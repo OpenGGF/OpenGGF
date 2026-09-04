@@ -54,8 +54,10 @@ class TestS2WidenedRequestOracle {
                             capture.requestRows());
             System.out.println("MEASUREMENT_ONLY " + published.name() + " "
                     + report.describe());
-            assertNotEquals(S2RequestAwareCandidateComparator.Kind.INVALID,
+            assertEquals(S2RequestAwareCandidateComparator.Kind.MATCH,
                     report.kind(), published.name() + ": " + report.describe());
+            assertEquals(published.requestTransfers(), report.comparedTransfers(),
+                    published.name() + ": " + report.describe());
         }
     }
 

@@ -764,14 +764,33 @@ class TestAudioDiagnosticObservers {
         restoreDiagnosticState(music, 10, 0, 1, 0,
                 Integer.MAX_VALUE,
                 music.captureSnapshot().fade());
+        int durationBeforeDelayFrame = music.getTracks().stream()
+                .filter(track -> track.type == SmpsSequencer.TrackType.FM)
+                .findFirst().orElseThrow().duration;
         SmpsDriverTestAccess.read(driver, new short[2]);
         assertEquals("begin:SEQUENCER_TICK:0", events.getFirst());
         assertEquals("end:SEQUENCER_TICK:0", events.getLast());
         assertTrue(events.subList(1, events.size() - 1).stream()
                 .allMatch("write:SEQUENCER_TICK"::equals));
-        assertTrue(events.size() > 2,
-                "a tempo-delay frame still walks tracks and scopes writes"
-                        + " to its sequencer service");
+        // The walk really ran, and it produced no chip write. S1's tempo delay
+        // adds 1 to every slot's DurationTimeout (s1.sounddriver.asm:1549-1561)
+        // and the walk's own decrement cancels it, so a track that has already
+        // read a note advances nothing on a delay frame and emits nothing. The
+        // net-zero duration is the evidence the walk happened. This guard used
+        // to require at least one write, which only held while the track had
+        // never started: every driver seeds DurationTimeout with 1 rather than
+        // 0 (s1.sounddriver.asm:823, :836; s2.sounddriver.asm:1857; skdisasm
+        // Sound/Z80 Sound Driver.asm:2168-2184), so what it was really
+        // measuring was the track's opening read, not a delay frame.
+        int durationAfterDelayFrame = music.getTracks().stream()
+                .filter(track -> track.type == SmpsSequencer.TrackType.FM)
+                .findFirst().orElseThrow().duration;
+        assertEquals(durationBeforeDelayFrame, durationAfterDelayFrame,
+                "a tempo-delay frame walks the track and leaves its duration"
+                        + " net unchanged");
+        assertEquals(2, events.size(),
+                "and it scopes every write it does make to its sequencer"
+                        + " service, of which a delay frame makes none");
 
         events.clear();
         restoreDiagnosticState(music, 10, 0, 1, 0,
