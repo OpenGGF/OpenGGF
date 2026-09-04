@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.rules.RequiresRom;
+import com.openggf.tests.rules.SonicGame;
 import com.openggf.tools.audio.completerun.CompleteRunAudioProducer;
 import com.openggf.tools.audio.completerun.CompleteRunAudioCaptureStore;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace;
@@ -20,6 +22,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@RequiresRom(SonicGame.SONIC_3K)
 class TestS3kCompleteRunReferenceProducer {
     @TempDir Path temporary;
 
