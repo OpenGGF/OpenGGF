@@ -208,8 +208,15 @@ public final class S2AudioOracleComparator {
             }
         }
 
-        List<S2OracleRawStream.ChipWrite> expectedWrites = referenceTick.writes();
-        List<S2OracleRawStream.ChipWrite> actualWrites = engine.writes();
+        // The DAC sample bytes leave the per-service partition: which service
+        // a 2Ah byte lands in is Z80 duration, not driver logic. They are
+        // compared as their own whole-window stream by
+        // S2DacStreamComparator, which carries the derivation.
+        List<S2OracleRawStream.ChipWrite> expectedWrites =
+                S2DacStreamComparator.withoutDacSampleBytes(
+                        referenceTick.writes());
+        List<S2OracleRawStream.ChipWrite> actualWrites =
+                S2DacStreamComparator.withoutDacSampleBytes(engine.writes());
         int shared = Math.min(expectedWrites.size(), actualWrites.size());
         for (int index = 0; index < shared; index++) {
             S2OracleRawStream.ChipWrite expected = expectedWrites.get(index);

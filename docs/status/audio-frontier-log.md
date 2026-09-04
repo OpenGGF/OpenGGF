@@ -27,6 +27,56 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 driver-state v2: the DAC byte stream leaves the service partition; tick 0 -> tick 170
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `2fed63a53`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 0 (movie row 10202), field
+  `writes.count`, reference 145 against the engine's 253; 1,525 of 2,198 ticks
+  divergent.
+- **After, state with writes:** DIVERGENCE at tick 170 (movie row 10372), field
+  `writes[2]`, reference `psg=0x90` against the engine's `psg=0x8f`; 515 of
+  2,198 ticks divergent.
+- **After, DAC stream (new second line):** `BYTE DIFFERENT in run 3 at byte
+  709: reference 0x80, engine 0x8D (92 runs, run-length delta 0)`.
+- **State only:** unchanged, DIVERGENCE at tick 1,789 (movie row 11991),
+  `global.currentTempo` `0x9e` against `0xbe`. This change touches no state.
+- **What moved.** The `2Ah` sample bytes now leave the per-service partition
+  and are compared as their own whole-window stream, the treatment the S3K
+  oracle already gives them. Which service a sample byte lands in is Z80
+  duration: `zWriteToDAC` streams from outside the interrupt, bracketing each
+  write with `di` / `ei` and spending the rest of its time in two `djnz $`
+  busy waits (s2.sounddriver.asm:682-726), which are the only window a V-int
+  can land in. The engine charges nothing for the service itself.
+- **The run boundary is the ROM's, and it validated.** Sonic 2's playback loop
+  writes nothing between samples: `zWaitLoop` spins on the remaining length
+  being zero and touches no register (:647-650). So a completed service with no
+  `2Ah` byte is a real gap. That rule gives the reference 92 runs across 2,243
+  services against 91 changes of its own `zCurDAC` byte, and the engine
+  independently produces the same 92, with a cumulative run-length delta of
+  zero. Run structure is therefore pinned by compared data, not assumed.
+- **No `2Bh` write moved.** Unlike S3K, Sonic 2's playback loop never writes the
+  DAC enable per sample; every `2Bh` in this driver belongs to a song load, a
+  fade or the SEGA chant (:1613, :1662, :1936, :2555, :3158), so all stay in the
+  per-service partition.
+- **Break-it evidence.**
+  `TestS2DriverStateOracle#aCorruptedDacSampleByteBreaksTheStreamComparison`
+  flips one reference sample byte and requires the verdict to move, so a stream
+  that never compared cannot read as one that agreed.
+- **Recorded** in docs/status/known-discrepancies.md, "S2 Music DAC Byte Stream
+  Partition (Oracle Comparison)".
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; the audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, `TestRewindCoverageGuard`
+  and `TestStaticStateRewindCoverageGuard` with three ROM paths: 2,058 tests,
+  0 failures, 0 errors, 10 skips.
+- **Next, two real divergences now visible behind the excused bytes.** The
+  service line at tick 170 is a PSG attenuation off by one step, `0x90` against
+  `0x8f`. The DAC line is a genuine content difference inside the fourth
+  sample run, at byte 709 of that run, with the three runs before it agreeing
+  in full.
+
 ## 2026-09-04 - S3K holds its PSG modulation after a rest note; tick 331 decoded, not closed
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

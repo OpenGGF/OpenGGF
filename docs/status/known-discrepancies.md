@@ -2832,6 +2832,75 @@ the partition derivable, and no fixture measurement may stand in for it.
 
 ---
 
+## S2 Music DAC Byte Stream Partition (Oracle Comparison)
+
+The S2 driver-state oracle compares the music DAC byte stream over the whole
+capture window rather than per service window, and does not assert how far a
+DAC run got before it ended. Everything else in a service, the `2Bh` enable
+and disable writes included, stays strictly partitioned and compared.
+
+### Original Implementation
+
+`zWriteToDAC` streams a sample's decoded bytes to `2Ah` from outside the
+interrupt, bracketing each write with `di` / `ei` and spending the rest of its
+time in two `djnz $` busy waits (s2.sounddriver.asm:682-726). Those waits are
+the only window a V-int can land in, so the number of bytes that fall in a
+given service window is whatever the Z80 had time for after that frame's
+`zUpdateEverything` returned with interrupts masked.
+
+### Engine Behaviour
+
+The engine models the driver's semantics, not the Z80's instruction timing. It
+streams the same bytes at the same per-byte cadence but charges nothing for the
+service itself, so it spends the whole inter-V-int interval streaming. Measured
+on the committed `s2-driver-state-w10150-12400` reference, the engine's music
+activation service carried 108 sample bytes that the ROM's carried none of, and
+those 108 bytes were byte-for-byte the head of the reference's *next* service.
+
+### Why
+
+This is the same unmodelled quantity already excused for S3K, one section
+above: the split is a property of a CPU this engine does not emulate, and
+measuring it from a fixture would be a fitted model.
+
+### What Is Still Compared
+
+The run count must match exactly, and every byte the two sides share within a
+run must be equal, in order. That is what proves the sample selection, the
+`jman2050` nybble decode and the cadence.
+
+A run boundary is the ROM's own and is visible in the write stream on both
+sides, so run structure is pinned by compared data rather than assumed. Sonic
+2's playback loop writes nothing at all between samples: `zWaitLoop` spins on
+the remaining length `de` being zero and touches no register until a sample is
+queued (:647-650). A completed service carrying no `2Ah` byte is therefore a
+real gap between samples. Measured on the committed reference, that rule yields
+92 runs across 2,243 services, against 91 changes of the driver's own `zCurDAC`
+byte over the same window, and the engine independently produces the same 92.
+
+Unlike S3K, no `2Bh` write moved into this stream. Sonic 2's playback loop
+never writes the DAC enable register per sample: every `2Bh` write in this
+driver belongs to a song load, a fade or the SEGA chant (:1613, :1662, :1936,
+:2555, :3158), so all of them stay in the per-service partition.
+
+One quantity is reported rather than asserted, so a regression in it stays
+visible on the DAC stream's result line: `run-length delta`, the cumulative
+byte-count difference across shared runs.
+
+### Verification
+
+`TestS2DriverStateOracle`, which reports the DAC stream as its own result line
+beside the per-service one, and whose
+`aCorruptedDacSampleByteBreaksTheStreamComparison` flips one reference sample
+byte and requires the verdict to move.
+
+### Removal Condition
+
+A Z80 cycle account for the driver's own service. Nothing short of that makes
+the partition derivable, and no fixture measurement may stand in for it.
+
+---
+
 ## PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores
 
 **Location:** `PsgChip.tickNoise()` / `PsgChip.linkedNoiseReload()`
