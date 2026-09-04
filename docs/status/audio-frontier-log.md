@@ -27,6 +27,45 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The unobserved transfer is sndDriverInput's music store at PC $10C0, and the hook is managed
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, at `54d3d3adb`. Analysis only; nothing
+  changed and no line moved.
+- **The answer, cited.** `sndDriverInput` makes two distinct stores into Z80
+  RAM. The music one is `move.b d0,zVar.QueueToPlay(a1)` at
+  `.isNotPauseCommand`, which the disassembly labels `loc_10C0`
+  (s2.asm:1302-1304). The SFX one is `move.b d0,zVar.Queue0(a1,d1.w)` inside
+  `.loop` (:1317-1326). The observer's manifest hooks a single instruction,
+  `pc 4310` with opcode `13801009`, and 4310 is `$10D6`.
+- **Verified against the cartridge, not only the listing.** The ROM holds
+  `13400008` at `$10C0` and `13801009` at `$10D6`, and `72031030` at `$10C4`,
+  which is the `moveq #3,d1` the `fixBugs = 0` path assembles at `.doSFX`. So
+  `$10D6` is the SFX store the manifest already names and `$10C0` is the music
+  store it does not.
+- **That single omission explains both gaps.** The nine music loads reach the
+  driver through `$10C0`, and so does the ring at movie row 3225, because the
+  ring-milestone check jumps to `PlayMusic` (s2.asm:25913-25914) which writes
+  `Sound_Queue.Music0` or `Music1` (:1520-1527) rather than the SFX slots.
+- **A structural finding that changes the shape of the fix.** The hook is not a
+  native observer action. `S2PreconsumptionRequestObserver` arms it with
+  `host.RegisterExecuteCallback(Pc, OnTransfer)`, a managed execute callback,
+  and reads `M68K D0` and `D1` in the callback; the manifest's
+  `native_action: 7` and patch digest are validated as identity, not used to
+  arm this hook. So adding the second site needs no patch edit, no core rebuild
+  and no toolchain: it is a manifest schema change plus managed code and tests.
+- **One detail the second site must not copy.** At `$10D6` the callback reads
+  `D1` as the SFX queue slot, which the `.loop` index makes correct. At `$10C0`
+  `D1` holds the pause-check residue of `move.b d0,d1` / `subi.b #MusID_Pause,d1`
+  (:1294-1295), so it is not a slot and must not be recorded as one; the music
+  transfer needs its own fixed slot identity.
+- **Next.** Implement the second site in the TraceChaser submodule under the
+  same rules, add the harness tests the existing site has, then recapture and
+  re-measure. The three published request windows and their transfer counts of
+  25, 52 and 27 are a gate: a widened observer that changes them must explain
+  each new transfer by ROM routine, and every one of them should be a music
+  request that `$10C0` alone carries.
+
 ## 2026-09-04 - The CPZ writes line is producer-blocked: one ring is played through the music mailbox
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
