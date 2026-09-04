@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cinttypes>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -87,18 +89,38 @@ void program(Chip &chip) {
         reg(chip, 0, 0x28, 0xf0 | (channel < 3 ? channel : channel + 1));
 }
 
+std::uint64_t hashInt(std::uint64_t hash, int value) {
+    std::uint32_t bits = static_cast<std::uint32_t>(value);
+    for (int shift = 0; shift < 32; shift += 8) {
+        hash ^= (bits >> shift) & 0xff;
+        hash *= UINT64_C(1099511628211);
+    }
+    return hash;
+}
+
 template <class Chip>
-long long render(Chip &chip, int frames) {
-    long long checksum = 0;
+std::vector<Sample> renderSamples(Chip &chip, int frames) {
+    std::vector<Sample> samples;
+    samples.reserve(frames);
+    for (int frame = 0; frame < frames; frame++) {
+        samples.push_back(chip.frame());
+    }
+    return samples;
+}
+
+template <class Chip>
+std::uint64_t render(Chip &chip, int frames) {
+    std::uint64_t hash = UINT64_C(14695981039346656037);
     for (int frame = 0; frame < frames; frame++) {
         Sample sample = chip.frame();
-        checksum += std::abs(sample[0]) + std::abs(sample[1]);
+        hash = hashInt(hash, sample[0]);
+        hash = hashInt(hash, sample[1]);
     }
-    return checksum;
+    return hash;
 }
 
 struct Result {
-    long long checksum;
+    std::uint64_t checksum;
     int snapshotErrors;
     int negativeChanges;
     std::vector<double> timings;
@@ -115,23 +137,27 @@ Result measure(int frames, int warmups, int iterations) {
         if (run >= 0) timings.push_back(elapsed / frames);
     }
     Chip validation; program(validation);
-    long long checksum = render(validation, frames);
+    std::uint64_t checksum = render(validation, frames);
     render(validation, std::min(frames, 256));
     auto snapshot = validation.save();
-    long long expected = render(validation, 128);
+    std::vector<Sample> expected = renderSamples(validation, 128);
     validation.restore(snapshot);
-    long long actual = render(validation, 128);
+    std::vector<Sample> actual = renderSamples(validation, 128);
     validation.restore(snapshot);
     reg(validation, 0, 0x28, 0xf0);
-    long long control = render(validation, 128);
+    std::vector<Sample> control = renderSamples(validation, 128);
     validation.restore(snapshot);
     reg(validation, 0, 0x28, 0x00);
-    long long changed = render(validation, 128);
-    return {checksum, expected == actual ? 0 : 1, control == changed ? 0 : 1, timings};
+    std::vector<Sample> changed = renderSamples(validation, 128);
+    int negativeChanges = 0;
+    for (std::size_t index = 0; index < control.size(); index++) {
+        if (control[index] != changed[index]) negativeChanges++;
+    }
+    return {checksum, expected == actual ? 0 : 1, negativeChanges, timings};
 }
 
 void printResult(const char *name, const Result &result) {
-    std::printf("\"%s\":{\"checksum\":%lld,\"snapshot_errors\":%d,"
+    std::printf("\"%s\":{\"checksum\":%" PRIu64 ",\"snapshot_errors\":%d,"
                 "\"negative_control_changes\":%d,\"nanoseconds_per_frame\":[",
                 name, result.checksum, result.snapshotErrors, result.negativeChanges);
     for (size_t index = 0; index < result.timings.size(); index++) {
@@ -147,7 +173,8 @@ int main(int argc, char **argv) {
     if (frames <= 0 || warmups < 0 || iterations <= 0) return 2;
     Result nuked = measure<Nuked>(frames, warmups, iterations);
     Result ymfm = measure<Ymfm>(frames, warmups, iterations);
-    std::printf("{\"implementations\":{");
+    std::printf("{\"frames\":%d,\"warmups\":%d,\"iterations\":%d,\"implementations\":{",
+                frames, warmups, iterations);
     printResult("c-nuked", nuked); std::printf(","); printResult("cpp-ymfm", ymfm);
     std::printf("}}\n");
     return 0;

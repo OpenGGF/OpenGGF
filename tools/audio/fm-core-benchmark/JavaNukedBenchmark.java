@@ -8,6 +8,9 @@ import java.util.Locale;
 
 /** ROM-free correctness and local throughput probe for the production Java Nuked port. */
 public final class JavaNukedBenchmark {
+    private static final long FNV_OFFSET_BASIS = 0xcbf29ce484222325L;
+    private static final long FNV_PRIME = 0x100000001b3L;
+
     private JavaNukedBenchmark() {
     }
 
@@ -55,20 +58,45 @@ public final class JavaNukedBenchmark {
         return chip;
     }
 
-    private static long render(NukedOpn2 chip, int frames) {
-        int[] pins = new int[2];
-        long checksum = 0;
-        for (int frame = 0; frame < frames; frame++) {
-            int left = 0;
-            int right = 0;
-            for (int cycle = 0; cycle < 24; cycle++) {
-                chip.clock(pins);
-                left += pins[0];
-                right += pins[1];
-            }
-            checksum += Math.abs((long) left) + Math.abs((long) right);
+    private static long hashInt(long hash, int value) {
+        for (int shift = 0; shift < Integer.SIZE; shift += Byte.SIZE) {
+            hash ^= (value >>> shift) & 0xff;
+            hash *= FNV_PRIME;
         }
-        return checksum;
+        return hash;
+    }
+
+    private static long frame(NukedOpn2 chip, int[] pins) {
+        int left = 0;
+        int right = 0;
+        for (int cycle = 0; cycle < 24; cycle++) {
+            chip.clock(pins);
+            left += pins[0];
+            right += pins[1];
+        }
+        return ((long) left << Integer.SIZE) | (right & 0xffffffffL);
+    }
+
+    private static int[] renderSamples(NukedOpn2 chip, int frames) {
+        int[] pins = new int[2];
+        int[] samples = new int[frames * 2];
+        for (int index = 0; index < frames; index++) {
+            long sample = frame(chip, pins);
+            samples[index * 2] = (int) (sample >> Integer.SIZE);
+            samples[index * 2 + 1] = (int) sample;
+        }
+        return samples;
+    }
+
+    private static long render(NukedOpn2 chip, int frames) {
+        long hash = FNV_OFFSET_BASIS;
+        int[] pins = new int[2];
+        for (int index = 0; index < frames; index++) {
+            long sample = frame(chip, pins);
+            hash = hashInt(hash, (int) (sample >> Integer.SIZE));
+            hash = hashInt(hash, (int) sample);
+        }
+        return hash;
     }
 
     public static void main(String[] args) {
@@ -97,23 +125,30 @@ public final class JavaNukedBenchmark {
         long checksum = render(validation, frames);
         render(validation, Math.min(frames, 256));
         NukedOpn2State snapshot = validation.state().copy();
-        long expected = render(validation, 128);
+        int[] expected = renderSamples(validation, 128);
         validation.state().copyFrom(snapshot);
-        long actual = render(validation, 128);
-        int snapshotErrors = expected == actual ? 0 : 1;
+        int[] actual = renderSamples(validation, 128);
+        int snapshotErrors = Arrays.equals(expected, actual) ? 0 : 1;
         validation.state().copyFrom(snapshot);
         int[] pins = new int[2];
         register(validation, pins, 0, 0x28, 0xf0);
-        long control = render(validation, 128);
+        int[] control = renderSamples(validation, 128);
         validation.state().copyFrom(snapshot);
         register(validation, pins, 0, 0x28, 0x00);
-        long changed = render(validation, 128);
-        int negativeChanges = control == changed ? 0 : 1;
+        int[] changed = renderSamples(validation, 128);
+        int negativeChanges = 0;
+        for (int index = 0; index < control.length; index += 2) {
+            if (control[index] != changed[index] || control[index + 1] != changed[index + 1]) {
+                negativeChanges++;
+            }
+        }
 
         System.out.printf(Locale.ROOT,
-                "{\"implementation\":\"java-nuked\",\"checksum\":%d," +
+                "{\"implementation\":\"java-nuked\",\"frames\":%d,\"warmups\":%d," +
+                        "\"iterations\":%d,\"checksum\":%s," +
                         "\"snapshot_errors\":%d,\"negative_control_changes\":%d," +
                         "\"nanoseconds_per_frame\":%s}%n",
-                checksum, snapshotErrors, negativeChanges, Arrays.toString(timings));
+                frames, warmups, iterations, Long.toUnsignedString(checksum),
+                snapshotErrors, negativeChanges, Arrays.toString(timings));
     }
 }

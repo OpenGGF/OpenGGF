@@ -4,6 +4,7 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 import platform
 import subprocess
@@ -51,10 +52,59 @@ args = parser.parse_args()
 
 java = read_json(args.java)
 native = read_json(args.native)
+
+
+def strict_int(value: object, name: str, *, minimum: int = 0) -> int:
+    if type(value) is not int or value < minimum:
+        fail(f"{name} must be an integer >= {minimum}")
+    return value
+
+
+def validate_dimensions(value: dict, name: str) -> None:
+    expected = {
+        "frames": args.frames,
+        "warmups": args.warmups,
+        "iterations": args.iterations,
+    }
+    for field, expected_value in expected.items():
+        actual = strict_int(value.get(field), f"{name}.{field}")
+        if actual != expected_value:
+            fail(f"{name}.{field} does not match command line")
+
+
+def validate_record(value: object, name: str, expected_id: str | None = None) -> dict:
+    if not isinstance(value, dict):
+        fail(f"{name} must be an object")
+    if expected_id is not None and value.get("implementation") != expected_id:
+        fail(f"{name}.implementation must be {expected_id}")
+    checksum = strict_int(value.get("checksum"), f"{name}.checksum")
+    if checksum > 0xffffffffffffffff:
+        fail(f"{name}.checksum exceeds unsigned 64-bit range")
+    strict_int(value.get("snapshot_errors"), f"{name}.snapshot_errors")
+    strict_int(value.get("negative_control_changes"), f"{name}.negative_control_changes")
+    timings = value.get("nanoseconds_per_frame")
+    if not isinstance(timings, list) or len(timings) != args.iterations:
+        fail(f"{name}.nanoseconds_per_frame must contain exactly {args.iterations} values")
+    for timing in timings:
+        if (isinstance(timing, bool) or not isinstance(timing, (int, float))
+                or not math.isfinite(timing) or timing < 0):
+            fail(f"{name}.nanoseconds_per_frame values must be finite and nonnegative")
+    return value
+
+
 try:
     implementations = native["implementations"]
-    c_nuked = implementations["c-nuked"]
-    ymfm = implementations["cpp-ymfm"]
+    if not isinstance(implementations, dict):
+        fail("native.implementations must be an object")
+    if set(implementations) != {"c-nuked", "cpp-ymfm"}:
+        fail("native implementations must be exactly c-nuked and cpp-ymfm")
+    if args.frames <= 0 or args.warmups < 0 or args.iterations <= 0:
+        fail("invalid measurement dimensions")
+    validate_dimensions(java, "java")
+    validate_dimensions(native, "native")
+    java = validate_record(java, "java", "java-nuked")
+    c_nuked = validate_record(implementations["c-nuked"], "c-nuked")
+    ymfm = validate_record(implementations["cpp-ymfm"], "cpp-ymfm")
     records = [java, c_nuked, ymfm]
     checksum_match = java["checksum"] == c_nuked["checksum"]
     snapshots_pass = all(item["snapshot_errors"] == 0 for item in records)
@@ -67,9 +117,6 @@ if not snapshots_pass:
     fail("snapshot replay failed")
 if not controls_pass:
     fail("negative control was inert")
-if args.frames <= 0 or args.warmups < 0 or args.iterations <= 0:
-    fail("invalid measurement dimensions")
-
 repo = args.repo.resolve()
 output = args.output.resolve()
 target = repo / "target"
@@ -134,7 +181,8 @@ record = {
     },
     "validation": {
         "java_c_nuked_checksum_match": True,
-        "snapshot_replay": "pass",
+        "stream_checksum": "fnv1a64-le-signed-int32-stereo",
+        "snapshot_replay": "sample-wise-exact-pass",
         "active_negative_controls": "pass",
     },
     "java": java,

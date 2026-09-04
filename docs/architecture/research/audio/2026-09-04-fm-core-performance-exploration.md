@@ -164,5 +164,7 @@ and low-end/platform budgets are deferred.
 
 The maintained ROM-free reproduction tool is
 `tools/audio/fm-core-benchmark/`. It deliberately retains the Java/native
-synthetic comparison and provenance checks, but not the Graal distribution,
-JNI spike, waveform output, or machine-specific runner.
+synthetic comparison, an order-, sign-, and channel-sensitive Java/C stream
+hash, sample-wise exact snapshot replay, active controls, and provenance
+checks, but not the Graal distribution, JNI spike, waveform output, or
+machine-specific runner.

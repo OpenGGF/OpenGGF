@@ -33,11 +33,25 @@ fi
 printf 'pinned input\n' > "$test_root/source/input.txt"
 
 cat > "$test_root/java.json" <<'JSON'
-{"implementation":"java-nuked","checksum":1234,"snapshot_errors":0,"negative_control_changes":19,"nanoseconds_per_frame":[10.0]}
+{"implementation":"java-nuked","frames":128,"warmups":0,"iterations":1,"checksum":1234,"snapshot_errors":0,"negative_control_changes":19,"nanoseconds_per_frame":[10.0]}
 JSON
 cat > "$test_root/native.json" <<'JSON'
-{"implementations":{"c-nuked":{"checksum":1234,"snapshot_errors":0,"negative_control_changes":17,"nanoseconds_per_frame":[8.0]},"cpp-ymfm":{"checksum":9876,"snapshot_errors":0,"negative_control_changes":16,"nanoseconds_per_frame":[3.0]}}}
+{"frames":128,"warmups":0,"iterations":1,"implementations":{"c-nuked":{"checksum":1234,"snapshot_errors":0,"negative_control_changes":17,"nanoseconds_per_frame":[8.0]},"cpp-ymfm":{"checksum":9876,"snapshot_errors":0,"negative_control_changes":16,"nanoseconds_per_frame":[3.0]}}}
 JSON
+
+expect_assemble_failure() {
+  local java_input=$1 native_input=$2 label=$3
+  if python3 "$tool_root/assemble-results.py" \
+      --java "$java_input" --native "$native_input" \
+      --output "$test_root/output/$label.json" --repo "$repo_root" \
+      --frames 128 --warmups 0 --iterations 1 \
+      --nuked-lock "$test_root/source.lock" --ymfm-lock "$test_root/source.lock" \
+      --build-input fixture="$test_root/source/input.txt" \
+      --native-c-flags=-O2 --native-cxx-flags='-O2 -std=c++14' >/dev/null 2>&1; then
+    echo "assemble-results accepted $label" >&2
+    exit 1
+  fi
+}
 
 python3 "$tool_root/assemble-results.py" \
   --java "$test_root/java.json" --native "$test_root/native.json" \
@@ -53,7 +67,8 @@ import sys
 result = json.load(open(sys.argv[1], encoding="utf-8"))
 assert result["validation"] == {
     "java_c_nuked_checksum_match": True,
-    "snapshot_replay": "pass",
+    "stream_checksum": "fnv1a64-le-signed-int32-stereo",
+    "snapshot_replay": "sample-wise-exact-pass",
     "active_negative_controls": "pass",
 }
 assert result["measurement"]["publishable"] is False
@@ -81,6 +96,49 @@ if python3 "$tool_root/assemble-results.py" \
   echo 'assemble-results accepted a Java/C checksum mismatch' >&2
   exit 1
 fi
+
+python3 - "$test_root/java.json" "$test_root/native.json" "$test_root" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+java_path, native_path, root = map(Path, sys.argv[1:])
+java = json.loads(java_path.read_text(encoding="utf-8"))
+native = json.loads(native_path.read_text(encoding="utf-8"))
+native["implementations"]["c-nuked"]["checksum"] = 1234
+native["implementations"]["cpp-ymfm"]["negative_control_changes"] = 16
+
+cases = {
+    "wrong-java-id": ({**java, "implementation": "java-other"}, native),
+    "unexpected-native-id": (java, {**native, "implementations": {
+        **native["implementations"], "extra-core": native["implementations"]["cpp-ymfm"]}}),
+    "boolean-checksum": ({**java, "checksum": True}, native),
+    "missing-timings": ({key: value for key, value in java.items()
+                         if key != "nanoseconds_per_frame"}, native),
+    "short-timings": ({**java, "nanoseconds_per_frame": []}, native),
+    "nan-timing": ({**java, "nanoseconds_per_frame": [float("nan")]}, native),
+    "boolean-timing": ({**java, "nanoseconds_per_frame": [True]}, native),
+    "negative-timing": ({**java, "nanoseconds_per_frame": [-1.0]}, native),
+    "wrong-dimensions": ({**java, "frames": 127}, native),
+    "native-boolean-errors": (java, {**native, "implementations": {
+        **native["implementations"], "c-nuked": {
+            **native["implementations"]["c-nuked"], "snapshot_errors": False}}}),
+    "native-missing-timings": (java, {**native, "implementations": {
+        **native["implementations"], "cpp-ymfm": {
+            key: value for key, value in native["implementations"]["cpp-ymfm"].items()
+            if key != "nanoseconds_per_frame"}}}),
+    "native-wrong-dimensions": (java, {**native, "warmups": 1}),
+}
+for label, (java_case, native_case) in cases.items():
+    (root / f"{label}-java.json").write_text(json.dumps(java_case), encoding="utf-8")
+    (root / f"{label}-native.json").write_text(json.dumps(native_case), encoding="utf-8")
+PY
+
+for label in wrong-java-id unexpected-native-id boolean-checksum missing-timings \
+    short-timings nan-timing boolean-timing negative-timing wrong-dimensions \
+    native-boolean-errors native-missing-timings native-wrong-dimensions; do
+  expect_assemble_failure "$test_root/$label-java.json" "$test_root/$label-native.json" "$label"
+done
 
 python3 - "$test_root/native.json" <<'PY'
 import json

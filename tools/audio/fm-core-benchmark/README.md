@@ -6,9 +6,10 @@ workload. It is a correctness/provenance harness with local timing diagnostics,
 not an audio-fidelity gate or a backend-selection benchmark.
 
 The entry point verifies every compiled upstream input, builds only below the
-invoking worktree's `target/`, checks the Java and C Nuked aggregate checksums,
-round-trips snapshots for all three implementations, and proves each snapshot
-check is live by keying off a channel as an active negative control. The final
+invoking worktree's `target/`, checks matching Java and C Nuked 64-bit FNV-1a
+hashes over the ordered, signed, interleaved stereo samples, compares snapshot
+replays sample by sample for all three implementations, and proves each
+snapshot check is live by keying off a channel as an active negative control. The final
 `result.json` records source pins, tool versions, host identity, Git state,
 measurement dimensions, timings, and validation outcomes. It always marks
 timings `publishable: false`; publication requires a separately reviewed run on
@@ -68,9 +69,10 @@ engine-derived stream experiment omitted the fixtures' internally streamed DAC
 bytes; that limitation belongs only to those fixtures. Current production
 `playDac` callbacks do observe real streamed DAC bytes (since `0ae29a261`).
 
-The aggregate Java/C checksum establishes that the two Nuked implementations
-executed the same synthetic stream; the repository's bit-exact port tests carry
-the sample-level proof. ymfm has a different output model, scale, and phase, so
-its checksum is intentionally not compared with Nuked. The harness does not
+The order-, sign-, and channel-sensitive Java/C stream hash is a compact guard
+for this synthetic stream, not a collision-free sample proof; the repository's
+bit-exact port tests carry the independent sample-level proof. ymfm has a
+different output model, scale, and phase, so its hash is intentionally not
+compared with Nuked. The harness does not
 exercise timers, IRQ/CSM integration, physical output transfer, resampling,
 audio scheduling, full-game load, listening quality, or non-Linux portability.
