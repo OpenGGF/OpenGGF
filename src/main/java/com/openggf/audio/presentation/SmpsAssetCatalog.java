@@ -559,6 +559,7 @@ final class SmpsAssetCatalog {
                 .sfxWalkPrecedesRequest(source.isSfxWalkPrecedesRequest())
                 .sfxAdmissionKeyOffAndClearsSsgEg(
                         source.isSfxAdmissionKeyOffAndClearsSsgEg())
+                .psgSfxAdmissionSilencesNoise(source.isPsgSfxAdmissionSilencesNoise())
                 .trackEndFlagOwnsTheStop(source.isTrackEndFlagOwnsTheStop())
                 .noteFillTail(source.getNoteFillTail())
                 .fadeOutDelay(source.getFadeOutDelay())

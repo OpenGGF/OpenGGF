@@ -27,6 +27,48 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - PSG SFX admission noise silence: 1569 to 1570
+
+- **Context:** `bugfix/ai-audio-round-s3k`, `.worktrees/audio-round-s3k`,
+  based on `develop` `4296bc291`; implementation is the commit containing
+  this entry. JDK 21.0.11, fresh isolated build, absolute verified ROM path.
+- **Fixture:** `s3k/s3k-aiz1-intro-reference-v2.jsonl.gz` with
+  `s3k-aiz1-intro-requests-v1.json`.
+- **Command:** after compilation and `mvn -Dmse=off -q
+  dependency:build-classpath -Dmdep.outputFile=target/gates/cp.txt`.
+  Export `S3K_ROM` to the discovered absolute locked-on ROM path (SHA-1
+  `cfbf98c36c776677290a872547ac47c53d2761d6`); the placeholder replaces the
+  executed machine-local path:
+
+  ```bash
+  java -cp "target/classes:$(cat target/gates/cp.txt)" \
+    com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz \
+    --requests src/test/resources/audio/parity/s3k/s3k-aiz1-intro-requests-v1.json \
+    --rom "$S3K_ROM"
+  ```
+
+- **Before:** service 1569, `EVENT_VALUE_DIFFERENT`, event 15: reference
+  PSG `FF`, engine YM2612 port 0 register `A4` value `22`.
+- **After:** service 1570, `EVENT_VALUE_DIFFERENT`, event 39: reference
+  PSG `E7`, engine PSG `FF`. Full comparison exits 3; no all-green claim.
+  The DAC stream stays at `BYTE_DIFFERENT`, run 338, byte 0, reference `88`
+  versus engine `7F`.
+- **ROM owner:** retail `fix_sndbugs=0`,
+  `zGetSFXChannelPointers.is_psg` (`Sound/Z80 Sound Driver.asm:2131-2136`),
+  unconditionally emits `FF` for every PSG header. Collapse loads FM3,
+  FM4, FM5, PSG3, so the write follows 15 FM initialization writes. A
+  profile-owned setting now emits that guaranteed write in header order.
+  The preceding stale-IX silence call is not fully modelled; the next
+  service's lazy noise takeover remains open.
+- **Evidence:** new prefix test failed at the exact missing write before
+  implementation and now asserts `MATCH` for all 1570 services through
+  1569. Final focused suite: 54 tests, zero failures/errors/skips, including
+  admission order, PSG1/PSG2/default profiles, configuration copy, runtime
+  noise tails and admission rollback. Ordinary/guards remain the integration
+  lead's checks. Exact red/green commands and test-observer corrections are
+  in [the validation report](../architecture/validation/audio/2026-09-04-s3k-admission-silence.md).
+
 ## 2026-09-04 - HANDOVER: S3K AIZ1 intro oracle, state at branch head
 
 - **Historical branch:** `bugfix/ai-s3k-oracle-freq-resend`; the measured code

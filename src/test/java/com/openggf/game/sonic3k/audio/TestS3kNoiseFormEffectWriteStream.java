@@ -53,7 +53,8 @@ import org.junit.jupiter.api.Test;
  * between them: it runs that takeover lazily on the first latch of the stolen
  * channel, and the {@code 0E7h} write is that latch, whereas the ROM emits it
  * during SFX setup in {@code zGetSFXChannelPointers} (:2128-2134) before the
- * track's first pass. That ordering gap is recorded as accepted debt in
+ * track's first pass. The engine now also emits the admission silence, but
+ * the extra lazy takeover write remains. That ordering gap is recorded in
  * docs/S3K_KNOWN_DISCREPANCIES.md; tightening this to strict adjacency is the
  * check to add once the takeover moves.
  */
@@ -141,9 +142,9 @@ class TestS3kNoiseFormEffectWriteStream {
 
     /**
      * The ordered PSG bytes the driver emits over the effect's opening
-     * services. The service in which the sequencer is installed puts nothing
-     * on the bus; the track's first pass, and so {@code cfSetPSGNoise}, runs
-     * in the next one. A small bound is taken rather than a fixed index so the
+     * services, excluding its admission noise silence. The track's first
+     * pass, and so {@code cfSetPSGNoise}, runs after admission. A small bound
+     * is taken rather than a fixed index so the
      * contract is "the effect opens with this pair", not "frame N does".
      */
     private List<Integer> firstServicePsgWrites(Rom rom, Sonic3kSmpsLoader loader, int sfxId) {
@@ -173,6 +174,9 @@ class TestS3kNoiseFormEffectWriteStream {
             sequencer.setSampleRate(SAMPLE_RATE);
             sequencer.setSfxMode(true);
             driver.addSequencer(sequencer, true);
+            // Admission now writes FF. Measure the first track pass rather
+            // than treating that setup write as proof the track has run.
+            writes.clear();
             for (int service = 0; service < OPENING_SERVICES && writes.isEmpty(); service++) {
                 driver.serviceOuterFrame();
             }
