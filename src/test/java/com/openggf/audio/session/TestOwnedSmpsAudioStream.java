@@ -93,7 +93,7 @@ class TestOwnedSmpsAudioStream {
 
     private static OwnedSmpsAudioStream stream(AtomicInteger writes) {
         SmpsPhysicalDevice.Settings settings =
-                new SmpsPhysicalDevice.Settings(44_100, false, false);
+                new SmpsPhysicalDevice.Settings(44_100, false);
         return new OwnedSmpsAudioStream(
                 "test", 0, settings,
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,

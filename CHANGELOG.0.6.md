@@ -39,6 +39,45 @@ This file contains the complete 0.6 development snapshot history carried forward
   way the original does, and the whole pass still puts exactly one volume byte
   on the sound chip.
 
+- **PSG noise now always clocks at the hardware rate:** the `audio.psgNoiseShiftEveryToggle`
+  option, which let the PSG noise LFSR shift twice as often as real hardware
+  (once per polarity toggle instead of once per rising edge), is removed. The
+  noise generator always follows the SN76489/libvgm rule now: one shift per
+  rising edge. This is a likely cause of S3K noise-based sound effects (splash,
+  insta-shield, the collapsing bridge) sounding wrong, since the shipped
+  default enabled the every-toggle mode. An existing `config.yaml` that still
+  sets the key has it ignored with a logged warning; nothing else changes.
+
+- **Sonic 1's ending sequence no longer stops Sonic dead a few seconds in:**
+  the ending plays out on its own stripped-down Green Hill, and the original
+  runs it from a loop of its own that deliberately leaves out the end-of-act
+  signpost step. The engine was running that step anyway, and because the
+  ending's stretch of level is short enough that the camera is already sitting
+  at its far edge on the first frame, the step immediately walled off the
+  ground behind the camera. Sonic ran left into that wall, stopped, and the
+  sequence never reached the point where it takes over and finishes. The
+  signpost step now stays out of the ending, so Sonic runs the whole way,
+  skids, and hands over as he should.
+
+- **Chemical Plant's looping platforms hand you over the way the original does:**
+  when the loop wraps, the platform under your feet leaves and another arrives in
+  its place. The original cannot make the arriving one solid straight away,
+  because a platform only becomes solid once it has been drawn, and that one was
+  still off the bottom of the screen a moment earlier. So you hang in the air for
+  a single frame and land on it next frame. The engine was making the arriving
+  platform solid the instant it appeared and passing you across with no gap.
+
+- **The Chemical Plant boss's parts now take their turns in the original's
+  order:** the boss itself moved last among its own components, so its arm and
+  container were working from where it had been a frame earlier. Everything
+  downstream inherited that lag, and the falling chemical blob it drops ran a
+  frame ahead of the original for its whole descent, which is what made it catch
+  Tails a frame early. The boss now builds its parts the way the original does,
+  from its own turn, so it moves first and the rest follow. The blob it drops
+  also becomes the falling blob in place rather than being handed off to a new
+  one, which is what the original does and what gives the drop its correct
+  first frame.
+
 - **Speed shoes now slow the music down on the same frame they take your speed
   back:** the original does both in one step at the end of a frame, restoring the
   boosted running values and asking the sound program to drop the tempo together.

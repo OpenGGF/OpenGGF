@@ -219,7 +219,7 @@ class TestSmpsSegaPcmTransport {
                 new SmpsSessionTestFixtures.RecordingObserver();
         SmpsPhysicalPolicy policy = Sonic3kSmpsPhysicalPolicy.INSTANCE;
         SmpsPhysicalDevice.Settings settings =
-                new SmpsPhysicalDevice.Settings(OUTPUT_RATE, false, false);
+                new SmpsPhysicalDevice.Settings(OUTPUT_RATE, false);
         return new RecordingSession(new SmpsDriverSession(
                 settings, policy, (ChipWriteObserver) writes,
                 new SmpsSessionProfileFingerprint(
