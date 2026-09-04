@@ -337,6 +337,7 @@ public final class SmpsSequencerConfig {
     private final PsgSilenceShape psgSilenceShape;
     private final boolean sfxWalkPrecedesRequest;
     private final boolean sfxAdmissionKeyOffAndClearsSsgEg;
+    private final boolean trackEndFlagOwnsTheStop;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -397,6 +398,7 @@ public final class SmpsSequencerConfig {
         this.psgSilenceShape = b.psgSilenceShape;
         this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
         this.sfxAdmissionKeyOffAndClearsSsgEg = b.sfxAdmissionKeyOffAndClearsSsgEg;
+        this.trackEndFlagOwnsTheStop = b.trackEndFlagOwnsTheStop;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -732,6 +734,20 @@ public final class SmpsSequencerConfig {
         return sfxAdmissionKeyOffAndClearsSsgEg;
     }
 
+    /**
+     * Whether the track-end coordination flag is the only thing that stops
+     * the note. S3K's {@code cfStopTrack} calls {@code zKeyOffIfActive}
+     * exactly once as it clears the playing bit (skdisasm Sound/Z80 Sound
+     * Driver.asm:3040-3046), so a second stop after the stream read puts a
+     * duplicate key-off on the bus. S1 and S2 keep the engine's blanket stop:
+     * their handlers do not all stop the note themselves, and removing it
+     * takes the S2 driver-state oracle from MATCH to a missing write at tick
+     * 207, so their track-end paths are unaudited rather than known-equal.
+     */
+    public boolean isTrackEndFlagOwnsTheStop() {
+        return trackEndFlagOwnsTheStop;
+    }
+
     /** How a single PSG track's silence is written. */
     public enum PsgSilenceShape {
         /** The engine's existing S1/S2 behaviour: one byte for the channel
@@ -870,6 +886,7 @@ public final class SmpsSequencerConfig {
         private PsgSilenceShape psgSilenceShape = PsgSilenceShape.SOUNDING_CHANNEL_ONLY;
         private boolean sfxWalkPrecedesRequest = false;
         private boolean sfxAdmissionKeyOffAndClearsSsgEg = false;
+        private boolean trackEndFlagOwnsTheStop = false;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -922,6 +939,7 @@ public final class SmpsSequencerConfig {
         public Builder psgSilenceShape(PsgSilenceShape val) { psgSilenceShape = val; return this; }
         public Builder sfxWalkPrecedesRequest(boolean val) { sfxWalkPrecedesRequest = val; return this; }
         public Builder sfxAdmissionKeyOffAndClearsSsgEg(boolean val) { sfxAdmissionKeyOffAndClearsSsgEg = val; return this; }
+        public Builder trackEndFlagOwnsTheStop(boolean val) { trackEndFlagOwnsTheStop = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }

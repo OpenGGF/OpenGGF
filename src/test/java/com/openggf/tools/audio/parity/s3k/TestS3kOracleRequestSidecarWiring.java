@@ -212,8 +212,8 @@ class TestS3kOracleRequestSidecarWiring {
      * to the next one, and every track now seeds its first duration timeout
      * with 1 as all three ROMs do, and an admitted SFX keys each of its
      * channels off and clears their SSG-EG operators as
-     * {@code zSFXTrackInitLoop} does. Service 565 agrees in full. What
-     * remains is a write at service 588.
+     * {@code zSFXTrackInitLoop} does, and a track-end flag is now the only
+     * thing that stops the note. What remains is a write at service 590.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -226,9 +226,9 @@ class TestS3kOracleRequestSidecarWiring {
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 450, report.tick());
-        assertEquals(3, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=1, register=181, value=64]",
+        assertEquals(TITLE_MUSIC_TICK + 452, report.tick());
+        assertEquals(1, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=1, register=180, value=128]",
                 report.reference());
     }
 

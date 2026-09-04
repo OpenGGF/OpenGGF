@@ -1516,7 +1516,13 @@ public class SmpsSequencer implements CoordFlagContext {
             }
             while (t.duration == 0 && t.active) {
                 if (t.pos >= programView.dataLength()) {
+                    // Running off the end of the data has no ROM counterpart,
+                    // since every stream ends with a track-end flag. Keep the
+                    // engine's safety stop here rather than after the loop, so
+                    // it cannot double up with the stop a track-end flag has
+                    // already performed.
                     t.active = false;
+                    stopNote(t);
                     break;
                 }
 
@@ -1603,7 +1609,13 @@ public class SmpsSequencer implements CoordFlagContext {
                 processPsgEnvelope(t);
             }
 
-            if (!t.active) {
+            if (!t.active && !config.isTrackEndFlagOwnsTheStop()) {
+                // S1/S2 keep this blanket stop: their handlers do not all stop
+                // the note themselves and removing it costs the S2
+                // driver-state oracle a write at tick 207. S3K's cfStopTrack
+                // keys off exactly once on its own (Sound/Z80 Sound
+                // Driver.asm:3040-3046), so a second stop here would put a
+                // duplicate key-off on the bus.
                 stopNote(t);
             }
         }

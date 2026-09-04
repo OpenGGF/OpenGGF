@@ -27,6 +27,62 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - One track end, one key-off; tick 588 -> tick 590
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged by design.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 588, event 3, reference
+  `ym2612 port 1 register 0B5h = 64` against engine `port 0 register 28h = 5`.
+  DAC stream `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 590, event 1, reference
+  `ym2612 port 1 register 0B4h = 128` against engine
+  `port 0 register 0A4h = 19`. DAC stream unchanged.
+- **The attribution took three probes and corrected a stale measurement.**
+  A stack probe on `forceSilence` never fired, and one on the driver's own
+  `writeFm` never fired either, because those writes reach the chip through
+  the session's synthesizer rather than the driver method. A third probe, on
+  the capture's own chip-write observer, caught the byte at service **566**,
+  not 588 — and re-dumping both services showed why: the release-rate and
+  total-level block the previous entry chased was already gone, removed by
+  that entry's own two config corrections. Its claim that they "changed
+  nothing" was read off a stale build, and the previous entry is corrected in
+  place. Service 566 carries that block in the reference too, and matches.
+- **What was actually left at 588 was a duplicated key-off.** The observer
+  probe, pointed at `28h = 5`, caught two writes from two different callers:
+  the `0F2h` track-end flag handler, and the blanket
+  `if (!t.active) stopNote(t)` after the stream-read loop. The ROM stops once:
+  `cfStopTrack` calls `zKeyOffIfActive` as it clears the playing bit
+  (Sound/Z80 Sound Driver.asm:3040-3046) and nothing follows it.
+- **Scoped to S3K after S2 said no.** Removing the blanket stop for every
+  driver took the S2 driver-state oracle from `MATCH (2198 ticks)` to a
+  missing write at tick 207, and pushed the CPZ divergent count from 36 to 45.
+  S1 and S2 therefore keep it, and the new `trackEndFlagOwnsTheStop` names why:
+  their handlers do not all stop the note themselves, which makes their
+  track-end paths unaudited rather than known-equal. With the flag applied to
+  S3K alone, every S2 line returns to its previous value including the CPZ
+  count of 36.
+- **The data-exhausted safety stop moved rather than vanished.** Running off
+  the end of a stream has no ROM counterpart, since every stream ends with a
+  track-end flag, so that stop now sits in the exhaustion branch itself where
+  it cannot double up.
+- **Two write-list snapshots re-pinned.** `TestSonic3kFm3SpecialMode`'s two
+  `F3` tests assert the PSG write list as incidental context around
+  raw-operand retention, and each carried one cleanup pair too many. They now
+  assert the single cleanup, with the `cfStopTrack` citation.
+- **S1 and S2 read by content.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; S2 v1 `MATCH (698 ticks)`, v2 state-and-writes and
+  state-only `MATCH (2198 ticks)`, CPZ state-only `MATCH (720 ticks)`,
+  request windows `MATCH` at 25, 52 and 27.
+- **Open items.** S2's `zNoteFillUpdate` countdown; S1 and S2's post-note
+  do-not-attack clear; the `.dac_playback_loop` cycle total of 303 against
+  `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and now S1's and S2's track-end stop, which this cycle showed the engine
+  depends on but no listing has been read for.
+- **Gates at this commit, all green.** 2,159 tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - The PSG SSG-EG clear writes nothing, and 588 is a force-silence with no ROM caller
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
@@ -63,7 +119,12 @@ defined by `com.openggf.tools.audio.parity`.
   restoring its voice (:3040-3070), never force-silencing;
   `zFMSilenceChannel` is reached only from `zInitAudioDriver`'s boot loop
   (:2475-2495) and from the track's own `0F2h` flag, `cfSilenceStopTrack`
-  (:3082-3096). Neither changed a single byte of this capture.
+  (:3082-3096). **Correction, made the next cycle:** the "neither changed a
+  byte" claim in this entry was wrong. It came from a `WriteDump` run against
+  a stale build. Both modes together removed the whole
+  `ym1[81h] [89h] [85h] [8Dh] = 0FFh` and `ym1[41h] [49h] [45h] [4Dh] = 07Fh`
+  block from service 588; what they did not do is move the *first* divergence
+  index, which is why the frontier line looked unchanged.
 - **Service 588, decoded but not closed.** The reference is
   `ym1[0A4h] [0A0h]`, one `ym0[28h] = 5`, then straight into the voice load
   at `ym1[0B5h]`. The engine inserts, between the key-off and the voice load,
