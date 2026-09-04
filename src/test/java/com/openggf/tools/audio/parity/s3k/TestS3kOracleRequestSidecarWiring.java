@@ -205,8 +205,11 @@ class TestS3kOracleRequestSidecarWiring {
      * its own tone channel before the noise byte, and {@code zRestTrack}'s
      * fall-through into {@code zSilencePSGChannel} is modelled, which is what
      * the 49-service run of PSG3 silences from 502 was, and a duration-only
-     * stream unit no longer re-derives the rest bit from the previous unit's
-     * note. What remains is a PSG3 write 151 events into service 551.
+     * stream unit no longer re-derives anything from the previous unit's note:
+     * not the rest bit, not the silence, not the frequency, and not the PSG
+     * volume's silence level. Service 551 agrees in full. What remains is
+     * SFX_FM4's {@code resting} bit at service 565, the first service of an
+     * SFX request.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -218,11 +221,10 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 413, report.tick());
-        assertEquals(151, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=192]",
-                report.reference());
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 427, report.tick());
+        assertEquals("SFX_FM4", report.role());
+        assertEquals("resting", report.field());
     }
 
     /**
