@@ -191,8 +191,11 @@ class TestS3kOracleRequestSidecarWiring {
      * carries the comparison through the whole post-SEGA stop-all burst and the
      * title-music load's own driver state, and now through that load's DAC-track
      * prefix, all six of its FM tracks and its PSG tracks, so the whole of that
-     * service now agrees. What remains is the DAC enable the ROM's idle loop
-     * sends in the following service's window.
+     * service now agrees, and through the DAC enable the ROM's idle loop sends
+     * in the following service's window. What remains is the music DAC byte
+     * pump: the reference streams every decoded sample byte as a 2Ah write
+     * (Sound/Z80 Sound Driver.asm:4299-4351), which the engine plays inside
+     * its chip DAC rather than on the write bus.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -206,8 +209,8 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
         assertEquals(TITLE_MUSIC_TICK + 1, report.tick());
-        assertEquals(0, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=43, value=128]",
+        assertEquals(1, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=42, value=128]",
                 report.reference());
     }
 
