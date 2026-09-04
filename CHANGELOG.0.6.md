@@ -14,6 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 1's music timing keeps running after a jingle ends:** the original's
+  sound program ticks its master tempo every frame regardless of whether any
+  music track is still playing, and only stops when a new song loads or the
+  sound is cleared. The engine treated a song whose tracks had all finished as
+  over and stopped servicing it, so its timing state froze at the last note.
+  A finished Sonic 1 song now keeps its timing running, which is what the next
+  thing to reuse that state expects to find.
+
 - **A tied note no longer freezes a PSG channel's volume shimmer in Sonic 1:**
   when one note runs straight into the next without re-attacking, the original
   keeps stepping that channel's volume envelope, so the shimmer carries on

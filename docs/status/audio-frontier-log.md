@@ -27,6 +27,58 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The tempo frontier was not tempo seeding: a finished S1 song stopped being serviced
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `d26d6a083`.
+- **Fixture:** scratch capture of window 2 of `s1-complete-run.bk2`, music
+  `$8E`, 567 ticks.
+- **Result:** unchanged first divergence, `GLOBAL_STATE_MISMATCH` tick 360,
+  `tempo_timeout`, reference `1` against engine `2`. **The frontier did not
+  move, and what landed is still worth having:** the engine's tempo state after
+  tick 360 was frozen and now runs.
+
+**The hypothesis handed to this round was tempo-mode seeding. It was wrong, and
+the trajectory said so.** Dumping both sides across the divergence shows every
+track going inactive at tick 360 on *both* sides: `$8E` is the act-clear
+jingle and it simply ends there. After that the reference's tempo timeout keeps
+cycling 3, 2, 1 forever while the engine's sat at 2 for all 206 remaining ticks.
+A value that stops changing is not a seeding error.
+
+**The ROM reason.** `UpdateMusic` decrements `v_main_tempo_timeout` and reloads
+it through `TempoWait` before it looks at any track, and unconditionally
+(s1.sounddriver.asm:174-176, :1549-1560). The driver has no notion of a song
+being over: its RAM persists and its tempo keeps running until a new song loads
+or `StopAllSound` clears it. The engine's `SmpsSequencer.isComplete()` reports
+a sequencer finished once every track is inactive, and both the service loop
+and `reapCompletedSequencers` then remove it, after which nothing services it
+at all. Guarding both removal paths for the direct-68k music sequencer makes the
+tempo run again; SFX sequencers are untouched, because those genuinely are
+released when they end.
+
+**The residual, stated precisely so the next round does not re-derive it.**
+With the tempo running, the two sides now cycle with the same period and differ
+by a constant one-step phase. The reference's tick 360 carries **two** tempo
+decrements: 359 reads 3, 360 reads 1, and there is no reload between them
+(`tempo_reload` is 3 throughout and no tempo command is dispatched -- the only
+dispatch at 360 is SFX `$CD`). So one recorded invocation at 360 contains two
+`.driverinput` passes. It is **not** the `.updateloop` DAC-busy retry: that
+`bra.s UpdateMusic` returns to the top of the routine, *before* the tempo
+decrement (:147-165), so a retry cannot decrement twice. The open question is
+which two calls those are, and answering it needs a probe that counts
+`.driverinput` passes per recorded invocation rather than another round of
+reading the listing.
+
+**Gates, all green and read by content.** Audio parity package with three ROM
+paths: 183 tests, 0 failures, 0 errors, 2 skips. The wider audio packages plus
+the rewind coverage guards, `TestSmpsFadeAudioThroughput`,
+`TestYm2612DacTiming` and the S3K audio classes: 1,921 tests, 0 failures, 0
+errors, 8 skips -- run because a sequencer-lifetime change is exactly the kind
+that breaks rewind coverage. Both S1 gameplay oracles `MATCH` at 2,562 and
+5,257 ticks; S2 v1 `MATCH (698 ticks)`; v2 both lines `MATCH (2198 ticks)`; CPZ
+state-only `MATCH (720 ticks)`; request windows `MATCH` at 25, 52 and 27.
+
+
 ## 2026-09-04 - The 1-up restore is a second window epoch; the first whole-run capture found it by aborting
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
