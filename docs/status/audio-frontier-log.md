@@ -27,6 +27,45 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - CPZ tick 237 is a whole voice load one FM channel across, and neither slot rule explains it
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, at `fad986e21`.
+- **Measurement, not a comparison run.** Nothing landed. Lines unchanged: CPZ
+  state only `MATCH (720 ticks)`, state with writes DIVERGENCE at tick 237.
+- **What the two sides actually emit.** Both write the same voice load, to
+  different channels of port 1, register for register:
+
+  | side | registers |
+  |---|---|
+  | reference | `B1 04`, `31 37`, `35 77`, `39 72`, `3D 49`, `51`-`8D`, `B5 C0`, `41 23` |
+  | engine | `B0 04`, `30 37`, `34 77`, `38 72`, `3C 49`, `50`-`8C`, `B4 C0`, `40 23` |
+
+  Every value agrees and every register is exactly one FM channel lower. The
+  reference loads the voice on FM5, the engine on FM4. The surrounding services
+  agree in full, including the four `A4`/`A0`/`A6`/`A2` frequency writes that
+  open this very service.
+- **The ROM's slot rule says FM5, and it is not a search.** `zPlaySound` takes
+  the SFX header's own channel byte, does `sub 2` then `add a,a`, and indexes
+  `zMusicTrackOffs`, whose entries are `zSongFM3, 0000h, zSongFM4, zSongFM5`
+  and then the three PSG tracks (s2.sounddriver.asm:2210-2251, :747-757). The
+  request at this row is `B5h`, its header declares channel byte `05h`, and
+  `(5 - 2) * 2` is offset 6, which is `zSongFM5`.
+- **The engine's own mapping also says FM5.** `SmpsSequencer.mapFmChannel`
+  sends `5` to linear channel 4, and `writeTrackFrequency`'s port split sends
+  linear 4 to port 1 channel 1, which is `B1h`. Loading the SFX directly
+  confirms the header byte the engine reads is `05h`.
+- **So the emitter of this block is not the SFX header path**, and the obvious
+  hypothesis is dead on both sides of the comparison. The next step is the
+  per-write attribution probe that settled the earlier EHZ ordering
+  divergences: print the music sequencer's track walk with an end marker per
+  track and every chip write inline with its call stack, and find which track
+  produces the block. It is most likely the same override or release path as
+  the PSG channel handback fixed earlier, since the block is a voice load
+  rather than a note.
+- **Not attempted here.** Guessing a channel adjustment without that
+  attribution would be exactly the fitted change the earlier rounds avoided.
+
 ## 2026-09-04 - The CPZ oracle's music id now comes from zMasterPlaylist, and the tick-237 mechanism narrows
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
