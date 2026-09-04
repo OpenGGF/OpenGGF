@@ -27,6 +27,54 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Service 590 attributed: the music voice restore lands after the music
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged by design. **Clean build before
+  every measurement in this entry**, after the stale-build error two cycles
+  ago.
+- **Command:** unchanged, both result lines.
+- **Result, unchanged by this cycle:** `EVENT_VALUE_DIFFERENT`, tick 590,
+  event 1, reference `ym2612 port 1 register 0B4h = 128` against engine
+  `port 0 register 0A4h = 19`. DAC stream `BYTE_DIFFERENT` run 338 byte 0. No
+  engine change landed; what this cycle produced is the attribution and one
+  rejected fix.
+- **What service 590 is.** The reference emits the SFX FM4 track's key-off and
+  then, immediately, the music's voice restore for that channel: `0B4h`,
+  `0B0h`, then the whole operator block. The engine emits the same key-off,
+  then the music tracks' own frequency and PSG writes, and only afterwards the
+  voice restore. Same writes, wrong order.
+- **Both writes attributed with the observer probe.** The key-off comes from
+  the `0F2h` track-end handler through `stopNote`, which is correct and
+  matches. The `0B4h` comes from `updateOverrides` calling
+  `setChannelOverridden`, then `refreshInstrument` and `applyFmPanAmsFms` —
+  the driver's post-service release sweep. The ROM does that work inline:
+  `cfStopTrack` clears the overridden music track's bit and restores its voice
+  as part of the flag itself (Sound/Z80 Sound Driver.asm:3059-3070), inside
+  the SFX update, which `zUpdateEverything` runs before the music update
+  (:650-701). So in the ROM the restore precedes that service's music writes.
+- **A fix was tried and rejected because it does nothing.** The host already
+  exposes `reconcileInactiveSfxTracks`, so the obvious move is to call it from
+  the track-end flag through a new `CoordFlagContext` hook. Implemented and
+  measured: the write order at 590 is byte-for-byte unchanged, so the
+  reconcile does not release the channel at that point. Its per-channel guard
+  requires the sequencer to hold no active track on that channel, and
+  something still satisfies that test when the flag runs. Reverted rather than
+  left in as an inert hook with a citation implying it works.
+- **Next step, stated concretely.** Find why
+  `reconcileInactiveSfxTracks` declines the release immediately after the
+  track-end flag clears the track's active bit — most likely `hasActiveTrack`
+  or the lock ownership test — and make the release happen at the flag rather
+  than in the post-service sweep. The write content already matches; only its
+  position in the service is wrong.
+- **S1 and S2 untouched this cycle:** no source change landed.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and S1's and S2's track-end stop.
+
+
 ## 2026-09-04 - One track end, one key-off; tick 588 -> tick 590
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
