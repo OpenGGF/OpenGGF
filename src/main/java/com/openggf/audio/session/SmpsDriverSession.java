@@ -654,6 +654,17 @@ public final class SmpsDriverSession implements AutoCloseable {
             return SmpsServiceOutcome.GLOBAL_STOP_CONSUMED;
         }
 
+        if (driver.consumeDacIdleLoopPass()) {
+            // The previous service's DAC track queued a sample; the driver
+            // returned into its idle loop, which found zDACIndex non-zero and
+            // enabled the DAC before decoding
+            // (Sound/Z80 Sound Driver.asm:4269-4276). The write therefore
+            // opens this service's window, not the one that queued it.
+            withPort(driverIdentity, port -> {
+                applyProgram(port, policy.enableDacFromIdleLoop());
+                return null;
+            });
+        }
         PendingService service = pendingService;
         if (service != null) {
             if (!service.readiness().ready()) {

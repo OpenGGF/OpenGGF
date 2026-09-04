@@ -27,6 +27,42 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K oracle: the DAC enable belongs to the idle loop; tick 139 event 0 -> 1
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick139`,
+  `bugfix/ai-s3k-oracle-tick139`, over `develop` at `c549f543d`.
+- **Command:** unchanged, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 139, event 0, reference
+  `ym2612 port 0 register 2Bh = 80h` against engine `port 1 register 0A4h = 27`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 139, **event 1**, reference
+  `ym2612 port 0 register 2Ah = 80h` against the same engine write. Event 0 now
+  agrees.
+- **What the ROM does.** `zPlayDigitalAudio` spins in `.dac_idle_loop`
+  (Sound/Z80 Sound Driver.asm:4264-4271) reading `zDACIndex`, and the pass that
+  finds it non-zero writes 2Bh = 80h before decoding (:4272-4276). The index is
+  stored by `zUpdateDACTrack` inside a V-int service (:2896-2903), so the enable
+  is emitted by the idle loop the service returns to, never by the service
+  itself. A sample queued while another plays clears bit 7, so
+  `jp p, .dac_idle_loop` (:4343-4345) sends the loop back through the same
+  enable: one 2Bh = 80h per queued sample. The engine now records the
+  `zDACIndex` store in `SmpsDriver` and lets the service-boundary owner (the
+  S3K capture host, and `SmpsDriverSession.serviceForward` at runtime) emit the
+  physical policy's enable at the start of the following window.
+- **No constant was introduced.** The write, its value and its position are all
+  stated by the listing. S1 and S2 keep an empty `enableDacFromIdleLoop`, since
+  their DAC enable is not written by an idle loop.
+- **Next, and it is a subsystem, not a write.** Tick 139's remaining 36 events
+  and every tick from 140 on are the music DAC byte pump: the reference carries
+  ~265 `2Ah` writes per tick, contiguous and ahead of that tick's service
+  writes, for 3,498 of its 5,263 ticks. The engine plays music DAC inside
+  `Ym2612Chip` rather than on the write bus, so no 2Ah write is produced. The
+  SEGA chant already streams this way through `SmpsSegaPcmTransport`, which is
+  the shape to reuse; the per-tick count must come from the ROM playback loop's
+  own annotated cycle costs (:4299-4351) and the sample's rate byte, not from
+  counting the fixture's rows.
+
+
 ## 2026-09-04 - S3K oracle: the PSG frequency is a whole 16-bit word; tick 138 clears to tick 139
 
 - **Worktree/branch:** `.worktrees/audio-s3k-tick138`,

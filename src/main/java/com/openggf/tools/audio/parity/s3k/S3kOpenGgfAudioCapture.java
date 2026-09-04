@@ -136,6 +136,14 @@ public final class S3kOpenGgfAudioCapture {
                 }
                 driver.serviceOuterFrame();
                 addTick(ticks, driver, writes, referenceTick, corruptWriteTick);
+                if (driver.consumeDacIdleLoopPass()) {
+                    // The V-int that queued the sample has returned; the idle
+                    // loop's next pass finds zDACIndex non-zero and enables the
+                    // DAC (D:4269-4276), so the write opens the following
+                    // service's window rather than closing this one.
+                    applyProgram(driver, Sonic3kSmpsPhysicalPolicy.INSTANCE
+                            .enableDacFromIdleLoop());
+                }
             }
             return new CaptureResult(ticks, unsupported);
             }

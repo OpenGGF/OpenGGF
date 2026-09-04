@@ -104,6 +104,16 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
     private AbstractSmpsData s1SpecialVoicePointer;
     /** Shared Z80 PAL cadence byte: zPALUpdTick / zPalDblUpdCounter. */
     private int palUpdateCounter = 5;
+    /**
+     * Whether a DAC sample has been queued since the idle loop last looked.
+     *
+     * <p>Stands for the ROM's {@code zDACIndex} going non-zero
+     * (skdisasm Sound/Z80 Sound Driver.asm:2903). The DAC idle loop reads the
+     * index on its next pass and enables the DAC (:4269-4276), so the caller
+     * that owns the physical write partition consumes this at the service
+     * boundary rather than inside the update that set it.</p>
+     */
+    private boolean dacQueuedSinceIdleLoopPass;
     private long nextSfxAdmissionOrdinal;
     private SfxContentionObserver sfxContentionObserver = SfxContentionObserver.NONE;
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
@@ -2868,11 +2878,30 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
 
             if (fmLocks[ch] == source) {
                 synthesizer.playDac(source, note);
+                dacQueuedSinceIdleLoopPass = true;
             }
         } else {
             if (fmLocks[ch] == null) {
                 synthesizer.playDac(source, note);
+                dacQueuedSinceIdleLoopPass = true;
             }
+        }
+    }
+
+    /**
+     * Reports and clears whether a DAC sample was queued since the last pass.
+     *
+     * <p>One {@code true} answers one {@code zDACIndex} store, matching the
+     * ROM's one 2Bh = 80h per queued sample: a sample queued while another is
+     * playing clears bit 7, so {@code jp p, .dac_idle_loop} sends the loop
+     * back through the enable (skdisasm Sound/Z80 Sound
+     * Driver.asm:2896-2903, :4343-4345).</p>
+     */
+    public boolean consumeDacIdleLoopPass() {
+        synchronized (sequencersLock) {
+            boolean queued = dacQueuedSinceIdleLoopPass;
+            dacQueuedSinceIdleLoopPass = false;
+            return queued;
         }
     }
 
