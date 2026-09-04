@@ -196,13 +196,13 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * The whole of the first update after the load now agrees, and so do the
-     * four steady-state updates that follow it, because the S3K note-going
-     * path re-sends the frequency every pass and {@code zUpdatePSGTrack}
-     * latches it before reading the volume envelope. What remains is a DAC
-     * run-length divergence: the engine's music sample runs out at tick 143
-     * and emits the idle loop's {@code 2Bh = 0}, where the ROM's is still
-     * playing and is superseded by the next play at tick 145.
+     * Eleven consecutive services now agree, because the S3K note-going path
+     * re-sends the frequency every pass, {@code zUpdatePSGTrack} latches it
+     * before reading the volume envelope, and the sample-end {@code 2Bh = 0}
+     * moved into the DAC byte stream, where whether a play exhausts or is
+     * superseded is excused as Z80 duration. What remains is the DAC track's
+     * own {@code resting} state at the service where the engine's sample has
+     * already ended and the ROM's has not.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -214,11 +214,10 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 5, report.tick());
-        assertEquals(0, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=165, value=19]",
-                report.reference());
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 12, report.tick());
+        assertEquals("MUS_DAC", report.role());
+        assertEquals("resting", report.field());
     }
 
     /**

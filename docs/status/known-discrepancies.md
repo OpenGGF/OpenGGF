@@ -2737,9 +2737,10 @@ shift is the single explicit adjustment the port contract permits.
 
 The S3K driver oracle compares the music DAC byte stream over the whole capture
 window rather than per service window, and does not assert how far a DAC run
-got before it was cut short. Everything else in a tick, including the `2Bh`
-DAC enable and disable and their position among the tick's service writes,
-stays strictly partitioned and compared.
+got before it was cut short, nor whether a run ended by exhausting rather than
+being superseded. The `2Bh = 80h` enable and everything else in a tick stay
+strictly partitioned and compared; the sample-end `2Bh = 0` disable moved into
+the DAC byte stream with the bytes.
 
 ### Original Implementation
 
@@ -2788,15 +2789,41 @@ was exhausted or because a later play cut it short
 cut is Z80 duration: the engine carries the first music sample 1,438 bytes
 where the reference's own play was cut at 1,364.
 
+The sample-end `2Bh = 0` inherits it in turn, and that is why it left the
+service stream. Only an exhausted sample reaches `zPlayDigitalAudio`'s entry,
+which is the sole writer of the disable (:4258-4262); a superseded one jumps
+straight to `.dac_idle_loop` and writes nothing. So the disable's presence
+encodes exactly which of the two endings occurred, which is the quantity
+already excused above. Measured on the committed reference: the first music
+play is superseded at service 145 with no disable at all, while the engine,
+streaming for the whole interval, exhausts the same sample and writes one at
+service 143.
+
+The `2Bh = 80h` enable did not move and must not. The idle loop writes it
+immediately on finding `zDACIndex` non-zero (:4269-4276), and that store
+happens at a service boundary, so every run's start stays pinned to an exact
+tick by strictly compared data.
+
 ### What Is Still Compared
 
 The comparison keeps everything the ROM decides rather than the Z80's clock.
 The run count must match exactly. Every byte the two sides share in a run
 must be equal, in order, which is what proves the sample selection, the DPCM
-decode and the cadence. Run boundaries are the `2Bh` writes, which are
-themselves compared per tick, so run structure is pinned by compared data.
-The cumulative run-length difference is reported on the DAC stream's result
-line as `run-length delta` so a regression in it stays visible.
+decode and the cadence. Run starts are the `2Bh = 80h` enables, which are
+still compared per tick, so run structure is pinned by compared data. No
+`2Ah` byte may stream while the DAC is disabled, on either side, because the
+idle loop streams nothing (:4262-4270); that stays a hard error.
+
+Two quantities are reported rather than asserted, so a regression in either
+stays visible on the DAC stream's result line: `run-length delta` for the
+cumulative byte difference, and `sample-end delta` for the cumulative
+difference in trailing disables.
+
+How many disables fall between two runs is not asserted either, and that was
+measured rather than assumed. Run 0 carries three on both sides, because
+`zPlaySEGAPCM` returns through `zPlayDigitalAudio`'s entry and re-writes the
+disable each time the idle path is re-entered. An earlier draft of this
+excusal asserted "at most one" and was refuted by the reference itself.
 
 ### Removal Condition
 

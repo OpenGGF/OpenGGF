@@ -27,6 +27,87 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The S3K sample-end disable joins the DAC byte stream; tick 143 -> tick 150
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `1b7951cf8`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:**
+  - `S3K audio oracle: MISMATCH`, `EVENT_VALUE_DIFFERENT`, tick 143, event 0,
+    reference `ym2612 port 0 register 0A5h = 19` against engine
+    `port 0 register 2Bh = 0`.
+  - `S3K DAC byte stream: MISMATCH`, `BYTE_DIFFERENT`, run 29, byte 0,
+    reference `0x7C` against engine `0x7F`.
+- **Result after:**
+  - `S3K audio oracle: MISMATCH`, `TRACK_STATE_MISMATCH`, tick 150, role
+    `MUS_DAC`, field `resting`, reference `false` against engine `true`.
+  - `S3K DAC byte stream: MISMATCH`, `BYTE_DIFFERENT`, run 29, byte 0,
+    unchanged.
+- **The ruling, and the ROM behind it.** `zPlayDigitalAudio`'s entry is the
+  only writer of `2Bh = 0` (Sound/Z80 Sound Driver.asm:4258-4262), and a
+  sample reaches that entry only by being exhausted; a sample superseded
+  mid-play jumps straight to `.dac_idle_loop` and writes no disable
+  (:4343-4345). So the disable's presence encodes which of the two endings
+  occurred, and which one occurs is the same Z80 service duration already
+  excused for the run length. It moved into the DAC byte stream with the
+  bytes. The `2Bh = 80h` enable did not move: the idle loop writes it on
+  finding `zDACIndex` non-zero (:4269-4276), which happens at a service
+  boundary, so every run's start stays pinned to an exact tick by strictly
+  compared data. Eleven consecutive services, 139 through 149, now agree.
+- **Two invariants were proposed and both were refuted by the reference
+  itself, which is why neither shipped as an error.**
+  - *At most one disable between two runs.* False. Run 0 carries three on both
+    sides, because `zPlaySEGAPCM` returns through `zPlayDigitalAudio`'s entry
+    and re-writes the disable each time the idle path is re-entered.
+  - *No `2Ah` byte while the DAC is disabled.* False. The reference does it
+    once, at service 3,837. The engine does it 497 times from service 496,
+    which is a real difference, so it is now counted and reported rather than
+    asserted.
+  Both are reported on the DAC stream's result line, as `sample-end delta` and
+  `idle-byte delta`, beside the existing `run-length delta`.
+- **What the DAC stream still asserts:** the run count exactly, and every byte
+  the two sides share in every run, in order. The excusal text in
+  docs/status/known-discrepancies.md, "S3K Music DAC Byte Stream Partition",
+  now says exactly this, including that the two invariants above were measured
+  and dropped.
+- **Break-it evidence, one mutation per claim.** Three guards were each broken
+  on purpose and each broke only its own test. Reverting the disable exclusion
+  in `serviceWrites` fails
+  `theSampleEndDisableIsNotComparedInTheServiceStream`; widening that
+  exclusion to all `2Bh` writes fails
+  `theRunStartEnableStaysComparedInTheServiceStream`, which is what pins the
+  enable; and dropping the idle-byte count fails
+  `bytesStreamedWhileTheDacIsDisabledAreCountedNotFailed`. The existing
+  corrupted-byte test still reports at run 1, ahead of the live frontier.
+- **The retired v1 stream moved too, and the move is the artefact, not a
+  defect.** v1's boot row physically carries the DAC entry disable as an 85th
+  write, which the service comparison no longer sees, so tick 0 now agrees and
+  v1's first divergence is its next sampling artefact: its row for the SEGA
+  PCM start omits the `2Bh = 80h` enable the engine emits. That the enable is
+  still caught there is the point.
+- **Next.** Tick 150's `MUS_DAC.resting`. The engine sets a DAC track's rest
+  bit from its note, but none of the three drivers' DAC paths touch it: S3K's
+  `zUpdateDACTrack` jumps a rest straight to
+  `zUpdateDACTrack_GetDuration` (:2889-2896) without setting
+  `PlaybackControl` bit 4, and S1's `DACUpdateTrack`
+  (s1.sounddriver.asm:277-307) and S2's `zDACUpdateTrack`
+  (s2.sounddriver.asm:759-790) have no rest test at all. That looks like a
+  shared correction rather than a per-driver one and is the next target.
+- **Open, and deliberately not acted on.** The listing's annotated cycle total
+  for one iteration of `.dac_playback_loop` is 303; `Sonic3kSmpsLoader` passes
+  297 as `baseCycles`. The two numbers are recorded here and the constant is
+  unchanged, because the present evidence does not establish which is right.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,109
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S3K tick 143 is Z80 service duration: the DAC pump gets the whole frame
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
