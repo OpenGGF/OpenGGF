@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K first music update matches the driver:** the post-load DAC pass keys
+  off FM6 and restores FM3 mode, `cfSetVoice` writes the release-rate reset,
+  notes send the frequency once without a pan write, and PSG frequencies keep
+  their full width; the S3K oracle clears tick 138 write for write.
 - **Sonic 2 request oracle widened:** four new duplicate-captured request
   windows (EHZ1 continuation, the special-stage transition, and a Chemical
   Plant level-select route) are committed; the oracle matches all 52 transfers
