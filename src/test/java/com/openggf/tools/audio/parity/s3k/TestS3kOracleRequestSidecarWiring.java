@@ -228,6 +228,18 @@ class TestS3kOracleRequestSidecarWiring {
      * admitting service's walk twice: once because the walk had genuinely
      * already run, and once more in {@code primeFirstService}, which models
      * that same skip for a sound admitted outside a service.
+     *
+     * <p>From 760 to 1490 is one more correction, and it is shared by all
+     * three drivers. Each resets the volume envelope index beside the note
+     * fill, in the same routine and under the same do-not-attack guard: S3K
+     * {@code zFinishTrackUpdate} (Sound/Z80 Sound Driver.asm:1055-1069), S2
+     * (s2.sounddriver.asm:948-957) and S1 {@code FinishTrackUpdate}
+     * (s1.sounddriver.asm:436-442). Without it a PSG envelope ran on past the
+     * note that should have restarted it and parked on its terminator, whose
+     * 83h form re-silences the channel on every later pass. The reference
+     * restarts that envelope at 559 while the engine was eight entries in.
+     * The divergence was invisible for as long as it was because {@code
+     * volEnv} is a diagnostic field the comparator does not gate.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -241,9 +253,9 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
                 report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 622, report.tick());
-        assertEquals(20, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=163]",
+        assertEquals(TITLE_MUSIC_TICK + 1352, report.tick());
+        assertEquals(0, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=64, value=33]",
                 report.reference());
     }
 

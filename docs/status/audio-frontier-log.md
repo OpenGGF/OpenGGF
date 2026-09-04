@@ -27,6 +27,52 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Every driver restarts the volume envelope at a note; frontier 760 -> 1490
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, merged with develop at `725d4cfd5`,
+  which did not move the frontier.
+- **What 760 was.** The reference writes the music PSG1 tone and moves on to
+  the next channel; the engine wrote the tone and then a latched silence,
+  `09Fh`, so its event 20 was a silence where the reference had the second
+  channel's tone latch.
+- **Not an ordering fault, which is worth recording.** `zUpdatePSGTrack` sends
+  the frequency first and reads the volume envelope after, and an `83h`
+  terminator then jumps to `zRestTrack`, which falls through into
+  `zSilencePSGChannel` (Sound/Z80 Sound Driver.asm:4058-4130, :4189-4194,
+  :4220-4245). Frequency-then-silence is exactly what the ROM would emit. The
+  engine's order was right; it simply reached the terminator and the ROM did
+  not.
+- **The cause.** Comparing envelope positions service by service, the
+  reference restarts the music PSG1 envelope at service 559 while the engine
+  is eight entries in and still climbing. Every driver resets that index
+  beside the note fill, in the same routine and under the same do-not-attack
+  guard: `zFinishTrackUpdate` (:1055-1069), S2 at
+  `s2.sounddriver.asm:948-957`, and S1 `FinishTrackUpdate` at
+  `s1.sounddriver.asm:436-442`, whose own comment notes it happens even on FM
+  tracks. The engine reset the note fill and the aliased modulation bytes
+  there but never the envelope index, so a PSG envelope ran past the note that
+  should have restarted it, hit its terminator early and parked. A parked `83h`
+  re-silences the channel on every later pass, which is what event 20 was.
+- **Why it stayed hidden.** `volEnv` is registered as a diagnostic field, not
+  a gated one, its own note saying it is "not yet pinned". The comparator
+  therefore never checked the position, and the first visible symptom was a
+  write four hundred services later. Worth revisiting whether it can be gated
+  now, which would move the frontier but stop hiding this class of drift.
+- **The fix is shared, and the other two oracles say so.** The reset is
+  unconditional in all three drivers, so it is applied for all three. The S1
+  gameplay oracles, both S2 driver-state oracles, the S2 published request
+  windows and the S2 request-aware raw stream all stayed green.
+- **Frontier 760 to 1490.** `EVENT_VALUE_DIFFERENT` at tick 1490, event 0:
+  reference `ym2612 port 0 register 64 value 33`, a total-level write, against
+  engine `port 1 register 130 value 255`. The DAC byte stream is unchanged at
+  run 338, byte 0.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,758 tests, 0 failures, 16
+  skips. Ordinary suite 16,475 tests, 0 failures, 22 skips. `-Pguards` 608
+  tests, 0 failures.
+
+
 ## 2026-09-04 - The S3K 1-up restore was lost to a rejected presentation command
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

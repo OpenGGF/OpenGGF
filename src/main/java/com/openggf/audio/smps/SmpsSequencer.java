@@ -2511,6 +2511,16 @@ public class SmpsSequencer implements CoordFlagContext {
         boolean preventAttack = shouldPreventNoteAttack(t);
         if (!preventAttack) {
             t.fillCounter = t.fill;
+            // Every driver resets the volume envelope index beside the note
+            // fill, in the same routine and under the same do-not-attack
+            // guard: S3K zFinishTrackUpdate (Sound/Z80 Sound
+            // Driver.asm:1055-1069), S2 (s2.sounddriver.asm:948-957) and S1
+            // FinishTrackUpdate (s1.sounddriver.asm:436-442), whose own
+            // comment notes it happens even on FM tracks. Without it a PSG
+            // envelope runs on past the note that should have restarted it,
+            // reaches its terminator early, and then parks there: an 83h
+            // terminator re-silences the channel on every later pass.
+            t.envPos = 0;
             if (config.isNoteResetAliasesModulationState()) {
                 // zFinishTrackUpdate clears ModEnvIndex and ModEnvSens for
                 // every stream unit it reads, rest or note, whenever the
