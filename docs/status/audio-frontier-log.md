@@ -167,6 +167,37 @@ defined by `com.openggf.tools.audio.parity`.
   measuring this fixture's counts.
 
 
+## 2026-09-04 - S2 request oracle reaches MATCH on every replayable window
+
+- **Worktree/branch:** `.worktrees/audio-s2-frontier`,
+  `bugfix/ai-s2-request-frontier`, from `develop` `55b40a105`.
+- **Fixtures:** `s2-request-window-w10150-10900`, `-w10900-11650` and
+  `-w11650-12400` under `src/test/resources/audio/parity/s2/`.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=TestS2WidenedRequestOracle
+  '-Dsonic2.rom.path=<abs>/s2.gen' '-Ds2.request.bk2.path=<abs>/src/test/
+  resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/
+  sonic-2-sonic-tails-complete-emeralds.bk2' test -B`
+- **Before:** `w11650-12400` DIVERGENCE at transfer 21, movie row 12132,
+  reference SFX `$A0` against the engine's SFX `$B5` at row 12114.
+- **After:** `MATCH` on all three, at 25, 52 and 27 production transfers.
+- **Two gameplay causes, both mailbox/ownership rather than driver.** The ten-
+  ring and shield monitors send their sound through ROM `PlayMusic`, the music
+  mailbox, not the SFX queue (s2.asm:25913-25914, :25955-25956, :1517-1527), so
+  those bytes make no sound-queue transfer while the driver still classifies
+  them by range at `QueueToPlay` (s2.sounddriver.asm:1565-1571). And the
+  explosion sound belongs to `Obj27_Init` in the explosion's own slot
+  (s2.asm:46717-46734), not to the touch that broke the monitor, which is a
+  pass later whenever `Obj26_Break`'s lowest-free allocation lands below the
+  monitor (:25702-25707). Commits `4dc26bea4` and `cecbb67b4`. No constant was
+  introduced; both fixes are structural and hold for any recording.
+- **Gates at `cecbb67b4`.** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`; both S1 gameplay oracles green; the S3K driver oracle
+  unchanged at tick 128; ordinary suite 16,387 tests and `-Pguards` 607 tests
+  with 0 failures and 0 errors; the full `*TraceReplay` sweep has the same 62
+  failing class names as a control sweep at the base commit.
+
+
+
 ## 2026-09-04 - S3K oracle: the DAC enable belongs to the idle loop; tick 139 event 0 -> 1
 
 - **Worktree/branch:** `.worktrees/audio-s3k-tick139`,
