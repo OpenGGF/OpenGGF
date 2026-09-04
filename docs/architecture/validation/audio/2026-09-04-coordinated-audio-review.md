@@ -100,8 +100,31 @@ comparison uses archived per-test outcomes, not an assumed historic total.
 
 ## Combined and merged verification
 
-Pending. No main-workspace integration, push, or worktree cleanup is claimed
-by this interim report.
+Whole-branch independent review: `review_s3k`, gpt-5.6-sol/high, range
+`4296bc291..ed9fd1e1b`. Verdict: approved with no actionable findings, subject
+to the required combined and post-merge verification. The review checked
+cross-lane ownership, observer compatibility, diagnostic authority, script
+modes, release/handover consistency and explicit deferrals. It found no native
+runtime dependency, backend selection, trace-schema change or submodule edit.
+
+Combined ordinary tests at `ed9fd1e1b`: 16,482 reported executions, zero
+failures/errors, 40 skips (5:04). Archived per-test comparison found no new
+failures or newly skipped tests. The sole absent name is the intentionally
+renamed frontier assertion (`theOracleReachesTheTitleMusicLoadsTrackCadence`
+became `theFullOraclePinsTheNextSfxWriteFrontier`); 17 net new cases execute.
+
+The first combined guard run completed with 609 tests, one failure, zero
+errors/skips: `TestArchUnitRules.core_runtime_cycle_cluster_does_not_gain_top_level_edges`
+reported the new `tools -> version` edge. Lead and independent `review_capture`
+reviewed both version classes: they depend only on JDK/internal version types,
+with no runtime back-edge. The approved correction explicitly admits only this
+leaf build-provenance dependency with a rationale comment. Cycle detection and
+all other ratchets remain unchanged. This is an intentional architecture
+decision, not a pre-existing baseline failure. The initial red reports are
+archived; the full guard suite must pass again before integration.
+
+No main-workspace integration, push, or worktree cleanup is claimed by this
+interim report.
 
 ## Remaining product decisions
 
