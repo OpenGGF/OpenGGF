@@ -118,6 +118,27 @@ final class S2Bk2DriverOracleComparator {
         return List.copyOf(result);
     }
 
+    /** True when a snapshot carries exactly the one EHZ music sequencer the
+     * engine-shaped tick is built from. */
+    static boolean hasSingleEhzMusicSequencer(SmpsDriverSnapshot snapshot) {
+        return snapshot != null && snapshot.sequencers().stream()
+                .filter(entry -> !entry.sfx())
+                .filter(entry -> entry.source().kind()
+                        == SmpsSourceDescriptor.Kind.BASE_MUSIC)
+                .filter(entry -> entry.source().id() == Sonic2Music.EMERALD_HILL.id)
+                .count() == 1;
+    }
+
+    /**
+     * The same mapping for a v2 driver-update tick, whose scope is one engine
+     * driver update rather than one folded reference row.
+     */
+    static S2OracleEngineCapture.EngineTick mapUpdateTick(int ordinal,
+            SmpsDriverSnapshot snapshot,
+            List<S2OracleRawStream.ChipWrite> writes) {
+        return map(new FoldedTick(ordinal, snapshot, writes));
+    }
+
     private static S2OracleEngineCapture.EngineTick map(FoldedTick tick) {
         List<SmpsDriverSnapshot.SequencerEntry> music = tick.snapshot()
                 .sequencers().stream()

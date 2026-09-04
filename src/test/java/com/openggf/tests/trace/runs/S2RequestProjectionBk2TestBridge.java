@@ -16,11 +16,26 @@ public final class S2RequestProjectionBk2TestBridge {
     public record Capture(
             S2ProductionRequestProjector projector, List<Integer> requestRows,
             List<ProductionAudioRow> audioRows,
-            List<PublicAudioRequest> publicAudioRequests) {
+            List<PublicAudioRequest> publicAudioRequests,
+            List<DriverUpdateTick> updateTicks) {
         public Capture {
             requestRows = List.copyOf(requestRows);
             audioRows = List.copyOf(audioRows);
             publicAudioRequests = List.copyOf(publicAudioRequests);
+            updateTicks = List.copyOf(updateTicks);
+        }
+    }
+
+    /**
+     * One completed engine driver update: the last driver snapshot the update
+     * committed and every chip write since the previous update boundary. The
+     * row is provenance only, exactly as the reference's frame field is.
+     */
+    public record DriverUpdateTick(
+            int row, SmpsDriverSnapshot snapshot,
+            List<S2OracleRawStream.ChipWrite> writes) {
+        public DriverUpdateTick {
+            writes = List.copyOf(writes);
         }
     }
 

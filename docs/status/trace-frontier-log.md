@@ -115278,3 +115278,44 @@ The other three death arms remain coordinates only.
   recapture through the shipped command behind it, and no fixture depends on the
   retired ABI-4 candidate core to be believed. Each EmuHawk run was bounded by a
   timeout and left no process behind.
+
+## 2026-09-04 - S2 driver-state v2 reference and its widened frontier
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser `bugfix/ai-s2-request-window-producer` at `24b009f`.
+- The S2 driver-state oracle is no longer confined to the 698-tick v1 payload.
+  A v2 reference covers movie rows 10150 to 12400 with one row per completed
+  vertical-interrupt service, driver RAM 12FEh-2000h sampled by the observer
+  core at the driver's own service return. Captured twice, byte-identical at
+  `e7456239c2f2da0804817d3c47cf81f9346877bbdf4b7f6f912acb7d7ebf0a87`; published
+  gzipped at
+  `7743d513cbcf05306455bf0afa3fbd7ead6fd6197a09ce893e1ac279bd34589a`.
+- Boundary: S2's zVInt falls through into zUpdateDAC, so the service has two
+  returns, 00E7h and 010Fh, both confirmed against the driver image in the
+  committed v1 fixture. Three tail sites at 017Ah, 0710h and 1288h also end the
+  service and carry the same snapshot.
+- Frame shape: 2250 frames, 2243 ticks, 7 zero-service frames, 0 multi-service
+  frames. The PAL double-update branch never fires here and could not add a
+  tick if it did: it calls zUpdateMusic twice inside one interrupt rather than
+  producing a second return, and its gate, IsPalFlag ANDed with zPalModeByte,
+  is zero because zPalModeByte is 00h.
+- **Measurement.** Both sides anchor on driver state, never on a frame: the
+  engine's first tick with exactly one EHZ music sequencer and the reference's
+  first tick whose music tracks are playing. Both land on movie row 10202 and
+  the rows pair one to one from there, 2198 compared.
+  - **Driver state only: first divergence at movie row 11991**, field
+    `global.currentTempo`, expected 9Eh and actual BEh, 409 of 2198 ticks
+    divergent. The driver's committed state agrees for the 1789 ticks before
+    that, which is more than twice the v1 span.
+  - **State and writes: first divergence at movie row 10202**, the first
+    compared tick, `writes[0]` expected `ym0[28h]=06h` and actual
+    `ym0[2Bh]=80h`, 1525 of 2198 ticks divergent. The write stream diverges in
+    order from the start of playback.
+- Unchanged in the same run: the v1 driver oracle still reports **MATCH (698
+  ticks)** and the three request windows still report MATCH at 25, 52 and 27.
+  Parity suite 174 tests, 0 failures, 2 skips; `-Pguards` 607 tests, 0
+  failures.
+- Break-on-purpose: corrupting one reference tempo byte moves the verdict to a
+  divergence at that exact tick, and perturbing every frame value in the
+  reference changes nothing compared, which is what makes the frame field
+  provenance rather than input.

@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 2 driver-state reference v2:** driver RAM is now sampled by the
+  observer core at both `zVInt` returns over rows 10150 to 12400 (2,243
+  services, two byte-identical captures); the driver state agrees for 1,789
+  consecutive services and first diverges on tempo at movie row 11,991.
 - **S3K note cadence follows its own driver:** S3K resends a note's frequency
   on every pass because its modulation routine returns to the fall-through,
   and its PSG update latches frequency before volume even at rest; both are

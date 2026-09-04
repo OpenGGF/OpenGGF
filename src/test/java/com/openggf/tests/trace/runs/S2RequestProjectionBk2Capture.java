@@ -73,6 +73,7 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
         S2ProductionRequestProjector projector = new S2ProductionRequestProjector();
         List<Integer> requestRows = new ArrayList<>();
         ProductionAudioRecorder audioRecorder = new ProductionAudioRecorder();
+        audioRecorder.observeWindow(firstRow, exclusiveEnd);
         int[] productionOutputRow = {-1};
         Sonic2AudioProfile profile = new Sonic2AudioProfile(event -> {
             int row = productionOutputRow[0];
@@ -108,7 +109,8 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                 audioRecorder.presentOpenRow(audio);
                 return new S2RequestProjectionBk2TestBridge.Capture(
                         projector, requestRows, audioRecorder.rows(),
-                        audioRecorder.publicAudioRequests());
+                        audioRecorder.publicAudioRequests(),
+                        audioRecorder.updateTicks());
             }
         } finally {
             productionOutputRowObserver = row -> { };
@@ -129,6 +131,26 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
         private SmpsDriverServiceObserver.ServiceEvent activeService;
         private boolean activeUpdateMusicService;
         private boolean completedDriverService;
+        /**
+         * Driver-update ticks for the v2 driver-state reference. The engine has
+         * no service whose scope equals one ROM vertical interrupt, so an
+         * update tick closes where the engine finishes the audio work for that
+         * update, carrying the last driver snapshot it committed and every chip
+         * write since the previous update boundary.
+         */
+        private final List<S2RequestProjectionBk2TestBridge.DriverUpdateTick>
+                updateTicks = new ArrayList<>();
+        private final List<S2OracleRawStream.ChipWrite> updateWrites =
+                new ArrayList<>();
+        private SmpsDriverSnapshot updateSnapshot;
+        private boolean updateCompleted;
+        private int windowFirstRow = FIRST_ROW;
+        private int windowExclusiveEnd = EXCLUSIVE_END;
+
+        void observeWindow(int firstRow, int exclusiveEnd) {
+            windowFirstRow = firstRow;
+            windowExclusiveEnd = exclusiveEnd;
+        }
 
         DiagnosticObserverSet observers() {
             return new DiagnosticObserverSet(
@@ -168,6 +190,10 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                                 finalSnapshot = snapshot;
                                 completedDriverService = true;
                             }
+                            if (snapshot != null) {
+                                updateSnapshot = snapshot;
+                                updateCompleted = true;
+                            }
                             activeService = null;
                             activeUpdateMusicService = false;
                         }
@@ -176,6 +202,9 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                         @Override
                         public void onYm2612Write(
                                 int port, int register, int value) {
+                            updateWrites.add(new S2OracleRawStream.ChipWrite(
+                                    true, port, register, value,
+                                    S2OracleRawStream.ChipWrite.SERVICE_UPDATE_MUSIC));
                             if (activeUpdateMusicService) {
                                 writes.add(new S2OracleRawStream.ChipWrite(
                                         true, port, register, value,
@@ -186,6 +215,9 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
 
                         @Override
                         public void onPsgWrite(int value) {
+                            updateWrites.add(new S2OracleRawStream.ChipWrite(
+                                    false, 0, 0, value,
+                                    S2OracleRawStream.ChipWrite.SERVICE_UPDATE_MUSIC));
                             if (activeUpdateMusicService) {
                                 writes.add(new S2OracleRawStream.ChipWrite(
                                         false, 0, 0, value,
@@ -212,12 +244,24 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                 return;
             }
             audio.presentFrame(PresentationMode.FORWARD);
+            int closedRow = row;
             S2RequestProjectionBk2TestBridge.ProductionAudioRow observed =
                     finishObservedRow();
             if (observed.row() >= S2OracleSchema.ANCHOR_ROW
                     && observed.row() < EXCLUSIVE_END) {
                 rows.add(observed);
             }
+            // Only updates inside the observed window are published, matching
+            // the reference, whose rows begin at its own first row.
+            if (updateCompleted && closedRow >= windowFirstRow
+                    && closedRow < windowExclusiveEnd) {
+                updateTicks.add(
+                        new S2RequestProjectionBk2TestBridge.DriverUpdateTick(
+                                closedRow, updateSnapshot, updateWrites));
+            }
+            updateWrites.clear();
+            updateSnapshot = null;
+            updateCompleted = false;
         }
 
         S2RequestProjectionBk2TestBridge.ProductionAudioRow finishObservedRow() {
@@ -240,6 +284,10 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                 throw new IllegalStateException("audio observation is incomplete");
             }
             return List.copyOf(rows);
+        }
+
+        List<S2RequestProjectionBk2TestBridge.DriverUpdateTick> updateTicks() {
+            return List.copyOf(updateTicks);
         }
 
         List<S2RequestProjectionBk2TestBridge.PublicAudioRequest>
