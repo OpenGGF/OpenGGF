@@ -2784,7 +2784,17 @@ public class SmpsSequencer implements CoordFlagContext {
             synth.stopDac(this);
         } else {
             if (t.channelId <= 3) {
-                if (t.noiseMode && t.channelId == 2) {
+                if (config.getPsgSilenceShape()
+                        == SmpsSequencerConfig.PsgSilenceShape.TONE_THEN_NOISE) {
+                    // zSilencePSGChannel silences 1Fh + VoiceControl, which is
+                    // the track's own tone channel, and only then adds 0FFh
+                    // for the noise channel, gated on PlaybackControl bit 0
+                    // (Sound/Z80 Sound Driver.asm:4226-4245).
+                    synth.writePsg(this, 0x80 | (t.channelId << 5) | (1 << 4) | 0x0F);
+                    if (t.noiseMode) {
+                        synth.writePsg(this, 0xFF);
+                    }
+                } else if (t.noiseMode && t.channelId == 2) {
                     synth.writePsg(this, 0x80 | (3 << 5) | (1 << 4) | 0x0F);
                 } else {
                     synth.writePsg(this, 0x80 | (t.channelId << 5) | (1 << 4) | 0x0F);

@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K per-track PSG silence writes tone then noise:** a noise PSG3 track
+  silences its own channel before the noise channel as the driver does; S3K
+  oracle at service 502.
 - **Sonic 2 write stream matches through 1,789 services:** SFX tracks walk in
   RAM slot order, PSG takeover claims a channel with one bit and no write, and
   a PSG3 noise SFX re-latches its noise byte on release; every remaining
