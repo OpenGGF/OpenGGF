@@ -27,6 +27,19 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The S2 driver-state v2 window matches on state and writes together
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, after merging the lead's branch head
+  (develop merged in), measured from `mvn clean`.
+- **Both v2 lines are now MATCH (2,198 ticks):** state only, which this branch's
+  speed-shoes ordering fix closed, and state with writes, which the audio work
+  merged in from develop closed. The last recorded write-stream frontier was a
+  divergence at tick 228, movie row 10430, `writes[2]`.
+- Unchanged in the same run: v1 S2 driver oracle `MATCH (698 ticks)` and the
+  three request windows `MATCH` at 25, 52 and 27 transfers. Parity suite 178
+  tests, 0 failures, 2 skips.
+
 ## 2026-09-04 - The S2 tempo divergence closes: the speed-shoes countdown moves to the ROM's display step
 
 - **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,

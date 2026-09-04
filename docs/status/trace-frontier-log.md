@@ -115448,3 +115448,20 @@ The other three death arms remain coordinates only.
   state and writes unchanged at tick 228 with 178 divergent ticks; v1 oracle
   `MATCH (698 ticks)`; request windows `MATCH` at 25, 52 and 27. Ordinary suite
   16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0 failures.
+
+## 2026-09-04 - Level-frame-counter branch re-verified on the merged tree
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase` after merging the lead's
+  `origin/bugfix/ai-speed-shoes-timer-phase` (develop merged in), measured from
+  `mvn clean` so the classes under test are the merged ones.
+- **Full `-Ptrace-replay` with three absolute ROM paths: 854 tests, 8 failures,
+  6 skips**, the same eight classes and the same first-error rows as this
+  branch's earlier entries: `TestS3kReplayReferenceClosureIntegration` frame
+  25589, `TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceRunReplayWalkerControlFlow`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` frame 2252 and
+  `TestS3kAizTraceReplay` frame 20713.
+- Ordinary suite 16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0
+  failures; parity suite 178 tests, 0 failures, 2 skips.
