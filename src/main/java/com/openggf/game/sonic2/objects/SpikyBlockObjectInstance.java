@@ -84,7 +84,7 @@ public class SpikyBlockObjectInstance extends AbstractObjectInstance
         // ObjectManager's update argument is the VBlank-style object counter;
         // Obj68 reads the ROM-visible level counter instead.
         int levelFrameCounter = services().levelManager() != null
-                ? services().levelManager().getFrameCounter() + 1
+                ? services().levelManager().getFrameCounter()
                 : vIntRunCount;
         int d0 = levelFrameCounter >> 6;
         int d1 = d0;

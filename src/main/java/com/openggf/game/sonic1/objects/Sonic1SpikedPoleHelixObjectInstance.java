@@ -206,7 +206,7 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
         // levelManager.getFrameCounter()+1 = current gfc (pre-increment, same as Electrocuter).
         LevelManager levelManager = services().levelManager();
         if (levelManager != null) {
-            int gfc = levelManager.getFrameCounter() + 1;
+            int gfc = levelManager.getFrameCounter();
             animCounter = (-(( gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 0x07;
         }
 
@@ -423,7 +423,7 @@ public class Sonic1SpikedPoleHelixObjectInstance extends AbstractObjectInstance
             LevelManager levelManager = services().levelManager();
             int animFrame = 0;
             if (levelManager != null) {
-                int gfc = levelManager.getFrameCounter() + 1;
+                int gfc = levelManager.getFrameCounter();
                 animFrame = (-((gfc + ANIM_FRAME_DURATION - 2) / ANIM_FRAME_DURATION)) & 0x07;
             }
             frame = (animFrame + phase) & 0x07;

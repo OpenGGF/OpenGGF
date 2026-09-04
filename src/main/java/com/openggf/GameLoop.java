@@ -4605,6 +4605,9 @@ public class GameLoop {
                 levelEvents.updateAfterCameraBoundaryEasing();
             }
             levelManager.postCameraObjectPlacementSync();
+            // The ending cutscene drives LevelManager directly rather than
+            // through LevelFrameStep, which now owns the loop-top increment.
+            levelManager.advanceLevelFrameCounter();
             levelManager.update();
             levelManager.refreshObjectPostCameraRenderState();
         }
