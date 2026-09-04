@@ -1410,7 +1410,7 @@ public class SmpsSequencer implements CoordFlagContext {
                         // `jp z, zKeyOffIfActive` keys the channel off
                         // (:786-790, :2148-2152).
                             if (t.type == TrackType.PSG) {
-                                t.resting = true;
+                                restTrack(t);
                             } else {
                                 stopNote(t);
                             }
@@ -1554,7 +1554,7 @@ public class SmpsSequencer implements CoordFlagContext {
                         break;
                     }
                     setDuration(t, cmd);
-                    playNote(t);
+                    playNote(t, false);
                     break;
                 }
             }
@@ -2398,6 +2398,20 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void playNote(Track t) {
+        playNote(t, true);
+    }
+
+    /**
+     * @param noteByteRead whether this stream unit actually carried a note
+     *     byte. A duration-only unit does not: {@code zGetNextNote} cleared
+     *     the rest bit on entry (Sound/Z80 Sound Driver.asm:910-911) and a
+     *     positive byte goes straight to {@code zStoreDuration} (:917-919),
+     *     which touches neither the rest bit nor the saved note. Only a note
+     *     byte of 80h reaches {@code zRestTrack}. Re-deriving the rest bit
+     *     from the previous unit's note would keep a track resting through a
+     *     duration that follows a rest.
+     */
+    private void playNote(Track t, boolean noteByteRead) {
         boolean preventAttack = shouldPreventNoteAttack(t);
         if (!preventAttack) {
             t.fillCounter = t.fill;
@@ -2429,9 +2443,18 @@ public class SmpsSequencer implements CoordFlagContext {
         // DACUpdateTrack (s1.sounddriver.asm:277-307) and S2's
         // zDACUpdateTrack (s2.sounddriver.asm:759-790) have no rest test at
         // all. Only FM and PSG tracks rest.
-        t.resting = t.type != TrackType.DAC && t.note == 0x80;
+        if (noteByteRead) {
+            t.resting = t.type != TrackType.DAC && t.note == 0x80;
+        } else {
+            t.resting = false;
+        }
 
-        if (t.note == 0x80) {
+        // The whole rest branch belongs to a note byte of 80h, never to a
+        // duration-only unit that leaves the previous unit's note in place.
+        // zGetNextNote sends a positive byte to zStoreDuration (Sound/Z80
+        // Sound Driver.asm:917-919), which silences nothing; only a real rest
+        // byte reaches zRestTrack.
+        if (noteByteRead && t.note == 0x80) {
             if (t.type != TrackType.DAC) {
                 stopNote(t);
             }
@@ -2504,7 +2527,15 @@ public class SmpsSequencer implements CoordFlagContext {
 
             block &= 7;
 
-            t.baseFnum = fnum;
+            if (noteByteRead) {
+                t.baseFnum = fnum;
+            } else {
+                // zStoreDuration stores no frequency (Sound/Z80 Sound
+                // Driver.asm:917-919), so a duration-only unit re-attacks the
+                // frequency the track already holds.
+                fnum = t.baseFnum;
+                block = t.baseBlock;
+            }
             t.baseBlock = block;
 
             int packed = (block << 11) | fnum;
@@ -2585,8 +2616,15 @@ public class SmpsSequencer implements CoordFlagContext {
                 psgNote = 0;
             if (psgNote >= psgFreqTable.length)
                 psgNote = psgFreqTable.length - 1;
-            int reg = psgFreqTable[psgNote];
-            t.baseFnum = reg;
+            int reg;
+            if (noteByteRead) {
+                reg = psgFreqTable[psgNote];
+                t.baseFnum = reg;
+            } else {
+                // zStoreDuration stores no frequency (Sound/Z80 Sound
+                // Driver.asm:917-919); the track keeps its Freq word.
+                reg = t.baseFnum;
+            }
 
             reg += t.detune;
 
@@ -2772,6 +2810,22 @@ public class SmpsSequencer implements CoordFlagContext {
         return freq;
     }
 
+    /**
+     * ROM {@code zRestTrack} (Sound/Z80 Sound Driver.asm:4220-4224): set the
+     * rest bit, return if an SFX is overriding the track, and otherwise fall
+     * through into {@code zSilencePSGChannel}. The routine has no terminating
+     * {@code ret} of its own, so the fall-through is unconditional for a
+     * track the driver still owns, and the silence therefore repeats on every
+     * pass that reaches it.
+     */
+    private void restTrack(Track t) {
+        t.resting = true;
+        if (t.overridden) {
+            return;
+        }
+        stopNote(t);
+    }
+
     @Override
     public void stopNote(Track t) {
         if (t.type == TrackType.FM) {
@@ -2831,7 +2885,14 @@ public class SmpsSequencer implements CoordFlagContext {
             if (t.overridden) {
                 return;
             }
-            int vol = t.note == 0x80 ? 0x0f
+            // The rest test is the track's rest BIT, not the last note byte
+            // read. zUpdatePSGTrack's volume tail adds Volume to the envelope
+            // value and only forces 0Fh when that addition sets bit 4
+            // (Sound/Z80 Sound Driver.asm:4098-4112); the rest bit gates
+            // whether the write happens at all, one line above. Keying on the
+            // note byte instead silenced a track whose last byte was a rest
+            // but which a later duration-only unit had already brought back.
+            int vol = t.resting ? 0x0f
                     : Math.min(0x0F, Math.max(0, t.volumeOffset + t.envValue));
             int ch = t.channelId;
             if (t.noiseMode && ch == 2) {
@@ -3020,20 +3081,28 @@ public class SmpsSequencer implements CoordFlagContext {
                 if (config.getPsgEnvRestCmd()
                         == SmpsSequencerConfig.PsgEnvRestCmd.Z80_81_AND_83
                         && (val == 0x81 || val == 0x83)) {
-                    // zDoVolEnvRest and zDoVolEnvFullRest pop the caller's
-                    // return address, set PlaybackControl bit 4 and end the
-                    // track's pass (Sound/Z80 Sound Driver.asm:4169-4175,
-                    // :4187-4194, :4204-4208). Neither silences the channel,
-                    // which the ROM says outright at :4208. Neither advances
-                    // VolEnv either, so the envelope stays parked on the
-                    // command and re-reads it on every later pass, re-setting
-                    // the rest bit each time. That re-set matters: zGetNextNote
-                    // clears bit 4 when a new note is read (:905-915), and the
-                    // envelope puts it straight back on the same pass. So the
-                    // envelope must NOT be held here, or the rest would be lost
-                    // at the next note.
+                    // zDoVolEnvRest (81h) and zDoVolEnvFullRest (83h) both pop
+                    // the caller's return address and end the track's pass
+                    // (Sound/Z80 Sound Driver.asm:4169-4175, :4187-4194,
+                    // :4204-4208), and neither advances VolEnv, so the
+                    // envelope stays parked and re-reads the command on every
+                    // later pass. That re-read matters: zGetNextNote clears
+                    // bit 4 when a new note is read (:905-915) and the parked
+                    // command puts it straight back on the same pass, so the
+                    // envelope must not be held here.
+                    //
+                    // The two differ in one way. 81h sets the bit itself and
+                    // returns, writing nothing, which the ROM notes at :4208.
+                    // 83h jumps to zRestTrack, which has no terminating ret
+                    // and falls straight through into zSilencePSGChannel
+                    // (:4220-4245), so it silences the channel every pass it
+                    // runs.
                     t.envPos--;
-                    t.resting = true;
+                    if (val == 0x83) {
+                        restTrack(t);
+                    } else {
+                        t.resting = true;
+                    }
                     return;
                 }
                 if (val == 0x80) {

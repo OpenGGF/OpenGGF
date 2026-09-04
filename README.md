@@ -263,6 +263,25 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K duration-only units neither silence nor retune:** a positive stream byte
+  only stores the duration, keeping the existing frequency and rest state; PSG
+  volume silence keys on the rest bit. S3K oracle at service 565.
+- **S2 DAC runs are bounded by the ROM sample length:** runs end at the
+  `zDACLenTbl` length, a silent service, or a selector change; the residual
+  byte difference is a supersession join and is reported as such.
+- **S3K duration-only notes keep the rest state the ROM left:** the note-start path
+  no longer recomputes the rest bit from a stale note byte; S3K oracle at a write
+  difference inside service 551.
+- **S2 DAC stream reports where the reference resyncs:** the byte-709 difference is
+  a merged-play sample join, not decode or selection; the driver-state oracle now
+  matches all 2,198 services for state and writes.
+- **S3K resting a PSG track silences it:** `zRestTrack` runs straight into the
+  PSG channel silence when the driver still owns the track, so a parked envelope
+  rest silences every pass; S3K oracle at service 551.
+- **Speed shoes expire on the ROM's frame in all three games:** the countdown
+  is driven at the display step where `Obj01_ChkShoes` runs, restoring physics
+  and issuing the slow-down command together, and the compensation constant
+  is gone; the S2 driver-state oracle is a full MATCH over 2,198 services.
 - **S3K per-track PSG silence writes tone then noise:** a noise PSG3 track
   silences its own channel before the noise channel as the driver does; S3K
   oracle at service 502.

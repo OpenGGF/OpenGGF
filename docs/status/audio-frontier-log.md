@@ -40,6 +40,361 @@ defined by `com.openggf.tools.audio.parity`.
   three request windows `MATCH` at 25, 52 and 27 transfers. Parity suite 178
   tests, 0 failures, 2 skips.
 
+## 2026-09-04 - A duration-only unit reuses everything; tick 551 -> tick 565
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `33d99b0ec`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 551, event 151, reference
+  `psg 192` against engine `psg 223`. DAC stream `BYTE_DIFFERENT` run 338
+  byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 565, role `SFX_FM4`, field
+  `resting`, reference `false` against engine `true`. DAC stream unchanged.
+  Service 551 now agrees in full, and 565 is the first service of an SFX
+  request.
+- **One defect, found three more times in the same service.** Last cycle
+  stopped a duration-only stream unit re-deriving the *rest bit* from the
+  previous unit's note. The same stale byte was still driving three more
+  decisions, each fixed against the same two ROM lines: `zGetNextNote` sends a
+  positive byte straight to `zStoreDuration` (Sound/Z80 Sound
+  Driver.asm:917-919), which stores no frequency and silences nothing, and
+  only a real `80h` byte reaches `zRestTrack`.
+  1. *The silence.* The rest branch called `stopNote`, so a duration-only unit
+     following a rest silenced the channel. It now runs only for a note byte
+     that is actually `80h`. Event 151 was that silence landing where the
+     reference sent PSG3's frequency.
+  2. *The frequency.* With the silence gone, the note path recomputed the
+     frequency from the stale `80h` and produced `03FFh` where the ROM keeps
+     the track's existing Freq word. Both the FM and PSG branches now reuse
+     the stored `baseFnum` and `baseBlock` when the unit carried no note byte.
+  3. *The PSG volume.* `refreshVolume` forced the silence level `0Fh` when the
+     last note byte was `80h`. The ROM's volume tail has no such rule: it adds
+     Volume to the envelope value and forces `0Fh` only when that addition
+     sets bit 4 (:4098-4112), while the rest *bit* one line above gates
+     whether the write happens at all. It now keys on the rest bit.
+- **An approach measured and dropped along the way.** Keeping a separate
+  "last note that carried a frequency" field and recomputing from it still
+  produced `03FFh`, because the ROM recomputes nothing at all on such a unit.
+  Reusing the stored frequency word is the accurate model, and it needed no
+  new state: `baseFnum` and `baseBlock` already hold it.
+- **S1 and S2 checked by reading their result lines, not the failure count.**
+  All four S2 oracles MATCH: the v1 driver oracle at 698 ticks, the v2
+  state-and-writes and state-only oracles at 2,198 ticks each, and the three
+  request windows at 25, 52 and 27 transfers. Both S1 sound-test captures
+  MATCH at 14,690 and 1,967 ticks.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape.
+- **Gates at this commit, all green.** The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,154
+  tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - S2 DAC runs are bounded by zDACLenTbl; the residual is a supersession join, not data
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `a0a5a47c7`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, DAC stream:** `BYTE DIFFERENT in run 3 at byte 709: reference 0x80,
+  engine 0x8D (92 runs, run-length delta 0, reference resyncs at engine byte 828
+  for 3612 bytes)`.
+- **After, DAC stream:** `BYTE DIFFERENT in run 4 at byte 0: reference 0x80,
+  engine 0x8A (104 runs, run-length delta 497, no resync, previous run
+  superseded: reference 709 and engine 1206 of 1320, 3 complete runs agreed)`.
+- **State lines:** `MATCH (2198 ticks)` for both, unchanged.
+- **The rule.** A run is now at most one decoded sample long, the bound
+  `zWriteToDAC` itself enforces by decrementing `de` from `zDACLenTbl` once per
+  source byte and returning to `zWaitLoop` at zero (s2.sounddriver.asm:505-518,
+  :528-529, :682-726). A run ends at that length, at a service with no sample
+  byte, or at a change of the current sample selector. Each side reads the bound
+  from the ROM's own table through its own selector, so the rule is symmetric
+  and the break-it control, which feeds the reference to both sides, stays
+  green.
+- **What the new line says, and it answers the question directly.** The three
+  runs before the join are full-length 1,320-byte plays and agree byte for byte
+  on both sides, which is what `complete runs agreed` counts. The run that then
+  differs follows a pair of runs that are both short of that same 1,320-byte
+  bound, 709 on the ROM and 1,206 on the engine. By the bound's own criterion
+  those runs were ended by supersession, which is the excused service-duration
+  quantity, not by a decode or selection error.
+- **A byte inside a bounded run would be data and would be fixed.** None is.
+  Aligning each side's superseding sample by its own start, 3,612 bytes agree
+  with zero mismatches, and the reference's byte 709 is `0x80`, the accumulator
+  value every sample starts at, reached by a step of minus nine that no
+  `zDACDecodeTbl` entry can produce.
+- **Also tried and reverted.** Cutting the engine's tick at its driver-service
+  return, to match the reference's sampling point and move the post-service DAC
+  bytes into the next tick, is the actual cause of the phase. It emptied the
+  engine's write stream, taking the state-with-writes line from `MATCH (2198
+  ticks)` to a divergence at tick 0, and was reverted rather than pursued: the
+  write partition is fully matching and is worth more than the DAC line.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; audio packages plus the four
+  extra classes with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10
+  skips.
+
+## 2026-09-04 - The rest-bit contradiction settled, and a duration-only unit fixed
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `a85d1f7b6`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 551, role `MUS_PSG3`, field
+  `resting`, reference `false` against engine `true`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 551, event 151, reference
+  `psg 192` against engine `psg 223`. DAC stream unchanged. Every compared
+  field at 551 now agrees; the remaining difference is 151 writes into that
+  service.
+- **The contradiction is settled, and both of my candidate explanations were
+  wrong.** A probe over the snapshot's own sequencer list shows exactly one
+  entry at services 546 through 556, so the comparator was never reading a
+  stale instance. Threading the oracle's own ordinal into the sequencer, in
+  place of the probe's home-made service counter, shows what the earlier
+  probe had mis-numbered: at service 551 the engine's `playNote` runs with
+  note `80h` and correctly rests the track for the byte it read. Engine and
+  reference were reading *different* notes, so the rest bit was a symptom.
+- **What the streams actually do at 551, decoded on both sides.** The
+  reference's data pointer moves 63039 to 63281, a jump of 242 bytes. The
+  engine reads `0F8h` at offset 3728, jumps to 3966, reads `0E5h`, then reads
+  `06h` at 3969 and ends at 3970: the same 242 bytes. The pointers agree. The
+  final byte is a *duration*, not a note.
+- **The defect.** `playNote` recomputed the rest bit from `t.note` on every
+  call, including a unit that carried only a duration, where `t.note` still
+  holds the previous unit's byte. The previous byte here was a rest, so the
+  engine re-rested a track the ROM had just brought out of rest. The ROM does
+  not: `zGetNextNote` clears the bit on entry (Sound/Z80 Sound
+  Driver.asm:910-911) and a positive byte goes straight to `zStoreDuration`
+  (:917-919), which touches neither the rest bit nor the saved note. Only a
+  note byte of `80h` reaches `zRestTrack`. `playNote` now takes whether the
+  unit carried a note byte, and the duration-only call site passes false.
+- **This is the narrow form of the change that was rejected last cycle.**
+  Clearing the rest bit for *every* read broke the S2 driver oracle at tick
+  208. Clearing it only where the ROM's own path cannot re-set it leaves all
+  four S2 oracles at MATCH, checked by reading their lines: the v1 driver
+  oracle at 698 ticks, the v2 state-and-writes and state-only oracles at 2,198
+  ticks each, and the three request windows at 25, 52 and 27 transfers.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape. The rest-bit clear at the note read leaves the open list, since this
+  entry resolves it.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; all four S2 oracles MATCH as listed above. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,154
+  tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - S2 driver-state v2 reaches MATCH on all 2,198 services; the DAC join is duration, proven
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `a0a5a47c7`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before:** state with writes and state only both DIVERGENCE at tick 1,789
+  (movie row 11991), `global.currentTempo`, reference `0x9e` against the
+  engine's `0xbe`; 409 of 2,198 ticks divergent. DAC stream `BYTE DIFFERENT in
+  run 3 at byte 709 (92 runs, run-length delta 0)`.
+- **After:** state with writes `MATCH (2198 ticks)` and state only
+  `MATCH (2198 ticks)`. DAC stream `BYTE DIFFERENT in run 3 at byte 709:
+  reference 0x80, engine 0x8D (92 runs, run-length delta 0, reference resyncs
+  at engine byte 828 for 3612 bytes)`.
+- **The tempo closed from the gameplay side.** The speed-shoes countdown moved
+  to the ROM's display step on develop, so this branch's merge of `a0a5a47c7`
+  took the last state divergence with it. Nothing on the audio side changed for
+  it.
+- **The DAC join is duration, and that is now proven rather than argued.** The
+  reference's bytes over its services 150-155 sum to exactly 709 and its byte
+  709 is `0x80`, the value `zWriteToDAC`'s accumulator starts every sample at
+  (s2.sounddriver.asm:502-517); the step from the preceding `0x89` is minus
+  nine, which no `zDACDecodeTbl` entry produces, so a second sample begins
+  there. Aligning each side's second sample by its own start, **3,612 bytes
+  agree with zero mismatches**, and the first sample's 709 bytes had already
+  agreed. The engine had played 828 bytes of the first sample where the ROM
+  played 709, a ratio of 1.17 that matches the service cost it does not charge.
+- **The other two hypotheses are ruled out.** It is not sample data: both
+  samples decode identically once aligned. It is not the engine's DAC
+  interpolation leaking into the observed stream: `Ym2612Chip`'s interpolated
+  write deliberately does not call the write observer, because it has no ROM
+  counterpart, so no synthetic byte can reach the compared stream.
+- **What landed.** The comparator now reports, beside an existing byte
+  difference, where the reference's remaining bytes resume in the engine's run
+  and how many agree from there. It decides nothing and suppresses nothing; it
+  distinguishes a merged-play join, which resyncs, from a decode or selection
+  error, which does not. The excusal and all three rejected boundary rules are
+  written up in docs/status/known-discrepancies.md under "S2 Music DAC Byte
+  Stream Partition (Oracle Comparison)".
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; audio packages plus the four
+  extra classes with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10
+  skips.
+
+## 2026-09-04 - S2 DAC run 3 is a supersede with no gap, and no symmetric run boundary exists
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `042b8a858`.
+- **Measurement, not a comparison run.** Three candidate run rules were built
+  and measured, and all three were reverted. The committed comparator is
+  unchanged, and so are its lines: state with writes and state only both stop at
+  tick 1,789 `global.currentTempo`; DAC stream `BYTE DIFFERENT in run 3 at byte
+  709, reference 0x80, engine 0x8D (92 runs, run-length delta 0)`.
+- **Run 3's byte 709 is not a decode error.** The reference's bytes over its
+  ticks 150-155 sum to exactly 709, and its byte 709 is `0x80`, the value
+  `zWriteToDAC`'s accumulator starts every sample at (`ld a,80h` /
+  `ex af,af'` in `zVInt`'s `.dacqueued`, s2.sounddriver.asm:502-517). The step
+  from the preceding `0x89` to `0x80` is minus nine, which no entry of
+  `zDACDecodeTbl` can produce. So a second sample begins there, and the engine's
+  `0x8D` is a legitimate continuation of the first, plus four, which the table
+  does contain. Both sides play the same sample correctly; they merely reach the
+  join at different byte offsets.
+- **The join has no gap, which is why the committed rule misses it.** The
+  reference's own `zCurDAC` changes at its tick 155 while that service is still
+  emitting 121 bytes of the outgoing sample, and the new sample's bytes begin at
+  tick 156. No service is silent, so the gap rule cannot see the boundary.
+- **Three rules were tried and each failed for a stated reason.**
+  1. *Gap, plus a selector change closing the changing service.* Moved the
+     failure to run 4 byte 0 at 100 runs, because the engine's selector and its
+     bytes change in the same service while the reference's selector leads its
+     bytes by one.
+  2. *Selector change alone.* 91 runs, failure at run 1 byte 0. Measured cause:
+     two consecutive plays of one sample change no selector at all. Over the
+     window's first two plays the reference's selector reads `0` throughout and
+     the engine's reads `129` throughout, and only the silent services between
+     them separate the plays.
+  3. *Selector change, phased per producer* — closing after the changing service
+     for the ROM, before it for the engine, on the stated ground that
+     `zUpdateDAC` arms a sample the loop can only play after the service returns
+     while the engine's pump starts it in the same service. This is the closest
+     to correct and was still reverted, because an asymmetric rule makes the
+     comparison disagree with itself: the break-it control feeds the reference
+     to both sides and it failed, `expected MATCH but was BYTE_DIFFERENT`.
+     Weakening that control to land the rule would remove the only evidence the
+     comparison works at all.
+- **What this means.** A supersede with no intervening gap is not comparable
+  under a partition that must be symmetric, because the two producers phase a
+  queued sample differently and that phase is the service-duration quantity
+  already excused for this stream. The honest next step is not another boundary
+  rule. It is either an engine-side signal that marks the first byte of a
+  sample directly, independent of service phase, or accepting the merge and
+  bounding each run's comparison at its own sample's decoded length, which the
+  ROM knows from `zDACLenTbl` and the engine from its `DacData`.
+- **Gates unchanged**, since nothing landed: S2 v1 driver oracle `MATCH (698
+  ticks)`, request windows `MATCH` at 25, 52 and 27 transfers.
+
+## 2026-09-04 - S3K tick 551, and an S2 regression that no gate would have failed on
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `221d275db`.
+- **Measurement, not a comparison run.** Nothing landed from this cycle. It
+  records one rejected change, the reason it was rejected, and a contradiction
+  in my own measurements that the next round should settle before building on
+  either side of it.
+- **The frontier.** `TRACK_STATE_MISMATCH`, tick 551, role `MUS_PSG3`, field
+  `resting`, reference `false` against engine `true`. The DAC stream is
+  unchanged at run 338 byte 0. At service 551 both sides read a new unit: the
+  data pointer jumps from 63039 to 63281, the saved duration goes from 42 to
+  6, and the envelope index resets. The reference leaves rest; the engine does
+  not.
+- **The obvious fix is right about the ROM and wrong for the engine.**
+  `zGetNextNote` clears the rest bit with `res 4` in the instruction after the
+  `res 1` the engine already models, before the coordination-flag loop
+  (Sound/Z80 Sound Driver.asm:910-911). Adding that clear moved the S3K
+  frontier not at all, and it broke S2: the S2 driver oracle went from
+  `MATCH (698 ticks)` to `DIVERGENCE at tick 208, field writes[133],
+  expected psg 087h against psg 09Fh`. Reverting the one line restores
+  `MATCH (698 ticks)`. The change was dropped rather than gated, because it
+  buys S3K nothing and the S2 behaviour it disturbs is not understood.
+- **That regression would have shipped.** The S2 driver oracle's result is
+  printed on a `MEASUREMENT_ONLY` line, so the audio gate stayed at 2,154
+  tests and 0 failures with the regression present. It was caught only by
+  reading the line. Anything touching shared sequencer state needs that line
+  read, not just the failure count.
+- **A contradiction to settle first, stated so it is not built on.** A
+  stack-tagged probe over the services around 551 shows the engine's
+  `playNote` setting `resting = false` for PSG3, with no later `restTrack`
+  call in that service, yet the end-of-service snapshot the comparator reads
+  has `resting = true`. Both cannot be right. The candidates are the probe's
+  own service numbering, which counts music services and not oracle ordinals,
+  and the possibility that the snapshot is taken from a different sequencer
+  instance than the one the probe watched. Resolve that before proposing a
+  mechanism.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and now S1's and S2's rest-bit clear at the note read, which the listings
+  place in their DoNext routines but which the engine cannot adopt without
+  disturbing the S2 oracle.
+
+
+## 2026-09-04 - zRestTrack falls through into the PSG silence; tick 502 -> tick 551
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `de1fe004c`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_MISSING`, tick 502, event 10, reference
+  `psg 223` against `<missing>`. DAC stream `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 551, role `MUS_PSG3`, field
+  `resting`, reference `false` against engine `true`. DAC stream unchanged.
+  The whole 49-service run of missing silences, 502 through 550, now agrees.
+- **The routine, and it is a fall-through with no `ret` of its own.**
+  `zRestTrack` sets the rest bit, returns only when an SFX is overriding the
+  track, and otherwise runs straight on into `zSilencePSGChannel`, which is
+  the very next routine in the listing (Sound/Z80 Sound Driver.asm:4220-4245).
+  So resting a PSG track the driver still owns also silences it, and because
+  a parked volume envelope re-reads its command every pass, the silence
+  repeats every pass.
+- **A correction to my own earlier entry in this branch.** The 2026-09-04
+  entry on the `81h`/`83h` envelope rest commands said "neither silences the
+  channel, which the ROM says outright at :4208". The quoted remark belongs to
+  `zSilencePSGChannel`'s noise test, not to the rest path, and I read the
+  `ret nz` at :4223 as ending `zRestTrack`. It does not. `83h` reaches
+  `zRestTrack` and therefore silences; `81h` sets the bit itself and returns,
+  and genuinely writes nothing. The two are now modelled separately, and the
+  PSG note-fill tail routes through the same helper.
+- **The candidate this round was given, and why it is refuted by the
+  listing.** The fade handlers were proposed as the writer. Neither can be:
+  `zDoMusicFadeOut`'s loop bound is literally
+  `(zSongPSG1-zTracksStart)/zTrack.len`, so it walks DAC and FM only and its
+  per-track call is `zSendTL`, which is FM-only (:2331-2385).
+  `zDoMusicFadeIn` walks `(zSongPSG1-zSongFM1)` FM tracks for volume and
+  touches PSG tracks only at completion, where it clears their SFX-override
+  bit and writes nothing (:2386-2446). No PSG volume leaves either handler.
+- **What actually located it was the pattern's shape.** Scanning the whole
+  reference for services ending in `0DFh 0FFh` gives 1,247 of 5,263: isolated
+  ones at services 0, 1, 49, 128, 421 and 495, all of which are stop or
+  silence-all events, then a 49-service run from 502 to 550, then two-service
+  bursts every eight services at 557, 573, 581, 589, 597 and 605. A run plus a
+  rhythmic burst pattern is a track's own part, not a global, and per-pass
+  repetition is what a parked envelope command produces.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape, which no routine in either listing pins.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,154
+  tests, 0 failures, 10 skips. `TestSonic3kFm3SpecialMode` joins the per-cycle
+  gate for the same reason `TestSonic3kCoordFlagParity` did.
+
+
 ## 2026-09-04 - The S2 tempo divergence closes: the speed-shoes countdown moves to the ROM's display step
 
 - **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
