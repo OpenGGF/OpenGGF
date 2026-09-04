@@ -27,6 +27,70 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - A 16,000-frame AIZ1 window captures splash and collapse, but the frontier is 565
+
+- **Worktree/branch:** `.worktrees/s3k-issue-coverage`,
+  `feature/ai-s3k-aiz1-audio-issue-coverage`, over `develop` at `319d777de`.
+- **Purpose.** Four user-reported S3K AIZ1 audio faults need an arbiter: the
+  insta-shield silent, the water splash wrong, the collapsing bridge wrong, and
+  a note held too long after the AIZ1 Knuckles cutscene.
+- **Capture.** Same producer, movie and power-on epoch as the committed intro
+  reference, with the window extended from 5,400 to 16,000 movie frames:
+
+  ```
+  OGGF_BIZHAWK_STOCK=<stock 2.11> \
+  OGGF_OBSERVER_CORE=<lock-matching gpgx.wbx.zst> \
+  OGGF_WORKDIR=<scratch> OGGF_OUT=<out.jsonl> OGGF_FRAMES=16000 \
+    tools/audio/run_s3k_audio_oracle_reference_v2.sh
+  ```
+
+  15,832 completed services over 16,000 frames, 68,573,797 bytes raw and
+  4,183,143 gzipped. Two serial captures to separate scratch roots were
+  byte-identical at sha256
+  `7747071cbbf8dfaf877e8c537e9c9d97bd3d29ba630ff952523002f8c3f2c00a`.
+- **Observer core.** The lock-matching build, verified against
+  `artifact-lock.json` on all five recorded values: patch `2e1d1e59...`,
+  decompressed core `177fb4b0...`, compressed core `25ee305d...`, build id
+  `9ded8f477abe193d`, observer identity `95188e3c...`. The separate ABI-5
+  install carrying patch `77ba1eab...` is a different build and was not used.
+- **Overlap check: byte-identical.** All 5,263 tick rows of the committed
+  `s3k-aiz1-intro-reference-v2.jsonl.gz` appear verbatim as the first 5,263
+  tick rows of the wider capture. The first differing line is the trailer, and
+  the metadata differs only in its `frames` field.
+- **Result, no sidecar:** `EVENT_MISSING`, tick 128, field `decoded_write`,
+  event 0, reference `ym2612[port 1, register 0x82] = 255` against
+  `<missing>`. This is the known frame-entry mailbox limitation, not a new one.
+- **Result, committed sidecar supplied as `--requests`:**
+  `EVENT_VALUE_DIFFERENT`, tick 565, field `decoded_write`, event 0, reference
+  `ym2612[port 0, register 0x28] = 4` against engine
+  `ym2612[port 0, register 0xA4] = 18`. DAC stream `BYTE_DIFFERENT` run 338
+  byte 0, reference `0x88` against `0x7F`. That reproduces the
+  `bugfix/ai-s3k-oracle-freq-resend` frontier exactly, from a different
+  worktree and a different reference file.
+- **Why the window does not yet arbitrate the four faults.** The frontier is
+  service 565 and the first splash request in this movie is service 4,087. The
+  effects sit far beyond where the comparison currently reaches.
+
+  | Effect | Request | Occurrences in window | First service |
+  |---|---|---|---|
+  | Splash | `sfx_Splash` 0x39 | 37 | 4,087 |
+  | Collapse | `sfx_Collapse` 0x59 | 24 | 1,569 |
+  | Insta-shield | `sfx_InstaAttack` 0x42 | 0 | never |
+
+- **Two structural gaps, not frontier distance.** The insta-shield is never
+  requested anywhere in `s3k-complete-sonic-tails.bk2`, so no window over this
+  movie can cover it; that fault needs a recording in which Sonic double-jumps
+  without a shield. And no music request appears in the mailbox stream at all,
+  only the `E1h` fades and one `FFh`, because `mailbox_sampling` is
+  `frame_entry`. The AIZ1 Knuckles cutscene is identified by its `mus_Knuckles`
+  (`$1F`) request, so locating and covering that fault needs the
+  request-observation producer re-run over the wider window.
+- **Not published.** The capture is validated and duplicate-identical, but its
+  only content beyond the committed intro reference is services 5,264-15,832,
+  which the comparison cannot reach while the frontier is 565. Holding the
+  4.2 MB fixture out of git history until the frontier is close enough to use
+  it.
+
 ## 2026-09-04 - The duration seed lands; both red assertions were the suspects
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
