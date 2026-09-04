@@ -14,6 +14,15 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **PSG noise now always clocks at the hardware rate:** the `audio.psgNoiseShiftEveryToggle`
+  option, which let the PSG noise LFSR shift twice as often as real hardware
+  (once per polarity toggle instead of once per rising edge), is removed. The
+  noise generator always follows the SN76489/libvgm rule now: one shift per
+  rising edge. This is a likely cause of S3K noise-based sound effects (splash,
+  insta-shield, the collapsing bridge) sounding wrong, since the shipped
+  default enabled the every-toggle mode. An existing `config.yaml` that still
+  sets the key has it ignored with a logged warning; nothing else changes.
+
 - **Speed shoes now slow the music down on the same frame they take your speed
   back:** the original does both in one step at the end of a frame, restoring the
   boosted running values and asking the sound program to drop the tempo together.

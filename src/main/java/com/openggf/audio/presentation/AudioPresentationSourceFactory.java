@@ -94,7 +94,6 @@ public final class AudioPresentationSourceFactory
             double outputSampleRate,
             SmpsSequencer.Region region,
             boolean dacInterpolate,
-            boolean psgNoiseShiftEveryToggle,
             boolean fm6DacOff,
             boolean speedShoesEnabled,
             int speedMultiplier,
@@ -119,7 +118,6 @@ public final class AudioPresentationSourceFactory
             return new Settings(
                     48_000,
                     SmpsSequencer.Region.NTSC,
-                    false,
                     false,
                     false,
                     false,

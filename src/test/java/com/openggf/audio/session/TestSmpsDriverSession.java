@@ -252,7 +252,7 @@ class TestSmpsDriverSession {
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(
                         44_100, SmpsSequencer.Region.NTSC,
-                        false, false, false, false, 1,
+                        false, false, false, 1,
                         () -> { }, new DecodedPcmCache(), ignored -> null);
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(
@@ -1113,7 +1113,7 @@ class TestSmpsDriverSession {
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(
                         44_100, SmpsSequencer.Region.NTSC,
-                        false, false, false, false, 1,
+                        false, false, false, 1,
                         () -> { }, new DecodedPcmCache(), ignored -> null);
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(
@@ -1386,7 +1386,7 @@ class TestSmpsDriverSession {
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(
                         44_100, SmpsSequencer.Region.NTSC,
-                        false, false, false, false, 1,
+                        false, false, false, 1,
                         () -> { }, new DecodedPcmCache(), ignored -> null);
         return new AudioPresentationSourceFactory(
                 () -> true, handlers, settings, session);
@@ -1709,7 +1709,7 @@ class TestSmpsDriverSession {
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(
                         44_100, com.openggf.audio.smps.SmpsSequencer.Region.NTSC,
-                        false, false, false, false, 1,
+                        false, false, false, 1,
                         () -> { }, new DecodedPcmCache(), ignored -> null);
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(

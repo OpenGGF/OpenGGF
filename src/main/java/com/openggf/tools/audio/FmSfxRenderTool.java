@@ -180,7 +180,7 @@ public final class FmSfxRenderTool {
             double rate, int maxFrames, boolean music, boolean mutePsg) {
         try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                 "fm-render", 0,
-                new SmpsPhysicalDevice.Settings(rate, false, false),
+                new SmpsPhysicalDevice.Settings(rate, false),
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                 ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();

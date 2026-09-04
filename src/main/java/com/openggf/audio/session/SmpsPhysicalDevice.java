@@ -10,8 +10,7 @@ import java.util.Objects;
 public final class SmpsPhysicalDevice {
     public record Settings(
             double outputSampleRate,
-            boolean dacInterpolate,
-            boolean psgNoiseShiftEveryToggle) {
+            boolean dacInterpolate) {
         public Settings {
             if (!Double.isFinite(outputSampleRate)
                     || outputSampleRate <= 0.0) {
@@ -74,8 +73,6 @@ public final class SmpsPhysicalDevice {
                 Objects.requireNonNull(observer, "observer"),
                 VirtualSynthesizer.Initialization.DEFERRED);
         synth.setDacInterpolate(settings.dacInterpolate());
-        synth.setPsgNoiseShiftOnEveryToggle(
-                settings.psgNoiseShiftEveryToggle());
     }
 
     double outputSampleRate() {
