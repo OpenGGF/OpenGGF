@@ -1070,16 +1070,20 @@ public final class AudioPresentationSourceFactory
         SmpsDriverSnapshot.SequencerEntry entry = sequencerEntry(
                 sequencer, false, source, source.sourceDescriptor());
         int fmDacTrackCount = 0;
+        int psgTrackCount = 0;
         for (int index = 0; index < sequencer.trackCount(); index++) {
             SmpsSequencer.TrackType type = sequencer.trackAt(index).type;
             if (type == SmpsSequencer.TrackType.FM
                     || type == SmpsSequencer.TrackType.DAC) {
                 fmDacTrackCount++;
+            } else if (type == SmpsSequencer.TrackType.PSG) {
+                psgTrackCount++;
             }
         }
         return new PreparedSmpsMusicActivation(
                 new SmpsMusicActivation(
-                        source.sourceDescriptor(), fmDacTrackCount),
+                        source.sourceDescriptor(), fmDacTrackCount,
+                        psgTrackCount),
                 entry,
                 SmpsLogicalTransitionPolicies.forConfig(
                         source.staticConfig()),

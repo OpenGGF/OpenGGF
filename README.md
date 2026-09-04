@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 2 music load writes match `zBGMLoad`:** activation keys FM6 off and
+  silences it before the DAC enable per the song's channel count, and the load's
+  two note-off loops send each slot's own voice-control byte; all 145 load
+  writes agree in order.
 - **S3K rest bits and sample-end follow the driver:** DAC tracks never rest,
   S3K's PSG envelope rests a track without silencing it, only S2 skips
   modulation at rest, and the sample-end DAC disable joins the excused byte
