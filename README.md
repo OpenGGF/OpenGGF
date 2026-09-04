@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K modulation state is compared and matches:** the six modulation bytes
+  joined the compared track state, `zFinishTrackUpdate`'s clears and the 8-bit
+  speed decrement are modelled, a resting FM track advances nothing, and
+  `zSendTL` writes all four operators; S3K oracle reaches service 421.
 - **S3K note attack, envelope rest and PSG volume flags follow the driver:**
   the do-not-attack bit clears at the top of the next note fetch, a parked
   envelope rest re-rests only under that bit, and the PSG volume coordination

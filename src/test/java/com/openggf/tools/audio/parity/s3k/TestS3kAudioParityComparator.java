@@ -33,7 +33,9 @@ class TestS3kAudioParityComparator {
                 fm1.dataPointer(), fm1.transpose(), fm1.volume() + 1, fm1.modulationCtrl(),
                 fm1.voiceIndex(), fm1.amsFmsPan(), fm1.durationTimeout(), fm1.savedDuration(),
                 fm1.frequency(), fm1.detune(), fm1.volEnv(), fm1.noteFillTimeout(),
-                fm1.noteFillMaster()));
+                fm1.noteFillMaster(), fm1.modulationPtr(), fm1.modulationVal(),
+                fm1.modulationWait(), fm1.modulationSpeed(), fm1.modulationDelta(),
+                fm1.modulationSteps()));
         engine.set(1, new S3kAudioTick(victim.ordinal(), victim.lag(), victim.mailbox(),
                 victim.global(), tracks, victim.writes()));
 
@@ -241,7 +243,8 @@ class TestS3kAudioParityComparator {
             String role = S3kAudioParitySchema.ROLES.get(index);
             tracks.add(index == 1
                     ? new S3kAudioTrackState(role, true, false, false, false, 0x00, 1, null,
-                            0, 0x0D, 0, 1, 0xC0, 1, 1, 0x2200, 0, null, null, null)
+                            0, 0x0D, 0, 1, 0xC0, 1, 1, 0x2200, 0, null, null, null,
+                            null, 0, 0, 0, 0, 0)
                     : S3kAudioTrackState.idle(role));
         }
         return new S3kAudioTick(ordinal, false, List.of(0, 0, 0),

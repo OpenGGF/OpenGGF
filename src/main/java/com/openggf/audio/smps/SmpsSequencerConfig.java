@@ -329,6 +329,8 @@ public final class SmpsSequencerConfig {
     private final PsgNoteGoingOrder psgNoteGoingOrder;
     private final PsgEnvRestCmd psgEnvRestCmd;
     private final boolean stepModulationAtRest;
+    private final boolean noteResetAliasesModulationState;
+    private final boolean fmNoteGoingReturnsAtRest;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -381,6 +383,8 @@ public final class SmpsSequencerConfig {
         this.psgNoteGoingOrder = b.psgNoteGoingOrder;
         this.psgEnvRestCmd = b.psgEnvRestCmd;
         this.stepModulationAtRest = b.stepModulationAtRest;
+        this.noteResetAliasesModulationState = b.noteResetAliasesModulationState;
+        this.fmNoteGoingReturnsAtRest = b.fmNoteGoingReturnsAtRest;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -621,6 +625,36 @@ public final class SmpsSequencerConfig {
         return stepModulationAtRest;
     }
 
+    /**
+     * Whether reading a stream unit zeroes two bytes that the S3K track
+     * layout shares between the modulation envelope and normal modulation.
+     * {@code zFinishTrackUpdate} clears {@code ModEnvIndex} and
+     * {@code ModEnvSens} whenever the do-not-attack bit is clear
+     * (skdisasm Sound/Z80 Sound Driver.asm:1055-1069), and those are the same
+     * bytes as {@code ModulationSpeed} at offset 25h and
+     * {@code ModulationValLow} at 22h (:76-92). So on a track using normal
+     * modulation, every note read zeroes the speed counter and the low byte
+     * of the accumulator. It is an aliasing quirk of the shipped driver, not
+     * an intended effect, and S1 and S2 have different track layouts.
+     */
+    public boolean isNoteResetAliasesModulationState() {
+        return noteResetAliasesModulationState;
+    }
+
+    /**
+     * Whether a resting FM track's continuing-note pass returns immediately.
+     * {@code zUpdateFMorPSGTrack}'s {@code .note_going} opens with
+     * {@code bit 4,(ix+zTrack.PlaybackControl) / ret nz}
+     * (skdisasm Sound/Z80 Sound Driver.asm:781-783), so a resting S3K FM
+     * track runs no volume envelope, no note fill, no frequency update and no
+     * modulation at all. {@code zUpdatePSGTrack} has no such test at its
+     * matching entry (:4066-4076), which is why a resting PSG track keeps
+     * sending its frequency and stepping its modulation.
+     */
+    public boolean isFmNoteGoingReturnsAtRest() {
+        return fmNoteGoingReturnsAtRest;
+    }
+
     /** Note-fill expiry tail: LEGACY (S1/S2) or S3K_SPLIT (S3K). */
     public NoteFillTail getNoteFillTail() {
         return noteFillTail;
@@ -702,6 +736,8 @@ public final class SmpsSequencerConfig {
         private PsgNoteGoingOrder psgNoteGoingOrder = PsgNoteGoingOrder.VOLUME_THEN_FREQUENCY;
         private PsgEnvRestCmd psgEnvRestCmd = PsgEnvRestCmd.NONE;
         private boolean stepModulationAtRest = false;
+        private boolean noteResetAliasesModulationState = false;
+        private boolean fmNoteGoingReturnsAtRest = false;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -746,6 +782,8 @@ public final class SmpsSequencerConfig {
         public Builder psgNoteGoingOrder(PsgNoteGoingOrder val) { psgNoteGoingOrder = val; return this; }
         public Builder psgEnvRestCmd(PsgEnvRestCmd val) { psgEnvRestCmd = val; return this; }
         public Builder stepModulationAtRest(boolean val) { stepModulationAtRest = val; return this; }
+        public Builder noteResetAliasesModulationState(boolean val) { noteResetAliasesModulationState = val; return this; }
+        public Builder fmNoteGoingReturnsAtRest(boolean val) { fmNoteGoingReturnsAtRest = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }

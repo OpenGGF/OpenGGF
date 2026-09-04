@@ -505,7 +505,13 @@ public final class S3kAudioReferenceReader {
                     ramByte(ram, base + 0x10),
                     ramByte(ram, base + 0x17),
                     ramByte(ram, base + 0x1E),
-                    ramByte(ram, base + 0x1F)));
+                    ramByte(ram, base + 0x1F),
+                    ramByte(ram, base + 0x20) | ramByte(ram, base + 0x21) << 8,
+                    ramByte(ram, base + 0x23) << 8 | ramByte(ram, base + 0x22),
+                    ramByte(ram, base + 0x24),
+                    ramByte(ram, base + 0x25),
+                    ramByte(ram, base + 0x26),
+                    ramByte(ram, base + 0x27)));
         }
         return tracks;
     }
