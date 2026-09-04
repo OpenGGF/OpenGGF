@@ -144,13 +144,11 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator 
      * stages see {@code sonic3k.asm:10742-10744} and {@code :63207-63209}, where
      * {@code addq.w #1,(Level_frame_counter).w} sits between {@code Wait_VSync}
      * and {@code Process_Sprites} -- so an object running this frame reads the
-     * already-incremented value. The engine advances its own counter in
-     * {@code LevelManager.update()}, after object execution, which is why every
-     * ported {@code Level_frame_counter} gate in the engine reads
-     * {@code getFrameCounter() + 1} (see {@code LevelManager}:922 passing exactly
-     * that into {@code ObjectManager.update}, and {@code CnzBumperObjectInstance},
-     * {@code AizFallingLogObjectInstance}, {@code PointPokeyObjectInstance} and
-     * others).
+     * already-incremented value. The engine advances its own counter at the same
+     * point, in {@code LevelFrameStep} via
+     * {@code LevelManager.advanceLevelFrameCounter()}, so every ported
+     * {@code Level_frame_counter} gate reads {@code getFrameCounter()} with no
+     * adjustment.
      *
      * <p>This replaces a free-running counter that was seeded from the level
      * counter once at stage setup and then self-incremented. It read one below
@@ -160,7 +158,7 @@ public class Sonic3kBonusStageCoordinator extends AbstractBonusStageCoordinator 
      */
     private int romLevelFrameCounter() {
         var levelManager = GameServices.levelOrNull();
-        return levelManager != null ? levelManager.getFrameCounter() + 1 : 0;
+        return levelManager != null ? levelManager.getFrameCounter() : 0;
     }
 
     public S3kSlotBonusStageRuntime activeSlotRuntime() {

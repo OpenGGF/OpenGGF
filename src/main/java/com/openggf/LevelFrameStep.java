@@ -240,6 +240,13 @@ public final class LevelFrameStep {
         dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
 
+        // ROM: the level loop increments Level_frame_counter immediately after
+        // the V-blank wait and before the object pass, in all three games
+        // (docs/s1disasm/sonic.asm:3001-3006, docs/s2disasm/s2.asm:5090-5094,
+        // docs/skdisasm/sonic3k.asm:7919-7925). Every routine that runs this
+        // frame therefore reads the already-incremented value.
+        levelManager.advanceLevelFrameCounter();
+
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
         //     cyclers in step 6) runs this frame. This is the canonical per-frame

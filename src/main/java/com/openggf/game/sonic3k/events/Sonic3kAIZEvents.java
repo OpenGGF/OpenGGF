@@ -2489,7 +2489,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // LevelManager stores the previous completed frame until its later
             // level-update phase. At ScreenEvents the ROM counter has already
             // advanced, so +1 recovers the value ShakeScreen_Setup reads.
-            int romFrameCounter = levelManager().getFrameCounter() + 1;
+            int romFrameCounter = levelManager().getFrameCounter();
             screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[romFrameCounter & 0x3F];
             return;
         }

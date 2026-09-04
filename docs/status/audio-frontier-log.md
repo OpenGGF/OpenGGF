@@ -88,6 +88,165 @@ defined by `com.openggf.tools.audio.parity`.
   tests, 0 failures, 10 skips.
 
 
+## 2026-09-04 - A second S2 driver-state recording: CPZ state MATCHes, writes stop at an SFX channel choice
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `9f8f21058`.
+- **Fixture:** `s2-driver-state-cpz-w2700-3450.reference-v2.jsonl.gz`, new,
+  captured from `s2-lvl-select-CPZ.bk2` over movie rows [2700,3450). 744 ticks
+  across 750 frames, 6 of them run past by an overrunning service, 94,990
+  writes. A different movie, a different zone and a different song from the
+  widened EHZ span.
+- **Command:** `run-s2-request-window.sh --request-window-mode driver-state`
+  with the CPZ movie and its sha256, `--first-row 2700 --exclusive-end 3450`,
+  recorded in full in the fixture metadata.
+- **The core was not rebuilt.** The build the widen lane left under its scratch
+  root matches `artifact-lock.json` on all four values, compressed digest,
+  decompressed digest, build id and observer identity, so it was installed
+  beside the stock distribution and used as is. A previous entry said no such
+  core existed anywhere; that was a fact about a search capped at six
+  directory levels, not about the machine.
+- **Duplicate-capture gate met:** two serial captures to distinct absent
+  external paths, byte-identical at
+  `af5ec3e65137d3cc1670433b368247dcf25440cc8ea2a7ebf7478c6ddc680bd7`.
+- **Result, state only:** `MATCH (720 ticks)`. The engine's driver state agrees
+  with a second recording across the whole span after the load.
+- **Result, state and writes:** DIVERGENCE at tick 237 (movie row 2968), field
+  `writes[4]`, reference `ym1[0xb1]=0x4` against the engine's
+  `ym1[0xb0]=0x4`; 36 of 719 ticks divergent.
+- **Mechanism candidate for that first divergence: SFX FM channel choice.** The
+  two sides write the same value to two different channels of port 1, `B1`
+  against `B0`, which is FM5 against FM4. The row is the window's second sound
+  request, `B5h`, arriving while the first, `A0h` at row 2959, is still
+  sounding, so the two sides disagree about which FM slot the second SFX takes
+  when one is already in use. Not fixed here: the write comparison had never
+  reached a second overlapping SFX before, and the ROM evidence for the
+  allocation order needs reading `zPlaySound`'s SFX slot search rather than
+  inferring it from one row.
+- **The engine music id was measured, not assumed.** ROM request `8Eh` is
+  engine id `8Ch`. The two are not a fixed distance apart, since EHZ is driver
+  `82h` against engine `81h`, so the id was settled by matching the song's
+  stored header tempo `EEh` against every loadable id
+  (s2.sounddriver.asm:1817-1826).
+- **Requests come from the committed sidecar.** The driver-state payload's own
+  pre-consumption markers carry no sound id, so the already-published
+  `s2-request-window-cpz-w2700-3450` supplies the 33 request transfers as
+  engine stimuli. Feeding them moved the write line from tick 228, the window's
+  first unheard SFX, to tick 237, and cut divergent ticks from 306 to 36.
+- **One documented offset.** The writes are compared from the first wholly
+  post-load service onwards, one later than the state. This window's load spans
+  two services because the Saxman decompression overruns its frame, so the
+  anchored service still carries the tail of `zBGMLoad`'s writes while the
+  engine capture emits its load burst as one block and drains it.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the EHZ v2 oracle
+  unchanged at `MATCH (2198 ticks)` on both lines; the three request windows
+  `MATCH` at 25, 52 and 27 transfers; audio packages plus the four extra
+  classes with three ROM paths: 2,062 tests, 0 failures, 0 errors, 10 skips.
+
+## 2026-09-04 - Roadmap step 4: all three routes to a second S2 span are blocked, and the third is the engine's own chain
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `9f8f21058`.
+- **Measurement and survey, not a comparison run.** Nothing landed and no
+  fixture was published. One experiment was run and reverted.
+- **Route one, the committed CPZ level-select recording.** Already published as
+  `s2-request-window-cpz-w2700-3450`, with its own pinned digests and the CPZ
+  music load inside it at movie row 2724, where `zCurSong` goes `91h` to `8Eh`.
+  The engine cannot be driven through it: `S2PublishedRequestWindows` keeps it
+  out of `COMPLETE_RUN_WINDOWS`, documented as the windows the run-chain
+  harness replays, and the CPZ trace under `traces/s2/cpz` starts at
+  `bk2_frame_offset: 2868`, which is 144 rows after that load.
+- **Route two, a fresh CPZ window of the complete-emeralds movie.** Needs a
+  capture, and the capture needs the patch-0001 GPGX observer core. No core
+  matching `artifact-lock.json`'s
+  `25ee305d…` exists on this machine; every `gpgx.wbx.zst` under the repository
+  and the scratch roots is the stock `c4231296…`. The surviving raw captures
+  from the widen lane, under `<agent-scratch>/claude/s2-widen/runs`, are each
+  already windowed to the range they were published at, so `extract` mode has
+  no complete-run source to cut a new window from. Building the core needs a
+  clean pinned BizHawk, GPGX and musl tree plus eleven exact clang-16 and
+  runtime packages, none staged; the pinned repositories are reachable, so this
+  is a cost question rather than an impossibility.
+- **Route three, the fourth already-published window, and this one is new.**
+  `s2-request-window-w13650-14400` spans the EHZ1 exit into the second special
+  stage at movie row 13712, so it crosses a level transition and opens a new
+  music epoch. It is in `COMPLETE_RUN_WINDOWS` and needs no capture, and it has
+  never been compared because `TestS2WidenedRequestOracle` captures only to row
+  12400 and skips any window ending past that.
+- **Widening that capture was tried and reverted.** With
+  `CAPTURE_EXCLUSIVE_END` at 14400 the run-chain replay itself fails on twelve
+  axes before the audio comparison is reached: an uncompared-interior physical
+  walk overrunning destination 101691, 2,122 physics comparator errors in
+  segment 15 with the first non-camera mismatch at frame 2252 field `air`, and
+  dynamic-art gap mismatches on two special-stage-to-EHZ1 handovers. So the
+  audio window stops at 12400 because that is where the engine's own chain is
+  still green, not because of anything in the audio layer.
+- **What this means for step 4.** A second S2 span cannot be measured today
+  without either building the observer core or moving the run chain's green
+  frontier past row 12400. The second of those is a physics-lane question, not
+  an audio one.
+
+## 2026-09-04 - The second S2 recording already exists; what is missing is an engine side to compare it against
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, from `develop` at `33d99b0ec`.
+- **Measurement and survey, not a comparison run.** No engine behaviour
+  changed and no fixture was published. This records why roadmap step 4 did not
+  produce a measurement, so the next lane does not repeat the search.
+- **A second S2 recording is already committed.**
+  `s2-request-window-cpz-w2700-3450` is cut from `s2-lvl-select-CPZ.bk2`, a
+  different movie from the complete-emeralds run, with its own pinned
+  digests and a `production_bound: false` declaration. Its 750 frame rows carry
+  the full 8 KB Z80 RAM image per row, and the CPZ music load is inside the
+  window: `zCurSong` goes `91h` to `8Eh` at movie row 2724.
+- **The engine cannot be driven through it, and the code says so.**
+  `S2PublishedRequestWindows` splits its published list into `ALL` and
+  `COMPLETE_RUN_WINDOWS`, the latter documented as "the candidates the
+  engine-side request oracle can drive today: those cut from the committed
+  complete run, which the run-chain harness replays". The CPZ window is in the
+  first list only.
+- **Nor can a trace replay cover the load.** `src/test/resources/traces/s2/cpz`
+  does replay this movie, through `TestS2CpzLevelSelectTraceReplay`, but its
+  metadata gives `bk2_frame_offset: 2868`. The trace therefore starts 144 rows
+  *after* the song load at 2724, so an engine replay could cover 582 of the
+  window's 750 rows and none of the load the window exists to capture.
+- **Capturing a fresh driver-state v2 reference is blocked on a build, not on
+  a movie.** The v2 producer needs the patch-0001 GPGX audio observer core.
+  No core matching `artifact-lock.json`'s
+  `25ee305d8bcac2567d60fd04c14238784ddd018808d4dafe7d5ef2b8372677b6` exists
+  anywhere on this machine: every `gpgx.wbx.zst` under the repository and under
+  the agent scratch roots is the stock `c4231296…`. The `.NET` harness
+  `BizHawk.Headless.Gpgx.exe` is built in three other worktrees but not here,
+  and building the core needs `prepare-toolchain.sh` fed a pinned source tree
+  and a package directory of exact clang-16 `.deb` files, neither of which is
+  staged. Network access to the pinned repositories does work, so this is a
+  cost question rather than an impossibility.
+- **The third route, decoding the committed v2 capture into driver-state
+  ticks, is real work rather than plumbing.** The v2 raw payload carries
+  tokenised native events, not attributed chip writes; only the v1 reader
+  produces the `ChipWrite` stream the driver-state comparator consumes, and it
+  rejects a v2 schema by design.
+- **Recommendation.** The cheapest route to a measured second recording is to
+  build the observer core once and capture a CPZ driver-state v2 reference
+  over rows 2700-3450, because the engine side then needs only the existing
+  `S2OracleEngineCapture` pattern with the CPZ music id, which plays the song
+  from a constant and takes recorded requests as stimuli. That avoids both the
+  run-chain gap and the v2 event decode. It is an infrastructure task with its
+  own risks, which is why it was not started unilaterally.
+
+## 2026-09-04 - The S2 driver-state v2 window matches on state and writes together
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, after merging the lead's branch head
+  (develop merged in), measured from `mvn clean`.
+- **Both v2 lines are now MATCH (2,198 ticks):** state only, which this branch's
+  speed-shoes ordering fix closed, and state with writes, which the audio work
+  merged in from develop closed. The last recorded write-stream frontier was a
+  divergence at tick 228, movie row 10430, `writes[2]`.
+- Unchanged in the same run: v1 S2 driver oracle `MATCH (698 ticks)` and the
+  three request windows `MATCH` at 25, 52 and 27 transfers. Parity suite 178
+  tests, 0 failures, 2 skips.
+
 ## 2026-09-04 - A duration-only unit reuses everything; tick 551 -> tick 565
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

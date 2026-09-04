@@ -16,13 +16,12 @@ import static org.mockito.Mockito.when;
  *
  * <p>S1/S2 (decimation 1) decrement every frame. S3K (decimation 8) decrements
  * only on frames where {@code (frame + LEVEL_FRAME_PHASE_OFFSET) & 7 == 0}. The
- * offset is one: {@code (Level_frame_counter+1).w} reads the low byte at the
- * word label's second address and does not arithmetically add one, but
- * {@code LevelLoop} increments the counter before {@code Process_Sprites}
- * ({@code docs/skdisasm/sonic3k.asm:7916-7925}) while the engine increments it
- * after the physics pass, so the counter the display step reads is one behind
- * the ROM's. The timer therefore decrements when
- * {@code (frameCounter + 1) & 7 == 0}.
+ * offset is zero: {@code (Level_frame_counter+1).w} reads the low byte at the
+ * word label's second address and does not arithmetically add one, and the
+ * engine advances its counter where {@code LevelLoop} does, before
+ * {@code Process_Sprites} ({@code docs/skdisasm/sonic3k.asm:7919-7925}), so the
+ * display step reads the ROM's own value. The timer therefore decrements when
+ * {@code frameCounter & 7 == 0}.
  */
 class TestSpeedShoesTimer {
 
@@ -53,9 +52,9 @@ class TestSpeedShoesTimer {
     }
 
     @Test
-    void decimationEightAlignsToTheRomCounterOneAheadOfTheEngineCounter() {
+    void decimationEightAlignsToTheRomCounterTheLoopTopAdvanced() {
         for (int frame = 0; frame < 16; frame++) {
-            boolean expected = ((frame + 1) & 7) == 0;
+            boolean expected = (frame & 7) == 0;
             assertEquals(expected, SpeedShoesTimer.isDecrementFrame(frame, 8),
                     "frame " + frame + " decrement gate");
         }

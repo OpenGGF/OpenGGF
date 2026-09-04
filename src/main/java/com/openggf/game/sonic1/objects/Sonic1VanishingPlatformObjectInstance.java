@@ -195,7 +195,7 @@ public class Sonic1VanishingPlatformObjectInstance extends AbstractObjectInstanc
         // object_near obj_frame confirmed the target platform is solid (obj_frame 0) at
         // f2268 in both ROM and the engine after this fix.
         LevelManager levelManager = services().levelManager();
-        int vFrameCount = levelManager != null ? levelManager.getFrameCounter() + 1 : vIntRunCount;
+        int vFrameCount = levelManager != null ? levelManager.getFrameCounter() : vIntRunCount;
         int check = (vFrameCount - phaseOffset) & phaseMask;
         if (check == 0) {
             // subq.b #4,obRoutine(a0) -> routine 6-4 = 2
