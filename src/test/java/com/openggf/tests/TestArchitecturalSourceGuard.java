@@ -122,7 +122,14 @@ class TestArchitecturalSourceGuard {
             // GameLoop keeps only the guarded call, which needs the freeze flag, the
             // run-frame-driver check and the level's ObjectManager, none of which the
             // controller can reach on its own.
-            GAME_LOOP_PATH, 3071
+            // 2026-09-04: 3071 -> 3072 for the one-line
+            // levelManager.advanceLevelFrameCounter() call on the ending-cutscene
+            // path. The ROM increments Level_frame_counter at the top of its level
+            // loop; LevelFrameStep now owns that for every ordinary frame, and the
+            // ending cutscene is the one path that drives LevelManager directly
+            // without going through it. The increment itself lives in LevelManager,
+            // so this is a delegating call, not new logic.
+            GAME_LOOP_PATH, 3072
     );
     private static final int ENGINE_MAX_LARGE_METHODS = 3;
     private static final int ENGINE_LARGE_METHOD_THRESHOLD = 100;

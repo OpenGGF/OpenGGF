@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Level frame counter advances where the ROM does:** all three loops increment
+  `Level_frame_counter` before the object pass; about two dozen per-reader `+1`
+  compensations and the speed-shoes phase offset are deleted.
 - **S3K duration-only units neither silence nor retune:** a positive stream byte
   only stores the duration, keeping the existing frequency and rest state; PSG
   volume silence keys on the rest bit. S3K oracle at service 565.

@@ -93,7 +93,7 @@ public class AizDisappearingFloorObjectInstance extends AbstractObjectInstance
         // previous completed frame until the current Process_Sprites pass, so
         // the value visible to this object is its counter plus one.
         return services().levelManager() != null
-                ? services().levelManager().getFrameCounter() + 1
+                ? services().levelManager().getFrameCounter()
                 : fallbackCounter;
     }
 

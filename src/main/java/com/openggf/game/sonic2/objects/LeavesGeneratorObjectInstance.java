@@ -150,7 +150,7 @@ public class LeavesGeneratorObjectInstance extends AbstractObjectInstance
         // (s2.asm:52090, 52109, 52116). LevelManager still stores the previous
         // completed frame until its late-frame update, so object code observes
         // the next visible level counter here.
-        return levelManager != null ? levelManager.getFrameCounter() + 1 : vIntRunCount;
+        return levelManager != null ? levelManager.getFrameCounter() : vIntRunCount;
     }
 
     private AbstractPlayableSprite mainPlayer() {

@@ -120,7 +120,7 @@ public class SpikyBlockSpikeInstance extends AbstractObjectInstance
         // ROM Obj68_Spike_Action reads Level_frame_counter, not the
         // VBlank-style object update counter passed into ObjectManager.
         int levelFrameCounter = services().levelManager() != null
-                ? services().levelManager().getFrameCounter() + 1
+                ? services().levelManager().getFrameCounter()
                 : vIntRunCount;
         if (waiting != 0) {
             // ROM: move.b (Level_frame_counter+1).w,d0 / andi.b #$3F,d0

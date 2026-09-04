@@ -115393,3 +115393,75 @@ The other three death arms remain coordinates only.
   6568's movement, and both S3K traces return to their baseline results. The
   pre-physics drive point had been cancelling the offset error by applying the
   restore a frame late; the two wrongs are removed together.
+
+## 2026-09-04 - Level_frame_counter is advanced where the ROM advances it, and ~26 per-reader compensations are deleted
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, over its own `58468acb8`.
+- **Command:** the same full `-Ptrace-replay` invocation as the previous entry,
+  with `target/surefire-reports` removed before each run and the reports copied
+  aside for a by-name, by-message diff.
+- **Result: 854 tests, 8 failures, 6 skips, unchanged.** The same eight classes
+  with byte-identical messages as the previous entry's table, so no first-error
+  row moved.
+- **What changed.** All three ROMs increment the level frame counter at the top
+  of the level loop, immediately after the V-blank wait and before the object
+  pass: `docs/s1disasm/sonic.asm:3001-3006`, `docs/s2disasm/s2.asm:5090-5094`,
+  `docs/skdisasm/sonic3k.asm:7919-7925`. The engine incremented it in
+  `LevelManager.update()`, near the end of the frame step, so every routine that
+  ran during the frame read the previous frame's number. `LevelFrameStep` now
+  calls `LevelManager.advanceLevelFrameCounter()` at the ROM's point, and the
+  per-reader `+ 1` compensations are deleted: eight inside `LevelManager` (the
+  object-pass, touch, post-player-hook and oscillation arguments), and the reads
+  in `Sonic1ElectrocuterObjectInstance`, `Sonic1SpikedPoleHelixObjectInstance`,
+  `Sonic1VanishingPlatformObjectInstance`, `Sonic1SpinPlatformObjectInstance`,
+  `LeavesGeneratorObjectInstance`, `SpikyBlockObjectInstance`,
+  `SpikyBlockSpikeInstance`, `PointPokeyObjectInstance`, `CogObjectInstance`,
+  `AizDisappearingFloorObjectInstance`, `AizFallingLogObjectInstance`,
+  `CnzBumperObjectInstance`, `Sonic3kAIZEvents`,
+  `Sonic3kBonusStageCoordinator` and `SidekickCpuController`. The ending
+  cutscene drives `LevelManager` directly rather than through the frame step, so
+  it calls the same method explicitly.
+  `SpeedShoesTimer.LEVEL_FRAME_PHASE_OFFSET` is back to `0`, which is what the
+  previous entry's S3K correction was standing in for.
+- **The intermediate arm, and the reader it found.** The first attempt moved the
+  increment and removed the `+ 1` reads, and two S2 Metropolis traces went red:
+  `TestS2Mtz2LevelSelectTraceReplay` at frame 1268 (`y` expected `0x0465`,
+  actual `0x046D`, 49012 errors) and `TestS2Mtz3LevelSelectTraceReplay` at frame
+  1998 (`player_animation_id` expected `0x0005`, actual `0x0000`, 49261 errors);
+  nothing else moved. The cause was `CogObjectInstance`, which carried the same
+  compensation *inside* its gate expression, `((levelFrameCounter + 1) & 0x0F)`,
+  where a search for `getFrameCounter() + 1` could not see it, plus a
+  first-execution special case that existed only because the raw read was a
+  frame behind. Obj70_Main's own test is
+  `move.b (Level_frame_counter+1).w,d0 / andi.w #$F,d0`
+  (`docs/s2disasm/s2.asm:54662-54665`), where the `+1` is the low byte's odd
+  address rather than an increment, so the gate is now `(counter & 0x0F) == 0`
+  and both MTZ traces returned to green.
+- **Tests ported, not weakened.** Six unit tests pinned the old convention by
+  seeding a stale counter and asserting the recovered value: the MTZ cog gate,
+  the CNZ bumper orbit and bounce angle, the S3K slot bonus-stage frame advance,
+  the S3K panic rev pulse, and the AIZ intro catch-up release. Each now seeds the
+  ROM-visible value the ROM routine actually reads. The `GameLoop` size ratchet
+  moved 3071 -> 3072 for the ending path's single delegating call.
+- **Other gates.** S2 driver-state v2 state only still `MATCH (2198 ticks)`;
+  state and writes unchanged at tick 228 with 178 divergent ticks; v1 oracle
+  `MATCH (698 ticks)`; request windows `MATCH` at 25, 52 and 27. Ordinary suite
+  16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0 failures.
+
+## 2026-09-04 - Level-frame-counter branch re-verified on the merged tree
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase` after merging the lead's
+  `origin/bugfix/ai-speed-shoes-timer-phase` (develop merged in), measured from
+  `mvn clean` so the classes under test are the merged ones.
+- **Full `-Ptrace-replay` with three absolute ROM paths: 854 tests, 8 failures,
+  6 skips**, the same eight classes and the same first-error rows as this
+  branch's earlier entries: `TestS3kReplayReferenceClosureIntegration` frame
+  25589, `TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceRunReplayWalkerControlFlow`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` frame 2252 and
+  `TestS3kAizTraceReplay` frame 20713.
+- Ordinary suite 16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0
+  failures; parity suite 178 tests, 0 failures, 2 skips.
