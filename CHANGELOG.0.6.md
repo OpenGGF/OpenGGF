@@ -14,6 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **S3K sound-effect admission now sends the retail noise-silence write:**
+  every declared PSG effect channel sends the original driver's unconditional
+  noise mute at admission, in header order. This corrects the missing write
+  during collapsing-scenery setup and extends the AIZ1 intro oracle's matching
+  prefix through service 1569. The next service still exposes the separately
+  documented lazy takeover write, and the independent DAC mismatch remains
+  open; this is not a complete audio-parity claim.
+
 - **Four more sound settings now reach playback:** a new guard checks that
   every sound-driver setting survives the step that prepares a sound for
   playback, since a setting missing from that step is silently ignored rather
