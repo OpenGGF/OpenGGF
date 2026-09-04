@@ -768,6 +768,15 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      * zWriteFMIorII} also returns on bit 2 of {@code PlaybackControl}, the
      * SFX-overriding bit (:2552-2553), and {@code zKeyOffIfActive} returns on
      * either that bit or the do-not-attack bit (:3338-3341).
+     *
+     * <p>Those two track bits are the driver's whole arbitration here: the
+     * writes themselves go out through {@code zWriteFMI} / {@code
+     * zWriteFMIorII} straight to the chip, with no test of which track last
+     * claimed the channel. They must therefore bypass this class's FM lock
+     * table, which would otherwise drop them whenever the incoming SFX is
+     * taking the channel from an SFX that still holds it - exactly the case
+     * where the ROM's key off is audible, because it releases the outgoing
+     * SFX's note before the new one attacks.
      */
     private void emitSfxTrackInitWrites(SmpsSequencer sequencer) {
         if (!sequencer.getConfig().isSfxAdmissionKeyOffAndClearsSsgEg()) {
@@ -787,10 +796,10 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             int channelInPort = channel % 3;
             if (!track.tieNext) {
                 int keyOffSelect = port == 0 ? channelInPort : channelInPort + 4;
-                writeFm(this, 0, 0x28, keyOffSelect);
+                writeRawFm(0, 0x28, keyOffSelect);
             }
             for (int operator = 0; operator < 4; operator++) {
-                writeFm(this, port, 0x90 + operator * 4 + channelInPort, 0x00);
+                writeRawFm(port, 0x90 + operator * 4 + channelInPort, 0x00);
             }
         }
     }
@@ -2575,6 +2584,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 if (isSfx && seq.getConfig().getFmSfxReleaseMode()
                         == SmpsSequencerConfig.FmSfxReleaseMode.LEGACY_FULL_RESTORE) {
                     seq.forceSilence(SmpsSequencer.TrackType.FM, i);
+                } else if (isSfx) {
+                    keyOffTornDownSfxTrack(seq, i);
                 }
                 fmLocks[i] = null;
                 updateOverrides(SmpsSequencer.TrackType.FM, i, false);
@@ -2595,6 +2606,34 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         psgLatches.remove(seq);
         sfxAdmissionOrdinals.remove(seq);
         pendingConflictOwners.keySet().removeIf(key -> key.challenger() == seq);
+    }
+
+    /**
+     * A track leaving an SFX runs {@code cfStopTrack}, which clears the
+     * playing flag and then sends {@code zKeyOffIfActive} for the channel
+     * before any voice restore (skdisasm Sound/Z80 Sound Driver.asm:3443-3462).
+     * A sequencer torn down wholesale never executes that flag, so the key off
+     * is issued here on its behalf; without it the outgoing SFX's note keeps
+     * sounding on the channel it just gave back.
+     *
+     * <p>{@code zKeyOffIfActive} returns without writing when the track's
+     * SFX-overriding or do-not-attack bit is set (:3338-3341), which is the
+     * {@code overridden} test below. The write bypasses the lock table because
+     * the ROM's own key off goes straight out through {@code zWriteFMI}.
+     */
+    private void keyOffTornDownSfxTrack(SmpsSequencer seq, int channel) {
+        for (SmpsSequencer.Track track : seq.getTracks()) {
+            if (track.type != SmpsSequencer.TrackType.FM
+                    || track.channelId != channel) {
+                continue;
+            }
+            if (!track.active || track.overridden) {
+                return;
+            }
+            int keyOffSelect = channel < 3 ? channel : (channel % 3) + 4;
+            writeRawFm(0, 0x28, keyOffSelect);
+            return;
+        }
     }
 
     private void releaseLocksWithoutRestoreWrites(SmpsSequencer seq) {
@@ -3173,6 +3212,15 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      */
     protected void writeRawPsg(int val) {
         synthesizer.writePsg(null, val);
+    }
+
+    /**
+     * Driver-owned FM write that skips the channel lock table, modelling a ROM
+     * write issued through {@code zWriteFMI} / {@code zWriteFMIorII} outside
+     * any track's playback (skdisasm Sound/Z80 Sound Driver.asm:2545-2556).
+     */
+    protected void writeRawFm(int port, int register, int value) {
+        synthesizer.writeFm(null, port, register, value);
     }
 
     /**

@@ -27,6 +27,70 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K SFX lifecycle: two missing key offs the intro oracle cannot see
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **Why this is not an oracle cycle.** The AIZ1 intro capture is music only,
+  so no SFX is ever admitted in it. Three conditions the branch's own SFX work
+  changed are therefore invisible to it, and the lead made them merge
+  blockers. New ROM-gated class `TestS3kSfxLifecycleRom` drives them through
+  the runtime request path (`AudioManager.playSfx` / `presentFrame`) and
+  asserts the chip writes, with the owning ROM routine cited on each test.
+- **Defect 1: an SFX taking an FM channel from another SFX sent no key off.**
+  `zSFXTrackInitLoop` keys off each incoming SFX track and clears its SSG-EG
+  operators while the sound loads (`Sound/Z80 Sound Driver.asm:2092-2103`);
+  nothing in that loop asks who holds the channel. The engine emitted those
+  writes as the driver rather than as a track, so `SmpsDriver.writeFm` dropped
+  them whenever the channel was already locked - exactly the takeover case
+  where the key off is audible. Measured with SPLASH (PSG2 + FM4) followed by
+  GRAB (FM4): the takeover service produced `psg[C5], psg[01]` and no FM write
+  at all. They now go out through a new `writeRawFm`, matching the ROM, which
+  writes through `zWriteFMI` with no ownership test.
+- **Defect 2: an SFX torn down wholesale never keyed off its FM note.**
+  `cfStopTrack` clears the playing flag and then sends `zKeyOffIfActive`
+  before any voice restore (`:3443-3449`). A sequencer removed by
+  `stopAllSfx` runs no coordination flag, and S3K's `ROM_VOICE_RESTORE` release
+  mode had replaced the old force-silence with nothing at all, so the note
+  kept sounding on the channel just handed back. `releaseLocks` now issues the
+  key off the flag would have sent, guarded by the same `overridden` test
+  `zKeyOffIfActive` applies. Measured: `stopAllSfx` on SPLASH produced only
+  `psg[DF]`; it now produces `ym0[28]=05, psg[DF]`.
+- **Both fixes proven load-bearing.** Reverting `SmpsDriver.java` alone turns
+  the two new tests red with the pre-fix write streams quoted in the failure
+  messages. The walk-before-judged-finished test is load-bearing on
+  `sfxWalkPrecedesRequest`: flipping that flag false makes the admitting
+  service reach the chip with the insta-shield's opening PSG writes, which the
+  ROM ordering forbids.
+- **The per-track handback test is a regression guard, not an ablated one.**
+  It asserts SPLASH's FM4 track hands its channel back to the music while the
+  PSG2 track keeps playing, which discriminates against whole-sequencer
+  handback by construction. Two ablations aimed at its mechanism did not move
+  it: neither disabling the F2 `releaseChannelToMusic` call nor short-circuiting
+  `reconcileInactiveSfxTracks` changed the result, so the clear comes from a
+  third path I did not identify. Recorded here so the next round does not
+  re-spend those two readings.
+- **Frontier unchanged.** The S3K service stream is still
+  `EVENT_VALUE_DIFFERENT` at tick 751, event 0, reference
+  `ym2612 port 1 register 165 value 80` against engine
+  `port 1 register 130 value 255`. The DAC byte stream is still
+  `BYTE_DIFFERENT` at run 338, byte 0, reference `88h` against engine `7Fh`.
+  Both measured after `mvn clean package`, so the build was not stale.
+- **Gates, all green.** Audio, per-game audio and parity packages with all
+  three ROM paths: 2,696 tests, 0 failures, 16 skips. That run includes the
+  oracle-backed classes, which all passed: `TestS1GameplayAudioDriverOracle`,
+  `TestS1GameplayRun2AudioDriverOracle`, `TestS2DriverStateOracle`,
+  `TestS2CpzDriverStateOracle`, `TestS2PublishedRequestWindows`,
+  `TestS2RequestAwareOracleRawStream`, `TestS3kOracleRequestSidecarWiring` and
+  both S3K fixture contracts.
+- **What was not measured.** I could not reconstruct the standalone
+  `S1AudioParityTool` and `S2AudioOracleTool` command lines in this worktree:
+  the S1 tool rejected every reference path as not a direct child of its
+  validated run root, and the S2 tool reported a changed fixture digest for
+  each committed stream. Those are failures of my invocation, not results; the
+  JUnit classes above cover the same comparisons and did run.
+
+
 ## 2026-09-04 - Live-regression risk audit of this branch, and one defect fixed
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
