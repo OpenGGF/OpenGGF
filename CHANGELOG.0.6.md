@@ -14,6 +14,17 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **The spindash rev pitch now comes from the sound program, as it does on
+  hardware:** the rising pitch while a spindash charges belongs to the sound
+  driver, and both games already carry it. Sonic 2 keeps a rev index beside a
+  60-frame timer, stepping it each time the sound is asked for while the
+  previous one is still playing, capping it, and adding it to the track as a
+  key offset. Sonic 3 & Knuckles carries the same ladder inside the effect's
+  own script. On top of that, the engine was also stretching the sound's
+  playback speed by the player's charge counter, a value the sound program
+  never sees, applied as a speed change rather than a note offset. That
+  invented adjustment is gone, so the rev is whatever the original asks for.
+
 - **Sonic 3 & Knuckles collapsing scenery rings out again, and the spindash
   release stops buzzing:** both effects put a long noise part alongside a short
   instrument part, and in both the noise part is what a player actually hears.
