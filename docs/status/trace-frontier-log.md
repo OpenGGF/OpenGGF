@@ -116593,3 +116593,64 @@ execution for the load span mean the same thing in both. Establish where the
 engine decides that row for each kind before writing the hold.
 
 No code change this round beyond the merge.
+
+## 2026-09-04 - Five arms, one signature: no harness action on the load-completion row can be right for both gap kinds
+
+Same worktree and branch, over merged develop; every arm below is reverted and
+`src/` is clean.
+
+### The arms, and they all fail the same way
+
+Each was measured on the full chain with the landed locator. Walk-failure axis
+first, as always:
+
+| arm | walk-failure axis | segment 2 `sidekick_x` at frame 0 |
+|---|---|---|
+| baseline | walk overruns 101691 | matches |
+| suppress destination players for the load span | `Segment 7` | 3px short, 16,404 errors |
+| one extra player pass on the load-completion row | `Segment 7` | wrong, 143 errors |
+| re-zero the leader's ring cursor there | `Segment 7` | wrong, 117,521 errors |
+| rewrite the ring's contents there | `Segment 7` | wrong, 117,521 errors |
+| re-run creation (`spawnSidekicks`) + a pass there, with the load span held | `Segment 7` | wrong, 163 errors |
+
+Five interventions, three of them opposite in direction, and every one truncates
+at segment 7 having broken the first special-stage return at its own frame 0 on
+the sidekick's position. A signature that stable is not five separate mistakes.
+
+### Why: the engine's destination load is unrelated to the ROM's load span, in
+### opposite directions at the two gap kinds
+
+Measured, leader ring reset against the load-completion row:
+
+| gap | load-completion row | engine creates the destination players | error |
+|---|---|---|---|
+| `seg7_ehz2 -> seg8_cpz1` (level to level) | 61180 | 61050 | **130 rows early** |
+| `ss -> seg2_ehz1` (special-stage return) | 10308 | 10309 | **1 row late** |
+
+At a level-to-level gap the players exist for the whole load and take two ring
+writes the ROM does not. At a special-stage return they do not exist until after
+the load has finished, so there is nothing to suppress and any action taken on
+the load-completion row runs against players the engine has not created yet --
+which is exactly what breaks segment 2 at frame 0 in every arm above.
+
+**No single action on the load-completion row can therefore be correct for
+both.** That is the finding, and it is why the shape keeps repeating.
+
+### Where the fix belongs
+
+Not in `AbstractRunChainTest` and not in the ring. The engine's destination level
+load has to happen on the ROM's load span in the first place -- which means the
+row the engine performs that load on, in each of the two transition paths, is the
+thing to change. Once creation lands on the load-completion row by construction,
+the ledger the ROM specifies (no player execution and no ring write across the
+load, exactly one of each on the `InitPlayers` row, one per row after) follows
+without any compensating action at all.
+
+Until then, do not retry an intervention at the load-completion row: the five
+above cover suppression, addition, cursor re-phasing, content rewriting and
+re-creation, and their numbers are recorded here.
+
+### Baseline unchanged
+
+`-Ptrace-replay` 854 tests / 7 failures / 6 skips, ordinary 16,410 / 0 failures,
+`-Pguards` 607 / 0 failures. The two landed commits are unaffected.
