@@ -105,6 +105,11 @@ public final class Sonic3kSmpsSequencerConfig {
                 // (Sound/Z80 Sound Driver.asm:2337-2343).
                 .fadeDelayCadence(
                         SmpsSequencerConfig.FadeDelayCadence.DECREMENT_THEN_TEST)
+                // TempoWait sits in zUpdateEverything, ahead of zUpdateMusic's
+                // zFillSoundQueue (Sound/Z80 Sound Driver.asm:653-701,
+                // :2607-2621), so a load service does not accumulate for the
+                // song it loads.
+                .tempoWaitPrecedesRequest(true)
                 .noteFillTail(SmpsSequencerConfig.NoteFillTail.S3K_SPLIT)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h

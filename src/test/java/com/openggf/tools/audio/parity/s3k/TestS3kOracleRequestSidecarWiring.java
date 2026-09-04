@@ -199,8 +199,10 @@ class TestS3kOracleRequestSidecarWiring {
      * The {@code E1h} music fade is now driver-owned state rather than an
      * unmodelled request, so the host consumes it like any other and the
      * capture reports no unsupported requests at all. Everything agrees
-     * through service 494, including the fade's own volume ramp. What remains
-     * is the global {@code tempoAccumulator} at service 495.
+     * through service 494, including the fade's own volume ramp, and the
+     * service-495 song load now ends on the accumulator value {@code zBGMLoad}
+     * seeds rather than one accumulation past it. What remains is a PSG
+     * silence 161 writes into that load's own burst.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -212,9 +214,11 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.GLOBAL_STATE_MISMATCH, report.kind());
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
         assertEquals(TITLE_MUSIC_TICK + 357, report.tick());
-        assertEquals("tempoAccumulator", report.field());
+        assertEquals(161, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=223]",
+                report.reference());
     }
 
     /**

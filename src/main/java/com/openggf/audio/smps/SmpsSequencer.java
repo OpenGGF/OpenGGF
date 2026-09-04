@@ -1086,6 +1086,17 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void primeFirstService() {
+        if (config.isTempoWaitPrecedesRequest()) {
+            // The load service's TempoWait already ran, with the previous
+            // tempo, before zUpdateMusic reached zFillSoundQueue
+            // (Sound/Z80 Sound Driver.asm:653-701, :2607-2621), so this song's
+            // first accumulation belongs to the next service. zBGMLoad's seed
+            // of zTempoAccumulator (:1829-1831) is what the load service ends
+            // on. The track walk still runs here.
+            tick();
+            primed = true;
+            return;
+        }
         if (config.isTempoOnFirstTick()) {
             if (tempoWeight != 0) {
                 processTempoFrame();

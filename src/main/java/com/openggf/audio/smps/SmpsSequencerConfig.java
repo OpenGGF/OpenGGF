@@ -333,6 +333,7 @@ public final class SmpsSequencerConfig {
     private final boolean fmNoteGoingReturnsAtRest;
     private final FadeOutHalt fadeOutHalt;
     private final FadeDelayCadence fadeDelayCadence;
+    private final boolean tempoWaitPrecedesRequest;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -389,6 +390,7 @@ public final class SmpsSequencerConfig {
         this.fmNoteGoingReturnsAtRest = b.fmNoteGoingReturnsAtRest;
         this.fadeOutHalt = b.fadeOutHalt;
         this.fadeDelayCadence = b.fadeDelayCadence;
+        this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -659,6 +661,22 @@ public final class SmpsSequencerConfig {
         return fmNoteGoingReturnsAtRest;
     }
 
+    /**
+     * Whether {@code TempoWait} runs before the driver reads its request
+     * mailbox. S3K's is in {@code zUpdateEverything}, ahead of
+     * {@code zUpdateMusic} and its {@code zFillSoundQueue}
+     * (skdisasm Sound/Z80 Sound Driver.asm:653-701, :2607-2621), so the
+     * service that loads a song has already accumulated with the previous
+     * tempo and {@code zBGMLoad}'s seed of the accumulator (:1829-1831) is
+     * the value that service ends on. The newly loaded song's own first
+     * accumulation is the next service; its track walk still runs in the load
+     * service. S1 and S2 run their tempo step inside the music update, after
+     * the queue is filled, and do accumulate on the load service.
+     */
+    public boolean isTempoWaitPrecedesRequest() {
+        return tempoWaitPrecedesRequest;
+    }
+
     /** How the fade's inter-step delay counter is tested. */
     public enum FadeDelayCadence {
         /**
@@ -789,6 +807,7 @@ public final class SmpsSequencerConfig {
         private boolean fmNoteGoingReturnsAtRest = false;
         private FadeOutHalt fadeOutHalt = FadeOutHalt.DAC_ONLY;
         private FadeDelayCadence fadeDelayCadence = FadeDelayCadence.TEST_THEN_DECREMENT;
+        private boolean tempoWaitPrecedesRequest = false;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -837,6 +856,7 @@ public final class SmpsSequencerConfig {
         public Builder fmNoteGoingReturnsAtRest(boolean val) { fmNoteGoingReturnsAtRest = val; return this; }
         public Builder fadeOutHalt(FadeOutHalt val) { fadeOutHalt = val; return this; }
         public Builder fadeDelayCadence(FadeDelayCadence val) { fadeDelayCadence = val; return this; }
+        public Builder tempoWaitPrecedesRequest(boolean val) { tempoWaitPrecedesRequest = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }

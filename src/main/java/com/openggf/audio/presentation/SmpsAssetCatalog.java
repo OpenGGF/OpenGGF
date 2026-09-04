@@ -543,6 +543,7 @@ final class SmpsAssetCatalog {
                 .fmNoteGoingReturnsAtRest(source.isFmNoteGoingReturnsAtRest())
                 .fadeOutHalt(source.getFadeOutHalt())
                 .fadeDelayCadence(source.getFadeDelayCadence())
+                .tempoWaitPrecedesRequest(source.isTempoWaitPrecedesRequest())
                 .noteFillTail(source.getNoteFillTail())
                 .fadeOutDelay(source.getFadeOutDelay())
                 .fadeOutSteps(source.getFadeOutSteps())

@@ -27,6 +27,53 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - An S3K load service does not accumulate for the song it loads
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `38e8777b5`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `GLOBAL_STATE_MISMATCH`, tick 495, field
+  `tempoAccumulator`, reference `64` against engine `128`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 495, event 161, reference
+  `psg 223` against engine `psg 255`. DAC stream unchanged. The tick is the
+  same, but the divergence moved from the service's global state to a write
+  161 events into that service's own burst.
+- **The routine.** `TempoWait` lives in `zUpdateEverything`, ahead of
+  `zUpdateMusic` and its `zFillSoundQueue` (Sound/Z80 Sound
+  Driver.asm:653-701, :2607-2621). So the service that loads a song has
+  already accumulated, using the *previous* tempo, before the load exists, and
+  `zBGMLoad`'s `ld (zTempoAccumulator), a` (:1829-1831) is the value that
+  service ends on. The engine seeded the accumulator and then accumulated
+  again in the same service, giving twice the tempo. The newly loaded song's
+  own first accumulation belongs to the next service; its track walk still
+  runs in the load service, which is why the writes were already right.
+- **Why this never showed until service 495.** The title music loaded at
+  service 139 has tempo 0, so the engine's first-service path took its
+  tempo-zero branch and accumulated nothing. Service 495 is the first load of
+  a song with a non-zero tempo, 64, and the difference is exactly one
+  accumulation of it: reference 64, engine 128, and the engine stayed one
+  accumulation ahead for every service after.
+- **This is the same ordering fact as the fade in the previous commit,** seen
+  in a second place. Both come from `zUpdateEverything` doing its own work
+  before the mailbox is read. S1 and S2 run their tempo step inside the music
+  update, after the queue is filled, and do accumulate on the load service,
+  which the engine already modelled and their oracles confirm; the new
+  `tempoWaitPrecedesRequest` flag defaults to their behaviour.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; and S2's `zFadeOutMusic` clearing
+  `SpeedUpFlag`.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - The S3K music fade becomes driver state; tick 421 -> tick 495
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
