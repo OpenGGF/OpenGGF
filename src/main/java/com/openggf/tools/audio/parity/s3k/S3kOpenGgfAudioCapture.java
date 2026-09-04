@@ -278,6 +278,11 @@ public final class S3kOpenGgfAudioCapture {
             // config already carries from the same routine. zDoMusicFadeOut
             // then steps them once per zUpdateMusic (D:2331-2385), which the
             // sequencer already drives.
+            // zFadeOutMusic writes zFadeDelayTimeout and zFadeDelay before it
+            // looks at anything else, and never asks whether a song is loaded
+            // (D:2306-2312), so the driver records the pair either way.
+            driver.armFadeDelay(
+                    Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutDelay());
             SmpsSequencer music = driver.firstMusicSequencer();
             if (music != null) {
                 music.triggerFadeOut(Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutSteps(),

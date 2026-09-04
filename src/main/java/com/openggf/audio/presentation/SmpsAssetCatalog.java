@@ -547,6 +547,7 @@ final class SmpsAssetCatalog {
                 .psgSilenceShape(source.getPsgSilenceShape())
                 .psgVolumeTail(source.getPsgVolumeTail())
                 .fadeInRestore(source.getFadeInRestore())
+                .driverOwnedFadeDelay(source.isDriverOwnedFadeDelay())
                 .dacNoteKeysOffFm6AndRestoresFm3(
                         source.isDacNoteKeysOffFm6AndRestoresFm3())
                 .enableDacOnSequencerStart(

@@ -164,6 +164,10 @@ public final class Sonic3kSmpsSequencerConfig {
                 // resting one: it ORs 84h over every track and clears bit 2
                 // again on the FM ones (Sound/Z80 Sound Driver.asm:2761-2770).
                 .fadeInRestore(SmpsSequencerConfig.FadeInRestore.OVERRIDE_PSG)
+                // zFadeDelay and zFadeDelayTimeout are driver variables, not
+                // song state, and zFadeOutMusic writes them whether or not a
+                // song is loaded (Sound/Z80 Sound Driver.asm:2306-2312).
+                .driverOwnedFadeDelay(true)
                 .build();
     }
 

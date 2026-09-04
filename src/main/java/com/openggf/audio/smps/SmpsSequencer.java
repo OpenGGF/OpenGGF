@@ -1805,6 +1805,59 @@ public class SmpsSequencer implements CoordFlagContext {
      */
     private boolean fadeArmedOutsideService;
 
+    /**
+     * The running fade delay. S3K keeps it on the driver, so a fade armed with
+     * no song loaded still records it; S1 and S2 keep it on the song
+     * (skdisasm Sound/Z80 Sound Driver.asm:2306-2312 against
+     * s1.sounddriver.asm:1363 and s2.sounddriver.asm:2425-2429).
+     */
+    private int fadeDelayCounter() {
+        if (!config.isDriverOwnedFadeDelay()) {
+            return fadeState.delayCounter;
+        }
+        return fadeState.fadeOut ? host.fadeDelayTimeout() : host.fadeDelay();
+    }
+
+    private void setFadeDelayCounter(int value) {
+        if (config.isDriverOwnedFadeDelay()) {
+            if (fadeState.fadeOut) {
+                host.setFadeDelayTimeout(value);
+            } else {
+                host.setFadeDelay(value);
+            }
+        }
+        fadeState.delayCounter = value;
+    }
+
+    /**
+     * The reload source for the counter above.
+     *
+     * <p>The two steppers use the driver's pair in opposite roles, which is
+     * why these are direction-aware rather than fixed. {@code zDoMusicFadeOut}
+     * decrements {@code zFadeDelayTimeout} and reloads it from
+     * {@code zFadeDelay} (Sound/Z80 Sound Driver.asm:2337-2346);
+     * {@code zDoMusicFadeIn} decrements {@code zFadeDelay} and reloads it from
+     * {@code zFadeDelayTimeout} (:2405-2414). Both arming routines write the
+     * same value to both halves, so the swap only shows once a fade runs.
+     */
+    private int fadeDelayReload() {
+        if (!config.isDriverOwnedFadeDelay()) {
+            return fadeState.delayInit;
+        }
+        return fadeState.fadeOut ? host.fadeDelay() : host.fadeDelayTimeout();
+    }
+
+    private void setFadeDelayReload(int value) {
+        if (config.isDriverOwnedFadeDelay()) {
+            if (fadeState.fadeOut) {
+                host.setFadeDelay(value);
+            } else {
+                host.setFadeDelayTimeout(value);
+            }
+        }
+        fadeState.delayInit = value;
+    }
+
     private void processFade() {
         if (fadeArmedOutsideService) {
             fadeArmedOutsideService = false;
@@ -1842,20 +1895,20 @@ public class SmpsSequencer implements CoordFlagContext {
             // zDoMusicFadeOut: dec a / jr z, .timer_expired, so an armed delay
             // of six steps on the sixth service, not the seventh
             // (Sound/Z80 Sound Driver.asm:2337-2343).
-            fadeState.delayCounter--;
-            if (fadeState.delayCounter != 0) {
+            setFadeDelayCounter(fadeDelayCounter() - 1);
+            if (fadeDelayCounter() != 0) {
                 return;
             }
-        } else if (fadeState.delayCounter > 0) {
+        } else if (fadeDelayCounter() > 0) {
             // zUpdateFadeout reads the delay first and steps only when it is
             // already zero (s2.sounddriver.asm:1686-1697).
-            fadeState.delayCounter--;
+            setFadeDelayCounter(fadeDelayCounter() - 1);
             return;
         }
 
         // ROM: Decrement fade counter and apply volume change
         fadeState.steps--;
-        fadeState.delayCounter = fadeState.delayInit;
+        setFadeDelayCounter(fadeDelayReload());
 
         int dir = fadeState.fadeOut ? 1 : -1;
 
@@ -3887,11 +3940,15 @@ public class SmpsSequencer implements CoordFlagContext {
     public void triggerFadeIn(int steps, int delay) {
         // Start a fade in from current volume (silence) to normal
         fadeState.steps = steps;
-        fadeState.delayInit = delay;
         fadeState.addFm = 1;
         fadeState.addPsg = 1;
-        // ROM: FadeInDelay is NOT initialized, so first step happens immediately
-        fadeState.delayCounter = 0;
+        fadeState.fadeOut = false;
+        setFadeDelayReload(delay);
+        // S1 and S2 leave the fade-in delay uninitialised, so their first step
+        // happens at once. S3K's zFadeInToPrevious writes the same value to
+        // both halves of its driver pair, exactly as zFadeOutMusic does
+        // (Sound/Z80 Sound Driver.asm:2784-2789 against :2306-2312).
+        setFadeDelayCounter(config.isDriverOwnedFadeDelay() ? delay : 0);
         fadeState.active = true;
         fadeState.fadeOut = false; // Fade IN
 
@@ -3965,12 +4022,12 @@ public class SmpsSequencer implements CoordFlagContext {
             return;
         }
         fadeState.steps = steps;
-        fadeState.delayInit = delay;
         fadeState.addFm = 1;
         fadeState.addPsg = 1;
-        fadeState.delayCounter = delay;
-        fadeState.active = true;
         fadeState.fadeOut = true;
+        setFadeDelayReload(delay);
+        setFadeDelayCounter(delay);
+        fadeState.active = true;
 
         // Stop DAC track immediately (can't fade it) - matches ROM zFadeOutMusic
         for (Track track : tracks) {

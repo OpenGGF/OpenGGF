@@ -51,7 +51,8 @@ public final class S3kAudioStateNormalizer {
     private static S3kAudioTick.GlobalState global(
             SmpsSequencerSnapshot music, SmpsDriverSnapshot driver) {
         if (music == null) {
-            return new S3kAudioTick.GlobalState(0, 0, 0, 0, null, null, null, null, null, null,
+            return new S3kAudioTick.GlobalState(0, 0, 0, 0, null, null,
+                    driver.fadeDelay(), driver.fadeDelayTimeout(), null, null,
                     null, null, driver.palUpdateCounter());
         }
         return new S3kAudioTick.GlobalState(
@@ -59,7 +60,12 @@ public final class S3kAudioStateNormalizer {
                 music.tempoAccumulator() & 0xff,
                 music.speedShoes() ? SPEED_SHOES_TEMPO : 0,
                 music.speedupTimeout() & 0xff,
-                null, null, null, null, null, null, null, null,
+                null, null,
+                // zFadeDelay (1C0Eh) and zFadeDelayTimeout (1C0Fh) are driver
+                // variables, not song state (Sound/Z80 Sound
+                // Driver.asm:2306-2312, :2784-2789).
+                driver.fadeDelay(), driver.fadeDelayTimeout(),
+                null, null, null, null,
                 driver.palUpdateCounter());
     }
 

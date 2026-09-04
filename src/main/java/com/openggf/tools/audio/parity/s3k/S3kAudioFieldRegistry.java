@@ -42,9 +42,14 @@ public final class S3kAudioFieldRegistry {
                     "no direct engine byte; DAC state lives in the DAC track", Comparison.DIAGNOSTIC),
             field("fadeOutTimeout", Scope.GLOBAL, "zFadeOutTimeout 1C0D (map §5.1)",
                     "SmpsSequencerSnapshot.fade.steps (shape differs)", Comparison.DIAGNOSTIC),
-            field("fadeDelay", Scope.GLOBAL, "zFadeDelay 1C0E", "fade.delayInit", Comparison.DIAGNOSTIC),
-            field("fadeDelayTimeout", Scope.GLOBAL, "zFadeDelayTimeout 1C0F", "fade.delayCounter",
-                    Comparison.DIAGNOSTIC),
+            // Driver-owned and correct at the arm, but the fade-out timeout
+            // that drives the stepping is still song state, so with no song
+            // loaded the engine arms the pair and then never steps it. Gate
+            // these once zFadeOutTimeout is driver-owned too.
+            field("fadeDelay", Scope.GLOBAL, "zFadeDelay 1C0E",
+                    "SmpsDriverSnapshot.fadeDelay", Comparison.DIAGNOSTIC),
+            field("fadeDelayTimeout", Scope.GLOBAL, "zFadeDelayTimeout 1C0F",
+                    "SmpsDriverSnapshot.fadeDelayTimeout", Comparison.DIAGNOSTIC),
             field("fadeInTimeout", Scope.GLOBAL, "zFadeInTimeout 1C29 (map §5.2)", "none",
                     Comparison.DIAGNOSTIC),
             field("pauseFlag", Scope.GLOBAL, "zPauseFlag 1C10 (map §3.6)",

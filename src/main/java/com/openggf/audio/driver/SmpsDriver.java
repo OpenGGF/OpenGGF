@@ -69,6 +69,17 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
     private final IdentityHashMap<SmpsSequencer, Long> sfxAdmissionOrdinals = new IdentityHashMap<>();
     private final Map<ConflictKey, SfxContentionObserver.Source> pendingConflictOwners = new HashMap<>();
+    /**
+     * {@code zFadeDelay} (1C0Eh) and {@code zFadeDelayTimeout} (1C0Fh), the
+     * driver's own fade delay pair. {@code zFadeOutMusic} sets both to 6 and
+     * {@code zFadeInToPrevious} sets both to 2, neither caring whether a song
+     * is loaded (skdisasm Sound/Z80 Sound Driver.asm:2306-2312, :2784-2789).
+     * The fade steppers decrement the first and reload it from the second
+     * (:2337-2346, :2405-2414).
+     */
+    private int fadeDelay;
+    private int fadeDelayTimeout;
+
     /** zMusicNumber, zSFXNumber0 and zSFXNumber1 (D:698-701). */
     private static final int SOUND_QUEUE_SLOTS = 3;
 
@@ -1801,7 +1812,11 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                     palUpdateCounter,
                     entries,
                     captureLockIds(fmLocks, sequencerIds),
-                    captureLockIds(psgLocks, sequencerIds));
+                    captureLockIds(psgLocks, sequencerIds),
+                    List.of(),
+                    null,
+                    fadeDelay,
+                    fadeDelayTimeout);
         }
     }
 
@@ -1853,6 +1868,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             continuousSfxFlag = snapshot.continuousSfxFlag();
             contSfxLoopCnt = snapshot.contSfxLoopCnt();
             palUpdateCounter = snapshot.palUpdateCounter();
+            fadeDelay = snapshot.fadeDelay();
+            fadeDelayTimeout = snapshot.fadeDelayTimeout();
 
             for (int i = 0; i < entries.size(); i++) {
                 SmpsDriverSnapshot.SequencerEntry entry = entries.get(i);
@@ -2196,6 +2213,39 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      * Stop all SFX sequencers, releasing their channel locks and silencing them.
      * Used when starting override music to prevent partial SFX playback on restore.
      */
+    @Override
+    public int fadeDelay() {
+        return fadeDelay;
+    }
+
+    @Override
+    public void setFadeDelay(int value) {
+        fadeDelay = value & 0xFF;
+    }
+
+    @Override
+    public int fadeDelayTimeout() {
+        return fadeDelayTimeout;
+    }
+
+    @Override
+    public void setFadeDelayTimeout(int value) {
+        fadeDelayTimeout = value & 0xFF;
+    }
+
+    /**
+     * Arms the driver's fade delay pair, as {@code zFadeOutMusic} and
+     * {@code zFadeInToPrevious} both do before anything else
+     * (skdisasm Sound/Z80 Sound Driver.asm:2306-2312, :2784-2789). Neither
+     * routine looks for a song first, so this records the value even when no
+     * music is installed, which is the case the song-owned copy could not
+     * represent at all.
+     */
+    public void armFadeDelay(int value) {
+        setFadeDelay(value);
+        setFadeDelayTimeout(value);
+    }
+
     public void stopAllSfx() {
         synchronized (sequencersLock) {
             sfxRemovalBuffer.clear();

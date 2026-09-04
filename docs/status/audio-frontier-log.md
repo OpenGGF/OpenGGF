@@ -27,6 +27,51 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The fade delay pair moves to the driver, and the ROM swaps its roles
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **The gap this closes.** `zFadeDelay` and `zFadeDelayTimeout` are driver
+  variables. Both `zFadeOutMusic` and `zFadeInToPrevious` write them before
+  looking at anything else, and neither asks whether a song is loaded
+  (Sound/Z80 Sound Driver.asm:2306-2312, :2784-2789). The engine kept the pair
+  on the music sequencer's fade state, so a fade armed with no song recorded
+  nothing at all. The driver now owns both bytes, arms them on a fade request
+  either way, snapshots them and restores them.
+- **S1 and S2 keep their own shape, under a config flag.** They hold a single
+  delay byte per direction and reload it from an immediate rather than from a
+  stored timeout: 3 in both (`s1.sounddriver.asm:1363`, :1381;
+  `s2.sounddriver.asm:2425-2429`) against S3K's 6. Only S3K sets
+  `driverOwnedFadeDelay`.
+- **The ROM swaps the pair's roles between its two steppers, which I had
+  backwards at first.** `zDoMusicFadeOut` decrements `zFadeDelayTimeout` and
+  reloads it from `zFadeDelay` (:2337-2346). `zDoMusicFadeIn` decrements
+  `zFadeDelay` and reloads it from `zFadeDelayTimeout` (:2405-2414). Both
+  arming routines write the same value to both halves, so the swap is
+  invisible until a fade actually runs; the oracle found it at service 2. The
+  engine's accessors are therefore direction-aware rather than fixed.
+- **The gate is not landed yet, and here is exactly why.** With the pair
+  driver-owned, the oracle reaches service 2 and stops: the reference has
+  stepped the counter to 5 and the engine still reads 6. The ROM's
+  `zDoMusicFadeOut` runs from `zUpdateMusic` every service and only tests
+  `zFadeOutTimeout`, so it steps the delay with no song loaded. The engine's
+  fade-out timeout is still song state, so with no song there is no stepper to
+  run. That byte is the next piece to move, and the two counters are gated the
+  moment it does. They stay diagnostic until then, with that reason recorded in
+  the registry rather than left blank.
+- **Caught by a guard, worth noting.** The new config flag failed
+  `TestSmpsSequencerConfigCopyCoverageGuard` until it was added to
+  `SmpsAssetCatalog.copyBuilder`. Without that the presentation layer would
+  have copied the config and silently dropped the flag, so every sound played
+  through `AudioManager` would have used the S1/S2 shape.
+- **Frontier unchanged** at tick 1490, event 0, and the DAC stream at run 338,
+  byte 0.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,758 tests, 0 failures, 16
+  skips. Ordinary suite 16,475 tests, 0 failures, 22 skips. `-Pguards` 608
+  tests, 0 failures.
+
+
 ## 2026-09-04 - Four comparator fields promoted from diagnostic to gated, at no cost
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
