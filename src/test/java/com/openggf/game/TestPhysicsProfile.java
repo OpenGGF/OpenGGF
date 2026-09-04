@@ -1,6 +1,8 @@
 package com.openggf.game;
 
 import com.openggf.game.rules.GameRules;
+import com.openggf.timer.DisplayPhaseTimer;
+import com.openggf.timer.timers.SpeedShoesTimer;
 
 import com.openggf.game.sonic1.Sonic1PhysicsProvider;
 import com.openggf.game.sonic2.Sonic2PhysicsProvider;
@@ -266,24 +268,24 @@ public class TestPhysicsProfile {
     }
 
     @Test
-    public void testSpeedShoesTimerPhaseCompensation_PerGame() {
-        // S1 and S2 have the same structure: the control routine dispatches the
-        // movement modes and only then calls Sonic_Display, which decrements the
-        // shoes timer and restores acceleration
-        // (s1disasm/_incObj/01 Sonic.asm:76,80,186-191; s2.asm:36240,36244,36310-36312).
-        // The engine ticks timers before movement, so both need one extra tick.
-        assertEquals(1, GameRules.SONIC_1.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
-                "S1 restores acceleration in Sonic_Display, after that frame's movement modes have run");
-        assertEquals(1, GameRules.SONIC_2.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
-                "S2 display-time decrement happens after movement, while the engine timer updates before movement");
-        assertEquals(0, GameRules.SONIC_3K.powerUp().speedShoesTimerPrePhysicsExtraTicks(),
-                "S3K phase is set by its every-eighth-frame decrement gate, not by this offset");
+    public void testSpeedShoesCountdownIsADisplayPhaseTimer() {
+        // All three games decrement the shoes timer in Sonic_Display, which the
+        // control routine calls after dispatching the movement modes, and do the
+        // physics restore and the slow-down music command there in the one frame
+        // (docs/s1disasm/_incObj/01 Sonic.asm:76,80,182-204;
+        // docs/s2disasm/s2.asm:36242,36248,36307-36326;
+        // docs/skdisasm/sonic3k.asm:22021,22031,22103-22127). The engine models
+        // that by ticking the countdown from the character's display step rather
+        // than from the level loop's pre-physics timer pass, so no per-game phase
+        // compensation constant exists.
+        assertTrue(DisplayPhaseTimer.class.isAssignableFrom(SpeedShoesTimer.class),
+                "the speed-shoes countdown runs from the display step in all three games");
     }
 
     @Test
     public void testSpeedShoesTimerDecimation_PerGame() {
         // S1/S2 use a per-frame word timer; S3K a byte timer decremented every
-        // 8th level frame (sonic3k.asm:22072-22078).
+        // 8th level frame (docs/skdisasm/sonic3k.asm:22108-22111).
         assertEquals(1, GameRules.SONIC_1.powerUp().speedShoesTimerDecimation(), "S1 per-frame word timer");
         assertEquals(1, GameRules.SONIC_2.powerUp().speedShoesTimerDecimation(), "S2 per-frame word timer");
         assertEquals(8, GameRules.SONIC_3K.powerUp().speedShoesTimerDecimation(),

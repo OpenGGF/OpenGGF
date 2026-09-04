@@ -115330,3 +115330,66 @@ The other three death arms remain coordinates only.
   have no engine counterpart. An unanchored ordinal alignment was measured and
   is wrong, pairing reference row 10185 against engine row 10202 and making all
   2198 ticks diverge on tempo.
+
+## 2026-09-04 - The speed-shoes countdown moves to the display step, and S3K's decimation phase is corrected
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, over `develop` at `b637f4171`.
+- **Command, before and after, from the same worktree:**
+
+  ```
+  mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    '-Ds1.rom.path=<worktree>/s1.gen' '-Ds2.rom.path=<worktree>/s2.gen' \
+    '-Ds3k.rom.path=<worktree>/s3k.gen' test
+  ```
+
+  `target/surefire-reports` was removed before each run, and each run's reports
+  were copied aside so the two sets could be diffed by failing test name and
+  message rather than by count.
+- **Result: 854 tests, 8 failures, 6 skips, before and after.** The same eight
+  classes fail with byte-identical messages, so no first-error row moved in
+  either direction:
+
+  | Class | First error, before and after |
+  |---|---|
+  | `TestS3kReplayReferenceClosureIntegration` | frame 25589, `player_animation_id`, 113 errors |
+  | `TestS1CompleteEmeraldRunChain` | 14 axes, segment 33 ownership |
+  | `TestS2CompleteEmeraldRunChain` | 12 axes, uncompared-interior walk 101691 |
+  | `TestS2EhzHalfpipeRoundTripChain` | 2 axes, `run_gap.edge[0].movie_logical_frame` |
+  | `TestS3kSonicTailsCompleteEmeraldRunChain` | uncompared-interior walk 8817 |
+  | `TestTraceRunReplayWalkerControlFlow` | `s2_special_stage` column count |
+  | `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` | frame 2252, `air`, 370 errors |
+  | `TestS3kAizTraceReplay` | frame 20713, `air`, 37 errors |
+
+- **What changed.** `PowerUpRules.speedShoesTimerPrePhysicsExtraTicks` is gone.
+  All three games decrement the countdown inside `Sonic_Display`, which the
+  control routine calls after dispatching the movement modes
+  (`docs/s1disasm/_incObj/01 Sonic.asm:76,80`, `docs/s2disasm/s2.asm:36242,36248`,
+  `docs/skdisasm/sonic3k.asm:22021,22031`), and the tail of that routine does
+  both consequences of reaching zero in the one frame: the top-speed,
+  acceleration and deceleration restore, and the slow-down music command
+  (`01 Sonic.asm:182-204`, `s2.asm:36307-36326`, `sonic3k.asm:22103-22127`).
+  The countdown is now a `DisplayPhaseTimer` that `SpriteManager` drives at the
+  ROM display point, so the constant that existed only to place the physics
+  restore on the ROM's frame is no longer needed and no longer delays the music.
+- **An intermediate arm, recorded so it is not retried.** With the drive point
+  moved and `SpeedShoesTimer.LEVEL_FRAME_PHASE_OFFSET` left at `0`, S1 and S2
+  were unchanged but S3K regressed: `TestS3kCnzTraceReplay` red at frame 6568
+  (`x_speed` expected `0x0320`, actual `0x0308`, 8164 errors) and
+  `TestS3kMgzTraceReplay` red at frame 6496 (`y_speed` expected `-0074`, actual
+  `-0073`, 9162 errors), for a total of 17 failures. This is the same CNZ
+  signature the 2026-06-01 display-phase attempt hit and reverted on.
+- **The cause was a frame-counter phase error the old drive point was masking.**
+  A probe on the decrement itself showed identical decrement schedules under
+  both drive points, 150 decrements ending at engine level frame 6568, so the
+  cadence was never the issue. ROM `LevelLoop` increments
+  `Level_frame_counter` at the top of the loop, before `Process_Sprites` runs
+  `Sonic_Display` (`docs/skdisasm/sonic3k.asm:7916-7925`), while the engine
+  increments it in `LevelManager.update()`, which the level frame step runs
+  after the player physics pass. The engine's counter is therefore one behind
+  the ROM's when `Sonic_ChkShoes` reads it, and the every-eighth-frame gate
+  must add that one back. Setting `LEVEL_FRAME_PHASE_OFFSET` to `1` moves the
+  final decrement to engine frame 6567, so the restore lands before frame
+  6568's movement, and both S3K traces return to their baseline results. The
+  pre-physics drive point had been cancelling the offset error by applying the
+  restore a frame late; the two wrongs are removed together.

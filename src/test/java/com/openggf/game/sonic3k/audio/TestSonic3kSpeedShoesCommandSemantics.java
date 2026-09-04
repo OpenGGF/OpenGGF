@@ -145,21 +145,33 @@ class TestSonic3kSpeedShoesCommandSemantics {
                         commandCountAfterPickup - 1).command());
         assertEquals(8, on.multiplier());
 
-        int initialTicks = timer.getTicks();
-        for (int update = 1; update < initialTicks; update++) {
-            GameServices.timers().update();
-            assertSame(timer, GameServices.timers().getTimerForCode(timerCode),
-                    "timer must remain registered before expiry");
-            assertTrue(player.hasSpeedShoes());
-            assertEquals(commandCountAfterPickup,
-                    audio.commandTimeline().entryCount(),
-                    "countdown updates must preserve semantic multiplier 8");
+        // S3K's countdown is a byte timer the ROM decrements only on level
+        // frames whose counter is divisible by eight, read from Sonic_Display
+        // (docs/skdisasm/sonic3k.asm:22103-22111). Drive whole level frames --
+        // counter advance plus display step -- as the live frame step does, so
+        // the gate fires once per eight frames.
+        var levelManager = player.currentLevelManagerIfAvailable();
+        assertNotNull(levelManager, "test gameplay mode must provide a level manager");
+        int levelFrame = 0;
+        int guard = 0;
+        while (GameServices.timers().getTimerForCode(timerCode) != null && guard++ < 4000) {
+            levelManager.setFrameCounter(levelFrame++);
+            GameServices.timers().updateDisplayPhaseTimersFor(player);
+            if (GameServices.timers().getTimerForCode(timerCode) != null) {
+                assertSame(timer, GameServices.timers().getTimerForCode(timerCode),
+                        "timer must remain registered before expiry");
+                assertTrue(player.hasSpeedShoes());
+                assertEquals(commandCountAfterPickup,
+                        audio.commandTimeline().entryCount(),
+                        "countdown updates must preserve semantic multiplier 8");
+            }
         }
-
-        GameServices.timers().update();
         assertNull(GameServices.timers().getTimerForCode(timerCode),
                 "TimerManager must remove the completed production timer");
         assertFalse(player.hasSpeedShoes());
+        assertTrue(guard >= 1190 && guard <= 1205,
+                "S3K speed shoes last ~1200 level frames via 150 every-eighth-frame "
+                        + "decrements (docs/skdisasm/sonic3k.asm:40858); was " + guard);
 
         int count = audio.commandTimeline().entryCount();
         AudioCommand.SetSpeedMultiplier off = assertInstanceOf(

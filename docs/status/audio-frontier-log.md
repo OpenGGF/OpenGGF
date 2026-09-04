@@ -78,6 +78,166 @@ defined by `com.openggf.tools.audio.parity`.
   ROM knows from `zDACLenTbl` and the engine from its `DacData`.
 - **Gates unchanged**, since nothing landed: S2 v1 driver oracle `MATCH (698
   ticks)`, request windows `MATCH` at 25, 52 and 27 transfers.
+## 2026-09-04 - The S2 tempo divergence closes: the speed-shoes countdown moves to the ROM's display step
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, over `develop` at `b637f4171`.
+- **Command, before and after, same worktree, same properties:**
+
+  ```
+  LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=com.openggf.tools.audio.parity.s2.TestS2DriverStateOracle \
+    '-Dsonic2.rom.path=<worktree>/s2.gen' \
+    '-Ds2.request.bk2.path=<worktree>/src/test/resources/traces/s2/runs/
+     s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2' test -B
+  ```
+
+  The before arm was measured by reverse-applying this branch's own diff in this
+  worktree, so both arms differ only by the change.
+- **State only: DIVERGENCE at tick 1,789 (movie row 11991), `global.currentTempo`,
+  reference `0x9e` against `0xbe`, 409 of 2,198 ticks divergent -> MATCH (2,198
+  ticks).** The whole compared window now agrees on driver state.
+- **State and writes:** first divergence unchanged at tick 228 (movie row 10430),
+  field `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's `psg=0x87`;
+  divergent ticks 496 -> 178 of 2,198. The DAC byte stream is unchanged, still
+  `BYTE DIFFERENT` in run 3 at byte 709.
+- **The fix, and it removed a constant rather than adding one.** The previous
+  entry located the offset outside the audio layer:
+  `PowerUpRules.speedShoesTimerPrePhysicsExtraTicks` was `1` for S1 and S2,
+  added to the countdown's duration so the physics restore would land on the
+  ROM's frame given that the engine ticked timers before the movement step.
+  The ROM does both consequences on one frame, in `Sonic_ChkShoes` at the tail
+  of `Sonic_Display` -- restore top speed, acceleration and deceleration, then
+  jump to `PlayMusic` with `MusID_SlowDown` (`docs/s2disasm/s2.asm:36307-36326`,
+  and the same shape at `docs/s1disasm/_incObj/01 Sonic.asm:182-204` and
+  `docs/skdisasm/sonic3k.asm:22103-22127`). Hanging both on one compensated
+  countdown pushed the music command a frame past the ROM's, which is one
+  driver service. The countdown is now a `DisplayPhaseTimer` driven by
+  `SpriteManager` where the ROM calls `Sonic_Display`, after the movement modes
+  (`s2.asm:36242,36248`), so the queue write reaches the same frame's service.
+  The constant is deleted.
+- **Regression gates at this commit.** The full `-Ptrace-replay` profile with
+  all three ROM paths: 854 tests, 8 failures, 6 skips, the same eight classes
+  with byte-identical messages before and after, so no trace frontier moved.
+  The v1 S2 driver oracle still reports `MATCH (698 ticks)` and the three
+  request windows `MATCH` at 25, 52 and 27 transfers. Both S1 gameplay driver
+  oracles pass at their pinned 2,562 and 5,257 ticks. Parity suite 178 tests,
+  0 failures, 2 skips; ordinary suite 16,399 tests, 0 failures, 17 skips;
+  `-Pguards` 607 tests, 0 failures.
+- **Not measured here.** The S1 sound-test music and SFX capture gates
+  (`MATCH (14690 ticks)` / `MATCH (1967 ticks)`) run through
+  `tools/audio/run_s1_audio_parity.sh`, which needs the TraceChaser submodule
+  and a BizHawk 2.11 installation; neither is present in this worktree. The
+  sound test drives no level and no monitor, so no speed-shoes countdown
+  exists on that path.
+
+## 2026-09-04 - S3K tick 502: a per-service PSG3 and noise silence with no ROM writer found
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `cf0f5d6d2`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  records what the frontier is and, more usefully, four readings that are
+  already ruled out, so the next round does not spend them again.
+- **The frontier.** `EVENT_MISSING`, tick 502, event 10: the reference emits
+  `psg 0DFh` where the engine emits nothing. The DAC stream is unchanged at
+  run 338 byte 0.
+- **What the reference does.** From service 502 onward, every service ends
+  with the same eight PSG bytes: three frequency pairs, `80h 00h`,
+  `0AFh 0FFh` and `0C0h 00h`, then `0DFh` and `0FFh`. The engine produces the
+  three pairs and neither of the last two. The pair persists at services 503,
+  504, 506, 510 and 520, so it is a steady per-service write, not a one-off.
+- **`0DFh` is PSG3's volume latch and `0FFh` is the noise channel's**, decoded
+  from the byte layout: bit 7 latch, bits 6-5 the channel, bit 4 selecting
+  volume over tone. So the ROM writes a silence-level volume to PSG3 and to
+  the noise channel on every service.
+- **Ruled out, each by measurement.**
+  1. *An SFX taking the channel.* At service 502 the only playing tracks are
+     `MUS_PSG1`, `MUS_PSG2` and `MUS_PSG3`; no SFX role is playing on either
+     side, and the mailbox is empty from services 496 through 506.
+  2. *A state divergence behind the writes.* Every compared track field agrees
+     at 502, which is why the comparator reports a write rather than a field.
+     A probe over 499-505 confirms `MUS_PSG3` is resting on both sides with
+     the same duration, saved duration, volume and frequency.
+  3. *The engine's envelope-hold gate on the PSG volume.* Removing
+     `envAtRest` from the volume gate for S3K moves nothing, so that flag is
+     not what suppresses the write. The change was reverted.
+  4. *The tempo-delay service.* Service 498 has the same accumulator carry as
+     502 and carries no such pair, so the carry is not the trigger.
+- **What makes it puzzling, stated plainly so the next round starts here.**
+  `zUpdatePSGTrack`'s volume tail is gated on the rest bit: `.no_volenv` tests
+  `bit 4, (ix+zTrack.PlaybackControl)` and returns when it is set (Sound/Z80
+  Sound Driver.asm:4098-4101). All three music PSG tracks are resting, so on
+  that reading the ROM should write no PSG volume at all here. Something
+  writes both bytes anyway, every service. The candidates not yet checked are
+  a writer outside `zUpdatePSGTrack` entirely, and the possibility that the
+  recorded RAM window's rest bit is sampled after a routine that clears and
+  re-sets it within the service.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape, which no routine in either listing pins.
+
+
+## 2026-09-04 - S3K silences a PSG track's own channel first; tick 495 -> tick 502
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `0b3aca34b`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 495, event 161, reference
+  `psg 223` against engine `psg 255`. DAC stream `BYTE_DIFFERENT` run 338
+  byte 0.
+- **Result after:** `EVENT_MISSING`, tick 502, event 10, reference `psg 223`
+  against `<missing>`. DAC stream unchanged.
+- **The routine.** `zSilencePSGChannel` writes `1Fh + VoiceControl` first,
+  which is the track's own tone channel, and only then adds `0FFh` for the
+  noise channel, gated on `PlaybackControl` bit 0 (Sound/Z80 Sound
+  Driver.asm:4226-4245). The engine wrote a single byte for whichever channel
+  the track was sounding on, so a noise PSG3 track emitted `0FFh` alone where
+  the ROM emits `0DFh` then `0FFh`.
+- **The listing calls its own bug here, and it matters.** Under
+  `fix_sndbugs = 0` the noise test is bit 0 of `PlaybackControl`, and the
+  comment says outright that "since this function is called when a new channel
+  is starting, this bit will almost inevitably be 0 and the noise channel will
+  not be silenced". So most calls emit the tone byte alone; service 495 is one
+  where the bit was set and both went out.
+- **Instrumented, not assumed.** A stack-tagged probe on every PSG `stopNote`
+  showed 27 calls for a noise PSG3 track, all from the note-start path, which
+  is what put the lone `0FFh` on the bus.
+- **Scoped to S3K, and the reason is that there is nothing to cite for the
+  others.** Neither S1 nor S2 has a per-track PSG silence routine; both
+  silence all four channels at once (s2.sounddriver.asm:1412-1418). Their
+  behaviour is therefore unaudited rather than established, and the new
+  `PsgSilenceShape` defaults to what the engine already did for them.
+- **Open items.** S2's `zNoteFillUpdate` countdown against the engine's
+  elapsed comparison; S1 and S2's post-note do-not-attack clear; the
+  `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297; S2's
+  `zFadeOutMusic` clearing `SpeedUpFlag` with `xor a / ld (zAbsVar.SpeedUpFlag), a`
+  (s2.sounddriver.asm:1677-1679), which the engine does not model; and now
+  S1's and S2's own per-track PSG silence shape, which no routine in either
+  listing pins. None of these is touched in this lane.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestRewindCoverageGuard` and
+  `TestStaticStateRewindCoverageGuard`: 2,142 tests, 0 failures, 10 skips.
+  `TestSonic3kCoordFlagParity` is now in the per-cycle gate, because its two
+  end-state snapshots are exactly the kind of assertion the audio gate used to
+  miss. The whole suite with three ROM paths is 16,397 tests, 0 failures, 22
+  skips, and `-Pguards` is 607 tests, 0 failures.
+- **One more engine-behaviour pin needed updating, on this same routine.**
+  `TestSonic3kFm3SpecialMode`'s `F3` test asserts the PSG write list as
+  incidental context around its real subject, which is raw-operand retention.
+  Each silence of its noise PSG3 track is a `zSilencePSGChannel` call, so the
+  tone byte now precedes the noise byte on every call and the list went from
+  `0DFh, 0E5h, 0FFh, 0FFh` to `0DFh, 0E5h, 0DFh, 0FFh, 0DFh, 0FFh`. The
+  previous list recorded the engine emitting the noise byte alone; the new one
+  follows the routine call for call. Like the two `TestSonic3kCoordFlagParity`
+  snapshots, it is reached only by the whole suite.
+
 
 ## 2026-09-04 - S2 releases every PSG lock before restoring; the write stream reaches the tempo frontier
 
@@ -282,8 +442,13 @@ defined by `com.openggf.tools.audio.parity`.
   recorded.** `TestSonic3kCoordFlagParity`'s two `zDoModulation` tests assert
   a packed frequency captured after running the engine for 60,000 samples.
   Those are end-state snapshots of engine output, not ROM-derived constants,
-  and they shift whenever the run's start phase does; this change moved them
-  from `2A94h` to `2A84h` and from `2AADh` to `2AD6h`. The mechanisms they
+  and they shift whenever the run's start phase does. The fix that moved them
+  is this entry's own: not accumulating tempo on the load service removes one
+  accumulation from the very start of the run, so every later service of the
+  60,000-sample run is reached one accumulation earlier in the tempo cycle and
+  the final modulated frequency lands elsewhere. `2A94h` became `2A84h` and
+  `2AADh` became `2AD6h`. Neither value was chosen; both were read back after
+  the change, and they are snapshots precisely so a future shift is visible. The mechanisms they
   name, the step-counter decrement on sustain ticks and the wait-zero
   same-tick application, are untouched, and the reference oracle is the
   authority for the shift. Both now carry a comment saying what kind of value

@@ -14,6 +14,19 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Speed shoes now slow the music down on the same frame they take your speed
+  back:** the original does both in one step at the end of a frame, restoring the
+  boosted running values and asking the sound program to drop the tempo together.
+  The engine ran that countdown at the top of the frame instead, and stretched it
+  by one frame so the running values still landed where the original puts them.
+  That patched up the physics but left the tempo change arriving one sound-program
+  update late, which is audible as the music holding its faster tempo a beat
+  longer than it should. The countdown now runs where the original runs it, so
+  both halves happen together, and the stretch is gone. Sonic 3 & Knuckles, whose
+  countdown only steps every eighth frame, also had its frame numbering corrected
+  to match: the original counts the frame up before the step reads it, and the
+  engine counted it up afterwards.
+
 - **A broken Sonic 2 monitor's explosion sound now comes from the explosion
   itself:** the original plays it from the explosion's own turn in the object
   list, one turn after the monitor breaks whenever the explosion takes a slot
