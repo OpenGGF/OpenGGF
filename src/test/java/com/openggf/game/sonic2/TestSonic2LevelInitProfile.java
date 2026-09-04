@@ -119,9 +119,11 @@ public class TestSonic2LevelInitProfile {
         // branches on Current_Zone/Current_Act. Feeding it the progression
         // index reads another zone's PLC and title-card data and silently
         // drops the CPZ act 2 water arm.
+        java.io.File romFile = RomTestUtils.ensureSonic2RomAvailable();
+        org.junit.jupiter.api.Assumptions.assumeTrue(romFile != null,
+                "Sonic 2 REV01 ROM not available — skipping test");
         audioRom = new Rom();
-        assertTrue(audioRom.open(RomTestUtils.ensureSonic2RomAvailable()
-                .getAbsolutePath()));
+        assertTrue(audioRom.open(romFile.getAbsolutePath()));
 
         int cpz2LevelIndex = LevelData.CHEMICAL_PLANT_2.getLevelIndex();
         int entry = Sonic2Constants.LEVEL_SELECT_ADDR + cpz2LevelIndex * 2;
@@ -167,8 +169,7 @@ public class TestSonic2LevelInitProfile {
         audio.resetState();
         audio.setBackend(new NullAudioBackend());
         audioRom = new Rom();
-        assertTrue(audioRom.open(RomTestUtils.ensureSonic2RomAvailable()
-                .getAbsolutePath()));
+        assertTrue(audioRom.open(requireSonic2Rom().getAbsolutePath()));
         audio.setRom(audioRom);
         audio.setAudioProfile(audioProfile);
         audio.setSoundMap(audioProfile.getSoundMap());
@@ -272,5 +273,12 @@ public class TestSonic2LevelInitProfile {
         } catch (UnsupportedOperationException e) {
             // expected
         }
+    }
+
+    private static java.io.File requireSonic2Rom() {
+        java.io.File romFile = RomTestUtils.ensureSonic2RomAvailable();
+        org.junit.jupiter.api.Assumptions.assumeTrue(romFile != null,
+                "Sonic 2 REV01 ROM not available — skipping test");
+        return romFile;
     }
 }
