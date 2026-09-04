@@ -263,6 +263,8 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **ROM-less CI green again:** the complete-run producer tests and two Sonic 2
+  level-init tests now skip without a ROM instead of failing.
 - **Sonic 2 request-window producer is a command:** TraceChaser now captures
   and extracts request windows from arguments (movie, hash, row interval,
   manifests, installation, output), the raw sink records the recording it
