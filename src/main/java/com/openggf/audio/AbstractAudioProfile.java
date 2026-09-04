@@ -86,13 +86,13 @@ public abstract class AbstractAudioProfile implements GameAudioProfile {
     }
 
     /**
-     * Executes the fade-out action. Override to supply game-specific
-     * step/delay parameters (e.g. S3K uses 0x28 steps, delay 6).
-     * The default calls {@link AudioManager#fadeOutMusic()} which uses
-     * the S1/S2 ROM defaults (0x28 steps, delay 3).
+     * Executes the fade-out action for a fade-out system command. Override
+     * {@link GameAudioProfile#fadeOutMusic(AudioManager)} rather than this to
+     * supply game-specific step and delay parameters; both the command path
+     * and the direct object-services path then use the same values.
      */
     protected void executeFadeOut(AudioManager manager) {
-        manager.fadeOutMusic();
+        fadeOutMusic(manager);
     }
 
     /**

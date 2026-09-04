@@ -72,6 +72,7 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                 "repository S2 complete-run BK2");
         S2ProductionRequestProjector projector = new S2ProductionRequestProjector();
         List<Integer> requestRows = new ArrayList<>();
+        List<Integer> musicSubmissionRows = new ArrayList<>();
         ProductionAudioRecorder audioRecorder = new ProductionAudioRecorder();
         audioRecorder.observeWindow(firstRow, exclusiveEnd);
         int[] productionOutputRow = {-1};
@@ -79,9 +80,13 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
             int row = productionOutputRow[0];
             if (row >= firstRow && row < exclusiveEnd) {
                 int before = projector.requests().size();
+                int musicBefore = projector.musicSubmissions().size();
                 projector.accept(event);
                 if (projector.requests().size() > before) {
                     requestRows.add(row);
+                }
+                if (projector.musicSubmissions().size() > musicBefore) {
+                    musicSubmissionRows.add(row);
                 }
             }
         });
@@ -108,7 +113,8 @@ final class S2RequestProjectionBk2Capture extends AbstractRunChainTest {
                         exclusiveEnd - DESTINATION_START_ROW);
                 audioRecorder.presentOpenRow(audio);
                 return new S2RequestProjectionBk2TestBridge.Capture(
-                        projector, requestRows, audioRecorder.rows(),
+                        projector, requestRows, musicSubmissionRows,
+                        audioRecorder.rows(),
                         audioRecorder.publicAudioRequests(),
                         audioRecorder.updateTicks());
             }

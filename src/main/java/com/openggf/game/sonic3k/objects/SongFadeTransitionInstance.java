@@ -99,7 +99,9 @@ public class SongFadeTransitionInstance extends AbstractObjectInstance implement
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         if (!fadeStarted) {
-            services().audioManager().fadeOutMusic(0x28, 6);
+            // The S3K profile owns 28h/6 (Sound/Z80 Sound Driver.asm:2306-2311);
+            // this is cmd_FadeOut, not a fade with parameters of its own.
+            services().audioManager().fadeOutMusic();
             fadeStarted = true;
             if (deferCountdownOnFadeStart) {
                 return;

@@ -223,6 +223,418 @@ defined by `com.openggf.tools.audio.parity`.
   rest should be accounted for by the fix rather than assumed.
 - **Gates.** Not re-run; no engine behaviour changed since `0da7b645a`.
 
+## 2026-09-04 - The unobserved transfer is sndDriverInput's music store at PC $10C0, and the hook is managed
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, at `54d3d3adb`. Analysis only; nothing
+  changed and no line moved.
+- **The answer, cited.** `sndDriverInput` makes two distinct stores into Z80
+  RAM. The music one is `move.b d0,zVar.QueueToPlay(a1)` at
+  `.isNotPauseCommand`, which the disassembly labels `loc_10C0`
+  (s2.asm:1302-1304). The SFX one is `move.b d0,zVar.Queue0(a1,d1.w)` inside
+  `.loop` (:1317-1326). The observer's manifest hooks a single instruction,
+  `pc 4310` with opcode `13801009`, and 4310 is `$10D6`.
+- **Verified against the cartridge, not only the listing.** The ROM holds
+  `13400008` at `$10C0` and `13801009` at `$10D6`, and `72031030` at `$10C4`,
+  which is the `moveq #3,d1` the `fixBugs = 0` path assembles at `.doSFX`. So
+  `$10D6` is the SFX store the manifest already names and `$10C0` is the music
+  store it does not.
+- **That single omission explains both gaps.** The nine music loads reach the
+  driver through `$10C0`, and so does the ring at movie row 3225, because the
+  ring-milestone check jumps to `PlayMusic` (s2.asm:25913-25914) which writes
+  `Sound_Queue.Music0` or `Music1` (:1520-1527) rather than the SFX slots.
+- **A structural finding that changes the shape of the fix.** The hook is not a
+  native observer action. `S2PreconsumptionRequestObserver` arms it with
+  `host.RegisterExecuteCallback(Pc, OnTransfer)`, a managed execute callback,
+  and reads `M68K D0` and `D1` in the callback; the manifest's
+  `native_action: 7` and patch digest are validated as identity, not used to
+  arm this hook. So adding the second site needs no patch edit, no core rebuild
+  and no toolchain: it is a manifest schema change plus managed code and tests.
+- **One detail the second site must not copy.** At `$10D6` the callback reads
+  `D1` as the SFX queue slot, which the `.loop` index makes correct. At `$10C0`
+  `D1` holds the pause-check residue of `move.b d0,d1` / `subi.b #MusID_Pause,d1`
+  (:1294-1295), so it is not a slot and must not be recorded as one; the music
+  transfer needs its own fixed slot identity.
+- **Next.** Implement the second site in the TraceChaser submodule under the
+  same rules, add the harness tests the existing site has, then recapture and
+  re-measure. The three published request windows and their transfer counts of
+  25, 52 and 27 are a gate: a widened observer that changes them must explain
+  each new transfer by ROM routine, and every one of them should be a music
+  request that `$10C0` alone carries.
+
+## 2026-09-04 - The CPZ writes line is producer-blocked: one ring is played through the music mailbox
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, at `aa3b74a4b`.
+- **Measurement, not a comparison run.** Nothing changed. CPZ state only
+  `MATCH (720 ticks)`; state with writes DIVERGENCE at tick 494 (movie row
+  3225), `writes.count`, reference 34 against the engine's 3, 18 of 719
+  divergent. All 18 are at or after that row, so there is one cause.
+- **What the reference plays there.** The FM5 voice-load block, byte for byte
+  the same one the ring plays at rows 2968, 2974, 3004 and 3069. The engine
+  emits only the three music writes of that service, because it was never told
+  to play it.
+- **Only the ring path can produce it, and that is checked rather than
+  assumed.** `zRingSpeaker` has exactly one writer in the whole driver, the
+  `cpl` in `zPlaySound_CheckRing` (s2.sounddriver.asm:2127-2134, declared at
+  :4091), and the flag flips at this row. So a ring was played.
+- **Two producers, nine rings, and the same one missing from both.** The
+  power-on driver-state capture records nine flips of the flag, at movie rows
+  1436, 2968, 2974, 3004, 3069, 3225, 3437, 3440 and 3448. Its own
+  pre-consumption markers appear at seven of those, missing 1436 and 3225. The
+  request capture records eight transfers, at 1432, 2968, 2974, 3004, 3069,
+  3437, 3440 and 3448, missing 3225. So row 3225 is invisible to both, and the
+  49-transfer reduction is not at fault: the extracted payload contains 49
+  request values in total and none of them is near that row.
+- **The ROM says why. The 68k plays the ring from seven sites and one of them
+  uses the other mailbox.** Six reach `PlaySound` or `PlaySound2`, but the
+  ring-milestone check at s2.asm:25913-25914 does `move.w #SndID_Ring,d0` then
+  `jmp (PlayMusic).l`, and `PlayMusic` writes `Sound_Queue.Music0` or
+  `Music1` (:1520-1527) rather than the SFX slots. The request manifest hooks a
+  single instruction, `pc 4310` with opcode `13801009`, described as the
+  accepted M68K-to-Z80 transfer, so a request that arrives through the music
+  mailbox is not observed. This is the same mailbox split an earlier lane
+  recorded for the ten-ring and shield monitors.
+- **So the writes line cannot reach MATCH from the committed captures.** The
+  missing stimulus is a request the recording genuinely made; supplying it by
+  reading the reference's flag flip would be hydrating driver state to decide
+  what the engine plays, which hard rule 4 forbids, and narrowing the window to
+  end before row 3225 would be fitting the measurement to the gap.
+- **What would unblock it.** A producer change: record the music-mailbox
+  transfer as well as the SFX one. The manifest is already data-driven, with
+  `request_transfer` carrying cpu, pc, opcode, native action and marker tokens,
+  so the shape of the change is a second transfer site rather than new
+  analysis. It needs a TraceChaser submodule change and a recapture, which is
+  why it is proposed here rather than started.
+
+## 2026-09-04 - The ring phase is derived from requests; CPZ tick 237 -> 494, and two producer limits found
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `874906bb7`.
+- **Before:** CPZ state with writes DIVERGENCE at tick 237 (movie row 2968),
+  `writes[4]`, reference `ym1[0xb1]=0x4` against the engine's
+  `ym1[0xb0]=0x4`; 36 of 719 divergent.
+- **After:** DIVERGENCE at tick 494 (movie row 3225), field `writes.count`,
+  reference 34 against the engine's 3; 18 of 719 divergent. State only stays
+  `MATCH (720 ticks)`.
+- **The removal condition is met by derivation, not by a power-on engine run.**
+  The ring flag is the parity of the rings played since power-on, because
+  `zPlaySound_CheckRing` complements it on every ring
+  (s2.sounddriver.asm:2124-2135). Ring requests are stimuli under the accepted
+  contract, so counting the ones before a window derives the phase without
+  reading a compared value. `S2OracleEngineCapture` now takes that count and
+  the CPZ oracle reads it from the new committed stimuli file, which carries
+  exactly one ring request, at movie row 1432. The driver-state capture agrees:
+  `zRingSpeaker` is `00h` from power-on and flips once, at movie row 1436, the
+  service that consumed it.
+- **Two new fixtures.** `s2-driver-state-cpz-w0-3450.reference-v2.jsonl.gz`,
+  3,264 ticks from the driver's first serviced frame to row 3449, duplicate
+  capture met byte-identical; and `s2-request-stimuli-cpz-w120-3450.json`, the
+  49 request transfers of the extracted request window reduced to row, order,
+  request and slot, with the source payload's digest recorded.
+- **First producer limitation: the request capture cannot start at row 0.**
+  `--request-window-mode capture --first-row 0` fails with "GPGX audio observer
+  begin publication epoch failed with status -2". The same command at
+  `--first-row 120`, the driver's first serviced frame, succeeds, and at
+  `--first-row 2700` succeeds. The driver-state mode accepts row 0 and simply
+  reports its first tick at row 120.
+- **Second producer limitation, and it is the larger one: no music requests are
+  recorded.** All 49 transfers over rows 120-3448 are `A0h` or above. The
+  driver-state capture shows the run loading nine songs in that span, with
+  `zCurSong` moving to `99h`, `91h`, `99h`, `89h`, `97h`, `82h`, `99h`, `91h`
+  and finally `8Eh` at row 2725, and not one of those appears in the request
+  stream. So an engine run driven from power-on by recorded requests cannot
+  reproduce the songs the recording plays, which is what a true power-on
+  comparison would need.
+- **A third, smaller gap in the same producer.** The stimuli carry eight ring
+  requests while the driver-state capture records nine flips of `zRingSpeaker`,
+  and only the ROM's ring path complements that byte (:2133). The missing one is
+  at movie row 3225, which is exactly the new first divergence: the reference
+  emits 34 writes there and the engine 3, because it was never told to play
+  that sound.
+- **What did not change.** No engine behaviour. The capture's power-on default
+  is still the ROM's zero flag; the count simply advances it.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the EHZ v2 oracle
+  unchanged at `MATCH (2198 ticks)` on both lines; the three request windows
+  `MATCH` at 25, 52 and 27 transfers; audio packages plus the four extra
+  classes with three ROM paths: 2,063 tests, 0 failures, 0 errors, 10 skips.
+
+## 2026-09-04 - The miniboss fade is real, and the drowning restore had no overrides
+
+- **Worktree/branch:** `.worktrees/s3k-issue-coverage`,
+  `feature/ai-s3k-aiz1-audio-issue-coverage`, over `develop` at `633ee400f`.
+- **The fade-rate claim stands, and the run that seemed to contradict it was
+  measuring elsewhere.** A source reading said the AIZ miniboss and fire-curtain
+  fades ran at the S1/S2 delay of 3; a later engine-driven run of seven AIZ1
+  music events recorded no fade at all and appeared to retract it. Both were
+  right. That run drove the fire-curtain restore through `setEventsFg5`, which
+  enters after the cutscene's own trigger has already run, so it never reached
+  either fade site.
+- **Settled by execution.** Driving `updateWaitTrigger` with a real
+  `AudioManager` carrying the S3K profile records exactly one `cmd_FadeOut`
+  carrying `28h/6`, the values `zFadeOutMusic` loads
+  (Sound/Z80 Sound Driver.asm:2306-2311). Before the routing fix it carried
+  `28h/3`. Pinned by `TestAizMinibossCutsceneInstance`, which fails on the
+  parameters if the profile supplies another game's.
+- **The drowning restore ignored all three ROM overrides, confirmed by
+  running it.** `Player_ResetAirTimer` (sonic3k.asm:33663-33686) loads
+  `Current_music` and substitutes `mus_Invincibility` for an invincible player,
+  the same track again for Super or Hyper, and `mus_MinibossK` during a boss.
+  On a real AIZ1 fixture the engine requested the zone track in every case, so
+  surfacing while invincible or Super cut the theme dead.
+- **All three games' rules are filled from their own routines, not defaulted.**
+  The shapes differ and the differences matter: Sonic 1's overrides are
+  conditional on `Revision<>0`, which holds for the REV01 ROM the engine models
+  (sonic.asm:14), and it has no Super form; Sonic 2 gives Super its own track
+  rather than reusing the invincibility theme (s2.asm:42296-42318); S3K reuses
+  it. In all three the boss test is taken last, so a boss wins.
+- **Coverage.** `TestAirResetMusicSelection` pins each game's choice and the
+  precedence, `TestS3kAirResetMusicRestore` drives a real AIZ1 fixture and pins
+  that the restore asks for it. The second was red on the invincible and Super
+  cases before the fix and is green after.
+
+## 2026-09-04 - The subset is published: 20 per-song windows, all 15 songs, six matching
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` merged at `633ee400f`,
+  clean-built before measuring.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off -B -Dsonic1.rom.path=...
+  -Dsonic2.rom.path=... -Ds3k.rom.path=... -Ds2.request.bk2.path=...
+  "-Dtest=com/openggf/tools/audio/parity/**/*,com/openggf/audio/**/*,TestRewindCoverageGuard,TestStaticStateRewindCoverageGuard" test`
+
+**Published:** 20 windows from `s1-complete-run.bk2`, 5.94 MB gzipped, covering
+**all 15 songs the movie plays**. Four whole-movie capture passes, two per
+window, every published window verified `cmp`-identical between its pair before
+publication.
+
+**Eight windows match end to end, across six distinct songs** -- `$81` Green
+Hill (three windows, one of 5,726 ticks), `$82` Labyrinth, `$84` Spring Yard at
+5,535 ticks, `$8A` title screen, `$8C` special stage, and `$91` credits. Before
+today only GHZ had ever matched.
+
+**The twelve red windows, by cause.**
+
+| Cause | Windows | Frontier |
+|---|---|---|
+| SFX override held from before the window's epoch | 15, 16, 58, 77, 80 | tick 0 (58 at tick 34) |
+| Act-clear double driver pass | 62, 72 | tick 360, `tempo_timeout` |
+| 1-up restore arms a fade the engine has no save slot for | 59 | tick 0, `fade_active` |
+| `StopAllSound` write ordering inside the silence | 81 | tick 4,646 of 4,671 |
+| Re-entered invocation | 82 | tick 0 |
+| First chip write | 76 | tick 0 |
+| PSG base frequency | 30 | tick 0 |
+
+**The restore window confirms the other lane's prediction exactly.** Window 59,
+music `$84`, opens at the 1-up restore and diverges at tick 0 on `fade_active`:
+`cfFadeInToPrevious` arms a fade-in at counter `$28`, and the engine has no
+driver-level 1-up save slot, so it has nothing to restore into. That is 0.7
+authenticity work, not a driver defect, and it is now pinned rather than
+predicted.
+
+**Two housekeeping corrections.** A stale `w002` fixture from the earlier
+partial publish was removed; the full capture's `$8E` windows are 62 and 72.
+And window 81's pinned frontier moved between the pre-merge and post-merge
+measurement, from the engine emitting a pan byte to emitting a key-off with the
+wrong channel -- closer, and re-pinned from a clean build rather than carried.
+
+**Gates.** Audio parity and the wider audio packages plus both rewind coverage
+guards, with three ROM paths and the S2 request movie: **2,109 tests, 0
+failures, 0 errors, 10 skips.** Both S1 gameplay oracles `MATCH` at 2,562 and
+5,257 ticks; S2 v1 `MATCH (698 ticks)`; v2 both lines `MATCH (2198 ticks)`; CPZ
+state-only `MATCH (720 ticks)`; request windows `MATCH` at 25, 52 and 27.
+
+
+## 2026-09-04 - StopAllSound routed against the window that contains one: $8D from a crash to tick 4,646 of 4,671
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` merged at `1456a4a51`.
+- **Fixture:** window 81 of the completed pass over `s1-complete-run.bk2`,
+  music `$8D`, 4,671 ticks.
+- **Result before:** the capture host threw, `S1 driver flag command 0xe4 is not
+  modelled by the parity host yet`. Nothing was compared.
+- **Result after:** `EVENT_VALUE_DIFFERENT` tick 4,646, reference
+  `ym2612 port 0 register 28h = 2` against engine `port 1 register B1h = 61`.
+  **Every compared field agrees through tick 4,645, and the first two chip
+  writes of the stop agree.**
+
+**Routed against the real window, not a guess.** `$E4` is the fourth sound id
+`PlaySoundID` sends through `Sound_E0toE4` (s1.sounddriver.asm:715, :726),
+reaching `StopAllSound` (:1461-1482). It is a different mechanism from the `E4`
+*coordination flag* in track data, which ends a 1-up jingle; the engine's
+`handleFadeIn` is that one. Conflating them is easy and this entry records the
+distinction because a reader of the earlier `Sound_E0toE4` commit could make it.
+
+**What the ROM does, and what now happens.** Enable the DAC (`2Bh = 80h`), put
+FM3 and FM6 back in normal mode with the timers off (`27h = 00h`), clear the
+driver's variable and track RAM, set `v_sound_id` to `$80`, then `FMSilenceAll`
+and `PSGSilenceAll`. The host emits the two mode writes, stops the SFX
+sequencers, applies the RAM clear to the music sequencer's own tracks, and
+silences. The clear zeroes the master tempo and its timeout as well as the track
+RAM, which is what took the frontier past its first landing at tick 4,646 on
+`tempo_reload`, reference `0` against engine `6`.
+
+**Where it stops.** The remaining difference is inside the silence itself: the
+ROM's next write is the first `28h` key-off and the engine emits a leftover
+`B1h` pan byte first. That is a write-ordering question inside the stop, with
+the driver state on both sides already agreeing, and it is recorded rather than
+chased.
+
+**Placement, for the same reason as the fade's stops.** The stop runs before the
+frame service rather than at the dispatch point, because it releases sequencers
+and the driver iterates its list by index over a size captured before the pass.
+The ROM likewise clears before it walks any track.
+
+**Gates.** Audio parity and the wider audio packages plus both rewind coverage
+guards: 2,072 tests, 0 failures, 0 errors, 10 skips. All three published pins
+unchanged; both S1 gameplay oracles `MATCH` at 2,562 and 5,257.
+
+
+## 2026-09-04 - The tick-zero override class is fixable, not a discrepancy: withdrawing my own entry
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` merged at `1456a4a51`.
+- **No measurement changed.** This records a corrected judgement.
+
+**What I wrote, and why it was wrong.** Five of the eighteen captured windows
+diverge at tick 0 on a music track's `overridden` bit, because the window's
+epoch lands while an SFX admitted *before* that epoch still holds the track. I
+recorded it in `known-discrepancies.md` as an accepted divergence with a
+selection-based removal condition, reasoning that the overriding SFX's identity
+is state predating the window and so undreivable without hydration.
+
+**That reasoning had a hole.** The SFX was requested inside the *previous*
+window, and a recorded request is the accepted stimulus for this contract --
+it is what the host already replays. So the host can start at the predecessor
+window's epoch, replay that window's song and its recorded dispatches, and only
+begin *comparing* at the target window's epoch. Nothing is hydrated: the driver
+carries itself across the boundary exactly as the ROM does, from requests
+alone. Where a predecessor is itself contaminated the chain extends further
+back, and it terminates, because a run's first window starts from power-on and
+is always clean.
+
+**So the entry is withdrawn.** A known-discrepancy entry asserts that a
+divergence is intentional and accepted, and this one is neither. Leaving it
+would have told the next lane not to fix something fixable, which is worse than
+having no entry at all. The five windows keep their pinned frontiers until the
+chained replay lands.
+
+**What lands with it.** The survey now records, per window, how many music
+tracks hold the SFX-overriding bit at that window's epoch. That stays useful
+either way: it tells a chained replay how far back it must start, rather than
+only telling a selector which windows to avoid.
+
+
+## 2026-09-04 - All 18 captured windows measured: six songs green, and one dominant red class
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` merged at `02f3950df`.
+- **Source:** the completed pass A over `s1-complete-run.bk2`, 84 windows walked,
+  18 written, 33,354 ticks, no capture errors. Publication awaits pass B.
+
+**The extra-life boundary works.** Window 58 is music `$88` alone, 210
+invocations from frame 138,135 to 138,346. Window 59 opens at the restore
+carrying music `$84`, the zone song the jingle interrupted, for 4,223
+invocations. The same capture previously aborted at frame 138,347.
+
+**Results, all 18.**
+
+| Window | Music | Ticks | Result |
+|---|---|---|---|
+| 0 | `$8A` | 72 | `MATCH` |
+| 1 | `$81` | 5,257 | `MATCH` |
+| 3 | `$81` | 1 | `MATCH` |
+| 8 | `$81` | 5,726 | `MATCH` |
+| 9 | `$8C` | 1,426 | `MATCH` |
+| 38 | `$82` | 981 | `MATCH` |
+| 61 | `$84` | 5,535 | `MATCH` |
+| 15 | `$87` | 1,202 | `TRACK_STATE_MISMATCH` tick 0, `overridden`, `true` vs `false` |
+| 16 | `$83` | 443 | same, tick 0 |
+| 77 | `$92` | 189 | same, tick 0 |
+| 80 | `$86` | 1,074 | same, tick 0 |
+| 30 | `$85` | 742 | `TRACK_STATE_MISMATCH` tick 0, `base_frequency`, `922` vs `854` |
+| 58 | `$88` | 210 | `TRACK_STATE_MISMATCH` tick 34, `overridden`, `false` vs `true` |
+| 62, 72 | `$8E` | 569, 524 | `GLOBAL_STATE_MISMATCH` tick 360, `tempo_timeout` |
+| 76 | `$86` | 1,132 | `EVENT_VALUE_DIFFERENT` tick 0 |
+| 82 | `$8B` | 1,223 | `EVENT_VALUE_DIFFERENT` tick 0 |
+| 81 | `$8D` | 4,671 | capture host throws on driver command `$E4` |
+
+**Six distinct songs agree end to end:** `$81`, `$82`, `$84`, `$8A`, `$8C`, and
+`$81` again at 5,726 ticks, a longer GHZ window than any committed fixture.
+Before today only GHZ had ever matched.
+
+**The dominant red class is one thing, and it is not driver accuracy.** Five
+windows diverge at **tick 0** on `overridden`, reference `true` against engine
+`false`: the window's epoch lands while an SFX is still holding a music track,
+and the replay host starts with no SFX admitted because a window's dispatch
+record begins at its own epoch. This is the same shape as the recorded S2
+`zRingSpeaker` discrepancy -- driver state that predates the window and cannot
+be derived from what the window contains. Worth attacking as one item rather
+than five.
+
+**Two defects found by measuring rather than by reasoning.** Window 80 crashed
+the capture host with `Index 1 out of bounds for length 1`: the dispatch-point
+seam called `stopAllSfx()` from inside the music sequencer's own service, and
+the driver iterates its sequencer list by index over a size captured before the
+pass, so removing sequencers there walks off the shortened list. `FadeOutMusic`
+stops the SFX tracks before it walks any track
+(s1.sounddriver.asm:1361-1362), and nothing between the pre-service point and
+the dispatch point reads SFX state, so the stops moved back to pre-service and
+only the fade arming -- which is what the fade step's position actually decides
+-- stays at the dispatch point. Window 81 is the first real occurrence of a
+driver command other than `$E0`: `$E4`, `StopAllSound`. The host throws rather
+than ignoring it, which is why it is visible; routing it is now evidence-backed
+work rather than speculation.
+
+**Gates.** 192 tests, 0 failures, 0 errors, 2 skips, against the merged develop.
+All three published pins unchanged.
+
+
+## 2026-09-04 - Tick 360 is two VBlank calls a frame apart, and the obvious contract fix is wrong
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `2ea323bbd`.
+- **Result unchanged:** `$8E` still `GLOBAL_STATE_MISMATCH` tick 360,
+  `tempo_timeout`, reference `1` against engine `2`. **A candidate fix was
+  built, measured, and reverted.**
+
+**What tick 360 actually is.** Logging every `UpdateMusic` entry inside the
+recorded invocation, with the caller's return address read off the stack, gives
+two entries: frames 6,203 and 6,204, both from `VBlank_Music`
+(caller return `$B64`, sonic.asm:682), both at stack `$FFFDB2`. So it is one
+call site on two consecutive frames, not the HBlank path, and not two entries
+inside one frame. The first invocation's return was never observed, and the
+shared lifecycle folds a same-stack entry into the one already open, so two
+frames of driver work became one recorded tick with two tempo decrements.
+
+**The candidate, and why it looked right.** The lifecycle's same-stack fold
+exists for the DAC-busy retry, where `bra.s UpdateMusic`
+(s1.sounddriver.asm:165) genuinely re-executes the entry address at the same
+stack. That retry always happens within the frame it started in, so the
+emulator frame looked like a clean discriminator: same stack *and* same frame is
+a retry, same stack a frame later is a new invocation.
+
+**It is wrong, and the measurement said so immediately.** Treating the later
+entry as a new invocation abandons the earlier one, which drops driver work the
+ROM really did. Two things broke at once. `$8E` went from diverging at tick 360
+to diverging at **tick 0**, on the first chip write. And the GHZ window stopped
+being byte-identical to the committed
+`s1-gameplay-ghz1-run2-reference.v1` fixture, which is a reproducibility
+property worth more than this frontier. Reverted.
+
+**Why neither folding nor dropping is right.** The ROM ran its driver twice and
+the record has one tick. Folding attributes both passes' effects to one tick,
+which is what the reference does today and is at least faithful about the
+resulting RAM. Dropping discards a pass outright. Representing it properly needs
+two ticks, which needs the first invocation's end to be observable, and it is
+not. The remaining option is the one already recorded: carry the per-tick driver
+pass count and have the host service that many times, which is the hard rule 4
+question, not a lane's to settle.
+
+**Reproducibility re-verified after the revert.** A third independent capture
+reproduces all three published windows byte for byte, and the GHZ window's
+identity with the committed gameplay fixture. Three captures now agree.
+
+
 ## 2026-09-04 - The every-toggle noise clock doubles the shift rate, and is still not the fault
 
 - **Worktree/branch:** `.worktrees/s3k-issue-coverage`,

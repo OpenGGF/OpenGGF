@@ -26,11 +26,11 @@ class TestS2RequestWindowFixture {
     static final String FIXTURE_RESOURCE =
             "/audio/parity/s2/s2-request-window-w10150-10900.raw-v2.jsonl.gz";
     static final String PAYLOAD_GZ_SHA256 =
-            "be8ab87f45499fcf5db0aee5613d699f56d79d5d6a8ffacbbfbe21592ab95c15";
+            "1d675c69d46f955eb0b69558b8b24efa3e323ffb278c10b6d936e8a1642f515f";
     static final String PAYLOAD_RAW_SHA256 =
-            "a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c";
+            "aba57c7e3de464c26c0a9caa2bc0327638c6db58e6967bb39c91982795d1773e";
     /** Ordered request transfers the extractor observed inside the window. */
-    static final int REQUEST_TRANSFERS = 25;
+    static final int REQUEST_TRANSFERS = 27;
 
     @TempDir
     Path temporaryDirectory;

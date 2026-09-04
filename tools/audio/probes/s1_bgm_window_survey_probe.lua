@@ -117,11 +117,32 @@ local dispatchTotal = 0
 local emitted = false
 local abandoned = {}
 
+-- How many music tracks have the "SFX overriding" bit (PlaybackControl bit 2)
+-- set at this instant. A window whose epoch has any is one the replay host
+-- cannot describe: the overriding SFX was admitted before the epoch, so it
+-- appears nowhere in the window's dispatch record and the replay starts with
+-- none held. Recorded so a clean window can be chosen for a song rather than
+-- the contamination being met at measurement time. See
+-- docs/status/known-discrepancies.md, "S1 Per-Song Run Windows Inherit An SFX
+-- Override From Before Their Epoch". Music track RAM is ten slots of $30 bytes
+-- from SOUND_RAM + $40, PlaybackControl first.
+local function overriddenMusicTracks()
+    local count = 0
+    for index = 0, 9 do
+        local status = mainmemory.read_u8(SOUND_RAM + 0x40 + index * 0x30)
+        if (status & 0x80) ~= 0 and (status & 0x04) ~= 0 then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 local function openWindow(musicId, frame)
     local base, bound = musicAssetRange(musicId)
     current = {
         dispatches = 0,
         invocations = 0,
+        epoch_overridden_tracks = overriddenMusicTracks(),
         music_id = musicId,
         open_frame = frame,
         ordinal = #windows,

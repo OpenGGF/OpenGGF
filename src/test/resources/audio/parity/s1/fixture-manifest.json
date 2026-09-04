@@ -145,12 +145,12 @@
     "subset_rule": "Every distinct song a movie plays is published from that movie, so a song appearing in both recordings is covered from both; the remaining budget goes to the request-dense windows. Windows containing a re-entered UpdateMusic invocation are excluded, because the ROM's partial-then-resumed track walk is not representable at invocation granularity. Red windows are published deliberately: a window with its frontier recorded pins where the engine stops agreeing. See docs/status/audio-frontier-log.md.",
     "regeneration": "Every window in each movie's plan below is regenerable by re-running the recorder probe over that movie with OGGF_AUDIO_WINDOWS set to its ordinal. Every window is opened, walked and reported on every run; the selection only decides which are written to disk. Ordinals after a run's first 1-up restore shift by one per restore relative to a survey taken before that boundary existed, so cite a window's epoch frame alongside its ordinal.",
     "capture_command": "OGGF_AUDIO_WINDOWS=<ordinals> OGGF_OUT=<external>/manifest.jsonl OGGF_INPUT_REPOSITORY_ROOT=<repo> OGGF_WORKDIR=<external>/workdir BIZHAWK_HOME=<bizhawk-2.11> tools/tracechaser/bizhawk/run_bizhawk_lua.sh tools/audio/probes/s1_run_window_driver_parity_probe.lua <bk2> <s1-rev01.gen>",
-    "provenance": "Two serial BizHawk captures, verified byte-identical per published window with cmp before anything was gzipped into the fixture tree. The published windows below came from a capture bounded to the movie's first four windows; each window is itself complete, opening and closing at real ROM epochs, and the full plan below comes from the survey probe over the whole movie.",
+    "provenance": "Two serial BizHawk captures of the whole movie per published window, verified byte-identical with cmp before anything was gzipped into the fixture tree. Windows 59 and 83 come from a second pair of whole-movie passes, since the first pair's selection list predated the 1-up restore boundary that shifted their ordinals.",
     "movies": {
       "s1-complete-run": {
         "bk2": "../../../traces/s1/_movies/s1-complete-run.bk2",
         "input_rows": 195493,
-        "window_count": 83,
+        "window_count": 84,
         "total_invocations": 194863,
         "dormant_invocations_before_first_window": 196,
         "reentry_window_ordinals": [
@@ -173,17 +173,17 @@
             "compressed_bytes": 11450
           },
           {
-            "file": "runs/s1-complete-run/w002-id8E.jsonl.gz",
-            "music_id": "0x8E",
-            "window_ordinal": 2,
+            "file": "runs/s1-complete-run/w001-id81.jsonl.gz",
+            "music_id": "0x81",
+            "window_ordinal": 1,
             "open_boundary": "bgm_dispatch",
-            "epoch_open_frame": 5842,
-            "close_frame": 6417,
-            "terminal_record_count": 567,
+            "epoch_open_frame": 584,
+            "close_frame": 5842,
+            "terminal_record_count": 5257,
             "abandoned_invocations": 0,
-            "uncompressed_sha256": "fd31da11ee5675f51cdd88c03b386119fa4b292b76349f2b7f7087f80f7b113b",
-            "uncompressed_bytes": 3933049,
-            "compressed_bytes": 64714
+            "uncompressed_sha256": "24292d7e7ea6f95ab03fcdb184cd938983f7cef824b6122d5cde0bf3f5ace0f3",
+            "uncompressed_bytes": 44776928,
+            "compressed_bytes": 869605
           },
           {
             "file": "runs/s1-complete-run/w003-id81.jsonl.gz",
@@ -191,763 +191,1078 @@
             "window_ordinal": 3,
             "open_boundary": "bgm_dispatch",
             "epoch_open_frame": 6417,
-            "close_frame": 6419,
-            "terminal_record_count": 1,
+            "close_frame": 8796,
+            "terminal_record_count": 2378,
             "abandoned_invocations": 0,
-            "uncompressed_sha256": "001885f227c452de59b4bc28ef5d227eb9c549852d2a43a4da8156454e32e721",
-            "uncompressed_bytes": 55638,
-            "compressed_bytes": 3739
+            "uncompressed_sha256": "152885b8613467fd9eabda005b64df02bd5056eda799a1d9f55cfb43e0bdb179",
+            "uncompressed_bytes": 20583626,
+            "compressed_bytes": 396236
+          },
+          {
+            "file": "runs/s1-complete-run/w008-id81.jsonl.gz",
+            "music_id": "0x81",
+            "window_ordinal": 8,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 12293,
+            "close_frame": 18020,
+            "terminal_record_count": 5726,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "75074478c9733a1248248eed86af2bc2a8503dd1a3750e2704f0552a0eb98981",
+            "uncompressed_bytes": 49085707,
+            "compressed_bytes": 941516
+          },
+          {
+            "file": "runs/s1-complete-run/w009-id8C.jsonl.gz",
+            "music_id": "0x8C",
+            "window_ordinal": 9,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 18020,
+            "close_frame": 19447,
+            "terminal_record_count": 1426,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "fe32074c95a80fb37c9c4417dca275a74118caafeb2d30ea9b65e2bada3e2e81",
+            "uncompressed_bytes": 11876745,
+            "compressed_bytes": 212501
+          },
+          {
+            "file": "runs/s1-complete-run/w015-id87.jsonl.gz",
+            "music_id": "0x87",
+            "window_ordinal": 15,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 41087,
+            "close_frame": 42290,
+            "terminal_record_count": 1202,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "6eba263bd88e0047ae2dfd11729500b20fc139e17bdd4ddcc9df6af85e601b90",
+            "uncompressed_bytes": 9189316,
+            "compressed_bytes": 180768
+          },
+          {
+            "file": "runs/s1-complete-run/w016-id83.jsonl.gz",
+            "music_id": "0x83",
+            "window_ordinal": 16,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 42290,
+            "close_frame": 42734,
+            "terminal_record_count": 443,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "8031da4317b556447b45bfc833255fe79d4b0907ecd3c82480e4235e90dab3df",
+            "uncompressed_bytes": 3710034,
+            "compressed_bytes": 77888
+          },
+          {
+            "file": "runs/s1-complete-run/w030-id85.jsonl.gz",
+            "music_id": "0x85",
+            "window_ordinal": 30,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 92212,
+            "close_frame": 92955,
+            "terminal_record_count": 742,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "a37af7a2ec2f23c39bb3db9943f8362ef0c9fc005977cacf13160dcc3a4c8059",
+            "uncompressed_bytes": 6172914,
+            "compressed_bytes": 115174
+          },
+          {
+            "file": "runs/s1-complete-run/w038-id82.jsonl.gz",
+            "music_id": "0x82",
+            "window_ordinal": 38,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 106758,
+            "close_frame": 107740,
+            "terminal_record_count": 981,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "38abfd01bf9e0386aabd1700012d2ce282840ceb93940f619dc5e78d5e86de54",
+            "uncompressed_bytes": 8488303,
+            "compressed_bytes": 171827
+          },
+          {
+            "file": "runs/s1-complete-run/w058-id88.jsonl.gz",
+            "music_id": "0x88",
+            "window_ordinal": 58,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 138135,
+            "close_frame": 138346,
+            "terminal_record_count": 210,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "1e1e52ee08506f50b94a203ead251951eedb7dd7d15eb49d5ce6e8575e326cdc",
+            "uncompressed_bytes": 1486651,
+            "compressed_bytes": 26782
+          },
+          {
+            "file": "runs/s1-complete-run/w059-id84.jsonl.gz",
+            "music_id": "0x84",
+            "window_ordinal": 59,
+            "open_boundary": "one_up_restore",
+            "epoch_open_frame": 138346,
+            "close_frame": 142570,
+            "terminal_record_count": 4223,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "8b74fb6a8b828d5358f4757d20d63cb7b0819ce71234c6aa5b314e1eea436644",
+            "uncompressed_bytes": 34323771,
+            "compressed_bytes": 678428
+          },
+          {
+            "file": "runs/s1-complete-run/w061-id84.jsonl.gz",
+            "music_id": "0x84",
+            "window_ordinal": 61,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 143102,
+            "close_frame": 148638,
+            "terminal_record_count": 5535,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "11938ac7605dfb8511c5cb1cfc6c3d1598db3036f58973974d84b2df4ad013af",
+            "uncompressed_bytes": 44854241,
+            "compressed_bytes": 876993
+          },
+          {
+            "file": "runs/s1-complete-run/w062-id8E.jsonl.gz",
+            "music_id": "0x8E",
+            "window_ordinal": 62,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 148638,
+            "close_frame": 149215,
+            "terminal_record_count": 569,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "b2ae763e9d9df19cf10afc897721537b7223d3d90d3b10c51195adc2d8f75bb9",
+            "uncompressed_bytes": 3946111,
+            "compressed_bytes": 64960
+          },
+          {
+            "file": "runs/s1-complete-run/w072-id8E.jsonl.gz",
+            "music_id": "0x8E",
+            "window_ordinal": 72,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 179651,
+            "close_frame": 180177,
+            "terminal_record_count": 524,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "a0a3e01e3e4a5dfbe4d184cd64113cdaeef228654381ef7ce2ea47d46543dbae",
+            "uncompressed_bytes": 3709059,
+            "compressed_bytes": 61854
+          },
+          {
+            "file": "runs/s1-complete-run/w076-id86.jsonl.gz",
+            "music_id": "0x86",
+            "window_ordinal": 76,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 183980,
+            "close_frame": 185113,
+            "terminal_record_count": 1132,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "d2b253be3a6a7b9b316d5b4311859b5bbb7293963de9dbd9037450a86a6eb2c7",
+            "uncompressed_bytes": 10090566,
+            "compressed_bytes": 208144
+          },
+          {
+            "file": "runs/s1-complete-run/w077-id92.jsonl.gz",
+            "music_id": "0x92",
+            "window_ordinal": 77,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 185113,
+            "close_frame": 185303,
+            "terminal_record_count": 189,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "02c2eed7683b6f32c5cc51cf7a2c17d0945e77ba6f7d4fe5fb97873b962948f1",
+            "uncompressed_bytes": 1477129,
+            "compressed_bytes": 29169
+          },
+          {
+            "file": "runs/s1-complete-run/w080-id86.jsonl.gz",
+            "music_id": "0x86",
+            "window_ordinal": 80,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 188308,
+            "close_frame": 189389,
+            "terminal_record_count": 1074,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "470dfde6d8ad983f20fa73ec9d176eaa45d4e9959c51c9830049fa7efe58757d",
+            "uncompressed_bytes": 9407116,
+            "compressed_bytes": 197452
+          },
+          {
+            "file": "runs/s1-complete-run/w081-id8D.jsonl.gz",
+            "music_id": "0x8D",
+            "window_ordinal": 81,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 189389,
+            "close_frame": 194164,
+            "terminal_record_count": 4671,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "46c5f7ab31eac700311338f10b2c88885876d1817992fca8ff91ec19e0e7c592",
+            "uncompressed_bytes": 35340988,
+            "compressed_bytes": 652044
+          },
+          {
+            "file": "runs/s1-complete-run/w082-id8B.jsonl.gz",
+            "music_id": "0x8B",
+            "window_ordinal": 82,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 194164,
+            "close_frame": 195389,
+            "terminal_record_count": 1223,
+            "abandoned_invocations": 1,
+            "uncompressed_sha256": "818dbb3ccb19567f82f1b0ad61c19bea4982d8d7760c9876529d2f76cdb5a220",
+            "uncompressed_bytes": 9010021,
+            "compressed_bytes": 154095
+          },
+          {
+            "file": "runs/s1-complete-run/w083-id91.jsonl.gz",
+            "music_id": "0x91",
+            "window_ordinal": 83,
+            "open_boundary": "bgm_dispatch",
+            "epoch_open_frame": 195389,
+            "close_frame": 195493,
+            "terminal_record_count": 103,
+            "abandoned_invocations": 0,
+            "uncompressed_sha256": "8ff301a32a67b1813437f6b20789be5670d3394d805125c8eefaf3c344839097",
+            "uncompressed_bytes": 809875,
+            "compressed_bytes": 16380
           }
         ],
         "plan": [
           {
             "ordinal": 0,
             "music_id": "0x8A",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 506,
             "close_frame": 584,
-            "invocations": 72,
-            "sfx_dispatches": 0,
-            "contains_reentry": false
+            "terminal_record_count": 72,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 1,
             "music_id": "0x81",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 584,
             "close_frame": 5842,
-            "invocations": 5257,
-            "sfx_dispatches": 165,
-            "contains_reentry": false
+            "terminal_record_count": 5257,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 2,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 5842,
             "close_frame": 6417,
-            "invocations": 567,
-            "sfx_dispatches": 19,
-            "contains_reentry": false
+            "terminal_record_count": 567,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 3,
             "music_id": "0x81",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 6417,
             "close_frame": 8796,
-            "invocations": 2378,
-            "sfx_dispatches": 86,
-            "contains_reentry": false
+            "terminal_record_count": 2378,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 4,
             "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 8796,
             "close_frame": 10122,
-            "invocations": 1325,
-            "sfx_dispatches": 37,
-            "contains_reentry": false
+            "terminal_record_count": 1325,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 5,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 10122,
             "close_frame": 10681,
-            "invocations": 551,
-            "sfx_dispatches": 16,
-            "contains_reentry": false
+            "terminal_record_count": 551,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 6,
             "music_id": "0x81",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 10681,
             "close_frame": 11092,
-            "invocations": 410,
-            "sfx_dispatches": 4,
-            "contains_reentry": false
+            "terminal_record_count": 410,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 7,
             "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 11092,
             "close_frame": 12293,
-            "invocations": 1200,
-            "sfx_dispatches": 32,
-            "contains_reentry": false
+            "terminal_record_count": 1200,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 8,
             "music_id": "0x81",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 12293,
             "close_frame": 18020,
-            "invocations": 5726,
-            "sfx_dispatches": 190,
-            "contains_reentry": false
+            "terminal_record_count": 5726,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 9,
             "music_id": "0x8C",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 18020,
             "close_frame": 19447,
-            "invocations": 1426,
-            "sfx_dispatches": 56,
-            "contains_reentry": false
+            "terminal_record_count": 1426,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 10,
             "music_id": "0x81",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 19447,
             "close_frame": 20072,
-            "invocations": 624,
-            "sfx_dispatches": 11,
-            "contains_reentry": false
+            "terminal_record_count": 624,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 11,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 20072,
             "close_frame": 20594,
-            "invocations": 514,
-            "sfx_dispatches": 6,
-            "contains_reentry": false
+            "terminal_record_count": 514,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 12,
             "music_id": "0x83",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 20594,
             "close_frame": 28312,
-            "invocations": 7717,
-            "sfx_dispatches": 362,
-            "contains_reentry": false
+            "terminal_record_count": 7717,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 13,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 28312,
             "close_frame": 28882,
-            "invocations": 562,
-            "sfx_dispatches": 18,
-            "contains_reentry": false
+            "terminal_record_count": 562,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 14,
             "music_id": "0x83",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 28882,
             "close_frame": 41087,
-            "invocations": 12204,
-            "sfx_dispatches": 369,
-            "contains_reentry": false
+            "terminal_record_count": 12204,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 15,
             "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 41087,
             "close_frame": 42290,
-            "invocations": 1202,
-            "sfx_dispatches": 62,
-            "contains_reentry": false
+            "terminal_record_count": 1202,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 16,
             "music_id": "0x83",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 42290,
             "close_frame": 42734,
-            "invocations": 443,
-            "sfx_dispatches": 21,
-            "contains_reentry": false
+            "terminal_record_count": 443,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 17,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 42734,
             "close_frame": 43246,
-            "invocations": 504,
-            "sfx_dispatches": 3,
-            "contains_reentry": false
+            "terminal_record_count": 504,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 18,
             "music_id": "0x83",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 43246,
             "close_frame": 59048,
-            "invocations": 15801,
-            "sfx_dispatches": 611,
-            "contains_reentry": false
+            "terminal_record_count": 15801,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 19,
             "music_id": "0x8C",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 59048,
             "close_frame": 60304,
-            "invocations": 1255,
-            "sfx_dispatches": 49,
-            "contains_reentry": false
+            "terminal_record_count": 1255,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 20,
             "music_id": "0x83",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 60304,
             "close_frame": 60842,
-            "invocations": 537,
-            "sfx_dispatches": 10,
-            "contains_reentry": false
+            "terminal_record_count": 537,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 21,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 60842,
             "close_frame": 61349,
-            "invocations": 499,
-            "sfx_dispatches": 3,
-            "contains_reentry": false
+            "terminal_record_count": 499,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 22,
             "music_id": "0x85",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 61349,
             "close_frame": 70786,
-            "invocations": 9436,
-            "sfx_dispatches": 173,
-            "contains_reentry": false
+            "terminal_record_count": 9436,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 23,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 70786,
             "close_frame": 71308,
-            "invocations": 514,
-            "sfx_dispatches": 6,
-            "contains_reentry": false
+            "terminal_record_count": 514,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 24,
             "music_id": "0x85",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 71308,
             "close_frame": 78996,
-            "invocations": 7687,
-            "sfx_dispatches": 194,
-            "contains_reentry": false
+            "terminal_record_count": 7687,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 25,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 78996,
             "close_frame": 79532,
-            "invocations": 528,
-            "sfx_dispatches": 9,
-            "contains_reentry": false
+            "terminal_record_count": 528,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 26,
             "music_id": "0x85",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 79532,
             "close_frame": 85785,
-            "invocations": 6252,
-            "sfx_dispatches": 143,
-            "contains_reentry": false
+            "terminal_record_count": 6252,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 27,
             "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 85785,
             "close_frame": 86985,
-            "invocations": 1199,
-            "sfx_dispatches": 25,
-            "contains_reentry": false
+            "terminal_record_count": 1199,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 28,
             "music_id": "0x85",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 86985,
             "close_frame": 90593,
-            "invocations": 3607,
-            "sfx_dispatches": 50,
-            "contains_reentry": false
+            "terminal_record_count": 3607,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 29,
             "music_id": "0x8C",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 90593,
             "close_frame": 92212,
-            "invocations": 1618,
-            "sfx_dispatches": 51,
-            "contains_reentry": false
+            "terminal_record_count": 1618,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 30,
             "music_id": "0x85",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 92212,
             "close_frame": 92955,
-            "invocations": 742,
-            "sfx_dispatches": 12,
-            "contains_reentry": false
+            "terminal_record_count": 742,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 31,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 92955,
             "close_frame": 93472,
-            "invocations": 509,
-            "sfx_dispatches": 5,
-            "contains_reentry": false
+            "terminal_record_count": 509,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 32,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 93472,
             "close_frame": 98243,
-            "invocations": 4770,
-            "sfx_dispatches": 76,
-            "contains_reentry": false
+            "terminal_record_count": 4770,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 33,
             "music_id": "0x92",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 98243,
             "close_frame": 98502,
-            "invocations": 258,
-            "sfx_dispatches": 1,
-            "contains_reentry": false
+            "terminal_record_count": 258,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 34,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 98502,
             "close_frame": 101479,
-            "invocations": 2976,
-            "sfx_dispatches": 54,
-            "contains_reentry": false
+            "terminal_record_count": 2976,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 35,
             "music_id": "0x92",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 101479,
             "close_frame": 101943,
-            "invocations": 463,
-            "sfx_dispatches": 5,
-            "contains_reentry": false
+            "terminal_record_count": 463,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 36,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 101943,
             "close_frame": 106245,
-            "invocations": 4301,
-            "sfx_dispatches": 89,
-            "contains_reentry": false
+            "terminal_record_count": 4301,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 37,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 106245,
             "close_frame": 106758,
-            "invocations": 505,
-            "sfx_dispatches": 4,
-            "contains_reentry": false
+            "terminal_record_count": 505,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 38,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 106758,
             "close_frame": 107740,
-            "invocations": 981,
-            "sfx_dispatches": 27,
-            "contains_reentry": false
+            "terminal_record_count": 981,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 39,
             "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 107740,
             "close_frame": 108970,
-            "invocations": 1229,
-            "sfx_dispatches": 15,
-            "contains_reentry": true
+            "terminal_record_count": 1229,
+            "abandoned_invocations": 1,
+            "published": false
           },
           {
             "ordinal": 40,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 108970,
             "close_frame": 112671,
-            "invocations": 3700,
-            "sfx_dispatches": 85,
-            "contains_reentry": false
+            "terminal_record_count": 3700,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 41,
             "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 112671,
             "close_frame": 113886,
-            "invocations": 1214,
-            "sfx_dispatches": 13,
-            "contains_reentry": false
+            "terminal_record_count": 1214,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 42,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 113886,
             "close_frame": 115873,
-            "invocations": 1986,
-            "sfx_dispatches": 25,
-            "contains_reentry": false
+            "terminal_record_count": 1986,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 43,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 115873,
             "close_frame": 116625,
-            "invocations": 751,
-            "sfx_dispatches": 9,
-            "contains_reentry": false
+            "terminal_record_count": 751,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 44,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 116625,
             "close_frame": 117148,
-            "invocations": 515,
-            "sfx_dispatches": 6,
-            "contains_reentry": false
+            "terminal_record_count": 515,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 45,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 117148,
             "close_frame": 124507,
-            "invocations": 7358,
-            "sfx_dispatches": 149,
-            "contains_reentry": false
+            "terminal_record_count": 7358,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 46,
             "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 124507,
             "close_frame": 125714,
-            "invocations": 1206,
-            "sfx_dispatches": 15,
-            "contains_reentry": false
+            "terminal_record_count": 1206,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 47,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 125714,
             "close_frame": 125735,
-            "invocations": 20,
-            "sfx_dispatches": 0,
-            "contains_reentry": false
+            "terminal_record_count": 20,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 48,
             "music_id": "0x92",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 125735,
             "close_frame": 125833,
-            "invocations": 97,
-            "sfx_dispatches": 1,
-            "contains_reentry": false
+            "terminal_record_count": 97,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 49,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 125833,
             "close_frame": 126749,
-            "invocations": 915,
-            "sfx_dispatches": 12,
-            "contains_reentry": false
+            "terminal_record_count": 915,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 50,
             "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 126749,
             "close_frame": 128021,
-            "invocations": 1271,
-            "sfx_dispatches": 20,
-            "contains_reentry": false
+            "terminal_record_count": 1271,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 51,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 128021,
             "close_frame": 128033,
-            "invocations": 11,
-            "sfx_dispatches": 0,
-            "contains_reentry": false
+            "terminal_record_count": 11,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 52,
             "music_id": "0x92",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 128033,
             "close_frame": 128079,
-            "invocations": 45,
-            "sfx_dispatches": 1,
-            "contains_reentry": false
+            "terminal_record_count": 45,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 53,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 128079,
             "close_frame": 133797,
-            "invocations": 5717,
-            "sfx_dispatches": 77,
-            "contains_reentry": false
+            "terminal_record_count": 5717,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 54,
             "music_id": "0x8C",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 133797,
             "close_frame": 135298,
-            "invocations": 1500,
-            "sfx_dispatches": 36,
-            "contains_reentry": false
+            "terminal_record_count": 1500,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 55,
             "music_id": "0x82",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 135298,
             "close_frame": 135925,
-            "invocations": 626,
-            "sfx_dispatches": 12,
-            "contains_reentry": false
+            "terminal_record_count": 626,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 56,
             "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 135925,
             "close_frame": 136471,
-            "invocations": 538,
-            "sfx_dispatches": 12,
-            "contains_reentry": false
+            "terminal_record_count": 538,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 57,
             "music_id": "0x84",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 136471,
             "close_frame": 138135,
-            "invocations": 1663,
-            "sfx_dispatches": 31,
-            "contains_reentry": false
+            "terminal_record_count": 1663,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 58,
             "music_id": "0x88",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 138135,
-            "close_frame": 142570,
-            "invocations": 4433,
-            "sfx_dispatches": 81,
-            "contains_reentry": false
+            "close_frame": 138346,
+            "terminal_record_count": 210,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 59,
-            "music_id": "0x8E",
-            "open_frame": 142570,
-            "close_frame": 143102,
-            "invocations": 524,
-            "sfx_dispatches": 8,
-            "contains_reentry": false
+            "music_id": "0x84",
+            "open_boundary": "one_up_restore",
+            "open_frame": 138346,
+            "close_frame": 142570,
+            "terminal_record_count": 4223,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 60,
-            "music_id": "0x84",
-            "open_frame": 143102,
-            "close_frame": 148638,
-            "invocations": 5535,
-            "sfx_dispatches": 125,
-            "contains_reentry": false
+            "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 142570,
+            "close_frame": 143102,
+            "terminal_record_count": 524,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 61,
-            "music_id": "0x8E",
-            "open_frame": 148638,
-            "close_frame": 149215,
-            "invocations": 569,
-            "sfx_dispatches": 20,
-            "contains_reentry": false
+            "music_id": "0x84",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 143102,
+            "close_frame": 148638,
+            "terminal_record_count": 5535,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 62,
-            "music_id": "0x84",
-            "open_frame": 149215,
-            "close_frame": 150647,
-            "invocations": 1431,
-            "sfx_dispatches": 36,
-            "contains_reentry": false
+            "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 148638,
+            "close_frame": 149215,
+            "terminal_record_count": 569,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 63,
-            "music_id": "0x87",
-            "open_frame": 150647,
-            "close_frame": 151856,
-            "invocations": 1208,
-            "sfx_dispatches": 24,
-            "contains_reentry": false
+            "music_id": "0x84",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 149215,
+            "close_frame": 150647,
+            "terminal_record_count": 1431,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 64,
-            "music_id": "0x84",
-            "open_frame": 151856,
-            "close_frame": 155164,
-            "invocations": 3307,
-            "sfx_dispatches": 102,
-            "contains_reentry": false
+            "music_id": "0x87",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 150647,
+            "close_frame": 151856,
+            "terminal_record_count": 1208,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 65,
-            "music_id": "0x8C",
-            "open_frame": 155164,
-            "close_frame": 162178,
-            "invocations": 7013,
-            "sfx_dispatches": 155,
-            "contains_reentry": false
+            "music_id": "0x84",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 151856,
+            "close_frame": 155164,
+            "terminal_record_count": 3307,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 66,
-            "music_id": "0x84",
-            "open_frame": 162178,
-            "close_frame": 162654,
-            "invocations": 475,
-            "sfx_dispatches": 9,
-            "contains_reentry": false
+            "music_id": "0x8C",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 155164,
+            "close_frame": 162178,
+            "terminal_record_count": 7013,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 67,
-            "music_id": "0x8E",
-            "open_frame": 162654,
-            "close_frame": 163166,
-            "invocations": 504,
-            "sfx_dispatches": 3,
-            "contains_reentry": false
+            "music_id": "0x84",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 162178,
+            "close_frame": 162654,
+            "terminal_record_count": 475,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 68,
-            "music_id": "0x86",
-            "open_frame": 163166,
-            "close_frame": 170472,
-            "invocations": 7305,
-            "sfx_dispatches": 193,
-            "contains_reentry": false
+            "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 162654,
+            "close_frame": 163166,
+            "terminal_record_count": 504,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 69,
-            "music_id": "0x8E",
-            "open_frame": 170472,
-            "close_frame": 171004,
-            "invocations": 524,
-            "sfx_dispatches": 9,
-            "contains_reentry": false
+            "music_id": "0x86",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 163166,
+            "close_frame": 170472,
+            "terminal_record_count": 7305,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 70,
-            "music_id": "0x86",
-            "open_frame": 171004,
-            "close_frame": 179651,
-            "invocations": 8646,
-            "sfx_dispatches": 243,
-            "contains_reentry": false
+            "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 170472,
+            "close_frame": 171004,
+            "terminal_record_count": 524,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 71,
-            "music_id": "0x8E",
-            "open_frame": 179651,
-            "close_frame": 180177,
-            "invocations": 524,
-            "sfx_dispatches": 6,
-            "contains_reentry": false
+            "music_id": "0x86",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 171004,
+            "close_frame": 179651,
+            "terminal_record_count": 8646,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 72,
-            "music_id": "0x8D",
-            "open_frame": 180177,
-            "close_frame": 180818,
-            "invocations": 634,
-            "sfx_dispatches": 6,
-            "contains_reentry": false
+            "music_id": "0x8E",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 179651,
+            "close_frame": 180177,
+            "terminal_record_count": 524,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 73,
-            "music_id": "0x86",
-            "open_frame": 180818,
-            "close_frame": 183646,
-            "invocations": 2827,
-            "sfx_dispatches": 47,
-            "contains_reentry": false
+            "music_id": "0x8D",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 180177,
+            "close_frame": 180818,
+            "terminal_record_count": 634,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 74,
-            "music_id": "0x92",
-            "open_frame": 183646,
-            "close_frame": 183980,
-            "invocations": 333,
-            "sfx_dispatches": 4,
-            "contains_reentry": false
+            "music_id": "0x86",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 180818,
+            "close_frame": 183646,
+            "terminal_record_count": 2827,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 75,
-            "music_id": "0x86",
-            "open_frame": 183980,
-            "close_frame": 185113,
-            "invocations": 1132,
-            "sfx_dispatches": 21,
-            "contains_reentry": false
+            "music_id": "0x92",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 183646,
+            "close_frame": 183980,
+            "terminal_record_count": 333,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 76,
-            "music_id": "0x92",
-            "open_frame": 185113,
-            "close_frame": 185303,
-            "invocations": 189,
-            "sfx_dispatches": 5,
-            "contains_reentry": false
+            "music_id": "0x86",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 183980,
+            "close_frame": 185113,
+            "terminal_record_count": 1132,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 77,
-            "music_id": "0x86",
-            "open_frame": 185303,
-            "close_frame": 187448,
-            "invocations": 2144,
-            "sfx_dispatches": 50,
-            "contains_reentry": false
+            "music_id": "0x92",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 185113,
+            "close_frame": 185303,
+            "terminal_record_count": 189,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 78,
-            "music_id": "0x92",
-            "open_frame": 187448,
-            "close_frame": 188308,
-            "invocations": 858,
-            "sfx_dispatches": 8,
-            "contains_reentry": true
+            "music_id": "0x86",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 185303,
+            "close_frame": 187448,
+            "terminal_record_count": 2144,
+            "abandoned_invocations": 0,
+            "published": false
           },
           {
             "ordinal": 79,
-            "music_id": "0x86",
-            "open_frame": 188308,
-            "close_frame": 189389,
-            "invocations": 1074,
-            "sfx_dispatches": 19,
-            "contains_reentry": false
+            "music_id": "0x92",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 187448,
+            "close_frame": 188308,
+            "terminal_record_count": 858,
+            "abandoned_invocations": 1,
+            "published": false
           },
           {
             "ordinal": 80,
-            "music_id": "0x8D",
-            "open_frame": 189389,
-            "close_frame": 194164,
-            "invocations": 4671,
-            "sfx_dispatches": 236,
-            "contains_reentry": false
+            "music_id": "0x86",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 188308,
+            "close_frame": 189389,
+            "terminal_record_count": 1074,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 81,
-            "music_id": "0x8B",
-            "open_frame": 194164,
-            "close_frame": 195389,
-            "invocations": 1223,
-            "sfx_dispatches": 5,
-            "contains_reentry": true
+            "music_id": "0x8D",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 189389,
+            "close_frame": 194164,
+            "terminal_record_count": 4671,
+            "abandoned_invocations": 0,
+            "published": true
           },
           {
             "ordinal": 82,
+            "music_id": "0x8B",
+            "open_boundary": "bgm_dispatch",
+            "open_frame": 194164,
+            "close_frame": 195389,
+            "terminal_record_count": 1223,
+            "abandoned_invocations": 1,
+            "published": true
+          },
+          {
+            "ordinal": 83,
             "music_id": "0x91",
+            "open_boundary": "bgm_dispatch",
             "open_frame": 195389,
             "close_frame": 195493,
-            "invocations": 102,
-            "sfx_dispatches": 0,
-            "contains_reentry": false
+            "terminal_record_count": 103,
+            "abandoned_invocations": 0,
+            "published": false
           }
-        ]
+        ],
+        "plan_source": "the completed whole-movie capture, so it carries the 1-up restore boundary; ordinals here supersede the pre-fix survey's, which had one fewer window"
       },
       "sonic1-complete-withemeralds": {
         "bk2": "../../../traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2",
