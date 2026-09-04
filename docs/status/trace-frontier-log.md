@@ -115734,3 +115734,102 @@ The other three death arms remain coordinates only.
   frame 25589), the S3K Sonic+Tails chain, and
   `TestTraceRunReplayWalkerControlFlow` -- all unchanged. Ordinary suite 16,404
   tests, 0 failures, 17 skips. `-Pguards` 607 tests, 0 failures.
+
+## 2026-09-04 - Boss constructor spawn order: researched, implemented, measured, NOT landed
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-boss-constructor-spawn-order`, from `c6954a259` with
+  `origin/develop` merged in.
+- **The shape.** `AbstractBossInstance`'s constructor calls
+  `initializeBossState()` (`src/main/java/com/openggf/level/objects/boss/AbstractBossInstance.java:90`),
+  so a boss that spawns children there does so before the object manager has
+  given it a slot. `spawnChild` is `spawnChildAfterSlot(getSlotIndex(), ...)`,
+  so with no parent slot it falls back to lowest-free and the children take
+  slots BELOW the boss, inverting the ROM's order and making the boss execute
+  after its own children. That is the defect the CPZ boss fix closed on the
+  seg15 branch, where it was worth 2,122 comparator errors.
+- **Scope, verified rather than inherited. Of the six candidates, two need no
+  change.** `Sonic2WFZBossInstance` was a false positive in the original grep,
+  which matched the coordinate field `spawnX`: its `initializeBossState` spawns
+  nothing and its five children come from routine `$04` via `spawnChild`,
+  already matching `ObjC5_CaseStart`'s five `LoadChildObject` calls.
+  `Sonic2MTZBossInstance` is a genuine no-change: `Obj54_Init` allocates through
+  `JmpTo17_AllocateObject`, the plain lowest-free allocator and a different
+  thunk from `JmpTo17_AllocateObjectAfterCurrent` used elsewhere in the same
+  file, and the engine already uses `spawnFreeChild`. Lowest-free does not
+  depend on the parent's slot, so the constructor timing is harmless there.
+- **The four that do differ from the ROM, with citations, for whoever resumes.**
+  - `Sonic2EHZBossInstance`. `Obj56_Init` (docs/s2disasm/s2.asm:63372) allocates
+    the vehicle top at `:63388`, the ground vehicle at `:63405`, calls
+    `loc_2F098` at `:63421` which allocates wheel subtypes 0, 1 and 2 at
+    `:63445`, `:63468`, `:63491` and the spike at `:63514`, and allocates the
+    propeller LAST at `:63425`. All seven are `AllocateObjectAfterCurrent`. The
+    engine spawns from the constructor and creates the propeller third.
+  - `Sonic2MechaSonicInstance`. `ObjAF_Init` (`:77646`) loads three children via
+    `LoadChildObject`, whose first instruction is
+    `AllocateObjectAfterCurrent` (`:73128-73129`). The engine uses
+    `spawnFreeChild`, which is lowest-free, AND spawns from the constructor.
+  - `Sonic2DeathEggRobotInstance`. `loc_3D52A` (`:82717`) loads ten children via
+    `LoadChildObject`, order Shoulder, FrontForearm, FrontLowerLeg, Arm,
+    FrontThigh, Head, Jet, BackLowerLeg, BackForearm, BackThigh. The engine uses
+    `spawnFreeChild`, spawns from the constructor, and swaps children two and
+    three.
+  - `LbzEndBossInstance`. `loc_73906` (docs/skdisasm/sonic3k.asm:153443-153444)
+    creates two children via `CreateChild1_Normal`, whose loop body is
+    `AllocateObjectAfterCurrent` (`:177010-177015`). Count, order and method
+    already match; only the constructor timing differs.
+- **All four were implemented and measured. Every one is trace-neutral.** With
+  the four changes applied, the full `-Ptrace-replay` profile reports 854 tests,
+  7 failures, 6 skips -- identical to the branch baseline, class for class and
+  message for message. `TestS2CompleteEmeraldRunChain` stays at 11 axes with no
+  `[segment-physics]` axis, all EHZ classes stay green including
+  `TestS2Ehz2Seg6CompleteEmeraldsSegmentTraceReplay` for the boss act, and
+  `TestS2DezEndingLevelSelectTraceReplay` stays green. `-Pguards` stays at 607
+  tests, 0 failures.
+- **The LBZ end boss is additionally a latent site.** Object id `0xCB` never
+  appears in an object event or a slot dump in any of the five committed LBZ
+  fixtures, which between them carry 108 to 208 distinct object ids. A first
+  pass suggested otherwise; that was a raw string match inside
+  `air_countdown_state` records rather than an object type, and the structured
+  check by role is the one to trust. `TestS3kLbzZoneSliceTraceReplay` (4,585
+  errors, first at frame 23533 on `x_speed`) and
+  `TestS3kSonicTailsLbzSegmentTraceReplay` (7,187 errors, first at frame 959 on
+  `player_animation_id`) are byte-identical with and without the change, and
+  both were already red before this branch; neither is in the `-Ptrace-replay`
+  S3K selection, so neither is a gate.
+- **Why it is NOT landed, and this is the finding.** Moving the spawn to the
+  boss's first update breaks 27 unit assertions across 13 classes. Most are a
+  straightforward port -- a test that constructs a boss and asserts on its
+  children now has to drive the boss's one init execution first, exactly as the
+  CPZ pair on the seg15 branch were ported -- and that port takes the set from
+  23 failures and 4 errors down to 1 failure and 9 errors. The residue is NOT a
+  harness artefact:
+  - Nine of the ten remaining are
+    `IllegalStateException: Missing required object reference:
+    ObjectRefId[slotIndex=-1, generation=0, spawnId=-1, dynamicId=1,
+    kind=DYNAMIC]`, thrown from `RewindRegistry.capture()` in
+    `TestS2DeathEggRobotGraphRewind`, `TestS3kLbzEndBossChildLinksRewind`,
+    `TestBossChildExactStateRewind` and `TestEveryObjectRewindRoundTrip`. A
+    child spawned after-current during an update is referenced by the boss but
+    is not yet resolvable in the identity table at capture time, where the
+    lowest-free path registered it immediately. That is a rewind-identity
+    question about `addDynamicObjectAfterSlot` versus
+    `addDynamicObjectNextFrame`, not about the boss.
+  - The tenth is `TestLbzEndBossInstance`, which after driving one update sees
+    SEVEN owned children where it expects two: the engine's routine 0 does more
+    in one update than the ROM's `loc_73906`, so "drive one update" is not
+    equivalent to "run Init" for that boss.
+- **The judgement.** These four changes are ROM-correct and buy nothing
+  measurable today -- no trace moves either way -- while introducing a
+  rewind-identity regression whose root cause is unresolved. The lead's own rule
+  for this series was that a boss whose trace moves the wrong way stays
+  unchanged with the numbers recorded; the same applies to one that moves no
+  trace and destabilises the rewind path. All four are reverted and the research
+  is banked here so a later lane can resume without redoing it.
+- **What a resumption needs, in order.** First settle the identity question:
+  whether a child added through `addDynamicObjectAfterSlot` during an update
+  should be capture-visible in the same frame, and fix that in the rewind path
+  rather than in the bosses. Then re-apply the four boss changes, port the 27
+  assertions, and confirm the sweep is still 854/7/6. `TestLbzEndBossInstance`
+  additionally needs its own answer for what "one Init execution" means for that
+  boss.
