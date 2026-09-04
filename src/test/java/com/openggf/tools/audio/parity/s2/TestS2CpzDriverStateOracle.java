@@ -45,8 +45,60 @@ class TestS2CpzDriverStateOracle {
     static final int ZERO_SERVICE_FRAMES = 6;
     /** The ROM driver request id this window's level load consumes. */
     static final int LOAD_ROM_MUSIC_ID = 0x8E;
-    /** The engine id for that song, identified by its stored header tempo. */
-    static final int LOAD_ENGINE_MUSIC_ID = Sonic2Music.CHEMICAL_PLANT.id;
+    /**
+     * The driver's music playlist in its own order, as the engine names each
+     * entry.
+     *
+     * <p>{@code zPlayMusic} strips the flag bits from the request byte and
+     * indexes {@code zMasterPlaylist} with what is left
+     * (s2.sounddriver.asm:1748, :1766-1773), so request {@code 81h} is the
+     * table's first entry and each later request steps one entry on. The table
+     * itself is {@code zMusIDPtr_2PResult}, {@code _EHZ}, {@code _MCZ_2P},
+     * {@code _OOZ}, {@code _MTZ}, {@code _HTZ}, {@code _ARZ}, {@code _CNZ_2P},
+     * {@code _CNZ}, {@code _DEZ}, {@code _MCZ}, {@code _EHZ_2P}, {@code _SCZ},
+     * {@code _CPZ}, {@code _WFZ}, {@code _HPZ}, {@code _Options},
+     * {@code _SpecStage} (:3823-3841).
+     *
+     * <p>The engine's own ids follow a different order entirely, so the two are
+     * not a shift and cannot be converted arithmetically: request {@code 82h}
+     * is EHZ, which the engine calls {@code 81h}, while request {@code 8Eh} is
+     * CPZ, which the engine calls {@code 8Ch}. Only the zone entries the
+     * driver-state oracles need are listed; the table is a citation, not a
+     * complete playlist.
+     */
+    private static final Sonic2Music[] DRIVER_PLAYLIST_FROM_81 = {
+            Sonic2Music.RESULTS_2P,       // 81h zMusIDPtr_2PResult
+            Sonic2Music.EMERALD_HILL,     // 82h zMusIDPtr_EHZ
+            Sonic2Music.MYSTIC_CAVE_2P,   // 83h zMusIDPtr_MCZ_2P
+            Sonic2Music.OIL_OCEAN,        // 84h zMusIDPtr_OOZ
+            Sonic2Music.METROPOLIS,       // 85h zMusIDPtr_MTZ
+            Sonic2Music.HILL_TOP,         // 86h zMusIDPtr_HTZ
+            Sonic2Music.AQUATIC_RUIN,     // 87h zMusIDPtr_ARZ
+            Sonic2Music.CASINO_NIGHT_2P,  // 88h zMusIDPtr_CNZ_2P
+            Sonic2Music.CASINO_NIGHT,     // 89h zMusIDPtr_CNZ
+            Sonic2Music.DEATH_EGG,        // 8Ah zMusIDPtr_DEZ
+            Sonic2Music.MYSTIC_CAVE,      // 8Bh zMusIDPtr_MCZ
+            Sonic2Music.EMERALD_HILL_2P,  // 8Ch zMusIDPtr_EHZ_2P
+            Sonic2Music.SKY_CHASE,        // 8Dh zMusIDPtr_SCZ
+            Sonic2Music.CHEMICAL_PLANT,   // 8Eh zMusIDPtr_CPZ
+            Sonic2Music.WING_FORTRESS,    // 8Fh zMusIDPtr_WFZ
+            Sonic2Music.HIDDEN_PALACE,    // 90h zMusIDPtr_HPZ
+            Sonic2Music.OPTIONS,          // 91h zMusIDPtr_Options
+            Sonic2Music.SPECIAL_STAGE,    // 92h zMusIDPtr_SpecStage
+    };
+
+    /** The engine id for that song, from the driver's own playlist order. */
+    static final int LOAD_ENGINE_MUSIC_ID = engineMusicFor(LOAD_ROM_MUSIC_ID);
+
+    static int engineMusicFor(int romRequestId) {
+        int index = romRequestId - 0x81;
+        if (index < 0 || index >= DRIVER_PLAYLIST_FROM_81.length) {
+            throw new IllegalArgumentException(
+                    "request id is outside the cited playlist span: "
+                            + Integer.toHexString(romRequestId));
+        }
+        return DRIVER_PLAYLIST_FROM_81[index].id;
+    }
     /** The committed request-window sidecar for this same movie and span. */
     static final String REQUEST_SIDECAR_RESOURCE =
             "/audio/parity/s2/s2-request-window-cpz-w2700-3450.raw-v2.jsonl.gz";
@@ -62,6 +114,36 @@ class TestS2CpzDriverStateOracle {
         assertEquals(reference.ticks().size() + reference.zeroServiceFrames(),
                 reference.frames(),
                 "every frame either completed a service or was run past by one");
+    }
+
+    /**
+     * The cited playlist entry is the song the recording actually loaded. The
+     * driver stores the loaded song's own header tempo in
+     * {@code zAbsVar.TempoMod} (s2.sounddriver.asm:1817-1826), so the two can
+     * be checked against each other rather than one standing in for the other.
+     */
+    @Test
+    void thePlaylistEntryMatchesTheTempoTheRecordingStored() throws Exception {
+        String romProperty = System.getProperty("sonic2.rom.path");
+        assumeTrue(romProperty != null, "an explicit ROM path is required");
+        int recordedTempo = -1;
+        for (S2AudioOracleComparator.ReferenceTick tick : anchoredTicks()) {
+            recordedTempo = S2OracleDriverState.decode(tick.state())
+                    .globals().tempoMod();
+            break;
+        }
+        assertNotEquals(-1, recordedTempo, "the window must have an anchor");
+
+        com.openggf.data.Rom rom = new com.openggf.data.Rom();
+        assumeTrue(rom.open(romProperty), "the verified S2 ROM must open");
+        try (rom) {
+            var loader = new com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader(rom);
+            var song = loader.loadMusic(LOAD_ENGINE_MUSIC_ID);
+            assertEquals(recordedTempo, song.getTempo() & 0xff,
+                    "the playlist entry for request "
+                            + Integer.toHexString(LOAD_ROM_MUSIC_ID)
+                            + " must be the song the recording loaded");
+        }
     }
 
     /** The window really does contain the level load this oracle anchors on. */
