@@ -27,6 +27,59 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 driver-state v2: the BGM load disposes of FM6 before enabling the DAC
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `f95ce7696`.
+- **Fixture:** `s2-driver-state-w10150-12400.reference-v2.jsonl.gz`, sampled by
+  the observer core at both zVInt returns, 2,243 completed services over movie
+  rows [10150,12400), aligned by service ordinal with both sides anchored on
+  driver state rather than a frame.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=TestS2DriverStateOracle
+  '-Dsonic2.rom.path=<abs>/s2.gen' '-Ds2.request.bk2.path=<abs>/src/test/
+  resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/
+  sonic-2-sonic-tails-complete-emeralds.bk2' test -B`
+- **Before, state with writes:** DIVERGENCE at tick 0 (movie row 10202), field
+  `writes[0]`, reference `ym0[0x28]=0x6` against the engine's `ym0[0x2b]=0x80`;
+  1,525 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 0 (movie row 10202), field
+  `writes[7]`, reference `ym0[0x28]=0x0` against the engine's `ym0[0xb0]=0x8`;
+  1,525 of 2,198 ticks divergent. The first seven writes of the activation now
+  agree.
+- **Before and after, state only:** unchanged, DIVERGENCE at tick 1,789 (movie
+  row 11991), field `global.currentTempo`, reference `0x9e` against the
+  engine's `0xbe`; 409 of 2,198 ticks divergent. This change touches no state.
+- **The routine.** `zBGMLoad` compares the song header's FM+DAC channel count
+  against 7 (s2.sounddriver.asm:1893-1898). A seven-track song is using FM6 as
+  a real FM channel, so the load writes `2Bh = 00h` and nothing else. Any other
+  count leaves FM6 to the DAC track, and `.silencefm6` (:1900-1938) keys the
+  channel off with `28h = 06h`, silences its four operator total-level
+  registers `42h/46h/4Ah/4Eh = FFh` on part II, resets its panning with
+  `B6h = C0h` because the DAC track never runs `zSetVoice`, and only then
+  writes `2Bh = 80h` at `.writesilence`. The engine emitted the DAC enable
+  alone, as its first write.
+- **FixBugs.** The file assembles with `FixDriverBugs = fixBugs = 0` and
+  `OptimiseDriver = 0` (s2.sounddriver.asm:8-9, s2.asm:27), so both the
+  key-off and the total-level loop are present in the shipped ROM. Under
+  `FixDriverBugs = 1` they would be deferred to a later `zFMNoteOff` and
+  `zFMSilenceChannel`; the engine takes the shipped path.
+- **Where it landed.** `Sonic2SmpsCompatibilityPolicy.activateMusic` now builds
+  the program from `SmpsMusicActivation.fmDacTrackCount()`, which the record
+  already carried. No constant was measured from the fixture: the branch and
+  every register value come from the listing, so it holds for any song.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; one run of the
+  `com.openggf.audio` and `com.openggf.tools.audio.parity` packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, `TestRewindCoverageGuard`
+  and `TestStaticStateRewindCoverageGuard` with all three ROM paths: 2,054
+  tests, 0 failures, 0 errors, 10 skips.
+- **Next.** `writes[7]` is the `.fmnoteoffloop` / `.psgnoteoffloop` tail of the
+  load (s2.sounddriver.asm:2054-2075): six `zFMNoteOff` calls over the fixed
+  music FM slots, sending each slot's `VoiceControl` byte, then three
+  `zPSGNoteOff` calls. The reference's `28h` values are `00 01 02 04 05 00` —
+  the last is `00` because a six-channel song never initialises the sixth FM
+  slot and `zClearTrackPlaybackMem` left it zero.
+
 ## 2026-09-04 - S3K tick 143 is Z80 service duration: the DAC pump gets the whole frame
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
