@@ -27,6 +27,52 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K tick 551, and an S2 regression that no gate would have failed on
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `221d275db`.
+- **Measurement, not a comparison run.** Nothing landed from this cycle. It
+  records one rejected change, the reason it was rejected, and a contradiction
+  in my own measurements that the next round should settle before building on
+  either side of it.
+- **The frontier.** `TRACK_STATE_MISMATCH`, tick 551, role `MUS_PSG3`, field
+  `resting`, reference `false` against engine `true`. The DAC stream is
+  unchanged at run 338 byte 0. At service 551 both sides read a new unit: the
+  data pointer jumps from 63039 to 63281, the saved duration goes from 42 to
+  6, and the envelope index resets. The reference leaves rest; the engine does
+  not.
+- **The obvious fix is right about the ROM and wrong for the engine.**
+  `zGetNextNote` clears the rest bit with `res 4` in the instruction after the
+  `res 1` the engine already models, before the coordination-flag loop
+  (Sound/Z80 Sound Driver.asm:910-911). Adding that clear moved the S3K
+  frontier not at all, and it broke S2: the S2 driver oracle went from
+  `MATCH (698 ticks)` to `DIVERGENCE at tick 208, field writes[133],
+  expected psg 087h against psg 09Fh`. Reverting the one line restores
+  `MATCH (698 ticks)`. The change was dropped rather than gated, because it
+  buys S3K nothing and the S2 behaviour it disturbs is not understood.
+- **That regression would have shipped.** The S2 driver oracle's result is
+  printed on a `MEASUREMENT_ONLY` line, so the audio gate stayed at 2,154
+  tests and 0 failures with the regression present. It was caught only by
+  reading the line. Anything touching shared sequencer state needs that line
+  read, not just the failure count.
+- **A contradiction to settle first, stated so it is not built on.** A
+  stack-tagged probe over the services around 551 shows the engine's
+  `playNote` setting `resting = false` for PSG3, with no later `restTrack`
+  call in that service, yet the end-of-service snapshot the comparator reads
+  has `resting = true`. Both cannot be right. The candidates are the probe's
+  own service numbering, which counts music services and not oracle ordinals,
+  and the possibility that the snapshot is taken from a different sequencer
+  instance than the one the probe watched. Resolve that before proposing a
+  mechanism.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and now S1's and S2's rest-bit clear at the note read, which the listings
+  place in their DoNext routines but which the engine cannot adopt without
+  disturbing the S2 oracle.
+
+
 ## 2026-09-04 - zRestTrack falls through into the PSG silence; tick 502 -> tick 551
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
