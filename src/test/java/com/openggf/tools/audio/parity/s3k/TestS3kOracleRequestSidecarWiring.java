@@ -214,7 +214,20 @@ class TestS3kOracleRequestSidecarWiring {
      * channels off and clears their SSG-EG operators as
      * {@code zSFXTrackInitLoop} does, a track-end flag is the only thing that
      * stops the note, and that flag hands the channel back to music inline as
-     * {@code cfStopTrack} does. What remains is a write at service 751.
+     * {@code cfStopTrack} does.
+     *
+     * <p>Two corrections took this from 751 to 760. A request used to be
+     * applied ahead of the whole service that consumed it, so a music change
+     * tore its tracks down before they were walked; the ROM walks them first,
+     * because {@code zUpdateEverything} runs {@code zUpdateSFXTracks} and both
+     * fade handlers before it reaches {@code zFillSoundQueue}
+     * (Sound/Z80 Sound Driver.asm:653-701). Consuming the request at that
+     * point gives service 751 the two leading frequency writes the reference
+     * opens it with. It briefly moved the pin backwards to 566, where a sound
+     * effect rested a service late, because the sequencer then skipped its
+     * admitting service's walk twice: once because the walk had genuinely
+     * already run, and once more in {@code primeFirstService}, which models
+     * that same skip for a sound admitted outside a service.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -226,10 +239,11 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 613, report.tick());
-        assertEquals(0, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=1, register=165, value=50]",
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
+                report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 622, report.tick());
+        assertEquals(20, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=163]",
                 report.reference());
     }
 

@@ -45,6 +45,23 @@ public interface CoordFlagContext {
      * post-service sweep instead puts the restore after the music's own
      * writes.
      */
+    /**
+     * Asks for the music beneath an override to come back, as
+     * {@code cfFadeInToPrevious} does by storing {@code zFadeToPrevFlag} for
+     * the main loop to act on (skdisasm Sound/Z80 Sound Driver.asm:3079-3082,
+     * and the flag's own read at :659-666).
+     *
+     * <p>A handler must reach the restore through here rather than through the
+     * global {@code AudioManager}. A coordination flag runs inside the
+     * sequencer's service, which for the presentation path runs inside an
+     * active presentation command batch, and that batch refuses a command
+     * submitted into it. The sequencer's injected sink is the one wired to
+     * defer the restore to the batch boundary; the singleton's is not, and a
+     * flag that calls it loses the restore to a swallowed exception.
+     */
+    default void restorePreviousMusic() {
+    }
+
     default void releaseChannelToMusic(SmpsSequencer.TrackType type, int channelId) {
     }
 

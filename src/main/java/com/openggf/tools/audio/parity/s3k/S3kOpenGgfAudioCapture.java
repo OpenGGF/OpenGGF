@@ -141,10 +141,18 @@ public final class S3kOpenGgfAudioCapture {
                 // 2Bh = 0 of any sample that finishes inside it) precede the
                 // service that closes the window.
                 stream.advanceDacIdleLoop(dacScratch, framesPerVint);
+                // zUpdateEverything walks the SFX tracks and runs TempoWait
+                // and both fade handlers before it loads zMusicNumber and
+                // reaches zFillSoundQueue (Sound/Z80 Sound Driver.asm:653-701),
+                // so the service that consumes a request has already updated
+                // the tracks that were playing when it arrived. Handing the
+                // request to the driver rather than applying it here is what
+                // puts it at that point instead of ahead of the whole service.
                 for (int request : referenceTick.mailbox()) {
                     if (request != 0) {
-                        dispatch(request, loader, dacData, stream, unsupported,
-                                ordinal, segaPending);
+                        driver.submitServiceRequest(() -> dispatch(request,
+                                loader, dacData, stream, unsupported,
+                                ordinal, segaPending));
                     }
                 }
                 driver.serviceOuterFrame();

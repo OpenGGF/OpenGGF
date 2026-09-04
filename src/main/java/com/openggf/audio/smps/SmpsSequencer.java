@@ -646,6 +646,11 @@ public class SmpsSequencer implements CoordFlagContext {
         return dacData;
     }
 
+    @Override
+    public void restorePreviousMusic() {
+        audioManager.restoreMusic();
+    }
+
     public MusicRestoreSink getAudioManager() {
         return audioManager;
     }
@@ -723,6 +728,25 @@ public class SmpsSequencer implements CoordFlagContext {
 
     public void setFm6DacOff(boolean active) {
         this.fm6DacOff = active;
+    }
+
+    /**
+     * Records that this sequencer was created by the request its own service
+     * consumed, so the walk it would otherwise skip has already gone by.
+     *
+     * <p>{@code zUpdateSFXTracks} runs before {@code zFillSoundQueue} admits a
+     * sound (skdisasm Sound/Z80 Sound Driver.asm:653-701), so an SFX gets no
+     * update in its admitting service and its first one is the next service.
+     * {@code primeFirstService} models that by skipping a walk, which is right
+     * when the sound is admitted outside a service, as live playback admits it.
+     * When the driver consumes the request at the ROM's point instead, the
+     * admitting service's SFX walk has genuinely already run, and skipping
+     * again would cost the sound a second service.
+     */
+    public void markAdmittingServiceWalkMissed() {
+        if (sfxMode && config.isSfxWalkPrecedesRequest()) {
+            primed = true;
+        }
     }
 
     public void setSfxMode(boolean active) {

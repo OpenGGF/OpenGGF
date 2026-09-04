@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K music returns after a 1-up:** the coord-flag handler now restores through
+  the sequencer's injected sink (drained after the presentation batch) instead of
+  the global AudioManager, whose command was refused inside the batch; S3K intro
+  oracle at service 760 with requests consumed at the ROM's point in the service.
 - **Second S2 recording green on state and writes:** the CPZ level-select window
   matches all 719 services once TraceChaser's request observer records the music
   mailbox (ring milestone, song loads); request windows compare per site and

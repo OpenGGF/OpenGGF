@@ -69,6 +69,12 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
     private final IdentityHashMap<SmpsSequencer, Long> sfxAdmissionOrdinals = new IdentityHashMap<>();
     private final Map<ConflictKey, SfxContentionObserver.Source> pendingConflictOwners = new HashMap<>();
+    /** zMusicNumber, zSFXNumber0 and zSFXNumber1 (D:698-701). */
+    private static final int SOUND_QUEUE_SLOTS = 3;
+
+    /** Requests handed to the running service, consumed at the ROM's point. */
+    private final List<Runnable> pendingServiceRequests = new ArrayList<>();
+
     private final SmpsSequencer[] fmLocks = new SmpsSequencer[6];
     private final SmpsSequencer[] psgLocks = new SmpsSequencer[4];
     private final Map<Object, Integer> psgLatches = new HashMap<>();
@@ -2338,9 +2344,21 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                         serviceSequencers(false);
                     }
                 }
+                // The queue is consumed before the music walk here too. This
+                // branch is reached whenever no music sequencer sets the S3K
+                // service order, which includes every service before the first
+                // song exists, and a song loaded by this service is walked by
+                // it: zCycleSoundQueue runs at :698-701 and .update_music
+                // follows at :702. SmpsSequencer.primeFirstService owns what
+                // that first walk does.
+                runPendingServiceRequest();
                 serviceSequencers(false);
                 serviceSequencers(true);
             }
+            // Safety net only: both branches above consume the queue at their
+            // own point. A request must never survive its service, because the
+            // next one would consume it instead.
+            runPendingServiceRequest();
             removeCompletedSequencers();
         }
     }
@@ -2351,9 +2369,69 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         if (music != null) {
             music.serviceS3kSpeedupTail();
         }
+        runPendingServiceRequest();
+        music = firstMusicSequencerLocked();
         serviceSequencers(false);
         if (music != null) {
             music.serviceS3kSpeedupTail();
+        }
+    }
+
+    /**
+     * Runs the request the host handed to this service, at the point
+     * {@code zUpdateEverything} reaches it.
+     *
+     * <p>The ROM's V-blank service is an order, not a set. It runs
+     * {@code zPauseUnpause} and {@code zUpdateSFXTracks}, then
+     * {@code zUpdateMusic}'s {@code TempoWait} and both fade handlers, and only
+     * then loads {@code zMusicNumber} and hands it to {@code zFillSoundQueue}
+     * and {@code zCycleSoundQueue} (skdisasm Sound/Z80 Sound
+     * Driver.asm:653-701). So the tracks playing when a request arrives are
+     * walked by the very service that consumes it, before it is consumed, and
+     * the music walk that follows sees whatever the request left behind.
+     *
+     * <p>A request applied before the service instead loses that walk
+     * entirely: a music change tears the tracks down first, and the frequency
+     * their last update owed the chip is never sent. The music slot is re-read
+     * after the request because a music change replaces it.
+     */
+    private void runPendingServiceRequest() {
+        if (pendingServiceRequests.isEmpty()) {
+            return;
+        }
+        // zFillSoundQueue transfers the three 68k bytes and zCycleSoundQueue is
+        // then called three times, playing the first, second and third entries
+        // in that order (skdisasm Sound/Z80 Sound Driver.asm:698-701). A
+        // service can therefore consume a song and two sound effects at once,
+        // so this runs them in submission order rather than taking only one.
+        List<Runnable> requests = new ArrayList<>(pendingServiceRequests);
+        pendingServiceRequests.clear();
+        Set<SmpsSequencer> before = new HashSet<>(sfxSequencers);
+        for (Runnable request : requests) {
+            request.run();
+        }
+        for (SmpsSequencer sequencer : sfxSequencers) {
+            if (!before.contains(sequencer)) {
+                sequencer.markAdmittingServiceWalkMissed();
+            }
+        }
+    }
+
+    /**
+     * Hands this service a request to consume at the ROM's own consume point.
+     * Only the S3K service order routes through {@code serviceSfxThenMusic},
+     * so a host that submits one to a driver servicing in any other order
+     * would see it dropped; the assertion below keeps that from being silent.
+     */
+    public void submitServiceRequest(Runnable request) {
+        Objects.requireNonNull(request, "request");
+        synchronized (sequencersLock) {
+            if (pendingServiceRequests.size() >= SOUND_QUEUE_SLOTS) {
+                throw new IllegalStateException(
+                        "the sound queue holds only " + SOUND_QUEUE_SLOTS
+                                + " entries per service");
+            }
+            pendingServiceRequests.add(request);
         }
     }
 
