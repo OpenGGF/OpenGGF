@@ -69,6 +69,16 @@ public final class OwnedSmpsAudioStream
         session.setChipWriteObserver(observer);
     }
 
+    /**
+     * Runs the physical chip for {@code stereoFrames} of output time without
+     * servicing the driver, modelling the Z80 sitting in
+     * {@code zPlayDigitalAudio} between two V-ints. See
+     * {@link SmpsDriverSession#advanceDacIdleLoop(short[], int)}.
+     */
+    public void advanceDacIdleLoop(short[] scratch, int stereoFrames) {
+        session.advanceDacIdleLoop(scratch, stereoFrames);
+    }
+
     /** Applies the owning session's exact host-policy global stop. */
     public void stopAll() {
         session.applyGlobalStopNow();

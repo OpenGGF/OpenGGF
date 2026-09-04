@@ -223,6 +223,44 @@ public final class SmpsPhysicalDevice {
         synth.stopDac(this);
     }
 
+    /**
+     * Emits {@code disable} once for every sample the chip has finished
+     * playing since the last call, and reports how many it emitted.
+     *
+     * <p>The ROM's playback loop falls out of
+     * {@code .dac_playback_loop} when the sample's length reaches zero,
+     * clears {@code zDACIndex} and jumps back to {@code zPlayDigitalAudio},
+     * whose entry writes {@code 2Bh = 0}
+     * (Sound/Z80 Sound Driver.asm:4348-4355, :4256-4260). A re-trigger or a
+     * stop clears the index without reaching that fall-through and so raises
+     * no edge.
+     *
+     * <p>The DAC's own silence is not audible output, so this write must not
+     * lift {@link #silenceOutput()} the way {@link #apply} does.</p>
+     */
+    int emitDacSampleEnds(SmpsWriteProgram disable) {
+        requireActive();
+        Objects.requireNonNull(disable, "disable");
+        int emitted = 0;
+        while (synth.consumeDacSampleEnded()) {
+            emitted++;
+            boolean priorOutputSilenced = outputSilenced;
+            try {
+                for (SmpsChipWrite write : disable.writes()) {
+                    if (write instanceof SmpsChipWrite.Ym2612 ym) {
+                        synth.writeFm(this, ym.port(), ym.register(),
+                                ym.value());
+                    } else if (write instanceof SmpsChipWrite.Psg psg) {
+                        synth.writePsg(this, psg.value());
+                    }
+                }
+            } finally {
+                outputSilenced = priorOutputSilenced;
+            }
+        }
+        return emitted;
+    }
+
     void selectDac(DacData data) {
         requireActive();
         synth.setDacData(Objects.requireNonNull(data, "data"));

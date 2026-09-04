@@ -108,7 +108,16 @@ public final class S3kAudioParityTool {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
         out.println(renderReport(report, format));
-        return exitCode(report);
+        // The DAC byte stream is compared unpartitioned and reported on its
+        // own line; see S3kAudioParityComparator's class comment.
+        S3kAudioParityComparator.DacStreamReport dacStream =
+                S3kAudioParityComparator.compareDacStream(
+                        reference, engine.ticks());
+        out.println("json".equals(format)
+                ? dacStream.toMachineText() : dacStream.toHumanText());
+        int serviceExit = exitCode(report);
+        return serviceExit != EXIT_MATCH || dacStream.matches()
+                ? serviceExit : EXIT_MISMATCH;
     }
 
     static String renderReport(

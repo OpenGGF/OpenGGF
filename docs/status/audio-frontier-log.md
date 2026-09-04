@@ -27,6 +27,224 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K music DAC byte pump lands unpartitioned; tick 139 event 1 becomes a track-set frontier
+
+- **Worktree/branch:** `.worktrees/audio-s3k-dac-pump`,
+  `feature/ai-s3k-dac-byte-pump`, over `develop` at `340634eb7`.
+- **Command:** unchanged, plus the second result line the tool now prints.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 139, event 1, reference
+  `ym2612 port 0 register 2Ah = 80h` against engine `port 1 register 0A4h = 27`.
+  No DAC byte stream existed to compare.
+- **Result after, two lines:**
+  - `S3K audio oracle: MISMATCH`, `EVENT_VALUE_DIFFERENT`, tick 139, event 1,
+    reference `ym2612 port 0 register 0A5h = 19` against engine
+    `port 1 register 0A4h = 27`.
+  - `S3K DAC byte stream: MISMATCH`, `BYTE_DIFFERENT`, run 29, byte 0,
+    reference `0x7C` against engine `0x7F`. Twenty-eight complete sample runs
+    agree byte for byte first.
+- **What the DAC line proves.** The engine's decoded samples are the ROM's:
+  the first music run compares equal for all 1,364 bytes the reference
+  carries, and the full `DAC_86` sample the engine decodes matches the
+  reference's own 1,438-byte run elsewhere byte for byte. Run 29's first byte
+  differing is a different sample being selected, which is downstream of the
+  partitioned stream's own divergence at tick 139 rather than a DAC defect.
+- **What was excused, and it is written down.** Which service window a `2Ah`
+  byte lands in, and how far a run got before a later play cut it short, are
+  both Z80 service duration. Recorded with its residual table in
+  docs/status/known-discrepancies.md, "S3K Music DAC Byte Stream Partition",
+  together with what is still compared: run count exactly, every shared byte
+  of every run in order, and the `2Bh` enable and disable which stay
+  partitioned and which delimit the runs.
+- **The pair now ships together.** `SmpsDriverSession` emits
+  `policy.enableDacFromIdleLoop()` after a service whose DAC track queued a
+  sample (Sound/Z80 Sound Driver.asm:2896-2903, :4269-4276) and
+  `policy.enterDacIdleLoop()` for every sample the chip exhausts
+  (:4348-4355, :4256-4260). The previous lane withheld the enable because
+  only half the pair existed; with the disable modelled,
+  `TestSonic3kUnifiedAudioPresentationRomIntegration`'s silence assertion
+  passes.
+- **No constant was introduced.** The per-byte cadence is the existing
+  `Ym2612Chip.dacPeriod` from `DacData.baseCycles` and the sample's rate
+  byte. The capture host advances the chip by one V-int of the driver's own
+  region cadence per tick.
+- **Next, and it is already diagnosed and cross-checked.** Tick 139's
+  remaining service writes are a track-set divergence in the first update
+  after the load: the reference sends FM2's frequency pair (`ym0 0A5h/0A1h`)
+  and three PSG channels, where the engine sends FM4 and FM5 and one PSG
+  channel. The tracks the engine omits are exactly the ones whose frequency
+  did not change since the previous pass, and FM2's `0132h` is identical at
+  ticks 139 and 140. S3K re-sends it anyway: `zUpdateFMorPSGTrack`'s
+  `.note_going` path calls `zUpdateFreq`, returns early only on the
+  sustain-frequency bit, then calls `zDoModulation` and **falls through** to
+  `zFMSendFreq` (Sound/Z80 Sound Driver.asm:783-799), and that
+  `zDoModulation` is an ordinary subroutine whose `ret z` on inactive
+  modulation lands on the fall-through (:1279-1283).
+  S2 is genuinely different and the engine currently implements S2's shape:
+  its `zDoModulation` opens with `pop de` and deliberately does not return to
+  its caller when modulation is off or the track is resting, so
+  `zFMUpdateFreq` is skipped (s2.sounddriver.asm:986-997, :828-834). So this
+  is a real per-game difference belonging in the sequencer config, not a
+  shared correction. In the engine the per-pass write exists only inside
+  `SmpsSequencer.applyModulation`, which returns before writing when
+  modulation is disabled or nothing changed. The PSG ordering difference
+  (engine volume-before-frequency against the reference's
+  frequency-then-volume) should be re-measured after that change rather than
+  before it.
+- **Gates at this commit:** one run of the `com.openggf.tools.audio.parity`
+  and `com.openggf.audio` packages plus `TestSmpsFadeAudioThroughput`,
+  `TestYm2612DacTiming`, the four S3K keep-green classes,
+  `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,106
+  tests, 0 failures, 14 skips. That covers the S1 sound-test and both S1
+  gameplay oracles, the S2 driver oracle and the S2 request windows, none of
+  which moved.
+- **Break-it evidence.** `aCorruptedDacByteIsReportedAtItsRunAndOffset`
+  corrupts one reference sample byte after tick 140 and requires the DAC
+  stream comparison to report it at run 1, ahead of the live frontier's run
+  29. Without it a stream that was never populated and one that agrees would
+  read identically.
+
+
+## 2026-09-04 - S3K music DAC byte pump: the cadence reconciles, the per-tick partition does not
+
+- **Worktree/branch:** `.worktrees/audio-s3k-dac-pump`,
+  `feature/ai-s3k-dac-byte-pump`, over `develop` at `340634eb7`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  entry records why the music DAC byte pump was not implemented against the
+  present model, so the next lane does not re-derive it.
+- **What the reference carries.** In
+  `s3k-aiz1-intro-reference-v2.jsonl.gz`: 725,780 writes over 5,263 ticks, of
+  which 625,699 are `ym2612 port 0 register 2Ah`, spread over 3,489 ticks and
+  contiguous at the head of the tick's write list in 3,015 of them. That is
+  `zPlayDigitalAudio`'s playback loop (Sound/Z80 Sound Driver.asm:4296-4351)
+  streaming between V-int services, exactly as the previous entry predicted.
+- **The engine's cycle model is the right model, and the reference confirms it
+  twice.** First, every contiguous run of `2Ah` writes sums to a ROM sample's
+  own decoded sample count read through `Sonic3kSmpsLoader.loadDacData`:
+  1,438 for `DAC_86`, 3,836 for `DAC_81`, 9,294 for `DAC_88`. One `2Ah` write
+  is one decoded sample, which is what `Ym2612Chip.dacSampleAt` already
+  indexes. Second, taking each tick's `zDACIndex` from the reference's own RAM
+  export (`z80 $1C30`; window base `$1C00`) and pairing it with that sample's
+  rate byte, the Z80 cycles the model leaves unaccounted per frame,
+  `59,736 - count * dacPeriod(297, rate)`, land in a consistent
+  11,600-16,000 band across fifteen distinct samples spanning rates 3 to 27.
+  A wrong per-byte cost would skew that residual with the rate; it does not
+  (rate 3 gives 13,494, rate 27 gives 12,059).
+- **The two base-cycle numbers, and why the reference cannot choose between
+  them.** The listing's own `; total:` annotation for `.dac_playback_loop`
+  (:4351) sums to **303**, because it counts the two `ld a, (hl)` fetches as
+  `7+3` for the ROM-access delay its comment attributes to Kabuto (:4297).
+  `DacData` carries **297** for S3K, the same total with those two penalties
+  excluded. The difference is 6 cycles in ~450, and it disappears into the
+  unaccounted residual above, which is itself unknown to several thousand
+  cycles. So 297 versus 303 is not the frontier and no evidence here refutes
+  either.
+- **Why the per-tick count is not derivable.** The residual is the Z80
+  execution cost of that frame's `zUpdateEverything`, and it is not constant.
+  Within a single uninterrupted play of one sample at one fixed rate the
+  reference's per-tick counts swing by 15 to 86 writes, and four separate
+  plays of the same sample index peak at 268, 258, 257 and 244. The rate is
+  fixed and the cycle model is fixed across all of that, so every write of the
+  variation is service duration. The engine models the driver's semantics, not
+  its Z80 instruction timing, and has no such quantity to offer.
+- **What a correct implementation of the pump would therefore produce.** The
+  oracle capture host never renders (`S3kOpenGgfAudioCapture` drives
+  `serviceOuterFrame` and reads the observer; nothing calls
+  `OwnedSmpsAudioStream.read`), so `Ym2612Chip.serviceDac` never runs there
+  and reporting its writes to the observer emits nothing. Driving one V-int
+  frame of chip time per tick instead would emit `59,736 / dacPeriod` writes,
+  which is the count with the service cost set to zero: about 279 where the
+  reference has 265 at rate 3, and about 133 where the reference has 211. The
+  only quantity that closes that gap is the per-frame service duration, and
+  supplying it as a constant is precisely the fitted model hard rule 3
+  forbids.
+- **The honest next step is a decision, not a fix.** Either the driver gains a
+  Z80 cycle account for its own service (a large piece of work, and the only
+  route that keeps the partition derivable), or the comparison stops
+  partitioning the DAC stream by service boundary and compares the byte stream
+  and its ordering while excusing the per-tick split, with the limit written
+  into the known-discrepancies entry in the same change. Do not close it by
+  measuring this fixture's counts.
+
+
+## 2026-09-04 - S2 request oracle reaches MATCH on every replayable window
+
+- **Worktree/branch:** `.worktrees/audio-s2-frontier`,
+  `bugfix/ai-s2-request-frontier`, from `develop` `55b40a105`.
+- **Fixtures:** `s2-request-window-w10150-10900`, `-w10900-11650` and
+  `-w11650-12400` under `src/test/resources/audio/parity/s2/`.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=TestS2WidenedRequestOracle
+  '-Dsonic2.rom.path=<abs>/s2.gen' '-Ds2.request.bk2.path=<abs>/src/test/
+  resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/
+  sonic-2-sonic-tails-complete-emeralds.bk2' test -B`
+- **Before:** `w11650-12400` DIVERGENCE at transfer 21, movie row 12132,
+  reference SFX `$A0` against the engine's SFX `$B5` at row 12114.
+- **After:** `MATCH` on all three, at 25, 52 and 27 production transfers.
+- **Two gameplay causes, both mailbox/ownership rather than driver.** The ten-
+  ring and shield monitors send their sound through ROM `PlayMusic`, the music
+  mailbox, not the SFX queue (s2.asm:25913-25914, :25955-25956, :1517-1527), so
+  those bytes make no sound-queue transfer while the driver still classifies
+  them by range at `QueueToPlay` (s2.sounddriver.asm:1565-1571). And the
+  explosion sound belongs to `Obj27_Init` in the explosion's own slot
+  (s2.asm:46717-46734), not to the touch that broke the monitor, which is a
+  pass later whenever `Obj26_Break`'s lowest-free allocation lands below the
+  monitor (:25702-25707). Commits `4dc26bea4` and `cecbb67b4`. No constant was
+  introduced; both fixes are structural and hold for any recording.
+- **Gates at `cecbb67b4`.** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`; both S1 gameplay oracles green; the S3K driver oracle
+  unchanged at tick 128; ordinary suite 16,387 tests and `-Pguards` 607 tests
+  with 0 failures and 0 errors; the full `*TraceReplay` sweep has the same 62
+  failing class names as a control sweep at the base commit.
+
+
+
+## 2026-09-04 - S3K oracle: the DAC enable belongs to the idle loop; tick 139 event 0 -> 1
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick139`,
+  `bugfix/ai-s3k-oracle-tick139`, over `develop` at `c549f543d`.
+- **Command:** unchanged, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 139, event 0, reference
+  `ym2612 port 0 register 2Bh = 80h` against engine `port 1 register 0A4h = 27`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 139, **event 1**, reference
+  `ym2612 port 0 register 2Ah = 80h` against the same engine write. Event 0 now
+  agrees.
+- **What the ROM does.** `zPlayDigitalAudio` spins in `.dac_idle_loop`
+  (Sound/Z80 Sound Driver.asm:4264-4271) reading `zDACIndex`, and the pass that
+  finds it non-zero writes 2Bh = 80h before decoding (:4272-4276). The index is
+  stored by `zUpdateDACTrack` inside a V-int service (:2896-2903), so the enable
+  is emitted by the idle loop the service returns to, never by the service
+  itself. A sample queued while another plays clears bit 7, so
+  `jp p, .dac_idle_loop` (:4343-4345) sends the loop back through the same
+  enable: one 2Bh = 80h per queued sample. The engine now records the
+  `zDACIndex` store in `SmpsDriver`, discards it wherever the ROM zeroes
+  `zDACIndex` (`zStopAllSound`'s wipe of the variable block that holds it,
+  :134,163,214, :2461-2470), and lets the oracle's capture host emit the
+  physical policy's enable at the start of the following window.
+- **The runtime session deliberately does not emit it yet, and that is
+  measured, not assumed.** The ROM's enable is one half of a pair: it streams
+  every decoded byte to 2Ah and then clears the index and re-enters
+  `zPlayDigitalAudio`, whose 2Bh = 0 turns the DAC off (:4352-4355,
+  :4256-4260). The session plays music DAC inside `Ym2612Chip` and has no
+  sample-end signal, so applying only the enable left the DAC on holding its
+  last level: `TestSonic3kUnifiedAudioPresentationRomIntegration` failed on
+  "stopping the music must actually silence the final packet", and an A/B with
+  the hook disabled passed. The runtime joins the capture host when the
+  sample-end disable is modelled with it.
+- **No constant was introduced.** The write, its value and its position are all
+  stated by the listing. S1 and S2 keep an empty `enableDacFromIdleLoop`, since
+  their DAC enable is not written by an idle loop.
+- **Next, and it is a subsystem, not a write.** Tick 139's remaining 36 events
+  and every tick from 140 on are the music DAC byte pump: the reference carries
+  ~265 `2Ah` writes per tick, contiguous and ahead of that tick's service
+  writes, for 3,498 of its 5,263 ticks. The engine plays music DAC inside
+  `Ym2612Chip` rather than on the write bus, so no 2Ah write is produced. The
+  SEGA chant already streams this way through `SmpsSegaPcmTransport`, which is
+  the shape to reuse; the per-tick count must come from the ROM playback loop's
+  own annotated cycle costs (:4299-4351) and the sample's rate byte, not from
+  counting the fixture's rows.
+
+
 ## 2026-09-04 - S3K oracle: the PSG frequency is a whole 16-bit word; tick 138 clears to tick 139
 
 - **Worktree/branch:** `.worktrees/audio-s3k-tick138`,

@@ -2,6 +2,7 @@ package com.openggf.tools.audio.parity.s3k;
 
 import com.openggf.tools.audio.parity.AudioParityChipWrite;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -12,8 +13,30 @@ import java.util.Objects;
  *
  * <p>Comparison order per tick: GATE globals, GATE track fields for each of
  * the sixteen fixed roles, then the ordered write stream.
+ *
+ * <h2>The DAC byte stream is compared, but not partitioned</h2>
+ * The music DAC bytes are excluded from the per-tick write stream and
+ * compared separately over the whole window by
+ * {@link #compareDacStream(List, List)}. The reason is measured, not
+ * convenient: which service window a given {@code 2Ah} byte falls in is
+ * decided by how many Z80 cycles that frame's {@code zUpdateEverything} took,
+ * because {@code zPlayDigitalAudio} streams for whatever is left of the
+ * inter-V-int interval (Sound/Z80 Sound Driver.asm:4296-4351). Within one
+ * uninterrupted play of one sample at one fixed rate the reference's own
+ * per-tick counts swing by 15 to 86 bytes, so the split is a property of a
+ * Z80 this engine does not emulate. Everything the ROM decides rather than
+ * the Z80's clock stays strictly partitioned, including the {@code 2Bh}
+ * enable and disable and their position among the tick's service writes; and
+ * those same {@code 2Bh} writes are what delimit the runs this stream
+ * compares, so run structure remains pinned by compared data. See
+ * docs/status/known-discrepancies.md, "S3K music DAC byte stream partition".
  */
 public final class S3kAudioParityComparator {
+
+    /** {@code 2Ah}, the DAC sample-byte register the playback loop writes. */
+    private static final int DAC_DATA_REGISTER = 0x2A;
+    /** {@code 2Bh}, the DAC enable/disable register that brackets a run. */
+    private static final int DAC_ENABLE_REGISTER = 0x2B;
 
     public record Report(Kind kind, int ticksCompared, Integer tick, String role, String field,
             Integer eventIndex, String reference, String openggf) {
@@ -61,7 +84,7 @@ public final class S3kAudioParityComparator {
             return value == null ? "null" : value.toString();
         }
 
-        private static String jsonString(String value) {
+        static String jsonString(String value) {
             if (value == null) {
                 return "null";
             }
@@ -109,7 +132,166 @@ public final class S3kAudioParityComparator {
                 return track;
             }
         }
-        return compareWrites(reference.writes(), openGgf.writes(), ordinal);
+        return compareWrites(serviceWrites(reference.writes()),
+                serviceWrites(openGgf.writes()), ordinal);
+    }
+
+    /** Every write of the tick except the DAC sample bytes. */
+    private static List<AudioParityChipWrite> serviceWrites(
+            List<AudioParityChipWrite> writes) {
+        List<AudioParityChipWrite> result = new ArrayList<>(writes.size());
+        for (AudioParityChipWrite write : writes) {
+            if (!isDacSampleByte(write)) {
+                result.add(write);
+            }
+        }
+        return result;
+    }
+
+    private static boolean isDacSampleByte(AudioParityChipWrite write) {
+        return "ym2612".equals(write.chip()) && write.port() != null
+                && write.port() == 0 && write.register() != null
+                && write.register() == DAC_DATA_REGISTER;
+    }
+
+    private static boolean isDacEnableWrite(AudioParityChipWrite write) {
+        return "ym2612".equals(write.chip()) && write.port() != null
+                && write.port() == 0 && write.register() != null
+                && write.register() == DAC_ENABLE_REGISTER;
+    }
+
+    /**
+     * Splits a whole window's writes into DAC sample runs.
+     *
+     * <p>A run is a maximal group of {@code 2Ah} bytes uninterrupted by a
+     * {@code 2Bh} write. That is the ROM's own bracket: the idle loop enables
+     * the DAC on finding {@code zDACIndex} non-zero
+     * (Sound/Z80 Sound Driver.asm:4269-4276), streams the sample, and the
+     * fall-through re-enters {@code zPlayDigitalAudio} whose entry disables it
+     * (:4348-4355, :4256-4260). Tick boundaries are deliberately not run
+     * boundaries; see the class comment.</p>
+     */
+    static List<int[]> dacRuns(List<S3kAudioTick> ticks) {
+        List<int[]> runs = new ArrayList<>();
+        List<Integer> current = new ArrayList<>();
+        for (S3kAudioTick tick : ticks) {
+            for (AudioParityChipWrite write : tick.writes()) {
+                if (isDacSampleByte(write)) {
+                    current.add(write.value());
+                } else if (isDacEnableWrite(write) && !current.isEmpty()) {
+                    runs.add(toArray(current));
+                    current = new ArrayList<>();
+                }
+            }
+        }
+        if (!current.isEmpty()) {
+            runs.add(toArray(current));
+        }
+        return runs;
+    }
+
+    private static int[] toArray(List<Integer> values) {
+        int[] result = new int[values.size()];
+        for (int index = 0; index < result.length; index++) {
+            result[index] = values.get(index);
+        }
+        return result;
+    }
+
+    /**
+     * Compares the two windows' DAC sample runs: the run count exactly, then
+     * every byte the two sides share in each run, in order.
+     *
+     * <p>A run's <em>length</em> is deliberately not asserted, and the reason
+     * is the same unmodelled quantity as the tick partition. A run ends
+     * either because the sample was exhausted or because a later play cut it
+     * short (the {@code jp p, .dac_idle_loop} at
+     * Sound/Z80 Sound Driver.asm:4343-4345), and how far the stream got
+     * before that cut is Z80 duration. Measured: the engine, which spends the
+     * whole inter-V-int interval streaming because it models no service cost,
+     * carries the first music sample 1,438 bytes where the reference's own
+     * play was cut at 1,364. Both sides' bytes agree over every byte they
+     * share, which is the content this comparison exists to prove. The
+     * cumulative difference is reported as {@code run-length delta} so a
+     * regression in it stays visible.</p>
+     */
+    public static DacStreamReport compareDacStream(List<S3kAudioTick> reference,
+            List<S3kAudioTick> openGgf) {
+        List<int[]> referenceRuns = dacRuns(reference);
+        List<int[]> openGgfRuns = dacRuns(openGgf);
+        int common = Math.min(referenceRuns.size(), openGgfRuns.size());
+        int bytes = 0;
+        int truncationDelta = 0;
+        for (int run = 0; run < common; run++) {
+            int[] expected = referenceRuns.get(run);
+            int[] actual = openGgfRuns.get(run);
+            int shared = Math.min(expected.length, actual.length);
+            for (int index = 0; index < shared; index++) {
+                if (expected[index] != actual[index]) {
+                    return new DacStreamReport(
+                            DacStreamReport.Kind.BYTE_DIFFERENT,
+                            referenceRuns.size(), bytes, truncationDelta,
+                            run, index,
+                            hex(expected[index]), hex(actual[index]));
+                }
+            }
+            bytes += shared;
+            truncationDelta += actual.length - expected.length;
+        }
+        if (referenceRuns.size() != openGgfRuns.size()) {
+            return new DacStreamReport(DacStreamReport.Kind.RUN_COUNT_DIFFERENT,
+                    referenceRuns.size(), bytes, truncationDelta, common, 0,
+                    Integer.toString(referenceRuns.size()),
+                    Integer.toString(openGgfRuns.size()));
+        }
+        return new DacStreamReport(DacStreamReport.Kind.MATCH,
+                referenceRuns.size(), bytes, truncationDelta,
+                null, null, null, null);
+    }
+
+    private static String hex(int value) {
+        return String.format("0x%02X", value);
+    }
+
+    /**
+     * The result of the unpartitioned DAC byte-stream comparison, reported
+     * beside the per-tick service-write result.
+     */
+    public record DacStreamReport(Kind kind, int runs, int bytesCompared,
+            int truncationDelta, Integer run, Integer byteOffset,
+            String reference, String openggf) {
+        public enum Kind {
+            MATCH, RUN_COUNT_DIFFERENT, BYTE_DIFFERENT
+        }
+
+        public boolean matches() {
+            return kind == Kind.MATCH;
+        }
+
+        public String toHumanText() {
+            if (matches()) {
+                return "S3K DAC byte stream: MATCH (" + runs + " runs, "
+                        + bytesCompared + " bytes, run-length delta "
+                        + truncationDelta + ")";
+            }
+            return "S3K DAC byte stream: MISMATCH\nkind: " + kind
+                    + "\nrun: " + run
+                    + "\nbyte: " + byteOffset
+                    + "\nreference: " + reference
+                    + "\nopenggf: " + openggf;
+        }
+
+        public String toMachineText() {
+            return "{\"schema\":\"openggf.s3k_audio_dac_stream_report.v1\""
+                    + ",\"kind\":\"" + kind + "\""
+                    + ",\"runs\":" + runs
+                    + ",\"bytes_compared\":" + bytesCompared
+                    + ",\"run_length_delta\":" + truncationDelta
+                    + ",\"run\":" + (run == null ? "null" : run)
+                    + ",\"byte\":" + (byteOffset == null ? "null" : byteOffset)
+                    + ",\"reference\":" + Report.jsonString(reference)
+                    + ",\"openggf\":" + Report.jsonString(openggf) + "}";
+        }
     }
 
     private static Report compareGlobal(S3kAudioTick.GlobalState reference,

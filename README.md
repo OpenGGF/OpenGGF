@@ -263,6 +263,24 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K music DAC on the observed bus:** every sample write the chip performs
+  now reaches the write observer, a sample-end edge emits the ROM's DAC
+  disable, and the oracle compares the DAC byte stream whole-window while
+  excusing only the per-service split that Z80 service duration decides.
+- **Sonic 2 monitor sounds match the ROM:** ring and shield monitors send
+  their sound through the music mailbox as `super_ring` does, and a monitor's
+  explosion makes its request from its own slot a pass later when allocated
+  below the monitor; the request oracle matches every replayable window.
+- **S3K DAC enable follows the idle loop:** the driver records the sample-index
+  store and the DAC enable is emitted by the idle loop at the next service
+  boundary, as `zPlayDigitalAudio` does; the oracle now stops on the music DAC
+  byte pump, which the engine renders inside the chip rather than on the bus.
+- **ROM-less CI green again:** the complete-run producer tests and two Sonic 2
+  level-init tests now skip without a ROM instead of failing.
+- **Sonic 2 request-window producer is a command:** TraceChaser now captures
+  and extracts request windows from arguments (movie, hash, row interval,
+  manifests, installation, output), the raw sink records the recording it
+  actually opened, and every published S2 window cites that command.
 - **S3K first music update matches the driver:** the post-load DAC pass keys
   off FM6 and restores FM3 mode, `cfSetVoice` writes the release-rate reset,
   notes send the frequency once without a pan write, and PSG frequencies keep

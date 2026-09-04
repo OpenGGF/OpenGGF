@@ -591,8 +591,10 @@ public final class SmpsDriverSession implements AutoCloseable {
                         emitChipDiagnostic(new ChipDiagnostic.Psg(value));
                     }
                 });
-        directRenderer = (buffer, frameOffset, frames) ->
-                device.renderFrames(buffer, frameOffset * 2, frames);
+        directRenderer = (buffer, frameOffset, frames) -> {
+            device.renderFrames(buffer, frameOffset * 2, frames);
+            emitPendingDacSampleEnds();
+        };
     }
 
     /** Creates and initializes the one persistent logical driver. */
@@ -692,7 +694,68 @@ public final class SmpsDriverSession implements AutoCloseable {
                 return null;
             });
         }
+        emitDacIdleLoopEnableIfQueued();
         return SmpsServiceOutcome.ORDINARY;
+    }
+
+    /**
+     * Emits the ROM's DAC enable for a sample this service queued.
+     *
+     * <p>{@code zUpdateDACTrack} stores {@code zDACIndex} inside the V-int
+     * service (Sound/Z80 Sound Driver.asm:2896-2903), and the idle loop the
+     * service returns to is what finds the index non-zero and writes
+     * {@code 2Bh = 80h} before decoding (:4269-4276). So the enable opens the
+     * window after the queueing service rather than closing it, which is
+     * where this call sits.</p>
+     *
+     * <p>Its other half is the disable, emitted from
+     * {@link #emitPendingDacSampleEnds()} when the chip exhausts the sample.
+     * The two must ship together: an enable without a disable leaves the DAC
+     * on holding its last level once the sample has finished.</p>
+     */
+    private void emitDacIdleLoopEnableIfQueued() {
+        if (!driver.consumeDacIdleLoopPass()) {
+            return;
+        }
+        SmpsWriteProgram enable = policy.enableDacFromIdleLoop();
+        if (enable.writes().isEmpty()) {
+            return;
+        }
+        withPort(driverIdentity, port -> {
+            applyProgram(port, enable);
+            return null;
+        });
+    }
+
+    /**
+     * Emits the ROM's {@code 2Bh = 0} for every sample the chip has finished
+     * since the last render (Sound/Z80 Sound Driver.asm:4348-4355,
+     * :4256-4260), and reports how many it emitted.
+     */
+    int emitPendingDacSampleEnds() {
+        SmpsWriteProgram disable = policy.enterDacIdleLoop();
+        if (disable.writes().isEmpty()) {
+            return 0;
+        }
+        return device.emitDacSampleEnds(disable);
+    }
+
+    /**
+     * Runs the physical chip for {@code stereoFrames} of output time without
+     * producing audio and without servicing the driver: the Z80 sitting in
+     * {@code zPlayDigitalAudio} between two V-ints
+     * (Sound/Z80 Sound Driver.asm:4296-4351). The DAC byte writes it makes
+     * reach the chip write observer like any other write.
+     */
+    public void advanceDacIdleLoop(short[] scratch, int stereoFrames) {
+        requireInstalled();
+        Objects.requireNonNull(scratch, "scratch");
+        if (stereoFrames < 0 || stereoFrames * 2 > scratch.length) {
+            throw new IllegalArgumentException(
+                    "scratch does not hold the requested frame range");
+        }
+        renderFrames(scratch, 0, stereoFrames);
+        emitPendingDacSampleEnds();
     }
 
     public int renderFrames(

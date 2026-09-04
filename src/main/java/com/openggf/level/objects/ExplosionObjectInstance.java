@@ -14,6 +14,7 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
     private int pointsValue;
     private boolean pointsAllocatedBeforeAnimal;
     private int pendingSfxId = -1;
+    private boolean firstUpdatePendingForPassedSlot;
     private int animFrame = 0;
     private boolean spawnedDestructionChildren;
 
@@ -95,10 +96,13 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
     }
 
     /**
-     * Creates an explosion with an optional sound effect.
-     * ROM: Explosion objects play their SFX in the init routine (e.g. sfx_Break, sfx_Bomb).
+     * Creates an explosion that makes its own sound request.
      *
-     * @param sfxId SFX ID to play on creation, or -1 for no sound
+     * <p>ROM explosion objects play their SFX from their init routine, in their
+     * own SST slot's pass (docs/s2disasm/s2.asm:46717-46734), so the request is
+     * made on this object's first {@code update}, not when it is constructed.
+     *
+     * @param sfxId SFX id the explosion requests on its first pass, or -1 for none
      */
     public ExplosionObjectInstance(int id, int x, int y, ObjectRenderManager renderManager, int sfxId) {
         super(new ObjectSpawn(x, y, id, 0, 0, false, 0), "Explosion");
@@ -108,7 +112,6 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
         this.pointsValue = 0;
         this.pointsAllocatedBeforeAnimal = false;
         this.pendingSfxId = sfxId;
-        playPendingSfxIfPossible();
     }
 
     public ExplosionObjectInstance(int id, int x, int y, ObjectRenderManager renderManager,
@@ -122,12 +125,6 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
         this.pointsFactory = pointsFactory;
         this.pointsValue = pointsValue;
         this.pointsAllocatedBeforeAnimal = pointsAllocatedBeforeAnimal;
-    }
-
-    @Override
-    public void setServices(ObjectServices services) {
-        super.setServices(services);
-        playPendingSfxIfPossible();
     }
 
     private void playPendingSfxIfPossible() {
@@ -145,8 +142,29 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
         }
     }
 
+    /**
+     * Marks an explosion allocated into an SST slot the ROM's object scan has
+     * already passed this frame, so its init routine first runs on the next
+     * one. {@code Obj26_Break} allocates with lowest-free {@code AllocateObject}
+     * from the monitor's own slot (docs/s2disasm/s2.asm:25702-25707), so the
+     * explosion regularly lands below the object currently executing. This
+     * mirrors {@code MonitorContentsObjectInstance#delayFirstIconUpdateForPassedSlot}.
+     */
+    public void delayFirstUpdateForPassedSlot() {
+        firstUpdatePendingForPassedSlot = true;
+    }
+
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
+        if (firstUpdatePendingForPassedSlot) {
+            firstUpdatePendingForPassedSlot = false;
+            return;
+        }
+        // ROM Obj27_Init plays the explosion sound from the explosion's own
+        // execution, not from whatever destroyed the object
+        // (docs/s2disasm/s2.asm:46717-46734; docs/s1disasm/_incObj/24, 27 & 3F
+        // Explosions.asm; docs/skdisasm/sonic3k.asm:42199-42208).
+        playPendingSfxIfPossible();
         spawnDestructionChildrenOnce();
         if (animFrameDuration < 0) {
             animFrameDuration = resolveInitialAnimDuration();

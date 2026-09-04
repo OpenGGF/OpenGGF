@@ -23,6 +23,7 @@ public final class Sonic3kSmpsPhysicalPolicy
     private static final SmpsWriteProgram STOP_ALL = stopAllProgram();
     private static final SmpsWriteProgram BOOT = STOP_ALL;
     private static final SmpsWriteProgram DAC_IDLE_ENTRY = dacIdleEntryProgram();
+    private static final SmpsWriteProgram DAC_IDLE_ENABLE = dacIdleEnableProgram();
     private static final SmpsWriteProgram BGM_LOAD = bgmLoadProgram();
     private static final SmpsSegaPcmTransport SEGA_PCM = segaPcmTransportProgram();
 
@@ -47,6 +48,11 @@ public final class Sonic3kSmpsPhysicalPolicy
     @Override
     public SmpsWriteProgram enterDacIdleLoop() {
         return DAC_IDLE_ENTRY;
+    }
+
+    @Override
+    public SmpsWriteProgram enableDacFromIdleLoop() {
+        return DAC_IDLE_ENABLE;
     }
 
     @Override
@@ -111,6 +117,17 @@ public final class Sonic3kSmpsPhysicalPolicy
         // (:2513-2519) is therefore the init's last write.
         return new SmpsWriteProgram(
                 List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x00)));
+    }
+
+    private static SmpsWriteProgram dacIdleEnableProgram() {
+        // Sound/Z80 Sound Driver.asm:zPlayDigitalAudio .dac_idle_loop
+        // (:4264-4276). The loop reads zDACIndex every pass and, on finding it
+        // non-zero, does ld a,2Bh / ld c,80h / di / call zWriteFMI before
+        // decoding. zDACIndex is written by the DAC track's update during a
+        // V-int service (:2896-2903), so the enable belongs to the idle loop
+        // the service returns to and opens the next service's window.
+        return new SmpsWriteProgram(
+                List.of(new SmpsChipWrite.Ym2612(0, 0x2B, 0x80)));
     }
 
     private static SmpsWriteProgram stopAllProgram() {
