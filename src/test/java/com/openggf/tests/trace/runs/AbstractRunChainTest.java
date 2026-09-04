@@ -2475,16 +2475,15 @@ abstract class AbstractRunChainTest {
         }
 
         /**
-         * Index into {@code physicalRows} of the last row of the longest
-         * interstitial run the main loop was not admitted on, or {@code -1}
-         * when the census records none -- the same structural locator
+         * Index into {@code physicalRows} of the last row of the last
+         * interstitial run longer than one frame the main loop was not admitted
+         * on, or {@code -1} when the census records none -- the same locator
          * {@link #lastNonAdmittedRow(boolean[])} applies on the level-to-level
          * path, read from the per-row census these rows already carry.
          */
         private int lastNonAdmittedInterstitialRow(
                 List<UncomparedInteriorPhysicalRow> rows) {
-            int bestEnd = -1;
-            int bestLength = 0;
+            int loadEnd = -1;
             int runStart = -1;
             for (int index = 0; index <= rows.size(); index++) {
                 boolean lag = index < rows.size()
@@ -2493,15 +2492,13 @@ abstract class AbstractRunChainTest {
                 if (lag && runStart < 0) {
                     runStart = index;
                 } else if (!lag && runStart >= 0) {
-                    int length = index - runStart;
-                    if (length > bestLength) {
-                        bestLength = length;
-                        bestEnd = index - 1;
+                    if (index - runStart > 1) {
+                        loadEnd = index - 1;
                     }
                     runStart = -1;
                 }
             }
-            return bestEnd;
+            return loadEnd;
         }
 
         @Override
@@ -5062,42 +5059,53 @@ abstract class AbstractRunChainTest {
     }
 
     /**
-     * Index of the last row of the gap's LONGEST non-admitted run, or
-     * {@code -1} when the census records none.
+     * Index of the last row of the gap's last non-admitted run longer than a
+     * single frame, or {@code -1} when the census records none.
      *
-     * <p>In the ROM's level-entry sequence that row is the one
-     * {@code InitPlayers} runs on (docs/s2disasm/s2.asm:4946). The load it ends
-     * -- LoadZoneTiles, loadZoneBlockMaps, LoadAnimatedBlocks, DrawInitialBG,
-     * ConvertCollisionArray, LoadCollisionIndexes, WaterEffects (:4938-4945) --
-     * is the only long stretch of straight-line code in the whole transition,
-     * so it is the gap's longest run of frames on which the main loop did not
-     * run. Everything after it waits on V-int per pass: the leave loop
-     * (:5060-5066) and then the title-card loop (:5060-5066), which admits the
-     * main loop on every row.
+     * <p>A non-admitted frame is one the ROM's main loop did not run on: V-int
+     * took the {@code Vint_Lag} branch, which performs no {@code ReadJoypads}
+     * (docs/s2disasm/s2.asm:484, :529). <b>Two consecutive such frames require
+     * the 68000 to be executing straight-line code with no {@code WaitForVint}
+     * between them</b>, because every routine {@code WaitForVint} dispatches
+     * does poll the controller. That is the discriminator, and it is a property
+     * of the ROM's control flow rather than of any recording.
      *
-     * <p>This was the LAST such run rather than the longest, which is the same
-     * row whenever the load is the final non-admitted stretch and is badly
-     * wrong when it is not -- a later, shorter stall then wins and the
-     * destination's level-entry art is held tens of rows past its row.
+     * <p>S2's level entry has exactly one such stretch. {@code Level:} runs
+     * {@code LoadZoneTiles}, {@code loadZoneBlockMaps},
+     * {@code LoadAnimatedBlocks}, {@code DrawInitialBG},
+     * {@code ConvertCollisionArray}, {@code LoadCollisionIndexes} and
+     * {@code WaterEffects} (:4938-4945), then {@code InitPlayers} (:4946),
+     * then the object-manager and first {@code RunObjects} / {@code BuildSprites}
+     * passes (:5005-5009) on which {@code Obj01_Init_Continued} takes the
+     * leader's first {@code Sonic_RecordPos} -- all of it straight through, with
+     * the first {@code WaitForVint} of the transition not reached until the
+     * title-card loop at :5060-5062. Everything from there on waits once per
+     * pass: that loop (:5060-5066) and then {@code Level_MainLoop} (:5088-5095).
+     * So after the load, a non-admitted frame can only be an isolated
+     * single-frame V-int overrun and can never form a run of two.
+     *
+     * <p>This was the last non-admitted run of any length, which is the same row
+     * whenever the load is the final stretch and is badly wrong when it is not:
+     * a later single-frame overrun then wins and the destination's level-entry
+     * art is held tens of rows past its row. Selecting the longest run picks the
+     * same row in every transition of the committed S2 run, but says less --
+     * "longer than one frame" is what the ROM's control flow actually licenses.
      */
     private static int lastNonAdmittedRow(boolean[] gapLag) {
-        int bestEnd = -1;
-        int bestLength = 0;
+        int loadEnd = -1;
         int runStart = -1;
         for (int index = 0; index <= gapLag.length; index++) {
             boolean lag = index < gapLag.length && gapLag[index];
             if (lag && runStart < 0) {
                 runStart = index;
             } else if (!lag && runStart >= 0) {
-                int length = index - runStart;
-                if (length > bestLength) {
-                    bestLength = length;
-                    bestEnd = index - 1;
+                if (index - runStart > 1) {
+                    loadEnd = index - 1;
                 }
                 runStart = -1;
             }
         }
-        return bestEnd;
+        return loadEnd;
     }
 
     private static void holdPlayerArtForLevelEntryLoad(boolean arm) {

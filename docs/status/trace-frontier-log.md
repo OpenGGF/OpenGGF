@@ -116156,3 +116156,62 @@ Still open, and the next round should establish the sidekick's position at the
 destination's first row under both arms before suppressing anything again. The
 landed commit is unaffected: it closes the special-stage art family and is
 independent of this.
+
+## 2026-09-04 - The load-completion rule, cited to the ROM instead of to a tally
+
+Same worktree and branch, over the landed special-stage commit. Behaviour is
+byte-for-byte unchanged; only the rule's statement and its justification move.
+
+### The previous justification was measuring the fixture
+
+The locator was adopted as "the last row of the gap's LONGEST non-admitted run",
+justified by a 21-of-27 tally against the committed manifest. That is a fixture
+measurement, which is a legitimate way to FIND a rule and not a legitimate way to
+land one.
+
+### The ROM's own discriminator
+
+A non-admitted frame is one the ROM's main loop did not run on: V-int took the
+`Vint_Lag` branch, which performs no `ReadJoypads`
+(`docs/s2disasm/s2.asm:484`, `:529`). **Two consecutive such frames require the
+68000 to be executing straight-line code with no `WaitForVint` between them**,
+because every routine `WaitForVint` dispatches does poll the controller. Run
+length greater than one is therefore a property of the ROM's control flow, and it
+is the discriminator.
+
+S2's level entry contains exactly one such stretch, and it is the last one before
+the destination's first recorded row. `Level:` runs `LoadZoneTiles`,
+`loadZoneBlockMaps`, `LoadAnimatedBlocks`, `DrawInitialBG`,
+`ConvertCollisionArray`, `LoadCollisionIndexes` and `WaterEffects`
+(`:4938-4945`), then `InitPlayers` (`:4946`), then the object-manager and the
+first `RunObjects` / `BuildSprites` passes (`:5005-5009`) on which
+`Obj01_Init_Continued` takes the leader's first `Sonic_RecordPos` -- all of it
+straight through. The transition's first `WaitForVint` is not reached until the
+title-card loop at `:5060-5062`. From there everything waits once per pass: that
+loop (`:5060-5066`) and then `Level_MainLoop` (`:5088-5095`). So after the load a
+non-admitted frame can only be an isolated single-frame V-int overrun and can
+never form a run of two.
+
+The locator is now **the last non-admitted run longer than one frame**, on both
+the level-to-level and the special-stage-return paths.
+
+### Confirmation, not derivation
+
+The census bears the ROM structure out: every one of the 27 transitions carries
+exactly one single-frame non-admitted run, exactly one run of 11, and one long
+run of 31-50. The two rules select the same row in all 27, so this is a
+restatement rather than a behaviour change -- and "longer than one frame" is what
+the control flow licenses, where "longest" was only what the numbers happened to
+show.
+
+### Gates, from a clean build with three absolute ROM paths
+
+Walk-failure axis first: the baseline's (`uncompared-interior physical walk
+exceeded destination 101691`), and segment 15 at the baseline frontier (2,122
+errors, frame 2252, field `air`). Delta histogram unchanged: 106 at 1, four at 2,
+none above.
+
+- `-Ptrace-replay`: 854 tests, 8 failures, 0 errors, 6 skips -- the same eight
+  classes as the baseline, no class moved either way.
+- Ordinary suite: 16,404 tests, 0 failures, 0 errors, 22 skips.
+- `-Pguards`: 607 tests, 0 failures, 0 errors, 0 skips.
