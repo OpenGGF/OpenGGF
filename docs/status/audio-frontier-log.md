@@ -27,6 +27,58 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The S2 tempo divergence closes: the speed-shoes countdown moves to the ROM's display step
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, over `develop` at `b637f4171`.
+- **Command, before and after, same worktree, same properties:**
+
+  ```
+  LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=com.openggf.tools.audio.parity.s2.TestS2DriverStateOracle \
+    '-Dsonic2.rom.path=<worktree>/s2.gen' \
+    '-Ds2.request.bk2.path=<worktree>/src/test/resources/traces/s2/runs/
+     s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2' test -B
+  ```
+
+  The before arm was measured by reverse-applying this branch's own diff in this
+  worktree, so both arms differ only by the change.
+- **State only: DIVERGENCE at tick 1,789 (movie row 11991), `global.currentTempo`,
+  reference `0x9e` against `0xbe`, 409 of 2,198 ticks divergent -> MATCH (2,198
+  ticks).** The whole compared window now agrees on driver state.
+- **State and writes:** first divergence unchanged at tick 228 (movie row 10430),
+  field `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's `psg=0x87`;
+  divergent ticks 496 -> 178 of 2,198. The DAC byte stream is unchanged, still
+  `BYTE DIFFERENT` in run 3 at byte 709.
+- **The fix, and it removed a constant rather than adding one.** The previous
+  entry located the offset outside the audio layer:
+  `PowerUpRules.speedShoesTimerPrePhysicsExtraTicks` was `1` for S1 and S2,
+  added to the countdown's duration so the physics restore would land on the
+  ROM's frame given that the engine ticked timers before the movement step.
+  The ROM does both consequences on one frame, in `Sonic_ChkShoes` at the tail
+  of `Sonic_Display` -- restore top speed, acceleration and deceleration, then
+  jump to `PlayMusic` with `MusID_SlowDown` (`docs/s2disasm/s2.asm:36307-36326`,
+  and the same shape at `docs/s1disasm/_incObj/01 Sonic.asm:182-204` and
+  `docs/skdisasm/sonic3k.asm:22103-22127`). Hanging both on one compensated
+  countdown pushed the music command a frame past the ROM's, which is one
+  driver service. The countdown is now a `DisplayPhaseTimer` driven by
+  `SpriteManager` where the ROM calls `Sonic_Display`, after the movement modes
+  (`s2.asm:36242,36248`), so the queue write reaches the same frame's service.
+  The constant is deleted.
+- **Regression gates at this commit.** The full `-Ptrace-replay` profile with
+  all three ROM paths: 854 tests, 8 failures, 6 skips, the same eight classes
+  with byte-identical messages before and after, so no trace frontier moved.
+  The v1 S2 driver oracle still reports `MATCH (698 ticks)` and the three
+  request windows `MATCH` at 25, 52 and 27 transfers. Both S1 gameplay driver
+  oracles pass at their pinned 2,562 and 5,257 ticks. Parity suite 178 tests,
+  0 failures, 2 skips; ordinary suite 16,399 tests, 0 failures, 17 skips;
+  `-Pguards` 607 tests, 0 failures.
+- **Not measured here.** The S1 sound-test music and SFX capture gates
+  (`MATCH (14690 ticks)` / `MATCH (1967 ticks)`) run through
+  `tools/audio/run_s1_audio_parity.sh`, which needs the TraceChaser submodule
+  and a BizHawk 2.11 installation; neither is present in this worktree. The
+  sound test drives no level and no monitor, so no speed-shoes countdown
+  exists on that path.
+
 ## 2026-09-04 - S2 sends a PSG note-on frequency once, not twice; tick 170 -> tick 228
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,

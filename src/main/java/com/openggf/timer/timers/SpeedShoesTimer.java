@@ -6,6 +6,7 @@ import com.openggf.game.rules.PowerUpRules;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.timer.AbstractTimer;
+import com.openggf.timer.DisplayPhaseTimer;
 
 /**
  * Timer for the Speed Shoes power-up effect.
@@ -15,24 +16,47 @@ import com.openggf.timer.AbstractTimer;
  * <p>The ROM decrement cadence is per-game (see
  * {@link PowerUpRules#speedShoesTimerDecimation()}):
  * S1/S2 use a per-frame word timer counting from {@code 0x4B0}
- * (s2.asm:36008-36025); S3K uses a byte timer counting from
+ * (docs/s2disasm/s2.asm:36307-36326); S3K uses a byte timer counting from
  * {@code (20*60)/8 = 150} and decremented only on every 8th level frame —
  * {@code Sonic_ChkShoes} gates {@code subq.b} on
  * the low byte at {@code Level_frame_counter+1} being divisible by 8
- * (sonic3k.asm:22072-22078; init
- * sonic3k.asm:40818). Both expire after 1200 wall-clock frames.
+ * (docs/skdisasm/sonic3k.asm:22108-22111; init
+ * docs/skdisasm/sonic3k.asm:40858). Both expire after 1200 wall-clock frames.
+ *
+ * <p>This is a {@link DisplayPhaseTimer}: all three games run the countdown
+ * from {@code Sonic_Display}, after the movement modes have been dispatched,
+ * and do both consequences of reaching zero there in the one frame — restore
+ * top speed, acceleration and deceleration, and queue the slow-down music.
+ * S1 {@code docs/s1disasm/_incObj/01 Sonic.asm:182-204} (restore at
+ * {@code :190-192}, {@code bgm_Slowdown} at {@code :203-204});
+ * S2 {@code docs/s2disasm/s2.asm:36307-36326} (restore at
+ * {@code :36314-36316}, {@code MusID_SlowDown} at {@code :36325-36326});
+ * S3K {@code docs/skdisasm/sonic3k.asm:22103-22127} (restore at
+ * {@code :22115-22117}, {@code Change_Music_Tempo} at {@code :22126-22127}).
+ * Ticking it from the character's display step keeps the music command in the
+ * same frame as the physics restore, so it reaches the same driver service the
+ * ROM's queue write does.
  */
-public class SpeedShoesTimer extends AbstractTimer {
+public class SpeedShoesTimer extends AbstractTimer implements DisplayPhaseTimer {
+
     public static final int ROM_DURATION_FRAMES = 0x4B0; // speedshoes_time(a0)
 
     /**
-     * Offset aligning the engine level frame counter to the ROM's byte-addressed
-     * S3K decrement gate. {@code (Level_frame_counter+1).w} is 68k syntax for
-     * reading the low byte at label address plus one; it does not add one to the
-     * counter value. The native gate therefore decrements when the visible low
-     * byte is divisible by eight, matching {@code frameCounter & 7 == 0} here.
+     * Offset aligning the engine's level frame counter to ROM
+     * {@code Level_frame_counter} as read from the display step.
+     *
+     * <p>Two separate facts set this. {@code (Level_frame_counter+1).w} is 68k
+     * syntax for reading the low byte at the label address plus one; it does
+     * not add one to the counter value, so the gate itself is simply
+     * "divisible by eight". But {@code LevelLoop} increments the counter at the
+     * top of the loop, before {@code Process_Sprites} runs
+     * {@code Sonic_Display} ({@code docs/skdisasm/sonic3k.asm:7916-7925}),
+     * whereas the engine increments it in {@code LevelManager.update()}, which
+     * the level frame step runs after the player physics pass. The engine's
+     * counter is therefore one behind the ROM's at the moment
+     * {@code Sonic_ChkShoes} reads it, and the gate must add that one back.
      */
-    static final int LEVEL_FRAME_PHASE_OFFSET = 0;
+    static final int LEVEL_FRAME_PHASE_OFFSET = 1;
 
     private final AbstractPlayableSprite sprite;
     /** Decrement cadence in level frames; a power of two (1 or 8). */
@@ -53,11 +77,12 @@ public class SpeedShoesTimer extends AbstractTimer {
     }
 
     private static int durationTicks(AbstractPlayableSprite sprite) {
-        PowerUpRules rules = powerUpRulesFor(sprite);
-        int extraTicks = rules != null
-                ? rules.speedShoesTimerPrePhysicsExtraTicks()
-                : 0;
-        return (ROM_DURATION_FRAMES / decimationFor(sprite)) + extraTicks;
+        return ROM_DURATION_FRAMES / decimationFor(sprite);
+    }
+
+    @Override
+    public Object displayPhaseOwner() {
+        return sprite;
     }
 
     private static PowerUpRules powerUpRulesFor(AbstractPlayableSprite sprite) {

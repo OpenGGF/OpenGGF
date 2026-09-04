@@ -159,7 +159,7 @@ class TestS3kCharacterSpeeds {
         int ticks = 0;
         while (sprite.hasSpeedShoes() && ticks < 2000) {
             levelManager.setFrameCounter(ticks);
-            GameServices.timers().update();
+            GameServices.timers().updateDisplayPhaseTimersFor(sprite);
             ticks++;
         }
 
