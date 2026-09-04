@@ -331,6 +331,10 @@ public final class SmpsSequencerConfig {
     private final boolean stepModulationAtRest;
     private final boolean noteResetAliasesModulationState;
     private final boolean fmNoteGoingReturnsAtRest;
+    private final FadeOutHalt fadeOutHalt;
+    private final FadeDelayCadence fadeDelayCadence;
+    private final boolean tempoWaitPrecedesRequest;
+    private final PsgSilenceShape psgSilenceShape;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -385,6 +389,10 @@ public final class SmpsSequencerConfig {
         this.stepModulationAtRest = b.stepModulationAtRest;
         this.noteResetAliasesModulationState = b.noteResetAliasesModulationState;
         this.fmNoteGoingReturnsAtRest = b.fmNoteGoingReturnsAtRest;
+        this.fadeOutHalt = b.fadeOutHalt;
+        this.fadeDelayCadence = b.fadeDelayCadence;
+        this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
+        this.psgSilenceShape = b.psgSilenceShape;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -655,6 +663,93 @@ public final class SmpsSequencerConfig {
         return fmNoteGoingReturnsAtRest;
     }
 
+    /**
+     * Whether {@code TempoWait} runs before the driver reads its request
+     * mailbox. S3K's is in {@code zUpdateEverything}, ahead of
+     * {@code zUpdateMusic} and its {@code zFillSoundQueue}
+     * (skdisasm Sound/Z80 Sound Driver.asm:653-701, :2607-2621), so the
+     * service that loads a song has already accumulated with the previous
+     * tempo and {@code zBGMLoad}'s seed of the accumulator (:1829-1831) is
+     * the value that service ends on. The newly loaded song's own first
+     * accumulation is the next service; its track walk still runs in the load
+     * service. S1 and S2 run their tempo step inside the music update, after
+     * the queue is filled, and do accumulate on the load service.
+     */
+    public boolean isTempoWaitPrecedesRequest() {
+        return tempoWaitPrecedesRequest;
+    }
+
+    /** How the fade's inter-step delay counter is tested. */
+    public enum FadeDelayCadence {
+        /**
+         * S1/S2: {@code zUpdateFadeout} reads the delay, steps when it is
+         * already zero, and otherwise decrements and returns
+         * (s2.sounddriver.asm:1686-1697). A delay of 3 therefore steps on the
+         * fourth service.
+         */
+        TEST_THEN_DECREMENT,
+        /**
+         * S3K: {@code zDoMusicFadeOut} decrements first and steps when the
+         * result is zero (skdisasm Sound/Z80 Sound Driver.asm:2337-2343). A
+         * delay of 6 therefore steps on the sixth service.
+         */
+        DECREMENT_THEN_TEST
+    }
+
+    /** Fade delay cadence: TEST_THEN_DECREMENT (S1/S2) or DECREMENT_THEN_TEST (S3K). */
+    public FadeDelayCadence getFadeDelayCadence() {
+        return fadeDelayCadence;
+    }
+
+    /** How a single PSG track's silence is written. */
+    public enum PsgSilenceShape {
+        /** The engine's existing S1/S2 behaviour: one byte for the channel
+         * the track is sounding on, which for a noise track is the noise
+         * channel. Neither driver has a per-track PSG silence routine to cite
+         * against; both silence all four channels at once
+         * (s2.sounddriver.asm:1412-1418), so this is unaudited rather than
+         * established. */
+        SOUNDING_CHANNEL_ONLY,
+        /**
+         * S3K's {@code zSilencePSGChannel} writes {@code 1Fh + VoiceControl}
+         * first, which is the track's own tone channel, and only then adds
+         * {@code 0FFh} for the noise channel, and only when
+         * {@code PlaybackControl} bit 0 is set (skdisasm Sound/Z80 Sound
+         * Driver.asm:4226-4245). Under {@code fix_sndbugs = 0} that bit is
+         * usually clear when the routine runs, which the listing itself calls
+         * out, so most calls emit the tone byte alone.
+         */
+        TONE_THEN_NOISE
+    }
+
+    /** PSG silence shape: SOUNDING_CHANNEL_ONLY (S1/S2) or TONE_THEN_NOISE (S3K). */
+    public PsgSilenceShape getPsgSilenceShape() {
+        return psgSilenceShape;
+    }
+
+    /** Which tracks a music fade-out request halts outright. */
+    public enum FadeOutHalt {
+        /**
+         * S1/S2: {@code zFadeOutMusic} zeroes only the DAC track's playback
+         * control, with the comment "can't fade it"
+         * (s2.sounddriver.asm:1668-1681).
+         */
+        DAC_ONLY,
+        /**
+         * S3K: {@code zFadeOutMusic} falls through into {@code zHaltDACPSG},
+         * which zeroes FM6/DAC, PSG3, PSG1 and PSG2 and then jumps to
+         * {@code zPSGSilenceAll} (skdisasm Sound/Z80 Sound
+         * Driver.asm:2307-2325). The halt itself writes nothing to the chip;
+         * only {@code zPSGSilenceAll} does.
+         */
+        DAC_AND_PSG
+    }
+
+    /** Fade-out halt scope: DAC_ONLY (S1/S2) or DAC_AND_PSG (S3K). */
+    public FadeOutHalt getFadeOutHalt() {
+        return fadeOutHalt;
+    }
+
     /** Note-fill expiry tail: LEGACY (S1/S2) or S3K_SPLIT (S3K). */
     public NoteFillTail getNoteFillTail() {
         return noteFillTail;
@@ -738,6 +833,10 @@ public final class SmpsSequencerConfig {
         private boolean stepModulationAtRest = false;
         private boolean noteResetAliasesModulationState = false;
         private boolean fmNoteGoingReturnsAtRest = false;
+        private FadeOutHalt fadeOutHalt = FadeOutHalt.DAC_ONLY;
+        private FadeDelayCadence fadeDelayCadence = FadeDelayCadence.TEST_THEN_DECREMENT;
+        private boolean tempoWaitPrecedesRequest = false;
+        private PsgSilenceShape psgSilenceShape = PsgSilenceShape.SOUNDING_CHANNEL_ONLY;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -784,6 +883,10 @@ public final class SmpsSequencerConfig {
         public Builder stepModulationAtRest(boolean val) { stepModulationAtRest = val; return this; }
         public Builder noteResetAliasesModulationState(boolean val) { noteResetAliasesModulationState = val; return this; }
         public Builder fmNoteGoingReturnsAtRest(boolean val) { fmNoteGoingReturnsAtRest = val; return this; }
+        public Builder fadeOutHalt(FadeOutHalt val) { fadeOutHalt = val; return this; }
+        public Builder fadeDelayCadence(FadeDelayCadence val) { fadeDelayCadence = val; return this; }
+        public Builder tempoWaitPrecedesRequest(boolean val) { tempoWaitPrecedesRequest = val; return this; }
+        public Builder psgSilenceShape(PsgSilenceShape val) { psgSilenceShape = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }

@@ -79,6 +79,400 @@ defined by `com.openggf.tools.audio.parity`.
   sound test drives no level and no monitor, so no speed-shoes countdown
   exists on that path.
 
+## 2026-09-04 - S3K tick 502: a per-service PSG3 and noise silence with no ROM writer found
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `cf0f5d6d2`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  records what the frontier is and, more usefully, four readings that are
+  already ruled out, so the next round does not spend them again.
+- **The frontier.** `EVENT_MISSING`, tick 502, event 10: the reference emits
+  `psg 0DFh` where the engine emits nothing. The DAC stream is unchanged at
+  run 338 byte 0.
+- **What the reference does.** From service 502 onward, every service ends
+  with the same eight PSG bytes: three frequency pairs, `80h 00h`,
+  `0AFh 0FFh` and `0C0h 00h`, then `0DFh` and `0FFh`. The engine produces the
+  three pairs and neither of the last two. The pair persists at services 503,
+  504, 506, 510 and 520, so it is a steady per-service write, not a one-off.
+- **`0DFh` is PSG3's volume latch and `0FFh` is the noise channel's**, decoded
+  from the byte layout: bit 7 latch, bits 6-5 the channel, bit 4 selecting
+  volume over tone. So the ROM writes a silence-level volume to PSG3 and to
+  the noise channel on every service.
+- **Ruled out, each by measurement.**
+  1. *An SFX taking the channel.* At service 502 the only playing tracks are
+     `MUS_PSG1`, `MUS_PSG2` and `MUS_PSG3`; no SFX role is playing on either
+     side, and the mailbox is empty from services 496 through 506.
+  2. *A state divergence behind the writes.* Every compared track field agrees
+     at 502, which is why the comparator reports a write rather than a field.
+     A probe over 499-505 confirms `MUS_PSG3` is resting on both sides with
+     the same duration, saved duration, volume and frequency.
+  3. *The engine's envelope-hold gate on the PSG volume.* Removing
+     `envAtRest` from the volume gate for S3K moves nothing, so that flag is
+     not what suppresses the write. The change was reverted.
+  4. *The tempo-delay service.* Service 498 has the same accumulator carry as
+     502 and carries no such pair, so the carry is not the trigger.
+- **What makes it puzzling, stated plainly so the next round starts here.**
+  `zUpdatePSGTrack`'s volume tail is gated on the rest bit: `.no_volenv` tests
+  `bit 4, (ix+zTrack.PlaybackControl)` and returns when it is set (Sound/Z80
+  Sound Driver.asm:4098-4101). All three music PSG tracks are resting, so on
+  that reading the ROM should write no PSG volume at all here. Something
+  writes both bytes anyway, every service. The candidates not yet checked are
+  a writer outside `zUpdatePSGTrack` entirely, and the possibility that the
+  recorded RAM window's rest bit is sampled after a routine that clears and
+  re-sets it within the service.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape, which no routine in either listing pins.
+
+
+## 2026-09-04 - S3K silences a PSG track's own channel first; tick 495 -> tick 502
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `0b3aca34b`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 495, event 161, reference
+  `psg 223` against engine `psg 255`. DAC stream `BYTE_DIFFERENT` run 338
+  byte 0.
+- **Result after:** `EVENT_MISSING`, tick 502, event 10, reference `psg 223`
+  against `<missing>`. DAC stream unchanged.
+- **The routine.** `zSilencePSGChannel` writes `1Fh + VoiceControl` first,
+  which is the track's own tone channel, and only then adds `0FFh` for the
+  noise channel, gated on `PlaybackControl` bit 0 (Sound/Z80 Sound
+  Driver.asm:4226-4245). The engine wrote a single byte for whichever channel
+  the track was sounding on, so a noise PSG3 track emitted `0FFh` alone where
+  the ROM emits `0DFh` then `0FFh`.
+- **The listing calls its own bug here, and it matters.** Under
+  `fix_sndbugs = 0` the noise test is bit 0 of `PlaybackControl`, and the
+  comment says outright that "since this function is called when a new channel
+  is starting, this bit will almost inevitably be 0 and the noise channel will
+  not be silenced". So most calls emit the tone byte alone; service 495 is one
+  where the bit was set and both went out.
+- **Instrumented, not assumed.** A stack-tagged probe on every PSG `stopNote`
+  showed 27 calls for a noise PSG3 track, all from the note-start path, which
+  is what put the lone `0FFh` on the bus.
+- **Scoped to S3K, and the reason is that there is nothing to cite for the
+  others.** Neither S1 nor S2 has a per-track PSG silence routine; both
+  silence all four channels at once (s2.sounddriver.asm:1412-1418). Their
+  behaviour is therefore unaudited rather than established, and the new
+  `PsgSilenceShape` defaults to what the engine already did for them.
+- **Open items.** S2's `zNoteFillUpdate` countdown against the engine's
+  elapsed comparison; S1 and S2's post-note do-not-attack clear; the
+  `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297; S2's
+  `zFadeOutMusic` clearing `SpeedUpFlag` with `xor a / ld (zAbsVar.SpeedUpFlag), a`
+  (s2.sounddriver.asm:1677-1679), which the engine does not model; and now
+  S1's and S2's own per-track PSG silence shape, which no routine in either
+  listing pins. None of these is touched in this lane.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestRewindCoverageGuard` and
+  `TestStaticStateRewindCoverageGuard`: 2,142 tests, 0 failures, 10 skips.
+  `TestSonic3kCoordFlagParity` is now in the per-cycle gate, because its two
+  end-state snapshots are exactly the kind of assertion the audio gate used to
+  miss. The whole suite with three ROM paths is 16,397 tests, 0 failures, 22
+  skips, and `-Pguards` is 607 tests, 0 failures.
+- **One more engine-behaviour pin needed updating, on this same routine.**
+  `TestSonic3kFm3SpecialMode`'s `F3` test asserts the PSG write list as
+  incidental context around its real subject, which is raw-operand retention.
+  Each silence of its noise PSG3 track is a `zSilencePSGChannel` call, so the
+  tone byte now precedes the noise byte on every call and the list went from
+  `0DFh, 0E5h, 0FFh, 0FFh` to `0DFh, 0E5h, 0DFh, 0FFh, 0DFh, 0FFh`. The
+  previous list recorded the engine emitting the noise byte alone; the new one
+  follows the routine call for call. Like the two `TestSonic3kCoordFlagParity`
+  snapshots, it is reached only by the whole suite.
+
+
+## 2026-09-04 - S2 releases every PSG lock before restoring; the write stream reaches the tempo frontier
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 584 (movie row 10786),
+  field `writes.count`, reference 9 against the engine's 8; 411 of 2,198 ticks
+  divergent.
+- **After, state with writes:** DIVERGENCE at tick 1,789 (movie row 11991),
+  field `global.currentTempo`, reference `0x9e` against the engine's `0xbe`;
+  409 of 2,198 ticks divergent. The write stream now agrees over every service
+  up to the tempo frontier, and the two result lines have converged on the same
+  tick and the same field.
+- **DAC stream:** unchanged, `BYTE DIFFERENT in run 3 at byte 709`.
+- **The divergence.** At tick 584 the reference emitted `psg=FF psg=E7` and the
+  engine only `psg=FF`. The missing byte is a PSG3 noise re-latch.
+- **The routine.** `zStopPSGSFXTrack` clears the SFX override bit on the
+  corresponding music track, marks it resting, and if that track's
+  `VoiceControl` is `0E0h`, a PSG3 noise track, writes its stored `PSGNoise`
+  byte back to the chip (s2.sounddriver.asm:3581-3587).
+- **What was actually wrong, measured rather than inferred.** The engine did
+  attempt the write. A probe on the release showed it firing at the right
+  moment with the track active and its noise parameter `7`, and a second probe
+  on the driver's music write path caught the byte being dropped:
+  `psg=E7 ch=3 own=3 lockHeld=true`. A noise byte's ownership channel is the
+  noise channel, not the track's own, and the release loop cleared the lock on
+  channel 2 and ran the override update from inside the same iteration, before
+  it had reached channel 3, which this same SFX still held.
+- **Where it landed.** `SmpsDriver.reconcileInactiveSfxTracks` now releases all
+  of the sequencer's PSG locks first and runs the override updates in a second
+  pass. The ROM has no per-channel hardware ownership that can be half
+  released: it clears one bit on the music track and the write goes out.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next, and it is no longer an audio-lane frontier.** Both lines now stop at
+  the speed-shoes tempo, which is the gameplay timer compensation constant
+  recorded two entries below and handed to a gameplay lane with the trace
+  sweeps as its gates. The remaining audio-side frontier is the DAC stream's
+  run-3 byte difference.
+
+## 2026-09-04 - S2 SFX takes a PSG channel without silencing it; tick 557 -> tick 584
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 557 (movie row 10759),
+  field `writes[38]`, reference `psg=0xe7` against the engine's `psg=0xff`;
+  455 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 584 (movie row 10786), field
+  `writes.count`, reference 9 against the engine's 8; 411 of 2,198 ticks
+  divergent.
+- **DAC stream and state only:** both unchanged.
+- **The divergence.** At tick 557 the engine emitted an extra `psg=FF`, a
+  maximum-attenuation latch on the noise channel, immediately before the SFX's
+  own `psg=E7` noise-control write. Tick 558 showed the same extra `FF` between
+  the reference's `psg=9F` and `psg=F2`.
+- **How it was attributed.** A probe on every PSG write printed its call stack.
+  The extra byte did not come from the sequencer at all: it came from
+  `SmpsDriver.writePsg`'s takeover path, which silences a PSG channel it is
+  about to take from the music. The sequencer's own writes agreed exactly.
+- **The routine.** `zPlaySound`'s `.sfxinitpsg` silences only PSG3, and only
+  through the explicit `or 1Fh` / `xor 20h` pair that writes `DF` then `FF`
+  (s2.sounddriver.asm:2221-2228). Every other PSG channel is claimed by nothing
+  more than `set 2,(hl)` on the corresponding music track (:2243-2245), with no
+  register write at all; the SFX's own bytecode owns everything visible from
+  there. The engine had S2 on the builder default `FORCE_SILENCE`, while S1,
+  whose loader is the same shape, was already off it.
+- **Where it landed.** `Sonic2SmpsSequencerConfig` now sets
+  `PsgSfxTakeoverMode.REGISTER_SEQUENCE`. The PSG3 pair itself is untouched: it
+  is already modelled by the separate `psg3SfxAdmissionWriteMode`, and both
+  sides still emit `DF FF` at the head of tick 557.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** Tick 584 is a write-count difference, reference 9 against the
+  engine's 8, so the engine is now missing a write rather than adding one.
+  `fmSfxTakeoverMode` is still on the builder default `FORCE_RESET` for S2 while
+  `.sfxinitfm` sets the same override bit and writes nothing (:2238-2245); that
+  is the obvious next thing to check, with its own evidence.
+
+## 2026-09-04 - S2 walks the fixed SFX RAM slots, not the SFX header order; tick 228 -> tick 557
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 228 (movie row 10430),
+  field `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's
+  `psg=0x87`; 496 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 557 (movie row 10759), field
+  `writes[38]`, reference `psg=0xe7` against the engine's `psg=0xff`; 455 of
+  2,198 ticks divergent.
+- **DAC stream and state only:** both unchanged.
+- **How the divergence was attributed, rather than guessed.** Probes printed
+  the music sequencer's track walk, an end marker per track, a walk-end marker,
+  and every chip write inline. At row 10430 the music walk ran
+  `DAC, FM1-FM5, PSG1-PSG3` in the ROM's own order and produced only
+  `psg=B9` and `psg=F4`. The two writes the comparator flagged, a PSG1 note
+  pair and an FM5 voice load plus note, were both emitted *after* `walk-end`,
+  so neither came from the music walk at all. They are the SFX pass handing
+  channels back.
+- **The routine.** `zVInt` updates the SFX tracks by stepping `ix` through the
+  fixed SFX RAM region: `SFX_FM_TRACK_COUNT` tracks in `.fmloop`, then
+  `SFX_PSG_TRACK_COUNT` more in `.psgloop` (s2.sounddriver.asm:465-487). It
+  never consults the order the SFX header listed its tracks, so every FM SFX
+  slot is serviced before any PSG SFX slot. The engine had S2 on the builder
+  default `HEADER_ORDER` while S1, whose driver does the same thing, was
+  already on `CHANNEL_RAM_ORDER`.
+- **Where it landed.** `Sonic2SmpsSequencerConfig` now sets
+  `SfxTrackWalkMode.CHANNEL_RAM_ORDER`. No constant was introduced and nothing
+  is keyed on a zone, route or fixture.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** Tick 557 is a PSG value difference at `writes[38]`, reference
+  `0xe7` against the engine's `0xff`. Both are channel 3 volume writes, so the
+  two sides disagree about the noise channel's attenuation rather than about
+  ordering.
+
+## 2026-09-04 - S2 tick 228 is a music walk-order difference, not a value difference
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `d82441942`.
+- **Measurement, not a comparison run.** No engine behaviour changed. Lines are
+  unchanged: state with writes DIVERGENCE at tick 228 (movie row 10430), field
+  `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's `psg=0x87`, 496 of
+  2,198 ticks divergent; DAC stream `BYTE DIFFERENT in run 3 at byte 709`;
+  state only tick 1,789.
+- **The two sides emit the same writes in a different order.** At tick 228,
+  after two leading PSG writes both sides agree on:
+
+  - reference: an FM voice-load block ending `ym0[28]=F5`, then `psg=87 psg=0E`
+  - engine: `psg=87 psg=0E`, then the identical FM voice-load block
+
+  Nothing differs in value, register or count. The engine runs that PSG track
+  before that FM track; the ROM runs it after. Tick 229 repeats the pattern.
+- **The ROM's walk is fixed and cited.** `zUpdateMusic` updates the DAC track,
+  then loops `MUSIC_FM_TRACK_COUNT` times over the FM tracks, then
+  `MUSIC_PSG_TRACK_COUNT` times over the PSG tracks
+  (s2.sounddriver.asm:554-575). Every FM music track therefore writes before
+  every PSG music track within one service.
+- **What is different about this tick, as a hypothesis rather than a finding.**
+  At tick 226 the engine ordered FM before PSG correctly, and the ticks that
+  diverge are the ones whose FM update carries a full voice load
+  (`ym1[B1]`, the operator block, `ym1[41]`-`ym1[4D]`). Whether the engine
+  defers a voice-load-bearing FM update past the PSG tracks, or reaches it by
+  another route, was not established here and should be instrumented rather than
+  assumed.
+- **Not a partition artefact.** The two leading PSG writes are identical on both
+  sides and are the same on the surrounding ticks, so wherever the service
+  boundary places them, the reordering sits between the FM block and the PSG1
+  frequency pair.
+
+## 2026-09-04 - An S3K load service does not accumulate for the song it loads
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `38e8777b5`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `GLOBAL_STATE_MISMATCH`, tick 495, field
+  `tempoAccumulator`, reference `64` against engine `128`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 495, event 161, reference
+  `psg 223` against engine `psg 255`. DAC stream unchanged. The tick is the
+  same, but the divergence moved from the service's global state to a write
+  161 events into that service's own burst.
+- **The routine.** `TempoWait` lives in `zUpdateEverything`, ahead of
+  `zUpdateMusic` and its `zFillSoundQueue` (Sound/Z80 Sound
+  Driver.asm:653-701, :2607-2621). So the service that loads a song has
+  already accumulated, using the *previous* tempo, before the load exists, and
+  `zBGMLoad`'s `ld (zTempoAccumulator), a` (:1829-1831) is the value that
+  service ends on. The engine seeded the accumulator and then accumulated
+  again in the same service, giving twice the tempo. The newly loaded song's
+  own first accumulation belongs to the next service; its track walk still
+  runs in the load service, which is why the writes were already right.
+- **Why this never showed until service 495.** The title music loaded at
+  service 139 has tempo 0, so the engine's first-service path took its
+  tempo-zero branch and accumulated nothing. Service 495 is the first load of
+  a song with a non-zero tempo, 64, and the difference is exactly one
+  accumulation of it: reference 64, engine 128, and the engine stayed one
+  accumulation ahead for every service after.
+- **This is the same ordering fact as the fade in the previous commit,** seen
+  in a second place. Both come from `zUpdateEverything` doing its own work
+  before the mailbox is read. S1 and S2 run their tempo step inside the music
+  update, after the queue is filled, and do accumulate on the load service,
+  which the engine already modelled and their oracles confirm; the new
+  `tempoWaitPrecedesRequest` flag defaults to their behaviour.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; and S2's `zFadeOutMusic` clearing
+  `SpeedUpFlag`.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips. The whole suite with three ROM paths is 16,396
+  tests, 0 failures, 22 skips, and `-Pguards` is 607 tests, 0 failures.
+- **Two snapshots outside the audio gate needed updating, and the reason is
+  recorded.** `TestSonic3kCoordFlagParity`'s two `zDoModulation` tests assert
+  a packed frequency captured after running the engine for 60,000 samples.
+  Those are end-state snapshots of engine output, not ROM-derived constants,
+  and they shift whenever the run's start phase does. The fix that moved them
+  is this entry's own: not accumulating tempo on the load service removes one
+  accumulation from the very start of the run, so every later service of the
+  60,000-sample run is reached one accumulation earlier in the tempo cycle and
+  the final modulated frequency lands elsewhere. `2A94h` became `2A84h` and
+  `2AADh` became `2AD6h`. Neither value was chosen; both were read back after
+  the change, and they are snapshots precisely so a future shift is visible. The mechanisms they
+  name, the step-counter decrement on sustain ticks and the wait-zero
+  same-tick application, are untouched, and the reference oracle is the
+  authority for the shift. Both now carry a comment saying what kind of value
+  they hold. They are reached only by the whole suite, not by the audio gate,
+  which is why they surfaced at the final full-suite run rather than at the
+  per-cycle one.
+
+
+## 2026-09-04 - The S3K music fade becomes driver state; tick 421 -> tick 495
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `38e8777b5`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 421, role `MUS_DAC`, field
+  `playing`, reference `false` against engine `true`. DAC stream
+  `BYTE_DIFFERENT` run 29 byte 0. Five services reported
+  `active music fade for request 0xe1 is not modelled by this capture host`.
+- **Result after:** `GLOBAL_STATE_MISMATCH`, tick 495, field
+  `tempoAccumulator`, reference `64` against engine `128`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0. **No unsupported requests at all.**
+- **The request.** Both `0E1h` and `0E5h` dispatch to `zFadeOutMusic`
+  (Sound/Z80 Sound Driver.asm:1668, :1672). It sets `zFadeOutTimeout` to
+  `28h` and both `zFadeDelayTimeout` and `zFadeDelay` to 6, then falls through
+  into `zHaltDACPSG`, which zeroes the playback control of FM6/DAC, PSG3,
+  PSG1 and PSG2 and jumps to `zPSGSilenceAll` (:2307-2325). The halt itself
+  writes nothing; only `zPSGSilenceAll` does, which the host already applied.
+  `zDoMusicFadeOut` then runs once per `zUpdateMusic` (:2331-2385).
+- **Three per-driver differences, each measured and each cited.**
+  1. *What the request halts.* S2's `zFadeOutMusic` stops only the DAC track,
+     commenting "can't fade it" (s2.sounddriver.asm:1668-1681). S3K halts the
+     three PSG tracks as well. New `SmpsSequencerConfig.FadeOutHalt`,
+     defaulting to `DAC_ONLY`.
+  2. *How the delay counter is tested.* S2 reads the delay, steps when it is
+     already zero, and otherwise decrements and returns (:1686-1697), so a
+     delay of 3 steps on the fourth service. S3K decrements first and steps
+     when the result is zero (:2337-2343), so a delay of 6 steps on the sixth.
+     The engine implemented S2's shape for both. New `FadeDelayCadence`,
+     defaulting to S1/S2's.
+  3. *When the armed fade first advances.* `zUpdateEverything` runs
+     `zDoMusicFadeOut` before `zUpdateMusic` loads `zMusicNumber` for
+     `zFillSoundQueue` (:653-701, :2628-2643), so the service that consumes
+     the request has already run its fade handler and does not advance the
+     fade it just armed. The capture host arms from the mailbox before the
+     service, so without this the first step lands one service early. A fade
+     armed by a coordination flag needs no such handling, because the engine's
+     `musicUpdateOverflow` already runs the fade step before the track walk,
+     exactly as the ROM does.
+- **No constants were introduced.** `28h` and 6 come from `zFadeOutMusic` and
+  were already in the S3K sequencer config from that same routine; the host
+  reads them from the config rather than restating them.
+- **Measured in two wrong positions before the right one, and both are worth
+  recording.** With only the halt modelled, the engine was one step behind at
+  service 433, reference volume 23 against 22. With the cadence corrected but
+  not the ordering, it was one step ahead at 426, 21 against 22. Only with all
+  three does the ramp line up, and it then agrees for the whole fade.
+- **The DAC stream improved as a side effect,** from run 29 to run 338:
+  halting the DAC track on the request, rather than leaving it playing,
+  changes which samples the following services select. Its pin was updated
+  with that reason.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; the
+  `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297; and now
+  S2's `zFadeOutMusic` clearing `SpeedUpFlag` (s2.sounddriver.asm:1677-1679),
+  which the engine does not model and which was left alone here.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S2 sends a PSG note-on frequency once, not twice; tick 170 -> tick 228
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
