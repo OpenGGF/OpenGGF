@@ -180,11 +180,26 @@ public final class S1OpenGgfSfxAudioCapture {
             musicSequencer.triggerFadeOut(S1_FADE_OUT_STEPS, S1_FADE_OUT_DELAY);
         }
 
+        /**
+         * Driver commands deferred to the ROM's dispatch point. S1 steps the
+         * fade before it cycles the sound queue (s1.sounddriver.asm:179-202),
+         * so a fade armed by a request is not stepped until the next
+         * invocation. Submitting these before the whole frame service would
+         * let the engine step the fade in the invocation that armed it.
+         *
+         * <p>SFX admission stays at the pre-service point: nothing between
+         * there and the dispatch point touches it, since the fade step does not
+         * read or write SFX admission, so the two positions are observationally
+         * the same for an SFX and the pre-service one keeps a newly admitted
+         * SFX in the same frame's walk as the ROM does.
+         */
+        private final List<Integer> deferredFlagCommands = new ArrayList<>();
+
         private void submitDispatches(List<Integer> dispatches) {
             for (int requestedSoundId : dispatches) {
                 int soundId = requestedSoundId;
                 if (soundId >= 0xE0) {
-                    submitFlagCommand(soundId);
+                    deferredFlagCommands.add(soundId);
                     continue;
                 }
                 if (soundId == 0xB5) {
@@ -229,6 +244,12 @@ public final class S1OpenGgfSfxAudioCapture {
             }
             List<Integer> dispatches = dispatchesByOrdinal.getOrDefault(ordinal, List.of());
             submitDispatches(dispatches);
+            musicSequencer.setDispatchPointListener(() -> {
+                for (int soundId : deferredFlagCommands) {
+                    submitFlagCommand(soundId);
+                }
+                deferredFlagCommands.clear();
+            });
             if (ordinal == 0) {
                 musicSequencer.advanceSamples(0);
             } else {

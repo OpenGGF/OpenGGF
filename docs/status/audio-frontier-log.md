@@ -27,6 +27,53 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The dispatch point lands, and music $8A goes green: the first whole new song to match
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `1bc78c8ea`.
+- **Fixture:** scratch capture of window 0 of `s1-complete-run.bk2`, music
+  `$8A`, the title-screen song, 72 ticks.
+- **Result before:** `GLOBAL_STATE_MISMATCH` tick 48, `fade_delay`, reference
+  `3` against engine `2`.
+- **Result after:** **`MATCH (72 ticks)`.** A song the oracle had never covered
+  now agrees end to end.
+
+**The ordering, from the ROM.** `UpdateMusic` steps a fade in progress
+(s1.sounddriver.asm:179-186) and only then cycles the sound queue and calls
+`PlaySoundID` (:197-202), before walking any track (:205 onward). So a fade
+armed by a request in invocation N is not stepped until N+1: N's fade step has
+already gone by. The parity host submitted every recorded request before the
+whole frame service, and the engine's fade step and track walk both live inside
+that service, so the engine stepped the fade in the invocation that armed it,
+one step early.
+
+**The seam.** `SmpsSequencer` now exposes a dispatch point that runs past the
+fade step and before the track walk, and the host submits driver commands
+there.
+
+**Only the driver commands moved, and the reason matters.** Moving SFX
+admission to the same point would have dropped a newly admitted SFX from the
+frame's own walk, because the driver captures its sequencer-list size before
+iterating, where the ROM walks an SFX admitted by `PlaySoundID` in that very
+invocation. Nothing between the pre-service point and the dispatch point touches
+SFX admission -- the fade step neither reads nor writes it -- so for an SFX the
+two positions are observationally identical and the pre-service one is the
+faithful one. The fade commands are the only requests the fade step interacts
+with, so they are the only ones that had to move. **No compensating constant
+was introduced**, which was the alternative and would have been a fitted one.
+
+**Gates, all green and read by content.** The audio parity package, the wider
+audio packages and both rewind coverage guards with three ROM paths and the S2
+request BK2: 2,063 tests, 0 failures, 0 errors, 10 skips. Both S1 gameplay
+oracles `MATCH` at 2,562 and 5,257 ticks; S2 v1 `MATCH (698 ticks)`; v2 both
+lines `MATCH (2198 ticks)`; CPZ state-only `MATCH (720 ticks)` with its
+state-and-writes companion unchanged at tick 237; request windows `MATCH` at
+25, 52 and 27.
+
+**Open.** Music `$8E` is unchanged at tick 360, the two-tempo-decrement
+question recorded in the previous entry.
+
+
 ## 2026-09-04 - The tempo frontier was not tempo seeding: a finished S1 song stopped being serviced
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,

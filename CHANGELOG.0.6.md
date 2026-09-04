@@ -14,6 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Fading out Sonic 1's music no longer loses its first step:** the original
+  steps a fade in progress before it looks at newly requested sounds, so a fade
+  asked for on one frame does not begin dimming until the next. The engine
+  applied the request first and so took the fade's opening step immediately,
+  finishing a frame early. Requests that change how the music plays now take
+  effect where the original acts on them. The Sonic 1 title-screen music now
+  matches the original exactly through its fade into the level.
+
 - **Sonic 1's music timing keeps running after a jingle ends:** the original's
   sound program ticks its master tempo every frame regardless of whether any
   music track is still playing, and only stops when a new song loads or the

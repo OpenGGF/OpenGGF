@@ -1618,6 +1618,28 @@ public class SmpsSequencer implements CoordFlagContext {
         }
     }
 
+    /**
+     * Runs at the ROM's dispatch point: after the fade step and before the
+     * track walk. S1's {@code UpdateMusic} steps the fade
+     * (s1.sounddriver.asm:179-186) and only then cycles the sound queue and
+     * calls {@code PlaySoundID} (:197-202), before walking any track (:205
+     * onward). A request that arms a fade in one invocation is therefore not
+     * stepped until the next, because that invocation's fade step has already
+     * gone by. Set by the parity host so a recorded driver command lands where
+     * the ROM issues it.
+     */
+    private Runnable dispatchPoint;
+
+    public void setDispatchPointListener(Runnable listener) {
+        this.dispatchPoint = listener;
+    }
+
+    private void runDispatchPoint() {
+        if (dispatchPoint != null) {
+            dispatchPoint.run();
+        }
+    }
+
     private void processTempoFrame() {
         if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW && !sfxMode) {
             // S3K music frame: fades advance inside each zUpdateMusic
@@ -1646,6 +1668,9 @@ public class SmpsSequencer implements CoordFlagContext {
                         t.duration++;
                     }
                 }
+                // The ROM's dispatch point: past the fade step, before any
+                // track is walked (SD:179-202).
+                runDispatchPoint();
             }
             tick(sfxMode);
         } else if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
