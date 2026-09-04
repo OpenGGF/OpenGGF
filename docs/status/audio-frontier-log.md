@@ -27,6 +27,104 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The S1 whole-run window plan, and a per-song oracle contract that reproduces the committed fixture byte for byte
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `981aece96`.
+- **Fixtures:** none published yet. This entry records the measured capture
+  plan for both pinned complete runs, the contract that will carry it, and the
+  first divergence the contract exposes.
+
+**The window rule, and why it is per song rather than per act.** A window opens
+at a `Sound_PlayBGM` dispatch and closes at the next one. That boundary is the
+ROM's: `Sound_PlayBGM` reloads the driver's music track RAM through
+`InitMusicPlayback` (s1.sounddriver.asm:1498-1502), so the song, and with it
+the ROM asset range every sequence position is normalized against, changes
+exactly there. Per act does not work, because an act contains several BGM
+loads -- invincibility, extra life, boss, act clear -- and crossing one is
+precisely what the existing contract cannot describe: the reference normalizes
+against one song's range and the engine host drives one music sequencer. Per
+song is the smallest ROM-defined epoch that keeps both sides' contracts intact,
+and it strictly refines per act. Chained windows tile a movie from its first
+BGM request to its end, so the coverage is the whole run.
+
+**The plan, measured rather than estimated.** A new reconnaissance probe,
+`tools/audio/probes/s1_bgm_window_survey_probe.lua`, hooks only `Sound_PlayBGM`
+and the `UpdateMusic` entry and return pair, so it walks a whole movie in about
+ten minutes and emits a capture plan instead of parity data.
+
+| Movie | Input rows | Windows | Invocations | SFX dispatches | Abandoned |
+|---|---|---|---|---|---|
+| `s1-complete-run.bk2` | 195,493 | 83 | 194,667 | 4,988 | 3 |
+| `sonic1-complete-withemeralds.bk2` | 225,101 | 101 | 224,123 | 6,244 | 3 |
+
+Fifteen distinct music ids appear across the shorter run, and every id resolves
+in the ROM music pointer table, so no window needs a hard-coded address.
+
+**The survey reproduces the committed fixture independently.** Its window 1 for
+`s1-complete-run.bk2` is music `$81` opening at emulator frame 584 with 5,257
+invocations -- the published `s1-gameplay-ghz1-run2-reference.v1` window's
+epoch frame and tick count, derived by a different code path.
+
+**The capture probe's window 1 is byte-identical to that fixture.**
+`tools/audio/probes/s1_run_window_driver_parity_probe.lua` chains windows and
+writes one file per window. Its capture of window 1 has a tick body of
+44,775,538 bytes, `cmp`-identical to the committed fixture's 44,775,538, so the
+per-tick record shape and every bus-capture path are preserved and a window
+this probe records is comparable with one the single-window probe records over
+the same span. Only the metadata line differs, by design.
+
+**The contract is additive, so no committed fixture's validation moved.** A new
+capture kind, `s1_run_song_window_driver_reference` and its OpenGGF
+counterpart, carries `music_id` and a `window` object instead of
+`launch_update_music_invocations`. That field is a per-movie property the
+gameplay kind pins, and it is meaningless for windows after the first, which
+have no dormant prefix at all -- the driver is already running when they open.
+Widening the gameplay kind would have disturbed its pinned counts, so the new
+shape sits beside it. The engine host now loads the window's own epoch song and
+derives its asset range from the music pointer table the same way
+`Sonic1SmpsLoader.calculateMusicDataSize` sizes the blob, replacing a
+hard-coded GHZ id and range.
+
+**First divergence on a non-GHZ song, and it is a probe constant rather than an
+engine fault.** Measuring music `$8E` (567 ticks, window 2 of the shorter run)
+gives `TRACK_STATE_MISMATCH` at tick 0, role `DAC`, field `loop_counters`,
+reference `[0, 0]` against engine `[]`. The reference side normalizes loop
+counters at a fixed index set, `ACTIVE_LOOP_COUNTERS = {0, 1}`, which is GHZ's
+reachable set and was correct for every window captured until now. The engine
+derives the set per song by walking the song's own bytecode
+(`parseReachableF7LoopIndices`), and finds `$8E` reaches no `F7` loop at all.
+The accurate normalization is the song-derived one, so the probe needs the same
+derivation rather than the constant. Left open deliberately: landing the
+song-derived set in Lua is the next step, and it is a ROM-data derivation on
+both sides, not a fitted constant.
+
+**Two UpdateMusic call sites, and the abandoned invocations they cause.**
+`UpdateMusic` is called from the VBlank handler (sonic.asm:682) and from the
+HBlank handler's delayed-transfer path (sonic.asm:1062), which runs when
+`f_doupdatesinhblank` is set. The two run at different stack depths, so over a
+whole run an invocation can be re-entered before its return is seen. The shared
+parity contract's invocation lifecycle asserts on exactly that, which is why
+the existing single windows, all of which stop early, never meet one. Three
+occur in each pinned movie. Both new probes drop such an invocation rather than
+recording a track walk that did not complete, and count it. `PauseMusic` is not
+involved: all of its exits reach `DoStartZ80`'s `rts`
+(s1.sounddriver.asm:581, :629), which is the hooked return.
+
+**Payload cost, measured.** At the existing fixtures' 165 gzipped bytes per
+tick, full coverage is about 32 MB for the shorter movie and about 69 MB for
+the pair. Individual per-song files stay between roughly 0.2 and 2 MB, so
+nothing approaches GitHub's per-file limit, but the repository total is a real
+cost and the committed subset is a decision recorded before any fixture lands.
+
+**Gates at this commit, all green.** The audio parity package with three ROM
+paths: 183 tests, 0 failures, 0 errors, 2 skips. Both S1 gameplay oracles pass
+their `MATCH` assertions at 2,562 and 5,257 ticks. S2 v1 `MATCH (698 ticks)`;
+v2 state-and-writes and state-only `MATCH (2198 ticks)`; CPZ state-only
+`MATCH (720 ticks)` with its state-and-writes line unchanged at tick 237,
+`writes[4]`, 36 of 719 divergent; request windows `MATCH` at 25, 52 and 27.
+
+
 ## 2026-09-04 - The duration seed lands; both red assertions were the suspects
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

@@ -47,10 +47,19 @@ public final class S1OpenGgfSfxAudioCapture {
         Objects.requireNonNull(output, "output");
         AudioParityMetadata referenceMetadata = S1OpenGgfAudioCapture.readReferenceMetadata(reference);
         boolean gameplay = AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE.equals(referenceMetadata.capture());
-        if (!gameplay && !AudioParitySchema.SFX_REFERENCE_CAPTURE.equals(referenceMetadata.capture())) {
+        boolean runWindow =
+                AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE.equals(referenceMetadata.capture());
+        if (!gameplay && !runWindow
+                && !AudioParitySchema.SFX_REFERENCE_CAPTURE.equals(referenceMetadata.capture())) {
             throw new IllegalArgumentException(
-                    "reference stream is not a BizHawk S1 SFX or gameplay capture");
+                    "reference stream is not a BizHawk S1 SFX, gameplay or run-window capture");
         }
+        // The sound-test and gameplay kinds are GHZ by construction: their
+        // epoch is the GHZ1 level-start request. A per-song run window names
+        // its own epoch song, and the host loads that one.
+        int musicId = runWindow
+                ? referenceMetadata.details().get("music_id").intValue()
+                : Sonic1Music.GHZ.id;
 
         Map<Integer, List<Integer>> dispatchesByOrdinal = new HashMap<>();
         AudioParityJsonl.read(reference, tick -> {
@@ -63,19 +72,28 @@ public final class S1OpenGgfSfxAudioCapture {
         S1OpenGgfAudioCapture.verifyRomIdentity(romPath);
         try (Rom rom = S1OpenGgfAudioCapture.openRom(romPath)) {
             Sonic1SmpsLoader loader = new Sonic1SmpsLoader(rom);
-            AbstractSmpsData song = Objects.requireNonNull(loader.loadMusic(Sonic1Music.GHZ.id),
-                    "S1 GHZ music is absent from the verified ROM");
+            AbstractSmpsData song = Objects.requireNonNull(loader.loadMusic(musicId),
+                    "S1 music 0x" + Integer.toHexString(musicId)
+                            + " is absent from the verified ROM");
             DacData dacData = Objects.requireNonNull(loader.loadDacData(),
                     "S1 DAC data is absent from the verified ROM");
-            S1OpenGgfAudioCapture.SongContract contract = S1OpenGgfAudioCapture.inspectGhz(rom, song);
+            S1OpenGgfAudioCapture.SongContract contract =
+                    S1OpenGgfAudioCapture.inspectSong(rom, song, musicId);
 
-            AudioParityMetadata outputMetadata = gameplay
-                    ? AudioParityMetadata.openGgfGameplay(
-                            referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
-                            referenceMetadata.romCrc32())
-                    : AudioParityMetadata.openGgfSfx(
-                            referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
-                            referenceMetadata.romCrc32());
+            AudioParityMetadata outputMetadata;
+            if (runWindow) {
+                outputMetadata = AudioParityMetadata.openGgfRunWindow(
+                        referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
+                        referenceMetadata.romCrc32());
+            } else if (gameplay) {
+                outputMetadata = AudioParityMetadata.openGgfGameplay(
+                        referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
+                        referenceMetadata.romCrc32());
+            } else {
+                outputMetadata = AudioParityMetadata.openGgfSfx(
+                        referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
+                        referenceMetadata.romCrc32());
+            }
             try (CaptureIterator ticks = new CaptureIterator(
                     loader, song, dacData, contract,
                     referenceMetadata.terminalRecordCount(),
