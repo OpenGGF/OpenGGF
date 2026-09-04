@@ -27,6 +27,57 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - First per-song windows published: $8A green, $8E red with its frontier pinned
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `d617f1e1f`.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off -B -Dsonic1.rom.path=... -Dsonic2.rom.path=...
+  -Ds3k.rom.path=... -Ds2.request.bk2.path=... "-Dtest=com/openggf/tools/audio/parity/**/*" test`
+
+**Published, from `s1-complete-run.bk2`.**
+
+| Fixture | Music | Ticks | Result |
+|---|---|---|---|
+| `runs/s1-complete-run/w000-id8A.jsonl.gz` | `$8A` title screen | 72 | `MATCH` |
+| `runs/s1-complete-run/w002-id8E.jsonl.gz` | `$8E` act clear | 567 | `GLOBAL_STATE_MISMATCH` tick 360, `tempo_timeout`, `1` against `2` |
+| `runs/s1-complete-run/w003-id81.jsonl.gz` | `$81` GHZ | 1 | `MATCH` |
+
+79,903 gzipped bytes for all three. Two serial captures, `cmp`-identical per
+window before publication.
+
+**Window 1 is deliberately not published.** Its ticks are byte-identical to the
+committed `s1-gameplay-ghz1-run2-reference.v1` fixture, which
+`TestS1GameplayRun2AudioDriverOracle` already covers at 5,257 ticks, so
+committing it again would add about 870 KB for no new coverage.
+
+**The red one is published on purpose.** A window with its frontier recorded
+pins where the engine stops agreeing, so the next change either moves that point
+or shows up as a regression. `$8E` agrees for 359 ticks before the tick the ROM
+serviced its driver twice.
+
+**Pins, not bare assertions.** `S1RunWindowPins` holds each window's expected
+outcome as the one-line summary the oracle prints, so a window that moves in
+*either* direction fails until both the table and this log are updated. A green
+window cannot regress unnoticed and a frontier cannot move silently.
+`$8A` additionally has its own named test asserting `Kind.MATCH` and the literal
+72, because the first whole song outside GHZ to agree should name itself when it
+breaks. A companion test corrupts a byte of a committed reference and requires
+the comparator to report it at the corrupted tick, so a comparison that silently
+stopped running is visible as such.
+
+**The manifest carries the whole plan, not just what was published.** Both
+movies' complete window lists are recorded -- 83 windows and 194,667
+invocations for `s1-complete-run.bk2`, 101 and 224,123 for
+`sonic1-complete-withemeralds.bk2` -- each with its music id, epoch frame, close
+frame, invocation count, SFX count and whether it contains a re-entered
+invocation, together with the exact command that regenerates any one of them.
+
+**Gates.** 188 tests, 0 failures, 0 errors, 2 skips. Both S1 gameplay oracles
+`MATCH` at 2,562 and 5,257 ticks; S2 v1 `MATCH (698 ticks)`; v2 both lines
+`MATCH (2198 ticks)`; CPZ state-only `MATCH (720 ticks)`; request windows
+`MATCH` at 25, 52 and 27.
+
+
 ## 2026-09-04 - Music $8E tick 360 measured, not argued: the ROM ran its driver twice in that frame
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,

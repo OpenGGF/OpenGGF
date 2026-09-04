@@ -83,6 +83,28 @@ class TestS1RunWindowAudioDriverOracle {
     }
 
     /**
+     * The title-screen song, asserted by name and length rather than only
+     * through the pins table, because it is the first whole song outside GHZ to
+     * agree end to end and a regression in it should name itself.
+     */
+    @org.junit.jupiter.api.Test
+    void titleScreenSongMatchesOverAllSeventyTwoTicks() throws Exception {
+        Path rom = requiredRom();
+        Path fixture = ROOT.resolve("s1-complete-run/w000-id8A.jsonl.gz");
+        assertTrue(Files.isRegularFile(fixture), "committed 0x8A window is required");
+        Path reference = decompress(fixture, temp.resolve("reference.jsonl"));
+        Path openGgf = temp.resolve("openggf.jsonl");
+
+        S1OpenGgfSfxAudioCapture.CaptureResult result =
+                S1OpenGgfSfxAudioCapture.capture(reference, rom, openGgf);
+        assertEquals(72, result.recordCount());
+
+        AudioParityReport report = AudioParityComparator.compare(reference, openGgf);
+        assertEquals(AudioParityReport.Kind.MATCH, report.kind(), report::toHumanText);
+        assertEquals(72, report.ticksCompared());
+    }
+
+    /**
      * Corrupts a byte in a copy of one committed reference and confirms the
      * comparator reports it at the corrupted tick, proving these comparisons
      * are live rather than vacuously reporting a stale pin.
