@@ -2545,6 +2545,28 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         return sfxSequencers.contains(source);
     }
 
+    /**
+     * S3K's {@code cfStopTrack} hands the channel back inside the flag: it
+     * clears the overridden music track's bit and sends that track's FM
+     * instrument before the music update of the same service runs
+     * (skdisasm Sound/Z80 Sound Driver.asm:3059-3086). Only an SFX track's
+     * end does this; the ROM gates the whole tail on {@code zUpdatingSFX}
+     * (:3050-3054).
+     */
+    @Override
+    public void releaseChannelToMusic(SmpsSequencer sequencer,
+            SmpsSequencer.TrackType type, int channelId) {
+        if (!isSfx(sequencer)) {
+            return;
+        }
+        SmpsSequencer[] locks = type == SmpsSequencer.TrackType.PSG ? psgLocks : fmLocks;
+        if (channelId < 0 || channelId >= locks.length || locks[channelId] != sequencer) {
+            return;
+        }
+        locks[channelId] = null;
+        updateOverrides(type, channelId, false);
+    }
+
     private void releaseLocks(SmpsSequencer seq) {
         boolean isSfx = isSfx(seq);
         for (int i = 0; i < 6; i++) {

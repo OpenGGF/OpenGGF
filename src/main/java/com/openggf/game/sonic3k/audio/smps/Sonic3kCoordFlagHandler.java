@@ -294,6 +294,11 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             case 0xF2: // TRK_END (TEND_STD) - standard track end
                 t.active = false;
                 ctx.stopNote(t);
+                // cfStopTrack does not stop at the key-off: it clears the
+                // overridden music track's bit and sends that track's FM
+                // instrument, inline, before the music update of the same
+                // service (Sound/Z80 Sound Driver.asm:3059-3086).
+                ctx.releaseChannelToMusic(t.type, t.channelId);
                 return true;
 
             case 0xF3: // PSG_NOISE (PNOIS_SRES) - set + reset

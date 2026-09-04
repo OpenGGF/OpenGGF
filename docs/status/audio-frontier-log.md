@@ -27,6 +27,55 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The track-end flag hands the channel back itself; tick 590 -> tick 751
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged by design. Clean build before
+  every measurement.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 590, event 1, reference
+  `ym2612 port 1 register 0B4h = 128` against engine
+  `port 0 register 0A4h = 19`. DAC stream `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 751, event 0, reference
+  `ym2612 port 1 register 0A5h = 50` against engine
+  `port 1 register 82h = 255`. DAC stream unchanged. **A hundred and
+  sixty-one more services agree.**
+- **The routine, read to its end this time.** `cfStopTrack` does not finish at
+  the key-off. It clears the overridden music track's bit, and then, for an FM
+  track, writes the FM3 settings if the channel is FM3 and sends that music
+  track's instrument through `zSendFMInstrument`, followed by its SSG-EG
+  (Sound/Z80 Sound Driver.asm:3059-3086). The whole tail is gated on
+  `zUpdatingSFX`, so only an SFX track's end restores anything (:3050-3054).
+  All of it happens inside the flag, during the SFX update, which
+  `zUpdateEverything` runs before the music update (:650-701) — so the restore
+  precedes that service's music writes.
+- **The engine had the right writes in the wrong place.** They came from the
+  driver's post-service release sweep, through `updateOverrides` and
+  `refreshInstrument`, which lands them after the music tracks have already
+  written. The flag now hands the channel back directly:
+  `CoordFlagContext.releaseChannelToMusic` reaches the driver, which drops the
+  lock and clears the override for that one channel, and the S3K `0F2h`
+  handler calls it right after its key-off. The driver's own SFX test mirrors
+  the ROM's `zUpdatingSFX` gate.
+- **This is the fix the previous cycle looked for and missed.** That cycle
+  routed the same intent through `reconcileInactiveSfxTracks`, whose guard is
+  about whether the sequencer still holds an active track on the channel, and
+  measured no change. The guard was the wrong question: the ROM does not ask
+  it, it simply releases the channel the ending track owned.
+- **S1 and S2 untouched by construction and by measurement.** The new hook is
+  a default no-op on both interfaces and is called only from the S3K flag
+  handler. S1 sound test `MATCH (14690 ticks)` and `MATCH (1967 ticks)`; S2 v1
+  `MATCH (698 ticks)`, v2 state-and-writes and state-only `MATCH (2198
+  ticks)`, CPZ state-only `MATCH (720 ticks)`, request windows `MATCH` at 25,
+  52 and 27, and the CPZ state-and-writes line unchanged at 36 of 719.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and S1's and S2's track-end stop.
+- **Gates at this commit, all green.** 2,159 tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - Service 590 attributed: the music voice restore lands after the music
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

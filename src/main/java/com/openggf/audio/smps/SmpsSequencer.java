@@ -2865,6 +2865,11 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     @Override
+    public void releaseChannelToMusic(TrackType type, int channelId) {
+        host.releaseChannelToMusic(this, type, channelId);
+    }
+
+    @Override
     public void stopNote(Track t) {
         if (t.type == TrackType.FM) {
             int hwCh = t.channelId;
