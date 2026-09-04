@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K 1-up resume fades in with its instruments restored:** the fade-in-to-previous
+  body (FM override clear, 40h attenuation, instrument resend, fade of 40h steps at
+  delay 2) now runs on the live restore path; fade delay pair and fade-out
+  machine are driver state; four more oracle fields gated.
 - **S3K music returns after a 1-up:** the coord-flag handler now restores through
   the sequencer's injected sink (drained after the presentation batch) instead of
   the global AudioManager, whose command was refused inside the batch; S3K intro

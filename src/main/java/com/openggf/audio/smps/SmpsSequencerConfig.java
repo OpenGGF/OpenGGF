@@ -333,6 +333,7 @@ public final class SmpsSequencerConfig {
     private final boolean fmNoteGoingReturnsAtRest;
     private final FadeOutHalt fadeOutHalt;
     private final FadeInRestore fadeInRestore;
+    private final boolean driverOwnedFadeDelay;
     private final FadeDelayCadence fadeDelayCadence;
     private final boolean tempoWaitPrecedesRequest;
     private final PsgSilenceShape psgSilenceShape;
@@ -396,6 +397,7 @@ public final class SmpsSequencerConfig {
         this.fmNoteGoingReturnsAtRest = b.fmNoteGoingReturnsAtRest;
         this.fadeOutHalt = b.fadeOutHalt;
         this.fadeInRestore = b.fadeInRestore;
+        this.driverOwnedFadeDelay = b.driverOwnedFadeDelay;
         this.fadeDelayCadence = b.fadeDelayCadence;
         this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
         this.psgSilenceShape = b.psgSilenceShape;
@@ -861,6 +863,22 @@ public final class SmpsSequencerConfig {
         OVERRIDE_PSG
     }
 
+    /**
+     * Whether the fade delay pair lives on the driver rather than the song.
+     *
+     * <p>S3K keeps {@code zFadeDelay} and {@code zFadeDelayTimeout} in the
+     * driver's own variable region, and both {@code zFadeOutMusic} and
+     * {@code zFadeInToPrevious} write them whether or not a song is loaded
+     * (skdisasm Sound/Z80 Sound Driver.asm:2306-2312, :2784-2789). S1 and S2
+     * instead keep a single delay byte per direction and reload it from an
+     * immediate rather than a stored timeout (s1.sounddriver.asm:1363,
+     * :1381; s2.sounddriver.asm:2425-2429), so they keep the song-owned
+     * shape.
+     */
+    public boolean isDriverOwnedFadeDelay() {
+        return driverOwnedFadeDelay;
+    }
+
     /** Restore-fade track handling: REST_TRACKS (S1/S2) or OVERRIDE_PSG (S3K). */
     public FadeInRestore getFadeInRestore() {
         return fadeInRestore;
@@ -951,6 +969,7 @@ public final class SmpsSequencerConfig {
         private boolean fmNoteGoingReturnsAtRest = false;
         private FadeOutHalt fadeOutHalt = FadeOutHalt.DAC_ONLY;
         private FadeInRestore fadeInRestore = FadeInRestore.REST_TRACKS;
+        private boolean driverOwnedFadeDelay = false;
         private FadeDelayCadence fadeDelayCadence = FadeDelayCadence.TEST_THEN_DECREMENT;
         private boolean tempoWaitPrecedesRequest = false;
         private PsgSilenceShape psgSilenceShape = PsgSilenceShape.SOUNDING_CHANNEL_ONLY;
@@ -1006,6 +1025,7 @@ public final class SmpsSequencerConfig {
         public Builder fmNoteGoingReturnsAtRest(boolean val) { fmNoteGoingReturnsAtRest = val; return this; }
         public Builder fadeOutHalt(FadeOutHalt val) { fadeOutHalt = val; return this; }
         public Builder fadeInRestore(FadeInRestore val) { fadeInRestore = val; return this; }
+        public Builder driverOwnedFadeDelay(boolean val) { driverOwnedFadeDelay = val; return this; }
         public Builder fadeDelayCadence(FadeDelayCadence val) { fadeDelayCadence = val; return this; }
         public Builder tempoWaitPrecedesRequest(boolean val) { tempoWaitPrecedesRequest = val; return this; }
         public Builder psgSilenceShape(PsgSilenceShape val) { psgSilenceShape = val; return this; }

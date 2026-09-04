@@ -1245,6 +1245,14 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         activeMusic = restored;
         overrideStack[--overrideCount] = null;
         pendingRestore = false;
+        // The ROM does the whole resume inside the driver: zFadeInToPrevious
+        // restores the saved tracks, attenuates and re-voices them and arms
+        // the fade in (Sound/Z80 Sound Driver.asm:2725-2789). Reactivating the
+        // slot here only brings the song back; the driver still owes it that
+        // body, or it returns at full volume with stale voices.
+        if (smpsSession != null) {
+            smpsSession.fadeInRestoredMusic();
+        }
         return true;
     }
 

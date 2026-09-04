@@ -1805,6 +1805,77 @@ public class SmpsSequencer implements CoordFlagContext {
      */
     private boolean fadeArmedOutsideService;
 
+    /**
+     * The running fade delay. S3K keeps it on the driver, so a fade armed with
+     * no song loaded still records it; S1 and S2 keep it on the song
+     * (skdisasm Sound/Z80 Sound Driver.asm:2306-2312 against
+     * s1.sounddriver.asm:1363 and s2.sounddriver.asm:2425-2429).
+     */
+    /**
+     * The fade's remaining steps. S3K keeps this on the driver as
+     * {@code zFadeOutTimeout} / {@code zFadeInTimeout}, which is what its
+     * steppers test to decide a fade is running at all (Sound/Z80 Sound
+     * Driver.asm:2331-2335, :2395-2396); S1 and S2 keep it with the song.
+     */
+    private int fadeSteps() {
+        return config.isDriverOwnedFadeDelay()
+                ? host.fadeStepCounter(fadeState.fadeOut) : fadeState.steps;
+    }
+
+    private void setFadeSteps(int value) {
+        if (config.isDriverOwnedFadeDelay()) {
+            host.setFadeStepCounter(fadeState.fadeOut, value);
+        }
+        fadeState.steps = value;
+    }
+
+    private int fadeDelayCounter() {
+        if (!config.isDriverOwnedFadeDelay()) {
+            return fadeState.delayCounter;
+        }
+        return fadeState.fadeOut ? host.fadeDelayTimeout() : host.fadeDelay();
+    }
+
+    private void setFadeDelayCounter(int value) {
+        if (config.isDriverOwnedFadeDelay()) {
+            if (fadeState.fadeOut) {
+                host.setFadeDelayTimeout(value);
+            } else {
+                host.setFadeDelay(value);
+            }
+        }
+        fadeState.delayCounter = value;
+    }
+
+    /**
+     * The reload source for the counter above.
+     *
+     * <p>The two steppers use the driver's pair in opposite roles, which is
+     * why these are direction-aware rather than fixed. {@code zDoMusicFadeOut}
+     * decrements {@code zFadeDelayTimeout} and reloads it from
+     * {@code zFadeDelay} (Sound/Z80 Sound Driver.asm:2337-2346);
+     * {@code zDoMusicFadeIn} decrements {@code zFadeDelay} and reloads it from
+     * {@code zFadeDelayTimeout} (:2405-2414). Both arming routines write the
+     * same value to both halves, so the swap only shows once a fade runs.
+     */
+    private int fadeDelayReload() {
+        if (!config.isDriverOwnedFadeDelay()) {
+            return fadeState.delayInit;
+        }
+        return fadeState.fadeOut ? host.fadeDelay() : host.fadeDelayTimeout();
+    }
+
+    private void setFadeDelayReload(int value) {
+        if (config.isDriverOwnedFadeDelay()) {
+            if (fadeState.fadeOut) {
+                host.setFadeDelay(value);
+            } else {
+                host.setFadeDelayTimeout(value);
+            }
+        }
+        fadeState.delayInit = value;
+    }
+
     private void processFade() {
         if (fadeArmedOutsideService) {
             fadeArmedOutsideService = false;
@@ -1812,7 +1883,7 @@ public class SmpsSequencer implements CoordFlagContext {
         }
         // ROM: Check if fade counter is already 0 BEFORE processing
         // This happens after all steps have been applied
-        if (fadeState.steps == 0) {
+        if (fadeSteps() == 0) {
             if (fadeState.fadeOut) {
                 // Stop all tracks
                 for (Track t : tracks) {
@@ -1842,20 +1913,20 @@ public class SmpsSequencer implements CoordFlagContext {
             // zDoMusicFadeOut: dec a / jr z, .timer_expired, so an armed delay
             // of six steps on the sixth service, not the seventh
             // (Sound/Z80 Sound Driver.asm:2337-2343).
-            fadeState.delayCounter--;
-            if (fadeState.delayCounter != 0) {
+            setFadeDelayCounter(fadeDelayCounter() - 1);
+            if (fadeDelayCounter() != 0) {
                 return;
             }
-        } else if (fadeState.delayCounter > 0) {
+        } else if (fadeDelayCounter() > 0) {
             // zUpdateFadeout reads the delay first and steps only when it is
             // already zero (s2.sounddriver.asm:1686-1697).
-            fadeState.delayCounter--;
+            setFadeDelayCounter(fadeDelayCounter() - 1);
             return;
         }
 
         // ROM: Decrement fade counter and apply volume change
-        fadeState.steps--;
-        fadeState.delayCounter = fadeState.delayInit;
+        setFadeSteps(fadeSteps() - 1);
+        setFadeDelayCounter(fadeDelayReload());
 
         int dir = fadeState.fadeOut ? 1 : -1;
 
@@ -2511,6 +2582,16 @@ public class SmpsSequencer implements CoordFlagContext {
         boolean preventAttack = shouldPreventNoteAttack(t);
         if (!preventAttack) {
             t.fillCounter = t.fill;
+            // Every driver resets the volume envelope index beside the note
+            // fill, in the same routine and under the same do-not-attack
+            // guard: S3K zFinishTrackUpdate (Sound/Z80 Sound
+            // Driver.asm:1055-1069), S2 (s2.sounddriver.asm:948-957) and S1
+            // FinishTrackUpdate (s1.sounddriver.asm:436-442), whose own
+            // comment notes it happens even on FM tracks. Without it a PSG
+            // envelope runs on past the note that should have restarted it,
+            // reaches its terminator early, and then parks there: an 83h
+            // terminator re-silences the channel on every later pass.
+            t.envPos = 0;
             if (config.isNoteResetAliasesModulationState()) {
                 // zFinishTrackUpdate clears ModEnvIndex and ModEnvSens for
                 // every stream unit it reads, rest or note, whenever the
@@ -3876,12 +3957,16 @@ public class SmpsSequencer implements CoordFlagContext {
 
     public void triggerFadeIn(int steps, int delay) {
         // Start a fade in from current volume (silence) to normal
-        fadeState.steps = steps;
-        fadeState.delayInit = delay;
         fadeState.addFm = 1;
         fadeState.addPsg = 1;
-        // ROM: FadeInDelay is NOT initialized, so first step happens immediately
-        fadeState.delayCounter = 0;
+        fadeState.fadeOut = false;
+        setFadeSteps(steps);
+        setFadeDelayReload(delay);
+        // S1 and S2 leave the fade-in delay uninitialised, so their first step
+        // happens at once. S3K's zFadeInToPrevious writes the same value to
+        // both halves of its driver pair, exactly as zFadeOutMusic does
+        // (Sound/Z80 Sound Driver.asm:2784-2789 against :2306-2312).
+        setFadeDelayCounter(config.isDriverOwnedFadeDelay() ? delay : 0);
         fadeState.active = true;
         fadeState.fadeOut = false; // Fade IN
 
@@ -3938,6 +4023,15 @@ public class SmpsSequencer implements CoordFlagContext {
                 // through the fade; the FM tracks have it cleared whatever it
                 // was before, and no track is rested.
                 track.overridden = track.type == TrackType.PSG;
+                if (track.type == TrackType.FM) {
+                    // The ROM's per-track order is: clear the overriding bit,
+                    // add 40h to the volume, then fetch and send the FM
+                    // instrument (:2766-2772). The resend comes after the
+                    // attenuation, so the voice reaches the chip already
+                    // carrying the fade's starting level rather than the
+                    // level the song had before the jingle interrupted it.
+                    refreshInstrument(track);
+                }
             }
         }
     }
@@ -3954,13 +4048,13 @@ public class SmpsSequencer implements CoordFlagContext {
         if (steps <= 0) {
             return;
         }
-        fadeState.steps = steps;
-        fadeState.delayInit = delay;
         fadeState.addFm = 1;
         fadeState.addPsg = 1;
-        fadeState.delayCounter = delay;
-        fadeState.active = true;
         fadeState.fadeOut = true;
+        setFadeSteps(steps);
+        setFadeDelayReload(delay);
+        setFadeDelayCounter(delay);
+        fadeState.active = true;
 
         // Stop DAC track immediately (can't fade it) - matches ROM zFadeOutMusic
         for (Track track : tracks) {

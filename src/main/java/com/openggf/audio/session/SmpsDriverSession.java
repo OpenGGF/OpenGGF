@@ -1466,6 +1466,24 @@ public final class SmpsDriverSession implements AutoCloseable {
         return sequencer;
     }
 
+    /**
+     * Runs {@code zFadeInToPrevious}'s body on the music that has just come
+     * back from beneath the extra-life jingle (skdisasm Sound/Z80 Sound
+     * Driver.asm:2725-2789). The routine restores the saved track region and
+     * then, per track, marks it playing, leaves the PSG tracks overridden,
+     * clears the overriding bit on the FM ones, lowers their volume by 40h and
+     * resends their instrument, before arming the fade in with 40h steps and a
+     * delay of 2. {@code SmpsSequencer.triggerFadeIn} is that body; without
+     * this call the restored song simply reappeared at full volume with the
+     * voices it happened to be left with.
+     */
+    public void fadeInRestoredMusic() {
+        SmpsSequencer music = driver.firstMusicSequencer();
+        if (music != null) {
+            music.triggerFadeIn();
+        }
+    }
+
     private void stopMusic() {
         stopMusic(true);
     }

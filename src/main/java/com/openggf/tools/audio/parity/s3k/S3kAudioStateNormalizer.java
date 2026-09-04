@@ -51,7 +51,8 @@ public final class S3kAudioStateNormalizer {
     private static S3kAudioTick.GlobalState global(
             SmpsSequencerSnapshot music, SmpsDriverSnapshot driver) {
         if (music == null) {
-            return new S3kAudioTick.GlobalState(0, 0, 0, 0, null, null, null, null, null, null,
+            return new S3kAudioTick.GlobalState(0, 0, 0, 0, null, null,
+                    driver.fadeDelay(), driver.fadeDelayTimeout(), null, null,
                     null, null, driver.palUpdateCounter());
         }
         return new S3kAudioTick.GlobalState(
@@ -59,7 +60,12 @@ public final class S3kAudioStateNormalizer {
                 music.tempoAccumulator() & 0xff,
                 music.speedShoes() ? SPEED_SHOES_TEMPO : 0,
                 music.speedupTimeout() & 0xff,
-                null, null, null, null, null, null, null, null,
+                null, null,
+                // zFadeDelay (1C0Eh) and zFadeDelayTimeout (1C0Fh) are driver
+                // variables, not song state (Sound/Z80 Sound
+                // Driver.asm:2306-2312, :2784-2789).
+                driver.fadeDelay(), driver.fadeDelayTimeout(),
+                null, null, null, null,
                 driver.palUpdateCounter());
     }
 
@@ -156,7 +162,15 @@ public final class S3kAudioStateNormalizer {
                 track.scaledDuration() & 0xff,
                 frequency,
                 track.detune() & 0xff,
-                null, null, null,
+                // VolEnv (17h) is the envelope position, which
+                // zDoVolEnvAdvance increments and zFinishTrackUpdate clears
+                // (Sound/Z80 Sound Driver.asm:1055-1069, :4211-4213), not the
+                // envelope's identity. NoteFillTimeout (1Eh) and
+                // NoteFillMaster (1Fh) are the running and reload copies of
+                // the note fill (:4070-4077).
+                track.envPos() & 0xff,
+                track.fillCounter() & 0xff,
+                track.fill() & 0xff,
                 // The modulation pointer is a Z80 address the engine has no
                 // equivalent for, like the data pointer above.
                 null,

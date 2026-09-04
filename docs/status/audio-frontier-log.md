@@ -27,6 +27,232 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The 1-up resume never ran its restore body on the live path
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`. Reported in game: after the extra-life
+  jingle the music has no fade in and the instruments sound briefly wrong.
+- **A premise worth correcting before the fix.** The brief said the engine
+  re-issues the song rather than restoring track RAM. It does not. The previous
+  song's sequencer is kept alive on the presentation override stack and
+  reactivated, which is the engine's equivalent of the ROM's saved track
+  region: the state survives. What was missing was everything
+  `zFadeInToPrevious` does *after* the restore, and on the live path it was
+  missing entirely.
+- **What was actually wrong.** `zFadeInToPrevious` restores the saved tracks
+  and then, per track, marks it playing, leaves the PSG tracks overridden,
+  clears the overriding bit on the FM ones, lowers their volume by 40h,
+  resends their instrument, and arms a fade in of 40h steps with a delay of 2
+  (Sound/Z80 Sound Driver.asm:2725-2789). `SmpsSequencer.triggerFadeIn` already
+  implements that body, and the S3K config already carries 40h and 2 from the
+  same routine. Nothing on the live path called it. The only production caller
+  was `AbstractSmpsAudioBackend.doRestoreMusic`, which is not reached, because
+  `AudioManager.sendLiveBackendCommands` returns false; and even there the call
+  was conditional on SFX being blocked.
+- **Two lines of behaviour.** The presentation restore now asks the session to
+  run the body on the song that just came back. The body's S3K branch also
+  resends each FM track's instrument, which it had not done, in the ROM's own
+  order: clear the bit, attenuate by 40h, then send the voice (:2766-2772). The
+  resend after the attenuation is what stops the voice reaching the chip at the
+  level the song had before the jingle interrupted it.
+- **The test reproduces the report.** `TestS3kOneUpRestoreRom` gained a case
+  that plays the level music, plays the jingle, and follows the restore through
+  `AudioManager.presentFrame`. It asserts the song comes back attenuated
+  against its settled volume, that the restore resends FM voices, that the PSG
+  tracks stay overridden through the fade, and that the attenuation then steps
+  back down. Ablating the new call fails it with "was 15 against a settled 15":
+  the song returning at full volume, which is the reported symptom exactly.
+- **Frontier unchanged** at tick 1490, event 0, and the DAC stream at run 338,
+  byte 0. The intro capture reaches no extra life.
+- **Gates at this commit, all green, on a clean build and a quiet machine.**
+  Audio, per-game audio and parity packages with all three ROM paths: 2,759
+  tests, 0 failures, 16 skips. Ordinary suite 16,476 tests, 0 failures, 22
+  skips. `-Pguards` 608 tests, 0 failures.
+- **Still open, and deliberately not done here.** The driver-level backup of
+  the tempo, tempo speedup, voice table pointer and song bank that
+  `zPlayMusic`'s extra-life branch saves (:1739-1781) has no engine equivalent;
+  the presentation stack preserves the sequencer instead. That is a real
+  structural difference, but it is not what the owner heard, and folding it in
+  would have hidden the two-line fix that was.
+
+
+## 2026-09-04 - The whole S3K fade-out machine moves to the driver, and both counters gate
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **What moved.** `zFadeOutTimeout` (1C0Dh) and `zFadeInTimeout` (1C29h) join
+  the delay pair as driver state, so the fade-out machine is driver-owned end
+  to end. `zDoMusicFadeOut` runs from `zUpdateMusic` every service and tests
+  only `zFadeOutTimeout` (Sound/Z80 Sound Driver.asm:2331-2346), so the driver
+  now steps it with no song loaded, which is the case a song-owned stepper
+  could not reach at all. A song still drives its own fade through
+  `SmpsSequencer.processFade`.
+- **Ordering, learned from the oracle.** The songless step must run before the
+  service consumes its request. `zUpdateMusic` runs `TempoWait` and both fade
+  handlers before it reaches `zFillSoundQueue` (:659-701), so a fade armed by
+  this service's own request is not stepped until the next one. Stepping it
+  first put the engine one ahead at service 1, reading 5 where the reference
+  read 6.
+- **Both counters now gate.** `fadeDelay` and `fadeDelayTimeout` are compared
+  every service, and each was proven to run by corrupting the engine's value
+  for it and checking the oracle names that field. S1 and S2 keep their
+  song-owned shape under `driverOwnedFadeDelay`.
+- **Frontier unchanged** at tick 1490, event 0, and the DAC stream at run 338,
+  byte 0. Two more gated fields at no cost.
+- **A measurement hazard I created and then had to unpick.** Two of my own
+  background gate runs overlapped in one worktree, sharing its `target/` and
+  its Maven temp directory. That produced a `CAPTURE_FAILURE` in a
+  memory-constrained child JVM on one run and twenty "failed to create default
+  temp directory" guard errors on the next, with different victims each time
+  and neither reproducible alone. Disk had 326 GB free, so space was never the
+  issue. Killing the stray run by PID and running the chain once on a quiet
+  machine gave a clean result. Read a red from a worktree that had two runs in
+  it as a measurement fault first, not a regression.
+- **Gates at this commit, all green, on a clean build and an undisturbed
+  machine.** Audio, per-game audio and parity packages with all three ROM
+  paths: 2,758 tests, 0 failures, 16 skips. Ordinary suite 16,475 tests, 0
+  failures, 22 skips. `-Pguards` 608 tests, 0 failures.
+
+
+## 2026-09-04 - The fade delay pair moves to the driver, and the ROM swaps its roles
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **The gap this closes.** `zFadeDelay` and `zFadeDelayTimeout` are driver
+  variables. Both `zFadeOutMusic` and `zFadeInToPrevious` write them before
+  looking at anything else, and neither asks whether a song is loaded
+  (Sound/Z80 Sound Driver.asm:2306-2312, :2784-2789). The engine kept the pair
+  on the music sequencer's fade state, so a fade armed with no song recorded
+  nothing at all. The driver now owns both bytes, arms them on a fade request
+  either way, snapshots them and restores them.
+- **S1 and S2 keep their own shape, under a config flag.** They hold a single
+  delay byte per direction and reload it from an immediate rather than from a
+  stored timeout: 3 in both (`s1.sounddriver.asm:1363`, :1381;
+  `s2.sounddriver.asm:2425-2429`) against S3K's 6. Only S3K sets
+  `driverOwnedFadeDelay`.
+- **The ROM swaps the pair's roles between its two steppers, which I had
+  backwards at first.** `zDoMusicFadeOut` decrements `zFadeDelayTimeout` and
+  reloads it from `zFadeDelay` (:2337-2346). `zDoMusicFadeIn` decrements
+  `zFadeDelay` and reloads it from `zFadeDelayTimeout` (:2405-2414). Both
+  arming routines write the same value to both halves, so the swap is
+  invisible until a fade actually runs; the oracle found it at service 2. The
+  engine's accessors are therefore direction-aware rather than fixed.
+- **The gate is not landed yet, and here is exactly why.** With the pair
+  driver-owned, the oracle reaches service 2 and stops: the reference has
+  stepped the counter to 5 and the engine still reads 6. The ROM's
+  `zDoMusicFadeOut` runs from `zUpdateMusic` every service and only tests
+  `zFadeOutTimeout`, so it steps the delay with no song loaded. The engine's
+  fade-out timeout is still song state, so with no song there is no stepper to
+  run. That byte is the next piece to move, and the two counters are gated the
+  moment it does. They stay diagnostic until then, with that reason recorded in
+  the registry rather than left blank.
+- **Caught by a guard, worth noting.** The new config flag failed
+  `TestSmpsSequencerConfigCopyCoverageGuard` until it was added to
+  `SmpsAssetCatalog.copyBuilder`. Without that the presentation layer would
+  have copied the config and silently dropped the flag, so every sound played
+  through `AudioManager` would have used the S1/S2 shape.
+- **Frontier unchanged** at tick 1490, event 0, and the DAC stream at run 338,
+  byte 0.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,758 tests, 0 failures, 16
+  skips. Ordinary suite 16,475 tests, 0 failures, 22 skips. `-Pguards` 608
+  tests, 0 failures.
+
+
+## 2026-09-04 - Four comparator fields promoted from diagnostic to gated, at no cost
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **Why.** The previous entry's envelope drift ran eight entries deep for four
+  hundred services before any gated field noticed. The field that would have
+  caught it on the first service was registered as diagnostic.
+- **What was actually wrong with `volEnv`.** Not a shape mismatch, as its
+  registry note claimed. The engine sent `null`: three track fields were
+  hard-coded null in `S3kAudioStateNormalizer`, so there was nothing to
+  compare even if the field had been gated. The ROM's byte is the envelope
+  *position*, which `zDoVolEnvAdvance` increments and `zFinishTrackUpdate`
+  clears (Sound/Z80 Sound Driver.asm:1055-1069, :4211-4213), and the engine
+  has carried it in `SmpsTrackSnapshot.envPos` all along.
+- **Promoted, all four free.** The frontier is 1490 before and after.
+
+  | Field | ROM byte | Engine source |
+  |---|---|---|
+  | `volEnv` | VolEnv 17h | `SmpsTrackSnapshot.envPos` |
+  | `noteFillTimeout` | NoteFillTimeout 1Eh | `fillCounter` |
+  | `noteFillMaster` | NoteFillMaster 1Fh | `fill` |
+  | `palDoubleUpdateCounter` | zPalDblUpdCounter 1C04 | `SmpsDriverSnapshot.palUpdateCounter` |
+
+- **Each proven to run.** Corrupting the engine's value for a field, one at a
+  time, makes the oracle report that field by name. A gate that has never
+  failed and a gate that never executes look identical from the outside.
+- **One I did not promote, and the gap it found.** `fadeDelay` and
+  `fadeDelayTimeout` have settled ROM meanings, but wiring them puts the
+  frontier at tick 1: the reference reads 6 where the engine reads 0, because
+  the ROM seeds `zFadeDelay` at driver init and the engine carries no such
+  byte until a fade is armed. That is a real engine gap, not comparator
+  timidity, and gating it now would hide everything after tick 1. Recorded here
+  so it is a known item rather than a silent one; the fix is to give the driver
+  the seeded byte, after which the gate costs nothing.
+- **The rest stay diagnostic for cause, not for comfort.** `dacIndex`,
+  `fadeInTimeout`, `pauseFlag`, `soundQueue`, `nextSound`, `modulationPtr` and
+  `dataPointer` each name a ROM byte the engine has no equivalent for, or a
+  Z80 address, or presentation-side state that is not a driver flag.
+  `fadeOutTimeout` maps to a fade shape that differs. None of those is a
+  settled mapping being withheld.
+- **Frontier unchanged** at tick 1490, event 0, and the DAC stream at run 338,
+  byte 0. No re-pin was needed.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,758 tests, 0 failures, 16
+  skips. Ordinary suite 16,475 tests, 0 failures, 22 skips. `-Pguards` 608
+  tests, 0 failures.
+
+
+## 2026-09-04 - Every driver restarts the volume envelope at a note; frontier 760 -> 1490
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, merged with develop at `725d4cfd5`,
+  which did not move the frontier.
+- **What 760 was.** The reference writes the music PSG1 tone and moves on to
+  the next channel; the engine wrote the tone and then a latched silence,
+  `09Fh`, so its event 20 was a silence where the reference had the second
+  channel's tone latch.
+- **Not an ordering fault, which is worth recording.** `zUpdatePSGTrack` sends
+  the frequency first and reads the volume envelope after, and an `83h`
+  terminator then jumps to `zRestTrack`, which falls through into
+  `zSilencePSGChannel` (Sound/Z80 Sound Driver.asm:4058-4130, :4189-4194,
+  :4220-4245). Frequency-then-silence is exactly what the ROM would emit. The
+  engine's order was right; it simply reached the terminator and the ROM did
+  not.
+- **The cause.** Comparing envelope positions service by service, the
+  reference restarts the music PSG1 envelope at service 559 while the engine
+  is eight entries in and still climbing. Every driver resets that index
+  beside the note fill, in the same routine and under the same do-not-attack
+  guard: `zFinishTrackUpdate` (:1055-1069), S2 at
+  `s2.sounddriver.asm:948-957`, and S1 `FinishTrackUpdate` at
+  `s1.sounddriver.asm:436-442`, whose own comment notes it happens even on FM
+  tracks. The engine reset the note fill and the aliased modulation bytes
+  there but never the envelope index, so a PSG envelope ran past the note that
+  should have restarted it, hit its terminator early and parked. A parked `83h`
+  re-silences the channel on every later pass, which is what event 20 was.
+- **Why it stayed hidden.** `volEnv` is registered as a diagnostic field, not
+  a gated one, its own note saying it is "not yet pinned". The comparator
+  therefore never checked the position, and the first visible symptom was a
+  write four hundred services later. Worth revisiting whether it can be gated
+  now, which would move the frontier but stop hiding this class of drift.
+- **The fix is shared, and the other two oracles say so.** The reset is
+  unconditional in all three drivers, so it is applied for all three. The S1
+  gameplay oracles, both S2 driver-state oracles, the S2 published request
+  windows and the S2 request-aware raw stream all stayed green.
+- **Frontier 760 to 1490.** `EVENT_VALUE_DIFFERENT` at tick 1490, event 0:
+  reference `ym2612 port 0 register 64 value 33`, a total-level write, against
+  engine `port 1 register 130 value 255`. The DAC byte stream is unchanged at
+  run 338, byte 0.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,758 tests, 0 failures, 16
+  skips. Ordinary suite 16,475 tests, 0 failures, 22 skips. `-Pguards` 608
+  tests, 0 failures.
+
+
 ## 2026-09-04 - The S3K 1-up restore was lost to a rejected presentation command
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

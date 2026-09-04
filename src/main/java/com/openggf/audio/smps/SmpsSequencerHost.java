@@ -23,6 +23,41 @@ public interface SmpsSequencerHost {
     }
 
     /**
+     * The driver's running fade delay, {@code zFadeDelay}, which the fade
+     * steppers decrement and reload (skdisasm Sound/Z80 Sound
+     * Driver.asm:2337-2346, :2405-2414). Only a driver whose config claims the
+     * pair answers these; the song keeps its own copy otherwise.
+     */
+    default int fadeDelay() {
+        return 0;
+    }
+
+    default void setFadeDelay(int value) {
+    }
+
+    /** The driver's fade delay reload source, {@code zFadeDelayTimeout}. */
+    default int fadeDelayTimeout() {
+        return 0;
+    }
+
+    default void setFadeDelayTimeout(int value) {
+    }
+
+    /**
+     * The driver's fade step counters, {@code zFadeOutTimeout} (1C0Dh) and
+     * {@code zFadeInTimeout} (1C29h). These are what the steppers test to
+     * decide whether a fade is running at all, and they are driver variables
+     * like the delay pair (skdisasm Sound/Z80 Sound Driver.asm:2306-2308,
+     * :2331-2335, :2784-2786).
+     */
+    default int fadeStepCounter(boolean fadeOut) {
+        return 0;
+    }
+
+    default void setFadeStepCounter(boolean fadeOut, int value) {
+    }
+
+    /**
      * Releases the channels of any inactive SFX track, including those of a
      * sequencer whose every track has now finished.
      *

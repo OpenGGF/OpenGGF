@@ -394,6 +394,15 @@ public final class S3kAudioParityComparator {
         result = globalField(ordinal, "tempoSpeedup", reference.tempoSpeedup(),
                 openGgf.tempoSpeedup());
         if (result != null) return result;
+        result = globalField(ordinal, "fadeDelay", reference.fadeDelay(),
+                openGgf.fadeDelay());
+        if (result != null) return result;
+        result = globalField(ordinal, "fadeDelayTimeout", reference.fadeDelayTimeout(),
+                openGgf.fadeDelayTimeout());
+        if (result != null) return result;
+        result = globalField(ordinal, "palDoubleUpdateCounter",
+                reference.palDoubleUpdateCounter(), openGgf.palDoubleUpdateCounter());
+        if (result != null) return result;
         return globalField(ordinal, "speedupTimeout", reference.speedupTimeout(),
                 openGgf.speedupTimeout());
     }
@@ -442,6 +451,14 @@ public final class S3kAudioParityComparator {
         result = trackField(ordinal, role, "frequency", reference.frequency(), openGgf.frequency());
         if (result != null) return result;
         result = trackField(ordinal, role, "detune", reference.detune(), openGgf.detune());
+        if (result != null) return result;
+        result = trackField(ordinal, role, "volEnv", reference.volEnv(), openGgf.volEnv());
+        if (result != null) return result;
+        result = trackField(ordinal, role, "noteFillTimeout", reference.noteFillTimeout(),
+                openGgf.noteFillTimeout());
+        if (result != null) return result;
+        result = trackField(ordinal, role, "noteFillMaster", reference.noteFillMaster(),
+                openGgf.noteFillMaster());
         if (result != null) return result;
         result = trackField(ordinal, role, "modulationVal", reference.modulationVal(),
                 openGgf.modulationVal());
