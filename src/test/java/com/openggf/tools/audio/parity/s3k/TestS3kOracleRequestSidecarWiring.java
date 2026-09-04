@@ -196,13 +196,10 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * Forty-one consecutive services now agree. The S3K note-going path
-     * re-sends the frequency every pass, {@code zUpdatePSGTrack} latches it
-     * before reading the volume envelope, the sample-end {@code 2Bh = 0}
-     * moved into the DAC byte stream, no DAC track rests, the PSG volume
-     * envelope's {@code 81h} and {@code 83h} rest the track without silencing
-     * it, and modulation keeps stepping at rest as S3K's {@code zDoModulation}
-     * does. What remains is FM2's {@code doNotAttack} bit.
+     * A hundred and ninety-two consecutive services now agree. The most recent
+     * correction is that neither S3K PSG volume coordination flag writes to
+     * the chip: both end at {@code zStoreTrackVolume}, which stores the byte
+     * and returns. What remains is a PSG2 frequency value at service 331.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -214,10 +211,11 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 42, report.tick());
-        assertEquals("MUS_FM2", report.role());
-        assertEquals("doNotAttack", report.field());
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 193, report.tick());
+        assertEquals(10, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=163]",
+                report.reference());
     }
 
     /**

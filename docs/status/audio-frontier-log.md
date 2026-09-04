@@ -27,6 +27,210 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K holds its PSG modulation after a rest note; tick 331 decoded, not closed
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `fca8ecd0d`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  entry records the decoded frontier so the next round starts from the numbers
+  rather than re-deriving them.
+- **The frontier.** `EVENT_VALUE_DIFFERENT`, tick 331, event 10, reference
+  `psg 163` against engine `psg 160`. Both are PSG2 tone latches, so the
+  divergence is the emitted period, not the write's presence or position.
+- **Decoded through the ROM's own two-byte PSG encoding.**
+  `zUpdatePSGTrack` sends `l & 0Fh` in the latch byte and the nibble-swapped
+  `(l & 0F0h) | h` in the data byte (Sound/Z80 Sound Driver.asm:4085-4095), so
+  the emitted 16-bit value can be read straight back out. PSG2's emitted
+  period per service:
+
+  | service | reference | engine |
+  |---|---|---|
+  | 320-329 | 01DE stepping to 01C3, minus 3 each service | identical |
+  | 330 | no frequency emitted | no frequency emitted |
+  | 331-335 | 0103 held constant | 01C0 stepping to 01B4, minus 3 each service |
+  | 336 onward | 00C9 | 00C9 |
+
+- **What that says.** Both sides modulate identically until service 329. At
+  330 a rest note is read and neither emits. From 331 the reference stops
+  advancing its modulation and holds one value for the whole of the next note,
+  where the engine carries the ramp straight on at the same minus-three rate
+  it had before the rest. The two re-converge at 336, so this is a bounded
+  five-service divergence, not a permanent drift.
+- **Every compared field agrees across the window,** which is why this
+  surfaces only in the write: `frequency` 1023, `detune` 4, `transpose` 244
+  and `modulationCtrl` 128 are equal on both sides at services 326 through
+  334, and the volume envelope index advances 0, 1, 2, 3, 4 identically from
+  the note at 330. The modulation accumulator is not a compared field.
+- **Candidate owner, with its kill condition.** `zUpdatePSGTrack`'s note-start
+  entry tests the rest bit immediately after `zGetNextNote` and returns before
+  `zPrepareModulation` (:4059-4066), so a rest note leaves the modulation
+  state untouched where a sounding note would re-arm it. The engine's
+  `playNote` skips its own modulation preparation for a rest note too, so the
+  difference is not simply that one re-arms and the other does not. The check
+  that would settle it is a probe on the ROM's `ModulationWait`,
+  `ModulationSpeed` and `ModulationSteps` bytes across services 329 to 336; if
+  the reference's held `0103` corresponds to `zDoModulation` returning early
+  on `dec (ix+ModulationWait) / ret nz` (:1284-1289), the emitted value would
+  be `Frequency + Detune` and that arithmetic must be made to agree before any
+  fix is attempted.
+- **Do not retry.** Reading the held value as `Frequency + Detune` from the
+  *compared* fields does not work: 1023 plus 4 is 0403h, and the reference
+  emits 0103h. Either the compared `frequency` projection is not the ROM's
+  `Frequency` word at this point, or the modulation contributes a constant
+  minus 300h. That contradiction is unresolved and is the first thing to
+  settle.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; and
+  the `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+
+
+## 2026-09-04 - Neither S3K PSG volume flag writes to the chip; tick 258 -> tick 331
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `00a65e743`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 258, event 9, reference
+  `psg 131` against engine `psg 149`. DAC stream `BYTE_DIFFERENT` run 29
+  byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 331, event 10, reference
+  `psg 163` against engine `psg 160`. DAC stream unchanged. Services 139
+  through 330 now agree.
+- **The routines.** `cfSetVolume` splits on the PSG bit of `VoiceControl`: the
+  FM branch falls through to `zSendTL` to "begin using new volume
+  immediately", but the PSG branch ends at `zStoreTrackVolume`, which stores
+  the byte and returns without touching the chip (Sound/Z80 Sound
+  Driver.asm:3128-3146, :3178-3181). `cfChangePSGVolume` ends at the same
+  place (:3186-3199). Neither emits a PSG write; the track's own
+  `zUpdatePSGTrack` tail sends the volume on its next pass. The engine called
+  `refreshVolume` from both, which put an extra volume byte on the bus ahead
+  of the frequency.
+- **`cfChangePSGVolume` also clears the rest bit.** It opens with
+  `res 4, (ix+zTrack.PlaybackControl)` before it touches the volume at all
+  (:3189). The engine cleared its envelope-at-rest flag there but not the rest
+  bit itself.
+- **How it was found, and one wrong turn.** A stack-tagged probe on every PSG1
+  volume write showed two per tick at the divergence, one from a coordination
+  flag and one from the note start, against the reference's single write after
+  the frequency. `cfSetVolume` was corrected first and moved nothing, because
+  the flag actually firing there is `cfChangePSGVolume`; the probe named it on
+  the second pass. The `cfSetVolume` correction is landed anyway, cited, since
+  the ROM is equally clear about it.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; and
+  the `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - A parked S3K PSG envelope rest survives the next note; tick 234 -> tick 258
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `00a65e743`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 234, role `MUS_PSG2`, field
+  `resting`, reference `true` against engine `false`. DAC stream
+  `BYTE_DIFFERENT` run 29 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 258, event 9, reference
+  `psg 131` against engine `psg 149`. DAC stream unchanged. Services 139
+  through 257 now agree.
+- **The routine.** `zUpdatePSGTrack`'s note-start entry falls through to the
+  same `.skip_fill` block the note-going entry uses, so a new note's own pass
+  also reads the volume envelope; only a rest note returns first, on the
+  `bit 4` test after `zGetNextNote` (Sound/Z80 Sound Driver.asm:4059-4090).
+  That matters when the envelope is parked on a rest command, because
+  `zDoVolEnvRest` and `zDoVolEnvFullRest` never advance `VolEnv` (:4187-4208):
+  `zGetNextNote` clears the rest bit for the new note and the parked command
+  puts it straight back on the same pass.
+- **The gate on it is the ROM's, not a carve-out.** `zFinishTrackUpdate`
+  leaves `VolEnv` alone exactly when the do-not-attack bit is set
+  (:1061-1068); otherwise it resets the index to zero and the pass reads the
+  first byte, which is the step the engine already applies at note start. So
+  the envelope is re-read on a note start only while that bit is set.
+- **The evidence, and a wrong first attempt that the measurement rejected.** A
+  probe over the reference showed PSG2 sitting on envelope index 20 unchanged
+  from service 228 to 240 while its rest bit stayed up, its pointer advanced
+  two bytes at 234 and its duration reloaded from the saved 96. Byte-level
+  probes of the engine's own stream showed it never dispatches a rest note
+  with the do-not-attack bit set, which ruled out the obvious reading that the
+  new note was itself a rest. Running the envelope on *every* note start,
+  ungated, was tried first and moved the frontier backwards to tick 138 event
+  257, because it double-steps the first envelope value that `playNote`
+  already applies. The gated form is what landed.
+- **A defect of my own from the previous round, corrected here.** The `81h`
+  and `83h` handling set `envHold`, which stopped the envelope being re-read
+  at all. That summarised "the index does not advance" but discarded the
+  re-read's side effect, which is the whole mechanism above. The hold is gone;
+  the index is simply left parked.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear,
+  which looks redundant on the same reading that fixed S3K; and the
+  `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - S3K clears do-not-attack before the note read; tick 180 -> tick 234
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `00a65e743`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 180, role `MUS_FM2`, field
+  `doNotAttack`, reference `true` against engine `false`. DAC stream
+  `BYTE_DIFFERENT` run 29 byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 234, role `MUS_PSG2`, field
+  `resting`, reference `true` against engine `false`. DAC stream unchanged.
+  Services 139 through 233 now agree.
+- **The routine.** `zGetNextNote` clears `PlaybackControl` bit 1 at its top,
+  before the coordination-flag loop it then enters (Sound/Z80 Sound
+  Driver.asm:905-915), and `cfPreventAttack` (`0E7h`) sets that bit from
+  inside the loop (:3212-3221). So a prevent-attack flag read while fetching a
+  note survives into the note it guards and stays set for the note's whole
+  duration, until the *next* `zGetNextNote` clears it. The engine cleared the
+  bit after the note started instead, so it never persisted.
+- **The evidence, from a probe rather than inference.** The reference's FM2 at
+  tick 180 advances its data pointer by two bytes, 63796 to 63798, reuses its
+  saved duration of 6, and raises `doNotAttack`, which then stays up for ticks
+  180 through 185 and drops at 186 when the next unit is read. Two bytes is
+  the parameterless `0E7h` plus the note byte.
+- **Scoped, and a first attempt was measured and corrected.** The engine's
+  post-note clear lived in a helper called from four sites, all of which
+  cleared only in the S3K `HOLD` mode. Inverting that helper to the S1/S2
+  `REST` mode made those three previously inert sites fire for S1, which
+  `TestS1AudioStateNormalizer#productionS1NoAttackBitRemainsLatchedForTheTiedNote`
+  caught outright, along with both S1 gameplay oracles. The landed change
+  instead removes the helper and its three S3K-only sites and leaves S1 and S2
+  with exactly the single post-note clear they had. On the same reading S1 and
+  S2 also clear before the read, so their post-note clear looks redundant too;
+  that is untouched and recorded here as open rather than changed on a green
+  oracle.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` is a per-pass countdown
+  that rests the track and sends a note off (s2.sounddriver.asm:1153-1163),
+  where the engine models an elapsed comparison. And the listing's annotated
+  cycle total for one iteration of `.dac_playback_loop` is 303 against
+  `Sonic3kSmpsLoader`'s `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S2 driver-state v2: two measured causes behind the remaining frontier
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
