@@ -97,6 +97,19 @@ public final class Sonic3kSmpsSequencerConfig {
                 // zUpdateFMorPSGTrack .note_going returns on the rest bit
                 // before it does anything (Sound/Z80 Sound Driver.asm:781-783).
                 .fmNoteGoingReturnsAtRest(true)
+                // zFadeOutMusic falls through zHaltDACPSG, which halts the
+                // PSG tracks as well as FM6/DAC (Sound/Z80 Sound
+                // Driver.asm:2307-2325).
+                .fadeOutHalt(SmpsSequencerConfig.FadeOutHalt.DAC_AND_PSG)
+                // zDoMusicFadeOut decrements the delay before testing it
+                // (Sound/Z80 Sound Driver.asm:2337-2343).
+                .fadeDelayCadence(
+                        SmpsSequencerConfig.FadeDelayCadence.DECREMENT_THEN_TEST)
+                // TempoWait sits in zUpdateEverything, ahead of zUpdateMusic's
+                // zFillSoundQueue (Sound/Z80 Sound Driver.asm:653-701,
+                // :2607-2621), so a load service does not accumulate for the
+                // song it loads.
+                .tempoWaitPrecedesRequest(true)
                 .noteFillTail(SmpsSequencerConfig.NoteFillTail.S3K_SPLIT)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
