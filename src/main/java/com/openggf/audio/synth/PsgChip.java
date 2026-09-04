@@ -106,6 +106,8 @@ public class PsgChip {
     private int panning = 0xFF;
     private final boolean[] mutes = new boolean[CHANNELS];
     private ChipWriteObserver writeObserver = ChipWriteObserver.NONE;
+    /** Diagnostic-only native generator ticks; snapshots deliberately do not restore it. */
+    private long physicalTick;
 
     // --- Registers (§2, §3, §4) --------------------------------------------
 
@@ -162,6 +164,8 @@ public class PsgChip {
         }
         this.sampleRate = sampleRate;
         blip.setRates(TICK_RATE_HZ, sampleRate);
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     /**
@@ -175,6 +179,8 @@ public class PsgChip {
         }
         chipType = type;
         lfsr = lfsrReset();
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     /**
@@ -189,6 +195,8 @@ public class PsgChip {
         for (int ch = 0; ch < CHANNELS; ch++) {
             updateAmplitude(ch);
         }
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     /** Ignores channels outside 0..3. A muted channel keeps advancing. */
@@ -198,11 +206,17 @@ public class PsgChip {
         }
         mutes[ch] = mute;
         updateAmplitude(ch);
+        emitPhysicalBoundary(ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     /** Installs the diagnostic write sink; {@code null} means none. */
     void setWriteObserver(ChipWriteObserver observer) {
         this.writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
+    }
+
+    void reportPhysicalTimelineBoundary(
+            ChipWriteObserver.PhysicalTimelineBoundary boundary) {
+        emitPhysicalBoundary(boundary);
     }
 
     /**
@@ -225,6 +239,7 @@ public class PsgChip {
         for (int ch = 0; ch < CHANNELS; ch++) {
             updateAmplitude(ch);
         }
+        emitPhysicalBoundary(ChipWriteObserver.PhysicalTimelineBoundary.RESET);
     }
 
     /** The ROM's silence-all sequence: attenuation 0xF to every channel (§7). */
@@ -276,6 +291,9 @@ public class PsgChip {
             noiseControl = data & 0x7;
             lfsr = lfsrReset();
         }
+        if (writeObserver.observesPhysicalWrites()) {
+            writeObserver.onPsgBusWrite(physicalTick, value);
+        }
     }
 
     // --- Rendering ---------------------------------------------------------
@@ -299,6 +317,7 @@ public class PsgChip {
             emitLevelChanges(t);
             tick();
         }
+        physicalTick += ticks;
         blip.endFrame(ticks);
         blip.readSamples(left, right, len);
     }
@@ -581,6 +600,17 @@ public class PsgChip {
         for (int ch = 0; ch < CHANNELS; ch++) {
             updateAmplitude(ch);
         }
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.SNAPSHOT_RESTORE);
+    }
+
+    private void emitPhysicalBoundary(
+            ChipWriteObserver.PhysicalTimelineBoundary boundary) {
+        if (writeObserver.observesPhysicalWrites()) {
+            writeObserver.onPhysicalTimelineBoundary(
+                    ChipWriteObserver.ChipClockDomain.PSG_GENERATOR_TICK,
+                    physicalTick, boundary);
+        }
     }
 
     private static void copyInto(int[] target, int[] source) {
@@ -635,5 +665,7 @@ public class PsgChip {
             }
             updateAmplitude(ch);
         }
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 }
