@@ -319,8 +319,6 @@ public class AudioManager implements MusicRestoreSink {
                         ? SmpsSequencer.Region.PAL
                         : SmpsSequencer.Region.NTSC,
                 config.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
-                config.getBoolean(
-                        SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
                 config.getBoolean(SonicConfiguration.FM6_DAC_OFF));
         profile.configurePresentationCoordFlagHandlers(coordFlagHandlers);
         manager.presentationCoordHandlerGameIds.add(gameId);
@@ -3203,7 +3201,7 @@ public class AudioManager implements MusicRestoreSink {
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(sampleRate,
                         tuning.region(), tuning.dacInterpolate(),
-                        tuning.psgNoiseShiftEveryToggle(), tuning.fm6DacOff(),
+                        tuning.fm6DacOff(),
                         false, 1, this::restoreShadowMusic,
                         new DecodedPcmCache(),
                         AudioManager.class.getClassLoader()::getResourceAsStream);
@@ -3215,8 +3213,7 @@ public class AudioManager implements MusicRestoreSink {
                 : LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
         SmpsPhysicalDevice.Settings physicalSettings =
                 new SmpsPhysicalDevice.Settings(
-                        sampleRate, tuning.dacInterpolate(),
-                        tuning.psgNoiseShiftEveryToggle());
+                        sampleRate, tuning.dacInterpolate());
         SmpsDriverSessionConfiguration sessionConfiguration =
                 new SmpsDriverSessionConfiguration(base.profile() != null
                         ? base.profile().smpsStatefulCommandPolicy()

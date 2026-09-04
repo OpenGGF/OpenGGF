@@ -277,8 +277,13 @@ Allowed launch profile enums:
 | `REGION` | `audio.region` | string | `"NTSC"` | Hardware region: `"NTSC"` (60 Hz) or `"PAL"` (50 Hz). Affects SMPS tempo timing and DAC sample rates. |
 | `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `false` | Optional smoothing with no hardware counterpart: `true` writes a linearly interpolated value between DAC (drum) samples when the chip bus is idle. Off by default to preserve the hardware's stepped output; it never changes sample pitch or length. |
 | `AUDIO_INTERNAL_RATE_OUTPUT` | `audio.internalRateOutput` | bool | `false` | Output audio at the YM2612 internal sample rate (~53 kHz) rather than the system rate. Useful for bit-accurate captures; may cause issues on some audio drivers. |
-| `PSG_NOISE_SHIFT_EVERY_TOGGLE` | `audio.psgNoiseShiftEveryToggle` | bool | `true` | PSG noise LFSR clock behaviour. `true` = shift on every polarity toggle (twice the hardware rate, brighter noise); `false` = one shift per rising edge of the noise clock, the documented SN76489 behaviour (darker noise). |
 | `FM6_DAC_OFF` | `audio.fm6DacOff` | bool | `true` | Silence FM channel 6 whenever a DAC note is active. Matches the SMPSPlay parity hack used in Sonic 2; prevents FM bleed audible during percussion. |
+
+`audio.psgNoiseShiftEveryToggle` was removed in 0.6: the PSG noise LFSR now
+always clocks once per rising edge of the noise square wave (the hardware/
+libvgm rule), matching the shipped console. If it is still present in an
+existing `config.yaml`, it is ignored with a logged warning rather than
+rejected.
 
 ## Capture
 
@@ -881,7 +886,6 @@ audio:
   region: "NTSC"   # Region for audio timing
   dacInterpolate: false   # Optional DAC smoothing (no hardware counterpart); true interpolates between PCM samples
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
-  psgNoiseShiftEveryToggle: true   # PSG noise LFSR clock mode: true=shift on every toggle, false=one shift per rising edge (hardware)
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
 # ── Characters ──

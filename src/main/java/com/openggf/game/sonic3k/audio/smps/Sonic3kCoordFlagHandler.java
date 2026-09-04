@@ -294,6 +294,11 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             case 0xF2: // TRK_END (TEND_STD) - standard track end
                 t.active = false;
                 ctx.stopNote(t);
+                // cfStopTrack does not stop at the key-off: it clears the
+                // overridden music track's bit and sends that track's FM
+                // instrument, inline, before the music update of the same
+                // service (Sound/Z80 Sound Driver.asm:3059-3086).
+                ctx.releaseChannelToMusic(t.type, t.channelId);
                 return true;
 
             case 0xF3: // PSG_NOISE (PNOIS_SRES) - set + reset
@@ -367,7 +372,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 if (t.returnSp > 0) {
                     t.pos = t.returnStack[--t.returnSp];
                 } else {
-                    t.active = false;
+                    deactivateOnMalformedData(ctx, t);
                 }
                 return true;
 
@@ -463,7 +468,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
         if (newPos != -1) {
             t.pos = newPos;
         } else {
-            t.active = false;
+            deactivateOnMalformedData(ctx, t);
         }
     }
 
@@ -476,7 +481,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             int count = program.dataByteAt(t.pos++) & 0xFF;
             int newPos = ctx.readJumpPointer(t);
             if (newPos == -1) {
-                t.active = false;
+                deactivateOnMalformedData(ctx, t);
                 return;
             }
             if (count == 0) {
@@ -503,7 +508,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
     private void handleGosub(CoordFlagContext ctx, SmpsSequencer.Track t) {
         int newPos = ctx.readJumpPointer(t);
         if (newPos == -1 || t.returnSp >= t.returnStack.length) {
-            t.active = false;
+            deactivateOnMalformedData(ctx, t);
             return;
         }
         t.returnStack[t.returnSp++] = t.pos;
@@ -575,7 +580,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
         if (jumpTarget != -1) {
             t.pos = jumpTarget;
         } else {
-            t.active = false;
+            deactivateOnMalformedData(ctx, t);
         }
     }
 
@@ -734,5 +739,20 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
     private static int wrapSignedByte(int value) {
         return (byte) value;
+    }
+
+    /**
+     * Stops a track that the engine has to give up on because its data does
+     * not resolve: an empty return stack, an unreadable jump or loop pointer,
+     * or a full gosub stack. The shipped driver never reaches any of these,
+     * so there is no ROM behaviour to model; what matters is that the channel
+     * does not keep sounding. The track-end flags 0E3h and 0F2h stop the note
+     * themselves, which is why {@code trackEndFlagOwnsTheStop} removed the
+     * read loop's blanket stop, and these paths must therefore stop it here.
+     */
+    private static void deactivateOnMalformedData(
+            CoordFlagContext ctx, SmpsSequencer.Track t) {
+        t.active = false;
+        ctx.stopNote(t);
     }
 }
