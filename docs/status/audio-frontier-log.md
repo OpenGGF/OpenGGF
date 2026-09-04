@@ -27,6 +27,63 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The loop-counter set becomes song-derived, and the fade dispatch class turns out to be unhooked
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `981aece96`.
+- **Fixtures:** still none published. Measurements below are against scratch
+  captures of the first four windows of `s1-complete-run.bk2`.
+
+**What moved.** The per-song window probe now derives each window's reachable
+`F7` loop-counter slots by walking the song's own track bytecode, mirroring
+`S1OpenGgfAudioCapture.parseReachableF7LoopIndices`, instead of the fixed
+`{0, 1}` the single-window probes carry. Music `$8E` moves from
+`TRACK_STATE_MISMATCH` at **tick 0** to **tick 186**, role `PSG1`, field
+`envelope_cursor`, reference `7` against engine `6`.
+
+**The derivation is checked against every song, not just the failing one.** Run
+offline over the pinned ROM for all nineteen music ids: `$81` gives `{0, 1}`,
+which is exactly the constant it replaces, so GHZ is unchanged and the probe's
+window 1 tick body stays `cmp`-identical to the committed run 2 fixture at
+44,775,538 bytes. `$8E` and `$88` reach no `F7` at all and give `{}`, which is
+what the engine already derived and what the tick-0 divergence was reporting.
+`$91`, the credits song, needs `{0, 1, 2}`: the old constant would have
+under-reported it. Ten songs give `{0}`. The constant was right for GHZ and
+wrong for the other eighteen.
+
+**A new frontier, and it names a missing input rather than an engine fault.**
+Music `$8A`, the 72-tick title-screen window, diverges at tick 48 on
+`GLOBAL.fade_active`, reference `true` against engine `false`. The engine was
+never told to fade. `PlaySoundID` dispatches ids `$E0-$E4` through a fourth
+branch, `Sound_E0toE4` (s1.sounddriver.asm:715, at `$71F8E` from the
+disassembly's own `locret_71F8C` address comment two bytes earlier), which
+reaches `FadeOutMusic` (:1360), `SpeedUpMusic` (:1568) and `SlowDownMusic`
+(:1587) through `Sound_ExIndex` (:722-725). The gameplay probe hooks
+`Sound_PlaySFX` and `Sound_PlaySpecial` but not this branch, so a fade request
+is invisible to the capture and the engine host has nothing to replay. These
+are driver commands the game issues exactly as it issues SFX, so they belong in
+the same per-invocation dispatch array; the ids already disambiguate
+themselves, as `$D0-$DF` do for special SFX. Landing that hook and its host
+routing is the next step, and it is required for any window that spans a fade,
+which over a whole run is most act transitions.
+
+**Measurements at this commit,** scratch captures of the first four windows:
+
+| Window | Music | Ticks | Result |
+|---|---|---|---|
+| 0 | `$8A` | 72 | first divergence tick 48, `GLOBAL.fade_active`, `true` vs `false` |
+| 1 | `$81` | 5,257 | tick body byte-identical to the committed run 2 fixture |
+| 2 | `$8E` | 567 | first divergence tick 186, `PSG1.envelope_cursor`, `7` vs `6` |
+| 3 | `$81` | 1 | `MATCH (1 ticks)` |
+
+**Gates, all green and read by content.** Audio parity package with three ROM
+paths: 183 tests, 0 failures, 0 errors, 2 skips. Both S1 gameplay oracles pass
+their `MATCH` assertions at 2,562 and 5,257 ticks. S2 v1 `MATCH (698 ticks)`;
+v2 state-and-writes and state-only `MATCH (2198 ticks)`; CPZ state-only
+`MATCH (720 ticks)`, its state-and-writes line unchanged at tick 237,
+`writes[4]`, 36 of 719 divergent; request windows `MATCH` at 25, 52 and 27.
+
+
 ## 2026-09-04 - The S1 whole-run window plan, and a per-song oracle contract that reproduces the committed fixture byte for byte
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,

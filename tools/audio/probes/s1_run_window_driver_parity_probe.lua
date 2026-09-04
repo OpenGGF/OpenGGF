@@ -127,7 +127,14 @@ local MUSIC_PTR_TABLE_ADDR = 0x071A9C
 local MUSIC_COUNT = 19
 local MUSIC_ID_BASE = 0x81
 local MAX_BLOB_SIZE = 0x4000
-local ACTIVE_LOOP_COUNTERS = {0, 1}
+-- Which of a track's twelve loop-counter slots the normalization reports is a
+-- property of the song, not a constant: the F7 opcode names the slot it uses,
+-- so only the slots reachable in the song's own bytecode are meaningful. The
+-- single-window probes hard-code {0, 1}, which is GHZ's reachable set and was
+-- correct while GHZ was the only song captured. This derivation mirrors
+-- S1OpenGgfAudioCapture.parseReachableF7LoopIndices so both sides describe the
+-- same slots for every song.
+local activeLoopCounters = nil
 local assetBase, assetEnd
 
 local callbackAddresses = {
@@ -484,6 +491,103 @@ local function musicAssetRange(musicId)
     return base, bound
 end
 
+local function songByte(offset)
+    return memory.read_u8(assetBase + offset, "MD CART")
+end
+
+local function songWord(offset)
+    return ((songByte(offset) << 8) | songByte(offset + 1)) & 0xFFFF
+end
+
+-- S1 track-command parameter lengths, mirroring
+-- S1OpenGgfAudioCapture.parameterLength. ED and EE take no parameter in S1.
+local PARAMETER_LENGTH = {
+    [0xE0] = 1, [0xE1] = 1, [0xE2] = 1, [0xE5] = 1, [0xE6] = 1, [0xE8] = 1,
+    [0xE9] = 1, [0xEA] = 1, [0xEB] = 1, [0xEC] = 1, [0xEF] = 1, [0xF3] = 1,
+    [0xF5] = 1, [0xFD] = 2, [0xF0] = 4
+}
+
+-- Walks the reachable track bytecode of the song at the open window's asset
+-- range, following jump, call and return edges and both outcomes of every
+-- loop, and collects the slot each reachable F7 names. Reads only the loaded
+-- cart, never a disassembly or a fixture.
+local function reachableLoopCounters()
+    local length = assetEnd - assetBase
+    assert(length > 8, "song asset range is too short to carry a header")
+
+    local function relativeTarget(pointerOffset)
+        local raw = songWord(pointerOffset)
+        if raw >= 0x8000 then raw = raw - 0x10000 end
+        return pointerOffset + 1 + raw
+    end
+
+    local pending = {}
+    local function push(position, stack)
+        pending[#pending + 1] = {position = position, stack = stack}
+    end
+
+    -- Header: voice pointer word, FM+DAC count, PSG count, two timing bytes,
+    -- then four-byte FM/DAC entries and six-byte PSG entries.
+    local fmCount = songByte(2)
+    local psgCount = songByte(3)
+    local offset = 0x06
+    for _ = 1, fmCount do
+        if offset + 3 < length then push(songWord(offset), {}) end
+        offset = offset + 4
+    end
+    for _ = 1, psgCount do
+        if offset + 5 < length then push(songWord(offset), {}) end
+        offset = offset + 6
+    end
+
+    local visited = {}
+    local found = {}
+    local ordered = {}
+    while #pending > 0 do
+        local state = table.remove(pending, 1)
+        local position, stack = state.position, state.stack
+        local key = position .. ":" .. table.concat(stack, ",")
+        if position >= 0 and position < length and not visited[key] then
+            visited[key] = true
+            local command = songByte(position)
+            if command < 0xE0 then
+                local next_ = position + 1
+                if command >= 0x80 and next_ < length and songByte(next_) < 0x80 then
+                    next_ = next_ + 1
+                end
+                push(next_, stack)
+            elseif command == 0xF2 then
+                -- Track stop: no successor.
+            elseif command == 0xE3 then
+                if #stack > 0 then
+                    local resumed = {}
+                    for index = 1, #stack - 1 do resumed[index] = stack[index] end
+                    push(stack[#stack], resumed)
+                end
+            elseif command == 0xF6 and position + 2 < length then
+                push(relativeTarget(position + 1), stack)
+            elseif command == 0xF8 and position + 2 < length then
+                local called = {}
+                for index = 1, #stack do called[index] = stack[index] end
+                called[#called + 1] = position + 3
+                push(relativeTarget(position + 1), called)
+            elseif command == 0xF7 and position + 4 < length then
+                local slot = songByte(position + 1)
+                if not found[slot] then
+                    found[slot] = true
+                    ordered[#ordered + 1] = slot
+                end
+                push(relativeTarget(position + 3), stack)
+                push(position + 5, stack)
+            else
+                push(position + 1 + (PARAMETER_LENGTH[command] or 0), stack)
+            end
+        end
+    end
+    table.sort(ordered)
+    return ordered
+end
+
 -- One window's accumulated capture. Windows are written out as they close, so
 -- only the open window is ever held in memory: a whole run is far too large to
 -- accumulate.
@@ -674,6 +778,7 @@ local function openWindow(musicId, frame)
     windowAbandoned = 0
     windowRecordCount = 0
     assetBase, assetEnd = musicAssetRange(musicId)
+    activeLoopCounters = reachableLoopCounters()
     windowFile = assert(io.open(windowOutputPath(windowOrdinal, musicId) .. ".body", "w"))
 end
 
@@ -729,7 +834,7 @@ local function closeCapturedInvocation(context)
             "music $%02X initialized no active track at its window epoch", windowMusicId))
     end
     debugPhase("normalize")
-    local normalized = AudioContract.normalizeRom(rawSnapshot, ACTIVE_LOOP_COUNTERS)
+    local normalized = AudioContract.normalizeRom(rawSnapshot, activeLoopCounters)
     local stateHash = AudioContract.hashState(normalized)
     local eventHash = AudioContract.hashEvents(stream.decoded)
     local record = {
