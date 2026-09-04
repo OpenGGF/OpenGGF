@@ -27,6 +27,50 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Neither S3K PSG volume flag writes to the chip; tick 258 -> tick 331
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `00a65e743`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 258, event 9, reference
+  `psg 131` against engine `psg 149`. DAC stream `BYTE_DIFFERENT` run 29
+  byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 331, event 10, reference
+  `psg 163` against engine `psg 160`. DAC stream unchanged. Services 139
+  through 330 now agree.
+- **The routines.** `cfSetVolume` splits on the PSG bit of `VoiceControl`: the
+  FM branch falls through to `zSendTL` to "begin using new volume
+  immediately", but the PSG branch ends at `zStoreTrackVolume`, which stores
+  the byte and returns without touching the chip (Sound/Z80 Sound
+  Driver.asm:3128-3146, :3178-3181). `cfChangePSGVolume` ends at the same
+  place (:3186-3199). Neither emits a PSG write; the track's own
+  `zUpdatePSGTrack` tail sends the volume on its next pass. The engine called
+  `refreshVolume` from both, which put an extra volume byte on the bus ahead
+  of the frequency.
+- **`cfChangePSGVolume` also clears the rest bit.** It opens with
+  `res 4, (ix+zTrack.PlaybackControl)` before it touches the volume at all
+  (:3189). The engine cleared its envelope-at-rest flag there but not the rest
+  bit itself.
+- **How it was found, and one wrong turn.** A stack-tagged probe on every PSG1
+  volume write showed two per tick at the divergence, one from a coordination
+  flag and one from the note start, against the reference's single write after
+  the frequency. `cfSetVolume` was corrected first and moved nothing, because
+  the flag actually firing there is `cfChangePSGVolume`; the probe named it on
+  the second pass. The `cfSetVolume` correction is landed anyway, cited, since
+  the ROM is equally clear about it.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; and
+  the `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - A parked S3K PSG envelope rest survives the next note; tick 234 -> tick 258
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

@@ -196,12 +196,10 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * A hundred and nineteen consecutive services now agree. The most recent
-     * correction is that a PSG volume envelope parked on a rest command
-     * re-rests the track on the same pass that {@code zGetNextNote} cleared
-     * the bit, which happens whenever the do-not-attack bit kept
-     * {@code zFinishTrackUpdate} from resetting the envelope index. What
-     * remains is a PSG1 write at service 258.
+     * A hundred and ninety-two consecutive services now agree. The most recent
+     * correction is that neither S3K PSG volume coordination flag writes to
+     * the chip: both end at {@code zStoreTrackVolume}, which stores the byte
+     * and returns. What remains is a PSG2 frequency value at service 331.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -214,9 +212,9 @@ class TestS3kOracleRequestSidecarWiring {
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 120, report.tick());
-        assertEquals(9, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=131]",
+        assertEquals(TITLE_MUSIC_TICK + 193, report.tick());
+        assertEquals(10, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=163]",
                 report.reference());
     }
 
