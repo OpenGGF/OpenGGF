@@ -2406,8 +2406,14 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         // so this runs them in submission order rather than taking only one.
         List<Runnable> requests = new ArrayList<>(pendingServiceRequests);
         pendingServiceRequests.clear();
+        Set<SmpsSequencer> before = new HashSet<>(sfxSequencers);
         for (Runnable request : requests) {
             request.run();
+        }
+        for (SmpsSequencer sequencer : sfxSequencers) {
+            if (!before.contains(sequencer)) {
+                sequencer.markAdmittingServiceWalkMissed();
+            }
         }
     }
 

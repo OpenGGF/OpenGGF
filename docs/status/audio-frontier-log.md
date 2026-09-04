@@ -27,6 +27,43 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K 566 was my own double skip; frontier 566 -> 760
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, merged with develop at `633ee400f`.
+  The merge did not move the frontier: it was 566 before and after.
+- **What 566 was.** `TRACK_STATE_MISMATCH` on `SFX_FM4`'s `resting`, reference
+  true against engine false. Sound effect B7h is admitted at service 565 with
+  two tracks, on ROM FM5 and FM6. The reference walks both at 566: one takes a
+  rest of two, the other a note of twenty-two, and the resting track plays the
+  same note at 568. The engine did not walk either until 567, one service late.
+- **The cause was the previous entry's fix, not a new defect.** Consuming a
+  request at the ROM's point means a sound effect created there has genuinely
+  missed its admitting service's SFX walk, because that walk ran earlier in the
+  same service. `SmpsSequencer.primeFirstService` also skips a walk, modelling
+  the same ROM ordering for a sound admitted outside a service, which is how
+  live playback admits one. Both skips fired, so the sound lost two services
+  instead of one.
+- **The fix.** The driver now tells a sound effect created during request
+  consumption that its admitting service's walk has already gone by, and
+  `primeFirstService` no longer skips a second one for it. The skip stays
+  intact for every sound admitted outside a service, so live playback is
+  unchanged.
+- **A phantom I nearly chased.** The engine's probe prints linear channel
+  indices and the reference's roles are one-based, so engine FM3 and FM4 are
+  ROM FM4 and FM5. There was never a channel-mapping fault; recorded so the
+  next reader does not spend the same reading.
+- **Frontier moved forward past its previous best.** From 566 to 760, where
+  the previous best was 751. `EVENT_VALUE_DIFFERENT` at tick 760, event 20:
+  the reference writes PSG `0A3h`, a latched volume of 3 on the second channel,
+  where the engine writes `09Fh`, a latched silence on the first. The DAC byte
+  stream is unchanged at run 338, byte 0.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,726 tests, 0 failures, 16
+  skips. Ordinary suite 16,441 tests, 0 failures, 22 skips. `-Pguards` 608
+  tests, 0 failures.
+
+
 ## 2026-09-04 - S3K: a request no longer pre-empts the service that consumes it
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

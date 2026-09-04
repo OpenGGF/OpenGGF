@@ -216,17 +216,18 @@ class TestS3kOracleRequestSidecarWiring {
      * stops the note, and that flag hands the channel back to music inline as
      * {@code cfStopTrack} does.
      *
-     * <p>This pin moved backwards, from service 751 to 566, and deliberately.
-     * A request used to be applied ahead of the whole service that consumed
-     * it, so a music change tore its tracks down before they were walked. The
-     * ROM walks them first: {@code zUpdateEverything} runs
-     * {@code zUpdateSFXTracks} and both fade handlers before it reaches
-     * {@code zFillSoundQueue} (Sound/Z80 Sound Driver.asm:653-701). Correcting
-     * that gives service 751 the two leading frequency writes the reference
-     * opens it with, and the divergence there is gone. It also changes what
-     * the music change at service 495 leaves behind, which uncovers a rest-flag
-     * difference at 566 that the old ordering had been hiding. The earlier
-     * number was not the better engine, so the pin follows the correction.
+     * <p>Two corrections took this from 751 to 760. A request used to be
+     * applied ahead of the whole service that consumed it, so a music change
+     * tore its tracks down before they were walked; the ROM walks them first,
+     * because {@code zUpdateEverything} runs {@code zUpdateSFXTracks} and both
+     * fade handlers before it reaches {@code zFillSoundQueue}
+     * (Sound/Z80 Sound Driver.asm:653-701). Consuming the request at that
+     * point gives service 751 the two leading frequency writes the reference
+     * opens it with. It briefly moved the pin backwards to 566, where a sound
+     * effect rested a service late, because the sequencer then skipped its
+     * admitting service's walk twice: once because the walk had genuinely
+     * already run, and once more in {@code primeFirstService}, which models
+     * that same skip for a sound admitted outside a service.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -238,12 +239,12 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
                 report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 428, report.tick());
-        assertEquals("resting", report.field());
-        assertEquals("true", report.reference());
-        assertEquals("false", report.openggf());
+        assertEquals(TITLE_MUSIC_TICK + 622, report.tick());
+        assertEquals(20, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=163]",
+                report.reference());
     }
 
     /**
