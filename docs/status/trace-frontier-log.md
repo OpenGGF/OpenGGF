@@ -115068,9 +115068,9 @@ The other three death arms remain coordinates only.
 
 - Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
   over `develop` at `1e128d0d6`.
-- Four new bounded request-aware candidates were captured and published beside
-  the original `w10150-10900` window: `w10900-11650` and `w11650-12400` continue
-  the complete run's EHZ1 segment, `w13650-14400` spans the EHZ1 exit into the
+- Four new bounded request-aware candidates are published beside the original
+  `w10150-10900` window: `w10900-11650` and `w11650-12400` continue the complete
+  run's EHZ1 segment, `w13650-14400` spans the EHZ1 exit into the
   second special stage at movie row 13712, and `cpz-w2700-3450` comes from the
   committed CPZ level-select recording, a different route and a different music
   epoch. Every window was captured twice on two independently built installs
@@ -115100,3 +115100,53 @@ The other three death arms remain coordinates only.
   the request MATCH of 25 and the driver-oracle **MATCH (698 ticks)**; the audio
   parity suite ran 161 tests with 0 failures and 2 skips; `-Pguards` ran 607
   tests with 0 failures and 0 errors.
+
+## 2026-09-04 - S2 request-window capture becomes a real command
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser branch `bugfix/ai-s2-request-window-producer` at `6481d7e`, cut
+  from the pinned head `8e32d25` and pointed at by this branch's gitlink. Two
+  commits: `dafd26b` fixes the raw sink, which wrote the profile's first pinned
+  movie identity into every capture whatever recording ran, and `6481d7e` adds
+  the command.
+- The bounded S2 request-window producer is now a command rather than a
+  disposable test on an unmerged commit. Capture takes the ROM, the movie and
+  its SHA-256, the service and candidate manifests, the BizHawk installation,
+  the movie-row interval and an absent output path; extraction takes the
+  captured stream, the same interval and an output directory. The raw sink
+  writes the identity of the recording actually opened, and the extractor takes
+  the expected recording identity and bounds instead of constants.
+- Commands: `tools/tracechaser/bizhawk-headless/run-s2-request-window.sh
+  --request-window-mode capture|extract ...`.
+- TraceChaser gates: `S2RequestWindowCommandTests` 4 of 4 pass; the `S2` filter
+  runs 195 passes with three failures that are identical at the pinned head and
+  so predate this branch, one of which is the harness-assembly identity pin that
+  any local rebuild moves. Both policy scanners report PASS on the committed
+  tree.
+- **Open native gap.** Capture cannot run on the shipped observer: the ABI-5
+  install rejects the request candidate manifest at `configure` with status -3,
+  and the only core that hosts this producer is the ABI-4 candidate build, which
+  the pinned-head profile refuses because it requires ABI 5 and an installed
+  `identity.json`. The native addition needed is small and additive - the
+  candidate patch on TraceChaser `69dd536` adds one export and a callback pair
+  and changes no ABI, event layout or existing behaviour - but publishing an
+  ABI-5 core carrying it is a separate native workstream with its own artifact
+  lock and selftests. The published fixtures were captured with the ABI-4
+  candidate core before this command existed.
+
+## 2026-09-04 - S2 w11650-12400 restored as the request frontier
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
+  after merging `origin/develop` at `c549f543d`.
+- The `w11650-12400` window was briefly dropped from publication as a
+  capture-budget decision taken before it had been measured. It is the window
+  that carries the S2 request frontier, so it is restored byte-for-byte from
+  `55b40a105`: gzipped payload
+  `d23d19d6374905da5781224470711cf218be632b0601bf9db8b16e272b8cbe76`, expanded
+  payload `04e9d7e1feb53cd5a2012bcab5813bce6262a9b7ef3bacd93565f8a12008bab0`,
+  27 request transfers. Its metadata now cites the producer command like the
+  other windows.
+- Frontier unchanged and re-measured on the merged tree: `w10150-10900` MATCH
+  with 25 transfers, `w10900-11650` MATCH with 52, and `w11650-12400`
+  **DIVERGENCE at transfer 21**, movie row 12132, the recording asking for SFX
+  `$A0` where the engine asks for SFX `$B5` at row 12114.

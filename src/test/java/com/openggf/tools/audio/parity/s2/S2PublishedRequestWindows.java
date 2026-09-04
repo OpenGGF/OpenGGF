@@ -79,7 +79,10 @@ final class S2PublishedRequestWindows {
             "b24c6f9144d8f4fe85316cf7d2a22020b916ec208280ac8001ab18876d3d9137",
             52, 10_900, 11_650);
 
-    /** The next contiguous 750 rows, carrying coverage to movie row 12400. */
+    /**
+     * The next contiguous 750 rows, carrying coverage to movie row 12400. This
+     * is where the request oracle first diverges, so it is the frontier window.
+     */
     static final Published EHZ1_CONTINUATION_TWO = complete(
             "s2-request-window-w11650-12400",
             "d23d19d6374905da5781224470711cf218be632b0601bf9db8b16e272b8cbe76",
