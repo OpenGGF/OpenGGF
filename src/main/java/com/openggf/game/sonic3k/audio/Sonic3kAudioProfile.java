@@ -215,6 +215,26 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         manager.fadeOutMusic(0x28, 6);
     }
 
+    /**
+     * {@code Player_ResetAirTimer} (sonic3k.asm:33663-33686) loads
+     * {@code Current_music}, then overrides it in three tests taken in order:
+     * {@code Status_Invincible} and {@code Super_Sonic_Knux_flag} both select
+     * {@code mus_Invincibility} ($2C), and {@code Boss_flag} selects
+     * {@code mus_MinibossK} ($18). The boss test comes last, so a boss fight
+     * wins over an invincible or Super player.
+     */
+    @Override
+    public int resolveAirResetMusic(int levelMusicId, boolean invincible,
+            boolean superForm, boolean bossActive) {
+        if (bossActive) {
+            return Sonic3kMusic.MINIBOSS.id;
+        }
+        if (invincible || superForm) {
+            return Sonic3kMusic.INVINCIBILITY.id;
+        }
+        return levelMusicId;
+    }
+
     @Override
     public boolean isContinuousSfx(int sfxId) {
         // ROM: sfx__FirstContinuous = 0xBC (sfx_SlideSkidLoud)

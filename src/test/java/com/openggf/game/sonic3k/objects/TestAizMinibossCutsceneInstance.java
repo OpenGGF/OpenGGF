@@ -3,6 +3,10 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.audio.AudioManager;
+import com.openggf.audio.AudioTestFixtures;
+import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
 
@@ -108,6 +112,80 @@ class TestAizMinibossCutsceneInstance {
         @Override
         public void playMusic(int musicId) {
             musicRequests.add(musicId);
+        }
+    }
+
+    /**
+     * The AIZ miniboss cutscene really does fade, and at the S3K driver's rate.
+     *
+     * <p>Both of its fades are {@code cmd_FadeOut}: the entry fade before the
+     * miniboss theme (ROM {@code loc_68556}, sonic3k.asm:136839-136846) and the
+     * escape fade before the level music is restored ({@code loc_68646},
+     * :136929-136946). {@code zFadeOutMusic} loads {@code zFadeOutTimeout} with
+     * 28h and {@code zFadeDelay} with 6 (Sound/Z80 Sound Driver.asm:2306-2311),
+     * so silence arrives after 240 frames rather than the 120 of S1 and S2.
+     *
+     * <p>This exists because an earlier source-level reading of these two sites
+     * and a later execution run disagreed about whether any fade was issued at
+     * all. It is issued; the run that saw none never drove the cutscene's own
+     * entry, only the fire-curtain restore that follows it.
+     */
+    @Test
+    void minibossCutsceneFadesAtTheS3kDriversRate() throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new AudioTestFixtures.RecordingAudioBackend());
+        audio.setAudioProfile(new Sonic3kAudioProfile());
+        audio.beginCommandTimelineFrame(0);
+
+        ForwardingFadeServices services = new ForwardingFadeServices(audio);
+        // The trigger only fires once the camera has reached the arena
+        // (ROM loc_68556's Camera_min/max_X lock, sonic3k.asm:136839-136846).
+        services.camera().setX((short) 0x3000);
+        AizMinibossCutsceneInstance cutscene = buildCutscene(services);
+        java.lang.reflect.Method trigger =
+                AizMinibossCutsceneInstance.class.getDeclaredMethod("updateWaitTrigger");
+        trigger.setAccessible(true);
+        trigger.invoke(cutscene);
+
+        List<AudioCommand.FadeOutMusic> fades = audio.commandTimeline().entries().stream()
+                .map(entry -> entry.command())
+                .filter(AudioCommand.FadeOutMusic.class::isInstance)
+                .map(AudioCommand.FadeOutMusic.class::cast)
+                .toList();
+        assertEquals(1, fades.size(),
+                "the cutscene's trigger issues cmd_FadeOut (sonic3k.asm:136844-136845)");
+        assertEquals(new AudioCommand.FadeOutMusic(0x28, 6), fades.getFirst(),
+                "an S3K fade must carry the S3K driver's own 28h/6, not the S1/S2 28h/3");
+    }
+
+    /**
+     * Object services whose fade reaches a real AudioManager, with a camera the
+     * trigger's arena lock can write to.
+     */
+    private static final class ForwardingFadeServices extends TestObjectServices {
+        private final AudioManager audio;
+        private final com.openggf.camera.Camera camera = new com.openggf.camera.Camera();
+        private final com.openggf.game.GameStateManager gameState =
+                new com.openggf.game.GameStateManager();
+
+        ForwardingFadeServices(AudioManager audio) {
+            this.audio = audio;
+        }
+
+        @Override
+        public com.openggf.camera.Camera camera() {
+            return camera;
+        }
+
+        @Override
+        public com.openggf.game.GameStateManager gameState() {
+            return gameState;
+        }
+
+        @Override
+        public void fadeOutMusic() {
+            audio.fadeOutMusic();
         }
     }
 

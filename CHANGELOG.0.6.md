@@ -9567,3 +9567,8 @@ history while grouping the public-facing material by release.
   asks for, rather than the 120 of Sonic 1 and 2. Object-triggered fades used a
   shared default instead of the game's own value, so every cut the ROM places
   part-way through a fade landed on silence instead.
+
+- Fix: surfacing from the drowning countdown now resumes the track the ROM
+  asks for. Invincibility, a Super or Hyper form, and a boss fight each keep
+  their own music instead of being cut off by the zone theme. Each game's
+  substitutions come from its own routine.
