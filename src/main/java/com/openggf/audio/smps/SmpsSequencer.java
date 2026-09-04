@@ -1554,7 +1554,7 @@ public class SmpsSequencer implements CoordFlagContext {
                         break;
                     }
                     setDuration(t, cmd);
-                    playNote(t);
+                    playNote(t, false);
                     break;
                 }
             }
@@ -2398,6 +2398,20 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void playNote(Track t) {
+        playNote(t, true);
+    }
+
+    /**
+     * @param noteByteRead whether this stream unit actually carried a note
+     *     byte. A duration-only unit does not: {@code zGetNextNote} cleared
+     *     the rest bit on entry (Sound/Z80 Sound Driver.asm:910-911) and a
+     *     positive byte goes straight to {@code zStoreDuration} (:917-919),
+     *     which touches neither the rest bit nor the saved note. Only a note
+     *     byte of 80h reaches {@code zRestTrack}. Re-deriving the rest bit
+     *     from the previous unit's note would keep a track resting through a
+     *     duration that follows a rest.
+     */
+    private void playNote(Track t, boolean noteByteRead) {
         boolean preventAttack = shouldPreventNoteAttack(t);
         if (!preventAttack) {
             t.fillCounter = t.fill;
@@ -2429,7 +2443,11 @@ public class SmpsSequencer implements CoordFlagContext {
         // DACUpdateTrack (s1.sounddriver.asm:277-307) and S2's
         // zDACUpdateTrack (s2.sounddriver.asm:759-790) have no rest test at
         // all. Only FM and PSG tracks rest.
-        t.resting = t.type != TrackType.DAC && t.note == 0x80;
+        if (noteByteRead) {
+            t.resting = t.type != TrackType.DAC && t.note == 0x80;
+        } else {
+            t.resting = false;
+        }
 
         if (t.note == 0x80) {
             if (t.type != TrackType.DAC) {
