@@ -263,6 +263,11 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 2 driver-state oracle: DAC stream and PSG note-on:** the v2 comparator
+  now compares the DAC sample bytes as a whole-window stream (92 runs, delta 0)
+  and a note-on PSG frequency is sent once as the driver does; service writes
+  reach tick 228, and the speed-shoes timer compensation is recorded as the
+  cause of the tempo phase.
 - **S3K modulation state is compared and matches:** the six modulation bytes
   joined the compared track state, `zFinishTrackUpdate`'s clears and the 8-bit
   speed decrement are modelled, a resting FM track advances nothing, and
