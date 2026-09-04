@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S2 request capture is reproducible end to end:** the observer core now
+  carries the S2 request marker (ABI 5, plain build), the TraceChaser command
+  reproduces a published window's raw and payload digests, and the gitlink
+  descends from a CI-green TraceChaser main.
 - **S3K music DAC on the observed bus:** every sample write the chip performs
   now reaches the write observer, a sample-end edge emits the ROM's DAC
   disable, and the oracle compares the DAC byte stream whole-window while
