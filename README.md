@@ -263,6 +263,11 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K spindash release and collapsing-bridge sounds restored:** a PSG3 noise
+  track now owns the noise channel, the PSG volume tail is sent every pass as the
+  ROM does, the fabricated spindash pitch multiplier is gone, and sequencer config
+  fields reach live playback (five were silently dropped); guarded by runtime-path
+  tests with AIZ1 music and a config-copy guard.
 - **S1 audio oracles cover whole complete runs per song:** windows tile each
   movie by `Sound_PlayBGM` and 1-up restore epochs; the title-screen song matches
   end to end (72 ticks), tied PSG notes step their envelope, a finished song keeps

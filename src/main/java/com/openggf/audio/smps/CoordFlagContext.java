@@ -36,6 +36,18 @@ public interface CoordFlagContext {
     /** Stop the currently playing note on the track (key off / mute). */
     void stopNote(SmpsSequencer.Track t);
 
+    /**
+     * Hands one channel back to music from inside the track-end flag, which is
+     * where S3K's {@code cfStopTrack} does it: after keying the SFX track off
+     * it clears the overridden music track's bit and sends that track's FM
+     * instrument, all before the music update of the same service
+     * (skdisasm Sound/Z80 Sound Driver.asm:3059-3086). Routing it through the
+     * post-service sweep instead puts the restore after the music's own
+     * writes.
+     */
+    default void releaseChannelToMusic(SmpsSequencer.TrackType type, int channelId) {
+    }
+
     /** Refresh the track's volume (re-apply TL for FM, attenuation for PSG). */
     void refreshVolume(SmpsSequencer.Track t);
 

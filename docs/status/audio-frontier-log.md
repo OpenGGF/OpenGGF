@@ -27,6 +27,470 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K service 751 is a music change, and the engine goes quiet just as the ROM gets busy
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `0da7b645a`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  records what tick 751 actually is, because the single-event frontier line
+  had me looking at the wrong thing for a cycle.
+- **What the frontier line says, and why it misleads.** The comparator reports
+  `EVENT_VALUE_DIFFERENT` at tick 751 event 0: reference
+  `ym2612 port 1 register 165 value 80` against engine
+  `port 1 register 130 value 255`. That reads like one wrong write. It is not.
+  Tick 751 carries 274 reference writes, and the two sides are not comparing
+  the same moment at all.
+- **Tick 751 is a music change.** The reference's writes there are
+  unmistakably the six-channel loop of `zStopAllSound`
+  (`Sound/Z80 Sound Driver.asm:2476-2498`) on the `fix_sndbugs = 0` branch:
+  per channel, D1L/RR of `FFh` on all four operators, total level of `7Fh` on
+  all four, a key off on register 28h, then the four SSG-EG registers cleared
+  to zero. Register 165 and 161 are the frequency high and low bytes for
+  linear FM4, sent immediately before that loop begins.
+- **The engine runs it one service early, and much shorter.** Writes per
+  service, engine against reference:
+
+  | Service | 747 | 748 | 749 | 750 | 751 | 752 | 753 | 754 |
+  |---|---|---|---|---|---|---|---|---|
+  | Reference | 28 | 8 | 8 | 8 | 274 | 297 | 270 | 263 |
+  | Engine | 28 | 8 | 8 | 89 | 177 | 10 | 10 | 10 |
+
+  The two agree exactly through 749. The engine then begins its stop at 750,
+  a whole service before the ROM does, and its own tick 751 opens with the
+  *tail* of that stop - a key off of channel 6 and register 27h set to zero,
+  which is `zFM3NormalMode` at the very end of `zStopAllSound` (:2506-2513).
+- **Correction to the paragraph this replaces.** I first wrote that the engine
+  was missing almost all of the new song's servicing, on the strength of the
+  reference sustaining 250 to 300 writes per service from 751 onward against
+  the engine's ten. That was wrong, and wrong in the way the known-discrepancy
+  note about the DAC partition warns about: those reference counts are almost
+  entirely 2Ah DAC bytes. The previous song had no DAC track playing, the new
+  one does, so the DAC pump starts at 751 and inflates every count after it.
+  Excluding 2Ah, the reference services 20, 19, 19, 23 and 13 writes across
+  752 to 756 against the engine's 10, 10, 10, 14 and 9. Comparable, and no
+  collapse. The engine also loads the song correctly: a probe of the music
+  sequencer at 751 shows music id 01h with all nine tracks present, active and
+  counting their durations down normally.
+- **So the whole finding is the one-service phase error.** On non-DAC writes
+  the two sides agree exactly through 749. The reference then spends 274
+  writes on the stop in service 751 alone. The engine spends 89 in 750 and 177
+  in 751, which is the same work started a service early and split across two.
+- **Where the service is chosen.** The music change is not mailbox-driven
+  here: the reference's frame-entry mailbox is empty at every service from 746
+  to 754. It comes from the request sidecar, whose row 876 carries music id
+  01h, and `S3kAudioReferenceReader.resolveSidecarRequests` decides which
+  service consumed it. That method has three branches; the one that fires when
+  the following service's entry sample is clear attributes the request to the
+  *previous* service, on the reasoning that the service running in the store's
+  own row must already have consumed and cleared the byte. For this request
+  that lands on service 750, which the reference shows doing nothing unusual
+  at all, only its ordinary eight writes.
+- **What the next cycle should do.** Settle that branch against the ROM before
+  changing anything. This is fixture attribution rather than engine code, so a
+  change to it moves the oracle's input and needs the reference's own writes as
+  the arbiter: whichever service the ROM spends 274 writes in is the service
+  that consumed the request, and here that is unambiguously 751. Check the
+  branch against the other thirteen observations in the sidecar before
+  concluding it is wrong in general rather than wrong here.
+- **Ruled out this cycle.** `forceSilence` is not the source of the engine's
+  `82h = FFh`: a probe on that method across services 748 to 754 never fired.
+  The write comes from the engine's own stop-all loop. The engine emits no 2Ah
+  bytes at all in this window, so its non-DAC counts above are also its total
+  counts; that silence belongs to the separate DAC-stream frontier at run 338.
+- **Gates.** Not re-run; no engine behaviour changed since `0da7b645a`, whose
+  gates are recorded in the entry below.
+
+
+## 2026-09-04 - S3K SFX lifecycle: two missing key offs the intro oracle cannot see
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`.
+- **Why this is not an oracle cycle.** The AIZ1 intro capture is music only,
+  so no SFX is ever admitted in it. Three conditions the branch's own SFX work
+  changed are therefore invisible to it, and the lead made them merge
+  blockers. New ROM-gated class `TestS3kSfxLifecycleRom` drives them through
+  the runtime request path (`AudioManager.playSfx` / `presentFrame`) and
+  asserts the chip writes, with the owning ROM routine cited on each test.
+- **Defect 1: an SFX taking an FM channel from another SFX sent no key off.**
+  `zSFXTrackInitLoop` keys off each incoming SFX track and clears its SSG-EG
+  operators while the sound loads (`Sound/Z80 Sound Driver.asm:2092-2103`);
+  nothing in that loop asks who holds the channel. The engine emitted those
+  writes as the driver rather than as a track, so `SmpsDriver.writeFm` dropped
+  them whenever the channel was already locked - exactly the takeover case
+  where the key off is audible. Measured with SPLASH (PSG2 + FM4) followed by
+  GRAB (FM4): the takeover service produced `psg[C5], psg[01]` and no FM write
+  at all. They now go out through a new `writeRawFm`, matching the ROM, which
+  writes through `zWriteFMI` with no ownership test.
+- **Defect 2: an SFX torn down wholesale never keyed off its FM note.**
+  `cfStopTrack` clears the playing flag and then sends `zKeyOffIfActive`
+  before any voice restore (`:3443-3449`). A sequencer removed by
+  `stopAllSfx` runs no coordination flag, and S3K's `ROM_VOICE_RESTORE` release
+  mode had replaced the old force-silence with nothing at all, so the note
+  kept sounding on the channel just handed back. `releaseLocks` now issues the
+  key off the flag would have sent, guarded by the same `overridden` test
+  `zKeyOffIfActive` applies. Measured: `stopAllSfx` on SPLASH produced only
+  `psg[DF]`; it now produces `ym0[28]=05, psg[DF]`.
+- **Both fixes proven load-bearing.** Reverting `SmpsDriver.java` alone turns
+  the two new tests red with the pre-fix write streams quoted in the failure
+  messages. The walk-before-judged-finished test is load-bearing on
+  `sfxWalkPrecedesRequest`: flipping that flag false makes the admitting
+  service reach the chip with the insta-shield's opening PSG writes, which the
+  ROM ordering forbids.
+- **The per-track handback test is a regression guard, not an ablated one.**
+  It asserts SPLASH's FM4 track hands its channel back to the music while the
+  PSG2 track keeps playing, which discriminates against whole-sequencer
+  handback by construction. Two ablations aimed at its mechanism did not move
+  it: neither disabling the F2 `releaseChannelToMusic` call nor short-circuiting
+  `reconcileInactiveSfxTracks` changed the result, so the clear comes from a
+  third path I did not identify. Recorded here so the next round does not
+  re-spend those two readings.
+- **Frontier unchanged.** The S3K service stream is still
+  `EVENT_VALUE_DIFFERENT` at tick 751, event 0, reference
+  `ym2612 port 1 register 165 value 80` against engine
+  `port 1 register 130 value 255`. The DAC byte stream is still
+  `BYTE_DIFFERENT` at run 338, byte 0, reference `88h` against engine `7Fh`.
+  Both measured after `mvn clean package`, so the build was not stale.
+- **Gates, all green.** Audio, per-game audio and parity packages with all
+  three ROM paths: 2,696 tests, 0 failures, 16 skips. That run includes the
+  oracle-backed classes, which all passed: `TestS1GameplayAudioDriverOracle`,
+  `TestS1GameplayRun2AudioDriverOracle`, `TestS2DriverStateOracle`,
+  `TestS2CpzDriverStateOracle`, `TestS2PublishedRequestWindows`,
+  `TestS2RequestAwareOracleRawStream`, `TestS3kOracleRequestSidecarWiring` and
+  both S3K fixture contracts.
+- **What was not measured.** I could not reconstruct the standalone
+  `S1AudioParityTool` and `S2AudioOracleTool` command lines in this worktree:
+  the S1 tool rejected every reference path as not a direct child of its
+  validated run root, and the S2 tool reported a changed fixture digest for
+  each committed stream. Those are failures of my invocation, not results; the
+  JUnit classes above cover the same comparisons and did run.
+
+
+## 2026-09-04 - Live-regression risk audit of this branch, and one defect fixed
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged. Clean build before every
+  measurement.
+- **Why this entry exists.** The owner reproduced in-game S3K breakage on
+  develop and a bisect lane asked which of this branch's changes could stop a
+  music track or cut an SFX under live `AudioManager` conditions that the
+  stimulus-replay oracle never exercises. The oracle drives 5,263 services of
+  one intro window with a fixed request list; it sees no malformed track data,
+  no sequencer reaping, no SFX replacement and no live fade interaction.
+- **Confirmed defect, introduced by this branch and fixed here.**
+  `trackEndFlagOwnsTheStop` removed the read loop's blanket
+  `if (!t.active) stopNote(t)` for S3K, on the correct ground that the two
+  track-end flags stop the note themselves. But five *other* S3K sites
+  deactivate a track without stopping it, and all five lost their key-off:
+  `0F9h` return with an empty return stack; an unreadable jump pointer; an
+  unreadable loop-exit pointer; a gosub with an unreadable pointer or a full
+  return stack; and a loop with no jump target. With the stop gone, any of
+  them leaves the channel sounding indefinitely, which presents as a note held
+  for ever. None occurs in the oracle window. All five now stop the note
+  through one helper that says why: the shipped driver never reaches these
+  states, so there is no ROM behaviour to model, only a channel that must not
+  keep sounding.
+- **Remaining risks on this branch, ranked, with the condition that would
+  expose each.** None is a known defect; each is a place where the oracle
+  cannot see and the live path differs.
+  1. *`FmSfxReleaseMode.ROM_VOICE_RESTORE`* removed the force-silence from the
+     driver's release sweep. The key-off now comes from the track-end flag, so
+     a release that happens **without** that flag — a sequencer reaped, an SFX
+     replaced by a new request, a stop-all — leaves no silence at all on that
+     channel. Live SFX interruption is exactly that path.
+  2. *`releaseChannelToMusic` from the `0F2h` flag* drops the channel lock as
+     soon as one SFX track ends. Faithful to `cfStopTrack`, which is per
+     track, but the engine's lock is per channel and per sequencer: a
+     multi-track SFX that ends one track early now returns that channel to
+     music while its other tracks still play. Could cut an SFX short.
+  3. *`sfxWalkPrecedesRequest`* gives an admitted SFX no walk in its own
+     service. Anything that services once and then tests completion sees an
+     unstarted SFX; a very short one could be judged finished before it plays.
+  4. *`trackEndFlagOwnsTheStop`* itself, beyond the five sites fixed above:
+     any future path that clears `active` without stopping inherits the same
+     hole.
+  5. *`restTrack`'s fall-through into the PSG silence* fires on every pass
+     while a track is parked on an envelope rest command. It is guarded on the
+     override bit, so it should not touch a channel an SFX owns, but it does
+     make the music silence its own PSG channel far more often than before.
+  The fade work is the one to check against "abrupt un-faded music changes":
+  this branch made the fade real rather than a no-op, so a request that
+  previously produced no fade now produces one, and the reverse is not
+  possible.
+- **Frontier unchanged** at `EVENT_VALUE_DIFFERENT`, tick 751, event 0, and
+  the DAC stream at run 338 byte 0, since none of the five sites is reached in
+  the oracle window.
+- **Gates at this commit, all green.** 2,159 tests, 0 failures, 10 skips. S1
+  sound test `MATCH (14690 ticks)` and `MATCH (1967 ticks)`; all S2 lines
+  unchanged including the CPZ state-and-writes count of 36 of 719.
+
+
+## 2026-09-04 - The track-end flag hands the channel back itself; tick 590 -> tick 751
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged by design. Clean build before
+  every measurement.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 590, event 1, reference
+  `ym2612 port 1 register 0B4h = 128` against engine
+  `port 0 register 0A4h = 19`. DAC stream `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 751, event 0, reference
+  `ym2612 port 1 register 0A5h = 50` against engine
+  `port 1 register 82h = 255`. DAC stream unchanged. **A hundred and
+  sixty-one more services agree.**
+- **The routine, read to its end this time.** `cfStopTrack` does not finish at
+  the key-off. It clears the overridden music track's bit, and then, for an FM
+  track, writes the FM3 settings if the channel is FM3 and sends that music
+  track's instrument through `zSendFMInstrument`, followed by its SSG-EG
+  (Sound/Z80 Sound Driver.asm:3059-3086). The whole tail is gated on
+  `zUpdatingSFX`, so only an SFX track's end restores anything (:3050-3054).
+  All of it happens inside the flag, during the SFX update, which
+  `zUpdateEverything` runs before the music update (:650-701) — so the restore
+  precedes that service's music writes.
+- **The engine had the right writes in the wrong place.** They came from the
+  driver's post-service release sweep, through `updateOverrides` and
+  `refreshInstrument`, which lands them after the music tracks have already
+  written. The flag now hands the channel back directly:
+  `CoordFlagContext.releaseChannelToMusic` reaches the driver, which drops the
+  lock and clears the override for that one channel, and the S3K `0F2h`
+  handler calls it right after its key-off. The driver's own SFX test mirrors
+  the ROM's `zUpdatingSFX` gate.
+- **This is the fix the previous cycle looked for and missed.** That cycle
+  routed the same intent through `reconcileInactiveSfxTracks`, whose guard is
+  about whether the sequencer still holds an active track on the channel, and
+  measured no change. The guard was the wrong question: the ROM does not ask
+  it, it simply releases the channel the ending track owned.
+- **S1 and S2 untouched by construction and by measurement.** The new hook is
+  a default no-op on both interfaces and is called only from the S3K flag
+  handler. S1 sound test `MATCH (14690 ticks)` and `MATCH (1967 ticks)`; S2 v1
+  `MATCH (698 ticks)`, v2 state-and-writes and state-only `MATCH (2198
+  ticks)`, CPZ state-only `MATCH (720 ticks)`, request windows `MATCH` at 25,
+  52 and 27, and the CPZ state-and-writes line unchanged at 36 of 719.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and S1's and S2's track-end stop.
+- **Gates at this commit, all green.** 2,159 tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - Service 590 attributed: the music voice restore lands after the music
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged by design. **Clean build before
+  every measurement in this entry**, after the stale-build error two cycles
+  ago.
+- **Command:** unchanged, both result lines.
+- **Result, unchanged by this cycle:** `EVENT_VALUE_DIFFERENT`, tick 590,
+  event 1, reference `ym2612 port 1 register 0B4h = 128` against engine
+  `port 0 register 0A4h = 19`. DAC stream `BYTE_DIFFERENT` run 338 byte 0. No
+  engine change landed; what this cycle produced is the attribution and one
+  rejected fix.
+- **What service 590 is.** The reference emits the SFX FM4 track's key-off and
+  then, immediately, the music's voice restore for that channel: `0B4h`,
+  `0B0h`, then the whole operator block. The engine emits the same key-off,
+  then the music tracks' own frequency and PSG writes, and only afterwards the
+  voice restore. Same writes, wrong order.
+- **Both writes attributed with the observer probe.** The key-off comes from
+  the `0F2h` track-end handler through `stopNote`, which is correct and
+  matches. The `0B4h` comes from `updateOverrides` calling
+  `setChannelOverridden`, then `refreshInstrument` and `applyFmPanAmsFms` —
+  the driver's post-service release sweep. The ROM does that work inline:
+  `cfStopTrack` clears the overridden music track's bit and restores its voice
+  as part of the flag itself (Sound/Z80 Sound Driver.asm:3059-3070), inside
+  the SFX update, which `zUpdateEverything` runs before the music update
+  (:650-701). So in the ROM the restore precedes that service's music writes.
+- **A fix was tried and rejected because it does nothing.** The host already
+  exposes `reconcileInactiveSfxTracks`, so the obvious move is to call it from
+  the track-end flag through a new `CoordFlagContext` hook. Implemented and
+  measured: the write order at 590 is byte-for-byte unchanged, so the
+  reconcile does not release the channel at that point. Its per-channel guard
+  requires the sequencer to hold no active track on that channel, and
+  something still satisfies that test when the flag runs. Reverted rather than
+  left in as an inert hook with a citation implying it works.
+- **Next step, stated concretely.** Find why
+  `reconcileInactiveSfxTracks` declines the release immediately after the
+  track-end flag clears the track's active bit — most likely `hasActiveTrack`
+  or the lock ownership test — and make the release happen at the flag rather
+  than in the post-service sweep. The write content already matches; only its
+  position in the service is wrong.
+- **S1 and S2 untouched this cycle:** no source change landed.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and S1's and S2's track-end stop.
+
+
+## 2026-09-04 - One track end, one key-off; tick 588 -> tick 590
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged by design.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 588, event 3, reference
+  `ym2612 port 1 register 0B5h = 64` against engine `port 0 register 28h = 5`.
+  DAC stream `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 590, event 1, reference
+  `ym2612 port 1 register 0B4h = 128` against engine
+  `port 0 register 0A4h = 19`. DAC stream unchanged.
+- **The attribution took three probes and corrected a stale measurement.**
+  A stack probe on `forceSilence` never fired, and one on the driver's own
+  `writeFm` never fired either, because those writes reach the chip through
+  the session's synthesizer rather than the driver method. A third probe, on
+  the capture's own chip-write observer, caught the byte at service **566**,
+  not 588 — and re-dumping both services showed why: the release-rate and
+  total-level block the previous entry chased was already gone, removed by
+  that entry's own two config corrections. Its claim that they "changed
+  nothing" was read off a stale build, and the previous entry is corrected in
+  place. Service 566 carries that block in the reference too, and matches.
+- **What was actually left at 588 was a duplicated key-off.** The observer
+  probe, pointed at `28h = 5`, caught two writes from two different callers:
+  the `0F2h` track-end flag handler, and the blanket
+  `if (!t.active) stopNote(t)` after the stream-read loop. The ROM stops once:
+  `cfStopTrack` calls `zKeyOffIfActive` as it clears the playing bit
+  (Sound/Z80 Sound Driver.asm:3040-3046) and nothing follows it.
+- **Scoped to S3K after S2 said no.** Removing the blanket stop for every
+  driver took the S2 driver-state oracle from `MATCH (2198 ticks)` to a
+  missing write at tick 207, and pushed the CPZ divergent count from 36 to 45.
+  S1 and S2 therefore keep it, and the new `trackEndFlagOwnsTheStop` names why:
+  their handlers do not all stop the note themselves, which makes their
+  track-end paths unaudited rather than known-equal. With the flag applied to
+  S3K alone, every S2 line returns to its previous value including the CPZ
+  count of 36.
+- **The data-exhausted safety stop moved rather than vanished.** Running off
+  the end of a stream has no ROM counterpart, since every stream ends with a
+  track-end flag, so that stop now sits in the exhaustion branch itself where
+  it cannot double up.
+- **Two write-list snapshots re-pinned.** `TestSonic3kFm3SpecialMode`'s two
+  `F3` tests assert the PSG write list as incidental context around
+  raw-operand retention, and each carried one cleanup pair too many. They now
+  assert the single cleanup, with the `cfStopTrack` citation.
+- **S1 and S2 read by content.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; S2 v1 `MATCH (698 ticks)`, v2 state-and-writes and
+  state-only `MATCH (2198 ticks)`, CPZ state-only `MATCH (720 ticks)`,
+  request windows `MATCH` at 25, 52 and 27.
+- **Open items.** S2's `zNoteFillUpdate` countdown; S1 and S2's post-note
+  do-not-attack clear; the `.dac_playback_loop` cycle total of 303 against
+  `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and now S1's and S2's track-end stop, which this cycle showed the engine
+  depends on but no listing has been read for.
+- **Gates at this commit, all green.** 2,159 tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - The PSG SSG-EG clear writes nothing, and 588 is a force-silence with no ROM caller
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged by design.
+- **Command:** unchanged, both result lines.
+- **Result before and after:** `EVENT_VALUE_DIFFERENT`, tick 588, event 3,
+  reference `ym2612 port 1 register 0B5h = 64` against engine
+  `port 0 register 28h = 5`; DAC stream `BYTE_DIFFERENT` run 338 byte 0. The
+  frontier did not move. What landed is a correction to the previous entry's
+  reasoning and two cited config corrections that are inert on this fixture.
+- **The previous entry was wrong to call the PSG case unmodelled, and the
+  `FixBugs` rule is what settles it.** `fix_sndbugs = 0` is the shipped branch
+  (skdisasm/sonic3k.asm:38) and it does call `zFMClearSSGEGOps` for PSG tracks,
+  which the listing flags with its own "(even on PSG tracks!!!)" note
+  (:2099). But every one of that loop's writes goes through
+  `zWriteFMIorII`, which opens with `bit 7,(ix+zTrack.VoiceControl) / ret nz`
+  and returns before touching the chip for any PSG track (:2549-2551). So the
+  PSG call is a wasted call, not a write, and the fixed branch merely tests
+  that bit at the call site to skip it. The observable stream is identical on
+  both branches. The FM-only implementation is therefore complete rather than
+  partial, and the comment now says so with the flag named, the branch taken
+  and what the fixed branch would do.
+- **Two further guards from the same routines are now modelled.**
+  `zWriteFMIorII` also returns on `PlaybackControl` bit 2, the SFX-overriding
+  bit (:2552-2553), and `zKeyOffIfActive` returns on that bit or the
+  do-not-attack bit (:3338-3341). Both are inert for a freshly loaded SFX
+  track, which is why the frontier is unchanged, and both are cited.
+- **Two config corrections, cited and inert here.** S3K now uses
+  `FmSfxTakeoverMode.REGISTER_SEQUENCE`, because `zSFXTrackInitLoop`'s only
+  chip writes are the key-off and the SSG-EG clear (:2092-2103) and the
+  engine's legacy takeover additionally forced RR and TL on the channel. And
+  `FmSfxReleaseMode.ROM_VOICE_RESTORE`, because `cfStopTrack` releases a
+  channel by keying it off, clearing the music track's override bit and
+  restoring its voice (:3040-3070), never force-silencing;
+  `zFMSilenceChannel` is reached only from `zInitAudioDriver`'s boot loop
+  (:2475-2495) and from the track's own `0F2h` flag, `cfSilenceStopTrack`
+  (:3082-3096). **Correction, made the next cycle:** the "neither changed a
+  byte" claim in this entry was wrong. It came from a `WriteDump` run against
+  a stale build. Both modes together removed the whole
+  `ym1[81h] [89h] [85h] [8Dh] = 0FFh` and `ym1[41h] [49h] [45h] [4Dh] = 07Fh`
+  block from service 588; what they did not do is move the *first* divergence
+  index, which is why the frontier line looked unchanged.
+- **Service 588, decoded but not closed.** The reference is
+  `ym1[0A4h] [0A0h]`, one `ym0[28h] = 5`, then straight into the voice load
+  at `ym1[0B5h]`. The engine inserts, between the key-off and the voice load,
+  a second `ym0[28h] = 5` followed by `ym1[81h] [89h] [85h] [8Dh] = 0FFh` and
+  `ym1[41h] [49h] [45h] [4Dh] = 07Fh`. That is
+  `SmpsSequencer.forceSilence`'s release-rate and total-level block. It is not
+  reached through the takeover or release modes corrected above, both of which
+  I changed and re-measured without effect, so the caller is one of the two
+  remaining `forceSilence` sites in `SmpsDriver` around lines 2555 and 2565,
+  which are a different release path. S3K has no ROM counterpart for it at
+  this point: the two routines the engine's comment cites,
+  `zSetMaxRelRate` and `zFMSilenceChannel`, are called only at boot and from
+  the `0F2h` flag. Tracing which of those two sites fires here is the next
+  step.
+- **S1 and S2 unchanged, read by content.** S1 sound test `MATCH (14690
+  ticks)` and `MATCH (1967 ticks)`; S2 v1 `MATCH (698 ticks)`, v2
+  state-and-writes and state-only `MATCH (2198 ticks)`, CPZ state-only
+  `MATCH (720 ticks)`, request windows `MATCH` at 25, 52 and 27. The CPZ
+  state-and-writes line sits unchanged at its own frontier.
+- **Open items.** S2's `zNoteFillUpdate` countdown; S1 and S2's post-note
+  do-not-attack clear; the `.dac_playback_loop` cycle total of 303 against
+  `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape. The SSG-EG-on-PSG item leaves the list: there is nothing to model.
+- **Gates at this commit, all green.** 2,159 tests, 0 failures, 10 skips
+  across the audio packages and the keep-green set.
+
+
+## 2026-09-04 - The SFX load keys off and clears SSG-EG; tick 565 -> tick 588
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `981aece96`. From this
+  cycle the branch stays unmerged until the AIZ1 oracle is MATCH end to end,
+  so the frontier log lives here.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 565, event 0, reference
+  `ym2612 port 0 register 28h = 4` against engine `port 0 register 0A4h = 18`.
+  DAC stream `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 588, event 3, reference
+  `ym2612 port 1 register 0B5h = 64` against engine `port 0 register 28h = 5`.
+  DAC stream unchanged. Twenty-three more services agree.
+- **The routine.** `zSFXTrackInitLoop` calls `zKeyOffIfActive` and then
+  `zFMClearSSGEGOps` for every SFX track it initialises, while the SFX is
+  still being loaded (Sound/Z80 Sound Driver.asm:2092-2103). The clear writes
+  `90h` and the three operator registers above it with zero (:2528-2536). The
+  reference's service 565 opens with exactly that, twice: key off FM4 then
+  `ym1[90h] [94h] [98h] [9Ch] = 0`, key off FM5 then
+  `ym1[91h] [95h] [99h] [9Dh] = 0`, and only afterwards the music's own
+  writes. The engine emitted none of it.
+- **One half deliberately not modelled, and it is the ROM's own bug.** Under
+  `fix_sndbugs = 0` the SSG-EG clear runs for PSG tracks too, which the
+  listing flags with its own "(even on PSG tracks!!!)" note (:2099). A PSG
+  track's `VoiceControl` selects a nonsense YM channel there. No committed
+  fixture exercises it, so modelling it would be a guess; the FM case is
+  implemented and the PSG case is written down in the config's own comment.
+- **S1 and S2 unchanged, read by content.** S1 sound test `MATCH (14690
+  ticks)` and `MATCH (1967 ticks)`. S2 v1 `MATCH (698 ticks)`, v2
+  state-and-writes and state-only `MATCH (2198 ticks)`, CPZ state-only
+  `MATCH (720 ticks)`, request windows `MATCH` at 25, 52 and 27. The CPZ
+  state-and-writes line is unchanged at its own frontier, tick 237.
+- **Open items.** S2's `zNoteFillUpdate` countdown; S1 and S2's post-note
+  do-not-attack clear; the `.dac_playback_loop` cycle total of 303 against
+  `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and now the SSG-EG clear on PSG tracks described above.
+- **Gates at this commit, all green.** The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,159
+  tests, 0 failures, 10 skips.
+
 ## 2026-09-04 - First per-song windows published: $8A green, $8E red with its frontier pinned
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,

@@ -1525,7 +1525,13 @@ public class SmpsSequencer implements CoordFlagContext {
             }
             while (t.duration == 0 && t.active) {
                 if (t.pos >= programView.dataLength()) {
+                    // Running off the end of the data has no ROM counterpart,
+                    // since every stream ends with a track-end flag. Keep the
+                    // engine's safety stop here rather than after the loop, so
+                    // it cannot double up with the stop a track-end flag has
+                    // already performed.
                     t.active = false;
+                    stopNote(t);
                     break;
                 }
 
@@ -1612,7 +1618,13 @@ public class SmpsSequencer implements CoordFlagContext {
                 processPsgEnvelope(t);
             }
 
-            if (!t.active) {
+            if (!t.active && !config.isTrackEndFlagOwnsTheStop()) {
+                // S1/S2 keep this blanket stop: their handlers do not all stop
+                // the note themselves and removing it costs the S2
+                // driver-state oracle a write at tick 207. S3K's cfStopTrack
+                // keys off exactly once on its own (Sound/Z80 Sound
+                // Driver.asm:3040-3046), so a second stop here would put a
+                // duplicate key-off on the bus.
                 stopNote(t);
             }
         }
@@ -2912,6 +2924,11 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     @Override
+    public void releaseChannelToMusic(TrackType type, int channelId) {
+        host.releaseChannelToMusic(this, type, channelId);
+    }
+
+    @Override
     public void stopNote(Track t) {
         if (t.type == TrackType.FM) {
             int hwCh = t.channelId;
@@ -3543,6 +3560,37 @@ public class SmpsSequencer implements CoordFlagContext {
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | data);
                 synth.writePsg(this, psgFrequencyHighByte(reg));
+            }
+            if (config.getPsgVolumeTail()
+                    == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS
+                    && t.instrumentId == 0) {
+                // zUpdatePSGTrack's .note_going path sends the frequency pair
+                // and then falls straight into the volume tail on every pass
+                // of a sounding note. The only gates on that tail are
+                // PlaybackControl bit 2 (SFX overriding) and bit 4 (track at
+                // rest), both of which refreshVolume already applies; there is
+                // no attack test in it at all
+                // (Sound/Z80 Sound Driver.asm:4079-4135).
+                //
+                // The gate is the ROM's own: zUpdatePSGTrack reads VoiceIndex
+                // and takes .no_volenv when it is zero, skipping zDoVolEnv with
+                // c = 0 and falling through to the same volume write rather
+                // than returning (:4103-4112). A track that does carry a PSG
+                // volume envelope already reaches refreshVolume through its
+                // envelope step each pass, so writing here as well would double
+                // the write. Testing the voice index rather than whether
+                // envelope data happens to be loaded matters: a track that
+                // takes its channel from music can be holding the displaced
+                // track's envelope data while its own voice index is still
+                // zero, and that is exactly the collapse-over-music case.
+                //
+                // Without the tail, a volume the track changed while a note was
+                // already sounding never reached the chip. sfx_Collapse's tail
+                // is exactly that: six passes of "nB3, $18, smpsNoAttack" each
+                // followed by smpsPSGAlterVol $03
+                // (Sound/SFX/59 - Collapse.asm:31-36), whose $00-to-$0F decay
+                // ramp is what makes the effect ring out rather than stop dead.
+                refreshVolume(t);
             }
         }
     }
