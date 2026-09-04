@@ -213,8 +213,9 @@ class TestS2CpzDriverStateOracle {
 
         assertNotEquals(S2AudioOracleComparator.Kind.INVALID, withWrites.kind(),
                 withWrites.describe());
-        assertNotEquals(S2AudioOracleComparator.Kind.INVALID, stateOnly.kind(),
+        assertEquals(S2AudioOracleComparator.Kind.MATCH, stateOnly.kind(),
                 stateOnly.describe());
+        assertEquals(720, stateOnly.comparedTicks(), stateOnly.describe());
     }
 
     /**
