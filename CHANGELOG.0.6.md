@@ -14,6 +14,17 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 1's ending sequence no longer stops Sonic dead a few seconds in:**
+  the ending plays out on its own stripped-down Green Hill, and the original
+  runs it from a loop of its own that deliberately leaves out the end-of-act
+  signpost step. The engine was running that step anyway, and because the
+  ending's stretch of level is short enough that the camera is already sitting
+  at its far edge on the first frame, the step immediately walled off the
+  ground behind the camera. Sonic ran left into that wall, stopped, and the
+  sequence never reached the point where it takes over and finishes. The
+  signpost step now stays out of the ending, so Sonic runs the whole way,
+  skids, and hands over as he should.
+
 - **Speed shoes now slow the music down on the same frame they take your speed
   back:** the original does both in one step at the end of a frame, restoring the
   boosted running values and asking the sound program to drop the tempo together.
