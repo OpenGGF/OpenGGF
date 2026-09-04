@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K title theme no longer dies on a late intro skip:** the SEGA chant stop is
+  issued once, as the ROM does at `loc_3FE4`, so pressing Start during the Sonic
+  animation keeps the title music; pinned by a headless request-order test.
 - **S3K spindash release and collapsing-bridge sounds restored:** a PSG3 noise
   track now owns the noise channel, the PSG volume tail is sent every pass as the
   ROM does, the fabricated spindash pitch multiplier is gone, and sequencer config

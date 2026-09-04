@@ -9543,3 +9543,9 @@ documentation changes, 18 performance changes, 5 build changes, 31 maintenance
 changes, 682 merges, 4 reverts, and 481 other integration entries. The detailed
 engineering ledger remains under `docs/changelog/`; this file keeps the full release
 history while grouping the public-facing material by release.
+
+- Fix: skipping the Sonic 3 & Knuckles intro with Start no longer silences the
+  title screen. Once the title music had started, the skip re-issued the SEGA
+  chant's stop command, which stops all sound, and then declined to restart the
+  music because it was already marked as playing. The stop is now tied to the
+  chant actually still playing, matching the ROM, which runs it exactly once.
