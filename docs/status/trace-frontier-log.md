@@ -115906,3 +115906,67 @@ Suppress the destination playables' ring writes for the rows the ROM spends
 loading, rather than re-phasing the cursor afterwards, and make
 `seg4_ehz1 -> seg5_ehz2` survive it -- that gap is the gate on measuring anything
 past segment 7. Until it does, no axis count from this chain means anything.
+
+## 2026-09-04 - Located: the special-stage return never arms the hold, and the level path arms it too late
+
+Same worktree and branch, `src/` unchanged. Code archaeology plus one earlier
+probe result; no new test run, so no numbers are claimed.
+
+### Step 1: why the special-stage returns publish 36-40 rows early
+
+There is exactly one arm of the level-entry art hold in the chain,
+`holdPlayerArtForLevelEntryLoad` at `AbstractRunChainTest`:3734, inside
+`admitLevelWhenReady`. That method has a single call site, :1889, on the
+level-to-level branch that carries a transition record.
+
+A special-stage source does not reach it. Its destination is crossed by the
+uncompared-interior branch at :1600-1700, which calls
+`TraceRunReplayWalker.awaitBoundary` with `UncomparedInteriorBoundaryDrive` and
+then attaches the return segment directly. That branch contains no
+`holdPlayerArtForLevelEntryLoad`, no `expandGapAdmissionCensus` and no
+`lastNonAdmittedRow`. So the destination's level-entry art publishes on the
+engine's own instantaneous-load row, which is 36-40 rows before the ROM's
+`InitPlayers`.
+
+This matches the correction two entries above: the admission census is right at
+those gaps (`lastlag == pair` at 10308, 20220, 31446), and the engine simply
+never consults it there. The work is to arm the same hold on the interior
+branch, releasing it on that transition's own last non-admitted row while
+`UncomparedInteriorBoundaryDrive` walks the gap rows.
+
+### Step 2: the arm point for the ring, and why the handshake failed
+
+Modelling this as the leader init running on the row the level goes live -- with
+the premature writes never happening -- rather than as a cursor patch after the
+fact, needs an arm point earlier than the destination playables' own init. A
+measurement from this round pins it: on the `seg7_ehz2 -> seg8_cpz1` gap the
+leader's ring reset fires at row 61050, and `admitLevelWhenReady`'s gap loop is
+already at gap index 23 on that same row. So a flag armed at the top of that
+method is armed **after** the init it is meant to gate, which is why a pending
+handshake there never fired -- the probe recorded `hold=false` at all fourteen
+resets in the run.
+
+The arm therefore belongs in `prepareAcrossLevelBoundary`, called at :1885
+immediately before `admitLevelWhenReady`, and in the interior branch's
+equivalent. The release stays where the art release already is.
+
+Arming at the start of the gap loop instead is what the first experiment did,
+and it suppressed the SOURCE level's tail records as well, which is a different
+defect: it moved the sidekick and broke the following segment. The window has to
+open at the destination's own load, not at the gap's first row.
+
+### Step 3 stays blocked, and it is the gate on measuring anything
+
+`seg4_ehz1 -> seg5_ehz2` is the first gap whose destination segment the chain
+must survive to reach segments 8 and beyond. Until a candidate leaves segment 7
+intact, every axis count past it is unmeasured -- which is exactly how this lane
+produced a retracted result. Per the standing guidance the disagreement there is
+about which row that act advance goes live, and that comes from the ROM's
+act-advance path, not from the ring.
+
+### Not attempted
+
+No code change this round. The previous candidate is reverted and the tree is
+source-identical to the last gated run, whose gates stand: `-Ptrace-replay` 854
+tests / 8 failures / 6 skips, ordinary 16,404 / 0 failures, `-Pguards` 607 / 0
+failures.
