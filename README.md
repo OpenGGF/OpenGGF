@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K music fade is driver-owned:** E1/E5 arm the fade counters and halt
+  the DAC and PSG tracks per the S3K driver, the fade handler and tempo step run
+  before the mailbox is read, and the capture reports no unsupported requests;
+  S3K oracle at service 495.
 - **Sonic 2 driver-state oracle: DAC stream and PSG note-on:** the v2 comparator
   now compares the DAC sample bytes as a whole-window stream (92 runs, delta 0)
   and a note-on PSG frequency is sent once as the driver does; service writes
