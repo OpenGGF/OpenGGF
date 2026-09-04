@@ -115101,6 +115101,59 @@ The other three death arms remain coordinates only.
   parity suite ran 161 tests with 0 failures and 2 skips; `-Pguards` ran 607
   tests with 0 failures and 0 errors.
 
+## 2026-09-04 - S2 request oracle: every replayable window MATCHes
+
+- **Worktree/branch:** `.worktrees/audio-s2-frontier`,
+  `bugfix/ai-s2-request-frontier`, from `develop` `55b40a105`.
+- **Fixtures:** the three replayable committed windows under
+  `src/test/resources/audio/parity/s2/` cut from the complete run's EHZ1
+  segment: `w10150-10900`, `w10900-11650`, `w11650-12400`.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=TestS2WidenedRequestOracle
+  '-Dsonic2.rom.path=<abs>/s2.gen' '-Ds2.request.bk2.path=<abs>/src/test/
+  resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/
+  sonic-2-sonic-tails-complete-emeralds.bk2' test -B`
+- **Before:** `w11650-12400` DIVERGENCE at transfer 21, movie row 12132: the
+  recording's next request is SFX `$A0` while the engine's is SFX `$B5` at row
+  12114.
+- **After:** all three windows **MATCH**, at 25, 52 and **27** production
+  transfers. `w11650-12400` is the last window the run-chain harness replays,
+  so this is the end of the S2 request frontier as currently reachable.
+  `w13650-14400` and `cpz-w2700-3450` are published but unreplayable.
+
+- **Divergence one, the monitor mailbox.** `$B5` is `SndID_Ring` and `$A0` is
+  `SndID_Jump`. The extra `$B5` was the ten-ring monitor. ROM `super_ring` ends
+  `move.w #SndID_Ring,d0 / jmp (PlayMusic).l` (s2.asm:25864, :25913-25914), and
+  `PlayMusic` is only the music mailbox (:1517-1527), so the byte never enters
+  the three-entry SFX queue `sndDriverInput` services (:1270-1332) and makes no
+  recorded transfer at all. The driver classifies it by range out of
+  `QueueToPlay` and still hands it to `zPlaySound_CheckRing`
+  (s2.sounddriver.asm:1565-1571, :2116-2135), so the ring speaker alternation
+  is unchanged. `shield_monitor` (:25953-25956) uses the same mailbox and was
+  fixed with it. Commit `4dc26bea4`; frontier moved to transfer 26.
+
+- **Divergence two, who owns the explosion sound.** Transfer 26 was SFX `$C1`
+  on both sides with the engine one row early. `Touch_Monitor.breakMonitor`
+  writes only the routine and parent (:85468-85477); `Obj26_Break` does the
+  rest on the monitor's own pass and allocates the explosion lowest-free
+  (:25702-25707), and `Obj27_Init` makes the request from the explosion's slot
+  (:46717-46734). A probe over the run recorded five monitor breaks with
+  (monitor slot, explosion slot) of (19,26), (21,38), (22,24), (33,20) and
+  (40,21): only the last is inside the diverging window, and its explosion sits
+  below the monitor, so the ROM's scan reaches it a pass later. The engine now
+  plays the sound from the explosion's first update and defers that update for
+  a passed slot. The badnik path is untouched because the explosion takes the
+  badnik's own slot. Commit `cecbb67b4`.
+
+- **Gates at `cecbb67b4`.** Ordinary suite with three absolute ROM paths:
+  16,387 tests, 0 failures, 0 errors, 21 skipped. `-Pguards`: 607 tests, 0
+  failures, 0 errors. S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0. Both S1 gameplay oracles green inside the
+  ordinary suite. S3K driver oracle unchanged at tick 128, `decoded_write`.
+  S3K keep-green set 55 tests, 0 failures. Full `*TraceReplay` sweep 192 tests,
+  55 failures / 7 errors, the same 62 failing class names as a control sweep of
+  the same command at the base commit `55b40a105`; the four EHZ1 replay classes
+  are green in both.
+
 ## 2026-09-04 - S2 request-window capture becomes a real command
 
 - Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;

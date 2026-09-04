@@ -14,6 +14,22 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **A broken Sonic 2 monitor's explosion sound now comes from the explosion
+  itself:** the original plays it from the explosion's own turn in the object
+  list, one turn after the monitor breaks whenever the explosion takes a slot
+  the list has already gone past. The engine played it from the collision that
+  broke the monitor, so it could be heard a frame early. Explosions in every
+  game now make the request on their first turn, as the original does.
+
+- **Sonic 2's ring and shield monitors now reach the sound program the way
+  the original sends them:** both monitors hand their sound to the original's
+  music request slot rather than its sound-effect queue, a quirk the original
+  code comments on itself. The engine was sending them down the sound-effect
+  queue, which occupies a queue entry the original leaves free and can push a
+  later sound out of its turn. What you hear is unchanged, because the sound
+  program classifies the request the same way once it arrives, including the
+  ring's left/right speaker alternation.
+
 - **Sonic 3&K music now starts with the stereo reset the original performs:**
   each time the original's sound program loads a song, the very first thing it
   does is put the shared drum/FM6 channel back to plain left-and-right stereo.

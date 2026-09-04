@@ -1767,6 +1767,48 @@ public class AudioManager implements MusicRestoreSink {
         }
     }
 
+    /**
+     * Models a ROM {@code PlayMusic} call whose operand is a native sound id
+     * rather than a music id.
+     *
+     * <p>Sonic 2's {@code PlayMusic} is only the music mailbox
+     * ({@code Sound_Queue.Music0}/{@code Music1}); the disassembly says so
+     * outright, "Despite the name, this can actually be used for playing
+     * sounds" (docs/s2disasm/s2.asm:1517-1527). Several ROM sites use it with
+     * an {@code SndID_} operand, so the byte reaches the driver through
+     * {@code QueueToPlay} instead of the three-entry SFX queue that
+     * {@code sndDriverInput} services (:1270-1332). The driver then classifies
+     * the byte by range and sends an SFX id on to
+     * {@code zPlaySound_CheckRing} exactly as if it had arrived by the other
+     * route (docs/s2disasm/s2.sounddriver.asm:1565-1571, :2116-2135), so the
+     * ring speaker alternation, the gloop toggle and the spindash frequency
+     * step all still apply.
+     *
+     * <p>{@link #playMusic(int)} deliberately classifies its operand as music,
+     * because the engine's own music ids overlap the native SFX range. This
+     * entry point is for the other case: the caller is passing a native ROM
+     * request byte, so the payload takes the driver's own classification.
+     */
+    public void playMusicMailboxNativeRequest(int nativeRequestId) {
+        if (suppressingRewindReplay()) {
+            return;
+        }
+        BaseAudioSource source = baseAudioSource;
+        if (source.profile() != null) {
+            ensureShadowPresentation();
+            if (shadowRequestService != null) {
+                requestObserver.onRequested(sfxRequestClass(nativeRequestId),
+                        nativeRequestId);
+                shadowRequestService.submitMusic(nativeRequestId,
+                        commandForNativeRequest(source, nativeRequestId));
+                return;
+            }
+        }
+        // Without the request service there is no mailbox to model, so the
+        // fallback presentation plays the sound the driver would have reached.
+        playSfx(nativeRequestId);
+    }
+
     public void playMusic(int musicId) {
         if (suppressingRewindReplay()) {
             return;

@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 2 monitor sounds match the ROM:** ring and shield monitors send
+  their sound through the music mailbox as `super_ring` does, and a monitor's
+  explosion makes its request from its own slot a pass later when allocated
+  below the monitor; the request oracle matches every replayable window.
 - **S3K DAC enable follows the idle loop:** the driver records the sample-index
   store and the DAC enable is emitted by the idle loop at the next service
   boundary, as `zPlayDigitalAudio` does; the oracle now stops on the music DAC
