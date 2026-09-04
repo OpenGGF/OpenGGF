@@ -7,8 +7,9 @@ import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 
-import java.util.logging.Logger;
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.logging.Logger;
 
 /**
  * Sonic 3 &amp; Knuckles coordination flag handler.
@@ -28,9 +29,9 @@ import java.util.Objects;
  *
  * <p>The S&K-loader-supported S3K music and SFX tables do not reach meta subcommands
  * {@code FF 01} (SND_CMD), {@code FF 02} (MUS_PAUSE), or {@code FF 03}
- * (COPY_MEM). The decoder advances over their documented widths solely to
- * retain a byte boundary in synthetic or diagnostic data. Custom/imported
- * streams that execute these commands are unsupported. See
+ * (COPY_MEM). Those cases still consume their documented operands so an
+ * imported/custom stream remains aligned, but that is deliberately not
+ * presented as native semantic support. See
  * {@code TestSonic3kSmpsMetaCommandReachability} and the audio research note
  * for the ROM inventory and source contract.</p>
  */
@@ -90,8 +91,16 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 if (t.pos < program.dataLength()) {
                     int param = program.dataByteAt(t.pos++) & 0xFF;
                     if (param == 0xFF) {
-                        // Restore previous music with fade-in (same as S2 E4 handler)
-                        ctx.restoreMusic();
+                        // Restore previous music with fade-in, through the
+                        // sequencer's own restore sink. The global AudioManager
+                        // is the wrong door from inside a service: this flag
+                        // runs within the presentation command batch, which
+                        // rejects a command submitted into it, and the failure
+                        // is logged rather than raised, so the restore is
+                        // simply lost. The injected sink defers it to the
+                        // batch boundary instead, which is also how the S1 and
+                        // S2 E4 handler reaches it.
+                        ctx.restorePreviousMusic();
                     }
                     // Other values: no-op
                 }
@@ -112,7 +121,12 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                     } else if (t.type == SmpsSequencer.TrackType.PSG) {
                         // 00(min)..7F(max) -> 0F(min)..00(max)
                         t.volumeOffset = ((raw >> 3) & 0x0F) ^ 0x0F;
-                        ctx.refreshVolume(t);
+                        // cfSetVolume's PSG branch ends at zStoreTrackVolume,
+                        // which stores the byte and returns without touching
+                        // the chip; only the FM branch falls through to
+                        // zSendTL to "begin using new volume immediately"
+                        // (Sound/Z80 Sound Driver.asm:3128-3146, :3178-3181).
+                        // The track's own zUpdatePSGTrack tail sends it.
                     }
                 }
                 return true;
@@ -180,8 +194,15 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                         }
                         t.volumeOffset = updated;
                         t.envAtRest = false;
+                        // cfChangePSGVolume opens with res 4, clearing the rest
+                        // bit before it touches the volume at all
+                        // (Sound/Z80 Sound Driver.asm:3186-3190).
+                        t.resting = false;
                         if (t.envPos > 0) t.envPos--; // SMPSPlay smps_commands.c:1890 VolEnvIdx--
-                        ctx.refreshVolume(t);
+                        // Like cfSetVolume's PSG branch, this ends at
+                        // zStoreTrackVolume, which stores the byte and returns
+                        // without touching the chip (:3191-3199). The track's
+                        // own zUpdatePSGTrack tail sends it.
                     }
                 }
                 return true;
@@ -207,6 +228,25 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xEF: // INSTRUMENT (INS_C_FMP) - load voice/instrument
                 if (t.pos < program.dataLength()) {
+                    // cfSetVoice releases the channel's envelope before it even
+                    // reads the voice index: for any non-PSG track it calls
+                    // zSetMaxRelRate, which writes 0FFh to 80h + operator for
+                    // all four operators, setting D1L to minimum and RR to
+                    // maximum (skdisasm Sound/Z80 Sound Driver.asm:3444-3447,
+                    // 2675-2698). zWriteFMIorII drops the write when
+                    // PlaybackControl bit 2 says SFX is overriding the track
+                    // (:2701-2709). Neither S1 cfSetVoice
+                    // (s1.sounddriver.asm:2313-2360) nor S2 cfSetVoice
+                    // (s2.sounddriver.asm:3271-3293) does this, which is why it
+                    // lives in the S3K handler.
+                    if (t.type != SmpsSequencer.TrackType.PSG && !t.overridden) {
+                        int port = (t.channelId < 3) ? 0 : 1;
+                        int channelOffset = t.channelId % 3;
+                        for (int operator = 0; operator < 4; operator++) {
+                            ctx.writeFm(port,
+                                    0x80 + (operator * 4) + channelOffset, 0xFF);
+                        }
+                    }
                     int voiceId = program.dataByteAt(t.pos++) & 0xFF;
                     ctx.loadVoice(t, voiceId);
                 }
@@ -261,12 +301,26 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             case 0xF2: // TRK_END (TEND_STD) - standard track end
                 t.active = false;
                 ctx.stopNote(t);
+                // cfStopTrack does not stop at the key-off: it clears the
+                // overridden music track's bit and sends that track's FM
+                // instrument, inline, before the music update of the same
+                // service (Sound/Z80 Sound Driver.asm:3059-3086).
+                ctx.releaseChannelToMusic(t.type, t.channelId);
                 return true;
 
             case 0xF3: // PSG_NOISE (PNOIS_SRES) - set + reset
                 if (t.pos < program.dataLength()) {
                     int noiseVal = program.dataByteAt(t.pos++) & 0xFF;
-                    if (t.type == SmpsSequencer.TrackType.PSG) {
+                    if (t.type == SmpsSequencer.TrackType.FM && t.channelId == 2) {
+                        // FixBugs = 0: cfSetPSGNoise reuses PlaybackControl bit 0.
+                        // On FM3 that bit is the distinct special-mode state;
+                        // it is not PSG noise and produces no new hardware write here.
+                        t.fm3SpecialMode = noiseVal != 0;
+                    } else if (t.type == SmpsSequencer.TrackType.PSG) {
+                        // FixBugs = 0 cfSetPSGNoise stores the exact command byte
+                        // in zTrack.PSGNoise before interpreting zero/nonzero.
+                        t.rawPsgNoise = noiseVal;
+                        t.rawPsgNoiseKnown = true;
                         ctx.writePsg(0xDF);
                         if (noiseVal == 0) {
                             t.noiseMode = false;
@@ -325,7 +379,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 if (t.returnSp > 0) {
                     t.pos = t.returnStack[--t.returnSp];
                 } else {
-                    t.active = false;
+                    deactivateOnMalformedData(ctx, t);
                 }
                 return true;
 
@@ -353,12 +407,14 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xFE: // SPC_FM3 - FM3 special mode (4 params)
                 if (t.pos + 3 < program.dataLength()) {
-                    // Read and discard 4 bytes - FM3 special mode is broken per DefCFlag.txt
-                    int p1 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p2 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p3 = program.dataByteAt(t.pos++) & 0xFF;
-                    int p4 = program.dataByteAt(t.pos++) & 0xFF;
-                    LOGGER.fine("S3K SPC_FM3 (broken): " + p1 + ", " + p2 + ", " + p3 + ", " + p4);
+                    // FixBugs = 0: the shipped handler consumes all four operands
+                    // and sets FM3 PlaybackControl bit 0, but its special-frequency
+                    // path is broken. Retain only the semantic bit: no $27 write,
+                    // frequency write, or corruption emulation belongs in this slice.
+                    t.pos += 4;
+                    if (t.type == SmpsSequencer.TrackType.FM && t.channelId == 2) {
+                        t.fm3SpecialMode = true;
+                    }
                 }
                 return true;
 
@@ -419,7 +475,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
         if (newPos != -1) {
             t.pos = newPos;
         } else {
-            t.active = false;
+            deactivateOnMalformedData(ctx, t);
         }
     }
 
@@ -432,7 +488,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
             int count = program.dataByteAt(t.pos++) & 0xFF;
             int newPos = ctx.readJumpPointer(t);
             if (newPos == -1) {
-                t.active = false;
+                deactivateOnMalformedData(ctx, t);
                 return;
             }
             if (count == 0) {
@@ -459,7 +515,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
     private void handleGosub(CoordFlagContext ctx, SmpsSequencer.Track t) {
         int newPos = ctx.readJumpPointer(t);
         if (newPos == -1 || t.returnSp >= t.returnStack.length) {
-            t.active = false;
+            deactivateOnMalformedData(ctx, t);
             return;
         }
         t.returnStack[t.returnSp++] = t.pos;
@@ -531,7 +587,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
         if (jumpTarget != -1) {
             t.pos = jumpTarget;
         } else {
-            t.active = false;
+            deactivateOnMalformedData(ctx, t);
         }
     }
 
@@ -590,11 +646,18 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                         int hwCh = t.channelId;
                         int port = (hwCh < 3) ? 0 : 1;
                         int ch = hwCh % 3;
-                        // Read and store SSG-EG values for persistence across track restoration.
-                        t.ssgEg[0] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[1] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[2] = program.dataByteAt(t.pos++) & 0xFF;
-                        t.ssgEg[3] = program.dataByteAt(t.pos++) & 0xFF;
+                        // FixBugs = 0 cfSetSSGEG sets HaveSSGEGFlag before
+                        // retaining its four bytes, including an all-zero payload.
+                        t.customSsgEgPresent = true;
+                        // Retain the exact pointer-backed bytes separately:
+                        // EF may clear live SSG-EG behavior without clearing the
+                        // native custom-restore pointer used by zStopSFX.
+                        for (int operator = 0; operator < 4; operator++) {
+                            int value = program.dataByteAt(t.pos++) & 0xFF;
+                            t.ssgEg[operator] = value;
+                            t.customSsgEgPayload[operator] = value;
+                        }
+                        t.customSsgEgPayloadKnown = true;
                         // zFMInstrumentSSGEGTable traverses 90,98,94,9C.
                         ctx.writeFm(port, 0x90 + ch, t.ssgEg[0]);
                         ctx.writeFm(port, 0x98 + ch, t.ssgEg[1]);
@@ -611,6 +674,13 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 if (t.pos + 1 < program.dataLength()) {
                     int envId = program.dataByteAt(t.pos++) & 0xFF;
                     int opMask = program.dataByteAt(t.pos++) & 0x0F;
+                    // FixBugs = 0 cfFMVolEnv aliases HaveSSGEGFlag and the
+                    // low custom SSG-EG pointer byte. A positive envelope
+                    // clears custom restore; a negative one retains its sign
+                    // but destroys enough of the pointer to reconstruct FF05.
+                    t.customSsgEgPresent = (envId & 0x80) != 0;
+                    Arrays.fill(t.customSsgEgPayload, 0);
+                    t.customSsgEgPayloadKnown = false;
                     if (t.type == SmpsSequencer.TrackType.FM && envId != 0 && opMask != 0) {
                         t.fmVolEnvData = copyPsgEnvelope(program, envId);
                         t.fmVolEnvPos = 0;
@@ -676,5 +746,20 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
     private static int wrapSignedByte(int value) {
         return (byte) value;
+    }
+
+    /**
+     * Stops a track that the engine has to give up on because its data does
+     * not resolve: an empty return stack, an unreadable jump or loop pointer,
+     * or a full gosub stack. The shipped driver never reaches any of these,
+     * so there is no ROM behaviour to model; what matters is that the channel
+     * does not keep sounding. The track-end flags 0E3h and 0F2h stop the note
+     * themselves, which is why {@code trackEndFlagOwnsTheStop} removed the
+     * read loop's blanket stop, and these paths must therefore stop it here.
+     */
+    private static void deactivateOnMalformedData(
+            CoordFlagContext ctx, SmpsSequencer.Track t) {
+        t.active = false;
+        ctx.stopNote(t);
     }
 }

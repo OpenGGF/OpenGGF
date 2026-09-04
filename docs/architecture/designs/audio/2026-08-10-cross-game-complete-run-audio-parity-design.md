@@ -901,6 +901,18 @@ installs its built-in profile and producer classes. There is no path,
 environment, command, or runtime registration seam. Each game task must fill
 only its reserved entry and add a successful end-to-end publication test.
 
+The registry is also the private snapshot-binding boundary for direct Java capture.
+After availability succeeds, it authenticates the caller's complete reference
+installation with the same pinned tree and artifact identities as the shell
+preflight, then copies the ROM, BK2, run manifest, and whole reference tree into
+an owner-only private directory. Only completed private copies are hashed and
+passed onward; producer validation, the TraceChaser child, raw adaptation,
+projection, and store finalization all remain inside that snapshot lifetime.
+Every copied leaf is an ordinary singly-linked file reached through stable
+non-symlink ancestors, with type and filesystem identity checked before and
+after copying. TraceChaser receives a private working directory and `HOME` plus
+only fixed `PATH`, `LC_ALL`, and `LANG` values, never the caller's environment.
+
 ### Storage and publication
 
 Captures are directories partitioned into deterministic 4,096-BK2-row chunks.
@@ -910,9 +922,11 @@ manifest lists chunks, counts, bounds, and a root digest over uncompressed
 records.
 
 The producer writes a sibling staging directory, closes it, validates every
-record and digest in bounded memory, and atomically renames the directory to a
-fresh destination. Unsupported atomic directory publication fails closed.
-Validation or producer failure removes only that invocation's staging path and
+record and digest in bounded memory, and returns only after subprocess/raw
+cleanup. The registry then removes the private input snapshot and atomically
+renames the completed store to the caller's fresh destination. Unsupported
+atomic directory publication fails closed. Validation, producer, projector, or
+snapshot-cleanup failure removes only that invocation's unpublished store and
 never replaces an existing capture.
 
 The comparator validates both captures fully, binds a digest to each source,

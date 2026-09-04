@@ -67,7 +67,7 @@ class TestModApiHookPolicy {
         assertStagedPasses(repo);
 
         git(repo, "reset", "--hard", "HEAD");
-        write(repo, "src/main/java/com/openggf/mods/ModApiVersion.java", "class ModApiVersion { static final String CURRENT = \"0.7.1\"; }\n");
+        write(repo, "src/main/java/com/openggf/mods/ModApiVersion.java", "class ModApiVersion {\n    static final String CURRENT = \"0.7.1\"; }\n");
         git(repo, "add", ".");
         assertStagedFails(repo);
     }
@@ -96,7 +96,7 @@ class TestModApiHookPolicy {
         Path repo = fixture();
         write(repo, API, "@ModApi public interface Example { void nextLine(); }\n");
         write(repo, "src/main/java/com/openggf/mods/ModApiVersion.java",
-                "class ModApiVersion { static final String CURRENT = \"0.8.0\"; }\n");
+                "class ModApiVersion {\n    static final String CURRENT = \"0.8.0\"; }\n");
         write(repo, DESCRIPTOR, descriptorForCurrent("0.8", "0.8.0"));
         git(repo, "mv", PIN, "src/test/resources/mods/mod-api-signatures-0.8.txt");
         git(repo, "add", DESCRIPTOR, API, "src/main/java/com/openggf/mods/ModApiVersion.java");
@@ -206,7 +206,7 @@ class TestModApiHookPolicy {
         git(repo, "config", "user.name", "Test");
         write(repo, DESCRIPTOR, descriptor("candidate", ""));
         write(repo, API, "@ModApi public interface Example { }\n");
-        write(repo, "src/main/java/com/openggf/mods/ModApiVersion.java", "class ModApiVersion { static final String CURRENT = \"0.7.0\"; }\n");
+        write(repo, "src/main/java/com/openggf/mods/ModApiVersion.java", "class ModApiVersion {\n    static final String CURRENT = \"0.7.0\"; }\n");
         write(repo, PIN, "baseline\n");
         git(repo, "add", ".");
         commit(repo);

@@ -7,8 +7,10 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.camera.Camera;
 import com.openggf.level.Chunk;
 import com.openggf.level.Level;
@@ -45,7 +47,6 @@ class TestSonic3kLbzLaunchSignals {
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
         SessionManager.clear();
     }
 
@@ -264,6 +265,8 @@ class TestSonic3kLbzLaunchSignals {
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_LBZ, 1)
                 .build();
         Sonic3kLBZEvents events = new Sonic3kLBZEvents();
+        S3kRuntimeArtCoordinator.current().resetForMissingSnapshot();
+        GameServices.hardwareTiming().resetForMissingSnapshot();
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         Level level = GameServices.level().getCurrentLevel();
         Camera camera = fixture.camera();

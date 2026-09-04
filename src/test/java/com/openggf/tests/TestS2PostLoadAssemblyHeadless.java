@@ -187,7 +187,7 @@ public class TestS2PostLoadAssemblyHeadless {
     }
 
     @Test
-    public void sidekickSpawnPositionWritesPreserveFractionalWords() {
+    public void sidekickSpawnClearsFractionalWordsWithLevelObjectRam() {
         sprite.setCentreX((short) 200);
         sprite.setCentreY((short) 400);
         Tails tails = createSidekick();

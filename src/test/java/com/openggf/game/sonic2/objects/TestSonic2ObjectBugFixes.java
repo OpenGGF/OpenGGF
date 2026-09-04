@@ -10,6 +10,7 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.rules.GameRules;
+import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.LevelManager;
@@ -1039,7 +1040,8 @@ class TestSonic2ObjectBugFixes {
 
         InOrder order = inOrder(tails);
         order.verify(tails).move((short) 0, (short) 0x0198);
-        order.verify(tails).applyHurt(0x0C40);
+        order.verify(tails).applyHurt(0x0C40, DamageCause.SPIKE);
+        verify(tails, never()).applyHurt(0x0C40);
         verify(objectManager, never()).getPreContactYSpeed();
     }
 
@@ -1242,23 +1244,6 @@ class TestSonic2ObjectBugFixes {
                 "Obj1F lacks render_flags.explicit_height, so BuildSprites keeps it through the 32px approximate Y band");
     }
 
-    /**
-     * LEFT RED DELIBERATELY, 2026-08-21. This asserts the two-tick
-     * {@code verticalOnlyOffscreenTicks} grace that {@code 3f0fd4a70} removed on
-     * purpose, replacing it with the ROM's own rule: {@code Obj1F_FragmentFall}
-     * deletes on the {@code render_flags} bit the last {@code BuildSprites} pass
-     * wrote, judged at the pre-fall position (docs/s2disasm/s2.asm:23860-23864).
-     *
-     * <p>It is a correct test of behaviour that no longer exists -- green against
-     * the pre-conversion class, red against the current one -- so unlike its two
-     * siblings it cannot be repaired by supplying the frame-start snapshot the
-     * harness was missing. Rewriting it to pass would mean inventing the new
-     * expectation for this scenario rather than deriving it, and a first attempt
-     * at that failed on its own first tick, which is the tell. Deleting it would
-     * discard the only encoding of what the grace was for. It stays red until
-     * someone derives the ROM's answer for a vertically clipped, horizontally
-     * visible fragment parent and rewrites it to that.
-     */
     @Test
     void collapsingPlatformFragmentFallDeletesOnFirstVerticallyOffscreenBuildResult() throws Exception {
         StubObjectServices services = new StubObjectServices();
@@ -1316,12 +1301,14 @@ class TestSonic2ObjectBugFixes {
             }
         });
 
-        when(levelManager.getFrameCounter()).thenReturn(0x07EE);
+        // LevelManager now advances at the loop top as the ROM does, so its
+        // counter IS the ROM-visible Level_frame_counter during the object pass.
+        when(levelManager.getFrameCounter()).thenReturn(0x07EF);
         cog.update(0x6CC1, new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0600));
         assertEquals(0x0800, cog.getPieceX(0),
-                "Stored LevelManager frame $07EE corresponds to ROM-visible $07EF, so Obj70 must not rotate yet");
+                "ROM-visible Level_frame_counter $07EF is not a $10 boundary, so Obj70 must not rotate yet");
 
-        when(levelManager.getFrameCounter()).thenReturn(0x07EF);
+        when(levelManager.getFrameCounter()).thenReturn(0x07F0);
         cog.update(0x6CC2, new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0600));
         assertEquals(0x080D, cog.getPieceX(0),
                 "ROM-visible Level_frame_counter $07F0 advances Obj70 to the next tooth phase");

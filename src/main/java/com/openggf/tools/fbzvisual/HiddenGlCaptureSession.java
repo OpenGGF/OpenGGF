@@ -164,7 +164,7 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
     }
 
     FbzVisualStateProbe.Snapshot captureState() {
-        return decorateSnapshot(FbzVisualStateProbe.captureRuntime());
+        return decorateSnapshot(FbzVisualStateProbe.captureVisualState());
     }
 
     FbzVisualStateProbe.Snapshot decorateSnapshot(FbzVisualStateProbe.Snapshot snapshot) {
@@ -178,7 +178,6 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
 
     private boolean overlaysDisabled() {
         return Boolean.FALSE.equals(effectiveConfiguration.get(SonicConfiguration.DEBUG_VIEW_ENABLED.name()))
-                && Boolean.FALSE.equals(effectiveConfiguration.get(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED.name()))
                 && Boolean.FALSE.equals(effectiveConfiguration.get(SonicConfiguration.EDITOR_ENABLED.name()))
                 && Boolean.FALSE.equals(effectiveConfiguration.get(SonicConfiguration.TEST_MODE_ENABLED.name()))
                 && Boolean.FALSE.equals(effectiveConfiguration.get(SonicConfiguration.LIVE_REWIND_ENABLED.name()));
@@ -196,7 +195,6 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
         resolved.put(SonicConfiguration.SCREEN_WIDTH_PIXELS.name(), mode.framebufferWidth());
         resolved.put(SonicConfiguration.SCREEN_HEIGHT_PIXELS.name(), mode.framebufferHeight());
         resolved.put(SonicConfiguration.DEBUG_VIEW_ENABLED.name(), false);
-        resolved.put(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED.name(), false);
         resolved.put(SonicConfiguration.EDITOR_ENABLED.name(), false);
         resolved.put(SonicConfiguration.TEST_MODE_ENABLED.name(), false);
         resolved.put(SonicConfiguration.LIVE_REWIND_ENABLED.name(), false);
@@ -229,7 +227,6 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
         config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH, mode.framebufferWidth());
         config.setSessionOverride(SonicConfiguration.SCREEN_HEIGHT, mode.framebufferHeight());
         config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
-        config.setSessionOverride(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.EDITOR_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.TEST_MODE_ENABLED, false);
         config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED, false);

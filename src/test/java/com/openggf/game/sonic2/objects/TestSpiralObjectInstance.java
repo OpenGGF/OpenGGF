@@ -46,7 +46,6 @@ class TestSpiralObjectInstance {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.setCurrent(previousModule);
     }
 

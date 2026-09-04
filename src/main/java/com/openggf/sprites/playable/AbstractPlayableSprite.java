@@ -2733,7 +2733,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 springing = false;
                         }
                 }
-                // Speed shoes countdown is now handled by SpeedShoesTimer
+                // Speed shoes countdown is a display-phase timer driven by
+                // SpriteManager at the ROM Sonic_Display point.
 
                 // Update Super Sonic state (ring drain, palette cycling, transformation)
                 if (controller != null && controller.getSuperState() != null) {

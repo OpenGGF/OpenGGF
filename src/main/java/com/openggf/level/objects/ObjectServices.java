@@ -98,6 +98,15 @@ public interface ObjectServices {
         return audioManager().playNamespacedSfx(sound);
     }
     void playMusic(int musicId);
+
+    /**
+     * Submits a native ROM sound id through the music mailbox, as the ROM's
+     * {@code PlayMusic} does at several {@code SndID_} call sites
+     * (docs/s2disasm/s2.asm:1517-1527).
+     */
+    default void playMusicMailboxNativeRequest(int nativeRequestId) {
+        audioManager().playMusicMailboxNativeRequest(nativeRequestId);
+    }
     default boolean playMusic(GameMusic music) {
         return audioManager().playMusic(music);
     }
@@ -414,6 +423,12 @@ public interface ObjectServices {
      * Returns the music ID for the current level, or -1 if unknown.
      */
     int getCurrentLevelMusicId();
+
+    /** Returns the track selected by ROM {@code Apparent_zone_and_act}. */
+    default int getApparentLevelMusicId() {
+        LevelManager manager = levelManager();
+        return manager != null ? manager.getApparentLevelMusicId() : -1;
+    }
 
     /**
      * Searches the level's foreground tilemap for a pattern within a radius.

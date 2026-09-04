@@ -272,11 +272,15 @@ Allowed launch profile enums:
 |-----|-----------|------|---------|-------------|
 | `AUDIO_ENABLED` | `audio.enabled` | bool | `true` | Master switch for all audio output (music and SFX). |
 | `REGION` | `audio.region` | string | `"NTSC"` | Hardware region: `"NTSC"` (60 Hz) or `"PAL"` (50 Hz). Affects SMPS tempo timing and DAC sample rates. |
-| `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `false` | Apply linear interpolation to DAC (drum) samples. Disabled by default to preserve the hardware's stepped output; enable for optional smoothing. |
+| `DAC_INTERPOLATE` | `audio.dacInterpolate` | bool | `false` | Optional smoothing with no hardware counterpart: `true` writes a linearly interpolated value between DAC (drum) samples when the chip bus is idle. Off by default to preserve the hardware's stepped output; it never changes sample pitch or length. |
 | `AUDIO_INTERNAL_RATE_OUTPUT` | `audio.internalRateOutput` | bool | `false` | Output audio at the YM2612 internal sample rate (~53 kHz) rather than the system rate. Useful for bit-accurate captures; may cause issues on some audio drivers. |
-| `PSG_NOISE_SHIFT_EVERY_TOGGLE` | `audio.psgNoiseShiftEveryToggle` | bool | `false` | PSG noise LFSR clock behaviour. `false` = shift on positive edges only (Genesis Plus GX / libvgm reference); `true` = shift on every polarity toggle (MAME-style, brighter noise). Installs carrying the old generated pair `dacInterpolate: true` plus `psgNoiseShiftEveryToggle: true` are migrated once to the two reference defaults; an asymmetric custom choice is preserved. |
-| `AUDIO_REFERENCE_DEFAULTS_VERSION` | `audio.referenceDefaultsVersion` | int | `1` | Internal one-time migration marker for the paired reference audio-chip defaults. Leave this at the generated value. |
 | `FM6_DAC_OFF` | `audio.fm6DacOff` | bool | `true` | Silence FM channel 6 whenever a DAC note is active. Matches the SMPSPlay parity hack used in Sonic 2; prevents FM bleed audible during percussion. |
+
+`audio.psgNoiseShiftEveryToggle` was removed in 0.6: the PSG noise LFSR now
+always clocks once per rising edge of the noise square wave (the hardware/
+libvgm rule), matching the shipped console. If it is still present in an
+existing `config.yaml`, it is ignored with a logged warning rather than
+rejected.
 
 ## Capture
 
@@ -510,7 +514,6 @@ before BK2 playback can be controlled from the keyboard.
 |-----|-----------|------|---------|-------------|
 | `DEBUG_VIEW_ENABLED` | `debug.flags.debugView` | bool | `false` | Eagerly initialise the debug overlay subsystem. Required for any runtime debug keys to function. Does not show anything on-screen until debug mode is activated. |
 | `EDITOR_ENABLED` | `debug.flags.editor` | bool | `false` | Allow the experimental in-engine editor overlay to be entered from gameplay with `Shift+Tab`. |
-| `DEBUG_COLLISION_VIEW_ENABLED` | `debug.flags.collisionView` | bool | `false` | Draw collision sensor rays and solid object outlines over the scene at all times. |
 | `LIVE_REWIND_ENABLED` | `rewind.liveEnabled` | bool | `false` | Enable held-key rewind during ordinary live level play. Uses gameplay rewind snapshots, records live input while enabled, and presents reverse audio/fade state while held. |
 | `LIVE_REWIND_DETERMINISM_AUDIT` | `debug.rewind.determinismAudit` | bool | `false` | Audit live-rewind determinism: re-simulates each completed rewind keyframe segment during live play and logs the first state divergence, pinpointing state that is missing from rewind capture. Disarms after the first divergence because replayed out-of-snapshot state cannot be rolled back. |
 | `LIVE_REWIND_TAPE_COAST_ENABLED` | `rewind.tapeCoastEnabled` | bool | `false` | Enable experimental live-rewind coast after releasing the rewind key. Disabled by default, so held rewind remains one step per visual frame. When enabled, reverse audio playback is resampled to match the current rewind speed (>1.0 pitches up, <1.0 plays slow-motion). |
@@ -727,7 +730,11 @@ Square/Cross/Circle respectively.
 | `P1_B` | `input.player1.b` | `-1` | unbound | Player 1 action button B. |
 | `P1_C` | `input.player1.c` | `-1` | unbound | Player 1 action button C. |
 | `START` | `input.player1.start` | `259` | Backspace | Player 1 Start: ROM-accurate in-game pause (`Game_paused` / `Pause_Loop`). A press during level gameplay freezes the level update for the frame while the frame counter still advances; press again to resume. Distinct from `PAUSE_KEY`, which is the loop/timing-level pause that also halts audio. Keyboard-only: the gamepad Start button is instead wired to `PAUSE_KEY`'s pause (see below), since this one has no visible feedback. |
-| `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. |
+| `P2_UP` | `input.player2.up` | `73` | I | Player 2 look up. |
+| `P2_DOWN` | `input.player2.down` | `75` | K | Player 2 crouch / roll. |
+| `P2_LEFT` | `input.player2.left` | `74` | J | Player 2 move left. |
+| `P2_RIGHT` | `input.player2.right` | `76` | L | Player 2 move right. |
+| `P2_A` | `input.player2.a` | `344` | Right Shift | Player 2 action button A / jump. In S2 this feeds the configured sidekick/manual-input path; it does not enable native two-player/competition gameplay. |
 | `P2_B` | `input.player2.b` | `-1` | unbound | Player 2 action button B. |
 | `P2_C` | `input.player2.c` | `-1` | unbound | Player 2 action button C. |
 | `P2_START` | `input.player2.start` | `345` | Right Control | Player 2 Start. |
@@ -797,7 +804,6 @@ diagnostic test runs only and must remain unset in CI.
 | Property | Type | Purpose |
 | --- | --- | --- |
 | `oggf.trace.hydrate` | Boolean (default `false`) | Diagnostic hydrate switch for trace replay tests. When `true` AND the trace's `metadata.json` declares a recorder version at or above `9.2-s2` (see `TraceMetadata.nativePreludeMode()`), the test harness snaps engine state to the recorded ROM frame-0 snapshot (player position-record buffer, sidekick CPU state, per-slot SST values) BEFORE the per-frame comparison loop begins. A run with this enabled is **NOT a valid green replay**: the switch masks the very divergences trace replay is designed to surface. Use only to isolate prelude bugs from gameplay-loop bugs. A `WARN`-level log line emits when the switch fires; `TestTraceHydrateSwitchDefault` is the CI guard that asserts the property is unset on master. |
-| `openggf.trace.s3k.probes` | Boolean (default `false`) | Enables verbose S3K-specific trace replay probes (cnz cylinder, aiz boundary, etc.). Diagnostic only. |
 
 ---
 
@@ -855,10 +861,8 @@ input:
 audio:
   enabled: true   # Enable music and SFX
   region: "NTSC"   # Region for audio timing
-  dacInterpolate: false   # Raw hardware DAC steps; true enables optional smoothing
+  dacInterpolate: false   # Optional DAC smoothing (no hardware counterpart); true interpolates between PCM samples
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
-  psgNoiseShiftEveryToggle: false   # false=positive edges (GPGX/libvgm), true=every toggle (MAME)
-  referenceDefaultsVersion: 1   # Internal one-time migration marker; leave generated value unchanged
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
 # ── Characters ──
@@ -941,7 +945,6 @@ debug:
   flags:
     debugView: false   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
     editor: false   # Allow entering the level editor from gameplay
-    collisionView: false   # Draw the collision overlay
   keys:
     test: T   # Debug-only test button
     nextAct: PAGE_UP   # Advance to the next act

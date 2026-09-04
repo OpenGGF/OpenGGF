@@ -41,12 +41,15 @@ public class TestYm2612InstrumentTone {
         int[] right = new int[2048];
         chip.renderStereo(left, right);
 
-        long sum = 0;
+        // The discrete YM2612 model rests at a constant positive level, so
+        // measure the swing around it rather than the absolute level.
+        int min = Integer.MAX_VALUE;
+        int max = Integer.MIN_VALUE;
         for (int s : left) {
-            sum += Math.abs(s);
+            min = Math.min(min, s);
+            max = Math.max(max, s);
         }
-        double avg = sum / (double) left.length;
-        assertTrue(avg > 50.0, "Expected audible output after key-on");
+        assertTrue(max - min > 100, "Expected audible output after key-on, swing was " + (max - min));
     }
 }
 

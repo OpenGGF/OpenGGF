@@ -144,9 +144,7 @@ class TestStreamedPresentationSession {
     void configuredRestoreFadePreservesCadenceAndSpeedAcrossCursorSwitches() {
         Fixture fixture = new Fixture();
         StreamedMusicVoice.RestorePolicy policy =
-                StreamedMusicVoice.RestorePolicy.from(config(
-                        SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
-                                .AFTER_FADE_IN, 2, 1));
+                StreamedMusicVoice.RestorePolicy.from(config(2, 1), true);
         StreamedMusicVoice base = fixture.stock(1, 0x81, policy);
         base.setSpeedMultiplier(8);
         mix(base);
@@ -180,13 +178,9 @@ class TestStreamedPresentationSession {
     void restorePolicySelectsImmediateOrAfterFadeSfxRelease() {
         Fixture fixture = new Fixture();
         StreamedMusicVoice immediate = fixture.stock(1, 0x81,
-                StreamedMusicVoice.RestorePolicy.from(config(
-                        SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
-                                .ON_RESTORE, 1, 0)));
+                StreamedMusicVoice.RestorePolicy.from(config(1, 0), false));
         StreamedMusicVoice afterFade = fixture.stock(2, 0x82,
-                StreamedMusicVoice.RestorePolicy.from(config(
-                        SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
-                                .AFTER_FADE_IN, 1, 0)));
+                StreamedMusicVoice.RestorePolicy.from(config(1, 0), true));
 
         immediate.beginOverrideRestore();
         assertTrue(immediate.releasesSfxOnRestore());
@@ -198,13 +192,8 @@ class TestStreamedPresentationSession {
     }
 
     private static SmpsSequencerConfig config(
-            SmpsSequencerConfig.MusicOverrideSfxReleasePolicy release,
             int steps, int delay) {
         return new SmpsSequencerConfig.Builder()
-                .musicOverrideRestorePolicy(
-                        SmpsSequencerConfig.MusicOverrideRestorePolicy
-                                .DRIVER_FADE_IN)
-                .musicOverrideSfxReleasePolicy(release)
                 .fadeInSteps(steps)
                 .fadeInDelay(delay)
                 .build();

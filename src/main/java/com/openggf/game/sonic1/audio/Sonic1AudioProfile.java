@@ -4,8 +4,10 @@ import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
+import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic1.audio.smps.Sonic1SmpsLoader;
 
@@ -82,10 +84,8 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
     }
 
     @Override
-    public OrdinaryMusicSfxPolicy getOrdinaryMusicSfxPolicy() {
-        // Shipped FixBugs=0 Sound_PlayBGM preserves both normal and special
-        // SFX tracks, then marks their channels as overrides on the new song.
-        return OrdinaryMusicSfxPolicy.PRESERVE_ACTIVE;
+    public SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return Sonic1SmpsCompatibilityPolicy.INSTANCE;
     }
 
     @Override
@@ -137,6 +137,15 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
     }
 
     /**
+     * Reads the chant through the runtime-layer ROM reader so the audio layer
+     * never depends on {@code com.openggf.data} for this sample.
+     */
+    @Override
+    public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+        return SegaPcmRomReader.read(rom, getSegaPcmSpec());
+    }
+
+    /**
      * Look up sound priority for a given sound ID using the Sonic 1 priority table.
      *
      * @param soundId any sound ID in the 0x81-0xE4 range
@@ -151,5 +160,26 @@ public class Sonic1AudioProfile extends AbstractAudioProfile {
     public boolean isSpecialSfx(int soundId) {
         return soundId >= Sonic1SmpsConstants.SPECIAL_SFX_ID_BASE
                 && soundId < Sonic1SmpsConstants.SPECIAL_SFX_ID_BASE + Sonic1SmpsConstants.SPECIAL_SFX_COUNT;
+    }
+
+    /**
+     * {@code ResumeMusic} (s1disasm "_incObj/sub ResumeMusic.asm":7-33) picks the
+     * zone's track, LZ or SBZ for LZ act 4, then overrides it twice under
+     * {@code Revision<>0}, which holds for the REV01 ROM this engine models
+     * (sonic.asm:14 sets {@code Revision = 1}): {@code v_invinc} selects
+     * {@code bgm_Invincible} and {@code f_lockscreen} selects {@code bgm_Boss}.
+     * The boss test is second, so it wins. Sonic 1 has no Super form, so that
+     * argument has no counterpart here and is ignored.
+     */
+    @Override
+    public int resolveAirResetMusic(int levelMusicId, boolean invincible,
+            boolean superForm, boolean bossActive) {
+        if (bossActive) {
+            return Sonic1Music.BOSS.id;
+        }
+        if (invincible) {
+            return Sonic1Music.INVINCIBILITY.id;
+        }
+        return levelMusicId;
     }
 }

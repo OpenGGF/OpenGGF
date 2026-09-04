@@ -32,7 +32,6 @@ public class TestSpriteManagerRender {
     public void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
@@ -40,7 +39,6 @@ public class TestSpriteManagerRender {
 
     @AfterEach
     public void tearDown() {
-        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }

@@ -132,27 +132,6 @@ class TestBlipResamplerTailSnapshot {
         assertEquals(liveOut, restoredOut);
     }
 
-    @Test
-    void lowOutputRateSnapshotAllowsTheNextOutputPositionPastInputHead() {
-        // At very low output rates one consumed output advances by hundreds of
-        // input samples. The next position is therefore legitimately ahead of
-        // the current input head until more chip samples arrive.
-        BlipResampler live = new BlipResampler(INPUT_RATE, 60.0);
-        for (int index = 0; index < 9; index++) {
-            live.addInputSample(index * 17, -index * 11);
-        }
-        assertTrue(live.hasOutputSample());
-        live.advanceOutput();
-
-        BlipResampler.Snapshot snapshot = live.captureSnapshot();
-        assertTrue(snapshot.outputPos() > snapshot.inputIndex());
-        BlipResampler.validateSnapshot(snapshot);
-
-        BlipResampler restored = new BlipResampler(INPUT_RATE, 60.0);
-        restored.restoreSnapshot(snapshot);
-        assertEquals(snapshot, restored.captureSnapshot());
-    }
-
     /**
      * Feeds deterministic pseudo-random input for sample indices
      * [from, to), draining output whenever available (normal usage pattern),

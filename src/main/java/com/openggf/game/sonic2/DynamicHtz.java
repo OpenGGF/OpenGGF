@@ -7,7 +7,7 @@ import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.Level;
 import com.openggf.level.Pattern;
 import com.openggf.game.sonic2.scroll.SwScrlHtz;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

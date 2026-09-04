@@ -23,6 +23,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.events.MgzObjectEventBridge;
+import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
@@ -192,9 +194,21 @@ class TestMgzDrillingRobotnikInstance {
 
     @Test
     void cleanupRestoresMgzPaletteLine1() throws Exception {
-        RecordingServices services = new RecordingServices(camera);
+        RecordingServices services = new RecordingServices(camera)
+                .withRuntimeArtRom();
         MgzDrillingRobotnikInstance boss = createBoss(services);
         boss.update(0, null);
+
+        S3kKosModuleQueue moduleQueue =
+                S3kRuntimeArtCoordinator.from(services).moduleQueue();
+        for (int frame = 0;
+                frame < 256 && moduleQueue.hasPendingPhysicalModules();
+                frame++) {
+            moduleQueue.processModuleQueueAfterObjects();
+            moduleQueue.prepareQueuedModuleBeforeVSync();
+        }
+        assertFalse(moduleQueue.hasPendingPhysicalModules(),
+                "The initial boss-art batch must leave room for loc_6C200's four-entry batch");
 
         setPrivateInt(boss, "waitTimer", 0);
         setPrivateInt(boss, "escapeTimer", 1);
@@ -206,8 +220,8 @@ class TestMgzDrillingRobotnikInstance {
         boss.update(2, null);
         assertTrue(boss.isDestroyed(), "Obj_Wait fires after $2E becomes negative");
 
-        assertColorWord(services.paletteLine1, 0, 0x000E);
-        assertColorWord(services.paletteLine1, 1, 0x024A);
+        assertColorWord(services.paletteLine1, 0, 0x0000);
+        assertColorWord(services.paletteLine1, 1, 0x0EEE);
     }
 
     @Test
@@ -552,7 +566,7 @@ class TestMgzDrillingRobotnikInstance {
         GameStateManager gameState = mock(GameStateManager.class);
         services.withGameState(gameState);
         MgzEndBossInstance boss = createEndBoss(services);
-        setPrivateInt(boss, "waitTimer", 0);
+        setPrivateInt(boss, "waitTimer", 0x2A);
         boss.getState().routine = staticInt("ROUTINE_END_ACTIVE");
 
         for (int i = 0; i < 8; i++) {
@@ -561,8 +575,8 @@ class TestMgzDrillingRobotnikInstance {
         }
 
         assertEquals(staticInt("ROUTINE_END_DEFEATED"), boss.getState().routine);
-        assertEquals(0, getPrivateInt(boss, "waitTimer"),
-                "loc_6D60A switches to Wait_FadeToLevelMusic without replacing the current $2E timer");
+        assertEquals(0x3F, getPrivateInt(boss, "waitTimer"),
+                "BossDefeated_StopTimer falls through to BossDefeated and writes $2E=$3F");
         assertTrue(services.objectManager().getActiveObjects().stream()
                         .anyMatch(S3kBossExplosionChild.class::isInstance),
                 "The final hit should immediately create a visible explosion before the boss debris handoff");

@@ -301,6 +301,17 @@ public class Sonic2Constants {
     public static final int ART_UNC_DEBUG_FONT_SIZE = 736; // 23 tiles
     public static final int ART_NEM_HUD_ADDR = 0x7923E; // HUD.nem (SCORE/TIME/RING text)
     public static final int ART_NEM_TITLE_CARD_ADDR = 0x7D22C; // Title card.nem (E, N, O, Z letters)
+    // ArtNem_Game_Over ("Game and Time Over text.nem", 401 bytes; verified by byte match
+    // against the ROM). Loaded by PLCID_GameOver at ArtTile_ArtNem_Game_Over ($4DE):
+    // docs/s2disasm/s2.asm:89312, s2.constants.asm:2581.
+    public static final int ART_NEM_GAME_OVER_ADDR = 0x7B400;
+    // Obj39_MapUnc_14C6C: GAME / OVER / TIME / OVER, tiles relative to ArtTile_ArtNem_Game_Over
+    // (docs/s2disasm/s2.asm:28816, mappings/sprite/obj39.asm).
+    public static final int MAPPINGS_GAME_OVER_ADDR = 0x14C6C;
+    // GameOver_GameText / GameOver_OverText share the TitleCard slots directly after
+    // MainCharacter and Sidekick in Object_RAM (docs/s2disasm/s2.constants.asm:1095-1112).
+    public static final int SST_SLOT_GAME_OVER_WORD = 2;
+    public static final int SST_SLOT_GAME_OVER_OVER = 3;
     public static final int ART_NEM_TITLE_CARD2_ADDR = 0x7D58A; // Font using large broken letters.nem (other letters)
 
     // Level Select Art (Nemesis compressed)

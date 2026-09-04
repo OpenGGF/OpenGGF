@@ -41,8 +41,6 @@ class TestPsgChipSnapshot {
 
     private static PsgChip configuredChip() {
         PsgChip chip = new PsgChip(48000.0, PsgChip.ChipType.INTEGRATED);
-        chip.setHqMode(true);
-        chip.setNoiseShiftOnEveryToggle(false);
         return chip;
     }
 

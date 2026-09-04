@@ -34,7 +34,8 @@ public final class ModApiSignatureSurface {
             java.util.EnumSet.class, java.util.List.class, java.util.Map.class,
             java.util.Optional.class, java.util.OptionalInt.class, java.util.Set.class,
             java.util.concurrent.Callable.class, java.util.concurrent.CompletableFuture.class,
-            java.util.function.BiConsumer.class, java.util.function.BooleanSupplier.class,
+            java.util.function.BiConsumer.class, java.util.function.BiFunction.class,
+            java.util.function.BooleanSupplier.class,
             java.util.function.Consumer.class, java.util.function.Function.class,
             java.util.function.LongSupplier.class, java.util.function.Predicate.class,
             java.util.function.Supplier.class, javax.net.ssl.SSLContext.class);
@@ -56,6 +57,40 @@ public final class ModApiSignatureSurface {
      * instead of here.
      */
     private static final Set<String> ENGINE_INTERNAL_TYPES = Set.of(
+            // Session-owned audio diagnostics, preparation and rewind are internal.
+            "com.openggf.audio.AudioManager$DiagnosticObserverHandle",
+            "com.openggf.audio.AudioManager$DiagnosticObserverSet",
+            "com.openggf.audio.driver.SmpsChannelOwnershipProjection",
+            "com.openggf.audio.driver.SmpsDriver$ReadMode",
+            "com.openggf.audio.presentation.AudioPresentationCommand",
+            "com.openggf.audio.presentation.AudioPresentationCommandResolver$AppliedOutcome",
+            "com.openggf.audio.presentation.AudioPresentationCommandResolver$OutcomeReservation",
+            "com.openggf.audio.presentation.AudioPresentationCommandResolver$OutcomeSeal",
+            "com.openggf.audio.presentation.AudioPresentationForwardService",
+            "com.openggf.audio.presentation.AudioPresentationForwardService$Snapshot",
+            "com.openggf.audio.presentation.AudioRequestService",
+            "com.openggf.audio.presentation.DecodedPcm",
+            "com.openggf.audio.presentation.DecodedPcmCache",
+            "com.openggf.audio.presentation.PcmPresentationVoice",
+            "com.openggf.audio.presentation.PresentationVoice",
+            "com.openggf.audio.presentation.PresentationVoiceSnapshot",
+            "com.openggf.audio.rewind.AudioCommandTimeline$PreparedAppend",
+            "com.openggf.audio.rewind.AudioSourceDescriptor",
+            "com.openggf.audio.rewind.SmpsDriverSnapshot",
+            "com.openggf.audio.rewind.SmpsSequencerSnapshot",
+            "com.openggf.audio.rewind.SmpsTrackSnapshot",
+            "com.openggf.audio.rewind.SmpsSourceDescriptor",
+            "com.openggf.audio.session.PreparedSmpsMusicActivation",
+            "com.openggf.audio.session.PreparedSmpsSfxProgram",
+            "com.openggf.audio.session.SmpsPhysicalPolicy",
+            "com.openggf.audio.session.SmpsStatefulCommandPolicy",
+            "com.openggf.audio.smps.LoadedSmpsMusic",
+            "com.openggf.audio.smps.SmpsLoadReadiness",
+            "com.openggf.audio.smps.SmpsSequencer$Region",
+            "com.openggf.audio.smps.SmpsSequencer$SourceDescriptorTrust",
+            "com.openggf.audio.smps.SmpsSequencer$Track",
+            "com.openggf.audio.smps.SmpsSequencer$TrackType",
+
             // Hardware-timing service and its ROM work ledger: engine scheduling of
             // ROM-paced work, reached via ObjectServices.hardwareTiming().
             "com.openggf.game.timing.HardwareTimingService",
@@ -96,10 +131,6 @@ public final class ModApiSignatureSurface {
             "com.openggf.audio.presentation.PresentationMode",
             "com.openggf.audio.smps.SmpsCoordFlagHandlerOwner",
             "com.openggf.audio.smps.SmpsCoordFlagRuntimeState",
-            // Driver-source YM write timing is engine accuracy metadata. Treat the
-            // outer interface as the terminal so its implicitly public Holder/Key/
-            // ImmutableProfile implementation graph cannot become creator API.
-            "com.openggf.audio.smps.YmServiceTimingProfile",
             // Host-side observers and input chords.
             "com.openggf.audio.AudioAdmissionObserver",
             "com.openggf.audio.AudioRequestObserver",

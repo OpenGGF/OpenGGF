@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TestSfxAdmissionMutationJournal {
     private static final ObjectMapper JSON = new ObjectMapper();
@@ -79,11 +80,9 @@ class TestSfxAdmissionMutationJournal {
             assertEquals(null, field.get(driverState),
                     "continuous journal retains general array " + field);
         }
-        Field synthStateField = driverState.getClass()
-                .getDeclaredField("synthState");
-        synthStateField.setAccessible(true);
-        assertEquals(null, synthStateField.get(driverState),
-                "continuous extension captures no chip state");
+        assertThrows(NoSuchFieldException.class,
+                () -> driverState.getClass().getDeclaredField("synthState"),
+                "logical admission journals cannot retain physical chip state");
 
         driver.commitSfxAdmissionUnderJournal(extension);
         journal.restore();

@@ -62,13 +62,6 @@ class TestAudioCommandTimeline {
 
     @Test
     void recordsResolvedDonorCommandsWithDonorGameAndId() {
-        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(
-                new AudioTestFixtures.StubSmpsLoader()) {
-            @Override
-            public MusicDuringOverridePolicy getMusicDuringOverridePolicy() {
-                return MusicDuringOverridePolicy.DEFER_UNTIL_RESTORE;
-            }
-        });
         AudioTestFixtures.StubSmpsLoader donor = new AudioTestFixtures.StubSmpsLoader();
         donor.sfxResults.put(0xA4, new AudioTestFixtures.StubSmpsData("donor-sfx"));
         donor.musicResults.put(0x21, new AudioTestFixtures.StubSmpsData("donor-music"));
@@ -96,9 +89,7 @@ class TestAudioCommandTimeline {
                 0x21,
                 AudioCommand.MusicRoute.DONOR_SMPS,
                 false,
-                "s3k",
-                GameAudioProfile.MusicDuringOverridePolicy
-                        .DEFER_UNTIL_RESTORE),
+                "s3k"),
                 entries.get(1).command());
     }
 

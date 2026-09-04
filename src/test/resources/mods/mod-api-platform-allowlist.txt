@@ -44,6 +44,7 @@ java.util.Set
 java.util.concurrent.Callable
 java.util.concurrent.CompletableFuture
 java.util.function.BiConsumer
+java.util.function.BiFunction
 java.util.function.BooleanSupplier
 java.util.function.Consumer
 java.util.function.Function

@@ -7,6 +7,7 @@ import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.PresentationVoiceSnapshot;
 import com.openggf.audio.presentation.SampleBackedVoice;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.data.Rom;
@@ -24,12 +25,12 @@ import org.junit.jupiter.api.Test;
 
 import com.openggf.audio.presentation.PresentationMode;
 
-import java.util.Arrays;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @RequiresRom(SonicGame.SONIC_3K)
@@ -64,7 +65,7 @@ class TestSegaPcmCommandRouting {
     }
 
     @Test
-    void presentationFactorySegaPcmRendersThroughTheYm2612Dac() {
+    void presentationFactorySegaPcmMatchesLegacyYmDacOutputScale() {
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(
                         () -> true,
@@ -79,14 +80,12 @@ class TestSegaPcmCommandRouting {
 
         voice.mixInto(accumulation, 3);
 
-        PresentationVoiceSnapshot.Sample snapshot =
-                (PresentationVoiceSnapshot.Sample) voice.snapshot();
-        assertEquals(PresentationVoiceSnapshot.SampleRenderMode.YM2612_DAC,
-                snapshot.renderMode());
-        assertEquals("sega/factory", snapshot.assetId());
-        assertNotNull(snapshot.synthSnapshot());
-        assertTrue(Arrays.stream(accumulation).anyMatch(value -> value != 0),
-                "the direct YM DAC path must produce chip output");
+        assertArrayEquals(
+                new long[] {-8192, -8192, 0, 0, 8128, 8128},
+                accumulation);
+        assertEquals("sega/factory",
+                ((PresentationVoiceSnapshot.Sample) voice.snapshot())
+                        .assetId());
     }
 
     @Test
@@ -107,28 +106,8 @@ class TestSegaPcmCommandRouting {
     }
 
     @Test
-    void ymDacSegaVoiceRestoresBitExactChipAndSourceState() {
-        DecodedPcmCache cache = new DecodedPcmCache();
-        DecodedPcm pcm = cache.registerUnsigned8Mono("sega/ym-restore",
-                new byte[] {0, 17, 34, 68, (byte) 136, (byte) 204,
-                        (byte) 255}, 16_500);
-        SampleBackedVoice uninterrupted = SampleBackedVoice.rawSegaPcm(
-                1, 0, pcm, 48_000);
-        uninterrupted.mixInto(new long[74], 37);
-        PresentationVoiceSnapshot.Sample snapshot =
-                (PresentationVoiceSnapshot.Sample) uninterrupted.snapshot();
-        SampleBackedVoice restored = SampleBackedVoice.restore(snapshot, cache);
-        long[] expected = new long[128];
-        long[] actual = new long[128];
-
-        uninterrupted.mixInto(expected, expected.length / 2);
-        restored.mixInto(actual, actual.length / 2);
-
-        assertArrayEquals(expected, actual);
-    }
-
-    @Test
-    void s3kSegaCommandRoutesToRawPcmAndStopCommandStopsOnlyPcm() throws Exception {
+    void s3kFeStopsRawNowAndConsumesOneRetainedStopOnNextForward()
+            throws Exception {
         Rom rom = GameServices.rom().getRom();
         RecordingBackend backend = new RecordingBackend();
         AudioManager audio = AudioManager.getInstance();
@@ -136,20 +115,105 @@ class TestSegaPcmCommandRouting {
         audio.setAudioProfile(new Sonic3kAudioProfile());
         audio.setRom(rom);
 
-        audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
-        audio.presentFrame(PresentationMode.SILENT);
-        assertNotNull(audio.captureLogicalSnapshot().presentation()
-                        .rawPcmVoiceId(),
-                "raw PCM is owned by the unified presentation registry");
+        java.util.List<String> writes = new java.util.ArrayList<>();
+        audio.setChipWriteObserver(new com.openggf.audio.synth.ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.add("ym:" + port + ":" + register + ":" + value);
+            }
 
+            @Override
+            public void onPsgWrite(int value) {
+                writes.add("psg:" + value);
+            }
+        });
+
+        int before = audio.commandTimeline().entryCount();
+        audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
+        assertEquals(before + 1, audio.commandTimeline().entryCount());
+        assertInstanceOf(AudioCommand.PlaySegaPcm.class,
+                audio.commandTimeline().entryAt(before).command());
+        audio.presentFrame(PresentationMode.SILENT);
+        // S3K's own zPlaySEGAPCM streams the chant (Sound/Z80 Sound
+        // Driver.asm:4372-4424), so the driver holds it rather than the
+        // presentation registry: the DAC enable and the sample bytes are on
+        // the physical stream, and no raw voice exists.
+        assertNull(audio.captureLogicalSnapshot().presentation()
+                        .rawPcmVoiceId(),
+                "the S3K driver owns the chant, not a presentation voice");
+        assertTrue(writes.contains("ym:0:43:128"),
+                "the transport enables the DAC");
+        assertTrue(writes.stream().anyMatch(
+                        write -> write.startsWith("ym:0:42:")),
+                "the transport sends sample bytes to the DAC register");
+        writes.clear();
+        before = audio.commandTimeline().entryCount();
         audio.playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
+        assertEquals(before + 1, audio.commandTimeline().entryCount());
+        assertInstanceOf(AudioCommand.StopSegaPcmAndRetainGlobalStop.class,
+                audio.commandTimeline().entryAt(before).command());
         audio.presentFrame(PresentationMode.SILENT);
         assertNull(audio.captureLogicalSnapshot().presentation()
                         .rawPcmVoiceId(),
-                "raw PCM stop is owned by the unified presentation registry");
+                "FE removes raw PCM at the command boundary");
+        // The loop breaks at its next sample boundary and re-enters
+        // zPlayDigitalAudio, whose entry disables the DAC (D:4394-4397,
+        // :4422, :4256-4260). Until it does, the masked services run no
+        // update at all, so the stop-all itself is still to come.
+        assertEquals("ym:0:43:0", writes.get(writes.size() - 1),
+                "leaving the loop disables the DAC");
+        writes.clear();
+
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(84, writes.size());
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(84, writes.size(),
+                "the retained global stop is consumed exactly once");
 
         assertEquals(0, backend.musicPlayCalls,
                 "the SEGA chant never reaches the source-construction backend");
+    }
+
+    @Test
+    void s3kE4PreservesRawSegaPcmFromEitherMailbox() throws Exception {
+        Rom rom = GameServices.rom().getRom();
+        AudioManager audio = AudioManager.getInstance();
+        audio.setBackend(new NullAudioBackend());
+        audio.setAudioProfile(new Sonic3kAudioProfile());
+        audio.setRom(rom);
+        java.util.List<String> writes = new java.util.ArrayList<>();
+        audio.setChipWriteObserver(
+                new com.openggf.audio.synth.ChipWriteObserver() {
+                    @Override
+                    public void onYm2612Write(
+                            int port, int register, int value) {
+                        writes.add("ym:" + port + ":" + register
+                                + ":" + value);
+                    }
+
+                    @Override
+                    public void onPsgWrite(int value) {
+                    }
+                });
+        audio.playMusic(Sonic3kSmpsConstants.CMD_SEGA);
+        audio.presentFrame(PresentationMode.SILENT);
+        boolean ringLeft = audio.captureLogicalSnapshot()
+                .presentation().ringLeft();
+
+        audio.playSfx(Sonic3kSmpsConstants.CMD_STOP_SFX);
+        writes.clear();
+        audio.presentFrame(PresentationMode.SILENT);
+
+        // E4 is SMPS-SFX-only: it must not reach into the driver's PCM loop,
+        // which keeps sending sample bytes across the frame.
+        assertTrue(writes.stream().anyMatch(
+                        write -> write.startsWith("ym:0:42:")),
+                "E4 must leave the SEGA transport running");
+        assertFalse(writes.contains("ym:0:43:0"),
+                "E4 must not end the SEGA transport");
+        assertEquals(ringLeft, audio.captureLogicalSnapshot()
+                        .presentation().ringLeft(),
+                "E4 must preserve the ring alternation state");
     }
 
     private static final class RecordingBackend extends NullAudioBackend {

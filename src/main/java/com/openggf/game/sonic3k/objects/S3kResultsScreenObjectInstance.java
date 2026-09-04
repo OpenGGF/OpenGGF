@@ -19,7 +19,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.S3kTransitionWriteSupport;
 import com.openggf.game.sonic3k.resources.S3kKosModuleQueue;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.NemesisReader;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;

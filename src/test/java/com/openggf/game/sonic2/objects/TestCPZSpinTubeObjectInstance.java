@@ -193,7 +193,7 @@ class TestCPZSpinTubeObjectInstance {
     }
 
     @Test
-    void lowerSlotDestinationHandoffPreservesOwnerOverwriteTiming() {
+    void destinationHandoffUsesLivePositionWithoutInventingCatchUpMovement() {
         ObjectSpawn spawn = new ObjectSpawn(0x1000, 0x0200, 0x1E, 0x3D, 0, false, 0);
         TestablePlayableSprite player = new TestablePlayableSprite("tails", (short) 0x10F8, (short) 0x0230);
         player.setGameRulesForTest(GameRules.SONIC_2);
@@ -201,9 +201,8 @@ class TestCPZSpinTubeObjectInstance {
         ObjectControlState.nativeBit7FullControl().applyTo(player);
         player.capturePrePhysicsSnapshot();
 
-        // Engine order has already run the source tube this frame. ROM's lower
-        // destination slot would still see the frame-start position, capture,
-        // then let the source tube apply Obj1E_MoveCharacter afterward.
+        // The source tube has already moved the player this frame. Obj1E reads
+        // the live x_pos/y_pos when this destination slot runs.
         player.setCentreXPreserveSubpixel((short) 0x10F0);
 
         CPZSpinTubeObjectInstance tube = new CPZSpinTubeObjectInstance(spawn, "CPZSpinTube");
@@ -211,8 +210,8 @@ class TestCPZSpinTubeObjectInstance {
 
         tube.update(0, player);
 
-        assertEquals(0x10E8, player.getCentreX() & 0xFFFF,
-                "Lower-slot destination capture must include the source tube's later same-frame move.");
+        assertEquals(0x10F0, player.getCentreX() & 0xFFFF,
+                "The capture pass writes velocity but does not invent an Obj1E_MoveCharacter call.");
         assertEquals(0x0230, player.getCentreY() & 0xFFFF);
         assertEquals((short) 0xF800, player.getXSpeed());
         assertTrue(player.isObjectControlled());
@@ -220,12 +219,12 @@ class TestCPZSpinTubeObjectInstance {
         player.setCentreXPreserveSubpixel((short) 0x10F0);
         tube.update(1, player);
 
-        assertEquals(0x10F0, player.getCentreX() & 0xFFFF,
-                "The destination's first entry tick runs before the source tube's final waypoint snap in ROM.");
+        assertEquals(0x10E8, player.getCentreX() & 0xFFFF,
+                "The destination starts entry movement on its following object dispatch.");
 
         tube.update(2, player);
 
-        assertEquals(0x10E8, player.getCentreX() & 0xFFFF,
-                "After the source handoff clears, the destination tube resumes normal entry movement.");
+        assertEquals(0x10E0, player.getCentreX() & 0xFFFF,
+                "Subsequent destination dispatches continue normal entry movement.");
     }
 }

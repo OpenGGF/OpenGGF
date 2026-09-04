@@ -119,10 +119,6 @@ public final class ConfigCatalog {
                 "DAC interpolation (optional smoothing; disabled for hardware parity)"));
         put(AUDIO_INTERNAL_RATE_OUTPUT, of("audio", "internalRateOutput", BOOL,
                 "Output audio at the internal YM2612 rate (~53kHz)"));
-        put(PSG_NOISE_SHIFT_EVERY_TOGGLE, of("audio", "psgNoiseShiftEveryToggle", BOOL,
-                "PSG noise LFSR clock mode: false=positive edges (GPGX/libvgm), true=every toggle (MAME)"));
-        put(AUDIO_REFERENCE_DEFAULTS_VERSION, of("audio", "referenceDefaultsVersion", INT,
-                "Internal one-time migration version for reference chip defaults"));
         put(FM6_DAC_OFF, of("audio", "fm6DacOff", BOOL,
                 "Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)"));
 
@@ -328,8 +324,6 @@ public final class ConfigCatalog {
         put(DEBUG_VIEW_ENABLED, of("debug.flags", "debugView", BOOL,
                 "Enable the debug overlay subsystem; visible HUD starts hidden until toggled"));
         put(EDITOR_ENABLED, of("debug.flags", "editor", BOOL, "Allow entering the level editor from gameplay"));
-        put(DEBUG_COLLISION_VIEW_ENABLED, of("debug.flags", "collisionView", BOOL,
-                "Draw the collision overlay"));
 
         // debug.keys
         put(TEST, of("debug.keys", "test", KEY, "Debug-only test button"));

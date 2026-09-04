@@ -12,7 +12,7 @@ import com.openggf.level.Pattern;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.level.render.SpritePieceRenderer;
-import com.openggf.tools.EnigmaReader;
+import com.openggf.data.compression.EnigmaReader;
 import com.openggf.util.PatternDecompressor;
 import org.lwjgl.system.MemoryUtil;
 
@@ -127,7 +127,6 @@ final class MasterTitleRomPreview {
     private static final int[] S3K_SONIC_FRAME_INDEX_TABLE = {
             1, 2, 3, 4, 5, 6, 7, 8, 9, 0xA, 0xB
     };
-    private static final int S3K_FINAL_FRAME_INDEX = 0xD;
     private static final int[] S3K_FRAME_ART_ADDRS = {
             Sonic3kConstants.ART_KOS_TITLE_SONIC1_ADDR,
             Sonic3kConstants.ART_KOS_TITLE_SONIC1_ADDR,
@@ -848,10 +847,6 @@ final class MasterTitleRomPreview {
                     S2_TAILS_HAND_POSITIONS.length - 1) * 4;
         }
         return S2_SETTLED_TICK;
-    }
-
-    private static int s3kPreviewFrameAt(int tick) {
-        return S3K_FINAL_FRAME_INDEX;
     }
 
     private static int s3kPreviewTokenAt(int tick) {

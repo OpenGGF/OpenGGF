@@ -5,6 +5,7 @@ import com.openggf.game.sonic1.Sonic1GameModule;
 import com.openggf.sprites.animation.SpriteAnimationEndAction;
 import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
@@ -21,6 +22,11 @@ import java.lang.reflect.Field;
 import java.util.Map;
 
 public class TestSonic1RunningDiscObjectInstance {
+
+    @AfterEach
+    void resetGameModuleOverride() {
+        GameModuleRegistry.reset();
+    }
 
     @Test
     public void attachesAndSetsStickToConvex() {

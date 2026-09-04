@@ -19,9 +19,10 @@ public class TestYm2612TimerCSM {
         // Algo 7 (all carriers), no feedback
         chip.write(0, 0xB2, 0xC7); // Channel 2
 
-        // FNUM/BLOCK
-        chip.write(0, 0xA2, 0x00); // Low bits for Ch 2
+        // FNUM/BLOCK: the high byte is a latch consumed by the low byte write,
+        // so it is written first (hardware order).
         chip.write(0, 0xA6, 0x22); // High bits + block for Ch 2
+        chip.write(0, 0xA2, 0x00); // Low bits for Ch 2
 
         // Configure operators for Channel 2
         // Slots for Ch 2 are 2, 6, 10, 14 (0x02, 0x06, 0x0A, 0x0E) ??

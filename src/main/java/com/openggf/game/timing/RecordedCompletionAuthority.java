@@ -76,7 +76,7 @@ public interface RecordedCompletionAuthority {
      * (HardwareTimingReplayPort:120-126). Work submitted inside such a span can
      * never be matched -- the recorder discards anything observed before a
      * segment's first row, so a level load's own arming reaches no trace file
-     * (tools/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83)
+     * (tools/tracechaser/bizhawk-headless/src/Recording/S1PlcHardwareTimingObserver.cs:80-83)
      * -- so holding it against recorded readiness deadlocks by construction.
      * Default {@code true} keeps every existing implementer unchanged.
      */

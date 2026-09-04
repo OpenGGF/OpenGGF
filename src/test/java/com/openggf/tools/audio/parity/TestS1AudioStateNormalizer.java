@@ -164,7 +164,7 @@ class TestS1AudioStateNormalizer {
 
         S1AudioStateNormalizer.NormalizedState before = S1AudioStateNormalizer.normalize(
                 sequencer.captureSnapshot(), GHZ, Set.of());
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
         S1AudioStateNormalizer.NormalizedState after = S1AudioStateNormalizer.normalize(
                 sequencer.captureSnapshot(), GHZ, Set.of());
 
@@ -187,7 +187,7 @@ class TestS1AudioStateNormalizer {
             @Override public void onPsgWrite(int value) { psgWrites.add(value); }
         });
 
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
         assertTrue(sequencer.getTracks().get(0).active);
 
         AudioParityTrackState psg1 = S1AudioStateNormalizer.normalize(
@@ -226,7 +226,7 @@ class TestS1AudioStateNormalizer {
             @Override public void onPsgWrite(int value) { psgWrites.add(value); }
         });
 
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
 
         AudioParityTrackState psg1 = S1AudioStateNormalizer.normalize(
                 sequencer.captureSnapshot(), GHZ, Set.of()).tracks().get(7);
@@ -248,7 +248,7 @@ class TestS1AudioStateNormalizer {
             @Override public void onPsgWrite(int value) { psgWrites.add(value); }
         });
 
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
         psgWrites.clear();
         sequencer.advanceBatch(735);
         psgWrites.clear();
@@ -284,7 +284,7 @@ class TestS1AudioStateNormalizer {
             @Override public void onPsgWrite(int value) { }
         });
 
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
 
         List<AudioParityChipWrite> expected = new ArrayList<>();
         expected.add(AudioParityChipWrite.ym2612(0, 0xb0, 0x34));
@@ -333,7 +333,7 @@ class TestS1AudioStateNormalizer {
             @Override public void onPsgWrite(int value) { }
         });
 
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
         writes.clear();
         sequencer.advanceBatch(735);
 
@@ -352,7 +352,7 @@ class TestS1AudioStateNormalizer {
                 AudioTestFixtures.EMPTY_DAC, new VirtualSynthesizer(), () -> {},
                 Sonic1SmpsSequencerConfig.CONFIG);
 
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
 
         assertEquals(1, sequencer.getTracks().get(0).modStepCounter,
                 "S1 cfModulation and FinishTrackUpdate shift the raw step byte right once");
@@ -372,7 +372,7 @@ class TestS1AudioStateNormalizer {
             @Override public void onPsgWrite(int value) { }
         });
 
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
         writes.clear();
         sequencer.advanceBatch(735);
 
@@ -389,7 +389,7 @@ class TestS1AudioStateNormalizer {
                 Sonic1SmpsSequencerConfig.CONFIG);
         sequencer.setSampleRate(44_100);
 
-        sequencer.advanceBatch(735);
+        sequencer.advanceSamples(0);
         sequencer.advanceBatch(735);
         sequencer.advanceBatch(735);
 
@@ -444,10 +444,9 @@ class TestS1AudioStateNormalizer {
     private static SmpsSequencerSnapshot sequencer(List<SmpsTrackSnapshot> tracks, int tempoWeight,
             int tempoAccumulator) {
         return new SmpsSequencerSnapshot(Region.NTSC, false, false, tempoWeight, 0, false,
-                Integer.MAX_VALUE, 1.0f, 0, false, false, 0, 1, 0, 5,
+                Integer.MAX_VALUE, 1.0f, 0, false, false, 0, 1, 0,
                 new SmpsSequencerSnapshot.FadeSnapshot(0, 0, 0, 0, 0, false, false),
-                44100, 735, 0, tempoWeight, tempoAccumulator, 1, true,
-                false, tracks);
+                44100, 735, 0, tempoWeight, tempoAccumulator, 1, true, tracks);
     }
 
     private static final class RestingPsgData extends AbstractSmpsData {
@@ -528,10 +527,15 @@ class TestS1AudioStateNormalizer {
             psgVolumeOffsets = new int[] {0};
             psgModEnvs = new int[] {0};
             psgInstruments = new int[] {0};
-            // A real S1 tempo larger than one lets the note-fill expiry occur
-            // between TempoWait extension boundaries. Tempo 1 continually
-            // extends the loader's initial DurationTimeout=1 by design.
-            tempo = 3;
+            // A tempo of 1 is degenerate against the ROM's own seed. S1's
+            // UpdateMusic adds 1 to every slot's DurationTimeout whenever the
+            // tempo timeout expires (s1.sounddriver.asm:1549-1561), which at
+            // tempo 1 is every frame, exactly cancelling the per-frame
+            // decrement; a track seeded with the ROM's DurationTimeout of 1
+            // (:823, :836) would then never reach zero and never read its
+            // stream at all. Tempo 2 lets the note play, which is what this
+            // fixture is for.
+            tempo = 2;
         }
 
         @Override public byte[] getVoice(int voiceId) { return null; }
@@ -631,9 +635,9 @@ class TestS1AudioStateNormalizer {
                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, modRateCounter, 0, (short) modAccumulator,
                 modCurrentDelta, modEnabled, modEnabled, detune, 0, null, 0, 0, 0, false,
                 false, 0, instrumentId, false, 0, 0, 0, null, envPos, 0, false, false,
-                null, 0, 0, false, 0, false, 0,
-                new int[0], false,
-                false, false, 0, false, false, 0);
+                null, 0, 0, false, 0, false, new int[0], false,
+                false, false, 0, false, false, 0, false,
+                false, new int[0], false, 0, false);
     }
 
     private static List<Integer> toInts(JsonNode array) {

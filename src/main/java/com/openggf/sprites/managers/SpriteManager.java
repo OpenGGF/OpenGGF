@@ -7,6 +7,9 @@ import static org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT;
 
 import com.openggf.audio.GameMusic;
 import com.openggf.configuration.KeyChord;
+import com.openggf.control.InputHandler;
+import com.openggf.game.JoypadPressSnapshot;
+import com.openggf.control.PlayerInputState;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.control.InputHandler;
@@ -14,6 +17,7 @@ import com.openggf.control.PlayerInputState;
 import com.openggf.game.CollisionModel;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.timer.TimerManager;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.GameplayInputFilter;
 import com.openggf.game.session.GameplayInputFilterAccess;
@@ -104,6 +108,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 	private final KeyChord giveSuperEmeraldsKey;
 	private int frameCounter;
 	private boolean inputSuppressed;
+	/**
+	 * ROM {@code v_jpadpress1}/{@code v_jpadpress2} for the current level frame,
+	 * published before the object pass so screen objects that poll a button
+	 * (the GAME OVER card) read the same press edge the players do.
+	 */
+	private JoypadPressSnapshot joypadPressSnapshot = JoypadPressSnapshot.NONE;
 	private boolean playbackInputSuppressed;
 	// publishHeldInputForLevelEvents() and update() are two phases of one frame. Retain the
 	// already-filtered immutable P1 snapshot so level events and movement cannot observe two
@@ -267,6 +277,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		levelManager = null;
 		frameCounter = 0;
 		inputSuppressed = false;
+		joypadPressSnapshot = JoypadPressSnapshot.NONE;
 		playbackInputSuppressed = false;
 		lastSidekickSuppressed = false;
 		playableUpdateOrder.clear();
@@ -430,6 +441,12 @@ public class SpriteManager implements PlayableSstDispatcher {
 		publishedEffectivePlayerOne = null;
 		publishedEffectivePlayerOne = filterPlayerOne(raw, publishedGameplayInputFilter);
 		PlayerInputState p1 = publishedEffectivePlayerOne;
+		PlayerInputState p2 = handler.logical().player2();
+		joypadPressSnapshot = suppressInput
+				? JoypadPressSnapshot.NONE
+				: new JoypadPressSnapshot(
+						p1.actionPressedMask(), p1.startPressed(),
+						p2.actionPressedMask(), p2.startPressed());
 		int p1Held = !suppressInput ? p1.heldMask() : 0;
 		boolean up = (p1Held & AbstractPlayableSprite.INPUT_UP) != 0;
 		boolean down = (p1Held & AbstractPlayableSprite.INPUT_DOWN) != 0;
@@ -441,6 +458,11 @@ public class SpriteManager implements PlayableSstDispatcher {
 				playable.setDirectionalInputPressed(up, down, left, right);
 			}
 		}
+	}
+
+	/** This level frame's controller press edges; {@link JoypadPressSnapshot#NONE} while input is suppressed. */
+	public JoypadPressSnapshot getJoypadPressSnapshot() {
+		return joypadPressSnapshot;
 	}
 
 	public void update(InputHandler handler) {
@@ -658,6 +680,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 						if (skipCpuPhysicsThisFrame) {
 							applyScreenYWrapValueAfterControl(playable);
 							playable.getAnimationManager().update(cadence);
+							tickDisplayPhaseTimers(playable);
 							playable.tickStatus();
 							playable.endOfTick();
 							continue;
@@ -666,6 +689,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 								&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 							applyScreenYWrapValueAfterControl(playable);
 							playable.getAnimationManager().update(cadence);
+							tickDisplayPhaseTimers(playable);
 							playable.tickStatus();
 							playable.endOfTick();
 							continue;
@@ -1148,6 +1172,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 									true, aiJumpPress);
 							if (skipCpuPhysicsThisFrame) {
 								playable.getAnimationManager().update(frameCounter);
+								tickDisplayPhaseTimers(playable);
 								playable.tickStatus();
 								playable.endOfTick();
 								continue;
@@ -1155,6 +1180,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 							if (cpuController.isApproaching()
 									&& !cpuController.getRespawnStrategy().requiresPhysics()) {
 								playable.getAnimationManager().update(frameCounter);
+								tickDisplayPhaseTimers(playable);
 								playable.tickStatus();
 								playable.endOfTick();
 								continue;
@@ -1883,6 +1909,7 @@ public class SpriteManager implements PlayableSstDispatcher {
 		// invulnerable_time, and spilled-ring touch checks read that decremented
 		// value in the same object-interaction pass.
 		playable.tickInvulnerabilityDisplayTimerBeforeTouchResponse();
+		tickDisplayPhaseTimers(playable);
 		// ROM Obj01_Control: movement runs first, then Sonic_Animate, then
 		// TouchResponse. Special objects like monitors gate on anim(a0), so
 		// ReactToItem must observe the post-movement animation state from the
@@ -1908,6 +1935,27 @@ public class SpriteManager implements PlayableSstDispatcher {
 		levelManager.applyPlaneSwitchers(playable);
 		playable.tickStatus();
 		playable.endOfTick();
+	}
+
+	/**
+	 * Runs a character's display-phase countdowns, at the point in the frame the
+	 * ROM's {@code Sonic_Display} occupies. All three games call it from the
+	 * control routine after the movement modes have been dispatched
+	 * (S1 {@code docs/s1disasm/_incObj/01 Sonic.asm:76,80},
+	 * S2 {@code docs/s2disasm/s2.asm:36242,36248},
+	 * S3K {@code docs/skdisasm/sonic3k.asm:22021,22031}), and its
+	 * {@code Sonic_ChkShoes} tail does both consequences of the speed-shoes
+	 * countdown reaching zero there in the one frame: the top-speed,
+	 * acceleration and deceleration restore, and the slow-down music command.
+	 * Driving the countdown here instead of from the level loop's pre-physics
+	 * timer pass keeps those two together and puts the queue write ahead of the
+	 * same frame's driver service, where the ROM's is.
+	 */
+	private static void tickDisplayPhaseTimers(AbstractPlayableSprite playable) {
+		TimerManager timers = GameServices.timersOrNull();
+		if (timers != null) {
+			timers.updateDisplayPhaseTimersFor(playable);
+		}
 	}
 
 	private static void applySolidContacts(LevelManager levelManager, AbstractPlayableSprite playable,

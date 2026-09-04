@@ -374,6 +374,16 @@ public class Sonic2ObjectArt {
 
     // ---- Extracted sheet builders (used by loadForZone and PLC registry) ----
 
+    /**
+     * Obj39 GAME OVER / TIME OVER sheet: ArtNem_Game_Over with Obj39_MapUnc_14C6C.
+     * The ROM decompresses it through PLCID_GameOver when CheckGameOver asks for
+     * it; the engine keeps the sheet resident and uses the PLC queue for timing.
+     */
+    public ObjectSpriteSheet loadGameOverSheet() {
+        return buildArtSheetFromRom(Sonic2Constants.ART_NEM_GAME_OVER_ADDR,
+                Sonic2Constants.MAPPINGS_GAME_OVER_ADDR, 0, 1);
+    }
+
     public ObjectSpriteSheet loadSpikeSheet() {
         return buildArtSheetFromRom(Sonic2Constants.ART_NEM_SPIKES_ADDR,
                 Sonic2Constants.MAP_UNC_SPIKES_ADDR, 1, 1);

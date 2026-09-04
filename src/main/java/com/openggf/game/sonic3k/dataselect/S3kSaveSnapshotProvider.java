@@ -21,9 +21,20 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
     @Override
     public boolean restoreProgress(
             GameStateManager gameState, int lives, int continues, Map<String, Object> payload) {
+        // S3K slot load: replenish exhausted lives and spend a continue
+        // (sonic3k.asm:16997-17012), before restoring either payload format.
+        if (lives == 0 || (lives < 3 && continues == 0)) {
+            lives = 3;
+            continues = Math.max(0, continues - 1);
+        }
         List<Integer> states = readEmeraldStates(payload.get("emeraldStates"));
         if (states == null) {
-            return false;
+            if (payload.containsKey("emeraldStates")) return false;
+            gameState.restoreSaveProgress(lives, continues,
+                    readIntList(payload.get("chaosEmeralds")),
+                    readIntList(payload.get("superEmeralds")),
+                    payload.get("emeraldsConverted") instanceof Boolean value ? value : null);
+            return true;
         }
         Boolean converted = payload.get("emeraldsConverted") instanceof Boolean value ? value : null;
         gameState.restoreSaveProgress(lives, continues, List.of(), List.of(), converted);
@@ -99,4 +110,16 @@ public final class S3kSaveSnapshotProvider implements SaveSnapshotProvider {
         payload.put("clearState", clear ? (S3kSaveProgressions.hasAllSuperEmeralds(superEmeralds) ? 2 : 1) : 0);
         return payload;
     }
+	private static List<Integer> readIntList(Object raw) {
+		if (!(raw instanceof List<?> list)) {
+			return List.of();
+		}
+		List<Integer> values = new java.util.ArrayList<>();
+		for (Object value : list) {
+			if (value instanceof Number number) {
+				values.add(number.intValue());
+			}
+		}
+		return List.copyOf(values);
+	}
 }

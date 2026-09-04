@@ -5,8 +5,11 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
+import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.session.SmpsStatefulCommandPolicy;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import com.openggf.data.Rom;
@@ -71,7 +74,6 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         map.put(GameSound.TAILS_FLYING, Sonic3kSfx.FLYING.id);
         map.put(GameSound.TAILS_FLY_TIRED, Sonic3kSfx.FLY_TIRED.id);
         map.put(GameSound.GRAB, Sonic3kSfx.GRAB.id);
-        map.put(GameSound.THUMP, Sonic3kSfx.THUMP.id);
         map.put(GameSound.GLIDE_LAND, Sonic3kSfx.GLIDE_LAND.id);
         SOUND_MAP = Collections.unmodifiableMap(map);
 
@@ -101,13 +103,23 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
+    public SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return Sonic3kSmpsPhysicalPolicy.INSTANCE;
+    }
+
+    @Override
+    public SmpsStatefulCommandPolicy smpsStatefulCommandPolicy() {
+        return Sonic3kStatefulCommandPolicy.INSTANCE;
+    }
+
+    @Override
     public int getSpeedShoesOnCommandId() {
-        return Sonic3kSmpsConstants.CMD_SPEED_UP;
+        return -1;
     }
 
     @Override
     public int getSpeedShoesOffCommandId() {
-        return Sonic3kSmpsConstants.CMD_SLOW_DOWN;
+        return -1;
     }
 
     @Override
@@ -136,24 +148,33 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
-    public MusicDuringOverridePolicy getMusicDuringOverridePolicy() {
-        return MusicDuringOverridePolicy.DEFER_UNTIL_RESTORE;
-    }
-
-    @Override
-    public SystemCommandDuringOverridePolicy
-            getSystemCommandDuringOverridePolicy() {
-        return SystemCommandDuringOverridePolicy.DISCARD;
-    }
-
-    @Override
     protected int getFadeOutCommandId() {
         return Sonic3kSmpsConstants.CMD_FADE_OUT;
     }
 
     @Override
+    protected int getAlternateFadeOutCommandId() {
+        return Sonic3kSmpsConstants.CMD_FADE_OUT_ALT;
+    }
+
+    @Override
     protected int getStopAllCommandId() {
         return Sonic3kSmpsConstants.CMD_STOP_ALL;
+    }
+
+    @Override
+    protected int getStopCommandId() {
+        return Sonic3kSmpsConstants.CMD_STOP;
+    }
+
+    @Override
+    protected int getPsgSilenceCommandId() {
+        return Sonic3kSmpsConstants.CMD_PSG_SILENCE;
+    }
+
+    @Override
+    protected int getStopSfxCommandId() {
+        return Sonic3kSmpsConstants.CMD_STOP_SFX;
     }
 
     @Override
@@ -174,15 +195,44 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
                 Sonic3kSmpsConstants.SEGA_SOUND_SAMPLE_RATE);
     }
 
+    /**
+     * Reads the chant through the runtime-layer ROM reader so the audio layer
+     * never depends on {@code com.openggf.data} for this sample.
+     */
     @Override
-    public SegaPcmPlaybackPolicy getSegaPcmPlaybackPolicy() {
-        return SegaPcmPlaybackPolicy.EXCLUSIVE_STOP_ALL;
+    public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+        return SegaPcmRomReader.read(rom, getSegaPcmSpec());
     }
 
-    /** S3K fade-out uses delay 6 instead of the S1/S2 default delay 3. */
+    /**
+     * {@code zFadeOutMusic} sets {@code zFadeOutTimeout} to 28h and both
+     * {@code zFadeDelayTimeout} and {@code zFadeDelay} to 6
+     * (Sound/Z80 Sound Driver.asm:2306-2311), so S3K takes 240 frames to
+     * silence where S1 and S2 take 120.
+     */
     @Override
-    protected void executeFadeOut(AudioManager manager) {
+    public void fadeOutMusic(AudioManager manager) {
         manager.fadeOutMusic(0x28, 6);
+    }
+
+    /**
+     * {@code Player_ResetAirTimer} (sonic3k.asm:33663-33686) loads
+     * {@code Current_music}, then overrides it in three tests taken in order:
+     * {@code Status_Invincible} and {@code Super_Sonic_Knux_flag} both select
+     * {@code mus_Invincibility} ($2C), and {@code Boss_flag} selects
+     * {@code mus_MinibossK} ($18). The boss test comes last, so a boss fight
+     * wins over an invincible or Super player.
+     */
+    @Override
+    public int resolveAirResetMusic(int levelMusicId, boolean invincible,
+            boolean superForm, boolean bossActive) {
+        if (bossActive) {
+            return Sonic3kMusic.MINIBOSS.id;
+        }
+        if (invincible || superForm) {
+            return Sonic3kMusic.INVINCIBILITY.id;
+        }
+        return levelMusicId;
     }
 
     @Override
@@ -192,20 +242,12 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
     }
 
     @Override
-    public float adjustSfxPitch(GameSound sound, float requestedPitch) {
-        if (sound == GameSound.SPINDASH_CHARGE) {
-            return 1.0f;
-        }
-        return requestedPitch;
-    }
-
-    @Override
     public SpeedMode getSpeedMode() {
         return SpeedMode.FRAME_MULTIPLY;
     }
 
     @Override
     public int getSpeedMultiplierValue() {
-        return 0x08; // Standard speed shoes: 125% speed
+        return Sonic3kSmpsConstants.SPEED_MULTIPLIER_ON;
     }
 }

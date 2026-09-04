@@ -37,6 +37,7 @@
         <surefire.forkCount>1</surefire.forkCount>
         <surefire.reuseForks>true</surefire.reuseForks>
         <surefire.runOrder>alphabetical</surefire.runOrder>
+        <surefire.excludedGroups>tracechaser-integration</surefire.excludedGroups>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
@@ -45,6 +46,27 @@
 
     <!-- LWJGL native classifier profiles -->
     <profiles>
+        <profile>
+            <id>tracechaser-integration</id>
+            <properties>
+                <surefire.excludedGroups></surefire.excludedGroups>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration>
+                            <runOrder>${surefire.runOrder}</runOrder>
+                            <groups>tracechaser-integration</groups>
+                            <excludedGroups></excludedGroups>
+                            <excludes combine.self="override"></excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>lwjgl-natives-linux</id>
             <activation>
@@ -1013,6 +1035,18 @@
                     <include>version.properties</include>
                 </includes>
             </resource>
+            <!-- Licence texts and notices travel with every jar (NOTICE.md, GPL-3 / LGPL-2.1 s.1). -->
+            <resource>
+                <directory>${project.basedir}</directory>
+                <targetPath>META-INF/openggf</targetPath>
+                <filtering>false</filtering>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>LICENSES/**</include>
+                    <include>NOTICE.md</include>
+                    <include>CREDITS.md</include>
+                </includes>
+            </resource>
         </resources>
         <plugins>
             <plugin>
@@ -1230,6 +1264,7 @@ To bypass deliberately (not for test runs): -Dopenggf.jdk.check.skip=true
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
+                    <excludedGroups>${surefire.excludedGroups}</excludedGroups>
                     <!-- LWJGL/GLFW on macOS requires -XstartOnFirstThread (set via profile) -->
                     <!--
                          LWJGL otherwise derives one native extraction directory from

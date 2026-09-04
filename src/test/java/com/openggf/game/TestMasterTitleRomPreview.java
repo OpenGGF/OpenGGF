@@ -159,7 +159,6 @@ class TestMasterTitleRomPreview {
 
     @Test
     void sonic3kPreviewStartsAtFinalSceneFingerWag() throws Exception {
-        assertEquals(0x0D, invokeIntHelper("s3kPreviewFrameAt", 0));
         assertEquals(4, invokeIntHelper("s3kPreviewFingerFrameAt", 0));
         assertEquals(4, invokeIntHelper("s3kPreviewFingerFrameAt", 35));
         assertEquals(0, invokeIntHelper("s3kPreviewFingerFrameAt", 36));

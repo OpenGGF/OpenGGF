@@ -10,8 +10,9 @@ authorize installation or deletion of committed fixtures.
 | --- | --- |
 | Reviewed source commit | `93f0abb81dc216f5ab6fee998db75e9eb4410379` |
 | Development baseline | `3573af57be947284a1f8398c7b4b4e05a8b12f14` |
+| Source diff base commit | `36be0aa44e4e1db9d2d586fff984e52ffd4fe053` |
 | Source diff SHA-256 | `127f9ef3cd8269dac419625a737ec4d56b7e9b66e0e57a5262208e008f33ff05` |
-| Diff definition | `git diff --full-index --binary origin/develop..93f0abb81 \| sha256sum` (with the visual handoff merge now at `origin/develop=36be0aa44`) |
+| Diff definition | `git diff --full-index --binary 36be0aa44e4e1db9d2d586fff984e52ffd4fe053..93f0abb81dc216f5ab6fee998db75e9eb4410379 \| sha256sum` |
 | Native harness | `tools/bizhawk-headless/bin/Release/BizHawk.Headless.Gpgx.exe` |
 | Native harness SHA-256 | `1320f95be8f8210a1a1b6f5ef5c6dcff9a5abeca91507e397f7ad1b38b106bb0` |
 | Native harness size | `359936` bytes |

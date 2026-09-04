@@ -216,8 +216,12 @@ public class TestS3kAiz1FireCurtainHeadless {
         AudioManager audio = AudioManager.getInstance();
         audio.playMusic(Sonic3kMusic.MINIBOSS.id);
         audio.presentFrame(PresentationMode.SILENT);
-        audio.playMusic(Sonic3kMusic.EXTRA_LIFE.id);
-        audio.presentFrame(PresentationMode.SILENT);
+
+        LevelManager levelManager = GameServices.level();
+        var currentAct = LevelManager.class.getDeclaredField("currentAct");
+        currentAct.setAccessible(true);
+        currentAct.setInt(levelManager, 1);
+        levelManager.setApparentAct(0);
 
         Sonic3kAIZEvents events = getAizEvents();
         var timer = Sonic3kAIZEvents.class
@@ -230,23 +234,11 @@ public class TestS3kAiz1FireCurtainHeadless {
         advance.invoke(events);
         audio.presentFrame(PresentationMode.SILENT);
 
-        assertEquals(Sonic3kMusic.EXTRA_LIFE.id,
-                audio.captureLogicalSnapshot().presentation().activeMusic().musicId(),
-                "the level-music request must not cut off the 1-up jingle");
-        assertEquals(GameServices.level().getCurrentLevelMusicId(),
-                audio.captureLogicalSnapshot().presentation().pendingMusic()
-                        .music().musicId(),
-                "the ROM escape timer queues the current level music");
-
-        audio.restoreMusic();
-        audio.presentFrame(PresentationMode.SILENT);
-        audio.presentFrame(PresentationMode.SILENT);
-
         assertNotNull(audio.captureLogicalSnapshot().presentation().activeMusic(),
-                "finishing the 1-up jingle must not leave gameplay in silence");
-        assertEquals(GameServices.level().getCurrentLevelMusicId(),
+                "the escape timer must leave level music active");
+        assertEquals(Sonic3kMusic.AIZ1.id,
                 audio.captureLogicalSnapshot().presentation().activeMusic().musicId(),
-                "the queued level music starts after the 1-up restore boundary");
+                "Restore_LevelMusic must use apparent AIZ1 while AIZ2 resources are loaded");
     }
 
     @Test
@@ -306,7 +298,7 @@ public class TestS3kAiz1FireCurtainHeadless {
             throws Exception {
         drainStartupKosWork();
         Sonic3kAIZEvents events = getAizEvents();
-        prepareFireOverlay(events);
+        stageFireOverlay(events);
         events.setFireSequencePhaseOrdinal(3);
         events.setFirePhaseFrames(63);
         queueAct2TransitionArt(events);
@@ -330,7 +322,7 @@ public class TestS3kAiz1FireCurtainHeadless {
     public void finishQueueWaitsForNextReadyVblankPhase() throws Exception {
         drainStartupKosWork();
         Sonic3kAIZEvents events = getAizEvents();
-        prepareFireOverlay(events);
+        stageFireOverlay(events);
         events.setFireSequencePhaseOrdinal(3);
         events.setFirePhaseFrames(63);
         queueAct2TransitionArt(events);
@@ -374,15 +366,19 @@ public class TestS3kAiz1FireCurtainHeadless {
         method.invoke(events);
     }
 
-    private void prepareFireOverlay(Sonic3kAIZEvents events) throws Exception {
-        var method = Sonic3kAIZEvents.class.getDeclaredMethod("ensureFireOverlayTilesLoaded");
+    private void stageFireOverlay(Sonic3kAIZEvents events) throws Exception {
+        var method = Sonic3kAIZEvents.class.getDeclaredMethod(
+                "ensureFireOverlayTilesLoaded");
         method.setAccessible(true);
-        for (int frame = 0; frame < 10_000 && !events.isFireOverlayTilesLoaded(); frame++) {
+        for (int frame = 0;
+                frame < 100_000 && !events.isFireOverlayTilesLoaded();
+                frame++) {
             method.invoke(events);
             fixture.stepIdleFrames(1);
         }
         assertTrue(events.isFireOverlayTilesLoaded(),
-                "the timing test must publish the real ROM-backed fire-overlay payload before requesting the reload");
+                "AIZ1 loc_1C5C6 must retain its prepared fire-overlay payload");
+        assertTrue(events.getFireOverlayTileCount() > 0);
     }
 
     private void drainStartupKosWork() {

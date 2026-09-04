@@ -100,6 +100,13 @@ public final class AudioPresentationParityProbe {
         commandCount++;
     }
 
+    public Runnable prepareCommandSubmissions(int count) {
+        if (count < 0) {
+            throw new IllegalArgumentException("count must be non-negative");
+        }
+        return () -> commandCount += count;
+    }
+
     public void presented(PresentationMode mode) {
         presentedFrames++;
         totalStereoFrames += clock.samplesForNextFrame();

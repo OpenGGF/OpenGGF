@@ -527,16 +527,14 @@ public class SidekickCpuController {
      * (sonic3k.asm:26918) — the {@code +1} is the odd-byte address of the word's low
      * byte, not a numeric increment.
      *
-     * <p>{@link #resolveCpuFrameCounter} yields the already-incremented sprite
-     * cadence directly, but bootstrap/warm-up paths preload the stale pre-increment
-     * {@code LevelManager} copy ({@link #cpuFrameCounterFromStoredLevelFrame}); in
-     * that case the engine adds one to recover the post-increment value the ROM
-     * gate reads. This consumes the counter-source semantic only — never trace
-     * identity — so it is correct for live play, level-select replay, and
-     * complete-run replay alike.
+     * <p>Both counter sources now carry the post-increment value:
+     * {@link #resolveCpuFrameCounter} yields the sprite cadence directly, and the
+     * {@code LevelManager} copy is advanced at the loop top by
+     * {@code LevelFrameStep}, as the ROM does, so neither needs an adjustment
+     * here.
      */
     private int romVisibleLevelFrameCounter() {
-        return cpuFrameCounterFromStoredLevelFrame ? frameCounter + 1 : frameCounter;
+        return frameCounter;
     }
 
     private int resolvePanicPhaseCounter() {
@@ -544,11 +542,9 @@ public class SidekickCpuController {
         // "+1" is the 68000 byte address within the word, not a frame increment
         // (S3K sonic3k.asm:26869-26884; S2 s2.asm:39122-39139). At CNZ f8958
         // the ROM-visible word is $22FF, so loc_13F94 keeps DOWN held for one
-        // more frame and releases at $2300. Bootstrap/VBlank closure paths can
-        // source the stale pre-Process_Sprites LevelManager copy; recover the
-        // already-incremented word, but do not project through Sonic_RecordPos:
-        // this routine reads Level_frame_counter itself, not a sprite-cadence
-        // table index.
+        // more frame and releases at $2300. Do not project through
+        // Sonic_RecordPos: this routine reads Level_frame_counter itself, not a
+        // sprite-cadence table index.
         return romVisibleLevelFrameCounter();
     }
 
@@ -3985,8 +3981,7 @@ public class SidekickCpuController {
         int catchUpFrameCounter = catchUpFrameCounterOverride >= 0
                 ? catchUpFrameCounterOverride
                 : (catchUpUsesRomVisibleLevelFrameCounter
-                        && (cpuFrameCounterFromStoredLevelFrame
-                            || titleCardOwnsRetainedResultsHeldLevelCounter())
+                        && titleCardOwnsRetainedResultsHeldLevelCounter()
                         ? frameCounter + 1
                         : frameCounter);
         if (catchUpUsesRomVisibleLevelFrameCounter) {
@@ -5405,7 +5400,7 @@ public class SidekickCpuController {
             // stored LevelManager counter advances, so expose the ROM-visible
             // cadence to the first routine-2 tick without changing S3K's normal
             // stored-counter rule.
-            catchUpFrameCounterOverride = levelManager.getFrameCounter() + 1;
+            catchUpFrameCounterOverride = levelManager.getFrameCounter();
         }
         state = State.CATCH_UP_FLIGHT;
         despawnCounter = 0;

@@ -4,6 +4,7 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectConstants;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
@@ -62,6 +63,7 @@ import com.openggf.game.dataselect.DataSelectHostProfile;
 import com.openggf.game.dataselect.DataSelectPresentationProvider;
 import com.openggf.game.startup.DonatedDataSelectWarmupTask;
 import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
+import com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler;
 import com.openggf.game.sonic2.dataselect.S2DataSelectProfile;
 import com.openggf.level.objects.ObjectRegistry;
 import com.openggf.level.objects.PlaneSwitcherConfig;
@@ -96,8 +98,10 @@ public class Sonic2GameModule implements GameModule {
     private final SpecialStageProvider specialStageProvider = new Sonic2SpecialStageProvider(specialStageManager);
     private final DebugModeProvider debugModeProvider =
             new Sonic2DebugModeProvider(specialStageManager, specialStageSpriteDebug);
+    private final Sonic2LevelMusicScheduler levelMusicScheduler =
+            new Sonic2LevelMusicScheduler();
     private final LevelInitProfile levelInitProfile = new Sonic2LevelInitProfile(
-            levelEventManager, playerArtModeAuthority);
+            levelEventManager, playerArtModeAuthority, levelMusicScheduler);
     private final TitleCardManager titleCardProvider = new TitleCardManager();
     private final TitleScreenManager titleScreenProvider = new TitleScreenManager();
     private final LevelSelectManager levelSelectProvider = new LevelSelectManager();
@@ -176,7 +180,9 @@ public class Sonic2GameModule implements GameModule {
 
     @Override
     public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
-        return plcService == null ? List.of() : List.of(plcService);
+        return plcService == null
+                ? List.of(levelMusicScheduler)
+                : List.of(plcService, levelMusicScheduler);
     }
 
     @Override
@@ -241,6 +247,13 @@ public class Sonic2GameModule implements GameModule {
     @Override
     public TitleCardProvider getTitleCardProvider() {
         return titleCardProvider;
+    }
+
+    private final GameOverFlowProvider gameOverFlowProvider = new Sonic2GameOverFlowProvider();
+
+    @Override
+    public GameOverFlowProvider getGameOverFlowProvider() {
+        return gameOverFlowProvider;
     }
 
     @Override

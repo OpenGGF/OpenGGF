@@ -1110,7 +1110,7 @@ public abstract class AbstractTraceReplayTest {
         //
         // A standalone trace is the tail of its recording: the capture loop
         // advances the emulator one frame past the last row and breaks
-        // ("tools/bizhawk-headless/src/Recording/S2TraceCaptureRunner.cs":383-390),
+        // ("tools/tracechaser/bizhawk-headless/src/Recording/S2TraceCaptureRunner.cs":383-390),
         // leaving that iteration's callbacks buffered with no further
         // PublishRow, so PublishTerminal attaches them to the last row
         // (:520-529 FlushDynamicArtSegment -> S2DynamicArtObserver.cs:268

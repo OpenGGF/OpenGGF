@@ -3,7 +3,9 @@
 This collection supports investigation of Mega Drive audio behavior and
 OpenGGF's audio implementation. It contains:
 
-- saved external references about YM2612, SN76489, SMPS, and Sonic audio data;
+- provenance stubs (`.md`, one per page) for the external references about YM2612,
+  SN76489, SMPS, and Sonic audio data that were consulted; the third-party pages
+  themselves are not tracked, each stub links to the original;
 - reference recordings captured from trusted emulators or source material;
 - OpenGGF engine captures used for comparison;
 - analysis images, raw PCM data, and intermediate diagnostic outputs;

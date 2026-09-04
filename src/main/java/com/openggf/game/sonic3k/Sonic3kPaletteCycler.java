@@ -14,7 +14,7 @@ import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.animation.AnimatedPaletteManager;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

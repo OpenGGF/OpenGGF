@@ -162,6 +162,11 @@ public class CheckpointState implements RespawnState {
      * it straight back to 0, which is the same observable minute/second as the
      * clamped expression below.)
      */
+    @Override
+    public void clearSavedActTimer() {
+        savedTimerFrames = 0;
+    }
+
     private void restoreActTimerIfSaved() {
         if (!hasSavedTimer) {
             return;

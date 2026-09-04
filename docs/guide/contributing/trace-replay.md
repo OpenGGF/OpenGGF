@@ -160,14 +160,14 @@ exact-byte approval workflow.
 
 Prerequisites:
 
-- BizHawk 2.11 installed at `docs/BizHawk-2.11-linux-x64`, or set `BIZHAWK_HOME`
+- BizHawk 2.11 installed at `tools/tracechaser/.dependencies/BizHawk-2.11-linux-x64`, or set `BIZHAWK_HOME`
 - the matching game ROM for the recorder you are using
 - a BK2 movie for the act you want to record
 
 Examples:
 
 ```bash
-tools/bizhawk-headless/run.sh --mode trace \
+tools/tracechaser/bizhawk-headless/run.sh --mode trace \
   --rom "$S3K_ROM_PATH" --movie /absolute/movie.bk2 \
   --output /absent/scratch/candidate --trace-profile aiz_end_to_end
 ```
@@ -266,7 +266,7 @@ under GitHub's 100 MB hard limit (50 MB recommended max). The Java parser
 transparently. Use the helper script after regenerating a large trace:
 
 ```powershell
-powershell -File tools/traces/compress-traces.ps1 -Path tools/bizhawk/trace_output -Recurse
+powershell -File tools/tracechaser/traces/compress-traces.ps1 -Path tools/tracechaser/bizhawk/trace_output -Recurse
 ```
 
 The script:
@@ -305,7 +305,7 @@ tools\bizhawk\record_s3k_trace.bat ^
 3. Run the fixture sanity gate against the **uncompressed** `tools\bizhawk\trace_output\aux_state.jsonl` (do this BEFORE compressing):
 
 ```powershell
-$events = Get-Content tools/bizhawk/trace_output/aux_state.jsonl | ForEach-Object { $_ | ConvertFrom-Json }
+$events = Get-Content tools/tracechaser/bizhawk/trace_output/aux_state.jsonl | ForEach-Object { $_ | ConvertFrom-Json }
 $required = 'intro_begin','gameplay_start','aiz1_fire_transition_begin','aiz2_reload_resume','aiz2_main_gameplay','hcz_handoff_begin','hcz_handoff_complete'
 $frames = $events | Select-Object -ExpandProperty frame
 
@@ -338,7 +338,7 @@ powershell -File tools\traces\compress-traces.ps1 -Path tools\bizhawk\trace_outp
 
 Use the dedicated credits recorder when you want the ROM's ending replays rather than a human-played
 BK2 route. This path forces `GM_Credits` from the title screen, waits for each demo to become active,
-and records each replay into its own trace directory under `tools/bizhawk/trace_output/credits_demos/`.
+and records each replay into its own trace directory under `tools/tracechaser/bizhawk/trace_output/credits_demos/`.
 
 Command:
 
@@ -369,9 +369,9 @@ Supported replay indices:
 
 Output layout:
 
-- `tools/bizhawk/trace_output/credits_demos/manifest.json`
-- `tools/bizhawk/trace_output/credits_demos/00_ghz1_credits_demo_1/`
-- `tools/bizhawk/trace_output/credits_demos/01_mz2_credits_demo/`
+- `tools/tracechaser/bizhawk/trace_output/credits_demos/manifest.json`
+- `tools/tracechaser/bizhawk/trace_output/credits_demos/00_ghz1_credits_demo_1/`
+- `tools/tracechaser/bizhawk/trace_output/credits_demos/01_mz2_credits_demo/`
 - `...`
 
 Each replay directory contains the same core files as a normal trace capture:
@@ -401,7 +401,7 @@ Notes:
 1. Create a new directory under `src/test/resources/traces/<game>/<name>/` (e.g.
    `src/test/resources/traces/s3k/mgz/`).
 2. Record (see [Recording Or Refreshing A Trace](#recording-or-refreshing-a-trace)) and run
-   `tools/traces/compress-traces.ps1` if your payload sizes warrant it. Copy
+   `tools/tracechaser/traces/compress-traces.ps1` if your payload sizes warrant it. Copy
    `metadata.json`, `physics.csv` (or `.csv.gz`), `aux_state.jsonl` (or `.jsonl.gz`), and
    the `.bk2` movie into the target directory.
 3. Add a test class under `src/test/java/com/openggf/tests/trace/<game>/` extending
@@ -492,7 +492,7 @@ ROM-citation requirements and per-game parity rules.
 - Updating the trace baseline before understanding whether a behaviour change is a real fix or
   a regression.
 - **Committing uncompressed large traces.** GitHub will reject any push containing files
-  >100 MB. Always run `tools/traces/compress-traces.ps1` after regenerating a large trace.
+  >100 MB. Always run `tools/tracechaser/traces/compress-traces.ps1` after regenerating a large trace.
 - **Adding per-frame trace-driven hydration to the test harness.** Setting engine state from
   recorded values mid-replay violates the comparison-only invariant and masks engine bugs. If
   you find yourself wanting to "preserve" or "set" engine fields each frame from the trace,
@@ -552,28 +552,27 @@ Parser (production code, used by tests + diagnostics):
 
 Recorders + launchers:
 
-- [`s1_trace_recorder.lua`](../../../tools/bizhawk/s1_trace_recorder.lua)
-- [`s2_trace_recorder.lua`](../../../tools/bizhawk/s2_trace_recorder.lua)
-- [`s3k_trace_recorder.lua`](../../../tools/bizhawk/s3k_trace_recorder.lua)
-- [`s1_credits_trace_recorder.lua`](../../../tools/bizhawk/s1_credits_trace_recorder.lua)
-- [`record_trace.bat`](../../../tools/bizhawk/record_trace.bat)
-- [`record_s2_trace.bat`](../../../tools/bizhawk/record_s2_trace.bat)
-- [`record_s3k_trace.bat`](../../../tools/bizhawk/record_s3k_trace.bat)
-- [`record_s1_credits_traces.bat`](../../../tools/bizhawk/record_s1_credits_traces.bat)
+- [`s1_trace_recorder.lua`](../../../tools/tracechaser/bizhawk/s1_trace_recorder.lua)
+- [`s2_trace_recorder.lua`](../../../tools/tracechaser/bizhawk/s2_trace_recorder.lua)
+- [`s3k_trace_recorder.lua`](../../../tools/tracechaser/bizhawk/s3k_trace_recorder.lua)
+- [`s1_credits_trace_recorder.py`](../../../tools/tracechaser/retro/s1_credits_trace_recorder.py) (stable-retro; the BizHawk Lua credits recorder was removed)
+- [`record_trace.bat`](../../../tools/tracechaser/bizhawk/record_trace.bat)
+- [`record_s2_trace.bat`](../../../tools/tracechaser/bizhawk/record_s2_trace.bat)
+- [`record_s3k_trace.bat`](../../../tools/tracechaser/bizhawk/record_s3k_trace.bat)
 
 Trace payload tooling:
 
-- [`compress-traces.ps1`](../../../tools/traces/compress-traces.ps1)
+- [`compress-traces.ps1`](../../../tools/tracechaser/traces/compress-traces.ps1)
 
 Skills:
 
-- [`trace-replay-bug-fixing`](../../../.claude/skills/trace-replay-bug-fixing/skill.md) — the
+- [`trace-replay-bug-fixing`](../../../.claude/skills/trace-replay-bug-fixing/SKILL.md) — the
   canonical workflow for any `*TraceReplay` test failure.
 - [`s1-trace-replay`](../../../.claude/skills/s1-trace-replay/) — Sonic 1 trace recording
   specifics.
 - **`bizhawk-headless-trace`** — canonical native capture and publication,
   including S1 credits demos; the maintained protocol is
-  [`tools/bizhawk-headless/README.md`](../../../tools/bizhawk-headless/README.md).
+  [`tools/tracechaser/bizhawk-headless/README.md`](../../../tools/tracechaser/bizhawk-headless/README.md).
 
 ## Next Steps
 

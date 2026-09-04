@@ -19,42 +19,19 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSoundTestPresentationHost {
-    @Test
-    void interactiveDeviceLifecycleRunsOnItsAudioThread() throws Exception {
-        Thread caller = Thread.currentThread();
-        AtomicReference<Thread> openedOn = new AtomicReference<>();
-        AtomicReference<Thread> closedOn = new AtomicReference<>();
-        ScheduledExecutorService audioThread =
-                Executors.newSingleThreadScheduledExecutor();
-        AutoCloseable resource = SoundTestApp.callOnAudioThread(
-                audioThread, () -> {
-                    openedOn.set(Thread.currentThread());
-                    return () -> closedOn.set(Thread.currentThread());
-                });
-
-        SoundTestApp.callOnAudioThread(audioThread, () -> {
-            resource.close();
-            return null;
-        });
-        audioThread.shutdownNow();
-
-        assertFalse(openedOn.get() == caller);
-        assertSame(openedOn.get(), closedOn.get());
-    }
-
     @Test
     void directBackendPlaybackCallsAreAbsentFromSoundTestApp()
             throws IOException {
@@ -102,7 +79,7 @@ class TestSoundTestPresentationHost {
         String source = Files.readString(Path.of(
                 "src/main/java/com/openggf/audio/debug/SoundTestApp.java"));
         assertTrue(source.contains(
-                "runInteractiveWindow(options, loader, dacData, catalog"));
+                "runInteractiveWindow(options, loader, dacData, host"));
         assertTrue(source.contains(
                 "runConsole(options, loader, dacData, host"));
         assertTrue(source.contains(
@@ -116,7 +93,6 @@ class TestSoundTestPresentationHost {
         try (StandaloneAudioPresentationHost host = fixture.host()) {
             host.playMusic(persistentS3kMusic(0x81), fixture.dac());
             host.playSfx(persistentS3kSfx(0xBC), fixture.dac(), 1.0f);
-            submitRawPcm(host.managerForTesting());
             host.toggleMute(ChannelType.FM, 1);
             host.toggleSolo(ChannelType.PSG, 2);
             host.setSpeedShoes(true);
@@ -124,11 +100,36 @@ class TestSoundTestPresentationHost {
 
             var presentation = host.managerForTesting()
                     .captureLogicalSnapshot().presentation();
-            assertTrue(presentation.voices().size() >= 1);
             assertEquals(1 << 1, presentation.fmMuteMask());
             assertEquals(1 << 2, presentation.psgSoloMask());
             assertTrue(presentation.speedShoesEnabled());
-            assertNotNull(presentation.rawPcmVoiceId());
+
+            // S3K's driver owns the SEGA chant itself (Sound/Z80 Sound
+            // Driver.asm:4372-4424), so raw PCM is not a presentation voice
+            // on this profile: it is the driver's own bus-holding transport,
+            // visible as the DAC enable and the sample bytes it writes.
+            List<String> writes = new ArrayList<>();
+            host.managerForTesting().setChipWriteObserver(
+                    new com.openggf.audio.synth.ChipWriteObserver() {
+                        @Override
+                        public void onYm2612Write(
+                                int port, int register, int value) {
+                            writes.add("ym:" + port + ":" + register
+                                    + ":" + value);
+                        }
+
+                        @Override
+                        public void onPsgWrite(int value) {
+                        }
+                    });
+            submitRawPcm(host.managerForTesting());
+            host.presentFrame();
+            assertNull(host.managerForTesting().captureLogicalSnapshot()
+                    .presentation().rawPcmVoiceId());
+            assertTrue(writes.contains("ym:0:43:128"),
+                    "the driver enables the DAC for its own transport");
+            assertTrue(writes.contains("ym:0:42:255"),
+                    "the sample bytes reach the DAC data register");
 
             host.stopPlayback();
             host.presentFrame();
@@ -160,11 +161,8 @@ class TestSoundTestPresentationHost {
             host.playSfx(persistentS3kSfx(0xBC), fixture.dac(), 1.0f);
             host.presentFrame();
             var sequencers = host.managerForTesting()
-                    .captureLogicalSnapshot().presentation().voices().stream()
-                    .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                    .map(PresentationVoiceSnapshot.Smps.class::cast)
-                    .flatMap(voice -> voice.driver().sequencers().stream())
-                    .toList();
+                    .captureLogicalSnapshot().presentation().smpsLogical()
+                    .sequencers();
             assertEquals(2, sequencers.size());
             var musicHandler = sequencers.get(0)
                     .config().getCoordFlagHandler();
@@ -186,11 +184,8 @@ class TestSoundTestPresentationHost {
             assertEquals(7, owner.state().spindashRevCounter());
             assertEquals(owner, presentationOwner(host.managerForTesting()));
             var recreatedSequencers = host.managerForTesting()
-                    .captureLogicalSnapshot().presentation().voices().stream()
-                    .filter(PresentationVoiceSnapshot.Smps.class::isInstance)
-                    .map(PresentationVoiceSnapshot.Smps.class::cast)
-                    .flatMap(voice -> voice.driver().sequencers().stream())
-                    .toList();
+                    .captureLogicalSnapshot().presentation().smpsLogical()
+                    .sequencers();
             assertEquals(2, recreatedSequencers.size());
             assertSame(owner.handlerFor("s3k"),
                     recreatedSequencers.get(0).config()

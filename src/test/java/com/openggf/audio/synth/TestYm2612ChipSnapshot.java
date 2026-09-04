@@ -48,7 +48,6 @@ class TestYm2612ChipSnapshot {
         chip.setOutputSampleRate(44100.0);
         chip.setDacData(dacData());
         chip.setDacInterpolate(true);
-        chip.setDacHighpassEnabled(true);
         return chip;
     }
 

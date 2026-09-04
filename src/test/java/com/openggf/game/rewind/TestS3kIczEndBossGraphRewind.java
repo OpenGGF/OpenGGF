@@ -1,6 +1,7 @@
 package com.openggf.game.rewind;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.IczSnowPileObjectInstance;
@@ -12,6 +13,8 @@ import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.StubObjectServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +23,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Constructor;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -99,6 +103,37 @@ class TestS3kIczEndBossGraphRewind {
                 "routine timer must restore from compact state");
         assertEquals(19, readIntField(restoredBoss, "swingTimer"),
                 "swing timer must restore from compact state");
+    }
+
+    @Test
+    void iczEndBossRestoresQueuedExtendedSidekickFrostCapture() throws Exception {
+        AbstractPlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x4400, (short) 0x0420);
+        AbstractPlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x4410, (short) 0x0420);
+        AbstractPlayableSprite extension = new TestablePlayableSprite("tails", (short) 0x4420, (short) 0x0420);
+        Harness harness = Harness.create(main, List.of(nativeP2, extension));
+        ObjectManager objectManager = harness.objectManager();
+        objectManager.setRewindInPlaceRestoreEnabledForTest(false);
+        IczEndBossInstance sourceBoss = objectManager.createDynamicObject(
+                () -> new IczEndBossInstance(BOSS_SPAWN));
+        Map<AbstractPlayableSprite, int[]> sourceCaptures = extendedFrostCaptures(sourceBoss);
+        sourceCaptures.put(extension, new int[]{2, 0x4410, 4});
+
+        ObjectRefId bossId = objectId(objectManager, sourceBoss);
+        RewindRegistry rewindRegistry = registryFor(objectManager);
+        CompositeSnapshot snapshot = rewindRegistry.capture();
+
+        objectManager.removeDynamicObject(sourceBoss);
+        objectManager.createDynamicObject(() -> new IczEndBossInstance(new ObjectSpawn(
+                0x4500, 0x0420, Sonic3kObjectIds.ICZ_END_BOSS, 0, 0, false, 73)));
+        rewindRegistry.restore(snapshot);
+
+        IczEndBossInstance restoredBoss = objectById(objectManager, IczEndBossInstance.class, bossId);
+        Map<AbstractPlayableSprite, int[]> restoredCaptures = extendedFrostCaptures(restoredBoss);
+        assertEquals(1, restoredCaptures.size());
+        assertTrue(restoredCaptures.containsKey(extension),
+                "queued capture must relink to the live playable identity");
+        assertTrue(java.util.Arrays.equals(new int[]{2, 0x4410, 4}, restoredCaptures.get(extension)),
+                "capture phase, source x, and source slot must survive rewind");
     }
 
     @Test
@@ -202,11 +237,21 @@ class TestS3kIczEndBossGraphRewind {
 
     private record Harness(ObjectManager objectManager, ObjectServices services) {
         static Harness create() {
+            return create(null);
+        }
+
+        static Harness create(AbstractPlayableSprite focusedPlayer) {
+            return create(focusedPlayer, List.of());
+        }
+
+        static Harness create(AbstractPlayableSprite focusedPlayer, List<PlayableEntity> sidekicks) {
             ObjectManager[] holder = new ObjectManager[1];
             Camera camera = mockCamera();
+            camera.setFocusedSprite(focusedPlayer);
             ObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }
                 @Override public Camera camera() { return camera; }
+                @Override public List<PlayableEntity> sidekicks() { return sidekicks; }
                 @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
             };
             ObjectManager objectManager = new ObjectManager(
@@ -287,6 +332,12 @@ class TestS3kIczEndBossGraphRewind {
         return field(target, name).get(target);
     }
 
+    @SuppressWarnings("unchecked")
+    private static Map<AbstractPlayableSprite, int[]> extendedFrostCaptures(IczEndBossInstance boss)
+            throws Exception {
+        return (Map<AbstractPlayableSprite, int[]>) readObjectField(boss, "extendedFrostCaptures");
+    }
+
     private static ObjectInstance constructDefeatDebris(
             int x, int y, int xVel, int yVel, int frame, boolean flipX) {
         try {
@@ -336,6 +387,10 @@ class TestS3kIczEndBossGraphRewind {
 
     private static Camera mockCamera() {
         return new Camera() {
+            private AbstractPlayableSprite focusedSprite;
+
+            @Override public void setFocusedSprite(AbstractPlayableSprite sprite) { focusedSprite = sprite; }
+            @Override public AbstractPlayableSprite getFocusedSprite() { return focusedSprite; }
             @Override public short getX() { return 0x4380; }
             @Override public short getY() { return 0x02F8; }
             @Override public short getWidth() { return 320; }

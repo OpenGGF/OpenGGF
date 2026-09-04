@@ -5,6 +5,7 @@ package com.openggf.level.objects;
  * refresh rather than by directly constructing an object during the dynamic
  * object restore pass.
  */
+@com.openggf.game.ModApi
 public interface PlayerBoundShieldRewindRecreatable extends RewindRecreatable {
 
     @Override

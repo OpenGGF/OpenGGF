@@ -13,6 +13,7 @@ one.
 |-----|--------|
 | Arrow Keys | Move left/right, look up, crouch/roll |
 | Space | Player 1 action A / jump |
+| I / K / J / L | Player 2 up / down / left / right (`input.player2.up/down/left/right`) |
 | Right Shift | Player 2 action A / jump |
 | Enter | Pause / unpause |
 | Backspace | Player 1 start / in-game pause (engine default; add `input.player1.start` to `config.yaml` to override) |
@@ -82,7 +83,7 @@ hardcoded in the debug overlay subsystem.
 ## Debug Overlays
 
 These toggle visual debug information drawn over the game scene. They require
-`debug.flags.debugView` to be `true` in config (it is by default).
+`debug.flags.debugView` to be `true` in config (it defaults to `false`).
 
 | Key | Overlay |
 |-----|---------|

@@ -99,7 +99,7 @@ public class TestObjectManagerLifecycle {
     }
 
     @Test
-    public void s2ExecThenLoadBypassesVerticalFilterWithoutPreExecLoad() {
+    public void s2InitialAndRuntimeLoadsBothBypassVerticalFilter() {
         Camera camera = GameServices.camera();
         camera.setMinY((short) 0);
         camera.setY((short) 0);
@@ -110,20 +110,20 @@ public class TestObjectManagerLifecycle {
         manager.enableExecThenLoadPlacement();
 
         manager.reset(0);
-        assertEquals(0, registry.createCount,
-                "Reset materialization must not pull high-Y S2 spawns ahead of the runtime ObjPosLoad pass");
+        assertEquals(1, registry.createCount,
+                "S2 ObjectsManager_Init uses the same X-only load window as its runtime passes");
+        assertEquals(0, registry.instances.get(highYSpawn).updateCount,
+                "Reset materialization creates the object without executing it");
 
         manager.update(0, null, null, 1);
 
         assertEquals(1, registry.createCount,
-                "S2 ChkLoadObj has no Camera_Y_pos filter during the single post-exec load");
-        assertEquals(0, registry.instances.get(highYSpawn).updateCount,
-                "S2's single post-exec load must not execute the newly loaded object until next frame");
+                "The already-materialized object must not be recreated by the runtime load pass");
+        assertEquals(1, registry.instances.get(highYSpawn).updateCount);
 
         manager.update(0, null, null, 2);
 
-        assertEquals(1, registry.instances.get(highYSpawn).updateCount,
-                "The high-Y spawn first executes on the frame after ObjPosLoad created it");
+        assertEquals(2, registry.instances.get(highYSpawn).updateCount);
     }
 
     @Test

@@ -6,15 +6,9 @@ import java.util.Map;
 
 @com.openggf.game.ModApi
 public final class DacData {
-    /**
-     * Compatibility snapshot for the published Mod API. The playback owner
-     * never reads this map; its independently cloned {@link Sample} catalog is
-     * the immutable runtime authority.
-     */
-    public final Map<Integer, byte[]> samples;
-    public final Map<Integer, DacEntry> mapping; // NoteID -> Entry
-    public final int baseCycles; // Game-specific DAC base cycles (S1=301, S2=295, S3K=297)
-    private final Map<Integer, Sample> ownedSamples;
+    private final Map<Integer, Sample> samples;
+    private final Map<Integer, DacEntry> mapping; // NoteID -> Entry
+    private final int baseCycles; // Game-specific DAC base cycles (S1=301, S2=288, S3K=297)
 
     public DacData(Map<Integer, byte[]> samples, Map<Integer, DacEntry> mapping) {
         this(samples, mapping, 288); // Default to S2 value for backwards compatibility
@@ -22,20 +16,17 @@ public final class DacData {
 
     public DacData(Map<Integer, byte[]> samples, Map<Integer, DacEntry> mapping, int baseCycles) {
         Map<Integer, Sample> ownedSamples = new HashMap<>();
-        Map<Integer, byte[]> compatibilitySamples = new HashMap<>();
         for (Map.Entry<Integer, byte[]> entry : samples.entrySet()) {
             byte[] bytes = entry.getValue();
             ownedSamples.put(entry.getKey(), bytes == null ? null : new Sample(bytes));
-            compatibilitySamples.put(entry.getKey(), bytes == null ? null : bytes.clone());
         }
-        this.ownedSamples = Collections.unmodifiableMap(ownedSamples);
-        this.samples = Collections.unmodifiableMap(compatibilitySamples);
+        this.samples = Collections.unmodifiableMap(ownedSamples);
         this.mapping = Collections.unmodifiableMap(new HashMap<>(mapping));
         this.baseCycles = baseCycles;
     }
 
     public Sample sample(int sampleId) {
-        return ownedSamples.get(sampleId);
+        return samples.get(sampleId);
     }
 
     public DacEntry mappingForNote(int noteId) {
@@ -47,7 +38,7 @@ public final class DacData {
     }
 
     public int sampleCount() {
-        return ownedSamples.size();
+        return samples.size();
     }
 
     public int mappingCount() {
@@ -55,7 +46,7 @@ public final class DacData {
     }
 
     public boolean hasSample(int sampleId) {
-        return ownedSamples.containsKey(sampleId);
+        return samples.containsKey(sampleId);
     }
 
     @com.openggf.game.ModApi
@@ -77,8 +68,8 @@ public final class DacData {
 
     @com.openggf.game.ModApi
     public static final class DacEntry {
-        public final int sampleId;
-        public final int rate;
+        private final int sampleId;
+        private final int rate;
 
         public DacEntry(int sampleId, int rate) {
             this.sampleId = sampleId;

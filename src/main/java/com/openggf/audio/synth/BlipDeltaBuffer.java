@@ -326,6 +326,19 @@ public class BlipDeltaBuffer {
     }
 
     /**
+     * Number of clocks that must be run (and passed to {@link #endFrame}) so
+     * that at least {@code samples} samples are available to
+     * {@link #readSamples}; blip_buf's {@code blip_clocks_needed}.
+     */
+    public int clocksNeeded(int samples) {
+        long needed = (long) samples << (FRAC_BITS + FACTOR_FP_BITS);
+        if (needed < offsetFp) {
+            return 0;
+        }
+        return (int) ((needed - offsetFp + factorFp - 1) / factorFp);
+    }
+
+    /**
      * End the current frame and advance the buffer position.
      * Uses integer clocks to eliminate floating-point precision loss.
      */
@@ -362,19 +375,6 @@ public class BlipDeltaBuffer {
         this.integR = snapshot.integR();
     }
 
-    static void validateSnapshot(Snapshot snapshot) {
-        if (snapshot == null) {
-            throw new IllegalArgumentException(
-                    "blip delta snapshot cannot be null");
-        }
-        if (snapshot.factorFp() <= 0 || snapshot.size() < BUF_EXTRA
-                || snapshot.bufferLRef().length != snapshot.size()
-                || snapshot.bufferRRef().length != snapshot.size()) {
-            throw new IllegalArgumentException(
-                    "blip delta snapshot shape is invalid");
-        }
-    }
-
     public record Snapshot(
             long factorFp,
             long offsetFp,
@@ -406,19 +406,14 @@ public class BlipDeltaBuffer {
 
         @Override
         public boolean equals(Object candidate) {
-            if (this == candidate) {
-                return true;
-            }
-            if (!(candidate instanceof Snapshot other)) {
-                return false;
-            }
-            return factorFp == other.factorFp
+            return candidate instanceof Snapshot other
+                    && factorFp == other.factorFp
                     && offsetFp == other.offsetFp
+                    && Arrays.equals(bufferL, other.bufferL)
+                    && Arrays.equals(bufferR, other.bufferR)
                     && size == other.size
                     && integL == other.integL
-                    && integR == other.integR
-                    && Arrays.equals(bufferL, other.bufferL)
-                    && Arrays.equals(bufferR, other.bufferR);
+                    && integR == other.integR;
         }
 
         @Override

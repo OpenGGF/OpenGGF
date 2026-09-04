@@ -72,7 +72,6 @@ class TestAiz2BossEndSequenceObjects {
     void tearDown() {
         Aiz2BossEndSequenceState.reset();
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test
@@ -753,6 +752,39 @@ class TestAiz2BossEndSequenceObjects {
                 "AIZ2 results must not consume the in-level title-card End_of_level_flag; "
                         + "Obj_LevelResults owns the next flag write on exit");
         assertFalse(Aiz2BossEndSequenceState.isEggCapsuleReleased());
+    }
+
+    @Test
+    void aizCapsuleResultsStartLocksSonicButDefersSidekickEndingPoseCheck() throws Exception {
+        Camera camera = TestEnvironment.activeGameplayMode().getCamera();
+        camera.resetState();
+
+        GameStateManager gameState = new GameStateManager();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        sonic.setAir(false);
+        TestablePlayableSprite tails = new TestablePlayableSprite("tails", (short) 0, (short) 0);
+        SidekickCpuController tailsCpu = new SidekickCpuController(tails, sonic);
+        tailsCpu.setController2SignedLocked(true);
+        tails.setCpuController(tailsCpu);
+
+        AizFloatingCapsuleForTest capsule = new AizFloatingCapsuleForTest();
+        capsule.setServices(new QueryOnlyServices(camera, sonic, List.of(tails))
+                .withGameState(gameState));
+        setField(capsule, "opened", 1);
+        setField(capsule, "postOpenTimer", 0);
+
+        capsule.update(0, sonic);
+
+        assertTrue(getBooleanField(capsule, "resultsStarted"));
+        assertTrue(sonic.isObjectControlled(),
+                "sub_868F8 calls Set_PlayerEndingPose for Player_1 when results start "
+                        + "(sonic3k.asm:181900-181918)");
+        assertTrue(tailsCpu.isController2SignedLocked(),
+                "AIZ Player_2 remains under Ctrl_2_locked until Check_TailsEndPose runs "
+                        + "(sonic3k.asm:181919-181939)");
+        assertFalse(tails.isObjectControlled(),
+                "Check_TailsEndPose owns Player_2's Set_PlayerEndingPose call, so results "
+                        + "start must not pre-emptively set object_control=$81.");
     }
 
     @Test

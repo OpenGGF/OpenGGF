@@ -2,7 +2,7 @@ package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Assumptions;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 
 import static org.junit.jupiter.api.Assertions.*;
 

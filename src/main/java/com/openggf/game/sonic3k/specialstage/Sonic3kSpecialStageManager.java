@@ -969,10 +969,13 @@ public class Sonic3kSpecialStageManager {
                 || ringsCollected == EXTRA_LIFE_THRESHOLD_2) {
             GameServices.audio().playSfx(Sonic3kSfx.RING_LOSS.id);
         } else {
-            // ROM: loc_9838 submits sfx_RingRight, then the locked-on Z80
-            // zPlaySound_CheckRing toggles zRingSpeaker and selects the left
-            // or right table entry before loading the SFX.
-            GameServices.audio().playSfx(GameSound.RING);
+            // ROM: loc_984C seeds sfx_RingRight before the Blue_spheres_stage_flag
+            // threshold branch and always calls Play_SFX with that ID
+            // (skdisasm/sonic3k.asm:12189-12222), exactly as GiveRing does in a
+            // level (sonic3k.asm:35456). The left/right alternation is the Z80
+            // driver's, keyed on that raw id (Z80 Sound Driver.asm:1919-1925),
+            // so the audio manager alternates this request the same way.
+            GameServices.audio().playSfx(Sonic3kSfx.RING_RIGHT.id);
         }
     }
 

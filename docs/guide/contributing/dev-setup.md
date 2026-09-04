@@ -23,6 +23,31 @@ tools/testing/install-hooks.sh
 mvn package
 ```
 
+The pinned Sonic Retro disassemblies are optional development references. The engine,
+Maven build, and ordinary tests do not require them. Contributors doing disassembly-backed
+parity research can initialize the exact reference revisions after cloning:
+
+```bash
+git submodule update --init docs/s1disasm docs/s2disasm docs/skdisasm
+```
+
+Trace recording and analysis are also optional. Those workflows use the exact
+TraceChaser release pinned by OpenGGF and the verified official BizHawk 2.11
+installation documented there:
+
+```bash
+git submodule update --init --recursive tools/tracechaser
+tools/tracechaser-bootstrap.sh --check
+```
+
+The submodule never initializes itself and normal builds do not require it.
+Compatibility launchers resolve each command through
+`tools/tracechaser-bootstrap.sh --require <relative-path>` before execution.
+That resolver derives the expected commit from the gitlink and refuses a dirty
+checkout, symbolic-link or non-directory path component, or a target that
+resolves outside the pinned checkout. Status 2 means uninitialized, status 3
+means the wrong commit, and status 4 means an unsafe or missing path.
+
 The executable OpenGGF JAR with all dependencies is written to the current
 worktree's Maven output tree:
 ```
@@ -42,13 +67,22 @@ Place ROM files in the project root directory (next to `pom.xml`):
 | Sonic 2 | `s2.gen` | World, REV01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K | `s3k.gen` | World, lock-on; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-ROM files are gitignored. Tests that require ROM data skip gracefully when files are
-absent, so you can build and run most tests without any ROMs.
+ROM files are gitignored. Test classes annotated `@RequiresRom` are disabled (reported as
+skipped) when their ROM cannot be found, so you can build and run most tests without any
+ROMs. Two classes are stricter: `TestS2CompleteRunStateDecoder` and
+`TestS3kCompleteRunStateDecoder` throw unless the matching property is set explicitly.
 
-For S3K-specific tests, the ROM path can also be passed as a system property:
+ROM paths are passed per game as system properties -- note the S3K property is
+`s3k.rom.path`, not `sonic3k.rom.path`:
+
 ```bash
-mvn test -Ds3k.rom.path=s3k.gen
+mvn -Dmse=off test -Dsonic1.rom.path=/abs/path/s1.gen \
+    -Dsonic2.rom.path=/abs/path/s2.gen -Ds3k.rom.path=/abs/path/s3k.gen
 ```
+
+Use **absolute** paths. From a git worktree (or any directory that is not the repository
+root) a relative path resolves against the Surefire fork's working directory, the ROM is not
+found, and every ROM-gated class is silently skipped and reported green.
 
 ## Run the Engine
 
@@ -71,7 +105,7 @@ changed sources and run directly from `target/classes`. The first offline
 development launch may require `run.sh` or `run.cmd` to populate Maven's local
 dependency cache.
 
-Linux developers can launch a RenderDoc capture with `./run_renderdoc.sh` when
+Linux developers can launch a RenderDoc capture with `scripts/run_renderdoc.sh` when
 `renderdoccmd` is installed and available on `PATH`.
 
 The engine will open a window showing the master title screen. Select a game with the
@@ -90,9 +124,9 @@ mvn test -Dtest=TestCollisionLogic
 mvn test -Dtest=TestCollisionLogic#testSlopeAngle
 ```
 
-Tests are configured for parallel execution across 8 JVM forks. ROM-dependent tests
-(marked with `@RequiresRom` or equivalent guards) skip automatically when ROMs are
-absent.
+Tests run across 4 JVM forks by default (`surefire.forkCount` in `pom.xml`; the CI profile
+drops to 1). Override with `-Dsurefire.forkCount=N`. ROM-dependent tests are gated as
+described under "ROM files" above.
 
 ## Project Structure
 
@@ -105,9 +139,9 @@ OpenGGF/
     main/resources/           -- Bundled default config, shaders
     test/java/com/openggf/   -- Test source code
   docs/
-    s1disasm/                -- Sonic 1 disassembly (untracked, local reference)
-    s2disasm/                -- Sonic 2 disassembly (untracked, local reference)
-    skdisasm/                -- Sonic 3&K disassembly (untracked, local reference)
+    s1disasm/                -- Sonic 1 disassembly (Sonic Retro submodule)
+    s2disasm/                -- Sonic 2 disassembly (Sonic Retro submodule)
+    skdisasm/                -- Sonic 3&K disassembly (Sonic Retro submodule)
     guide/                   -- This user guide
   tools/                     -- External reference tools
 ```

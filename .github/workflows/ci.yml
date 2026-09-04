@@ -41,6 +41,8 @@ jobs:
   guards:
     if: github.event_name != 'push' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
+    env:
+      LUA_BIN: lua5.4
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -61,11 +63,26 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Install Lua 5.4
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes lua5.4
+          "$LUA_BIN" -e 'assert(_VERSION == "Lua 5.4")'
+
       - name: Run structural guards
         run: mvn -Dmse=off -Pguards test -B
 
+  # The ordinary suite is ROM-free too (ROM-gated classes error only when a
+  # path is supplied), so it runs on the same integration-branch pushes as the
+  # guards job. It used to run only on PRs and schedules, which let develop
+  # carry a deterministic red test and an order-dependent one unnoticed
+  # because nothing on the push path executed them.
+  #
+  # Same pin as `guards`: all-branch pushes stay policy-only and Maven-free
+  # (allBranchPushPolicyShouldRemainLightweight in TestBuildToolingGuard).
   test:
-    if: github.event_name != 'push' || github.ref == 'refs/heads/next'
+    if: github.event_name != 'push' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/next'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

@@ -183,9 +183,6 @@ public final class TraceSuppressedRowClosure {
         } else {
             LevelFrameStep.serviceVBlankOnly(
                     context, lifecycleFrame, PlcLifecyclePhase.LAG);
-            if (levelEvents != null) {
-                levelEvents.advanceVblankOnlyState();
-            }
             if (context.runtimeArtCoordinator().ownsHeldLevelCounterHardwareTail()) {
                 LevelFrameStep.serviceHardwarePostObjectsOnly(context);
                 LevelFrameStep.serviceHardwarePreMainLoopOnly(context);
@@ -206,8 +203,7 @@ public final class TraceSuppressedRowClosure {
         if (levelManager.hasPendingInLevelTitleCardHeldCounterDispatch()) {
             startPendingInLevelTitleCard.run();
         }
-        if (levelEvents != null && titleCardProvider != null
-                && titleCardProvider.advancesOnHeldLevelCounter()) {
+        if (levelEvents != null) {
             levelEvents.advanceVblankOnlyState();
         }
         levelManager.getObjectManager().advanceVblaCounter();

@@ -198,6 +198,7 @@ class TestLbzTubeElevatorInstance {
     @Test
     void waitExitStaysOpenWhileReleasedPlayerIsStillStandingOnElevator() throws Exception {
         ObjectInstance elevator = elevator(0x1200, 0x0600, 0);
+        setServices(elevator, new TestObjectServices());
         TestablePlayableSprite player = playerAt(0x1200, 0x0600);
         ObjectManager objectManager = mock(ObjectManager.class);
         setServices(elevator, new ObjectManagerOnlyServices(objectManager));

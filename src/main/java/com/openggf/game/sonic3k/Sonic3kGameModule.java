@@ -4,6 +4,7 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.CanonicalAnimation;
 import com.openggf.game.CrossGameFeatureProvider;
@@ -327,6 +328,13 @@ public class Sonic3kGameModule implements GameModule {
         return scrollHandlerProvider;
     }
 
+    private final GameOverFlowProvider gameOverFlowProvider = new Sonic3kGameOverFlowProvider();
+
+    @Override
+    public GameOverFlowProvider getGameOverFlowProvider() {
+        return gameOverFlowProvider;
+    }
+
     @Override
     public TitleCardProvider getTitleCardProvider() {
         return titleCardManager;
@@ -485,6 +493,19 @@ public class Sonic3kGameModule implements GameModule {
     }
 
     @Override
+    public java.util.function.BiFunction<AbstractPlayableSprite, com.openggf.game.ShieldType,
+            com.openggf.level.objects.ShieldObjectInstance> getShieldFactory() {
+        // Same objects whether S3K is the host or the cross-game donor.
+        return donorProvider.getShieldFactory();
+    }
+
+    @Override
+    public java.util.function.Function<AbstractPlayableSprite,
+            com.openggf.level.objects.AbstractObjectInstance> getInstaShieldFactory() {
+        return donorProvider.getInstaShieldFactory();
+    }
+
+    @Override
     public DonorCapabilities getDonorCapabilities() {
         return Sonic3kDonorCapabilities.INSTANCE;
     }
@@ -578,6 +599,23 @@ public class Sonic3kGameModule implements GameModule {
     }
 
     private static final class Sonic3kCrossGameDonorProvider implements CrossGameDonorProvider {
+        @Override
+        public java.util.function.BiFunction<AbstractPlayableSprite, com.openggf.game.ShieldType,
+                com.openggf.level.objects.ShieldObjectInstance> getShieldFactory() {
+            return (player, type) -> switch (type) {
+                case FIRE -> new com.openggf.game.sonic3k.objects.FireShieldObjectInstance(player);
+                case LIGHTNING -> new com.openggf.game.sonic3k.objects.LightningShieldObjectInstance(player);
+                case BUBBLE -> new com.openggf.game.sonic3k.objects.BubbleShieldObjectInstance(player);
+                default -> new com.openggf.level.objects.ShieldObjectInstance(player);
+            };
+        }
+
+        @Override
+        public java.util.function.Function<AbstractPlayableSprite,
+                com.openggf.level.objects.AbstractObjectInstance> getInstaShieldFactory() {
+            return com.openggf.game.sonic3k.objects.InstaShieldObjectInstance::new;
+        }
+
         @Override
         public DonorCapabilities getDonorCapabilities() {
             return Sonic3kDonorCapabilities.INSTANCE;

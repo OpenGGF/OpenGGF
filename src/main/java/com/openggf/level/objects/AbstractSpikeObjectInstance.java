@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.RenderPriority;
+import com.openggf.game.DamageCause;
 import com.openggf.game.PlayableEntity;
 
 /**
@@ -119,7 +120,7 @@ public abstract class AbstractSpikeObjectInstance extends AbstractObjectInstance
         rewindPlayerYBeforeHurt(player);
         // ROM: Hurt_Sidekick - CPU Tails only gets knockback, no ring scatter or death
         if (player.isCpuControlled()) {
-            player.applyHurt(currentX);
+            player.applyHurt(currentX, DamageCause.SPIKE);
             return;
         }
         boolean hadRings = player.getRingCount() > 0;

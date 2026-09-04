@@ -381,7 +381,10 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
                 player.giveSpeedShoes();
                 GameAudioProfile audioProfile = services().audioManager().getAudioProfile();
                 if (audioProfile != null) {
-                    services().playMusic(audioProfile.getSpeedShoesOnCommandId());
+                    // S3K monitor code writes 8 directly to zTempoSpeedup;
+                    // E2/E3 are unrelated driver commands.
+                    services().audioManager().setSpeedMultiplier(
+                            audioProfile.getSpeedMultiplierValue());
                 }
             }
             case FIRE_SHIELD -> {

@@ -19,7 +19,11 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.LoadedSmpsMusic;
+import com.openggf.audio.smps.SmpsLoadReadiness;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.session.SmpsDriverSession;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kCoordFlagHandler;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -92,22 +96,29 @@ class TestAudioPresentationCommandResolver {
     }
 
     @Test
-    void ordinaryMusicCommandCarriesTheCapturedGameSfxPolicy() {
+    void donorMusicCannotImportItsLoadReadinessIntoTheHostSession() {
         Fixture fixture = fixture();
-        fixture.sources.baseMusic = music(0x81);
-        fixture.sources.ordinaryMusicSfxPolicy =
-                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
-                        .PRESERVE_ACTIVE;
+        fixture.sources.donorMusic = music(0x91);
+        fixture.sources.musicReadiness = new SmpsLoadReadiness() {
+            @Override public boolean immediate() { return false; }
+            @Override public int compressedByteCount() { return 1; }
+            @Override public int workUnitCount() { return 1; }
+            @Override public long minimumTStates(Context context) { return 1; }
+            @Override public Work begin(Context context) {
+                throw new AssertionError("donor readiness must not begin");
+            }
+            @Override public String provenance() { return "poison-donor"; }
+        };
 
         fixture.resolver.submit(new AudioCommand.PlayMusic(
-                0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null));
+                0x91, AudioCommand.MusicRoute.DONOR_SMPS, true, "s2"));
 
-        ReplaceMusic command = assertInstanceOf(
-                ReplaceMusic.class, drain(fixture.queue).getFirst());
-        assertEquals(
-                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
-                        .PRESERVE_ACTIVE,
-                command.sfxPolicy());
+        PushMusicOverride command = assertInstanceOf(
+                PushMusicOverride.class, drain(fixture.queue).getFirst());
+        AudioPresentationCommand.SmpsVoiceDescriptor voice = assertInstanceOf(
+                AudioPresentationCommand.SmpsVoiceDescriptor.class,
+                command.music().voiceDescriptor());
+        assertTrue(voice.activation().readiness().immediate());
     }
 
     @Test
@@ -232,6 +243,181 @@ class TestAudioPresentationCommandResolver {
     }
 
     @Test
+    void privateResolutionBatchRollsBackCatalogAndVoiceCursorExactly() {
+        Fixture fixture = fixture();
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null);
+
+        var failed = fixture.resolver.beginResolutionBatch();
+        failed.resolve(request);
+        assertEquals(0, fixture.queue.size(),
+                "a request batch must not enter the durable command queue");
+        var firstOutcome = failed.apply();
+        AddSmpsSfx first = assertInstanceOf(AddSmpsSfx.class,
+                firstOutcome.commands().getFirst());
+        assertFalse(firstOutcome.commands().isEmpty());
+        failed.rollback();
+
+        assertEquals(null, fixture.factory.findRegisteredSmpsSfxAsset(
+                first.source().assetKey(), 0),
+                "a rejected attempt must not publish its ROM program");
+
+        var retry = fixture.resolver.beginResolutionBatch();
+        retry.resolve(request);
+        var replayOutcome = retry.apply();
+        assertFalse(replayOutcome.commands().isEmpty(), fixture.warnings.toString());
+        AddSmpsSfx replay = assertInstanceOf(AddSmpsSfx.class,
+                replayOutcome.commands().getFirst());
+        assertEquals(first.source().standaloneVoiceId(),
+                replay.source().standaloneVoiceId(),
+                "rollback must restore the resolver allocation cursor");
+        retry.rollback();
+    }
+
+    @Test
+    void rollbackRestoresBatchOrdinalWithoutMakingIdentityTransplantable()
+            throws Exception {
+        Fixture fixture = fixture();
+        fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+        AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                1.0f, null);
+
+        var rejected = fixture.resolver.beginResolutionBatch();
+        rejected.resolve(request);
+        var rejectedReservation = rejected.reservation();
+        long rejectedOrdinal = reservationOrdinal(rejectedReservation);
+        rejected.rollback();
+
+        var retry = fixture.resolver.beginResolutionBatch();
+        retry.resolve(request);
+        var retryReservation = retry.reservation();
+        assertEquals(rejectedOrdinal, reservationOrdinal(retryReservation),
+                "rollback must restore the batch allocation cursor");
+        assertNotSame(rejectedReservation, retryReservation,
+                "a retry must retain an opaque batch identity");
+        var outcome = retry.apply();
+        assertTrue(outcome.belongsTo(retryReservation));
+        assertFalse(outcome.belongsTo(rejectedReservation),
+                "equal ordinals cannot transplant across batch identities");
+        retry.rollback();
+    }
+
+    private static long reservationOrdinal(
+            AudioPresentationCommandResolver.OutcomeReservation reservation)
+            throws Exception {
+        Field ordinal = reservation.getClass().getDeclaredField("ordinal");
+        ordinal.setAccessible(true);
+        return ordinal.getLong(reservation);
+    }
+
+    @Test
+    void nullAndThrowingMusicReturnTypedFailureWithoutWarningsOrEffects() {
+        for (boolean throwing : List.of(false, true)) {
+            Fixture fixture = fixture();
+            fixture.sources.throwMusic = throwing;
+            AudioCommand.PlayMusic request = new AudioCommand.PlayMusic(
+                    0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null);
+            var rejected = fixture.resolver.beginResolutionBatch();
+
+            assertInstanceOf(AudioPresentationCommandResolver.Failure.class,
+                    rejected.resolve(request));
+            assertEquals(List.of(), fixture.warnings);
+            assertEquals(0, fixture.queue.size());
+            assertEquals(List.of(), fixture.synchronouslyApplied);
+            assertThrows(IllegalStateException.class, rejected::apply);
+            rejected.rollback();
+
+            fixture.sources.throwMusic = false;
+            fixture.sources.baseMusic = music(0x81);
+            var retry = fixture.resolver.beginResolutionBatch();
+            assertInstanceOf(
+                    AudioPresentationCommandResolver.CompleteSuccess.class,
+                    retry.resolve(request));
+            var outcome = retry.apply();
+            assertEquals(2, outcome.commands().size());
+            assertInstanceOf(AudioPresentationCommand.StopAllSfx.class,
+                    outcome.commands().get(0));
+            ReplaceMusic replacement = assertInstanceOf(
+                    ReplaceMusic.class, outcome.commands().get(1));
+            assertEquals(1L,
+                    replacement.music().voiceDescriptor().voiceId());
+            retry.rollback();
+        }
+    }
+
+    @Test
+    void nullAndThrowingOrdinarySfxReturnTypedFailureAndRetryExactly() {
+        for (boolean throwing : List.of(false, true)) {
+            Fixture fixture = fixture();
+            fixture.sources.throwSfx = throwing;
+            AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                    0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID,
+                    1.0f, null);
+            var rejected = fixture.resolver.beginResolutionBatch();
+
+            assertInstanceOf(AudioPresentationCommandResolver.Failure.class,
+                    rejected.resolve(request));
+            assertEquals(List.of(), fixture.warnings);
+            assertEquals(0, fixture.queue.size());
+            assertThrows(IllegalStateException.class, rejected::apply);
+            rejected.rollback();
+
+            fixture.sources.throwSfx = false;
+            fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
+            var retry = fixture.resolver.beginResolutionBatch();
+            assertInstanceOf(
+                    AudioPresentationCommandResolver.CompleteSuccess.class,
+                    retry.resolve(request));
+            var outcome = retry.apply();
+            AddSmpsSfx replay = assertInstanceOf(
+                    AddSmpsSfx.class, outcome.commands().getFirst());
+            assertEquals(1L, replay.source().standaloneVoiceId());
+            retry.rollback();
+        }
+    }
+
+    @Test
+    void failedRingFallbackNeverPublishesResetWithoutPlayback() {
+        for (boolean throwing : List.of(false, true)) {
+            Fixture fixture = fixture();
+            if (throwing) {
+                fixture.assets.throwing.add("sfx/ring.wav");
+            } else {
+                fixture.assets.malformed.add("sfx/ring.wav");
+            }
+            AudioCommand.PlaySfx request = new AudioCommand.PlaySfx(
+                    -1, "RING_LEFT", AudioCommand.SfxRoute.RING_RESOLVED,
+                    1.0f, null);
+            var rejected = fixture.resolver.beginResolutionBatch();
+
+            assertInstanceOf(AudioPresentationCommandResolver.Failure.class,
+                    rejected.resolve(request));
+            assertEquals(List.of(), fixture.warnings);
+            assertEquals(List.of(), fixture.synchronouslyApplied,
+                    "ring alternation cannot escape without playback");
+            rejected.rollback();
+
+            fixture.assets.throwing.clear();
+            fixture.assets.malformed.clear();
+            var retry = fixture.resolver.beginResolutionBatch();
+            assertInstanceOf(
+                    AudioPresentationCommandResolver.CompleteSuccess.class,
+                    retry.resolve(request));
+            var outcome = retry.apply();
+            assertEquals(2, outcome.commands().size());
+            assertInstanceOf(AudioPresentationCommand.ResetRingAlternation.class,
+                    outcome.commands().get(0));
+            StartSampleSfx playback = assertInstanceOf(
+                    StartSampleSfx.class, outcome.commands().get(1));
+            assertEquals(1L, playback.voice().voiceId());
+            retry.rollback();
+        }
+    }
+
+    @Test
     void repeatedDonorSfxLoadsAndMaterializesOnlyOnce() {
         Fixture fixture = fixture();
         AtomicInteger materializations = new AtomicInteger();
@@ -278,12 +464,12 @@ class TestAudioPresentationCommandResolver {
         assertEquals(8, newCommand.source().dependencyGeneration());
         AudioVoiceRegistry oldRegistry = fixture.registry();
         AudioVoiceRegistry newRegistry = fixture.registry();
-        oldRegistry.apply(oldCommand);
-        newRegistry.apply(newCommand);
-        assertEquals(7, standaloneDescriptor(oldRegistry)
-                .dependencyGeneration());
-        assertEquals(8, standaloneDescriptor(newRegistry)
-                .dependencyGeneration());
+        apply(fixture, oldRegistry, oldCommand);
+        assertEquals(7, fixture.session.captureLogicalSnapshot()
+                .sequencers().get(0).source().dependencyGeneration());
+        apply(fixture, newRegistry, newCommand);
+        assertEquals(8, fixture.session.captureLogicalSnapshot()
+                .sequencers().get(0).source().dependencyGeneration());
     }
 
     @Test
@@ -487,7 +673,7 @@ class TestAudioPresentationCommandResolver {
         registry.apply(new AddSmpsSfx(stale));
 
         assertEquals(0, registry.orderedVoiceCount());
-        assertEquals(1, fixture.warnings.size());
+        assertEquals(0, fixture.warnings.size());
     }
 
     @Test
@@ -502,18 +688,18 @@ class TestAudioPresentationCommandResolver {
         List<AudioPresentationCommand> commands = drain(fixture.queue);
 
         AudioVoiceRegistry registry = fixture.registry();
-        registry.apply(commands.get(0));
-        SmpsCompositeVoice music =
-                (SmpsCompositeVoice) registry.orderedVoiceAt(0);
-        assertEquals(1, music.driver().captureSnapshot().sequencers().size());
+        apply(fixture, registry, commands.get(0));
+        assertEquals(1, fixture.session.captureLogicalSnapshot()
+                .sequencers().size());
 
-        registry.apply(commands.get(1));
+        apply(fixture, registry, commands.get(1));
 
-        assertEquals(2, music.driver().captureSnapshot().sequencers().size());
+        assertEquals(2, fixture.session.captureLogicalSnapshot()
+                .sequencers().size());
     }
 
     @Test
-    void noMusicSmpsSfxCreatesOneStandaloneComposite() {
+    void noMusicSmpsSfxUsesTheSessionDriverWithoutAnOrderedCarrier() {
         Fixture fixture = fixture();
         fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
         fixture.resolver.submit(new AudioCommand.PlaySfx(
@@ -522,11 +708,12 @@ class TestAudioPresentationCommandResolver {
                 0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
 
         AudioVoiceRegistry registry = fixture.registry();
-        drain(fixture.queue).forEach(registry::apply);
+        drain(fixture.queue).forEach(command ->
+                apply(fixture, registry, command));
 
-        assertEquals(1, registry.orderedVoiceCount());
-        assertEquals(1, ((SmpsCompositeVoice) registry.orderedVoiceAt(0))
-                .driver().captureSnapshot().sequencers().size());
+        assertEquals(0, registry.orderedVoiceCount());
+        assertEquals(1, fixture.session.captureLogicalSnapshot()
+                .sequencers().size());
     }
 
     @Test
@@ -540,6 +727,7 @@ class TestAudioPresentationCommandResolver {
         fixture.resolver.submit(new AudioCommand.SetSpeedShoes(true));
         fixture.resolver.submit(new AudioCommand.SetSpeedMultiplier(8));
         fixture.resolver.submit(new AudioCommand.ChangeMusicTempo(5));
+        fixture.resolver.submit(new AudioCommand.SilencePsg(0xE3));
 
         List<AudioPresentationCommand> commands = drain(fixture.queue);
         assertEquals(List.of(
@@ -549,7 +737,8 @@ class TestAudioPresentationCommandResolver {
                         AudioPresentationCommand.RestoreMusicOverride.class,
                         AudioPresentationCommand.SetSpeedShoes.class,
                         AudioPresentationCommand.SetSpeedMultiplier.class,
-                        AudioPresentationCommand.ChangeMusicTempo.class),
+                        AudioPresentationCommand.ChangeMusicTempo.class,
+                        AudioPresentationCommand.SilencePsg.class),
                 commands.stream().map(Object::getClass).toList());
     }
 
@@ -692,14 +881,17 @@ class TestAudioPresentationCommandResolver {
         fixture.resolver.submit(new AudioCommand.PlayMusic(
                 0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null));
         AudioVoiceRegistry registry = fixture.registry();
-        registry.apply(drain(fixture.queue).get(0));
-        SmpsDriver owner =
-                ((SmpsCompositeVoice) registry.orderedVoiceAt(0)).driver();
+        apply(fixture, registry, drain(fixture.queue).get(0));
+        SmpsDriverSnapshot before = fixture.session.captureLogicalSnapshot();
 
         fixture.resolver.submit(new AudioCommand.PlaySfx(
                 0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
 
-        assertEquals(1, owner.captureSnapshot().sequencers().size());
+        assertEquals(1, before.sequencers().size());
+        SmpsDriverSnapshot after = fixture.session.captureLogicalSnapshot();
+        assertEquals(before.sequencers().size(), after.sequencers().size());
+        assertEquals(before.sequencers().get(0).source(),
+                after.sequencers().get(0).source());
     }
 
     @Test
@@ -742,10 +934,9 @@ class TestAudioPresentationCommandResolver {
         mutableDacSamples.clear();
 
         AudioVoiceRegistry registry = fixture.registry();
-        assertDoesNotThrow(() -> registry.apply(command));
+        assertDoesNotThrow(() -> apply(fixture, registry, command));
         SmpsDriverSnapshot snapshot =
-                ((SmpsCompositeVoice) registry.orderedVoiceAt(0))
-                        .driver().captureSnapshot();
+                fixture.session.captureLogicalSnapshot();
         assertEquals((byte) 0xF2,
                 snapshot.sequencers().get(0).smpsData().getData()[0x40]);
         assertNotSame(original, snapshot.sequencers().get(0).smpsData());
@@ -823,7 +1014,7 @@ class TestAudioPresentationCommandResolver {
 
         assertEquals(0, registry.orderedVoiceCount());
         assertEquals(before, calls.get() + fixture.assets.opens.get());
-        assertEquals(1, fixture.warnings.size());
+        assertEquals(0, fixture.warnings.size());
     }
 
     @Test
@@ -840,17 +1031,15 @@ class TestAudioPresentationCommandResolver {
                 0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
         AudioVoiceRegistry registry = fixture.registry();
 
-        drain(fixture.queue).forEach(registry::apply);
+        drain(fixture.queue).forEach(command ->
+                apply(fixture, registry, command));
 
-        SmpsCompositeVoice current =
-                (SmpsCompositeVoice) registry.orderedVoiceAt(0);
-        assertEquals(1, current.driver().captureSnapshot().sequencers().size(),
-                "the music override blocks the later SFX request just as the"
-                        + " shipped 1-up path does");
+        assertEquals(2, fixture.session.captureLogicalSnapshot()
+                .sequencers().size());
     }
 
     @Test
-    void overlappingNoMusicSfxUseOneStandaloneDriverAndArbitrate() {
+    void overlappingNoMusicSfxUseTheSessionDriverAndArbitrate() {
         Fixture fixture = fixture();
         fixture.sources.baseSfx = sfx(0xA0, (byte) 0xF2);
         fixture.sources.namedSfx = sfx(0xA1, (byte) 0xF2);
@@ -860,11 +1049,12 @@ class TestAudioPresentationCommandResolver {
                 -1, "JUMP", AudioCommand.SfxRoute.BASE_SMPS_NAME, 1.0f, null));
         AudioVoiceRegistry registry = fixture.registry();
 
-        drain(fixture.queue).forEach(registry::apply);
+        drain(fixture.queue).forEach(command ->
+                apply(fixture, registry, command));
 
-        assertEquals(1, registry.orderedVoiceCount());
-        assertEquals(1, ((SmpsCompositeVoice) registry.orderedVoiceAt(0))
-                .driver().captureSnapshot().sequencers().size());
+        assertEquals(0, registry.orderedVoiceCount());
+        assertEquals(1, fixture.session.captureLogicalSnapshot()
+                .sequencers().size());
     }
 
     @Test
@@ -885,13 +1075,14 @@ class TestAudioPresentationCommandResolver {
                     0xBC, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
             AudioVoiceRegistry registry = fixture.registry();
 
-            drain(fixture.queue).forEach(registry::apply);
+            drain(fixture.queue).forEach(command ->
+                    apply(fixture, registry, command));
 
-            SmpsDriver driver =
-                    ((SmpsCompositeVoice) registry.orderedVoiceAt(0)).driver();
+            SmpsDriverSnapshot snapshot =
+                    fixture.session.captureLogicalSnapshot();
             assertEquals(withMusic ? 2 : 1,
-                    driver.captureSnapshot().sequencers().size());
-            assertTrue(driver.isContinuousSfxFlagSet());
+                    snapshot.sequencers().size());
+            assertTrue(snapshot.continuousSfxFlag());
         }
     }
 
@@ -907,9 +1098,10 @@ class TestAudioPresentationCommandResolver {
         fixture.resolver.submit(new AudioCommand.PlaySfx(
                 0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
         AudioVoiceRegistry registry = fixture.registry();
-        drain(fixture.queue).forEach(registry::apply);
+        drain(fixture.queue).forEach(command ->
+                apply(fixture, registry, command));
 
-        mix(registry, 1024);
+        mix(fixture, registry, 1024);
 
         assertTrue(fixture.handlers.state().spindashRevCounter() > 0);
     }
@@ -923,41 +1115,20 @@ class TestAudioPresentationCommandResolver {
         fixture.resolver.submit(new AudioCommand.PlaySfx(
                 0xA0, null, AudioCommand.SfxRoute.BASE_SMPS_ID, 1.0f, null));
         AudioVoiceRegistry registry = fixture.registry();
-        drain(fixture.queue).forEach(registry::apply);
-        mix(registry, 1024);
+        drain(fixture.queue).forEach(command ->
+                apply(fixture, registry, command));
+        mix(fixture, registry, 1024);
         int afterSfx = fixture.handlers.state().spindashRevCounter();
         fixture.sources.baseMusic = musicWithTrack(0x81,
                 (byte) 0xE9, (byte) 0xF2);
         fixture.resolver.submit(new AudioCommand.PlayMusic(
                 0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null));
-        drain(fixture.queue).forEach(registry::apply);
+        drain(fixture.queue).forEach(command ->
+                apply(fixture, registry, command));
 
-        mix(registry, 1024);
+        mix(fixture, registry, 1024);
 
         assertTrue(fixture.handlers.state().spindashRevCounter() >= afterSfx);
-    }
-
-    @Test
-    void overrideAndSnapshotRecreationUseTheSamePresentationHandlerOwner() {
-        Fixture fixture = fixtureWithS3kOwner();
-        fixture.sources.baseConfig = s3kConfig(new ArbitraryHandler());
-        fixture.sources.baseMusic = music(0x81);
-        fixture.resolver.submit(new AudioCommand.PlayMusic(
-                0x81, AudioCommand.MusicRoute.BASE_SMPS, true, null));
-        MusicVoiceEntry music =
-                ((PushMusicOverride) drain(fixture.queue).get(0)).music();
-        SmpsCompositeVoice original = fixture.factory.recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor)
-                        music.voiceDescriptor());
-        PresentationVoiceSnapshot.Smps snapshot =
-                (PresentationVoiceSnapshot.Smps) original.snapshot();
-
-        SmpsCompositeVoice restored = fixture.factory.recreateSmps(
-                snapshot, SmpsDriverSnapshot.liveReferences());
-
-        assertSame(fixture.handlers.handlerFor("s3k"),
-                restored.driver().captureSnapshot().sequencers().get(0)
-                        .config().getCoordFlagHandler());
     }
 
     @Test
@@ -971,12 +1142,10 @@ class TestAudioPresentationCommandResolver {
                 0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null));
         ReplaceMusic command =
                 (ReplaceMusic) drain(fixture.queue).get(0);
-        SmpsCompositeVoice voice = fixture.factory.recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor)
-                        command.music().voiceDescriptor());
-
-        CoordFlagHandler actual = voice.driver().captureSnapshot()
-                .sequencers().get(0).config().getCoordFlagHandler();
+        var activation = ((AudioPresentationCommand.SmpsVoiceDescriptor)
+                command.music().voiceDescriptor()).activation();
+        CoordFlagHandler actual = activation.incomingMusic()
+                .config().getCoordFlagHandler();
         assertNotSame(arbitrary, actual);
         assertSame(fixture.handlers.handlerFor("s3k"), actual);
     }
@@ -993,13 +1162,6 @@ class TestAudioPresentationCommandResolver {
         return fixture(handlers, "s3k");
     }
 
-    private static com.openggf.audio.rewind.SmpsSourceDescriptor
-            standaloneDescriptor(AudioVoiceRegistry registry) {
-        SmpsCompositeVoice voice = (SmpsCompositeVoice)
-                registry.orderedVoiceAt(0);
-        return voice.driver().captureSnapshot().sequencers().get(0).source();
-    }
-
     private static Fixture fixture(
             SmpsCoordFlagHandlerOwner handlers, String baseGameId) {
         AtomicBoolean owner = new AtomicBoolean(true);
@@ -1008,11 +1170,12 @@ class TestAudioPresentationCommandResolver {
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(
                         48_000, SmpsSequencer.Region.NTSC,
-                        false, false, false, false, 1,
+                        false, false, false, 1,
                         AudioManager.getInstance(), pcm, assets);
+        SmpsDriverSession session = SmpsSessionTestSupport.installed(48_000);
         AudioPresentationSourceFactory factory =
                 new AudioPresentationSourceFactory(owner::get, handlers,
-                        settings);
+                        settings, session);
         FakeSources sources = new FakeSources(baseGameId);
         AudioPresentationCommandQueue queue =
                 new AudioPresentationCommandQueue();
@@ -1023,7 +1186,18 @@ class TestAudioPresentationCommandResolver {
                 new AudioPresentationCommandResolver(
                         queue, factory, sources, warnings::add,
                         owner::get, synchronouslyApplied::add);
+        AudioVoiceRegistry registry = new AudioVoiceRegistry();
+        int maxFrames = (48_000 + 60 - 1) / 60;
+        AudioPresentationProducer producer = new AudioPresentationProducer(
+                48_000, 60, 48_000, 1, registry,
+                new AudioPresentationCommandQueue(registry::isRendering),
+                new AudioPresentationMixer(maxFrames,
+                        registry::onVoiceFailure),
+                new com.openggf.audio.output.NoDeviceAudioSink(48_000),
+                synchronouslyApplied::add);
+        resolver.bindForwardExecutor(producer::applyResolvedForwardCommand);
         return new Fixture(queue, factory, resolver, sources, assets, handlers,
+                session,
                 warnings, owner, synchronouslyApplied);
     }
 
@@ -1034,12 +1208,13 @@ class TestAudioPresentationCommandResolver {
             FakeSources sources,
             FakeAssets assets,
             SmpsCoordFlagHandlerOwner handlers,
+            SmpsDriverSession session,
             List<String> warnings,
             AtomicBoolean ownerThreadBoundary,
             List<AudioPresentationCommand> synchronouslyApplied) {
         AudioVoiceRegistry registry() {
             return new AudioVoiceRegistry(
-                    factory, factory, handlers, warnings::add);
+                    factory, factory, handlers, warnings::add, session);
         }
     }
 
@@ -1068,9 +1243,9 @@ class TestAudioPresentationCommandResolver {
         int basePriority = 0x70;
         boolean baseSpecial;
         boolean baseContinuous;
-        com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy
-                ordinaryMusicSfxPolicy =
-                com.openggf.audio.GameAudioProfile.OrdinaryMusicSfxPolicy.STOP_ALL;
+        boolean throwMusic;
+        SmpsLoadReadiness musicReadiness;
+        boolean throwSfx;
         Runnable afterBaseSfxLoad;
         Runnable afterDonorSfxLoad;
 
@@ -1121,12 +1296,30 @@ class TestAudioPresentationCommandResolver {
                         @Override
                         public AbstractSmpsData loadMusic(int musicId) {
                             calls.incrementAndGet();
+                            if (throwMusic) {
+                                throw new IllegalStateException(
+                                        "seeded music source failure");
+                            }
                             return capturedMusic;
+                        }
+
+                        @Override
+                        public LoadedSmpsMusic loadMusicWithReadiness(
+                                int musicId) {
+                            AbstractSmpsData music = loadMusic(musicId);
+                            return music == null ? null : new LoadedSmpsMusic(
+                                    music, musicReadiness == null
+                                            ? SmpsLoadReadiness.immediatePlan()
+                                            : musicReadiness);
                         }
 
                         @Override
                         public AbstractSmpsData loadSfx(int sfxId) {
                             calls.incrementAndGet();
+                            if (throwSfx) {
+                                throw new IllegalStateException(
+                                        "seeded SFX source failure");
+                            }
                             if (capturedSfxCallback != null) {
                                 capturedSfxCallback.run();
                             }
@@ -1159,8 +1352,7 @@ class TestAudioPresentationCommandResolver {
                         }
                     };
             return new AudioPresentationCommandResolver.SourceAccess(
-                    gameId, generation, loader, dac, config, policy,
-                    ordinaryMusicSfxPolicy);
+                    gameId, generation, loader, dac, config, policy);
         }
 
         @Override
@@ -1173,10 +1365,15 @@ class TestAudioPresentationCommandResolver {
             implements AudioPresentationSourceFactory.WavAssets {
         final AtomicInteger opens = new AtomicInteger();
         final List<String> malformed = new ArrayList<>();
+        final List<String> throwing = new ArrayList<>();
 
         @Override
         public InputStream open(String assetId) {
             opens.incrementAndGet();
+            if (throwing.contains(assetId)) {
+                throw new IllegalStateException(
+                        "seeded fallback source failure");
+            }
             if (malformed.contains(assetId)) {
                 return new ByteArrayInputStream(new byte[] {1, 2, 3});
             }
@@ -1252,8 +1449,27 @@ class TestAudioPresentationCommandResolver {
                 .build();
     }
 
-    private static void mix(AudioVoiceRegistry registry, int frames) {
-        new AudioPresentationMixer(frames).mix(registry, frames);
+    private static void apply(
+            Fixture fixture,
+            AudioVoiceRegistry registry,
+            AudioPresentationCommand command) {
+        AudioPresentationSessionCommandApplier.apply(
+                fixture.session, registry, command);
+    }
+
+    private static void mix(
+            Fixture fixture, AudioVoiceRegistry registry, int frames) {
+        registry.beginRendering();
+        try {
+            registry.serviceOuterFrame();
+            fixture.session.serviceForward();
+            short[] smpsPcm = new short[frames * 2];
+            fixture.session.renderFrames(smpsPcm, 0, frames);
+            new AudioPresentationMixer(frames).mixPcmVoices(
+                    registry, frames, smpsPcm, 0);
+        } finally {
+            registry.endRendering();
+        }
     }
 
     private static List<AudioPresentationCommand> drain(

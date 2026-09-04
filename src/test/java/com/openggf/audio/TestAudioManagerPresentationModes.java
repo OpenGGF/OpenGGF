@@ -15,13 +15,11 @@ import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.AudioVoiceRegistry;
 import com.openggf.audio.presentation.DecodedPcmCache;
 import com.openggf.audio.presentation.SmpsAssetKey;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
-import com.openggf.audio.driver.SmpsDriver;
 import com.openggf.audio.runtime.PcmHistoryRing;
+import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
 import com.openggf.audio.smps.SmpsSequencerConfig;
-import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.tests.TestEnvironment;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -30,7 +28,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.lang.reflect.Field;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -167,10 +165,6 @@ class TestAudioManagerPresentationModes {
             throws Exception {
         AudioManager audio = AudioManager.getInstance();
         AudioVoiceRegistry registry = registry(audio);
-        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                SampleBackedVoice.oneShot(4, 0,
-                        registeredPcm(audio, "raw"),
-                        48_000, 1.0f, 1.0f)));
         registry.apply(new AudioPresentationCommand.ReplaceMusic(
                 music(audio, 1, 0x81, "base")));
         registry.apply(new AudioPresentationCommand.PushMusicOverride(
@@ -179,6 +173,10 @@ class TestAudioManagerPresentationModes {
                 SampleBackedVoice.oneShot(3, 1,
                         registeredPcm(audio, "sample"),
                         48_000, 1.0f, 1.0f)));
+        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
+                SampleBackedVoice.oneShot(4, 0,
+                        registeredPcm(audio, "raw"),
+                        48_000, 1.0f, 1.0f), new byte[] {0}));
         audio.beginReverseAudioPresentation();
 
         audio.afterRewindRestore(7,
@@ -205,6 +203,76 @@ class TestAudioManagerPresentationModes {
 
         assertEquals(0x81, audio.captureLogicalSnapshot().presentation()
                 .activeMusic().musicId());
+    }
+
+    @Test
+    void authoritativeResyncPopsThePersistentSessionOverride() {
+        AudioManager audio = AudioManager.getInstance();
+        configureSessionMusic(audio, 0x81, 0x82);
+        audio.playMusic(0x81);
+        audio.playMusic(0x82);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(0x82, activeSmpsMusicId(audio));
+        audio.beginReverseAudioPresentation();
+
+        audio.afterRewindRestore(7,
+                AudioPresentationPolicy.STOP_TRANSIENT_SFX_RESYNC_MUSIC);
+
+        assertEquals(0x81, activeSmpsMusicId(audio),
+                "resync must pop the persistent session override, not only "
+                        + "its registry handle");
+    }
+
+    @Test
+    void stopAllPresentationClearsPersistentSessionAndRegistry() {
+        AudioManager audio = AudioManager.getInstance();
+        configureSessionMusic(audio, 0x81);
+        audio.playMusic(0x81);
+        audio.presentFrame(PresentationMode.SILENT);
+        assertEquals(0x81, activeSmpsMusicId(audio));
+        audio.beginReverseAudioPresentation();
+
+        audio.afterRewindRestore(7,
+                AudioPresentationPolicy.STOP_ALL_PRESENTATION);
+
+        var presentation = audio.captureLogicalSnapshot().presentation();
+        assertNull(presentation.activeMusic());
+        assertTrue(presentation.smpsLogical().sequencers().isEmpty(),
+                "stop-all must clear the persistent logical driver too");
+    }
+
+    @Test
+    void nullSelectionLogicalStagingUsesThePersistentSessionTransaction() {
+        AudioManager audio = AudioManager.getInstance();
+        configureSessionMusic(audio, 0x81);
+
+        audio.replayTimelineCommandLogically(new AudioCommand.PlayMusic(
+                0x81, AudioCommand.MusicRoute.BASE_SMPS, false, null));
+
+        assertEquals(0x81, activeSmpsMusicId(audio),
+                "null-selection staging must not update registry metadata alone");
+    }
+
+    @Test
+    void synchronousQueuePressureDrainUsesTheSessionCompositeBoundary()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        configureSessionMusic(audio, 0x81);
+        audio.playMusic(0x81);
+        AudioPresentationCommandQueue queue = commands(audio);
+        for (int index = queue.size();
+                index < AudioPresentationCommandQueue.CAPACITY; index++) {
+            queue.submit(new AudioPresentationCommand.FadeMusic(
+                            index + 1, 1),
+                    () -> true, ignored -> { });
+        }
+
+        audio.toggleMute(ChannelType.FM, 0);
+
+        assertEquals(0x81, activeSmpsMusicId(audio),
+                "pressure drain must apply the queued activation to the session");
+        assertEquals(1, queue.size(),
+                "the triggering command remains queued after the drained batch");
     }
 
     @Test
@@ -405,18 +473,36 @@ class TestAudioManagerPresentationModes {
 
     @ParameterizedTest
     @EnumSource(ManagerProducerClosePath.class)
-    void managerLifecycleDiscardsPreparedProducerRestoreExactlyOnce(
+    void managerLifecycleDiscardsPreparedProducerRestoreWriteFreeExactlyOnce(
             ManagerProducerClosePath closePath) throws Exception {
         AudioManager audio = AudioManager.getInstance();
         AudioPresentationProducer producer = shadowProducer(audio);
-        CountingSmpsDriver preparedDriver =
-                prepareCountingProducerRestore(producer);
+        PreparedProducerRestore prepared =
+                prepareObservedProducerRestore(producer);
+        assertTrue(producer.transactionFingerprint()
+                        .preparedSelectedRestoreIdentity().token() != 0,
+                "fixture must hold one prepared logical restore");
 
         closePath.close(audio);
+
+        assertTrue(producer.isClosed());
+        assertEquals(1, prepared.logicalDiscards().get(),
+                "manager lifecycle must discard the prepared token once");
+        assertEquals(0, prepared.ymWrites().get(),
+                "prepared SMPS discard must not silence YM");
+        assertEquals(0, prepared.psgWrites().get(),
+                "prepared SMPS discard must not silence PSG");
+        assertNull(field(AudioManager.class, "shadowProducer").get(audio));
+        assertNull(field(AudioManager.class, "shadowSmpsSession").get(audio));
+
         closePath.close(audio);
 
-        assertEquals(1, preparedDriver.stopCalls,
-                "manager lifecycle must route producer cleanup exactly once");
+        assertEquals(1, prepared.logicalDiscards().get(),
+                "a repeated manager lifecycle call must not consume twice");
+        assertEquals(0, prepared.ymWrites().get());
+        assertEquals(0, prepared.psgWrites().get());
+        assertNull(field(AudioManager.class, "shadowProducer").get(audio));
+        assertNull(field(AudioManager.class, "shadowSmpsSession").get(audio));
     }
 
     @ParameterizedTest
@@ -458,6 +544,12 @@ class TestAudioManagerPresentationModes {
                                 registeredPcm(audio, "queued-sample"),
                                 48_000, 1.0f, 1.0f)),
                 () -> true, registry::apply);
+        commands.submit(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
+                        SampleBackedVoice.oneShot(6, 0,
+                                registeredPcm(audio, "queued-raw"),
+                                48_000, 1.0f, 1.0f), new byte[] {0}),
+                () -> true, registry::apply);
+
         audio.afterRewindRestore(7, policy);
 
         assertEquals(0, commands.size(),
@@ -472,10 +564,6 @@ class TestAudioManagerPresentationModes {
     private static void populateReleaseState(AudioManager audio)
             throws Exception {
         AudioVoiceRegistry registry = registry(audio);
-        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
-                SampleBackedVoice.oneShot(4, 0,
-                        registeredPcm(audio, "raw"),
-                        48_000, 1.0f, 1.0f)));
         registry.apply(new AudioPresentationCommand.ReplaceMusic(
                 music(audio, 1, 0x81, "base")));
         registry.apply(new AudioPresentationCommand.PushMusicOverride(
@@ -484,6 +572,10 @@ class TestAudioManagerPresentationModes {
                 SampleBackedVoice.oneShot(3, 1,
                         registeredPcm(audio, "sample"),
                         48_000, 1.0f, 1.0f)));
+        registry.apply(AudioPresentationCommand.ReplaceRawPcm.fromVoice(
+                SampleBackedVoice.oneShot(4, 0,
+                        registeredPcm(audio, "raw"),
+                        48_000, 1.0f, 1.0f), new byte[] {0}));
         audio.setRewindHistoryArmed(true);
         audio.presentFrame(PresentationMode.FORWARD);
     }
@@ -507,7 +599,6 @@ class TestAudioManagerPresentationModes {
             default -> throw new AssertionError(policy);
         }
         assertNull(presentation.rawPcmVoiceId());
-        assertNull(presentation.standaloneSmpsVoiceId());
     }
 
     private static long rawPcmCursor(AudioManager audio) {
@@ -545,6 +636,41 @@ class TestAudioManagerPresentationModes {
                         48_000, 1.0f));
     }
 
+    private static void configureSessionMusic(
+            AudioManager audio, int... musicIds) {
+        AudioTestFixtures.StubSmpsLoader loader =
+                new AudioTestFixtures.StubSmpsLoader();
+        for (int musicId : musicIds) {
+            AudioTestFixtures.StubSmpsData music =
+                    new AudioTestFixtures.StubSmpsData(
+                            "session-music-" + musicId);
+            music.setId(musicId);
+            loader.musicResults.put(musicId, music);
+        }
+        audio.setAudioProfile(new AudioTestFixtures.StubAudioProfile(loader) {
+            @Override
+            public boolean isMusicOverride(int musicId) {
+                return musicId == 0x82;
+            }
+
+            @Override
+            public SmpsSequencerConfig getSequencerConfig() {
+                return new SmpsSequencerConfig.Builder().build();
+            }
+        });
+        audio.setRom(new com.openggf.data.Rom());
+    }
+
+    private static int activeSmpsMusicId(AudioManager audio) {
+        return audio.captureLogicalSnapshot().presentation().smpsLogical()
+                .sequencers().stream()
+                .filter(entry -> !entry.sfx())
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "no persistent SMPS music is active"))
+                .source().id();
+    }
+
     private static DecodedPcm registeredPcm(
             AudioManager audio, String assetId) {
         byte[] samples = new byte[2_000];
@@ -560,49 +686,46 @@ class TestAudioManagerPresentationModes {
                 AudioManager.class, "shadowProducer").get(audio);
     }
 
-    private static CountingSmpsDriver prepareCountingProducerRestore(
+    private static PreparedProducerRestore prepareObservedProducerRestore(
             AudioPresentationProducer producer) {
-        SmpsDriver source = new SmpsDriver();
-        PresentationVoiceSnapshot.Smps voice =
-                new PresentationVoiceSnapshot.Smps(
-                        1, 0, 0x81,
-                        AudioSourceDescriptor.baseMusic(0x81),
-                        1, source.captureSnapshot());
-        AudioPresentationSnapshot selected =
-                new AudioPresentationSnapshot(
-                        2, List.of(voice),
-                        new AudioPresentationSnapshot.MusicSlotSnapshot(
-                                0x81,
-                                AudioSourceDescriptor.baseMusic(0x81), 1),
-                        List.of(), null, null,
-                        0, 0, 0, 0,
-                        false, false, false, 1, true,
-                        new SmpsCoordFlagRuntimeState.Snapshot(0));
-        AtomicReference<CountingSmpsDriver> recreated =
-                new AtomicReference<>();
+        AudioPresentationSnapshot selected = producer.snapshot();
+        AtomicInteger ymWrites = new AtomicInteger();
+        AtomicInteger psgWrites = new AtomicInteger();
+        AtomicInteger logicalDiscards = new AtomicInteger();
         AudioPresentationDependencyResolver resolver =
                 new AudioPresentationDependencyResolver() {
+                    @Override
+                    public DiagnosticTransaction beginDiagnosticTransaction() {
+                        return new DiagnosticTransaction() {
+                            @Override
+                            public void endPreparation() {
+                            }
+
+                            @Override
+                            public void commit() {
+                                throw new AssertionError(
+                                        "prepared restore must not commit");
+                            }
+
+                            @Override
+                            public void discard() {
+                                logicalDiscards.incrementAndGet();
+                            }
+                        };
+                    }
+
                     @Override
                     public DecodedPcm resolvePcm(String assetId) {
                         throw new AssertionError("no PCM voice expected");
                     }
 
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        CountingSmpsDriver driver =
-                                new CountingSmpsDriver();
-                        recreated.set(driver);
-                        return new SmpsCompositeVoice(
-                                snapshot.voiceId(), snapshot.priority(),
-                                snapshot.musicId(),
-                                snapshot.sourceDescriptor(),
-                                snapshot.maxStereoFrames(), driver);
-                    }
                 };
         producer.beginReverse(1.0);
         producer.prepareRestoreSelection(selected, resolver);
-        return recreated.get();
+        ymWrites.set(0);
+        psgWrites.set(0);
+        return new PreparedProducerRestore(
+                ymWrites, psgWrites, logicalDiscards);
     }
 
     private static DecodedPcmCache presentationPcmCache(
@@ -616,14 +739,10 @@ class TestAudioManagerPresentationModes {
         return settings.pcmCache();
     }
 
-    private static final class CountingSmpsDriver extends SmpsDriver {
-        private int stopCalls;
-
-        @Override
-        public void stopAll() {
-            stopCalls++;
-            super.stopAll();
-        }
+    private record PreparedProducerRestore(
+            AtomicInteger ymWrites,
+            AtomicInteger psgWrites,
+            AtomicInteger logicalDiscards) {
     }
 
     private static final class InspectingBackend extends NullAudioBackend {

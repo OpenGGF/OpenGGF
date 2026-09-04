@@ -90,21 +90,23 @@ class TestInGamePause {
         assertTrue(state.isGamePaused(), "held Start (no new edge) keeps pause");
     }
 
+    /** {@code tst.b (v_lives).w; beq.s .unpauseGame}: a game over cannot be paused. */
     @Test
-    void zeroLivesCanStillPauseUntilGameOverFlowExists() {
+    void zeroLivesCannotPause() {
         GameStateManager state = new GameStateManager();
         state.loseLife();
         state.loseLife();
         state.loseLife(); // 3 -> 0
         assertEquals(0, state.getLives());
 
-        assertTrue(state.applyPauseToggle(true),
-                "Without a Game Over state, zero-life gameplay should remain coherently pausable");
-        assertTrue(state.isGamePaused());
+        assertFalse(state.applyPauseToggle(true),
+                "PauseGame returns before the Start test once Life_count is zero");
+        assertFalse(state.isGamePaused());
     }
 
+    /** The same early-out clears {@code f_pause}, releasing a pause held over the last life. */
     @Test
-    void losingLastLifeWhilePausedKeepsPauseUntilGameOverFlowExists() {
+    void losingLastLifeWhilePausedReleasesThePause() {
         GameStateManager state = new GameStateManager();
         assertTrue(state.applyPauseToggle(true));
         assertTrue(state.isGamePaused());
@@ -113,9 +115,9 @@ class TestInGamePause {
         state.loseLife();
         state.loseLife(); // 3 -> 0
 
-        assertTrue(state.applyPauseToggle(false),
-                "Zero-life gameplay should not auto-resume while Game Over / Continue is not implemented");
-        assertTrue(state.isGamePaused());
+        assertFalse(state.applyPauseToggle(false),
+                ".unpauseGame writes f_pause = 0 on the next frame");
+        assertFalse(state.isGamePaused());
     }
 
     // ---- Frame-skip wiring (LevelFrameStep.executeWithPause) ----

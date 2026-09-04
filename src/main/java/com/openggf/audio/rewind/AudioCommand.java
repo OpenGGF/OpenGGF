@@ -93,6 +93,51 @@ public sealed interface AudioCommand {
     record StopAllSfx() implements AudioCommand {}
 
     @com.openggf.game.ModApi
+    record StopSmpsSfx(int sourceCommandId) implements AudioCommand {}
+
+    @com.openggf.game.ModApi
+    record SilencePsg(int sourceCommandId) implements AudioCommand {}
+
+    @com.openggf.game.ModApi
+    record RetainGlobalStop(int sourceCommandId) implements AudioCommand {}
+
+    @com.openggf.game.ModApi
+    record PlaySegaPcm(
+            int sourceCommandId, byte[] pcm, int sourceRate)
+            implements AudioCommand {
+        public PlaySegaPcm {
+            pcm = pcm.clone();
+            if (sourceRate <= 0) {
+                throw new IllegalArgumentException(
+                        "sourceRate must be positive");
+            }
+        }
+
+        @Override
+        public byte[] pcm() {
+            return pcm.clone();
+        }
+    }
+
+    @com.openggf.game.ModApi
+    record StopRawPcm() implements AudioCommand {}
+
+    @com.openggf.game.ModApi
+    record StopSegaPcmAndRetainGlobalStop(int sourceCommandId)
+            implements AudioCommand {}
+
+    @com.openggf.game.ModApi
+    record ReferenceLimitation(int sourceCommandId, String reason)
+            implements AudioCommand {
+        public ReferenceLimitation {
+            if (reason == null || reason.isBlank()) {
+                throw new IllegalArgumentException(
+                        "reference limitation reason is required");
+            }
+        }
+    }
+
+    @com.openggf.game.ModApi
     record EndMusicOverride(int musicId) implements AudioCommand {}
 
     @com.openggf.game.ModApi

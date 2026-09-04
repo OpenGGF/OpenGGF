@@ -31,7 +31,6 @@ class TestEngineContext {
         // See TestEngine.tearDown: a leaked Engine static poisons the fork.
         com.openggf.Engine.clearGlobalInstance();
         SessionManager.clear();
-        SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
     }
 

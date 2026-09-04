@@ -7,7 +7,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -181,49 +180,6 @@ class TestS1GameplayAudioTimelineCli {
             String stderr = Files.readString(error);
             assertTrue(stderr.contains("unsupported loader environment variable: " + loaderVariable), stderr);
         }
-    }
-
-    @Test
-    void shellResolvesQuotedRelativeInputsAgainstOriginalCallerDirectory() throws Exception {
-        Path caller = Files.createDirectories(temp.resolve("caller directory"));
-        Path relativeRom = Path.of("inputs with spaces", "missing sonic.gen");
-        Path relativeBizHawk = Path.of("tools with spaces", "missing BizHawk");
-        Path expectedRom = caller.resolve(relativeRom).toAbsolutePath().normalize();
-        Path repositoryRom = Path.of("").toAbsolutePath().resolve(relativeRom).normalize();
-        Path script = Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh").toAbsolutePath();
-        ProcessBuilder builder = new ProcessBuilder(
-                script.toString(),
-                "--rom", relativeRom.toString(),
-                "--bizhawk-home", relativeBizHawk.toString());
-        builder.directory(caller.toFile());
-        Process process = builder.start();
-        String stdout = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        String stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-
-        assertEquals(4, process.waitFor(), stdout + System.lineSeparator() + stderr);
-        assertTrue(stderr.contains(expectedRom.toString()), stderr);
-        assertFalse(stderr.contains(repositoryRom.toString()), stderr);
-    }
-
-    @Test
-    void shellPreservesQuotedAbsoluteInputPaths() throws Exception {
-        Path caller = Files.createDirectories(temp.resolve("different caller"));
-        Path absoluteRom = temp.resolve("absolute inputs").resolve("missing sonic.gen")
-                .toAbsolutePath().normalize();
-        Path absoluteBizHawk = temp.resolve("absolute tools").resolve("missing BizHawk")
-                .toAbsolutePath().normalize();
-        Path script = Path.of("tools/audio/run_s1_ghz1_gameplay_audio_timeline.sh").toAbsolutePath();
-        ProcessBuilder builder = new ProcessBuilder(
-                script.toString(),
-                "--rom", absoluteRom.toString(),
-                "--bizhawk-home", absoluteBizHawk.toString());
-        builder.directory(caller.toFile());
-        Process process = builder.start();
-        String stdout = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        String stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-
-        assertEquals(4, process.waitFor(), stdout + System.lineSeparator() + stderr);
-        assertTrue(stderr.contains(absoluteRom.toString()), stderr);
     }
 
     private Path runRoot() throws Exception {

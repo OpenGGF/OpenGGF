@@ -492,6 +492,18 @@ public class WaterSystem implements RewindSnapshottable<WaterSystemSnapshot> {
     }
 
     /**
+     * Reads only the loaded mutable {@code Water_flag} state.
+     *
+     * <p>Unlike {@link #hasWater(int, int)}, this does not fall back to a
+     * level's static water capability when no live state exists. Callers that
+     * model a branch on the previous level's RAM flag need that distinction.
+     */
+    public boolean isLiveWaterFlagSet(int zoneId, int actId) {
+        DynamicWaterState state = dynamicWaterStates.get(makeKey(zoneId, actId));
+        return state != null && state.isEnabled();
+    }
+
+    /**
      * Get the current/base water surface Y position in world coordinates.
      * This corresponds to the non-oscillated runtime water register such as
      * S1/S2 {@code v_waterpos2}/{@code Water_Level_2} or S3K

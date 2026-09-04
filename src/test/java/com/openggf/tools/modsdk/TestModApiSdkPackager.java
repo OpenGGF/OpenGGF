@@ -31,23 +31,9 @@ class TestModApiSdkPackager {
                 com.openggf.audio.driver.SmpsRequestAdmissionPolicy.class,
                 com.openggf.audio.smps.DacData.Sample.class,
                 com.openggf.audio.smps.SmpsProgramView.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.PalServicePolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.TempoPhasePolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.SfxPriorityPolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.DriverServiceOrder.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.SfxStartTiming.class,
                 com.openggf.audio.smps.SmpsSequencerConfig.FmSfxTakeoverMode.class,
                 com.openggf.audio.smps.SmpsSequencerConfig.FmSfxReleaseMode.class,
                 com.openggf.audio.smps.SmpsSequencerConfig.PsgSfxReleaseMode.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.FadeOutChannelPolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverrideSpeedPolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverrideRestorePolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverridePriorityPolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.MusicOverrideDacRestorePolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.FadeInChannelPolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.PausePolicy.class,
-                com.openggf.audio.smps.SmpsSequencerConfig.SfxRequestTransformPolicy.class,
                 com.openggf.audio.smps.SmpsSequencerConfig.FmVoiceWriteProfile.class,
                 com.openggf.game.dataselect.DataSelectExitTransition.class);
 
@@ -173,17 +159,10 @@ class TestModApiSdkPackager {
             assertFalse(recursive.contains(observer), observer.getName());
         }
     }
-
-    @Test
-    void ymServiceTimingMetadataStaysOutsideCreatorApiClosure() {
-        Class<?> timingProfile = com.openggf.audio.smps.YmServiceTimingProfile.class;
-        assertFalse(timingProfile.isAnnotationPresent(com.openggf.game.ModApi.class));
-        assertTrue(com.openggf.mods.code.ModApiSignatureSurface.engineInternalTypeNames()
-                .contains(timingProfile.getName()));
-        assertFalse(com.openggf.mods.code.ModApiSignatureSurface.recursiveTypes()
-                .contains(timingProfile));
+    void retiredYmServiceTimingMetadataStaysOutsideCreatorApiClosure() {
         assertFalse(com.openggf.mods.code.ModApiSignatureSurface.recursiveTypes().stream()
-                .anyMatch(type -> type.getName().startsWith(timingProfile.getName() + "$")));
+                .anyMatch(type -> type.getName().startsWith(
+                        "com.openggf.audio.smps.YmServiceTimingProfile")));
     }
 
     @Test

@@ -16,18 +16,15 @@ before opening a PR.
 
 ## Git Hooks
 
-Tracked hooks live in `.githooks/`. Maven installs them during the `validate` phase by pointing
-`core.hooksPath` at `.githooks`:
+Tracked hooks live in `.githooks/`. Maven never mutates Git configuration during `validate`
+or any other phase; install the hooks explicitly once per worktree:
 
 ```bash
-mvn validate
+tools/testing/install-hooks.sh      # PowerShell: tools/testing/install-hooks.ps1
 ```
 
-If you commit before building, install the hooks manually:
-
-```bash
-git config core.hooksPath .githooks
-```
+The script sets `core.hooksPath` to `.githooks` for that worktree. Check the result with
+`git config core.hooksPath`.
 
 Do not bypass the policy with `--no-verify`. The trailer block is the project's explicit
 attestation that related documentation and discrepancy files were considered.

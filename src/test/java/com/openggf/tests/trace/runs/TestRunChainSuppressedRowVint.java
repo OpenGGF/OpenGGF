@@ -1,11 +1,26 @@
 package com.openggf.tests.trace.runs;
 
+import com.openggf.LevelFrameContext;
+import com.openggf.game.GameModule;
+import com.openggf.game.LevelInitProfile;
+import com.openggf.game.NoOpBonusStageProvider;
+import com.openggf.game.resources.PlcFrameLifecycleCoordinator;
+import com.openggf.game.resources.PlcLifecyclePhase;
+import com.openggf.game.resources.PlcLifecycleService;
+import com.openggf.game.timing.HardwareTimingService;
+import com.openggf.level.objects.ObjectManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.Mockito.when;
 
 /**
  * The transition-row V-blank invariant, asserted without a ROM, a level or a
@@ -26,6 +41,51 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * so nothing about it should depend on a recording.
  */
 class TestRunChainSuppressedRowVint {
+
+    @Test
+    void lagHelperDispatchesGameVblankOnceWithoutObjectsOrOrdinaryPlc() {
+        AtomicInteger gameVblanks = new AtomicInteger();
+        AtomicInteger ordinaryPlc = new AtomicInteger();
+        LevelInitProfile profile = mock(LevelInitProfile.class);
+        org.mockito.Mockito.doAnswer(ignored -> {
+            gameVblanks.incrementAndGet();
+            return null;
+        }).when(profile).serviceLevelLoadVBlank();
+        GameModule module = mock(GameModule.class);
+        when(module.getLevelInitProfile()).thenReturn(profile);
+        PlcLifecycleService plc = new PlcLifecycleService() {
+            @Override
+            public void serviceVBlank(PlcLifecyclePhase phase) {
+                if (phase == PlcLifecyclePhase.ORDINARY_LEVEL) {
+                    ordinaryPlc.incrementAndGet();
+                }
+            }
+
+            @Override
+            public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
+                return false;
+            }
+
+            @Override
+            public void prepareAfterLoop(PlcLifecyclePhase phase) {
+            }
+        };
+        ObjectManager objects = mock(ObjectManager.class);
+        when(objects.getVblaCounter()).thenReturn(41);
+        LevelFrameContext context = new LevelFrameContext(
+                module, null, null, NoOpBonusStageProvider.INSTANCE,
+                null, null, null, null, null, new HardwareTimingService(),
+                ignored -> { }, null);
+
+        AbstractRunChainTest.serviceLagRowVint(
+                context, new PlcFrameLifecycleCoordinator(plc), objects);
+
+        assertEquals(1, gameVblanks.get());
+        assertEquals(0, ordinaryPlc.get());
+        verify(objects).getVblaCounter();
+        verify(objects).initVblaCounter(42);
+        verifyNoMoreInteractions(objects);
+    }
 
     @Test
     @DisplayName("A row the engine left the clock still on still owes its VintRet tick")

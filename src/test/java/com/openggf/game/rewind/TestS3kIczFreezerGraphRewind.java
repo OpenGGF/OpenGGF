@@ -4,6 +4,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.identity.RewindIdentityTable;
+import com.openggf.game.rewind.snapshot.ObjectManagerSnapshot;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.IczFreezerObjectInstance;
 import com.openggf.graphics.GraphicsManager;
@@ -187,6 +188,53 @@ class TestS3kIczFreezerGraphRewind {
     }
 
     @Test
+    void slotlessExtendedPlayerBlockSurvivesRewindWithPlayerLink() {
+        TestablePlayableSprite main = player("sonic", 0x2400, 0x0340);
+        TestablePlayableSprite nativeP2 = player("sonic_p2", 0x2408, 0x0340);
+        TestablePlayableSprite capturedPlayer = player("sonic_p3", 0x2410, 0x0340);
+        capturedPlayer.setCpuControlled(true);
+        Harness harness = Harness.create(main, List.of(nativeP2, capturedPlayer));
+        ObjectManager objectManager = harness.objectManager();
+        IczFreezerObjectInstance.FrozenPlayerBlock sourceBlock =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(
+                        capturedPlayer, 0x2410, 0x0340, 0x2400, false, false, true);
+        objectManager.addRewindableAuxiliaryDynamicObject(sourceBlock);
+
+        assertEquals(-1, sourceBlock.getSlotIndex(),
+                "extra-player ice must not consume a native SST slot");
+        RewindIdentityTable captureTable = objectManager.captureIdentityContext().requireIdentityTable();
+        ObjectRefId blockId = requireId(captureTable, sourceBlock);
+        RewindRegistry registry = new RewindRegistry();
+        registry.register(objectManager.rewindSnapshottable());
+        CompositeSnapshot snapshot = registry.capture();
+
+        objectManager.removeDynamicObject(sourceBlock);
+        registry.restore(snapshot);
+
+        IczFreezerObjectInstance.FrozenPlayerBlock restoredBlock = objectById(
+                objectManager, IczFreezerObjectInstance.FrozenPlayerBlock.class, blockId);
+        assertEquals(-1, restoredBlock.getSlotIndex());
+        assertSame(capturedPlayer, restoredBlock.capturedPlayerForTesting());
+        assertTrue(readBooleanField(restoredBlock, "engineSidekickExtension"));
+
+        writeBooleanField(restoredBlock, "landedOnTerrain", true);
+        writeIntField(restoredBlock, "breakTimer", 0);
+        restoredBlock.update(23822, main);
+
+        List<ObjectInstance> restoredDebris = objectManager.getActiveObjects().stream()
+                .filter(object -> object.getClass().getSimpleName().equals("IceDebris"))
+                .toList();
+        assertEquals(12, restoredDebris.size());
+        assertTrue(restoredDebris.stream().allMatch(object ->
+                object instanceof AbstractObjectInstance instance && instance.getSlotIndex() == -1));
+        assertEquals(12, objectManager.rewindSnapshottable().capture().dynamicObjects().stream()
+                .filter(entry -> entry.className().endsWith("$IceDebris"))
+                .filter(ObjectManagerSnapshot.DynamicObjectEntry::rewindableAuxiliary)
+                .count());
+        assertDoesNotThrow(objectManager::validateRewindReferenceClosure);
+    }
+
+    @Test
     void capturedIczFreezerGameplayRefsFailLoudlyWhenTargetHasNoRewindIdentity() {
         assertMissingReferenceFails(() -> {
             TestablePlayableSprite capturedPlayer = player("old-sonic", 0x2410, 0x0340);
@@ -306,10 +354,17 @@ class TestS3kIczFreezerGraphRewind {
     private record Harness(ObjectManager objectManager, TestCamera camera, StubObjectServices services,
                            List<AbstractPlayableSprite> sidekicks) {
         static Harness create(AbstractPlayableSprite focusedPlayer) {
+            return create(focusedPlayer, List.of());
+        }
+
+        static Harness create(AbstractPlayableSprite focusedPlayer, List<PlayableEntity> initialSidekicks) {
             ObjectManager[] holder = new ObjectManager[1];
             TestCamera camera = new TestCamera();
             camera.setFocusedSprite(focusedPlayer);
             List<AbstractPlayableSprite> sidekicks = new ArrayList<>();
+            for (PlayableEntity sidekick : initialSidekicks) {
+                sidekicks.add((AbstractPlayableSprite) sidekick);
+            }
             ObjectPlayerQuery playerQuery = new ObjectPlayerQuery(camera::getFocusedSprite, () -> sidekicks);
             StubObjectServices services = new StubObjectServices() {
                 @Override public ObjectManager objectManager() { return holder[0]; }

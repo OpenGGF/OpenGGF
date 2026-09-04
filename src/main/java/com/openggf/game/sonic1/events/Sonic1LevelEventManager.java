@@ -169,6 +169,13 @@ public class Sonic1LevelEventManager extends AbstractLevelEventManager {
      */
     @Override
     public void updateAtLevelLoopTail() {
+        // The tail slot belongs to Level_MainLoop. A level whose ROM game mode
+        // runs its own loop — the ending sequence's End_MainLoop
+        // (docs/s1disasm/sonic.asm:3662-3680) — never reaches this call at all.
+        Sonic1ZoneEvents handler = getActiveHandler();
+        if (handler != null && !handler.runsLevelMainLoopTail()) {
+            return;
+        }
         // tst.w (v_debuguse).w / bne.w .return
         AbstractPlayableSprite player = Sonic1ZoneEvents.focusedSpriteOrNull();
         if (player != null && player.isDebugMode()) {

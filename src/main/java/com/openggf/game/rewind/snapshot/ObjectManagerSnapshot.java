@@ -246,13 +246,25 @@ public record ObjectManagerSnapshot(
              */
             ObjectRefId objectId,
             /** Owning compiled-mod id, or {@code null} for engine-defined classes. */
-            String ownerModId
+            String ownerModId,
+            boolean rewindableAuxiliary
     ) {
         /** Backward-compatible constructor (pre-loader-aware rewind). */
         public DynamicObjectEntry(String className, ObjectSpawn spawn, int slotIndex,
                                   PerObjectRewindSnapshot state, PlayableEntity playerOwner,
                                   ObjectRefId objectId) {
-            this(className, spawn, slotIndex, state, playerOwner, objectId, null);
+            this(className, spawn, slotIndex, state, playerOwner, objectId, null, false);
+        }
+        public DynamicObjectEntry(String className, ObjectSpawn spawn, int slotIndex,
+                                  PerObjectRewindSnapshot state, PlayableEntity playerOwner,
+                                  ObjectRefId objectId, String ownerModId) {
+            this(className, spawn, slotIndex, state, playerOwner, objectId, ownerModId, false);
+        }
+
+        public DynamicObjectEntry(String className, ObjectSpawn spawn, int slotIndex,
+                                  PerObjectRewindSnapshot state, PlayableEntity playerOwner,
+                                  ObjectRefId objectId, boolean rewindableAuxiliary) {
+            this(className, spawn, slotIndex, state, playerOwner, objectId, null, rewindableAuxiliary);
         }
         /** Backward-compatible constructor that includes playerOwner but not objectId. */
         public DynamicObjectEntry(
@@ -262,7 +274,7 @@ public record ObjectManagerSnapshot(
                 PerObjectRewindSnapshot state,
                 PlayableEntity playerOwner
         ) {
-            this(className, spawn, slotIndex, state, playerOwner, null, null);
+            this(className, spawn, slotIndex, state, playerOwner, null, null, false);
         }
 
         /** Backward-compatible 4-arg constructor (no playerOwner, no objectId). */
@@ -272,7 +284,7 @@ public record ObjectManagerSnapshot(
                 int slotIndex,
                 PerObjectRewindSnapshot state
         ) {
-            this(className, spawn, slotIndex, state, null, null, null);
+            this(className, spawn, slotIndex, state, null, null, null, false);
         }
     }
 

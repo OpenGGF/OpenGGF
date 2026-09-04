@@ -30,6 +30,7 @@ public record AudioParityReport(
         TICK_COUNT_MISMATCH,
         ORDINAL_MISMATCH,
         GLOBAL_STATE_MISMATCH,
+        DISPATCH_MISMATCH,
         TRACK_STATE_MISMATCH,
         EVENT_MISSING,
         EVENT_EXTRA,

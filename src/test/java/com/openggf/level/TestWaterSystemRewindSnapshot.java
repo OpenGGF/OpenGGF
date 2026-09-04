@@ -106,6 +106,20 @@ class TestWaterSystemRewindSnapshot {
         assertTrue(ws.captureFullScreenFlag(99, 0, 0x700));
     }
 
+    @Test
+    void liveWaterFlagRequiresLoadedDynamicStateAndTracksItsEnabledBit() {
+        WaterSystem ws = new WaterSystem();
+        assertFalse(ws.isLiveWaterFlagSet(99, 0),
+                "an absent dynamic state is not a live Water_flag");
+
+        ws.loadForLevelFromProvider(new TestWaterProvider(), null,
+                99, 0, PlayerCharacter.SONIC_ALONE);
+        assertTrue(ws.isLiveWaterFlagSet(99, 0));
+
+        ws.setWaterEnabled(99, 0, false);
+        assertFalse(ws.isLiveWaterFlagSet(99, 0));
+    }
+
     private static final class TestWaterProvider implements WaterDataProvider {
         @Override public boolean hasWater(int zoneId, int actId, PlayerCharacter character) { return true; }
         @Override public int getStartingWaterLevel(int zoneId, int actId) { return 0x618; }

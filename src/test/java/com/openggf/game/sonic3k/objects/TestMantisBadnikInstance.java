@@ -70,11 +70,9 @@ class TestMantisBadnikInstance {
         mantis.setServices(new StubObjectServices());
 
         mantis.update(0, null);
-        AbstractObjectInstance child = (AbstractObjectInstance) readField(mantis, "child");
         mantis.update(1, null);
 
         assertFalse((boolean) readField(mantis, "initialized"));
-        assertNull(child, "Obj_WaitOffscreen must not allocate the visual child before activation");
         assertNull(readField(mantis, "child"),
                 "repeated wait-offscreen updates must not consume a child slot");
         assertEquals(0x0490, mantis.getY());
@@ -91,6 +89,7 @@ class TestMantisBadnikInstance {
 
         mantis.update(3, null);
 
+        AbstractObjectInstance child = (AbstractObjectInstance) readField(mantis, "child");
         assertTrue((boolean) readField(mantis, "initialized"));
         AbstractObjectInstance activatedChild = (AbstractObjectInstance) readField(mantis, "child");
         assertNotNull(activatedChild, "the first initializer allocates the visual child");

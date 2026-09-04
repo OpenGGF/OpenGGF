@@ -1,44 +1,62 @@
 package com.openggf.audio.driver;
 
-import com.openggf.audio.AudioStream;
 import com.openggf.audio.MusicRestoreSink;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLogicalWriteTarget;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
-import com.openggf.audio.smps.YmServiceTimingProfile;
-import com.openggf.audio.smps.YmSourceProgramTiming;
-import com.openggf.audio.synth.ChipWriteObserver;
-import com.openggf.audio.synth.PsgChip;
-import com.openggf.audio.synth.Synthesizer;
-import com.openggf.audio.synth.VirtualSynthesizer;
-import com.openggf.audio.synth.YmWriteTimeline;
+import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.smps.SmpsSequencerHost;
+import com.openggf.audio.rewind.SmpsSequencerSnapshot;
+import com.openggf.audio.rewind.SmpsTrackSnapshot;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
+public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
+    @FunctionalInterface
+    public interface DirectPcmRenderer {
+        void render(short[] target, int frameOffset, int stereoFrames);
+    }
     public enum ReadMode {
         SAMPLE_ACCURATE,
         HYBRID
     }
 
     private static final int MIN_BATCH_SAMPLES = 32;
-    private static final SmpsSourceDescriptor DRIVER_SOURCE =
-            new SmpsSourceDescriptor(
-                    SmpsSourceDescriptor.Kind.UNKNOWN, -1,
-                    "SMPS driver", null, 0, 0, 0, false, 0);
+
+    private enum DetachedLogicalWriteTarget implements SmpsLogicalWriteTarget {
+        INSTANCE;
+
+        @Override public void writeFm(Object source, int port, int register, int value) { }
+        @Override public void writePsg(Object source, int value) { }
+        @Override public void setInstrument(Object source, int channel,
+                byte[] voice) { }
+        @Override public void playDac(Object source, int note) { }
+        @Override public void stopDac(Object source) { }
+        @Override public void setDacData(DacData data) { }
+        @Override public void setFmMute(int channel, boolean mute) { }
+        @Override public void setPsgMute(int channel, boolean mute) { }
+        @Override public void setDacInterpolate(boolean interpolate) { }
+        @Override public void silenceAll() { }
+        @Override public void selectDac(SmpsSourceDescriptor source, DacData data) { }
+    }
+
+    private final SmpsLogicalWriteTarget synthesizer;
 
     private final Object sequencersLock = new Object();
     private final List<SmpsSequencer> sequencers = new ArrayList<>();
@@ -51,25 +69,42 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
     private final IdentityHashMap<SmpsSequencer, Long> sfxAdmissionOrdinals = new IdentityHashMap<>();
     private final Map<ConflictKey, SfxContentionObserver.Source> pendingConflictOwners = new HashMap<>();
+    /**
+     * {@code zFadeDelay} (1C0Eh) and {@code zFadeDelayTimeout} (1C0Fh), the
+     * driver's own fade delay pair. {@code zFadeOutMusic} sets both to 6 and
+     * {@code zFadeInToPrevious} sets both to 2, neither caring whether a song
+     * is loaded (skdisasm Sound/Z80 Sound Driver.asm:2306-2312, :2784-2789).
+     * The fade steppers decrement the first and reload it from the second
+     * (:2337-2346, :2405-2414).
+     */
+    private int fadeDelay;
+    private int fadeDelayTimeout;
+    /** zFadeOutTimeout (1C0Dh) and zFadeInTimeout (1C29h). */
+    private int fadeOutTimeout;
+    private int fadeInTimeout;
+    /**
+     * Set once a request arms a fade through the driver-owned shape. With no
+     * song loaded there is no config to consult, and the ROM's stepper runs
+     * from zUpdateMusic regardless of whether one is (D:2331-2346).
+     */
+    private boolean driverOwnedFade;
+
+    /** zMusicNumber, zSFXNumber0 and zSFXNumber1 (D:698-701). */
+    private static final int SOUND_QUEUE_SLOTS = 3;
+
+    /** Requests handed to the running service, consumed at the ROM's point. */
+    private final List<Runnable> pendingServiceRequests = new ArrayList<>();
+
     private final SmpsSequencer[] fmLocks = new SmpsSequencer[6];
     private final SmpsSequencer[] psgLocks = new SmpsSequencer[4];
     private final Map<Object, Integer> psgLatches = new HashMap<>();
     private SmpsSequencer.Region region = SmpsSequencer.Region.NTSC;
-    private int palFullUpdateCounter = 5;
-    private int sfxPriorityLatch;
-    private int spindashRevPlayingCounter;
-    private int spindashRevFrequencyIndex;
-    private boolean fadeTerminalStopAllPending;
-    private boolean fadeTerminalStopAllCompleted;
 
     private final List<SmpsSequencer> pendingRemovals = new ArrayList<>();
 
     // Reusable buffer for stopAllSfx() to avoid per-call ArrayList allocation
     private final List<SmpsSequencer> sfxRemovalBuffer = new ArrayList<>();
 
-    // Scratch buffer for read() to avoid per-frame allocations
-    private final short[] scratchFrameBuf = new short[2];
-    private short[] chunkScratch = new short[0];
     private ReadMode readMode = ReadMode.HYBRID;
     private int hybridChunkCountForTesting;
 
@@ -81,9 +116,30 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     private int continuousSfxId;
     private boolean continuousSfxFlag;
     private int contSfxLoopCnt;
-    private final PendingSfxRequest[] pendingSfxInputs =
-            new PendingSfxRequest[2];
-    private long nextPendingSfxRequestOrdinal;
+
+    /**
+     * S1 {@code v_special_voice_ptr}: the voice bank of the most recently
+     * dispatched special SFX. {@code Sound_PlaySpecial} is its only writer
+     * (docs/s1disasm/s1.sounddriver.asm:1132), so it outlives the special SFX
+     * that installed it and is cleared only when the driver RAM globals are
+     * wiped -- {@code InitMusicPlayback} (:1498-1502) and {@code StopAllSound}
+     * (:1468-1478). The shipped {@code FixBugs = 0} {@code SendVoiceTL} reads
+     * this pointer for every normal SFX track (:2391-2398), so it must persist
+     * exactly as the ROM's global does rather than track a live sequencer.
+     */
+    private AbstractSmpsData s1SpecialVoicePointer;
+    /** Shared Z80 PAL cadence byte: zPALUpdTick / zPalDblUpdCounter. */
+    private int palUpdateCounter = 5;
+    /**
+     * Whether a DAC sample has been queued since the idle loop last looked.
+     *
+     * <p>Stands for the ROM's {@code zDACIndex} going non-zero
+     * (skdisasm Sound/Z80 Sound Driver.asm:2903). The DAC idle loop reads the
+     * index on its next pass and enables the DAC (:4269-4276), so the caller
+     * that owns the physical write partition consumes this at the service
+     * boundary rather than inside the update that set it.</p>
+     */
+    private boolean dacQueuedSinceIdleLoopPass;
     private long nextSfxAdmissionOrdinal;
     private SfxContentionObserver sfxContentionObserver = SfxContentionObserver.NONE;
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
@@ -95,212 +151,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsDriverServiceObserver.NONE;
     private SmpsDriverServiceObserver.DriverIdentity diagnosticIdentity =
             SmpsDriverServiceObserver.DriverIdentity.unspecified();
-    private long ymServiceCursor;
-    private long nextYmServiceOrdinal;
-    private long nextYmWriteOrdinal;
-    private ServiceTransaction ymServiceTransaction;
-    private DriverServiceReservation ymDriverServiceReservation;
-    private SmpsSequencer activeServiceSequencer;
-    private SmpsDriverServiceObserver.ServiceKind activeServiceKind;
-    private boolean consumingDeferredSfxInput;
-
-    private record PendingSfxRequest(
-            SmpsSequencer sequencer,
-            int continuousSfxId,
-            int trackCount,
-            long requestOrdinal) {
-        private PendingSfxRequest {
-            Objects.requireNonNull(sequencer, "sequencer");
-            if (requestOrdinal < 0) {
-                throw new IllegalArgumentException(
-                        "pending SFX request ordinal cannot be negative");
-            }
-        }
-    }
-
-    @FunctionalInterface
-    private interface PostCommitPublication {
-        void publish();
-    }
-
-    @FunctionalInterface
-    private interface PublicationStateFreeze {
-        void freeze(PsgChip.Snapshot psgSnapshot);
-    }
-
-    private record PsgHardwarePublication(Object source, int value) {
-    }
-
-    private static final class ServiceTransaction {
-        private final LiveCommandMutationToken rollback;
-        private final Object source;
-        private final long serviceOrdinal;
-        private final long generation;
-        private final boolean implicit;
-        private final boolean orderedSiblingFence;
-        private final List<YmWriteTimeline.Entry> writes = new ArrayList<>();
-        private final List<PsgHardwarePublication> hardwarePublications =
-                new ArrayList<>();
-        private final List<PostCommitPublication> logicalPublications =
-                new ArrayList<>();
-        private final List<PublicationStateFreeze> publicationStateFreezes =
-                new ArrayList<>();
-        private long cursor;
-        private DriverYmTimingScope activeScope;
-        private YmSourceProgramTiming.SourceProgram sourceProgram;
-        private YmSourceProgramTiming.ProgramState sourceProgramState;
-        private long sourceProgramServiceCursor;
-        private long sourceProgramRenderedFrontier;
-
-        private ServiceTransaction(
-                LiveCommandMutationToken rollback,
-                Object source,
-                long serviceOrdinal,
-                long generation,
-                long cursor,
-                boolean implicit,
-                boolean orderedSiblingFence) {
-            this.rollback = rollback;
-            this.source = source;
-            this.serviceOrdinal = serviceOrdinal;
-            this.generation = generation;
-            this.cursor = cursor;
-            this.implicit = implicit;
-            this.orderedSiblingFence = orderedSiblingFence;
-        }
-    }
-
-    private static final class DriverServiceReservation {
-        private final int capacity;
-        private final LiveCommandMutationToken rollback;
-        private final List<PsgHardwarePublication> hardwarePublications =
-                new ArrayList<>();
-        private final List<PostCommitPublication> logicalPublications =
-                new ArrayList<>();
-        private final PsgChip psgShadow;
-        private int remaining;
-
-        private DriverServiceReservation(
-                int capacity, LiveCommandMutationToken rollback) {
-            this.capacity = capacity;
-            this.rollback = rollback;
-            this.remaining = capacity;
-            this.psgShadow = new PsgChip(
-                    rollback.synthSnapshot.outputSampleRate(),
-                    PsgChip.ChipType.INTEGRATED);
-            this.psgShadow.restoreSnapshot(
-                    rollback.synthSnapshot.psg());
-        }
-    }
-
-    private final class DriverYmTimingScope
-            implements Synthesizer.YmTimingScope {
-        private final ServiceTransaction transaction;
-        private final Object source;
-        private final YmServiceTimingProfile.Segment segment;
-        private final YmServiceTimingProfile.SegmentKind kind;
-        private final long[] advances;
-        private final boolean sourceProgramScope;
-        private final int expectedWrites;
-        private int consumed;
-        private boolean closed;
-
-        private DriverYmTimingScope(
-                ServiceTransaction transaction,
-                Object source,
-                YmServiceTimingProfile.Segment segment) {
-            this.transaction = transaction;
-            this.source = source;
-            this.segment = segment;
-            this.kind = segment.kind();
-            this.advances = segment.advanceBeforeWriteMasterCycles();
-            this.sourceProgramScope = false;
-            this.expectedWrites = advances.length;
-        }
-
-        private DriverYmTimingScope(
-                ServiceTransaction transaction,
-                Object source,
-                YmServiceTimingProfile.SegmentKind kind,
-                int expectedWrites) {
-            this.transaction = transaction;
-            this.source = source;
-            this.segment = null;
-            this.kind = Objects.requireNonNull(kind, "kind");
-            this.advances = null;
-            this.sourceProgramScope = true;
-            this.expectedWrites = expectedWrites;
-        }
-
-        private long consumeSlot(int port, int register, int value) {
-            requireUsable();
-            if (consumed >= expectedWrites) {
-                IllegalStateException failure = new IllegalStateException(
-                        "YM timing segment produced excess hardware writes");
-                abortYmServiceTransaction(failure);
-                throw failure;
-            }
-            try {
-                if (sourceProgramScope) {
-                    YmSourceProgramTiming.ResolvedWrite resolved =
-                            YmSourceProgramTiming.YmSourceProgramResolver.resolveNext(
-                                    transaction.sourceProgram,
-                                    transaction.sourceProgramState,
-                                    kind, port, register, value,
-                                    transaction.sourceProgramServiceCursor,
-                                    transaction.sourceProgramRenderedFrontier);
-                    transaction.sourceProgramState = resolved.nextState();
-                    transaction.cursor = resolved.dueMasterCycle();
-                } else {
-                    transaction.cursor = Math.addExact(
-                            transaction.cursor, advances[consumed]);
-                }
-            } catch (RuntimeException failure) {
-                abortYmServiceTransaction(failure);
-                throw failure;
-            }
-            consumed++;
-            return transaction.cursor;
-        }
-
-        @Override
-        public void consumeSuppressedHardwareAttempt() {
-            if (sourceProgramScope) {
-                IllegalStateException failure = new IllegalStateException(
-                        "S1 source program cannot suppress an authenticated hardware write");
-                abortYmServiceTransaction(failure);
-                throw failure;
-            }
-            consumeSlot(0, 0, 0);
-        }
-
-        @Override
-        public void close() {
-            requireUsable();
-            if (consumed != expectedWrites) {
-                closed = true;
-                transaction.activeScope = null;
-                IllegalStateException failure = new IllegalStateException(
-                        "YM timing segment closed after " + consumed
-                                + " of " + expectedWrites + " slots");
-                abortYmServiceTransaction(failure);
-                throw failure;
-            }
-            closed = true;
-            transaction.activeScope = null;
-            if (transaction.implicit && !sourceProgramScope) {
-                commitYmServiceTransaction();
-            }
-        }
-
-        private void requireUsable() {
-            if (closed || ymServiceTransaction != transaction
-                    || transaction.activeScope != this) {
-                throw new IllegalStateException(
-                        "YM timing scope is closed or no longer active");
-            }
-        }
-    }
 
     /**
      * Exact, identity-bearing rollback state for one live presentation command.
@@ -314,36 +164,20 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final SmpsSequencer[] sfxSequencers;
         private final SmpsSequencer[] admissionSequencers;
         private final long[] admissionOrdinals;
-        private final boolean serviceSequencerOrdinalsPresent;
-        private final SmpsSequencer[] serviceOrdinalSequencers;
-        private final long[] serviceOrdinals;
         private final SmpsSequencer[] fmLocks;
         private final SmpsSequencer[] psgLocks;
         private final Object[] psgLatchSources;
         private final int[] psgLatchChannels;
         private final SmpsSequencer[] pendingRemovals;
         private final SmpsSequencer[] sfxRemovalBuffer;
-        private final PendingSfxRequest[] pendingSfxInputs;
-        private final SmpsSequencer.LiveCommandMutationToken[]
-                pendingSfxSequencerStates;
-        private final long nextPendingSfxRequestOrdinal;
         private final SmpsSequencer.Region region;
         private final ReadMode readMode;
         private final int hybridChunkCountForTesting;
-        private final int palFullUpdateCounter;
-        private final int sfxPriorityLatch;
-        private final int spindashRevPlayingCounter;
-        private final int spindashRevFrequencyIndex;
         private final int continuousSfxId;
         private final boolean continuousSfxFlag;
         private final int contSfxLoopCnt;
-        private final long ymServiceCursor;
-        private final long nextYmServiceOrdinal;
-        private final long nextYmWriteOrdinal;
-        private final long nextServiceOrdinal;
-        private final long nextServiceSequencerOrdinal;
-        private final DacData liveDacDataReference;
-        private final VirtualSynthesizer.Snapshot synthSnapshot;
+        private final int palUpdateCounter;
+        private final AbstractSmpsData s1SpecialVoicePointer;
 
         private LiveCommandMutationToken(
                 SmpsDriver owner,
@@ -352,80 +186,45 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 SmpsSequencer[] sfxSequencers,
                 SmpsSequencer[] admissionSequencers,
                 long[] admissionOrdinals,
-                boolean serviceSequencerOrdinalsPresent,
-                SmpsSequencer[] serviceOrdinalSequencers,
-                long[] serviceOrdinals,
                 SmpsSequencer[] fmLocks,
                 SmpsSequencer[] psgLocks,
                 Object[] psgLatchSources,
                 int[] psgLatchChannels,
                 SmpsSequencer[] pendingRemovals,
                 SmpsSequencer[] sfxRemovalBuffer,
-                PendingSfxRequest[] pendingSfxInputs,
-                SmpsSequencer.LiveCommandMutationToken[]
-                        pendingSfxSequencerStates,
-                long nextPendingSfxRequestOrdinal,
                 SmpsSequencer.Region region,
                 ReadMode readMode,
                 int hybridChunkCountForTesting,
-                int palFullUpdateCounter,
-                int sfxPriorityLatch,
-                int spindashRevPlayingCounter,
-                int spindashRevFrequencyIndex,
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int contSfxLoopCnt,
-                long ymServiceCursor,
-                long nextYmServiceOrdinal,
-                long nextYmWriteOrdinal,
-                long nextServiceOrdinal,
-                long nextServiceSequencerOrdinal,
-                DacData liveDacDataReference,
-                VirtualSynthesizer.Snapshot synthSnapshot) {
+                int palUpdateCounter,
+                AbstractSmpsData s1SpecialVoicePointer) {
             this.owner = owner;
             this.sequencers = sequencers;
             this.sequencerStates = sequencerStates;
             this.sfxSequencers = sfxSequencers;
             this.admissionSequencers = admissionSequencers;
             this.admissionOrdinals = admissionOrdinals;
-            this.serviceSequencerOrdinalsPresent =
-                    serviceSequencerOrdinalsPresent;
-            this.serviceOrdinalSequencers = serviceOrdinalSequencers;
-            this.serviceOrdinals = serviceOrdinals;
             this.fmLocks = fmLocks;
             this.psgLocks = psgLocks;
             this.psgLatchSources = psgLatchSources;
             this.psgLatchChannels = psgLatchChannels;
             this.pendingRemovals = pendingRemovals;
             this.sfxRemovalBuffer = sfxRemovalBuffer;
-            this.pendingSfxInputs = pendingSfxInputs;
-            this.pendingSfxSequencerStates = pendingSfxSequencerStates;
-            this.nextPendingSfxRequestOrdinal =
-                    nextPendingSfxRequestOrdinal;
             this.region = region;
             this.readMode = readMode;
             this.hybridChunkCountForTesting = hybridChunkCountForTesting;
-            this.palFullUpdateCounter = palFullUpdateCounter;
-            this.sfxPriorityLatch = sfxPriorityLatch;
-            this.spindashRevPlayingCounter = spindashRevPlayingCounter;
-            this.spindashRevFrequencyIndex = spindashRevFrequencyIndex;
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.contSfxLoopCnt = contSfxLoopCnt;
-            this.ymServiceCursor = ymServiceCursor;
-            this.nextYmServiceOrdinal = nextYmServiceOrdinal;
-            this.nextYmWriteOrdinal = nextYmWriteOrdinal;
-            this.nextServiceOrdinal = nextServiceOrdinal;
-            this.nextServiceSequencerOrdinal =
-                    nextServiceSequencerOrdinal;
-            this.liveDacDataReference = liveDacDataReference;
-            this.synthSnapshot = synthSnapshot;
+            this.palUpdateCounter = palUpdateCounter;
+            this.s1SpecialVoicePointer = s1SpecialVoicePointer;
         }
     }
 
     static final class SfxAdmissionMutationState {
         private final boolean continuousOnly;
-        private final LiveCommandMutationToken driverState;
         private final SmpsSequencer[] affected;
         private final SmpsSequencer.LiveCommandMutationToken[] sequencerStates;
         private final int[] positions;
@@ -448,13 +247,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         private final long nextServiceOrdinal;
         private final long nextServiceSequencerOrdinal;
         private final int continuousSfxId;
-        private final int sfxPriorityLatch;
-        private final int spindashRevPlayingCounter;
-        private final int spindashRevFrequencyIndex;
         private final boolean continuousSfxFlag;
         private final int continuousLoopCount;
-        private final DacData dacData;
-        private final VirtualSynthesizer.SfxAdmissionState synthState;
 
         private SfxAdmissionMutationState(
                 SmpsSequencer[] affected,
@@ -472,14 +266,9 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 SfxContentionObserver.Source[] conflictSources,
                 long nextAdmissionOrdinal, long nextServiceOrdinal,
                 long nextServiceSequencerOrdinal,
-                int sfxPriorityLatch,
-                int spindashRevPlayingCounter,
-                int spindashRevFrequencyIndex,
                 int continuousSfxId, boolean continuousSfxFlag,
-                int continuousLoopCount, DacData dacData,
-                VirtualSynthesizer.SfxAdmissionState synthState) {
+                int continuousLoopCount) {
             this.continuousOnly = false;
-            this.driverState = null;
             this.affected = affected;
             this.sequencerStates = sequencerStates;
             this.positions = positions;
@@ -501,28 +290,19 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.nextAdmissionOrdinal = nextAdmissionOrdinal;
             this.nextServiceOrdinal = nextServiceOrdinal;
             this.nextServiceSequencerOrdinal = nextServiceSequencerOrdinal;
-            this.sfxPriorityLatch = sfxPriorityLatch;
-            this.spindashRevPlayingCounter = spindashRevPlayingCounter;
-            this.spindashRevFrequencyIndex = spindashRevFrequencyIndex;
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.continuousLoopCount = continuousLoopCount;
-            this.dacData = dacData;
-            this.synthState = synthState;
         }
 
         private SfxAdmissionMutationState(
                 long nextAdmissionOrdinal,
                 long nextServiceOrdinal,
                 long nextServiceSequencerOrdinal,
-                int sfxPriorityLatch,
-                int spindashRevPlayingCounter,
-                int spindashRevFrequencyIndex,
                 int continuousSfxId,
                 boolean continuousSfxFlag,
                 int continuousLoopCount) {
             this.continuousOnly = true;
-            this.driverState = null;
             this.affected = null;
             this.sequencerStates = null;
             this.positions = null;
@@ -544,563 +324,71 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             this.nextAdmissionOrdinal = nextAdmissionOrdinal;
             this.nextServiceOrdinal = nextServiceOrdinal;
             this.nextServiceSequencerOrdinal = nextServiceSequencerOrdinal;
-            this.sfxPriorityLatch = sfxPriorityLatch;
-            this.spindashRevPlayingCounter = spindashRevPlayingCounter;
-            this.spindashRevFrequencyIndex = spindashRevFrequencyIndex;
             this.continuousSfxId = continuousSfxId;
             this.continuousSfxFlag = continuousSfxFlag;
             this.continuousLoopCount = continuousLoopCount;
-            this.dacData = null;
-            this.synthState = null;
-        }
-
-        private SfxAdmissionMutationState(
-                LiveCommandMutationToken driverState) {
-            this.continuousOnly = false;
-            this.driverState = Objects.requireNonNull(
-                    driverState, "driverState");
-            this.affected = null;
-            this.sequencerStates = null;
-            this.positions = null;
-            this.sfxMembers = null;
-            this.pendingRemovalMembers = null;
-            this.removalBufferMembers = null;
-            this.admissionOrdinalPresent = null;
-            this.admissionOrdinals = null;
-            this.serviceOrdinalPresent = null;
-            this.serviceOrdinals = null;
-            this.fmLocks = null;
-            this.psgLocks = null;
-            this.psgLatchPresent = null;
-            this.psgLatchChannels = null;
-            this.musicOverrideTracks = null;
-            this.musicOverrides = null;
-            this.conflictKeys = null;
-            this.conflictSources = null;
-            this.nextAdmissionOrdinal = 0;
-            this.nextServiceOrdinal = 0;
-            this.nextServiceSequencerOrdinal = 0;
-            this.sfxPriorityLatch = 0;
-            this.spindashRevPlayingCounter = 0;
-            this.spindashRevFrequencyIndex = 0;
-            this.continuousSfxId = 0;
-            this.continuousSfxFlag = false;
-            this.continuousLoopCount = 0;
-            this.dacData = null;
-            this.synthState = null;
         }
     }
 
     public SmpsDriver() {
-        super();
-        setPsgHqMode(true);
+        this(DetachedLogicalWriteTarget.INSTANCE);
     }
 
     public SmpsDriver(double outputSampleRate) {
-        super(outputSampleRate);
-        setPsgHqMode(true);
-    }
-
-    public SmpsDriver(
-            double outputSampleRate, ChipWriteObserver observer) {
-        super(outputSampleRate, observer);
-        setPsgHqMode(true);
-        nextYmWriteOrdinal = nextCommittedYmWriteOrdinal();
-    }
-
-    @Override
-    public Synthesizer.YmTimingScope beginYmTiming(
-            Object source,
-            YmServiceTimingProfile.SegmentKind kind,
-            YmServiceTimingProfile.Variant variant) {
-        Objects.requireNonNull(kind, "kind");
-        Objects.requireNonNull(variant, "variant");
-        YmServiceTimingProfile profile = timingProfileFor(source);
-        if (profile == YmServiceTimingProfile.none()) {
-            return Synthesizer.YmTimingScope.immediate();
-        }
-
-        YmServiceTimingProfile.Segment segment;
-        try {
-            segment = profile.requireSegment(kind, variant);
-        } catch (RuntimeException failure) {
-            if (ymServiceTransaction != null) {
-                abortYmServiceTransaction(failure);
-            }
-            throw failure;
-        }
-        if (ymServiceTransaction == null) {
-            beginYmServiceTransaction(source, true);
-        }
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction.activeScope != null) {
-            IllegalStateException failure = new IllegalStateException(
-                    "nested YM timing scopes are not permitted");
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
-        DriverYmTimingScope scope = new DriverYmTimingScope(
-                transaction, source, segment);
-        transaction.activeScope = scope;
-        return scope;
-    }
-
-    @Override
-    public Synthesizer.YmTimingScope beginYmSourceProgram(
-            Object source,
-            YmSourceProgramTiming.SourceProgram program,
-            YmServiceTimingProfile.SegmentKind firstSection) {
-        Objects.requireNonNull(program, "program");
-        Objects.requireNonNull(firstSection, "firstSection");
-        YmServiceTimingProfile profile = timingProfileFor(source);
-        if (profile == YmServiceTimingProfile.none()) {
-            return Synthesizer.YmTimingScope.immediate();
-        }
-        if (profile.timingOwnership()
-                != YmServiceTimingProfile.TimingOwnership.EXCLUSIVE_SFX_FM5) {
+        this();
+        if (!Double.isFinite(outputSampleRate)
+                || outputSampleRate <= 0.0) {
             throw new IllegalArgumentException(
-                    "source programs require exclusive SFX FM5 timing ownership");
+                    "outputSampleRate must be positive and finite");
         }
-        if (ymServiceTransaction == null) {
-            beginYmServiceTransaction(source, true);
-        }
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction.activeScope != null || transaction.sourceProgram != null) {
-            IllegalStateException failure = new IllegalStateException(
-                    "nested or duplicate YM source programs are not permitted");
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
-        transaction.sourceProgram = program;
-        transaction.sourceProgramState = YmSourceProgramTiming.ProgramState.initial();
-        transaction.sourceProgramServiceCursor = transaction.cursor;
-        transaction.sourceProgramRenderedFrontier = renderedYmMasterCycle();
-        return openSourceProgramSection(transaction, source, firstSection);
+    }
+
+    private SmpsDriver(SmpsLogicalWriteTarget synthesizer) {
+        this.synthesizer = Objects.requireNonNull(
+                synthesizer, "synthesizer");
+    }
+
+    /**
+     * Composition-root seam for the one session-owned logical driver. This is
+     * the sole construction path which does not allocate a private chip pair.
+     */
+    public static SmpsDriver createSessionDriver(
+            SmpsDriverSessionAccess sessionAccess) {
+        return new SmpsDriver(
+                Objects.requireNonNull(sessionAccess, "sessionAccess"));
     }
 
     @Override
-    public Synthesizer.YmTimingScope enterYmSourceProgramSection(
-            Object source, YmServiceTimingProfile.SegmentKind section) {
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction == null) {
-            throw new IllegalStateException("no matching active YM source program");
-        }
-        if (transaction.sourceProgram == null || transaction.source != source
-                || transaction.activeScope != null) {
-            IllegalStateException failure = new IllegalStateException(
-                    "no matching active YM source program");
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
-        return openSourceProgramSection(transaction, source,
-                Objects.requireNonNull(section, "section"));
+    public void setDacData(DacData data) {
+        synthesizer.setDacData(data);
     }
 
-    private Synthesizer.YmTimingScope openSourceProgramSection(
-            ServiceTransaction transaction, Object source,
-            YmServiceTimingProfile.SegmentKind section) {
-        int next = transaction.sourceProgramState.nextWrite();
-        YmSourceProgramTiming.ProgramSection matched = null;
-        for (YmSourceProgramTiming.ProgramSection candidate
-                : transaction.sourceProgram.sections()) {
-            if (candidate.firstWrite() == next) {
-                matched = candidate;
-                break;
-            }
-        }
-        if (matched == null || matched.kind() != section) {
-            IllegalStateException failure = new IllegalStateException(
-                    "YM source-program section differs at write " + next);
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
-        DriverYmTimingScope scope = new DriverYmTimingScope(
-                transaction, source, section, matched.writeCount());
-        transaction.activeScope = scope;
-        return scope;
+    @Override
+    public void selectDac(SmpsSourceDescriptor source, DacData data) {
+        synthesizer.selectDac(Objects.requireNonNull(source, "source"),
+                Objects.requireNonNull(data, "data"));
     }
 
-    private YmServiceTimingProfile timingProfileFor(Object source) {
-        if (!(source instanceof SmpsSequencer sequencer)) {
-            return YmServiceTimingProfile.none();
-        }
-        YmServiceTimingProfile configured =
-                sequencer.getConfig().getYmServiceTimingProfile();
-        if (configured.timingOwnership()
-                == YmServiceTimingProfile.TimingOwnership.EXCLUSIVE_SFX_FM5
-                && (!sequencer.isSfx()
-                || fmLocks[4] != sequencer
-                || !sequencer.hasReservableExclusiveYmSourceProgram())) {
-            return YmServiceTimingProfile.none();
-        }
-        // The audited source path belongs to SFX. A sibling sequencer only
-        // joins while delayed SFX writes are still pending, acting as an
-        // ordered fence so its ordinary writes cannot overtake them.
-        if (usesSfxOwnedYmSourceTiming(sequencer)
-                && !sequencer.isSfx() && sequencers.contains(sequencer)
-                && pendingYmWriteCount() == 0) {
-            return YmServiceTimingProfile.none();
-        }
-        return configured;
+    public void setFmMute(int channel, boolean mute) {
+        synthesizer.setFmMute(channel, mute);
     }
 
-    private ServiceTransaction beginYmServiceTransaction(
-            Object source, boolean implicit) {
-        LiveCommandMutationToken rollback = captureLiveCommandMutation();
-        if (ymServiceTransaction != null) {
-            throw new IllegalStateException(
-                    "a YM driver service transaction is already active");
-        }
-        if (ymDriverServiceReservation == null) {
-            preflightYmServiceCapacity(
-                    aggregateYmServiceWriteBound(source));
-        }
-        long cursor = Math.max(ymServiceCursor,
-                Math.max(renderedYmMasterCycle(),
-                        lastPendingYmWriteDueCycle()));
-        ymServiceTransaction = new ServiceTransaction(
-                rollback, source, nextYmServiceOrdinal, ymTimelineGeneration(),
-                cursor, implicit, isOrderedSiblingFence(source));
-        return ymServiceTransaction;
+    public void setPsgMute(int channel, boolean mute) {
+        synthesizer.setPsgMute(channel, mute);
     }
 
-    private int aggregateYmServiceWriteBound(Object source) {
-        IdentityHashMap<SmpsSequencer, Boolean> owners =
-                new IdentityHashMap<>();
-        for (SmpsSequencer sequencer : sequencers) {
-            owners.put(sequencer, Boolean.TRUE);
-        }
-        for (SmpsSequencer pending : pendingRemovals) {
-            owners.put(pending, Boolean.TRUE);
-        }
-        if (source instanceof SmpsSequencer sequencer) {
-            owners.put(sequencer, Boolean.TRUE);
-        }
-
-        int aggregateBound = 0;
-        for (SmpsSequencer owner : owners.keySet()) {
-            if (isOrderedSiblingFence(owner)) {
-                continue;
-            }
-            aggregateBound = Math.addExact(aggregateBound,
-                    timingProfileFor(owner)
-                            .maximumWritesPerDriverService());
-        }
-        for (PendingSfxRequest pending : pendingSfxInputs) {
-            if (pending != null && !owners.containsKey(pending.sequencer())) {
-                aggregateBound = Math.addExact(aggregateBound,
-                        pending.sequencer().getConfig()
-                                .getYmServiceTimingProfile()
-                                .maximumWritesPerDriverService());
-            }
-        }
-        if (region == SmpsSequencer.Region.PAL
-                && usesPalFullDriverRepeat()) {
-            for (SmpsSequencer active : sequencers) {
-                if (!pendingRemovals.contains(active)) {
-                    if (isOrderedSiblingFence(active)) {
-                        continue;
-                    }
-                    aggregateBound = Math.addExact(aggregateBound,
-                            timingProfileFor(active)
-                                    .maximumWritesPerDriverService());
-                }
-            }
-        }
-        return aggregateBound;
+    public void setDacInterpolate(boolean interpolate) {
+        synthesizer.setDacInterpolate(interpolate);
     }
 
-    private void preflightYmServiceCapacity(int requiredCapacity) {
-        int remainingCapacity = Math.subtractExact(
-                ymWriteTimelineCapacity(), pendingYmWriteCount());
-        if (remainingCapacity < requiredCapacity) {
-            throw new IllegalStateException(
-                    "YM write timeline cannot admit aggregate service bound "
-                            + requiredCapacity + " with only "
-                            + remainingCapacity + " slots remaining");
-        }
+    @Override
+    public void silenceAll() {
+        synthesizer.silenceAll();
     }
 
-    private boolean isManagedMusicSequencer(SmpsSequencer sequencer) {
-        return !sequencer.isSfx() && sequencers.contains(sequencer);
-    }
-
-    private static boolean usesSfxOwnedYmSourceTiming(
-            SmpsSequencer sequencer) {
-        SmpsSequencerConfig config = sequencer.getConfig();
-        return config.getSfxStartTiming()
-                == SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE
-                && config.getDriverServiceOrder()
-                == SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC;
-    }
-
-    private boolean isOrderedSiblingFence(Object source) {
-        return source instanceof SmpsSequencer sequencer
-                && isManagedMusicSequencer(sequencer)
-                && usesSfxOwnedYmSourceTiming(sequencer)
-                && pendingYmWriteCount() > 0;
-    }
-
-    private void beginYmDriverServiceReservation(int frames) {
-        if (ymDriverServiceReservation != null) {
-            throw new IllegalStateException(
-                    "a YM driver-service reservation is already active");
-        }
-        if (!mayPublishTimedWorkDuringAdvance(frames)) {
-            return;
-        }
-        int requiredCapacity = aggregateYmServiceWriteBound(null);
-        preflightYmServiceCapacity(requiredCapacity);
-        ymDriverServiceReservation =
-                new DriverServiceReservation(requiredCapacity,
-                        captureLiveCommandMutation());
-    }
-
-    private boolean mayPublishTimedWorkDuringAdvance(int frames) {
-        if (pendingSfxInputs[0] != null || pendingSfxInputs[1] != null) {
-            return true;
-        }
-        for (SmpsSequencer pending : pendingRemovals) {
-            if (timingProfileFor(pending)
-                    != YmServiceTimingProfile.none()) {
-                return true;
-            }
-        }
-        for (SmpsSequencer sequencer : sequencers) {
-            if (timingProfileFor(sequencer)
-                    != YmServiceTimingProfile.none()
-                    && (sequencer.isComplete()
-                    || sequencer.getSamplesUntilNextDriverService()
-                    <= frames
-                    || palRepeatCanPublishAtNextBoundary(
-                            sequencer, frames))) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private boolean palRepeatCanPublishAtNextBoundary(
-            SmpsSequencer sequencer, int frames) {
-        return region == SmpsSequencer.Region.PAL
-                && palFullUpdateCounter == 0
-                && usesPalFullDriverRepeat()
-                && sequencer.getSamplesUntilNextTempoFrame() <= frames;
-    }
-
-    private void commitYmServiceTransaction() {
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction == null) {
-            return;
-        }
-        if (transaction.activeScope != null) {
-            IllegalStateException failure = new IllegalStateException(
-                    "YM driver service ended with an open timing scope");
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
-        if (transaction.sourceProgram != null
-                && !transaction.sourceProgramState.complete(
-                        transaction.sourceProgram)) {
-            IllegalStateException failure = new IllegalStateException(
-                    "YM source program ended before its terminal write");
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
-        try {
-            DriverServiceReservation reservation =
-                    ymDriverServiceReservation;
-            if (reservation != null) {
-                if (transaction.orderedSiblingFence) {
-                    int available = Math.subtractExact(
-                            ymWriteTimelineCapacity(), pendingYmWriteCount());
-                    int required = Math.addExact(transaction.writes.size(),
-                            reservation.remaining);
-                    if (available < required) {
-                        throw new IllegalStateException(
-                                "ordered YM sibling fence requires "
-                                        + transaction.writes.size()
-                                        + " writes while preserving "
-                                        + reservation.remaining
-                                        + " reserved slots, but only "
-                                        + available + " remain");
-                    }
-                } else if (transaction.writes.size()
-                        > reservation.remaining) {
-                    throw new IllegalStateException(
-                            "YM service exceeded reserved driver horizon of "
-                                    + reservation.capacity + " writes");
-                }
-            }
-            commitYmWriteJournal(transaction.writes);
-            ymServiceCursor = transaction.cursor;
-            nextYmWriteOrdinal = Math.addExact(
-                    nextYmWriteOrdinal, transaction.writes.size());
-            nextYmServiceOrdinal = Math.incrementExact(
-                    nextYmServiceOrdinal);
-            if (reservation != null
-                    && !transaction.orderedSiblingFence) {
-                reservation.remaining = Math.subtractExact(
-                        reservation.remaining, transaction.writes.size());
-            }
-        } catch (RuntimeException failure) {
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
-        List<PsgHardwarePublication> hardwarePublications =
-                List.copyOf(transaction.hardwarePublications);
-        List<PostCommitPublication> logicalPublications =
-                List.copyOf(transaction.logicalPublications);
-        ymServiceTransaction = null;
-        DriverServiceReservation reservation =
-                ymDriverServiceReservation;
-        if (reservation != null) {
-            replayPsgPublications(
-                    hardwarePublications, reservation.psgShadow);
-            freezePublicationState(transaction,
-                    reservation.psgShadow.captureSnapshot());
-            reservation.hardwarePublications.addAll(hardwarePublications);
-            reservation.logicalPublications.addAll(logicalPublications);
-            return;
-        }
-        // Hardware belongs to the committed service. Diagnostic failures can
-        // be reported afterward, but cannot gate or interrupt chip mutation.
-        RuntimeException publicationFailure = publishPsgPublications(
-                hardwarePublications, null);
-        freezePublicationState(transaction,
-                captureSynthSnapshot().psg());
-        publicationFailure = publishAll(
-                logicalPublications, publicationFailure);
-        if (publicationFailure != null) {
-            throw publicationFailure;
-        }
-    }
-
-    private void replayPsgPublications(
-            List<PsgHardwarePublication> publications,
-            PsgChip psgShadow) {
-        for (PsgHardwarePublication publication : publications) {
-            psgShadow.write(publication.value());
-        }
-    }
-
-    private RuntimeException publishPsgPublications(
-            List<PsgHardwarePublication> publications,
-            RuntimeException primaryFailure) {
-        for (PsgHardwarePublication publication : publications) {
-            try {
-                super.writePsg(publication.source(), publication.value());
-            } catch (RuntimeException failure) {
-                primaryFailure = appendPublicationFailure(
-                        primaryFailure, failure);
-            }
-        }
-        return primaryFailure;
-    }
-
-    private void freezePublicationState(
-            ServiceTransaction transaction,
-            PsgChip.Snapshot psgSnapshot) {
-        for (PublicationStateFreeze freeze
-                : transaction.publicationStateFreezes) {
-            freeze.freeze(psgSnapshot);
-        }
-    }
-
-    private RuntimeException publishAll(
-            List<PostCommitPublication> publications,
-            RuntimeException primaryFailure) {
-        for (PostCommitPublication publication : publications) {
-            try {
-                publication.publish();
-            } catch (RuntimeException failure) {
-                primaryFailure = appendPublicationFailure(
-                        primaryFailure, failure);
-            }
-        }
-        return primaryFailure;
-    }
-
-    private static RuntimeException appendPublicationFailure(
-            RuntimeException primaryFailure,
-            RuntimeException laterFailure) {
-        if (primaryFailure == null) {
-            return laterFailure;
-        }
-        if (laterFailure != primaryFailure) {
-            primaryFailure.addSuppressed(laterFailure);
-        }
-        return primaryFailure;
-    }
-
-    private void abortYmServiceTransaction(Throwable failure) {
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction == null) {
-            return;
-        }
-        if (transaction.activeScope != null) {
-            transaction.activeScope.closed = true;
-            transaction.activeScope = null;
-        }
-        ymServiceTransaction = null;
-        try {
-            rollbackLiveCommandMutation(transaction.rollback, true);
-        } catch (RuntimeException rollbackFailure) {
-            failure.addSuppressed(rollbackFailure);
-        }
-    }
-
-    private void cancelUnpublishedYmServiceForBarrier(String barrier) {
-        if (ymServiceTransaction != null) {
-            abortYmServiceTransaction(new IllegalStateException(
-                    barrier + " cancelled an unpublished YM service"));
-        }
-    }
-
-    private void cancelUnpublishedSfxServiceForStop() {
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction == null) {
-            return;
-        }
-        if (!(transaction.source instanceof SmpsSequencer sequencer)
-                || !sequencer.isSfx()) {
-            throw new IllegalStateException(
-                    "cannot stop all SFX during a non-SFX YM service");
-        }
-        abortYmServiceTransaction(new IllegalStateException(
-                "stopAllSfx cancelled an unpublished SFX service"));
-    }
-
-    /** Rolls back a semantic service which failed before atomic publication. */
-    public void abortSequencerService(Throwable failure) {
-        abortYmServiceTransaction(Objects.requireNonNull(
-                failure, "failure"));
-        activeServiceSequencer = null;
-        activeServiceKind = null;
-    }
-
-    private void stageLogicalObserver(
-            PostCommitPublication notification) {
-        if (ymServiceTransaction != null) {
-            ymServiceTransaction.logicalPublications.add(notification);
-        } else if (ymDriverServiceReservation != null) {
-            ymDriverServiceReservation.logicalPublications.add(notification);
-        } else {
-            notification.publish();
-        }
-    }
-
-    private void publishAuthorizedPsgWrite(Object source, int value) {
-        if (ymServiceTransaction != null) {
-            ymServiceTransaction.hardwarePublications.add(
-                    new PsgHardwarePublication(source, value));
-        } else if (ymDriverServiceReservation != null) {
-            PsgHardwarePublication publication =
-                    new PsgHardwarePublication(source, value);
-            ymDriverServiceReservation.hardwarePublications.add(publication);
-            ymDriverServiceReservation.psgShadow.write(value);
-        } else {
-            super.writePsg(source, value);
+    public void forceSilenceChannel(int channelId) {
+        if (synthesizer instanceof SmpsDriverSessionAccess access) {
+            access.forceSilenceFmChannel(channelId);
         }
     }
 
@@ -1130,14 +418,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     public SmpsDriverServiceObserver.ServiceEvent beginSequencerService(
             SmpsSequencer sequencer,
             SmpsDriverServiceObserver.ServiceKind kind) {
-        Objects.requireNonNull(sequencer, "sequencer");
-        Objects.requireNonNull(kind, "kind");
-        activeServiceSequencer = sequencer;
-        activeServiceKind = kind;
-        if (timingProfileFor(sequencer) != YmServiceTimingProfile.none()
-                && ymServiceTransaction == null) {
-            beginYmServiceTransaction(sequencer, false);
-        }
         if (serviceObserver == SmpsDriverServiceObserver.NONE) {
             return null;
         }
@@ -1154,9 +434,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                                 sequencerOrdinal,
                                 sequencer.getSourceDescriptor(),
                                 sequencer.isSfx()),
-                        kind);
-        SmpsDriverServiceObserver observer = serviceObserver;
-        stageLogicalObserver(() -> observer.onServiceBegin(event));
+                        Objects.requireNonNull(kind, "kind"));
+        serviceObserver.onServiceBegin(event);
         return event;
     }
 
@@ -1164,53 +443,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     public void endSequencerService(
             SmpsDriverServiceObserver.ServiceEvent event) {
         if (event != null) {
-            SmpsDriverServiceObserver observer = serviceObserver;
-            ServiceTransaction transaction = ymServiceTransaction;
-            if (transaction == null) {
-                DriverServiceReservation reservation =
-                        ymDriverServiceReservation;
-                SmpsDriverSnapshot stableSnapshot = reservation == null
-                        ? captureSnapshot()
-                        : captureSnapshotWithPsg(
-                                reservation.psgShadow.captureSnapshot());
-                stageLogicalObserver(() -> observer.onServiceEnd(
-                        event, stableSnapshot));
-            } else {
-                SmpsDriverSnapshot[] stableSnapshot = { null };
-                transaction.publicationStateFreezes.add(psgSnapshot ->
-                        stableSnapshot[0] = captureSnapshotWithPsg(
-                                psgSnapshot));
-                stageLogicalObserver(() -> observer.onServiceEnd(
-                        event, stableSnapshot[0]));
-            }
+            serviceObserver.onServiceEnd(event, captureSnapshot());
         }
-        try {
-            commitYmServiceTransaction();
-        } finally {
-            activeServiceSequencer = null;
-            activeServiceKind = null;
-        }
-    }
-
-    /**
-     * Completes a fade service, including the shipped driver's terminal
-     * StopAllSound mutation inside the same observable service boundary.
-     */
-    public void endFadeSequencerService(
-            SmpsDriverServiceObserver.ServiceEvent event) {
-        if (fadeTerminalStopAllPending) {
-            fadeTerminalStopAllPending = false;
-            boolean unpublishedTimedService = ymServiceTransaction != null;
-            stopAll();
-            fadeTerminalStopAllCompleted = true;
-            if (!unpublishedTimedService) {
-                // None profiles publish their begin callback immediately, so
-                // preserve the matching legacy end around terminal StopAll.
-                endSequencerService(event);
-            }
-            return;
-        }
-        endSequencerService(event);
     }
 
     private void forgetSequencerServiceIdentity(SmpsSequencer sequencer) {
@@ -1237,12 +471,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                         : kind == SmpsDriverServiceObserver.LifecycleKind.RESTORE
                         ? SmpsDriverServiceObserver.LifecycleSource.SNAPSHOT_RESTORE
                         : SmpsDriverServiceObserver.LifecycleSource.DRIVER_MUTATION;
-        SmpsDriverServiceObserver observer = serviceObserver;
-        SmpsDriverServiceObserver.LifecycleEvent event =
+        serviceObserver.onLifecycle(
                 SmpsDriverServiceObserver.LifecycleEvent.driver(
                         Objects.requireNonNull(kind, "kind"), source,
-                        diagnosticIdentity);
-        stageLogicalObserver(() -> observer.onLifecycle(event));
+                        diagnosticIdentity));
     }
 
     // --- Continuous SFX API ---
@@ -1264,8 +496,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             for (SmpsSequencer sequencer : sfxSequencers) {
                 if (sequencer.getSmpsData().getId() == sfxId) {
                     return new PreparedSfxAdmission(
-                            this, null, true, false, 0, 0, sfxId, trackCount,
-                            sfxPriorityLatch, sfxPriorityLatch,
+                            this, null, true, 0, 0, 0, 0,
+                            sfxId, trackCount,
                             null, null, null);
                 }
             }
@@ -1292,36 +524,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         sequencer.validateSfxAdmissionMetadata();
 
         synchronized (sequencersLock) {
-            if (usesDeferredSfxInputCells(sequencer)) {
-                if (sfxSequencers.contains(sequencer)
-                        || containsPendingSfxSequencer(sequencer)) {
-                    throw new IllegalArgumentException(
-                            "SFX sequencer is already attached or pending");
-                }
-                return new PreparedSfxAdmission(
-                        this, sequencer, false, true, 0, 0,
-                        sfxId, trackCount,
-                        SmpsRequestAdmissionPolicy.NO_PRIORITY,
-                        SmpsRequestAdmissionPolicy.NO_PRIORITY,
-                        null, new SmpsSequencer[0],
-                        new SmpsSequencer.Track[0]);
-            }
-            return prepareImmediateSfxAdmission(
-                    sequencer, sfxId, trackCount);
-        }
-    }
-
-    private PreparedSfxAdmission prepareImmediateSfxAdmission(
-            SmpsSequencer sequencer, int sfxId, int trackCount) {
-            SmpsRequestAdmissionPolicy.AdmissionResult priorityDecision =
-                    evaluateSfxRequest(sequencer.getSmpsData().getId(),
-                            sequencer.getSfxPriority(),
-                            sequencer.isSpecialSfx(), false,
-                            sequencer.getConfig().getSfxPriorityPolicy());
-            if (!priorityDecision.accepted()) {
-                throw new IllegalStateException(
-                        "SFX request was rejected by the global priority latch");
-            }
             if (sfxSequencers.contains(sequencer)) {
                 throw new IllegalArgumentException(
                         "SFX sequencer is already attached");
@@ -1360,6 +562,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                             "SFX track has an unsupported channel type");
                 }
             }
+            int claimedFmMask = fmMask;
+            int claimedPsgMask = psgMask;
 
             if (replaced != null) {
                 for (int channel = 0; channel < fmLocks.length; channel++) {
@@ -1378,7 +582,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     newIndex < sequencer.trackCount(); newIndex++) {
                 SmpsSequencer.Track newTrack = sequencer.trackAt(newIndex);
                 SmpsSequencer existing = sfxClaimOwner(newTrack);
-                if (existing != null && existing != replaced) {
+                if (existing != null && existing != replaced
+                        && !specialSfxCoexists(sequencer, existing)) {
                     for (int trackIndex = 0;
                             trackIndex < existing.trackCount(); trackIndex++) {
                         SmpsSequencer.Track track = existing.trackAt(trackIndex);
@@ -1400,28 +605,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
 
             return new PreparedSfxAdmission(
-                    this, sequencer, false, false, fmMask, psgMask,
-                    sfxId, trackCount,
-                    priorityDecision.priorityBefore(),
-                    priorityDecision.priorityAfter(),
-                    replaced,
+                    this, sequencer, false,
+                    claimedFmMask, claimedPsgMask, fmMask, psgMask,
+                    sfxId, trackCount, replaced,
                     displacedOwners, displacedTracks);
-    }
-
-    private static boolean usesDeferredSfxInputCells(
-            SmpsSequencer sequencer) {
-        return sequencer.getConfig().getSfxStartTiming()
-                == SmpsSequencerConfig.SfxStartTiming.NEXT_DRIVER_UPDATE
-                && sequencer.getConfig().getDriverServiceOrder()
-                == SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC;
-    }
-
-    private boolean containsPendingSfxSequencer(
-            SmpsSequencer sequencer) {
-        return (pendingSfxInputs[0] != null
-                && pendingSfxInputs[0].sequencer() == sequencer)
-                || (pendingSfxInputs[1] != null
-                && pendingSfxInputs[1].sequencer() == sequencer);
+        }
     }
 
     /** Applies one already-validated admission in deterministic native order. */
@@ -1446,60 +634,34 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     "prepared SFX admission belongs to another driver");
         }
         synchronized (sequencersLock) {
-            if (!admission.continuousExtension()
-                    && !admission.deferredRequest()
-                    && admission.priorityBefore()
-                    != SmpsRequestAdmissionPolicy.NO_PRIORITY
-                    && admission.priorityBefore() != sfxPriorityLatch) {
-                throw new IllegalStateException(
-                        "prepared SFX priority proof is stale");
+            if (admission.continuousExtension()) {
+                admission.claimCommit();
+                continuousSfxFlag = true;
+                contSfxLoopCnt = admission.trackCount();
+                return;
             }
 
+            admission.claimCommit();
             SfxAdmissionMutationState rollbackState = null;
-            ServiceTransaction timingTransaction = null;
-            boolean claimed = false;
             try {
-                if (timingProfileFor(admission.sequencer())
-                        != YmServiceTimingProfile.none()
-                        || (captureLocalJournal
-                        && hasPotentiallyThrowingAdmissionObserver())) {
+                if (captureLocalJournal
+                        && hasPotentiallyThrowingAdmissionObserver()) {
                     rollbackState = captureSfxAdmissionMutation(admission);
                 }
-                if (timingProfileFor(admission.sequencer())
-                        != YmServiceTimingProfile.none()) {
-                    timingTransaction = beginYmServiceTransaction(
-                            admission.sequencer(), false);
-                }
-                admission.claimCommit();
-                claimed = true;
-                if (admission.continuousExtension()) {
-                    continuousSfxFlag = true;
-                    contSfxLoopCnt = admission.trackCount();
-                } else if (admission.deferredRequest()) {
-                    enqueueDeferredSfxRequest(admission);
-                } else {
-                    commitNewSfxAdmission(admission);
-                }
-                if (timingTransaction != null) {
-                    commitYmServiceTransaction();
-                }
-            } catch (RuntimeException | Error failure) {
-                boolean unpublishedTiming = timingTransaction != null
-                        && ymServiceTransaction == timingTransaction;
-                if (unpublishedTiming) {
-                    abortYmServiceTransaction(failure);
-                }
-                if (timingTransaction == null || unpublishedTiming) {
+            } catch (RuntimeException failure) {
+                admission.releaseCommit();
+                throw failure;
+            }
+            try {
+                commitNewSfxAdmission(admission);
+            } catch (RuntimeException failure) {
+                if (rollbackState != null) {
                     try {
-                        if (rollbackState != null) {
-                            restoreSfxAdmissionMutation(rollbackState);
-                        }
+                        restoreSfxAdmissionMutation(rollbackState);
                     } catch (RuntimeException rollbackFailure) {
                         failure.addSuppressed(rollbackFailure);
                     } finally {
-                        if (claimed) {
-                            admission.releaseCommit();
-                        }
+                        admission.releaseCommit();
                     }
                 }
                 throw failure;
@@ -1507,97 +669,37 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
-    private void enqueueDeferredSfxRequest(
-            PreparedSfxAdmission admission) {
-        int nativeId = admission.sequencer().getSmpsData().getId();
-        PendingSfxRequest first = pendingSfxInputs[0];
-        if (first != null
-                && first.sequencer().getSmpsData().getId() == nativeId) {
-            return;
-        }
-        long requestOrdinal = nextPendingSfxRequestOrdinal;
-        long nextOrdinal = Math.incrementExact(requestOrdinal);
-        PendingSfxRequest request = new PendingSfxRequest(
-                admission.sequencer(), admission.continuousSfxId(),
-                admission.trackCount(), requestOrdinal);
-        if (!sequencers.isEmpty()) {
-            admission.sequencer().alignDriverSamplePhase(
-                    sequencers.getFirst().driverSamplePhase());
-        }
-        if (first == null) {
-            pendingSfxInputs[0] = request;
-        } else {
-            pendingSfxInputs[1] = request;
-        }
-        nextPendingSfxRequestOrdinal = nextOrdinal;
-    }
-
-    private void consumeDeferredSfxInputs() {
-        PendingSfxRequest first = pendingSfxInputs[0];
-        PendingSfxRequest second = pendingSfxInputs[1];
-        pendingSfxInputs[0] = null;
-        pendingSfxInputs[1] = null;
-        if (first != null) {
-            consumeDeferredSfxInput(first);
-        }
-        if (second != null) {
-            consumeDeferredSfxInput(second);
-        }
-    }
-
-    private void consumeDeferredSfxInput(PendingSfxRequest request) {
-        SmpsSequencer sequencer = request.sequencer();
-        PreparedSfxAdmission admission = prepareImmediateSfxAdmission(
-                sequencer, request.continuousSfxId(), request.trackCount());
-        sequencer.consumeDeferredSfxAdmission();
-        consumingDeferredSfxInput = true;
-        try {
-            commitSfxAdmission(admission, false);
-        } finally {
-            consumingDeferredSfxInput = false;
-        }
-    }
-
     private boolean hasPotentiallyThrowingAdmissionObserver() {
-        return hasChipWriteObserver()
-                || sfxContentionObserver != SfxContentionObserver.NONE
+        return sfxContentionObserver != SfxContentionObserver.NONE
                 || serviceObserver != SmpsDriverServiceObserver.NONE;
     }
 
     private void commitNewSfxAdmission(PreparedSfxAdmission admission) {
         SmpsSequencer sequencer = admission.sequencer();
+        boolean ownsAtAdmission = ownsChannelsAtAdmission(sequencer);
         if (sfxContentionObserver != SfxContentionObserver.NONE) {
             trackSfxAdmission(sequencer);
         }
-        applySfxRequestTransform(sequencer);
         sequencer.commitSfxAdmissionInitialization();
-        if (admission.priorityAfter()
-                != SmpsRequestAdmissionPolicy.NO_PRIORITY) {
-            sfxPriorityLatch = admission.priorityAfter();
-        }
         sequencer.setRegion(region);
-        if (!consumingDeferredSfxInput) {
-            alignSequencerServicePhase(sequencer);
-        }
         sequencer.setIsSfx(true);
-        applyAdmissionFmPreparation(sequencer);
 
         SmpsSequencer replaced = admission.replacedSequencer;
-        boolean replacedPsg3 = false;
         if (replaced != null) {
             rememberReplacementConflicts(replaced, sequencer);
             sequencers.remove(replaced);
-            handoffRetailFmReplacementLocks(replaced, sequencer);
-            replacedPsg3 = handoffSharedPsg3ReplacementLock(
-                    replaced, sequencer);
-            releaseLocks(replaced);
+            if (ownsAtAdmission) {
+                transferPreparedLocks(replaced, sequencer, admission);
+            } else {
+                releaseLocks(replaced);
+            }
             sfxSequencers.remove(replaced);
             sfxSequencersById.remove(replaced.getSmpsData().getId(), replaced);
             forgetSfxClaims(replaced);
             forgetSequencerServiceIdentity(replaced);
         }
 
-        boolean killedPsg3Track = replacedPsg3;
+        boolean killedPsg3Track = false;
         for (int action = 0;
                 action < admission.displacedTracks.length; action++) {
             SmpsSequencer.Track track = admission.displacedTracks[action];
@@ -1607,37 +709,34 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsSequencer owner = admission.displacedOwners[action];
             track.active = false;
             forgetSfxClaim(owner, track);
-            int channel = track.channelId;
-            boolean retailFmHandoff = track.type
-                    != SmpsSequencer.TrackType.PSG
-                    && fmLocks[channel] == owner
-                    && sequencer.getConfig().getFmSfxTakeoverMode()
-                    == SmpsSequencerConfig.FmSfxTakeoverMode
-                            .KEY_OFF_CLEAR_SSG_EG;
-            if (!retailFmHandoff) {
+            if (!ownsAtAdmission
+                    && !isReplacedByExplicitPsg3AdmissionPair(
+                            sequencer, track)) {
                 owner.stopNote(track);
             }
-            if (retailFmHandoff) {
-                // S3K fix_sndbugs=0 has one shared SFX RAM track per channel.
-                // A different SFX overwrites that track after the admission
-                // key-off; it never releases the channel to music in between.
-                rememberConflict(SfxContentionObserver.Bus.FM,
-                        channel, owner, sequencer);
-                fmLocks[channel] = sequencer;
-            } else if (track.type == SmpsSequencer.TrackType.PSG
+            int channel = track.channelId;
+            if (track.type == SmpsSequencer.TrackType.PSG
                     && psgLocks[channel] == owner) {
                 rememberConflict(SfxContentionObserver.Bus.PSG,
                         channel, owner, sequencer);
-                psgLocks[channel] = null;
-                updateOverrides(SmpsSequencer.TrackType.PSG,
-                        channel, false);
+                if (ownsAtAdmission) {
+                    psgLocks[channel] = sequencer;
+                } else {
+                    psgLocks[channel] = null;
+                    updateOverrides(SmpsSequencer.TrackType.PSG,
+                            channel, false);
+                }
             } else if (track.type != SmpsSequencer.TrackType.PSG
                     && fmLocks[channel] == owner) {
                 rememberConflict(SfxContentionObserver.Bus.FM,
                         channel, owner, sequencer);
-                fmLocks[channel] = null;
-                updateOverrides(SmpsSequencer.TrackType.FM,
-                        channel, false);
+                if (ownsAtAdmission) {
+                    fmLocks[channel] = sequencer;
+                } else {
+                    fmLocks[channel] = null;
+                    updateOverrides(SmpsSequencer.TrackType.FM,
+                            channel, false);
+                }
             }
             killedPsg3Track |= track.type == SmpsSequencer.TrackType.PSG
                     && channel == 2;
@@ -1646,16 +745,24 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (sequencer.trackCount() > 0) {
             removeInactiveSfxSequencers(admission);
         }
-        if (killedPsg3Track) {
+        if (killedPsg3Track && !hasExplicitPsg3AdmissionPair(sequencer)) {
             writeRawPsg(0xDF);
             writeRawPsg(0xFF);
         }
+        writeConfiguredPsg3AdmissionPair(sequencer);
+        writeS1Psg3AdmissionPair(sequencer);
 
         sequencers.add(sequencer);
         sfxSequencers.add(sequencer);
         sfxSequencersById.put(sequencer.getSmpsData().getId(), sequencer);
-        claimAdmittedSfxChannels(sequencer);
+        if (sequencer.isSpecialSfx()) {
+            // Sound_PlaySpecial stores the sound's voice pointer into the
+            // driver global (s1.sounddriver.asm:1128-1132).
+            s1SpecialVoicePointer = sequencer.getSmpsData();
+        }
         recordSfxClaims(sequencer);
+        installPreparedSfxChannelOwnership(admission, sequencer);
+        writeSpecialSfxPsg3SilencePair(sequencer);
         restoreMusicDacData();
         reportSfxAdmission(sequencer);
         if (admission.continuousSfxId() != 0) {
@@ -1665,125 +772,344 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
-    private void handoffRetailFmReplacementLocks(
-            SmpsSequencer replaced, SmpsSequencer replacement) {
-        if (replacement.getConfig().getFmSfxTakeoverMode()
-                != SmpsSequencerConfig.FmSfxTakeoverMode
-                        .KEY_OFF_CLEAR_SSG_EG) {
+    /**
+     * ROM {@code zSFXTrackInitLoop}: while an SFX is still being loaded, each
+     * of its tracks is keyed off and has its SSG-EG operators cleared, in
+     * track order (skdisasm Sound/Z80 Sound Driver.asm:2092-2103). The clear
+     * is {@code zFMClearSSGEGOps}, which walks 90h and the three operator
+     * registers above it with zero (:2528-2536).
+     *
+     * <p>{@code fix_sndbugs = 0} is the branch the shipped ROM takes and the
+     * one modelled here (skdisasm/sonic3k.asm:38). On that branch
+     * {@code zSFXTrackInitLoop} calls {@code zFMClearSSGEGOps} for every
+     * track including PSG ones, which the listing flags with its own
+     * "(even on PSG tracks!!!)" note at :2099. Nothing reaches the chip for
+     * those, because every write goes through {@code zWriteFMIorII}, which
+     * returns at once on bit 7 of {@code VoiceControl} (:2549-2551). The
+     * fixed branch would test that bit at the call site and skip the call
+     * instead; the observable write stream is identical either way, so this
+     * models the FM tracks alone and is complete rather than partial.
+     *
+     * <p>The same routine's second guard is modelled too: {@code
+     * zWriteFMIorII} also returns on bit 2 of {@code PlaybackControl}, the
+     * SFX-overriding bit (:2552-2553), and {@code zKeyOffIfActive} returns on
+     * either that bit or the do-not-attack bit (:3338-3341).
+     *
+     * <p>Those two track bits are the driver's whole arbitration here: the
+     * writes themselves go out through {@code zWriteFMI} / {@code
+     * zWriteFMIorII} straight to the chip, with no test of which track last
+     * claimed the channel. They must therefore bypass this class's FM lock
+     * table, which would otherwise drop them whenever the incoming SFX is
+     * taking the channel from an SFX that still holds it - exactly the case
+     * where the ROM's key off is audible, because it releases the outgoing
+     * SFX's note before the new one attacks.
+     */
+    private void emitSfxTrackInitWrites(SmpsSequencer sequencer) {
+        if (!sequencer.getConfig().isSfxAdmissionKeyOffAndClearsSsgEg()) {
             return;
         }
-        for (int index = 0; index < replacement.trackCount(); index++) {
-            SmpsSequencer.Track track = replacement.trackAt(index);
-            if (!track.active
-                    || (track.type != SmpsSequencer.TrackType.FM
-                    && track.type != SmpsSequencer.TrackType.DAC)) {
+        for (SmpsSequencer.Track track : sequencer.getTracks()) {
+            // zWriteFMIorII returns on bit 7 of VoiceControl, so a PSG track's
+            // clear writes nothing at all.
+            if (track.type != SmpsSequencer.TrackType.FM) {
+                continue;
+            }
+            if (track.overridden) {
                 continue;
             }
             int channel = track.channelId;
-            if (fmLocks[channel] == replaced) {
-                // S3K fix_sndbugs=0 overwrites the shared SFX track after
-                // zKeyOffIfActive/zFMClearSSGEGOps. It does not run the old
-                // track through zFMSilenceChannel (RR=FF, TL=7F) first.
-                fmLocks[channel] = replacement;
+            int port = channel < 3 ? 0 : 1;
+            int channelInPort = channel % 3;
+            if (!track.tieNext) {
+                int keyOffSelect = port == 0 ? channelInPort : channelInPort + 4;
+                writeRawFm(0, 0x28, keyOffSelect);
+            }
+            for (int operator = 0; operator < 4; operator++) {
+                writeRawFm(port, 0x90 + operator * 4 + channelInPort, 0x00);
             }
         }
     }
 
-    private boolean handoffSharedPsg3ReplacementLock(
-            SmpsSequencer replaced, SmpsSequencer replacement) {
-        for (int index = 0; index < replacement.trackCount(); index++) {
-            SmpsSequencer.Track track = replacement.trackAt(index);
-            if (!track.active || track.type != SmpsSequencer.TrackType.PSG
-                    || track.channelId != 2) {
+    private void installPreparedSfxChannelOwnership(
+            PreparedSfxAdmission admission, SmpsSequencer sequencer) {
+        emitSfxTrackInitWrites(sequencer);
+        if (!ownsChannelsAtAdmission(sequencer)) {
+            return;
+        }
+        // S2 zPlaySound_CheckRing resolves B5 to CE before zPlaySFX installs
+        // PlaybackControl bit 2 on the music slot (sd:2116-2135, 2243-2246).
+        // With FixDriverBugs=0 the following zUpdateEverything services music
+        // first (sd:420-452), so ownership must exist at admission even though
+        // constructing the SFX has emitted no chip write.
+        // S1's Sound_PlaySpecial takes music ownership at admission the same
+        // way, setting bit 2 on the music slot (s1.sounddriver.asm:1146 for
+        // FM4, :1153 for PSG3). It does not take the channel from a normal
+        // SFX: see yieldsToIncumbentSfx.
+        int claimedFmMask = admission.claimedFmMask();
+        for (int channel = 0; channel < fmLocks.length; channel++) {
+            if ((claimedFmMask & (1 << channel)) == 0) {
                 continue;
             }
-            if (psgLocks[2] != replaced) {
+            updateOverrides(SmpsSequencer.TrackType.FM, channel, true);
+            if (yieldsToIncumbentSfx(sequencer, fmLocks[channel])) {
+                sequencer.setChannelOverriddenWithoutRestore(
+                        SmpsSequencer.TrackType.FM, channel, true);
                 continue;
             }
-            // PSG3 and noise are one logical SMPS track. A same-ID request
-            // overwrites its shared SFX RAM in place; it does not release the
-            // interrupted music track between old and new instances. S3K
-            // fix_sndbugs=0 then silences both hardware generators while
-            // initializing the replacement in zPlaySound.
-            psgLocks[2] = replacement;
-            return true;
+            overrideIncumbentSpecialSfx(
+                    SmpsSequencer.TrackType.FM, channel, sequencer);
+            fmLocks[channel] = sequencer;
+        }
+        int claimedPsgMask = admission.claimedPsgMask();
+        for (int channel = 0; channel < psgLocks.length; channel++) {
+            if ((claimedPsgMask & (1 << channel)) == 0) {
+                continue;
+            }
+            updateOverrides(SmpsSequencer.TrackType.PSG, channel, true);
+            if (yieldsToIncumbentSfx(sequencer, psgLocks[channel])) {
+                sequencer.setChannelOverriddenWithoutRestore(
+                        SmpsSequencer.TrackType.PSG, channel, true);
+                continue;
+            }
+            overrideIncumbentSpecialSfx(
+                    SmpsSequencer.TrackType.PSG, channel, sequencer);
+            psgLocks[channel] = sequencer;
+        }
+    }
+
+    /**
+     * True when an admitting SFX must leave an incumbent SFX track playing on
+     * a shared channel instead of displacing it.
+     *
+     * <p>S1's special SFX ({@code Sound_PlaySpecial},
+     * docs/s1disasm/s1.sounddriver.asm:1117) is the case this exists for. It
+     * initialises only its own {@code v_spcsfx_*} track slots and never writes
+     * the normal {@code v_sfx_*} slots. When the normal SFX track on the shared
+     * channel is already playing it sets bit 2 ('SFX is overriding') on its
+     * own special track instead (:1180-1182 for FM4, :1185-1187 for PSG3), so
+     * the special SFX advances its timing silently until the normal SFX
+     * releases the channel through {@code cfStopTrack}'s special-track branch
+     * (:2514-2518). Displacing the incumbent would make the special SFX audible
+     * immediately, which the ROM never does.
+     *
+     * <p>This is the admission-time counterpart of the same precedence
+     * {@link #shouldStealLock} already applies to per-write arbitration: a
+     * normal SFX outranks a special one, never the reverse.
+     */
+    private boolean yieldsToIncumbentSfx(
+            SmpsSequencer challenger, SmpsSequencer incumbent) {
+        return incumbent != null && isSfx(incumbent)
+                && challenger.isSpecialSfx() && !incumbent.isSpecialSfx();
+    }
+
+    /**
+     * True when an admitting SFX and an incumbent SFX on a shared channel are
+     * one special and one normal, the pair S1's driver keeps side by side in
+     * separate track RAM instead of one replacing the other.
+     */
+    private boolean specialSfxCoexists(
+            SmpsSequencer challenger, SmpsSequencer incumbent) {
+        return incumbent != null && isSfx(incumbent)
+                && challenger.isSpecialSfx() != incumbent.isSpecialSfx();
+    }
+
+    /**
+     * Silences, without stopping, a special SFX whose channel a normal SFX is
+     * taking at admission.
+     *
+     * <p>{@code Sound_PlaySFX} loads its own tracks and then tests the SFX
+     * track it just wrote: with FM4 in use it sets bit 2, 'SFX is overriding',
+     * on {@code v_spcsfx_fm4_track} (s1.sounddriver.asm:1072-1074), and PSG3
+     * the same way (:1077-1079). It never clears the special track's playing
+     * bit, so the special SFX keeps advancing silently and gets the channel
+     * back through {@code cfStopTrack}; see {@link #waitingSpecialSfx}. This is
+     * the mirror of {@link #yieldsToIncumbentSfx}.
+     */
+    private void overrideIncumbentSpecialSfx(
+            SmpsSequencer.TrackType type, int channel, SmpsSequencer challenger) {
+        SmpsSequencer incumbent = type == SmpsSequencer.TrackType.PSG
+                ? psgLocks[channel] : fmLocks[channel];
+        if (incumbent == null || incumbent == challenger
+                || !incumbent.isSpecialSfx() || challenger.isSpecialSfx()) {
+            return;
+        }
+        incumbent.setChannelOverriddenWithoutRestore(type, channel, true);
+    }
+
+    private static boolean ownsChannelsAtAdmission(
+            SmpsSequencer sequencer) {
+        return sequencer.getConfig().getSfxChannelOwnershipMode()
+                == SmpsSequencerConfig.SfxChannelOwnershipMode.ADMISSION;
+    }
+
+    private void transferPreparedLocks(
+            SmpsSequencer displaced,
+            SmpsSequencer challenger,
+            PreparedSfxAdmission admission) {
+        for (int channel = 0; channel < fmLocks.length; channel++) {
+            if (fmLocks[channel] != displaced) {
+                continue;
+            }
+            if ((admission.claimedFmMask() & (1 << channel)) == 0) {
+                fmLocks[channel] = null;
+                pendingConflictOwners.remove(new ConflictKey(
+                        SfxContentionObserver.Bus.FM, channel, challenger));
+                updateOverridesWithoutRestore(SmpsSequencer.TrackType.FM,
+                        channel, false);
+                continue;
+            }
+            fmLocks[channel] = challenger;
+        }
+        for (int channel = 0; channel < psgLocks.length; channel++) {
+            if (psgLocks[channel] != displaced) {
+                continue;
+            }
+            if ((admission.claimedPsgMask() & (1 << channel)) == 0) {
+                psgLocks[channel] = null;
+                pendingConflictOwners.remove(new ConflictKey(
+                        SfxContentionObserver.Bus.PSG, channel, challenger));
+                updateOverridesWithoutRestore(SmpsSequencer.TrackType.PSG,
+                        channel, false);
+                continue;
+            }
+            psgLocks[channel] = challenger;
+        }
+        displaced.setPsgLatchChannel(-1);
+        psgLatches.remove(displaced);
+        sfxAdmissionOrdinals.remove(displaced);
+        pendingConflictOwners.keySet().removeIf(
+                key -> key.challenger() == displaced);
+    }
+
+    private void writeS1Psg3AdmissionPair(SmpsSequencer sequencer) {
+        if (sequencer.getConfig().getPsgSfxTakeoverMode()
+                != SmpsSequencerConfig.PsgSfxTakeoverMode.S1_PSG3_SILENCE_PAIR) {
+            return;
+        }
+        // S1 Sound_PlaySFX writes these while loading cPSG3, before the
+        // track's first UpdateMusic service (SD:1038-1044). PSG1/2 have
+        // no corresponding admission write.
+        writePsg3AdmissionPairIfDeclared(sequencer);
+    }
+
+    /**
+     * Emits the PSG pair S1's {@code Sound_PlaySpecial} writes at its
+     * {@code .doneoverride} tail (docs/s1disasm/s1.sounddriver.asm:1183-1191).
+     *
+     * <p>The routine loads the special SFX's own {@code v_spcsfx_*} tracks,
+     * then tests the NORMAL SFX PSG3 slot: {@code tst.b
+     * SMPS_RAM.v_sfx_psg3_track.PlaybackControl(a6) / bpl.s .locret} (:1183).
+     * When that slot is playing it sets the 'SFX is overriding' bit on its own
+     * special PSG3 track and writes {@code ori.b #$1F,d4 / move.b d4,(psg_input)
+     * / bchg #5,d4 / move.b d4,(psg_input)} (:1186-1191).
+     *
+     * <p>{@code d4} is NOT the PSG3 channel byte the "command to silence
+     * channel" comment implies. Its last assignment is {@code move.b 1(a1),d4}
+     * at the top of {@code .sfxloadloop} (:1141), so it holds the voice control
+     * bits of the last track the loop read. {@code SndD0 - Waterfall} declares
+     * one track, {@code cFM4} = {@code $04}, so the pair emitted is {@code $1F,
+     * $3F}: two SN76489 data bytes rather than the intended {@code $DF, $FF}
+     * latch pair. This is the shipped {@code FixBugs = 0} path
+     * (docs/s1disasm/sonic.asm:20); the fixed branch does not exist for this
+     * site, so there is no alternative behaviour to select. The engine emits
+     * what the ROM emits.
+     */
+    private void writeSpecialSfxPsg3SilencePair(SmpsSequencer sequencer) {
+        if (!sequencer.isSpecialSfx()
+                || sequencer.getConfig().getSpecialSfxPsg3SilenceMode()
+                        != SmpsSequencerConfig.SpecialSfxPsg3SilenceMode
+                                .S1_STALE_VOICE_CONTROL_PAIR) {
+            return;
+        }
+        if (!normalSfxPsg3TrackPlaying()) {
+            return;
+        }
+        int staleVoiceControl = lastLoadedSfxTrackVoiceControl(sequencer);
+        if (staleVoiceControl < 0) {
+            return;
+        }
+        int silence = (staleVoiceControl | 0x1F) & 0xFF;
+        writeRawPsg(silence);
+        writeRawPsg(silence ^ 0x20);
+    }
+
+    /**
+     * The engine's reading of {@code v_sfx_psg3_track.PlaybackControl} bit 7:
+     * a normal (non-special) SFX holding an active PSG3 track. S1 keeps exactly
+     * one such slot, which {@code Sound_PlaySpecial} never writes.
+     */
+    private boolean normalSfxPsg3TrackPlaying() {
+        for (SmpsSequencer candidate : sfxSequencers) {
+            if (candidate.isSpecialSfx()) {
+                continue;
+            }
+            for (int track = 0; track < candidate.trackCount(); track++) {
+                SmpsSequencer.Track entry = candidate.trackAt(track);
+                if (entry.active
+                        && entry.type == SmpsSequencer.TrackType.PSG
+                        && entry.channelId == 2) {
+                    return true;
+                }
+            }
         }
         return false;
     }
 
-    void applyAdmissionFmPreparation(SmpsSequencer sequencer) {
-        if (sequencer.getConfig().getFmSfxTakeoverMode()
-                != SmpsSequencerConfig.FmSfxTakeoverMode
-                        .KEY_OFF_CLEAR_SSG_EG) {
+    /**
+     * The voice control byte {@code Sound_PlaySpecial}'s {@code .sfxloadloop}
+     * leaves in {@code d4}: the channel byte of the last header entry it read
+     * (s1.sounddriver.asm:1141).
+     */
+    private static int lastLoadedSfxTrackVoiceControl(SmpsSequencer sequencer) {
+        if (!(sequencer.getSmpsData() instanceof SmpsSfxData sfxData)) {
+            return -1;
+        }
+        java.util.List<? extends SmpsSfxData.SmpsSfxTrack> entries =
+                sfxData.getTrackEntries();
+        if (entries.isEmpty()) {
+            return -1;
+        }
+        return entries.get(entries.size() - 1).channelMask() & 0xFF;
+    }
+
+    private void writeConfiguredPsg3AdmissionPair(
+            SmpsSequencer sequencer) {
+        if (sequencer.getConfig().getPsg3SfxAdmissionWriteMode()
+                != SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
+                        .SILENCE_TONE_AND_NOISE) {
             return;
         }
-        int preparedMask = 0;
-        int[] operatorOffsets = { 0, 8, 4, 12 };
+        writePsg3AdmissionPairIfDeclared(sequencer);
+    }
+
+    private boolean hasExplicitPsg3AdmissionPair(
+            SmpsSequencer sequencer) {
+        return sequencer.getConfig().getPsg3SfxAdmissionWriteMode()
+                        == SmpsSequencerConfig.Psg3SfxAdmissionWriteMode
+                                .SILENCE_TONE_AND_NOISE
+                || sequencer.getConfig().getPsgSfxTakeoverMode()
+                        == SmpsSequencerConfig.PsgSfxTakeoverMode
+                                .S1_PSG3_SILENCE_PAIR;
+    }
+
+    private boolean isReplacedByExplicitPsg3AdmissionPair(
+            SmpsSequencer sequencer, SmpsSequencer.Track displacedTrack) {
+        return displacedTrack.type == SmpsSequencer.TrackType.PSG
+                && displacedTrack.channelId == 2
+                && hasExplicitPsg3AdmissionPair(sequencer);
+    }
+
+    private void writePsg3AdmissionPairIfDeclared(
+            SmpsSequencer sequencer) {
         for (int index = 0; index < sequencer.trackCount(); index++) {
             SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.type != SmpsSequencer.TrackType.FM
-                    || (preparedMask & (1 << track.channelId)) != 0) {
+            if (track.type != SmpsSequencer.TrackType.PSG
+                    || track.channelId != 2) {
                 continue;
             }
-            preparedMask |= 1 << track.channelId;
-            int port = track.channelId < 3 ? 0 : 1;
-            int channel = track.channelId % 3;
-            int keyChannel = port == 0 ? channel : channel + 4;
-            if (track.channelId == 4) {
-                YmServiceTimingProfile.Variant variant =
-                        new YmServiceTimingProfile.Variant(
-                                port, 4, false, true, 0,
-                                0,
-                                YmServiceTimingProfile.PathKind
-                                        .FIRST_ADMISSION);
-                try (Synthesizer.YmTimingScope ignored = beginYmTiming(
-                        sequencer,
-                        YmServiceTimingProfile.SegmentKind
-                                .SFX_ADMISSION_PREP,
-                        variant)) {
-                    publishAdmissionFmPreparationWrites(sequencer, port,
-                            channel, keyChannel, operatorOffsets);
-                }
-            } else {
-                publishAdmissionFmPreparationWrites(sequencer, port,
-                        channel, keyChannel, operatorOffsets);
-            }
-        }
-    }
-
-    private void publishAdmissionFmPreparationWrites(
-            SmpsSequencer sequencer,
-            int port,
-            int channel,
-            int keyChannel,
-            int[] operatorOffsets) {
-        publishAuthorizedFmWrite(sequencer, 0, 0x28, keyChannel);
-        for (int operatorOffset : operatorOffsets) {
-            publishAuthorizedFmWrite(sequencer, port,
-                    0x90 + operatorOffset + channel, 0);
-        }
-    }
-
-    private void applySfxRequestTransform(SmpsSequencer sequencer) {
-        if (sequencer.getConfig().getSfxRequestTransformPolicy()
-                != SmpsSequencerConfig.SfxRequestTransformPolicy
-                        .SONIC2_SPINDASH_REV) {
+            writeRawPsg(0xDF);
+            writeRawPsg(0xFF);
             return;
-        }
-        // Sonic 2's shipped fixBugs=0 driver owns this independently of the
-        // gameplay charge counter. E0 restarts a 0x3C-service timeout and
-        // advances a saturating 0..11 semitone index before track playback.
-        if (sequencer.getSmpsData().getId() != 0xE0) {
-            return;
-        }
-        int index = spindashRevPlayingCounter == 0
-                ? 0 : Math.min(11, spindashRevFrequencyIndex + 1);
-        spindashRevFrequencyIndex = index;
-        spindashRevPlayingCounter = 0x3C;
-        for (int trackIndex = 0;
-                trackIndex < sequencer.trackCount(); trackIndex++) {
-            SmpsSequencer.Track track = sequencer.trackAt(trackIndex);
-            track.keyOffset = (byte) (track.keyOffset + index);
         }
     }
 
@@ -1797,196 +1123,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             throw new IllegalArgumentException(
                     "continuous SFX track count must not be negative");
         }
-    }
-
-    private void claimAdmittedSfxChannels(SmpsSequencer sequencer) {
-        for (int index = 0; index < sequencer.trackCount(); index++) {
-            SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (!track.active) {
-                continue;
-            }
-            if (track.type == SmpsSequencer.TrackType.PSG) {
-                psgLocks[track.channelId] = sequencer;
-                updateOverrides(SmpsSequencer.TrackType.PSG,
-                        track.channelId, true);
-            } else {
-                fmLocks[track.channelId] = sequencer;
-                updateOverrides(SmpsSequencer.TrackType.FM,
-                        track.channelId, true);
-            }
-        }
-    }
-
-    public SmpsRequestAdmissionPolicy.AdmissionResult evaluateSfxRequest(
-            int soundId,
-            int requestedPriority,
-            boolean specialSfx,
-            boolean continuousRetrigger) {
-        SmpsSequencerConfig.SfxPriorityPolicy policy =
-                activeSfxPriorityPolicy();
-        return evaluateSfxRequest(soundId, requestedPriority, specialSfx,
-                continuousRetrigger, policy);
-    }
-
-    private SmpsRequestAdmissionPolicy.AdmissionResult evaluateSfxRequest(
-            int soundId,
-            int requestedPriority,
-            boolean specialSfx,
-            boolean continuousRetrigger,
-            SmpsSequencerConfig.SfxPriorityPolicy policy) {
-        if (requestedPriority < 0 || requestedPriority > 0xFF) {
-            throw new IllegalArgumentException(
-                    "SFX priority must fit one unsigned byte");
-        }
-        if (policy == SmpsSequencerConfig.SfxPriorityPolicy.NONE) {
-            return new SmpsRequestAdmissionPolicy.AdmissionResult(
-                    true, SmpsRequestAdmissionPolicy.RejectionReason.NONE,
-                    SmpsRequestAdmissionPolicy.NO_PRIORITY,
-                    SmpsRequestAdmissionPolicy.NO_PRIORITY, soundId);
-        }
-
-        int before = sfxPriorityLatch;
-        if (requestedPriority < before) {
-            return new SmpsRequestAdmissionPolicy.AdmissionResult(
-                    false, SmpsRequestAdmissionPolicy.RejectionReason.PRIORITY,
-                    before, before, soundId);
-        }
-        int after = (requestedPriority & 0x80) != 0
-                ? before : requestedPriority;
-        return new SmpsRequestAdmissionPolicy.AdmissionResult(
-                true, SmpsRequestAdmissionPolicy.RejectionReason.NONE,
-                before, after, soundId);
-    }
-
-    private SmpsSequencerConfig.SfxPriorityPolicy activeSfxPriorityPolicy() {
-        synchronized (sequencersLock) {
-            for (SmpsSequencer sequencer : sequencers) {
-                return sequencer.getConfig().getSfxPriorityPolicy();
-            }
-        }
-        return SmpsSequencerConfig.SfxPriorityPolicy.NONE;
-    }
-
-    public boolean usesGlobalSfxPriority() {
-        return activeSfxPriorityPolicy()
-                == SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH;
-    }
-
-    public void onSfxTrackStopped() {
-        if (usesGlobalSfxPriority()) {
-            // Shipped S1 FixBugs=0 and S2 FixDriverBugs=0 clear the single
-            // latch from the SFX track-stop path. The bug-fixed S2 path does
-            // not change this track-end behavior.
-            sfxPriorityLatch = 0;
-        }
-    }
-
-    /**
-     * Applies locked-on {@code fix_sndbugs=0} {@code cfStopTrack} ownership at
-     * the exact retiring FM track boundary. Returns true when this driver has
-     * published the key-off and released the channel on the caller's behalf.
-     */
-    public final boolean releaseStoppedSfxFmTrackFromSequencer(
-            SmpsSequencer sequencer, int channel) {
-        if (activeServiceSequencer != sequencer
-                || activeServiceKind
-                != SmpsDriverServiceObserver.ServiceKind.SEQUENCER_TICK
-                || !sequencer.isSfx()
-                || channel < 0 || channel >= fmLocks.length
-                || !hasStoppedFmTrack(sequencer, channel)
-                || sequencer.getConfig().getFmSfxReleaseMode()
-                != SmpsSequencerConfig.FmSfxReleaseMode
-                        .RESTORE_MUSIC_DIRECTLY) {
-            return false;
-        }
-
-        // F2 stops the track inside handleFlag(), then tickTracks() observes
-        // the inactive track and calls stopNote() once more. Native cfStopTrack
-        // executes only once; after the first call releases this lock, the
-        // second Java cleanup call must not reacquire the channel.
-        if (fmLocks[channel] != sequencer) {
-            return true;
-        }
-
-        int keyOffChannel = channel < 3 ? channel : channel + 1;
-        YmServiceTimingProfile profile = timingProfileFor(sequencer);
-        YmServiceTimingProfile.Variant stopVariant =
-                new YmServiceTimingProfile.Variant(
-                        channel < 3 ? 0 : 1, 4, false, false,
-                        0, 0, YmServiceTimingProfile.PathKind.TRACK_STOP);
-        boolean timedTrackStop = profile.supports(
-                YmServiceTimingProfile.SegmentKind.TRACK_STOP_KEY_OFF,
-                stopVariant);
-        if (timedTrackStop) {
-            try (Synthesizer.YmTimingScope ignored = beginYmTiming(
-                    sequencer,
-                    YmServiceTimingProfile.SegmentKind.TRACK_STOP_KEY_OFF,
-                    stopVariant)) {
-                publishAuthorizedFmWrite(
-                        sequencer, 0, 0x28, keyOffChannel);
-            }
-        } else {
-            publishAuthorizedFmWrite(sequencer, 0, 0x28, keyOffChannel);
-        }
-
-        if (channel == 4) {
-            YmServiceTimingProfile.Variant restoreVariant = null;
-            for (SmpsSequencer candidate : sequencers) {
-                if (!isSfx(candidate)) {
-                    restoreVariant = completionRestoreVariant(
-                            candidate, channel);
-                    if (restoreVariant != null) {
-                        break;
-                    }
-                }
-            }
-            if (restoreVariant != null && profile.supports(
-                        YmServiceTimingProfile.SegmentKind.COMPLETION_RESTORE,
-                        restoreVariant)) {
-                try (Synthesizer.YmTimingScope ignored = beginYmTiming(
-                        sequencer,
-                        YmServiceTimingProfile.SegmentKind.COMPLETION_RESTORE,
-                        restoreVariant)) {
-                    releaseStoppedFmOwnership(sequencer, channel);
-                }
-                return true;
-            }
-        }
-        releaseStoppedFmOwnership(sequencer, channel);
-        return true;
-    }
-
-    private static boolean hasStoppedFmTrack(
-            SmpsSequencer sequencer, int channel) {
-        boolean stopped = false;
-        for (int index = 0; index < sequencer.trackCount(); index++) {
-            SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.type != SmpsSequencer.TrackType.FM
-                    || track.channelId != channel) {
-                continue;
-            }
-            if (track.active) {
-                return false;
-            }
-            stopped = true;
-        }
-        return stopped;
-    }
-
-    private void releaseStoppedFmOwnership(
-            SmpsSequencer sequencer, int channel) {
-        fmLocks[channel] = null;
-        if (fmSfxClaims[channel] == sequencer) {
-            fmSfxClaims[channel] = null;
-        }
-        updateOverrides(SmpsSequencer.TrackType.FM, channel, false);
-    }
-
-    int sfxPriorityLatchForTesting() {
-        return activeSfxPriorityPolicy()
-                == SmpsSequencerConfig.SfxPriorityPolicy.NONE
-                ? SmpsRequestAdmissionPolicy.NO_PRIORITY
-                : sfxPriorityLatch;
     }
 
     private static boolean isAlreadyDisplaced(
@@ -2150,12 +1286,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     public void setRegion(SmpsSequencer.Region region) {
-        boolean changed = this.region != region;
-        if (changed) {
-            palFullUpdateCounter = 5;
-            setChipClockProfile(region == SmpsSequencer.Region.PAL
-                    ? ChipClockProfile.PAL : ChipClockProfile.NTSC);
-        }
         this.region = region;
         synchronized (sequencersLock) {
             for (SmpsSequencer seq : sequencers) {
@@ -2203,17 +1333,10 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     SfxAdmissionMutationState captureSfxAdmissionMutation(
             PreparedSfxAdmission admission) {
         synchronized (sequencersLock) {
-            if (admission.deferredRequest()) {
-                return new SfxAdmissionMutationState(
-                        captureLiveCommandMutation());
-            }
             if (admission.continuousExtension()) {
                 return new SfxAdmissionMutationState(
                         nextSfxAdmissionOrdinal, nextServiceOrdinal,
-                        nextServiceSequencerOrdinal, sfxPriorityLatch,
-                        spindashRevPlayingCounter,
-                        spindashRevFrequencyIndex,
-                        continuousSfxId,
+                        nextServiceSequencerOrdinal, continuousSfxId,
                         continuousSfxFlag, contSfxLoopCnt);
             }
             SmpsSequencer[] affected = affectedSequencers(admission);
@@ -2308,44 +1431,22 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     conflictKeys, conflictSources,
                     nextSfxAdmissionOrdinal,
                     nextServiceOrdinal, nextServiceSequencerOrdinal,
-                    sfxPriorityLatch,
-                    spindashRevPlayingCounter,
-                    spindashRevFrequencyIndex,
                     continuousSfxId,
-                    continuousSfxFlag, contSfxLoopCnt,
-                    captureLiveDacDataReference(),
-                    admission.affectedFmMask() == 0
-                            && admission.affectedPsgMask() == 0
-                            ? null : captureSfxAdmissionState(
-                                    admission.affectedFmMask(),
-                                    admission.affectedPsgMask()));
+                    continuousSfxFlag, contSfxLoopCnt);
         }
     }
 
     void restoreSfxAdmissionMutation(SfxAdmissionMutationState state) {
         synchronized (sequencersLock) {
-            if (state.driverState != null) {
-                rollbackLiveCommandMutation(state.driverState);
-                return;
-            }
             if (state.continuousOnly) {
                 nextSfxAdmissionOrdinal = state.nextAdmissionOrdinal;
                 nextServiceOrdinal = state.nextServiceOrdinal;
                 nextServiceSequencerOrdinal =
                         state.nextServiceSequencerOrdinal;
-                sfxPriorityLatch = state.sfxPriorityLatch;
-                spindashRevPlayingCounter =
-                        state.spindashRevPlayingCounter;
-                spindashRevFrequencyIndex =
-                        state.spindashRevFrequencyIndex;
                 continuousSfxId = state.continuousSfxId;
                 continuousSfxFlag = state.continuousSfxFlag;
                 contSfxLoopCnt = state.continuousLoopCount;
                 return;
-            }
-            restoreLiveDacDataReference(state.dacData);
-            if (state.synthState != null) {
-                restoreSfxAdmissionState(state.synthState);
             }
             for (int index = 0; index < state.affected.length; index++) {
                 state.affected[index].rollbackLiveCommandMutation(
@@ -2413,9 +1514,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             nextServiceOrdinal = state.nextServiceOrdinal;
             nextServiceSequencerOrdinal = state.nextServiceSequencerOrdinal;
             continuousSfxId = state.continuousSfxId;
-            sfxPriorityLatch = state.sfxPriorityLatch;
-            spindashRevPlayingCounter = state.spindashRevPlayingCounter;
-            spindashRevFrequencyIndex = state.spindashRevFrequencyIndex;
             continuousSfxFlag = state.continuousSfxFlag;
             contSfxLoopCnt = state.continuousLoopCount;
         }
@@ -2474,10 +1572,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
     public LiveCommandMutationToken captureLiveCommandMutation() {
         synchronized (sequencersLock) {
-            if (ymServiceTransaction != null) {
-                throw new IllegalStateException(
-                        "cannot capture a command token during an in-flight YM service");
-            }
             SmpsSequencer[] capturedSequencers =
                     sequencers.toArray(SmpsSequencer[]::new);
             SmpsSequencer.LiveCommandMutationToken[] sequencerStates =
@@ -2508,29 +1602,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     admissionOrdinals.add(ordinal);
                 }
             }
-            boolean serviceOrdinalsPresent =
-                    serviceSequencerOrdinals != null;
-            SmpsSequencer[] serviceOrdinalSequencers =
-                    serviceOrdinalsPresent
-                            ? serviceSequencerOrdinals.keySet().toArray(
-                                    SmpsSequencer[]::new)
-                            : new SmpsSequencer[0];
-            long[] serviceOrdinals =
-                    new long[serviceOrdinalSequencers.length];
-            for (int index = 0;
-                    index < serviceOrdinalSequencers.length; index++) {
-                serviceOrdinals[index] = serviceSequencerOrdinals.get(
-                        serviceOrdinalSequencers[index]);
-            }
-            PendingSfxRequest[] capturedPending = pendingSfxInputs.clone();
-            SmpsSequencer.LiveCommandMutationToken[] pendingStates =
-                    new SmpsSequencer.LiveCommandMutationToken[2];
-            for (int index = 0; index < capturedPending.length; index++) {
-                if (capturedPending[index] != null) {
-                    pendingStates[index] = capturedPending[index].sequencer()
-                            .captureLiveCommandMutation();
-                }
-            }
             return new LiveCommandMutationToken(
                     this,
                     capturedSequencers,
@@ -2538,46 +1609,25 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     sfxSequencers.toArray(SmpsSequencer[]::new),
                     admittedSequencers.toArray(SmpsSequencer[]::new),
                     admissionOrdinals.stream().mapToLong(Long::longValue).toArray(),
-                    serviceOrdinalsPresent,
-                    serviceOrdinalSequencers,
-                    serviceOrdinals,
                     fmLocks.clone(),
                     psgLocks.clone(),
                     latchSources,
                     latchChannels,
                     pendingRemovals.toArray(SmpsSequencer[]::new),
                     sfxRemovalBuffer.toArray(SmpsSequencer[]::new),
-                    capturedPending,
-                    pendingStates,
-                    nextPendingSfxRequestOrdinal,
                     region,
                     readMode,
                     hybridChunkCountForTesting,
-                    palFullUpdateCounter,
-                    sfxPriorityLatch,
-                    spindashRevPlayingCounter,
-                    spindashRevFrequencyIndex,
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
-                    ymServiceCursor,
-                    nextYmServiceOrdinal,
-                    nextYmWriteOrdinal,
-                    nextServiceOrdinal,
-                    nextServiceSequencerOrdinal,
-                    captureLiveDacDataReference(),
-                    captureSynthSnapshot());
+                    palUpdateCounter,
+                    s1SpecialVoicePointer);
         }
     }
 
     public void rollbackLiveCommandMutation(
             LiveCommandMutationToken token) {
-        rollbackLiveCommandMutation(token, false);
-    }
-
-    private void rollbackLiveCommandMutation(
-            LiveCommandMutationToken token,
-            boolean restoreUnpublishedServiceIdentities) {
         Objects.requireNonNull(token, "token");
         if (token.owner != this) {
             throw new IllegalArgumentException(
@@ -2589,14 +1639,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                  index++) {
                 token.sequencers[index].rollbackLiveCommandMutation(
                         token.sequencerStates[index]);
-            }
-            for (int index = 0;
-                    index < token.pendingSfxInputs.length; index++) {
-                PendingSfxRequest pending = token.pendingSfxInputs[index];
-                if (pending != null) {
-                    pending.sequencer().rollbackLiveCommandMutation(
-                            token.pendingSfxSequencerStates[index]);
-                }
             }
 
             sequencers.clear();
@@ -2639,310 +1681,158 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             for (SmpsSequencer sequencer : token.sfxRemovalBuffer) {
                 sfxRemovalBuffer.add(sequencer);
             }
-            System.arraycopy(token.pendingSfxInputs, 0,
-                    pendingSfxInputs, 0, pendingSfxInputs.length);
-            nextPendingSfxRequestOrdinal =
-                    token.nextPendingSfxRequestOrdinal;
             region = token.region;
             readMode = token.readMode;
             hybridChunkCountForTesting =
                     token.hybridChunkCountForTesting;
-            palFullUpdateCounter = token.palFullUpdateCounter;
-            sfxPriorityLatch = token.sfxPriorityLatch;
-            spindashRevPlayingCounter = token.spindashRevPlayingCounter;
-            spindashRevFrequencyIndex = token.spindashRevFrequencyIndex;
             continuousSfxId = token.continuousSfxId;
             continuousSfxFlag = token.continuousSfxFlag;
             contSfxLoopCnt = token.contSfxLoopCnt;
-            ymServiceCursor = token.ymServiceCursor;
-            nextYmServiceOrdinal = token.nextYmServiceOrdinal;
-            nextYmWriteOrdinal = token.nextYmWriteOrdinal;
-            restoreLiveDacDataReference(token.liveDacDataReference);
-            restoreSynthSnapshot(token.synthSnapshot);
-            if (restoreUnpublishedServiceIdentities) {
-                // A poisoned service was never observable, so its diagnostic
-                // identities are transaction state and remain dense on retry.
-                nextServiceOrdinal = token.nextServiceOrdinal;
-                nextServiceSequencerOrdinal =
-                        token.nextServiceSequencerOrdinal;
-                if (!token.serviceSequencerOrdinalsPresent) {
-                    serviceSequencerOrdinals = null;
-                } else {
-                    serviceSequencerOrdinals = new IdentityHashMap<>();
-                    for (int index = 0;
-                            index < token.serviceOrdinalSequencers.length;
-                            index++) {
-                        serviceSequencerOrdinals.put(
-                                token.serviceOrdinalSequencers[index],
-                                token.serviceOrdinals[index]);
-                    }
-                }
-            } else {
-                // Public command rollback preserves the established observer
-                // contract: an identity allocated to a live command attempt
-                // is never reused by a later command.
-                if (serviceSequencerOrdinals != null) {
-                    serviceSequencerOrdinals.keySet()
-                            .retainAll(sequencers);
-                }
+            palUpdateCounter = token.palUpdateCounter;
+            s1SpecialVoicePointer = token.s1SpecialVoicePointer;
+            if (serviceSequencerOrdinals != null) {
+                serviceSequencerOrdinals.keySet().retainAll(sequencers);
             }
         }
     }
 
     public SmpsDriverSnapshot captureSnapshot() {
+        return captureLogicalState();
+    }
+
+    /**
+     * Captures immutable logical channel ownership without consulting routing
+     * locks or touching the chip.  SFX occupancy is derived from active track
+     * declarations, which is the state a ROM-shaped command can actually
+     * inspect before a track has produced its first hardware write.
+     */
+    public SmpsChannelOwnershipProjection captureOwnershipProjection() {
         synchronized (sequencersLock) {
-            if (ymServiceTransaction != null) {
-                throw new IllegalStateException(
-                        "cannot expose an in-flight YM service snapshot");
+            Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                    List<SmpsChannelOwnershipProjection.TrackProjection>>
+                    sfx = new LinkedHashMap<>();
+            Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                    List<SmpsChannelOwnershipProjection.TrackProjection>>
+                    music = new LinkedHashMap<>();
+            for (int sequencerIndex = 0;
+                    sequencerIndex < sequencers.size(); sequencerIndex++) {
+                SmpsSequencer sequencer = sequencers.get(sequencerIndex);
+                boolean sfxSequencer = isSfx(sequencer);
+                SmpsSequencerSnapshot snapshot = sequencer.captureSnapshot();
+                for (int trackIndex = 0;
+                        trackIndex < snapshot.tracks().size(); trackIndex++) {
+                    SmpsTrackSnapshot track = snapshot.tracks().get(trackIndex);
+                    if (sfxSequencer && !track.active()) {
+                        continue;
+                    }
+                    SmpsChannelOwnershipProjection.PhysicalChannel channel =
+                            normalizedChannel(track);
+                    SmpsChannelOwnershipProjection.TrackProjection projection =
+                            new SmpsChannelOwnershipProjection.TrackProjection(
+                                    new SmpsChannelOwnershipProjection.TrackCoordinate(
+                                            sequencerIndex, trackIndex,
+                                            sfxSequencer,
+                                            sequencer.getSourceDescriptor()),
+                                    track);
+                    (sfxSequencer ? sfx : music).computeIfAbsent(channel,
+                            ignored -> new ArrayList<>()).add(projection);
+                }
             }
+            Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                    SmpsChannelOwnershipProjection.RoleOwnership> roles =
+                    new LinkedHashMap<>();
+            for (SmpsChannelOwnershipProjection.PhysicalChannel channel
+                    : unionChannels(sfx, music)) {
+                roles.put(channel,
+                        new SmpsChannelOwnershipProjection.RoleOwnership(
+                                channel,
+                                sfx.getOrDefault(channel, List.of()),
+                                music.getOrDefault(channel, List.of())));
+            }
+            return new SmpsChannelOwnershipProjection(roles);
+        }
+    }
+
+    private static List<SmpsChannelOwnershipProjection.PhysicalChannel>
+            unionChannels(
+                    Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                            List<SmpsChannelOwnershipProjection.TrackProjection>> first,
+                    Map<SmpsChannelOwnershipProjection.PhysicalChannel,
+                            List<SmpsChannelOwnershipProjection.TrackProjection>> second) {
+        LinkedHashSet<SmpsChannelOwnershipProjection.PhysicalChannel> channels =
+                new LinkedHashSet<>(first.keySet());
+        channels.addAll(second.keySet());
+        return List.copyOf(channels);
+    }
+
+    private static SmpsChannelOwnershipProjection.PhysicalChannel
+            normalizedChannel(SmpsTrackSnapshot track) {
+        SmpsChannelOwnershipProjection.Bus bus = switch (track.type()) {
+            case FM -> SmpsChannelOwnershipProjection.Bus.FM;
+            case PSG -> SmpsChannelOwnershipProjection.Bus.PSG;
+            // DAC occupies its own normalized role.  Its sequencer-local FM6
+            // storage coordinate is retained in TrackProjection instead.
+            case DAC -> SmpsChannelOwnershipProjection.Bus.DAC;
+        };
+        int channel = track.type() == SmpsSequencer.TrackType.DAC
+                ? 0 : track.channelId();
+        return new SmpsChannelOwnershipProjection.PhysicalChannel(bus,
+                channel);
+    }
+
+    private SmpsDriverSnapshot captureLogicalState() {
+        synchronized (sequencersLock) {
             IdentityHashMap<SmpsSequencer, Integer> sequencerIds = new IdentityHashMap<>();
             IdentityHashMap<AbstractSmpsData, SmpsSourceDescriptor> sourceDescriptors = new IdentityHashMap<>();
             for (SmpsSequencer sequencer : sequencers) {
                 sourceDescriptors.put(sequencer.getSmpsData(), sequencer.getSourceDescriptor());
             }
-            for (PendingSfxRequest pending : pendingSfxInputs) {
-                if (pending != null) {
-                    sourceDescriptors.put(pending.sequencer().getSmpsData(),
-                            pending.sequencer().getSourceDescriptor());
-                }
-            }
             List<SmpsDriverSnapshot.SequencerEntry> entries = new ArrayList<>(sequencers.size());
             for (int i = 0; i < sequencers.size(); i++) {
                 SmpsSequencer sequencer = sequencers.get(i);
                 sequencerIds.put(sequencer, i);
-                entries.add(captureSequencerEntry(
-                        sequencer, isSfx(sequencer), sourceDescriptors));
-            }
-            List<SmpsDriverSnapshot.PendingSfxEntry> pendingEntries =
-                    new ArrayList<>(2);
-            for (PendingSfxRequest pending : pendingSfxInputs) {
-                if (pending != null) {
-                    pendingEntries.add(new SmpsDriverSnapshot.PendingSfxEntry(
-                            captureSequencerEntry(pending.sequencer(), false,
-                                    sourceDescriptors),
-                            pending.continuousSfxId(), pending.trackCount(),
-                            pending.requestOrdinal()));
+                AbstractSmpsData fallbackVoiceData = sequencer.getFallbackVoiceData();
+                SmpsSourceDescriptor fallbackVoiceSource = null;
+                if (fallbackVoiceData != null) {
+                    fallbackVoiceSource = sourceDescriptors.get(fallbackVoiceData);
+                    if (fallbackVoiceSource == null) {
+                        fallbackVoiceSource = SmpsSourceDescriptor.from(fallbackVoiceData);
+                        sourceDescriptors.put(fallbackVoiceData, fallbackVoiceSource);
+                    }
                 }
+                entries.add(new SmpsDriverSnapshot.SequencerEntry(
+                        isSfx(sequencer),
+                        sequencer.getSourceDescriptor(),
+                        sequencer.getSourceDescriptorTrust(),
+                        fallbackVoiceSource,
+                        sequencer.getSmpsData(),
+                        sequencer.getDacData(),
+                        sequencer.getAudioManager(),
+                        sequencer.getConfig(),
+                        sequencer.captureSnapshot()));
             }
 
             return new SmpsDriverSnapshot(
                     region,
                     readMode,
-                    palFullUpdateCounter,
-                    sfxPriorityLatch,
-                    spindashRevPlayingCounter,
-                    spindashRevFrequencyIndex,
                     continuousSfxId,
                     continuousSfxFlag,
                     contSfxLoopCnt,
+                    palUpdateCounter,
                     entries,
                     captureLockIds(fmLocks, sequencerIds),
                     captureLockIds(psgLocks, sequencerIds),
-                    captureSynthSnapshot(),
-                    ymServiceCursor,
-                    nextYmServiceOrdinal,
-                    nextYmWriteOrdinal,
-                    ymTimelineGeneration(), pendingEntries,
-                    nextPendingSfxRequestOrdinal);
+                    List.of(),
+                    null,
+                    fadeDelay,
+                    fadeDelayTimeout,
+                    fadeOutTimeout,
+                    fadeInTimeout,
+                    driverOwnedFade);
         }
     }
 
-    private static SmpsDriverSnapshot.SequencerEntry captureSequencerEntry(
-            SmpsSequencer sequencer,
-            boolean sfx,
-            IdentityHashMap<AbstractSmpsData, SmpsSourceDescriptor>
-                    sourceDescriptors) {
-        AbstractSmpsData fallbackVoiceData = sequencer.getFallbackVoiceData();
-        SmpsSourceDescriptor fallbackVoiceSource = null;
-        if (fallbackVoiceData != null) {
-            fallbackVoiceSource = sourceDescriptors.get(fallbackVoiceData);
-            if (fallbackVoiceSource == null) {
-                fallbackVoiceSource = SmpsSourceDescriptor.from(
-                        fallbackVoiceData);
-                sourceDescriptors.put(fallbackVoiceData, fallbackVoiceSource);
-            }
-        }
-        return new SmpsDriverSnapshot.SequencerEntry(
-                sfx, sequencer.getSourceDescriptor(),
-                sequencer.getSourceDescriptorTrust(), fallbackVoiceSource,
-                sequencer.getSmpsData(), sequencer.getDacData(),
-                sequencer.getAudioManager(), sequencer.getConfig(),
-                sequencer.captureSnapshot());
-    }
-
-    private SmpsDriverSnapshot captureSnapshotWithPsg(
-            PsgChip.Snapshot psgSnapshot) {
-        SmpsDriverSnapshot snapshot = captureSnapshot();
-        VirtualSynthesizer.Snapshot synth = snapshot.synthSnapshot();
-        VirtualSynthesizer.Snapshot shadowSynth =
-                new VirtualSynthesizer.Snapshot(
-                        synth.outputSampleRate(), synth.ym(), psgSnapshot,
-                        synth.ymWriteTimeline(),
-                        synth.renderedYmMasterCycle(),
-                        synth.ymTimelineGeneration());
-        return new SmpsDriverSnapshot(
-                snapshot.region(), snapshot.readMode(),
-                snapshot.palFullUpdateCounter(),
-                snapshot.sfxPriorityLatch(),
-                snapshot.spindashRevPlayingCounter(),
-                snapshot.spindashRevFrequencyIndex(),
-                snapshot.continuousSfxId(),
-                snapshot.continuousSfxFlag(), snapshot.contSfxLoopCnt(),
-                snapshot.sequencers(), snapshot.fmLockSequencerIds(),
-                snapshot.psgLockSequencerIds(), shadowSynth,
-                snapshot.ymServiceCursor(),
-                snapshot.nextYmServiceOrdinal(),
-                snapshot.nextYmWriteOrdinal(),
-                snapshot.driverGeneration(), snapshot.pendingSfxInputs(),
-                snapshot.nextPendingSfxRequestOrdinal());
-    }
-
-    /**
-     * Atomically adopts the live SFX state of another driver while retaining
-     * this driver's newly loaded music. Sonic 1 uses this during ordinary BGM
-     * loads; Sonic 2 and S3K stop SFX before loading music instead.
-     */
-    public void adoptActiveSfxFrom(SmpsDriver source) {
-        Objects.requireNonNull(source, "source");
-        if (source == this) {
-            throw new IllegalArgumentException("cannot adopt SFX from self");
-        }
-        SmpsDriverSnapshot targetSnapshot = captureSnapshot();
-        SmpsDriverSnapshot sourceSnapshot = source.captureSnapshot();
-        List<SmpsDriverSnapshot.SequencerEntry> targetEntries =
-                targetSnapshot.sequencers();
-        if (targetEntries.size() != 1 || targetEntries.get(0).sfx()) {
-            throw new IllegalStateException(
-                    "replacement driver must contain exactly one music sequencer");
-        }
-
-        SmpsDriverSnapshot.SequencerEntry targetMusic = targetEntries.get(0);
-        SmpsSourceDescriptor oldMusicSource = null;
-        for (SmpsDriverSnapshot.SequencerEntry entry : sourceSnapshot.sequencers()) {
-            if (!entry.sfx()) {
-                oldMusicSource = entry.source();
-                break;
-            }
-        }
-
-        List<SmpsDriverSnapshot.SequencerEntry> combined = new ArrayList<>();
-        combined.add(targetMusic);
-        int[] sourceToCombined = new int[sourceSnapshot.sequencers().size()];
-        Arrays.fill(sourceToCombined, -1);
-        for (int index = 0; index < sourceSnapshot.sequencers().size(); index++) {
-            SmpsDriverSnapshot.SequencerEntry entry =
-                    sourceSnapshot.sequencers().get(index);
-            if (!entry.sfx()) {
-                continue;
-            }
-            SmpsSourceDescriptor fallback = entry.fallbackVoiceSource();
-            if (fallback != null && fallback.equals(oldMusicSource)) {
-                fallback = targetMusic.source();
-            }
-            sourceToCombined[index] = combined.size();
-            combined.add(new SmpsDriverSnapshot.SequencerEntry(
-                    true, entry.source(), entry.sourceDescriptorTrust(), fallback,
-                    entry.smpsData(), entry.dacData(), entry.audioManager(),
-                    entry.config(), entry.snapshot()));
-        }
-        if (combined.size() == 1) {
-            return;
-        }
-
-        VirtualSynthesizer.Snapshot adoptedSynth = adoptPendingSfxWrites(
-                targetSnapshot, sourceSnapshot);
-        long adoptedCursor = Math.max(targetSnapshot.ymServiceCursor(),
-                adoptedSynth.ymWriteTimeline().pending().stream()
-                        .mapToLong(YmWriteTimeline.Entry::dueMasterCycle)
-                        .max().orElse(0L));
-        long adoptedServiceOrdinal = Math.incrementExact(
-                targetSnapshot.nextYmServiceOrdinal());
-
-        SmpsDriverSnapshot adopted = new SmpsDriverSnapshot(
-                targetSnapshot.region(), targetSnapshot.readMode(),
-                targetSnapshot.palFullUpdateCounter(),
-                sourceSnapshot.sfxPriorityLatch(),
-                sourceSnapshot.spindashRevPlayingCounter(),
-                sourceSnapshot.spindashRevFrequencyIndex(),
-                sourceSnapshot.continuousSfxId(),
-                sourceSnapshot.continuousSfxFlag(),
-                sourceSnapshot.contSfxLoopCnt(), combined,
-                remapAdoptedLocks(sourceSnapshot.fmLockSequencerIds(),
-                        sourceToCombined),
-                remapAdoptedLocks(sourceSnapshot.psgLockSequencerIds(),
-                        sourceToCombined),
-                adoptedSynth,
-                adoptedCursor,
-                adoptedServiceOrdinal,
-                adoptedSynth.ymWriteTimeline().nextOrdinal(),
-                targetSnapshot.driverGeneration());
-        restoreSnapshot(adopted);
-    }
-
-    private static VirtualSynthesizer.Snapshot adoptPendingSfxWrites(
-            SmpsDriverSnapshot target,
-            SmpsDriverSnapshot source) {
-        VirtualSynthesizer.Snapshot targetSynth = Objects.requireNonNull(
-                target.synthSnapshot(), "target synth snapshot");
-        VirtualSynthesizer.Snapshot sourceSynth = Objects.requireNonNull(
-                source.synthSnapshot(), "source synth snapshot");
-        Set<SmpsSourceDescriptor> sfxSources = new HashSet<>();
-        for (SmpsDriverSnapshot.SequencerEntry entry : source.sequencers()) {
-            if (entry.sfx()) {
-                sfxSources.add(entry.source());
-            }
-        }
-
-        List<YmWriteTimeline.Entry> pending = new ArrayList<>(
-                targetSynth.ymWriteTimeline().pending());
-        long nextOrdinal = targetSynth.ymWriteTimeline().nextOrdinal();
-        for (YmWriteTimeline.Entry entry
-                : sourceSynth.ymWriteTimeline().pending()) {
-            if (!sfxSources.contains(entry.sourceDescriptor())) {
-                continue;
-            }
-            long remaining = Math.max(0L, Math.subtractExact(
-                    entry.dueMasterCycle(),
-                    sourceSynth.renderedYmMasterCycle()));
-            long due = Math.addExact(
-                    targetSynth.renderedYmMasterCycle(), remaining);
-            pending.add(new YmWriteTimeline.Entry(
-                    due, nextOrdinal++, entry.port(), entry.register(),
-                    entry.value(), target.driverGeneration(),
-                    target.nextYmServiceOrdinal(),
-                    entry.sourceDescriptor(), entry.segment()));
-        }
-        if (pending.size() > targetSynth.ymWriteTimeline().capacity()) {
-            throw new IllegalStateException(
-                    "adopted SFX writes exceed target YM timeline capacity");
-        }
-        YmWriteTimeline.Snapshot timeline = new YmWriteTimeline.Snapshot(
-                targetSynth.ymWriteTimeline().capacity(),
-                nextOrdinal, pending);
-        return new VirtualSynthesizer.Snapshot(
-                targetSynth.outputSampleRate(), targetSynth.ym(),
-                targetSynth.psg(), timeline,
-                targetSynth.renderedYmMasterCycle(),
-                target.driverGeneration());
-    }
-
-    private static int[] remapAdoptedLocks(
-            int[] sourceLocks, int[] sourceToCombined) {
-        int[] result = new int[sourceLocks.length];
-        Arrays.fill(result, -1);
-        for (int index = 0; index < sourceLocks.length; index++) {
-            int sourceId = sourceLocks[index];
-            if (sourceId >= 0 && sourceId < sourceToCombined.length) {
-                result[index] = sourceToCombined[sourceId];
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Restores logical SMPS driver state only. Native/audio-chip presentation state is
-     * cleared and must be refreshed by subsequent sequencer advancement.
-     */
+    /** Restores logical SMPS driver state without touching the physical device. */
     public void restoreSnapshot(SmpsDriverSnapshot snapshot) {
         restoreSnapshot(snapshot, SmpsDriverSnapshot.liveReferences());
     }
@@ -2957,18 +1847,16 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             SmpsDriverSnapshot.DependencyResolver resolver) {
         Objects.requireNonNull(snapshot, "snapshot");
         Objects.requireNonNull(resolver, "resolver");
-        if (ymServiceTransaction != null) {
-            throw new IllegalStateException(
-                    "cannot restore during an in-flight YM service");
-        }
         List<SmpsDriverSnapshot.SequencerEntry> entries = snapshot.sequencers();
         List<ResolvedSequencerDependencies> resolved = resolveSequencerDependencies(entries, resolver);
-        List<SmpsDriverSnapshot.SequencerEntry> pendingEntries =
-                snapshot.pendingSfxInputs().stream()
-                        .map(SmpsDriverSnapshot.PendingSfxEntry::sequencer)
-                        .toList();
-        List<ResolvedSequencerDependencies> pendingResolved =
-                resolveSequencerDependencies(pendingEntries, resolver);
+        restoreLogicalState(snapshot, entries, resolved);
+        observeLifecycle(SmpsDriverServiceObserver.LifecycleKind.RESTORE);
+    }
+
+    private void restoreLogicalState(
+            SmpsDriverSnapshot snapshot,
+            List<SmpsDriverSnapshot.SequencerEntry> entries,
+            List<ResolvedSequencerDependencies> resolved) {
         synchronized (sequencersLock) {
             sequencers.clear();
             sfxSequencers.clear();
@@ -2985,21 +1873,18 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
             Arrays.fill(fmLocks, null);
             Arrays.fill(psgLocks, null);
-            Arrays.fill(pendingSfxInputs, null);
 
             region = snapshot.region();
             readMode = snapshot.readMode();
-            palFullUpdateCounter = snapshot.palFullUpdateCounter();
-            sfxPriorityLatch = snapshot.sfxPriorityLatch();
-            spindashRevPlayingCounter =
-                    snapshot.spindashRevPlayingCounter();
-            spindashRevFrequencyIndex =
-                    snapshot.spindashRevFrequencyIndex();
             continuousSfxId = snapshot.continuousSfxId();
             continuousSfxFlag = snapshot.continuousSfxFlag();
             contSfxLoopCnt = snapshot.contSfxLoopCnt();
-            nextPendingSfxRequestOrdinal =
-                    snapshot.nextPendingSfxRequestOrdinal();
+            palUpdateCounter = snapshot.palUpdateCounter();
+            fadeDelay = snapshot.fadeDelay();
+            fadeDelayTimeout = snapshot.fadeDelayTimeout();
+            fadeOutTimeout = snapshot.fadeOutTimeout();
+            fadeInTimeout = snapshot.fadeInTimeout();
+            driverOwnedFade = snapshot.driverOwnedFade();
 
             for (int i = 0; i < entries.size(); i++) {
                 SmpsDriverSnapshot.SequencerEntry entry = entries.get(i);
@@ -3007,14 +1892,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 SmpsSequencer sequencer = new SmpsSequencer(
                         dependency.smpsData(),
                         dependency.dacData(),
-                        this,
+                        this, this,
                         dependency.audioManager(),
                         dependency.config(),
                         entry.source(),
                         dependency.sourceDescriptorTrust());
                 sequencer.setRegion(region);
-                sequencer.setIsSfx(entry.sfx());
                 sequencer.restoreSnapshot(entry.snapshot());
+                sequencer.setIsSfx(entry.sfx());
                 sequencers.add(sequencer);
                 if (entry.sfx()) {
                     sfxSequencers.add(sequencer);
@@ -3023,23 +1908,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     recordSfxClaims(sequencer);
                     trackRestoredSfxAdmission(sequencer);
                 }
-            }
-
-            for (int i = 0; i < snapshot.pendingSfxInputs().size(); i++) {
-                SmpsDriverSnapshot.PendingSfxEntry pending =
-                        snapshot.pendingSfxInputs().get(i);
-                ResolvedSequencerDependencies dependency =
-                        pendingResolved.get(i);
-                SmpsSequencer sequencer = new SmpsSequencer(
-                        dependency.smpsData(), dependency.dacData(), this,
-                        dependency.audioManager(), dependency.config(),
-                        pending.sequencer().source(),
-                        dependency.sourceDescriptorTrust());
-                sequencer.setRegion(region);
-                sequencer.restoreSnapshot(pending.sequencer().snapshot());
-                pendingSfxInputs[i] = new PendingSfxRequest(
-                        sequencer, pending.continuousSfxId(),
-                        pending.trackCount(), pending.requestOrdinal());
             }
 
             for (int i = 0; i < entries.size(); i++) {
@@ -3063,19 +1931,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 }
             }
         }
-        if (snapshot.synthSnapshot() != null) {
-            restoreSynthSnapshot(snapshot.synthSnapshot());
-            ymServiceCursor = snapshot.ymServiceCursor();
-            nextYmServiceOrdinal = snapshot.nextYmServiceOrdinal();
-            nextYmWriteOrdinal = snapshot.nextYmWriteOrdinal();
-        } else {
-            silenceAll();
-            ymServiceCursor = Math.max(renderedYmMasterCycle(),
-                    lastPendingYmWriteDueCycle());
-            nextYmServiceOrdinal = 0;
-            nextYmWriteOrdinal = nextCommittedYmWriteOrdinal();
-        }
-        observeLifecycle(SmpsDriverServiceObserver.LifecycleKind.RESTORE);
     }
 
     private static List<ResolvedSequencerDependencies> resolveSequencerDependencies(
@@ -3161,9 +2016,12 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             return;
         }
         seq.setRegion(region);
-        alignSequencerServicePhase(seq);
         seq.setIsSfx(false); // Cache isSfx flag on the sequencer for O(1) lookup
         synchronized (sequencersLock) {
+            // InitMusicPlayback clears the driver globals, including
+            // v_special_voice_ptr, before loading a song
+            // (s1.sounddriver.asm:1498-1502).
+            s1SpecialVoicePointer = null;
             // ROM behavior: re-triggering the same SFX replaces the old one.
             // Without this, two sequencers for the same sound compete for the same
             // FM/PSG channels, causing lock ping-pong when priority bit 7 is set
@@ -3270,15 +2128,20 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     writeRawPsg(0xFF); // silence noise channel: 0x80|(3<<5)|(1<<4)|0x0F
                 }
             }
+            selectDac(seq.getSourceDescriptor(), seq.getDacData());
+            if (seq.getConfig().isEnableDacOnSequencerStart()) {
+                // The S3K Z80 driver never enables the DAC when a song loads:
+                // zPlayDigitalAudio disables it on entry and only writes
+                // 2Bh = 80h from its idle loop, after zDACIndex goes non-zero
+                // and outside the V-int service that queued the sample
+                // (skdisasm Sound/Z80 Sound Driver.asm:4256-4275).
+                writeFm(seq, 0, 0x2B, 0x80);
+            }
             sequencers.add(seq);
             if (isSfx) {
                 sfxSequencers.add(seq);
                 sfxSequencersById.put(seq.getSmpsData().getId(), seq);
                 recordSfxClaims(seq);
-                // SFX constructor calls synth.setDacData() which overwrites the music's
-                // DAC sample bank on the shared synthesizer. Restore the music sequencer's
-                // DAC data so donor music (e.g. S3K invincibility) keeps its correct samples.
-                restoreMusicDacData();
                 reportSfxAdmission(seq);
             }
         }
@@ -3319,129 +2182,13 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         for (int i = 0; i < sequencers.size(); i++) {
             SmpsSequencer s = sequencers.get(i);
             if (!isSfx(s) && s.getDacData() != null) {
-                setDacData(s.getDacData());
+                selectDac(s.getSourceDescriptor(), s.getDacData());
                 return;
             }
         }
     }
 
-    /** Applies the retail driver's first pause transition to the chip cores. */
-    public void pauseAudio() {
-        // Pause is an external control boundary, never a sequencer service or
-        // source-timing scope. Its immediate writes deliberately bypass the
-        // authorized source publication journal.
-        SmpsSequencerConfig.PausePolicy policy = pausePolicy();
-        switch (policy) {
-            case NONE -> { }
-            case S1_PAN_KEYOFF -> {
-                // S1 PauseMusic ($71E50): pan FM1-6 to zero, key off, silence PSG.
-                for (int channel = 0; channel < 3; channel++) {
-                    super.writeFm(null, 0, 0xB4 + channel, 0);
-                    super.writeFm(null, 1, 0xB4 + channel, 0);
-                }
-                keyOffChannels(0, 1, 2, 4, 5, 6);
-                silenceAllPsg();
-            }
-            case S2_SILENCE_RELOAD -> {
-                // S2 FixDriverBugs=0 zFMSilenceAll ($0B36) is destructive.
-                keyOffChannels(2, 6, 1, 5, 0, 4);
-                for (int register = 0x30; register < 0x90; register++) {
-                    super.writeFm(null, 0, register, 0xFF);
-                    super.writeFm(null, 1, register, 0xFF);
-                }
-                silenceAllPsg();
-            }
-            case S3K_FM1_TO_5 -> {
-                /*
-                 * S3K fix_sndbugs=0 zPauseAudio ($098D) redundantly silences
-                 * PSG, mutes only FM1-5 (FM6/DAC continues), then silences PSG
-                 * again on the shared fall-through.
-                 */
-                silenceAllPsg();
-                for (int channel = 0; channel < 3; channel++) {
-                    super.writeFm(null, 0, 0xB4 + channel, 0);
-                }
-                for (int channel = 0; channel < 2; channel++) {
-                    super.writeFm(null, 1, 0xB4 + channel, 0);
-                }
-                keyOffChannels(0, 1, 2, 3, 4, 5);
-                silenceAllPsg();
-            }
-        }
-    }
-
-    /** Restores active FM ownership using the matching retail pause policy. */
-    public void resumeAudio() {
-        SmpsSequencerConfig.PausePolicy policy = pausePolicy();
-        if (policy == SmpsSequencerConfig.PausePolicy.NONE) {
-            return;
-        }
-        synchronized (sequencersLock) {
-            for (SmpsSequencer sequencer : sequencers) {
-                sequencer.resumeAfterPause(policy);
-            }
-        }
-    }
-
-    /**
-     * Advances the continuously clocked chips without running a driver VInt.
-     * The shipped pause paths stop track service, but their YM2612 DAC loop
-     * remains active (and S3K deliberately leaves FM6/DAC unmuted).
-     */
-    public void advancePausedHardware(int stereoFrames) {
-        if (stereoFrames < 0) {
-            throw new IllegalArgumentException(
-                    "paused hardware frame count must be non-negative");
-        }
-        synchronized (sequencersLock) {
-            for (int frame = 0; frame < stereoFrames; frame++) {
-                super.render(scratchFrameBuf);
-            }
-        }
-    }
-
-    private SmpsSequencerConfig.PausePolicy pausePolicy() {
-        synchronized (sequencersLock) {
-            for (SmpsSequencer sequencer : sequencers) {
-                if (!isSfx(sequencer)) {
-                    return sequencer.getConfig().getPausePolicy();
-                }
-            }
-            return sequencers.isEmpty()
-                    ? SmpsSequencerConfig.PausePolicy.NONE
-                    : sequencers.get(0).getConfig().getPausePolicy();
-        }
-    }
-
-    private void keyOffChannels(int... channels) {
-        // Only the out-of-service pause policies above call this helper.
-        for (int channel : channels) {
-            super.writeFm(null, 0, 0x28, channel);
-        }
-    }
-
-    private void silenceAllPsg() {
-        for (int value = 0x9F; value <= 0xFF; value += 0x20) {
-            super.writePsg(null, value);
-        }
-    }
-
-    /**
-     * Full silence is a named generation barrier. Any source work which has
-     * not reached atomic publication is rolled back before the synth advances
-     * its epoch and discards older committed writes.
-     */
-    @Override
-    public void silenceAll() {
-        cancelUnpublishedYmServiceForBarrier("full silence");
-        super.silenceAll();
-        ymServiceCursor = Math.max(renderedYmMasterCycle(),
-                lastPendingYmWriteDueCycle());
-        nextYmWriteOrdinal = nextCommittedYmWriteOrdinal();
-    }
-
     public void stopAll() {
-        cancelUnpublishedYmServiceForBarrier("stopAll");
         synchronized (sequencersLock) {
             sequencers.clear();
             sfxSequencers.clear();
@@ -3462,8 +2209,15 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             continuousSfxId = 0;
             continuousSfxFlag = false;
             contSfxLoopCnt = 0;
-            sfxPriorityLatch = 0;
-            clearPendingSfxInputs();
+            // StopAllSound clears the driver RAM globals, v_special_voice_ptr
+            // included (s1.sounddriver.asm:1468-1478). S3K's zStopAllSound
+            // zeroes zTempVariablesStart..zTempVariablesEnd, which contains
+            // zDACIndex (skdisasm Sound/Z80 Sound Driver.asm:134,163,214,
+            // :2461-2470), so a sample queued but not yet seen by the idle
+            // loop is discarded and the DAC stays disabled by the same
+            // routine's own 2Bh = 0 (:2508-2511).
+            s1SpecialVoicePointer = null;
+            dacQueuedSinceIdleLoopPass = false;
         }
         // Silence hardware (ROM: zFMSilenceAll + zPSGSilenceAll)
         silenceAll();
@@ -3474,148 +2228,467 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      * Stop all SFX sequencers, releasing their channel locks and silencing them.
      * Used when starting override music to prevent partial SFX playback on restore.
      */
+    @Override
+    public int fadeDelay() {
+        return fadeDelay;
+    }
+
+    @Override
+    public void setFadeDelay(int value) {
+        fadeDelay = value & 0xFF;
+    }
+
+    @Override
+    public int fadeDelayTimeout() {
+        return fadeDelayTimeout;
+    }
+
+    @Override
+    public void setFadeDelayTimeout(int value) {
+        fadeDelayTimeout = value & 0xFF;
+    }
+
+    /**
+     * Arms the driver's fade delay pair, as {@code zFadeOutMusic} and
+     * {@code zFadeInToPrevious} both do before anything else
+     * (skdisasm Sound/Z80 Sound Driver.asm:2306-2312, :2784-2789). Neither
+     * routine looks for a song first, so this records the value even when no
+     * music is installed, which is the case the song-owned copy could not
+     * represent at all.
+     */
+    public void armFadeDelay(int value) {
+        setFadeDelay(value);
+        setFadeDelayTimeout(value);
+        driverOwnedFade = true;
+    }
+
+    /**
+     * Arms a fade out on the driver, as {@code zFadeOutMusic} does: the step
+     * counter first, then both halves of the delay pair, none of it
+     * conditional on a song being loaded (skdisasm Sound/Z80 Sound
+     * Driver.asm:2306-2312).
+     */
+    public void armFadeOut(int steps, int delay) {
+        setFadeStepCounter(true, steps);
+        armFadeDelay(delay);
+    }
+
+    @Override
+    public int fadeStepCounter(boolean fadeOut) {
+        return fadeOut ? fadeOutTimeout : fadeInTimeout;
+    }
+
+    @Override
+    public void setFadeStepCounter(boolean fadeOut, int value) {
+        if (fadeOut) {
+            fadeOutTimeout = value & 0xFF;
+        } else {
+            fadeInTimeout = value & 0xFF;
+        }
+        driverOwnedFade = true;
+    }
+
+    /**
+     * Runs {@code zDoMusicFadeOut}'s delay step for a driver with no song
+     * loaded (skdisasm Sound/Z80 Sound Driver.asm:2331-2346). The routine is
+     * called from {@code zUpdateMusic} every service and tests only
+     * {@code zFadeOutTimeout}, so the counters keep moving with nothing to
+     * apply the volume change to. A song of its own drives this through
+     * {@code SmpsSequencer.processFade} instead.
+     */
+    /**
+     * {@code zUpdateMusic} runs {@code TempoWait} and both fade handlers
+     * before it reaches {@code zFillSoundQueue} (skdisasm Sound/Z80 Sound
+     * Driver.asm:659-701), so a fade armed by this service's own request is
+     * not stepped until the next one. A song drives its own fade through
+     * {@code SmpsSequencer.processFade}; this covers the case where there is
+     * none to drive it.
+     */
+    private void stepSonglessFadeIfNoSong() {
+        if (firstMusicSequencerLocked() == null) {
+            stepSonglessFade();
+        }
+    }
+
+    private void stepSonglessFade() {
+        if (!driverOwnedFade || fadeOutTimeout == 0) {
+            return;
+        }
+        fadeDelayTimeout = (fadeDelayTimeout - 1) & 0xFF;
+        if (fadeDelayTimeout != 0) {
+            return;
+        }
+        fadeDelayTimeout = fadeDelay;
+        fadeOutTimeout = (fadeOutTimeout - 1) & 0xFF;
+    }
+
     public void stopAllSfx() {
-        cancelUnpublishedSfxServiceForStop();
-        ServiceTransaction stopTransaction = null;
-        try {
-            synchronized (sequencersLock) {
-                for (SmpsSequencer sfx : sfxSequencers) {
-                    if (timingProfileFor(sfx)
-                            != YmServiceTimingProfile.none()) {
-                        stopTransaction = beginYmServiceTransaction(
-                                sfx, false);
-                        break;
-                    }
-                }
-                sfxPriorityLatch = 0;
-                clearPendingSfxInputs();
-                sfxRemovalBuffer.clear();
-                sfxRemovalBuffer.addAll(sfxSequencers);
-                for (int i = 0; i < sfxRemovalBuffer.size(); i++) {
-                    SmpsSequencer sfx = sfxRemovalBuffer.get(i);
-                    sequencers.remove(sfx);
-                    releaseLocks(sfx);
-                    sfxSequencers.remove(sfx);
-                    sfxSequencersById.remove(
-                            sfx.getSmpsData().getId(), sfx);
-                    forgetSfxClaims(sfx);
-                    sfxAdmissionOrdinals.remove(sfx);
-                    forgetSequencerServiceIdentity(sfx);
-                }
-                pendingConflictOwners.clear();
-                continuousSfxId = 0;
-                continuousSfxFlag = false;
-                contSfxLoopCnt = 0;
-            }
-            observeLifecycle(
-                    SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
-            if (stopTransaction != null) {
-                commitYmServiceTransaction();
-            }
-        } catch (RuntimeException | Error failure) {
-            if (stopTransaction != null
-                    && ymServiceTransaction == stopTransaction) {
-                abortYmServiceTransaction(failure);
-            }
-            throw failure;
-        }
-    }
-
-    private void clearPendingSfxInputs() {
-        Arrays.fill(pendingSfxInputs, null);
-    }
-
-    /** Stops 1-up-displaced SFX with the retail save-slot priority ordering. */
-    public void stopAllSfxForMusicOverride() {
-        SmpsSequencerConfig.MusicOverridePriorityPolicy policy;
-        int savedPriority;
         synchronized (sequencersLock) {
-            SmpsSequencer music = firstMusicSequencer();
-            policy = music == null
-                    ? SmpsSequencerConfig.MusicOverridePriorityPolicy
-                            .CLEAR_BEFORE_SAVE
-                    : music.getConfig().getMusicOverridePriorityPolicy();
-            savedPriority = sfxPriorityLatch;
-        }
-        stopAllSfx();
-        if (policy == SmpsSequencerConfig.MusicOverridePriorityPolicy
-                .PRESERVE_SAVED_LATCH) {
-            synchronized (sequencersLock) {
-                // Sonic 2 FixDriverBugs=0 clears zSFXPriorityVal only after
-                // LDIR copied the old value into zTracksSaveStart. Restoring
-                // the song therefore restores that stale non-zero latch.
-                sfxPriorityLatch = savedPriority;
+            sfxRemovalBuffer.clear();
+            sfxRemovalBuffer.addAll(sfxSequencers);
+            for (int i = 0; i < sfxRemovalBuffer.size(); i++) {
+                SmpsSequencer sfx = sfxRemovalBuffer.get(i);
+                sequencers.remove(sfx);
+                releaseLocks(sfx);
+                sfxSequencers.remove(sfx);
+                sfxSequencersById.remove(sfx.getSmpsData().getId(), sfx);
+                forgetSfxClaims(sfx);
+                sfxAdmissionOrdinals.remove(sfx);
+                forgetSequencerServiceIdentity(sfx);
             }
+            pendingConflictOwners.clear();
+            continuousSfxId = 0;
+            continuousSfxFlag = false;
+            contSfxLoopCnt = 0;
         }
+        observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
     }
 
-    @Override
-    public int read(short[] buffer) {
-        return read(buffer, buffer.length);
+    /**
+     * Releases the logical SFX slots without emitting channel restoration
+     * writes or clearing the continuous-SFX bookkeeping bytes. S3K
+     * {@code zStopSFX} owns a distinct seven-slot physical-write program; the
+     * session uses this boundary until that program is ported in full.
+     */
+    public void stopAllSfxWithoutRestoreWrites() {
+        synchronized (sequencersLock) {
+            sfxRemovalBuffer.clear();
+            sfxRemovalBuffer.addAll(sfxSequencers);
+            for (int i = 0; i < sfxRemovalBuffer.size(); i++) {
+                SmpsSequencer sfx = sfxRemovalBuffer.get(i);
+                sequencers.remove(sfx);
+                releaseLocksWithoutRestoreWrites(sfx);
+                sfxSequencers.remove(sfx);
+                sfxSequencersById.remove(sfx.getSmpsData().getId(), sfx);
+                forgetSfxClaims(sfx);
+                sfxAdmissionOrdinals.remove(sfx);
+                forgetSequencerServiceIdentity(sfx);
+            }
+            pendingConflictOwners.clear();
+        }
+        observeLifecycle(
+                SmpsDriverServiceObserver.LifecycleKind.STOP_ALL_SFX);
     }
 
-    @Override
-    public int read(short[] buffer, int length) {
+    /**
+     * Advances direct-read logical cadence while a separate owner renders the
+     * physical frames. Presentation never calls this compatibility boundary.
+     */
+    public int readDirect(
+            short[] buffer,
+            int length,
+            DirectPcmRenderer renderer) {
+        Objects.requireNonNull(buffer, "buffer");
+        Objects.requireNonNull(renderer, "renderer");
+        if (length < 0 || length > buffer.length || (length & 1) != 0) {
+            throw new IllegalArgumentException(
+                    "length must be an even count within the target buffer");
+        }
         return readMode == ReadMode.HYBRID
-                ? readHybrid(buffer, length)
-                : readSampleAccurate(buffer, length);
+                ? readDirectHybrid(buffer, length, renderer)
+                : readDirectSampleAccurate(buffer, length, renderer);
     }
 
-    private int readSampleAccurate(short[] buffer, int length) {
+    private int readDirectSampleAccurate(
+            short[] buffer, int length, DirectPcmRenderer renderer) {
         int frames = length / 2;
-
-        // Per-sample processing is required because sequencer state changes (note events,
-        // instrument changes, etc.) must happen in lockstep with rendering. Batching
-        // breaks audio fidelity because synth state changes mid-batch would be lost.
         synchronized (sequencersLock) {
-            for (int i = 0; i < frames; i++) {
+            for (int frame = 0; frame < frames; frame++) {
                 advanceSequencersBatch(1);
-
-                super.render(scratchFrameBuf);
-                buffer[i * 2] = scratchFrameBuf[0];
-                buffer[i * 2 + 1] = scratchFrameBuf[1];
+                removeCompletedSequencers();
+                renderer.render(buffer, frame, 1);
             }
         }
         return length;
     }
 
-    private int readHybrid(short[] buffer, int length) {
+    private int readDirectHybrid(
+            short[] buffer, int length, DirectPcmRenderer renderer) {
         int frames = length / 2;
         hybridChunkCountForTesting = 0;
-
         synchronized (sequencersLock) {
-            if (hasPendingYmWrites()
-                    || mayPublishTimedWorkDuringAdvance(frames)) {
-                // Keep the complete call on the sample boundary once it starts
-                // with scheduled YM work or a source which can create it.
-                // Switching to a PSG batch after a mid-call service would
-                // leave a different resampler phase than SAMPLE_ACCURATE.
-                for (int frameIndex = 0;
-                        frameIndex < frames; frameIndex++) {
-                    renderSingleSample(buffer, frameIndex);
-                }
-                return length;
-            }
             int frameIndex = 0;
             while (frameIndex < frames) {
                 if (requiresSampleAccurateFallback()) {
-                    renderSingleSample(buffer, frameIndex++);
+                    renderDirectSample(buffer, frameIndex++, renderer);
                     continue;
                 }
-
-                int safeChunk = computeSafeChunkSamples(frames - frameIndex);
+                int safeChunk = computeSafeChunkSamples(
+                        frames - frameIndex);
                 if (safeChunk < MIN_BATCH_SAMPLES) {
-                    renderSingleSample(buffer, frameIndex++);
+                    renderDirectSample(buffer, frameIndex++, renderer);
                     continue;
                 }
-
                 advanceSequencersBatch(safeChunk);
-                renderChunk(buffer, frameIndex, safeChunk);
+                removeCompletedSequencers();
+                renderer.render(buffer, frameIndex, safeChunk);
                 hybridChunkCountForTesting++;
                 frameIndex += safeChunk;
             }
         }
         return length;
+    }
+
+    private void renderDirectSample(
+            short[] buffer,
+            int frameIndex,
+            DirectPcmRenderer renderer) {
+        advanceSequencersBatch(1);
+        removeCompletedSequencers();
+        renderer.render(buffer, frameIndex, 1);
+    }
+
+    /** Runs one V-blank-owned service for every sequencer in this driver. */
+    public void serviceOuterFrame() {
+        synchronized (sequencersLock) {
+            SmpsSequencer music = firstMusicSequencerLocked();
+            SmpsSequencerConfig.PalUpdateMode palMode = music == null
+                    ? SmpsSequencerConfig.PalUpdateMode.NONE
+                    : music.getConfig().getPalUpdateMode();
+            if (palMode == SmpsSequencerConfig.PalUpdateMode.EXTRA_FULL) {
+                serviceSfxThenMusic();
+                if (region == SmpsSequencer.Region.PAL) {
+                    // S&K fix_sndbugs=0: test before decrement; zero reloads 5,
+                    // repeats zUpdateEverything, then the re-check stores 4.
+                    if (palUpdateCounter == 0) {
+                        palUpdateCounter = 5;
+                        serviceSfxThenMusic();
+                    }
+                    palUpdateCounter--;
+                }
+            } else {
+                if (palMode == SmpsSequencerConfig.PalUpdateMode.EXTRA_MUSIC
+                        && region == SmpsSequencer.Region.PAL
+                        && music != null
+                        && !music.getSmpsData().isPalSpeedupDisabled()) {
+                    // S2 FixDriverBugs=0: decrement first; zero reloads 5 and
+                    // calls zUpdateMusic once before the normal music pass.
+                    palUpdateCounter--;
+                    if (palUpdateCounter == 0) {
+                        palUpdateCounter = 5;
+                        serviceSequencers(false);
+                    }
+                }
+                // The queue is consumed before the music walk here too. This
+                // branch is reached whenever no music sequencer sets the S3K
+                // service order, which includes every service before the first
+                // song exists, and a song loaded by this service is walked by
+                // it: zCycleSoundQueue runs at :698-701 and .update_music
+                // follows at :702. SmpsSequencer.primeFirstService owns what
+                // that first walk does.
+                stepSonglessFadeIfNoSong();
+                runPendingServiceRequest();
+                serviceSequencers(false);
+                serviceSequencers(true);
+            }
+            // Safety net only: both branches above consume the queue at their
+            // own point. A request must never survive its service, because the
+            // next one would consume it instead.
+            runPendingServiceRequest();
+            removeCompletedSequencers();
+        }
+    }
+
+    private void serviceSfxThenMusic() {
+        SmpsSequencer music = firstMusicSequencerLocked();
+        serviceSequencers(true);
+        if (music != null) {
+            music.serviceS3kSpeedupTail();
+        }
+        if (music != null) {
+            music.serviceFadeStepAheadOfRequest();
+        }
+        stepSonglessFadeIfNoSong();
+        runPendingServiceRequest();
+        music = firstMusicSequencerLocked();
+        serviceSequencers(false);
+        if (music != null) {
+            music.serviceS3kSpeedupTail();
+        }
+    }
+
+    /**
+     * Runs the request the host handed to this service, at the point
+     * {@code zUpdateEverything} reaches it.
+     *
+     * <p>The ROM's V-blank service is an order, not a set. It runs
+     * {@code zPauseUnpause} and {@code zUpdateSFXTracks}, then
+     * {@code zUpdateMusic}'s {@code TempoWait} and both fade handlers, and only
+     * then loads {@code zMusicNumber} and hands it to {@code zFillSoundQueue}
+     * and {@code zCycleSoundQueue} (skdisasm Sound/Z80 Sound
+     * Driver.asm:653-701). So the tracks playing when a request arrives are
+     * walked by the very service that consumes it, before it is consumed, and
+     * the music walk that follows sees whatever the request left behind.
+     *
+     * <p>A request applied before the service instead loses that walk
+     * entirely: a music change tears the tracks down first, and the frequency
+     * their last update owed the chip is never sent. The music slot is re-read
+     * after the request because a music change replaces it.
+     */
+    private void runPendingServiceRequest() {
+        if (pendingServiceRequests.isEmpty()) {
+            return;
+        }
+        // zFillSoundQueue transfers the three 68k bytes and zCycleSoundQueue is
+        // then called three times, playing the first, second and third entries
+        // in that order (skdisasm Sound/Z80 Sound Driver.asm:698-701). A
+        // service can therefore consume a song and two sound effects at once,
+        // so this runs them in submission order rather than taking only one.
+        List<Runnable> requests = new ArrayList<>(pendingServiceRequests);
+        pendingServiceRequests.clear();
+        Set<SmpsSequencer> before = new HashSet<>(sfxSequencers);
+        for (Runnable request : requests) {
+            request.run();
+        }
+        for (SmpsSequencer sequencer : sfxSequencers) {
+            if (!before.contains(sequencer)) {
+                sequencer.markAdmittingServiceWalkMissed();
+            }
+        }
+    }
+
+    /**
+     * Hands this service a request to consume at the ROM's own consume point.
+     * Only the S3K service order routes through {@code serviceSfxThenMusic},
+     * so a host that submits one to a driver servicing in any other order
+     * would see it dropped; the assertion below keeps that from being silent.
+     */
+    public void submitServiceRequest(Runnable request) {
+        Objects.requireNonNull(request, "request");
+        synchronized (sequencersLock) {
+            if (pendingServiceRequests.size() >= SOUND_QUEUE_SLOTS) {
+                throw new IllegalStateException(
+                        "the sound queue holds only " + SOUND_QUEUE_SLOTS
+                                + " entries per service");
+            }
+            pendingServiceRequests.add(request);
+        }
+    }
+
+    private void serviceSequencers(boolean sfx) {
+        if (sfx && usesChannelRamOrderSfxWalk()) {
+            serviceSfxByChannelRamOrder();
+            return;
+        }
+        int size = sequencers.size();
+        for (int index = 0; index < size; index++) {
+            SmpsSequencer sequencer = sequencers.get(index);
+            if (isSfx(sequencer) != sfx) {
+                continue;
+            }
+            sequencer.serviceOuterFrame();
+            if (sequencer.isComplete() && !retainsFinishedMusic(sequencer, sfx)) {
+                pendingRemovals.add(sequencer);
+            }
+        }
+    }
+
+    /**
+     * Whether a music sequencer whose tracks have all ended must keep being
+     * serviced. S1's {@code UpdateMusic} decrements
+     * {@code v_main_tempo_timeout} and reloads it through {@code TempoWait}
+     * before it looks at any track, and unconditionally
+     * (s1.sounddriver.asm:174-176, :1549-1560), so the driver's tempo keeps
+     * running after a song's last track stops; the RAM only stops changing
+     * when a new song loads or {@code StopAllSound} clears it. The engine
+     * treated an all-tracks-inactive music sequencer as finished and stopped
+     * servicing it, which froze the tempo state a song end onward.
+     *
+     * <p>SFX sequencers are unaffected: those genuinely are released when they
+     * end, and the ROM frees their slots.
+     */
+    private static boolean retainsFinishedMusic(SmpsSequencer sequencer, boolean sfx) {
+        return !sfx && sequencer.getConfig().isDirect68kDriver();
+    }
+
+    private boolean usesChannelRamOrderSfxWalk() {
+        for (int index = 0; index < sequencers.size(); index++) {
+            SmpsSequencer sequencer = sequencers.get(index);
+            if (!isSfx(sequencer)) {
+                continue;
+            }
+            if (sequencer.getConfig().getSfxTrackWalkMode()
+                    != SmpsSequencerConfig.SfxTrackWalkMode.CHANNEL_RAM_ORDER) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Services every live SFX program by walking the fixed SFX track slots.
+     *
+     * <p>S1 {@code UpdateMusic} owns one array of SFX track slots and walks it
+     * in RAM order -- SFX FM3..FM5 (s1.sounddriver.asm:222-231) then SFX
+     * PSG1..PSG3 (:233-241) -- with no notion of which sound owns a slot. So
+     * when a second sound is admitted while the first is still playing, their
+     * tracks interleave by channel rather than by admission order: a ring on
+     * FM4 is serviced before a still-playing jump on PSG1, even though the jump
+     * started fourteen invocations earlier. The two special-SFX slots come
+     * after the whole SFX block (:258-268); see {@link
+     * SmpsSequencer#sfxSlotWalkOrder}.
+     */
+    private void serviceSfxByChannelRamOrder() {
+        List<SmpsSequencer> pass = null;
+        List<SlotWalkEntry> walk = null;
+        int size = sequencers.size();
+        for (int index = 0; index < size; index++) {
+            SmpsSequencer sequencer = sequencers.get(index);
+            if (!isSfx(sequencer)) {
+                continue;
+            }
+            if (pass == null) {
+                pass = new ArrayList<>();
+            }
+            pass.add(sequencer);
+            for (SmpsSequencer.Track track : sequencer.beginSfxSlotWalkPass()) {
+                if (walk == null) {
+                    walk = new ArrayList<>();
+                }
+                walk.add(new SlotWalkEntry(
+                        SmpsSequencer.sfxSlotWalkOrder(
+                                track, sequencer.isSpecialSfx()),
+                        walk.size(),
+                        sequencer, track));
+            }
+        }
+        if (pass == null) {
+            return;
+        }
+        if (walk != null) {
+            walk.sort(SLOT_WALK_ORDER);
+            for (int index = 0; index < walk.size(); index++) {
+                SlotWalkEntry entry = walk.get(index);
+                entry.sequencer().tickSfxSlotWalkTrack(entry.track());
+            }
+        }
+        for (int index = 0; index < pass.size(); index++) {
+            SmpsSequencer sequencer = pass.get(index);
+            sequencer.finishSfxSlotWalkPass();
+            if (sequencer.isComplete()) {
+                pendingRemovals.add(sequencer);
+            }
+        }
+    }
+
+    private record SlotWalkEntry(
+            int slot, int arrival, SmpsSequencer sequencer,
+            SmpsSequencer.Track track) {
+    }
+
+    private static final Comparator<SlotWalkEntry> SLOT_WALK_ORDER =
+            Comparator.comparingInt(SlotWalkEntry::slot)
+                    .thenComparingInt(SlotWalkEntry::arrival);
+
+    private SmpsSequencer firstMusicSequencerLocked() {
+        for (int index = 0; index < sequencers.size(); index++) {
+            SmpsSequencer sequencer = sequencers.get(index);
+            if (!isSfx(sequencer)) {
+                return sequencer;
+            }
+        }
+        return null;
     }
 
     private boolean requiresSampleAccurateFallback() {
@@ -3643,187 +2716,14 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
     }
 
     private void advanceSequencersBatch(int frames) {
-        beginYmDriverServiceReservation(frames);
-        DriverServiceReservation completedReservation = null;
-        try {
-            advanceSequencersWithinReservation(frames);
-            removeCompletedSequencers();
-        } catch (RuntimeException | Error failure) {
-            abortYmServiceTransaction(failure);
-            DriverServiceReservation reservation =
-                    ymDriverServiceReservation;
-            if (reservation != null) {
-                try {
-                    rollbackLiveCommandMutation(
-                            reservation.rollback, true);
-                } catch (RuntimeException rollbackFailure) {
-                    failure.addSuppressed(rollbackFailure);
-                }
-            }
-            throw failure;
-        } finally {
-            completedReservation = ymDriverServiceReservation;
-            ymDriverServiceReservation = null;
-        }
-        if (completedReservation == null) {
-            return;
-        }
-        RuntimeException publicationFailure = publishPsgPublications(
-                completedReservation.hardwarePublications, null);
-        publicationFailure = publishAll(
-                completedReservation.logicalPublications,
-                publicationFailure);
-        if (publicationFailure != null) {
-            throw publicationFailure;
-        }
-    }
-
-    private void advanceSequencersWithinReservation(int frames) {
-        boolean sfxFirst = usesSfxFirstServiceOrder();
-        boolean consumePendingAtBoundary = sfxFirst
-                && (pendingSfxInputs[0] != null
-                || pendingSfxInputs[1] != null)
-                && advancePendingSfxInputClocks(frames);
-        int driverFrames = -1;
-        for (int pass = 0; pass < 2; pass++) {
-            boolean serviceSfx = sfxFirst == (pass == 0);
-            int passSize = sequencers.size();
-            for (int i = 0; i < passSize; i++) {
-                SmpsSequencer sequencer = sequencers.get(i);
-                if (sequencer.isSfx() != serviceSfx) {
-                    continue;
-                }
-                int sequencerFrames =
-                        sequencer.advanceBatchAndCountDriverFrames(frames);
-                if (fadeTerminalStopAllCompleted) {
-                    fadeTerminalStopAllCompleted = false;
-                    return;
-                }
-                if (!sequencer.isSfx() || driverFrames < 0) {
-                    driverFrames = sequencerFrames;
-                }
-                if (sequencer.isComplete()) {
-                    pendingRemovals.add(sequencer);
-                }
-            }
-            if (sfxFirst && serviceSfx) {
-                // Locked-on S&K runs zUpdateSFXTracks before zUpdateMusic.
-                // A stopped SFX restores its channel in that first pass, so
-                // the same VInt's music service can use it immediately.
-                removeCompletedSequencers();
-                if (consumePendingAtBoundary) {
-                    consumeDeferredSfxInputs();
-                    consumePendingAtBoundary = false;
-                }
+        int size = sequencers.size();
+        for (int i = 0; i < size; i++) {
+            SmpsSequencer seq = sequencers.get(i);
+            seq.advanceBatch(frames);
+            if (seq.isComplete()) {
+                pendingRemovals.add(seq);
             }
         }
-        driverFrames = Math.max(0, driverFrames);
-        for (int i = 0; i < driverFrames; i++) {
-            if (spindashRevPlayingCounter > 0) {
-                spindashRevPlayingCounter--;
-            }
-            servicePalFullUpdateBoundary();
-        }
-    }
-
-    private boolean advancePendingSfxInputClocks(int frames) {
-        boolean crossed = false;
-        for (PendingSfxRequest pending : pendingSfxInputs) {
-            if (pending != null
-                    && pending.sequencer()
-                            .advanceDeferredSfxAdmissionClock(frames)) {
-                crossed = true;
-            }
-        }
-        return crossed;
-    }
-
-    public void requestFadeTerminalStopAll() {
-        fadeTerminalStopAllPending = true;
-    }
-
-    private boolean usesSfxFirstServiceOrder() {
-        for (SmpsSequencer sequencer : sequencers) {
-            return sequencer.getConfig().getDriverServiceOrder()
-                    == SmpsSequencerConfig.DriverServiceOrder.SFX_THEN_MUSIC;
-        }
-        for (PendingSfxRequest pending : pendingSfxInputs) {
-            if (pending != null) {
-                return pending.sequencer().getConfig()
-                        .getDriverServiceOrder()
-                        == SmpsSequencerConfig.DriverServiceOrder
-                                .SFX_THEN_MUSIC;
-            }
-        }
-        return false;
-    }
-
-    private void alignSequencerServicePhase(SmpsSequencer sequencer) {
-        if (!sequencers.isEmpty()) {
-            sequencer.alignDriverSamplePhase(
-                    sequencers.getFirst().driverSamplePhase());
-        }
-    }
-
-    private void servicePalFullUpdateBoundary() {
-        if (region != SmpsSequencer.Region.PAL
-                || !usesPalFullDriverRepeat()) {
-            return;
-        }
-        if (palFullUpdateCounter != 0) {
-            palFullUpdateCounter--;
-            return;
-        }
-
-        // Shipped locked-on fix_sndbugs=0 checks before decrementing. It
-        // reloads 6, repeats zUpdateEverything, then that repeated tail
-        // decrements the counter to 5.
-        palFullUpdateCounter = 6;
-        boolean sfxFirst = usesSfxFirstServiceOrder();
-        for (int pass = 0; pass < 2; pass++) {
-            boolean serviceSfx = sfxFirst == (pass == 0);
-            for (SmpsSequencer sequencer : sequencers) {
-                if (sequencer.isSfx() == serviceSfx) {
-                    sequencer.repeatDriverService();
-                    if (fadeTerminalStopAllCompleted) {
-                        fadeTerminalStopAllCompleted = false;
-                        return;
-                    }
-                    if (sequencer.isComplete()) {
-                        pendingRemovals.add(sequencer);
-                    }
-                }
-            }
-            if (sfxFirst && serviceSfx) {
-                // The repeated zUpdateEverything keeps the same SFX-first
-                // release boundary as the ordinary locked-on S&K VInt.
-                removeCompletedSequencers();
-            }
-        }
-        palFullUpdateCounter--;
-    }
-
-    private boolean usesPalFullDriverRepeat() {
-        for (SmpsSequencer sequencer : sequencers) {
-            if (sequencer.getConfig().getPalServicePolicy()
-                    == SmpsSequencerConfig.PalServicePolicy
-                            .FULL_DRIVER_REPEAT_EVERY_SIXTH) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private void renderSingleSample(short[] buffer, int frameIndex) {
-        advanceSequencersBatch(1);
-
-        super.render(scratchFrameBuf);
-        buffer[frameIndex * 2] = scratchFrameBuf[0];
-        buffer[frameIndex * 2 + 1] = scratchFrameBuf[1];
-    }
-
-    private void renderChunk(short[] target, int frameOffset, int frames) {
-        super.renderFrames(target, frameOffset, frames);
     }
 
     private void removeCompletedSequencers() {
@@ -3847,11 +2747,27 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
     }
 
-    @Override
+    /**
+     * Tool-facing: detaches every sequencer that has completed, releasing its
+     * channel locks exactly as the render loop's completion cleanup would.
+     * Parity capture hosts advance sequencers directly and never call
+     * direct-read cadence, so they invoke this once per driver tick.
+     */
+    public void reapCompletedSequencers() {
+        synchronized (sequencersLock) {
+            for (int i = 0; i < sequencers.size(); i++) {
+                SmpsSequencer seq = sequencers.get(i);
+                if (seq.isComplete() && !pendingRemovals.contains(seq)
+                        && !retainsFinishedMusic(seq, isSfx(seq))) {
+                    pendingRemovals.add(seq);
+                }
+            }
+            removeCompletedSequencers();
+        }
+    }
+
     public boolean isComplete() {
-        return sequencers.isEmpty()
-                && pendingSfxInputs[0] == null
-                && pendingSfxInputs[1] == null;
+        return sequencers.isEmpty();
     }
 
     /**
@@ -3866,50 +2782,38 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         return sfxSequencers.contains(source);
     }
 
+    /**
+     * S3K's {@code cfStopTrack} hands the channel back inside the flag: it
+     * clears the overridden music track's bit and sends that track's FM
+     * instrument before the music update of the same service runs
+     * (skdisasm Sound/Z80 Sound Driver.asm:3059-3086). Only an SFX track's
+     * end does this; the ROM gates the whole tail on {@code zUpdatingSFX}
+     * (:3050-3054).
+     */
+    @Override
+    public void releaseChannelToMusic(SmpsSequencer sequencer,
+            SmpsSequencer.TrackType type, int channelId) {
+        if (!isSfx(sequencer)) {
+            return;
+        }
+        SmpsSequencer[] locks = type == SmpsSequencer.TrackType.PSG ? psgLocks : fmLocks;
+        if (channelId < 0 || channelId >= locks.length || locks[channelId] != sequencer) {
+            return;
+        }
+        locks[channelId] = null;
+        updateOverrides(type, channelId, false);
+    }
+
     private void releaseLocks(SmpsSequencer seq) {
         boolean isSfx = isSfx(seq);
         for (int i = 0; i < 6; i++) {
             if (fmLocks[i] == seq) {
-                if (isSfx && i == 4
-                        && activeServiceSequencer == seq
-                        && activeServiceKind
-                        == SmpsDriverServiceObserver.ServiceKind
-                                .COMPLETION_CLEANUP) {
-                    YmServiceTimingProfile.Variant restoreVariant = null;
-                    for (SmpsSequencer candidate : sequencers) {
-                        if (!isSfx(candidate)) {
-                            restoreVariant = completionRestoreVariant(
-                                    candidate, i);
-                            if (restoreVariant != null) {
-                                break;
-                            }
-                        }
-                    }
-                    YmServiceTimingProfile cleanupProfile =
-                            timingProfileFor(seq);
-                    if (restoreVariant != null
-                            && cleanupProfile.supports(
-                                    YmServiceTimingProfile.SegmentKind
-                                            .COMPLETION_RESTORE,
-                                    restoreVariant)) {
-                        try (Synthesizer.YmTimingScope ignored = beginYmTiming(
-                                seq,
-                                YmServiceTimingProfile.SegmentKind
-                                        .COMPLETION_RESTORE,
-                                restoreVariant)) {
-                            publishAuthorizedFmWrite(seq, 0, 0x28, 0x05);
-                            fmLocks[i] = null;
-                            updateOverrides(SmpsSequencer.TrackType.FM,
-                                    i, false);
-                        }
-                        continue;
-                    }
-                    publishAuthorizedFmWrite(seq, 0, 0x28, 0x05);
-                }
+                // If this was an SFX, ensure the channel is silenced before handing it back.
                 if (isSfx && seq.getConfig().getFmSfxReleaseMode()
-                        == SmpsSequencerConfig.FmSfxReleaseMode
-                                .FORCE_SILENCE_THEN_RESTORE) {
+                        == SmpsSequencerConfig.FmSfxReleaseMode.LEGACY_FULL_RESTORE) {
                     seq.forceSilence(SmpsSequencer.TrackType.FM, i);
+                } else if (isSfx) {
+                    keyOffTornDownSfxTrack(seq, i);
                 }
                 fmLocks[i] = null;
                 updateOverrides(SmpsSequencer.TrackType.FM, i, false);
@@ -3917,7 +2821,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
         for (int i = 0; i < 4; i++) {
             if (psgLocks[i] == seq) {
-                if (isSfx) {
+                if (isSfx && seq.getConfig().getPsgSfxReleaseMode()
+                        == SmpsSequencerConfig.PsgSfxReleaseMode.LEGACY_FULL_RESTORE) {
                     seq.forceSilence(SmpsSequencer.TrackType.PSG, i);
                 }
                 psgLocks[i] = null;
@@ -3931,34 +2836,204 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         pendingConflictOwners.keySet().removeIf(key -> key.challenger() == seq);
     }
 
-    private static YmServiceTimingProfile.Variant completionRestoreVariant(
-            SmpsSequencer sequencer, int channelId) {
+    /**
+     * A track leaving an SFX runs {@code cfStopTrack}, which clears the
+     * playing flag and then sends {@code zKeyOffIfActive} for the channel
+     * before any voice restore (skdisasm Sound/Z80 Sound Driver.asm:3443-3462).
+     * A sequencer torn down wholesale never executes that flag, so the key off
+     * is issued here on its behalf; without it the outgoing SFX's note keeps
+     * sounding on the channel it just gave back.
+     *
+     * <p>{@code zKeyOffIfActive} returns without writing when the track's
+     * SFX-overriding or do-not-attack bit is set (:3338-3341), which is the
+     * {@code overridden} test below. The write bypasses the lock table because
+     * the ROM's own key off goes straight out through {@code zWriteFMI}.
+     */
+    private void keyOffTornDownSfxTrack(SmpsSequencer seq, int channel) {
+        for (SmpsSequencer.Track track : seq.getTracks()) {
+            if (track.type != SmpsSequencer.TrackType.FM
+                    || track.channelId != channel) {
+                continue;
+            }
+            if (!track.active || track.overridden) {
+                return;
+            }
+            int keyOffSelect = channel < 3 ? channel : (channel % 3) + 4;
+            writeRawFm(0, 0x28, keyOffSelect);
+            return;
+        }
+    }
+
+    private void releaseLocksWithoutRestoreWrites(SmpsSequencer seq) {
+        for (int i = 0; i < fmLocks.length; i++) {
+            if (fmLocks[i] == seq) {
+                fmLocks[i] = null;
+                updateOverridesWithoutRestore(
+                        SmpsSequencer.TrackType.FM, i, false);
+            }
+        }
+        for (int i = 0; i < psgLocks.length; i++) {
+            if (psgLocks[i] == seq) {
+                psgLocks[i] = null;
+                updateOverridesWithoutRestore(
+                        SmpsSequencer.TrackType.PSG, i, false);
+            }
+        }
+        seq.setPsgLatchChannel(-1);
+        psgLatches.remove(seq);
+        sfxAdmissionOrdinals.remove(seq);
+        pendingConflictOwners.keySet().removeIf(
+                key -> key.challenger() == seq);
+    }
+
+    /** Releases stopped tracks while their sibling SFX tracks remain active. */
+    public void reconcileInactiveSfxTracks(SmpsSequencer sequencer) {
+        reconcileInactiveSfxTracks(sequencer, false);
+    }
+
+    @Override
+    public void reconcileFinishedSfxSlot(SmpsSequencer sequencer) {
+        reconcileInactiveSfxTracks(sequencer, true);
+    }
+
+    private void reconcileInactiveSfxTracks(
+            SmpsSequencer sequencer, boolean includeCompleted) {
+        if (!isSfx(sequencer)
+                || (!includeCompleted && sequencer.isComplete())) {
+            return;
+        }
         for (int index = 0; index < sequencer.trackCount(); index++) {
             SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.type == SmpsSequencer.TrackType.FM
-                    && track.channelId == channelId
-                    && track.active && track.overridden
-                    && track.voiceData != null) {
-                return new YmServiceTimingProfile.Variant(
-                        channelId < 3 ? 0 : 1, 4, true, false,
-                        bit7CarrierMask(track.voiceData, 21),
-                        4,
-                        YmServiceTimingProfile.PathKind.COMPLETION_RESTORE);
+            if (!track.active) {
+                forgetSfxClaim(sequencer, track);
+            }
+        }
+        for (int channel = 0; channel < fmLocks.length; channel++) {
+            if (fmLocks[channel] != sequencer
+                    || hasActiveTrack(sequencer, channel, false)) {
+                continue;
+            }
+            if (sequencer.getConfig().getFmSfxReleaseMode()
+                    == SmpsSequencerConfig.FmSfxReleaseMode.LEGACY_FULL_RESTORE) {
+                sequencer.forceSilence(SmpsSequencer.TrackType.FM, channel);
+            }
+            SmpsSequencer waiting = waitingSpecialSfx(
+                    SmpsSequencer.TrackType.FM, channel, sequencer);
+            if (waiting != null) {
+                fmLocks[channel] = waiting;
+                waiting.setChannelOverridden(
+                        SmpsSequencer.TrackType.FM, channel, false);
+                continue;
+            }
+            fmLocks[channel] = null;
+            updateOverrides(SmpsSequencer.TrackType.FM, channel, false);
+        }
+        // Two passes, and the split is a ROM requirement rather than tidiness.
+        // A released music PSG track writes during its override update: a PSG3
+        // noise track re-latches its stored PSGNoise byte
+        // (zStopPSGSFXTrack, s2.sounddriver.asm:3581-3587). That byte's
+        // ownership channel is the noise channel, not the track's own, so
+        // releasing channel by channel would run the write while a later
+        // channel this same sequencer still holds is suppressing it. The ROM
+        // has no per-channel hardware ownership to be half-released: it clears
+        // the override bit on the music track and the write goes out.
+        boolean[] releasedPsg = new boolean[psgLocks.length];
+        for (int channel = 0; channel < psgLocks.length; channel++) {
+            if (psgLocks[channel] != sequencer
+                    || hasActiveTrack(sequencer, channel, true)) {
+                continue;
+            }
+            if (sequencer.getConfig().getPsgSfxReleaseMode()
+                    == SmpsSequencerConfig.PsgSfxReleaseMode.LEGACY_FULL_RESTORE) {
+                sequencer.forceSilence(SmpsSequencer.TrackType.PSG, channel);
+            }
+            SmpsSequencer waitingPsg = waitingSpecialSfx(
+                    SmpsSequencer.TrackType.PSG, channel, sequencer);
+            if (waitingPsg != null) {
+                psgLocks[channel] = waitingPsg;
+                waitingPsg.setChannelOverridden(
+                        SmpsSequencer.TrackType.PSG, channel, false);
+                continue;
+            }
+            psgLocks[channel] = null;
+            releasedPsg[channel] = true;
+        }
+        for (int channel = 0; channel < releasedPsg.length; channel++) {
+            if (releasedPsg[channel]) {
+                updateOverrides(SmpsSequencer.TrackType.PSG, channel, false);
+            }
+        }
+    }
+
+    /**
+     * The special SFX waiting on a channel a normal SFX is about to release,
+     * or {@code null} when nothing is waiting.
+     *
+     * <p>{@code cfStopTrack}'s FM4 case tests {@code v_spcsfx_fm4_track}'s
+     * PlaybackControl before anything else (s1.sounddriver.asm:2512-2518). When
+     * a special SFX is playing it restores into the *special* track using
+     * {@code v_special_voice_ptr}, the special SFX's own voice table, and never
+     * reaches the music track, so the music override bit survives the release.
+     * PSG3 takes the same shape through {@code .getpsgptr} (:2540-2547). The
+     * restore itself is {@code .gotpointer} (:2529-2533, PSG at :2554-2556):
+     * clear the track's
+     * 'SFX overriding' bit, set 'track at rest', and reload its current voice.
+     */
+    private SmpsSequencer waitingSpecialSfx(
+            SmpsSequencer.TrackType type, int channel, SmpsSequencer releasing) {
+        for (SmpsSequencer candidate : sfxSequencers) {
+            if (candidate == releasing || !candidate.isSpecialSfx()) {
+                continue;
+            }
+            if (hasActiveTrack(candidate, channel,
+                    type == SmpsSequencer.TrackType.PSG)) {
+                return candidate;
             }
         }
         return null;
     }
 
-    private static int bit7CarrierMask(byte[] voice, int totalLevelBase) {
-        int mask = 0;
-        for (int storedOperator = 0; storedOperator < 4;
-                storedOperator++) {
-            int index = totalLevelBase + storedOperator;
-            if (index < voice.length && (voice[index] & 0x80) != 0) {
-                mask |= 1 << storedOperator;
+    /**
+     * Whether {@code sequencer} still drives {@code channel}.
+     *
+     * <p>A PSG track in noise mode owns two hardware channels, not one. The
+     * ROM keeps the noise channel on the PSG3 track slot itself: {@code
+     * zStopPSGTrack} decides whether to re-send a stored noise byte by testing
+     * {@code PlaybackControl} bit 0 -- "Is this a noise channel?" -- on that
+     * track, and reads {@code zTrack.PSGNoise} out of the same slot
+     * (Sound/Z80 Sound Driver.asm:3520-3527). There is no separate noise track
+     * to hold the ownership, so a track whose {@code channelId} is PSG3 keeps
+     * the noise channel alive for as long as it is active.
+     *
+     * <p>Matching only on {@code channelId} released the noise channel on the
+     * first reconcile of every noise-form effect, and the release force-silences
+     * it. That silenced the whole tail of {@code sfx_Collapse} ($59) and
+     * {@code sfx_Dash} ($B6), whose PSG3 noise tracks outlive their short FM
+     * tracks by design: Collapse's six-iteration volume ramp
+     * (Sound/SFX/59 - Collapse.asm:31-36) and Dash's $4F-tick noise sweep
+     * (Sound/SFX/B6 - Dash.asm:19-23) never reached the bus.
+     *
+     * <p>Drivers that fold noise ownership onto PSG3 are unaffected: {@link
+     * #psgOwnershipChannel} already remaps the noise channel to 2 under
+     * {@code S1_PSG3_SILENCE_PAIR}, so those never take a channel-3 lock.
+     */
+    private static boolean hasActiveTrack(
+            SmpsSequencer sequencer, int channel, boolean psg) {
+        for (int index = 0; index < sequencer.trackCount(); index++) {
+            SmpsSequencer.Track track = sequencer.trackAt(index);
+            if (!track.active
+                    || (track.type == SmpsSequencer.TrackType.PSG) != psg) {
+                continue;
+            }
+            if (track.channelId == channel) {
+                return true;
+            }
+            if (psg && channel == PSG_NOISE_CHANNEL && track.noiseMode
+                    && track.channelId == PSG_TONE3_CHANNEL) {
+                return true;
             }
         }
-        return mask;
+        return false;
     }
 
     private void updateOverrides(SmpsSequencer.TrackType type, int ch, boolean overridden) {
@@ -3966,6 +3041,18 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             for (SmpsSequencer s : sequencers) {
                 if (!isSfx(s)) {
                     s.setChannelOverridden(type, ch, overridden);
+                }
+            }
+        }
+    }
+
+    private void updateOverridesWithoutRestore(
+            SmpsSequencer.TrackType type, int ch, boolean overridden) {
+        synchronized (sequencersLock) {
+            for (SmpsSequencer sequencer : sequencers) {
+                if (!isSfx(sequencer)) {
+                    sequencer.setChannelOverriddenWithoutRestore(
+                            type, ch, overridden);
                 }
             }
         }
@@ -4008,7 +3095,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     // Silence channel if stealing from music (not from another SFX or self)
                     if (fmLocks[ch] != source && !isSfx(fmLocks[ch])
                             && usesForcedFmTakeover(source)) {
-                        silenceFmChannel(source, ch);
+                        silenceFmChannel(ch);
                     }
                     fmLocks[ch] = (SmpsSequencer) source;
                     updateOverrides(SmpsSequencer.TrackType.FM, ch, true);
@@ -4016,76 +3103,17 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 reportLockDecision(decision);
 
                 if (fmLocks[ch] == source) {
-                    publishAuthorizedFmWrite(source, port, reg, val);
-                } else {
-                    consumeSuppressedFmAttemptIfAudited();
+                    synthesizer.writeFm(source, port, reg, val);
                 }
             } else {
                 if (fmLocks[ch] == null) {
-                    publishAuthorizedFmWrite(source, port, reg, val);
-                } else {
-                    consumeSuppressedFmAttemptIfAudited();
+                    synthesizer.writeFm(source, port, reg, val);
                 }
             }
         } else {
             // Global or unmapped
-            publishAuthorizedFmWrite(source, port, reg, val);
+            synthesizer.writeFm(source, port, reg, val);
         }
-    }
-
-    private void consumeSuppressedFmAttemptIfAudited() {
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction != null && transaction.activeScope != null) {
-            transaction.activeScope.consumeSuppressedHardwareAttempt();
-        }
-    }
-
-    /**
-     * Publishes one FM write whose source/channel authorization is already
-     * complete. Admission preparation and ordinary arbitration converge here
-     * so a timed source slot can be consumed exactly once.
-     */
-    final void publishAuthorizedFmWrite(
-            Object source, int port, int reg, int val) {
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction == null) {
-            super.writeFm(source, port, reg, val);
-            return;
-        }
-
-        DriverYmTimingScope scope = transaction.activeScope;
-        long dueMasterCycle = transaction.cursor;
-        YmServiceTimingProfile.SegmentKind segment = null;
-        if (scope != null) {
-            dueMasterCycle = scope.consumeSlot(port & 1, reg & 0x1ff, val & 0xff);
-            segment = scope.kind;
-        }
-        long ordinal;
-        try {
-            ordinal = Math.addExact(nextYmWriteOrdinal,
-                    transaction.writes.size());
-            transaction.writes.add(new YmWriteTimeline.Entry(
-                    dueMasterCycle, ordinal, port & 1, reg & 0x1FF,
-                    val & 0xFF, transaction.generation,
-                    transaction.serviceOrdinal,
-                    sourceDescriptorFor(source), segment));
-        } catch (RuntimeException failure) {
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
-    }
-
-    private SmpsSourceDescriptor sourceDescriptorFor(Object source) {
-        if (source instanceof SmpsSequencer sequencer) {
-            return sequencer.getSourceDescriptor();
-        }
-        ServiceTransaction transaction = ymServiceTransaction;
-        if (transaction != null && transaction.activeScope != null
-                && transaction.activeScope.source
-                instanceof SmpsSequencer sequencer) {
-            return sequencer.getSourceDescriptor();
-        }
-        return DRIVER_SOURCE;
     }
 
     @Override
@@ -4096,7 +3124,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if ((val & 0x80) != 0) {
             // Latch
             int ch = (val >> 5) & 0x03;
-            int lockChannel = psgLockChannelForWrite(seq, ch);
+            int ownershipChannel = psgOwnershipChannel(ch, source);
 
             // Cache latch channel on sequencer (fast path) and in HashMap (fallback)
             if (seq != null) {
@@ -4107,26 +3135,27 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
 
             if (isSfx(source)) {
                 LockDecision decision = decideLock(SfxContentionObserver.Bus.PSG,
-                        lockChannel, psgLocks[lockChannel],
+                        ownershipChannel, psgLocks[ownershipChannel],
                         (SmpsSequencer) source);
                 if (decision.acquired()) {
                     // Silence channel if stealing from music (not from another SFX or self)
-                    if (psgLocks[lockChannel] != source
-                            && !isSfx(psgLocks[lockChannel])) {
-                        silencePsgChannel(ch);
+                    if (psgLocks[ownershipChannel] != source
+                            && !isSfx(psgLocks[ownershipChannel])
+                            && usesForcedPsgTakeover(source)) {
+                        silencePsgChannel(ownershipChannel);
                     }
-                    psgLocks[lockChannel] = (SmpsSequencer) source;
+                    psgLocks[ownershipChannel] = (SmpsSequencer) source;
                     updateOverrides(SmpsSequencer.TrackType.PSG,
-                            lockChannel, true);
+                            ownershipChannel, true);
                 }
                 reportLockDecision(decision);
 
-                if (psgLocks[lockChannel] == source) {
-                    publishAuthorizedPsgWrite(source, val);
+                if (psgLocks[ownershipChannel] == source) {
+                    synthesizer.writePsg(source, val);
                 }
             } else {
-                if (psgLocks[ch] == null) {
-                    publishAuthorizedPsgWrite(source, val);
+                if (psgLocks[ownershipChannel] == null) {
+                    synthesizer.writePsg(source, val);
                 }
             }
         } else {
@@ -4139,70 +3168,65 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             }
 
             if (ch >= 0) {
+                int ownershipChannel = psgOwnershipChannel(ch, source);
                 if (isSfx(source)) {
-                    int lockChannel = psgLockChannelForWrite(seq, ch);
                     // Update lock just in case? Already locked by Latch.
                     LockDecision decision = decideLock(SfxContentionObserver.Bus.PSG,
-                            lockChannel, psgLocks[lockChannel],
+                            ownershipChannel, psgLocks[ownershipChannel],
                             (SmpsSequencer) source);
                     if (decision.acquired()) {
                         // Silence channel if stealing from music (not from another SFX or self)
-                        if (psgLocks[lockChannel] != source
-                                && !isSfx(psgLocks[lockChannel])) {
-                            silencePsgChannel(ch);
+                        if (psgLocks[ownershipChannel] != source
+                                && !isSfx(psgLocks[ownershipChannel])
+                                && usesForcedPsgTakeover(source)) {
+                            silencePsgChannel(ownershipChannel);
                         }
-                        psgLocks[lockChannel] = (SmpsSequencer) source;
+                        psgLocks[ownershipChannel] = (SmpsSequencer) source;
                         updateOverrides(SmpsSequencer.TrackType.PSG,
-                                lockChannel, true);
+                                ownershipChannel, true);
                     }
                     reportLockDecision(decision);
 
-                    if (psgLocks[lockChannel] == (SmpsSequencer) source) {
-                        publishAuthorizedPsgWrite(source, val);
+                    if (psgLocks[ownershipChannel] == (SmpsSequencer) source) {
+                        synthesizer.writePsg(source, val);
                     }
                 } else {
-                    if (psgLocks[ch] == null) {
-                        publishAuthorizedPsgWrite(source, val);
+                    if (psgLocks[ownershipChannel] == null) {
+                        synthesizer.writePsg(source, val);
                     }
                 }
             } else {
                 // Unknown channel (no previous latch from this source), drop or pass?
                 // Pass for safety/compatibility
-                publishAuthorizedPsgWrite(source, val);
+                synthesizer.writePsg(source, val);
             }
         }
     }
 
-    private static int psgLockChannelForWrite(
-            SmpsSequencer sequencer, int hardwareChannel) {
-        if (sequencer == null || hardwareChannel != 3) {
-            return hardwareChannel;
-        }
-        for (int index = 0; index < sequencer.trackCount(); index++) {
-            SmpsSequencer.Track track = sequencer.trackAt(index);
-            if (track.active
-                    && track.type == SmpsSequencer.TrackType.PSG
-                    && track.channelId == 2
-                    && track.noiseMode) {
-                // SMPS PSG3/noise is one logical track. Noise-latch and noise-
-                // volume writes therefore use the PSG3 track's existing lock;
-                // acquiring a second hardware-channel lock injects a silence
-                // byte that the shipped driver never sends mid-note.
-                return 2;
-            }
+    /** PSG3, the tone channel a noise track's own slot names. */
+    private static final int PSG_TONE3_CHANNEL = 2;
+
+    /** The PSG noise channel, which a PSG3 noise track owns alongside PSG3. */
+    private static final int PSG_NOISE_CHANNEL = 3;
+
+    private static int psgOwnershipChannel(
+            int hardwareChannel, Object source) {
+        // S1 stores tone 3 ($C0) and noise ($E0) in one logical track slot.
+        // Keep the hardware latch intact, but arbitrate both register classes
+        // through the PSG3 owner for its source-authentic profile.
+        if (hardwareChannel == 3
+                && source instanceof SmpsSequencer sequencer
+                && sequencer.getConfig().getPsgSfxTakeoverMode()
+                == SmpsSequencerConfig.PsgSfxTakeoverMode.S1_PSG3_SILENCE_PAIR) {
+            return 2;
         }
         return hardwareChannel;
     }
 
+    // Override other methods if needed (setInstrument calls writeFm, so it's
+    // covered)
     @Override
     public void setInstrument(Object source, int channelId, byte[] voice) {
-        if (timingProfileFor(source) != YmServiceTimingProfile.none()
-                || ymServiceTransaction != null) {
-            IllegalStateException failure = new IllegalStateException(
-                    "profiled services must expand instruments through audited FM writes");
-            abortYmServiceTransaction(failure);
-            throw failure;
-        }
         // Channel ID is passed explicitly.
         if (channelId >= 0 && channelId < 6) {
             if (isSfx(source)) {
@@ -4212,7 +3236,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                     // Silence channel if stealing from music (not from another SFX or self)
                     if (fmLocks[channelId] != source && !isSfx(fmLocks[channelId])
                             && usesForcedFmTakeover(source)) {
-                        silenceFmChannel(source, channelId);
+                        silenceFmChannel(channelId);
                     }
                     fmLocks[channelId] = (SmpsSequencer) source;
                     updateOverrides(SmpsSequencer.TrackType.FM, channelId, true);
@@ -4220,11 +3244,11 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 reportLockDecision(decision);
 
                 if (fmLocks[channelId] == source) {
-                    super.setInstrument(source, channelId, voice);
+                    synthesizer.setInstrument(source, channelId, voice);
                 }
             } else {
                 if (fmLocks[channelId] == null) {
-                    super.setInstrument(source, channelId, voice);
+                    synthesizer.setInstrument(source, channelId, voice);
                 }
             }
         }
@@ -4241,8 +3265,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 // Silence channel if stealing from music (not from another SFX or self)
                 if (fmLocks[ch] != source && !isSfx(fmLocks[ch])
                         && usesForcedFmTakeover(source)) {
-                    silenceFmChannel(source, 5);
-                    super.stopDac(null);
+                    silenceFmChannel(5);
+                    synthesizer.stopDac(null);
                 }
                 fmLocks[ch] = (SmpsSequencer) source;
                 updateOverrides(SmpsSequencer.TrackType.FM, ch, true);
@@ -4250,12 +3274,31 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             reportLockDecision(decision);
 
             if (fmLocks[ch] == source) {
-                super.playDac(source, note);
+                synthesizer.playDac(source, note);
+                dacQueuedSinceIdleLoopPass = true;
             }
         } else {
             if (fmLocks[ch] == null) {
-                super.playDac(source, note);
+                synthesizer.playDac(source, note);
+                dacQueuedSinceIdleLoopPass = true;
             }
+        }
+    }
+
+    /**
+     * Reports and clears whether a DAC sample was queued since the last pass.
+     *
+     * <p>One {@code true} answers one {@code zDACIndex} store, matching the
+     * ROM's one 2Bh = 80h per queued sample: a sample queued while another is
+     * playing clears bit 7, so {@code jp p, .dac_idle_loop} sends the loop
+     * back through the enable (skdisasm Sound/Z80 Sound
+     * Driver.asm:2896-2903, :4343-4345).</p>
+     */
+    public boolean consumeDacIdleLoopPass() {
+        synchronized (sequencersLock) {
+            boolean queued = dacQueuedSinceIdleLoopPass;
+            dacQueuedSinceIdleLoopPass = false;
+            return queued;
         }
     }
 
@@ -4277,14 +3320,6 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         }
         if (!currentSpecial && challengerSpecial) {
             return false;
-        }
-
-        // S1/S2 have already admitted the complete request through their one
-        // global priority latch. The requested track replaces the incumbent
-        // channel directly; there is no second per-channel priority gate.
-        if (challenger.getConfig().getSfxPriorityPolicy()
-                == SmpsSequencerConfig.SfxPriorityPolicy.GLOBAL_LATCH) {
-            return true;
         }
 
         // Priority arbitration:
@@ -4312,25 +3347,41 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
                 == SmpsSequencerConfig.FmSfxTakeoverMode.FORCE_RESET;
     }
 
+    private static boolean usesForcedPsgTakeover(Object source) {
+        return ((SmpsSequencer) source).getConfig().getPsgSfxTakeoverMode()
+                == SmpsSequencerConfig.PsgSfxTakeoverMode.FORCE_SILENCE;
+    }
+
+    /**
+     * Returns the currently installed S1 special-SFX voice for the shipped
+     * SendVoiceTL(a6) pointer bug, or {@code null} while that pointer is zero.
+     */
+    public byte[] s1SpecialSfxVoiceForBug(int voiceId) {
+        synchronized (sequencersLock) {
+            AbstractSmpsData bank = s1SpecialVoicePointer;
+            return bank == null ? null : bank.getVoice(voiceId);
+        }
+    }
+
     private LockDecision decideLock(SfxContentionObserver.Bus bus,
                                     int channel,
                                     SmpsSequencer currentLock,
                                     SmpsSequencer challenger) {
         boolean acquired = shouldStealLock(currentLock, challenger);
-        ConflictKey key = new ConflictKey(bus, channel, challenger);
-        SfxContentionObserver.Source deferred =
-                pendingConflictOwners.remove(key);
-        SfxContentionObserver.Source previous = deferred != null
-                ? deferred
-                : currentLock == null ? null : sourceFor(currentLock);
+        SfxContentionObserver.Source previous = null;
+        if (currentLock == null || currentLock == challenger) {
+            previous = pendingConflictOwners.remove(
+                    new ConflictKey(bus, channel, challenger));
+        }
+        if (previous == null && currentLock != null) {
+            previous = sourceFor(currentLock);
+        }
         return new LockDecision(acquired, new SfxContentionObserver.Arbitration(
                 bus, channel, sourceFor(challenger), previous, acquired));
     }
 
     private void reportLockDecision(LockDecision decision) {
-        SfxContentionObserver observer = sfxContentionObserver;
-        stageLogicalObserver(() -> observer.onRoleArbitrated(
-                decision.arbitration()));
+        sfxContentionObserver.onRoleArbitrated(decision.arbitration());
     }
 
     private SfxContentionObserver.Source sourceFor(SmpsSequencer sequencer) {
@@ -4393,11 +3444,8 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
         if (sfxContentionObserver == SfxContentionObserver.NONE) {
             return;
         }
-        SfxContentionObserver observer = sfxContentionObserver;
-        SfxContentionObserver.Admission admission =
-                new SfxContentionObserver.Admission(
-                        sourceFor(sequencer), declaredRoles(sequencer));
-        stageLogicalObserver(() -> observer.onSfxAdmitted(admission));
+        sfxContentionObserver.onSfxAdmitted(new SfxContentionObserver.Admission(
+                sourceFor(sequencer), declaredRoles(sequencer)));
     }
 
     /**
@@ -4410,16 +3458,16 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      * voice load), this directly resets the envelope counters to fully
      * silent state, ensuring the next Key On starts from a clean slate.
      */
-    private void silenceFmChannel(Object source, int ch) {
+    private void silenceFmChannel(int ch) {
         // Directly reset envelope state - this takes effect immediately
         // without needing audio samples to be rendered
-        super.forceSilenceChannel(ch);
+        forceSilenceChannel(ch);
 
         // Also send Key Off via registers for completeness
         int port = (ch < 3) ? 0 : 1;
         int hwCh = ch % 3;
         int chVal = (port == 0) ? hwCh : (hwCh + 4);
-        publishAuthorizedFmWrite(source, 0, 0x28, 0x00 | chVal);
+        synthesizer.writeFm(null, 0, 0x28, 0x00 | chVal);
     }
 
     /**
@@ -4428,7 +3476,16 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      * Protected to allow test spy access.
      */
     protected void writeRawPsg(int val) {
-        publishAuthorizedPsgWrite(null, val);
+        synthesizer.writePsg(null, val);
+    }
+
+    /**
+     * Driver-owned FM write that skips the channel lock table, modelling a ROM
+     * write issued through {@code zWriteFMI} / {@code zWriteFMIorII} outside
+     * any track's playback (skdisasm Sound/Z80 Sound Driver.asm:2545-2556).
+     */
+    protected void writeRawFm(int port, int register, int value) {
+        synthesizer.writeFm(null, port, register, value);
     }
 
     /**
@@ -4437,8 +3494,7 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
      */
     private void silencePsgChannel(int ch) {
         if (ch >= 0 && ch <= 3) {
-            publishAuthorizedPsgWrite(
-                    null, 0x80 | (ch << 5) | (1 << 4) | 0x0F);
+            synthesizer.writePsg(null, 0x80 | (ch << 5) | (1 << 4) | 0x0F);
         }
     }
 
@@ -4449,11 +3505,20 @@ public class SmpsDriver extends VirtualSynthesizer implements AudioStream {
             // Don't release lock here, just stop sound.
             // Lock is released when track ends or channel unused?
             // Actually, stopDac is just stopping sound.
-            super.stopDac(source);
+            synthesizer.stopDac(source);
         } else {
             if (fmLocks[ch] == null) {
-                super.stopDac(source);
+                synthesizer.stopDac(source);
             }
+        }
+        // Stopping the DAC is zDACIndex returning to zero, so any sample the
+        // idle loop has not yet seen is gone: zStopAllSound zeroes the
+        // variable block that holds it (skdisasm Sound/Z80 Sound
+        // Driver.asm:134,163,214,:2461-2470) and the playback loop's own exit
+        // clears it before re-entering zPlayDigitalAudio (:4352-4355). Either
+        // way the next idle-loop pass finds zero and writes no enable.
+        synchronized (sequencersLock) {
+            dacQueuedSinceIdleLoopPass = false;
         }
     }
 }

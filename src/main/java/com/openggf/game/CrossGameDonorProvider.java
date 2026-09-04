@@ -58,4 +58,25 @@ public interface CrossGameDonorProvider {
     default SpriteArtSet loadInstaShieldArt(RomByteReader reader) throws IOException {
         return SpriteArtSet.EMPTY;
     }
+
+    /**
+     * Returns the donor's shield object factory (see
+     * {@link GameModule#getShieldFactory()}) so a host game whose hybrid rules
+     * enable the donor's elemental shields can spawn the donor's objects, or
+     * {@code null} when the donor has no shield variants to contribute.
+     */
+    default java.util.function.BiFunction<AbstractPlayableSprite, ShieldType,
+            com.openggf.level.objects.ShieldObjectInstance> getShieldFactory() {
+        return null;
+    }
+
+    /**
+     * Returns the donor's insta-shield object factory (see
+     * {@link GameModule#getInstaShieldFactory()}), or {@code null} when the
+     * donor has no insta-shield object.
+     */
+    default java.util.function.Function<AbstractPlayableSprite,
+            com.openggf.level.objects.AbstractObjectInstance> getInstaShieldFactory() {
+        return null;
+    }
 }

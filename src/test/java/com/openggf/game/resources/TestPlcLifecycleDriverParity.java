@@ -4,6 +4,7 @@ import com.openggf.LevelFrameStep;
 import com.openggf.GameLoop;
 import com.openggf.control.InputHandler;
 import com.openggf.game.GameModule;
+import com.openggf.game.LevelInitProfile;
 import com.openggf.game.RuntimeArtCoordinator;
 import com.openggf.game.TitleCardProvider;
 import com.openggf.game.session.GameplayModeContext;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 class TestPlcLifecycleDriverParity {
 
@@ -59,6 +61,7 @@ class TestPlcLifecycleDriverParity {
     void publicPlcFrameEntriesRequireTheCallersLatchedToken() {
         List<String> phaseOwned = List.of(
                 "execute", "executeWithPause", "serviceVBlankOnly",
+                "serviceHardwareVBlankOnly", "dispatchGameVBlank",
                 "executeHardwareTimedObjectScan");
         for (var method : LevelFrameStep.class.getDeclaredMethods()) {
             if (Modifier.isPublic(method.getModifiers())
@@ -79,6 +82,8 @@ class TestPlcLifecycleDriverParity {
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(service);
         GameModule module = mock(GameModule.class);
+        LevelInitProfile profile = mock(LevelInitProfile.class);
+        when(module.getLevelInitProfile()).thenReturn(profile);
         WorldSession world = mock(WorldSession.class);
         when(world.getGameModule()).thenReturn(module);
         GameplayModeContext gameplay = mock(GameplayModeContext.class);
@@ -114,6 +119,42 @@ class TestPlcLifecycleDriverParity {
                 "prepare:LEVEL_TITLE_CARD"), events);
         assertTrue(events.stream().noneMatch(
                 "service:ORDINARY_LEVEL"::equals));
+        verify(profile).serviceLevelLoadVBlank();
+    }
+
+    @Test
+    void normallyPresentedTitleCardDispatchesOneGameVblankWithoutObjectClockCoupling()
+            throws Exception {
+        GameModule module = mock(GameModule.class);
+        LevelInitProfile profile = mock(LevelInitProfile.class);
+        when(module.getLevelInitProfile()).thenReturn(profile);
+        WorldSession world = mock(WorldSession.class);
+        when(world.getGameModule()).thenReturn(module);
+        GameplayModeContext gameplay = mock(GameplayModeContext.class);
+        when(gameplay.getWorldSession()).thenReturn(world);
+        when(gameplay.hardwareTiming()).thenReturn(new HardwareTimingService());
+        when(gameplay.runtimeArtCoordinator()).thenReturn(RuntimeArtCoordinator.NONE);
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+        when(titleCard.shouldReleaseControl()).thenReturn(false);
+        when(titleCard.shouldRunPlayerPhysics()).thenReturn(false);
+
+        GameLoop loop = new GameLoop(new InputHandler());
+        set(loop, "gameplayMode", gameplay);
+        set(loop, "titleCardProvider", titleCard);
+        set(loop, "levelManager", mock(com.openggf.level.LevelManager.class));
+        set(loop, "camera", mock(com.openggf.camera.Camera.class));
+        set(loop, "audioManager", mock(com.openggf.audio.AudioManager.class));
+        var coordinator = new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));
+        var frame = coordinator.latchBeforeFadeUpdate();
+        set(loop, "activePlcLifecycleFrame", frame);
+        Method update = GameLoop.class.getDeclaredMethod("updateTitleCardMode", boolean.class);
+        update.setAccessible(true);
+
+        update.invoke(loop, true);
+        frame.finish();
+
+        verify(profile).serviceLevelLoadVBlank();
+        verify(titleCard).update();
     }
 
     private static void set(Object target, String fieldName, Object value)

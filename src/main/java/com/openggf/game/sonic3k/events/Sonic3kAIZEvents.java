@@ -725,11 +725,11 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
         }
         fireMusicRestoreTimer--;
         if (fireMusicRestoreTimer < 0) {
-            int levelMusicId = levelManager().getCurrentLevelMusicId();
+            int levelMusicId = levelManager().getApparentLevelMusicId();
             if (levelMusicId >= 0) {
                 // ROM AIZMinibossCutscene_Escape calls Restore_LevelMusic,
                 // which derives the track from Apparent_zone_and_act;
-                // restoreMusic() is reserved for the 1-up driver's saved slot.
+                // restoreMusic() only unwinds a temporary saved-song slot.
                 audio().playMusic(levelMusicId);
             }
             fireMusicRestoreTimer = -1;
@@ -2489,7 +2489,7 @@ public class Sonic3kAIZEvents extends Sonic3kZoneEvents {
             // LevelManager stores the previous completed frame until its later
             // level-update phase. At ScreenEvents the ROM counter has already
             // advanced, so +1 recovers the value ShakeScreen_Setup reads.
-            int romFrameCounter = levelManager().getFrameCounter() + 1;
+            int romFrameCounter = levelManager().getFrameCounter();
             screenShakeOffsetY = SCREEN_SHAKE_ARRAY_CONSTANT[romFrameCounter & 0x3F];
             return;
         }

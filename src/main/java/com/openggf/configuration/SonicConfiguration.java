@@ -161,11 +161,6 @@ public enum SonicConfiguration {
 	EDITOR_ENABLED,
 
 	/**
-	 * Whether to display debugging collision information on screen.
-	 */
-	DEBUG_COLLISION_VIEW_ENABLED,
-
-	/**
 	 * Key to toggle Debug Movement Mode at runtime.
 	 */
 	DEBUG_MODE_KEY,
@@ -219,18 +214,6 @@ public enum SonicConfiguration {
 	 * Whether to output audio at the internal YM2612 rate (~53kHz).
 	 */
 	AUDIO_INTERNAL_RATE_OUTPUT,
-
-	/**
-	 * PSG noise LFSR clock mode.
-	 * true = shift on every polarity toggle (MAME-style, brighter),
-	 * false = shift on positive edges only (GPGX/libvgm style).
-	 */
-	PSG_NOISE_SHIFT_EVERY_TOGGLE,
-
-	/**
-	 * Persisted one-time migration marker for the reference audio defaults.
-	 */
-	AUDIO_REFERENCE_DEFAULTS_VERSION,
 
 	/**
 	 * Whether to mute FM6 when playing a note on it (if DAC is enabled).

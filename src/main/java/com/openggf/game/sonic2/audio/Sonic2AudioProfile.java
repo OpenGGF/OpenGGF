@@ -4,16 +4,30 @@ import com.openggf.audio.AbstractAudioProfile;
 import com.openggf.audio.GameMusic;
 import com.openggf.audio.GameSound;
 import com.openggf.audio.SegaPcmSpec;
+import com.openggf.game.audio.SegaPcmRomReader;
 import com.openggf.audio.smps.SmpsLoader;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.session.SmpsPhysicalPolicy;
+import com.openggf.audio.presentation.AudioRequestService;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Consumer;
 
 public class Sonic2AudioProfile extends AbstractAudioProfile {
+
+    private final Consumer<Sonic2SoundRequestService.Event> requestObserver;
+
+    @Override
+    public AudioRequestService createAudioRequestService() {
+        Sonic2SoundRequestService service = new Sonic2SoundRequestService();
+        service.addObserver(requestObserver);
+        return service;
+    }
 
     private static final Map<GameSound, Integer> SOUND_MAP;
     private static final Map<GameMusic, Integer> MUSIC_MAP;
@@ -60,7 +74,15 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     }
 
     public Sonic2AudioProfile() {
+        this(ignored -> { });
+    }
+
+    /** Installs an output-only observer on this profile's production request service. */
+    public Sonic2AudioProfile(
+            Consumer<Sonic2SoundRequestService.Event> requestObserver) {
         super(SOUND_MAP, MUSIC_MAP);
+        this.requestObserver = Objects.requireNonNull(
+                requestObserver, "requestObserver");
     }
 
     @Override
@@ -71,6 +93,11 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     @Override
     public SmpsSequencerConfig getSequencerConfig() {
         return Sonic2SmpsSequencerConfig.CONFIG;
+    }
+
+    @Override
+    public SmpsPhysicalPolicy smpsPhysicalPolicy() {
+        return Sonic2SmpsCompatibilityPolicy.INSTANCE;
     }
 
     @Override
@@ -99,23 +126,8 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     }
 
     @Override
-    public MusicOverrideRetriggerPolicy getMusicOverrideRetriggerPolicy() {
-        return MusicOverrideRetriggerPolicy.RESTART;
-    }
-
-    @Override
     public int getSuperSonicMusicId() {
         return Sonic2Music.SUPER_SONIC.id;
-    }
-
-    @Override
-    protected int getFadeOutCommandId() {
-        return Sonic2SmpsConstants.CMD_FADE_OUT;
-    }
-
-    @Override
-    protected int getStopAllCommandId() {
-        return Sonic2SmpsConstants.CMD_STOP_ALL;
     }
 
     @Override
@@ -131,8 +143,42 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
                 Sonic2SmpsConstants.SEGA_SOUND_SAMPLE_RATE);
     }
 
+    /**
+     * Reads the chant through the runtime-layer ROM reader so the audio layer
+     * never depends on {@code com.openggf.data} for this sample.
+     */
+    @Override
+    public byte[] loadSegaPcm(Object rom) throws java.io.IOException {
+        return SegaPcmRomReader.read(rom, getSegaPcmSpec());
+    }
+
     @Override
     public int getSfxPriority(int soundId) {
         return Sonic2SmpsConstants.getSfxPriority(soundId);
+    }
+
+    /**
+     * {@code ResumeMusic} (s2disasm s2.asm:42296-42318) loads
+     * {@code Level_Music}, then overrides it in three tests taken in order:
+     * {@code status_secondary.invincible} selects {@code MusID_Invincible},
+     * {@code Super_Sonic_flag} selects {@code MusID_SuperSonic}, and
+     * {@code Current_Boss_ID} selects {@code MusID_Boss}. Each later test
+     * overwrites the earlier one, so a boss wins over Super, which wins over
+     * invincibility. Unlike S3K, Sonic 2 gives Super its own track rather than
+     * reusing the invincibility theme.
+     */
+    @Override
+    public int resolveAirResetMusic(int levelMusicId, boolean invincible,
+            boolean superForm, boolean bossActive) {
+        if (bossActive) {
+            return Sonic2Music.BOSS.id;
+        }
+        if (superForm) {
+            return Sonic2Music.SUPER_SONIC.id;
+        }
+        if (invincible) {
+            return Sonic2Music.INVINCIBILITY.id;
+        }
+        return levelMusicId;
     }
 }

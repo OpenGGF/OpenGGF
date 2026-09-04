@@ -10,8 +10,9 @@ preservation of classic Mega Drive / Genesis platform games — the mainline Son
 Hedgehog series. It is not affiliated with, sponsored by, approved by, or endorsed by Sega.
 It reimplements the original hardware's physics and rendering using data loaded from
 user-supplied ROM images (Sonic 1, 2, and 3&K). No copyrighted assets live in this repo.
-Alongside faithful emulation of behaviour it aims to provide modern tooling: an in-engine
-level editor and an open framework for modding.
+Alongside faithful emulation of behaviour it aspires to provide modern tooling — an in-engine
+level editor and an open framework for modding — but neither exists yet beyond an
+experimental editor overlay; do not describe them as shipped features.
 
 **Accuracy is the point.** The engine must replicate original physics pixel-for-pixel.
 The disassembly is the source of truth — verify against it rather than tuning values until
@@ -74,6 +75,8 @@ complete Maven log into context.
   suite report hundreds of phantom failures (Mockito stubbing errors leaking across
   classes, ROM fixtures failing to load) that look like real regressions but aren't. The
   build fails fast at `validate` if the JVM is wrong.
+- **Lua 5.4 runs the TraceChaser forwarder guard.** Set `LUA_BIN` when the executable is
+  not named `lua`; CI pins it to `lua5.4` and verifies the version before Maven.
 - Maven Silent Extension is enabled by default (`-Dmse=relaxed` via `.mvn/maven.config`).
   Use `-Dmse=off` when you need full Maven logs.
 - In PowerShell, quote `-D...` properties (`mvn "-Dtest=com.openggf.pkg.TestClass" test`).
@@ -90,8 +93,12 @@ that's actually there. Identify the game from the filename and verify the hash w
 matters. Do not assume a fixed filename, and do not rename, copy, delete, or symlink a ROM
 just to satisfy an example command. For ROM-backed tests, pass the discovered path through
 that game's property — note S3K's is **not** `sonic3k.rom.path`. A sweep that touches all
-three games needs all three; ROM-backed classes error out (they do not skip) when their
-ROM is missing.
+three games needs all three. When a ROM is missing, `@RequiresRom` classes are **disabled
+silently** (`RequiresRomCondition` reports them as skipped, not failed); only the audio
+`*CompleteRunStateDecoder` classes throw. So a green run with a wrong path proves nothing —
+**pass absolute ROM paths**, especially from a worktree, because a relative path like
+`s3k.gen` resolves against the worktree and quietly skips every ROM-gated class. Check the
+skip count against the expected total before trusting a result.
 
 | ROM | Test property | CRC32 | SHA-1 |
 |---|---|---|---|
@@ -99,8 +106,19 @@ ROM is missing.
 | Sonic 2 World REV01 | `-Dsonic2.rom.path=` | `7B905383` | `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
 | Sonic 3&K locked-on | `-Ds3k.rom.path=` | `63522553` | `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, `docs/skdisasm/` (untracked,
-available locally); SMPS audio reference under `docs/SMPS-rips/SMPSPlay/`.
+Disassemblies live under `docs/s1disasm/`, `docs/s2disasm/`, and `docs/skdisasm/` as
+optional development references pinned to the canonical Sonic Retro repositories. Builds,
+tests, and runtime do not require them. Contributors doing disassembly-backed parity research
+can opt in with `git submodule update --init`. The SMPS audio reference under
+`docs/SMPS-rips/SMPSPlay/` remains untracked and available locally.
+
+Trace producers, BizHawk integration, probes, and trace validation utilities live in the
+optional pinned `tools/tracechaser/` submodule. Ordinary builds and tests do not require it.
+For trace work, run `git submodule update --init --recursive tools/tracechaser`, then follow
+TraceChaser's own capture guide. OpenGGF keeps only 0.6 compatibility forwarders at selected
+old command paths; new guidance must use `tools/tracechaser/...`. BizHawk is not vendored:
+TraceChaser requires the verified official 2.11 release because later versions remove Lua
+functionality used by the supported recorders.
 
 ## Temporary and durable artifacts
 
@@ -352,8 +370,10 @@ future "support the bug-fixed revisions" effort tractable, since the sites are
 otherwise invisible once ported. `Camera.java:122-124` and
 `Sonic1BatbrainBadnikInstance.java:394` are existing examples of the shape.
 
-**Audio accuracy:** reference the libvgm chip cores and the SMPSPlay source rather than
-simplified versions. Diagnose against a source of truth instead of twiddling knobs.
+**Audio accuracy:** the FM core is the Nuked-OPN2 port (`audio.synth.nuked`); its only
+reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
+reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
+versions. Diagnose against a source of truth instead of twiddling knobs.
 
 ### Sonic 3&K bring-up notes
 

@@ -365,7 +365,9 @@ public class TestS3kAizIntroEventsHeadless {
         tails.setControlLocked(true);
         tails.setObjectControlled(true);
         controller.setInitialState(SidekickCpuController.State.DORMANT_MARKER);
-        setLevelFrameCounter(0x02FF);
+        // LevelManager advances at the loop top as the ROM does, so its counter
+        // already holds the release tick's Level_frame_counter.
+        setLevelFrameCounter(0x0300);
         controller.releaseDormantMarkerForLevelEvent();
 
         controller.update(0x0300);

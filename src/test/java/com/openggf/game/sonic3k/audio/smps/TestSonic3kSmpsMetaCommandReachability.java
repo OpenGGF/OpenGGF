@@ -2,11 +2,11 @@ package com.openggf.game.sonic3k.audio.smps;
 
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsConstants;
-import com.openggf.tools.KosinskiReader;
-import com.openggf.tools.audio.s3kparity.S3kSmpsReachabilityInventory;
+import com.openggf.data.compression.KosinskiReader;
 import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -43,7 +45,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @RequiresRom(SonicGame.SONIC_3K)
 public class TestSonic3kSmpsMetaCommandReachability {
 
-    private static final Set<Integer> TARGET_META_SUBCOMMANDS = Set.of(0x01, 0x02, 0x03);
+    // FF01..03 are source-only paths whose raw state is not retained by the
+    // Phase-1 E4 projection.  A shipped reachability result would require a
+    // different projection contract; it must not be reconstructed from Java
+    // track fields.
+    private static final Set<Integer> UNRETAINED_META_SUBCOMMANDS = Set.of(0x01, 0x02, 0x03);
     private static final int NATIVE_SFX_LAST_ID = 0xDF;
     private static final int NATIVE_SFX_COUNT = NATIVE_SFX_LAST_ID - Sonic3kSfx.ID_BASE + 1;
     private static final int Z80_BANK_SIZE = 0x8000;
@@ -52,6 +58,14 @@ public class TestSonic3kSmpsMetaCommandReachability {
     private static final int S3_SFX_BANK_ROM = Sonic3kSmpsConstants.S3_ROM_OFFSET_IN_COMBINED
             + Sonic3kSmpsConstants.SFX_BANK_BASE;
     private static final int SK_ADDITIONAL_LOAD_ADDRESS = Sonic3kSmpsConstants.Z80_GENERAL_PTR_LIST;
+    // zTracks DAC/FM then PSG channel-RAM order for S3K music headers.
+    private static final int[] MUSIC_FM_VOICE_CONTROLS = {0x16, 0x00, 0x01, 0x02,
+            0x04, 0x05, 0x06};
+    private static final int[] MUSIC_PSG_VOICE_CONTROLS = {0x80, 0xA0, 0xC0};
+    private static final Set<Integer> SHIPPED_PSG_F3_VOICE_CONTROLS =
+            Set.of(0x80, 0xA0, 0xC0);
+    private static final Set<Integer> FM_OR_DAC_VOICE_CONTROLS =
+            Set.of(0x16, 0x00, 0x01, 0x02, 0x04, 0x05, 0x06);
 
     private enum NativeDispatch {
         MUSIC_CREDITS,
@@ -77,6 +91,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
         Rom rom = TestEnvironment.currentRom();
         Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(rom);
         Set<Integer> metaSubcommands = new HashSet<>();
+        Set<Integer> coordFlags = new HashSet<>();
 
         int skMusicCount = 0;
         for (int id = 0x01; id <= 0x33; id++) {
@@ -84,8 +99,10 @@ public class TestSonic3kSmpsMetaCommandReachability {
             assertNotNull(data, "Missing S&K music stream 0x" + hex(id));
             ControlFlowInventory inventory = inventory(data);
             assertClosed(inventory, "S&K music 0x" + hex(id));
+            assertMusicRootsUseShippedPsgNoise(data, "S&K music 0x" + hex(id));
             assertNoMusicMetaPair(data, id, "S&K");
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
             skMusicCount++;
         }
 
@@ -95,8 +112,10 @@ public class TestSonic3kSmpsMetaCommandReachability {
             assertNotNull(data, "Missing S3 music stream 0x" + hex(id));
             ControlFlowInventory inventory = inventory(data);
             assertClosed(inventory, "S3 music 0x" + hex(id));
+            assertMusicRootsUseShippedPsgNoise(data, "S3 music 0x" + hex(id));
             assertNoMusicMetaPair(data, id, "S3");
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
             s3MusicCount++;
         }
 
@@ -107,6 +126,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
             ControlFlowInventory inventory = inventory(data);
             assertClosed(inventory, "SFX 0x" + hex(id));
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
             skSfxCount++;
         }
 
@@ -117,14 +137,17 @@ public class TestSonic3kSmpsMetaCommandReachability {
                 "The inventory must observe a live FF00 tempo command");
         assertTrue(metaSubcommands.contains(0x07),
                 "The inventory must observe the live SFX FF07 command");
-        assertFalse(metaSubcommands.stream().anyMatch(TARGET_META_SUBCOMMANDS::contains),
+        assertFalse(metaSubcommands.stream().anyMatch(UNRETAINED_META_SUBCOMMANDS::contains),
                 () -> "Loader-scoped stream set reached an unimplemented meta command: " + metaSubcommands);
+        assertFalse(coordFlags.contains(0xFE),
+                "loader-scoped shipped streams reached FM3-special state that Phase 1 does not retain");
     }
 
     @Test
     void nativeSkAndS3SfxTablesCoverEveryEntryAndCloseFullBanks() throws IOException {
         Rom rom = TestEnvironment.currentRom();
         Set<Integer> metaSubcommands = new HashSet<>();
+        Set<Integer> coordFlags = new HashSet<>();
 
         NativeSfxBank sk = readNativeSfxBank(rom, NativeHalf.SK, readSkAdditionalData(rom),
                 Sonic3kSmpsConstants.Z80_SFX_PTR_LIST - SK_ADDITIONAL_LOAD_ADDRESS,
@@ -174,12 +197,16 @@ public class TestSonic3kSmpsMetaCommandReachability {
 
         for (ControlFlowInventory inventory : sk.inventories.values()) {
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
         }
         for (ControlFlowInventory inventory : s3.inventories.values()) {
             metaSubcommands.addAll(inventory.metaSubcommands);
+            coordFlags.addAll(inventory.coordFlags);
         }
-        assertFalse(metaSubcommands.stream().anyMatch(TARGET_META_SUBCOMMANDS::contains),
+        assertFalse(metaSubcommands.stream().anyMatch(UNRETAINED_META_SUBCOMMANDS::contains),
                 () -> "Native SFX banks reached an unimplemented meta command: " + metaSubcommands);
+        assertFalse(coordFlags.contains(0xFE),
+                "native shipped SFX banks reached FM3-special state that Phase 1 does not retain");
     }
 
     @Test
@@ -230,6 +257,40 @@ public class TestSonic3kSmpsMetaCommandReachability {
         assertFalse(bankEnd.frontier.isEmpty(), "bank-end falloff must remain an unexplored frontier");
     }
 
+    @Test
+    void skMusic1dUsesTheShippedPsg1F3Root() {
+        Sonic3kSmpsLoader loader = new Sonic3kSmpsLoader(TestEnvironment.currentRom());
+        AbstractSmpsData data = loader.loadMusic(0x1D);
+        assertNotNull(data, "S&K music 0x1D must resolve through the loader");
+        assertTrue(data instanceof Sonic3kSmpsData,
+                "S&K music 0x1D must retain native S3K bank coordinates");
+        Sonic3kSmpsData music = (Sonic3kSmpsData) data;
+        NativeTrackRoot psg1 = musicTrackRoots(music, "S&K music 0x1D").stream()
+                .filter(root -> root.rawVoiceControl == 0x80)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "S&K music 0x1D must retain a PSG1/0x80 root"));
+        assertEquals(0x72FB, psg1.offset,
+                "S&K music 0x1D PSG1/0x80 root bank offset");
+        ControlFlowInventory inventory = inventory(music, false, List.of(psg1.offset));
+        assertFalse(inventory.f3Offsets.isEmpty(),
+                "S&K music 0x1D PSG1 root must reach F3");
+        assertReachableF3UsesShippedPsgNoise(psg1, inventory, music.getBankData(),
+                "S&K music 0x1D");
+    }
+
+    @Test
+    void perRootF3AuditRejectsFm3EvenWithTheShippedNoiseOperand() {
+        Sonic3kSfxData data = syntheticSfx(new byte[] {(byte) 0xF3, (byte) 0xE7,
+                (byte) 0xF2});
+        NativeTrackRoot fm3 = new NativeTrackRoot(0x20, SmpsSequencer.TrackType.FM, 0x02);
+        assertThrows(AssertionError.class,
+                () -> assertReachableF3UsesShippedPsgNoise(fm3,
+                        inventory(data, true, List.of(fm3.offset)), data.getData(),
+                        "mutated FM3 F3 root"),
+                "a matching operand must not make an FM3 F3 root look like PSG noise");
+    }
+
     private static void assertControlFlowEdges(int command, int commandLength,
             int fallThrough, boolean hasFallThrough) {
         byte[] stream = new byte[commandLength];
@@ -267,11 +328,6 @@ public class TestSonic3kSmpsMetaCommandReachability {
     private static Sonic3kSfxData syntheticSfx(byte[] stream) {
         byte[] bank = syntheticBank();
         System.arraycopy(stream, 0, bank, 0x20, stream.length);
-        if (stream.length > 0 && (stream[0] & 0xFF) == 0xF8) {
-            // A gosub reaches its fall-through only when the target returns.
-            bank[0x40] = (byte) 0xF9;
-            bank[0x50] = (byte) 0xF9;
-        }
         return new Sonic3kSfxData(bank, 0x8000, 0, 0x10);
     }
 
@@ -317,6 +373,9 @@ public class TestSonic3kSmpsMetaCommandReachability {
             result.trackCounts.put(id, declaredTrackCount);
             for (int trackIndex = 0; trackIndex < tracks.size(); trackIndex++) {
                 SmpsSfxData.SmpsSfxTrack track = tracks.get(trackIndex);
+                assertEquals(0x80, bank[headerOffset + 4 + trackIndex * 6] & 0xFF,
+                        half.label + " SFX 0x" + hex(id)
+                                + " playbackFlags must be the shipped playing bit");
                 int rawTrackPointer = readLe16(bank, headerOffset + 6 + trackIndex * 6);
                 assertRawTrackRoot(rawTrackPointer, track.pointer(),
                         half.label + " SFX 0x" + hex(id));
@@ -324,6 +383,12 @@ public class TestSonic3kSmpsMetaCommandReachability {
                 assertTrue(start >= 0 && start < bank.length,
                         half.label + " SFX 0x" + hex(id) + " has unresolved track root 0x"
                                 + hex(start));
+                int rawVoiceControl = bank[headerOffset + 5 + trackIndex * 6] & 0xFF;
+                NativeTrackRoot root = new NativeTrackRoot(start,
+                        trackType(rawVoiceControl), rawVoiceControl);
+                assertReachableF3UsesShippedPsgNoise(root,
+                        inventory(data, true, List.of(start)), bank,
+                        half.label + " SFX 0x" + hex(id));
             }
 
             ControlFlowInventory inventory = inventory(data, true);
@@ -436,25 +501,274 @@ public class TestSonic3kSmpsMetaCommandReachability {
     }
 
     private static ControlFlowInventory inventory(AbstractSmpsData data, boolean strictFullBank) {
+        boolean bankSpace = data instanceof Sonic3kSmpsData s3
+                && s3.getBankData() != null;
+        return inventory(data, strictFullBank, trackStarts(data, bankSpace));
+    }
+
+    private static ControlFlowInventory inventory(AbstractSmpsData data,
+            boolean strictFullBank, List<Integer> starts) {
+        byte[] bytes = data.getData();
+        boolean bankSpace = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null;
+        if (bankSpace) bytes = ((Sonic3kSmpsData) data).getBankData();
         ControlFlowInventory result = new ControlFlowInventory();
-        S3kSmpsReachabilityInventory.InventoryResult shared =
-                S3kSmpsReachabilityInventory.inventoryAll(
-                        S3kSmpsReachabilityInventory.Dialect.LOCKED_ON_S3K_V4,
-                        strictFullBank ? "legacy.native-bank" : "legacy.loader-stream",
-                        data,
-                        S3kSmpsReachabilityInventory.ExternalEvent.SERVICE_ENTRY,
-                        S3kSmpsReachabilityInventory.FIRST_SLICE_LIMITS);
-        shared.states().stream().map(S3kSmpsReachabilityInventory.State::pc)
-                .forEach(result.reachable::add);
-        shared.frontiers().stream().map(S3kSmpsReachabilityInventory.Frontier::reason)
-                .forEach(result.frontier::add);
-        shared.behaviors().stream().map(S3kSmpsReachabilityInventory.Behavior::key)
-                .filter(key -> key.matches("coord\\.ff\\.[0-9a-f]{2}"))
-                .map(key -> Integer.parseInt(key.substring("coord.ff.".length()), 16))
-                .forEach(result.metaSubcommands::add);
-        result.reachableOffsets = result.reachable.size();
-        result.terminalOrCycle = result.frontier.isEmpty();
+        ArrayDeque<Integer> work = new ArrayDeque<>();
+        for (int start : starts) {
+            // Zero/foreign pointers are non-track header slots for loader-scoped
+            // blobs. A strict full-bank proof must surface them as malformed roots.
+            if (start >= 0) {
+                work.add(start);
+            } else if (strictFullBank) {
+                result.frontier.add("unresolved control-flow root");
+            }
+        }
+
+        while (!work.isEmpty()) {
+            int pos = work.removeFirst();
+            if (pos < 0 || pos >= bytes.length) {
+                result.frontier.add("offset 0x" + Integer.toHexString(pos)
+                        + " reaches or exceeds bank end");
+                continue;
+            }
+            if (!result.reachable.add(pos)) {
+                result.terminalOrCycle = true;
+                continue;
+            }
+            result.reachableOffsets++;
+
+            int command = bytes[pos] & 0xFF;
+            if (command < 0x80) {
+                enqueue(result, work, pos + 1, bytes.length, "duration");
+                continue;
+            }
+            if (command < 0xE0) {
+                int next = pos + 1;
+                if (next < bytes.length && (bytes[next] & 0xFF) < 0x80) {
+                    next++;
+                }
+                enqueue(result, work, next, bytes.length, "note");
+                continue;
+            }
+            if (command != 0xFF) {
+                result.coordFlags.add(command);
+                if (command == 0xF3) {
+                    result.f3Offsets.add(pos);
+                }
+            }
+
+            switch (command) {
+                case 0xE3, 0xF2, 0xF9 -> result.terminalOrCycle = true;
+                case 0xF6 -> addPointerEdge(result, work, data, pos + 1, false, "goto", strictFullBank);
+                case 0xF7 -> addPointerEdge(result, work, data, pos + 3, true, "loop", strictFullBank);
+                case 0xF8 -> addPointerEdge(result, work, data, pos + 1, true, "call", strictFullBank);
+                case 0xEB -> addPointerEdge(result, work, data, pos + 2, true, "loop-exit", strictFullBank);
+                case 0xFC -> addPointerEdge(result, work, data, pos + 1, true, "continuous", strictFullBank);
+                case 0xFF -> {
+                    if (pos + 1 >= bytes.length) {
+                        result.frontier.add("FF at 0x" + Integer.toHexString(pos) + " lacks subcommand");
+                        continue;
+                    }
+                    int subcommand = bytes[pos + 1] & 0xFF;
+                    result.metaSubcommands.add(subcommand);
+                    int operands = switch (subcommand) {
+                        case 0x00, 0x01, 0x02, 0x04 -> 1;
+                        case 0x03 -> 3;
+                        case 0x05 -> 4;
+                        case 0x06 -> 2;
+                        case 0x07 -> 0;
+                        default -> -1;
+                    };
+                    if (operands < 0) {
+                        result.frontier.add("unknown FF subcommand 0x" + Integer.toHexString(subcommand)
+                                + " at 0x" + Integer.toHexString(pos));
+                    } else {
+                        enqueue(result, work, pos + 2 + operands, bytes.length, "meta");
+                    }
+                }
+                default -> {
+                    int length = parameterLength(command);
+                    if (length < 0) {
+                        result.frontier.add("unknown command 0x" + Integer.toHexString(command)
+                                + " at 0x" + Integer.toHexString(pos));
+                    } else {
+                        enqueue(result, work, pos + 1 + length, bytes.length, "command");
+                    }
+                }
+            }
+        }
         return result;
+    }
+
+    private static void assertReachableF3UsesShippedPsgNoise(NativeTrackRoot root,
+            ControlFlowInventory inventory, byte[] bank, String label) {
+        assertClosed(inventory, label + " root 0x" + hexWord(root.offset));
+        for (int commandOffset : inventory.f3Offsets) {
+            assertTrue(commandOffset + 1 < bank.length,
+                    label + " root 0x" + hexWord(root.offset)
+                            + " has truncated reachable F3 at 0x" + hexWord(commandOffset));
+            assertEquals(0xE7, bank[commandOffset + 1] & 0xFF,
+                    label + " root VoiceControl 0x" + hex(root.rawVoiceControl)
+                            + " reachable F3 operand at 0x" + hexWord(commandOffset));
+            assertEquals(SmpsSequencer.TrackType.PSG, root.type,
+                    label + " root 0x" + hexWord(root.offset)
+                            + " reached F3 from a non-PSG VoiceControl 0x"
+                            + hex(root.rawVoiceControl));
+            assertTrue(SHIPPED_PSG_F3_VOICE_CONTROLS.contains(root.rawVoiceControl),
+                    label + " root 0x" + hexWord(root.offset)
+                            + " reached F3 from an unsupported PSG VoiceControl 0x"
+                            + hex(root.rawVoiceControl));
+            assertFalse(FM_OR_DAC_VOICE_CONTROLS.contains(root.rawVoiceControl),
+                    label + " root 0x" + hexWord(root.offset)
+                            + " reached F3 from FM/DAC VoiceControl 0x"
+                            + hex(root.rawVoiceControl));
+        }
+    }
+
+    private static void assertMusicRootsUseShippedPsgNoise(AbstractSmpsData data,
+            String label) {
+        assertTrue(data instanceof Sonic3kSmpsData,
+                label + " must retain native S3K bank coordinates");
+        Sonic3kSmpsData music = (Sonic3kSmpsData) data;
+        byte[] bank = music.getBankData();
+        assertNotNull(bank, label + " must retain its source bank for root attribution");
+        for (NativeTrackRoot root : musicTrackRoots(music, label)) {
+            // Keep this inventory per root: a pooled walk loses the source
+            // VoiceControl that determines whether F3 is FM3-special or PSG noise.
+            assertReachableF3UsesShippedPsgNoise(root,
+                    inventory(music, false, List.of(root.offset)), bank, label);
+        }
+    }
+
+    private static List<NativeTrackRoot> musicTrackRoots(Sonic3kSmpsData music,
+            String label) {
+        boolean bankSpace = music.getBankData() != null;
+        assertTrue(bankSpace, label + " must retain its full Z80 bank");
+        List<NativeTrackRoot> roots = new ArrayList<>();
+        int[] fmPointers = music.getFmPointers();
+        assertTrue(fmPointers.length <= MUSIC_FM_VOICE_CONTROLS.length,
+                label + " declares more DAC/FM roots than zTracks supports");
+        for (int index = 0; index < fmPointers.length; index++) {
+            addMusicTrackRoot(roots, fmPointers[index], MUSIC_FM_VOICE_CONTROLS[index],
+                    music, bankSpace, label + " DAC/FM index " + index);
+        }
+        int[] psgPointers = music.getPsgPointers();
+        assertTrue(psgPointers.length <= MUSIC_PSG_VOICE_CONTROLS.length,
+                label + " declares more PSG roots than zTracks supports");
+        for (int index = 0; index < psgPointers.length; index++) {
+            addMusicTrackRoot(roots, psgPointers[index], MUSIC_PSG_VOICE_CONTROLS[index],
+                    music, bankSpace, label + " PSG index " + index);
+        }
+        return roots;
+    }
+
+    private static void addMusicTrackRoot(List<NativeTrackRoot> roots, int pointer,
+            int rawVoiceControl, Sonic3kSmpsData music, boolean bankSpace, String label) {
+        if (pointer <= 0) {
+            return;
+        }
+        int offset = resolvePointer(pointer, music, bankSpace);
+        assertTrue(offset >= 0, label + " pointer 0x" + hexWord(pointer)
+                + " must resolve in its source bank");
+        roots.add(new NativeTrackRoot(offset, trackType(rawVoiceControl), rawVoiceControl));
+    }
+
+    private static void addPointerEdge(ControlFlowInventory result, ArrayDeque<Integer> work,
+            AbstractSmpsData data, int pointerOffset, boolean fallThrough, String edgeName,
+            boolean strictFullBank) {
+        byte[] bytes = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null
+                ? s3.getBankData() : data.getData();
+        int afterPointer = pointerOffset + 2;
+        if (afterPointer > bytes.length) {
+            result.frontier.add(edgeName + " at 0x" + Integer.toHexString(pointerOffset - 1)
+                    + " has truncated pointer");
+            return;
+        }
+        int raw = (bytes[pointerOffset] & 0xFF) | ((bytes[pointerOffset + 1] & 0xFF) << 8);
+        int base = data instanceof Sonic3kSmpsData s3 && s3.getBankData() != null
+                ? s3.getBankZ80Base() : data.getZ80StartAddress();
+        int target;
+        if (strictFullBank) {
+            target = raw >= base && raw < base + bytes.length ? raw - base : -1;
+        } else {
+            target = raw - base;
+            if (target < 0 || target >= bytes.length) {
+                target = raw < bytes.length ? raw : -1;
+            }
+        }
+        if (target < 0) {
+            if ("call".equals(edgeName) && !strictFullBank) {
+                // S3 music can call a shared bank routine that is outside the
+                // loader's per-song blob. It is a closed external edge, not
+                // an unexplored in-stream frontier.
+                result.terminalOrCycle = true;
+            } else {
+                result.frontier.add(edgeName + " target 0x" + Integer.toHexString(raw)
+                        + " is outside stream");
+            }
+        } else {
+            enqueue(result, work, target, bytes.length, edgeName + " target");
+        }
+        if (fallThrough) {
+            enqueue(result, work, afterPointer, bytes.length, edgeName + " fallthrough");
+        }
+    }
+
+    private static void enqueue(ControlFlowInventory result, ArrayDeque<Integer> work,
+            int next, int length, String edgeName) {
+        if (next < 0 || next >= length) {
+            result.frontier.add(edgeName + " reaches 0x" + Integer.toHexString(next)
+                    + " at bank end");
+        } else {
+            work.add(next);
+        }
+    }
+
+    private static List<Integer> trackStarts(AbstractSmpsData data, boolean bankSpace) {
+        List<Integer> starts = new ArrayList<>();
+        if (data instanceof SmpsSfxData sfx) {
+            for (SmpsSfxData.SmpsSfxTrack track : sfx.getTrackEntries()) {
+                starts.add(track.pointer());
+            }
+            return starts;
+        }
+        for (int pointer : data.getFmPointers()) {
+            if (pointer > 0) starts.add(resolvePointer(pointer, data, bankSpace));
+        }
+        for (int pointer : data.getPsgPointers()) {
+            if (pointer > 0) starts.add(resolvePointer(pointer, data, bankSpace));
+        }
+        return starts;
+    }
+
+    private static int resolvePointer(int pointer, AbstractSmpsData data, boolean bankSpace) {
+        if (pointer <= 0) return -1;
+        if (bankSpace) {
+            Sonic3kSmpsData s3 = (Sonic3kSmpsData) data;
+            int relative = pointer - s3.getBankZ80Base();
+            return relative >= 0 && relative < s3.getBankData().length ? relative : -1;
+        }
+        if (pointer < data.getData().length) return pointer;
+        int relative = pointer - data.getZ80StartAddress();
+        return relative >= 0 && relative < data.getData().length ? relative : -1;
+    }
+
+    private static SmpsSequencer.TrackType trackType(int rawVoiceControl) {
+        if (rawVoiceControl == 0x10 || rawVoiceControl == 0x16) {
+            return SmpsSequencer.TrackType.DAC;
+        }
+        return (rawVoiceControl & 0x80) != 0
+                ? SmpsSequencer.TrackType.PSG : SmpsSequencer.TrackType.FM;
+    }
+
+    private static int parameterLength(int command) {
+        return switch (command) {
+            case 0xE0, 0xE1, 0xE2, 0xE4, 0xE6, 0xE8, 0xEA, 0xEC, 0xED, 0xEF,
+                    0xF3, 0xF4, 0xF5, 0xFB, 0xFD -> 1;
+            case 0xE7, 0xE9, 0xFA -> 0;
+            case 0xE5, 0xEE, 0xF1, 0xF6, 0xF8 -> 2;
+            case 0xEB, 0xF7, 0xF0, 0xFE -> 4;
+            default -> -1;
+        };
     }
 
     private static void assertNoMusicMetaPair(AbstractSmpsData data, int id, String table) {
@@ -463,7 +777,7 @@ public class TestSonic3kSmpsMetaCommandReachability {
             if ((bytes[pos] & 0xFF) != 0xFF) continue;
             int sub = bytes[pos + 1] & 0xFF;
             int blobOffset = pos;
-            assertFalse(TARGET_META_SUBCOMMANDS.contains(sub),
+            assertFalse(UNRETAINED_META_SUBCOMMANDS.contains(sub),
                     () -> table + " music 0x" + hex(id) + " contains FF" + hex(sub)
                             + " at blob offset 0x" + Integer.toHexString(blobOffset));
         }
@@ -515,10 +829,16 @@ public class TestSonic3kSmpsMetaCommandReachability {
         }
     }
 
+    private record NativeTrackRoot(int offset, SmpsSequencer.TrackType type,
+            int rawVoiceControl) {
+    }
+
     private static final class ControlFlowInventory {
         private final Set<Integer> reachable = new HashSet<>();
         private final Set<String> frontier = new HashSet<>();
         private final Set<Integer> metaSubcommands = new HashSet<>();
+        private final Set<Integer> coordFlags = new HashSet<>();
+        private final Set<Integer> f3Offsets = new HashSet<>();
         private int reachableOffsets;
         private boolean terminalOrCycle;
     }

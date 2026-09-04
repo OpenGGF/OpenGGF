@@ -29,24 +29,50 @@ public class TimerManager implements RewindSnapshottable<TimerManagerSnapshot> {
 
     public void update() {
         // Iterate all our timers:
-        // Iterate all our timers:
         var iterator = timers.entrySet().iterator();
         while (iterator.hasNext()) {
-            Map.Entry<String, Timer> timerEntry = iterator.next();
-            Timer timer = timerEntry.getValue();
-            // Decrement the tick value to indicate a tick has passed:
-            timer.decrementTick();
-
-            // Check if the tick is less than 1.
-            if (timer.getTicks() < 1) {
-                if (timer.perform()) {
-                    iterator.remove();
-                } else {
-                    LOGGER.warning("Timer failed: " + timer.getClass().getSimpleName()
-                            + " code=" + timer.getCode());
-                    iterator.remove();
-                }
+            Timer timer = iterator.next().getValue();
+            // Display-phase countdowns belong to the owning character's own
+            // display step, which runs after the movement modes; see
+            // DisplayPhaseTimer for the ROM citations.
+            if (timer instanceof DisplayPhaseTimer) {
+                continue;
             }
+            tickAndRetire(iterator, timer);
+        }
+    }
+
+    /**
+     * Ticks the {@link DisplayPhaseTimer}s owned by {@code owner}, from that
+     * character's display step. Timers owned by anything else are untouched, so
+     * a character's own display step never advances another character's
+     * countdown.
+     */
+    public void updateDisplayPhaseTimersFor(Object owner) {
+        if (owner == null) {
+            return;
+        }
+        var iterator = timers.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Timer timer = iterator.next().getValue();
+            if (timer instanceof DisplayPhaseTimer displayTimer
+                    && displayTimer.displayPhaseOwner() == owner) {
+                tickAndRetire(iterator, timer);
+            }
+        }
+    }
+
+    private void tickAndRetire(java.util.Iterator<Map.Entry<String, Timer>> iterator, Timer timer) {
+        // Decrement the tick value to indicate a tick has passed:
+        timer.decrementTick();
+
+        // Check if the tick is less than 1.
+        if (timer.getTicks() < 1) {
+            if (!timer.perform()) {
+                LOGGER.warning("Timer failed: " + timer.getClass().getSimpleName()
+                        + " code=" + timer.getCode());
+            }
+            iterator.remove();
         }
     }
 

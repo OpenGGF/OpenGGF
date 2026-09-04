@@ -277,7 +277,11 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
             spawnTrackedChild(() -> new AizMinibossFlameBarrelChild(this, index, true));
         }
 
-        services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        // ROM AIZMiniboss_StartDropMusic plays mus_Miniboss, $2E
+        // (sonic3k.asm:136809-136811), not mus_MinibossK, $18. Both resolve to
+        // the same arrangement in the S&K driver table, so this is inaudible
+        // today and audible the moment the S3 table is selected.
+        services().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
     }
 
     private void onDescendComplete() {
@@ -358,10 +362,10 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
         // During the unwinnable AIZ1 cutscene transition, BG events own camera/music flow.
         // Only restore defaults when no transition handoff is active.
         if (!transitionInProgress) {
-            int levelMusicId = services().getCurrentLevelMusicId();
+            int levelMusicId = services().getApparentLevelMusicId();
             if (levelMusicId >= 0) {
                 // ROM restores the level track here; AudioManager.restoreMusic()
-                // only unwinds the 1-up driver's saved-song slot.
+                // only unwinds a temporary saved-song slot.
                 services().playMusic(levelMusicId);
             }
             var camera = services().camera();

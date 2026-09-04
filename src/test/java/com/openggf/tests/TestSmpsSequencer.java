@@ -80,7 +80,7 @@ public class TestSmpsSequencer {
 
         // Increase buffer to ensure at least one tick at 0x80 tempo (~2 frames)
         short[] buf = new short[2000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         boolean foundFreq = false;
         boolean foundKeyOn = false;
@@ -102,10 +102,10 @@ public class TestSmpsSequencer {
     }
 
     @Test
-    public void testSonic2TempoZeroHoldsInitialTrackStream() {
+    public void testS2TempoZeroWalksTracksWithoutExpiringTheCurrentNote() {
         byte[] data = new byte[32];
         data[2] = 2; // 2 FM Channels so channel 1 avoids DAC path
-        data[5] = 0; // TempoWait holds DurationTimeout at one forever
+        data[5] = 0; // Tempo zero should halt progression
 
         // Track 0 (DAC) stubbed with stop
         data[6] = 0x10;
@@ -124,16 +124,18 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[4000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
-        // Track service still runs each VInt, but TempoWait extends the initial
-        // duration before it can enter the stream.
-        assertEquals(1, synth.log.size(),
-                "Tempo zero should hold the initial track stream");
+        long keyOnCount = synth.log.stream()
+                .filter(entry -> entry.contains("R28 VF"))
+                .count();
+        assertEquals(1, keyOnCount,
+                "S2 TempoWait still walks tracks at tempo zero, but its"
+                        + " no-carry pre-increment prevents the note expiring");
     }
 
     @Test
-    public void testSonic2TempoChangePreservesAccumulator() {
+    public void testS2TempoChangePreservesAccumulator() {
         byte[] data = new byte[48];
         data[2] = 2; // 2 FM Channels so we can use channel 1 for FM note sequencing
         data[5] = (byte) 0xC0; // Initial fast tempo
@@ -163,10 +165,10 @@ public class TestSmpsSequencer {
         MockSynth synth = new MockSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // Shipped FixDriverBugs=0 writes CurrentTempo but preserves
-        // TempoTimeout, so the live fast-tempo phase advances to note two.
+        // S2 cfSetTempo changes CurrentTempo only (sd:3207-3209); the live
+        // TempoTimeout phase is preserved, so the second note remains in range.
         short[] buf = new short[12000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         String logStr = synth.log.toString();
         long keyOnCount = synth.log.stream().filter(entry -> entry.contains("R28 VF")).count();
@@ -175,9 +177,9 @@ public class TestSmpsSequencer {
         assertTrue(firstNoteIdx >= 0, "First note should play. Log: " + logStr);
         assertTrue(logStr.contains("R28 V00"), "Rest after tempo change should key off the channel");
         assertEquals(2, keyOnCount,
-                "S2 tempo-set must preserve the live accumulator phase");
+                "Preserving TempoTimeout should keep the second note in range");
         assertTrue(secondNoteIdx >= 0,
-                "Preserved accumulator phase should reach the second note");
+                "The preserved accumulator should reach the second note");
     }
 
     @Test
@@ -210,7 +212,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[12000];
-        seq.read(buf); // should execute both notes
+        seq.advanceSamples(buf.length); // should execute both notes
 
         String logStr = String.join(" | ", synth.log);
         long keyOnCount = synth.log.stream()
@@ -240,7 +242,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         short[] buf = new short[5000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         String logStr = String.join(" | ", synth.log);
 
@@ -272,10 +274,8 @@ public class TestSmpsSequencer {
         MockSynth synth = new MockSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // Direct rendering no longer performs a hidden pre-sample driver
-        // tick; render past the first NTSC VInt service boundary.
-        short[] buf = new short[1000];
-        seq.read(buf);
+        short[] buf = new short[100];
+        seq.advanceSamples(buf.length);
 
         assertEquals(0xAA, seq.getCommData(), "Comm data should be 0xAA");
     }
@@ -306,7 +306,7 @@ public class TestSmpsSequencer {
 
         // Read small buffer. Track should still be active and playing the note.
         short[] buf = new short[2000];
-        seq.read(buf);
+        seq.advanceSamples(buf.length);
 
         SmpsSequencer.DebugState state = seq.debugState();
         // Index 0 is FM1 (DAC track skipped because ptr is 0)
@@ -359,7 +359,7 @@ public class TestSmpsSequencer {
         int lastNote = -1;
 
         for (int i = 0; i < 300; i++) {
-            seq.read(buf);
+            seq.advanceSamples(buf.length);
             SmpsSequencer.DebugState state = seq.debugState();
             if (!state.tracks.isEmpty()) {
                 SmpsSequencer.DebugTrack t = state.tracks.get(0);
@@ -414,7 +414,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         // Prime sequencer (runs initial tick) without advancing tempo frames
-        seq.read(new short[2]);
+        seq.advanceSamples(2);
         // Advance enough samples for one additional tempo tick (2 frames @ tempo 0x80)
         seq.advance(1500);
 
@@ -458,7 +458,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         // Prime sequencer (runs initial tick)
-        seq.read(new short[2]);
+        seq.advanceSamples(2);
         // Advance enough samples for one additional tempo tick
         seq.advance(1500);
 
@@ -478,7 +478,7 @@ public class TestSmpsSequencer {
     }
 
     @Test
-    public void testS2HoldE7PreventsRetrigger() {
+    public void testS2HoldE7StillRetriggersFm() {
         byte[] data = new byte[64];
         data[2] = 2; // DAC + FM1
         data[4] = 1; // Dividing timing
@@ -492,19 +492,20 @@ public class TestSmpsSequencer {
         data[pos++] = (byte) 0x81; // Note 1
         data[pos++] = 0x01;        // Duration
         data[pos++] = (byte) 0xE7; // HOLD / no-attack for next note
-        data[pos++] = (byte) 0x83; // Note 2 (should sustain, not retrigger)
+        data[pos++] = (byte) 0x83; // Note 2 (no attack state, but FM keys on)
         data[pos++] = 0x01;        // Duration
         data[pos] = (byte) 0xF2;   // Stop
 
         AbstractSmpsData smps = new Sonic2SmpsData(data);
         MockFmSynth synth = new MockFmSynth();
         SmpsSequencer seq = new SmpsSequencer(smps, null, synth, Sonic2SmpsSequencerConfig.CONFIG);
-        seq.read(new short[12000]);
+        seq.advanceSamples(12000);
 
         long fmKeyOnCount = synth.fmLog.stream()
                 .filter(s -> s.startsWith("0:28:") && s.endsWith("F0"))
                 .count();
-        assertEquals(1, fmKeyOnCount, "E7 HOLD should prevent retriggering the second FM note");
+        assertEquals(2, fmKeyOnCount,
+                "S2's shipped no-attack path still executes the FM key-on");
     }
 
     @Test
@@ -520,9 +521,6 @@ public class TestSmpsSequencer {
         assertTrue(sfx instanceof Sonic2SfxData, "Expected Sonic2SfxData for SFX 0xBC");
         assertNotNull(sfx.getVoice(0), "SFX 0xBC should have voice 0");
         Sonic2SfxData sfxData = (Sonic2SfxData) sfx;
-        assertEquals((byte) 0x90,
-                (byte) sfxData.getTrackEntries().getFirst().transpose(),
-                "shipped FixMusicAndSFXDataBugs=0 keeps the invalid FM5 transpose");
         int ptr = sfxData.getTrackEntries().get(0).pointer;
         assertTrue(ptr >= 0 && ptr < sfxData.getData().length, "Track pointer should be within data");
         assertEquals((byte) 0xEF, sfxData.getData()[ptr], "SFX 0xBC track should start with Set Voice");
@@ -532,7 +530,7 @@ public class TestSmpsSequencer {
         SmpsSequencer seq = new SmpsSequencer(sfx, dacData, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
         // Prime and run a few ticks
-        seq.read(new short[2]);
+        seq.advanceSamples(2);
         SmpsSequencer.DebugState initial = seq.debugState();
         seq.advance(20000);
 

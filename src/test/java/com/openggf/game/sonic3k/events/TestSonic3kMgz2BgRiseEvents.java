@@ -61,7 +61,6 @@ class TestSonic3kMgz2BgRiseEvents {
     void setUp() {
         previousModule = GameModuleRegistry.getCurrent();
         SessionManager.clear();
-        SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
@@ -69,7 +68,6 @@ class TestSonic3kMgz2BgRiseEvents {
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
         SessionManager.clear();
         if (previousModule != null) {
             GameModuleRegistry.setCurrent(previousModule);
@@ -221,6 +219,21 @@ class TestSonic3kMgz2BgRiseEvents {
         assertTrue(events.isBgRiseMotionStarted());
         assertEquals(0x6000, events.getBgRiseSubpixelAccum(),
                 "threshold entry falls through to the first accumulator step on the same object pass");
+    }
+
+    @Test
+    void collapseVScrollModeSuppressesBgRiseTriggerReentry() {
+        placePlayer(0x3CC0, 0x0850);
+        Sonic3kMGZEvents events = new Sonic3kMGZEvents();
+        events.init(1);
+        events.setBgRiseLoadStateInitialised(true);
+        events.setBgRiseRoutine(BG_RISE_AFTER_MOVE);
+        events.setCollapseInitialized(true);
+
+        events.updatePrePhysics(1);
+
+        assertEquals(BG_RISE_AFTER_MOVE, events.getBgRiseRoutine(),
+                "MGZ2_LevelCollapse's _unkEEA2 VScroll mode makes MGZ2_BGEventTrigger return before state-C re-entry");
     }
 
     @Test

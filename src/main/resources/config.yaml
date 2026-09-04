@@ -51,10 +51,8 @@ input:
 audio:
   enabled: true   # Enable music and SFX
   region: "NTSC"   # Region for audio timing
-  dacInterpolate: false   # Raw DAC sample steps (hardware-authentic); true enables smoothing
+  dacInterpolate: false   # Optional DAC smoothing (no hardware counterpart); true interpolates between PCM samples
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
-  psgNoiseShiftEveryToggle: false   # PSG noise LFSR clock mode: false=positive edges (GPGX/libvgm), true=every toggle (MAME)
-  referenceDefaultsVersion: 1   # Internal one-time migration marker for reference chip defaults
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 
 # ── Characters ──
@@ -93,6 +91,10 @@ rewind:
   audioHistoryLimitType: "time"   # How the rewind audio PCM history ring is sized
   audioHistorySeconds: 60   # Seconds of PCM history kept when audioHistoryLimitType=time
   audioHistorySizeMb: 10   # Megabytes of PCM history kept when audioHistoryLimitType=size
+  liveHalfSpeedKey: LEFT_CONTROL   # Modifier held with the rewind key for half-speed rewind
+  liveDoubleSpeedKey: LEFT_SHIFT   # Modifier held with the rewind key for double-speed rewind
+  vhsEffect: true   # VHS picture-search effect while live rewind is active
+  vhsTearBands: true   # Include the scrolling tear bands in the VHS rewind effect
 
 # ── Cross-Game ──
 crossGame:
@@ -143,6 +145,9 @@ capture:
   codec: "ffv1"   # Video codec: ffv1, h264 or h265 (all lossless)
   audioCodec: "flac"   # Audio codec: flac (lossless), or aac / mp3 (LOSSY)
   container: "mkv"   # Recording file extension; mp4 is portable only with h264/h265 + aac
+  encoderPreset: "fast"   # x264/x265 speed preset (ultrafast..placebo); blank = encoder default; ignored by ffv1/dnxhr
+  encoderThreads: 0   # ffmpeg -threads for the encode pass; 0 lets ffmpeg choose
+  queueBudgetMb: 192   # Live recording only: memory budget for the encoder frame queue (clamped to 8..120 frames)
   # ── ADVANCED: full ffmpeg argument lists ───────────────────────────────
   # "default" = the engine's own command. Empty = skip that pass (pass 2 only,
   # which publishes the video with no audio). Anything else is used literally.
@@ -201,7 +206,6 @@ debug:
   flags:
     debugView: false   # Enable the debug overlay subsystem; visible HUD starts hidden until toggled
     editor: false   # Allow entering the level editor from gameplay
-    collisionView: false   # Draw the collision overlay
   keys:
     test: T   # Debug-only test button
     nextAct: PAGE_UP   # Advance to the next act
@@ -242,6 +246,8 @@ debug:
     showDesyncGhosts: true   # Render desync ghosts in Trace Test Mode and trace capture
     showGameHud: true   # Render the game HUD during trace replay/capture
     showDebugHud: false   # Render the debug HUD during trace replay/capture
+  rewind:
+    determinismAudit: false   # Re-simulate each completed live-rewind keyframe segment and log the first divergence
   testMode:
     enabled: false   # Replace the master title with the trace picker (dev-only)
     catalogDir: "src/test/resources/traces"   # Directory scanned for traces when test mode is enabled

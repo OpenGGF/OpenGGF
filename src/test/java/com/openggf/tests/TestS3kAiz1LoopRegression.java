@@ -19,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Headless regression for the AIZ1 loop before the hollow log.
  *
- * <p>Scenario from {@code docs/status/s3k-bug-list.md}: teleport Sonic beside the
+ * <p>Scenario from the retired 2026-03-25 AIZ working list (now folded into
+ * {@code docs/status/known-bugs.md}): teleport Sonic beside the
  * red spring, let the spring launch him into the loop, and verify he exits the
  * loop instead of stalling in the wall and rolling backward.
  */

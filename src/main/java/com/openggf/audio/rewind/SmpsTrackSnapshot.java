@@ -75,7 +75,6 @@ public record SmpsTrackSnapshot(
         boolean fmVolEnvHold,
         int fmVolEnvOpMask,
         boolean forceRefresh,
-        int internalStateFlags,
         int[] ssgEg,
         boolean dacMuted,
         boolean modStepInEffect,
@@ -83,7 +82,13 @@ public record SmpsTrackSnapshot(
         int modStepDelta,
         boolean modEnvStepInEffect,
         boolean modEnvStepChanged,
-        int modEnvStepDelta) {
+        int modEnvStepDelta,
+        boolean fm3SpecialMode,
+        boolean customSsgEgPresent,
+        int[] customSsgEgPayload,
+        boolean customSsgEgPayloadKnown,
+        int rawPsgNoise,
+        boolean rawPsgNoiseKnown) {
 
     public SmpsTrackSnapshot {
         voiceData = copy(voiceData);
@@ -94,6 +99,7 @@ public record SmpsTrackSnapshot(
         envData = copy(envData);
         fmVolEnvData = copy(fmVolEnvData);
         ssgEg = copy(ssgEg);
+        customSsgEgPayload = copy(customSsgEgPayload);
     }
 
     private static byte[] copy(byte[] values) {
@@ -142,5 +148,10 @@ public record SmpsTrackSnapshot(
     @Override
     public int[] ssgEg() {
         return copy(ssgEg);
+    }
+
+    @Override
+    public int[] customSsgEgPayload() {
+        return copy(customSsgEgPayload);
     }
 }

@@ -3,11 +3,15 @@
 This document tracks **intentional deviations** from the original Sonic 3 & Knuckles ROM. Entries here are architectural choices we've made (cleaner code, added features, deliberate corrections of known ROM bugs) that we accept and do not plan to revert. Runtime gameplay behavior is preserved unless a rationale explicitly justifies a visible change (e.g., the "Save System" entry adds JSON persistence that replaces SRAM).
 
 **What does NOT belong here:**
-- Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [S3K_KNOWN_BUGS.md](S3K_KNOWN_BUGS.md)
-- General (cross-game) engine-level issues → [KNOWN_BUGS.md](KNOWN_BUGS.md)
-- General (cross-game) intentional discrepancies → [KNOWN_DISCREPANCIES.md](KNOWN_DISCREPANCIES.md)
+- Bugs, incomplete implementations, and parity gaps that we *intend to fix* → [s3k-known-bugs.md](status/s3k-known-bugs.md)
+- General (cross-game) engine-level issues → [known-bugs.md](status/known-bugs.md)
+- General (cross-game) intentional discrepancies → [known-discrepancies.md](status/known-discrepancies.md)
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
+
+**TraceChaser extraction note (2026-08-29):** the optional pinned trace-tool
+submodule changes recorder ownership, not Sonic 3 & Knuckles runtime behaviour.
+No S3K discrepancy was added or reclassified by the cutover.
 
 ## Table of Contents
 
@@ -100,16 +104,32 @@ The ROM creates `Obj_AIZPlaneIntro` inside `SpawnLevelMainSprites`, which runs d
 
 ### Our Implementation
 
-We spawn the intro object from `Sonic3kAIZEvents.init()`, the zone-specific level event handler:
+We spawn the intro object from `Sonic3kAIZEvents`, the zone-specific level event handler. `init(act)` calls
+`spawnIntroObject()` when `shouldSpawnIntro(act)` holds (act 1 and the bootstrap is not skipping the intro), and
+`updateAct1()` re-runs it as a one-shot fallback if the object is missing before the camera reaches the start of
+the tracked range. The spawn reuses the ROM's fixed dynamic-object slot rather than allocating a fresh one:
 
 ```java
-@Override
-public void init(int act) {
-    if (act == 0 && !bootstrap.isAiz1GameplayAfterIntro()) {
-        spawnObject(new AizPlaneIntroInstance(...));
+private boolean spawnIntroObject() {
+    AizPlaneIntroInstance existing = findLiveIntroObject();
+    if (existing != null) {
+        // ROM SpawnLevelMainSprites installs Obj_AIZPlaneIntro in a fixed
+        // dynamic-object slot before the first Process_Sprites call
+        // (sonic3k.asm:7849-7853, 8111-8126). A duplicate engine event init
+        // must re-adopt that live object, not allocate a second parent.
+        AizPlaneIntroInstance.adoptActiveIntroInstance(existing);
+        return true;
     }
+    // ...
+    ObjectSpawn spawn = new ObjectSpawn(0x60, 0x30, 0, 0, 0, false, 0);
+    AizPlaneIntroInstance intro = lm.getObjectManager().createDynamicObjectAtSlot(
+            () -> new AizPlaneIntroInstance(spawn), AIZ_PLANE_INTRO_SST_SLOT);
+    // ...
 }
 ```
+
+`init()` also clears the camera's level-started flag before the spawn, matching the `clr.b (Level_started_flag).w`
+in `SpawnLevelMainSprites`.
 
 ### Rationale
 
@@ -296,7 +316,7 @@ OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envel
 
 ## Tails Flying-With-Cargo Physics
 
-**Location:** Tails flight physics (`SidekickCpuController`, `PlayableSpriteMovement.applyGravity`)
+**Location:** Tails flight physics (`TailsFlightController`, `PlayableSpriteMovement.applyGravity`); CNZ1 carry and CPU flight routines (`SidekickCpuController`)
 **ROM Reference:** `sonic3k.asm:27592` `Tails_Move_FlySwim` (+0x08 flight gravity), `sonic3k.asm:27553` `Tails_Stand_Freespace` (branch on `double_jump_flag`)
 
 ### Original Implementation
@@ -374,7 +394,7 @@ silently.
 Gameplay state follows the S&K disassembly: `AIZ2_DoShipLoop` writes
 `Level_repeat_offset=$200` and subtracts `$200` from camera/player state when
 the post-bombing ship loop reaches `$46C0`
-(`docs/skdisasm/skdisasm/sonic3k.asm:105200-105221`). Do not change
+(`docs/skdisasm/sonic3k.asm:105200-105221`). Do not change
 `BATTLESHIP_WRAP_DIST_POST_BOMBING` away from `$200`.
 
 **Display validated seamless (2026-06-16).** Once the AIZ trace frontier advanced
@@ -1405,7 +1425,7 @@ frame fixture-relative in the first place.
 ### The compared field is not "prepared"
 
 The recorder projects this field from bit 15 of `Kos_decomp_queue_count`
-(`tools/bizhawk-headless/src/Recording/LoadQueueStateProjector.cs`:
+(`tools/tracechaser/bizhawk-headless/src/Recording/LoadQueueStateProjector.cs`:
 `bool prepared = (rawCount & 0x8000) != 0;`). In the ROM that bit means
 **decompression is in progress right now**, not "prepared":
 
@@ -1595,6 +1615,11 @@ There is no hold, no timer, and no SEGA sound command anywhere in either file.
 holds for `SEGA_HOLD_DURATION = 180` frames, stops the sound and moves to the palette
 transition.
 
+The chant itself is no longer a presentation addition: since 2026-09-03 the sound it plays is the
+ROM's own `zPlaySEGAPCM` transport (`Sound/Z80 Sound Driver.asm:4372-4424`), run by the driver
+through the emulated YM2612 DAC at the ROM's own loop cadence. Only the screen and its hold
+remain engine additions.
+
 **Why this is acceptable.** It is a presentation addition, not a parity gap — there is no ROM
 behaviour being approximated, so there is nothing for the 180 to be wrong against. It affects
 only the pre-title sequence and no gameplay state, and it is skippable by input like the rest of
@@ -1608,3 +1633,38 @@ is a product decision, not a parity one.**
 
 Full context:
 [docs/architecture/audits/2026-08-21-timing-constant-provenance-sweep.md](architecture/audits/2026-08-21-timing-constant-provenance-sweep.md).
+
+---
+
+## SFX channel takeover splits `cfSetPSGNoise`'s two writes
+
+**What the ROM does.** The S3K sound driver is built with `fix_sndbugs = 0`
+(`Sound/Z80 Sound Driver.asm:16`), so `cfSetPSGNoise` takes the `else` branch at
+`:3558-3571`. That branch puts exactly two bytes on the PSG bus, back to back and
+with nothing between them: `0DFh` to silence PSG3, then the effect's own noise
+operand. The routine has no calls between the two writes, so their adjacency is
+structural rather than incidental.
+
+**What we do.** The engine emits `DF FF E7`. `SmpsDriver.silencePsgChannel`
+performs the SFX channel takeover lazily, on the first latch of the channel being
+stolen from music, and for a noise-form effect the `0E7h` write is that first
+latch. The takeover's own `0FFh` therefore lands between `cfSetPSGNoise`'s two
+writes. The ROM performs the equivalent takeover during SFX setup instead, before
+the track's first pass runs.
+
+**Scope.** Every S3K effect that carries a PSG form is affected, because all 36 of
+them declare `$E7`. Among them are three behind reported AIZ1 audio faults:
+`sfx_Splash` (`$39`), `sfx_InstaAttack` (`$42`) and `sfx_Collapse` (`$59`).
+
+**Why it is probably not what anyone hears.** The interposed byte sets the noise
+channel to silence, and the effect's real attenuation follows within the same
+driver service. It is an ordering divergence in the write stream, not a sustained
+level change. The audible fault reported against these effects is being tracked
+separately against the PSG noise clock, not against this.
+
+**Coverage.** `TestS3kNoiseFormEffectWriteStream` asserts the ROM's adjacency for
+all three effects, reading each expected noise operand out of the effect's own
+script in the ROM rather than naming it. The class is `@Disabled` against this
+entry; removing that annotation is the whole of enabling it. The write stream is
+not yet arbitrated by the hardware oracle, whose S3K frontier is service 565 while
+the first splash request in the captured window is service 4,087.

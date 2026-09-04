@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableB
 import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -23,6 +24,9 @@ import static org.mockito.Mockito.when;
 
 class TestHCZWaterTunnelHandler {
 
+    // Reset before as well as after: the first test otherwise inherits whatever
+    // an earlier class in the fork left in these statics.
+    @BeforeEach
     @AfterEach
     void resetTunnelHandler() {
         HCZWaterTunnelHandler.reset();

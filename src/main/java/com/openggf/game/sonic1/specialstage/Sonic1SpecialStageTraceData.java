@@ -65,15 +65,13 @@ public final class Sonic1SpecialStageTraceData {
         }
         Path auxPath = TraceFiles.resolve(traceDirectory, "aux_state.jsonl");
 
-        StoredPhysicsFrameDomain frameDomain =
-                StoredPhysicsFrameDomain.scan(
-                        physicsPath,
-                        StoredPhysicsFrameDomain.FrameEncoding.DECIMAL);
         List<Sonic1SpecialStageTraceFrame> frames = loadPhysicsCsv(physicsPath);
         Map<Integer, List<TraceEvent>> events = auxPath != null
             ? TraceData.loadAuxEvents(auxPath, metadata)
             : Collections.emptyMap();
         if (metadata.hasPerFrameDynamicArtTransferState()) {
+            StoredPhysicsFrameDomain frameDomain = StoredPhysicsFrameDomain.scan(
+                    physicsPath, StoredPhysicsFrameDomain.FrameEncoding.DECIMAL);
             TraceData.validateDynamicArtTransferStates(
                     metadata, frameDomain, events, openingDynamicArtLedger);
         }

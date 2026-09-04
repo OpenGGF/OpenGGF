@@ -2,6 +2,12 @@ package com.openggf.tests;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomManager;
+import com.openggf.game.OscillationManager;
+import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
+import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
+import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
+import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZBreakableBarState;
+import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance.HCZWaterRushPaletteCycleGate;
 import com.openggf.game.GameModule;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.session.EngineContext;
@@ -94,6 +100,18 @@ public final class TestEnvironment {
     private static void resetToBootstrapBaseline() {
         GroundSensor.setLevelManager(null);
         SonicConfigurationService.getInstance().resetToDefaults();
+        // OscillationManager is a process-wide static table advanced by every level
+        // frame; objects that read it (e.g. CnzHoverFanInstance) assume the reset
+        // baseline in unit tests, so it must not leak across classes in a fork.
+        OscillationManager.reset();
+        // S3K static gameplay handlers advanced by level frames; the classes that
+        // own them reset them in their own hooks, but any headless class that runs
+        // HCZ frames leaves them set for the next class in the fork.
+        HCZWaterTunnelHandler.reset();
+        HCZWaterSkimHandler.reset();
+        HCZBreakableBarState.reset();
+        HCZWaterRushPaletteCycleGate.reset();
+        Sonic3kLevelTriggerManager.reset();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
 
         // CRITICAL: Capture the current game's profile BEFORE resetting the module.
@@ -101,7 +119,6 @@ public final class TestEnvironment {
         // We need the PREVIOUS game's teardown to clean up its own state.
         LevelInitProfile profile = GameModuleRegistry.getCurrent().getLevelInitProfile();
 
-        SessionManager.clear();
         SessionManager.clear();
 
         // Phase 0: Reset game module (shared across all games)
@@ -119,7 +136,6 @@ public final class TestEnvironment {
     }
 
     private static void recreateGameplayMode() {
-        SessionManager.clear();
         SessionManager.clear();
         activeGameplayMode();
     }

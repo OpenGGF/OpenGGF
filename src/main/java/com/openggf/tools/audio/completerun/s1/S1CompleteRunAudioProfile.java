@@ -52,6 +52,20 @@ public final class S1CompleteRunAudioProfile {
         @Override public CompleteRunAudioTrace.CompleteRunFixture fixture() { return FIXTURE; }
         @Override public List<CompleteRunAudioTrace.HardwareRole> hardwareRoles() { return ROLES; }
         @Override public CompleteRunAudioTrace.StateInventory stateInventory() { return INVENTORY; }
+        @Override public CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory() {
+            String reason = "S1 complete-run v2 producers are not installed";
+            return new CompleteRunAudioTrace.ComparisonLayerInventory(java.util.Arrays.stream(
+                    CompleteRunAudioTrace.ComparisonLayer.values()).map(layer ->
+                            new CompleteRunAudioTrace.ComparisonLayerClaim(layer,
+                                    CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE, reason)).toList());
+        }
+        @Override public Map<CompleteRunAudioTrace.ProducerKind,
+                CompleteRunAudioTrace.ProducerObservationInventory> producerObservationInventories() {
+            var unavailable = CompleteRunAudioTrace.ProducerObservationInventory.allUnobserved(
+                    "S1 complete-run v2 producer is not installed");
+            return Map.of(CompleteRunAudioTrace.ProducerKind.REFERENCE, unavailable,
+                    CompleteRunAudioTrace.ProducerKind.OPENGGF, unavailable);
+        }
         @Override public Map<CompleteRunAudioTrace.RawAudioRequest,
                 CompleteRunAudioTrace.NativeSoundIdentity> nativeSoundIdentities() { return IDENTITIES; }
 

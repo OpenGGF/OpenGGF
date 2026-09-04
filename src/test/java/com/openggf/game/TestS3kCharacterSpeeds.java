@@ -32,7 +32,6 @@ class TestS3kCharacterSpeeds {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
@@ -159,7 +158,7 @@ class TestS3kCharacterSpeeds {
         int ticks = 0;
         while (sprite.hasSpeedShoes() && ticks < 2000) {
             levelManager.setFrameCounter(ticks);
-            GameServices.timers().update();
+            GameServices.timers().updateDisplayPhaseTimersFor(sprite);
             ticks++;
         }
 
@@ -178,7 +177,6 @@ class TestS3kCharacterSpeeds {
     @Test
     void s2_sonic_matchesS3kSonic() {
         GameModuleRegistry.setCurrent(new com.openggf.game.sonic2.Sonic2GameModule());
-        SessionManager.clear();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);

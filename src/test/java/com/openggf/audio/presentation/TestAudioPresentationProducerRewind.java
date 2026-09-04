@@ -10,12 +10,14 @@ import com.openggf.audio.runtime.AudioFrameClock;
 import com.openggf.audio.runtime.PcmHistoryRing;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
+import com.openggf.audio.synth.ChipWriteObserver;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -224,11 +226,6 @@ class TestAudioPresentationProducerRewind {
                         return fixture.resolver.resolvePcm(assetId);
                     }
 
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        return fixture.resolver.recreateSmps(snapshot);
-                    }
                 };
         fixture.producer.restore(selected, flaky, true);
 
@@ -364,56 +361,6 @@ class TestAudioPresentationProducerRewind {
                 "a hard history epoch must discard pre-boundary deferred logical state");
     }
 
-    @Test
-    void closeDiscardsPreparedRestoreExactlyOnceBeforeRegistryClear() {
-        Fixture fixture = fixture();
-        SmpsDriver source = new SmpsDriver();
-        PresentationVoiceSnapshot.Smps voice =
-                new PresentationVoiceSnapshot.Smps(
-                        1, 0, 0x81,
-                        AudioSourceDescriptor.baseMusic(0x81),
-                        1, source.captureSnapshot());
-        AudioPresentationSnapshot selected =
-                new AudioPresentationSnapshot(
-                        2, List.of(voice),
-                        new AudioPresentationSnapshot.MusicSlotSnapshot(
-                                0x81,
-                                AudioSourceDescriptor.baseMusic(0x81), 1),
-                        List.of(), null, null,
-                        0, 0, 0, 0,
-                        false, false, false, 1, true,
-                        new SmpsCoordFlagRuntimeState.Snapshot(0));
-        AtomicReference<CountingSmpsDriver> recreated =
-                new AtomicReference<>();
-        AudioPresentationDependencyResolver resolver =
-                new AudioPresentationDependencyResolver() {
-                    @Override
-                    public DecodedPcm resolvePcm(String assetId) {
-                        throw new AssertionError("no PCM voice expected");
-                    }
-
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        CountingSmpsDriver driver =
-                                new CountingSmpsDriver();
-                        recreated.set(driver);
-                        return new SmpsCompositeVoice(
-                                snapshot.voiceId(), snapshot.priority(),
-                                snapshot.musicId(),
-                                snapshot.sourceDescriptor(),
-                                snapshot.maxStereoFrames(), driver);
-                    }
-                };
-        fixture.producer.beginReverse(1.0);
-        fixture.producer.prepareRestoreSelection(selected, resolver);
-
-        fixture.producer.close();
-        fixture.producer.close();
-
-        assertEquals(1, recreated.get().stopCalls);
-    }
-
     private static Fixture fixture() {
         return fixture(4, 2);
     }
@@ -428,11 +375,6 @@ class TestAudioPresentationProducerRewind {
                         return pcm;
                     }
 
-                    @Override
-                    public SmpsCompositeVoice recreateSmps(
-                            PresentationVoiceSnapshot.Smps snapshot) {
-                        throw new AssertionError("no SMPS voice expected");
-                    }
                 };
         AudioVoiceRegistry registry = new AudioVoiceRegistry(
                 noSmps(), resolver,
@@ -464,11 +406,6 @@ class TestAudioPresentationProducerRewind {
                 throw new AssertionError("no SMPS SFX expected");
             }
 
-            @Override
-            public SmpsCompositeVoice instantiateStandaloneCached(
-                    ResolvedSmpsSfxSource source) {
-                throw new AssertionError("no SMPS SFX expected");
-            }
         };
     }
 
@@ -550,13 +487,4 @@ class TestAudioPresentationProducerRewind {
         }
     }
 
-    private static final class CountingSmpsDriver extends SmpsDriver {
-        private int stopCalls;
-
-        @Override
-        public void stopAll() {
-            stopCalls++;
-            super.stopAll();
-        }
-    }
 }

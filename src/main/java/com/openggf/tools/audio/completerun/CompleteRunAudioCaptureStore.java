@@ -108,7 +108,12 @@ public final class CompleteRunAudioCaptureStore {
         void delete(Path path) throws IOException;
     }
 
-    public interface Writer extends CompleteRunAudioRecordSink { }
+    public interface Writer extends CompleteRunAudioRecordSink {
+        /** Appends the terminal from counts and digests independently accumulated by this writer. */
+        void finish(CompleteRunAudioTrace.NativeCapabilitySummary nativeCapability) throws IOException;
+        /** Discards the private staging tree without attempting publication. */
+        void abort() throws IOException;
+    }
 
     public interface Reader extends Iterator<Record>, AutoCloseable {
         Metadata metadata();
@@ -149,6 +154,7 @@ public final class CompleteRunAudioCaptureStore {
         @Override
         public void append(Record record) throws IOException {
             requireOpen();
+            metadata.validateObservationShape(Objects.requireNonNull(record, "complete-run record"));
             if (terminalSeen) {
                 throw new IllegalArgumentException("terminal must be the final complete-run record");
             }
@@ -185,8 +191,8 @@ public final class CompleteRunAudioCaptureStore {
                 if (!baselineSeen || cutoffSeen) {
                     throw new IllegalArgumentException("exactly one cutoff frontier is required after baseline");
                 }
-                cutoffActive = frontier.activeStack().size();
-                cutoffPending = frontier.pendingDescendants().size();
+                cutoffActive = size(frontier.activeStack());
+                cutoffPending = size(frontier.pendingDescendants());
                 cutoffSeen = true;
             } else if (record instanceof Terminal terminal) {
                 if (!baselineSeen || !cutoffSeen) {
@@ -210,20 +216,52 @@ public final class CompleteRunAudioCaptureStore {
         }
 
         private void count(Frame frame) {
-            requests = Math.addExact(requests, frame.requests().size());
-            for (var service : frame.services()) {
-                services = Math.addExact(services, 1);
-                decisions = Math.addExact(decisions, service.decisions().size());
-                for (var event : service.chipEvents()) {
-                    if (event instanceof CompleteRunAudioTrace.YmWrite) ym = Math.addExact(ym, 1);
-                    else psg = Math.addExact(psg, 1);
-                }
+            requests = Math.addExact(requests, size(frame.requests()));
+            services = Math.addExact(services, size(frame.services()));
+            decisions = Math.addExact(decisions, size(frame.decisions()));
+            for (var event : frame.chipEvents() == null ? List.<CompleteRunAudioTrace.ChipEvent>of()
+                    : frame.chipEvents()) {
+                if (event instanceof CompleteRunAudioTrace.YmWrite) ym = Math.addExact(ym, 1);
+                else psg = Math.addExact(psg, 1);
             }
         }
 
         private CaptureCounts counts() {
             return new CaptureCounts(frames, requests, services, decisions, ym, psg, lifecycles,
                     cutoffActive, cutoffPending);
+        }
+
+        @Override
+        public void finish(CompleteRunAudioTrace.NativeCapabilitySummary nativeCapability) throws IOException {
+            requireOpen();
+            if (!baselineSeen || !cutoffSeen || terminalSeen) {
+                throw new IllegalArgumentException("capture is not ready for terminal finalization");
+            }
+            CaptureCounts captured = counts();
+            append(new Terminal(metadata.fixture().exclusiveEnd(), captured.frameCount(),
+                    captured.requestCount(), captured.serviceCount(), captured.decisionCount(),
+                    captured.ymCount(), captured.psgCount(), captured.lifecycleCount(),
+                    captured.cutoffActiveCount(), captured.cutoffPendingCount(), nativeCapability,
+                    digestCopy(rootDigest), digestCopy(semanticDigest)));
+        }
+
+        @Override
+        public void abort() throws IOException {
+            if (closed) return;
+            IOException failure = null;
+            if (current != null) {
+                try { current.gzip.close(); }
+                catch (IOException problem) { failure = problem; }
+                current = null;
+            }
+            try {
+                stagingCleaner.delete(staging);
+                closed = true;
+            } catch (IOException cleanupFailure) {
+                if (failure == null) failure = cleanupFailure;
+                else failure.addSuppressed(cleanupFailure);
+            }
+            if (failure != null) throw failure;
         }
 
         private ChunkWriter current() throws IOException {
@@ -441,6 +479,7 @@ public final class CompleteRunAudioCaptureStore {
 
         void accept(Record record) {
             if (terminal) throw new IllegalArgumentException("records follow terminal");
+            metadata.validateObservationShape(Objects.requireNonNull(record, "complete-run record"));
             if (cutoff && !(record instanceof Terminal)) {
                 throw new IllegalArgumentException("cutoff frontier must be immediately before terminal");
             }
@@ -456,13 +495,12 @@ public final class CompleteRunAudioCaptureStore {
                 currentChunkFrames++;
                 currentChunkEnd = frame.absoluteFrame() + 1;
                 frames++;
-                requests = Math.addExact(requests, frame.requests().size());
-                for (var service : frame.services()) {
-                    services = Math.addExact(services, 1);
-                    decisions = Math.addExact(decisions, service.decisions().size());
-                    for (var event : service.chipEvents()) {
-                        if (event instanceof CompleteRunAudioTrace.YmWrite) ym = Math.addExact(ym, 1); else psg = Math.addExact(psg, 1);
-                    }
+                requests = Math.addExact(requests, size(frame.requests()));
+                services = Math.addExact(services, size(frame.services()));
+                decisions = Math.addExact(decisions, size(frame.decisions()));
+                for (var event : frame.chipEvents() == null ? List.<CompleteRunAudioTrace.ChipEvent>of()
+                        : frame.chipEvents()) {
+                    if (event instanceof CompleteRunAudioTrace.YmWrite) ym = Math.addExact(ym, 1); else psg = Math.addExact(psg, 1);
                 }
             } else if (record instanceof Lifecycle) {
                 if (!baseline) throw new IllegalArgumentException("lifecycle precedes baseline");
@@ -470,8 +508,8 @@ public final class CompleteRunAudioCaptureStore {
             } else if (record instanceof CutoffFrontier value) {
                 if (!baseline || cutoff) throw new IllegalArgumentException("invalid cutoff frontier position");
                 cutoff = true;
-                cutoffActive = value.activeStack().size();
-                cutoffPending = value.pendingDescendants().size();
+                cutoffActive = size(value.activeStack());
+                cutoffPending = size(value.pendingDescendants());
             } else if (record instanceof Terminal value) {
                 if (!baseline || !cutoff) throw new IllegalArgumentException("terminal lacks cutoff frontier");
                 metadata.validateTerminal(value, new CaptureCounts(frames, requests, services, decisions, ym, psg,
@@ -690,9 +728,17 @@ public final class CompleteRunAudioCaptureStore {
         catch (IOException failure) { throw new IllegalArgumentException("cannot canonicalize record", failure); }
     }
 
+    private static int size(List<?> values) {
+        return values == null ? 0 : values.size();
+    }
+
     private static void update(MessageDigest digest, String record) { digest.update((record + "\n").getBytes(StandardCharsets.UTF_8)); }
     private static MessageDigest sha256() { try { return MessageDigest.getInstance("SHA-256"); } catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); } }
     private static String digest(MessageDigest digest) { return HexFormat.of().formatHex(digest.digest()); }
+    private static String digestCopy(MessageDigest digest) {
+        try { return HexFormat.of().formatHex(((MessageDigest) digest.clone()).digest()); }
+        catch (CloneNotSupportedException impossible) { throw new AssertionError(impossible); }
+    }
     private static void manifestField(JsonParser parser,String name)throws IOException{if(parser.nextToken()!=com.fasterxml.jackson.core.JsonToken.FIELD_NAME||!name.equals(parser.currentName())||parser.nextToken()==null)throw new IllegalArgumentException("expected manifest field: "+name);} private static String manifestText(JsonParser parser,String label)throws IOException{if(parser.currentToken()!=com.fasterxml.jackson.core.JsonToken.VALUE_STRING)throw new IllegalArgumentException(label+" must be text");return parser.getText();} private static int manifestInt(JsonParser parser,String label)throws IOException{if(parser.currentToken()!=com.fasterxml.jackson.core.JsonToken.VALUE_NUMBER_INT)throw new IllegalArgumentException(label+" must be int");return parser.getIntValue();} private static String manifestHash(JsonParser parser)throws IOException{String value=manifestText(parser,"manifest hash");if(!value.matches("[0-9a-f]{64}"))throw new IllegalArgumentException("manifest hash must be canonical SHA-256");return value;}
     private void suppressCleanupFailure(Path root, Throwable primary) {
         try {

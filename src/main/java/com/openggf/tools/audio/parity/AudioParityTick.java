@@ -8,7 +8,14 @@ public record AudioParityTick(
         int ordinal,
         GlobalState global,
         List<AudioParityTrackState> tracks,
-        List<AudioParityChipWrite> events) {
+        List<AudioParityChipWrite> events,
+        List<Integer> dispatches) {
+
+    /** Music-capture tick: no dispatch channel (the field is absent from the stream). */
+    public AudioParityTick(int ordinal, GlobalState global, List<AudioParityTrackState> tracks,
+            List<AudioParityChipWrite> events) {
+        this(ordinal, global, tracks, events, null);
+    }
 
     public AudioParityTick {
         if (ordinal < 0) {
@@ -17,6 +24,14 @@ public record AudioParityTick(
         Objects.requireNonNull(global, "global");
         tracks = List.copyOf(tracks);
         events = List.copyOf(events);
+        if (dispatches != null) {
+            dispatches = List.copyOf(dispatches);
+            for (Integer dispatch : dispatches) {
+                if (dispatch == null || dispatch < 0 || dispatch > 0xff) {
+                    throw new IllegalArgumentException("dispatched sound id must be an unsigned byte");
+                }
+            }
+        }
         if (tracks.size() != AudioParitySchema.ROLES.size()) {
             throw new IllegalArgumentException("tick must contain all ten fixed roles");
         }
@@ -28,7 +43,7 @@ public record AudioParityTick(
     }
 
     public AudioParityTick withOrdinal(int newOrdinal) {
-        return new AudioParityTick(newOrdinal, global, tracks, events);
+        return new AudioParityTick(newOrdinal, global, tracks, events, dispatches);
     }
 
     /** Global state common to the ROM driver and OpenGGF sequencer. */

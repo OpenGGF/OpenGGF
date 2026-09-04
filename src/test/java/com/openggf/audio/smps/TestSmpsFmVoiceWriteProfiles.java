@@ -2,8 +2,6 @@ package com.openggf.audio.smps;
 
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.VirtualSynthesizer;
-import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
-import com.openggf.game.sonic1.audio.smps.Sonic1SfxData;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import com.openggf.game.sonic2.audio.smps.Sonic2SfxData;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
@@ -60,56 +58,6 @@ class TestSmpsFmVoiceWriteProfiles {
     }
 
     @Test
-    void s3kSetVoiceMaximizesReleaseBeforeUploadingTheInstrument() {
-        List<String> writes = captureSetVoice(
-                s3kSfx(false), Sonic3kSmpsSequencerConfig.CONFIG);
-
-        assertEquals(List.of(
-                "0:80:FF", "0:84:FF", "0:88:FF", "0:8C:FF"),
-                writes.subList(0, 4));
-        assertEquals(s3kExpected(), writes.subList(4, writes.size()));
-    }
-
-    @Test
-    void s2SetVoiceDoesNotInjectTheS3kReleaseSequence() {
-        assertEquals(s2Expected(), captureSetVoice(
-                s2Sfx(), Sonic2SmpsSequencerConfig.CONFIG));
-    }
-
-    @Test
-    void s1SetVoiceDoesNotInjectTheS3kReleaseSequence() {
-        Sonic1SfxData source = s1Sfx();
-        assertEquals(
-                captureRefresh(source, Sonic1SmpsSequencerConfig.CONFIG),
-                captureSetVoice(source, Sonic1SmpsSequencerConfig.CONFIG));
-    }
-
-    @Test
-    void s3kSfxReleaseRestoresOnlyTheMusicVoice() {
-        VirtualSynthesizer synth = new VirtualSynthesizer();
-        RecordingObserver observer = new RecordingObserver();
-        SmpsSequencer sequencer = new SmpsSequencer(
-                s3kMusic(), EMPTY_DAC, synth,
-                Sonic3kSmpsSequencerConfig.CONFIG);
-        SmpsSequencer.Track fm = sequencer.getTracks().stream()
-                .filter(track -> track.type == SmpsSequencer.TrackType.FM)
-                .findFirst()
-                .orElseThrow();
-        fm.duration = 4;
-        fm.baseFnum = 0x2345;
-        sequencer.setChannelOverridden(
-                SmpsSequencer.TrackType.FM, fm.channelId, true);
-        synth.setChipWriteObserver(observer);
-
-        sequencer.setChannelOverridden(
-                SmpsSequencer.TrackType.FM, fm.channelId, false);
-
-        assertEquals(s3kExpected(), observer.events,
-                "cfStopTrack restores the voice; it does not synthesize a "
-                        + "second key-off or an immediate frequency write");
-    }
-
-    @Test
     void s3kVoiceLookupPreservesRawRomOperatorBytes() {
         Sonic3kSmpsData source = s3kMusic();
 
@@ -117,14 +65,16 @@ class TestSmpsFmVoiceWriteProfiles {
     }
 
     @Test
-    void s2VolumeRefreshRotatesTheAlgorithmMaskAcrossAscendingRegisters() {
+    void s2VolumeRefreshWritesAllTlsAndAddsVolumeOnlyToCarriers() {
         byte[] voice = DISTINCT_VOICE.clone();
         voice[22] = (byte) 0x96;
         voice[23] = (byte) 0x97;
         voice[24] = (byte) 0x98;
         Sonic2SmpsData source = new Sonic2SmpsData(musicBlob(voice), 0);
 
-        assertEquals(List.of("0:44:98", "0:48:99", "0:4C:9A"),
+        // S2's zSetFMTLs writes every TL register; the algorithm mask only
+        // controls whether the channel volume is added to that operator.
+        assertEquals(List.of("0:40:15", "0:44:98", "0:48:99", "0:4C:9A"),
                 captureVolume(source, Sonic2SmpsSequencerConfig.CONFIG, 2));
     }
 
@@ -137,7 +87,14 @@ class TestSmpsFmVoiceWriteProfiles {
         voice[24] = (byte) 0x98;
         Sonic3kSmpsData source = new Sonic3kSmpsData(musicBlob(voice), 0);
 
-        assertEquals(List.of("0:48:18", "0:4C:1A"),
+        // zSendTL loops over the whole TL table and writes every entry; the
+        // bit-7 test only branches past the track-volume add, and the
+        // fix_sndbugs=0 path strips the sign bit from what it sends
+        // (skdisasm Sound/Z80 Sound Driver.asm:3149-3178). So the two
+        // non-carriers 15h and 17h go out unchanged and the two carriers
+        // 96h and 98h go out as 16h and 18h plus the track volume, in S3K's
+        // middle-register traversal order.
+        assertEquals(List.of("0:40:15", "0:48:18", "0:44:17", "0:4C:1A"),
                 captureVolume(source, Sonic3kSmpsSequencerConfig.CONFIG, 2));
     }
 
@@ -169,23 +126,6 @@ class TestSmpsFmVoiceWriteProfiles {
         synth.setChipWriteObserver(observer);
 
         sequencer.refreshVolume(fm);
-
-        return observer.events;
-    }
-
-    private static List<String> captureSetVoice(
-            AbstractSmpsData source, SmpsSequencerConfig config) {
-        VirtualSynthesizer synth = new VirtualSynthesizer();
-        RecordingObserver observer = new RecordingObserver();
-        SmpsSequencer sequencer = new SmpsSequencer(
-                source, EMPTY_DAC, synth, config);
-        SmpsSequencer.Track fm = sequencer.getTracks().stream()
-                .filter(track -> track.type == SmpsSequencer.TrackType.FM)
-                .findFirst()
-                .orElseThrow();
-        synth.setChipWriteObserver(observer);
-
-        sequencer.loadVoice(fm, 0);
 
         return observer.events;
     }
@@ -222,20 +162,6 @@ class TestSmpsFmVoiceWriteProfiles {
     private static Sonic2SfxData s2Sfx() {
         byte[] data = sfxBlob(false);
         return new Sonic2SfxData(data, 0, 0, 0);
-    }
-
-    private static Sonic1SfxData s1Sfx() {
-        byte[] data = new byte[0x180];
-        setBe16(data, 0x00, 0x100);
-        data[0x02] = 1;
-        data[0x03] = 1;
-        data[0x04] = (byte) 0x80;
-        data[0x05] = 0; // FM1
-        setBe16(data, 0x06, 0x80);
-        data[0x80] = (byte) 0xF2;
-        System.arraycopy(DISTINCT_VOICE, 0, data, 0x100,
-                DISTINCT_VOICE.length);
-        return new Sonic1SfxData(data, 0);
     }
 
     private static Sonic3kSfxData s3kSfx(boolean globalVoice) {
@@ -286,11 +212,6 @@ class TestSmpsFmVoiceWriteProfiles {
     private static void setLe16(byte[] data, int offset, int value) {
         data[offset] = (byte) value;
         data[offset + 1] = (byte) (value >>> 8);
-    }
-
-    private static void setBe16(byte[] data, int offset, int value) {
-        data[offset] = (byte) (value >>> 8);
-        data[offset + 1] = (byte) value;
     }
 
     private static final class RecordingObserver implements ChipWriteObserver {

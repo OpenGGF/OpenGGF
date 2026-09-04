@@ -4448,12 +4448,14 @@ class TestSidekickCpuFollowParity {
             SidekickCpuController controller = new SidekickCpuController(tails, sonic);
             controller.forceStateForTest(SidekickCpuController.State.PANIC, 0);
 
-            setLevelFrameCounter(0x221F);
+            // LevelManager advances at the loop top as the ROM does, so its
+            // counter is the ROM-visible Level_frame_counter the panic branch reads.
+            setLevelFrameCounter(0x2220);
             controller.update(0);
 
             assertTrue(controller.getInputJumpPress(),
-                    "A stored pre-Process_Sprites $221F counter is ROM-visible as $2220, "
-                            + "so the panic spindash branch must publish its $20-phase jump pulse");
+                    "The ROM-visible $2220 counter puts the panic spindash branch on its "
+                            + "$20 phase, so it must publish its jump pulse");
         } finally {
             installStandaloneGameModule(previous);
         }

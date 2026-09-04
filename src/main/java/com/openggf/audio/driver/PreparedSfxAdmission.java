@@ -13,13 +13,12 @@ public final class PreparedSfxAdmission {
     private final SmpsDriver owner;
     private final SmpsSequencer sequencer;
     private final boolean continuousExtension;
-    private final boolean deferredRequest;
+    private final int claimedFmMask;
+    private final int claimedPsgMask;
     private final int affectedFmMask;
     private final int affectedPsgMask;
     private final int continuousSfxId;
     private final int trackCount;
-    private final int priorityBefore;
-    private final int priorityAfter;
     final SmpsSequencer replacedSequencer;
     final SmpsSequencer[] displacedOwners;
     final SmpsSequencer.Track[] displacedTracks;
@@ -29,26 +28,24 @@ public final class PreparedSfxAdmission {
             SmpsDriver owner,
             SmpsSequencer sequencer,
             boolean continuousExtension,
-            boolean deferredRequest,
+            int claimedFmMask,
+            int claimedPsgMask,
             int affectedFmMask,
             int affectedPsgMask,
             int continuousSfxId,
             int trackCount,
-            int priorityBefore,
-            int priorityAfter,
             SmpsSequencer replacedSequencer,
             SmpsSequencer[] displacedOwners,
             SmpsSequencer.Track[] displacedTracks) {
         this.owner = owner;
         this.sequencer = sequencer;
         this.continuousExtension = continuousExtension;
-        this.deferredRequest = deferredRequest;
+        this.claimedFmMask = claimedFmMask;
+        this.claimedPsgMask = claimedPsgMask;
         this.affectedFmMask = affectedFmMask;
         this.affectedPsgMask = affectedPsgMask;
         this.continuousSfxId = continuousSfxId;
         this.trackCount = trackCount;
-        this.priorityBefore = priorityBefore;
-        this.priorityAfter = priorityAfter;
         this.replacedSequencer = replacedSequencer;
         this.displacedOwners = displacedOwners;
         this.displacedTracks = displacedTracks;
@@ -66,8 +63,12 @@ public final class PreparedSfxAdmission {
         return continuousExtension;
     }
 
-    boolean deferredRequest() {
-        return deferredRequest;
+    public int claimedFmMask() {
+        return claimedFmMask;
+    }
+
+    public int claimedPsgMask() {
+        return claimedPsgMask;
     }
 
     public int affectedFmMask() {
@@ -84,14 +85,6 @@ public final class PreparedSfxAdmission {
 
     public int trackCount() {
         return trackCount;
-    }
-
-    int priorityBefore() {
-        return priorityBefore;
-    }
-
-    int priorityAfter() {
-        return priorityAfter;
     }
 
     void claimCommit() {

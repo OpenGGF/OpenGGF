@@ -599,15 +599,8 @@ class TestLiveRewindManagerAudioCleanup {
         assertEquals(AudioSourceDescriptor.baseMusic(musicId),
                 snapshot.presentation().activeMusic()
                         .sourceDescriptor());
-        assertTrue(snapshot.presentation().voices().stream()
-                        .filter(com.openggf.audio.presentation
-                                .PresentationVoiceSnapshot.Smps.class
-                                ::isInstance)
-                        .map(com.openggf.audio.presentation
-                                .PresentationVoiceSnapshot.Smps.class
-                                ::cast)
-                        .anyMatch(voice -> hasSfxSource(
-                                voice.driver(), sfxId)),
+        assertTrue(hasSfxSource(
+                        snapshot.presentation().smpsLogical(), sfxId),
                 "producer snapshot must retain source-bearing SFX "
                         + Integer.toHexString(sfxId));
     }
@@ -619,9 +612,6 @@ class TestLiveRewindManagerAudioCleanup {
                 "fresh producer snapshot must retain queued raw PCM");
         assertTrue(snapshot.presentation().voices().stream()
                         .anyMatch(voice -> switch (voice) {
-                            case com.openggf.audio.presentation
-                                    .PresentationVoiceSnapshot.Smps smps ->
-                                    smps.voiceId() == rawVoiceId;
                             case com.openggf.audio.presentation
                                     .PresentationVoiceSnapshot.Sample sample ->
                                     sample.voiceId() == rawVoiceId;

@@ -3,6 +3,7 @@ package com.openggf.audio;
 import com.openggf.audio.output.AudioPresentationSink;
 import com.openggf.audio.output.NoDeviceAudioSink;
 import com.openggf.audio.presentation.PresentationMode;
+import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.data.Rom;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -16,6 +17,8 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -68,8 +71,9 @@ class TestAudioManagerRuntimeInstallation {
         AudioPresentationSink sinkBefore = presentationSink(audio);
         assertEquals(48_000, sinkBefore.sampleRate());
         var logicalBefore = audio.captureLogicalSnapshot();
-        assertFalse(logicalBefore.presentation().voices().isEmpty(),
-                "precondition: a sounding voice exists before the swap");
+        assertFalse(logicalBefore.presentation().smpsLogical()
+                        .sequencers().isEmpty(),
+                "precondition: sounding SMPS state exists before the swap");
         assertNotNull(logicalBefore.presentation().activeMusic(),
                 "precondition: music is playing before the swap");
 
@@ -128,10 +132,11 @@ class TestAudioManagerRuntimeInstallation {
         var before = audio.captureLogicalSnapshot();
         var producerBefore =
                 AudioManagerTestDiagnostics.producerFingerprint(audio);
-        assertFalse(before.presentation().voices().isEmpty(),
-                "precondition: a sounding voice exists before the failure");
-        assertFalse(producerBefore.voiceIdentities().isEmpty(),
-                "precondition: the producer holds that live voice");
+        assertFalse(before.presentation().smpsLogical()
+                        .sequencers().isEmpty(),
+                "precondition: sounding SMPS state exists before the failure");
+        assertNotNull(producerBefore.smpsSessionIdentity(),
+                "the producer fingerprints its persistent SMPS session");
 
         audio.replaceFailedPresentationSink(
                 new IllegalStateException("speaker device removed"));
@@ -170,6 +175,48 @@ class TestAudioManagerRuntimeInstallation {
         assertNotNull(audio.captureLogicalSnapshot().presentation()
                 .activeMusic(),
                 "music keeps playing across a speaker device swap");
+    }
+
+    @Test
+    void baseGenerationChangesReplaceOneSessionWhileDonorChangesPreserveIt()
+            throws Exception {
+        AudioManager audio = AudioManager.getInstance();
+        audio.resetState();
+        audio.setBackend(new FixedRateNullBackend(48_000));
+        audio.setAudioProfile(musicProfile());
+        audio.setRom(new Rom());
+        audio.presentFrame(PresentationMode.SILENT);
+        SmpsDriverSession first = shadowSession(audio);
+
+        audio.setAudioProfile(musicProfile());
+
+        SmpsDriverSession afterProfile = shadowSession(audio);
+        assertNotSame(first, afterProfile,
+                "a base profile generation change replaces the session");
+        assertThrows(IllegalStateException.class, first::captureSnapshot,
+                "the previous base session must be closed");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertSame(afterProfile, shadowSession(audio),
+                "the profile change installs exactly one replacement");
+
+        audio.setRom(new Rom());
+
+        SmpsDriverSession afterRom = shadowSession(audio);
+        assertNotSame(afterProfile, afterRom,
+                "a base ROM generation change replaces the session");
+        assertThrows(IllegalStateException.class,
+                afterProfile::captureSnapshot,
+                "the prior-generation session must be closed");
+        audio.presentFrame(PresentationMode.SILENT);
+        assertSame(afterRom, shadowSession(audio),
+                "the ROM change installs exactly one replacement");
+
+        audio.registerDonorLoader("donor",
+                new AudioTestFixtures.StubSmpsLoader(),
+                AudioTestFixtures.EMPTY_DAC);
+
+        assertSame(afterRom, shadowSession(audio),
+                "donor catalog changes retain the base-owned session");
     }
 
     @Test
@@ -303,6 +350,14 @@ class TestAudioManagerRuntimeInstallation {
         Field field = AudioManager.class.getDeclaredField("presentationSink");
         field.setAccessible(true);
         return (AudioPresentationSink) field.get(audio);
+    }
+
+    private static SmpsDriverSession shadowSession(AudioManager audio)
+            throws Exception {
+        Field field = AudioManager.class.getDeclaredField(
+                "shadowSmpsSession");
+        field.setAccessible(true);
+        return (SmpsDriverSession) field.get(audio);
     }
 
     private static class FixedRateNullBackend extends NullAudioBackend {

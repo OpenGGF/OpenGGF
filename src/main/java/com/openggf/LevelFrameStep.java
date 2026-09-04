@@ -152,6 +152,7 @@ public final class LevelFrameStep {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
+        dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
 
         // Complete runtime-art work submitted by an earlier object pass before
@@ -165,7 +166,9 @@ public final class LevelFrameStep {
         }
     }
 
-    public static void serviceHardwareVBlankOnly(LevelFrameContext context) {
+    public static void serviceHardwareVBlankOnly(
+            LevelFrameContext context, PlcLifecycleFrame frame) {
+        dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
     }
 
@@ -202,6 +205,7 @@ public final class LevelFrameStep {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
+        dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         objectScan.run();
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
@@ -244,6 +248,7 @@ public final class LevelFrameStep {
             context.runtimeArtCoordinator()
                     .deferProductionSubmissionForHeldLoopTailClosure();
         }
+        dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
 
         // Retire runtime-art work submitted by an earlier object pass before
@@ -253,6 +258,12 @@ public final class LevelFrameStep {
                 instanceof com.openggf.game.internal.RuntimeObjectArtQueue runtimeQueue) {
             runtimeQueue.processRuntimeArtQueueBeforeObjects();
         }
+        // ROM: the level loop increments Level_frame_counter immediately after
+        // the V-blank wait and before the object pass, in all three games
+        // (docs/s1disasm/sonic.asm:3001-3006, docs/s2disasm/s2.asm:5090-5094,
+        // docs/skdisasm/sonic3k.asm:7919-7925). Every routine that runs this
+        // frame therefore reads the already-incremented value.
+        levelManager.advanceLevelFrameCounter();
 
         // 0a. Drain the per-frame palette-write accumulator at frame top, before
         //     any submitter (object palette writes in steps 2-3, zone palette
@@ -581,6 +592,20 @@ public final class LevelFrameStep {
                 context.runtimeArtCoordinator(),
                 context.hardwareTiming(),
                 context.hardwareTimingBoundaryObserver());
+    }
+
+    /** Dispatches game-owned VBlank work once for this physical lifecycle token. */
+    public static void dispatchGameVBlank(
+            LevelFrameContext context, PlcLifecycleFrame frame) {
+        Objects.requireNonNull(context, "context");
+        Objects.requireNonNull(frame, "frame");
+        frame.dispatchGameVBlank(() -> {
+            var module = context.gameModule();
+            var profile = module != null ? module.getLevelInitProfile() : null;
+            if (profile != null) {
+                profile.serviceLevelLoadVBlank();
+            }
+        });
     }
 
     private static void startPendingInLevelTitleCard(

@@ -420,6 +420,43 @@ class TestPlcFrameLifecycleCoordinator {
     }
 
     @Test
+    void replayedIterationCannotReplaceAnOuterFrameThatDispatchedGameVblank() {
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));
+
+        assertThrows(IllegalStateException.class, () ->
+                coordinator.runLogicalIteration(() -> { }, outer -> {
+                    outer.dispatchGameVBlank(() -> { });
+                    return coordinator.runReplayedLogicalIteration(
+                            () -> { }, replay -> null);
+                }));
+    }
+
+    @Test
+    void preFadeVblankCannotChargeWorkArmedByTheFadeCompletionCallback() {
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));
+        java.util.concurrent.atomic.AtomicBoolean pending =
+                new java.util.concurrent.atomic.AtomicBoolean();
+        java.util.concurrent.atomic.AtomicInteger services =
+                new java.util.concurrent.atomic.AtomicInteger();
+
+        coordinator.runLogicalIteration(
+                frame -> frame.dispatchGameVBlank(() -> {
+                    if (pending.get()) services.incrementAndGet();
+                }),
+                () -> pending.set(true),
+                frame -> {
+                    frame.dispatchGameVBlank(services::incrementAndGet);
+                    return null;
+                });
+
+        assertTrue(pending.get());
+        assertEquals(0, services.get(),
+                "work armed after the physical VBlank waits for the next token");
+    }
+
+    @Test
     void preparationValidationDoesNotMaskThePrimaryIterationFailure() {
         PlcFrameLifecycleCoordinator coordinator =
                 new PlcFrameLifecycleCoordinator(recording(new ArrayList<>()));

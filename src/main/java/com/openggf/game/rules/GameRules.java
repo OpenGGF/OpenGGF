@@ -161,7 +161,6 @@ public record GameRules(
                     true
             ),
             new PowerUpRules(
-                    1,
                     6,
                     8,
                     12,
@@ -317,7 +316,6 @@ public record GameRules(
                     false
             ),
             new PowerUpRules(
-                    1,
                     134,
                     136,
                     -1,
@@ -467,7 +465,6 @@ public record GameRules(
                     true
             ),
             new PowerUpRules(
-                    0,
                     100,
                     102,
                     -1,

@@ -14,10 +14,12 @@ import com.openggf.game.GameMode;
 import com.openggf.game.MasterTitleScreen;
 import com.openggf.game.RomDetectionService;
 import com.openggf.game.session.EngineContext;
+import com.openggf.game.session.EngineServices;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -47,6 +49,19 @@ import static org.lwjgl.glfw.GLFW.GLFW_RELEASE;
 class TestUserRecordingControls {
     @TempDir
     Path tempDir;
+
+    /**
+     * The GameLoop constructor installs its EngineContext process-wide via
+     * EngineServices.configure, so the mocked context built by
+     * playbackTakeoverEndsSessionBeforePlaybackInputBridgeCanForceInput (with a
+     * mock RomDetectionService) would otherwise stay current for every later
+     * class in the fork; TestHeaderNameRomDetectors then saw registry detection
+     * silently return empty while the singleton path detected the ROM.
+     */
+    @AfterEach
+    void restoreEngineServices() {
+        EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
+    }
 
     @Test
     void holdReachesLauncherExactlyAtSixtyFrames() {

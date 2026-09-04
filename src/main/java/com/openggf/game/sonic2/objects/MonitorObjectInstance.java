@@ -6,6 +6,7 @@ import com.openggf.level.objects.ExplosionObjectInstance;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.audio.Sonic2Sfx;
+import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
@@ -34,7 +35,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.Sprite;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.audio.Sonic2SmpsConstants;
 
 import java.util.List;
@@ -282,9 +282,23 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
 
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null) {
-            spawnFreeChild(() -> new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager));
+            // ROM Obj26_SpawnSmoke allocates the explosion and gives it
+            // routine 2, so its first execution runs Obj27_Init and that
+            // routine plays SndID_Explosion (docs/s2disasm/s2.asm:25702-25707,
+            // :46717-46734). The sound therefore belongs to the explosion's
+            // own pass, not to the touch that broke the monitor.
+            ExplosionObjectInstance explosion = spawnFreeChild(() ->
+                    new ExplosionObjectInstance(0x27, spawn.x(), spawn.y(), renderManager,
+                            Sonic2Sfx.EXPLOSION.id));
+            if (explosion.getSlotIndex() >= 0
+                    && getSlotIndex() >= 0
+                    && explosion.getSlotIndex() < getSlotIndex()) {
+                // AllocateObject is lowest-free, so the explosion often lands
+                // below the monitor's own slot, which the ROM's scan has
+                // already passed; Obj27 then first executes next frame.
+                explosion.delayFirstUpdateForPassedSlot();
+            }
         }
-        services().playSfx(Sonic2Sfx.EXPLOSION.id);
     }
 
     @Override
@@ -624,11 +638,21 @@ public class MonitorObjectInstance extends AbstractMonitorObjectInstance impleme
         switch (MonitorType.fromSubtype(subtype)) {
             case RINGS -> {
                 player.addRings(RING_MONITOR_REWARD);
-                services.playSfx(GameSound.RING);
+                // ROM super_ring reaches the driver through the music mailbox,
+                // not the SFX queue: it ends `move.w #SndID_Ring,d0 /
+                // jmp (PlayMusic).l` (s2.asm:25864, :25913-25914). The driver
+                // still applies the ring speaker alternation, because
+                // QueueToPlay hands an SFX-range byte to zPlaySound_CheckRing
+                // (s2.sounddriver.asm:1565-1571, :2116-2135).
+                services.playMusicMailboxNativeRequest(
+                        Sonic2AudioConstants.SFX_RING_RIGHT);
             }
             case SHIELD -> {
                 player.giveShield();
-                services.playSfx(Sonic2Sfx.SHIELD.id);
+                // ROM shield_monitor likewise uses the music mailbox:
+                // `move.w #SndID_Shield,d0 / jsr (PlayMusic).l`
+                // (s2.asm:25953-25956).
+                services.playMusicMailboxNativeRequest(Sonic2Sfx.SHIELD.id);
             }
             case SHOES -> {
                 player.giveSpeedShoes();

@@ -32,7 +32,6 @@ class TestSidekickGating {
     @BeforeEach
     void setUp() {
         SessionManager.clear();
-        SessionManager.clear();
         CrossGameFeatureProvider.getInstance().resetState();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
     }
@@ -40,7 +39,6 @@ class TestSidekickGating {
     @AfterEach
     void tearDown() {
         CrossGameFeatureProvider.getInstance().resetState();
-        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }

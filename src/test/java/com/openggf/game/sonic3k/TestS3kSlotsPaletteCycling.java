@@ -54,7 +54,6 @@ public class TestS3kSlotsPaletteCycling {
     @AfterEach
     public void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.setCurrent(previousModule);
     }
 
@@ -151,7 +150,6 @@ public class TestS3kSlotsPaletteCycling {
         slotRuntimeField.setAccessible(true);
         slotRuntimeField.set(coordinator, runtime);
 
-        SessionManager.clear();
         SessionManager.clear();
         SessionManager.openGameplaySession(new TestSonic3kModule(coordinator));
         TestEnvironment.activeGameplayMode();

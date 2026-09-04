@@ -55,7 +55,6 @@ class TestMonitorObjectInstance {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 

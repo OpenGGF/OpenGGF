@@ -4,6 +4,10 @@ package com.openggf.audio.smps;
 public interface SmpsLoader {
     AbstractSmpsData loadMusic(int musicId);
 
+    default LoadedSmpsMusic loadMusicWithReadiness(int musicId) {
+        return LoadedSmpsMusic.immediate(loadMusic(musicId));
+    }
+
     AbstractSmpsData loadSfx(int sfxId);
 
     AbstractSmpsData loadSfx(String sfxName);

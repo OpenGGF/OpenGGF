@@ -1,14 +1,18 @@
 package com.openggf.audio;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.presentation.AudioPresentationParityProbe;
 import com.openggf.audio.presentation.AudioPresentationProducer;
-import com.openggf.audio.presentation.AudioVoiceRegistry;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
+import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.session.SmpsDriverSession;
 import com.openggf.audio.smps.DacData;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Map;
+import java.util.function.Function;
 
 /** Test-source bridge for package-private audio diagnostics. */
 public final class AudioManagerTestDiagnostics {
@@ -80,7 +84,7 @@ public final class AudioManagerTestDiagnostics {
     }
 
     /**
-     * Primes an <em>already admitted</em> SMPS composite voice so a stub
+     * Primes the <em>already admitted</em> session-owned SMPS device so a stub
      * (data-free) asset still synthesizes audible FM/PSG/DAC output.
      *
      * <p>This deliberately does <em>not</em> drain the pending presentation
@@ -92,28 +96,30 @@ public final class AudioManagerTestDiagnostics {
      * drain, but it does not render, so a data-free stub voice is not swept as
      * complete before the caller can prime it.
      *
-     * @return the primed composite voice, or {@code null} when no SMPS music
-     *         voice has been admitted
+     * @return the primed logical snapshot, or {@code null} when no SMPS music
+     *         has been admitted
      */
-    public static SmpsCompositeVoice primeAdmittedSmpsMusic(AudioManager audio) {
-        AudioVoiceRegistry registry =
-                field(audio, "shadowRegistry", AudioVoiceRegistry.class);
-        for (int index = 0; index < registry.orderedVoiceCount(); index++) {
-            if (registry.orderedVoiceAt(index)
-                    instanceof SmpsCompositeVoice composite) {
-                primeSynth(composite.driver());
-                return composite;
-            }
+    public static SmpsDriverSnapshot primeAdmittedSmpsMusic(
+            AudioManager audio) {
+        SmpsDriverSession session = field(
+                audio, "shadowSmpsSession", SmpsDriverSession.class);
+        SmpsDriver driver = sessionDriver(session);
+        SmpsDriverSnapshot before = driver.captureSnapshot();
+        if (before.sequencers().stream().noneMatch(entry -> !entry.sfx())) {
+            return null;
         }
-        return null;
+        withSessionEpoch(session, driver, () -> primeSynth(driver));
+        return driver.captureSnapshot();
     }
 
     /** Mirrors the source-parity fixture's synthesis priming. */
     private static void primeSynth(SmpsDriver driver) {
-        driver.setDacData(new DacData(
+        var musicSource = driver.captureSnapshot().sequencers().stream()
+                .filter(entry -> !entry.sfx())
+                .findFirst().orElseThrow().source();
+        driver.selectDac(musicSource, new DacData(
                 Map.of(1, new byte[] {0, 24, 64, 127}),
                 Map.of(0x81, new DacData.DacEntry(1, 4)), 295));
-        driver.setDacInterpolate(true);
         driver.writeFm(driver, 0, 0x22, 0x0B);
         driver.writeFm(driver, 0, 0x2B, 0x80);
         driver.setInstrument(driver, 0, new byte[] {
@@ -130,6 +136,47 @@ public final class AudioManagerTestDiagnostics {
         driver.writePsg(driver, 0x84);
         driver.writePsg(driver, 0x12);
         driver.writePsg(driver, 0x92);
+    }
+
+    private static SmpsDriver sessionDriver(SmpsDriverSession session) {
+        try {
+            Method method = SmpsDriverSession.class.getDeclaredMethod(
+                    "logicalDriverForTesting");
+            method.setAccessible(true);
+            return (SmpsDriver) method.invoke(session);
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException(
+                    "cannot read the session-owned SMPS driver", failure);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void withSessionEpoch(
+            SmpsDriverSession session,
+            SmpsDriver driver,
+            Runnable action) {
+        try {
+            Method method = SmpsDriverSession.class.getDeclaredMethod(
+                    "withPort",
+                    SmpsDriverServiceObserver.DriverIdentity.class,
+                    Function.class);
+            method.setAccessible(true);
+            method.invoke(session, driver.diagnosticIdentity(),
+                    (Function<Object, Object>) ignored -> {
+                        action.run();
+                        return null;
+                    });
+        } catch (InvocationTargetException failure) {
+            Throwable cause = failure.getCause();
+            if (cause instanceof RuntimeException runtime) {
+                throw runtime;
+            }
+            throw new IllegalStateException(
+                    "session SMPS priming failed", cause);
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException(
+                    "cannot open a scoped session SMPS epoch", failure);
+        }
     }
 
     private static <T> T field(AudioManager audio, String name, Class<T> type) {

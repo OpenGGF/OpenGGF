@@ -16,6 +16,7 @@ import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Assumptions;
 
 import java.io.File;
 import java.io.IOException;
@@ -114,9 +115,12 @@ public final class SharedLevel {
             case SONIC_2 -> RomTestUtils.ensureSonic2RomAvailable();
             case SONIC_3K -> RomTestUtils.ensureSonic3kRomAvailable();
         };
-        if (romFile == null) {
-            throw new IOException("Required ROM not available for shared level fixture: " + game);
-        }
+        // A missing ROM is an environment condition, not a defect: skip the
+        // calling test (with a reason) the same way @RequiresRom does, so a
+        // ROM-less runner reports skips rather than errors. Release runs pass
+        // the ROM properties explicitly and classify any remaining skips.
+        Assumptions.assumeTrue(romFile != null,
+                game.getDisplayName() + " ROM not available — skipping shared level fixture");
 
         Rom rom = new Rom();
         String romPath = romFile.getAbsolutePath();
@@ -127,7 +131,6 @@ public final class SharedLevel {
         RomManager.getInstance().setRom(rom);
         GameModuleRegistry.detectAndSetModule(rom);
 
-        SessionManager.clear();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
     }

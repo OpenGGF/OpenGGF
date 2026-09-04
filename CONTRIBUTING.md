@@ -143,11 +143,13 @@ Use focused branches from `develop`:
 - `bugfix/ai-...` for fixes.
 
 Tracked git hooks and CI enforce commit-message trailers on non-`master` branch commits. Maven
-installs the hooks during `validate`; if you commit before building, run:
+never installs or touches the hooks; install them explicitly once per worktree:
 
 ```bash
-git config core.hooksPath .githooks
+tools/testing/install-hooks.sh      # PowerShell: tools/testing/install-hooks.ps1
 ```
+
+The script points `core.hooksPath` at `.githooks` for that worktree only.
 
 Do not bypass hooks with `--no-verify`.
 

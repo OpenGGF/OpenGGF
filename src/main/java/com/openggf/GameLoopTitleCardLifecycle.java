@@ -35,12 +35,21 @@ final class GameLoopTitleCardLifecycle {
             Consumer<PlcLifecyclePhase> preparePhase,
             LevelFrameStep.StepWrapper wrapper) {
         frame.claim(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        LevelFrameContext frameContext = LevelFrameContext.from(gameplayMode);
+        // The title-card loop owns a real VBlank even when it does not run the
+        // ordinary player/object body, and several of its branches never reach
+        // a LevelFrameStep edge. Dispatch the game-owned hook here so every
+        // branch services it exactly once; the token's guard makes the later
+        // LevelFrameStep dispatches on the physics branch no-ops. This adds no
+        // hardware service boundary -- VINT_SERVICE stays owned by
+        // LevelFrameStep alone.
+        LevelFrameStep.dispatchGameVBlank(frameContext, frame);
         boolean hardwareTimedProviderScan = titleCard != null
                 && titleCard.shouldAdvanceVblankClockDuringLockedPhase();
         boolean preparedByFrameStep = hardwareTimedProviderScan;
         if (hardwareTimedProviderScan) {
             LevelFrameStep.executeHardwareTimedObjectScan(
-                    LevelFrameContext.from(gameplayMode), frame,
+                    frameContext, frame,
                     PlcLifecyclePhase.LEVEL_TITLE_CARD, titleCard::update);
         } else if (titleCard != null) {
             titleCard.update();

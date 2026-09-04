@@ -131,15 +131,22 @@ CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$MusicRoute visible @com
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$PlayMusic visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$PlaySegaPcm visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$PlaySfx visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$ReferenceLimitation visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$ResetRingAlternation visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$RestoreCause visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$RestoreMusic visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$RetainGlobalStop visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$SetSpeedShoes visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$SfxRoute visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$SilencePsg visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$StopAllSfx visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$StopMusic visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$StopRawPcm visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommand$StopSmpsSfx visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioCommandTimeline visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioLogicalSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot visible @com.openggf.game.ModApi
@@ -155,33 +162,33 @@ CF-ANNOTATION TYPE com.openggf.audio.smps.DacData$DacEntry visible @com.openggf.
 CF-ANNOTATION TYPE com.openggf.audio.smps.DacData$Sample visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsLoader visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsProgramView visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencer$Track visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencer$TrackType visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$Builder visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$TempoMode visible @com.openggf.game.ModApi
-CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.audio.smps.SmpsSequencerConfig$VolMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.camera.Camera visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.configuration.SonicConfiguration visible @com.openggf.game.ModApi
@@ -286,6 +293,8 @@ CF-ANNOTATION TYPE com.openggf.game.GameDataSource visible @com.openggf.game.Mod
 CF-ANNOTATION TYPE com.openggf.game.GameId visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.GameMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.GameModule visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.GameOverExit visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.GameOverFlowProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.GameRng visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.GameRng$Flavour visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.GameStateManager visible @com.openggf.game.ModApi
@@ -296,6 +305,7 @@ CF-ANNOTATION TYPE com.openggf.game.GameplayPolicyProvider visible @com.openggf.
 CF-ANNOTATION TYPE com.openggf.game.GroundMode visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.InitStep visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.InstaShieldHandle visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.game.JoypadPressSnapshot visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LegalDisclaimerScreen visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelEventProvider visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.game.LevelInitProfile visible @com.openggf.game.ModApi
@@ -783,12 +793,14 @@ CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$DplcRun visible
 CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$Frame visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$Meta visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PlayableSheetReader$PlayableSheet visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.PlayerBoundShieldRewindRecreatable visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.PoweredAttackSurface visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindClassResolver visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreatable visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RewindRecreateContext visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RingObjectPlacementMapping visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.RomObjectSnapshot visible @com.openggf.game.ModApi
+CF-ANNOTATION TYPE com.openggf.level.objects.ShieldObjectInstance visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SolidContact visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SpringBounceHelper visible @com.openggf.game.ModApi
 CF-ANNOTATION TYPE com.openggf.level.objects.SubpixelMotion visible @com.openggf.game.ModApi
@@ -1110,16 +1122,24 @@ CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlayMusic public  <init>(int,c
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlayMusic public  <init>(int,com.openggf.audio.rewind.AudioCommand$MusicRoute,boolean,java.lang.String,com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy,com.openggf.audio.GameAudioProfile$MusicOverrideRetriggerPolicy)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic public  <init>(com.openggf.audio.StreamedMusicPort$TrackRef)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx public  <init>(com.openggf.audio.StreamedMusicPort$SfxRef)
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlaySegaPcm public  <init>(int,byte[],int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$PlaySfx public  <init>(int,java.lang.String,com.openggf.audio.rewind.AudioCommand$SfxRoute,float,java.lang.String)
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$ReferenceLimitation public  <init>(int,java.lang.String)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$ResetRingAlternation public  <init>(boolean)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$RestoreMusic public  <init>(com.openggf.audio.rewind.AudioCommand$RestoreCause)
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public  <init>(int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier public  <init>(int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$SetSpeedShoes public  <init>(boolean)
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$SilencePsg public  <init>(int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$StopAllSfx public  <init>()
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$StopMusic public  <init>()
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$StopMusic public  <init>(com.openggf.audio.GameAudioProfile$SystemCommandDuringOverridePolicy)
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$StopRawPcm public  <init>()
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop public  <init>(int)
+CONSTRUCTOR com.openggf.audio.rewind.AudioCommand$StopSmpsSfx public  <init>(int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioCommandTimeline public  <init>()
 CONSTRUCTOR com.openggf.audio.rewind.AudioLogicalSnapshot public  <init>(boolean,long,int,int,com.openggf.audio.presentation.AudioPresentationSnapshot,java.util.Set<java.lang.String>,java.util.Set<com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot>)
+CONSTRUCTOR com.openggf.audio.rewind.AudioLogicalSnapshot public  <init>(boolean,long,int,int,com.openggf.audio.presentation.AudioPresentationSnapshot,java.util.Set<java.lang.String>,java.util.Set<com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot>,com.openggf.audio.presentation.AudioPresentationForwardService$Snapshot)
 CONSTRUCTOR com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot public  <init>(com.openggf.audio.GameSound,java.lang.String,int)
 CONSTRUCTOR com.openggf.audio.rewind.AudioTimelineEntry public  <init>(long,int,com.openggf.audio.rewind.AudioCommand)
 CONSTRUCTOR com.openggf.audio.smps.AbstractSmpsData protected  <init>(byte[],int)
@@ -1191,6 +1211,7 @@ CONSTRUCTOR com.openggf.game.GameRng public  <init>(com.openggf.game.GameRng$Fla
 CONSTRUCTOR com.openggf.game.GameStateManager public  <init>()
 CONSTRUCTOR com.openggf.game.GameplayLaunchTeam public  <init>(com.openggf.game.CharacterKey,java.util.List<com.openggf.game.CharacterKey>)
 CONSTRUCTOR com.openggf.game.InitStep public  <init>(java.lang.String,java.lang.String,java.lang.Runnable)
+CONSTRUCTOR com.openggf.game.JoypadPressSnapshot public  <init>(int,boolean,int,boolean)
 CONSTRUCTOR com.openggf.game.LegalDisclaimerScreen public  <init>(com.openggf.graphics.FadeManager)
 CONSTRUCTOR com.openggf.game.LevelLoadContext public  <init>()
 CONSTRUCTOR com.openggf.game.MasterTitleEntry$Launch public  <init>(com.openggf.game.MasterTitleEntry,com.openggf.game.MasterTitleEntry$Action)
@@ -1327,7 +1348,9 @@ CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEnt
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId)
+CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId,boolean)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId,java.lang.String)
+CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  <init>(java.lang.String,com.openggf.level.objects.ObjectSpawn,int,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.PlayableEntity,com.openggf.game.rewind.identity.ObjectRefId,java.lang.String,boolean)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,java.lang.String,com.openggf.level.objects.PerObjectRewindSnapshot)
 CONSTRUCTOR com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$PerSlotEntry public  <init>(int,com.openggf.level.objects.ObjectSpawn,java.lang.String,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.game.rewind.identity.ObjectRefId)
@@ -1390,7 +1413,7 @@ CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,b
 CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[])
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,short,boolean,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
-CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,int,boolean,boolean,int,int)
+CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.save.SaveManager public  <init>(java.nio.file.Path)
@@ -1564,6 +1587,7 @@ CONSTRUCTOR com.openggf.level.objects.RewindRecreateContext public  <init>(com.o
 CONSTRUCTOR com.openggf.level.objects.RewindRecreateContext public  <init>(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.level.objects.ObjectServices,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry)
 CONSTRUCTOR com.openggf.level.objects.RewindRecreateContext public  <init>(com.openggf.level.objects.ObjectSpawn,com.openggf.level.objects.PerObjectRewindSnapshot,com.openggf.level.objects.ObjectServices,com.openggf.level.objects.ObjectManager,com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry)
 CONSTRUCTOR com.openggf.level.objects.RomObjectSnapshot public  <init>(java.util.Map<java.lang.Integer,java.lang.Integer>,java.util.Map<java.lang.Integer,java.lang.Integer>)
+CONSTRUCTOR com.openggf.level.objects.ShieldObjectInstance public  <init>(com.openggf.game.PlayableEntity)
 CONSTRUCTOR com.openggf.level.objects.SolidContact public  <init>(boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.level.objects.SolidContact public  <init>(boolean,boolean,boolean,boolean,boolean,int,boolean)
 CONSTRUCTOR com.openggf.level.objects.SubpixelMotion$State public  <init>(int,int,int,int,int,int)
@@ -1945,148 +1969,68 @@ FIELD com.openggf.audio.smps.AbstractSmpsData protected int[] psgModEnvs
 FIELD com.openggf.audio.smps.AbstractSmpsData protected int[] psgPointers
 FIELD com.openggf.audio.smps.AbstractSmpsData protected int[] psgVolumeOffsets
 FIELD com.openggf.audio.smps.AbstractSmpsData protected,final byte[] data
-FIELD com.openggf.audio.smps.DacData public,final int baseCycles
-FIELD com.openggf.audio.smps.DacData public,final java.util.Map<java.lang.Integer,byte[]> samples
-FIELD com.openggf.audio.smps.DacData public,final java.util.Map<java.lang.Integer,com.openggf.audio.smps.DacData$DacEntry> mapping
-FIELD com.openggf.audio.smps.DacData$DacEntry public,final int rate
-FIELD com.openggf.audio.smps.DacData$DacEntry public,final int sampleId
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean active
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean customModEnabled
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean dacMuted
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean envAtRest
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean envHold
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean fmVolEnvHold
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean forceRefresh
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean modEnabled
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean modEnvHold
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean noiseMode
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean overridden
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean rawFreqMode
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean resting
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public boolean tieNext
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public byte[] envData
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public byte[] fmVolEnvData
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public byte[] modEnvData
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public byte[] voiceData
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public com.openggf.audio.smps.SmpsSequencer$TrackType type
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int ams
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int baseBlock
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int baseFnum
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int channelId
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int decayOffset
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int decayTimer
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int detune
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int dividingTiming
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int duration
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int envPos
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int envValue
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int fill
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int fillCounter
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int fmVolEnvOpMask
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int fmVolEnvPos
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int fmVolEnvValue
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int fms
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int instrumentId
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int keyOffset
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int loopTarget
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modCurrentDelta
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modDelay
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modDelayInit
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modDelta
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modEnvCache
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modEnvId
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modEnvMult
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modEnvPos
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modPendingDelayInit
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modPendingDelta
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modPendingRate
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modPendingSteps
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modPendingStepsFull
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modRate
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modRateCounter
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modStepCounter
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modSteps
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int modStepsFull
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int note
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int pan
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int pos
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int psgNoiseParam
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int rawDuration
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int rawFrequency
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int returnSp
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int scaledDuration
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int voiceId
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int volumeOffset
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public int[] loopCounters
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public short modAccumulator
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public,final byte[] voiceScratch
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public,final int[] returnStack
-FIELD com.openggf.audio.smps.SmpsSequencer$Track public,final int[] ssgEg
-FIELD com.openggf.audio.smps.SmpsSequencer$TrackType public,static,final com.openggf.audio.smps.SmpsSequencer$TrackType DAC
-FIELD com.openggf.audio.smps.SmpsSequencer$TrackType public,static,final com.openggf.audio.smps.SmpsSequencer$TrackType FM
-FIELD com.openggf.audio.smps.SmpsSequencer$TrackType public,static,final com.openggf.audio.smps.SmpsSequencer$TrackType PSG
 FIELD com.openggf.audio.smps.SmpsSequencerConfig public,static,final int DEFAULT_TEMPO_MOD_BASE
 FIELD com.openggf.audio.smps.SmpsSequencerConfig public,static,final int[] DEFAULT_FM_CHANNEL_ORDER
 FIELD com.openggf.audio.smps.SmpsSequencerConfig public,static,final int[] DEFAULT_PSG_CHANNEL_ORDER
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq public,static,final com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq KEEP
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq public,static,final com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq RESET
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder public,static,final com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder MUSIC_THEN_SFX
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder public,static,final com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder SFX_THEN_MUSIC
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy ALL_NON_DAC
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy FM_ONLY
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy FADE_FM_AND_PSG
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy HALT_DAC_AND_PSG_FADE_FM
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode FORCE_SILENCE_THEN_RESTORE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode RESTORE_MUSIC_DIRECTLY
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence DECREMENT_THEN_TEST
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence TEST_THEN_DECREMENT
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore OVERRIDE_PSG
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore REST_TRACKS
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt DAC_AND_PSG
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt DAC_ONLY
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode LEGACY_FULL_RESTORE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode ROM_VOICE_RESTORE
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode FORCE_RESET
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode KEY_OFF_CLEAR_SSG_EG
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode REGISTER_SEQUENCE
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile S1_68K
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile S2_Z80
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile S3K_Z80
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode S1_SPECIAL_POINTER_BUG
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode TRACK_VOICE_BANK
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo public,static,final com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo MOD_68K
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo public,static,final com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo MOD_Z80
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy PRESERVE_OVERRIDE_DAC_MODE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy RESTORE_SAVED_CHIP
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy CLEAR_BEFORE_SAVE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy PRESERVE_SAVED_LATCH
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy DRIVER_FADE_IN
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy IMMEDIATE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy AFTER_FADE_IN
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy ON_RESTORE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy INHERIT_CURRENT
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy NORMAL_DURING_OVERRIDE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail LEGACY
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail S3K_SPLIT
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend EVERY_PASS
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend MODULATION_ONLY
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent HOLD
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent REST
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy EXTRA_MUSIC_EVERY_FIFTH
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy FULL_DRIVER_REPEAT_EVERY_SIXTH
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy LEGACY_TEMPO_SCALE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy NONE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy NONE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy S1_PAN_KEYOFF
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy S2_SILENCE_RELOAD
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy S3K_FM1_TO_5
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode EXTRA_FULL
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode EXTRA_MUSIC
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode NONE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode NONE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode SILENCE_TONE_AND_NOISE
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 HOLD
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 RESET
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode RESTORE_LIVE_STATE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode REST_UNTIL_NEXT_NOTE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy GLOBAL_LATCH
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy NONE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy NONE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy SONIC2_SPINDASH_REV
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming NEXT_DRIVER_UPDATE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming SAME_DRIVER_UPDATE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd NONE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd Z80_81_AND_83
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder FREQUENCY_THEN_VOLUME
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder VOLUME_THEN_FREQUENCY
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode LEGACY_FULL_RESTORE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode ROM_REST_RESTORE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode FORCE_SILENCE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode REGISTER_SEQUENCE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode S1_PSG3_SILENCE_PAIR
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape SOUNDING_CHANNEL_ONLY
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape TONE_THEN_NOISE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail EVERY_NOTE_GOING_PASS
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail NOTE_AND_ENVELOPE_ONLY
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode ADMISSION
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode FIRST_WRITE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode CHANNEL_RAM_ORDER
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode HEADER_ORDER
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode NONE
+FIELD com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode S1_STALE_VOICE_CONTROL_PAIR
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$TempoMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoMode OVERFLOW
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$TempoMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoMode OVERFLOW2
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$TempoMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoMode TIMEOUT
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy PRESERVE
-FIELD com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy RESET_TO_EFFECTIVE_TEMPO
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$VolMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$VolMode ALGO
 FIELD com.openggf.audio.smps.SmpsSequencerConfig$VolMode public,static,final com.openggf.audio.smps.SmpsSequencerConfig$VolMode BIT7
 FIELD com.openggf.camera.Camera public,static,final int VERTICAL_WRAP_RANGE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration AUDIO_ENABLED
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration AUDIO_INTERNAL_RATE_OUTPUT
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration AUDIO_REFERENCE_DEFAULTS_VERSION
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration CAPTURE_AUDIO_CODEC
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration CAPTURE_CODEC
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration CAPTURE_CONTAINER
@@ -2110,7 +2054,6 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration CROSS_GAME_SOURCE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DAC_INTERPOLATE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DATA_SELECT_EXTRA_PLAYER_COMBOS
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DEBUG_COLLISION_VIEW_ENABLED
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DEBUG_LAST_CHECKPOINT_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DEBUG_MODE_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration DEBUG_VIEW_ENABLED
@@ -2199,7 +2142,6 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration PLAYBACK_STEP_BACK_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration PLAYBACK_STEP_FORWARD_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration PLAYBACK_TOGGLE_KEY
-FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration PSG_NOISE_SHIFT_EVERY_TOGGLE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration RECORDING_RECORD_KEY
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REGION
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_LIMIT_TYPE
@@ -2447,6 +2389,8 @@ FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode TI
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode TITLE_SCREEN
 FIELD com.openggf.game.GameMode public,static,final com.openggf.game.GameMode TRY_AGAIN_END
 FIELD com.openggf.game.GameModule public,static,final com.openggf.game.modzone.ModZoneAdapter EMPTY_MOD_ZONE_ADAPTER
+FIELD com.openggf.game.GameOverExit public,static,final com.openggf.game.GameOverExit CONTINUE_SCREEN
+FIELD com.openggf.game.GameOverExit public,static,final com.openggf.game.GameOverExit TITLE_SCREEN
 FIELD com.openggf.game.GameRng$Flavour public,static,final com.openggf.game.GameRng$Flavour S1_S2
 FIELD com.openggf.game.GameRng$Flavour public,static,final com.openggf.game.GameRng$Flavour S3K
 FIELD com.openggf.game.GameplayInputFilter public,static,final com.openggf.game.GameplayInputFilter IDENTITY
@@ -2455,6 +2399,7 @@ FIELD com.openggf.game.GroundMode public,static,final com.openggf.game.GroundMod
 FIELD com.openggf.game.GroundMode public,static,final com.openggf.game.GroundMode GROUND
 FIELD com.openggf.game.GroundMode public,static,final com.openggf.game.GroundMode LEFTWALL
 FIELD com.openggf.game.GroundMode public,static,final com.openggf.game.GroundMode RIGHTWALL
+FIELD com.openggf.game.JoypadPressSnapshot public,static,final com.openggf.game.JoypadPressSnapshot NONE
 FIELD com.openggf.game.LevelLoadMode public,static,final com.openggf.game.LevelLoadMode FULL
 FIELD com.openggf.game.LevelLoadMode public,static,final com.openggf.game.LevelLoadMode PREVIEW_CAPTURE
 FIELD com.openggf.game.LevelSelectProvider$State public,static,final com.openggf.game.LevelSelectProvider$State ACTIVE
@@ -3189,13 +3134,20 @@ INTERFACE com.openggf.audio.rewind.AudioCommand$FadeOutMusic com.openggf.audio.r
 INTERFACE com.openggf.audio.rewind.AudioCommand$PlayMusic com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$PlaySegaPcm com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$PlaySfx com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$ReferenceLimitation com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$ResetRingAlternation com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$RestoreMusic com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$RetainGlobalStop com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$SetSpeedShoes com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$SilencePsg com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$StopAllSfx com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioCommand$StopMusic com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$StopRawPcm com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop com.openggf.audio.rewind.AudioCommand
+INTERFACE com.openggf.audio.rewind.AudioCommand$StopSmpsSfx com.openggf.audio.rewind.AudioCommand
 INTERFACE com.openggf.audio.rewind.AudioReplayScope java.lang.AutoCloseable
 INTERFACE com.openggf.audio.smps.AbstractSmpsData com.openggf.audio.smps.SmpsProgramView
 INTERFACE com.openggf.camera.Camera com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.CameraSnapshot>
@@ -3266,6 +3218,9 @@ INTERFACE com.openggf.level.objects.PerObjectRewindSnapshot$BuzzerRewindExtra co
 INTERFACE com.openggf.level.objects.PerObjectRewindSnapshot$CoconutsRewindExtra com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra
 INTERFACE com.openggf.level.objects.PerObjectRewindSnapshot$MasherRewindExtra com.openggf.level.objects.PerObjectRewindSnapshot$BadnikSubclassRewindExtra
 INTERFACE com.openggf.level.objects.PerObjectRewindSnapshot$MonitorRewindExtra com.openggf.level.objects.PerObjectRewindSnapshot$ObjectSubclassRewindExtra
+INTERFACE com.openggf.level.objects.PlayerBoundShieldRewindRecreatable com.openggf.level.objects.RewindRecreatable
+INTERFACE com.openggf.level.objects.ShieldObjectInstance com.openggf.game.PowerUpObject
+INTERFACE com.openggf.level.objects.ShieldObjectInstance com.openggf.level.objects.PlayerBoundShieldRewindRecreatable
 INTERFACE com.openggf.level.objects.boss.BossChildComponent com.openggf.level.objects.ObjectInstance
 INTERFACE com.openggf.level.render.SpriteMappingFrame com.openggf.level.render.SpriteFrame<com.openggf.level.render.SpriteMappingPiece>
 INTERFACE com.openggf.level.render.SpriteMappingPiece com.openggf.level.render.SpriteFramePiece
@@ -3385,11 +3340,13 @@ METHOD com.openggf.Engine public  com.openggf.game.MasterTitleScreen getMasterTi
 METHOD com.openggf.Engine public  float[] getProjectionMatrixBuffer()
 METHOD com.openggf.Engine public  int getCurrentDisplayHeight()
 METHOD com.openggf.Engine public  void beginFBOProjection(int,int)
+METHOD com.openggf.Engine public  void closeConfiguredHeadlessSession()
 METHOD com.openggf.Engine public  void draw()
 METHOD com.openggf.Engine public  void endFBOProjection()
 METHOD com.openggf.Engine public  void enterEditorFromCurrentPlayer(com.openggf.game.session.EditorPlaytestStash,int,int)
 METHOD com.openggf.Engine public  void exitLegalDisclaimer()
 METHOD com.openggf.Engine public  void exitMasterTitleScreen(java.lang.String)
+METHOD com.openggf.Engine public  void initializeConfiguredHeadlessSession(com.openggf.control.InputHandler,com.openggf.audio.AudioBackend)
 METHOD com.openggf.Engine public  void initializeGame()
 METHOD com.openggf.Engine public  void resumePlaytestFromEditor()
 METHOD com.openggf.Engine public  void run()
@@ -3407,6 +3364,7 @@ METHOD com.openggf.Engine public,static  void clearGlobalInstance()
 METHOD com.openggf.Engine public,static  void main(java.lang.String[])
 METHOD com.openggf.Engine public,static  void nextDebugOption()
 METHOD com.openggf.Engine public,static  void nextDebugState()
+METHOD com.openggf.Engine public,static  void presentOuterAudioFrame(com.openggf.GameLoop,boolean,boolean)
 METHOD com.openggf.Engine public,static  void setDebugOption(com.openggf.debug.DebugOption)
 METHOD com.openggf.Engine public,static,synchronized  com.openggf.Engine getInstance()
 METHOD com.openggf.EscapeToMasterTitleController public  boolean visible()
@@ -3415,6 +3373,7 @@ METHOD com.openggf.EscapeToMasterTitleController public  java.lang.String messag
 METHOD com.openggf.EscapeToMasterTitleController public  void reset()
 METHOD com.openggf.EscapeToMasterTitleController public  void update(com.openggf.game.GameMode,com.openggf.control.InputHandler)
 METHOD com.openggf.GameLoop public  boolean commitDeferredTraceRunModeBoundaryIfReady()
+METHOD com.openggf.GameLoop public  boolean externalFrameOrInputOwnerActive()
 METHOD com.openggf.GameLoop public  boolean isUserPaused()
 METHOD com.openggf.GameLoop public  boolean ownsGameplayFadeLifecycle()
 METHOD com.openggf.GameLoop public  boolean shouldSuppressUserRecordingSceneRendering()
@@ -3516,7 +3475,10 @@ METHOD com.openggf.audio.AudioManager public  void pause()
 METHOD com.openggf.audio.AudioManager public  void playDonorMusic(java.lang.String,int)
 METHOD com.openggf.audio.AudioManager public  void playDonorSfx(java.lang.String,int)
 METHOD com.openggf.audio.AudioManager public  void playMusic(int)
+METHOD com.openggf.audio.AudioManager public  void playMusicMailboxNativeRequest(int)
+METHOD com.openggf.audio.AudioManager public  void playSecondarySfx(com.openggf.audio.GameSound)
 METHOD com.openggf.audio.AudioManager public  void playSegaPcm()
+METHOD com.openggf.audio.AudioManager public  void playSegaPcmCommand(int)
 METHOD com.openggf.audio.AudioManager public  void playSfx(com.openggf.audio.GameSound)
 METHOD com.openggf.audio.AudioManager public  void playSfx(com.openggf.audio.GameSound,float)
 METHOD com.openggf.audio.AudioManager public  void playSfx(java.lang.String)
@@ -3525,6 +3487,7 @@ METHOD com.openggf.audio.AudioManager public  void playStandaloneMusic(com.openg
 METHOD com.openggf.audio.AudioManager public  void playStandaloneSfx(com.openggf.audio.smps.AbstractSmpsData,com.openggf.audio.smps.DacData,float)
 METHOD com.openggf.audio.AudioManager public  void presentFrame(com.openggf.audio.presentation.PresentationMode)
 METHOD com.openggf.audio.AudioManager public  void pruneAudioCommandsBefore(int)
+METHOD com.openggf.audio.AudioManager public  void recordReferenceLimitation(int,java.lang.String)
 METHOD com.openggf.audio.AudioManager public  void registerDonorLoader(java.lang.String,com.openggf.audio.smps.SmpsLoader,com.openggf.audio.smps.DacData)
 METHOD com.openggf.audio.AudioManager public  void registerDonorLoader(java.lang.String,com.openggf.audio.smps.SmpsLoader,com.openggf.audio.smps.DacData,com.openggf.audio.smps.SmpsSequencerConfig)
 METHOD com.openggf.audio.AudioManager public  void registerDonorMusicMap(java.lang.String,java.util.Map<com.openggf.audio.GameMusic,java.lang.Integer>)
@@ -3536,23 +3499,21 @@ METHOD com.openggf.audio.AudioManager public  void resetRingSound()
 METHOD com.openggf.audio.AudioManager public  void restoreLogicalSnapshot(com.openggf.audio.rewind.AudioLogicalSnapshot)
 METHOD com.openggf.audio.AudioManager public  void restoreMusic()
 METHOD com.openggf.audio.AudioManager public  void resume()
-METHOD com.openggf.audio.AudioManager public  void setAdmissionObserver(com.openggf.audio.AudioAdmissionObserver)
-METHOD com.openggf.audio.AudioManager public  void setBackend(com.openggf.audio.AudioBackend)
+METHOD com.openggf.audio.AudioManager public  void retainGlobalStop(int)
 METHOD com.openggf.audio.AudioManager public  void setBackendForLaunch(com.openggf.audio.AudioBackend)
-METHOD com.openggf.audio.AudioManager public  void setChipWriteObserver(com.openggf.audio.synth.ChipWriteObserver)
-METHOD com.openggf.audio.AudioManager public  void setDriverServiceObserver(com.openggf.audio.driver.SmpsDriverServiceObserver)
 METHOD com.openggf.audio.AudioManager public  void setForwardPlaybackRate(double)
-METHOD com.openggf.audio.AudioManager public  void setRequestObserver(com.openggf.audio.AudioRequestObserver)
 METHOD com.openggf.audio.AudioManager public  void setReversePlaybackRate(double)
 METHOD com.openggf.audio.AudioManager public  void setRewindHistoryArmed(boolean)
-METHOD com.openggf.audio.AudioManager public  void setSfxContentionObserver(com.openggf.audio.driver.SfxContentionObserver)
 METHOD com.openggf.audio.AudioManager public  void setSoundMap(java.util.Map<com.openggf.audio.GameSound,java.lang.Integer>)
 METHOD com.openggf.audio.AudioManager public  void setSpeedMultiplier(int)
 METHOD com.openggf.audio.AudioManager public  void setSpeedShoes(boolean)
 METHOD com.openggf.audio.AudioManager public  void setStreamedMusicSessionInvalidator(java.lang.Runnable)
+METHOD com.openggf.audio.AudioManager public  void silencePsg(int)
 METHOD com.openggf.audio.AudioManager public  void stopAllSfx()
 METHOD com.openggf.audio.AudioManager public  void stopMusic()
 METHOD com.openggf.audio.AudioManager public  void stopSegaPcm()
+METHOD com.openggf.audio.AudioManager public  void stopSegaPcmAndRetainGlobalStop(int)
+METHOD com.openggf.audio.AudioManager public  void stopSmpsSfx(int)
 METHOD com.openggf.audio.AudioManager public  void stopStandalonePlayback()
 METHOD com.openggf.audio.AudioManager public  void toggleMute(com.openggf.audio.ChannelType,int)
 METHOD com.openggf.audio.AudioManager public  void toggleSolo(com.openggf.audio.ChannelType,int)
@@ -3561,6 +3522,8 @@ METHOD com.openggf.audio.AudioManager public  void updateLegacyDevice()
 METHOD com.openggf.audio.AudioManager public,static  com.openggf.audio.AudioManager createStandalonePresentation(java.lang.String,com.openggf.audio.GameAudioProfile,com.openggf.configuration.SonicConfigurationService,com.openggf.debug.PerformanceProfiler,com.openggf.audio.output.AudioPresentationSink,com.openggf.audio.smps.SmpsCoordFlagHandlerOwner)
 METHOD com.openggf.audio.AudioManager public,static,synchronized  com.openggf.audio.AudioManager getInstance()
 METHOD com.openggf.audio.AudioManager public,static,synchronized  com.openggf.audio.AudioManager presentationOwner()
+METHOD com.openggf.audio.AudioManager public,synchronized  boolean hasInstalledBackend(com.openggf.audio.AudioBackend)
+METHOD com.openggf.audio.AudioManager public,synchronized  com.openggf.audio.AudioManager$DiagnosticObserverHandle acquireDiagnosticObservers(com.openggf.audio.AudioManager$DiagnosticObserverSet)
 METHOD com.openggf.audio.AudioManager public,synchronized  com.openggf.audio.LiveCaptureAudioHandle beginLiveCaptureAudio(int)
 METHOD com.openggf.audio.AudioManager public,synchronized  int drainCaptureFrame(short[])
 METHOD com.openggf.audio.AudioManager public,synchronized  int presentationFrameRate()
@@ -3571,8 +3534,14 @@ METHOD com.openggf.audio.AudioManager public,synchronized  void installStreamedM
 METHOD com.openggf.audio.AudioManager public,synchronized  void registerDonorLoader(java.lang.String,com.openggf.audio.smps.SmpsLoader,com.openggf.audio.smps.DacData,com.openggf.audio.smps.SmpsSequencerConfig,com.openggf.audio.GameAudioProfile)
 METHOD com.openggf.audio.AudioManager public,synchronized  void resetState()
 METHOD com.openggf.audio.AudioManager public,synchronized  void resetStreamedMusicPort()
+METHOD com.openggf.audio.AudioManager public,synchronized  void setAdmissionObserver(com.openggf.audio.AudioAdmissionObserver)
 METHOD com.openggf.audio.AudioManager public,synchronized  void setAudioProfile(com.openggf.audio.GameAudioProfile)
+METHOD com.openggf.audio.AudioManager public,synchronized  void setBackend(com.openggf.audio.AudioBackend)
+METHOD com.openggf.audio.AudioManager public,synchronized  void setChipWriteObserver(com.openggf.audio.synth.ChipWriteObserver)
+METHOD com.openggf.audio.AudioManager public,synchronized  void setDriverServiceObserver(com.openggf.audio.driver.SmpsDriverServiceObserver)
+METHOD com.openggf.audio.AudioManager public,synchronized  void setRequestObserver(com.openggf.audio.AudioRequestObserver)
 METHOD com.openggf.audio.AudioManager public,synchronized  void setRom(com.openggf.data.Rom)
+METHOD com.openggf.audio.AudioManager public,synchronized  void setSfxContentionObserver(com.openggf.audio.driver.SfxContentionObserver)
 METHOD com.openggf.audio.ChannelType public,static  com.openggf.audio.ChannelType valueOf(java.lang.String)
 METHOD com.openggf.audio.ChannelType public,static  com.openggf.audio.ChannelType[] values()
 METHOD com.openggf.audio.GameAudioProfile public  boolean blocksSfxDuringMusicRestoreFadeIn()
@@ -3581,6 +3550,7 @@ METHOD com.openggf.audio.GameAudioProfile public  boolean isContinuousSfx(int)
 METHOD com.openggf.audio.GameAudioProfile public  boolean isMusicOverride(int)
 METHOD com.openggf.audio.GameAudioProfile public  boolean isSfxBlockingMusic(int)
 METHOD com.openggf.audio.GameAudioProfile public  boolean isSpecialSfx(int)
+METHOD com.openggf.audio.GameAudioProfile public  byte[] loadSegaPcm(java.lang.Object) THROWS java.io.IOException
 METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy getMusicDuringOverridePolicy()
 METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.GameAudioProfile$MusicOverrideRetriggerPolicy getMusicOverrideRetriggerPolicy()
 METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.GameAudioProfile$OrdinaryMusicSfxPolicy getOrdinaryMusicSfxPolicy()
@@ -3589,13 +3559,18 @@ METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.GameAudioPro
 METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.GameAudioProfile$SystemCommandDuringOverridePolicy getSystemCommandDuringOverridePolicy()
 METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.SegaPcmSpec getSegaPcmSpec()
 METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.driver.SmpsRequestAdmissionPolicy getSfxAdmissionPolicy()
+METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.presentation.AudioRequestService createAudioRequestService()
+METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.session.SmpsPhysicalPolicy smpsPhysicalPolicy()
+METHOD com.openggf.audio.GameAudioProfile public  com.openggf.audio.session.SmpsStatefulCommandPolicy smpsStatefulCommandPolicy()
 METHOD com.openggf.audio.GameAudioProfile public  float adjustSfxPitch(com.openggf.audio.GameSound,float)
 METHOD com.openggf.audio.GameAudioProfile public  int getSfxPriority(int)
 METHOD com.openggf.audio.GameAudioProfile public  int getSpeedMultiplierValue()
 METHOD com.openggf.audio.GameAudioProfile public  int getSuperSonicMusicId()
+METHOD com.openggf.audio.GameAudioProfile public  int resolveAirResetMusic(int,boolean,boolean,boolean)
 METHOD com.openggf.audio.GameAudioProfile public  java.lang.String presentationGameId()
 METHOD com.openggf.audio.GameAudioProfile public  java.util.Map<com.openggf.audio.GameMusic,java.lang.Integer> getMusicMap()
 METHOD com.openggf.audio.GameAudioProfile public  void configurePresentationCoordFlagHandlers(com.openggf.audio.smps.SmpsCoordFlagHandlerOwner)
+METHOD com.openggf.audio.GameAudioProfile public  void fadeOutMusic(com.openggf.audio.AudioManager)
 METHOD com.openggf.audio.GameAudioProfile public,abstract  com.openggf.audio.smps.SmpsLoader createSmpsLoader(com.openggf.data.Rom)
 METHOD com.openggf.audio.GameAudioProfile public,abstract  com.openggf.audio.smps.SmpsSequencerConfig getSequencerConfig()
 METHOD com.openggf.audio.GameAudioProfile public,abstract  int getDrowningMusicId()
@@ -3604,6 +3579,7 @@ METHOD com.openggf.audio.GameAudioProfile public,abstract  int getInvincibilityM
 METHOD com.openggf.audio.GameAudioProfile public,abstract  int getSpeedShoesOffCommandId()
 METHOD com.openggf.audio.GameAudioProfile public,abstract  int getSpeedShoesOnCommandId()
 METHOD com.openggf.audio.GameAudioProfile public,abstract  java.util.Map<com.openggf.audio.GameSound,java.lang.Integer> getSoundMap()
+METHOD com.openggf.audio.GameAudioProfile public,static  void fadeOut(com.openggf.audio.GameAudioProfile,com.openggf.audio.AudioManager)
 METHOD com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy public,static  com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy valueOf(java.lang.String)
 METHOD com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy public,static  com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy[] values()
 METHOD com.openggf.audio.GameAudioProfile$MusicOverrideRetriggerPolicy public,static  com.openggf.audio.GameAudioProfile$MusicOverrideRetriggerPolicy valueOf(java.lang.String)
@@ -3741,6 +3717,12 @@ METHOD com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx public  com.openg
 METHOD com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx public,final  int hashCode()
 METHOD com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommand$PlaySegaPcm public  byte[] pcm()
+METHOD com.openggf.audio.rewind.AudioCommand$PlaySegaPcm public  int sourceCommandId()
+METHOD com.openggf.audio.rewind.AudioCommand$PlaySegaPcm public  int sourceRate()
+METHOD com.openggf.audio.rewind.AudioCommand$PlaySegaPcm public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$PlaySegaPcm public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$PlaySegaPcm public,final  java.lang.String toString()
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public  com.openggf.audio.rewind.AudioCommand$SfxRoute route()
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public  float pitch()
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public  int sfxId()
@@ -3749,6 +3731,11 @@ METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public  java.lang.String sf
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public,final  int hashCode()
 METHOD com.openggf.audio.rewind.AudioCommand$PlaySfx public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommand$ReferenceLimitation public  int sourceCommandId()
+METHOD com.openggf.audio.rewind.AudioCommand$ReferenceLimitation public  java.lang.String reason()
+METHOD com.openggf.audio.rewind.AudioCommand$ReferenceLimitation public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$ReferenceLimitation public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$ReferenceLimitation public,final  java.lang.String toString()
 METHOD com.openggf.audio.rewind.AudioCommand$ResetRingAlternation public  boolean ringLeft()
 METHOD com.openggf.audio.rewind.AudioCommand$ResetRingAlternation public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$ResetRingAlternation public,final  int hashCode()
@@ -3759,6 +3746,10 @@ METHOD com.openggf.audio.rewind.AudioCommand$RestoreMusic public  com.openggf.au
 METHOD com.openggf.audio.rewind.AudioCommand$RestoreMusic public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$RestoreMusic public,final  int hashCode()
 METHOD com.openggf.audio.rewind.AudioCommand$RestoreMusic public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public  int sourceCommandId()
+METHOD com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$RetainGlobalStop public,final  java.lang.String toString()
 METHOD com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier public  int multiplier()
 METHOD com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier public,final  int hashCode()
@@ -3769,6 +3760,10 @@ METHOD com.openggf.audio.rewind.AudioCommand$SetSpeedShoes public,final  int has
 METHOD com.openggf.audio.rewind.AudioCommand$SetSpeedShoes public,final  java.lang.String toString()
 METHOD com.openggf.audio.rewind.AudioCommand$SfxRoute public,static  com.openggf.audio.rewind.AudioCommand$SfxRoute valueOf(java.lang.String)
 METHOD com.openggf.audio.rewind.AudioCommand$SfxRoute public,static  com.openggf.audio.rewind.AudioCommand$SfxRoute[] values()
+METHOD com.openggf.audio.rewind.AudioCommand$SilencePsg public  int sourceCommandId()
+METHOD com.openggf.audio.rewind.AudioCommand$SilencePsg public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$SilencePsg public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$SilencePsg public,final  java.lang.String toString()
 METHOD com.openggf.audio.rewind.AudioCommand$StopAllSfx public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$StopAllSfx public,final  int hashCode()
 METHOD com.openggf.audio.rewind.AudioCommand$StopAllSfx public,final  java.lang.String toString()
@@ -3776,6 +3771,18 @@ METHOD com.openggf.audio.rewind.AudioCommand$StopMusic public  com.openggf.audio
 METHOD com.openggf.audio.rewind.AudioCommand$StopMusic public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.audio.rewind.AudioCommand$StopMusic public,final  int hashCode()
 METHOD com.openggf.audio.rewind.AudioCommand$StopMusic public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommand$StopRawPcm public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$StopRawPcm public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$StopRawPcm public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop public  int sourceCommandId()
+METHOD com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommand$StopSmpsSfx public  int sourceCommandId()
+METHOD com.openggf.audio.rewind.AudioCommand$StopSmpsSfx public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.audio.rewind.AudioCommand$StopSmpsSfx public,final  int hashCode()
+METHOD com.openggf.audio.rewind.AudioCommand$StopSmpsSfx public,final  java.lang.String toString()
+METHOD com.openggf.audio.rewind.AudioCommandTimeline public  com.openggf.audio.rewind.AudioCommandTimeline$PreparedAppend prepareAppend(java.util.List<com.openggf.audio.rewind.AudioCommand>)
 METHOD com.openggf.audio.rewind.AudioCommandTimeline public  com.openggf.audio.rewind.AudioTimelineEntry entryAt(int)
 METHOD com.openggf.audio.rewind.AudioCommandTimeline public  com.openggf.audio.rewind.AudioTimelineEntry record(com.openggf.audio.rewind.AudioCommand)
 METHOD com.openggf.audio.rewind.AudioCommandTimeline public  int entryCount()
@@ -3789,6 +3796,7 @@ METHOD com.openggf.audio.rewind.AudioCommandTimeline public  void discardAfter(l
 METHOD com.openggf.audio.rewind.AudioCommandTimeline public  void pruneBefore(int)
 METHOD com.openggf.audio.rewind.AudioCommandTimeline public  void restoreCursor(long,int)
 METHOD com.openggf.audio.rewind.AudioLogicalSnapshot public  boolean ringLeft()
+METHOD com.openggf.audio.rewind.AudioLogicalSnapshot public  com.openggf.audio.presentation.AudioPresentationForwardService$Snapshot forwardServiceSnapshot()
 METHOD com.openggf.audio.rewind.AudioLogicalSnapshot public  com.openggf.audio.presentation.AudioPresentationSnapshot presentation()
 METHOD com.openggf.audio.rewind.AudioLogicalSnapshot public  int commandEntryCount()
 METHOD com.openggf.audio.rewind.AudioLogicalSnapshot public  int commandTimelineNextOrder()
@@ -3868,6 +3876,8 @@ METHOD com.openggf.audio.smps.CoordFlagContext public  boolean decrementContSfxL
 METHOD com.openggf.audio.smps.CoordFlagContext public  boolean isContinuousSfxFlagSet()
 METHOD com.openggf.audio.smps.CoordFlagContext public  void clearContinuousSfxFlag()
 METHOD com.openggf.audio.smps.CoordFlagContext public  void clearContinuousSfxId()
+METHOD com.openggf.audio.smps.CoordFlagContext public  void releaseChannelToMusic(com.openggf.audio.smps.SmpsSequencer$TrackType,int)
+METHOD com.openggf.audio.smps.CoordFlagContext public  void restorePreviousMusic()
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  com.openggf.audio.smps.AbstractSmpsData getSmpsData()
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  com.openggf.audio.smps.SmpsProgramView programView()
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  com.openggf.audio.smps.SmpsSequencerConfig getConfig()
@@ -3881,7 +3891,6 @@ METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  void playDac(int
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  void recalculateTempo()
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  void refreshInstrument(com.openggf.audio.smps.SmpsSequencer$Track)
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  void refreshVolume(com.openggf.audio.smps.SmpsSequencer$Track)
-METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  void restoreMusic()
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  void setCommData(int)
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  void setNormalTempo(int)
 METHOD com.openggf.audio.smps.CoordFlagContext public,abstract  void stopDac()
@@ -3904,6 +3913,7 @@ METHOD com.openggf.audio.smps.DacData$DacEntry public  int rate()
 METHOD com.openggf.audio.smps.DacData$DacEntry public  int sampleId()
 METHOD com.openggf.audio.smps.DacData$Sample public  byte byteAt(int)
 METHOD com.openggf.audio.smps.DacData$Sample public  int length()
+METHOD com.openggf.audio.smps.SmpsLoader public  com.openggf.audio.smps.LoadedSmpsMusic loadMusicWithReadiness(int)
 METHOD com.openggf.audio.smps.SmpsLoader public  int findMusicOffset(int)
 METHOD com.openggf.audio.smps.SmpsLoader public,abstract  com.openggf.audio.smps.AbstractSmpsData loadMusic(int)
 METHOD com.openggf.audio.smps.SmpsLoader public,abstract  com.openggf.audio.smps.AbstractSmpsData loadSfx(int)
@@ -3928,41 +3938,51 @@ METHOD com.openggf.audio.smps.SmpsProgramView public,abstract  int psgPointerAt(
 METHOD com.openggf.audio.smps.SmpsProgramView public,abstract  int psgPointerCount()
 METHOD com.openggf.audio.smps.SmpsProgramView public,abstract  int psgVolumeOffsetAt(int)
 METHOD com.openggf.audio.smps.SmpsProgramView public,abstract  int voiceLength(int)
-METHOD com.openggf.audio.smps.SmpsSequencer$TrackType public,static  com.openggf.audio.smps.SmpsSequencer$TrackType valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencer$TrackType public,static  com.openggf.audio.smps.SmpsSequencer$TrackType[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean blocksSfxDuringFadeOut()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isAdvancePsgEnvelopeOnRest()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isApplyModOnNote()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isDacNoteKeysOffFm6AndRestoresFm3()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isDirect68kDriver()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isFadeOutClearsSpeedShoes()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isFadeOutStopsSfxImmediately()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isDriverOwnedFadeDelay()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isEnableDacOnSequencerStart()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isFmNoteGoingReturnsAtRest()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isHalveModSteps()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isNoteResetAliasesModulationState()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isPsgFrequencyHighByteNibbleSwap()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isRelativePointers()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isSfxAdmissionKeyOffAndClearsSsgEg()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isSfxWalkPrecedesRequest()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isStepModulationAtRest()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isTempoOnFirstTick()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isTempoWaitPrecedesRequest()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isTrackEndFlagOwnsTheStop()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  boolean isWriteFmPanOnNote()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.CoordFlagHandler getCoordFlagHandler()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq getDelayFreq()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder getDriverServiceOrder()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy getFadeInChannelPolicy()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy getFadeOutChannelPolicy()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence getFadeDelayCadence()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore getFadeInRestore()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt getFadeOutHalt()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode getFmSfxReleaseMode()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode getFmSfxTakeoverMode()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile getFmVoiceWriteProfile()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode getFmVolumeVoiceBankMode()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo getModAlgo()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy getMusicOverrideDacRestorePolicy()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy getMusicOverridePriorityPolicy()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy getMusicOverrideRestorePolicy()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy getMusicOverrideSfxReleasePolicy()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy getMusicOverrideSpeedPolicy()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail getNoteFillTail()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend getNoteGoingFreqSend()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent getNoteOnPrevent()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy getPalServicePolicy()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy getPausePolicy()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode getPalUpdateMode()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode getPsg3SfxAdmissionWriteMode()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 getPsgEnvCmd80()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd getPsgEnvRestCmd()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder getPsgNoteGoingOrder()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode getPsgSfxReleaseMode()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy getSfxPriorityPolicy()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy getSfxRequestTransformPolicy()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming getSfxStartTiming()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode getPsgSfxTakeoverMode()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape getPsgSilenceShape()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail getPsgVolumeTail()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode getSfxChannelOwnershipMode()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode getSfxTrackWalkMode()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode getSpecialSfxPsg3SilenceMode()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$TempoMode getTempoMode()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy getTempoPhasePolicy()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.SmpsSequencerConfig$VolMode getVolMode()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig public  com.openggf.audio.smps.YmServiceTimingProfile getYmServiceTimingProfile()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  int getFadeInDelay()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  int getFadeInSteps()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  int getFadeOutDelay()
@@ -3974,95 +3994,111 @@ METHOD com.openggf.audio.smps.SmpsSequencerConfig public  java.util.Map<java.lan
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  java.util.Map<java.lang.Integer,java.lang.Integer> getSpeedUpTempos()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig public  java.util.Set<java.lang.Integer> getExtraTrkEndFlags()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig build()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder advancePsgEnvelopeOnRest(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder applyModOnNote(boolean)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder blocksSfxDuringFadeOut(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder coordFlagHandler(com.openggf.audio.smps.CoordFlagHandler)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder coordFlagParamOverrides(java.util.Map<java.lang.Integer,java.lang.Integer>)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder dacNoteKeysOffFm6AndRestoresFm3(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder delayFreq(com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder direct68kDriver(boolean)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder driverServiceOrder(com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder driverOwnedFadeDelay(boolean)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder enableDacOnSequencerStart(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder extraTrkEndFlags(java.util.Set<java.lang.Integer>)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeInChannelPolicy(com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeDelayCadence(com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeInDelay(int)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeInRestore(com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeInSteps(int)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeOutChannelPolicy(com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeOutClearsSpeedShoes(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeOutDelay(int)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeOutHalt(com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeOutSteps(int)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fadeOutStopsSfxImmediately(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fmChannelOrder(int[])
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fmNoteGoingReturnsAtRest(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fmSfxReleaseMode(com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fmSfxTakeoverMode(com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fmVoiceWriteProfile(com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder fmVolumeVoiceBankMode(com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder halveModSteps(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder modAlgo(com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder musicOverrideDacRestorePolicy(com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder musicOverridePriorityPolicy(com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder musicOverrideRestorePolicy(com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder musicOverrideSfxReleasePolicy(com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder musicOverrideSpeedPolicy(com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder noteFillTail(com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder noteGoingFreqSend(com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder noteOnPrevent(com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder palServicePolicy(com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder pausePolicy(com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder noteResetAliasesModulationState(boolean)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder palUpdateMode(com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psg3SfxAdmissionWriteMode(com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgChannelOrder(int[])
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgEnvCmd80(com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgEnvRestCmd(com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgFrequencyHighByteNibbleSwap(boolean)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgNoteGoingOrder(com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgSfxReleaseMode(com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgSfxTakeoverMode(com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgSilenceShape(com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder psgVolumeTail(com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder relativePointers(boolean)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder sfxPriorityPolicy(com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder sfxRequestTransformPolicy(com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder sfxStartTiming(com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder sfxAdmissionKeyOffAndClearsSsgEg(boolean)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder sfxChannelOwnershipMode(com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder sfxTrackWalkMode(com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder sfxWalkPrecedesRequest(boolean)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder specialSfxPsg3SilenceMode(com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder speedUpTempos(java.util.Map<java.lang.Integer,java.lang.Integer>)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder stepModulationAtRest(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder tempoModBase(int)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder tempoMode(com.openggf.audio.smps.SmpsSequencerConfig$TempoMode)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder tempoPhasePolicy(com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder tempoOnFirstTick(boolean)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder tempoWaitPrecedesRequest(boolean)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder trackEndFlagOwnsTheStop(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder volMode(com.openggf.audio.smps.SmpsSequencerConfig$VolMode)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder ymServiceTimingProfile(com.openggf.audio.smps.YmServiceTimingProfile)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Builder public  com.openggf.audio.smps.SmpsSequencerConfig$Builder writeFmPanOnNote(boolean)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq public,static  com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq public,static  com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder public,static  com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder public,static  com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt public,static  com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile public,static  com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile public,static  com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo public,static  com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo public,static  com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail public,static  com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail public,static  com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend public,static  com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend public,static  com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent public,static  com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent public,static  com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail public,static  com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode[] values()
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode valueOf(java.lang.String)
+METHOD com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$TempoMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$TempoMode valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$TempoMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$TempoMode[] values()
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy valueOf(java.lang.String)
-METHOD com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy public,static  com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy[] values()
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$VolMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$VolMode valueOf(java.lang.String)
 METHOD com.openggf.audio.smps.SmpsSequencerConfig$VolMode public,static  com.openggf.audio.smps.SmpsSequencerConfig$VolMode[] values()
 METHOD com.openggf.camera.Camera public  boolean applyScreenYWrapValue(com.openggf.sprites.playable.AbstractPlayableSprite)
@@ -4484,6 +4520,7 @@ METHOD com.openggf.debug.playback.Bk2Movie public  java.util.List<com.openggf.de
 METHOD com.openggf.debug.playback.Bk2Movie public  java.util.Map<java.lang.String,java.lang.String> getHeaderMetadata()
 METHOD com.openggf.debug.playback.PlaybackDebugManager public,static  com.openggf.debug.playback.PlaybackDebugManager getInstance()
 METHOD com.openggf.debug.playback.PlaybackDebugManager public,synchronized  boolean activateScheduledLevelLoadSession()
+METHOD com.openggf.debug.playback.PlaybackDebugManager public,synchronized  boolean hasActiveOrScheduledSession()
 METHOD com.openggf.debug.playback.PlaybackDebugManager public,synchronized  boolean hasLoadedMovie()
 METHOD com.openggf.debug.playback.PlaybackDebugManager public,synchronized  boolean hasScheduledLevelLoadSession()
 METHOD com.openggf.debug.playback.PlaybackDebugManager public,synchronized  boolean isCurrentForcedJumpPress()
@@ -4879,6 +4916,8 @@ METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.level.Palette
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.sprites.art.SpriteArtSet loadInstaShieldArt(com.openggf.data.RomByteReader) THROWS java.io.IOException
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.sprites.art.SpriteArtSet loadTailsTailArt(com.openggf.data.RomByteReader) THROWS java.io.IOException
 METHOD com.openggf.game.CrossGameDonorProvider public  com.openggf.sprites.playable.SuperStateController createSuperStateController(com.openggf.sprites.playable.AbstractPlayableSprite)
+METHOD com.openggf.game.CrossGameDonorProvider public  java.util.function.BiFunction<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.game.ShieldType,com.openggf.level.objects.ShieldObjectInstance> getShieldFactory()
+METHOD com.openggf.game.CrossGameDonorProvider public  java.util.function.Function<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.level.objects.AbstractObjectInstance> getInstaShieldFactory()
 METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.audio.GameAudioProfile getAudioProfile()
 METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.data.PlayerSpriteArtProvider createPlayerArtProvider(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.CrossGameDonorProvider public,abstract  com.openggf.game.DonorCapabilities getDonorCapabilities()
@@ -4897,6 +4936,8 @@ METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.sprites.art
 METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.sprites.playable.SuperStateController createSuperStateController(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.game.CrossGameFeatureProvider public  com.openggf.sprites.render.PlayerSpriteRenderer getInstaShieldRenderer()
 METHOD com.openggf.game.CrossGameFeatureProvider public  java.lang.String getDonorGameId()
+METHOD com.openggf.game.CrossGameFeatureProvider public  java.util.function.BiFunction<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.game.ShieldType,com.openggf.level.objects.ShieldObjectInstance> getDonorShieldFactory()
+METHOD com.openggf.game.CrossGameFeatureProvider public  java.util.function.Function<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.level.objects.AbstractObjectInstance> getDonorInstaShieldFactory()
 METHOD com.openggf.game.CrossGameFeatureProvider public  void close()
 METHOD com.openggf.game.CrossGameFeatureProvider public  void initialize(java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.game.CrossGameFeatureProvider public  void resetState()
@@ -5040,6 +5081,7 @@ METHOD com.openggf.game.GameModule public  com.openggf.game.DataSelectProvider g
 METHOD com.openggf.game.GameModule public  com.openggf.game.DebugModeProvider getDebugModeProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.DonorCapabilities getDonorCapabilities()
 METHOD com.openggf.game.GameModule public  com.openggf.game.EndingProvider getEndingProvider()
+METHOD com.openggf.game.GameModule public  com.openggf.game.GameOverFlowProvider getGameOverFlowProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.GameRng$Flavour rngFlavour()
 METHOD com.openggf.game.GameModule public  com.openggf.game.GameplayPolicyProvider getGameplayPolicyProvider()
 METHOD com.openggf.game.GameModule public  com.openggf.game.LevelInitProfile getLevelInitProfile()
@@ -5082,7 +5124,10 @@ METHOD com.openggf.game.GameModule public  int[] getBackgroundScrollOverride(int
 METHOD com.openggf.game.GameModule public  java.lang.String getGameCode()
 METHOD com.openggf.game.GameModule public  java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters()
 METHOD com.openggf.game.GameModule public  java.util.Optional<com.openggf.game.startup.DonatedDataSelectWarmupTask> getDonatedDataSelectWarmupTask()
+METHOD com.openggf.game.GameModule public  java.util.function.BiFunction<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.game.ShieldType,com.openggf.level.objects.ShieldObjectInstance> getShieldFactory()
+METHOD com.openggf.game.GameModule public  java.util.function.BiFunction<java.lang.Integer,java.lang.Integer,com.openggf.level.objects.AbstractObjectInstance> getWaterSplashFactory()
 METHOD com.openggf.game.GameModule public  java.util.function.Function<com.openggf.game.PlayableEntity,com.openggf.level.objects.AbstractObjectInstance> getInvincibilityStarsFactory()
+METHOD com.openggf.game.GameModule public  java.util.function.Function<com.openggf.sprites.playable.AbstractPlayableSprite,com.openggf.level.objects.AbstractObjectInstance> getInstaShieldFactory()
 METHOD com.openggf.game.GameModule public  void applyPlaneSwitching(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.game.GameModule public  void applySeamlessMutation(com.openggf.level.LevelManager,java.lang.String)
 METHOD com.openggf.game.GameModule public  void onLevelLoad()
@@ -5106,6 +5151,10 @@ METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.Pl
 METHOD com.openggf.game.GameModule public,abstract  com.openggf.level.objects.TouchResponseTable createTouchResponseTable(com.openggf.data.RomByteReader)
 METHOD com.openggf.game.GameModule public,abstract  int getPlaneSwitcherObjectId()
 METHOD com.openggf.game.GameModule public,abstract  java.lang.String getIdentifier()
+METHOD com.openggf.game.GameOverExit public,static  com.openggf.game.GameOverExit valueOf(java.lang.String)
+METHOD com.openggf.game.GameOverExit public,static  com.openggf.game.GameOverExit[] values()
+METHOD com.openggf.game.GameOverFlowProvider public,abstract  void beginGameOverCard(com.openggf.level.objects.ObjectServices,boolean)
+METHOD com.openggf.game.GameOverFlowProvider public,static  boolean begin(com.openggf.level.LevelManager,boolean)
 METHOD com.openggf.game.GameRng public  boolean nextBoolean()
 METHOD com.openggf.game.GameRng public  com.openggf.game.GameRng$Flavour flavour()
 METHOD com.openggf.game.GameRng public  com.openggf.game.rewind.snapshot.GameRngSnapshot capture()
@@ -5190,6 +5239,7 @@ METHOD com.openggf.game.GameStateManager public  void setScreenLocked(boolean)
 METHOD com.openggf.game.GameStateManager public  void setScreenShakeActive(boolean)
 METHOD com.openggf.game.GameStateManager public  void setTimeAttackActive(boolean)
 METHOD com.openggf.game.GameStateManager public  void setWfzFireToggle(boolean)
+METHOD com.openggf.game.GameStateManager public  void startNewGameFromTitle()
 METHOD com.openggf.game.GameStateManager public,synchronized  void configureSpecialStageProgress(int,int)
 METHOD com.openggf.game.GameStateManager public,synchronized  void markEmeraldCollected(int)
 METHOD com.openggf.game.GameStateManager public,synchronized  void markSuperEmeraldCollected(int)
@@ -5217,6 +5267,17 @@ METHOD com.openggf.game.InitStep public,final  java.lang.String toString()
 METHOD com.openggf.game.InstaShieldHandle public,abstract  void invalidateDplcCache()
 METHOD com.openggf.game.InstaShieldHandle public,abstract  void triggerAttack()
 METHOD com.openggf.game.InstaShieldHandle public,abstract  void update(int,com.openggf.game.PlayableEntity)
+METHOD com.openggf.game.JoypadPressSnapshot public  boolean eitherAnyActionPressed()
+METHOD com.openggf.game.JoypadPressSnapshot public  boolean eitherStartPressed()
+METHOD com.openggf.game.JoypadPressSnapshot public  boolean player1AnyActionPressed()
+METHOD com.openggf.game.JoypadPressSnapshot public  boolean player1StartPressed()
+METHOD com.openggf.game.JoypadPressSnapshot public  boolean player2StartPressed()
+METHOD com.openggf.game.JoypadPressSnapshot public  int eitherActionPressed()
+METHOD com.openggf.game.JoypadPressSnapshot public  int player1ActionPressed()
+METHOD com.openggf.game.JoypadPressSnapshot public  int player2ActionPressed()
+METHOD com.openggf.game.JoypadPressSnapshot public,final  boolean equals(java.lang.Object)
+METHOD com.openggf.game.JoypadPressSnapshot public,final  int hashCode()
+METHOD com.openggf.game.JoypadPressSnapshot public,final  java.lang.String toString()
 METHOD com.openggf.game.LegalDisclaimerScreen public  boolean isDismissed()
 METHOD com.openggf.game.LegalDisclaimerScreen public  void cleanup()
 METHOD com.openggf.game.LegalDisclaimerScreen public  void draw()
@@ -5244,6 +5305,7 @@ METHOD com.openggf.game.LevelEventProvider public  void updateFixedInLevelObject
 METHOD com.openggf.game.LevelEventProvider public  void updatePrePhysics()
 METHOD com.openggf.game.LevelEventProvider public,abstract  void initLevel(int,int)
 METHOD com.openggf.game.LevelEventProvider public,abstract  void update()
+METHOD com.openggf.game.LevelInitProfile public  boolean isLevelMusicPublicationPending()
 METHOD com.openggf.game.LevelInitProfile public  boolean preserveFreshGroundedStatusUntilFirstDispatch()
 METHOD com.openggf.game.LevelInitProfile public  com.openggf.game.InitialProcessSpritesLifecycle initialProcessSpritesLifecycle()
 METHOD com.openggf.game.LevelInitProfile public  com.openggf.game.SidekickSpawnOffset sidekickSpawnOffset()
@@ -5252,7 +5314,10 @@ METHOD com.openggf.game.LevelInitProfile public  int preLevelFadeOutFrames()
 METHOD com.openggf.game.LevelInitProfile public  int preLevelMainLoopDelayFrames()
 METHOD com.openggf.game.LevelInitProfile public  int skippedPresentationPlayableFrames()
 METHOD com.openggf.game.LevelInitProfile public  int skippedPresentationPlayableFramesBeforeFirstVBlank()
+METHOD com.openggf.game.LevelInitProfile public  void beginLevelEntry()
+METHOD com.openggf.game.LevelInitProfile public  void cancelPendingLevelLoadWork()
 METHOD com.openggf.game.LevelInitProfile public  void completeInitialPresentationPlcs()
+METHOD com.openggf.game.LevelInitProfile public  void serviceLevelLoadVBlank()
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.InitStep> levelLoadSteps(com.openggf.game.LevelLoadContext)
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.InitStep> levelTeardownSteps()
 METHOD com.openggf.game.LevelInitProfile public,abstract  java.util.List<com.openggf.game.InitStep> perTestResetSteps()
@@ -5624,6 +5689,7 @@ METHOD com.openggf.game.PowerUpSpawner public,abstract  com.openggf.game.PowerUp
 METHOD com.openggf.game.PowerUpSpawner public,abstract  void registerObject(com.openggf.game.PowerUpObject)
 METHOD com.openggf.game.PowerUpSpawner public,abstract  void spawnSplash(com.openggf.game.PlayableEntity)
 METHOD com.openggf.game.RespawnState public  int getStarPostActivationMark()
+METHOD com.openggf.game.RespawnState public  void clearSavedActTimer()
 METHOD com.openggf.game.RespawnState public  void restoreStarPostActivationMark(int)
 METHOD com.openggf.game.RespawnState public,abstract  boolean isActive()
 METHOD com.openggf.game.RespawnState public,abstract  int getLastCheckpointIndex()
@@ -6892,6 +6958,7 @@ METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry pu
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public,final  int hashCode()
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$ChildSpawnEntry public,final  java.lang.String toString()
+METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  boolean rewindableAuxiliary()
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  com.openggf.game.PlayableEntity playerOwner()
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  com.openggf.game.rewind.identity.ObjectRefId objectId()
 METHOD com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry public  com.openggf.level.objects.ObjectSpawn spawn()
@@ -7289,7 +7356,6 @@ METHOD com.openggf.game.rules.PowerUpRules public  int primaryFixedDustSlotIndex
 METHOD com.openggf.game.rules.PowerUpRules public  int secondaryFixedDustSlotIndex()
 METHOD com.openggf.game.rules.PowerUpRules public  int shieldObjectFixedSlotIndex()
 METHOD com.openggf.game.rules.PowerUpRules public  int speedShoesTimerDecimation()
-METHOD com.openggf.game.rules.PowerUpRules public  int speedShoesTimerPrePhysicsExtraTicks()
 METHOD com.openggf.game.rules.PowerUpRules public  int superStarsFixedSlotIndex()
 METHOD com.openggf.game.rules.PowerUpRules public  int waterSplashFixedSlotIndex()
 METHOD com.openggf.game.rules.PowerUpRules public,final  boolean equals(java.lang.Object)
@@ -8555,6 +8621,8 @@ METHOD com.openggf.level.LevelManager public  com.openggf.data.Game getGame()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.BonusStageType consumeBonusStageRequest()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.CheckpointState$RewindState captureCheckpointStateForRewind()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.GameModule getGameModule()
+METHOD com.openggf.level.LevelManager public  com.openggf.game.GameOverExit consumeGameOverExitRequest()
+METHOD com.openggf.level.LevelManager public  com.openggf.game.GameOverExit getGameOverExitRequested()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.LevelState getLevelGamestate()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.RespawnState getCheckpointState()
 METHOD com.openggf.level.LevelManager public  com.openggf.game.SpecialStageEntryRequest consumeSpecialStageEntryRequest()
@@ -8587,6 +8655,7 @@ METHOD com.openggf.level.LevelManager public  int consumeInLevelTitleCardExitPha
 METHOD com.openggf.level.LevelManager public  int consumeInLevelTitleCardResetAdditionalDispatches()
 METHOD com.openggf.level.LevelManager public  int consumeInLevelTitleCardResetPhaseOneDispatchOverlap()
 METHOD com.openggf.level.LevelManager public  int getApparentAct()
+METHOD com.openggf.level.LevelManager public  int getApparentLevelMusicId()
 METHOD com.openggf.level.LevelManager public  int getBackgroundTileDescriptorAtWorld(int,int)
 METHOD com.openggf.level.LevelManager public  int getBlockIdAt(int,int)
 METHOD com.openggf.level.LevelManager public  int getBonusStageReturnCheckpointIndex()
@@ -8612,10 +8681,12 @@ METHOD com.openggf.level.LevelManager public  int reserveSidekickPatternBank(int
 METHOD com.openggf.level.LevelManager public  int[] findPatternOffset(int,int,int,int,int)
 METHOD com.openggf.level.LevelManager public  java.util.Collection<com.openggf.level.objects.ObjectSpawn> getActiveObjectSpawns()
 METHOD com.openggf.level.LevelManager public  java.util.Optional<com.openggf.level.SanctuaryReturnContext> sanctuaryReturnContext()
+METHOD com.openggf.level.LevelManager public  java.util.OptionalInt prepareCurrentLevelMusic() THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  java.util.OptionalInt sanctuaryReentryStage()
 METHOD com.openggf.level.LevelManager public  long getCompletedProductionLoadGeneration()
 METHOD com.openggf.level.LevelManager public  void advanceDynamicWaterLevel()
 METHOD com.openggf.level.LevelManager public  void advanceGlobalOscillationAtLevelLoopTail()
+METHOD com.openggf.level.LevelManager public  void advanceLevelFrameCounter()
 METHOD com.openggf.level.LevelManager public  void advanceTitleCardVblankOnly()
 METHOD com.openggf.level.LevelManager public  void advanceToNextLevel() THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  void advanceToSpecialStageEntryRoutine()
@@ -8626,6 +8697,7 @@ METHOD com.openggf.level.LevelManager public  void applySeamlessTransition(com.o
 METHOD com.openggf.level.LevelManager public  void applySidekickLevelBounds(com.openggf.sprites.playable.AbstractPlayableSprite)
 METHOD com.openggf.level.LevelManager public  void applySynchronousScreenEventTransition(com.openggf.level.SeamlessLevelTransitionRequest)
 METHOD com.openggf.level.LevelManager public  void applyTouchResponses(com.openggf.game.PlayableEntity)
+METHOD com.openggf.level.LevelManager public  void beginLevelEntry()
 METHOD com.openggf.level.LevelManager public  void clearBigRingReturn()
 METHOD com.openggf.level.LevelManager public  void clearBonusStageReturn()
 METHOD com.openggf.level.LevelManager public  void clearCheckpointAndBonusReturnForActTitle()
@@ -8635,6 +8707,7 @@ METHOD com.openggf.level.LevelManager public  void completeFreshLevelTransitionB
 METHOD com.openggf.level.LevelManager public  void completeFreshLevelTransitionCameraBoundary()
 METHOD com.openggf.level.LevelManager public  void completeInitialTitleCardPresentation()
 METHOD com.openggf.level.LevelManager public  void completeSanctuaryOriginRestore()
+METHOD com.openggf.level.LevelManager public  void configureAudio() THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  void draw()
 METHOD com.openggf.level.LevelManager public  void drawAllPatterns()
 METHOD com.openggf.level.LevelManager public  void drawWithRenderOptions(com.openggf.sprites.managers.SpriteManager,com.openggf.level.LevelManager$LevelRenderOptions)
@@ -8679,11 +8752,14 @@ METHOD com.openggf.level.LevelManager public  void markSanctuaryReentry(int,bool
 METHOD com.openggf.level.LevelManager public  void markSynchronousSeamlessTransitionBoundary()
 METHOD com.openggf.level.LevelManager public  void nextAct() THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  void nextZone() THROWS java.io.IOException
+METHOD com.openggf.level.LevelManager public  void playCurrentLevelMusic()
+METHOD com.openggf.level.LevelManager public  void playLevelMusic(int) THROWS java.io.IOException
 METHOD com.openggf.level.LevelManager public  void postCameraObjectPlacementSync()
 METHOD com.openggf.level.LevelManager public  void prebuildTransitionTilemaps()
 METHOD com.openggf.level.LevelManager public  void prepareTouchResponseSnapshots()
 METHOD com.openggf.level.LevelManager public  void processDirtyRegions()
 METHOD com.openggf.level.LevelManager public  void publishFreshLevelTransitionInitialBoundary()
+METHOD com.openggf.level.LevelManager public  void publishPreparedLevelMusic(int)
 METHOD com.openggf.level.LevelManager public  void rebuildLevelDerivedState()
 METHOD com.openggf.level.LevelManager public  void recomputeParallaxAfterRewindRestore()
 METHOD com.openggf.level.LevelManager public  void recomputeParallaxOnlyForCurrentFrame()
@@ -8697,6 +8773,7 @@ METHOD com.openggf.level.LevelManager public  void renderEndingBackground(int,fl
 METHOD com.openggf.level.LevelManager public  void renderSpriteObjectPass(com.openggf.sprites.managers.SpriteManager,boolean)
 METHOD com.openggf.level.LevelManager public  void requestBonusStageEntry(com.openggf.game.BonusStageType)
 METHOD com.openggf.level.LevelManager public  void requestCreditsTransition()
+METHOD com.openggf.level.LevelManager public  void requestGameOverExit(com.openggf.game.GameOverExit)
 METHOD com.openggf.level.LevelManager public  void requestInLevelTitleCard(int,int)
 METHOD com.openggf.level.LevelManager public  void requestInLevelTitleCard(int,int,boolean)
 METHOD com.openggf.level.LevelManager public  void requestInLevelTitleCard(int,int,boolean,int)
@@ -8873,6 +8950,8 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  boolean isTitleCardR
 METHOD com.openggf.level.LevelTransitionCoordinator public  boolean requestSanctuaryExit()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.BonusStageType consumeBonusStageRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.BonusStageType peekBonusStageRequest()
+METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.GameOverExit consumeGameOverExitRequest()
+METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.GameOverExit getGameOverExitRequested()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.game.SpecialStageEntryRequest consumeSpecialStageEntryRequest()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.level.BigRingReturnState getBigRingReturn()
 METHOD com.openggf.level.LevelTransitionCoordinator public  com.openggf.level.SeamlessLevelTransitionRequest consumeSeamlessTransitionRequest()
@@ -8901,6 +8980,7 @@ METHOD com.openggf.level.LevelTransitionCoordinator public  void markSanctuaryRe
 METHOD com.openggf.level.LevelTransitionCoordinator public  void markSanctuaryReentry(int,boolean)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestBonusStageEntry(com.openggf.game.BonusStageType)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestCreditsTransition()
+METHOD com.openggf.level.LevelTransitionCoordinator public  void requestGameOverExit(com.openggf.game.GameOverExit)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestInLevelTitleCard(int,int)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestInLevelTitleCard(int,int,boolean)
 METHOD com.openggf.level.LevelTransitionCoordinator public  void requestInLevelTitleCard(int,int,boolean,int)
@@ -9220,6 +9300,7 @@ METHOD com.openggf.level.TransitionSstOccupant public,final  java.lang.String to
 METHOD com.openggf.level.WaterSystem public  boolean captureFullScreenFlag(int,int,int)
 METHOD com.openggf.level.WaterSystem public  boolean hasWater(int,int)
 METHOD com.openggf.level.WaterSystem public  boolean isDynamicWaterLocked(int,int)
+METHOD com.openggf.level.WaterSystem public  boolean isLiveWaterFlagSet(int,int)
 METHOD com.openggf.level.WaterSystem public  boolean isWaterRising(int,int)
 METHOD com.openggf.level.WaterSystem public  com.openggf.game.DynamicWaterHandler getDynamicWaterHandler(int,int)
 METHOD com.openggf.level.WaterSystem public  com.openggf.game.rewind.snapshot.WaterSystemSnapshot capture()
@@ -9581,6 +9662,7 @@ METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectInstance getActiveObjectForRewind(com.openggf.level.objects.ObjectSpawn)
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectInstance getRidingObject(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectRewindDynamicCodecs$ExactAdoptionSurface exactRewindAdoptionSurface()
+METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectServices getObjectServices()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.ObjectSolidContactController solidContacts()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.PersistentRespawnState capturePersistentRespawn()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.level.objects.PoweredAttackSurface poweredAttacks()
@@ -9631,6 +9713,7 @@ METHOD com.openggf.level.objects.ObjectManager public  void addDynamicObjectAfte
 METHOD com.openggf.level.objects.ObjectManager public  void addDynamicObjectAtSlot(com.openggf.level.objects.ObjectInstance,int)
 METHOD com.openggf.level.objects.ObjectManager public  void addDynamicObjectNextFrame(com.openggf.level.objects.ObjectInstance)
 METHOD com.openggf.level.objects.ObjectManager public  void addDynamicObjectToReservedSlot(com.openggf.level.objects.ObjectInstance,com.openggf.level.objects.ObjectSpawn,int)
+METHOD com.openggf.level.objects.ObjectManager public  void addRewindableAuxiliaryDynamicObject(com.openggf.level.objects.ObjectInstance)
 METHOD com.openggf.level.objects.ObjectManager public  void adjustPlacementTrackingForWrap(int)
 METHOD com.openggf.level.objects.ObjectManager public  void advanceVblaCounter()
 METHOD com.openggf.level.objects.ObjectManager public  void applyInlinePlaneSwitcher(com.openggf.level.objects.ObjectSpawn,com.openggf.game.PlayableEntity)
@@ -9831,9 +9914,11 @@ METHOD com.openggf.level.objects.ObjectServices public  com.openggf.level.resour
 METHOD com.openggf.level.objects.ObjectServices public  com.openggf.physics.BackgroundPlaneCollisionProvider backgroundPlaneCollisionProvider()
 METHOD com.openggf.level.objects.ObjectServices public  int apparentAct()
 METHOD com.openggf.level.objects.ObjectServices public  int currentZone()
+METHOD com.openggf.level.objects.ObjectServices public  int getApparentLevelMusicId()
 METHOD com.openggf.level.objects.ObjectServices public  int resolveVIntRunCount(int)
 METHOD com.openggf.level.objects.ObjectServices public  java.util.Optional<com.openggf.level.SanctuaryReturnContext> sanctuaryReturnContext()
 METHOD com.openggf.level.objects.ObjectServices public  java.util.OptionalInt sanctuaryReentryStage()
+METHOD com.openggf.level.objects.ObjectServices public  void playMusicMailboxNativeRequest(int)
 METHOD com.openggf.level.objects.ObjectServices public  void requestSanctuaryExit()
 METHOD com.openggf.level.objects.ObjectServices public  void requestSeamlessTransition(com.openggf.level.SeamlessLevelTransitionRequest)
 METHOD com.openggf.level.objects.ObjectServices public  void requestSpecialStageEntry(com.openggf.game.SpecialStageEntryRequest)
@@ -10363,6 +10448,7 @@ METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.util.Map<java.lang.String,com.openggf.level.objects.PlayableSheetReader$Animation> animations()
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public  java.util.Map<java.lang.String,java.util.List<java.lang.Integer>> appendages()
 METHOD com.openggf.level.objects.PlayableSheetReader$PlayableSheet public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.PlayerBoundShieldRewindRecreatable public  com.openggf.level.objects.AbstractObjectInstance recreateForRewind(com.openggf.level.objects.RewindRecreateContext)
 METHOD com.openggf.level.objects.PoweredAttackSurface public  java.util.List<com.openggf.level.objects.ObjectInstance> targetReadView()
 METHOD com.openggf.level.objects.PoweredAttackSurface public  void apply(com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.RewindClassResolver public,abstract  java.util.Optional<java.lang.Class<?>> resolve(java.lang.String,java.lang.String)
@@ -10409,6 +10495,19 @@ METHOD com.openggf.level.objects.RomObjectSnapshot public  int yVel()
 METHOD com.openggf.level.objects.RomObjectSnapshot public  java.util.Map<java.lang.Integer,java.lang.Integer> byteFields()
 METHOD com.openggf.level.objects.RomObjectSnapshot public  java.util.Map<java.lang.Integer,java.lang.Integer> wordFields()
 METHOD com.openggf.level.objects.RomObjectSnapshot public,static  com.openggf.level.objects.RomObjectSnapshot fromJsonNode(java.lang.Object)
+METHOD com.openggf.level.objects.ShieldObjectInstance protected  boolean hasRenderer()
+METHOD com.openggf.level.objects.ShieldObjectInstance protected  boolean isShieldDestroyed()
+METHOD com.openggf.level.objects.ShieldObjectInstance protected  boolean isShieldVisible()
+METHOD com.openggf.level.objects.ShieldObjectInstance protected  com.openggf.game.PlayableEntity getPlayer()
+METHOD com.openggf.level.objects.ShieldObjectInstance protected  int getCurrentFrame()
+METHOD com.openggf.level.objects.ShieldObjectInstance protected  int getSequenceIndex()
+METHOD com.openggf.level.objects.ShieldObjectInstance public  boolean isHighPriority()
+METHOD com.openggf.level.objects.ShieldObjectInstance public  boolean isShieldFor(com.openggf.game.PlayableEntity,com.openggf.game.ShieldType)
+METHOD com.openggf.level.objects.ShieldObjectInstance public  int getPriorityBucket()
+METHOD com.openggf.level.objects.ShieldObjectInstance public  void appendRenderCommands(java.util.List<com.openggf.graphics.GLCommand>)
+METHOD com.openggf.level.objects.ShieldObjectInstance public  void destroy()
+METHOD com.openggf.level.objects.ShieldObjectInstance public  void setVisible(boolean)
+METHOD com.openggf.level.objects.ShieldObjectInstance public  void update(int,com.openggf.game.PlayableEntity)
 METHOD com.openggf.level.objects.SolidContact public  boolean movingInto()
 METHOD com.openggf.level.objects.SolidContact public  boolean pushing()
 METHOD com.openggf.level.objects.SolidContact public  boolean standing()
@@ -11851,6 +11950,7 @@ METHOD com.openggf.sprites.managers.SpriteManager protected  boolean resolveCpuS
 METHOD com.openggf.sprites.managers.SpriteManager public  boolean addSprite(com.openggf.sprites.Sprite)
 METHOD com.openggf.sprites.managers.SpriteManager public  boolean removeSprite(java.lang.String)
 METHOD com.openggf.sprites.managers.SpriteManager public  boolean removeTemporarySidekick(com.openggf.sprites.playable.AbstractPlayableSprite)
+METHOD com.openggf.sprites.managers.SpriteManager public  com.openggf.game.JoypadPressSnapshot getJoypadPressSnapshot()
 METHOD com.openggf.sprites.managers.SpriteManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.SpriteManagerSnapshot> rewindSnapshottable()
 METHOD com.openggf.sprites.managers.SpriteManager public  com.openggf.sprites.Sprite getSprite(java.lang.String)
 METHOD com.openggf.sprites.managers.SpriteManager public  com.openggf.sprites.playable.AbstractPlayableSprite getMainPlayable()
@@ -12710,6 +12810,7 @@ METHOD com.openggf.timer.TimerManager public  void removeTimerForCode(java.lang.
 METHOD com.openggf.timer.TimerManager public  void resetState()
 METHOD com.openggf.timer.TimerManager public  void restore(com.openggf.game.rewind.snapshot.TimerManagerSnapshot)
 METHOD com.openggf.timer.TimerManager public  void update()
+METHOD com.openggf.timer.TimerManager public  void updateDisplayPhaseTimersFor(java.lang.Object)
 METHOD com.openggf.timer.TimerManager public,volatile  java.lang.Object capture()
 METHOD com.openggf.timer.TimerManager public,volatile  void restore(java.lang.Object)
 METHOD com.openggf.tools.disasm.CompressionType public  java.lang.String getDisplayName()
@@ -13718,6 +13819,8 @@ METHOD com.openggf.version.BuildIdentity public,final  boolean equals(java.lang.
 METHOD com.openggf.version.BuildIdentity public,final  int hashCode()
 METHOD com.openggf.version.BuildIdentity public,final  java.lang.String toString()
 NESTED com.openggf.GameLoop com.openggf.GameLoop$GameModeChangeListener
+NESTED com.openggf.audio.AudioManager com.openggf.audio.AudioManager$DiagnosticObserverHandle
+NESTED com.openggf.audio.AudioManager com.openggf.audio.AudioManager$DiagnosticObserverSet
 NESTED com.openggf.audio.GameAudioProfile com.openggf.audio.GameAudioProfile$MusicDuringOverridePolicy
 NESTED com.openggf.audio.GameAudioProfile com.openggf.audio.GameAudioProfile$MusicOverrideRetriggerPolicy
 NESTED com.openggf.audio.GameAudioProfile com.openggf.audio.GameAudioProfile$OrdinaryMusicSfxPolicy
@@ -13740,42 +13843,52 @@ NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComma
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayMusic
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlaySegaPcm
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlaySfx
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$ReferenceLimitation
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$ResetRingAlternation
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RestoreCause
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RestoreMusic
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RetainGlobalStop
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedShoes
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SfxRoute
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SilencePsg
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopAllSfx
 NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopMusic
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopRawPcm
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop
+NESTED com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopSmpsSfx
+NESTED com.openggf.audio.rewind.AudioCommandTimeline com.openggf.audio.rewind.AudioCommandTimeline$PreparedAppend
 NESTED com.openggf.audio.rewind.AudioLogicalSnapshot com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot
 NESTED com.openggf.audio.smps.DacData com.openggf.audio.smps.DacData$DacEntry
 NESTED com.openggf.audio.smps.DacData com.openggf.audio.smps.DacData$Sample
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$Builder
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode
+NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$TempoMode
-NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy
 NESTED com.openggf.audio.smps.SmpsSequencerConfig com.openggf.audio.smps.SmpsSequencerConfig$VolMode
 NESTED com.openggf.camera.Camera com.openggf.camera.Camera$UpdateObserver
 NESTED com.openggf.control.GamepadStateSource com.openggf.control.GamepadStateSource$DeviceState
@@ -14104,13 +14217,20 @@ PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioComm
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayMusic
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlaySegaPcm
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$PlaySfx
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$ReferenceLimitation
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$ResetRingAlternation
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RestoreMusic
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$RetainGlobalStop
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SetSpeedShoes
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$SilencePsg
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopAllSfx
 PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopMusic
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopRawPcm
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop
+PERMITS com.openggf.audio.rewind.AudioCommand com.openggf.audio.rewind.AudioCommand$StopSmpsSfx
 PERMITS com.openggf.editor.persistence.FullLevelExporter$ExportMusic com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Stock
 PERMITS com.openggf.editor.persistence.FullLevelExporter$ExportMusic com.openggf.editor.persistence.FullLevelExporter$ExportMusic$Track
 PERMITS com.openggf.game.MasterTitleEntry com.openggf.game.MasterTitleEntry$Standalone
@@ -14272,21 +14392,31 @@ RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayMusic overrideRetrigg
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayMusic route com.openggf.audio.rewind.AudioCommand$MusicRoute
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic track com.openggf.audio.StreamedMusicPort$TrackRef
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx sfx com.openggf.audio.StreamedMusicPort$SfxRef
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySegaPcm pcm byte[]
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySegaPcm sourceCommandId int
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySegaPcm sourceRate int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySfx donorGameId java.lang.String
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySfx pitch float
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySfx route com.openggf.audio.rewind.AudioCommand$SfxRoute
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySfx sfxId int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$PlaySfx sfxName java.lang.String
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$ReferenceLimitation reason java.lang.String
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$ReferenceLimitation sourceCommandId int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$ResetRingAlternation ringLeft boolean
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$RestoreMusic cause com.openggf.audio.rewind.AudioCommand$RestoreCause
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$RetainGlobalStop sourceCommandId int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier multiplier int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$SetSpeedShoes enabled boolean
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$SilencePsg sourceCommandId int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$StopMusic systemCommandDuringOverridePolicy com.openggf.audio.GameAudioProfile$SystemCommandDuringOverridePolicy
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop sourceCommandId int
+RECORD-COMPONENT com.openggf.audio.rewind.AudioCommand$StopSmpsSfx sourceCommandId int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot commandEntryCount int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot commandTimelineFrame long
 RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot commandTimelineNextOrder int
 RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot donorBindings java.util.Set<com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot>
 RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot donorGameIds java.util.Set<java.lang.String>
+RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot forwardServiceSnapshot com.openggf.audio.presentation.AudioPresentationForwardService$Snapshot
 RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot presentation com.openggf.audio.presentation.AudioPresentationSnapshot
 RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot ringLeft boolean
 RECORD-COMPONENT com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot donorGameId java.lang.String
@@ -14477,6 +14607,10 @@ RECORD-COMPONENT com.openggf.game.GameplayLaunchTeam sidekicks java.util.List<co
 RECORD-COMPONENT com.openggf.game.InitStep action java.lang.Runnable
 RECORD-COMPONENT com.openggf.game.InitStep name java.lang.String
 RECORD-COMPONENT com.openggf.game.InitStep romRoutine java.lang.String
+RECORD-COMPONENT com.openggf.game.JoypadPressSnapshot player1ActionPressed int
+RECORD-COMPONENT com.openggf.game.JoypadPressSnapshot player1StartPressed boolean
+RECORD-COMPONENT com.openggf.game.JoypadPressSnapshot player2ActionPressed int
+RECORD-COMPONENT com.openggf.game.JoypadPressSnapshot player2StartPressed boolean
 RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Launch action com.openggf.game.MasterTitleEntry$Action
 RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Launch entry com.openggf.game.MasterTitleEntry
 RECORD-COMPONENT com.openggf.game.MasterTitleEntry$Standalone continueAvailable boolean
@@ -14790,6 +14924,7 @@ RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicO
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry objectId com.openggf.game.rewind.identity.ObjectRefId
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry ownerModId java.lang.String
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry playerOwner com.openggf.game.PlayableEntity
+RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry rewindableAuxiliary boolean
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry slotIndex int
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry spawn com.openggf.level.objects.ObjectSpawn
 RECORD-COMPONENT com.openggf.game.rewind.snapshot.ObjectManagerSnapshot$DynamicObjectEntry state com.openggf.level.objects.PerObjectRewindSnapshot
@@ -15047,7 +15182,6 @@ RECORD-COMPONENT com.openggf.game.rules.PowerUpRules primaryFixedDustSlotIndex i
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules secondaryFixedDustSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules shieldObjectFixedSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules speedShoesTimerDecimation int
-RECORD-COMPONENT com.openggf.game.rules.PowerUpRules speedShoesTimerPrePhysicsExtraTicks int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules superStarsFixedSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules waterSplashFixedSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules waterSplashUsesFixedDustObject boolean
@@ -16812,6 +16946,7 @@ TYPE class public com.openggf.level.objects.HudRenderManager SUPER java.lang.Obj
 TYPE class public com.openggf.level.objects.ObjectManager SUPER java.lang.Object
 TYPE class public com.openggf.level.objects.ObjectRenderManager SUPER java.lang.Object
 TYPE class public com.openggf.level.objects.ObjectSpriteSheet SUPER java.lang.Object
+TYPE class public com.openggf.level.objects.ShieldObjectInstance SUPER com.openggf.level.objects.AbstractObjectInstance
 TYPE class public com.openggf.level.objects.TouchResponseDebugState SUPER java.lang.Object
 TYPE class public com.openggf.level.objects.TouchResponseTable SUPER java.lang.Object
 TYPE class public com.openggf.level.render.BackgroundRenderer SUPER java.lang.Object
@@ -16947,7 +17082,6 @@ TYPE class public,final com.openggf.sprites.managers.TailsFlightController SUPER
 TYPE class public,final com.openggf.sprites.playable.TailsCarryController SUPER java.lang.Object
 TYPE class public,final com.openggf.testmode.TraceCameraFocusController SUPER java.lang.Object
 TYPE class public,final com.openggf.trace.live.LiveTraceComparator SUPER java.lang.Object
-TYPE class public,static com.openggf.audio.smps.SmpsSequencer$Track SUPER java.lang.Object
 TYPE class public,static com.openggf.debug.MemoryStats$Snapshot SUPER java.lang.Object
 TYPE class public,static com.openggf.level.Palette$Color SUPER java.lang.Object
 TYPE class public,static com.openggf.level.WaterSystem$DynamicWaterState SUPER java.lang.Object
@@ -16987,6 +17121,7 @@ TYPE enum public,final com.openggf.game.EmeraldRewardKind SUPER java.lang.Enum<c
 TYPE enum public,final com.openggf.game.EndingPhase SUPER java.lang.Enum<com.openggf.game.EndingPhase>
 TYPE enum public,final com.openggf.game.GameId SUPER java.lang.Enum<com.openggf.game.GameId>
 TYPE enum public,final com.openggf.game.GameMode SUPER java.lang.Enum<com.openggf.game.GameMode>
+TYPE enum public,final com.openggf.game.GameOverExit SUPER java.lang.Enum<com.openggf.game.GameOverExit>
 TYPE enum public,final com.openggf.game.GroundMode SUPER java.lang.Enum<com.openggf.game.GroundMode>
 TYPE enum public,final com.openggf.game.LevelLoadMode SUPER java.lang.Enum<com.openggf.game.LevelLoadMode>
 TYPE enum public,final com.openggf.game.PlayerCharacter SUPER java.lang.Enum<com.openggf.game.PlayerCharacter>
@@ -17054,30 +17189,31 @@ TYPE enum public,static,final com.openggf.audio.driver.SmpsRequestAdmissionPolic
 TYPE enum public,static,final com.openggf.audio.rewind.AudioCommand$MusicRoute SUPER java.lang.Enum<com.openggf.audio.rewind.AudioCommand$MusicRoute>
 TYPE enum public,static,final com.openggf.audio.rewind.AudioCommand$RestoreCause SUPER java.lang.Enum<com.openggf.audio.rewind.AudioCommand$RestoreCause>
 TYPE enum public,static,final com.openggf.audio.rewind.AudioCommand$SfxRoute SUPER java.lang.Enum<com.openggf.audio.rewind.AudioCommand$SfxRoute>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencer$TrackType SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencer$TrackType>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode>
+TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$TempoMode>
-TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy>
 TYPE enum public,static,final com.openggf.audio.smps.SmpsSequencerConfig$VolMode SUPER java.lang.Enum<com.openggf.audio.smps.SmpsSequencerConfig$VolMode>
 TYPE enum public,static,final com.openggf.editor.EditorInputHandler$Action SUPER java.lang.Enum<com.openggf.editor.EditorInputHandler$Action>
 TYPE enum public,static,final com.openggf.editor.EditorStockObjectPalette$Navigation SUPER java.lang.Enum<com.openggf.editor.EditorStockObjectPalette$Navigation>
@@ -17148,6 +17284,7 @@ TYPE interface public,abstract com.openggf.game.DynamicWaterHandler SUPER <none>
 TYPE interface public,abstract com.openggf.game.EndingProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.GameDataSource SUPER <none>
 TYPE interface public,abstract com.openggf.game.GameModule SUPER <none>
+TYPE interface public,abstract com.openggf.game.GameOverFlowProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.GameplayInputFilter SUPER <none>
 TYPE interface public,abstract com.openggf.game.GameplayPolicyProvider SUPER <none>
 TYPE interface public,abstract com.openggf.game.InstaShieldHandle SUPER <none>
@@ -17214,6 +17351,7 @@ TYPE interface public,abstract com.openggf.level.objects.ObjectPlacementEncoding
 TYPE interface public,abstract com.openggf.level.objects.ObjectRegistry SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.ObjectServices SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.ObjectWindowingStrategy SUPER <none>
+TYPE interface public,abstract com.openggf.level.objects.PlayerBoundShieldRewindRecreatable SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.RewindClassResolver SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.RewindRecreatable SUPER <none>
 TYPE interface public,abstract com.openggf.level.objects.RingObjectPlacementMapping SUPER <none>
@@ -17311,6 +17449,7 @@ TYPE record public,final com.openggf.game.CharacterDefinition SUPER java.lang.Re
 TYPE record public,final com.openggf.game.DemoLamppostState SUPER java.lang.Record
 TYPE record public,final com.openggf.game.GameplayLaunchTeam SUPER java.lang.Record
 TYPE record public,final com.openggf.game.InitStep SUPER java.lang.Record
+TYPE record public,final com.openggf.game.JoypadPressSnapshot SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsModifiers SUPER java.lang.Record
 TYPE record public,final com.openggf.game.PhysicsProfile SUPER java.lang.Record
 TYPE record public,final com.openggf.game.SidekickSpawnOffset SUPER java.lang.Record
@@ -17458,13 +17597,20 @@ TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$FadeOutMus
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$PlayMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$PlaySegaPcm SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$PlaySfx SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$ReferenceLimitation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$ResetRingAlternation SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$RestoreMusic SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$RetainGlobalStop SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$SetSpeedShoes SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$SilencePsg SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopAllSfx SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopMusic SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopRawPcm SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop SUPER java.lang.Record
+TYPE record public,static,final com.openggf.audio.rewind.AudioCommand$StopSmpsSfx SUPER java.lang.Record
 TYPE record public,static,final com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot SUPER java.lang.Record
 TYPE record public,static,final com.openggf.control.GamepadStateSource$DeviceState SUPER java.lang.Record
 TYPE record public,static,final com.openggf.debug.DebugRenderContext$DebugTextEntry SUPER java.lang.Record
@@ -17737,15 +17883,22 @@ TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$MusicRoute @com.openggf.ga
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$PlayMusic @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$PlayNamespacedMusic @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$PlayNamespacedSfx @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$PlaySegaPcm @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$PlaySfx @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$ReferenceLimitation @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$ResetRingAlternation @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$RestoreCause @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$RestoreMusic @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$RetainGlobalStop @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$SetSpeedMultiplier @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$SetSpeedShoes @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$SfxRoute @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$SilencePsg @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$StopAllSfx @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$StopMusic @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$StopRawPcm @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$StopSegaPcmAndRetainGlobalStop @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommand$StopSmpsSfx @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioCommandTimeline @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioLogicalSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.rewind.AudioLogicalSnapshot$DonorSfxBindingSnapshot @com.openggf.game.ModApi
@@ -17761,33 +17914,33 @@ TYPE-ANNOTATION com.openggf.audio.smps.DacData$DacEntry @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.DacData$Sample @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsLoader @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsProgramView @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencer$Track @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencer$TrackType @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$Builder @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$DelayFreq @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$DriverServiceOrder @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FadeInChannelPolicy @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FadeOutChannelPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FadeDelayCadence @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FadeInRestore @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FadeOutHalt @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FmSfxReleaseMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FmSfxTakeoverMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FmVoiceWriteProfile @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$FmVolumeVoiceBankMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$ModAlgo @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideDacRestorePolicy @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$MusicOverridePriorityPolicy @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideRestorePolicy @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSfxReleasePolicy @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$MusicOverrideSpeedPolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$NoteFillTail @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$NoteGoingFreqSend @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$NoteOnPrevent @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PalServicePolicy @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PausePolicy @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PalUpdateMode @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$Psg3SfxAdmissionWriteMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvCmd80 @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PsgEnvRestCmd @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PsgNoteGoingOrder @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxReleaseMode @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$SfxPriorityPolicy @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$SfxRequestTransformPolicy @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$SfxStartTiming @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PsgSfxTakeoverMode @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PsgSilenceShape @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$PsgVolumeTail @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$SfxChannelOwnershipMode @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$SfxTrackWalkMode @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$SpecialSfxPsg3SilenceMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$TempoMode @com.openggf.game.ModApi
-TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$TempoPhasePolicy @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.audio.smps.SmpsSequencerConfig$VolMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.camera.Camera @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.configuration.SonicConfiguration @com.openggf.game.ModApi
@@ -17892,6 +18045,8 @@ TYPE-ANNOTATION com.openggf.game.GameDataSource @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.GameId @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.GameMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.GameModule @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.GameOverExit @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.GameOverFlowProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.GameRng @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.GameRng$Flavour @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.GameStateManager @com.openggf.game.ModApi
@@ -17902,6 +18057,7 @@ TYPE-ANNOTATION com.openggf.game.GameplayPolicyProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.GroundMode @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.InitStep @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.InstaShieldHandle @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.game.JoypadPressSnapshot @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LegalDisclaimerScreen @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelEventProvider @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.game.LevelInitProfile @com.openggf.game.ModApi
@@ -18389,12 +18545,14 @@ TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$DplcRun @com.openg
 TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$Frame @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$Meta @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PlayableSheetReader$PlayableSheet @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.PlayerBoundShieldRewindRecreatable @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.PoweredAttackSurface @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindClassResolver @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreatable @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RewindRecreateContext @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RingObjectPlacementMapping @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.RomObjectSnapshot @com.openggf.game.ModApi
+TYPE-ANNOTATION com.openggf.level.objects.ShieldObjectInstance @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SolidContact @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SpringBounceHelper @com.openggf.game.ModApi
 TYPE-ANNOTATION com.openggf.level.objects.SubpixelMotion @com.openggf.game.ModApi

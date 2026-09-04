@@ -229,7 +229,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 continue;
             }
             player.addRings(1);
-            audioManager.playSfx(GameSound.RING);
+            playRingAcquisitionSound();
             ring.collected = true;
             ring.sparkleStartFrame = frameCounter;
             return;
@@ -391,8 +391,15 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer != null && renderer.getSparkleFrameCount() > 0) {
             placement.setSparkleStartFrame(index, frameCounter);
         }
-        audioManager.playSfx(GameSound.RING);
+        playRingAcquisitionSound();
         player.addRings(1);
+    }
+
+    private void playRingAcquisitionSound() {
+        // Sonic 2 CollectRing's original and REV01 gameRevision branches converge on
+        // PlaySound2/SFX1; shipped World REV01 takes the else branch
+        // (docs/s2disasm/s2.asm:25034-25063). No fixBugs conditional owns this call.
+        audioManager.playSecondarySfx(GameSound.RING);
     }
 
     /**

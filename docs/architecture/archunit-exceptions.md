@@ -29,7 +29,14 @@ target rather than walking back the assertion.
 | Rule | Baseline | Target | Trigger |
 |------|----------|--------|---------|
 | `low_level_layers_do_not_depend_on_runtime_layers` | 209 | <=150 | AudioManager/GraphicsManager runtime callbacks migrate off direct level/sprite imports |
-| `shared_layers_do_not_depend_on_game_specific_packages` | 14 | 0 | `DefaultPowerUpSpawner` visual object creation and master-title ROM preview mapping move behind provider contracts |
+
+2026-09-03: the two `AudioManager -> Rom.readBytes` SEGA-boot PCM edges were
+solved and the frozen entry pruned. `GameAudioProfile.loadSegaPcm(Object)` now
+declares the read and the per-game profiles perform it through
+`com.openggf.game.audio.SegaPcmRomReader`, which lives in the runtime layer and
+may depend on `com.openggf.data`. The rule description keeps its original
+baseline wording because the freeze store is keyed by that text.
+| `shared_layers_do_not_depend_on_game_specific_packages` | 9 | 0 | Master-title ROM preview mapping moves behind provider contracts (`DefaultPowerUpSpawner` visual object creation moved behind `GameModule` factories, 2026-08-28) |
 | `per_game_packages_do_not_cross_depend` | 37 | <=20 | Data-select preview loading, payload validation, and menu animation helpers extracted out of per-game packages |
 
 ## Source Ratchets
@@ -123,7 +130,7 @@ When a frozen baseline shrinks or grows intentionally, update the matching count
 in the same commit.
 
 - `low_level_layers_do_not_depend_on_runtime_layers`: 209
-- `shared_layers_do_not_depend_on_game_specific_packages`: 14
+- `shared_layers_do_not_depend_on_game_specific_packages`: 9
 - `per_game_packages_do_not_cross_depend`: 37
 
 ## Package Cycle Ratchets
@@ -189,10 +196,11 @@ Rule: `shared level and game layers should not depend on game-specific packages`
 
 Frozen violations 1–9 are in `MasterTitleRomPreview`, which composes the
 cross-game master-title previews through concrete Sonic 1, Sonic 2, and Sonic
-3&K title-screen mappings. Violations 10–14 are in
-`DefaultPowerUpSpawner`, which constructs Sonic 1 splash and S3K
-shield/insta-shield visuals from shared object code. The frozen set remains 14
-entries under UUID `e0b8ef04-86e9-4001-b35e-c5de3ef4d940`.
+3&K title-screen mappings. The five former `DefaultPowerUpSpawner` entries
+(Sonic 1 splash and S3K shield/insta-shield construction) were removed on
+2026-08-28 when that creation moved behind `GameModule.getShieldFactory()`,
+`getInstaShieldFactory()`, and `getWaterSplashFactory()`. The frozen set is now
+9 entries under UUID `e0b8ef04-86e9-4001-b35e-c5de3ef4d940`.
 
 Target direction:
 
@@ -263,14 +271,13 @@ Target direction:
 
 Rule: `shared code should not construct concrete Sonic provider/art/object classes`
 
-Frozen violations:
-
-- `DefaultPowerUpSpawner` directly constructs the Sonic 1 splash object from
-  shared object code.
+Frozen violations: none. The former `DefaultPowerUpSpawner` Sonic 1 splash
+construction now comes from `Sonic1GameModule.getWaterSplashFactory()`
+(baseline reduced to 0 on 2026-08-28).
 
 Target direction:
 
-- Move game-specific visual object creation behind `GameModule` provider
+- Keep game-specific visual object creation behind `GameModule` provider
   contracts or a dedicated composition root.
   Keep shared object helpers independent of concrete Sonic object classes.
 

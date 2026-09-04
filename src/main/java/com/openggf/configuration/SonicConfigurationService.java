@@ -138,9 +138,6 @@ public class SonicConfigurationService {
 		if (migrationService.migrateDeprecatedCaptureToggleKey(config)) {
 			configChanged = true;
 		}
-		if (migrationService.migrateDeprecatedAudioChipDefaults(config)) {
-			configChanged = true;
-		}
 		if (normalizeDisplayShaderSelection(config)) {
 			configChanged = true;
 		}
@@ -663,7 +660,6 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
 		putDefault(SonicConfiguration.EDITOR_ENABLED, false);
 		putDefault(SonicConfiguration.SKIP_MOD_ZONE_TITLE_CARDS, true);
-		putDefault(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED, false);
 		putDefault(SonicConfiguration.DISPLAY_COLOR_PROFILE, "RAW_RGB");
 		putDefaultKey(SonicConfiguration.DISPLAY_COLOR_PROFILE_TOGGLE_KEY, GLFW_KEY_V);
 		putDefault(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
@@ -679,8 +675,6 @@ public class SonicConfigurationService {
 		putDefault(SonicConfiguration.FM6_DAC_OFF, true); // Default true for Sonic 2 parity
 		putDefault(SonicConfiguration.AUDIO_ENABLED, true);
 		putDefault(SonicConfiguration.AUDIO_INTERNAL_RATE_OUTPUT, false);
-		putDefault(SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE, false);
-		putDefault(SonicConfiguration.AUDIO_REFERENCE_DEFAULTS_VERSION, 1);
 		putDefault(SonicConfiguration.REGION, "NTSC");
 		putDefaultKey(SonicConfiguration.UP, GLFW_KEY_UP);
 		putDefaultKey(SonicConfiguration.DOWN, GLFW_KEY_DOWN);

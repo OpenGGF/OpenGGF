@@ -10,6 +10,11 @@ This document tracks **intentional deviations** from the original Sonic 1 / 2 / 
 
 Each entry describes what the ROM does, what we do, and why — focusing on *why* the divergence is acceptable.
 
+**TraceChaser extraction note (2026-08-29):** moving recorder and analysis
+utilities to the optional pinned `tools/tracechaser` submodule changes source
+ownership only. It introduces no cross-game or ROM-behaviour discrepancy, so
+no discrepancy entry was added or reclassified by the cutover.
+
 ## Table of Contents
 
 1. [Gloop Sound Toggle](#gloop-sound-toggle)
@@ -20,8 +25,8 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 6. [Multi-Sidekick Daisy Chain](#multi-sidekick-daisy-chain)
 7. [Sonic 1 Monitor Sidekick Guard](#sonic-1-monitor-sidekick-guard)
 8. [Bonus Stage Game Mode](#bonus-stage-game-mode)
-9. [HCZ Conveyor Belt Rolling State Clear](#hcz-conveyor-belt-rolling-state-clear)
-10. [Right-Wall Odd-Sensor Fallback Heuristics](#right-wall-odd-sensor-fallback-heuristics)
+9. [HCZ Conveyor Belt Rolling State Clear (Resolved)](#hcz-conveyor-belt-rolling-state-clear-resolved)
+10. [Right-Wall Penetration Timer Heuristic](#right-wall-penetration-timer-heuristic)
 11. [S2 CPZ Visual Water Surface Oscillation](#s2-cpz-visual-water-surface-oscillation)
 12. [S2 Music Offsets Resolved from Hardcoded REV01 Table](#s2-music-offsets-resolved-from-hardcoded-rev01-table)
 13. [Right-Boundary Is Viewport-Independent (Level Edge)](#right-boundary-is-viewport-independent-level-edge)
@@ -43,6 +48,11 @@ Each entry describes what the ROM does, what we do, and why — focusing on *why
 29. [S2 Push-Release Animation Restart Fires Once Extra At A Contact-End Frame](#s2-push-release-animation-restart-fires-once-extra-at-a-contact-end-frame)
 30. [S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)](#s2-cpz-boss-truncates-the-object-pass-fixbugs--0)
 31. [S2 Interactive Special-Stage Hardware Lag Is Approximated](#s2-interactive-special-stage-hardware-lag-is-approximated)
+32. [YM2612 Output Scale, Resting Level and DAC Presentation](#ym2612-output-scale-resting-level-and-dac-presentation)
+33. [PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores](#psg-tone-2-linked-noise-at-period-01-follows-the-reference-cores)
+34. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration)
+35. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention)
+36. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
 
 ---
 
@@ -192,7 +202,7 @@ move.w  #tiles_to_bytes(ArtTile_Title_Card),d0
 
 We use **extended pattern ID ranges** with fixed bases that don't overlap:
 
-| Base | Category | Notes |
+| Range | `PatternAtlasRange` | Notes |
 |------|----------|-------|
 | `0x00000` | Level tiles | Corresponds to VRAM tile indices (0-~2047) |
 | `0x01000` | Special Stage | Track, objects, HUD for special stages |
@@ -580,7 +590,7 @@ N/A — held rewind is an engine-only feature with no ROM equivalent.
 
 Live rewind now works *within* the Gumball and Pachinko bonus stages (`BonusStageProvider.supportsRewind()==true`): held rewind restores in-stage object/reward/accumulator state exactly as it does in `GameMode.LEVEL`. The timeline is intentionally severed at the bonus-stage boundary in both directions. The `GameplayModeContext` (and its `rewindRegistry`) survives bonus entry — that is precisely why the coordinator accumulator adapter can be registered/deregistered against it. What resets the rewind timeline is the `LEVEL_LOAD`-class boundary that `loadZoneAndAct` emits on the bonus-zone load: it drives `LiveRewindManager.handleLevelLoadBoundary()` → `resetToFrameZero`, and the entry transition also marks `MODE_EXIT_TO_NON_REWINDABLE` (buffer clear). So rewind cannot walk backward across that boundary into the parent level's pre-entry history; likewise the exit frame (`bonusStageTransitionPending`) is excluded from capture, so rewind never walks forward past the bonus stage back into the level. Held rewind is confined to frames strictly inside the active bonus stage.
 
-The Slot Machine bonus stage is excluded: `BonusStageProvider.supportsRewind()` reports `false` for it, so `LiveRewindManager`/`GameLoop` never engage rewind while it is active (see `docs/S3K_known-discrepancies.md` for the reason and the deferred follow-up plan).
+The Slot Machine bonus stage is excluded: `BonusStageProvider.supportsRewind()` reports `false` for it, so `LiveRewindManager`/`GameLoop` never engage rewind while it is active (see `docs/S3K_KNOWN_DISCREPANCIES.md` for the reason and the deferred follow-up plan).
 
 **Cosmetic caveat:** during backward re-simulation frames (replaying forward from a keyframe to reach a rewind target), the player sprite's art-tile high-priority bit is not re-forced each frame the way normal forward gameplay does. This is a minor rendering-order artifact only visible mid-scrub, and it self-corrects once rewind releases and normal per-frame updates resume; it has no effect on collision, physics, or reward-accumulator correctness.
 
@@ -594,7 +604,7 @@ None on gameplay determinism or reward correctness (ring/item totals match what 
 
 ---
 
-## HCZ Conveyor Belt Rolling State Clear
+## HCZ Conveyor Belt Rolling State Clear (Resolved)
 
 **Location:** `HCZConveyorBeltObjectInstance.java` (`capturePlayer()`)
 **ROM Reference:** `sonic3k.asm` lines 66490-66511 (standing capture), 66528-66547 (hanging capture)
@@ -616,73 +626,51 @@ The ROM's capture sequences for the HCZ conveyor belt (Obj 0x3E) do not contain 
     ; ... state init, DPLC call
 ```
 
-On the original hardware, `Status_Roll` is effectively neutralised during capture through side-effects of `object_control = 3` altering the player's main update path (skipping `Sonic_CheckRoll` and related routines). The release path unconditionally sets `Status_Roll` via `bset #Status_Roll,status(a1)` (sonic3k.asm:66454).
+The release path unconditionally sets `Status_Roll` via `bset #Status_Roll,status(a1)` (sonic3k.asm:66454).
 
 ### Our Implementation
 
-We explicitly clear the rolling state during capture:
-
-```java
-private void capturePlayer(AbstractPlayableSprite player, PlayerBeltState state,
-                           int snapY, int initialFrame, int initialPhase) {
-    player.setXSpeed((short) 0);
-    player.setYSpeed((short) 0);
-    player.setGSpeed((short) 0);
-    player.setRenderFlips(false, false);
-
-    // Explicit roll clear — not present in ROM capture sequence
-    if (player.getRolling()) {
-        player.setRolling(false);
-    }
-
-    player.setCentreY((short) snapY);
-    // ...
-}
-```
+An earlier engine build added an explicit `setRolling(false)` to `capturePlayer()` that the ROM does not
+perform, so that a player captured mid-roll would not count as attacking. That divergence has been removed:
+`capturePlayer()` now mirrors the ROM sequence instruction for instruction — velocity clears, render-flip clear,
+Y snap through `NativePositionOps.writeYPosPreserveSubpixel`, `anim = 0`, `object_control = 3` via
+`ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed()`, and the initial mapping frame — with no roll
+write. The release path still sets the roll bit as the ROM does (`sonic3k.asm:66454`).
 
 ### Rationale
 
-1. **Touch responses run while object-controlled** — `object_control = 3` suppresses solid object collisions and animation, but does NOT suppress touch response (enemy/badnik) collision checks.
-
-2. **Rolling = attacking** — `ObjectManager.isPlayerAttacking()` returns `true` when `getRolling()` is true. If `Status_Roll` persists from a jump into belt capture, the player incorrectly destroys enemies on contact (e.g. Chopper in HCZ) instead of taking damage.
-
-3. **Observed gameplay confirms vulnerability** — On original hardware, Chopper can grab and hurt Sonic while he is on the conveyor belt, proving the player is NOT in an attacking state during capture.
-
-4. **ROM clears implicitly, engine needs explicit** — The ROM achieves this through `object_control = 3` altering the player update path in ways our engine doesn't replicate as a side-effect. The explicit clear produces identical gameplay behavior.
-
-5. **Must clear before Y snap** — `setRolling(false)` restores standing radii, which changes sprite height. Clearing after `setCentreY()` would shift the centre by half the height delta (5px for Sonic). Clearing before the snap ensures the snap uses standing-height coordinates.
+The roll bit is left exactly as the ROM leaves it. Enemy touch responses consume the native attack state the
+same way the ROM does, so the earlier engine-side clear is no longer needed to keep the player vulnerable on the
+belt.
 
 ### Verification
 
-With the fix, the player is vulnerable to enemy touch responses while on the conveyor belt, matching original hardware behavior. The release path still unconditionally sets `Status_Roll`, so belt exit behavior is unaffected.
+Retained as a record of the removed divergence. `TestHCZConveyorBeltObjectInstance` covers the capture/release sequence.
 
 ---
 
-## Right-Wall Odd-Sensor Fallback Heuristics
+## Right-Wall Penetration Timer Heuristic
 
-**Location:** `CollisionSystem.pendingOddSensorFallbackAngles`, `AbstractPlayableSprite.rightWallPenetrationTimer`
+**Location:** `AbstractPlayableSprite.rightWallPenetrationTimer`
 **ROM Reference:** `AnglePos`/right-wall sensor selection paths in the Sonic 1, Sonic 2, and Sonic 3K disassemblies.
 
 ### Original Implementation
 
-The ROM resolves the active wall sensor and floor angle from the current frame's sensor probes. Odd/flagged angle values are snapped from the same frame's result; there is no cross-frame map of prior alternate-sensor angles.
+The ROM resolves the active wall sensor and floor angle from the current frame's sensor probes. Odd/flagged angle values are snapped from the same frame's result; there is no cross-frame map of prior alternate-sensor angles and no grace timer for right-wall penetration.
 
 ### Our Implementation
 
-The engine carries two narrow right-wall stability heuristics:
+The engine carries one narrow right-wall stability heuristic: `AbstractPlayableSprite.rightWallPenetrationTimer` gives a short grace period while resolving right-wall penetration and is captured in playable-sprite rewind snapshots.
 
-1. `CollisionSystem.pendingOddSensorFallbackAngles` can remember the alternate sensor angle from a previous RIGHTWALL frame and apply it when the selected sensor reports distance 0 with an odd angle.
-2. `AbstractPlayableSprite.rightWallPenetrationTimer` gives a short grace period while resolving right-wall penetration and is captured in playable-sprite rewind snapshots.
-
-`CollisionSystem.resetState()` clears the pending-angle map so singleton reuse between tests or gameplay sessions cannot inherit stale fallback state.
+A second heuristic, `CollisionSystem.pendingOddSensorFallbackAngles` (a cross-frame cache of the alternate sensor angle applied when the selected sensor reported distance 0 with an odd angle), has been **removed**: ROM `Sonic_Angle` (`docs/s1disasm/_incObj/Sonic AnglePos.asm:186-208`) snaps an odd selected angle straight to `(angle+0x20)&0xC0` from the current frame, and the cache was resurrecting a stale angle one frame early on the S1 LZ3 and S3K CNZ right-wall paths (see the `CHANGELOG.0.6.md` entry "S1 right-wall odd-angle snap (LZ3/CNZ)").
 
 ### Rationale
 
-The heuristics prevent visible ground-mode oscillation at right-wall transitions in the Java collision model while the broader collision pipeline still differs structurally from the ROM's exact object RAM and terrain probe sequencing.
+The remaining timer prevents visible ground-mode oscillation at right-wall transitions in the Java collision model while the broader collision pipeline still differs structurally from the ROM's exact object RAM and terrain probe sequencing.
 
 ### Verification
 
-`CollisionSystemTest.resetStateClearsPendingOddSensorFallbackAngles` guards the reset behavior. `TestAbstractPlayableSpriteRewindCapture` covers the captured `rightWallPenetrationTimer` field.
+`TestAbstractPlayableSpriteRewindCapture` covers the captured `rightWallPenetrationTimer` field.
 
 ---
 
@@ -2406,7 +2394,7 @@ index space with this proxy would swap one non-ROM predicate for another.
 ### What is blocked, and the decision required
 
 No committed fixture records the flag. The recorder samples only `$FFB0` (Chaos count,
-`tools/bizhawk-headless/src/Recording/S3KRam.cs:247`); SS `aux_state.jsonl.gz` is
+`tools/tracechaser/bizhawk-headless/src/Recording/S3KRam.cs:247`); SS `aux_state.jsonl.gz` is
 byte-empty by design (`S3KCompleteRunSegmenter.cs:24`). Note `run_manifest.json` **does**
 carry `emeralds_before`/`emeralds_after` -- an earlier claim here that it did not was
 wrong -- but that is the Chaos count, not the flag.
@@ -2513,9 +2501,7 @@ object-side port audit have returned.
 
 ## S2 CPZ Boss Truncates The Object Pass (`fixBugs = 0`)
 
-**Status:** open, deliberately not reproduced. **Cost:** part of a 2422-error
-`dynamic_art` cluster in the CPZ2 standalone segment; the mechanism accounts for
-under half of it.
+**Status:** reproduced (closed). Kept as the citation record for a `fixBugs` site.
 
 ### Original Implementation
 
@@ -2543,38 +2529,27 @@ The `fixBugs = 1` path uses `cmpi.b #ObjID_CPZBoss,id(a1)` and leaves `d7` alone
 
 ### Our Implementation
 
-`ObjectManager.runExecLoop` iterates `for (currentExecSlot = 0; currentExecSlot <
-execOrder.length; currentExecSlot++)`. The bound is a fixed array length: there is
-no remaining-count an executing object could write, and no path by which an object
-shortens the pass. The engine runs all three `LevelOnly` objects on frames where
-the ROM skips them, and is therefore **more correct than the ROM and wrong**.
+`CPZBossPipe.updateRetract()` (`docs/s2disasm/s2.asm:62244-62253` cited inline) now
+calls `ObjectManager.overrideRemainingObjectLoopSlots(...)` with the boss's own object
+id while the retract search runs, so the object pass ends where the ROM's does. The
+value is `ObjID_CPZBoss` read out of the disassembly, not a tuned duration, and the
+write stops once `Obj5D_flag` is set, exactly as the ROM's entry test at
+`docs/s2disasm/s2.asm:62220-62221` skips the search on later frames.
 
 ### Rationale
 
-Not reproduced, on three grounds measured rather than assumed:
-
-- **It is necessary but not sufficient.** `Obj5D` holds routine `$08` on two runs
-  in the recording, 5112-5123 and 5553-5564. Only the second produces any
-  divergence, because the skipped frames must land where `Obj05`'s animation would
-  otherwise have advanced.
-- **It explains under half the cluster.** `Obj5D` does not exist after row 6084,
-  yet 1247 of the 2422 errors — 51% — lie beyond 6600, in two ramps it cannot
-  influence.
-- **The change is disproportionate.** Reproducing it requires introducing a
-  mutable pass budget into the object dispatch loop *shared by all three games*
-  and exposing it to object code — a structural change to dispatch, not an
-  object-local port.
-
-Recorded here rather than ported because the standing rule that a `fixBugs`
-site must be commented where it is ported cannot apply when nothing is ported.
-This entry is the substitute: the flag, the routine and the citation, so the site
-is findable without the ported comment.
+An earlier revision recorded this as "deliberately not reproduced" because it required
+a mutable pass budget in the dispatch loop shared by all three games. That budget now
+exists as `overrideRemainingObjectLoopSlots`; see the `CHANGELOG.0.6.md` entry "The CPZ
+act 2 boss's retracting pipe now cuts the object pass short, as the shipped ROM does"
+for the measured effect (Tails' tails no longer animate DPLC frames the ROM never queues).
 
 ### Verification
 
 Probe `tools/bizhawk/probes/s2_cpz2_d7_clobber_probe.lua` over rows 5535-5600
 logs `d7` per `RunObject` iteration; rows 5554-5564 show 123 iterations ending at
-`$FFCE80`, their neighbours 144 ending at `$FFD3C0`.
+`$FFCE80`, their neighbours 144 ending at `$FFD3C0`. The inline `FixBugs` comment in
+`CPZBossPipe.updateRetract()` is the ported-site marker required by the project rule.
 
 ## S2 tornado (ObjB2): recorded single-instance SST rows are exact
 
@@ -2643,3 +2618,512 @@ trace comparator remains deliberately unchanged in this patch.
 **Removal condition.** Give the parent Tornado an exact identity through the child-presence
 tail without slot fitting, compare and close the state-8-and-later rows, then promote the
 Tornado-only warning helper to `Severity.ERROR`.
+
+## S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention
+
+**Location:** `Sonic2SaxmanLoadReadiness`, `SmpsDriverSession`
+
+**ROM reference:** `docs/s2disasm/s2.sounddriver.asm` `zBGMLoad`,
+`zSaxmanDec`, `zInitMusicPlayback`, and `zUpdateMusic`
+
+Sonic 2 decompresses compressed music on the Z80 inside its interrupt service,
+so no music update runs until the decompressor and post-load initialization
+return. OpenGGF derives that readiness from the actual compressed ROM stream
+and the shipped unoptimised Z80 instruction path. For EHZ this is 363,255
+T-states on NTSC: the model predicts the six fully masked rows observed by the
+native driver oracle without using a movie row, song id, or fitted frame count.
+
+The model intentionally omits the sub-frame perturbation from exact 68K
+BUSREQ phase, VDP-DMA contention on bank-window reads, and YM2612 busy-poll
+retries. Those effects require a shared cycle scheduler that OpenGGF does not
+have. Their bounded residual does not cross EHZ's frame-granularity readiness
+boundary, but another compressed stream sufficiently close to a boundary may
+become ready one presentation earlier or later than hardware.
+
+Remove this entry when the engine models the shared 68K/Z80/VDP/YM bus phase
+closely enough for compressed-load readiness to include those stalls directly.
+
+## S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It
+
+**Location:** `AudioManager.playMusic`/`stopMusic`, `AudioPresentationProducer`,
+`Sonic2SoundRequestService`
+
+`AudioManager.playMusic` enters Sonic 2's real mailbox
+(`Sonic2SoundRequestService`, modelling `PlayMusic` at `s2.asm:1520-1528`), but
+`stopMusic` still enqueues directly into the plain presentation command queue.
+While a compressed load blocks mailbox consumption
+(`SmpsDriverSession#blocksForwardRequestConsumption`), the producer holds both
+queues shut and, on release, applies held plain commands before held mailbox
+requests — so a play and a stop issued in the same blocked span are not
+issue-ordered. A faithful fix routes the stop through the mailbox as the
+shipped `MusID_Stop` command (`CmdPtr_Stop` → `zStopSoundAndMusic`,
+`s2.sounddriver.asm:1598,2545`), but that command shares `Music1` with the
+`fixBugs = 0` slot-3 `VoiceTblPtr` alias bug (the unfixed four-iteration SFX
+scan reads `SoundQueue.SFX0+3`, which is `Music1`'s struct offset,
+`s2.asm:1270-1332`, `s2.constants.asm:1879-1885`) — on real hardware a second
+same-frame mailbox write can itself be silently lost this way, so the fix must
+accept that loss rather than paper over it. Deferred; not fixed by this entry.
+
+## YM2612 Output Scale, Resting Level and DAC Presentation
+
+`Ym2612Chip` is a facade over the Nuked-OPN2 port (`audio.synth.nuked`), which is
+clocked one internal cycle at a time and leaves time-multiplexed pin values on
+MOL/MOR. The facade's output sample is the sum of the 24 pin values of a frame
+(the RC-averaged pin of the real part), shifted left by 3.
+
+### Original Implementation
+
+The discrete YM2612's analogue output is what it is; the previous engine core
+(a Genesis Plus GX derivative) presented one FM channel at a nominal full scale
+of 8191 and rested, when silenced, at +768 at chip scale (+384 after the
+mixer's `MASTER_GAIN_SHIFT`), a resting level that was inherent to that model of
+the discrete DAC.
+
+### Our Implementation
+
+- **Scale.** In the 24-cycle pin sum a full-scale channel contributes
+  `3 * 256 = 768` in both output stages (`chOutput`, `ym3438.c:947`). The facade
+  applies one shift (`<< 3`), giving 6144 per channel: the largest power-of-two
+  scaling that keeps six full-scale channels inside 16 bits after the master
+  gain. Relative to the previous core's 8191 the FM level is about 2.5 dB lower;
+  the mixer's PSG preamp restores the previous FM:PSG balance (see "FM:PSG Mix
+  Balance Is Pre-Rewrite Parity, Not a Hardware Calibration"). No other gain is
+  applied in the chip.
+- **Resting level.** In YM2612 mode a silent channel's four pin cycles each carry
+  the amplified sign of a non-negative output (+3), so a silenced chip rests at
+  `72 << 3 = 576` per side at chip scale, +288 LSB after the master gain
+  (previously +384). Types 1 and 2 (YM3438 output stage) rest at 0. Muted
+  channels keep this resting contribution, as a keyed-off channel does on
+  silicon. The offset is the model's own and is not adjusted.
+- **DAC cadence.** `playDac` streams PCM as `0x2A` writes every
+  `(baseCycles + 26 * (rate - 1)) / 2` Z80 cycles, from the Z80 playback loops
+  (`s1disasm sound/z80.asm zPlayPCMLoop`, `s2disasm s2.sounddriver.asm
+  zWriteToDAC`, `skdisasm Sound/Z80 Sound Driver.asm zPlayDigitalAudio`): the
+  fixed instruction path per byte plus the taken `djnz` iterations. The two
+  halves of each byte are not equally long on the Z80 (S1: 124 and 177 cycles
+  before the pitch loop) but `DacData` carries only the per-byte total, so the
+  facade spaces the two samples evenly; the Z80 loop also stalls while the
+  chip bus is busy with sequencer writes, which the facade models by pausing
+  the cadence rather than dropping samples. The S2 loader's `baseCycles` of 288
+  differs from the 295 that `s2.sounddriver.asm` counts for its own loop; the
+  loader value is used as found and is a separate follow-up.
+- **DAC interpolation** (`audio.dacInterpolate`, default off since
+  2026-09-02) is a presentation option with no hardware counterpart: between
+  two PCM samples the facade writes a linearly interpolated `0x2A` value once
+  per output frame, only when the chip bus is idle and the real Z80 cadence
+  cannot reach its next sample before the synthetic write completes; otherwise
+  the frame's interpolation is dropped. It never pauses the sample cadence (an
+  earlier implementation did, stretching samples ~1.7x). The previous core's
+  engine-side DAC high-pass option was removed with the switch-over.
+
+### Rationale
+
+The facade must not add constants to reproduce the previous core's numbers:
+the port is a derivative of one pinned source and its output is pinned
+sample-for-sample against the C build (`TestYm2612ChipNukedParity`). The scale
+shift is the single explicit adjustment the port contract permits.
+
+### Verification
+
+`TestYm2612ChipNukedParity` (68 scripts against the C harness under
+`tools/audio/nuked-opn2/harness/`), `TestYm2612ChipSnapshot`,
+`TestChipWriteObserver`, `TestSfxAdmissionMutationJournal`.
+
+---
+
+## S3K Music DAC Byte Stream Partition (Oracle Comparison)
+
+The S3K driver oracle compares the music DAC byte stream over the whole capture
+window rather than per service window, and does not assert how far a DAC run
+got before it was cut short, nor whether a run ended by exhausting rather than
+being superseded. The `2Bh = 80h` enable and everything else in a tick stay
+strictly partitioned and compared; the sample-end `2Bh = 0` disable moved into
+the DAC byte stream with the bytes.
+
+### Original Implementation
+
+`zPlayDigitalAudio` streams every decoded sample byte to `2Ah` for the whole
+of the interval between two V-ints (Sound/Z80 Sound Driver.asm:4296-4351),
+so the number of bytes that land in a given service window is whatever the
+Z80 had time for after that frame's `zUpdateEverything` returned.
+
+### Engine Behaviour
+
+The engine models the driver's semantics, not the Z80's instruction timing.
+`Ym2612Chip` streams the same bytes at the same per-byte cadence, derived from
+`DacData.baseCycles` and the sample's rate byte, but it has no cost for the
+service itself, so it spends the whole interval streaming.
+
+### Why
+
+The split is a property of a CPU this engine does not emulate, and measuring
+it from a fixture would be a fitted model. Two measurements settle it. The
+aggregate cadence is right: every contiguous run of `2Ah` writes in the
+reference sums to a ROM sample's own decoded sample count (1,438 for
+`DAC_86`, 3,836 for `DAC_81`, 9,294 for `DAC_88`), and pairing each tick's
+`zDACIndex` with that sample's rate byte leaves a residual per frame that is
+consistent across fifteen samples spanning rates 3 to 27:
+
+| Sample | Rate | Median bytes per tick | Z80 cycles unaccounted per frame |
+|---|---|---|---|
+| `DAC_90` | 3 | 265 | 13,494 |
+| `DAC_86` | 4 | 239 | 14,924 |
+| `DAC_88` | 6 | 220 | 12,766 |
+| `DAC_8D` | 11 | 165 | 13,784 |
+| `DAC_93` | 14 | 151 | 11,794 |
+| `DAC_97` | 18 | 129 | 12,070 |
+| `DAC_B2` | 22 | 114 | 11,685 |
+| `DAC_8B` | 27 | 98 | 12,059 |
+
+A wrong per-byte cost would skew that residual with the rate; it does not.
+The residual is the service's own execution cost, and it is not constant:
+within one uninterrupted play of one sample at one fixed rate the reference's
+per-tick counts swing by 15 to 86 bytes, and four separate plays of the same
+sample index peak at 268, 258, 257 and 244.
+
+Run length inherits the same quantity. A run ends either because the sample
+was exhausted or because a later play cut it short
+(`jp p, .dac_idle_loop`, :4343-4345), and how far the stream got before the
+cut is Z80 duration: the engine carries the first music sample 1,438 bytes
+where the reference's own play was cut at 1,364.
+
+The sample-end `2Bh = 0` inherits it in turn, and that is why it left the
+service stream. Only an exhausted sample reaches `zPlayDigitalAudio`'s entry,
+which is the sole writer of the disable (:4258-4262); a superseded one jumps
+straight to `.dac_idle_loop` and writes nothing. So the disable's presence
+encodes exactly which of the two endings occurred, which is the quantity
+already excused above. Measured on the committed reference: the first music
+play is superseded at service 145 with no disable at all, while the engine,
+streaming for the whole interval, exhausts the same sample and writes one at
+service 143.
+
+The `2Bh = 80h` enable did not move and must not. The idle loop writes it
+immediately on finding `zDACIndex` non-zero (:4269-4276), and that store
+happens at a service boundary, so every run's start stays pinned to an exact
+tick by strictly compared data.
+
+### What Is Still Compared
+
+The comparison keeps everything the ROM decides rather than the Z80's clock.
+The run count must match exactly. Every byte the two sides share in a run
+must be equal, in order, which is what proves the sample selection, the DPCM
+decode and the cadence. Run starts are the `2Bh = 80h` enables, which are
+still compared per tick, so run structure is pinned by compared data. No
+`2Ah` byte may stream while the DAC is disabled, on either side, because the
+idle loop streams nothing (:4262-4270); that stays a hard error.
+
+Two quantities are reported rather than asserted, so a regression in either
+stays visible on the DAC stream's result line: `run-length delta` for the
+cumulative byte difference, and `sample-end delta` for the cumulative
+difference in trailing disables.
+
+How many disables fall between two runs is not asserted either, and that was
+measured rather than assumed. Run 0 carries three on both sides, because
+`zPlaySEGAPCM` returns through `zPlayDigitalAudio`'s entry and re-writes the
+disable each time the idle path is re-entered. An earlier draft of this
+excusal asserted "at most one" and was refuted by the reference itself.
+
+### Removal Condition
+
+A Z80 cycle account for the driver's own service. Nothing short of that makes
+the partition derivable, and no fixture measurement may stand in for it.
+
+---
+
+## S2 Music DAC Byte Stream Partition (Oracle Comparison)
+
+The S2 driver-state oracle compares the music DAC byte stream over the whole
+capture window rather than per service window, and does not assert how far a
+DAC run got before it ended. Everything else in a service, the `2Bh` enable
+and disable writes included, stays strictly partitioned and compared.
+
+### Original Implementation
+
+`zWriteToDAC` streams a sample's decoded bytes to `2Ah` from outside the
+interrupt, bracketing each write with `di` / `ei` and spending the rest of its
+time in two `djnz $` busy waits (s2.sounddriver.asm:682-726). Those waits are
+the only window a V-int can land in, so the number of bytes that fall in a
+given service window is whatever the Z80 had time for after that frame's
+`zUpdateEverything` returned with interrupts masked.
+
+### Engine Behaviour
+
+The engine models the driver's semantics, not the Z80's instruction timing. It
+streams the same bytes at the same per-byte cadence but charges nothing for the
+service itself, so it spends the whole inter-V-int interval streaming. Measured
+on the committed `s2-driver-state-w10150-12400` reference, the engine's music
+activation service carried 108 sample bytes that the ROM's carried none of, and
+those 108 bytes were byte-for-byte the head of the reference's *next* service.
+
+### Why
+
+This is the same unmodelled quantity already excused for S3K, one section
+above: the split is a property of a CPU this engine does not emulate, and
+measuring it from a fixture would be a fitted model.
+
+### What Is Still Compared
+
+The run count must match exactly, and every byte the two sides share within a
+run must be equal, in order. That is what proves the sample selection, the
+`jman2050` nybble decode and the cadence.
+
+Every run boundary is the ROM's own and is derived from driver state rather
+than assumed; the next section states the rule in full. Sonic 2's playback loop
+writes nothing at all between samples, because `zWaitLoop` spins on the
+remaining length `de` being zero and touches no register until a sample is
+queued (:647-650), so a completed service carrying no `2Ah` byte is a real gap.
+The sample's own decoded length and the driver's current sample selector supply
+the other two.
+
+Unlike S3K, no `2Bh` write moved into this stream. Sonic 2's playback loop
+never writes the DAC enable register per sample: every `2Bh` write in this
+driver belongs to a song load, a fade or the SEGA chant (:1613, :1662, :1936,
+:2555, :3158), so all of them stay in the per-service partition.
+
+Two quantities are reported rather than asserted, so a regression in either
+stays visible on the DAC stream's result line. `run-length delta` is the
+cumulative byte-count difference across shared runs. `resync` is where the
+reference's remaining bytes pick up again in the engine's run after a byte
+difference, and it is what separates the two very different situations a byte
+difference can mean.
+
+### The Run Rule, And The One Thing It Cannot Split
+
+A run is at most one decoded sample long. That bound is the one
+`zWriteToDAC` itself enforces: it decrements `de`, loaded from `zDACLenTbl`
+by the same self-modified entry lookup that rebases `zCurDAC`
+(s2.sounddriver.asm:505-518, :528-529), once per source byte, and returns to
+`zWaitLoop` when it reaches zero. So a run ends at its sample's decoded
+length, at a service that carried no sample byte, or at a change of the
+current sample selector. Two consecutive plays of one sample are two runs of
+that length even with nothing between them. Each side reads the bound from the
+ROM's own table through its own selector, and the two selectors are never
+compared to each other.
+
+A run shorter than its bound was cut off by another play rather than
+exhausting its sample, and how far each side got before the cut is the
+service-duration quantity above. The join between two such runs is the one
+place the comparison cannot line up, because the two producers phase a queued
+sample differently: the ROM arms it at the end of `zUpdateDAC` and cannot
+stream a byte until the service returns and re-enables interrupts (:492-536,
+:682-726), while the engine's pump, charging nothing for the service, begins
+inside it.
+
+It is measured, not assumed. On the committed `s2-driver-state-w10150-12400`
+reference the first such join is in run 3, whose sample is 1,320 decoded bytes
+long. The ROM played 709 of them before another play superseded it and the
+engine played 1,206. The reference's 709 is exactly the sum of its own
+services 150-155, and its next byte is `0x80`, the value `zWriteToDAC`'s
+accumulator starts every sample at (`ld a,80h` / `ex af,af'` in `zVInt`'s
+`.dacqueued`, :502-517); the step from the preceding `0x89` is minus nine,
+which no entry of `zDACDecodeTbl` can produce, so a second sample begins
+there.
+
+The data itself is not in question, and the result line says so. The three
+runs before the join are full-length plays of 1,320 bytes and agree byte for
+byte on both sides, which is what `complete runs agreed` counts. Aligning each
+side's superseding sample by its own start, 3,612 bytes agree with zero
+mismatches. A byte difference inside a full-length run would be sample data
+and would be a defect; a byte difference after a pair of short runs is this
+join.
+
+The engine's DAC interpolation is not involved and cannot be. `Ym2612Chip`'s
+interpolated write deliberately does not call the write observer, because it
+has no ROM counterpart, so no synthetic byte reaches the compared stream.
+
+Three quantities are reported rather than asserted, so a regression in any of
+them stays visible on the result line: `run-length delta`, the cumulative
+byte-count difference across shared runs; `resync`, where the reference's
+remaining bytes resume in the engine's run after a difference; and
+`previous run superseded`, the two short lengths and the bound they fell short
+of.
+
+### Verification
+
+`TestS2DriverStateOracle`, which reports the DAC stream as its own result line
+beside the per-service one, and whose
+`aCorruptedDacSampleByteBreaksTheStreamComparison` flips one reference sample
+byte and requires the verdict to move.
+
+### Removal Condition
+
+A Z80 cycle account for the driver's own service. Nothing short of that makes
+the partition derivable, and no fixture measurement may stand in for it.
+
+---
+
+## S2 Headless Oracle Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)
+
+The S2 driver-state oracles drive the engine from a song load, not from
+power-on. Driver variables that a song load does not clear therefore enter the
+comparison with whatever the recording accumulated before the window, and the
+engine capture has no way to know that value. The first one this has cost is
+`zRingSpeaker`.
+
+### Original Implementation
+
+`zPlaySound_CheckRing` alternates the ring sound between two speakers. While
+`zRingSpeaker` is zero it resolves the raw `B5h` request to `CEh`, ring left,
+and either way it complements the flag afterwards, so consecutive rings
+alternate (s2.sounddriver.asm:2124-2135). The flag lives among the driver's own
+byte variables at low Z80 addresses, outside the `zAbsVar`-to-`zTracksSongEnd`
+region `zInitMusicPlayback` clears (:2580-2612), so a song load leaves it
+untouched.
+
+### Engine Behaviour
+
+`S2OracleEngineCapture` starts its alternation at the power-on value, zero, so
+its first ring resolves to `CEh`. That is the correct default and it is
+asserted by
+`TestS2AudioOracleComparator#explicitDriverRequestsResolveAndAdmitTheFirstRingBeforeTheTargetUpdate`,
+which requires `zRingSpeaker = 0` to produce `CEh`.
+
+### Why
+
+A capture that begins at a mid-run song load cannot derive a variable the load
+does not clear. Seeding it from the reference would hydrate driver state that
+decides *which* sound plays, which is outside the hardware-timing exception in
+hard rule 4: that exception may only affect when engine-created work becomes
+ready or which of two existing ROM loops a row takes, never what happens.
+
+### What It Costs, Measured
+
+On the committed `s2-driver-state-cpz-w2700-3450` reference the window's
+`zRingSpeaker` is `FFh` from the anchor through service 261 and flips to `00h`
+at service 262, which is the window's first ring. So the ROM kept `B5h`, ring
+right, where the engine resolved `CEh`, ring left. The two sounds occupy
+different FM channels, so the whole voice load appears one channel across:
+the reference on FM5 at `B1h`, `31h`, `35h`, `39h`, `3Dh`, the engine on FM4 at
+`B0h`, `30h`, `34h`, `38h`, `3Ch`, every value equal.
+
+The attribution was proved by experiment rather than argued. Starting the
+harness alternation at the opposite phase moves the first write divergence from
+service 237, movie row 2968, to service 494, movie row 3225, and halves the
+divergent services from 36 to 18. That change was not kept, because it breaks
+the power-on assertion above; the phase is a property of the window, not a
+constant to pick.
+
+### What Is Still Compared
+
+Everything else. The CPZ window's driver state matches on all 720 compared
+services, and the write stream matches up to the first ring. Nothing is
+excluded from the comparison by this entry; it records why a mid-run window's
+first ring can differ and what that difference looks like, so the next lane
+does not read it as a channel-assignment defect. The slot rule itself is not
+involved: `zPlaySound` derives an SFX slot from the header's own channel byte
+through `zMusicTrackOffs` (:2210-2251, :747-757) and both sides agree on it.
+
+### Resolved For The Ring Flag
+
+Met on 2026-09-04 by the second route rather than the first. The flag is the
+parity of the rings played since power-on, and the recording's own ring
+requests are stimuli, so the count of them before a window derives it without
+reading any compared value. `S2OracleEngineCapture` takes that count and the
+CPZ oracle reads it from the committed
+`s2-request-stimuli-cpz-w120-3450.json`, which carries one ring request at
+movie row 1432, before the window. The write frontier moved from service 237,
+movie row 2968, to service 494, movie row 3225.
+
+The entry stays because the general limitation stands: any other driver
+variable outside the load's clear is still inherited and still undetermined,
+and the ring flag is only the first one to have cost anything.
+
+### Removal Condition
+
+A capture that starts from power-on and an engine run driven across it. Two
+producer limitations block that today and are recorded in the audio frontier
+log: the request-window capture mode cannot begin a publication epoch at movie
+row 0, and the request producer records no music requests at all, so a
+power-on engine run cannot reproduce the songs a recording loads before the
+window.
+
+---
+
+## PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores
+
+**Location:** `PsgChip.tickNoise()` / `PsgChip.linkedNoiseReload()`
+**Hardware Reference:** `docs/architecture/research/audio/2026-08-29-sn76489-clean-room-spec.md` §4.1, §10.5
+
+### Original Implementation
+
+On the Sega-integrated SN76489 a tone period of 0 or 1 holds the channel's output
+constantly high. The TI datasheet wires "tone generator #3 output" into the noise
+clock when the noise rate bits are `11`, and a constant output has no edges, so
+the clean-room specification's first revision concluded the LFSR stops in that
+state. No public hardware capture of the Sega part in this state is known.
+
+### Our Implementation
+
+The noise clock is driven by tone 2's *counter expiry*, not its held output
+latch: with `N₂ ≤ 1` the noise counter reloads with `max(N₂, 1)`, so it flips every
+tick and the LFSR shifts every second tick — the highest noise pitch the chip
+produces. Tone 2's own output stays constantly high as before.
+
+### Rationale
+
+The pinned Genesis Plus GX reference (and MAME, at twice the rate) both clock the
+noise in this state, and the SMPS drivers use it deliberately: writing the top
+note-table entry (`0x000`) into tone 2 under a linked noise track is their idiom
+for the fastest noise. Twenty-two SFX across the three games sit in that state —
+S1 `A2`, `AA` Splash, `AB`, `AE` Fireball, `B6` Spikes Move; S2 `A2`, `AA` Splash,
+`AB` Swish, `AE` Lava Ball, `B6`, `D4`; S3K `42`, `47`, `4E`, `66`, `70`, `7E`,
+`8D`, `97`, `A0`, `D1`, `DB` — the S1/S2 Splash for its whole 1.7 s body. A stopped
+LFSR silences them. Whether real silicon shifts once per tick (MAME) or once per
+two ticks (GPGX) remains unmeasured; the engine follows GPGX because the engine
+contract's tolerances are stated against it. Only the linked-noise clock changed;
+the tone channel's constant-high rule and every other noise rate are untouched.
+
+### Verification
+
+`TestPsgChipHardwareBehaviour.toneTwoLinkedNoiseFollowsToneTwoPeriodAndKeepsClockingAtTheTopOfTheTable`
+asserts one shift per two ticks at `N₂ = 1` and `N₂ = 0` with tone 2 held high.
+The capture re-run in
+`docs/architecture/validation/2026-08-29-psg-clean-room-capture-comparison.md` §9
+matches the reference on the S1 `B6` tail to within 0.02 dB per attenuation step,
+identical transition counts, and cross-correlation 0.990–0.9999 at a constant lag.
+
+---
+
+## FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration
+
+**Location:** `VirtualSynthesizer.PSG_PREAMP_PERCENT` (applied via `PsgChip.configure(38, 0xFF)`)
+**Reference:** `docs/architecture/validation/2026-08-29-audio-mix-calibration.md`
+
+### Original Implementation
+
+The console mixes the YM2612 and SN76489 at a fixed analogue ratio. The engine
+never measured it: before the two core rewrites the balance was whatever the
+two Genesis Plus GX-derived cores produced through a plain sum — one full-scale
+FM channel 8191 against one full-scale PSG channel 2800 x 150 % = 4200, an
+FM:PSG ratio of 1.950 (+5.80 dB), with no preamp call anywhere in the mixer.
+
+### Our Implementation
+
+The Nuked-OPN2 facade emits 6144 per full-scale FM channel and the clean-room
+PSG 8191 per full-scale channel, so an unadjusted sum would have moved the
+balance by 8.30 dB toward the PSG. The mixer now sets the PSG output-stage
+preamp to 38 % (`6144 x 4200 / 8191^2 = 38.46 %`, rounded to the whole percent
+`configure` accepts), giving 6144 / 3112 = 1.974 (+5.90 dB), 0.10 dB from the
+pre-rewrite ratio. At the 16-bit output after `MASTER_GAIN_SHIFT` one full-scale
+FM channel is 3072, one full-scale PSG channel 1556, and silence rests at +288.
+Neither chip's own scale is adjusted.
+
+### Rationale
+
+No capture with both FM music and PSG sound exists in the repository (every
+`*-reference.wav` under `docs/architecture/research/audio/` is FM-only, the
+trace fixtures carry no PCM, and the BizHawk observer records chip writes, not
+audio), so the balance is **pre-rewrite parity, uncalibrated against hardware —
+it needs a two-chip capture**. Restoring the old ratio numerically keeps the
+audible balance players had rather than inventing a new one.
+
+### Verification
+
+`TestVirtualSynthesizerMix` asserts the documented per-chip levels, the ratio,
+and the resting level from the constants above. Removal condition: a hardware
+or trusted-emulator capture of one passage containing FM music and a PSG SFX,
+rendered through `FmSfxRenderTool` / `PsgSfxRenderTool` and matched on the
+relative RMS of the FM- and PSG-dominated segments; replace the 38 % with the
+measured value and retire this entry.
+
+---

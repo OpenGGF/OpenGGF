@@ -12,7 +12,7 @@ import com.openggf.level.objects.ObjectSpriteSheet;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.level.render.SpriteMappingPiece;
-import com.openggf.tools.NemesisReader;
+import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
 import com.openggf.sprites.managers.ProcessSpritesEpoch;

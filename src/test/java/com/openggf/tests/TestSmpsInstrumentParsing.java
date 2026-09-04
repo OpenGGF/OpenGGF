@@ -80,9 +80,8 @@ public class TestSmpsInstrumentParsing {
 
         SmpsSequencer seq = new SmpsSequencer(smps, dac, synth, Sonic2SmpsSequencerConfig.CONFIG);
 
-        // The shipped driver reaches F9 on the third real VInt. Direct sample
-        // reads no longer inject a synthetic pre-VInt service.
-        seq.advanceBatch(3 * 735);
+        short[] buf = new short[2000];
+        seq.advanceSamples(buf.length);
 
         // 1. Verify the data source preserves the raw S2 register-order voice.
         byte[] expectedVoice = new byte[25];

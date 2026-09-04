@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.NullAudioBackend;
@@ -41,17 +42,34 @@ import org.junit.jupiter.api.Test;
 import org.lwjgl.glfw.GLFW;
 
 class TestSpriteManagerDebugEmeraldGrant {
+    private com.openggf.data.Rom openedRom;
+
     @BeforeEach
     void setUp() {
         TestEnvironment.resetAll();
         TestEnvironment.configureGameModuleFixture(SonicGame.SONIC_2);
         AudioManager.getInstance().resetState();
         AudioManager.getInstance().setBackend(new NullAudioBackend());
+        // Sonic 2 resolves a request against its ROM-backed sample before the
+        // driver publishes it and rejects the request outright when no ROM is
+        // installed, so the chime needs the real ROM to reach the timeline.
+        java.io.File romFile = com.openggf.tests.RomTestUtils
+                .ensureSonic2RomAvailable();
+        org.junit.jupiter.api.Assumptions.assumeTrue(romFile != null,
+                "Sonic 2 REV01 ROM is required to resolve an S2 request");
+        openedRom = new com.openggf.data.Rom();
+        assertTrue(openedRom.open(romFile.getAbsolutePath()));
+        AudioManager.getInstance().setRom(openedRom);
         AudioManager.getInstance().setAudioProfile(new Sonic2AudioProfile());
 
         GameplayModeContext mode = TestEnvironment.activeGameplayMode();
         SpriteManager spriteManager = new SpriteManager();
         GameStateManager gameStateManager = new GameStateManager();
+        CollisionSystem collisionSystem = mock(CollisionSystem.class);
+        when(collisionSystem.key()).thenReturn("collision");
+        ZoneLayoutMutationPipeline mutationPipeline =
+                mock(ZoneLayoutMutationPipeline.class);
+        when(mutationPipeline.key()).thenReturn("mutation-pipeline");
         mode.attachGameplayManagers(
                 new Camera(),
                 new TimerManager(),
@@ -82,6 +100,10 @@ class TestSpriteManagerDebugEmeraldGrant {
     void tearDown() {
         SessionManager.clear();
         AudioManager.getInstance().resetState();
+        if (openedRom != null) {
+            openedRom.close();
+            openedRom = null;
+        }
     }
 
     @Test
@@ -94,6 +116,10 @@ class TestSpriteManagerDebugEmeraldGrant {
         GameServices.sprites().update(input);
 
         assertEquals(7, GameServices.gameState().getEmeraldCount());
+        // S2 requests become commands at the frame's forward presentation
+        // boundary, the way the game loop drives them.
+        AudioManager.getInstance().presentFrame(
+                com.openggf.audio.presentation.PresentationMode.FORWARD);
         var commands = musicCommands();
         assertEquals(1, commands.size());
         assertEquals(Sonic2Music.GOT_EMERALD.id, commands.getFirst().musicId());

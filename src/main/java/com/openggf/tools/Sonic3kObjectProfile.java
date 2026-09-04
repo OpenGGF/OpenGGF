@@ -54,10 +54,15 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
                     "HPZ", "Hidden Palace Sanctuary", 1)
     );
 
-    // Shared objects implemented for both zone sets.
-    // Public so tests (e.g. TestCnzMinibossRegistered) can assert that
-    // zone-set-specific ids (where the same numeric id maps to different
-    // objects in S3KL vs SKL) stay out of the cross-zoneset allowlist.
+    // Implemented-id sets, one per registry gate in Sonic3kObjectRegistry. An id is
+    // implemented for a zone when the registry's factory resolves it to a concrete
+    // runtime owner under that zone's zone set (and zone-local gate) instead of a
+    // PlaceholderObjectInstance. These lists are transcribed from the registry and
+    // TestSonic3kObjectProfileRegistryGuard fails when they drift from it.
+
+    // Objects implemented in every zone of both zone sets.
+    // Names may differ between zone sets; membership means a concrete owner
+    // exists in every zone. Zone-gated implementations remain in the sets below.
     public static final Set<Integer> SHARED_IMPLEMENTED_IDS = Set.of(
             0x00, // Ring
             0x01, // Monitor
@@ -69,172 +74,260 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x0D, // BreakableWall
             0x0E, // TwistedRamp
             0x0F, // CollapsingBridge
+            0x24, // AutomaticTunnel
             0x26, // AutoSpin
             0x28, // InvisibleBlock
             0x2A, // CorkFloor
             0x2F, // StillSprite
             0x30, // AnimatedStillSprite
+            0x31, // LBZRollingDrum / LRZCollapsingBridge
             0x33, // Button
             0x34, // StarPost
+            0x35, // AIZForegroundPlant
             0x3C, // Door
             0x3D, // RetractingSpring
-            0x4F, // SinkingMud
             0x51, // FloatingPlatform
+            0x54, // Bubbler
+            0x6A, // InvisibleHurtBlockHorizontal
+            0x6B, // InvisibleHurtBlockVertical
             0x6C, // TensionBridge
-            0x6A, // InvisibleHurtBlockH
-            0x6B, // InvisibleHurtBlockV
+            0x78, // FBZDEZPlayerLauncher
             0x80, // HiddenMonitor
-            0x8A, // FBZExitHall (same pointer in both SK sets)
-            0x85  // SSEntryRing
+            0x82, // CutsceneKnuckles
+            0x83, // CutsceneButton
+            0x85, // SSEntryRing
+            0x86, // GumballMachine
+            0x87, // GumballTriangleBumper
+            0x88, // CNZWaterLevelCorkFloor
+            0x89, // CNZWaterLevelButton
+            0x8A, // FBZExitHall
+            0x8C, // Bloominator / Madmole
+            0x8D, // Rhinobot / Mushmeanie
+            0x8E, // MonkeyDude / Dragonfly
+            0x8F, // CaterKillerJr / Butterdroid
+            0x90, // AIZMinibossCutscene / Cluckoid
+            0xA8, // Blaster / MHZ1CutsceneKnuckles
+            0xA9, // TechnoSqueek / MHZ1CutsceneButton
+            0xEB // GumballItem
     );
 
-    // S3KL-only implementations (zones 0-6: AIZ through LBZ)
-    private static final Set<Integer> S3KL_IMPLEMENTED_IDS;
-    // FBZ completion gate: only factories proven concrete for FBZ's S3KL mappings.
-    // Keep this zone-specific so SKL factories for remapped ids (notably A8/A9)
-    // cannot make the FBZ audit report a false positive.
-    private static final Set<Integer> FBZ_IMPLEMENTED_IDS = Set.of(
-            0x00, 0x01, 0x02, 0x07, 0x08, 0x0F, 0x26, 0x28, 0x2A,
-            0x2F, 0x33, 0x34, 0x3D, 0x6A, 0x6B,
-            0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78,
-            0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x7F, 0xE0, 0xE1,
-            0x8A, 0xCE, 0xCF, 0xD0,
-            0xE2, 0xE3, 0xE4, 0xE5, 0xFF,
-            0x80, 0x85, 0xA8, 0xA9, 0xAA, 0xAB
+    // S3KL-only implementations (zones 0-6: AIZ through LBZ), on top of SHARED.
+    private static final Set<Integer> S3KL_ONLY_IDS = Set.of(
+            0x03, // AIZHollowTree
+            0x06, // AIZRideVine
+            0x09, // AIZ1Tree
+            0x0A, // AIZ1ZiplinePeg
+            0x0C, // AIZGiantRideVine
+            0x10, // LBZTubeElevator
+            0x15, // LBZPlayerLauncher
+            0x16, // LBZFlameThrower
+            0x17, // LBZRideGrapple
+            0x18, // LBZCupElevator
+            0x19, // LBZCupElevatorPole
+            0x20, // MGZLBZSmashingPillar
+            0x22, // LBZAlarm
+            0x29, // AIZDisappearingFloor
+            0x2B, // AIZFlippingBridge
+            0x2C, // AIZCollapsingLogBridge
+            0x2D, // AIZFallingLog
+            0x2E, // AIZSpikedLog
+            0x32, // AIZDrawBridge
+            0x36, // HCZBreakableBar
+            0x37, // HCZWaterRush
+            0x38, // HCZCGZFan
+            0x39, // HCZLargeFan
+            0x3A, // HCZHandLauncher
+            0x3B, // HCZWaterWall
+            0x3E, // HCZConveyorBelt
+            0x3F, // HCZConveyorSpike
+            0x40, // HCZBlock
+            0x41, // CNZBalloon
+            0x42, // CNZCannon
+            0x43, // CNZRisingPlatform
+            0x44, // CNZTrapDoor
+            0x45, // CNZLightBulb
+            0x46, // CNZHoverFan
+            0x47, // CNZCylinder
+            0x48, // CNZVacuumTube
+            0x49, // CNZGiantWheel
+            0x4C, // CNZSpiralTube
+            0x4D, // CNZBarberPoleSprite
+            0x4E, // CNZWireCage
+            0x4F, // SinkingMud
+            0x50, // MGZTwistingLoop
+            0x52, // MGZSmashingPillar
+            0x53, // MGZSwingingPlatform
+            0x55, // MGZHeadTrigger
+            0x56, // MGZMovingSpikePlatform
+            0x57, // MGZTriggerPlatform
+            0x58, // MGZSwingingSpikeBall
+            0x59, // MGZDashTrigger
+            0x5A, // MGZPulley
+            0x5B, // MGZTopPlatform
+            0x5C, // MGZTopLauncher
+            0x67, // HCZSnakeBlocks
+            0x68, // HCZSpinningColumn
+            0x69, // HCZTwistingLoop
+            0x6D, // HCZWaterSplash
+            0x6E, // WaterDrop
+            0x6F, // FBZWireCage
+            0x70, // FBZWireCageStationary
+            0x71, // FBZFloatingPlatform
+            0x72, // FBZChainLink
+            0x75, // FBZSnakePlatform
+            0x76, // FBZBentPipe
+            0x77, // FBZRotatingPlatform
+            0x79, // FBZDisappearingPlatform
+            0x7A, // FBZScrewDoor
+            0x7B, // FBZSpinningPole
+            0x7C, // FBZPropeller
+            0x7D, // FBZPiston
+            0x7E, // FBZPlatformBlocks
+            0x7F, // FBZMissileLauncher
+            0x91, // AIZMiniboss
+            0x92, // AIZEndBoss
+            0x93, // Jawz
+            0x94, // Blastoid
+            0x95, // Buggernaut
+            0x96, // TurboSpiker
+            0x97, // MegaChopper
+            0x98, // Poindexter
+            0x99, // HCZMiniboss
+            0x9A, // HCZEndBoss
+            0x9B, // BubblesBadnik
+            0x9C, // Spiker
+            0x9D, // Mantis
+            0x9E, // Tunnelbot
+            0x9F, // MGZMiniboss
+            0xA1, // MGZEndBoss
+            0xA2, // MGZEndBossKnux
+            0xA3, // Clamer
+            0xA4, // Sparkle
+            0xA5, // Batbot
+            0xA6, // CNZMiniboss
+            0xA7, // CNZEndBoss
+            0xAA, // FBZMiniboss
+            0xAB, // FBZ2Subboss
+            0xAC, // FBZEndBoss
+            0xAD, // Penguinator
+            0xAE, // StarPointer
+            0xAF, // ICZCrushingColumn
+            0xB0, // ICZPathFollowPlatform
+            0xB1, // ICZBreakableWall
+            0xB2, // ICZFreezer
+            0xB3, // ICZSegmentColumn
+            0xB4, // ICZSwingingPlatform
+            0xB5, // ICZStalagtite
+            0xB6, // ICZIceCube
+            0xB7, // ICZIceSpikes
+            0xB8, // ICZHarmfulIce
+            0xB9, // ICZSnowPile
+            0xBA, // ICZTensionPlatform
+            0xBB, // ICZIceBlock
+            0xBC, // ICZMiniboss
+            0xBD, // ICZEndBoss
+            0xBE, // SnaleBlaster
+            0xBF, // Ribot
+            0xC0, // Orbinaut
+            0xC1, // Corkey
+            0xC2, // Flybot767
+            0xCE, // FBZExitDoor
+            0xCF, // FBZEggPrison
+            0xD0, // FBZSpringPlunger
+            0xE0, // FBZWallMissile
+            0xE1, // FBZMine
+            0xE2, // FBZElevator
+            0xE3, // FBZTrapSpring
+            0xE4, // FBZFlamethrower
+            0xE5 // FBZSpiderCrane
     );
-    // LBZ-only implementations from S3KL ids that map to different zone objects elsewhere.
-    private static final Set<Integer> LBZ_IMPLEMENTED_IDS;
-    // SKL-only implementations (zones 7-13: MHZ through DDZ)
-    private static final Set<Integer> SKL_IMPLEMENTED_IDS;
 
-    static {
-        var s3kl = new HashSet<>(SHARED_IMPLEMENTED_IDS);
-        s3kl.addAll(Set.of(
-                0x03, // AIZHollowTree
-                0x06, // AIZRideVine
-                0x09, // AIZ1Tree
-                0x0A, // AIZ1ZiplinePeg
-                0x0C, // AIZGiantRideVine
-                0x10, // LBZTubeElevator
-                0x11, // LBZMovingPlatform
-                0x13, // LBZExplodingTrigger
-                0x14, // LBZTriggerBridge
-                0x16, // LBZFlameThrower
-                0x17, // LBZRideGrapple
-                0x18, // LBZCupElevator
-                0x19, // LBZCupElevatorPole
-                0x29, // AIZDisappearingFloor
-                0x2B, // AIZFlippingBridge
-                0x2C, // AIZCollapsingLogBridge
-                0x2D, // AIZFallingLog
-                0x2E, // AIZSpikedLog
-                0x35, // AIZForegroundPlant
-                0x36, // HCZBreakableBar
-                0x37, // HCZWaterRush
-                0x38, // HCZCGZFan
-                0x3A, // HCZHandLauncher
-                0x3B, // HCZWaterWall
-                0x20, // MGZLBZSmashingPillar (alt slot)
-                0x22, // LBZAlarm
-                0x52, // MGZLBZSmashingPillar
-                0x53, // MGZSwingingPlatform
-                0x55, // MGZHeadTrigger
-                0x56, // MGZMovingSpikePlatform
-                0x57, // MGZTriggerPlatform
-                0x58, // MGZSwingingSpikeBall
-                0x59, // MGZDashTrigger
-                0x5B, // MGZTopPlatform
-                0x3E, // HCZConveyorBelt
-                0x3F, // HCZConveyorSpike
-                0x41, // CNZBalloon
-                0x42, // CNZCannon
-                0x43, // CNZRisingPlatform
-                0x44, // CNZTrapDoor
-                0x45, // CNZLightBulb
-                0x46, // CNZHoverFan
-                0x47, // CNZCylinder
-                0x48, // CNZVacuumTube
-                0x49, // CNZGiantWheel
-                0x4A, // CNZBumper
-                0x4B, // CNZTriangleBumpers
-                0x4C, // CNZSpiralTube
-                0x4D, // CNZBarberPoleSprite
-                0x4E, // CNZWireCage
-                0x67, // HCZSnakeBlocks
-                0x68, // HCZSpinningColumn
-                0x69, // HCZTwistingLoop
-                0x6D, // HCZWaterSplash
-                0x6E, // HCZWaterDrop
-                0x8C, // Bloominator
-                0x8D, // Rhinobot
-                0x8E, // MonkeyDude
-                0x8F, // CaterKillerJr
-                0x82, // CutsceneKnuckles (CNZ2 variants included)
-                0x83, // CutsceneButton
-                0x88, // CNZWaterLevelCorkFloor
-                0x89, // CNZWaterLevelButton
-                0xA3, // Clamer
-                0xA4, // Sparkle
-                0xA5, // Batbot
-                0x93, // Jawz
-                0x94, // Blastoid
-                0x95, // Buggernaut
-                0x98, // Poindexter
-                0x9B, // BubblesBadnik
-                0x9C, // Spiker
-                0x9E, // Tunnelbot
-                0x90, // AIZMinibossCutscene
-                0x91, // AIZMiniboss
-                0x92, // AIZEndBoss
-                0x99, // HCZMiniboss
-                0x9A, // HCZEndBoss
-                0xA6, // CNZMiniboss (S3KL only — same id maps to DEZMiniboss in SKL)
-                0xA7, // CNZEndBoss (S3KL only — same id maps to DEZEndBoss in SKL)
-                0xAD, // Penguinator
-                0xAE, // StarPointer
-                0xAF, // ICZCrushingColumn
-                0xB0, // ICZPathFollowPlatform
-                0xB1, // ICZBreakableWall
-                0xB2, // ICZFreezer
-                0xB3, // ICZSegmentColumn
-                0xB4, // ICZSwingingPlatform
-                0xB5, // ICZStalagtite
-                0xB6, // ICZIceCube
-                0xB7, // ICZIceSpikes
-                0xB8, // ICZHarmfulIce
-                0xB9, // ICZSnowPile
-                0xBA, // ICZTensionPlatform
-                0xBB, // ICZIceBlock
-                0xBC, // ICZMiniboss
-                0xBD, // ICZEndBoss
-                0xBE, // SnaleBlaster
-                0xBF, // Ribot
-                0xC0, // Orbinaut
-                0xC1, // Corkey
-                0xC2, // Flybot767
-                0xC3, // LBZ1Robotnik
-                0xC4, // LBZMinibossBox
-                0xC5, // LBZMinibossBoxKnux
-                0xC6, // LBZ2RobotnikShip
-                0xC8, // LBZKnuxPillar
-                0xC9, // LBZMiniboss
-                0xCA, // LBZFinalBoss1
-                0xCB, // LBZEndBoss
-                0xCE, // FBZExitDoor
-                0xCF, // FBZEggPrison
-                0xD0  // FBZSpringPlunger
-        ));
-        S3KL_IMPLEMENTED_IDS = Set.copyOf(s3kl);
-        var lbz = new HashSet<>(S3KL_IMPLEMENTED_IDS);
-        lbz.add(0x1B); // LBZPipePlug
-        lbz.add(0x1E); // LBZSpinLauncher
-        lbz.add(0x1F); // LBZLoweringGrapple
-        lbz.add(0x21); // LBZGateLaser
-        LBZ_IMPLEMENTED_IDS = Set.copyOf(lbz);
+    // CNZ-only implementations from S3KL ids gated on ZONE_CNZ.
+    private static final Set<Integer> CNZ_ONLY_IDS = Set.of(
+            0x4A, // Bumper
+            0x4B // CNZTriangleBumpers
+    );
 
-        var skl = new HashSet<>(SHARED_IMPLEMENTED_IDS);
-        skl.addAll(Set.of(0x79, 0xB0, 0xB4, 0xB5));
-        SKL_IMPLEMENTED_IDS = Set.copyOf(skl);
+    // FBZ-only implementations from S3KL ids gated on ZONE_FBZ.
+    private static final Set<Integer> FBZ_ONLY_IDS = Set.of(
+            0x73, // FBZMagneticSpikeBall
+            0x74, // FBZMagneticPlatform
+            0xFF // FBZMagneticPendulum
+    );
+
+    // LBZ-only implementations from S3KL ids gated on ZONE_LBZ.
+    private static final Set<Integer> LBZ_ONLY_IDS = Set.of(
+            0x11, // LBZMovingPlatform
+            0x13, // LBZExplodingTrigger
+            0x14, // LBZTriggerBridge
+            0x1B, // LBZPipePlug
+            0x1E, // LBZSpinLauncher
+            0x1F, // LBZLoweringGrapple
+            0x21, // LBZGateLaser
+            0xC3, // LBZ1Robotnik
+            0xC4, // LBZMinibossBox
+            0xC5, // LBZMinibossBoxKnux
+            0xC6, // LBZ2RobotnikShip
+            0xC8, // LBZKnuxPillar
+            0xC9, // LBZMiniboss
+            0xCA, // LBZFinalBoss1
+            0xCB, // LBZEndBoss
+            0xCC // LBZFinalBoss2
+    );
+
+    // SKL-only implementations (zones 7-13: MHZ through DDZ), on top of SHARED.
+    private static final Set<Integer> SKL_ONLY_IDS = Set.of(
+            0x14 // Updraft
+    );
+
+    // MHZ-only implementations from SKL ids gated on ZONE_MHZ.
+    private static final Set<Integer> MHZ_ONLY_IDS = Set.of(
+            0x03, // MHZTwistedVine
+            0x06, // MHZPulleyLift
+            0x09, // MHZCurledVine
+            0x0A, // MHZStickyVine
+            0x0B, // MHZSwingBarHorizontal
+            0x0C, // MHZSwingBarVertical
+            0x10, // MHZSwingVine
+            0x11, // MHZMushroomPlatform
+            0x12, // MHZMushroomParachute
+            0x13, // MHZMushroomCatapult
+            0x23, // MHZMushroomCap
+            0x91, // MHZMinibossTree
+            0x92, // MHZMiniboss
+            0x93 // MHZEndBoss
+    );
+
+    /** Every id implemented in at least one S3KL zone. */
+    private static final Set<Integer> S3KL_IMPLEMENTED_IDS = union(
+            SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS, CNZ_ONLY_IDS, FBZ_ONLY_IDS, LBZ_ONLY_IDS);
+
+    /** Implemented ids for one ROM zone id, resolved through the same gates as the registry. */
+    public static Set<Integer> implementedIdsForZone(int zoneId) {
+        if (S3kZoneSet.forZone(zoneId) == S3kZoneSet.SKL) {
+            return zoneId == Sonic3kZoneIds.ZONE_MHZ
+                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS)
+                    : union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS);
+        }
+        if (zoneId == Sonic3kZoneIds.ZONE_CNZ) {
+            return union(SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS, CNZ_ONLY_IDS);
+        }
+        if (zoneId == Sonic3kZoneIds.ZONE_FBZ) {
+            return union(SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS, FBZ_ONLY_IDS);
+        }
+        if (zoneId == Sonic3kZoneIds.ZONE_LBZ) {
+            return union(SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS, LBZ_ONLY_IDS);
+        }
+        return union(SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS);
+    }
+
+    @SafeVarargs
+    private static Set<Integer> union(Set<Integer>... sets) {
+        Set<Integer> all = new HashSet<>();
+        for (Set<Integer> set : sets) {
+            all.addAll(set);
+        }
+        return Set.copyOf(all);
     }
 
     // S3KL badniks (SK Set 1, zones 0-6: AIZ through LBZ)
@@ -406,18 +499,21 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     @Override public String gameId() { return "s3k"; }
     @Override public String defaultRomPath() { return "s3k.gen"; }
     @Override public String outputFilename() { return "S3K_OBJECT_CHECKLIST.md"; }
+    @Override public String coverageNote() {
+        return """
+                > **Coverage meaning:** "Implemented" means the object ID resolves to a
+                > concrete registry/runtime owner for that zone's zone set (S3KL zones 0-6,
+                > SKL zones 7-13) in `Sonic3kObjectRegistry`, rather than a
+                > `PlaceholderObjectInstance`; the totals count id x zone-set rows. It does not
+                > certify full ROM behavior, rendering, collision, every subtype, boss phase,
+                > or rewind/trace parity. Dynamically allocated child objects can also remain
+                > absent even when their registered parent is checked; use the current status
+                > and known-bugs documents for route-completion claims.""";
+    }
     @Override public List<ObjectDiscoveryTool.LevelConfig> getLevels() { return LEVELS; }
     @Override public Set<Integer> getImplementedIds() { return S3KL_IMPLEMENTED_IDS; }
     @Override public Set<Integer> getImplementedIds(ObjectDiscoveryTool.LevelConfig level) {
-        int[] za = LEVEL_ZONE_ACT.get(level.levelData());
-        if (zoneSetForLevel(level) == S3kZoneSet.SKL) {
-            return SKL_IMPLEMENTED_IDS;
-        }
-        return switch (za[0]) {
-            case Sonic3kZoneIds.ZONE_FBZ -> FBZ_IMPLEMENTED_IDS;
-            case Sonic3kZoneIds.ZONE_LBZ -> LBZ_IMPLEMENTED_IDS;
-            default -> S3KL_IMPLEMENTED_IDS;
-        };
+        return implementedIdsForZone(LEVEL_ZONE_ACT.get(level.levelData())[0]);
     }
     @Override public Map<String, List<ObjectDiscoveryTool.DynamicBoss>> getDynamicBosses() { return DYNAMIC_BOSSES; }
 

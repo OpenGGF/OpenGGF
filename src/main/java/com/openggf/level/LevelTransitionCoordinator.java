@@ -2,6 +2,7 @@ package com.openggf.level;
 
 import com.openggf.game.BonusStageType;
 import com.openggf.game.SpecialStageEntryRequest;
+import com.openggf.game.GameOverExit;
 import com.openggf.level.objects.PersistentRespawnState;
 
 import java.util.Optional;
@@ -89,6 +90,7 @@ public class LevelTransitionCoordinator {
 
     // ── Credits ────────────────────────────────────────────────────────
     private boolean creditsRequested;
+    private GameOverExit gameOverExitRequested;
 
     // ── Time attack menu return ─────────────────────────────────────────
     private boolean timeAttackMenuReturnRequested;
@@ -644,6 +646,7 @@ public class LevelTransitionCoordinator {
                 || creditsRequested
                 || specialStageEntryRequest != null
                 || specialStageEntryRoutineArmed
+                || gameOverExitRequested != null
                 || bonusStageRequested != null;
     }
 
@@ -863,6 +866,34 @@ public class LevelTransitionCoordinator {
         boolean requested = timeAttackMenuReturnRequested;
         timeAttackMenuReturnRequested = false;
         return requested;
+    }
+
+    // ================================================================
+    //  Game over
+    // ================================================================
+
+    /**
+     * The GAME OVER card's {@code move.b #id_Continue,(v_gamemode).w} /
+     * {@code move.b #id_Sega,(v_gamemode).w}: ends the level main loop and
+     * names the mode that follows. Idempotent because the card keeps writing
+     * the mode on every frame after it has been dismissed.
+     */
+    public void requestGameOverExit(GameOverExit exit) {
+        if (exit == null) {
+            throw new IllegalArgumentException("exit must not be null");
+        }
+        this.gameOverExitRequested = exit;
+    }
+
+    /** @return the requested exit, or {@code null}; clears the request. */
+    public GameOverExit consumeGameOverExitRequest() {
+        GameOverExit exit = gameOverExitRequested;
+        gameOverExitRequested = null;
+        return exit;
+    }
+
+    public GameOverExit getGameOverExitRequested() {
+        return gameOverExitRequested;
     }
 
     // ================================================================

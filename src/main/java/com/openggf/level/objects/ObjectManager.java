@@ -73,8 +73,7 @@ public class ObjectManager {
     private final Map<ObjectSpawn, ObjectInstance> activeObjects = new IdentityHashMap<>();
     private final Map<ObjectInstance, ObjectSpawn> instanceToSpawn = new IdentityHashMap<>();
     private final List<ObjectInstance> dynamicObjects = new ArrayList<>();
-    private final Set<ObjectInstance> auxiliaryDynamicObjects =
-            Collections.newSetFromMap(new IdentityHashMap<>());
+    private final DynamicObjectOwnership dynamicOwnership = new DynamicObjectOwnership();
     private final List<ObjectInstance> dynamicFallbackScratch = new ArrayList<>();
     private final List<ObjectInstance> activeFallbackScratch = new ArrayList<>();
     // Per-frame scratch collections reused to avoid steady-state allocation.
@@ -441,7 +440,7 @@ public class ObjectManager {
         clearActiveObjects();
         dynamicObjects.clear();
         objectCallbacks.clear();
-        auxiliaryDynamicObjects.clear();
+        dynamicOwnership.clear();
         deferredDynamicExecThisFrame.clear();
         runtimeState.clearPostExecDynamicSpawns();
         reservedChildSlots.clear();
@@ -480,6 +479,11 @@ public class ObjectManager {
     }
 
     ObjectServices services() {
+        return objectServices;
+    }
+
+    /** The services this manager injects into every object it owns. */
+    public ObjectServices getObjectServices() {
         return objectServices;
     }
 
@@ -1500,36 +1504,7 @@ public class ObjectManager {
         int targetBucket = RenderPriority.clamp(bucket);
         int idx = targetBucket - RenderPriority.MIN;
         List<ObjectInstance>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
-        List<ObjectInstance> instances = buckets[idx];
-
-        if (instances.isEmpty()) {
-            return;
-        }
-
-        enableVerticalWrapIfNeeded();
-        try {
-            renderCommands.clear();
-            for (ObjectInstance instance : instances) {
-                objectCallbacks.run(instance, () -> {
-                    int mask = instance.getTileOcclusionPaletteMask();
-                    if (graphicsManager.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                        graphicsManager.flushPatternBatch();
-                        graphicsManager.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                        graphicsManager.beginPatternBatch();
-                    }
-                    instance.appendRenderCommands(renderCommands);
-                });
-            }
-
-            if (renderCommands.isEmpty()) {
-                return;
-            }
-            graphicsManager.enqueueDebugLineState();
-            graphicsManager.registerCommand(new GLCommandGroup(GL_LINES, renderCommands));
-            graphicsManager.enqueueDefaultShaderState();
-        } finally {
-            graphicsManager.disableVerticalWrapAdjust();
-        }
+        drawBucketInstancesWithPriority(buckets[idx], graphicsManager);
     }
 
     /**
@@ -1908,7 +1883,7 @@ public class ObjectManager {
     }
 
     public ObjectRewindDynamicCodecs.ExactAdoptionSurface exactRewindAdoptionSurface() {
-        return new ObjectRewindDynamicCodecs.ExactAdoptionSurface(objectServices, slotLayout, slotAllocator, rewindObjectIds, dynamicObjects, auxiliaryDynamicObjects, execOrder, this::execIndexForSlot, slot -> objectIdInSlot(slot) >= 0, this::markRewindAdoptionDirty);
+        return new ObjectRewindDynamicCodecs.ExactAdoptionSurface(objectServices, slotLayout, slotAllocator, rewindObjectIds, dynamicObjects, dynamicOwnership.nonRewindableObjects(), execOrder, this::execIndexForSlot, slot -> objectIdInSlot(slot) >= 0, this::markRewindAdoptionDirty);
     }
     void markRewindAdoptionDirty() { bucketsDirty = activeObjectsCacheDirty = true; }
 
@@ -2014,7 +1989,8 @@ public class ObjectManager {
     private boolean removeDynamicObjectInstance(ObjectInstance object) {
         boolean removed = dynamicObjects.remove(object);
         if (removed) {
-            auxiliaryDynamicObjects.remove(object);
+            dynamicOwnership.remove(object);
+            rewindObjectIds.remove(object);
             notifyObjectManagerRemoval(object);
         }
         return removed;
@@ -2099,18 +2075,31 @@ public class ObjectManager {
      * stays faithful to the original game.
      */
     public void addAuxiliaryDynamicObject(ObjectInstance object) {
-        if (object == null) {
-            return;
-        }
+        if (object == null) return;
         registerInheritedCallbackOwner(object);
-        if (object instanceof AbstractObjectInstance aoi) {
-            objectCallbacks.run(object, () -> aoi.setServices(objectServices));
-            objectCallbacks.run(object, () -> aoi.setSlotIndex(-1));
+        if (objectCallbacks.call(object,
+                () -> dynamicOwnership.addNonRewindable(object, objectServices, dynamicObjects))) {
+            bucketsDirty = activeObjectsCacheDirty = true;
         }
-        dynamicObjects.add(object);
-        auxiliaryDynamicObjects.add(object);
-        bucketsDirty = true;
-        activeObjectsCacheDirty = true;
+    }
+
+    /**
+     * Adds a rewind-owned engine extension without consuming a ROM SST slot.
+     *
+     * <p>Unlike {@link #addAuxiliaryDynamicObject(ObjectInstance)}, this path is
+     * included in object rewind snapshots. Use it for extra-player gameplay
+     * objects whose lifetime must survive rewind but must not alter native slot
+     * pressure.
+     */
+    public void addRewindableAuxiliaryDynamicObject(ObjectInstance object) {
+        if (object == null) return;
+        registerInheritedCallbackOwner(object);
+        if (objectCallbacks.call(object,
+                () -> dynamicOwnership.addRewindable(object, objectServices, dynamicObjects,
+                        deferredDynamicExecThisFrame, updating,
+                        candidate -> assignRewindObjectId(candidate, candidate.getSpawn())))) {
+            bucketsDirty = activeObjectsCacheDirty = true;
+        }
     }
 
     private void addDynamicObjectInternal(ObjectInstance object,
@@ -2500,7 +2489,7 @@ public class ObjectManager {
     }
 
     private int getDynamicObjectCount() {
-        return dynamicObjects.size() - auxiliaryDynamicObjects.size();
+        return dynamicOwnership.nativeCount(dynamicObjects.size());
     }
 
     /**
@@ -3204,6 +3193,8 @@ public class ObjectManager {
                 }
                 objectCallbacks.runAndUnregister(inst, inst::onUnload);
                 solidContacts.evictLatchForDestroyedInstance(inst);
+                dynamicOwnership.remove(inst);
+                rewindObjectIds.remove(inst);
                 notifyObjectManagerRemoval(inst);
                 iter.remove();
                 changed = true;
@@ -3972,7 +3963,7 @@ public class ObjectManager {
                 List<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.DynamicObjectEntry> dynamicEntries =
                         new ArrayList<>();
                 for (ObjectInstance inst : dynamicObjects) {
-                    if (auxiliaryDynamicObjects.contains(inst)) {
+                    if (dynamicOwnership.excludesFromRewind(inst)) {
                         continue;
                     }
                     if (inst instanceof AbstractObjectInstance aoi) {
@@ -3984,7 +3975,8 @@ public class ObjectManager {
                                         objectCallbacks.captureRewind(aoi, rewindContext),
                                         playerBoundOwner(inst),
                                         rewindObjectIds.get(inst),
-                                        objectCallbacks.owner(inst)));
+                                        objectCallbacks.owner(inst),
+                                        dynamicOwnership.isRewindableAuxiliary(inst)));
                     }
                 }
 
@@ -4061,7 +4053,7 @@ public class ObjectManager {
                 //    re-registered below.
                 clearActiveObjects();
                 dynamicObjects.clear();
-                auxiliaryDynamicObjects.clear();
+                dynamicOwnership.clear();
                 Arrays.fill(execOrder, null);
                 pendingPlayerBoundEntries.clear();
                 // Capture construction-spawned children produced while active objects are
@@ -4265,6 +4257,9 @@ public class ObjectManager {
                         assignRewindObjectId(aoi, objectCallbacks.call(aoi, aoi::getSpawn));
                     }
                     dynamicObjects.add(aoi);
+                    if (entry.rewindableAuxiliary()) {
+                        dynamicOwnership.markRestoredRewindable(aoi);
+                    }
                     activeObjectsCacheDirty = true;
                     int execIdx = execIndexForSlot(objectCallbacks.call(aoi, aoi::getSlotIndex));
                     if (execIdx >= 0 && execIdx < execOrder.length) {
@@ -4481,7 +4476,8 @@ public class ObjectManager {
      */
     public void validateRewindReferenceClosure() {
         ObjectRewindReferenceClosureValidator.validate(
-                activeObjects.values(), dynamicObjects, auxiliaryDynamicObjects, rewindCaptureContext());
+                activeObjects.values(), dynamicObjects,
+                dynamicOwnership.nonRewindableObjects(), rewindCaptureContext());
     }
 
     private com.openggf.game.rewind.schema.RewindCaptureContext rewindCaptureContext() {

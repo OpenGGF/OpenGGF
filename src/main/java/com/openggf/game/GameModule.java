@@ -202,6 +202,15 @@ public interface GameModule {
     }
 
     /**
+     * Owner of the GAME OVER / TIME OVER card spawn for this game, or
+     * {@code null} when the game has no such flow yet. See
+     * {@link GameOverFlowProvider}.
+     */
+    default GameOverFlowProvider getGameOverFlowProvider() {
+        return null;
+    }
+
+    /**
      * Returns the zone registry for this game.
      * The zone registry provides metadata about zones, acts, and levels.
      *
@@ -606,6 +615,48 @@ public interface GameModule {
     default java.util.function.Function<PlayableEntity, com.openggf.level.objects.AbstractObjectInstance>
             getInvincibilityStarsFactory() {
         return com.openggf.level.objects.InvincibilityStarsObjectInstance::new;
+    }
+
+    /**
+     * Returns a factory that constructs the shield power-up object for the
+     * player and requested {@link ShieldType}. Games with elemental shields
+     * (S3K) override this to map {@code FIRE}/{@code LIGHTNING}/{@code BUBBLE}
+     * to their concrete object classes; the default builds the game-agnostic
+     * {@link com.openggf.level.objects.ShieldObjectInstance} for every type.
+     *
+     * @return a factory creating the shield object for the given player and type
+     */
+    default java.util.function.BiFunction<AbstractPlayableSprite, ShieldType,
+            com.openggf.level.objects.ShieldObjectInstance> getShieldFactory() {
+        return (player, type) -> new com.openggf.level.objects.ShieldObjectInstance(player);
+    }
+
+    /**
+     * Returns a factory that constructs the persistent insta-shield object for
+     * the player, or {@code null} when the game has no such object. The result
+     * must implement {@link InstaShieldHandle}. Only games whose
+     * {@code PlayerCapabilityRules.instaShieldEnabled()} is set are asked for
+     * one, so the default returns {@code null}.
+     *
+     * @return a factory creating the insta-shield object, or {@code null}
+     */
+    default java.util.function.Function<AbstractPlayableSprite,
+            com.openggf.level.objects.AbstractObjectInstance> getInstaShieldFactory() {
+        return null;
+    }
+
+    /**
+     * Returns a factory that constructs the water-entry splash as a level object
+     * from {@code (playerX, waterY)}, or {@code null} when the game draws its
+     * splash through the fixed dust object instead
+     * ({@code PowerUpRules.waterSplashUsesFixedDustObject()}). Sonic 1 overrides
+     * this with its LZ splash object (ROM object 0x08).
+     *
+     * @return a factory creating the splash object, or {@code null}
+     */
+    default java.util.function.BiFunction<Integer, Integer,
+            com.openggf.level.objects.AbstractObjectInstance> getWaterSplashFactory() {
+        return null;
     }
 
     /**

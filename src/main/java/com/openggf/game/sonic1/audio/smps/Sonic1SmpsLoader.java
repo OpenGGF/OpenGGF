@@ -9,14 +9,13 @@ import com.openggf.audio.smps.AbstractSmpsLoader;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.Sonic1SmpsData;
 import com.openggf.data.Rom;
-import com.openggf.tools.DcmDecoder;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.DcmDecoder;
+import com.openggf.data.compression.KosinskiReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,9 +43,16 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
     private static final int MAX_BLOB_SIZE = 0x4000; // 16 KB safety limit
 
     private byte[][] psgEnvelopes;
+    private byte[] zeroAddressVoiceBank;
 
     public Sonic1SmpsLoader(Rom rom) {
         super(rom);
+        try {
+            zeroAddressVoiceBank = rom.readBytes(0, 0x100);
+        } catch (IOException error) {
+            throw new IllegalStateException(
+                    "cannot read the S1 ROM vector area", error);
+        }
         loadPsgEnvelopes();
     }
 
@@ -139,6 +145,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
             Sonic1SfxData data = new Sonic1SfxData(raw, 0);
             data.setPsgEnvelopes(psgEnvelopes);
+            data.setZeroAddressVoiceBank(zeroAddressVoiceBank);
             data.setId(sfxId);
             sfxCache.put(sfxId, data);
             return data;
@@ -274,6 +281,7 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
 
             Sonic1SfxData data = new Sonic1SfxData(raw, 0);
             data.setPsgEnvelopes(psgEnvelopes);
+            data.setZeroAddressVoiceBank(zeroAddressVoiceBank);
             data.setId(sfxId);
             sfxCache.put(sfxId, data);
             return data;
@@ -353,10 +361,10 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
                 int ptrAddr = Sonic1SmpsConstants.PSG_ENV_PTR_TABLE_ADDR + i * 4;
                 int envAddr = rom.read32BitAddr(ptrAddr);
                 if (envAddr <= 0 || envAddr >= rom.getSize()) {
-                    throw new IllegalArgumentException(
-                            "invalid PSG envelope pointer " + i
-                                    + " at 0x"
-                                    + Integer.toHexString(ptrAddr));
+                    LOGGER.fine("Invalid PSG envelope pointer " + i
+                            + " at 0x" + Integer.toHexString(ptrAddr));
+                    psgEnvelopes[i] = new byte[] { (byte) 0x80 }; // empty hold
+                    continue;
                 }
 
                 List<Byte> bytes = new ArrayList<>();
@@ -370,28 +378,17 @@ public class Sonic1SmpsLoader extends AbstractSmpsLoader {
                     offset++;
                 }
 
-                byte[] envelope = new byte[bytes.size()];
+                psgEnvelopes[i] = new byte[bytes.size()];
                 for (int j = 0; j < bytes.size(); j++) {
-                    envelope[j] = bytes.get(j);
+                    psgEnvelopes[i][j] = bytes.get(j);
                 }
-                psgEnvelopes[i] = requirePsgEnvelope(envelope);
 
                 LOGGER.fine("Loaded PSG envelope " + i + " from 0x"
                         + Integer.toHexString(envAddr) + " (" + bytes.size() + " bytes)");
             } catch (IOException e) {
-                throw new IllegalStateException(
-                        "failed to load PSG envelope " + i, e);
+                LOGGER.warning("Failed to load PSG envelope " + i);
+                psgEnvelopes[i] = new byte[] { (byte) 0x80 }; // fallback
             }
         }
-    }
-
-    static byte[] requirePsgEnvelope(byte[] envelope) {
-        for (int index = 0; index < envelope.length; index++) {
-            if ((envelope[index] & 0xFF) == 0x80) {
-                return Arrays.copyOf(envelope, index + 1);
-            }
-        }
-        throw new IllegalArgumentException(
-                "Sonic 1 PSG envelope has no 0x80 hold terminator");
     }
 }

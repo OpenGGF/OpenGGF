@@ -1,6 +1,6 @@
 package com.openggf.game.timing;
 
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;

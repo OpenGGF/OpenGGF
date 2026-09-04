@@ -23,6 +23,41 @@ public final class AudioCommandTimeline {
     private long currentFrame;
     private int nextOrder;
 
+    public final class PreparedAppend {
+        private final long frame = currentFrame;
+        private final int order = nextOrder;
+        private final List<AudioTimelineEntry> prepared;
+        private boolean committed;
+
+        private PreparedAppend(List<AudioCommand> commands) {
+            ArrayList<AudioTimelineEntry> entries =
+                    new ArrayList<>(commands.size());
+            int candidateOrder = order;
+            for (AudioCommand command : commands) {
+                entries.add(new AudioTimelineEntry(
+                        frame, candidateOrder++, command));
+            }
+            prepared = List.copyOf(entries);
+            AudioCommandTimeline.this.entries.ensureCapacity(
+                    AudioCommandTimeline.this.entries.size()
+                            + prepared.size());
+        }
+
+        public void commit() {
+            if (committed) {
+                return;
+            }
+            AudioCommandTimeline.this.entries.addAll(prepared);
+            nextOrder = order + prepared.size();
+            committed = true;
+        }
+    }
+
+    public PreparedAppend prepareAppend(List<AudioCommand> commands) {
+        return new PreparedAppend(List.copyOf(
+                Objects.requireNonNull(commands, "commands")));
+    }
+
     public void beginFrame(long frame) {
         if (frame != currentFrame) {
             currentFrame = frame;

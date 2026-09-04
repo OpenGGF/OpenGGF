@@ -234,6 +234,22 @@ public final class Sonic1Constants {
     // Verified by binary search matching docs/s1disasm/artnem/Title Cards.nem
     public static final int ART_NEM_TITLE_CARD_ADDR = 0x39204;
 
+    // ---- GAME OVER / TIME OVER card (Obj39 GameOverCard) ----
+    // Nem_GameOver (docs/s1disasm/sonic.lst:94090, artnem/Game Over.nem, 401 bytes;
+    // verified by byte match against the ROM). Loaded by PLC_GameOver at
+    // ArtTile_Game_Over ($55E): docs/s1disasm/_inc/Pattern Load Cues.asm:100-102.
+    public static final int ART_NEM_GAME_OVER_ADDR = 0x3A678;
+    // Map_Over (_maps/Game Over.asm): four frames GAME / OVER / TIME / OVER,
+    // tile ids relative to ArtTile_Game_Over (docs/s1disasm/sonic.lst:46362-46367).
+    public static final int MAP_GAME_OVER_ADDR = 0xD232;
+    public static final int MAP_GAME_OVER_FRAME_COUNT = 4;
+    // plcid_GameOver: fourth entry of ArtLoadCues (docs/s1disasm/_inc/Pattern Load Cues.asm:29-32).
+    public static final int PLC_GAME_OVER = 3;
+    // v_gameovertext1 / v_gameovertext2 = v_objspace + object_size*2 / *3
+    // (docs/s1disasm/_Variables.asm:62-63).
+    public static final int SST_SLOT_GAME_OVER_WORD = 2;
+    public static final int SST_SLOT_GAME_OVER_OVER = 3;
+
     // ---- Ending sequence Kosinski-compressed flower art ----
     // Kos_EndFlowers: decompressed at GM_Ending into RAM buffer, used by
     // AniArt_Ending_BigFlower (offset 0), Flower3 (+$400) and Flower4 (+$A00).

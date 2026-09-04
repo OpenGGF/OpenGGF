@@ -1,2 +1,0 @@
-#define ECL_INVISIBLE
-#define ECL_EXPORT

@@ -8,37 +8,51 @@ import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsSequencerTestAccess;
+import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.synth.VirtualSynthesizer;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSmpsDriverSnapshot {
 
     @Test
-    void snapshotRestoresTheSynthOwnedGenerationAndDriverTimelineWatermarks() {
-        SmpsDriver driver = new SmpsDriver();
-        SmpsDriverSnapshot generationOne = driver.captureSnapshot();
-        assertEquals(1, generationOne.driverGeneration());
-        assertEquals(0, generationOne.ymServiceCursor());
-        assertEquals(0, generationOne.nextYmServiceOrdinal());
-        assertEquals(0, generationOne.nextYmWriteOrdinal());
+    void logicalSnapshotContainsNoPhysicalSynthState() {
+        assertTrue(Arrays.stream(
+                        SmpsDriverSnapshot.class.getRecordComponents())
+                .noneMatch(component -> component.getType()
+                        == VirtualSynthesizer.Snapshot.class));
+    }
 
-        driver.silenceAll();
-        assertEquals(2, driver.captureSnapshot().driverGeneration());
+    @Test
+    void resolvingLogicalMementoEmitsNoChipWrites() {
+        AtomicInteger writes = new AtomicInteger();
+        ChipWriteObserver observer = new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+                writes.incrementAndGet();
+            }
 
-        driver.restoreSnapshot(generationOne);
-        SmpsDriverSnapshot restored = driver.captureSnapshot();
-        assertEquals(generationOne.driverGeneration(),
-                restored.driverGeneration());
-        assertEquals(generationOne.ymServiceCursor(),
-                restored.ymServiceCursor());
-        assertEquals(generationOne.nextYmServiceOrdinal(),
-                restored.nextYmServiceOrdinal());
-        assertEquals(generationOne.nextYmWriteOrdinal(),
-                restored.nextYmWriteOrdinal());
-        assertEquals(generationOne.synthSnapshot(), restored.synthSnapshot());
+            @Override
+            public void onPsgWrite(int value) {
+                writes.incrementAndGet();
+            }
+        };
+        SmpsDriver source = SmpsDriverTestAccess.create(48_000.0, observer);
+        source.addSequencer(newSequencer("music", 0x81, source), false);
+        SmpsDriverSnapshot memento = source.captureSnapshot();
+        SmpsDriver target = SmpsDriverTestAccess.create(48_000.0, observer);
+        writes.set(0);
+
+        target.restoreSnapshot(
+                memento, SmpsDriverSnapshot.liveReferences());
+
+        assertEquals(0, writes.get());
     }
 
     @Test
@@ -169,6 +183,12 @@ class TestSmpsDriverSnapshot {
         SmpsSequencer music = newSequencer("music", 0x81, driver);
         SmpsSequencer sfx = newSequencer("sfx", 0xBC, driver);
         sfx.setFallbackVoiceData(music.getSmpsData());
+        SmpsSequencer.Track musicFm3 = SmpsSequencerTestAccess.addActiveFmTrack(
+                music, 2);
+        musicFm3.fm3SpecialMode = true;
+        musicFm3.customSsgEgPresent = true;
+        musicFm3.customSsgEgPayload[0] = 0x22;
+        musicFm3.customSsgEgPayloadKnown = true;
 
         driver.addSequencer(music, false);
         PreparedSfxAdmission admission =
@@ -202,53 +222,14 @@ class TestSmpsDriverSnapshot {
         assertEquals(0xBC, restored.continuousSfxId());
         assertTrue(restored.continuousSfxFlag());
         assertEquals(2, restored.contSfxLoopCnt());
-    }
-
-    @Test
-    void sonicOneOrdinaryMusicLoadAdoptsLiveSfxAndRebindsMusicFallback() {
-        SmpsDriver previous = new SmpsDriver();
-        SmpsSequencer oldMusic = newSequencer("old-music", 0x81, previous);
-        SmpsSequencer sfx = newSequencer("sfx", 0xBC, previous);
-        sfx.setFallbackVoiceData(oldMusic.getSmpsData());
-        previous.addSequencer(oldMusic, false);
-        PreparedSfxAdmission admission =
-                previous.prepareNewSfxAdmission(sfx, 0xBC, 3);
-        sfx.beginSfxAdmission();
-        previous.commitSfxAdmission(admission);
-        assertTrue(previous.extendContinuousSfx(0xBC, 3));
-        previous.writeFm(sfx, 0, 0xA0, 0x22);
-        previous.writePsg(sfx, 0x80 | (2 << 5) | 0x04);
-        previous.writePsg(sfx, 0x06);
-        SmpsDriverSnapshot before = previous.captureSnapshot();
-
-        SmpsDriver replacement = new SmpsDriver();
-        SmpsSequencer newMusic = newSequencer("new-music", 0x82, replacement);
-        replacement.addSequencer(newMusic, false);
-
-        replacement.adoptActiveSfxFrom(previous);
-
-        SmpsDriverSnapshot adopted = replacement.captureSnapshot();
-        assertEquals(2, adopted.sequencers().size());
-        assertEquals(0x82, adopted.sequencers().get(0).source().id());
-        assertTrue(adopted.sequencers().get(1).sfx());
-        assertEquals(before.sequencers().get(1).snapshot(),
-                adopted.sequencers().get(1).snapshot());
-        assertEquals(adopted.sequencers().get(0).source(),
-                adopted.sequencers().get(1).fallbackVoiceSource());
-        assertEquals(1, adopted.fmLockSequencerIds()[0]);
-        assertEquals(1, adopted.psgLockSequencerIds()[2]);
-        assertEquals(before.sfxPriorityLatch(), adopted.sfxPriorityLatch());
-        assertEquals(0xBC, adopted.continuousSfxId());
-        assertTrue(adopted.continuousSfxFlag());
-        SmpsDriverSnapshot afterSource = previous.captureSnapshot();
-        assertEquals(before.sequencers(), afterSource.sequencers(),
-                "adoption must not mutate source sequencers");
-        assertArrayEquals(before.fmLockSequencerIds(),
-                afterSource.fmLockSequencerIds());
-        assertArrayEquals(before.psgLockSequencerIds(),
-                afterSource.psgLockSequencerIds());
-        assertEquals(before.continuousSfxId(), afterSource.continuousSfxId());
-        assertEquals(before.contSfxLoopCnt(), afterSource.contSfxLoopCnt());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().fm3SpecialMode());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().customSsgEgPresent());
+        assertArrayEquals(new int[] {0x22, 0, 0, 0}, restored.sequencers()
+                .getFirst().snapshot().tracks().getFirst().customSsgEgPayload());
+        assertTrue(restored.sequencers().getFirst().snapshot().tracks()
+                .getFirst().customSsgEgPayloadKnown());
     }
 
     @Test
@@ -422,30 +403,6 @@ class TestSmpsDriverSnapshot {
         SmpsDriverSnapshot after = targetDriver.captureSnapshot();
         assertEquals(before.sequencers().size(), after.sequencers().size());
         assertEquals(before.sequencers().get(0).source(), after.sequencers().get(0).source());
-    }
-
-    @Test
-    void restoreRoundTripsSynthSnapshotAfterLogicalSequencerRestore() {
-        SmpsDriver uninterrupted = configuredDriver();
-        SmpsDriver restored = configuredDriver();
-        primeSynth(uninterrupted);
-        primeSynth(restored);
-
-        uninterrupted.read(new short[74], 74);
-        restored.read(new short[74], 74);
-
-        SmpsDriverSnapshot snapshot = uninterrupted.captureSnapshot();
-        perturbSynth(uninterrupted);
-        short[] expected = new short[192];
-        uninterrupted.read(expected, expected.length);
-
-        perturbSynth(restored);
-        restored.restoreSnapshot(snapshot);
-        perturbSynth(restored);
-        short[] actual = new short[192];
-        restored.read(actual, actual.length);
-
-        assertArrayEquals(expected, actual);
     }
 
     private static SmpsSequencer newSequencer(String name, int id, SmpsDriver driver) {

@@ -17,9 +17,9 @@ class TestS1SfxTakeoverOrder {
 
     @Test
     void sonic1FmTakeoverStartsWithTheSfxRegisterInsteadOfSyntheticReset() {
-        SmpsDriver driver = new SmpsDriver();
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
         SmpsSequencer sfx = sequencer(driver, Sonic1SmpsSequencerConfig.CONFIG);
         driver.addSequencer(sfx, true);
         observer.events.clear();
@@ -31,34 +31,130 @@ class TestS1SfxTakeoverOrder {
     }
 
     @Test
-    void admissionOwnershipDoesNotDelaySyntheticTakeoverUntilFirstWrite() {
-        SmpsDriver driver = new SmpsDriver();
+    void legacyProfilesRetainTheirExistingSyntheticTakeoverPolicy() {
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
         RecordingObserver observer = new RecordingObserver();
-        driver.setChipWriteObserver(observer);
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
         SmpsSequencer sfx = sequencer(driver, new SmpsSequencerConfig.Builder().build());
         driver.addSequencer(sfx, true);
         observer.events.clear();
 
         sfx.writeFm(1, 0xB1, 0x3C);
 
-        assertEquals(List.of("YM:1:B1:3C"), observer.events);
+        assertEquals(List.of("YM:0:28:05", "YM:1:B1:3C"), observer.events);
+    }
+
+    @Test
+    void sonic1PsgTakeoverStartsWithTheSfxLatchInsteadOfSyntheticSilence() {
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
+        RecordingObserver observer = new RecordingObserver();
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
+        SmpsSequencer sfx = sequencer(driver, Sonic1SmpsSequencerConfig.CONFIG);
+        driver.addSequencer(sfx, true);
+        observer.events.clear();
+
+        sfx.writePsg(0x80);
+
+        assertEquals(List.of("PSG:80"), observer.events,
+                "S1 Sound_PlaySFX emits no PSG1 admission silence; the"
+                        + " SFX track's first latch owns the visible write");
+    }
+
+    @Test
+    void sonic1Psg3AdmissionEmitsOnlyTheRomsExplicitToneAndNoiseSilencePair() {
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
+        RecordingObserver observer = new RecordingObserver();
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
+
+        driver.addSequencer(sequencer(driver,
+                Sonic1SmpsSequencerConfig.CONFIG, 0xC0), true);
+
+        assertEquals(List.of("PSG:DF", "PSG:FF"), observer.events,
+                "S1 Sound_PlaySFX explicitly silences PSG3 and noise while"
+                        + " loading a PSG3 SFX track");
+    }
+
+    @Test
+    void sonic1Psg3ReplacementDoesNotDuplicateTheAdmissionSilencePair() {
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
+        RecordingObserver observer = new RecordingObserver();
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
+        SmpsSequencer oldSfx = sequencer(
+                driver, Sonic1SmpsSequencerConfig.CONFIG, 0xC0, 0xC1);
+        SmpsSequencer replacement = sequencer(
+                driver, Sonic1SmpsSequencerConfig.CONFIG, 0xC0, 0xC2);
+        driver.addSequencer(oldSfx, true);
+        driver.writePsg(oldSfx, 0xC0);
+        observer.events.clear();
+
+        driver.addSequencer(replacement, true);
+
+        assertEquals(List.of("PSG:DF", "PSG:FF"), observer.events,
+                "S1's explicit PSG3 header pair is the sole admission write");
+    }
+
+    @Test
+    void psg3SfxOwnershipAlsoSuppressesMusicNoiseLatches() {
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
+        RecordingObserver observer = new RecordingObserver();
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
+        SmpsSequencer sfx = sequencer(driver,
+                Sonic1SmpsSequencerConfig.CONFIG, 0xC0);
+        driver.addSequencer(sfx, true);
+        driver.writePsg(sfx, 0xC0);
+        observer.events.clear();
+
+        driver.writePsg(sequencer(driver,
+                Sonic1SmpsSequencerConfig.CONFIG), 0xF3);
+
+        assertEquals(List.of(), observer.events,
+                "SMPS PSG3 and noise share one source-driver ownership slot");
+    }
+
+    @Test
+    void legacyProfilesRetainTheirSyntheticPsgTakeoverSilence() {
+        SmpsDriver driver = SmpsDriverTestAccess.create(48_000);
+        RecordingObserver observer = new RecordingObserver();
+        SmpsDriverTestAccess.setChipWriteObserver(driver, observer);
+        SmpsSequencer sfx = sequencer(
+                driver, new SmpsSequencerConfig.Builder().build());
+        driver.addSequencer(sfx, true);
+        observer.events.clear();
+
+        sfx.writePsg(0x80);
+
+        assertEquals(List.of("PSG:9F", "PSG:80"), observer.events);
     }
 
     private static SmpsSequencer sequencer(SmpsDriver driver, SmpsSequencerConfig config) {
-        return new SmpsSequencer(new SingleFm5SfxData(), AudioTestFixtures.EMPTY_DAC,
+        return sequencer(driver, config, 5);
+    }
+
+    private static SmpsSequencer sequencer(
+            SmpsDriver driver, SmpsSequencerConfig config, int channelMask) {
+        return sequencer(driver, config, channelMask, 0xC1);
+    }
+
+    private static SmpsSequencer sequencer(
+            SmpsDriver driver, SmpsSequencerConfig config,
+            int channelMask, int id) {
+        return new SmpsSequencer(new SingleTrackSfxData(channelMask, id), AudioTestFixtures.EMPTY_DAC,
                 driver, () -> {}, config);
     }
 
-    private static final class SingleFm5SfxData extends AbstractSmpsData
+    private static final class SingleTrackSfxData extends AbstractSmpsData
             implements SmpsSfxData {
-        private SingleFm5SfxData() {
+        private final int channelMask;
+
+        private SingleTrackSfxData(int channelMask, int id) {
             super(new byte[] {0, (byte) 0xF2}, 0);
-            setId(0xC1);
+            setId(id);
+            this.channelMask = channelMask;
         }
 
         @Override public int getTickMultiplier() { return 1; }
         @Override public List<? extends SmpsSfxTrack> getTrackEntries() {
-            return List.of(new Track(5, 1, 0, 0));
+            return List.of(new Track(channelMask, 1, 0, 0));
         }
         @Override protected void parseHeader() { dividingTiming = 1; tempo = 1; }
         @Override public byte[] getVoice(int voiceId) { return new byte[25]; }

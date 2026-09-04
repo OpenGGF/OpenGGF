@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
+import java.util.zip.GZIPInputStream;
 
 /** Strict, deterministic and record-streaming JSONL transport for audio parity captures. */
 public final class AudioParityJsonl {
@@ -30,7 +31,7 @@ public final class AudioParityJsonl {
             .build();
     private static final ObjectMapper JSON = new ObjectMapper(FACTORY);
     private static final Set<String> TICK_FIELDS = Set.of("type", "ordinal", "state", "events",
-            "diagnostic", "raw_bus");
+            "diagnostic", "raw_bus", "dispatches");
     private static final Set<String> STATE_FIELDS = Set.of("global", "tracks");
     private static final Set<String> GLOBAL_FIELDS = Set.of("fadeActive", "fadeDirection", "fadeDelay",
             "fadeSteps", "speedUp", "tempoReload", "tempoTimeout");
@@ -65,17 +66,41 @@ public final class AudioParityJsonl {
     private AudioParityJsonl() {
     }
 
+    /**
+     * Opens a capture stream for reading; a committed fixture may be stored
+     * gzip-compressed with a {@code .gz} suffix and is decompressed on the fly.
+     */
+    public static BufferedReader openReader(Path path) throws IOException {
+        java.io.InputStream input = Files.newInputStream(path);
+        if (path.getFileName().toString().endsWith(".gz")) {
+            input = new GZIPInputStream(input);
+        }
+        return new BufferedReader(new java.io.InputStreamReader(input, StandardCharsets.UTF_8));
+    }
+
     /** Reads one record at a time; raw bus and diagnostics are validated as JSON but never retained. */
     public static AudioParityMetadata read(Path path, Consumer<AudioParityTick> tickConsumer) {
-        try (BufferedReader input = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+        try (BufferedReader input = openReader(path)) {
             String metadataLine = input.readLine();
             if (metadataLine == null || metadataLine.isBlank()) {
                 throw invalid("missing capture metadata line");
             }
             AudioParityMetadata metadata = parseMetadata(metadataLine);
-            String expectedRawBusSource = metadata.capture().equals(AudioParitySchema.REFERENCE_CAPTURE)
+            boolean referenceCapture = metadata.capture().equals(AudioParitySchema.REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.SFX_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE);
+            String expectedRawBusSource = referenceCapture
                     ? text(object(metadata.details().get("callback_contract"), "callback_contract"), "source")
                     : null;
+            // Every capture kind that carries a per-invocation dispatch
+            // sequence: the request stream is the engine host's input contract.
+            boolean sfxCapture = metadata.capture().equals(AudioParitySchema.SFX_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.SFX_OPENGGF_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE)
+                    || metadata.capture().equals(AudioParitySchema.RUN_WINDOW_OPENGGF_CAPTURE);
             String line;
             int expectedOrdinal = 0;
             while ((line = input.readLine()) != null) {
@@ -85,6 +110,14 @@ public final class AudioParityJsonl {
                 AudioParityTick tick = parseTick(line, expectedRawBusSource, true);
                 if (tick.ordinal() != expectedOrdinal) {
                     throw continuityFailure(expectedOrdinal, tick.ordinal());
+                }
+                if (sfxCapture && tick.dispatches() == null) {
+                    throw invalid("SFX capture tick is missing its dispatches record at ordinal "
+                            + expectedOrdinal);
+                }
+                if (!sfxCapture && tick.dispatches() != null) {
+                    throw invalid("music capture tick carries a dispatches record at ordinal "
+                            + expectedOrdinal);
                 }
                 tickConsumer.accept(tick);
                 expectedOrdinal++;
@@ -211,7 +244,12 @@ public final class AudioParityJsonl {
         ArrayNode eventNodes = array(required(root, "events"), "events");
         List<AudioParityChipWrite> events = new ArrayList<>(eventNodes.size());
         eventNodes.forEach(node -> events.add(parseWrite(object(node, "event"))));
-        return new AudioParityTick(ordinal, global, tracks, events);
+        List<Integer> dispatches = null;
+        if (root.has("dispatches")) {
+            dispatches = integerList(root, "dispatches");
+            dispatches.forEach(value -> byteValue(value, "dispatches"));
+        }
+        return new AudioParityTick(ordinal, global, tracks, events, dispatches);
     }
 
     private static ObjectNode parseTickGatingTree(String json, String expectedRawBusSource,
@@ -367,34 +405,115 @@ public final class AudioParityJsonl {
     }
 
     private static void validateMetadataDetails(String capture, ObjectNode details) {
-        if (capture.equals(AudioParitySchema.OPENGGF_CAPTURE)) {
+        if (capture.equals(AudioParitySchema.OPENGGF_CAPTURE)
+                || capture.equals(AudioParitySchema.SFX_OPENGGF_CAPTURE)
+                || capture.equals(AudioParitySchema.GAMEPLAY_OPENGGF_CAPTURE)
+                || capture.equals(AudioParitySchema.RUN_WINDOW_OPENGGF_CAPTURE)) {
             if (!details.isEmpty()) {
                 throw invalid("OpenGGF capture metadata cannot contain reference movie/callback fields");
             }
             return;
         }
+        if (capture.equals(AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE)) {
+            validateRunWindowDetails(details);
+            return;
+        }
+        boolean sfx = capture.equals(AudioParitySchema.SFX_REFERENCE_CAPTURE);
+        boolean gameplay = capture.equals(AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE);
         Set<String> referenceFields = Set.of("callback_contract", "diagnostic_fields", "gating_fields",
                 "launch_update_music_invocations", "movie");
         exactFields(details, referenceFields, referenceFields, "reference metadata");
-        if (integer(details, "launch_update_music_invocations") != 514) {
+        // The two sound-test movies share the full pre-epoch input prefix, so
+        // both see the same 514 dormant UpdateMusic invocations before the GHZ
+        // capture epoch. The complete-run gameplay movie has its own real
+        // title/SEGA/menu prefix before the GHZ1 BGM dispatch, pinned separately.
+        ObjectNode movieNode = object(details.get("movie"), "movie");
+        AudioParitySchema.GameplayMovie gameplayMovie = gameplay
+                ? AudioParitySchema.GAMEPLAY_MOVIES.get(text(movieNode, "archive_sha256"))
+                : null;
+        if (gameplay && gameplayMovie == null) {
+            throw invalid("gameplay reference names a BK2 that is not a pinned S1 gameplay movie");
+        }
+        int expectedLaunchInvocations = gameplay ? gameplayMovie.launchInvocations() : 514;
+        if (integer(details, "launch_update_music_invocations") != expectedLaunchInvocations) {
             throw invalid("reference launch_update_music_invocations must match the pinned BK2 transport");
         }
         validateCallbackContract(object(details.get("callback_contract"), "callback_contract"));
         validateFieldInventory(details, "diagnostic_fields", AudioParitySchema.DIAGNOSTIC_GLOBAL_FIELDS,
                 AudioParitySchema.DIAGNOSTIC_TRACK_FIELDS);
-        validateFieldInventory(details, "gating_fields", AudioParitySchema.GATING_GLOBAL_FIELDS,
+        validateFieldInventory(details, "gating_fields",
+                (sfx || gameplay) ? AudioParitySchema.SFX_GATING_GLOBAL_FIELDS
+                        : AudioParitySchema.GATING_GLOBAL_FIELDS,
                 AudioParitySchema.GATING_TRACK_FIELDS);
-        ObjectNode movie = object(details.get("movie"), "movie");
+        ObjectNode movie = movieNode;
         Set<String> fields = Set.of("archive_sha256", "core", "emulator", "game", "input_rows",
                 "opaque_header_hash");
         exactFields(movie, fields, fields, "movie");
-        if (!text(movie, "archive_sha256").equals(AudioParitySchema.BK2_SHA256)
+        // A gameplay reference names which pinned movie it came from, so its
+        // digest is checked by membership above rather than against one
+        // hard-coded value; the row count still has to match that movie.
+        String expectedSha = gameplay ? text(movie, "archive_sha256")
+                : sfx ? AudioParitySchema.SFX_BK2_SHA256 : AudioParitySchema.BK2_SHA256;
+        int expectedRows = gameplay ? gameplayMovie.inputRows()
+                : sfx ? AudioParitySchema.SFX_BK2_INPUT_ROWS : AudioParitySchema.BK2_INPUT_ROWS;
+        String expectedOpaque = gameplay ? AudioParitySchema.GAMEPLAY_BK2_OPAQUE_HASH
+                : sfx ? AudioParitySchema.SFX_BK2_OPAQUE_HASH : AudioParitySchema.BK2_OPAQUE_HASH;
+        if (!text(movie, "archive_sha256").equals(expectedSha)
                 || !text(movie, "core").equals(AudioParitySchema.BK2_CORE)
                 || !text(movie, "emulator").equals(AudioParitySchema.BK2_EMULATOR)
                 || !text(movie, "game").equals(AudioParitySchema.BK2_GAME)
-                || integer(movie, "input_rows") != AudioParitySchema.BK2_INPUT_ROWS
-                || !text(movie, "opaque_header_hash").equals(AudioParitySchema.BK2_OPAQUE_HASH)) {
-            throw invalid("reference movie metadata does not match the pinned S1 GHZ BK2");
+                || integer(movie, "input_rows") != expectedRows
+                || !text(movie, "opaque_header_hash").equals(expectedOpaque)) {
+            throw invalid("reference movie metadata does not match the pinned S1 BK2 for " + capture);
+        }
+    }
+
+    /**
+     * A per-song run window names the song it replays and where in its movie it
+     * sits, and carries no {@code launch_update_music_invocations}: only a
+     * movie's first window has a dormant prefix, and that count is already
+     * pinned by the gameplay capture kind.
+     */
+    private static void validateRunWindowDetails(ObjectNode details) {
+        Set<String> referenceFields = Set.of("callback_contract", "diagnostic_fields",
+                "gating_fields", "movie", "music_id", "window");
+        exactFields(details, referenceFields, referenceFields, "run window metadata");
+        int musicId = integer(details, "music_id");
+        if (musicId < AudioParitySchema.MUSIC_ID_BASE || musicId > AudioParitySchema.MUSIC_ID_MAX) {
+            throw invalid("run window music_id is outside the S1 music pointer table: " + musicId);
+        }
+        ObjectNode window = object(details.get("window"), "window");
+        Set<String> windowFields = Set.of("ordinal", "open_frame", "close_frame");
+        exactFields(window, windowFields, windowFields, "window");
+        int ordinal = integer(window, "ordinal");
+        int openFrame = integer(window, "open_frame");
+        int closeFrame = integer(window, "close_frame");
+        if (ordinal < 0 || openFrame < 0 || closeFrame <= openFrame) {
+            throw invalid("run window ordinal/frame span is out of range");
+        }
+        validateCallbackContract(object(details.get("callback_contract"), "callback_contract"));
+        validateFieldInventory(details, "diagnostic_fields", AudioParitySchema.DIAGNOSTIC_GLOBAL_FIELDS,
+                AudioParitySchema.DIAGNOSTIC_TRACK_FIELDS);
+        validateFieldInventory(details, "gating_fields", AudioParitySchema.SFX_GATING_GLOBAL_FIELDS,
+                AudioParitySchema.GATING_TRACK_FIELDS);
+        ObjectNode movie = object(details.get("movie"), "movie");
+        Set<String> movieFields = Set.of("archive_sha256", "core", "emulator", "game", "input_rows",
+                "opaque_header_hash");
+        exactFields(movie, movieFields, movieFields, "movie");
+        AudioParitySchema.GameplayMovie pinned =
+                AudioParitySchema.GAMEPLAY_MOVIES.get(text(movie, "archive_sha256"));
+        if (pinned == null) {
+            throw invalid("run window names a BK2 that is not a pinned S1 complete-run movie");
+        }
+        if (!text(movie, "core").equals(AudioParitySchema.BK2_CORE)
+                || !text(movie, "emulator").equals(AudioParitySchema.BK2_EMULATOR)
+                || !text(movie, "game").equals(AudioParitySchema.BK2_GAME)
+                || integer(movie, "input_rows") != pinned.inputRows()
+                || !text(movie, "opaque_header_hash").equals(AudioParitySchema.GAMEPLAY_BK2_OPAQUE_HASH)) {
+            throw invalid("run window movie metadata does not match its pinned S1 BK2");
+        }
+        if (closeFrame > pinned.inputRows()) {
+            throw invalid("run window close_frame is past the end of its movie");
         }
     }
 
@@ -484,6 +603,10 @@ public final class AudioParityJsonl {
 
     public static JsonNode tickTree(AudioParityTick tick) {
         ObjectNode root = JsonNodeFactory.instance.objectNode();
+        if (tick.dispatches() != null) {
+            ArrayNode dispatches = root.putArray("dispatches");
+            tick.dispatches().forEach(dispatches::add);
+        }
         root.set("events", eventsTree(tick.events()));
         root.put("ordinal", tick.ordinal());
         root.set("state", stateTree(tick));

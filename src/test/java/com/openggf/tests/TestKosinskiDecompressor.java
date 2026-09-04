@@ -2,7 +2,7 @@ package com.openggf.tests;
 
 
 import org.junit.jupiter.api.Test;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

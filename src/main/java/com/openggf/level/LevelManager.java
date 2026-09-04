@@ -1,5 +1,9 @@
 package com.openggf.level;
 
+import com.openggf.game.GameOverExit;
+
+import com.openggf.game.GameOverExit;
+
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.*;
 import com.openggf.Engine;
@@ -128,17 +132,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     Level level;
     int blockPixelSize = 128;  // cached from level
     // Block-grid index math (pow2 fast path); recomputed in cacheLevelDimensions().
-    private BlockGridIndexer blockGrid = new BlockGridIndexer(128);
+    BlockGridIndexer blockGrid = new BlockGridIndexer(128);
+    /** Owns block/chunk/pattern resolution from world coordinates. */
+    private final LevelLayoutLookup layoutLookup = new LevelLayoutLookup(this);
     private int chunksPerBlockSide = 8;
     // Cached level pixel dimensions (immutable once level loads).
     // Avoids repeated getLayerWidthBlocks()*blockPixelSize in hot-path collision lookups.
-    private int cachedFgWidthPx;
-    private int cachedFgHeightPx;
-    private int cachedBgWidthPx;           // Full map width for BG layer (used for block lookups)
+    int cachedFgWidthPx;
+    int cachedFgHeightPx;
+    int cachedBgWidthPx;           // Full map width for BG layer (used for block lookups)
     int cachedBgContiguousWidthPx; // Contiguous BG data width from column 0 (for bgTilemapBaseX wrapping)
-    private int cachedBgHeightPx;
+    int cachedBgHeightPx;
     Game game;
     GameModule gameModule;
+    private boolean levelEntryBegun;
 
     public Game getGame() {
         return game;
@@ -265,6 +272,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     // ROM: LZ3/SBZ2 vertical wrapping — FG layer wraps Y instead of clamping
     boolean verticalWrapEnabled = false;
+
+    // ROM collision-layout row-index mask (see layoutLookupY). 0 = not modelled.
+    int collisionLayoutYMask;
 
     // Background rendering support
     ParallaxManager parallaxManager;
@@ -448,7 +458,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             if (ctx.getLevel() != null) {
                 writeCurrentLevel(ctx.getLevel());
             }
-            resetRewindBufferAfterLevelBoundary();
+            markRewindLevelLoadBoundary();
             InitialProcessSpritesLifecycle requestedSetup =
                     ctx.requestedInitialProcessSpritesLifecycle();
             if (requestedSetup != InitialProcessSpritesLifecycle.NONE) {
@@ -461,6 +471,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             }
         } catch (Exception e) {
             discardInitialProcessSpritesLifecycle();
+            activeGameModule().getLevelInitProfile().cancelPendingLevelLoadWork();
             // Profile steps wrap checked exceptions in RuntimeException; unwrap if cause is IOException
             Throwable cause = e.getCause();
             if (cause instanceof IOException ioe) {
@@ -471,9 +482,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             throw new IOException("Failed to load level due to unexpected error.", e);
         } finally {
             // The suppress flag belongs to this load only. A load that fails before
-            // InitAudio — or a preview capture, which has no InitAudio step — must not
+            // ScheduleLevelMusic — or a preview capture, which has no music step — must not
             // leave it latched for the next level, which would start that level silent.
             transitions.setSuppressNextMusicChange(false);
+            levelEntryBegun = false;
         }
     }
 
@@ -484,6 +496,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
         markRewindLevelLoadBoundary();
     }
+
 
     static void markRewindLevelLoadBoundary() {
         GameplayModeContext gameplayMode = SessionManager.getCurrentGameplayMode();
@@ -514,21 +527,54 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Phase C/F: Configure audio manager and play level music.
      */
     public void initAudio(int levelIndex) throws IOException {
+        configureAudio();
+        playLevelMusic(levelIndex);
+    }
+
+    /** Establishes the current game's production audio/request service. */
+    public void configureAudio() throws IOException {
         audioManager.setAudioProfile(gameModule.getAudioProfile());
         audioManager.setRom(worldSession.getDataSource().rom().orElse(null));
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
-        if (!transitions.isSuppressNextMusicChange()) {
-            com.openggf.game.MusicReference music =
-                    gameModule.getLevelMusicReference(currentZone, currentAct);
-            if (music instanceof com.openggf.game.MusicReference.Stock stock) {
-                audioManager.playMusic(stock.musicId());
-            } else {
-                com.openggf.game.MusicReference.Namespaced namespaced =
-                        (com.openggf.game.MusicReference.Namespaced) music;
-                audioManager.playNamespacedMusic(new com.openggf.audio.StreamedMusicPort.TrackRef(
-                        namespaced.owner(), namespaced.localName()));
-            }
+    }
+
+    /**
+     * Starts one ROM level-entry boundary. Results returns reach it before
+     * their counted fade; the ordered load profile reaches it as fallback.
+     */
+    public void beginLevelEntry() {
+        levelEntryBegun = LevelMusicCoordinator.beginEntry(levelEntryBegun,
+                activeGameModule().getLevelInitProfile());
+    }
+
+    /** Submits the level's playlist request after game-owned entry commands. */
+    public void playLevelMusic(int levelIndex) throws IOException {
+        LevelMusicCoordinator.prepare(game, transitions, levelIndex)
+                .ifPresent(this::publishPreparedLevelMusic);
+    }
+
+    /** Resolves the selected zone/act's playlist entry without publishing it. */
+    public java.util.OptionalInt prepareCurrentLevelMusic() throws IOException {
+        return LevelMusicCoordinator.prepareCurrent(game, transitions, resolveLevelData());
+    }
+
+    /** Re-publishes the current level request through the canonical owner. */
+    public void playCurrentLevelMusic() {
+        publishPreparedLevelMusic(getCurrentLevelMusicId());
+    }
+
+    /** Publishes a request the active game profile has released. */
+    public void publishPreparedLevelMusic(int musicId) {
+        var module = activeGameModule();
+        var profile = module.getLevelInitProfile();
+        if (profile.isLevelMusicPublicationPending()) return;
+        var reference = module.getLevelMusicReference(currentZone, currentAct);
+        if (reference instanceof com.openggf.game.MusicReference.Namespaced namespaced) {
+            audioManager.playNamespacedMusic(new com.openggf.audio.StreamedMusicPort.TrackRef(
+                    namespaced.owner(), namespaced.localName()));
+        } else {
+            LevelMusicCoordinator.publish(audioManager, musicId, profile);
         }
     }
 
@@ -1030,7 +1076,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-            objectManager.update(camera.getX(), playable, sidekicks, frameCounter + 1);
+            objectManager.update(camera.getX(), playable, sidekicks, frameCounter);
         }
 
         // ROM parity: OscillateNumDo runs AFTER ExecuteObjects in both S1
@@ -1099,14 +1145,14 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         if (objectManager != null) {
             objectManager.runTouchResponsesForPlayer(
                     player,
-                    frameCounter + 1,
+                    frameCounter,
                     objectsExecuteAfterPlayerPhysics());
         }
         if (ringManager != null && player instanceof AbstractPlayableSprite playable && !playable.getDead()) {
-            ringManager.collectAttractedRing(playable, frameCounter + 1);
+            ringManager.collectAttractedRing(playable, frameCounter);
             ringManager.attractStageRings(playable);
             if (!ringManager.usesObjectTouchCollection()) {
-                ringManager.collectStageRings(playable, frameCounter + 1);
+                ringManager.collectStageRings(playable, frameCounter);
             }
             // Lost (spilled) ring collection now runs through the unified slot-ordered touch
             // loop in ObjectManager.runTouchResponsesForPlayer (above) via the type-keyed
@@ -1153,7 +1199,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
 
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-            objectManager.update(camera.getX(), playable, sidekicks, frameCounter + 1, false);
+            objectManager.update(camera.getX(), playable, sidekicks, frameCounter, false);
         }
 
         // ROM parity: OscillateNumDo runs AFTER ExecuteObjects in both S1
@@ -1178,7 +1224,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
         AbstractPlayableSprite playable =
                 player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
-        objectManager.runPostPlayerHooks(playable, frameCounter + 1);
+        objectManager.runPostPlayerHooks(playable, frameCounter);
     }
 
     /**
@@ -1204,7 +1250,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             Sprite player = spriteManager.getSprite(resolveMainCharacterCode());
             AbstractPlayableSprite playable = player instanceof AbstractPlayableSprite ? (AbstractPlayableSprite) player : null;
             List<AbstractPlayableSprite> sidekicks = spriteManager.getSidekicks();
-            objectManager.update(camera.getX(), playable, sidekicks, frameCounter + 1,
+            objectManager.update(camera.getX(), playable, sidekicks, frameCounter,
                     false, true, true, afterExecBeforePlacement);
         }
 
@@ -1239,8 +1285,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // games -- S1 Level_MainLoop (sonic.asm:3033), S2 Level_MainLoop
         // (s2.asm:5108) and S3K Level_MainLoop (sonic3k.asm:7909) -- while
         // OscillateNumInit runs once during level init (S1 sonic.asm:2916,
-        // S2 s2.asm:4999).
-        OscillationManager.update(frameCounter + 1);
+        // S2 s2.asm:4999). The title-card / level-load sequence never reaches
+        // that loop tail, so its passes must not tick the oscillators. The
+        // title-card lifecycle already raises the one-shot suppression flag for
+        // each of those passes; this tail is the second implementation of the
+        // same OscillateNumDo contract and has to honour it exactly as
+        // advanceGlobalOscillation() does. Without it every title-card frame
+        // advanced the global table, so the level began that many frames out of
+        // phase (S2 EHZ1 star-post re-entry: 128 title-card passes, leaving the
+        // Obj18 subtype-2 vertical platform at x=$07C0 at the opposite end of
+        // its travel and catching a player the ROM lets fall past).
+        frameRuntimeUpdater.advanceGlobalOscillation();
     }
 
     void advanceGlobalOscillation() {
@@ -1328,16 +1383,27 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         }
     }
 
+    /**
+     * Advances {@code Level_frame_counter} at the ROM's own point in the loop:
+     * immediately after the V-blank wait and before the object pass, so every
+     * routine that runs this frame reads the already-incremented value.
+     *
+     * <p>All three games place the increment there --
+     * {@code addq.w #1,(v_framecount).w} after {@code WaitForVBlank}
+     * ({@code docs/s1disasm/sonic.asm:3001-3006}),
+     * {@code addq.w #1,(Level_frame_counter).w} after {@code WaitForVint}
+     * ({@code docs/s2disasm/s2.asm:5090-5094}) and after {@code Wait_VSync}
+     * ({@code docs/skdisasm/sonic3k.asm:7919-7925}) -- in each case before
+     * {@code ExecuteObjects} / {@code RunObjects} / {@code Process_Sprites}.
+     */
+    public void advanceLevelFrameCounter() {
+        frameCounter++;
+    }
+
     public void update() {
         // NOTE: OscillationManager and objectManager are now updated via updateObjectPositions()
         // which is called earlier in GameLoop to fix platform riding sync (1-frame lag fix).
 
-        // Advance the frame counter. This drives OscillationManager dedup (via
-        // updateObjectPositionsWithoutTouches), ring/object frame tracking, and
-        // parallax animation timing. Must increment here (in the logic path)
-        // rather than in drawWithSpritePriority() so headless tests see the
-        // counter advance even when rendering is disabled.
-        frameCounter++;
         processPendingLostRingSpawns();
 
         Sprite player = null;
@@ -1946,7 +2012,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @param layer the layer to retrieve the block from
      * @return the Block at the specified position, or null if not found
      */
-    private int getLayerLevelWidthPx(byte layer) {
+    int getLayerLevelWidthPx(byte layer) {
         if (level == null) {
             return blockPixelSize;
         }
@@ -1954,7 +2020,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         return widthBlocks * blockPixelSize;
     }
 
-    private int getLayerLevelHeightPx(byte layer) {
+    int getLayerLevelHeightPx(byte layer) {
         if (level == null) {
             return blockPixelSize;
         }
@@ -1981,7 +2047,59 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             cachedBgHeightPx = blockPixelSize;
         }
         blockGrid = new BlockGridIndexer(blockPixelSize);
+        collisionLayoutYMask = resolveCollisionLayoutYMask();
     }
+
+    private int resolveCollisionLayoutYMask() {
+        GameRules rules = gameRulesFor(gameModule);
+        if (rules == null || rules.collision() == null) {
+            return 0;
+        }
+        if (!rules.collision().layoutYMaskAppliesToAllLookups()) {
+            // The mask is real but is not a constant for this game (S3K writes
+            // Layout_row_index_mask per level: $7C normally, $3C for looping levels,
+            // sonic3k.asm:102207/110071/110322/114224/114253), and it masks an
+            // already-shifted row index rather than a Y position. Treating it as a
+            // constant made ICZ1's snowboard intro end its slope ride 193px short, so
+            // this game keeps its previous lookup behaviour until the runtime variable
+            // is modelled.
+            return 0;
+        }
+        return rules.collision().defaultCollisionLayoutYMask();
+    }
+
+    /**
+     * Maps a world Y onto a collision-layout row the way the ROM's tile lookup does.
+     *
+     * <p>Every game's block lookup <em>masks</em> the layout row index rather than
+     * bounds-checking it, because the layout is a fixed-size RAM buffer:
+     * <ul>
+     *   <li>S1 {@code FindNearestTile}: {@code lsr.w #1,d0 / andi.w #$380,d0} over the
+     *       8-row, {@code layout_row}=$80 buffer — an 0x800px window
+     *       (docs/s1disasm/_incObj/"sub FindNearestTile &amp; FindFloor &amp; FindWall.asm":15-17,
+     *       docs/s1disasm/_Variables.asm:21).</li>
+     *   <li>S2 {@code Find_Tile}: {@code add.w d0,d0 / andi.w #$F00,d0} over 16 rows of
+     *       128px — also an 0x800px window (docs/s2disasm/s2.asm:43366-43368).</li>
+     *   <li>S3K {@code Find_Tile_FG}: {@code lsr.w #5,d0 / and.w (Layout_row_index_mask).w,d0}
+     *       (docs/skdisasm/sonic3k.asm:19143-19145).</li>
+     * </ul>
+     * The per-game window is already carried by
+     * {@code CollisionRules.defaultCollisionLayoutYMask()}, which
+     * {@code GroundSensor.verticalTileLookupY} applies to the negative-Y ceiling probe.
+     * Applying it here makes it what it actually is in the ROM: a property of how the
+     * layout array is indexed, on every lookup, for every object — not a player-only or
+     * upward-only special case.
+     *
+     * <p>Consequence: an object that leaves the level vertically keeps sensing terrain
+     * from a wrapped row instead of falling forever. Rows past the end of the loaded
+     * layout are zero-filled RAM, i.e. the blank-chunk path (with {@code FixBugs = 0} that
+     * is {@code .blanktile -> movea.l d1,a1} pointing at {@code v_chunk0collision}, which
+     * is permanently 0; the {@code FixBugs} branch would instead point at a ROM zero word,
+     * same observable result) — modelled here by returning -1 so callers see no terrain.
+     *
+     * @return the wrapped Y, or -1 when the wrapped row is outside the loaded layout
+     */
+
 
     /**
      * Builds a LevelGeometry snapshot from the current cached dimensions.
@@ -2053,62 +2171,20 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     /** Fast cached getter for layer pixel width (avoids per-call getLayerWidthBlocks). */
-    private int getCachedLayerWidthPx(byte layer) {
+    int getCachedLayerWidthPx(byte layer) {
         int cached = layer == 0 ? cachedFgWidthPx : cachedBgWidthPx;
         return cached > 0 ? cached : getLayerLevelWidthPx(layer);
     }
 
     /** Fast cached getter for layer pixel height (avoids per-call getLayerHeightBlocks). */
-    private int getCachedLayerHeightPx(byte layer) {
+    int getCachedLayerHeightPx(byte layer) {
         int cached = layer == 0 ? cachedFgHeightPx : cachedBgHeightPx;
         return cached > 0 ? cached : getLayerLevelHeightPx(layer);
     }
 
+    /** Delegates to {@link LevelLayoutLookup#getBlockAtPosition}. */
     Block getBlockAtPosition(byte layer, int x, int y) {
-        if (level == null || level.getMap() == null) {
-            LOGGER.warning("Level or Map is not initialized.");
-            return null;
-        }
-
-        int levelWidth = getCachedLayerWidthPx(layer);
-        int levelHeight = getCachedLayerHeightPx(layer);
-
-        // Handle wrapping for X
-        int wrappedX = ((x % levelWidth) + levelWidth) % levelWidth;
-
-        // Handle wrapping for Y
-        int wrappedY = y;
-        if (layer == 1) {
-            // Background loops vertically
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
-        } else if (verticalWrapEnabled) {
-            // ROM: LZ3/SBZ2 — FG also wraps vertically
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
-        } else {
-            // Foreground Clamps
-            if (wrappedY < 0 || wrappedY >= levelHeight)
-                return null;
-        }
-
-        Map map = level.getMap();
-        int mapX = wrappedX / blockPixelSize;
-        int mapY = wrappedY / blockPixelSize;
-
-        byte value = map.getValue(layer, mapX, mapY);
-
-        // Mask the value to treat the byte as unsigned
-        int blockIndex = value & 0xFF;
-
-        if (blockIndex >= level.getBlockCount()) {
-            return null;
-        }
-
-        Block block = level.getBlock(blockIndex);
-        if (block == null) {
-            LOGGER.warning("Block at index " + blockIndex + " is null.");
-        }
-
-        return block;
+        return layoutLookup.getBlockAtPosition(layer, x, y);
     }
 
     /**
@@ -2119,73 +2195,17 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @param y pixel Y coordinate
      * @return block index (0-255), or -1 if out of bounds
      */
+    /**
+     * Returns the raw block index (0-255) at the given pixel position in the
+     * foreground layer, or -1 when out of bounds.
+     */
     public int getBlockIdAt(int x, int y) {
-        if (level == null || level.getMap() == null) {
-            return -1;
-        }
-        int levelWidth = cachedFgWidthPx;
-        int levelHeight = cachedFgHeightPx;
-        if (levelWidth <= 0 || levelHeight <= 0 || blockPixelSize <= 0) {
-            return -1;
-        }
-        int wrappedX = ((x % levelWidth) + levelWidth) % levelWidth;
-        int wrappedY = y;
-        if (verticalWrapEnabled) {
-            wrappedY = ((wrappedY % levelHeight) + levelHeight) % levelHeight;
-        } else if (wrappedY < 0 || wrappedY >= levelHeight) {
-            return -1;
-        }
-        Map map = level.getMap();
-        int mapX = wrappedX / blockPixelSize;
-        int mapY = wrappedY / blockPixelSize;
-        return map.getValue(0, mapX, mapY) & 0xFF;
+        return layoutLookup.getBlockIdAt(x, y);
     }
 
+    /** Returns the ChunkDesc at the given pixel position, or null. */
     public ChunkDesc getChunkDescAt(byte layer, int x, int y) {
-        if (level == null || level.getMap() == null) {
-            return null;
-        }
-
-        int levelWidth = getCachedLayerWidthPx(layer);
-        int levelHeight = getCachedLayerHeightPx(layer);
-        if (levelWidth <= 0 || levelHeight <= 0) {
-            return null;
-        }
-
-        // Wrap X (always wraps)
-        int wrappedX = BlockGridIndexer.wrapCoordinate(x, levelWidth);
-
-        // Wrap or clamp Y depending on layer
-        int wrappedY = y;
-        if (layer == 1 || verticalWrapEnabled) {
-            // Background loops vertically; ROM: LZ3/SBZ2 — FG also wraps vertically
-            wrappedY = BlockGridIndexer.wrapCoordinate(wrappedY, levelHeight);
-        } else {
-            // Foreground clamps
-            if (wrappedY < 0 || wrappedY >= levelHeight)
-                return null;
-        }
-
-        // Block lookup (inlined from getBlockAtPosition to reuse wrappedX/wrappedY).
-        Map map = level.getMap();
-        int mapX = blockGrid.blockIndex(wrappedX);
-        int mapY = blockGrid.blockIndex(wrappedY);
-
-        byte value = map.getValue(layer, mapX, mapY);
-        int blockIndex = value & 0xFF;
-
-        if (blockIndex >= level.getBlockCount()) {
-            return null;
-        }
-
-        Block block = level.getBlock(blockIndex);
-        if (block == null) {
-            return null;
-        }
-
-        // Intra-block position (reuses already-wrapped coordinates)
-        return block.getChunkDesc(blockGrid.blockLocal(wrappedX) / LevelConstants.CHUNK_WIDTH,
-                blockGrid.blockLocal(wrappedY) / LevelConstants.CHUNK_HEIGHT);
+        return layoutLookup.getChunkDescAt(layer, x, y);
     }
 
     /**
@@ -2198,48 +2218,13 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * @param loopLowPlane if true and layer == 0, resolve collision block index via Level
      * @return the ChunkDesc, or null if out of bounds
      */
-    public ChunkDesc getChunkDescAt(byte layer, int x, int y, boolean loopLowPlane) {
-        if (!loopLowPlane || layer != 0) {
-            return getChunkDescAt(layer, x, y);
-        }
-
-        // Loop low plane: resolve collision block via Level.resolveCollisionBlockIndex
-        if (level == null || level.getMap() == null) {
-            return null;
-        }
-
-        int levelWidth = getCachedLayerWidthPx((byte) 0);
-        int levelHeight = getCachedLayerHeightPx((byte) 0);
-        if (levelWidth <= 0 || levelHeight <= 0) {
-            return null;
-        }
-        int wrappedX = BlockGridIndexer.wrapCoordinate(x, levelWidth);
-        int wrappedY = y;
-        if (verticalWrapEnabled) {
-            wrappedY = BlockGridIndexer.wrapCoordinate(wrappedY, levelHeight);
-        } else if (wrappedY < 0 || wrappedY >= levelHeight) {
-            return null;
-        }
-
-        Map map = level.getMap();
-        int mapX = blockGrid.blockIndex(wrappedX);
-        int mapY = blockGrid.blockIndex(wrappedY);
-
-        int rawBlockIndex = map.getValue(0, mapX, mapY) & 0xFF;
-        int resolvedIndex = level.resolveCollisionBlockIndex(rawBlockIndex, mapX, mapY);
-
-        if (resolvedIndex >= level.getBlockCount()) {
-            return null;
-        }
-
-        Block block = level.getBlock(resolvedIndex);
-        if (block == null) {
-            return null;
-        }
-
-        return block.getChunkDesc(
-                blockGrid.blockLocal(wrappedX) / LevelConstants.CHUNK_WIDTH,
-                blockGrid.blockLocal(wrappedY) / LevelConstants.CHUNK_HEIGHT);
+    /**
+     * Returns the ChunkDesc at the given pixel position, optionally resolving
+     * Sonic 1 loop collision (low plane uses an alternate block index).
+     */
+    public ChunkDesc getChunkDescAt(
+            byte layer, int x, int y, boolean loopLowPlane) {
+        return layoutLookup.getChunkDescAt(layer, x, y, loopLowPlane);
     }
 
     public SolidTile getSolidTileForChunkDesc(ChunkDesc chunkDesc, int solidityBitIndex) {
@@ -2577,63 +2562,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     }
 
     private int getTileDescriptorAtWorld(byte layer, int worldX, int worldY) {
-        if (level == null || level.getMap() == null) {
-            return 0;
-        }
-
-        int levelWidth = getLayerLevelWidthPx(layer);
-        int levelHeight = getLayerLevelHeightPx(layer);
-        if (levelWidth <= 0 || levelHeight <= 0) {
-            return 0;
-        }
-
-        int wrappedX = Math.floorMod(worldX, levelWidth);
-        int wrappedY = worldY;
-        if (layer == 1 || verticalWrapEnabled) {
-            wrappedY = Math.floorMod(worldY, levelHeight);
-        } else if (wrappedY < 0 || wrappedY >= levelHeight) {
-            return 0;
-        }
-
-        Block block = getBlockAtPosition(layer, wrappedX, wrappedY);
-        if (block == null) {
-            return 0;
-        }
-
-        int xBlockBit = (wrappedX % blockPixelSize) / LevelConstants.CHUNK_WIDTH;
-        int yBlockBit = (wrappedY % blockPixelSize) / LevelConstants.CHUNK_HEIGHT;
-        ChunkDesc chunkDesc = block.getChunkDesc(xBlockBit, yBlockBit);
-        if (chunkDesc == null) {
-            return 0;
-        }
-
-        int chunkIndex = chunkDesc.getChunkIndex();
-        if (chunkIndex < 0 || chunkIndex >= level.getChunkCount()) {
-            return 0;
-        }
-
-        Chunk chunk = level.getChunk(chunkIndex);
-        if (chunk == null) {
-            return 0;
-        }
-
-        int tileX = (wrappedX & (LevelConstants.CHUNK_WIDTH - 1)) / Pattern.PATTERN_WIDTH;
-        int tileY = (wrappedY & (LevelConstants.CHUNK_HEIGHT - 1)) / Pattern.PATTERN_HEIGHT;
-        int logicalX = chunkDesc.getHFlip() ? 1 - tileX : tileX;
-        int logicalY = chunkDesc.getVFlip() ? 1 - tileY : tileY;
-        PatternDesc patternDesc = chunk.getPatternDesc(logicalX, logicalY);
-        if (patternDesc == null) {
-            return 0;
-        }
-
-        int descriptor = patternDesc.get();
-        if (chunkDesc.getHFlip()) {
-            descriptor ^= 0x800;
-        }
-        if (chunkDesc.getVFlip()) {
-            descriptor ^= 0x1000;
-        }
-        return descriptor & 0xFFFF;
+        return layoutLookup.getTileDescriptorAtWorld(layer, worldX, worldY);
     }
 
     /**
@@ -2734,16 +2663,21 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      * Returns -1 if no level is loaded or music ID cannot be determined.
      */
     public int getCurrentLevelMusicId() {
-        if (game == null || levels == null || levels.isEmpty()) {
+        return LevelMusicCoordinator.currentMusicId(
+                game, levels, currentZone, currentAct, LOGGER);
+    }
+
+    /**
+     * Gets the music selected by the ROM's {@code Apparent_zone_and_act}.
+     * This intentionally differs from {@link #getCurrentLevelMusicId()} during
+     * seamless transitions such as AIZ's fire curtain, where AIZ2 resources
+     * are loaded while the apparent act remains AIZ1.
+     */
+    public int getApparentLevelMusicId() {
+        if (gameModule == null) {
             return -1;
         }
-        try {
-            int levelIdx = levels.get(currentZone).get(currentAct).levelIndex();
-            return game.getMusicId(levelIdx);
-        } catch (Exception e) {
-            LOGGER.warning("Failed to get music ID for current level: " + e.getMessage());
-            return -1;
-        }
+        return gameModule.getZoneRegistry().getMusicId(currentZone, apparentAct);
     }
 
     public Collection<ObjectSpawn> getActiveObjectSpawns() {
@@ -2767,10 +2701,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /**
      * Aligns this manager's level frame counter during one-time replay/bootstrap
-     * setup. ROM {@code Level_frame_counter} is already incremented before
-     * {@code Process_Sprites}; the engine stores the previous completed level
-     * frame here until {@link #update()} runs near the end of
-     * {@code LevelFrameStep}.
+     * setup. Seed it with the PREVIOUS completed level frame:
+     * {@link #advanceLevelFrameCounter()} runs at the top of the next
+     * {@code LevelFrameStep} frame, where the ROM's own loop increments
+     * {@code Level_frame_counter}, so that frame's body reads the ROM's value.
      */
     public void setFrameCounter(int frameCounter) {
         this.frameCounter = frameCounter;
@@ -4786,6 +4720,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** @see LevelTransitionCoordinator#consumeTimeAttackMenuReturnRequest() */
     public boolean consumeTimeAttackMenuReturnRequest() { return transitions.consumeTimeAttackMenuReturnRequest(); }
+    public void requestGameOverExit(GameOverExit exit) { transitions.requestGameOverExit(exit); }
+
+    public GameOverExit consumeGameOverExitRequest() { return transitions.consumeGameOverExitRequest(); }
+
+    public GameOverExit getGameOverExitRequested() { return transitions.getGameOverExitRequested(); }
 
     /** @see LevelTransitionCoordinator#setForceHudSuppressed(boolean) */
     public void setForceHudSuppressed(boolean suppressed) { transitions.setForceHudSuppressed(suppressed); }

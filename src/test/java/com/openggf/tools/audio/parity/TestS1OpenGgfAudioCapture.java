@@ -2,6 +2,8 @@ package com.openggf.tools.audio.parity;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -25,6 +27,20 @@ class TestS1OpenGgfAudioCapture {
 
     @TempDir
     Path temp;
+
+    @Test
+    void s1ReleaseProfileLeavesTheCompletedSfxNoteOffAuthoritative() {
+        assertEquals(SmpsSequencerConfig.PsgSfxTakeoverMode.S1_PSG3_SILENCE_PAIR,
+                Sonic1SmpsSequencerConfig.CONFIG.getPsgSfxTakeoverMode());
+        assertEquals(SmpsSequencerConfig.SfxTrackWalkMode.CHANNEL_RAM_ORDER,
+                Sonic1SmpsSequencerConfig.CONFIG.getSfxTrackWalkMode());
+        assertEquals(SmpsSequencerConfig.FmVolumeVoiceBankMode.S1_SPECIAL_POINTER_BUG,
+                Sonic1SmpsSequencerConfig.CONFIG.getFmVolumeVoiceBankMode());
+        assertEquals(SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE,
+                Sonic1SmpsSequencerConfig.CONFIG.getFmSfxReleaseMode());
+        assertEquals(SmpsSequencerConfig.PsgSfxReleaseMode.ROM_REST_RESTORE,
+                Sonic1SmpsSequencerConfig.CONFIG.getPsgSfxReleaseMode());
+    }
 
     @Test
     void realGhzCaptureStartsAfterPowerOnAndUsesOneNtscServicePerRecord() throws Exception {

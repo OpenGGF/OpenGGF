@@ -593,6 +593,7 @@ class TestS3kMgz2BgRiseHeadless {
 
     @Test
     void backgroundTilemapBuildUsesFullContiguousWidthForMgzStateEight() throws Exception {
+        mgzEvents().setBgRiseRoutine(8);
         var tm = GameServices.level().getTilemapManager();
         var bgCameraField = GameServices.parallax().getClass().getDeclaredField("cachedBgCameraX");
         bgCameraField.setAccessible(true);
@@ -608,6 +609,22 @@ class TestS3kMgz2BgRiseHeadless {
                 "MGZ state 8 should rebuild the full contiguous BG strip instead of a guessed wrapped cache window");
         assertTrue(tm.getBackgroundTilemapWidthTiles() > 64,
                 "MGZ state 8 should build a BG tilemap wider than the normal 64-cell plane");
+    }
+
+    @Test
+    void backgroundTilemapBuildKeepsVdpWindowForMgzBossSkyState() throws Exception {
+        mgzEvents().setBgRiseRoutine(0);
+        var tm = GameServices.level().getTilemapManager();
+        var bgCameraField = GameServices.parallax().getClass().getDeclaredField("cachedBgCameraX");
+        bgCameraField.setAccessible(true);
+        bgCameraField.setInt(GameServices.parallax(), 0x3C80);
+        tm.setBackgroundTilemapDirty(true);
+
+        ensureBackgroundTilemapData();
+
+        assertEquals(64, tm.getBackgroundTilemapWidthTiles(),
+                "MGZ2 normal/boss-sky state must keep the retail 64-cell VDP Plane B window; "
+                        + "only Events_bg+$00 state 8 uses the full contiguous rise-terrain strip");
     }
 
     /**

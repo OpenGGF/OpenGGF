@@ -19,9 +19,7 @@ class TestStreamedAudioVoiceRegistry {
 
     @Test
     void completionSweepRetiresFiniteStreamedCursors() {
-        Fixture fixture = new Fixture(config(
-                SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.ON_RESTORE,
-                1, 0));
+        Fixture fixture = new Fixture(config(1, 0), false);
         fixture.port.finite = true;
 
         for (int index = 0; index < 20; index++) {
@@ -35,9 +33,7 @@ class TestStreamedAudioVoiceRegistry {
 
     @Test
     void restoreFadeUsesConfiguredCadenceAndAfterFadeReleaseBoundary() {
-        Fixture fixture = new Fixture(config(
-                SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
-                        .AFTER_FADE_IN, 1, 0));
+        Fixture fixture = new Fixture(config(1, 0), true);
         fixture.replaceAndPush();
 
         fixture.registry.apply(new RestoreMusicOverride());
@@ -52,9 +48,7 @@ class TestStreamedAudioVoiceRegistry {
 
     @Test
     void restoreFadeCanReleaseSfxImmediatelyWhileFadeContinues() {
-        Fixture fixture = new Fixture(config(
-                SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.ON_RESTORE,
-                2, 1));
+        Fixture fixture = new Fixture(config(2, 1), false);
         fixture.replaceAndPush();
 
         fixture.registry.apply(new RestoreMusicOverride());
@@ -66,31 +60,24 @@ class TestStreamedAudioVoiceRegistry {
 
     @Test
     void snapshotWithActiveStreamedOverrideKeepsOverrideSfxBlockAfterRender() {
-        Fixture fixture = new Fixture(config(
-                SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
-                        .AFTER_FADE_IN, 1, 0));
+        Fixture fixture = new Fixture(config(1, 0), true);
         fixture.replaceAndPush();
         AudioPresentationSnapshot snapshot = fixture.registry.snapshot();
-        assertTrue(snapshot.activeMusicOverride());
+        assertTrue(!snapshot.overrideStack().isEmpty());
         assertTrue(snapshot.sfxBlocked());
 
         fixture.registry.restore(snapshot, fixture.factory);
         fixture.renderFrame();
 
         AudioPresentationSnapshot restored = fixture.registry.snapshot();
-        assertTrue(restored.activeMusicOverride());
+        assertTrue(!restored.overrideStack().isEmpty());
         assertTrue(restored.sfxBlocked(),
                 "an active override block is not a completed restore fade");
     }
 
     private static SmpsSequencerConfig config(
-            SmpsSequencerConfig.MusicOverrideSfxReleasePolicy release,
             int steps, int delay) {
         return new SmpsSequencerConfig.Builder()
-                .musicOverrideRestorePolicy(
-                        SmpsSequencerConfig.MusicOverrideRestorePolicy
-                                .DRIVER_FADE_IN)
-                .musicOverrideSfxReleasePolicy(release)
                 .fadeInSteps(steps)
                 .fadeInDelay(delay)
                 .build();
@@ -101,7 +88,7 @@ class TestStreamedAudioVoiceRegistry {
         private final AudioPresentationSourceFactory factory;
         private final AudioVoiceRegistry registry;
 
-        private Fixture(SmpsSequencerConfig config) {
+        private Fixture(SmpsSequencerConfig config, boolean blockSfxDuringFade) {
             SmpsCoordFlagHandlerOwner handlers =
                     new SmpsCoordFlagHandlerOwner(
                             new SmpsCoordFlagRuntimeState());
@@ -109,7 +96,7 @@ class TestStreamedAudioVoiceRegistry {
                     () -> true, handlers,
                     AudioPresentationSourceFactory.Settings.defaults());
             factory.installStreamedMusicPort(port);
-            factory.setStreamedRestoreConfig(config);
+            factory.setStreamedRestoreConfig(config, blockSfxDuringFade);
             registry = new AudioVoiceRegistry(factory, factory, handlers,
                     ignored -> { });
         }

@@ -63,13 +63,20 @@ public final class S1AudioParityTool {
             throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
         }
         Path canonical = canonicalCandidate(normalized);
+        if (canonical.startsWith(resources)) {
+            throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
+        }
+        if (!canonical.startsWith(repo)) {
+            // An explicit run root outside the repository is the wrapper-driven
+            // shape: TraceChaser's output policy requires reference captures to
+            // land outside both source trees, and the engine capture and reports
+            // belong beside them in the same run directory.
+            return canonical;
+        }
         Path allowedRoot = repo.resolve("target/audio-parity").normalize();
         if (!canonical.startsWith(canonicalCandidate(allowedRoot))) {
             throw new IllegalArgumentException(
-                    "audio parity output is outside repository target/audio-parity");
-        }
-        if (canonical.startsWith(resources)) {
-            throw new IllegalArgumentException("audio parity output must not be under src/test/resources");
+                    "audio parity output inside the repository must stay under target/audio-parity");
         }
         return canonical;
     }
@@ -91,7 +98,8 @@ public final class S1AudioParityTool {
     }
 
     private static int validate(Map<String, String> options, PrintStream out) {
-        rejectUnknown(options, "repo", "rom", "rom-search-root", "movie", "bizhawk-home", "output-root");
+        rejectUnknown(options, "repo", "rom", "rom-search-root", "movie", "bizhawk-home", "output-root",
+                "capture");
         Path repo = canonicalExisting(Path.of(required(options, "repo")), "repository");
         Path rom = options.containsKey("rom")
                 ? Path.of(options.get("rom")).toAbsolutePath().normalize()
@@ -101,10 +109,27 @@ public final class S1AudioParityTool {
         verifyDigest(rom, "SHA-1", AudioParitySchema.S1_REV01_SHA1,
                 "audio parity requires the pinned S1 World REV01 ROM");
 
+        CaptureKind kind = captureKind(options);
         Path movie = normalizedRequired(options, "movie");
         verifyRegular(movie, "pinned BK2 movie");
-        verifyDigest(movie, "SHA-256", AudioParitySchema.BK2_SHA256,
-                "BK2 movie does not match the pinned s1-soundtest-ghz.bk2 identity");
+        if (kind == CaptureKind.GAMEPLAY || kind == CaptureKind.RUN_WINDOW) {
+            // The gameplay and run-window kinds accept more than one pinned
+            // complete run, so the check is membership rather than a single
+            // digest. Both read the same pinned movies; they differ only in
+            // how much of one they cover.
+            String actual = digest(movie, "SHA-256");
+            if (!AudioParitySchema.GAMEPLAY_MOVIES.containsKey(actual)) {
+                throw new IllegalArgumentException(
+                        "BK2 movie is not one of the pinned S1 gameplay movies (observed " + actual + ")");
+            }
+        } else {
+            verifyDigest(movie, "SHA-256", expectedMovieSha256(kind), switch (kind) {
+                case SFX -> "BK2 movie does not match the pinned s1-soundtest-sfx.bk2 identity";
+                case MUSIC -> "BK2 movie does not match the pinned s1-soundtest-ghz.bk2 identity";
+                case GAMEPLAY, RUN_WINDOW ->
+                        throw new IllegalStateException("complete-run kinds are handled above");
+            });
+        }
 
         Path bizhawk = normalizedRequired(options, "bizhawk-home");
         Path emuHawk = bizhawk.resolve("EmuHawk.exe");
@@ -125,16 +150,52 @@ public final class S1AudioParityTool {
     }
 
     private static int capture(Map<String, String> options, PrintStream out) {
-        rejectUnknown(options, "repo", "run-root", "reference", "rom", "output");
+        rejectUnknown(options, "repo", "run-root", "reference", "rom", "output", "capture");
         Path repo = canonicalExisting(Path.of(required(options, "repo")), "repository");
         Path runRoot = resolveSafeRunRoot(repo, normalizedRequired(options, "run-root"));
         Path reference = existingRunChild(runRoot, normalizedRequired(options, "reference"), "reference");
         Path rom = normalizedRequired(options, "rom");
         Path output = newRunChild(runRoot, normalizedRequired(options, "output"), "capture output");
+        CaptureKind kind = captureKind(options);
+        if (kind == CaptureKind.SFX || kind == CaptureKind.GAMEPLAY
+                || kind == CaptureKind.RUN_WINDOW) {
+            S1OpenGgfSfxAudioCapture.CaptureResult result =
+                    S1OpenGgfSfxAudioCapture.capture(reference, rom, output);
+            out.println("OpenGGF " + kind + " capture: " + output + " (" + result.recordCount()
+                    + " ticks, " + result.dispatchCount() + " dispatches)");
+            return EXIT_MATCH;
+        }
         S1OpenGgfAudioCapture.CaptureResult result =
                 S1OpenGgfAudioCapture.capture(reference, rom, output);
         out.println("OpenGGF capture: " + output + " (" + result.recordCount() + " ticks)");
         return EXIT_MATCH;
+    }
+
+    private enum CaptureKind { MUSIC, SFX, GAMEPLAY, RUN_WINDOW }
+
+    private static CaptureKind captureKind(Map<String, String> options) {
+        String kind = options.getOrDefault("capture", "music");
+        return switch (kind) {
+            case "music" -> CaptureKind.MUSIC;
+            case "sfx" -> CaptureKind.SFX;
+            case "gameplay" -> CaptureKind.GAMEPLAY;
+            case "run-window" -> CaptureKind.RUN_WINDOW;
+            default -> throw new UsageException(
+                    "--capture must be music, sfx, gameplay, or run-window");
+        };
+    }
+
+    /**
+     * Single-digest kinds only; GAMEPLAY and RUN_WINDOW accept any movie in
+     * {@code GAMEPLAY_MOVIES}.
+     */
+    private static String expectedMovieSha256(CaptureKind kind) {
+        return switch (kind) {
+            case MUSIC -> AudioParitySchema.BK2_SHA256;
+            case SFX -> AudioParitySchema.SFX_BK2_SHA256;
+            case GAMEPLAY, RUN_WINDOW ->
+                    throw new IllegalStateException("complete-run kinds accept several pinned movies");
+        };
     }
 
     private static int compare(Map<String, String> options, PrintStream out) throws IOException {
@@ -158,8 +219,8 @@ public final class S1AudioParityTool {
 
     private static boolean isParityDifference(AudioParityReport.Kind kind) {
         return switch (kind) {
-            case GLOBAL_STATE_MISMATCH, TRACK_STATE_MISMATCH, EVENT_MISSING, EVENT_EXTRA,
-                    EVENT_REORDERED, EVENT_VALUE_DIFFERENT -> true;
+            case GLOBAL_STATE_MISMATCH, DISPATCH_MISMATCH, TRACK_STATE_MISMATCH, EVENT_MISSING,
+                    EVENT_EXTRA, EVENT_REORDERED, EVENT_VALUE_DIFFERENT -> true;
             case MATCH, CAPTURE_FAILURE, METADATA_MISMATCH, TICK_COUNT_MISMATCH,
                     ORDINAL_MISMATCH -> false;
         };

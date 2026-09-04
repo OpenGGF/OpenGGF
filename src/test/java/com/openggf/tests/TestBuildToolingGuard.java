@@ -29,6 +29,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -71,7 +72,7 @@ class TestBuildToolingGuard {
             "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmark.java",
             "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmarkComparator.java",
             "src/test/java/com/openggf/audio/SmpsRepeatedPlaybackBenchmarkComparator.java",
-            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipNukedParity.java",
             "src/test/java/com/openggf/capture/CaptureRecorderTest.java",
             "src/test/java/com/openggf/capture/LiveCaptureControllerTest.java",
             "src/test/java/com/openggf/capture/LiveCaptureRecorderFactoryTest.java",
@@ -137,6 +138,7 @@ class TestBuildToolingGuard {
             "src/test/java/com/openggf/game/rewind/TestScalarOnlyCodecDeletion.java",
             "src/test/java/com/openggf/game/rewind/TestS3kAizEndBossGraphRewind.java",
             "src/test/java/com/openggf/game/rewind/TestS3kHczEndBossGraphRewind.java",
+            "src/test/java/com/openggf/audio/synth/TestYm2612ChipNukedParity.java",
             "src/packaging/assemble-macos-app.sh");
 
     private static final Pattern LEGACY_OUTPUT_WRITE = Pattern.compile(
@@ -146,7 +148,6 @@ class TestBuildToolingGuard {
                     + "Path\\.of\\(\\s*\\\"target|Paths\\.get\\(\\s*\\\"target)");
 
     private static final Set<String> SESSION_OUTPUT_FILES = Set.of(
-            "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
             "src/test/java/com/openggf/game/TestInstaShieldVisual.java",
             "src/test/java/com/openggf/game/rewind/RewindBenchmark.java",
             "src/test/java/com/openggf/game/rewind/RewindRoundTripHarness.java",
@@ -236,8 +237,7 @@ class TestBuildToolingGuard {
             "com.openggf.audio.AudioRegressionTest#testSfxJumpMatchesReference",
             "com.openggf.audio.AudioRegressionTest#testSfxSpringMatchesReference",
             "com.openggf.audio.AudioRegressionTest#testMixedMusicSfxMatchesReference",
-            "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples",
-            "com.openggf.audio.synth.TestYm2612ChipGpgxParity#nativeEnvelopeHarnessReproducesTrackedVectorsWhenCoreIsPresent");
+            "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples");
     private static final List<Pattern> TRACE_BOOTSTRAP_POLICY_SIGNALS = List.of(
             Pattern.compile("\\b(?:meta|metadata)\\s*\\.\\s*(?:zoneId|act|traceProfile)\\s*\\("),
             Pattern.compile("\\bhasPerFrameSlotMachineState\\s*\\("),
@@ -1211,6 +1211,46 @@ class TestBuildToolingGuard {
             fail("structural guards must be gated by CI on every push:\n  "
                     + String.join("\n  ", new TreeSet<>(violations)));
         }
+    }
+
+    @Test
+    void traceChaserBoundaryCiJobsShouldProvisionLua54() throws Exception {
+        Map<String, String> ciJobs = yamlJobBlocks(
+                Files.readString(Path.of(".github/workflows/ci.yml")));
+        Map<String, String> releaseJobs = yamlJobBlocks(
+                Files.readString(Path.of(".github/workflows/release.yml")));
+
+        String guards = ciJobs.get("guards");
+        assertNotNull(guards, ".github/workflows/ci.yml is missing job guards");
+        assertTrue(guards.contains("LUA_BIN: lua5.4"),
+                "CI guards job must select the pinned Lua executable");
+        assertTrue(guards.contains("Install Lua 5.4"),
+                "CI guards job must install Lua before Maven");
+        assertTrue(guards.contains("sudo apt-get install --yes lua5.4"),
+                "CI guards job must install the selected Lua package");
+        assertTrue(guards.contains("assert(_VERSION == \"Lua 5.4\")"),
+                "CI guards job must verify the installed Lua version");
+        assertTrue(guards.indexOf("Install Lua 5.4") < guards.indexOf("mvn -Dmse=off"),
+                "CI guards job must install Lua before running Maven");
+
+        String releaseTest = releaseJobs.get("test");
+        assertNotNull(releaseTest, ".github/workflows/release.yml is missing test job");
+        assertTrue(releaseTest.contains("LUA_BIN: lua5.4"),
+                "release test job must select the pinned Lua executable");
+        assertTrue(releaseTest.contains("Verify Lua 5.4"),
+                "release test job must preflight Lua before Maven");
+        assertTrue(releaseTest.contains("command -v \"$LUA_BIN\""),
+                "release test job must require its configured Lua executable");
+        assertTrue(releaseTest.contains("assert(_VERSION == \"Lua 5.4\")"),
+                "release test job must verify the configured Lua version");
+        assertTrue(releaseTest.indexOf("Verify Lua 5.4")
+                        < releaseTest.indexOf("mvn -Dmse=off test -B"),
+                "release test job must verify Lua before running Maven");
+
+        String boundaryGuard = Files.readString(Path.of(
+                "src/test/java/com/openggf/tests/TestTraceChaserBoundaryGuard.java"));
+        assertTrue(boundaryGuard.contains("System.getenv().getOrDefault(\"LUA_BIN\", \"lua\")"),
+                "TraceChaser Lua guard must consume the CI-selected executable");
     }
 
     private static List<String> guardTestSources() throws Exception {
@@ -3678,10 +3718,20 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void everyDisassemblyPathIsIgnoredAsDirectoryAndSymlink(@TempDir Path temporaryDirectory) throws Exception {
+    void canonicalDisassembliesStayOptionalAndTrackableWhileLocalReferencesStayIgnored(
+            @TempDir Path temporaryDirectory) throws Exception {
         Path repository = newRepository(temporaryDirectory, "disassembly-ignore");
         installProjectIgnoreRules(repository);
-        for (String disassembly : disassemblyPaths()) {
+        for (String disassembly : canonicalDisassemblyPaths()) {
+            Path directory = repository.resolve(disassembly);
+            Files.createDirectories(directory);
+            ProcessResult result = run(
+                    repository, List.of("git", "check-ignore", "-q", "--", disassembly), null);
+            assertTrue(result.exitCode() != 0,
+                    () -> "canonical submodule path must be trackable: " + disassembly);
+            Files.delete(directory);
+        }
+        for (String disassembly : localDisassemblyPaths()) {
             Path directory = repository.resolve(disassembly);
             Files.createDirectories(directory);
             assertGitSucceeds(repository, "check-ignore", "-q", "--", disassembly);
@@ -3691,6 +3741,88 @@ class TestBuildToolingGuard {
             assertGitSucceeds(repository, "check-ignore", "-q", "--", disassembly);
             Files.delete(directory);
         }
+
+        String developerSetup = Files.readString(Path.of("docs/guide/contributing/dev-setup.md"));
+        assertFalse(developerSetup.contains("git clone --recurse-submodules"),
+                "the default developer clone must not initialize optional disassembly references");
+        assertTrue(developerSetup.contains("git clone https://github.com/OpenGGF/OpenGGF.git"),
+                "the default developer setup must use an ordinary clone");
+        assertTrue(developerSetup.contains("git submodule update --init"),
+                "disassembly-backed development must retain an explicit opt-in command");
+
+        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+            String guidance = Files.readString(Path.of(agentGuide))
+                    .toLowerCase(Locale.ROOT)
+                    .replaceAll("\\s+", " ");
+            assertTrue(guidance.contains("optional development references"),
+                    () -> agentGuide + " must classify the disassemblies as optional development references");
+            assertTrue(guidance.contains("builds, tests, and runtime do not require them"),
+                    () -> agentGuide + " must keep the disassemblies outside the project dependency graph");
+        }
+
+        try (Stream<Path> workflows = Files.walk(Path.of(".github/workflows"))) {
+            for (Path workflow : workflows
+                    .filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+                        return name.endsWith(".yml") || name.endsWith(".yaml");
+                    })
+                    .toList()) {
+                String source = Files.readString(workflow);
+                assertFalse(workflowInitializesOptionalSubmodules(source),
+                        () -> workflow + " must build and test without initialized disassembly submodules");
+            }
+        }
+
+        assertTrue(workflowInitializesOptionalSubmodules("submodules: recursive # checkout input\n"));
+        assertTrue(workflowInitializesOptionalSubmodules("submodules: 'TRUE'\n"));
+        assertTrue(workflowInitializesOptionalSubmodules("run: git submodule update --init\n"));
+        assertTrue(workflowInitializesOptionalSubmodules(
+                "run: git clone https://example.invalid/repository.git --recurse-submodules\n"));
+        assertTrue(workflowInitializesOptionalSubmodules(
+                "run: git clone --recursive https://example.invalid/repository.git\n"));
+        assertFalse(workflowInitializesOptionalSubmodules("submodules: false\n"));
+        assertFalse(workflowInitializesOptionalSubmodules("run: git status --short\n"));
+    }
+
+    @Test
+    void traceChaserStaysExactOptionalAndOutsideOrdinaryBuilds() throws Exception {
+        String modules = Files.readString(Path.of(".gitmodules"));
+        assertTrue(modules.contains("[submodule \"tools/tracechaser\"]"));
+        assertTrue(modules.contains("url = https://github.com/OpenGGF/TraceChaser.git"));
+        assertFalse(modules.substring(modules.indexOf("[submodule \"tools/tracechaser\"]"))
+                .contains("branch ="), "TraceChaser must never float on a branch");
+        assertEquals("160000 4fb6d0802cc6ad27f07dd845a1b98ea84d2c7b0e 0\ttools/tracechaser",
+                gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
+
+        String pom = Files.readString(Path.of("pom.xml"));
+        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration</surefire.excludedGroups>"));
+        assertTrue(pom.contains("<excludedGroups>${surefire.excludedGroups}</excludedGroups>"));
+        assertTrue(pom.contains("<id>tracechaser-integration</id>"));
+        for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
+            String guidance = Files.readString(Path.of(agentGuide));
+            assertTrue(guidance.contains("optional pinned `tools/tracechaser/` submodule"));
+            assertTrue(guidance.contains(
+                    "git submodule update --init --recursive tools/tracechaser"));
+        }
+        try (Stream<Path> workflows = Files.walk(Path.of(".github/workflows"))) {
+            for (Path workflow : workflows.filter(Files::isRegularFile).toList()) {
+                assertFalse(workflowInitializesOptionalSubmodules(Files.readString(workflow)),
+                        () -> workflow + " must not initialize optional TraceChaser");
+            }
+        }
+    }
+
+    private static boolean workflowInitializesOptionalSubmodules(String source) {
+        Pattern checkoutSetting = Pattern.compile(
+                "(?im)^\\s*submodules\\s*:\\s*(['\"]?)(?:true|recursive)\\1\\s*(?:#.*)?$");
+        Pattern directInitialization = Pattern.compile(
+                "(?im)\\bgit\\s+submodule\\s+(?:init|update)\\b");
+        Pattern recursiveClone = Pattern.compile(
+                "(?im)\\bgit\\s+clone\\b[^\\r\\n]*--(?:recurse-submodules|recursive)\\b");
+        return checkoutSetting.matcher(source).find()
+                || directInitialization.matcher(source).find()
+                || recursiveClone.matcher(source).find();
     }
 
     @Test
@@ -3901,6 +4033,27 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void postCheckoutLeavesTrackedDisassemblyGitlinkAvailableForSubmoduleInitialization(
+            @TempDir Path temporaryDirectory) throws Exception {
+        Path mainRepository = newRepository(temporaryDirectory, "checkout-submodule-main");
+        createInitialCommit(mainRepository);
+        stageGitlink(mainRepository, "docs/skdisasm", gitOutput(mainRepository, "rev-parse", "HEAD").trim());
+        commit(mainRepository, "track disassembly submodule");
+        Path localCheckout = mainRepository.resolve("docs/skdisasm");
+        Files.createDirectories(localCheckout);
+        Files.writeString(localCheckout.resolve("marker.txt"), "local checkout\n");
+        Path linkedWorktree = temporaryDirectory.resolve("checkout-submodule-worktree");
+        git(mainRepository, "worktree", "add", "-b", "feature/submodule", linkedWorktree.toString());
+
+        ProcessResult result = run(linkedWorktree,
+                List.of("bash", POST_CHECKOUT_HOOK.toString(), ALL_ZERO_OID, ALL_ZERO_OID, "1"), null);
+
+        assertEquals(0, result.exitCode(), () -> "post-checkout failed:\n" + result.output());
+        assertFalse(Files.isSymbolicLink(linkedWorktree.resolve("docs/skdisasm")),
+                "tracked gitlink must remain available to git submodule update --init");
+    }
+
+    @Test
     void postCheckoutMigratesLegacyAbsoluteLinkToExpectedMainResource(@TempDir Path temporaryDirectory)
             throws Exception {
         Path mainRepository = newRepository(temporaryDirectory, "legacy-link-main");
@@ -4101,6 +4254,12 @@ class TestBuildToolingGuard {
         }
         String indexEntry = gitOutput(repository, "ls-files", "--stage", "--", relativePath);
         assertTrue(indexEntry.startsWith("120000 "), "staged symlink must retain mode 120000: " + indexEntry);
+    }
+
+    private static void stageGitlink(Path repository, String relativePath, String commitOid) throws Exception {
+        git(repository, "update-index", "--add", "--cacheinfo", "160000," + commitOid + "," + relativePath);
+        String indexEntry = gitOutput(repository, "ls-files", "--stage", "--", relativePath);
+        assertTrue(indexEntry.startsWith("160000 "), "staged gitlink must retain mode 160000: " + indexEntry);
     }
 
     private static void deleteAndStage(Path repository, String relativePath) throws Exception {
@@ -4329,8 +4488,12 @@ class TestBuildToolingGuard {
         return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
     }
 
-    private static List<String> disassemblyPaths() {
-        return List.of("docs/s1disasm", "docs/s2disasm", "docs/kis2disasm", "docs/scddisasm", "docs/skdisasm");
+    private static List<String> canonicalDisassemblyPaths() {
+        return List.of("docs/s1disasm", "docs/s2disasm", "docs/skdisasm");
+    }
+
+    private static List<String> localDisassemblyPaths() {
+        return List.of("docs/kis2disasm", "docs/scddisasm");
     }
 
     private record ProcessResult(int exitCode, String output) {

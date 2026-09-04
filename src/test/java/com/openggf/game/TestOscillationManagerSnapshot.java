@@ -75,8 +75,7 @@ class TestOscillationManagerSnapshot {
         OscillationSnapshot snap = OscillationManager.snapshot();
         int[] values = snap.values();
         values[0] = 0xDEAD;   // mutate the returned array
-        OscillationSnapshot snap2 = OscillationManager.snapshot();
-        assertNotEquals(0xDEAD, snap2.values()[0],
+        assertNotEquals(0xDEAD, snap.values()[0],
                 "Snapshot must defensively copy or expose immutable views");
     }
 

@@ -124,8 +124,7 @@ public final class StreamedMusicVoice implements PresentationVoice {
 
     boolean releasesSfxOnRestore() {
         return !restorePolicy.fadeIn()
-                || restorePolicy.releasePolicy()
-                == SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.ON_RESTORE;
+                || restorePolicy.releaseOnRestore();
     }
 
     boolean restoreFadeComplete() {
@@ -177,30 +176,25 @@ public final class StreamedMusicVoice implements PresentationVoice {
             boolean fadeIn,
             int steps,
             int delay,
-            SmpsSequencerConfig.MusicOverrideSfxReleasePolicy releasePolicy) {
+            boolean releaseOnRestore) {
         RestorePolicy {
-            Objects.requireNonNull(releasePolicy, "releasePolicy");
             if (fadeIn && (steps <= 0 || delay < 0)) {
                 throw new IllegalArgumentException(
                         "invalid streamed restore fade");
             }
         }
 
-        static RestorePolicy from(SmpsSequencerConfig config) {
+        static RestorePolicy from(SmpsSequencerConfig config, boolean blockSfxDuringFade) {
             Objects.requireNonNull(config, "config");
-            boolean fade = config.getMusicOverrideRestorePolicy()
-                    == SmpsSequencerConfig.MusicOverrideRestorePolicy
-                            .DRIVER_FADE_IN;
+            boolean fade = config.getFadeInSteps() > 0;
             return new RestorePolicy(fade,
                     fade ? config.getFadeInSteps() : 0,
                     fade ? config.getFadeInDelay() : 0,
-                    config.getMusicOverrideSfxReleasePolicy());
+                    !blockSfxDuringFade);
         }
 
         static RestorePolicy immediate() {
-            return new RestorePolicy(false, 0, 0,
-                    SmpsSequencerConfig.MusicOverrideSfxReleasePolicy
-                            .ON_RESTORE);
+            return new RestorePolicy(false, 0, 0, true);
         }
     }
 }

@@ -84,7 +84,8 @@ final class GameLoopSpecialStageLifecycle {
             GameLoop.SpecialStageObservationPacing resolvedPacing = installed;
             LevelFrameStep.executeHardwareTimedObjectScan(
                     LevelFrameContext.from(gameplayMode), plcFrame,
-                    PlcLifecyclePhase.SPECIAL_STAGE,
+                    PlcLifecyclePhase.orElse(provider.specialStagePlcLifecyclePhase(),
+                            PlcLifecyclePhase.SPECIAL_STAGE),
                     () -> updateProvider(provider, resolvedPacing, updateInput));
         } else if (session.skippedSpecialStagePlcPhase().isPresent()) {
             LevelFrameStep.serviceVBlankOnly(LevelFrameContext.from(gameplayMode), plcFrame,

@@ -15,6 +15,7 @@ import com.openggf.game.rewind.RewindTransient;
 
 import java.util.List;
 
+@com.openggf.game.ModApi
 public class ShieldObjectInstance extends AbstractObjectInstance
         implements PowerUpObject, PlayerBoundShieldRewindRecreatable {
     @RewindTransient(reason = "player binding is structural and restored by the power-up spawner")

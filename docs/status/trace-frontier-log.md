@@ -108516,3 +108516,793 @@ The other three death arms remain coordinates only.
   `20260826T194722Z-p44688-ce596b` (candidate) and
   `20260826T194832Z-p44825-1dc3d7` (control) reproduced the same nondeterministic
   module/decompression-queue choice, so it is not attributable to this change.
+
+## 2026-08-27 - MGZ2 boss-collapse background tile-window snap removed
+
+- Worktree/branch: direct `develop` worktree at `b50a6edc4` with the uncommitted
+  MGZ2 scroll-handler candidate.
+- Root cause: retail `MGZ2_BGDeform` substitutes `Events_bg+$0C` for
+  `Camera_X_pos_copy` only when building `HScroll_table` at `loc_23D24C`.
+  The engine also published that accelerating cursor as its BG tilemap/collision
+  camera X and selected MGZ2's full-width rise-terrain strip for every Act 2
+  state with a BG camera. `SwScrlMgz` now retains the boss cursor only for
+  H-scroll math, publishes the ROM's zero `Camera_X_pos_BG_copy` in normal/boss
+  state, and gates the full-width strip on `Events_bg+$00 == 8`. A remaining
+  flash came from the BG-rise trigger re-entering state 8 as Sonic fell: retail
+  `MGZ2_LevelCollapse` sets `_unkEEA2`, and `MGZ2_BGEventTrigger` returns while
+  that special VScroll flag is set. The engine now preserves state C across the
+  collapse and air-boss sequence under the same condition.
+- Baseline command: `tools/testing/test-session.sh -- mvn -Dmse=off
+  "-Dtest=*TraceReplay#replayMatchesTrace" -DfailIfNoTests=false
+  -Dsonic1.rom.path=... -Dsonic2.rom.path=... -Ds3k.rom.path=... test`.
+  Run `20260827T073523Z-p52679-232779` at `b50a6edc4`: 171 methods,
+  106 failures, 0 errors, 65 passes.
+- Candidate command: the same full sweep. Final run
+  `20260828T085504Z-p68021-536c08`: 171 methods, 106 failures, 0 errors,
+  65 passes. All 105 emitted failure-summary fingerprints are byte-for-byte
+  identical to baseline after sorting; no frontier moved and no previously
+  green trace regressed.
+- Focused MGZ replay command selected `TestS3kMgzTraceReplay` and
+  `TestS3kMgzZoneSliceTraceReplay`. The short MGZ trace remains green; the zone
+  slice retains its baseline first error at frame 5255, `tails_g_speed`
+  (`expected=0x0000`, `actual=-0x01D5`), with 6,870 errors.
+
+## 2026-08-28 - Develop ordinary-suite lifecycle repair verification
+
+- Worktree/branch: `.worktrees/develop-suite-repair`,
+  `bugfix/ai-develop-suite-repair`, candidate over `a29d5fd7a`.
+- Full release-scope command: `mvn -Dmse=off -Ptrace-replay
+  -Dsurefire.runOrder=alphabetical -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test -B`.
+- Result: 870 tests, 6 failures, 0 errors, and 7 skips. The six failures and
+  first-error signatures match the recorded 2026-08-26 frontier: S3K reference
+  closure frame 25589 / `player_animation_id`; S1 complete chain; S2 complete
+  chain; S3K complete chain; S2 CPZ2 segment 10 frame 2252 / `air`; and standard
+  AIZ frame 20713 / `air`. No frontier moved and no green trace regressed.
+
+## 2026-08-28 - Develop ordinary-suite follow-up repair verification
+
+- Worktree/branch: `.worktrees/suite-resource-errors`,
+  `bugfix/ai-suite-resource-errors`, candidate over `2f5265e3f`.
+- Full release-scope command: `mvn -Dmse=off -Ptrace-replay
+  -Dsurefire.runOrder=alphabetical -Dsonic1.rom.path=s1.gen
+  -Dsonic2.rom.path=s2.gen -Ds3k.rom.path=s3k.gen test -B`.
+- A rejected self-review candidate incorrectly treated `loc_6D60A` as
+  preserving `$2E` and regressed `TestS3kMgzTraceReplay` with 25 errors, first
+  at frame 35184 on `queue.s3k_kos_direct.busy` (expected true, actual false).
+  `BossDefeated_StopTimer` actually falls through into `BossDefeated`, whose
+  first instruction writes `$2E=$3F`; restoring that retail-ROM behavior made
+  the focused MGZ replay pass again.
+- Final result: **870 tests, 6 failures, 0 errors, and 7 skips**. The six
+  identities and first-error signatures match the existing frontier: S3K
+  reference closure frame 25589 / `player_animation_id`; S1 complete chain; S2
+  complete chain; S3K complete chain; S2 CPZ2 segment 10 frame 2252 / `air`;
+  and S3K AIZ frame 20713 / `air`. No frontier moved and no green trace remains
+  regressed.
+
+## 2026-08-29 - Post-audit integration sweep on develop
+
+- Worktree/branch: main checkout, `develop` at `0561aef9d` (seven audit-fix
+  branches merged: release docs, guide docs, hygiene, ordinary-suite repair,
+  ledgers + S3K `$4F` gate, decompressor relocation / power-up factories,
+  GAME OVER / TIME OVER card flow; plus a guard-baseline integration fix after
+  the collaborator commit `74cf38b71`).
+- Command: `mvn -Dmse=off -Ptrace-replay test -B -Dsurefire.runOrder=alphabetical`
+  with the three ROM paths passed as absolute `-D` properties from the repository root (`s1.gen`, `s2.gen`, `s3k.gen`).
+- Result: **870 tests, 6 failures, 0 errors, 7 skips.** Identities and
+  first-error signatures unchanged: `TestS3kReplayReferenceClosureIntegration`
+  frame 25589 / `player_animation_id` (113 errors);
+  `TestS1CompleteEmeraldRunChain`; `TestS2CompleteEmeraldRunChain`;
+  `TestS3kSonicTailsCompleteEmeraldRunChain`;
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` frame 2252 / `air`
+  (370 errors); `TestS3kAizTraceReplay` frame 20713 / `air` (37 errors).
+  No frontier moved and no green trace regressed.
+- Same tree: `-Pguards` 550 tests / 0 failures / 0 errors; ordinary suite
+  14,896 tests / 0 failures / 0 errors / 18 skipped (absolute ROM paths).
+
+## 2026-09-04 - S2 driver-oracle coverage widened past its single window
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
+  over `develop` at `1e128d0d6`.
+- Four new bounded request-aware candidates are published beside the original
+  `w10150-10900` window: `w10900-11650` and `w11650-12400` continue the complete
+  run's EHZ1 segment, `w13650-14400` spans the EHZ1 exit into the
+  second special stage at movie row 13712, and `cpz-w2700-3450` comes from the
+  committed CPZ level-select recording, a different route and a different music
+  epoch. Every window was captured twice on two independently built installs
+  and extracted twice; both raw captures and both extractions were
+  byte-identical in all four cases.
+- Producer control: rebuilding the disposable live producer and recapturing the
+  original window reproduced the published raw-v3 digest
+  `dd8b427d4a9a407102be83442d04dd21ddebebe6c3c7f72a3e453b479f870f05` and, after
+  extraction, the published payload digest
+  `a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c` with the
+  published capability and attestation digests, so the new windows come from a
+  producer proven byte-identical to the one that made the first fixture.
+- Command: `mvn -Dmse=off -Dtest=TestS2WidenedRequestOracle
+  -Dsonic2.rom.path=<abs>/s2.gen -Ds2.request.bk2.path=<abs>/src/test/resources/
+  traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2
+  test`.
+- Result per window. `w10150-10900`: MATCH, 25 production transfers.
+  `w10900-11650`: **MATCH, 52 production transfers** - the oracle holds a full
+  750 rows past its previous horizon. `w11650-12400`: **DIVERGENCE at transfer
+  21**, movie row 12132, where the recording's next request is SFX `$A0` and the
+  engine's is SFX `$B5` at row 12114. That is the new S2 request frontier.
+- `w13650-14400` and `cpz-w2700-3450` are published and their payload integrity
+  is gated, but neither has an engine-side comparison yet: the run-chain harness
+  replays only within one segment, so it reaches neither the special-stage
+  segment nor the CPZ level-select recording.
+- Same tree: the existing gate `TestS2RequestAwareOracleRawStream` still reports
+  the request MATCH of 25 and the driver-oracle **MATCH (698 ticks)**; the audio
+  parity suite ran 161 tests with 0 failures and 2 skips; `-Pguards` ran 607
+  tests with 0 failures and 0 errors.
+
+## 2026-09-04 - S2 request oracle: every replayable window MATCHes
+
+- **Worktree/branch:** `.worktrees/audio-s2-frontier`,
+  `bugfix/ai-s2-request-frontier`, from `develop` `55b40a105`.
+- **Fixtures:** the three replayable committed windows under
+  `src/test/resources/audio/parity/s2/` cut from the complete run's EHZ1
+  segment: `w10150-10900`, `w10900-11650`, `w11650-12400`.
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=TestS2WidenedRequestOracle
+  '-Dsonic2.rom.path=<abs>/s2.gen' '-Ds2.request.bk2.path=<abs>/src/test/
+  resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/
+  sonic-2-sonic-tails-complete-emeralds.bk2' test -B`
+- **Before:** `w11650-12400` DIVERGENCE at transfer 21, movie row 12132: the
+  recording's next request is SFX `$A0` while the engine's is SFX `$B5` at row
+  12114.
+- **After:** all three windows **MATCH**, at 25, 52 and **27** production
+  transfers. `w11650-12400` is the last window the run-chain harness replays,
+  so this is the end of the S2 request frontier as currently reachable.
+  `w13650-14400` and `cpz-w2700-3450` are published but unreplayable.
+
+- **Divergence one, the monitor mailbox.** `$B5` is `SndID_Ring` and `$A0` is
+  `SndID_Jump`. The extra `$B5` was the ten-ring monitor. ROM `super_ring` ends
+  `move.w #SndID_Ring,d0 / jmp (PlayMusic).l` (s2.asm:25864, :25913-25914), and
+  `PlayMusic` is only the music mailbox (:1517-1527), so the byte never enters
+  the three-entry SFX queue `sndDriverInput` services (:1270-1332) and makes no
+  recorded transfer at all. The driver classifies it by range out of
+  `QueueToPlay` and still hands it to `zPlaySound_CheckRing`
+  (s2.sounddriver.asm:1565-1571, :2116-2135), so the ring speaker alternation
+  is unchanged. `shield_monitor` (:25953-25956) uses the same mailbox and was
+  fixed with it. Commit `4dc26bea4`; frontier moved to transfer 26.
+
+- **Divergence two, who owns the explosion sound.** Transfer 26 was SFX `$C1`
+  on both sides with the engine one row early. `Touch_Monitor.breakMonitor`
+  writes only the routine and parent (:85468-85477); `Obj26_Break` does the
+  rest on the monitor's own pass and allocates the explosion lowest-free
+  (:25702-25707), and `Obj27_Init` makes the request from the explosion's slot
+  (:46717-46734). A probe over the run recorded five monitor breaks with
+  (monitor slot, explosion slot) of (19,26), (21,38), (22,24), (33,20) and
+  (40,21): only the last is inside the diverging window, and its explosion sits
+  below the monitor, so the ROM's scan reaches it a pass later. The engine now
+  plays the sound from the explosion's first update and defers that update for
+  a passed slot. The badnik path is untouched because the explosion takes the
+  badnik's own slot. Commit `cecbb67b4`.
+
+- **Gates at `cecbb67b4`.** Ordinary suite with three absolute ROM paths:
+  16,387 tests, 0 failures, 0 errors, 21 skipped. `-Pguards`: 607 tests, 0
+  failures, 0 errors. S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0. Both S1 gameplay oracles green inside the
+  ordinary suite. S3K driver oracle unchanged at tick 128, `decoded_write`.
+  S3K keep-green set 55 tests, 0 failures. Full `*TraceReplay` sweep 192 tests,
+  55 failures / 7 errors, the same 62 failing class names as a control sweep of
+  the same command at the base commit `55b40a105`; the four EHZ1 replay classes
+  are green in both.
+
+## 2026-09-04 - S2 request-window capture becomes a real command
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser branch `bugfix/ai-s2-request-window-producer` at `6481d7e`, cut
+  from the pinned head `8e32d25` and pointed at by this branch's gitlink. Two
+  commits: `dafd26b` fixes the raw sink, which wrote the profile's first pinned
+  movie identity into every capture whatever recording ran, and `6481d7e` adds
+  the command.
+- The bounded S2 request-window producer is now a command rather than a
+  disposable test on an unmerged commit. Capture takes the ROM, the movie and
+  its SHA-256, the service and candidate manifests, the BizHawk installation,
+  the movie-row interval and an absent output path; extraction takes the
+  captured stream, the same interval and an output directory. The raw sink
+  writes the identity of the recording actually opened, and the extractor takes
+  the expected recording identity and bounds instead of constants.
+- Commands: `tools/tracechaser/bizhawk-headless/run-s2-request-window.sh
+  --request-window-mode capture|extract ...`.
+- TraceChaser gates: `S2RequestWindowCommandTests` 4 of 4 pass; the `S2` filter
+  runs 195 passes with three failures that are identical at the pinned head and
+  so predate this branch, one of which is the harness-assembly identity pin that
+  any local rebuild moves. Both policy scanners report PASS on the committed
+  tree.
+- **Open native gap.** Capture cannot run on the shipped observer: the ABI-5
+  install rejects the request candidate manifest at `configure` with status -3,
+  and the only core that hosts this producer is the ABI-4 candidate build, which
+  the pinned-head profile refuses because it requires ABI 5 and an installed
+  `identity.json`. The native addition needed is small and additive - the
+  candidate patch on TraceChaser `69dd536` adds one export and a callback pair
+  and changes no ABI, event layout or existing behaviour - but publishing an
+  ABI-5 core carrying it is a separate native workstream with its own artifact
+  lock and selftests. The published fixtures were captured with the ABI-4
+  candidate core before this command existed.
+
+## 2026-09-04 - S2 w11650-12400 restored as the request frontier
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
+  after merging `origin/develop` at `c549f543d`.
+- The `w11650-12400` window was briefly dropped from publication as a
+  capture-budget decision taken before it had been measured. It is the window
+  that carries the S2 request frontier, so it is restored byte-for-byte from
+  `55b40a105`: gzipped payload
+  `d23d19d6374905da5781224470711cf218be632b0601bf9db8b16e272b8cbe76`, expanded
+  payload `04e9d7e1feb53cd5a2012bcab5813bce6262a9b7ef3bacd93565f8a12008bab0`,
+  27 request transfers. Its metadata now cites the producer command like the
+  other windows.
+- Frontier unchanged and re-measured on the merged tree: `w10150-10900` MATCH
+  with 25 transfers, `w10900-11650` MATCH with 52, and `w11650-12400`
+  **DIVERGENCE at transfer 21**, movie row 12132, the recording asking for SFX
+  `$A0` where the engine asks for SFX `$B5` at row 12114.
+
+## 2026-09-04 - S2 request marker lands in the shipped observer core
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser `bugfix/ai-s2-request-window-producer` at `7ebed3b`, which merges
+  TraceChaser main `41beab8` so the gitlink descends from the green main and its
+  CI runs the real checks. The merge conflicted only in the two policy-scanner
+  test files, where main's curated contract-exception tests win outright; this
+  branch changes nothing under `testing/`.
+- The S2 request marker is no longer an unmerged candidate at an abandoned ABI.
+  Its patch is folded into the observer patch, its harnesses are selftests that
+  run on every build, and the candidates tree is deleted. The core exports one
+  additional function and changes no ABI, event layout or existing behaviour.
+- The managed side gained what the candidate branch had proven and the pinned
+  head lacked: the second marker for a transfer nested under a kind-3 VInt
+  service, ordered insertion of the marker pair so the core's hook ordering
+  holds, the carried kind-4 root identity, and a bounded-candidate completion
+  that does not require an override-resume service inside a request window.
+- Build: `native/gpgx-audio-observer/prepare-toolchain.sh` then
+  `build-observer.sh`, installed with `install-observer.sh` to a scratch home
+  outside both repositories. New identities: patch
+  `2e1d1e59175f7e544558088bae48c4f45ee78401dbf808a494182c2575767a0b`, core
+  `177fb4b04e73fa12edc2fdcb097d6f11a8850a8cdf86fabeaaf8b374d62e4464`, build id
+  `9ded8f477abe193d`.
+- **Recapture proof.** `run-s2-request-window.sh --request-window-mode capture`
+  over movie rows 10900 to 11650, with that core, reproduced the published
+  raw-v3 digest
+  `1182a93833c4663d5a71883bd72b6c4edb50f70ab3cd9a122b3f6d0c9dca962e`, and the
+  extract mode reproduced the published payload digest
+  `b24c6f9144d8f4fe85316cf7d2a22020b916ec208280ac8001ab18876d3d9137`. The
+  published windows are therefore reproducible from the command.
+- Selftest evidence: breaking the new harness's expected request PC on purpose
+  fails the build with the harness's own assertion, so the selftest runs rather
+  than merely being present.
+- TraceChaser suite: 63 failures on this branch against 81 at the pinned head
+  on the same machine, and the five failures unique to this branch before the
+  test port are gone. The three that remain in the `S2` filter fail identically
+  at the pinned head. Both policy scanners PASS.
+
+## 2026-09-04 - S2 request windows on the merged tree, measured after a clean build
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
+  merged with `origin/develop` at `2607114d4`, gitlink at TraceChaser `7ebed3b`.
+- Command: `mvn -Dmse=off -Dtest=com.openggf.tools.audio.parity.**` with the
+  three ROM paths and the complete-run BK2 as absolute properties.
+- Result: **all three replayable windows MATCH**, at 25, 52 and 27 production
+  transfers, and the driver oracle still reports **MATCH (698 ticks)**. The
+  row-12132 divergence is closed by the monitor-mailbox and explosion-ownership
+  fixes this merge brought in. Parity suite 170 tests, 0 failures, 2 skips;
+  `-Pguards` 607 tests, 0 failures, 0 errors.
+- **Measurement hazard worth recording.** The first run after the merge still
+  reported the old divergence at transfer 21, movie row 12132, because Maven's
+  incremental compile had not rebuilt the merged `src/main` classes. The engine
+  under test was the pre-merge engine while the sources on disk were the merged
+  ones. `mvn clean` before the run changed the verdict from DIVERGENCE to MATCH
+  with no source change. After merging another branch's fixes, measure from a
+  clean build or the number is about the wrong engine.
+
+## 2026-09-04 - Every published S2 request window reproduced from the command
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser `bugfix/ai-s2-request-window-producer` at `7ebed3b`.
+- The two windows that had never been recaptured were recaptured with
+  `run-s2-request-window.sh`, on a core built from the observer patch at that
+  commit, and both reproduce their published digests exactly.
+- `w13650-14400`: raw-v3
+  `5096d2bb02f76045be1b06df5dc72d83d756e360acfc1a6d2b98ba40546ae027`, payload
+  `457e9870c381fef32dd37abfbcf2fe04fa041cfdf3548e62e3e1e789a438c871`.
+- `cpz-w2700-3450`: raw-v3
+  `0db7b9611fc6f17d46d1b517137ac8f5b78ab8906d1bbd053da5cf575210f555`, payload
+  `f1e068cba2fbd342eed5d1d7d784ac8bdecd72a0d6ed58db68aad0893c0d2cbf`.
+- With `w10900-11650` already reproduced, every published window now has a
+  recapture through the shipped command behind it, and no fixture depends on the
+  retired ABI-4 candidate core to be believed. Each EmuHawk run was bounded by a
+  timeout and left no process behind.
+
+## 2026-09-04 - S2 driver-state v2 reference and its widened frontier
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser `bugfix/ai-s2-request-window-producer` at `24b009f`.
+- The S2 driver-state oracle is no longer confined to the 698-tick v1 payload.
+  A v2 reference covers movie rows 10150 to 12400 with one row per completed
+  vertical-interrupt service, driver RAM 12FEh-2000h sampled by the observer
+  core at the driver's own service return. Captured twice, byte-identical at
+  `e7456239c2f2da0804817d3c47cf81f9346877bbdf4b7f6f912acb7d7ebf0a87`; published
+  gzipped at
+  `7743d513cbcf05306455bf0afa3fbd7ead6fd6197a09ce893e1ac279bd34589a`.
+- Boundary: S2's zVInt falls through into zUpdateDAC, so the service has two
+  returns, 00E7h and 010Fh, both confirmed against the driver image in the
+  committed v1 fixture. Three tail sites at 017Ah, 0710h and 1288h also end the
+  service and carry the same snapshot.
+- Frame shape: 2250 frames, 2243 ticks, 7 zero-service frames, 0 multi-service
+  frames. The PAL double-update branch never fires here and could not add a
+  tick if it did: it calls zUpdateMusic twice inside one interrupt rather than
+  producing a second return, and its gate, IsPalFlag ANDed with zPalModeByte,
+  is zero because zPalModeByte is 00h.
+- **Measurement.** Both sides anchor on driver state, never on a frame: the
+  engine's first tick with exactly one EHZ music sequencer and the reference's
+  first tick whose music tracks are playing. Both land on movie row 10202 and
+  the rows pair one to one from there, 2198 compared.
+  - **Driver state only: first divergence at movie row 11991**, field
+    `global.currentTempo`, expected 9Eh and actual BEh, 409 of 2198 ticks
+    divergent. The driver's committed state agrees for the 1789 ticks before
+    that, which is more than twice the v1 span.
+  - **State and writes: first divergence at movie row 10202**, the first
+    compared tick, `writes[0]` expected `ym0[28h]=06h` and actual
+    `ym0[2Bh]=80h`, 1525 of 2198 ticks divergent. The write stream diverges in
+    order from the start of playback.
+- Unchanged in the same run: the v1 driver oracle still reports **MATCH (698
+  ticks)** and the three request windows still report MATCH at 25, 52 and 27.
+  Parity suite 174 tests, 0 failures, 2 skips; `-Pguards` 607 tests, 0
+  failures.
+- Break-on-purpose: corrupting one reference tempo byte moves the verdict to a
+  divergence at that exact tick, and perturbing every frame value in the
+  reference changes nothing compared, which is what makes the frame field
+  provenance rather than input.
+- **Why the alignment is sound.** All 7 zero-service frames fall before the
+  anchor: 10184, 10195 and 10197 to 10201. The compared span 10202 to 12399
+  holds 2198 frames and 2198 reference ticks, one service per frame, and the
+  engine contributes exactly 2198 ticks after its own anchor. No overrun frame
+  lies inside the compared span, so the ordinal correspondence cannot have
+  drifted, and the row-11991 divergence is driver state rather than scheduling.
+  The anchor is needed only because this window opens mid-run on a music
+  reload: the reference's first 45 services run before any music is loaded and
+  have no engine counterpart. An unanchored ordinal alignment was measured and
+  is wrong, pairing reference row 10185 against engine row 10202 and making all
+  2198 ticks diverge on tempo.
+
+## 2026-09-04 - The speed-shoes countdown moves to the display step, and S3K's decimation phase is corrected
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, over `develop` at `b637f4171`.
+- **Command, before and after, from the same worktree:**
+
+  ```
+  mvn -Ptrace-replay -Dmse=off -Dsurefire.runOrder=alphabetical \
+    '-Ds1.rom.path=<worktree>/s1.gen' '-Ds2.rom.path=<worktree>/s2.gen' \
+    '-Ds3k.rom.path=<worktree>/s3k.gen' test
+  ```
+
+  `target/surefire-reports` was removed before each run, and each run's reports
+  were copied aside so the two sets could be diffed by failing test name and
+  message rather than by count.
+- **Result: 854 tests, 8 failures, 6 skips, before and after.** The same eight
+  classes fail with byte-identical messages, so no first-error row moved in
+  either direction:
+
+  | Class | First error, before and after |
+  |---|---|
+  | `TestS3kReplayReferenceClosureIntegration` | frame 25589, `player_animation_id`, 113 errors |
+  | `TestS1CompleteEmeraldRunChain` | 14 axes, segment 33 ownership |
+  | `TestS2CompleteEmeraldRunChain` | 12 axes, uncompared-interior walk 101691 |
+  | `TestS2EhzHalfpipeRoundTripChain` | 2 axes, `run_gap.edge[0].movie_logical_frame` |
+  | `TestS3kSonicTailsCompleteEmeraldRunChain` | uncompared-interior walk 8817 |
+  | `TestTraceRunReplayWalkerControlFlow` | `s2_special_stage` column count |
+  | `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` | frame 2252, `air`, 370 errors |
+  | `TestS3kAizTraceReplay` | frame 20713, `air`, 37 errors |
+
+- **What changed.** `PowerUpRules.speedShoesTimerPrePhysicsExtraTicks` is gone.
+  All three games decrement the countdown inside `Sonic_Display`, which the
+  control routine calls after dispatching the movement modes
+  (`docs/s1disasm/_incObj/01 Sonic.asm:76,80`, `docs/s2disasm/s2.asm:36242,36248`,
+  `docs/skdisasm/sonic3k.asm:22021,22031`), and the tail of that routine does
+  both consequences of reaching zero in the one frame: the top-speed,
+  acceleration and deceleration restore, and the slow-down music command
+  (`01 Sonic.asm:182-204`, `s2.asm:36307-36326`, `sonic3k.asm:22103-22127`).
+  The countdown is now a `DisplayPhaseTimer` that `SpriteManager` drives at the
+  ROM display point, so the constant that existed only to place the physics
+  restore on the ROM's frame is no longer needed and no longer delays the music.
+- **An intermediate arm, recorded so it is not retried.** With the drive point
+  moved and `SpeedShoesTimer.LEVEL_FRAME_PHASE_OFFSET` left at `0`, S1 and S2
+  were unchanged but S3K regressed: `TestS3kCnzTraceReplay` red at frame 6568
+  (`x_speed` expected `0x0320`, actual `0x0308`, 8164 errors) and
+  `TestS3kMgzTraceReplay` red at frame 6496 (`y_speed` expected `-0074`, actual
+  `-0073`, 9162 errors), for a total of 17 failures. This is the same CNZ
+  signature the 2026-06-01 display-phase attempt hit and reverted on.
+- **The cause was a frame-counter phase error the old drive point was masking.**
+  A probe on the decrement itself showed identical decrement schedules under
+  both drive points, 150 decrements ending at engine level frame 6568, so the
+  cadence was never the issue. ROM `LevelLoop` increments
+  `Level_frame_counter` at the top of the loop, before `Process_Sprites` runs
+  `Sonic_Display` (`docs/skdisasm/sonic3k.asm:7916-7925`), while the engine
+  increments it in `LevelManager.update()`, which the level frame step runs
+  after the player physics pass. The engine's counter is therefore one behind
+  the ROM's when `Sonic_ChkShoes` reads it, and the every-eighth-frame gate
+  must add that one back. Setting `LEVEL_FRAME_PHASE_OFFSET` to `1` moves the
+  final decrement to engine frame 6567, so the restore lands before frame
+  6568's movement, and both S3K traces return to their baseline results. The
+  pre-physics drive point had been cancelling the offset error by applying the
+  restore a frame late; the two wrongs are removed together.
+
+## 2026-09-04 - Level_frame_counter is advanced where the ROM advances it, and ~26 per-reader compensations are deleted
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, over its own `58468acb8`.
+- **Command:** the same full `-Ptrace-replay` invocation as the previous entry,
+  with `target/surefire-reports` removed before each run and the reports copied
+  aside for a by-name, by-message diff.
+- **Result: 854 tests, 8 failures, 6 skips, unchanged.** The same eight classes
+  with byte-identical messages as the previous entry's table, so no first-error
+  row moved.
+- **What changed.** All three ROMs increment the level frame counter at the top
+  of the level loop, immediately after the V-blank wait and before the object
+  pass: `docs/s1disasm/sonic.asm:3001-3006`, `docs/s2disasm/s2.asm:5090-5094`,
+  `docs/skdisasm/sonic3k.asm:7919-7925`. The engine incremented it in
+  `LevelManager.update()`, near the end of the frame step, so every routine that
+  ran during the frame read the previous frame's number. `LevelFrameStep` now
+  calls `LevelManager.advanceLevelFrameCounter()` at the ROM's point, and the
+  per-reader `+ 1` compensations are deleted: eight inside `LevelManager` (the
+  object-pass, touch, post-player-hook and oscillation arguments), and the reads
+  in `Sonic1ElectrocuterObjectInstance`, `Sonic1SpikedPoleHelixObjectInstance`,
+  `Sonic1VanishingPlatformObjectInstance`, `Sonic1SpinPlatformObjectInstance`,
+  `LeavesGeneratorObjectInstance`, `SpikyBlockObjectInstance`,
+  `SpikyBlockSpikeInstance`, `PointPokeyObjectInstance`, `CogObjectInstance`,
+  `AizDisappearingFloorObjectInstance`, `AizFallingLogObjectInstance`,
+  `CnzBumperObjectInstance`, `Sonic3kAIZEvents`,
+  `Sonic3kBonusStageCoordinator` and `SidekickCpuController`. The ending
+  cutscene drives `LevelManager` directly rather than through the frame step, so
+  it calls the same method explicitly.
+  `SpeedShoesTimer.LEVEL_FRAME_PHASE_OFFSET` is back to `0`, which is what the
+  previous entry's S3K correction was standing in for.
+- **The intermediate arm, and the reader it found.** The first attempt moved the
+  increment and removed the `+ 1` reads, and two S2 Metropolis traces went red:
+  `TestS2Mtz2LevelSelectTraceReplay` at frame 1268 (`y` expected `0x0465`,
+  actual `0x046D`, 49012 errors) and `TestS2Mtz3LevelSelectTraceReplay` at frame
+  1998 (`player_animation_id` expected `0x0005`, actual `0x0000`, 49261 errors);
+  nothing else moved. The cause was `CogObjectInstance`, which carried the same
+  compensation *inside* its gate expression, `((levelFrameCounter + 1) & 0x0F)`,
+  where a search for `getFrameCounter() + 1` could not see it, plus a
+  first-execution special case that existed only because the raw read was a
+  frame behind. Obj70_Main's own test is
+  `move.b (Level_frame_counter+1).w,d0 / andi.w #$F,d0`
+  (`docs/s2disasm/s2.asm:54662-54665`), where the `+1` is the low byte's odd
+  address rather than an increment, so the gate is now `(counter & 0x0F) == 0`
+  and both MTZ traces returned to green.
+- **Tests ported, not weakened.** Six unit tests pinned the old convention by
+  seeding a stale counter and asserting the recovered value: the MTZ cog gate,
+  the CNZ bumper orbit and bounce angle, the S3K slot bonus-stage frame advance,
+  the S3K panic rev pulse, and the AIZ intro catch-up release. Each now seeds the
+  ROM-visible value the ROM routine actually reads. The `GameLoop` size ratchet
+  moved 3071 -> 3072 for the ending path's single delegating call.
+- **Other gates.** S2 driver-state v2 state only still `MATCH (2198 ticks)`;
+  state and writes unchanged at tick 228 with 178 divergent ticks; v1 oracle
+  `MATCH (698 ticks)`; request windows `MATCH` at 25, 52 and 27. Ordinary suite
+  16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0 failures.
+
+## 2026-09-04 - Level-frame-counter branch re-verified on the merged tree
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase` after merging the lead's
+  `origin/bugfix/ai-speed-shoes-timer-phase` (develop merged in), measured from
+  `mvn clean` so the classes under test are the merged ones.
+- **Full `-Ptrace-replay` with three absolute ROM paths: 854 tests, 8 failures,
+  6 skips**, the same eight classes and the same first-error rows as this
+  branch's earlier entries: `TestS3kReplayReferenceClosureIntegration` frame
+  25589, `TestS1CompleteEmeraldRunChain`, `TestS2CompleteEmeraldRunChain`,
+  `TestS2EhzHalfpipeRoundTripChain`, `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceRunReplayWalkerControlFlow`,
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` frame 2252 and
+  `TestS3kAizTraceReplay` frame 20713.
+- Ordinary suite 16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0
+  failures; parity suite 178 tests, 0 failures, 2 skips.
+
+## 2026-09-04 - S2 complete-emeralds segment 15: the CPZ boss gunk falls one frame ahead of the ROM
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-s2-runchain-seg15`, over `develop` at `3499ca48b`.
+- **Reproduced, unchanged:** `TestS2CompleteEmeraldRunChain` fails on 12 axes,
+  segment 15 diverging with 2,122 comparator errors, first non-camera mismatch
+  at frame 2252 on field `air`, plus the uncompared-interior walk overrunning
+  destination 101691 and ten dynamic-art gap axes.
+- **The headline frame is not the cause.** Segment 15 is `seg10_cpz2`, and the
+  standalone lane `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` shows the
+  same first error at frame 2252 with 370 errors and runs in ten seconds, so all
+  the work below was done there. Parsing its report: the frame-2252 `air` error
+  is a single frame, `cascading: false`, and **exactly one of the 370 errors
+  starts before frame 5662**. Closing 2252 would remove one error. The cascade
+  origin is 5662, and every field there is a sidekick field.
+- **What happens at 5662.** The engine puts Tails into the hurt routine one
+  frame before the ROM does. The recorded rows carry the ROM's own hurt at row
+  5663 with `routine 0x02 -> 0x04`, `x_vel -0x200`, `y_vel -0x400`,
+  `animation 0x1A`; the engine produces that same state at row 5662. On the
+  ROM's own clock, the recorded `gameplay_frame_counter` for the ROM's hurt row
+  is `0x161E` (5662) and the engine's touch fires at level frame 5661.
+- **The object, named by a probe rather than inferred.** A temporary probe on
+  the sidekick hurt path fired exactly once in the whole segment:
+  `slot=33 id=0x5d class=CPZBossGunk objY=0x04DF liveFlags=0x87 sizeIdx=7
+  cat=HURT`, against Tails at `(0x2AD3,0x04F0)`. This is the CPZ act 2 boss's
+  Mega Mack blob (`Obj5D` routine `$C`), not one of its droplets: the droplets
+  are created with `collision_flags` copied from the parent *after* the parent
+  zeroes its own (`docs/s2disasm/s2.asm:63031,63053`), so a droplet can never
+  hurt anyone.
+- **Geometry and sizes agree; the phase does not.** Touch size index 7 is
+  `(6,6)` in `Touch_Sizes` (`s2.asm:85455-85462`) on both sides, and the boss
+  branch `Touch_Boss` reaches the same box arithmetic as the ordinary path,
+  because `BossSpecificCollision` only acts on `collision_flags == $F` and the
+  gunk's is `$87` (`s2.asm:85325-85400`, `:85783-85793`). Working the ROM's
+  height test by hand for Tails, `y_radius` 15 so `d3 = y - 12` and `d5 = 24`:
+  the blob at `0x04DD` misses and at `0x04DF` hits. The ROM hurts on the frame
+  its touch pass sees `0x04DF`; so does the engine. The two disagree only about
+  **which frame the blob is at `0x04DF`**.
+- **Measured: the engine's blob falls one frame ahead for its whole descent.**
+  A probe on the object's own update, against the recorded slot-31 rows:
+
+  | end of frame | ROM `y` | engine `y` |
+  |---|---|---|
+  | 5632-5634 | 0x048B | 0x048B |
+  | 5635 | 0x048B | 0x048C |
+  | 5636 | 0x048C | 0x048D |
+  | 5659 | 0x04D7 | 0x04DD |
+  | 5660 | 0x04DD | 0x04DF |
+
+  The two sequences are identical in shape -- `04C2, 04C7, 04CC, 04D2, 04D7,
+  04DD, 04DF` -- so the motion model is right and only the phase is wrong. The
+  ROM dwells four frames at the spawn `y` (5632 through 5635); the engine dwells
+  three.
+- **Root cause, from the ROM.** `Obj5D_Container_Extend` does not allocate a
+  gunk. It rewrites ITSELF: `move.b #$C,routine(a0)`,
+  `move.b #0,routine_secondary(a0)`, `move.b #$87,collision_flags(a0)`, then
+  `bra.s Obj5D_Container_Floor_End` (`docs/s2disasm/s2.asm:62843-62847`). Two
+  things follow. The gunk keeps that object's SST slot -- the recording shows
+  slot 31 carrying routine `0x10` through row 5632 and `0x0C` from row 5633,
+  one slot, one identity. And the branch away means `Obj5D_Gunk_Init`, which
+  falls through into `Obj5D_Gunk_Main` and its first `ObjectMoveAndFall`, is not
+  reached on the rewriting frame; the object pass has already run that slot, so
+  the gunk's first execution is the NEXT frame. The engine instead does
+  `spawnGunk(); setDestroyed(true)` in `CPZBossContainerExtend`, which both
+  takes a fresh slot (engine 33 against ROM 31) and runs the gunk's init in the
+  rewriting frame, which is the missing dwell frame.
+- **A candidate implemented, measured and REVERTED -- do not retry it as-is.**
+  Replacing the child spawn with the documented in-place transfer
+  (`ObjectLifetimeOps.detachSlotForTransfer` plus
+  `addReplacementAtTransferredSlot`) moved the gunk's first execution from level
+  frame 5632 to **5634**, two frames later rather than one, where the ROM's is
+  5633. The hurt correspondingly moved from one frame early to one frame late,
+  at level frame 5663 against the ROM's 5662, and the segment went from 370 to
+  **1,377 errors**. The transferred object's x also changed, 0x2AD4 to 0x2AD2
+  against the ROM's 0x2AD6, which says the rewriting frame itself moved rather
+  than only the first execution. The transfer helper adds the replacement
+  directly at the slot, so the extra frame comes from the surrounding
+  extend-object lifecycle, not from the helper. The direction is right and the
+  citation holds; what is missing is why the transform frame shifts. Reverted:
+  the segment is back to 370 errors and the tree is source-identical to
+  `3499ca48b`.
+- **Next step.** Instrument `CPZBossContainerExtend`'s own frames across the
+  transform under both shapes and find why `shouldSpawnGunk()` is observed a
+  frame later once the object is transferred rather than destroyed. The gunk's
+  first execution has to land on the frame after the rewrite, not two after.
+- **Not the cause, ruled out here.** The droplets, which carry zero collision by
+  the ROM's own copy order; the touch box sizes, which match; and the boss-branch
+  collision filter, which does not apply to `$87`.
+
+## 2026-09-04 - S2 segment 15: the gunk transform measured on both shapes; the residual owner is the container's dump cycle
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-s2-runchain-seg15`, over `develop` at `7ca24101c`.
+- **Method.** Probes on `CPZBossContainerExtend` (the rewrite), `CPZBossGunk`
+  (first execution and the landing transition) and `Sonic2CPZBossInstance`
+  (the frame the spawn-gunk flag is set), run on the ten-second standalone lane
+  under both shapes. The segment carries exactly two gunk drops, so all four
+  events are measurable.
+- **The three hypotheses, each measured.**
+  1. *The ROM's rewrite frame still does display and position work.*
+     **Confirmed.** `Obj5D_Container_Extend` branches to
+     `Obj5D_Container_Floor_End` (`docs/s2disasm/s2.asm:62843-62848`), which
+     copies the parent container's position, render flags and status into this
+     object and animates and displays it
+     (`:62881-62889`). The engine returned before its own
+     `updatePosition()`, so the gunk started from the previous frame's copy.
+     Adding that call makes the first drop's transform position exactly the
+     ROM's, `x=0x2AB9 y=0x0487` against the recorded slot-31 row.
+  2. *The transfer helper double-runs or skips the replacement.*
+     **Refuted.** With the position copy in place the first drop transfers into
+     slot 31, the ROM's own slot, and its first execution is the next frame,
+     which is exactly one deferral and not two. The two-frame figure in the
+     previous entry was the SECOND drop, already displaced by the first.
+  3. *The spawn-gunk flag is observed a frame late after the transfer.*
+     **Refuted.** The container sets it and the extend polls it in the same
+     frame, `BOSS dumpComplete lf=5222 slot=29` against
+     `transform lf=5222 slot=31`.
+- **The four measured frames, against the recording.** Recorded row `R` carries
+  `gameplay_frame_counter` `R-1`, so these are all on the ROM's own clock:
+
+  | event | ROM | engine, spawn-child | engine, in-place transfer |
+  |---|---|---|---|
+  | drop 1 rewrite | 5221 | 5222 | 5222 |
+  | drop 1 landing | 5251 | 5251 | 5252 |
+  | drop 2 rewrite | 5632 | 5632 | 5633 |
+  | drop 2 landing | 5661 | 5660 | 5662 |
+
+- **What this says, and it changes the conclusion.** The shipped spawn-child
+  shape is two compensating errors: the rewrite is a frame late and the gunk's
+  first execution is a frame early, and on drop 1 they cancel exactly. The
+  in-place transfer removes the second error, which is correct against the ROM,
+  and leaves the first exposed, so both drops land one frame late and the
+  segment goes from 370 to 1,377 errors. The transfer is not the defect; it
+  converts a two-error cancellation into a single, constant, upstream one.
+- **The residual owner is named.** The rewrite frame is decided by when the
+  container finishes its dump: `CPZBossContainer.updateMain` decrements `timer2`
+  and calls `onContainerDumpComplete()` at zero, and that fires at engine level
+  frame 5222 where the ROM's is 5221. The extend object's poll and rewrite are
+  correct once the flag is set. So the next round owns the container's dump
+  timer against the ROM's own `Obj5D_Container` state machine, not the gunk.
+- **Landed: documentation only.** The transfer is reverted again rather than
+  landed alone, because alone it regresses the segment; it should land together
+  with the container fix, and this entry records both halves so they are not
+  separated again. The tree is source-identical to `7ca24101c`.
+- **Do not retry.** The in-place transfer on its own, with or without the
+  position copy: both produce 1,377 errors on the segment lane, which is this
+  lever's fingerprint.
+
+## 2026-09-04 - S2 segment 15: the CPZ boss family takes the ROM's slot order; 370 errors to 1
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-s2-runchain-seg15`, over `develop` at `7ca24101c`.
+- **Result.** `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` goes from
+  **370 errors to 1**, and segment 15 of `TestS2CompleteEmeraldRunChain` from
+  **2,122 to 1**. Both remaining errors are the same single frame: 2252, field
+  `air`, ROM 1 against engine 0, `cascading: false`, self-healing on the next
+  frame. The whole frame-5662 sidekick cascade is closed.
+- **Root cause, found by probing the trigger's inputs.** The container's drop
+  trigger reads the boss's position, and the engine's read was a frame stale.
+  The boss was in slot 29 and its own container in slot 27, so the container
+  executed first. The recording has the boss in slot 24 and the container in 28.
+  The inversion comes from `AbstractBossInstance`'s constructor calling
+  `initializeBossState()`, which spawned the five children before the object
+  manager had given the boss a slot, so `spawnChild`'s after-current scan had no
+  parent slot to start from and the children took the lower free slots.
+- **The ROM.** `Obj5D_Init` allocates all five with
+  `AllocateObjectAfterCurrent` in the order Robotnik, Flame, Pump, Container,
+  Pipe (`docs/s2disasm/s2.asm:61628-61710`), and it is the boss's routine 0,
+  executed from the boss's own slot. That is what keeps the boss at the lowest
+  slot of its family. Moving the spawn out of the constructor and into the
+  boss's first update reproduces the recording exactly: boss 24, Robotnik 25,
+  Flame 26, Pump 27, Container 28, in creation order.
+- **Landed as one commit, because each half alone regresses.** Three changes:
+  1. the CPZ boss spawns its children from its own first update, as
+     `Obj5D_Init` does, giving it the ROM's slot;
+  2. `Obj5D_Container_Extend` rewrites itself into the gunk in place
+     (`s2.asm:62843-62848`), keeping its slot and deferring
+     `Obj5D_Gunk_Init` to the next frame;
+  3. the rewriting frame still runs the `Obj5D_Container_Floor_End` tail
+     (`s2.asm:62881-62889`), copying the parent's position before the transform.
+  Measured individually on the segment lane: the slot fix alone gives 1,104
+  errors and the transfer alone 1,377, because each removes one of a pair of
+  compensating one-frame errors. Together they give 1.
+- **The drop cadence now matches the recording frame for frame.** Both gunk
+  drops: rewrite at ROM frames 5221 and 5632, landing at 5251 and 5661, against
+  the previous shape's 5222/5251 and 5632/5660.
+- **Tests ported, not weakened.** Two CPZ boss rewind classes built their graph
+  by constructing the boss and asserting immediately. They now drive the boss's
+  one init execution first, which is what production does and what the ROM's
+  routine 0 is.
+- **The remaining error, characterised but not closed.** At frame 2252 the
+  player is standing on a CPZ `Obj6B` platform in slot 35 when three of them
+  wrap to new positions; the ROM leaves him airborne for exactly that frame and
+  attaches him to slot 36 on the next, while the engine hands him over with no
+  gap. Position, speeds and angle agree throughout, and `stand_on_obj` goes
+  `0x23 -> 0x24` a frame later on the ROM side. `Obj6B_Main` gates its entire
+  `SolidObject` call on the object's own on-screen render bit
+  (`docs/s2disasm/s2.asm:54443-54456`), which the engine's platform does not
+  model, but that is a hypothesis and was NOT measured -- the three platforms
+  are all plausibly on screen at the wrap. The next round should probe the
+  engine's solid pass for slots 35 and 36 across frame 2252 before changing
+  anything, and note the change would touch every `Obj6B` platform including
+  MTZ's.
+- **Gates from a clean build.** Full `-Ptrace-replay` with three absolute ROM
+  paths: 854 tests, 8 failures, 6 skips, the same eight classes as the baseline
+  with every message byte-identical except the two that improved. Ordinary suite
+  16,404 tests, 0 failures, 17 skips. `-Pguards` 607 tests, 0 failures.
+
+## 2026-09-04 - S2 segment 15 is GREEN: Obj6B's solid pass reads a latched render bit, not a live test
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-s2-runchain-seg15`, over `develop` at `7ca24101c`.
+- **Result: `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` passes.** The
+  S2 complete-emeralds chain drops from 12 axes to 11 and no longer reports a
+  `[segment-physics]` axis at all. The full sweep goes from 8 failing classes to
+  7, with the other six unchanged message for message.
+- **Probed before proposing, as the previous entry said to.** A probe on the
+  platform's solid pass across the wrap shows the engine's own sequence at
+  level frame 2251: slot 35 and 36 tested at their pre-wrap positions with the
+  player grounded, then both wrap, and at that instant the player is correctly
+  airborne -- then slot 36 is tested AGAIN in the same frame at its new position
+  and takes him, `standing=true`. The engine runs a solid pass both before and
+  after an object's own update, so the arriving platform catches the player on
+  the frame it arrives.
+- **Why the ROM does not.** `Obj6B_Main` gates its entire `SolidObject` call on
+  the object's own render on-screen bit,
+  `_btst #render_flags.on_screen,render_flags(a0) / _beq.s .offScreen`
+  (`docs/s2disasm/s2.asm:54443-54456`). That bit is not a live position test: it
+  is set when the object displays, at the tail of its own previous pass, so it
+  describes where the object was at the END of the previous frame. The arriving
+  platform was at `y 0x05EF` with the camera band `0x04A4..0x0584`, 95 pixels
+  below the screen, so its bit was clear and the ROM skipped its solid pass on
+  the arrival frame. The player is airborne for exactly that frame and lands the
+  next, which is the recorded `stand_on_obj 0x23 -> 0x24` a frame later.
+- **Two wrong expressions measured before the right one, recorded so they are
+  not retried.** Latching the coarse camera-bounds test
+  (`isOnScreen()`) gives **12,950 errors**, first error frame 2227 on
+  `camera_y`: that predicate is not the render-flag box. Latching the correct
+  `isWithinBuildSpritesBounds(x, y, width_pixels, 32)` but refreshing it inside
+  the object's own update leaves the lane at **1 error**, unchanged, because the
+  same update that moves the platform also refreshes the latch, so the
+  post-update solid pass reads the new position and the gate never fires. The
+  working model computes the value into a pending field at the end of the update
+  and promotes it at the start of the NEXT update, so the whole frame reads the
+  value the previous frame's display latched. `Obj6B_Init` sets only the
+  `level_fg` render flag and never the custom-height bit, so the vertical band is
+  BuildSprites' fixed 32-pixel `.assumeHeight` path.
+- **Blast radius, measured.** This changes every `Obj6B`, which is MTZ's main
+  platform as well as CPZ's stair blocks. The full sweep is unchanged on every
+  other class, and the ordinary suite and guards are clean, so no MTZ trace
+  moved.
+- **Follow-up the lead asked for: which bosses share the constructor-spawn
+  shape.** `AbstractBossInstance`'s constructor calls `initializeBossState()`,
+  so any boss spawning children there does so before the object manager has
+  given it a slot, and the children take the lower free slots. Seven do; CPZ is
+  fixed by this branch, leaving six to measure against their own traces:
+  `Sonic2EHZBossInstance`, `Sonic2MTZBossInstance`, `Sonic2WFZBossInstance`,
+  `Sonic2MechaSonicInstance`, `Sonic2DeathEggRobotInstance` and
+  `LbzEndBossInstance`. Not chased here. Each needs its own before/after against
+  its trace, because the fix reorders that boss family's slots.
+- **Gates from a clean build.** Full `-Ptrace-replay` with three absolute ROM
+  paths: 854 tests, **7 failures**, 6 skips. The seven are the S1 complete-
+  emerald chain (14 axes), the S2 complete-emerald chain (11 axes, down from
+  12), the S2 EHZ halfpipe round trip (2 axes), `TestS3kAizTraceReplay` (37
+  errors, frame 20713), `TestS3kReplayReferenceClosureIntegration` (113 errors,
+  frame 25589), the S3K Sonic+Tails chain, and
+  `TestTraceRunReplayWalkerControlFlow` -- all unchanged. Ordinary suite 16,404
+  tests, 0 failures, 17 skips. `-Pguards` 607 tests, 0 failures.
+## 2026-09-04 - S2 CPZ driver-state MATCH after a producer fix, not an engine change
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`. TraceChaser at
+  `4fb6d0802cc6ad27f07dd845a1b98ea84d2c7b0e`
+  (`feature/ai-s2-music-mailbox-observer`, pushed; `main` untouched).
+- **Frontier moved by fixing the producer.** The CPZ state-and-writes line
+  diverged on a ring at row 3225 that the request observer never saw. The
+  hundred-ring milestone check plays that ring through `PlayMusic`
+  (docs/s2disasm/s2.asm:25913-25914), so it stores to `sndDriverInput` at
+  `loc_10C0` (:1302-1304) and never reaches
+  `move.b D0,$09(A1,D1.w)` at `0x10D6`, the single PC the observer watched.
+  Nine music loads across the published windows were invisible for the same
+  reason.
+- **Fix:** a second fixed observer site at `M68K BUS` PC `0x0010C0`, opcode
+  `13400008`, slot 4, under the same manifest rules as the first. Every
+  transfer now carries an explicit `site` (`sfx` or `music`), validated per
+  site by the sink; the raw payload schema moved to
+  `openggf.s2-complete-run-audio-raw.v4` and the transfer schema to
+  `openggf.s2-preconsumption-request-transfer.v2`, with no compatibility for
+  the old shape. All five published windows were recaptured, each now bounded
+  to its own window rather than cut from one whole-run capture.
+- **Command:** `mvn -Dmse=off -Dtest=com.openggf.audio.**,com.openggf.tools.audio.parity.**,...`
+  with three absolute ROM paths and the complete-emeralds BK2.
+- **Result: 2063 tests, 0 failures, 0 errors, 10 skipped.** CPZ
+  `state and writes: MATCH (719 ticks)` and `state only: MATCH (720 ticks)`,
+  both now hard assertions. EHZ window `MATCH (2198 ticks)` on both lines, v1
+  oracle `MATCH (698 ticks)`, request windows `MATCH` at 25, 52 and 27
+  production transfers.
+- **Transfer-count deltas** against the old single-site captures:
+  `w10150-10900` 25 -> 27 (rows 10195 `82h` EHZ music, 10791 `FBh` speed
+  shoes), `w10900-11650` 52 -> 52 (one music epoch, no song loaded),
+  `w11650-12400` 27 -> 29 (rows 11991 `FCh` speed-shoes slow-down, 12114
+  `B5h` ring on the music mailbox), `w13650-14400` 5 -> 7 (13712 `F9h`
+  fade-out, 13849 `92h` `zMusIDPtr_SpecStage`), CPZ 33 -> 35 (2724 `8Eh` CPZ
+  music, 3225 `B5h` the milestone ring).

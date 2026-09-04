@@ -4,8 +4,8 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.presentation.AudioPresentationCommand;
 import com.openggf.audio.presentation.AudioPresentationSourceFactory;
 import com.openggf.audio.presentation.DecodedPcmCache;
-import com.openggf.audio.presentation.SmpsCompositeVoice;
 import com.openggf.audio.rewind.AudioSourceDescriptor;
+import com.openggf.audio.session.SmpsSessionTestSupport;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -52,53 +52,6 @@ class TestFrozenSmpsDataImmutability {
                 () -> frozen.setPalSpeedupDisabled(false));
         assertEquals(0x91, frozen.getId());
         assertTrue(frozen.isPalSpeedupDisabled());
-    }
-
-    @Test
-    void frozenCatalogCopiesTheTypedPausePolicy() {
-        MutableSmpsData source = MutableSmpsData.complete();
-        AudioPresentationSourceFactory factory = factory();
-        AudioPresentationCommand.MusicVoiceEntry entry = factory.musicSmps(
-                "base", 0x91, 1, source, EMPTY_DAC,
-                new SmpsSequencerConfig.Builder()
-                        .pausePolicy(SmpsSequencerConfig.PausePolicy
-                                .S3K_FM1_TO_5)
-                        .musicOverridePriorityPolicy(
-                                SmpsSequencerConfig
-                                        .MusicOverridePriorityPolicy
-                                        .PRESERVE_SAVED_LATCH)
-                        .musicOverrideSfxReleasePolicy(
-                                SmpsSequencerConfig
-                                        .MusicOverrideSfxReleasePolicy
-                                        .ON_RESTORE)
-                        .musicOverrideDacRestorePolicy(
-                                SmpsSequencerConfig
-                                        .MusicOverrideDacRestorePolicy
-                                        .PRESERVE_OVERRIDE_DAC_MODE)
-                        .build(),
-                AudioSourceDescriptor.baseMusic(0x91), 32);
-
-        SmpsCompositeVoice voice = factory.recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor)
-                        entry.voiceDescriptor());
-
-        assertEquals(SmpsSequencerConfig.PausePolicy.S3K_FM1_TO_5,
-                voice.driver().firstMusicSequencer().getConfig()
-                        .getPausePolicy());
-        assertEquals(
-                SmpsSequencerConfig.MusicOverridePriorityPolicy
-                        .PRESERVE_SAVED_LATCH,
-                voice.driver().firstMusicSequencer().getConfig()
-                        .getMusicOverridePriorityPolicy());
-        assertEquals(
-                SmpsSequencerConfig.MusicOverrideSfxReleasePolicy.ON_RESTORE,
-                voice.driver().firstMusicSequencer().getConfig()
-                        .getMusicOverrideSfxReleasePolicy());
-        assertEquals(
-                SmpsSequencerConfig.MusicOverrideDacRestorePolicy
-                        .PRESERVE_OVERRIDE_DAC_MODE,
-                voice.driver().firstMusicSequencer().getConfig()
-                        .getMusicOverrideDacRestorePolicy());
     }
 
     @Test
@@ -198,9 +151,10 @@ class TestFrozenSmpsDataImmutability {
                         new SmpsCoordFlagRuntimeState()),
                 new AudioPresentationSourceFactory.Settings(
                         48_000, SmpsSequencer.Region.NTSC,
-                        false, false, false, false, 1,
+                        false, false, false, 1,
                         AudioManager.getInstance(),
-                        new DecodedPcmCache(), ignored -> null));
+                        new DecodedPcmCache(), ignored -> null),
+                SmpsSessionTestSupport.installed(48_000));
     }
 
     private static SmpsSequencerConfig indexedConfig() {
@@ -213,10 +167,8 @@ class TestFrozenSmpsDataImmutability {
     private static AbstractSmpsData program(
             AudioPresentationSourceFactory factory,
             AudioPresentationCommand.MusicVoiceEntry entry) {
-        SmpsCompositeVoice voice = factory.recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor)
-                        entry.voiceDescriptor());
-        return voice.driver().firstMusicSequencer().getSmpsData();
+        return ((AudioPresentationCommand.SmpsVoiceDescriptor)
+                entry.voiceDescriptor()).activation().incomingMusic().smpsData();
     }
 
     private static void mutatePublicCopies(AbstractSmpsData frozen) {

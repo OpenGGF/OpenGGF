@@ -18,7 +18,5 @@ class TestAudioHardwareDefaults {
                 SonicConfigurationService.createStandalone(configDir);
 
         assertFalse(config.getBoolean(SonicConfiguration.DAC_INTERPOLATE));
-        assertFalse(config.getBoolean(
-                SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE));
     }
 }

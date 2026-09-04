@@ -116,7 +116,8 @@ class TestRemainingRewindTailInventory {
         // 2026-08-27 official-scope integration inventory: the three new
         // standalone object classes probe cleanly, and the parent-dependent
         // Sonic 2 Obj11 bridge segment has focused graph coverage.
-        return new TailInventory(1006, 786, 220, 0, buckets);
+        // The three game-over card implementations from develop pass the isolated sweep.
+        return new TailInventory(1009, 789, 220, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

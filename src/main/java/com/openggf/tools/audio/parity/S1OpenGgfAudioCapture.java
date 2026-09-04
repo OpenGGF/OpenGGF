@@ -1,6 +1,9 @@
 package com.openggf.tools.audio.parity;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.session.LegacyCompatibilitySmpsPhysicalPolicy;
+import com.openggf.audio.session.OwnedSmpsAudioStream;
+import com.openggf.audio.session.SmpsPhysicalDevice;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.DacData;
@@ -78,10 +81,12 @@ public final class S1OpenGgfAudioCapture {
                     referenceMetadata.cycleStart(), referenceMetadata.period(),
                     referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
                     referenceMetadata.romCrc32());
-            CaptureIterator ticks = new CaptureIterator(song, dacData, contract,
-                    referenceMetadata.terminalRecordCount());
-            AudioParityJsonl.writeNew(output, outputMetadata, ticks);
-            return ticks.result();
+            try (CaptureIterator ticks = new CaptureIterator(
+                    song, dacData, contract,
+                    referenceMetadata.terminalRecordCount())) {
+                AudioParityJsonl.writeNew(output, outputMetadata, ticks);
+                return ticks.result();
+            }
         }
     }
 
@@ -96,21 +101,40 @@ public final class S1OpenGgfAudioCapture {
         }
     }
 
-    private static SongContract inspectGhz(Rom rom, AbstractSmpsData song) {
+    static SongContract inspectGhz(Rom rom, AbstractSmpsData song) {
+        return inspectSong(rom, song, Sonic1Music.GHZ.id);
+    }
+
+    /**
+     * Derives a song's ROM asset range and reachable loop indices, the two
+     * pieces of song identity the state normalizer needs.
+     *
+     * <p>The range is the song's own pointer-table entry through that entry
+     * plus the loaded blob's length, exactly as
+     * {@code Sonic1SmpsLoader.calculateMusicDataSize} sized the blob. Every
+     * music id is derived the same way, so a per-song window carries no
+     * hard-coded address of its own.
+     */
+    static SongContract inspectSong(Rom rom, AbstractSmpsData song, int musicId) {
+        if (musicId < Sonic1Music.ID_BASE || musicId > Sonic1Music.ID_MAX) {
+            throw new IllegalArgumentException(
+                    "music id is outside the S1 pointer table: 0x" + Integer.toHexString(musicId));
+        }
         try {
-            int index = Sonic1Music.GHZ.id - Sonic1Music.ID_BASE;
+            int index = musicId - Sonic1Music.ID_BASE;
             long base = Integer.toUnsignedLong(rom.read32BitAddr(
                     Sonic1SmpsConstants.MUSIC_PTR_TABLE_ADDR + index * 4L));
             long end = base + song.getData().length;
             return new SongContract(new S1AudioStateNormalizer.GhzAssetRange(base, end),
                     parseReachableF7LoopIndices(song));
         } catch (IOException error) {
-            throw new IllegalArgumentException("cannot derive the GHZ ROM asset range", error);
+            throw new IllegalArgumentException("cannot derive the ROM asset range for music 0x"
+                    + Integer.toHexString(musicId), error);
         }
     }
 
-    private static AudioParityMetadata readReferenceMetadata(Path reference) {
-        try (BufferedReader input = Files.newBufferedReader(reference)) {
+    static AudioParityMetadata readReferenceMetadata(Path reference) {
+        try (BufferedReader input = AudioParityJsonl.openReader(reference)) {
             String line = input.readLine();
             if (line == null) {
                 throw new IllegalArgumentException("reference stream has no metadata");
@@ -121,7 +145,7 @@ public final class S1OpenGgfAudioCapture {
         }
     }
 
-    private static Rom openRom(Path path) {
+    static Rom openRom(Path path) {
         Rom rom = new Rom();
         if (!rom.open(path.toString())) {
             throw new IllegalArgumentException("cannot open verified S1 ROM");
@@ -129,7 +153,7 @@ public final class S1OpenGgfAudioCapture {
         return rom;
     }
 
-    private static void verifyRomIdentity(Path path) {
+    static void verifyRomIdentity(Path path) {
         if (!Files.isRegularFile(path)) {
             throw new IllegalArgumentException("S1 ROM does not exist or is not a regular file");
         }
@@ -247,7 +271,9 @@ public final class S1OpenGgfAudioCapture {
         }
     }
 
-    private static final class CaptureIterator implements Iterator<AudioParityTick>, ChipWriteObserver {
+    static final class CaptureIterator implements Iterator<AudioParityTick>,
+            ChipWriteObserver, AutoCloseable {
+        private final OwnedSmpsAudioStream stream;
         private final SmpsDriver driver;
         private final SmpsSequencer sequencer;
         private final SongContract contract;
@@ -261,7 +287,13 @@ public final class S1OpenGgfAudioCapture {
                 int terminalCount) {
             this.contract = contract;
             this.terminalCount = terminalCount;
-            driver = new SmpsDriver(SAMPLE_RATE);
+            stream = new OwnedSmpsAudioStream(
+                    "s1-parity", 0,
+                    new SmpsPhysicalDevice.Settings(
+                            SAMPLE_RATE, false),
+                    LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
+                    ChipWriteObserver.NONE);
+            driver = stream.logicalDriver();
             sequencer = new SmpsSequencer(song, dacData, driver, () -> { },
                     Sonic1SmpsSequencerConfig.CONFIG);
             sequencer.setSampleRate(SAMPLE_RATE);
@@ -269,11 +301,16 @@ public final class S1OpenGgfAudioCapture {
             // The BizHawk epoch begins at S1 InitMusicPlayback. Chip power-on and
             // Java construction precede it; the shipped FixBugs=0 path then performs
             // this exact music-load silence sequence before the first track update.
-            driver.setChipWriteObserver(this);
+            stream.setChipWriteObserver(this);
             initializeS1MusicPlayback(driver, song);
         }
 
-        private static void initializeS1MusicPlayback(SmpsDriver driver, AbstractSmpsData song) {
+        @Override
+        public void close() {
+            stream.close();
+        }
+
+        static void initializeS1MusicPlayback(SmpsDriver driver, AbstractSmpsData song) {
             for (int channel = 2; channel >= 0; channel--) {
                 driver.writeFm(driver, 0, 0x28, channel);
                 driver.writeFm(driver, 0, 0x28, channel + 4);
@@ -327,10 +364,7 @@ public final class S1OpenGgfAudioCapture {
                 throw new NoSuchElementException();
             }
             if (ordinal == 0) {
-                // The reference epoch's first record follows one real S1 VInt
-                // service. Direct sample reads deliberately do not fabricate
-                // that service, so advance the driver boundary explicitly.
-                sequencer.advanceBatch(NTSC_SAMPLES);
+                sequencer.advanceSamples(0);
             } else {
                 sequencer.advanceBatch(NTSC_SAMPLES);
                 advancedSamples += NTSC_SAMPLES;

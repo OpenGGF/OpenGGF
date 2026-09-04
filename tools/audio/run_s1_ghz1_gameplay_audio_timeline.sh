@@ -37,13 +37,12 @@ done
 SCRIPT_DIR=$(cd "${BASH_SOURCE[0]%/*}" && pwd -P)
 REPO=$(cd "$SCRIPT_DIR/../.." && pwd)
 CALLER_DIR=$(pwd -P)
+TRACECHASER_BOOTSTRAP="$REPO/tools/tracechaser-bootstrap.sh"
 MOVIE="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds/sonic1-complete-withemeralds.bk2"
 RUN_PATH="$REPO/src/test/resources/traces/s1/runs/s1-sonic-complete-withemeralds"
 ARTIFACT_ROOT="$REPO/target"
 BUILD_ROOT="$REPO/target"
 OUTPUT_ROOT="$REPO/target/audio-parity/s1-ghz1-gameplay"
-PROBE="$REPO/tools/bizhawk/probes/s1_ghz1_gameplay_audio_timeline_probe.lua"
-LAUNCHER="$REPO/tools/bizhawk/run_bizhawk_lua.sh"
 ROM_PATH=""
 BIZHAWK_DIR="${BIZHAWK_HOME:-}"
 
@@ -90,6 +89,10 @@ while [ "$#" -gt 0 ]; do
 		*) echo "Argument error: unknown option: $1" >&2; usage >&2; exit "$EXIT_USAGE" ;;
 	esac
 done
+
+PROBE=$("$TRACECHASER_BOOTSTRAP" --require \
+	"bizhawk/probes/s1_ghz1_gameplay_audio_timeline_probe.lua") || exit $?
+LAUNCHER=$("$TRACECHASER_BOOTSTRAP" --require "bizhawk/run_bizhawk_lua.sh") || exit $?
 
 [ -n "$ROM_PATH" ] || { echo "Argument error: --rom is required" >&2; usage >&2; exit "$EXIT_USAGE"; }
 ROM_PATH=$(canonicalize_caller_input "ROM path" "$ROM_PATH")
@@ -146,7 +149,8 @@ JSON_REPORT="$RUN_DIR/parity-report.json"
 capture_reference() {
 	local output=$1 log=$2 staging
 	staging=$(/usr/bin/mktemp "$RUN_DIR/reference.XXXXXXXX.staging") || return 1
-	if ! "${SAFE_ENV[@]}" BIZHAWK_HOME="$BIZHAWK_DIR" MONO_BIN="$MONO_SYSTEM_BIN" OGGF_OUT="$staging" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
+	if ! "${SAFE_ENV[@]}" BIZHAWK_HOME="$BIZHAWK_DIR" MONO_BIN="$MONO_SYSTEM_BIN" OGGF_OUT="$staging" \
+		OGGF_INPUT_REPOSITORY_ROOT="$REPO" "$LAUNCHER" "$PROBE" "$MOVIE" "$ROM_PATH" >"$log" 2>&1; then
 		"${SAFE_ENV[@]}" "${JAVA_TOOL[@]}" discard-reference --repo "$REPO" --run-root "$RUN_DIR" --staging "$staging" >/dev/null 2>&1 || true
 		return 1
 	fi

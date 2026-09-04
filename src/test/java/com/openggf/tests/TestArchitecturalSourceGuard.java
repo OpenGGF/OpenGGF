@@ -1119,8 +1119,7 @@ class TestArchitecturalSourceGuard {
                 "com/openggf/game/sonic3k/Sonic3k.java",
                 "com/openggf/game/sonic3k/Sonic3kGameModule.java",
                 "com/openggf/game/sonic3k/Sonic3kObjectArt.java",
-                "com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java",
-                "com/openggf/game/sonic3k/objects/AbstractCnzTraversalVisibleStubInstance.java"
+                "com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java"
         );
         List<String> stalePhrases = List.of(
                 "Task 6 infrastructure only",

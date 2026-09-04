@@ -20,9 +20,16 @@ import com.openggf.audio.presentation.AudioPresentationCommand.StartSampleSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopAllSfx;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopMusic;
 import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcm;
+import com.openggf.audio.presentation.AudioPresentationCommand.ReferenceLimitation;
+import com.openggf.audio.presentation.AudioPresentationCommand.RetainGlobalStop;
+import com.openggf.audio.presentation.AudioPresentationCommand.StopRawPcmAndRetainGlobalStop;
+import com.openggf.audio.presentation.AudioPresentationCommand.StopSmpsSfx;
+import com.openggf.audio.presentation.AudioPresentationCommand.SilencePsg;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleMute;
 import com.openggf.audio.presentation.AudioPresentationCommand.ToggleSolo;
 import com.openggf.audio.rewind.AudioCommand;
+import com.openggf.audio.session.PreparedSmpsMusicActivation;
+import com.openggf.audio.session.PreparedSmpsSfxProgram;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.RecordComponent;
@@ -215,6 +222,63 @@ class TestAudioPresentationCommandQueue {
     }
 
     @Test
+    void capturedBatchStaysInExactOrderUntilCompositeCommit() {
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        for (int steps : new int[] {1, 2, 3}) {
+            queue.submit(new FadeMusic(steps, 1),
+                    () -> true, ignored -> { });
+        }
+        List<Integer> attempts = new ArrayList<>();
+        AudioPresentationCommandQueue.PendingBatch first =
+                queue.capturePendingBatch();
+
+        queue.applyPendingBatch(first, command -> attempts.add(
+                ((FadeMusic) command).steps()));
+        assertEquals(3, queue.size(),
+                "application alone must not consume the captured prefix");
+        queue.rollbackPendingBatch(first);
+
+        AudioPresentationCommandQueue.PendingBatch retry =
+                queue.capturePendingBatch();
+        queue.applyPendingBatch(retry, command -> attempts.add(
+                ((FadeMusic) command).steps()));
+        queue.preparePendingBatchCommit(retry);
+        queue.commitPendingBatch(retry);
+
+        assertEquals(List.of(1, 2, 3, 1, 2, 3), attempts,
+                "rollback leaves every command at its original retry position");
+        assertEquals(0, queue.size());
+    }
+
+    @Test
+    void appliedBatchRemainsRetryableWhenCompositeRenderFails() {
+        AudioPresentationCommandQueue queue =
+                new AudioPresentationCommandQueue();
+        queue.submit(new SetSpeedMultiplier(4),
+                () -> true, ignored -> { });
+        AudioPresentationCommandQueue.PendingBatch batch =
+                queue.capturePendingBatch();
+
+        assertThrows(IllegalStateException.class, () -> {
+            try {
+                queue.applyPendingBatch(batch, ignored -> { });
+                throw new IllegalStateException(
+                        "injected physical render failure");
+            } catch (RuntimeException failure) {
+                queue.rollbackPendingBatch(batch);
+                throw failure;
+            }
+        });
+
+        assertEquals(1, queue.size(),
+                "render completion precedes command consumption");
+        List<AudioPresentationCommand> retry = new ArrayList<>();
+        queue.applyPendingAtomically(retry::add);
+        assertEquals(List.of(new SetSpeedMultiplier(4)), retry);
+    }
+
+    @Test
     void everyAudioCommandVariantHasOneResolvedPresentationCommand() {
         Set<String> resolvedNames = Arrays.stream(AudioPresentationCommand.class.getPermittedSubclasses())
                 .map(Class::getSimpleName)
@@ -234,8 +298,7 @@ class TestAudioPresentationCommandQueue {
                 SetSpeedMultiplier.class.getSimpleName(),
                 ChangeMusicTempo.class.getSimpleName(),
                 ResetRingAlternation.class.getSimpleName())));
-        // 13 with the namespaced creator music and one-shot commands.
-        assertEquals(13, AudioCommand.class.getPermittedSubclasses().length);
+        assertEquals(20, AudioCommand.class.getPermittedSubclasses().length);
     }
 
     @Test
@@ -243,7 +306,11 @@ class TestAudioPresentationCommandQueue {
         Set<Class<?>> expectedRecords = Set.of(
                 ReplaceMusic.class, PushMusicOverride.class, RestoreMusicOverride.class,
                 EndMusicOverride.class, AddSmpsSfx.class, StartSampleSfx.class,
-                ReplaceRawPcm.class, StopRawPcm.class, StopMusic.class, StopAllSfx.class,
+                ReplaceRawPcm.class, StopRawPcm.class,
+                StopRawPcmAndRetainGlobalStop.class,
+                RetainGlobalStop.class, StopMusic.class, StopAllSfx.class,
+                StopSmpsSfx.class, SilencePsg.class,
+                ReferenceLimitation.class,
                 FadeMusic.class, SetVoiceGain.class, SetVoicePitch.class,
                 SetSpeedShoes.class, SetSpeedMultiplier.class, ChangeMusicTempo.class,
                 ResetRingAlternation.class, ToggleMute.class, ToggleSolo.class,
@@ -281,7 +348,7 @@ class TestAudioPresentationCommandQueue {
 
         queue.submit(StartSampleSfx.fromVoice(sample), () -> true, ignored -> {
         });
-        queue.submit(ReplaceRawPcm.fromVoice(raw), () -> true, ignored -> {
+        queue.submit(ReplaceRawPcm.fromVoice(raw, new byte[] {0}), () -> true, ignored -> {
         });
         queue.submit(new ReplaceMusic(music), () -> true, ignored -> {
         });
@@ -332,7 +399,9 @@ class TestAudioPresentationCommandQueue {
             Class<?> type, Set<Class<?>> visited) {
         if (!visited.add(type) || type.isPrimitive() || type.isEnum()
                 || type == String.class || Number.class.isAssignableFrom(type)
-                || type == Boolean.class || type == Character.class) {
+                || type == Boolean.class || type == Character.class
+                || type == PreparedSmpsMusicActivation.class
+                || type == PreparedSmpsSfxProgram.class) {
             return;
         }
         assertFalse(PresentationVoice.class.isAssignableFrom(type), type.getName());

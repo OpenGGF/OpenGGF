@@ -215,7 +215,7 @@ public class TestSonic3kPlcArtRegistry {
     @Test
     public void aiz1PlanIncludesBadnikAndLevelArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x00, 0);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size());
 
         // Verify Bloominator
         Sonic3kPlcArtRegistry.StandaloneArtEntry bloominator = plan.standaloneArt().stream()
@@ -237,7 +237,7 @@ public class TestSonic3kPlcArtRegistry {
     @Test
     public void aiz2PlanHasAct2SpecificEntries() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x00, 1);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size());
         boolean hasAiz2Rock = plan.levelArt().stream()
                 .anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.AIZ2_ROCK));
         assertTrue(hasAiz2Rock);
@@ -251,7 +251,7 @@ public class TestSonic3kPlcArtRegistry {
     public void hcz1PlanHasBlastoidNotJawz() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x01, 0);
         assertNotNull(plan);
-        assertEquals(20, plan.standaloneArt().size());
+        assertEquals(21, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_LARGE_FAN)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_BLASTOID)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_TURBO_SPIKER)));
@@ -262,7 +262,7 @@ public class TestSonic3kPlcArtRegistry {
     public void hcz2PlanHasJawzNotBlastoid() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x01, 1);
         assertNotNull(plan);
-        assertEquals(20, plan.standaloneArt().size());
+        assertEquals(21, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_LARGE_FAN)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_JAWZ)));
         assertFalse(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.HCZ_BLASTOID)));
@@ -272,7 +272,7 @@ public class TestSonic3kPlcArtRegistry {
     public void mgz1PlanHasMinibossAndDiagonalSpringOverride() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x02, 0);
         assertNotNull(plan);
-        assertEquals(10, plan.standaloneArt().size());
+        assertEquals(11, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_SPIKER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MINIBOSS)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MINIBOSS_SPIRE)));
@@ -291,7 +291,7 @@ public class TestSonic3kPlcArtRegistry {
     public void mgz2PlanHasMantisNotMiniboss() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x02, 1);
         assertNotNull(plan);
-        assertEquals(12, plan.standaloneArt().size());
+        assertEquals(13, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_MANTIS)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.MGZ_ENDBOSS)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ROBOTNIK_SHIP)));
@@ -330,7 +330,7 @@ public class TestSonic3kPlcArtRegistry {
     public void fbzPlanOverridesSpikes() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x04, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(10, plan.standaloneArt().size()); // Includes the shared game-over card.
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FBZ_BLASTER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FBZ_MINIBOSS)));
 
@@ -346,7 +346,7 @@ public class TestSonic3kPlcArtRegistry {
     public void iczPlanHasCollapsingBridgeAndBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x05, 0);
         assertNotNull(plan);
-        assertEquals(8, plan.standaloneArt().size());
+        assertEquals(9, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ICZ_SNOWDUST)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ICZ_STAR_POINTER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ICZ_PENGUINATOR)));
@@ -1116,13 +1116,13 @@ public class TestSonic3kPlcArtRegistry {
             RomByteReader reader = RomByteReader.fromRom(rom);
             List<SpriteMappingFrame> blaster = S3kSpriteDataLoader.loadMappingFrames(
                     reader, Sonic3kConstants.MAP_BLASTER_ADDR, 11);
-            assertEquals(List.of(4,4,4,1,1,1,1,1,1,1,1),
+            assertEquals(List.of(4, 4, 4, 1, 1, 1, 1, 1, 1, 1, 1),
                     blaster.stream().map(frame -> frame.pieces().size()).toList());
             assertEquals(0x27, maximumOccupiedTile(blaster));
 
             List<SpriteMappingFrame> techno = S3kSpriteDataLoader.loadMappingFrames(
                     reader, Sonic3kConstants.MAP_TECHNOSQUEEK_ADDR, 10);
-            assertEquals(List.of(1,1,1,1,1,1,1,1,1,1),
+            assertEquals(List.of(1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
                     techno.stream().map(frame -> frame.pieces().size()).toList());
             assertEquals(0x22, techno.stream().flatMap(frame -> frame.pieces().stream())
                     .mapToInt(SpriteMappingPiece::tileIndex).max().orElse(-1));
@@ -1441,7 +1441,7 @@ public class TestSonic3kPlcArtRegistry {
     public void sozPlanHasThreeBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x08, 0);
         assertNotNull(plan);
-        assertEquals(8, plan.standaloneArt().size());
+        assertEquals(9, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SKORP)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SANDWORM)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ROCKN)));
@@ -1451,7 +1451,7 @@ public class TestSonic3kPlcArtRegistry {
     public void lrzPlanHasRocksAndBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x09, 0);
         assertNotNull(plan);
-        assertEquals(8, plan.standaloneArt().size());
+        assertEquals(9, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.FIREWORM_SEGMENTS)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.IWAMODOKI)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.TOXOMISTER)));
@@ -1466,7 +1466,7 @@ public class TestSonic3kPlcArtRegistry {
     public void sszPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0A, 0);
         assertNotNull(plan);
-        assertEquals(6, plan.standaloneArt().size());
+        assertEquals(7, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SSZ_EGG_ROBO)));
 
         // EggRobo should use palette 0
@@ -1481,7 +1481,7 @@ public class TestSonic3kPlcArtRegistry {
     public void dezPlanHasTwoBadniks() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0B, 0);
         assertNotNull(plan);
-        assertEquals(7, plan.standaloneArt().size());
+        assertEquals(8, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKEBONKER)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.CHAINSPIKE)));
     }
@@ -1490,7 +1490,7 @@ public class TestSonic3kPlcArtRegistry {
     public void ddzPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0C, 0);
         assertNotNull(plan);
-        assertEquals(6, plan.standaloneArt().size());
+        assertEquals(7, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DDZ_EGG_ROBO)));
         Sonic3kPlcArtRegistry.StandaloneArtEntry ddzEggRobo = plan.standaloneArt().stream()
                 .filter(e -> e.key().equals(Sonic3kObjectArtKeys.DDZ_EGG_ROBO))
@@ -1935,6 +1935,6 @@ public class TestSonic3kPlcArtRegistry {
 
         assertNotNull(plan);
         assertTrue(plan.levelArt().size() >= 7, "Expected at least 7 shared level art entries");
-        assertEquals(5, plan.standaloneArt().size(), "Expected shared standalone art only for unknown zone");
+        assertEquals(6, plan.standaloneArt().size(), "Expected shared standalone art only for unknown zone");
     }
 }

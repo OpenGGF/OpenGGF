@@ -270,6 +270,10 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
                                                        int cachedBgContiguousWidthPx) {
         return zoneIndex == Sonic3kZoneIds.ZONE_MGZ
                 && actIndex == 1
+                && GameServices.hasRuntime()
+                && S3kRuntimeStates.currentMgz(GameServices.zoneRuntimeRegistry())
+                .map(state -> state.bgRiseRoutine() == 8)
+                .orElse(false)
                 && bgCameraX != Integer.MIN_VALUE
                 && cachedBgContiguousWidthPx > VDP_BG_PLANE_WIDTH_PX;
     }

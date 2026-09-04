@@ -25,6 +25,7 @@ class TestRhinobotBadnikInstance {
             updateMovement(outside, sonic);
             assertFalse(readBoolean(outside, "waitOffscreenReleased"),
                     "One pixel beyond the $20 Obj_WaitOffscreen placeholder must remain dormant");
+            assertFalse(readBoolean(outside, "waitOffscreenReleased"));
 
             AbstractObjectInstance.updateCameraBounds(0, 0, 0x03E0, 0x0400, 0);
             RhinobotBadnikInstance atPlaceholderEdge = rhinobotWithPlayers(sonic, null);

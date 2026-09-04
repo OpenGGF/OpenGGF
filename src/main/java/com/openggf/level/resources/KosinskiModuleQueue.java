@@ -2,7 +2,7 @@ package com.openggf.level.resources;
 
 import com.openggf.data.Rom;
 import com.openggf.game.rewind.RewindSnapshottable;
-import com.openggf.tools.KosinskiReader;
+import com.openggf.data.compression.KosinskiReader;
 
 import java.io.IOException;
 import java.nio.channels.FileChannel;

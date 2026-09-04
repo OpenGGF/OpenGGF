@@ -32,7 +32,6 @@ class TestRuntimeOwnedRegistryLifecycle {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     /**

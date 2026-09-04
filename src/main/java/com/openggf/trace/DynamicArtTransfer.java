@@ -569,7 +569,7 @@ public final class DynamicArtTransfer {
      * <p>{@link #validateCallback} pins a ROM-callback PC set per game and
      * rejects any other game outright, so a trace can only legitimately carry
      * the capability for a game listed here. There is no S3K dynamic-art
-     * observer on the recording side either -- {@code tools/bizhawk-headless}
+     * observer on the recording side either -- {@code tools/tracechaser/bizhawk-headless}
      * ships {@code S1DynamicArtObserver} and {@code S2DynamicArtObserver} and no
      * S3K equivalent -- so an S3K trace can neither be produced with the
      * capability nor parsed with it.

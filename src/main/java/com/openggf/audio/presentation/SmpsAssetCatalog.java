@@ -8,6 +8,7 @@ import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.smps.SmpsSfxData;
+import com.openggf.audio.smps.SmpsLoadReadiness;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,6 +19,16 @@ import java.util.Set;
 
 /** Session-owned immutable SMPS dependency and program catalog. */
 final class SmpsAssetCatalog {
+    record Snapshot(
+            Map<DependencyKey, DependencyEntry> dependencies,
+            Map<ProgramKey, ProgramEntry> programs,
+            Map<SmpsSourceDescriptor, ProgramEntry> descriptors) {
+        Snapshot {
+            dependencies = Map.copyOf(dependencies);
+            programs = Map.copyOf(programs);
+            descriptors = Map.copyOf(descriptors);
+        }
+    }
     static final class ProgramIdentityConflict extends IllegalStateException {
         private ProgramIdentityConflict(String message) {
             super(message);
@@ -60,6 +71,7 @@ final class SmpsAssetCatalog {
         private final int trackCount;
         private final SmpsSfxPlaybackPolicy sfxPolicy;
         private final AbstractSmpsData sourceIdentity;
+        private final SmpsLoadReadiness readiness;
 
         private ProgramEntry(
                 AbstractSmpsData program,
@@ -69,7 +81,8 @@ final class SmpsAssetCatalog {
                 int assetId,
                 int trackCount,
                 SmpsSfxPlaybackPolicy sfxPolicy,
-                AbstractSmpsData sourceIdentity) {
+                AbstractSmpsData sourceIdentity,
+                SmpsLoadReadiness readiness) {
             this.program = Objects.requireNonNull(program, "program");
             this.programView = Objects.requireNonNull(
                     programView, "programView");
@@ -82,6 +95,7 @@ final class SmpsAssetCatalog {
             this.sfxPolicy = Objects.requireNonNull(sfxPolicy, "sfxPolicy");
             this.sourceIdentity = Objects.requireNonNull(
                     sourceIdentity, "sourceIdentity");
+            this.readiness = Objects.requireNonNull(readiness, "readiness");
         }
 
         AbstractSmpsData program() {
@@ -119,6 +133,8 @@ final class SmpsAssetCatalog {
         SmpsSfxPlaybackPolicy sfxPolicy() {
             return sfxPolicy;
         }
+
+        SmpsLoadReadiness readiness() { return readiness; }
 
         private boolean hasSourceIdentity(AbstractSmpsData source) {
             return sourceIdentity == source;
@@ -179,7 +195,8 @@ final class SmpsAssetCatalog {
             SmpsSequencerConfig config,
             boolean specialSfx) {
         return register(key, data, dac, config,
-                SmpsSfxPlaybackPolicy.defaults(specialSfx));
+                SmpsSfxPlaybackPolicy.defaults(specialSfx),
+                SmpsLoadReadiness.immediatePlan());
     }
 
     ProgramEntry register(
@@ -188,17 +205,31 @@ final class SmpsAssetCatalog {
             DacData dac,
             SmpsSequencerConfig config,
             SmpsSfxPlaybackPolicy sfxPolicy) {
+        return register(key, data, dac, config, sfxPolicy,
+                SmpsLoadReadiness.immediatePlan());
+    }
+
+    ProgramEntry register(
+            ProgramKey key,
+            AbstractSmpsData data,
+            DacData dac,
+            SmpsSequencerConfig config,
+            SmpsSfxPlaybackPolicy sfxPolicy,
+            SmpsLoadReadiness readiness) {
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(data, "data");
         Objects.requireNonNull(dac, "dac");
         Objects.requireNonNull(config, "config");
         Objects.requireNonNull(sfxPolicy, "sfxPolicy");
+        Objects.requireNonNull(readiness, "readiness");
 
         ProgramEntry existing = programs.get(key);
         if (existing != null) {
             existing.dependency().requireProvenance(dac, config);
             if (existing.hasSourceIdentity(data)) {
-                if (!existing.sfxPolicy().equals(sfxPolicy)) {
+                if (!existing.sfxPolicy().equals(sfxPolicy)
+                        || !existing.readiness().provenance().equals(
+                                readiness.provenance())) {
                     throw programConflict(key);
                 }
                 return existing;
@@ -209,6 +240,8 @@ final class SmpsAssetCatalog {
                 key.dependencyKey(), dac, config);
         if (existing != null) {
             if (existing.sfxPolicy().equals(sfxPolicy)
+                    && existing.readiness().provenance().equals(
+                            readiness.provenance())
                     && sameProgram(existing.program(), data)) {
                 return existing;
             }
@@ -226,7 +259,8 @@ final class SmpsAssetCatalog {
                 resolveAssetId(key.assetKey(), frozen),
                 frozen.getChannels() + frozen.getPsgChannels(),
                 sfxPolicy,
-                data);
+                data,
+                readiness);
         ProgramEntry descriptorOwner = descriptors.get(descriptor);
         if (descriptorOwner != null
                 && descriptorOwner.dependency() != dependency) {
@@ -257,6 +291,25 @@ final class SmpsAssetCatalog {
                     "no registered SMPS asset for " + descriptor);
         }
         return entry;
+    }
+
+    Snapshot snapshot() {
+        return new Snapshot(dependencies, programs, descriptors);
+    }
+
+    void restore(Snapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        dependencies.clear();
+        dependencies.putAll(snapshot.dependencies());
+        programs.clear();
+        programs.putAll(snapshot.programs());
+        descriptors.clear();
+        descriptors.putAll(snapshot.descriptors());
+        if (!dependencies.equals(snapshot.dependencies())
+                || !programs.equals(snapshot.programs())
+                || !descriptors.equals(snapshot.descriptors())) {
+            throw new IllegalStateException("SMPS catalog rollback failed");
+        }
     }
 
     static AbstractSmpsData freezeStandalone(AbstractSmpsData source) {
@@ -453,11 +506,7 @@ final class SmpsAssetCatalog {
                 .fmChannelOrder(source.getFmChannelOrder())
                 .psgChannelOrder(source.getPsgChannelOrder())
                 .tempoMode(source.getTempoMode())
-                .palServicePolicy(source.getPalServicePolicy())
-                .tempoPhasePolicy(source.getTempoPhasePolicy())
-                .sfxPriorityPolicy(source.getSfxPriorityPolicy())
-                .driverServiceOrder(source.getDriverServiceOrder())
-                .sfxStartTiming(source.getSfxStartTiming())
+                .palUpdateMode(source.getPalUpdateMode())
                 .coordFlagParamOverrides(
                         source.getCoordFlagParamOverrides())
                 .applyModOnNote(source.isApplyModOnNote())
@@ -465,32 +514,53 @@ final class SmpsAssetCatalog {
                 .extraTrkEndFlags(Set.copyOf(
                         source.getExtraTrkEndFlags()))
                 .relativePointers(source.isRelativePointers())
+                .tempoOnFirstTick(source.isTempoOnFirstTick())
                 .direct68kDriver(source.isDirect68kDriver())
+                .advancePsgEnvelopeOnRest(source.isAdvancePsgEnvelopeOnRest())
+                .writeFmPanOnNote(source.isWriteFmPanOnNote())
                 .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
+                .psgSfxTakeoverMode(source.getPsgSfxTakeoverMode())
+                .psg3SfxAdmissionWriteMode(
+                        source.getPsg3SfxAdmissionWriteMode())
+                .sfxChannelOwnershipMode(
+                        source.getSfxChannelOwnershipMode())
                 .fmSfxReleaseMode(source.getFmSfxReleaseMode())
                 .psgSfxReleaseMode(source.getPsgSfxReleaseMode())
-                .fadeOutChannelPolicy(source.getFadeOutChannelPolicy())
-                .musicOverrideSpeedPolicy(source.getMusicOverrideSpeedPolicy())
-                .musicOverrideRestorePolicy(source.getMusicOverrideRestorePolicy())
-                .musicOverridePriorityPolicy(
-                        source.getMusicOverridePriorityPolicy())
-                .musicOverrideSfxReleasePolicy(
-                        source.getMusicOverrideSfxReleasePolicy())
-                .musicOverrideDacRestorePolicy(
-                        source.getMusicOverrideDacRestorePolicy())
-                .fadeInChannelPolicy(source.getFadeInChannelPolicy())
-                .pausePolicy(source.getPausePolicy())
-                .sfxRequestTransformPolicy(source.getSfxRequestTransformPolicy())
-                .fadeOutClearsSpeedShoes(source.isFadeOutClearsSpeedShoes())
-                .fadeOutStopsSfxImmediately(source.isFadeOutStopsSfxImmediately())
-                .blocksSfxDuringFadeOut(source.blocksSfxDuringFadeOut())
+                .sfxTrackWalkMode(source.getSfxTrackWalkMode())
+                .fmVolumeVoiceBankMode(source.getFmVolumeVoiceBankMode())
                 .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
-                .ymServiceTimingProfile(source.getYmServiceTimingProfile())
                 .volMode(source.getVolMode())
                 .psgEnvCmd80(source.getPsgEnvCmd80())
                 .noteOnPrevent(source.getNoteOnPrevent())
                 .delayFreq(source.getDelayFreq())
                 .modAlgo(source.getModAlgo())
+                .noteGoingFreqSend(source.getNoteGoingFreqSend())
+                .psgNoteGoingOrder(source.getPsgNoteGoingOrder())
+                .psgEnvRestCmd(source.getPsgEnvRestCmd())
+                .stepModulationAtRest(source.isStepModulationAtRest())
+                .noteResetAliasesModulationState(
+                        source.isNoteResetAliasesModulationState())
+                .fmNoteGoingReturnsAtRest(source.isFmNoteGoingReturnsAtRest())
+                .fadeOutHalt(source.getFadeOutHalt())
+                .fadeDelayCadence(source.getFadeDelayCadence())
+                .tempoWaitPrecedesRequest(source.isTempoWaitPrecedesRequest())
+                .psgSilenceShape(source.getPsgSilenceShape())
+                .psgVolumeTail(source.getPsgVolumeTail())
+                .fadeInRestore(source.getFadeInRestore())
+                .driverOwnedFadeDelay(source.isDriverOwnedFadeDelay())
+                .dacNoteKeysOffFm6AndRestoresFm3(
+                        source.isDacNoteKeysOffFm6AndRestoresFm3())
+                .enableDacOnSequencerStart(
+                        source.isEnableDacOnSequencerStart())
+                .psgFrequencyHighByteNibbleSwap(
+                        source.isPsgFrequencyHighByteNibbleSwap())
+                .specialSfxPsg3SilenceMode(
+                        source.getSpecialSfxPsg3SilenceMode())
+                .sfxWalkPrecedesRequest(source.isSfxWalkPrecedesRequest())
+                .sfxAdmissionKeyOffAndClearsSsgEg(
+                        source.isSfxAdmissionKeyOffAndClearsSsgEg())
+                .trackEndFlagOwnsTheStop(source.isTrackEndFlagOwnsTheStop())
+                .noteFillTail(source.getNoteFillTail())
                 .fadeOutDelay(source.getFadeOutDelay())
                 .fadeOutSteps(source.getFadeOutSteps())
                 .fadeInSteps(source.getFadeInSteps())

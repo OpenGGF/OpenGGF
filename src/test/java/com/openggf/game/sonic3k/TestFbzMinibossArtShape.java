@@ -37,7 +37,7 @@ class TestFbzMinibossArtShape {
             assumeTrue(rom.open(romFile.getPath()));
             List<SpriteMappingFrame> frames = S3kSpriteDataLoader.loadMappingFrames(
                     RomByteReader.fromRom(rom), Sonic3kConstants.MAP_FBZ_MINIBOSS_ADDR, 18);
-            assertArrayEquals(new int[] {4,1,1,2,2,2,2,4,6,6,6,6,6,6,6,6,6,2},
+            assertArrayEquals(new int[] {4, 1, 1, 2, 2, 2, 2, 4, 6, 6, 6, 6, 6, 6, 6, 6, 6, 2},
                     frames.stream().mapToInt(frame -> frame.pieces().size()).toArray());
             assertEquals(0x51, frames.stream().flatMap(frame -> frame.pieces().stream())
                     .mapToInt(piece -> piece.tileIndex() & 0x7FF).max().orElseThrow());

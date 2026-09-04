@@ -2798,7 +2798,7 @@ public final class TraceSessionLauncher {
      * <p>A gap is a gap in the <em>recording</em>, not in the ROM. A run
      * recorder finalizes a level segment on the first frame whose sampled game
      * mode has left the level
-     * ({@code tools/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs}:285-296,
+     * ({@code tools/tracechaser/bizhawk-headless/src/Recording/S1RunCaptureRunner.cs}:285-296,
      * {@code S2RunCaptureRunner.cs}:311), and that frame's level iteration ran:
      * the write that left the level came from inside its own object pass, and
      * the loop tests for it on the very next instruction

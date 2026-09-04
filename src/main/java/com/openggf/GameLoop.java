@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.game.GameOverExit;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugOverlayToggle;
@@ -849,6 +850,10 @@ public class GameLoop {
         return paused || userPaused;
     }
 
+    public boolean externalFrameOrInputOwnerActive() {
+        return ExternalFrameOrInputOwnership.active(engineServices);
+    }
+
     /**
      * Updates audio pause state based on combined pause flags.
      * Audio should be paused if either window or user pause is active.
@@ -1162,6 +1167,12 @@ public class GameLoop {
         }
         Runnable productionIteration = () ->
             lifecycleContext.plcFrameLifecycle().runLogicalIteration(
+                    frame -> {
+                        if (frame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE)) {
+                            LevelFrameStep.dispatchGameVBlank(
+                                    LevelFrameContext.from(lifecycleContext), frame);
+                        }
+                    },
                     resolveFadeManager()::update, frame -> {
                         activePlcLifecycleFrame = frame;
                         try {
@@ -1328,7 +1339,9 @@ public class GameLoop {
             return;
         }
 
-        if (TraceSessionLauncher.admitsRunLogicalGameplayInput(currentGameMode)) {
+        if ((currentGameMode == GameMode.LEVEL
+                || currentGameMode == GameMode.BONUS_STAGE)
+                && TraceSessionLauncher.admitsRunLogicalGameplayInput(currentGameMode)) {
             playbackDebugManager.shouldSkipCurrentGameplayTick();
         }
 
@@ -1510,6 +1523,7 @@ public class GameLoop {
                 liveRewindManager, currentGameMode, this::enterResultsScreen);
     }
 
+
     /**
      * SPECIAL_STAGE_RESULTS per-frame update: advances the results screen and
      * exits when complete. Falls through to the shared post-update tail.
@@ -1541,6 +1555,9 @@ public class GameLoop {
             // belongs to the first frame past the results screen's last
             // sampled row, never to that row itself.
             if (resultsExitPreLevelFadeFramesRemaining < 0) {
+                // Level begins before its counted fade: Sonic 2's loc_3EC4
+                // PlaySound(F9) precedes ClearPLC/Pal_FadeToBlack.
+                levelManager.beginLevelEntry();
                 resultsExitPreLevelFadeFramesRemaining = GameServices.module()
                         .getLevelInitProfile().preLevelFadeOutFrames();
             }
@@ -1682,6 +1699,14 @@ public class GameLoop {
                 startRespawnFade();
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
+                updateNonGameplayAudio(doFrameStep);
+                return false;
+            }
+            GameOverExit gameOverExit = levelManager.consumeGameOverExitRequest();
+            if (gameOverExit != null) {
+                userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
+                GameLoopGameOverExit.startToBlack(gameOverExit, levelManager, audioManager, fadeManager,
+                        resolveGameplayModeContext(), this::returnToTitleScreenFromLevel);
                 updateNonGameplayAudio(doFrameStep);
                 return false;
             }
@@ -1900,7 +1925,7 @@ public class GameLoop {
                 levelIterationAdmission.consumeTransitionFreezeRow(
                         playbackDebugManager,
                         levelManager != null ? levelManager.getObjectManager() : null,
-                        LevelFrameContext.from(gameplayMode));
+                        LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame);
             }
         }
 
@@ -2045,7 +2070,8 @@ public class GameLoop {
                 int vblankTicks = playbackDebugManager.currentSkippedTickVblankAdvanceCount();
                 for (int tick = 0; tick < vblankTicks; tick++) {
                     LevelFrameStep.serviceHardwareVBlankOnly(
-                            LevelFrameContext.from(gameplayMode));
+                            LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame);
+                    // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                     levelManager.getObjectManager().advanceVblaCounter();
                 }
             }
@@ -2071,7 +2097,8 @@ public class GameLoop {
             // when no playback session is active.
             if (levelManager.getObjectManager() != null) {
                 LevelFrameStep.serviceHardwareVBlankOnly(
-                        LevelFrameContext.from(gameplayMode));
+                        LevelFrameContext.from(gameplayMode), activePlcLifecycleFrame);
+                // V-blank-only row: see the exactly-one-tick-per-serviced-V-blank invariant on ObjectManager.vblaCounter.
                 levelManager.getObjectManager().advanceVblaCounter();
             }
             playbackDebugManager.onLevelFrameAdvanced();
@@ -2969,10 +2996,7 @@ public class GameLoop {
         applyTitleCardControlLock(true);
 
         // Play zone music (ROM: Restore_LevelMusic during title card wait)
-        int zoneMusicId = levelManager.getCurrentLevelMusicId();
-        if (zoneMusicId >= 0) {
-            audioManager.playMusic(zoneMusicId);
-        }
+        levelManager.playCurrentLevelMusic();
 
         // Fade from black — level + zone title card become visible together
         fadeManager.startFadeFromBlack(null);
@@ -3477,11 +3501,7 @@ public class GameLoop {
         }
 
         // Start zone music immediately when title card begins (not at the end)
-        int zoneMusicId = levelManager.getCurrentLevelMusicId();
-        if (zoneMusicId >= 0) {
-            audioManager.playMusic(zoneMusicId);
-            LOGGER.fine("Started zone music at title card: 0x" + Integer.toHexString(zoneMusicId));
-        }
+        levelManager.playCurrentLevelMusic();
 
         // Notify listener of mode change
         if (gameModeChangeListener != null) {
@@ -4072,6 +4092,7 @@ public class GameLoop {
 
     private void startLevelFromTitleScreenImmediate() {
         setGameMode(GameMode.LEVEL);
+        GameServices.gameState().startNewGameFromTitle();
         try {
             levelManager.loadZoneAndActForFreshRuntime(0, 0);
         } catch (IOException e) {
@@ -4184,14 +4205,6 @@ public class GameLoop {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
         }
         fadeManager.startFadeFromBlack(null);
-    }
-
-    /**
-     * Transitions from the title screen to the data select screen.
-     * Used as the exitToLevelHandler for S3K title screen.
-     */
-    private void startDataSelectFromTitleScreen() {
-        initializeDataSelectMode();
     }
 
     /**
@@ -4417,6 +4430,7 @@ public class GameLoop {
             // Reset level select manager
             levelSelect.reset();
 
+            GameServices.gameState().startNewGameFromTitle(); // S1 LevSel_Level -> PlayLevel (sonic.asm:2270-2283)
             // Fade out level select music
             audioManager.fadeOutMusic();
 
@@ -4475,6 +4489,13 @@ public class GameLoop {
     }
 
     // ==================== Level Transition Methods with Fade ====================
+
+    /** Shared by the ending and the GAME OVER card: black screen to title screen. */
+    private void returnToTitleScreenFromLevel() {
+        GameLoopGameOverExit.exitToTitleScreen(spriteManager, levelManager, camera,
+                () -> setGameMode(GameMode.TITLE_SCREEN), getTitleScreenProviderLazy(),
+                fadeManager, resolveGameplayModeContext());
+    }
 
     /**
      * Starts the fade-to-black transition for death respawn.
@@ -4930,6 +4951,9 @@ public class GameLoop {
                 levelEvents.updateAfterCameraBoundaryEasing();
             }
             levelManager.postCameraObjectPlacementSync();
+            // The ending cutscene drives LevelManager directly rather than
+            // through LevelFrameStep, which now owns the loop-top increment.
+            levelManager.advanceLevelFrameCounter();
             levelManager.update();
             levelManager.refreshObjectPostCameraRenderState();
         }
@@ -5098,26 +5122,8 @@ public class GameLoop {
      */
     private void exitEndingToTitleScreen() {
         LOGGER.info("Ending sequence complete, returning to title screen");
-
-        // Clean up any remaining demo state
-        spriteManager.setInputSuppressed(false);
-        levelManager.setForceHudSuppressed(false);
-        String mainCode = resolveMainCharacterCode();
-        var sprite = spriteManager.getSprite(mainCode);
-        if (sprite instanceof AbstractPlayableSprite player) {
-            player.setControlLocked(false);
-            player.clearForcedInputMask();
-        }
-
-        audioManager.fadeOutMusic();
-
-        FadeManager fadeManager = this.fadeManager;
-        if (!fadeManager.isActive()) {
-            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
-                    this::doExitEndingToTitleScreen);
-        } else {
-            doExitEndingToTitleScreen();
-        }
+        GameLoopGameOverExit.startEndingReturn(spriteManager, levelManager, resolveMainCharacterCode(),
+                audioManager, fadeManager, resolveGameplayModeContext(), this::doExitEndingToTitleScreen);
     }
 
     /**
@@ -5125,18 +5131,7 @@ public class GameLoop {
      */
     private void doExitEndingToTitleScreen() {
         endingProvider = null;
-
-        camera.setX((short) 0);
-        camera.setY((short) 0);
-
-        setGameMode(GameMode.TITLE_SCREEN);
-
-        TitleScreenProvider titleScreen = getTitleScreenProviderLazy();
-        if (titleScreen != null) {
-            titleScreen.initialize();
-        }
-
-        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        returnToTitleScreenFromLevel();
         LOGGER.info("Ending -> Title Screen");
     }
 

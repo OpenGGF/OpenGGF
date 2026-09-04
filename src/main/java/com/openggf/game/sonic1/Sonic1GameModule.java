@@ -4,6 +4,7 @@ import com.openggf.audio.GameAudioProfile;
 import com.openggf.data.Game;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
+import com.openggf.game.GameOverFlowProvider;
 import com.openggf.game.sonic1.audio.Sonic1AudioProfile;
 import com.openggf.game.sonic1.events.Sonic1LevelEventManager;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
@@ -195,6 +196,13 @@ public class Sonic1GameModule implements GameModule {
         return new LevelGamestate();
     }
 
+    private final GameOverFlowProvider gameOverFlowProvider = new Sonic1GameOverFlowProvider();
+
+    @Override
+    public GameOverFlowProvider getGameOverFlowProvider() {
+        return gameOverFlowProvider;
+    }
+
     @Override
     public TitleCardProvider getTitleCardProvider() {
         return titleCardProvider;
@@ -328,6 +336,13 @@ public class Sonic1GameModule implements GameModule {
     @Override
     public void resetModuleScopedState() {
         plcService = null;
+    }
+
+    @Override
+    public java.util.function.BiFunction<Integer, Integer,
+            com.openggf.level.objects.AbstractObjectInstance> getWaterSplashFactory() {
+        // S1 LZ splash art from ObjectRenderManager (Object 0x08).
+        return com.openggf.game.sonic1.objects.Sonic1SplashObjectInstance::new;
     }
 
     @Override

@@ -23,7 +23,7 @@
 __pycache__/
 
 # IDE temporary
-.idea/shelf/
+.idea/
 
 # Archives
 *.7z
@@ -44,6 +44,10 @@ stable-retro-*.zip
 
 # Debug tools (uncompiled standalone scripts)
 tools/*
+!tools/tracechaser-bootstrap.sh
+!tools/tracechaser-forward.lua
+!tools/tracechaser.ps1
+!tools/tracechaser.sh
 !tools/audio/
 !tools/audio/run_s1_audio_parity.sh
 !tools/audio/lib/
@@ -51,12 +55,17 @@ tools/*
 !tools/testing/**
 /.openggf/test-runs/
 !tools/audio/lib/s1_audio_parity_protocol.sh
+!tools/audio/nuked-opn2/
+!tools/audio/nuked-opn2/**
 !tools/bizhawk/
 !tools/retro/
 !tools/traces/
 !tools/traces/s1_credits_raw_evidence.py
 !tools/traces/build_s1_credits_raw_host_evidence.py
 !tools/traces/no_replace_output.py
+
+# Windows Explorer folder metadata
+desktop.ini
 
 # Screenshots (keep locally)
 docs/screenshots/
@@ -84,12 +93,9 @@ dist/
 docs/clownacy/
 docs/gensplusgx/
 docs/lz_comp2/
-/docs/s1disasm
-/docs/s2disasm
 /docs/kis2disasm
 /docs/scddisasm
 docs/s2ssedit-0.2.0/
-/docs/skdisasm
 docs/SMPS-rips/
 docs/SMPS_Research_Pack/
 docs/SCHG_*.htm
@@ -101,6 +107,9 @@ target/trace-reports/
 # Capture output and any sidecar/backup capture directory. Payloads here are
 # uncompressed and enormous; validate-policy rejects them at commit time.
 tools/bizhawk/trace_output*/
+
+# LWJGL native extraction directory accidentally staged once; never track it
+/.tmpdir/
 
 # Windows NUL redirect artifact created when a `> NUL` runs on a POSIX shell
 tools/bizhawk/NUL

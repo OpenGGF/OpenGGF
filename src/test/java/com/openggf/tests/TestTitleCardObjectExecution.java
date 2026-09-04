@@ -81,7 +81,6 @@ class TestTitleCardObjectExecution {
     @AfterEach
     void cleanup() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
         RomManager.getInstance().setRom(null);
         SonicConfigurationService.getInstance().resetToDefaults();

@@ -30,7 +30,7 @@ public final class FbzVisualStateProbe {
     private FbzVisualStateProbe() {
     }
 
-    public static Snapshot captureRuntime() {
+    public static Snapshot captureVisualState() {
         return capture(new GameServicesRuntimeView());
     }
 
@@ -118,7 +118,6 @@ public final class FbzVisualStateProbe {
             values.put("fade_frame_count", fade.getFrameCount());
             var config = GameServices.configuration();
             boolean overlaysDisabled = !config.getBoolean(SonicConfiguration.DEBUG_VIEW_ENABLED)
-                    && !config.getBoolean(SonicConfiguration.DEBUG_COLLISION_VIEW_ENABLED)
                     && !config.getBoolean(SonicConfiguration.EDITOR_ENABLED)
                     && !config.getBoolean(SonicConfiguration.TEST_MODE_ENABLED)
                     && !config.getBoolean(SonicConfiguration.LIVE_REWIND_ENABLED);

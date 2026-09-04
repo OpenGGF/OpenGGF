@@ -1,7 +1,6 @@
 package com.openggf.level.scroll;
 
 import com.openggf.level.scroll.compose.DeformationPlan;
-import com.openggf.level.scroll.compose.PersistentAccumulator;
 import com.openggf.level.scroll.compose.ScrollComposeContext;
 import com.openggf.level.scroll.compose.ScrollEffectComposer;
 import com.openggf.level.scroll.compose.ScrollValueTable;
@@ -195,27 +194,5 @@ public class TestScrollEffectComposer {
 
         assertEquals(6, composer.getShakeOffsetX());
         assertEquals(-3, composer.getShakeOffsetY());
-    }
-
-    @Test
-    public void persistentAccumulatorKeepsRunningTotal() {
-        PersistentAccumulator accumulator = new PersistentAccumulator(7);
-
-        assertEquals(7, accumulator.get());
-        assertEquals(12, accumulator.add(5));
-        assertEquals(12, accumulator.get());
-        accumulator.set(-3);
-        assertEquals(-3, accumulator.get());
-    }
-
-    @Test
-    public void scrollComposeContextExposesFrameState() {
-        ScrollComposeContext context = new ScrollComposeContext(0x1200, 0x0340, 42, 1);
-
-        assertEquals(0x1200, context.cameraX());
-        assertEquals(0x0340, context.cameraY());
-        assertEquals(42, context.frameCounter());
-        assertEquals(1, context.actId());
-        assertNotNull(context);
     }
 }

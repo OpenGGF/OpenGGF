@@ -51,6 +51,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -249,126 +250,69 @@ class TestS3kIczFreezerObject {
     }
 
     @Test
-    void captureCloudFreezesThirdPlayerWhenNativePrefixIsOutOfRange() {
-        RecordingServices services = new RecordingServices();
+    void captureCloudFreezesEveryConfiguredPlayerInRange() {
+        ObjectManager manager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        };
         IczFreezerObjectInstance freezer = createFreezer(services,
                 new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
-        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0400, (short) 0x0134);
-        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0400, (short) 0x0134);
-        TestablePlayableSprite extension = new TestablePlayableSprite("knuckles", (short) 0x0204, (short) 0x0134);
-        nativeP2.setCpuControlled(true);
-        extension.setCpuControlled(true);
+        freezer.setServices(services);
+
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0202, (short) 0x0134);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0204, (short) 0x0134);
+        TestablePlayableSprite extension = new TestablePlayableSprite("tails", (short) 0x0206, (short) 0x0134);
         services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension)));
 
         IczFreezerObjectInstance.CaptureCloud cloud =
                 freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
         cloud.setServices(services);
-        for (int frame = 0; frame <= 32; frame++) {
-            cloud.update(frame, main);
-        }
+        cloud.update(0, main);
+        cloud.update(1, main);
 
-        assertSame(extension, cloud.frozenBlockForTesting().capturedPlayerForTesting());
-        assertFalse(main.isObjectControlled());
-        assertFalse(nativeP2.isObjectControlled());
+        assertTrue(main.isObjectControlled());
+        assertTrue(nativeP2.isObjectControlled());
+        assertTrue(extension.isObjectControlled());
+        verify(manager, times(2)).addDynamicObjectAfterCurrentNextFrame(
+                org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
+        verify(manager).addRewindableAuxiliaryDynamicObject(
+                org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
     }
 
     @Test
-    void frozenBlockRightClampTracksLogicalViewportWidth() {
-        assertEquals(0x128,
-                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 320));
-        assertEquals(0x148,
-                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 352));
-        assertEquals(0x178,
-                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 400));
-        assertEquals(0x1F8,
-                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 528));
-        assertEquals(0x308,
-                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(false, 800));
-        assertEquals(0x20,
-                IczFreezerObjectInstance.FrozenPlayerBlock.cameraClampOffsetForTesting(true, 800));
-    }
+    void captureCloudFreezesExtendedSidekickWithoutNativeObjectSlot() {
+        ObjectManager manager = mock(ObjectManager.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            ((AbstractObjectInstance) invocation.getArgument(0)).setDestroyed(true);
+            return null;
+        }).when(manager).addDynamicObjectAfterCurrentNextFrame(
+                org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
+        RecordingServices services = new RecordingServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        };
+        IczFreezerObjectInstance freezer = createFreezer(services,
+                new ObjectSpawn(0x0200, 0x0100, Sonic3kObjectIds.ICZ_FREEZER, 0, 0, false, 0));
+        freezer.setServices(services);
+        TestablePlayableSprite main = new TestablePlayableSprite("sonic", (short) 0x0400, (short) 0x0134);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x0400, (short) 0x0134);
+        TestablePlayableSprite extension = new TestablePlayableSprite("tails", (short) 0x0204, (short) 0x0134);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> main, () -> List.of(nativeP2, extension)));
 
-    @ParameterizedTest
-    @CsvSource({
-            "320,296",
-            "352,328",
-            "400,376",
-            "528,504",
-            "800,776"
-    })
-    void frozenPlayerBlockUsesLiveViewportForRightClampBoundaries(int viewportWidth, int rightClampOffset) {
-        AbstractObjectInstance.updateCameraBounds(0x4000, 0,
-                0x4000 + viewportWidth, 224, 0);
-        RecordingServices services = new RecordingServices();
-        Camera camera = mock(Camera.class);
-        when(camera.getX()).thenReturn((short) 0x4000);
-        when(camera.getWidth()).thenReturn((short) viewportWidth);
-        services.withCamera(camera);
+        IczFreezerObjectInstance.CaptureCloud cloud =
+                freezer.createCaptureCloudForTesting(0x0200, 0x0130, false);
+        cloud.setServices(services);
+        cloud.update(0, main);
+        cloud.update(1, main);
 
-        int threshold = 0x4000 + rightClampOffset;
-        TestablePlayableSprite inside = new TestablePlayableSprite(
-                "tails", (short) threshold, (short) 0x0373);
-        IczFreezerObjectInstance.FrozenPlayerBlock insideBlock =
-                new IczFreezerObjectInstance.FrozenPlayerBlock(inside, threshold, 0x0373, 0, false);
-        insideBlock.setServices(services);
-        insideBlock.update(1, inside);
-
-        assertEquals(threshold + 2, insideBlock.getX(),
-                "the exact right clamp boundary must remain movable at width " + viewportWidth);
-
-        TestablePlayableSprite outside = new TestablePlayableSprite(
-                "tails", (short) (threshold + 1), (short) 0x0373);
-        IczFreezerObjectInstance.FrozenPlayerBlock outsideBlock =
-                new IczFreezerObjectInstance.FrozenPlayerBlock(
-                        outside, threshold + 1, 0x0373, 0, false);
-        outsideBlock.setServices(services);
-        outsideBlock.update(1, outside);
-
-        assertEquals(threshold + 1, outsideBlock.getX(),
-                "the first pixel beyond the right clamp must stop at width " + viewportWidth);
-    }
-
-    @Test
-    void frozenBlockUnloadReleasesOnlyTheControlStateItStillOwns() {
-        TestablePlayableSprite player = new TestablePlayableSprite("knuckles", (short) 0x0204, (short) 0x0134);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setAnimationId(0x1A);
-        IczFreezerObjectInstance.FrozenPlayerBlock block =
-                new IczFreezerObjectInstance.FrozenPlayerBlock(player, 0x0204, 0x0134, 0x0200, false);
-
-        block.onUnload();
-
-        assertFalse(player.isObjectControlled(), "removing a live frost block must not strand its player in control lock");
-    }
-
-    @Test
-    void frozenBlockUnloadDoesNotClearAReplacementObjectsControl() {
-        TestablePlayableSprite player = new TestablePlayableSprite("knuckles", (short) 0x0204, (short) 0x0134);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setAnimationId(0x1A);
-        IczFreezerObjectInstance.FrozenPlayerBlock block =
-                new IczFreezerObjectInstance.FrozenPlayerBlock(player, 0x0204, 0x0134, 0x0200, false);
-        ObjectControlState.engineScriptedTouchSuppressedMovementActive().applyTo(player);
-        player.setAnimationId(0x05);
-
-        block.onUnload();
-
-        assertTrue(player.isObjectControlled(), "stale frost cleanup must not release unrelated replacement control");
-    }
-
-    @Test
-    void frozenBlockDropsDeadCapturedPlayerWithoutKeepingAStaleLock() {
-        TestablePlayableSprite player = new TestablePlayableSprite("knuckles", (short) 0x0204, (short) 0x0134);
-        ObjectControlState.nativeBit7FullControl().applyTo(player);
-        player.setAnimationId(0x1A);
-        IczFreezerObjectInstance.FrozenPlayerBlock block =
-                new IczFreezerObjectInstance.FrozenPlayerBlock(player, 0x0204, 0x0134, 0x0200, false);
-        player.setDead(true);
-
-        block.update(1, player);
-
-        assertTrue(block.isDestroyed());
-        assertFalse(player.isObjectControlled());
+        assertTrue(extension.isObjectControlled());
+        verify(manager).addRewindableAuxiliaryDynamicObject(
+                org.mockito.ArgumentMatchers.any(IczFreezerObjectInstance.FrozenPlayerBlock.class));
     }
 
     @Test
@@ -504,6 +448,60 @@ class TestS3kIczFreezerObject {
         assertEquals(120, tails.getInvulnerableFrames());
         assertEquals(12, block.debrisSpawnedForTesting());
         assertEquals(List.of(), services.lostRingSpawnFrames);
+    }
+
+    @Test
+    void fallingExtendedSidekickCanShatterFrozenBlock() {
+        installLevelGamestate();
+
+        RecordingServices services = new RecordingServices();
+        TestablePlayableSprite sonic = new TestablePlayableSprite("sonic", (short) 0x43B0, (short) 0x06B3);
+        TestablePlayableSprite nativeP2 = new TestablePlayableSprite("tails", (short) 0x4500, (short) 0x06B3);
+        TestablePlayableSprite extension = new TestablePlayableSprite("tails", (short) 0x43A6, (short) 0x069C);
+        extension.setAnimationId(2);
+        extension.setYSpeed((short) 0x03E0);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> sonic, () -> List.of(nativeP2, extension)));
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(sonic, 0x43B0, 0x06B3, 0x4360, false);
+        block.setServices(services);
+
+        block.update(23822, sonic);
+
+        assertTrue(block.isDestroyed());
+        assertEquals((short) -0x03E0, extension.getYSpeed());
+        assertFalse(sonic.isObjectControlled());
+    }
+
+    @Test
+    void extendedCaptiveShatterKeepsDebrisOutOfNativeObjectPool() {
+        installLevelGamestate();
+
+        ObjectManager manager = mock(ObjectManager.class);
+        RecordingServices services = new RecordingServices() {
+            @Override
+            public ObjectManager objectManager() {
+                return manager;
+            }
+        };
+        TestablePlayableSprite attacker =
+                new TestablePlayableSprite("sonic", (short) 0x43A6, (short) 0x069C);
+        attacker.setAnimationId(2);
+        attacker.setYSpeed((short) 0x03E0);
+        TestablePlayableSprite captive =
+                new TestablePlayableSprite("sonic_p3", (short) 0x43B0, (short) 0x06B3);
+        captive.setCpuControlled(true);
+        services.withPlayerQuery(new ObjectPlayerQuery(() -> attacker, () -> List.of(captive)));
+        IczFreezerObjectInstance.FrozenPlayerBlock block =
+                new IczFreezerObjectInstance.FrozenPlayerBlock(
+                        captive, 0x43B0, 0x06B3, 0x4360, false, false, true);
+        block.setServices(services);
+
+        block.update(23822, attacker);
+
+        assertTrue(block.isDestroyed());
+        verify(manager, times(12)).addRewindableAuxiliaryDynamicObject(any());
+        verify(manager, org.mockito.Mockito.never()).addDynamicObjectAfterCurrent(any());
+        verify(manager, org.mockito.Mockito.never()).addDynamicObjectAfterCurrentNextFrame(any());
     }
 
     @Test

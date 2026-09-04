@@ -1,7 +1,7 @@
 package com.openggf.tests;
 
 import org.junit.jupiter.api.Test;
-import com.openggf.tools.SaxmanDecompressor;
+import com.openggf.data.compression.SaxmanDecompressor;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TestSaxmanDecompressor {

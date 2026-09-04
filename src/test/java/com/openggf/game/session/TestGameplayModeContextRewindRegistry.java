@@ -151,6 +151,7 @@ class TestGameplayModeContextRewindRegistry {
                 HardwareTimingService.REWIND_KEY,
                 DynamicArtLifecycleService.REWIND_KEY,
                 ctx.seamlessTransitionResourceHandoffs().key(),
+                com.openggf.game.sonic2.timing.Sonic2LevelMusicScheduler.REWIND_KEY,
                 "solid-execution");
         assertTrue(snapshot.entries().keySet().containsAll(expectedKeys),
                 "Expected all atomic adapter keys to be present, got: " + snapshot.entries().keySet());

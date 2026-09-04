@@ -1,5 +1,9 @@
 package com.openggf.audio.presentation;
 
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsLoadReadiness;
+
 public interface AudioPresentationDependencyResolver {
     interface DiagnosticTransaction {
         DiagnosticTransaction NONE = new DiagnosticTransaction() {
@@ -32,7 +36,15 @@ public interface AudioPresentationDependencyResolver {
 
     DecodedPcm resolvePcm(String assetId);
 
-    SmpsCompositeVoice recreateSmps(PresentationVoiceSnapshot.Smps snapshot);
+    default DacData resolveDac(SmpsSourceDescriptor source) {
+        throw new IllegalStateException(
+                "no cached DAC dependency for " + source);
+    }
+
+    default SmpsLoadReadiness resolveSmpsLoadReadiness(
+            SmpsSourceDescriptor source) {
+        return SmpsLoadReadiness.immediatePlan();
+    }
 
     /**
      * Rebuilds a creator-supplied streamed override. Only a live installed
@@ -57,13 +69,8 @@ public interface AudioPresentationDependencyResolver {
         if (descriptor instanceof AudioPresentationCommand.StreamedVoiceDescriptor streamed) {
             return recreateStreamed(streamed.snapshot());
         }
-        return recreateSmps(
-                (AudioPresentationCommand.SmpsVoiceDescriptor) descriptor);
+        throw new IllegalArgumentException(
+                "SMPS voices are recreated by the session owner");
     }
 
-    default SmpsCompositeVoice recreateSmps(
-            AudioPresentationCommand.SmpsVoiceDescriptor descriptor) {
-        throw new IllegalStateException(
-                "no cached SMPS music for " + descriptor.sourceDescriptor());
-    }
 }

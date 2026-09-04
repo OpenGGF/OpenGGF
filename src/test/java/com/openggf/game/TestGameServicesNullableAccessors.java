@@ -12,13 +12,12 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestGameServicesNullableAccessors {
     @BeforeEach void setUp() { TestEnvironment.resetAll(); }
-    @AfterEach void tearDown() { SessionManager.clear(); SessionManager.clear(); }
+    @AfterEach void tearDown() { SessionManager.clear(); }
 
     @Test
     void nullableAccessorsReturnNullWithoutGameplayMode() {
         // Post-migration: GameServices accessors resolve through the gameplay
         // mode context, so clearing the session is required.
-        SessionManager.clear();
         SessionManager.clear();
         assertFalse(GameServices.hasRuntime());
         assertNull(GameServices.cameraOrNull());
@@ -65,7 +64,6 @@ class TestGameServicesNullableAccessors {
     @Test
     void strictAccessorsStillThrowWithoutGameplayMode() {
         SessionManager.clear();
-        SessionManager.clear();
         assertThrows(IllegalStateException.class, GameServices::camera);
         assertThrows(IllegalStateException.class, GameServices::level);
         assertThrows(IllegalStateException.class, GameServices::gameState);
@@ -94,7 +92,6 @@ class TestGameServicesNullableAccessors {
     void hasRuntimeAgreesWithGameplayModeAcrossLifecycle() {
         // 1. No gameplay mode, no session.
         SessionManager.clear();
-        SessionManager.clear();
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
                 "no-gameplay-mode: hasRuntime() must match gameplay mode availability");
         assertFalse(GameServices.hasRuntime());
@@ -120,7 +117,6 @@ class TestGameServicesNullableAccessors {
         assertTrue(GameServices.hasRuntime(), "post-resume: gameplay should be active");
 
         // 5. Fully torn down.
-        SessionManager.clear();
         SessionManager.clear();
         assertEquals(GameServices.cameraOrNull() != null, GameServices.hasRuntime(),
                 "post-destroy: hasRuntime() must match gameplay mode availability");

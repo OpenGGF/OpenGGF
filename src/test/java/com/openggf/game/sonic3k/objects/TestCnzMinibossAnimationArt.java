@@ -249,7 +249,11 @@ class TestCnzMinibossAnimationArt {
 
         transition.update(0, null);
 
-        verify(harness.audioManager()).fadeOutMusic(0x28, 6);
+        // cmd_FadeOut carries no parameters of its own; the S3K profile owns
+        // 28h/6 (Sound/Z80 Sound Driver.asm:2306-2311) and
+        // TestGameFadeOutParameters pins that the no-argument fade resolves to
+        // them for S3K and to the S1/S2 values for the other two games.
+        verify(harness.audioManager()).fadeOutMusic();
         for (int frame = 1; frame < 120; frame++) {
             transition.update(frame, null);
         }

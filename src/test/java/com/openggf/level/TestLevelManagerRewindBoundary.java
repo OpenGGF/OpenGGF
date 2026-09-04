@@ -24,7 +24,7 @@ class TestLevelManagerRewindBoundary {
         AtomicReference<RewindBoundary> boundary = new AtomicReference<>();
         context.setRewindBoundaryReporter(boundary::set);
 
-        LevelRewindBoundaryCoordinator.markLevelLoadBoundary();
+        LevelManager.markRewindLevelLoadBoundary();
 
         assertEquals(RewindBoundary.LEVEL_LOAD, boundary.get());
     }

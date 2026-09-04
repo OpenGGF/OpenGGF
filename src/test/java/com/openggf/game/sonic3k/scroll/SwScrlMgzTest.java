@@ -32,7 +32,6 @@ public class SwScrlMgzTest {
     void setUpRuntime() {
         previousModule = GameModuleRegistry.getCurrent();
         SessionManager.clear();
-        SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
@@ -40,7 +39,6 @@ public class SwScrlMgzTest {
 
     @AfterEach
     void tearDownRuntime() {
-        SessionManager.clear();
         SessionManager.clear();
         if (previousModule != null) {
             GameModuleRegistry.setCurrent(previousModule);
@@ -172,8 +170,8 @@ public class SwScrlMgzTest {
         handler.update(hScroll, 0x1200, 0x0200, 1, 1);
 
         assertEquals(0, handler.getShakeOffsetY());
-        assertEquals(0x1200, handler.getBgCameraX(),
-                "MGZ handler init should clear event-owned BG camera overrides between level loads");
+        assertEquals(0, handler.getBgCameraX(),
+                "MGZ2 normal deformation clears Camera_X_pos_BG_copy after level re-entry");
         assertEquals(96, handler.getVscrollFactorBG(),
                 "MGZ handler init should clear BG rise overrides between level loads");
     }
@@ -219,6 +217,19 @@ public class SwScrlMgzTest {
     }
 
     @Test
+    public void bossBgScrollOffsetKeepsRomZeroBackgroundCameraCopy() {
+        SwScrlMgz handler = new SwScrlMgz();
+        int[] hScroll = new int[224];
+
+        handler.setBossBgScrollOffset(0x3D80);
+        handler.update(hScroll, 0x3C80, 0x0600, 1, 1);
+
+        assertEquals(0, handler.getBgCameraX(),
+                "ROM loc_23D24C substitutes Events_bg+$0C only for HScroll_table math; "
+                        + "loc_23D220 keeps Camera_X_pos_BG_copy cleared for the boss sky");
+    }
+
+    @Test
     public void act2StateEightKeepsVdpSizedBgPeriod() {
         SwScrlMgz handler = new SwScrlMgz();
         int[] rising = new int[224];
@@ -238,6 +249,7 @@ public class SwScrlMgzTest {
         handler.setBgRiseState(8, 0x200);
         handler.setScreenShakeOffset(3);
         handler.update(rising, 0x3500, 0x0850, 1, 1);
+        handler.update(rising, 0x3500, 0x0850, 2, 1);
 
         assertEquals(0, handler.getShakeOffsetY(),
                 "The sample prepared at the background-event tail is not visible until the next frame");
@@ -257,6 +269,10 @@ public class SwScrlMgzTest {
         handler.setScreenShakeOffset(3);
         handler.setScreenShakeOffset(0);
         handler.update(rising, 0x3500, 0x0850, 1, 1);
+        assertEquals(0, handler.getShakeOffsetY(),
+                "ShakeScreen_Setup should publish its newly computed offset on the next frame");
+
+        handler.update(rising, 0x3500, 0x0850, 2, 1);
 
         assertEquals(0, handler.getShakeOffsetY(),
                 "The current frame publishes the sample prepared by the preceding background-event pass");

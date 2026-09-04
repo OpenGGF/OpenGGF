@@ -23,7 +23,7 @@ public final class FbzGameServicesFixturePort implements FbzVisualFixturePort {
 
     @Override
     public FbzVisualStateProbe.Snapshot snapshot() {
-        return FbzVisualStateProbe.captureRuntime();
+        return FbzVisualStateProbe.captureVisualState();
     }
 
     @Override

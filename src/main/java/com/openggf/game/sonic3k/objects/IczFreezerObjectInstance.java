@@ -65,6 +65,8 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
     private static final int JET_PHASE_FRAMES = 0x40;
     private static final int FROST_PUFF_INTERVAL = 1;
     private static final int CAPTURE_CLOUD_OFFSET = 0x30;
+    // sub_8A9C6 scans the ROM's fixed P1/P2 pair; engine sidekicks extend the
+    // mechanically identical P2 interaction without disturbing that prefix.
     private static final ObjectPlayerParticipationPolicy PLAYER_PARTICIPATION =
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED;
 
@@ -422,12 +424,17 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
                     () -> playerEntity,
                     () -> serviceQuery != null ? serviceQuery.sidekicks() : List.of());
 
-            for (PlayableEntity participant : query.playersFor(PLAYER_PARTICIPATION)) {
+            boolean capturedAny = false;
+            List<PlayableEntity> participants = query.playersFor(PLAYER_PARTICIPATION);
+            for (int index = 0; index < participants.size(); index++) {
+                PlayableEntity participant = participants.get(index);
                 AbstractPlayableSprite player = participant instanceof AbstractPlayableSprite sprite ? sprite : null;
                 if (canCapture(player)) {
-                    capture(player);
-                    return;
+                    capturedAny |= capture(player, index >= 2);
                 }
+            }
+            if (capturedAny) {
+                setDestroyed(true);
             }
         }
 
@@ -445,9 +452,29 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
                     && dy >= CAPTURE_MIN_Y && dy < CAPTURE_MAX_Y;
         }
 
-        private void capture(AbstractPlayableSprite player) {
+        private boolean capture(AbstractPlayableSprite player, boolean engineSidekickExtension) {
             int capturedX = player.getCentreX();
             int capturedY = player.getCentreY();
+            if (engineSidekickExtension) {
+                // Extra engine participants have no native player/SST pair.
+                // Their gameplay block must not compete with native objects,
+                // but it remains rewind-owned because it controls release.
+                FrozenPlayerBlock block = new FrozenPlayerBlock(
+                        player, capturedX, capturedY, parent.x, hFlip, false, true);
+                services().objectManager().addRewindableAuxiliaryDynamicObject(block);
+                applyCaptureState(player, capturedX, capturedY);
+                retainFirstFrozenBlock(block);
+                return true;
+            }
+
+            applyCaptureState(player, capturedX, capturedY);
+            FrozenPlayerBlock block = spawnChild(
+                    () -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
+            retainFirstFrozenBlock(block);
+            return true;
+        }
+
+        private void applyCaptureState(AbstractPlayableSprite player, int capturedX, int capturedY) {
             ObjectControlState.nativeBit7FullControl().applyTo(player);
             player.setAir(true);
             player.setXSpeed((short) 0);
@@ -456,9 +483,12 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             player.setAnimationId(0x1A);
             NativePositionOps.writeXPosPreserveSubpixel(player, capturedX);
             NativePositionOps.writeYPosPreserveSubpixel(player, capturedY);
+        }
 
-            frozenBlock = spawnChild(() -> new FrozenPlayerBlock(player, capturedX, capturedY, parent.x, hFlip));
-            setDestroyed(true);
+        private void retainFirstFrozenBlock(FrozenPlayerBlock block) {
+            if (!block.isDestroyed() && frozenBlock == null) {
+                frozenBlock = block;
+            }
         }
 
         @Override
@@ -513,20 +543,28 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
         private int breakTimer = BREAK_TIMER;
         private boolean landedOnTerrain;
         private boolean nativeInitPassPending;
+        private boolean engineSidekickExtension;
 
         public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
                 int parentX, boolean hFlip) {
-            this(capturedPlayer, capturedX, capturedY, parentX, hFlip, false);
+            this(capturedPlayer, capturedX, capturedY, parentX, hFlip, false, false);
         }
 
         public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
                 int parentX, boolean hFlip, boolean nativeInitPassPending) {
+            this(capturedPlayer, capturedX, capturedY, parentX, hFlip, nativeInitPassPending, false);
+        }
+
+        public FrozenPlayerBlock(AbstractPlayableSprite capturedPlayer, int capturedX, int capturedY,
+                int parentX, boolean hFlip, boolean nativeInitPassPending,
+                boolean engineSidekickExtension) {
             super(new ObjectSpawn(capturedX, capturedY, OBJECT_ID, 0, hFlip ? 1 : 0, false, capturedY),
                     "ICZFreezerFrozenPlayer");
             this.capturedPlayer = capturedPlayer;
             int xSpeed = capturedX >= parentX ? INITIAL_X_SPEED : -INITIAL_X_SPEED;
             this.motion = new SubpixelMotion.State(capturedX, capturedY, 0, 0, xSpeed, INITIAL_Y_SPEED);
             this.nativeInitPassPending = nativeInitPassPending;
+            this.engineSidekickExtension = engineSidekickExtension;
         }
 
         private FrozenPlayerBlock(ObjectSpawn spawn) {
@@ -534,6 +572,7 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             this.capturedPlayer = null;
             this.motion = new SubpixelMotion.State(spawn.x(), spawn.y(), 0, 0, 0, INITIAL_Y_SPEED);
             this.nativeInitPassPending = false;
+            this.engineSidekickExtension = false;
         }
 
         @Override
@@ -585,12 +624,13 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
 
         /**
          * ROM {@code sub_8AA38}: the non-captured native player can shatter the
-         * block while falling in a roll or spin-dash animation. The successful
-         * contact reflects that player's vertical velocity before releasing the
-         * captured player without running the timer-expiry hurt path.
+         * block while falling in a roll or spin-dash animation. Engine sidekicks
+         * extend that mechanically identical P2 interaction. The successful contact
+         * reflects that player's vertical velocity before releasing the captured
+         * player without running the timer-expiry hurt path.
          */
         private boolean tryBreakFromOtherPlayer(PlayableEntity updatePlayer) {
-            for (PlayableEntity candidate : nativePlayers(updatePlayer)) {
+            for (PlayableEntity candidate : captureParticipants(updatePlayer)) {
                 if (!(candidate instanceof AbstractPlayableSprite attacker)
                         || attacker == capturedPlayer
                         || attacker.isObjectControlled()
@@ -612,13 +652,14 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             return false;
         }
 
-        private List<PlayableEntity> nativePlayers(PlayableEntity updatePlayer) {
+        private List<PlayableEntity> captureParticipants(PlayableEntity updatePlayer) {
             ObjectServices services = tryServices();
             if (services != null) {
                 try {
                     ObjectPlayerQuery query = services.playerQuery();
                     if (query != null) {
-                        return query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
+                        return query.playersFor(
+                                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
                     }
                 } catch (RuntimeException ignored) {
                     // Lightweight object tests may not install a participation query.
@@ -726,8 +767,15 @@ public class IczFreezerObjectInstance extends AbstractObjectInstance
             for (int i = 0; i < DEBRIS_COUNT; i++) {
                 int[] velocity = VELOCITY_INDEX[i];
                 int debrisSubtype = i * 2;
-                IceDebris child = spawnChild(() -> new IceDebris(getX(), getY(), debrisSubtype,
-                        velocity[0], velocity[1]));
+                IceDebris child;
+                if (engineSidekickExtension) {
+                    child = new IceDebris(
+                            getX(), getY(), debrisSubtype, velocity[0], velocity[1]);
+                    services().objectManager().addRewindableAuxiliaryDynamicObject(child);
+                } else {
+                    child = spawnChild(() -> new IceDebris(
+                            getX(), getY(), debrisSubtype, velocity[0], velocity[1]));
+                }
                 debris.add(child);
             }
         }

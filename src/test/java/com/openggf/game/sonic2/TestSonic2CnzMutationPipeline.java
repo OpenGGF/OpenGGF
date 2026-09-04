@@ -43,7 +43,6 @@ class TestSonic2CnzMutationPipeline {
     void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();
@@ -52,7 +51,6 @@ class TestSonic2CnzMutationPipeline {
     @AfterEach
     void tearDown() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }

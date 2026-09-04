@@ -21,7 +21,7 @@ is the long-form companion that documents every layer.
    - 3.2 [`s1_trace_recorder.lua`](#32-s1_trace_recorderlua)
    - 3.3 [`s2_trace_recorder.lua`](#33-s2_trace_recorderlua)
    - 3.4 [`s3k_trace_recorder.lua`](#34-s3k_trace_recorderlua)
-   - 3.5 [`s1_credits_trace_recorder.lua`](#35-s1_credits_trace_recorderlua)
+   - 3.5 [`s1_credits_trace_recorder.lua` (removed)](#35-s1_credits_trace_recorderlua-removed)
    - 3.6 [Diagnostic/debug Lua scripts](#36-diagnosticdebug-lua-scripts)
    - 3.7 [Batch launchers](#37-batch-launchers)
 4. [Part II — Recording: stable-retro Python](#4-part-ii--recording-stable-retro-python)
@@ -101,8 +101,8 @@ tests in the repo for physics, object timing, spawn timing, and collision parity
                                    ▼
                 ┌──────────────────────────────────────────┐
                 │  Recorder (Lua or Python)                │
-                │   - tools/bizhawk/*.lua                  │
-                │   - tools/retro/*.py                     │
+                │   - tools/tracechaser/bizhawk/*.lua                  │
+                │   - tools/tracechaser/retro/*.py                     │
                 └──────────────────────────────────────────┘
                                    │ writes 3 files
                                    ▼
@@ -145,21 +145,21 @@ their own legally-obtained copy.
 
 ## 3. Part I — Recording: BizHawk Lua
 
-BizHawk (`docs/BizHawk-2.11-win-x64/EmuHawk.exe`, not checked in) runs the ROM with a
+BizHawk (`tools/tracechaser/.dependencies/BizHawk-2.11-win-x64/EmuHawk.exe`, not checked in) runs the ROM with a
 deterministic BK2 movie. A companion Lua script is loaded with `--lua` which, via
 `event.onframeend`, snapshots RAM into `physics.csv` and emits diagnostic events into
 `aux_state.jsonl`. The script is the authoritative source of truth for the fixture format.
 
 ### 3.1 Script inventory
 
-`tools/bizhawk/` contains **15 Lua files** and **4 batch launchers**:
+`tools/tracechaser/bizhawk/` contains **15 Lua files** and **4 batch launchers**:
 
 | Category | File | Purpose |
 |---|---|---|
 | Main recorder | `s1_trace_recorder.lua` | S1 REV01 per-frame physics |
 | Main recorder | `s2_trace_recorder.lua` | S2 REV01 per-frame physics, Sonic + Tails |
 | Main recorder | `s3k_trace_recorder.lua` | S3&K per-frame physics, zone_act_state + checkpoints |
-| Credits recorder | `s1_credits_trace_recorder.lua` | Records the 8 ROM-owned credits demos |
+| Credits recorder | `s1_credits_trace_recorder.lua` (removed; see `tools/tracechaser/retro/s1_credits_trace_recorder.py`) | Recorded the 8 ROM-owned credits demos |
 | Launcher | `record_trace.bat` | Wraps BizHawk for S1 recording |
 | Launcher | `record_s2_trace.bat` | Wraps BizHawk for S2 recording with PowerShell stdout bridge |
 | Launcher | `record_s3k_trace.bat` | Wraps BizHawk for S3K recording, exposes `aiz_end_to_end` profile |
@@ -179,7 +179,7 @@ deterministic BK2 movie. A companion Lua script is loaded with `--lua` which, vi
 
 ### 3.2 `s1_trace_recorder.lua`
 
-**File:** `tools/bizhawk/s1_trace_recorder.lua` (~680 lines)
+**File:** `tools/tracechaser/bizhawk/s1_trace_recorder.lua` (~680 lines)
 
 #### Frame detection
 
@@ -257,7 +257,7 @@ All events carry `frame` (the trace frame number) and `vfc` (`gameplay_frame_cou
 
 ### 3.3 `s2_trace_recorder.lua`
 
-**File:** `tools/bizhawk/s2_trace_recorder.lua` (~947 lines) — the most complex recorder.
+**File:** `tools/tracechaser/bizhawk/s2_trace_recorder.lua` (~947 lines) — the most complex recorder.
 
 #### What changes vs S1
 
@@ -298,7 +298,7 @@ tails_x_sub,tails_y_sub,tails_routine,tails_status_byte,tails_stand_on_obj
 
 ### 3.4 `s3k_trace_recorder.lua`
 
-**File:** `tools/bizhawk/s3k_trace_recorder.lua` (~745 lines).
+**File:** `tools/tracechaser/bizhawk/s3k_trace_recorder.lua` (~745 lines).
 
 #### Critical S3K differences
 
@@ -353,13 +353,19 @@ A PowerShell sanity gate in [`trace-replay.md`](trace-replay.md) (section "Recor
 End-To-End Fixture") verifies the checkpoint set is complete and ordered before the fixture
 is committed.
 
-### 3.5 `s1_credits_trace_recorder.lua`
+### 3.5 `s1_credits_trace_recorder.lua` (removed)
 
-Records the eight ROM-owned credits demos. The inputs are not in a BK2 — they are embedded
+This Lua recorder and its `record_s1_credits_traces.bat` launcher no longer exist in the
+tree; the surviving credits recorder is the stable-retro
+`tools/tracechaser/retro/s1_credits_trace_recorder.py` (section 4.4), which writes the same layout
+under `trace_output/credits_demos/`. The description below is kept because the trace
+schema it produced is still what the credits fixtures carry.
+
+Recorded the eight ROM-owned credits demos. The inputs are not in a BK2 — they are embedded
 in the ROM at `DemoEndData` (see `Sonic1CreditsDemoData`) and replayed by the stock
 `MoveSonicInDemo` routine. The recorder forces `GM_Credits` from the title screen, waits for
 each demo to become active (`demo_flag == 0x8001` and `credits_num` matches), and writes a
-separate trace directory per demo under `tools/bizhawk/trace_output/credits_demos/`.
+separate trace directory per demo under `trace_output/credits_demos/` (gitignored).
 
 Each demo trace carries the S1 v4 schema plus these extra metadata fields:
 
@@ -417,8 +423,6 @@ BK2 as a ZIP, counts the lines in `Input Log.txt`, and sets
 script know how long the movie is and which profile to activate (`gameplay_unlock` vs
 `aiz_end_to_end`).
 
-**`record_s1_credits_traces.bat`:** Wraps `s1_credits_trace_recorder.lua`; takes either an
-index `0..7` or the literal `all`.
 
 ---
 
@@ -428,7 +432,7 @@ stable-retro is a Python library that embeds the same Genesis Plus GX core as Bi
 fully headless and runs on macOS / Linux / WSL. It produces byte-identical output to the
 BizHawk Lua recorder. S1 has full Python support; S2 and S3K are planned.
 
-`tools/retro/` contents:
+`tools/tracechaser/retro/` contents:
 
 | File | Lines | Role |
 |---|---|---|
@@ -516,13 +520,13 @@ Three input-source modes, controlled by CLI flags:
 
 ```bash
 # Native stable-retro BK2
-python tools/retro/s1_trace_recorder.py --movie path.bk2 --output-dir tools/retro/trace_output/
+python tools/tracechaser/retro/s1_trace_recorder.py --movie path.bk2 --output-dir tools/tracechaser/retro/trace_output/
 
 # Auto-parse a BizHawk BK2
-python tools/retro/s1_trace_recorder.py --bizhawk-bk2 path.bk2 --output-dir ...
+python tools/tracechaser/retro/s1_trace_recorder.py --bizhawk-bk2 path.bk2 --output-dir ...
 
 # Boot from a savestate (GreenHillZone.Act1 etc.) — used for interactive or unit-test recordings
-python tools/retro/s1_trace_recorder.py --state GreenHillZone.Act1 --output-dir ...
+python tools/tracechaser/retro/s1_trace_recorder.py --state GreenHillZone.Act1 --output-dir ...
 ```
 
 The main loop looks like:
@@ -940,8 +944,9 @@ For pre-v3 fixtures that lack these counters the model falls back to a `bk2_fram
 heuristic (documented in the guide) and emits a one-shot warning so the user knows the
 fixture should be regenerated.
 
-Synthetic v3 fixtures live at `src/test/resources/traces/synthetic/` and exercise this path
-without needing a ROM.
+Synthetic fixtures for this path are built in-test (see `TestSpecialStageHardwareTimingLifecycle`
+and `TestPlaybackAdvanceOnlyInputBridge`) rather than committed under
+`src/test/resources/traces/`, so they need no ROM.
 
 ### 6.8 S3K elastic windows & required checkpoints
 
@@ -1125,8 +1130,8 @@ For any given trace divergence, the agent has:
   collision divergences.
 - **Diagnostic Lua scripts** (`hook_solid_classify.lua`, `hook_speedtopos.lua`, etc.) when
   the divergence narrows to a single ROM instruction.
-- **Prior memory** (`~/.claude/projects/.../memory/*.md`) — case studies of previous
-  iterations, e.g. `mz1_trace_progress.md`, `htz-earthquake.md`.
+- **Prior case studies** — the frontier history in `docs/status/trace-frontier-log.md`
+  and the write-ups under `docs/architecture/research/` and `docs/architecture/audits/`.
 
 ### 10.3 The skills that drive iteration
 
@@ -1200,7 +1205,7 @@ via the `Changelog`/`Guide`/`Agent-Docs` trailers required by the branch policy.
 
 ### 10.6 Case study — MZ1: 229 → 147 → 57 errors
 
-From `~/.claude/projects/.../memory/mz1_trace_progress.md`:
+Reconstructed from the MZ1 trace-progress notes of the time:
 
 - **Baseline:** 229 errors on first run of `TestS1Mz1TraceReplay`.
 - **Session 1 fixes (229 → 147):** subpixel position fidelity, sensor alignment, solid
@@ -1381,21 +1386,19 @@ None of these predecessor versions is a current compatibility target.
 
 **Current recorder:**
 
-- `tools/bizhawk-headless/run.sh`
-- `tools/bizhawk-headless/src/Recording/`
+- `tools/tracechaser/bizhawk-headless/run.sh`
+- `tools/tracechaser/bizhawk-headless/src/Recording/`
 
 **Historical/diagnostic recorder references:**
 
-- `tools/bizhawk/s1_trace_recorder.lua`
-- `tools/bizhawk/s2_trace_recorder.lua`
-- `tools/bizhawk/s3k_trace_recorder.lua`
-- `tools/bizhawk/s1_credits_trace_recorder.lua`
-- `tools/bizhawk/record_trace.bat`, `record_s2_trace.bat`, `record_s3k_trace.bat`,
-  `record_s1_credits_traces.bat`
-- `tools/retro/trace_core.py`
-- `tools/retro/s1_trace_recorder.py`
-- `tools/retro/s1_credits_trace_recorder.py`
-- `tools/retro/requirements.txt`
+- `tools/tracechaser/bizhawk/s1_trace_recorder.lua`
+- `tools/tracechaser/bizhawk/s2_trace_recorder.lua`
+- `tools/tracechaser/bizhawk/s3k_trace_recorder.lua`
+- `tools/tracechaser/bizhawk/record_trace.bat`, `record_s2_trace.bat`, `record_s3k_trace.bat`
+- `tools/tracechaser/retro/trace_core.py`
+- `tools/tracechaser/retro/s1_trace_recorder.py`
+- `tools/tracechaser/retro/s1_credits_trace_recorder.py`
+- `tools/tracechaser/retro/requirements.txt`
 
 **Java harness** (`src/test/java/com/openggf/tests/trace/`):
 
@@ -1409,10 +1412,9 @@ None of these predecessor versions is a current compatibility target.
 - `EngineDiagnostics.java`, `EngineNearbyObjectFormatter.java`,
   `TouchResponseDebugHitFormatter.java`, `TraceEventFormatter.java`
 - `TraceExecutionModel.java`, `TraceExecutionPhase.java`
-- `TraceReplayBootstrap.java`, `TraceObjectSnapshotBinder.java`,
-  `TraceHistoryHydration.java`
-- `s3k/S3kReplayCheckpointDetector.java`, `s3k/S3kElasticWindowController.java`,
-  `s3k/S3kCheckpointProbe.java`, `s3k/S3kRequiredCheckpointGuard.java`
+- `TraceReplayBootstrap.java`, `TraceObjectSnapshotBinder.java`
+- `s3k/S3kReplayCheckpointDetector.java`, `s3k/S3kCheckpointProbe.java`,
+  `s3k/S3kRequiredCheckpointGuard.java`
 - `Sonic1CreditsDemoData.java` (under `src/main/java/com/openggf/game/sonic1/credits/`)
 
 **Runtime collision trace** (`src/main/java/com/openggf/physics/`):
@@ -1436,10 +1438,5 @@ None of these predecessor versions is a current compatibility target.
 **Skills:**
 
 - `.claude/skills/s1-trace-replay/SKILL.md`
-- `.claude/skills/s1-retro-trace/SKILL.md`
-
-**Memory:**
-
-- `~/.claude/projects/C--Users-farre-IdeaProjects-sonic-engine/memory/mz1_trace_progress.md`
-- `~/.claude/projects/.../memory/htz-earthquake.md`
-- `~/.claude/projects/.../memory/s3k-palette-mutations.md`
+- `.claude/skills/trace-replay-bug-fixing/SKILL.md`
+- `.claude/skills/bizhawk-headless-trace/SKILL.md`

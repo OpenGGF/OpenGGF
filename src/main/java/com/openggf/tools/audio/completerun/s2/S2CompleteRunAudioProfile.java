@@ -43,6 +43,15 @@ public final class S2CompleteRunAudioProfile {
                     S2CompleteRunStateNormalizer.GLOBAL_FIELDS,
                     S2CompleteRunStateNormalizer.ACTIVE_ROLE_FIELDS);
         }
+        @Override public CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayerInventory() {
+            return comparisonLayers();
+        }
+        @Override public Map<CompleteRunAudioTrace.ProducerKind,
+                CompleteRunAudioTrace.ProducerObservationInventory> producerObservationInventories() {
+            var chipsOnly = frameChipsOnly();
+            return Map.of(CompleteRunAudioTrace.ProducerKind.REFERENCE, chipsOnly,
+                    CompleteRunAudioTrace.ProducerKind.OPENGGF, chipsOnly);
+        }
         @Override public Map<CompleteRunAudioTrace.RawAudioRequest,
                 CompleteRunAudioTrace.NativeSoundIdentity> nativeSoundIdentities() { return IDENTITIES; }
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
@@ -51,9 +60,11 @@ public final class S2CompleteRunAudioProfile {
                 CompleteRunAudioTrace.ProducerBinding> producerBindings() {
             return Map.of(
                     CompleteRunAudioTrace.ProducerKind.REFERENCE,
-                    new CompleteRunAudioTrace.UnavailableProducerBinding("Task 2 S2 reference adapter is not installed"),
+                    new CompleteRunAudioTrace.UnavailableProducerBinding(
+                            "S2 raw v2 carried-origin evidence is implemented; reviewed duplicate capture and exact managed executable/capability identities are not installed"),
                     CompleteRunAudioTrace.ProducerKind.OPENGGF,
-                    new CompleteRunAudioTrace.UnavailableProducerBinding("Task 5 S2 OpenGGF producer is not installed"));
+                    new CompleteRunAudioTrace.UnavailableProducerBinding(
+                            "OpenGGF producer artifact attestation trust root is not installed"));
         }
         @Override public Map<CompleteRunAudioTrace.ProducerKind,
                 CompleteRunAudioTrace.ObserverProof> observerProofs() { return Map.of(); }
@@ -94,6 +105,30 @@ public final class S2CompleteRunAudioProfile {
         }
     }
 
+    private static CompleteRunAudioTrace.ComparisonLayerInventory comparisonLayers() {
+        String reason = "S2 complete-run producers currently share only frame chip-event evidence";
+        return new CompleteRunAudioTrace.ComparisonLayerInventory(java.util.Arrays.stream(
+                CompleteRunAudioTrace.ComparisonLayer.values()).map(layer ->
+                        new CompleteRunAudioTrace.ComparisonLayerClaim(layer,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS
+                                        ? CompleteRunAudioTrace.ComparisonLayerStatus.COMPARED
+                                        : CompleteRunAudioTrace.ComparisonLayerStatus.UNAVAILABLE,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS ? null : reason))
+                .toList());
+    }
+
+    private static CompleteRunAudioTrace.ProducerObservationInventory frameChipsOnly() {
+        String reason = "S2 complete-run projector has no canonical observation for this layer";
+        return new CompleteRunAudioTrace.ProducerObservationInventory(java.util.Arrays.stream(
+                CompleteRunAudioTrace.ComparisonLayer.values()).map(layer ->
+                        new CompleteRunAudioTrace.ProducerObservationClaim(layer,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS
+                                        ? CompleteRunAudioTrace.ObservationStatus.OBSERVED
+                                        : CompleteRunAudioTrace.ObservationStatus.UNOBSERVED,
+                                layer == CompleteRunAudioTrace.ComparisonLayer.FRAME_CHIP_EVENTS ? null : reason))
+                .toList());
+    }
+
     private static CompleteRunAudioTrace.CompleteRunFixture fixture() {
         List<CompleteRunAudioTrace.ManifestSegment> segments = new ArrayList<>();
         segment(segments, "seg1_ehz1", 769, 3710); segment(segments, "ss", 4480, 5681);
@@ -117,7 +152,7 @@ public final class S2CompleteRunAudioProfile {
         return new CompleteRunAudioTrace.CompleteRunFixture(
                 "8bca5dcef1af3e00098666fd892dc1c2a76333f9", "7b905383",
                 "e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5", 259590,
-                "dfb220822eab3c524472aa02d6d78463a9489233b97fdd9ccd9340c9f3a10411",
+                "ff7b332e343c8672e48f6acfa7df673ae18dc558a1fb9f2863471b4a3b102578",
                 segments, 769, 259590);
     }
 
