@@ -27,6 +27,49 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The `next` audio fixes were already on develop; the override oracle compares nothing
+
+- **Worktree/branch:** `.worktrees/next-audio-validation`,
+  `feature/ai-validate-next-audio-fixes`, over `develop` at `373b4376c`.
+- **Command:** the audio parity gate,
+  `LUA_BIN=lua5.4 mvn -Dmse=off -B <three ROM paths> <s2.request.bk2.path>
+  "-Dtest=com/openggf/tools/audio/parity/**/*" test`.
+- **Result:** `Tests run: 187, Failures: 0, Errors: 0, Skipped: 2`. Every
+  `MEASUREMENT_ONLY` line MATCH — S1 gameplay, both S1 sound-test oracles, the
+  S2 driver-state windows and every S2 request window. This is a baseline, not
+  a movement: no source changed.
+- **Both audio fixes on `next` are already on `develop`.** `aa3fee58d` and
+  `c4af7f072` landed together as `86e4c8085`, same author and session. Content
+  lines of the two `next` patches against `86e4c8085` differ only by a 13-line
+  block that exists solely on `next`, added by the unmerged powered-form
+  feature `75758d198`. Nothing outstanding to implement.
+- **Their ROM claims were audited anyway and all hold**, `FixBugs = 0` and
+  `fix_sndbugs = 0`: the single 1-up save slot in S1
+  (`s1.sounddriver.asm:754-790`) and S3K (`Z80 Sound Driver.asm:1717-1787`,
+  `zStopAllSound` at `:2460` wiping the whole save area per the RAM map at
+  `:134-215`), and the invincibility-expiry re-issue with its boss and
+  drowning gates (`_incObj/01 Sonic.asm:154-176`, `s2.asm:36290-36303`).
+- **The frontier that matters: no oracle exercises the override-resume path.**
+  `TestS1OverrideResumeAudioOracle` asserts that its reference bundle is
+  *unavailable* (`FRESH_AUTHENTICATED_NATIVE_GPGX_AUTHORITY_UNAVAILABLE`) and
+  passes in 8 ms. It is a blocked-task marker, not a comparison, so "187 green,
+  all MATCH" must not be read as covering the 1-up interrupt and resume. That
+  behaviour is covered only by unit tests.
+- **Capture that would move it:** the `override-resume-first-divergence-v1`
+  bundle the contract already names, per game a
+  `<game>-override-resume-reference.v1.jsonl.gz` plus metadata for S1 and S2,
+  over a window spanning a 1-up collected during zone music through the `E4`
+  fade-in-to-previous into the resumed song, and a second window over
+  invincibility expiry to discriminate re-issue from restore.
+- **Note for the S2 1-up restore lane** (`bugfix/ai-s2-1up-music-restore`,
+  which has no commits ahead of `develop` as of this entry): the save-slot
+  model on `develop` is ROM-correct, and single-slot semantics are not an
+  S1/S3K peculiarity. If an S2 1-up restore bug still reproduces, the defect is
+  below the `isMusicOverride` classification, not in it, and the override
+  oracle will not arbitrate the fix.
+- Full audit: `docs/architecture/audits/2026-09-04-next-audio-fixes-validation.md`.
+
+
 ## 2026-09-04 - The duration seed lands; both red assertions were the suspects
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
