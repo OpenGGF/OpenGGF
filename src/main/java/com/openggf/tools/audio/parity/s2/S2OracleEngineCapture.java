@@ -116,7 +116,7 @@ public final class S2OracleEngineCapture {
             try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                     "s2-oracle", 0,
                     new SmpsPhysicalDevice.Settings(
-                            SAMPLE_RATE, false, false),
+                            SAMPLE_RATE, false),
                     LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                     ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();

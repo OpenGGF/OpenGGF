@@ -290,7 +290,7 @@ public final class S1OpenGgfAudioCapture {
             stream = new OwnedSmpsAudioStream(
                     "s1-parity", 0,
                     new SmpsPhysicalDevice.Settings(
-                            SAMPLE_RATE, false, false),
+                            SAMPLE_RATE, false),
                     LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                     ChipWriteObserver.NONE);
             driver = stream.logicalDriver();

@@ -6,9 +6,8 @@ import com.openggf.audio.smps.SmpsSequencer;
 public record AudioPresentationTuning(
         SmpsSequencer.Region region,
         boolean dacInterpolate,
-        boolean psgNoiseShiftEveryToggle,
         boolean fm6DacOff) {
     public static final AudioPresentationTuning DEFAULT =
             new AudioPresentationTuning(
-                    SmpsSequencer.Region.NTSC, false, false, false);
+                    SmpsSequencer.Region.NTSC, false, false);
 }

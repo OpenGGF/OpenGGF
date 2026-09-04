@@ -102,7 +102,6 @@ public class PsgChip {
 
     private double sampleRate;
     private ChipType chipType;
-    private boolean noiseShiftOnEveryToggle;
     private int preamp = 100;
     private int panning = 0xFF;
     private final boolean[] mutes = new boolean[CHANNELS];
@@ -176,20 +175,6 @@ public class PsgChip {
         }
         chipType = type;
         lfsr = lfsrReset();
-    }
-
-    /**
-     * Selects when the shift register steps. {@code false} is the hardware
-     * behaviour (§4.1): one shift per rising edge of the noise square wave.
-     * {@code true} shifts on every polarity toggle, twice as often; it exists
-     * for the {@code audio.psgNoiseShiftEveryToggle} configuration key.
-     */
-    public void setNoiseShiftOnEveryToggle(boolean everyToggle) {
-        this.noiseShiftOnEveryToggle = everyToggle;
-    }
-
-    public boolean isNoiseShiftOnEveryToggle() {
-        return noiseShiftOnEveryToggle;
     }
 
     /**
@@ -387,7 +372,9 @@ public class PsgChip {
             counter[NOISE_CHANNEL] = reload;
             boolean rising = !polarity[NOISE_CHANNEL];
             polarity[NOISE_CHANNEL] = rising;
-            if (rising || noiseShiftOnEveryToggle) {
+            // libvgm sn76489: the LFSR shifts once per rising edge of the
+            // noise square wave (§4.1), never on the falling edge.
+            if (rising) {
                 shiftLfsr();
             }
         }
@@ -462,7 +449,6 @@ public class PsgChip {
     public record Snapshot(
             double sampleRate,
             ChipType chipType,
-            boolean noiseShiftOnEveryToggle,
             int preamp,
             int panning,
             boolean[] mutes,
@@ -526,8 +512,6 @@ public class PsgChip {
             return candidate instanceof Snapshot other
                     && Double.compare(sampleRate, other.sampleRate) == 0
                     && chipType == other.chipType
-                    && noiseShiftOnEveryToggle
-                            == other.noiseShiftOnEveryToggle
                     && preamp == other.preamp
                     && panning == other.panning
                     && Arrays.equals(mutes, other.mutes)
@@ -546,7 +530,7 @@ public class PsgChip {
         @Override
         public int hashCode() {
             int result = Objects.hash(sampleRate, chipType,
-                    noiseShiftOnEveryToggle, preamp, panning, noiseControl,
+                    preamp, panning, noiseControl,
                     latch, lfsr, blip);
             result = 31 * result + Arrays.hashCode(mutes);
             result = 31 * result + Arrays.hashCode(tonePeriods);
@@ -562,7 +546,6 @@ public class PsgChip {
         return new Snapshot(
                 sampleRate,
                 chipType,
-                noiseShiftOnEveryToggle,
                 preamp,
                 panning,
                 mutes,
@@ -582,7 +565,6 @@ public class PsgChip {
     public void restoreSnapshot(Snapshot snapshot) {
         sampleRate = snapshot.sampleRate();
         chipType = snapshot.chipType();
-        noiseShiftOnEveryToggle = snapshot.noiseShiftOnEveryToggle();
         preamp = snapshot.preamp();
         panning = snapshot.panning();
         copyInto(mutes, snapshot.mutes());

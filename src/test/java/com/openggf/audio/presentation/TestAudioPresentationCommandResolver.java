@@ -1170,7 +1170,7 @@ class TestAudioPresentationCommandResolver {
         AudioPresentationSourceFactory.Settings settings =
                 new AudioPresentationSourceFactory.Settings(
                         48_000, SmpsSequencer.Region.NTSC,
-                        false, false, false, false, 1,
+                        false, false, false, 1,
                         AudioManager.getInstance(), pcm, assets);
         SmpsDriverSession session = SmpsSessionTestSupport.installed(48_000);
         AudioPresentationSourceFactory factory =

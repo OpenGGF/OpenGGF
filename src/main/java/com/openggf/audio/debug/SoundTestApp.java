@@ -304,7 +304,7 @@ public final class SoundTestApp {
             int maxSamples) throws IOException {
         try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                 "sound-test", 0,
-                new SmpsPhysicalDevice.Settings(outputRate, true, false),
+                new SmpsPhysicalDevice.Settings(outputRate, true),
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                 ChipWriteObserver.NONE)) {
             SmpsDriver driver = stream.logicalDriver();
