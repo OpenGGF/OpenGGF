@@ -59,22 +59,44 @@ defined by `com.openggf.tools.audio.parity`.
   a whole service before the ROM does, and its own tick 751 opens with the
   *tail* of that stop - a key off of channel 6 and register 27h set to zero,
   which is `zFM3NormalMode` at the very end of `zStopAllSound` (:2506-2513).
-- **The larger problem is what follows.** The reference sustains roughly 250
-  to 300 writes per service from 751 onward, which is the newly loaded music
-  doing its per-service work. The engine collapses to ten writes per service
-  and stays there. So this is not a one-service phase error to be nudged: the
-  engine is missing almost all of the new song's servicing, and the early stop
-  is likely a symptom of the same mis-modelled music-change sequence rather
-  than a separate bug.
-- **What the next cycle should do.** Start from the request that lands at 751
-  in `s3k-aiz1-intro-requests-v1.json` and follow `zCycleSoundQueue` into
-  `zBGMLoad` (:1790), rather than from the single divergent write. The
-  question to answer first is why the engine's newly loaded song services ten
-  writes where the ROM's services two hundred and fifty, because that gap is
-  far larger than the ordering error and probably explains it.
+- **Correction to the paragraph this replaces.** I first wrote that the engine
+  was missing almost all of the new song's servicing, on the strength of the
+  reference sustaining 250 to 300 writes per service from 751 onward against
+  the engine's ten. That was wrong, and wrong in the way the known-discrepancy
+  note about the DAC partition warns about: those reference counts are almost
+  entirely 2Ah DAC bytes. The previous song had no DAC track playing, the new
+  one does, so the DAC pump starts at 751 and inflates every count after it.
+  Excluding 2Ah, the reference services 20, 19, 19, 23 and 13 writes across
+  752 to 756 against the engine's 10, 10, 10, 14 and 9. Comparable, and no
+  collapse. The engine also loads the song correctly: a probe of the music
+  sequencer at 751 shows music id 01h with all nine tracks present, active and
+  counting their durations down normally.
+- **So the whole finding is the one-service phase error.** On non-DAC writes
+  the two sides agree exactly through 749. The reference then spends 274
+  writes on the stop in service 751 alone. The engine spends 89 in 750 and 177
+  in 751, which is the same work started a service early and split across two.
+- **Where the service is chosen.** The music change is not mailbox-driven
+  here: the reference's frame-entry mailbox is empty at every service from 746
+  to 754. It comes from the request sidecar, whose row 876 carries music id
+  01h, and `S3kAudioReferenceReader.resolveSidecarRequests` decides which
+  service consumed it. That method has three branches; the one that fires when
+  the following service's entry sample is clear attributes the request to the
+  *previous* service, on the reasoning that the service running in the store's
+  own row must already have consumed and cleared the byte. For this request
+  that lands on service 750, which the reference shows doing nothing unusual
+  at all, only its ordinary eight writes.
+- **What the next cycle should do.** Settle that branch against the ROM before
+  changing anything. This is fixture attribution rather than engine code, so a
+  change to it moves the oracle's input and needs the reference's own writes as
+  the arbiter: whichever service the ROM spends 274 writes in is the service
+  that consumed the request, and here that is unambiguously 751. Check the
+  branch against the other thirteen observations in the sidecar before
+  concluding it is wrong in general rather than wrong here.
 - **Ruled out this cycle.** `forceSilence` is not the source of the engine's
   `82h = FFh`: a probe on that method across services 748 to 754 never fired.
-  The write comes from the engine's own stop-all loop.
+  The write comes from the engine's own stop-all loop. The engine emits no 2Ah
+  bytes at all in this window, so its non-DAC counts above are also its total
+  counts; that silence belongs to the separate DAC-stream frontier at run 338.
 - **Gates.** Not re-run; no engine behaviour changed since `0da7b645a`, whose
   gates are recorded in the entry below.
 
