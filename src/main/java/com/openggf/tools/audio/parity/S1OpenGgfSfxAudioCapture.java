@@ -47,10 +47,19 @@ public final class S1OpenGgfSfxAudioCapture {
         Objects.requireNonNull(output, "output");
         AudioParityMetadata referenceMetadata = S1OpenGgfAudioCapture.readReferenceMetadata(reference);
         boolean gameplay = AudioParitySchema.GAMEPLAY_REFERENCE_CAPTURE.equals(referenceMetadata.capture());
-        if (!gameplay && !AudioParitySchema.SFX_REFERENCE_CAPTURE.equals(referenceMetadata.capture())) {
+        boolean runWindow =
+                AudioParitySchema.RUN_WINDOW_REFERENCE_CAPTURE.equals(referenceMetadata.capture());
+        if (!gameplay && !runWindow
+                && !AudioParitySchema.SFX_REFERENCE_CAPTURE.equals(referenceMetadata.capture())) {
             throw new IllegalArgumentException(
-                    "reference stream is not a BizHawk S1 SFX or gameplay capture");
+                    "reference stream is not a BizHawk S1 SFX, gameplay or run-window capture");
         }
+        // The sound-test and gameplay kinds are GHZ by construction: their
+        // epoch is the GHZ1 level-start request. A per-song run window names
+        // its own epoch song, and the host loads that one.
+        int musicId = runWindow
+                ? referenceMetadata.details().get("music_id").intValue()
+                : Sonic1Music.GHZ.id;
 
         Map<Integer, List<Integer>> dispatchesByOrdinal = new HashMap<>();
         AudioParityJsonl.read(reference, tick -> {
@@ -63,19 +72,28 @@ public final class S1OpenGgfSfxAudioCapture {
         S1OpenGgfAudioCapture.verifyRomIdentity(romPath);
         try (Rom rom = S1OpenGgfAudioCapture.openRom(romPath)) {
             Sonic1SmpsLoader loader = new Sonic1SmpsLoader(rom);
-            AbstractSmpsData song = Objects.requireNonNull(loader.loadMusic(Sonic1Music.GHZ.id),
-                    "S1 GHZ music is absent from the verified ROM");
+            AbstractSmpsData song = Objects.requireNonNull(loader.loadMusic(musicId),
+                    "S1 music 0x" + Integer.toHexString(musicId)
+                            + " is absent from the verified ROM");
             DacData dacData = Objects.requireNonNull(loader.loadDacData(),
                     "S1 DAC data is absent from the verified ROM");
-            S1OpenGgfAudioCapture.SongContract contract = S1OpenGgfAudioCapture.inspectGhz(rom, song);
+            S1OpenGgfAudioCapture.SongContract contract =
+                    S1OpenGgfAudioCapture.inspectSong(rom, song, musicId);
 
-            AudioParityMetadata outputMetadata = gameplay
-                    ? AudioParityMetadata.openGgfGameplay(
-                            referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
-                            referenceMetadata.romCrc32())
-                    : AudioParityMetadata.openGgfSfx(
-                            referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
-                            referenceMetadata.romCrc32());
+            AudioParityMetadata outputMetadata;
+            if (runWindow) {
+                outputMetadata = AudioParityMetadata.openGgfRunWindow(
+                        referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
+                        referenceMetadata.romCrc32());
+            } else if (gameplay) {
+                outputMetadata = AudioParityMetadata.openGgfGameplay(
+                        referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
+                        referenceMetadata.romCrc32());
+            } else {
+                outputMetadata = AudioParityMetadata.openGgfSfx(
+                        referenceMetadata.terminalRecordCount(), referenceMetadata.romSha1(),
+                        referenceMetadata.romCrc32());
+            }
             try (CaptureIterator ticks = new CaptureIterator(
                     loader, song, dacData, contract,
                     referenceMetadata.terminalRecordCount(),
@@ -135,9 +153,55 @@ public final class S1OpenGgfSfxAudioCapture {
             stream.close();
         }
 
+        /**
+         * S1 {@code FadeOutMusic} (s1.sounddriver.asm:1360-1367): stop the SFX
+         * and special-SFX tracks, arm a fade of {@code $28} steps three frames
+         * apart, stop the DAC track, and clear the speed-shoes tempo flag.
+         * {@code triggerFadeOut} performs the step/delay arming and the DAC
+         * stop, so only the two stops and the flag clear are done here.
+         */
+        private static final int S1_FADE_OUT_STEPS = 0x28;
+        private static final int S1_FADE_OUT_DELAY = 3;
+
+        private void submitFlagCommand(int soundId) {
+            if (soundId != 0xE0) {
+                // $E1 PlaySegaSound, $E2 SpeedUpMusic, $E3 SlowDownMusic and
+                // $E4 StopAllSound reach the driver through the same
+                // Sound_E0toE4 branch (s1.sounddriver.asm:715) but are not
+                // modelled here yet. Failing loudly keeps a window that
+                // contains one from being compared as though the request never
+                // happened.
+                throw new IllegalStateException(
+                        "S1 driver flag command 0x" + Integer.toHexString(soundId)
+                                + " is not modelled by the parity host yet");
+            }
+            driver.stopAllSfx();
+            musicSequencer.setSpeedShoes(false);
+            musicSequencer.triggerFadeOut(S1_FADE_OUT_STEPS, S1_FADE_OUT_DELAY);
+        }
+
+        /**
+         * Driver commands deferred to the ROM's dispatch point. S1 steps the
+         * fade before it cycles the sound queue (s1.sounddriver.asm:179-202),
+         * so a fade armed by a request is not stepped until the next
+         * invocation. Submitting these before the whole frame service would
+         * let the engine step the fade in the invocation that armed it.
+         *
+         * <p>SFX admission stays at the pre-service point: nothing between
+         * there and the dispatch point touches it, since the fade step does not
+         * read or write SFX admission, so the two positions are observationally
+         * the same for an SFX and the pre-service one keeps a newly admitted
+         * SFX in the same frame's walk as the ROM does.
+         */
+        private final List<Integer> deferredFlagCommands = new ArrayList<>();
+
         private void submitDispatches(List<Integer> dispatches) {
             for (int requestedSoundId : dispatches) {
                 int soundId = requestedSoundId;
+                if (soundId >= 0xE0) {
+                    deferredFlagCommands.add(soundId);
+                    continue;
+                }
                 if (soundId == 0xB5) {
                     // S1 Sound_PlaySFX substitutes the left-speaker program CE
                     // while v_ring_speaker is zero, then toggles the source-owned
@@ -180,6 +244,12 @@ public final class S1OpenGgfSfxAudioCapture {
             }
             List<Integer> dispatches = dispatchesByOrdinal.getOrDefault(ordinal, List.of());
             submitDispatches(dispatches);
+            musicSequencer.setDispatchPointListener(() -> {
+                for (int soundId : deferredFlagCommands) {
+                    submitFlagCommand(soundId);
+                }
+                deferredFlagCommands.clear();
+            });
             if (ordinal == 0) {
                 musicSequencer.advanceSamples(0);
             } else {
