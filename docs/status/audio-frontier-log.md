@@ -27,6 +27,41 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The tick-zero override class is fixable, not a discrepancy: withdrawing my own entry
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` merged at `1456a4a51`.
+- **No measurement changed.** This records a corrected judgement.
+
+**What I wrote, and why it was wrong.** Five of the eighteen captured windows
+diverge at tick 0 on a music track's `overridden` bit, because the window's
+epoch lands while an SFX admitted *before* that epoch still holds the track. I
+recorded it in `known-discrepancies.md` as an accepted divergence with a
+selection-based removal condition, reasoning that the overriding SFX's identity
+is state predating the window and so undreivable without hydration.
+
+**That reasoning had a hole.** The SFX was requested inside the *previous*
+window, and a recorded request is the accepted stimulus for this contract --
+it is what the host already replays. So the host can start at the predecessor
+window's epoch, replay that window's song and its recorded dispatches, and only
+begin *comparing* at the target window's epoch. Nothing is hydrated: the driver
+carries itself across the boundary exactly as the ROM does, from requests
+alone. Where a predecessor is itself contaminated the chain extends further
+back, and it terminates, because a run's first window starts from power-on and
+is always clean.
+
+**So the entry is withdrawn.** A known-discrepancy entry asserts that a
+divergence is intentional and accepted, and this one is neither. Leaving it
+would have told the next lane not to fix something fixable, which is worse than
+having no entry at all. The five windows keep their pinned frontiers until the
+chained replay lands.
+
+**What lands with it.** The survey now records, per window, how many music
+tracks hold the SFX-overriding bit at that window's epoch. That stays useful
+either way: it tells a chained replay how far back it must start, rather than
+only telling a selector which windows to avoid.
+
+
 ## 2026-09-04 - All 18 captured windows measured: six songs green, and one dominant red class
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,

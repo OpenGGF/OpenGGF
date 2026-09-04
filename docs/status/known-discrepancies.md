@@ -2954,53 +2954,6 @@ the partition derivable, and no fixture measurement may stand in for it.
 
 ---
 
-## S1 Per-Song Run Windows Inherit An SFX Override From Before Their Epoch
-
-A per-song run window opens at the ROM epoch that reloads the driver's music
-track RAM: a `Sound_PlayBGM` dispatch, or the `cfFadeInToPrevious` restore that
-ends a 1-up jingle (s1.sounddriver.asm:1498-1502, :2166-2223). Neither epoch
-clears the *SFX* tracks, and neither clears the music tracks' "SFX overriding"
-bit, which an SFX admitted before the epoch may still be holding.
-
-The window's recorded dispatch sequence begins at its own epoch, because that is
-what a window is. So an SFX admitted before the epoch appears nowhere in the
-window, and the replay host starts with no SFX sequencer admitted and no music
-track overridden, where the ROM's driver starts the window with one already
-held. The comparison reports this at tick 0 as `TRACK_STATE_MISMATCH` on
-`overridden`, reference `true` against engine `false`.
-
-### Which Windows
-
-Five of the eighteen windows captured from `s1-complete-run.bk2`: ordinals 15
-(`$87`), 16 (`$83`), 77 (`$92`), 80 (`$86`) and, in the mirror-image form,
-58 (`$88`) at tick 34 where the reference releases an override the engine still
-holds. Windows whose epoch happens with no SFX outstanding are unaffected, and
-six distinct songs match end to end.
-
-### Why The Engine Cannot Derive It
-
-The overriding SFX's identity, its admission ordinal and how far through it is
-are all driver state that predates the window. Nothing the window contains
-implies them. Seeding them from the reference's own tick 0 would hydrate engine
-state from trace data, which hard rule 4 forbids outside its named exception,
-and that exception covers scheduling outcomes rather than *what* is playing.
-
-### Removal Condition
-
-A window whose epoch has no outstanding SFX override, which is a selection
-property rather than a fix: the capture manifest records each window's epoch
-frame and the survey enumerates every window, so a clean window can be chosen
-for a song that currently only has a contaminated one. Failing that, a contract
-that carries window-entry track ownership as an input, which would be a new
-shape and a design decision rather than a lane's.
-
-### What Is Still Compared
-
-Everything else, including every tick of the five affected windows after their
-first divergence is reported. Nothing is excluded from the comparison by this
-entry; it records why a window that opens mid-SFX diverges at tick 0, so the
-next lane does not read it as a channel-ownership defect in the driver.
-
 ## S2 Headless Oracle Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)
 
 The S2 driver-state oracles drive the engine from a song load, not from
