@@ -2589,6 +2589,16 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             fmLocks[channel] = null;
             updateOverrides(SmpsSequencer.TrackType.FM, channel, false);
         }
+        // Two passes, and the split is a ROM requirement rather than tidiness.
+        // A released music PSG track writes during its override update: a PSG3
+        // noise track re-latches its stored PSGNoise byte
+        // (zStopPSGSFXTrack, s2.sounddriver.asm:3581-3587). That byte's
+        // ownership channel is the noise channel, not the track's own, so
+        // releasing channel by channel would run the write while a later
+        // channel this same sequencer still holds is suppressing it. The ROM
+        // has no per-channel hardware ownership to be half-released: it clears
+        // the override bit on the music track and the write goes out.
+        boolean[] releasedPsg = new boolean[psgLocks.length];
         for (int channel = 0; channel < psgLocks.length; channel++) {
             if (psgLocks[channel] != sequencer
                     || hasActiveTrack(sequencer, channel, true)) {
@@ -2607,7 +2617,12 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 continue;
             }
             psgLocks[channel] = null;
-            updateOverrides(SmpsSequencer.TrackType.PSG, channel, false);
+            releasedPsg[channel] = true;
+        }
+        for (int channel = 0; channel < releasedPsg.length; channel++) {
+            if (releasedPsg[channel]) {
+                updateOverrides(SmpsSequencer.TrackType.PSG, channel, false);
+            }
         }
     }
 

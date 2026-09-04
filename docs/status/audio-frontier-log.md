@@ -136,6 +136,159 @@ defined by `com.openggf.tools.audio.parity`.
   snapshots, it is reached only by the whole suite.
 
 
+## 2026-09-04 - S2 releases every PSG lock before restoring; the write stream reaches the tempo frontier
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 584 (movie row 10786),
+  field `writes.count`, reference 9 against the engine's 8; 411 of 2,198 ticks
+  divergent.
+- **After, state with writes:** DIVERGENCE at tick 1,789 (movie row 11991),
+  field `global.currentTempo`, reference `0x9e` against the engine's `0xbe`;
+  409 of 2,198 ticks divergent. The write stream now agrees over every service
+  up to the tempo frontier, and the two result lines have converged on the same
+  tick and the same field.
+- **DAC stream:** unchanged, `BYTE DIFFERENT in run 3 at byte 709`.
+- **The divergence.** At tick 584 the reference emitted `psg=FF psg=E7` and the
+  engine only `psg=FF`. The missing byte is a PSG3 noise re-latch.
+- **The routine.** `zStopPSGSFXTrack` clears the SFX override bit on the
+  corresponding music track, marks it resting, and if that track's
+  `VoiceControl` is `0E0h`, a PSG3 noise track, writes its stored `PSGNoise`
+  byte back to the chip (s2.sounddriver.asm:3581-3587).
+- **What was actually wrong, measured rather than inferred.** The engine did
+  attempt the write. A probe on the release showed it firing at the right
+  moment with the track active and its noise parameter `7`, and a second probe
+  on the driver's music write path caught the byte being dropped:
+  `psg=E7 ch=3 own=3 lockHeld=true`. A noise byte's ownership channel is the
+  noise channel, not the track's own, and the release loop cleared the lock on
+  channel 2 and ran the override update from inside the same iteration, before
+  it had reached channel 3, which this same SFX still held.
+- **Where it landed.** `SmpsDriver.reconcileInactiveSfxTracks` now releases all
+  of the sequencer's PSG locks first and runs the override updates in a second
+  pass. The ROM has no per-channel hardware ownership that can be half
+  released: it clears one bit on the music track and the write goes out.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next, and it is no longer an audio-lane frontier.** Both lines now stop at
+  the speed-shoes tempo, which is the gameplay timer compensation constant
+  recorded two entries below and handed to a gameplay lane with the trace
+  sweeps as its gates. The remaining audio-side frontier is the DAC stream's
+  run-3 byte difference.
+
+## 2026-09-04 - S2 SFX takes a PSG channel without silencing it; tick 557 -> tick 584
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 557 (movie row 10759),
+  field `writes[38]`, reference `psg=0xe7` against the engine's `psg=0xff`;
+  455 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 584 (movie row 10786), field
+  `writes.count`, reference 9 against the engine's 8; 411 of 2,198 ticks
+  divergent.
+- **DAC stream and state only:** both unchanged.
+- **The divergence.** At tick 557 the engine emitted an extra `psg=FF`, a
+  maximum-attenuation latch on the noise channel, immediately before the SFX's
+  own `psg=E7` noise-control write. Tick 558 showed the same extra `FF` between
+  the reference's `psg=9F` and `psg=F2`.
+- **How it was attributed.** A probe on every PSG write printed its call stack.
+  The extra byte did not come from the sequencer at all: it came from
+  `SmpsDriver.writePsg`'s takeover path, which silences a PSG channel it is
+  about to take from the music. The sequencer's own writes agreed exactly.
+- **The routine.** `zPlaySound`'s `.sfxinitpsg` silences only PSG3, and only
+  through the explicit `or 1Fh` / `xor 20h` pair that writes `DF` then `FF`
+  (s2.sounddriver.asm:2221-2228). Every other PSG channel is claimed by nothing
+  more than `set 2,(hl)` on the corresponding music track (:2243-2245), with no
+  register write at all; the SFX's own bytecode owns everything visible from
+  there. The engine had S2 on the builder default `FORCE_SILENCE`, while S1,
+  whose loader is the same shape, was already off it.
+- **Where it landed.** `Sonic2SmpsSequencerConfig` now sets
+  `PsgSfxTakeoverMode.REGISTER_SEQUENCE`. The PSG3 pair itself is untouched: it
+  is already modelled by the separate `psg3SfxAdmissionWriteMode`, and both
+  sides still emit `DF FF` at the head of tick 557.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** Tick 584 is a write-count difference, reference 9 against the
+  engine's 8, so the engine is now missing a write rather than adding one.
+  `fmSfxTakeoverMode` is still on the builder default `FORCE_RESET` for S2 while
+  `.sfxinitfm` sets the same override bit and writes nothing (:2238-2245); that
+  is the obvious next thing to check, with its own evidence.
+
+## 2026-09-04 - S2 walks the fixed SFX RAM slots, not the SFX header order; tick 228 -> tick 557
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 228 (movie row 10430),
+  field `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's
+  `psg=0x87`; 496 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 557 (movie row 10759), field
+  `writes[38]`, reference `psg=0xe7` against the engine's `psg=0xff`; 455 of
+  2,198 ticks divergent.
+- **DAC stream and state only:** both unchanged.
+- **How the divergence was attributed, rather than guessed.** Probes printed
+  the music sequencer's track walk, an end marker per track, a walk-end marker,
+  and every chip write inline. At row 10430 the music walk ran
+  `DAC, FM1-FM5, PSG1-PSG3` in the ROM's own order and produced only
+  `psg=B9` and `psg=F4`. The two writes the comparator flagged, a PSG1 note
+  pair and an FM5 voice load plus note, were both emitted *after* `walk-end`,
+  so neither came from the music walk at all. They are the SFX pass handing
+  channels back.
+- **The routine.** `zVInt` updates the SFX tracks by stepping `ix` through the
+  fixed SFX RAM region: `SFX_FM_TRACK_COUNT` tracks in `.fmloop`, then
+  `SFX_PSG_TRACK_COUNT` more in `.psgloop` (s2.sounddriver.asm:465-487). It
+  never consults the order the SFX header listed its tracks, so every FM SFX
+  slot is serviced before any PSG SFX slot. The engine had S2 on the builder
+  default `HEADER_ORDER` while S1, whose driver does the same thing, was
+  already on `CHANNEL_RAM_ORDER`.
+- **Where it landed.** `Sonic2SmpsSequencerConfig` now sets
+  `SfxTrackWalkMode.CHANNEL_RAM_ORDER`. No constant was introduced and nothing
+  is keyed on a zone, route or fixture.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** Tick 557 is a PSG value difference at `writes[38]`, reference
+  `0xe7` against the engine's `0xff`. Both are channel 3 volume writes, so the
+  two sides disagree about the noise channel's attenuation rather than about
+  ordering.
+
+## 2026-09-04 - S2 tick 228 is a music walk-order difference, not a value difference
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `d82441942`.
+- **Measurement, not a comparison run.** No engine behaviour changed. Lines are
+  unchanged: state with writes DIVERGENCE at tick 228 (movie row 10430), field
+  `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's `psg=0x87`, 496 of
+  2,198 ticks divergent; DAC stream `BYTE DIFFERENT in run 3 at byte 709`;
+  state only tick 1,789.
+- **The two sides emit the same writes in a different order.** At tick 228,
+  after two leading PSG writes both sides agree on:
+
+  - reference: an FM voice-load block ending `ym0[28]=F5`, then `psg=87 psg=0E`
+  - engine: `psg=87 psg=0E`, then the identical FM voice-load block
+
+  Nothing differs in value, register or count. The engine runs that PSG track
+  before that FM track; the ROM runs it after. Tick 229 repeats the pattern.
+- **The ROM's walk is fixed and cited.** `zUpdateMusic` updates the DAC track,
+  then loops `MUSIC_FM_TRACK_COUNT` times over the FM tracks, then
+  `MUSIC_PSG_TRACK_COUNT` times over the PSG tracks
+  (s2.sounddriver.asm:554-575). Every FM music track therefore writes before
+  every PSG music track within one service.
+- **What is different about this tick, as a hypothesis rather than a finding.**
+  At tick 226 the engine ordered FM before PSG correctly, and the ticks that
+  diverge are the ones whose FM update carries a full voice load
+  (`ym1[B1]`, the operator block, `ym1[41]`-`ym1[4D]`). Whether the engine
+  defers a voice-load-bearing FM update past the PSG tracks, or reaches it by
+  another route, was not established here and should be instrumented rather than
+  assumed.
+- **Not a partition artefact.** The two leading PSG writes are identical on both
+  sides and are the same on the surrounding ticks, so wherever the service
+  boundary places them, the reordering sits between the FM block and the PSG1
+  frequency pair.
+
 ## 2026-09-04 - An S3K load service does not accumulate for the song it loads
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
