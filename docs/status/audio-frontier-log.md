@@ -27,6 +27,71 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Three S3K rest-bit corrections; tick 150 -> tick 180
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `1b7951cf8`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 150, role `MUS_DAC`, field
+  `resting`, reference `false` against engine `true`. DAC stream
+  `BYTE_DIFFERENT` run 29 byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 180, role `MUS_FM2`, field
+  `doNotAttack`, reference `true` against engine `false`. DAC stream
+  unchanged. Services 139 through 179 now agree.
+- **Three corrections, in the order the oracle surfaced them.**
+  1. *No DAC track ever rests.* The engine set the rest bit from the note for
+     every track type. No driver's DAC path touches it: S3K's
+     `zUpdateDACTrack` jumps a rest straight to
+     `zUpdateDACTrack_GetDuration` without setting `PlaybackControl` bit 4
+     (Sound/Z80 Sound Driver.asm:2890-2896), and S1's `DACUpdateTrack`
+     (s1.sounddriver.asm:277-307) and S2's `zDACUpdateTrack`
+     (s2.sounddriver.asm:759-790) have no rest test at all. Shared
+     correction, no config. Tick 150 -> 158.
+  2. *The PSG volume envelope rests the track.* `zDoVolEnv` dispatches `83h`
+     to `zDoVolEnvFullRest` and `81h` to `zDoVolEnvRest` (:4169-4175,
+     :4187-4194, :4204-4208). Both pop the caller's return address, set the
+     rest bit and end the pass; neither advances the envelope index and
+     neither silences the channel, which the ROM states outright at :4208.
+     Diagnosed from the probe rather than guessed: at tick 158 the reference's
+     PSG2 rest bit goes up while its duration keeps counting down 77, 76, 75,
+     its data pointer never moves, its note fill is zero and its volume and
+     frequency are unchanged, so no note was read and no fill expired. New
+     `SmpsSequencerConfig.PsgEnvRestCmd`, S3K only. Tick 158 -> 159.
+  3. *Only S2 skips modulation at rest.* The engine gated that on
+     `isDirect68kDriver()`, which is true for S1 and false for both Z80
+     drivers, so S3K inherited S2's check. S2's `zDoModulation` does test the
+     bit (`bit 1,(ix+zTrack.PlaybackControl) / ret nz`,
+     s2.sounddriver.asm:988-990); S1's (s1.sounddriver.asm:483-490) and S3K's
+     (:1277-1283) test only whether modulation is active. New
+     `stepModulationAtRest`, set explicitly on all three and preserving S1 and
+     S2 exactly. Tick 159 -> 180.
+- **A fourth change that moved nothing and is landed as such.** S3K's note
+  fill is a per-pass countdown whose tail splits by track type: PSG rests
+  without silencing (:4070-4074, :4220-4224) where FM keys off without
+  resting (:786-790, :2148-2152). The engine modelled it as an elapsed
+  comparison that did neither. The frontier did not move, because no track
+  reaches a fill expiry in this window; it is landed with a citation rather
+  than left wrong.
+- **Scoped deliberately, and the reason is recorded.** The new
+  `NoteFillTail` mode is S3K only. S2's `zNoteFillUpdate` is also a per-pass
+  countdown and it rests the track and sends a note off for either type
+  (s2.sounddriver.asm:1153-1163), which the engine's elapsed-comparison model
+  does not do. Switching S2 left its driver oracle at `MATCH (698 ticks)`, but
+  that window reaches no fill expiry, so the green proves nothing. S2 is left
+  on its existing model and the discrepancy is recorded here as open.
+- **Still open, unchanged from the previous entry.** The listing's annotated
+  cycle total for one iteration of `.dac_playback_loop` is 303;
+  `Sonic3kSmpsLoader` passes 297 as `baseCycles`. The constant is untouched.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,109
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S3K tick 143 is Z80 service duration: the DAC pump gets the whole frame
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
