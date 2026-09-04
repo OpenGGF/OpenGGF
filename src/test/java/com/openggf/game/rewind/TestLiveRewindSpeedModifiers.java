@@ -80,7 +80,7 @@ class TestLiveRewindSpeedModifiers {
         // down, fires (deactivating speed shoes), and self-removes -- exactly
         // like ordinary gameplay driving TimerManager.update() every frame.
         for (int i = 0; i < 5; i++) {
-            GameServices.timers().update();
+            GameServices.timers().updateDisplayPhaseTimersFor(sonic);
         }
         assertFalse(sonic.hasSpeedShoes(), "sanity: speed shoes must have naturally expired by now");
         assertNull(GameServices.timers().getTimerForCode(code), "sanity: the expired timer must have removed itself");
@@ -93,12 +93,12 @@ class TestLiveRewindSpeedModifiers {
         assertTrue(sonic.hasSpeedShoes(), "restore must bring speed shoes back to their captured active state");
 
         for (int i = 0; i < 4; i++) {
-            GameServices.timers().update();
+            GameServices.timers().updateDisplayPhaseTimersFor(sonic);
         }
         assertTrue(sonic.hasSpeedShoes(),
                 "speed shoes must still be active after only 4 of the 5 originally-captured remaining ticks pass");
 
-        GameServices.timers().update();
+        GameServices.timers().updateDisplayPhaseTimersFor(sonic);
         assertFalse(sonic.hasSpeedShoes(),
                 "the restored timer must still expire after its original remaining duration instead of "
                         + "lasting indefinitely");
