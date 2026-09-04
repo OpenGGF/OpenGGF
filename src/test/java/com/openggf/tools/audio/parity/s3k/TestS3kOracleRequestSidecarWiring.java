@@ -196,11 +196,12 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * Ninety-five consecutive services now agree. The most recent correction
-     * is where the do-not-attack bit is cleared: {@code zGetNextNote} clears
-     * it before the coordination-flag loop, so a {@code cfPreventAttack} read
-     * during that same unit survives for the guarded note's whole duration.
-     * What remains is PSG2's {@code resting} bit.
+     * A hundred and nineteen consecutive services now agree. The most recent
+     * correction is that a PSG volume envelope parked on a rest command
+     * re-rests the track on the same pass that {@code zGetNextNote} cleared
+     * the bit, which happens whenever the do-not-attack bit kept
+     * {@code zFinishTrackUpdate} from resetting the envelope index. What
+     * remains is a PSG1 write at service 258.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -212,10 +213,11 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 96, report.tick());
-        assertEquals("MUS_PSG2", report.role());
-        assertEquals("resting", report.field());
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 120, report.tick());
+        assertEquals(9, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=131]",
+                report.reference());
     }
 
     /**

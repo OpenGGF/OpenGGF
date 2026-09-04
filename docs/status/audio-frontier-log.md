@@ -27,6 +27,59 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - A parked S3K PSG envelope rest survives the next note; tick 234 -> tick 258
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `00a65e743`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 234, role `MUS_PSG2`, field
+  `resting`, reference `true` against engine `false`. DAC stream
+  `BYTE_DIFFERENT` run 29 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 258, event 9, reference
+  `psg 131` against engine `psg 149`. DAC stream unchanged. Services 139
+  through 257 now agree.
+- **The routine.** `zUpdatePSGTrack`'s note-start entry falls through to the
+  same `.skip_fill` block the note-going entry uses, so a new note's own pass
+  also reads the volume envelope; only a rest note returns first, on the
+  `bit 4` test after `zGetNextNote` (Sound/Z80 Sound Driver.asm:4059-4090).
+  That matters when the envelope is parked on a rest command, because
+  `zDoVolEnvRest` and `zDoVolEnvFullRest` never advance `VolEnv` (:4187-4208):
+  `zGetNextNote` clears the rest bit for the new note and the parked command
+  puts it straight back on the same pass.
+- **The gate on it is the ROM's, not a carve-out.** `zFinishTrackUpdate`
+  leaves `VolEnv` alone exactly when the do-not-attack bit is set
+  (:1061-1068); otherwise it resets the index to zero and the pass reads the
+  first byte, which is the step the engine already applies at note start. So
+  the envelope is re-read on a note start only while that bit is set.
+- **The evidence, and a wrong first attempt that the measurement rejected.** A
+  probe over the reference showed PSG2 sitting on envelope index 20 unchanged
+  from service 228 to 240 while its rest bit stayed up, its pointer advanced
+  two bytes at 234 and its duration reloaded from the saved 96. Byte-level
+  probes of the engine's own stream showed it never dispatches a rest note
+  with the do-not-attack bit set, which ruled out the obvious reading that the
+  new note was itself a rest. Running the envelope on *every* note start,
+  ungated, was tried first and moved the frontier backwards to tick 138 event
+  257, because it double-steps the first envelope value that `playNote`
+  already applies. The gated form is what landed.
+- **A defect of my own from the previous round, corrected here.** The `81h`
+  and `83h` handling set `envHold`, which stopped the envelope being re-read
+  at all. That summarised "the index does not advance" but discarded the
+  re-read's side effect, which is the whole mechanism above. The hold is gone;
+  the index is simply left parked.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear,
+  which looks redundant on the same reading that fixed S3K; and the
+  `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S3K clears do-not-attack before the note read; tick 180 -> tick 234
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

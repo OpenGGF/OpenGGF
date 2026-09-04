@@ -1532,6 +1532,24 @@ public class SmpsSequencer implements CoordFlagContext {
                 }
             }
 
+            if (t.active && t.type == TrackType.PSG && !t.resting && t.tieNext
+                    && config.getPsgEnvRestCmd()
+                            == SmpsSequencerConfig.PsgEnvRestCmd.Z80_81_AND_83) {
+                // zUpdatePSGTrack's note-start entry falls through to the same
+                // .skip_fill block the note-going entry uses, so a new note's
+                // own pass reads the volume envelope too; only a rest note
+                // returns first, on the bit 4 test after zGetNextNote
+                // (Sound/Z80 Sound Driver.asm:4059-4090). This matters when
+                // zFinishTrackUpdate left VolEnv alone, which it does exactly
+                // when the do-not-attack bit is set (:1061-1068): the envelope
+                // is still parked on whatever command it stopped at, and a
+                // parked 81h or 83h re-rests the track on the same pass that
+                // zGetNextNote cleared bit 4. When the bit is clear the ROM
+                // resets VolEnv to 0 and reads the first byte, which is the
+                // step playNote already applies.
+                processPsgEnvelope(t);
+            }
+
             if (!t.active) {
                 stopNote(t);
             }
@@ -2908,15 +2926,17 @@ public class SmpsSequencer implements CoordFlagContext {
                     // zDoVolEnvRest and zDoVolEnvFullRest pop the caller's
                     // return address, set PlaybackControl bit 4 and end the
                     // track's pass (Sound/Z80 Sound Driver.asm:4169-4175,
-                    // :4187-4194, :4204-4208). Neither advances VolEnv, so the
-                    // same command is re-read every pass, and neither silences
-                    // the channel: the ROM says so outright at :4208. The
-                    // frequency latch has already happened by here, which is
-                    // why only the volume write is skipped.
+                    // :4187-4194, :4204-4208). Neither silences the channel,
+                    // which the ROM says outright at :4208. Neither advances
+                    // VolEnv either, so the envelope stays parked on the
+                    // command and re-reads it on every later pass, re-setting
+                    // the rest bit each time. That re-set matters: zGetNextNote
+                    // clears bit 4 when a new note is read (:905-915), and the
+                    // envelope puts it straight back on the same pass. So the
+                    // envelope must NOT be held here, or the rest would be lost
+                    // at the next note.
                     t.envPos--;
                     t.resting = true;
-                    t.envHold = true;
-                    t.envAtRest = true;
                     return;
                 }
                 if (val == 0x80) {
