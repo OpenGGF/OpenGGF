@@ -7,6 +7,8 @@ import com.openggf.level.objects.TestObjectServices;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -71,6 +73,41 @@ class TestAizMinibossCutsceneInstance {
             return barrel;
         } finally {
             context.remove();
+        }
+    }
+
+    /**
+     * The AIZ miniboss drop plays {@code mus_Miniboss}, {@code $2E}
+     * (sonic3k.asm:136807-136812, {@code AIZMiniboss_StartDropMusic}), which
+     * also writes it to {@code Current_music+1}.
+     *
+     * <p>The engine used {@code mus_MinibossK}, {@code $18}. Both resolve to the
+     * same arrangement through the S&amp;K driver table, so the wrong constant
+     * is inaudible today and becomes audible the moment the S3 table is
+     * selected. That is exactly the kind of divergence a listening test cannot
+     * catch, so it is pinned by id here.
+     */
+    @Test
+    void minibossDropRequestsTheRomsOwnMinibossTrack() throws Exception {
+        RecordingMusicServices services = new RecordingMusicServices();
+        AizMinibossCutsceneInstance cutscene = buildCutscene(services);
+
+        java.lang.reflect.Method start =
+                AizMinibossCutsceneInstance.class.getDeclaredMethod("onInitialDelayComplete");
+        start.setAccessible(true);
+        start.invoke(cutscene);
+
+        assertEquals(List.of(0x2E), services.musicRequests,
+                "AIZMiniboss_StartDropMusic plays mus_Miniboss ($2E), not mus_MinibossK ($18)");
+    }
+
+    /** Records the music ids an object requests. */
+    private static final class RecordingMusicServices extends TestObjectServices {
+        private final List<Integer> musicRequests = new ArrayList<>();
+
+        @Override
+        public void playMusic(int musicId) {
+            musicRequests.add(musicId);
         }
     }
 
