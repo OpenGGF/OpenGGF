@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects.bosses;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.level.objects.ObjectAnimationState;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -78,8 +79,14 @@ public class CPZBossContainerExtend extends AbstractObjectInstance implements Re
         // Check if should become gunk
         if (mainBoss != null && mainBoss.shouldSpawnGunk()) {
             mainBoss.clearSpawnGunkFlag();
-            spawnGunk();
-            setDestroyed(true);
+            // ROM: the rewrite branches to Obj5D_Container_Floor_End, which still
+            // copies the parent container's position, render flags and status into
+            // this object and animates and displays it for THIS frame
+            // (docs/s2disasm/s2.asm:62843-62848, :62881-62889). The gunk's own
+            // routine is not reached on the rewriting frame, so this frame's
+            // position copy is the position the gunk starts from.
+            updatePosition();
+            becomeGunk();
             return;
         }
 
@@ -121,12 +128,30 @@ public class CPZBossContainerExtend extends AbstractObjectInstance implements Re
         animate();
     }
 
-    private void spawnGunk() {
-        if (services().objectManager() == null) {
+    /**
+     * ROM: {@code Obj5D_Container_Extend} does not allocate a gunk. It rewrites
+     * ITSELF -- {@code move.b #$C,routine(a0)},
+     * {@code move.b #0,routine_secondary(a0)},
+     * {@code move.b #$87,collision_flags(a0)} -- and then branches to
+     * {@code Obj5D_Container_Floor_End} (docs/s2disasm/s2.asm:62843-62848).
+     *
+     * <p>Two consequences, and both are load-bearing. The gunk keeps this
+     * object's SST slot rather than taking a fresh one. And because the object
+     * pass has already run that slot, {@code Obj5D_Gunk_Init} -- which falls
+     * through into {@code Obj5D_Gunk_Main} and its first
+     * {@code ObjectMoveAndFall} -- is not reached until the NEXT frame.
+     */
+    private void becomeGunk() {
+        var objectManager = services().objectManager();
+        if (objectManager == null) {
             return;
         }
+        int transferredSlot = ObjectLifetimeOps.detachSlotForTransfer(this);
+        ObjectLifetimeOps.destroyLatched(this);
+        ObjectLifetimeOps.removeSpawnFromActive(objectManager, spawn);
         ObjectSpawn gunkSpawn = new ObjectSpawn(x, y, Sonic2ObjectIds.CPZ_BOSS, 0, renderFlags, false, 0);
-        spawnChild(() -> new CPZBossGunk(gunkSpawn, mainBoss, false));
+        ObjectLifetimeOps.addReplacementAtTransferredSlot(objectManager,
+                new CPZBossGunk(gunkSpawn, mainBoss, false), transferredSlot);
     }
 
     private void animate() {

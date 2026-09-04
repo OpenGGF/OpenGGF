@@ -82,6 +82,18 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     // Subtype configuration
     private int moveType;
     private int widthPixels;
+    /**
+     * ROM {@code render_flags} on-screen bit as the solid gate reads it: the
+     * value this object's own display pass latched at the end of the PREVIOUS
+     * frame. The engine runs a solid pass both before and after an object's own
+     * update within a frame, so the freshly computed value is held in
+     * {@link #onScreenAtNextDisplay} and only promoted at the start of the next
+     * update; otherwise a platform that jumps position would gate on where it
+     * has just arrived rather than where it was displayed.
+     */
+    private boolean onScreenAtLastDisplay;
+    /** The value this frame's display pass will latch for the next frame. */
+    private boolean onScreenAtNextDisplay;
     private int yRadius;
     private int mappingFrame;
 
@@ -155,10 +167,25 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
         return SolidRoutineProfile.fromProvider(this);
     }
 
+    /**
+     * ROM {@code Obj6B_Main} gates its whole {@code SolidObject} call on this
+     * object's own render on-screen bit:
+     * {@code _btst #render_flags.on_screen,render_flags(a0) / _beq.s .offScreen}
+     * (docs/s2disasm/s2.asm:54443-54456). That bit is not a live position test.
+     * It is set when the object displays, at the tail of its own previous pass,
+     * so it describes where the object was at the END of the previous frame.
+     *
+     * <p>The difference matters wherever one of these platforms jumps position.
+     * The CPZ loop wraps three of them at once; a platform arriving at the
+     * player's feet was off-screen the frame before, so the ROM skips its solid
+     * pass on the arrival frame and the player is briefly airborne, landing on
+     * it the following frame. A live on-screen test instead makes it solid the
+     * moment it arrives and hands the player over with no gap.
+     */
     @Override
     public boolean isSolidFor(PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
-        return !isDestroyed();
+        return !isDestroyed() && onScreenAtLastDisplay;
     }
 
     @Override
@@ -186,8 +213,18 @@ public class MTZPlatformObjectInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        onScreenAtLastDisplay = onScreenAtNextDisplay;
         applyMovement(vIntRunCount);
         updateDynamicSpawn(x, y);
+        // ROM Obj6B_Main ends by displaying through MarkObjGone2, which is what
+        // sets render_flags' on-screen bit, and it does so from the position this
+        // pass just produced. The next pass's solid gate reads that latched bit,
+        // never a live test -- see isSolidFor.
+        // BuildSprites sets the bit from the object's own render extents. Obj6B_Init
+        // sets only the level_fg render flag, never the custom-height bit, so the
+        // vertical band is BuildSprites' fixed 32px .assumeHeight path
+        // (docs/s2disasm/s2.asm:53906-53930).
+        onScreenAtNextDisplay = isWithinBuildSpritesBounds(x, y, widthPixels, 32);
     }
 
     @Override
