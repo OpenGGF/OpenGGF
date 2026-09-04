@@ -123,7 +123,17 @@ defined by `com.openggf.tools.audio.parity`.
   `TestStaticStateRewindCoverageGuard`: 2,142 tests, 0 failures, 10 skips.
   `TestSonic3kCoordFlagParity` is now in the per-cycle gate, because its two
   end-state snapshots are exactly the kind of assertion the audio gate used to
-  miss.
+  miss. The whole suite with three ROM paths is 16,397 tests, 0 failures, 22
+  skips, and `-Pguards` is 607 tests, 0 failures.
+- **One more engine-behaviour pin needed updating, on this same routine.**
+  `TestSonic3kFm3SpecialMode`'s `F3` test asserts the PSG write list as
+  incidental context around its real subject, which is raw-operand retention.
+  Each silence of its noise PSG3 track is a `zSilencePSGChannel` call, so the
+  tone byte now precedes the noise byte on every call and the list went from
+  `0DFh, 0E5h, 0FFh, 0FFh` to `0DFh, 0E5h, 0DFh, 0FFh, 0DFh, 0FFh`. The
+  previous list recorded the engine emitting the noise byte alone; the new one
+  follows the routine call for call. Like the two `TestSonic3kCoordFlagParity`
+  snapshots, it is reached only by the whole suite.
 
 
 ## 2026-09-04 - An S3K load service does not accumulate for the song it loads

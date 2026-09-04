@@ -141,7 +141,13 @@ class TestSonic3kFm3SpecialMode {
         assertTrue(psg3.rawPsgNoiseKnown);
         assertEquals(0x05, psg3.psgNoiseParam,
                 "normalised PSG behaviour remains independent of the retained byte");
-        assertEquals(List.of(0xDF, 0xE5, 0xFF, 0xFF), synth.psgWriteValues,
+        // Each silence of this noise PSG3 track is a zSilencePSGChannel call,
+        // which writes 1Fh + VoiceControl for the track's own tone channel
+        // and then 0FFh for the noise channel (skdisasm Sound/Z80 Sound
+        // Driver.asm:4226-4245), so the pair repeats per call. The engine used
+        // to emit the noise byte alone, which is what the previous
+        // 0DFh, 0E5h, 0FFh, 0FFh expectation recorded.
+        assertEquals(List.of(0xDF, 0xE5, 0xDF, 0xFF, 0xDF, 0xFF), synth.psgWriteValues,
                 "F3 keeps its existing writes, including the terminal F2 cleanup");
         assertEquals(0x43, psg3.pos);
     }
