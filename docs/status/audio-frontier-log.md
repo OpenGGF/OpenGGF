@@ -185,6 +185,51 @@ defined by `com.openggf.tools.audio.parity`.
   `com.openggf.audio` packages, `TestSmpsFadeAudioThroughput` and the four S3K
   keep-green classes run 2,097 tests with 0 failures.
 
+## 2026-09-04 — S1 gameplay run-2 oracle: tick 1,906 → full MATCH, Sound_PlaySpecial's stale-d4 PSG pair
+
+- **Worktree/branch:** `.worktrees/audio-s1-run2`, `bugfix/ai-s1-run2-frontier`,
+  from `develop` `1e128d0d6`.
+- **Fixture:** `src/test/resources/audio/parity/s1/s1-gameplay-ghz1-run2-reference.v1.jsonl.gz`
+  (5,257 ticks, from the committed `s1-complete-run.bk2`).
+- **Command:** `LUA_BIN=lua5.4 mvn -Dmse=off '-Dsonic1.rom.path=<absolute S1
+  REV01 .gen>'
+  '-Dtest=com.openggf.tools.audio.parity.TestS1GameplayRun2AudioDriverOracle'
+  test -B`
+- **Before:** `MISMATCH`, first divergence tick **1,906**, event 0 — the
+  reference opens that tick with PSG `$1F` then `$3F`, which the engine never
+  emitted.
+- **After:** **`MATCH (5257 ticks)`**. Both S1 gameplay windows now match end
+  to end.
+- **The routine.** Tick 1,906's only dispatch is `$D0`, the GHZ waterfall
+  special SFX, so the writes belong to `Sound_PlaySpecial`
+  (docs/s1disasm/s1.sounddriver.asm:1117). Its `.doneoverride` tail (:1183-1191)
+  tests the NORMAL SFX PSG3 slot — `tst.b v_sfx_psg3_track.PlaybackControl /
+  bpl.s .locret` — and when it is playing writes `ori.b #$1F,d4 / move.b
+  d4,(psg_input) / bchg #5,d4 / move.b d4,(psg_input)`. The comment calls this
+  "command to silence channel", but `d4`'s last assignment is `move.b 1(a1),d4`
+  at the top of `.sfxloadloop` (:1141), so it holds the voice control bits of
+  the last header entry the loop read. `SndD0 - Waterfall` declares one track,
+  `cFM4` = `$04` (docs/s1disasm/sound/sfx/SndD0 - Waterfall.asm:7, `cFM4` at
+  docs/s1disasm/sound/_smps2asm_inc.asm:176), so `$04 | $1F` = `$1F` and the
+  `bchg #5` gives `$3F` — two SN76489 *data* bytes rather than the intended
+  `$DF, $FF` latch pair. That is the shipped `FixBugs = 0` behaviour
+  (docs/s1disasm/sonic.asm:20) and the engine now emits it as emitted.
+- **Why it fires once in 23.** The fixture dispatches `$D0` twenty-three times
+  and only tick 1,906 carries the pair, because the gate is the normal SFX PSG3
+  slot. `$C1` "Break Item", the one nearby SFX with a `cPSG3` track
+  (docs/s1disasm/sound/sfx/SndC1 - Break Item.asm:8), was dispatched thirteen
+  ticks earlier at 1,893 and was still playing. No constant was introduced: the
+  emitted bytes are computed from the special SFX's own last header entry, and
+  the gate is the PSG3 slot's playing state, so both generalise to any movie.
+- **Placement.** New `SmpsSequencerConfig.SpecialSfxPsg3SilenceMode`, set to
+  `S1_STALE_VOICE_CONTROL_PAIR` only by `Sonic1SmpsSequencerConfig`; the S2 and
+  S3K Z80 drivers keep `NONE`. No shared-sequencer behaviour changed.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`, both exit 0 through `run_s1_audio_parity.sh`; the S1
+  gameplay v3 oracle stays green; the S2 driver oracle stays at
+  `MATCH (698 ticks)`; the audio and audio-tooling packages run 2,501 tests
+  with 0 failures and 0 errors.
+
 
 ## 2026-09-03 — a second S1 gameplay source, and it diverges where the first does not
 

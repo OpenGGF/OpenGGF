@@ -1,0 +1,97 @@
+{
+  "schema": "openggf.s2-request-oracle-audio-raw-fixture.v1",
+  "payload": "s2-request-window-w13650-14400.raw-v2.jsonl.gz",
+  "payload_schema": "openggf.s2-oracle-audio-raw.v2",
+  "source_schema": "openggf.s2-complete-run-audio-raw.v3",
+  "request_transfer_schema": "openggf.s2-preconsumption-request-transfer.v1",
+  "game": "s2",
+  "rom": {
+    "name": "Sonic 2 World REV01",
+    "sha1": "8bca5dcef1af3e00098666fd892dc1c2a76333f9",
+    "crc32": "7b905383"
+  },
+  "movie": {
+    "name": "sonic-2-sonic-tails-complete-emeralds.bk2",
+    "path": "src/test/resources/traces/s2/runs/s2-sonic-tails-complete-emeralds/sonic-2-sonic-tails-complete-emeralds.bk2",
+    "sha256": "e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5",
+    "rows": 259590
+  },
+  "window": {
+    "first_row": 13650,
+    "exclusive_end": 14400,
+    "rows": 750,
+    "source_first_row": 13650,
+    "source_exclusive_end": 14400,
+    "request_transfers": 5,
+    "request_pc": "0x10d6",
+    "request_opcode": "13801009",
+    "notes": "The 750 rows spanning the EHZ1 exit into the second special stage at movie row 13712, so the window crosses a level transition and a new music epoch opens inside it."
+  },
+  "digests": {
+    "payload_gz_sha256": "d465abe64b2bee433aa458ab93dd4b7068479f22fd7ea4007700dfc758b55330",
+    "payload_raw_sha256": "457e9870c381fef32dd37abfbcf2fe04fa041cfdf3548e62e3e1e789a438c871",
+    "payload_raw_bytes": 40614035,
+    "payload_raw_lines": 753
+  },
+  "capture": {
+    "tracechaser_base_commit": "85a2a802f8008e11149888cff2f4048d591415db",
+    "duplicate_capture_gate": "met: two independent serial power-on captures on two independently built installs, byte-identical raw-v3 and byte-identical extracted payload",
+    "source_raw_sha256": "5096d2bb02f76045be1b06df5dc72d83d756e360acfc1a6d2b98ba40546ae027",
+    "capture_paths": [
+      "<agent-scratch>/claude/s2-widen/runs/w4-g/s2-request.raw.jsonl",
+      "<agent-scratch>/claude/s2-widen/runs/w4-h/s2-request.raw.jsonl"
+    ],
+    "capture_paths_note": "Two distinct absent external paths under a session scratch root, outside the repository; recorded for provenance, not as a re-runnable location.",
+    "candidate_core_sha256": "04555797c284358fe96dd018feed82aa9d6d4eaddc3cce8e1282a2f4fd636ffa",
+    "observer_identity_sha256": "815bfde02d78fd6caa1b127ddefe7be28cc84d6fdeef5a75cecc31f186f84d86",
+    "service_manifest_sha256": "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0",
+    "extractor_capability_sha256": "76d05a9ee97add56f0549f3a552c87a7354acb827ea8e38a10240413b9ce130d",
+    "extractor_attestation_sha256": "18ab252f4a172a92d9418347e8413592a4ed8b2f841dc449cec0ebe4a5ce1d93",
+    "producer_uncommitted_diff_sha256": "0734f55cdfbdae7da0c5e46dfbfc28c86123aed93ae02a0ce93bbae6d385a39b",
+    "producer_diff_note": "The disposable live producer lives on TraceChaser 85a2a80, which is not an ancestor of the pinned gitlink. Two edits were needed and are not committed anywhere: the capture window was made an environment input instead of a source constant, and the observer profile's single pinned movie identity became a two-entry table of exactly pinned identities so the CPZ recording could be opened. Neither edit relaxes an identity match.",
+    "control_reproduction": "Rebuilding the apparatus and recapturing the original 10150-10900 window reproduced the published source raw-v3 digest dd8b427d4a9a407102be83442d04dd21ddebebe6c3c7f72a3e453b479f870f05 and, after extraction, the published payload digest a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c with the published capability and attestation digests, so these windows come from a producer proven byte-identical to the one that made the first fixture.",
+    "extractor_capability": {
+      "schema": "openggf.s2-request-aware-raw-v3-capability.v1",
+      "production_bound": false,
+      "producer": "s2-complete-audio-request-candidate",
+      "rom_sha1": "8bca5dcef1af3e00098666fd892dc1c2a76333f9",
+      "bk2_sha256": "e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5",
+      "service_manifest_sha256": "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0",
+      "candidate_manifest_sha256": "375a6bc5433f62e75e2991283f495a8d9e9e6c77fed9c91144d15124ed39e669",
+      "candidate_patch_sha256": "1419e1fc4eb3399fec5e40973cd1cc826689378cdfc254677cf6fc60cad9035a",
+      "candidate_recipe_sha256": "880341f179b3369e58918af17a5a6465aca4021226f32abeace4af2d8c50d65f",
+      "candidate_profile_sha256": "3f9b408755dbdf1c3060c1c947b19bd6f925d7193915d45ffb8a1efd525e4b05",
+      "harness_executable_sha256": "2ebf068fdb997b68049f5e84eeb5036192b850448445b3273c92698bccdb5fd6",
+      "first_row": 13650,
+      "exclusive_end": 14400,
+      "window_first_row": 13650,
+      "window_exclusive_end": 14400,
+      "base_event_count": 139869,
+      "all_event_count": 139874,
+      "marker_event_count": 5,
+      "request_count": 5,
+      "base_event_sha256": "ac93f517e2254c92a7ba1bcc9f41ada922b61bac2f6831152af63202ead88980",
+      "all_event_sha256": "3c5c432c6a7c4251ca84d5b603b3fb4fad1d5198d1beb80965d81960e8e7ec49",
+      "marker_event_sha256": "860c462bc588d01f288c8dfab873dfce2fd23d1e62fcddfe5073c16b92de1369",
+      "request_sha256": "fa1af2153734f8cc8ab2e1f40b2d19d49ec0bb0112812ef13eccce4e87a392cb",
+      "max_request_occupancy": 1,
+      "override_resume_count": 0,
+      "override_resume_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "pcm_count": 0,
+      "pcm_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "cutoff_frontier_sha256": "ef1f2f744a7d2b63325fd36e703634218cc55e4b60cdbd637a2f87362b1c9bf1",
+      "terminal_state_sha256": "8661c5c835c5155791090f852ecca00c032810897481506044e96b5fc695be09",
+      "digest_domains": {
+        "raw_sha256": "raw-file-bytes-v1",
+        "event_and_request_sha256": "compact-json-lf-v1",
+        "override_resume_sha256": "compact-json-lf-v1",
+        "pcm_sha256": "compact-json-lf-v1",
+        "cutoff_frontier_sha256": "compact-json-lf-v1",
+        "terminal_state_sha256": "decoded-z80-state-bytes-v1"
+      }
+    }
+  },
+  "production_bound": false,
+  "production_bound_meaning": "The payload's own metadata line carries production_bound:false and that value is preserved verbatim. This fixture is a committed comparison reference and binds nothing to a production producer. Nothing here hydrates engine state: it is comparison-only, MEASUREMENT_ONLY at the gate.",
+  "notes": "Published 2026-09-04 alongside the original 10150-10900 window as part of widening the S2 driver-oracle coverage. Gate: TestS2WidenedRequestOracle, which reads this payload and compares it against the engine's own request projection driven from the committed recording."
+}

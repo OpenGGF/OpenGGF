@@ -97,6 +97,29 @@ public final class SmpsSequencerConfig {
         S1_PSG3_SILENCE_PAIR
     }
 
+    /**
+     * Visible PSG writes S1's special-SFX loader emits at the tail of
+     * {@code Sound_PlaySpecial}.
+     */
+    public enum SpecialSfxPsg3SilenceMode {
+        /** Admitting a special SFX changes no PSG register state. */
+        NONE,
+        /**
+         * S1: {@code Sound_PlaySpecial}'s {@code .doneoverride} tail
+         * (docs/s1disasm/s1.sounddriver.asm:1183-1191) writes {@code d4|$1F}
+         * and then that value with bit 5 flipped, where {@code d4} still holds
+         * the voice control bits of the LAST track its own load loop read
+         * (:1141). The intended value was the PSG3 channel byte {@code $C0},
+         * which would give the {@code $DF, $FF} silence pair; with an FM-only
+         * special SFX such as {@code SndD0 - Waterfall} ({@code cFM4} =
+         * {@code $04}) it instead emits {@code $1F, $3F}, two SN76489 DATA
+         * bytes that land on whichever register was latched last. This is a
+         * shipped-ROM defect under {@code FixBugs = 0} and is modelled as
+         * emitted, not as the value the comment intends.
+         */
+        S1_STALE_VOICE_CONTROL_PAIR
+    }
+
     /** Visible PSG writes emitted while admitting a declared PSG3 SFX track. */
     public enum Psg3SfxAdmissionWriteMode {
         /** Admission changes no PSG register state. */
@@ -189,6 +212,7 @@ public final class SmpsSequencerConfig {
     private final FmSfxTakeoverMode fmSfxTakeoverMode;
     private final PsgSfxTakeoverMode psgSfxTakeoverMode;
     private final Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode;
+    private final SpecialSfxPsg3SilenceMode specialSfxPsg3SilenceMode;
     private final SfxChannelOwnershipMode sfxChannelOwnershipMode;
     private final FmSfxReleaseMode fmSfxReleaseMode;
     private final PsgSfxReleaseMode psgSfxReleaseMode;
@@ -237,6 +261,7 @@ public final class SmpsSequencerConfig {
         this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
         this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
         this.psg3SfxAdmissionWriteMode = b.psg3SfxAdmissionWriteMode;
+        this.specialSfxPsg3SilenceMode = b.specialSfxPsg3SilenceMode;
         this.sfxChannelOwnershipMode = b.sfxChannelOwnershipMode;
         this.fmSfxReleaseMode = b.fmSfxReleaseMode;
         this.psgSfxReleaseMode = b.psgSfxReleaseMode;
@@ -384,6 +409,10 @@ public final class SmpsSequencerConfig {
         return psgSfxTakeoverMode;
     }
 
+    public SpecialSfxPsg3SilenceMode getSpecialSfxPsg3SilenceMode() {
+        return specialSfxPsg3SilenceMode;
+    }
+
     public Psg3SfxAdmissionWriteMode getPsg3SfxAdmissionWriteMode() {
         return psg3SfxAdmissionWriteMode;
     }
@@ -505,6 +534,8 @@ public final class SmpsSequencerConfig {
         private PsgSfxTakeoverMode psgSfxTakeoverMode = PsgSfxTakeoverMode.FORCE_SILENCE;
         private Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode =
                 Psg3SfxAdmissionWriteMode.NONE;
+        private SpecialSfxPsg3SilenceMode specialSfxPsg3SilenceMode =
+                SpecialSfxPsg3SilenceMode.NONE;
         private SfxChannelOwnershipMode sfxChannelOwnershipMode =
                 SfxChannelOwnershipMode.FIRST_WRITE;
         private FmSfxReleaseMode fmSfxReleaseMode = FmSfxReleaseMode.LEGACY_FULL_RESTORE;
@@ -547,6 +578,7 @@ public final class SmpsSequencerConfig {
         public Builder fmSfxTakeoverMode(FmSfxTakeoverMode val) { fmSfxTakeoverMode = val; return this; }
         public Builder psgSfxTakeoverMode(PsgSfxTakeoverMode val) { psgSfxTakeoverMode = val; return this; }
         public Builder psg3SfxAdmissionWriteMode(Psg3SfxAdmissionWriteMode val) { psg3SfxAdmissionWriteMode = val; return this; }
+        public Builder specialSfxPsg3SilenceMode(SpecialSfxPsg3SilenceMode val) { specialSfxPsg3SilenceMode = val; return this; }
         public Builder sfxChannelOwnershipMode(SfxChannelOwnershipMode val) { sfxChannelOwnershipMode = val; return this; }
         public Builder fmSfxReleaseMode(FmSfxReleaseMode val) { fmSfxReleaseMode = val; return this; }
         public Builder psgSfxReleaseMode(PsgSfxReleaseMode val) { psgSfxReleaseMode = val; return this; }

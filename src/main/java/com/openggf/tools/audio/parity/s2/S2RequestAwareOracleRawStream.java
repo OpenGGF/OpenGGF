@@ -115,42 +115,55 @@ final class S2RequestAwareOracleRawStream {
      * hence no production path may open it. Tests can exercise only this closed seam.
      */
     static Result scanCandidateForTesting(Path candidate) throws IOException {
-        return scanCandidate(candidate, SourceIdentity.FULL_CAPTURE);
+        return scanCandidate(candidate, S2RequestAwareOracleSchema.CONTROL, true);
     }
 
     /** Fixed measurement-only entry for extractor output whose source is already windowed. */
     static Result scanWindowSourceCandidateForTesting(Path candidate) throws IOException {
-        return scanCandidate(candidate, SourceIdentity.WINDOW_CAPTURE);
+        return scanWindowSourceCandidateForTesting(candidate,
+                S2RequestAwareOracleSchema.CONTROL);
     }
 
-    private static Result scanCandidate(Path candidate, SourceIdentity expected)
+    /**
+     * The same measurement-only entry for a published window other than the
+     * original one. The window is an exact identity, not a relaxation: the
+     * reader still matches the recording, the bounds and the source interval.
+     */
+    static Result scanWindowSourceCandidateForTesting(Path candidate,
+            S2RequestAwareOracleSchema.Window window) throws IOException {
+        return scanCandidate(candidate, window, false);
+    }
+
+    private static Result scanCandidate(Path candidate,
+            S2RequestAwareOracleSchema.Window window, boolean fullCapture)
             throws IOException {
         Objects.requireNonNull(candidate, "candidate");
+        Objects.requireNonNull(window, "window");
         try (InputStream input = Files.newInputStream(candidate)) {
-            return scan(input, expected);
+            return scan(input, window, fullCapture);
         }
     }
 
-    private static Result scan(InputStream input, SourceIdentity expected)
+    private static Result scan(InputStream input,
+            S2RequestAwareOracleSchema.Window window, boolean fullCapture)
             throws IOException {
         MessageDigest digest = sha256();
         StrictLines lines = new StrictLines(input, digest);
         byte[] metadataBytes = lines.next("metadata");
         JsonNode metadata = parse(metadataBytes, "metadata");
-        validateMetadata(metadata, expected);
+        validateMetadata(metadata, window, fullCapture);
         BoundedEvidence evidence = new BoundedEvidence();
         evidence.payloadPrefix(metadataBytes);
         byte[] baselineBytes = lines.next("baseline");
-        Baseline baseline = parseBaseline(parse(baselineBytes, "baseline"));
+        Baseline baseline = parseBaseline(parse(baselineBytes, "baseline"), window);
         evidence.body(baselineBytes);
-        List<Frame> frames = new ArrayList<>(S2RequestAwareOracleSchema.EXCLUSIVE_END
-                - S2RequestAwareOracleSchema.FIRST_ROW);
+        List<Frame> frames = new ArrayList<>(
+                window.exclusiveEnd() - window.firstRow());
         long previousGlobalOrdinal = -1;
         ServiceTopology serviceTopology = new ServiceTopology();
         int overrideRow = -1;
         int pcmRow = -1;
-        for (int row = S2RequestAwareOracleSchema.FIRST_ROW;
-                row < S2RequestAwareOracleSchema.EXCLUSIVE_END; row++) {
+        for (int row = window.firstRow(); row < window.exclusiveEnd(); row++) {
             byte[] frameBytes = lines.next("frame");
             JsonNode frameRecord = parse(frameBytes, "frame");
             Frame frame = parseFrame(frameRecord, row, previousGlobalOrdinal,
@@ -176,12 +189,13 @@ final class S2RequestAwareOracleRawStream {
         }
         require((overrideRow < 0) == (pcmRow < 0),
                 "override resume and PCM inventory differ");
-        validateCutoff(parse(lines.next("cutoff"), "cutoff"), evidence);
+        validateCutoff(parse(lines.next("cutoff"), "cutoff"), evidence, window);
         require(lines.eof(), "records follow the cutoff");
         return new Result(baseline, frames, HexFormat.of().formatHex(digest.digest()));
     }
 
-    private static void validateMetadata(JsonNode value, SourceIdentity expected) {
+    private static void validateMetadata(JsonNode value,
+            S2RequestAwareOracleSchema.Window window, boolean fullCapture) {
         exact(value, "metadata", "type", "schema", "rom_sha1", "bk2_sha256",
                 "service_manifest_sha256", "first_row", "exclusive_end", "state_start",
                 "state_exclusive_end", "source_schema", "source_first_row",
@@ -192,22 +206,23 @@ final class S2RequestAwareOracleRawStream {
                 "schema differs");
         require(S2RequestAwareOracleSchema.S2_REV01_SHA1.equals(text(value, "rom_sha1")),
                 "ROM identity differs");
-        require(S2RequestAwareOracleSchema.BK2_SHA256.equals(text(value, "bk2_sha256")),
+        require(window.bk2Sha256().equals(text(value, "bk2_sha256")),
                 "BK2 identity differs");
         require(S2RequestAwareOracleSchema.SERVICE_MANIFEST_SHA256.equals(
                 text(value, "service_manifest_sha256")), "service manifest identity differs");
-        require(integer(value, "first_row") == S2RequestAwareOracleSchema.FIRST_ROW
-                        && integer(value, "exclusive_end")
-                                == S2RequestAwareOracleSchema.EXCLUSIVE_END
+        require(integer(value, "first_row") == window.firstRow()
+                        && integer(value, "exclusive_end") == window.exclusiveEnd()
                         && integer(value, "state_start") == 0
                         && integer(value, "state_exclusive_end")
                                 == S2RequestAwareOracleSchema.STATE_BYTES,
                 "bounded metadata shape differs");
         require(S2RequestAwareOracleSchema.SOURCE_SCHEMA.equals(text(value, "source_schema"))
                         && integer(value, "source_first_row")
-                                == expected.firstRow
+                                == (fullCapture ? window.sourceFirstRow()
+                                        : window.firstRow())
                         && integer(value, "source_exclusive_end")
-                                == expected.exclusiveEnd,
+                                == (fullCapture ? window.sourceExclusiveEnd()
+                                        : window.exclusiveEnd()),
                 "source identity differs");
         require(S2RequestAwareOracleSchema.REQUEST_TRANSFER_SCHEMA.equals(
                 text(value, "request_transfer_schema")), "request transfer schema differs");
@@ -226,28 +241,14 @@ final class S2RequestAwareOracleRawStream {
                 "bounded digest domains differ");
     }
 
-    private enum SourceIdentity {
-        FULL_CAPTURE(S2RequestAwareOracleSchema.SOURCE_FIRST_ROW,
-                S2RequestAwareOracleSchema.SOURCE_EXCLUSIVE_END),
-        WINDOW_CAPTURE(S2RequestAwareOracleSchema.FIRST_ROW,
-                S2RequestAwareOracleSchema.EXCLUSIVE_END);
-
-        private final int firstRow;
-        private final int exclusiveEnd;
-
-        SourceIdentity(int firstRow, int exclusiveEnd) {
-            this.firstRow = firstRow;
-            this.exclusiveEnd = exclusiveEnd;
-        }
-    }
-
-    private static Baseline parseBaseline(JsonNode value) {
+    private static Baseline parseBaseline(JsonNode value,
+            S2RequestAwareOracleSchema.Window window) {
         exact(value, "baseline", "type", "row", "source_preceding_row", "state_hex",
                 "ym_port0_latch", "ym_port1_latch");
         require("baseline".equals(text(value, "type"))
-                        && integer(value, "row") == S2RequestAwareOracleSchema.FIRST_ROW
+                        && integer(value, "row") == window.firstRow()
                         && integer(value, "source_preceding_row")
-                                == S2RequestAwareOracleSchema.FIRST_ROW - 1,
+                                == window.firstRow() - 1,
                 "baseline boundary differs");
         return new Baseline(integer(value, "row"), integer(value, "source_preceding_row"),
                 state(value), unsignedByte(value, "ym_port0_latch"),
@@ -551,7 +552,8 @@ final class S2RequestAwareOracleRawStream {
         return List.of(new ObservedEnvelope(compact(value)));
     }
 
-    private static void validateCutoff(JsonNode value, BoundedEvidence evidence) {
+    private static void validateCutoff(JsonNode value, BoundedEvidence evidence,
+            S2RequestAwareOracleSchema.Window window) {
         exact(value, "cutoff", "type", "exclusive_end", "frame_count", "base_event_count",
                 "all_event_count", "marker_event_count", "request_transfer_count",
                 "override_resume_count", "pcm_count", "max_request_occupancy",
@@ -560,9 +562,9 @@ final class S2RequestAwareOracleRawStream {
                 "body_byte_count", "body_sha256", "terminal_state_sha256",
                 "payload_before_cutoff_sha256");
         require("cutoff".equals(text(value, "type"))
-                        && integer(value, "exclusive_end") == S2RequestAwareOracleSchema.EXCLUSIVE_END,
+                        && integer(value, "exclusive_end") == window.exclusiveEnd(),
                 "cutoff boundary differs");
-        evidence.verify(value);
+        evidence.verify(value, window);
     }
 
     /** Self-contained bounded output accounting; it never consults raw-v3 provenance. */
@@ -632,9 +634,8 @@ final class S2RequestAwareOracleRawStream {
             }
         }
 
-        void verify(JsonNode cutoff) {
-            require(frameCount == S2RequestAwareOracleSchema.EXCLUSIVE_END
-                            - S2RequestAwareOracleSchema.FIRST_ROW
+        void verify(JsonNode cutoff, S2RequestAwareOracleSchema.Window window) {
+            require(frameCount == window.exclusiveEnd() - window.firstRow()
                             && terminalState != null && overrideCount <= 1 && pcmCount <= 1
                             && overrideCount == pcmCount && markerEventCount == transferCount
                             && allEventCount == baseEventCount + markerEventCount
