@@ -8,8 +8,9 @@ before relying on any of them (see the measurement-hazard table in
 
 ## Where develop stands
 
-- `develop` head at handover: `37c3f0c0b` (the two audited P1 fade regressions
-  fixed; before it `5dd1b8122`: S3K 1-up fade-in body on the live path,
+- `develop` head at handover: `a306c0351` (S3K branch `bugfix/ai-s3k-oracle-freq-resend`
+  fully merged at `ebc90caa3`; no lane is running). Before it `37c3f0c0b` (the two
+  audited P1 fade regressions fixed; before it `5dd1b8122`: S3K 1-up fade-in body on the live path,
   driver-owned fade machine, four more gated oracle fields, intro oracle 760 →
   1490, then 1569 on the branch).
 - Ordinary suite on `5dd1b8122`: 16,476 tests, 0 failures, 22 skips (three ROM
@@ -39,7 +40,7 @@ not evidence (see `TestS2WidenedRequestOracle` history in the frontier log).
 | S2 request windows | MATCH per site (25+2, 52+0, 27+2 SFX+music), payload v4 |
 | S2 CPZ w2700-3450 (second recording) | MATCH 720 state / 719 writes |
 | S2 1-up window w20107-23600 | restore service pinned; whole window red (state tick 2880, writes tick 0) |
-| S3K AIZ1 intro | service 1,569 of 5,263 on `bugfix/ai-s3k-oracle-freq-resend`; DAC stream red at run 338 |
+| S3K AIZ1 intro | service 1,569 of 5,263 (write difference: reference PSG FFh vs engine FM1 frequency, at an SFX taking PSG3); DAC stream red at run 338 byte 0 (88h vs 7Fh). Branch merged; resume from develop |
 
 Per-effect and runtime-path tests (S3K): `TestS3kSfxLifecycleRom`,
 `TestS3kSfxNoiseTailWriteStream`, `TestS3kSfxRuntimePathWithMusic`,
@@ -68,7 +69,7 @@ five silently dropped settings on its first run).
    volumes untouched, per `zDoMusicFadeIn`.
 2. (closed at `37c3f0c0b`) Audit P1: the session snapshot copy dropped the
    driver fade counters; fixed, with a record-component survival guard.
-3. S3K intro oracle from 1,569: same lane, branch `bugfix/ai-s3k-oracle-freq-resend`.
+3. S3K intro oracle from 1,569: resume from develop; the frontier log's top entry has the resume command and the six gated fields.
 4. S1 red windows: five share one cause (an SFX from the previous window still
    holds a track at the epoch). Fix designed: replay from the predecessor
    window's epoch with its recorded requests and compare from the target epoch.
