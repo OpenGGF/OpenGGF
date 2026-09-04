@@ -27,6 +27,49 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 driver-state v2: the BGM load closes with a note-off sweep over every music slot
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `f95ce7696`.
+- **Fixture and command:** as the entry below.
+- **Before, state with writes:** DIVERGENCE at tick 0 (movie row 10202), field
+  `writes[7]`, reference `ym0[0x28]=0x0` against the engine's `ym0[0xb0]=0x8`.
+- **After, state with writes:** DIVERGENCE at tick 0 (movie row 10202), field
+  `writes.count`, reference 145 against the engine's 253. Every one of the
+  reference's 145 writes now agrees with the engine's, in order; what remains
+  at this tick is 108 extra engine writes past the end of the reference's
+  service.
+- **Before and after, state only:** unchanged at tick 1,789.
+- **The routine.** After the FM, PSG and SFX track init, `zBGMLoad` closes with
+  two loops (s2.sounddriver.asm:2051-2075): `zFMNoteOff` over all six music FM
+  slots and `zPSGNoteOff` over all three music PSG slots. Both walk the fixed
+  track region rather than the song's track list, so a song declaring fewer
+  tracks still sweeps every slot. Each call sends that slot's own
+  `VoiceControl` byte, as `28h` for FM (:2814-2827) and as
+  `VoiceControl | 1Fh` to the PSG port (:1357-1367).
+- **Why the reference's last FM value is `00`, and it is derived rather than
+  measured.** EHZ declares six FM+DAC tracks, so slots FM1-FM5 take
+  `zFMDACInitBytes`' `00 01 02 04 05` and the sixth is never touched by this
+  load. It reads back zero because `zBGMLoad` calls `zInitMusicPlayback` first
+  (:1739), and that clears the whole music track region (:2580-2612). Neither
+  of `zFMNoteOff`'s early returns can fire either: bit 4 is inside the region
+  just cleared, and under `FixDriverBugs = 0` `zInitSFX` *clears* the SFX
+  override bit rather than setting it (:2036-2043), which the listing itself
+  flags as a bug against S1's driver.
+- **Where it landed.** `Sonic2SmpsCompatibilityPolicy.activateMusic` now builds
+  the whole load program from the activation's FM+DAC and PSG track counts;
+  `SmpsMusicActivation` gained the PSG count beside the FM+DAC count it already
+  carried. Every value comes from `zFMDACInitBytes` and `zPSGInitBytes`
+  (:2107-2113), so the program is right for any song's track counts.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; the same package run as the
+  entry below: 2,054 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** The 108 surplus engine writes at tick 0. Beyond that the state-only
+  frontier at tick 1,789 is the speed shoes expiring: reference RAM shows
+  `SpeedUpFlag` going `80h` to `00h` and `CurrentTempo` `BEh` to `9Eh` at that
+  service, which is `zSlowDownMusic` (:2697-2707) storing `TempoMod`. The
+  engine holds `BEh` for the remaining 409 ticks.
+
 ## 2026-09-04 - S2 driver-state v2: the BGM load disposes of FM6 before enabling the DAC
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
