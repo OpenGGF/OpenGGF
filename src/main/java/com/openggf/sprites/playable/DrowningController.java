@@ -4,9 +4,11 @@ import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameAudioProfile;
 import com.openggf.audio.GameSound;
 import com.openggf.game.rules.DrowningBubbleRules;
+import com.openggf.sprites.playable.PlayableSpriteRuntimeServices;
 import com.openggf.game.rules.GameRules;
 import com.openggf.level.objects.BreathingBubbleInstance;
 import com.openggf.level.LevelManager;
+import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -384,8 +386,14 @@ public class DrowningController {
     }
 
     /**
-     * Restarts the zone music from the beginning.
-     * Called when exiting water or replenishing air while drowning music was playing.
+     * Restarts the music the player should hear now that the countdown is over.
+     *
+     * <p>Which track that is belongs to the game. S3K's
+     * {@code Player_ResetAirTimer} (sonic3k.asm:33663-33686) loads the level
+     * track and then overrides it for an invincible player, a Super or Hyper
+     * player, and a boss fight; S1 and S2 keep the level track. The choice is
+     * made by the active audio profile, which already owns the music ids, so
+     * this method stays free of any per-game branch.
      */
     private void restartZoneMusic() {
         LevelManager levelManager = player.currentLevelManagerIfAvailable();
@@ -393,9 +401,24 @@ public class DrowningController {
             return;
         }
         int musicId = levelManager.getCurrentLevelMusicId();
-        if (musicId >= 0) {
-            audioManager.playMusic(musicId);
+        if (musicId < 0) {
+            return;
         }
+        GameAudioProfile profile = audioManager.getAudioProfile();
+        if (profile != null) {
+            musicId = profile.resolveAirResetMusic(musicId,
+                    player.getInvincibleFrames() > 0,
+                    player.isSuperSonic(),
+                    bossOwnsMusic());
+        }
+        audioManager.playMusic(musicId);
+    }
+
+    /** ROM: {@code tst.b (Boss_flag).w} at sonic3k.asm:33681. */
+    private boolean bossOwnsMusic() {
+        return PlayableSpriteRuntimeServices.levelEventsOrNull()
+                instanceof AbstractLevelEventManager events
+                && events.isBossActive();
     }
 
     /**

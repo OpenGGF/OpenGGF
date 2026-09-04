@@ -2874,9 +2874,16 @@ public class AudioManager implements MusicRestoreSink {
         return fadeOutMusicCount;
     }
 
+    /**
+     * Fades the current music out with the active game's own ROM parameters.
+     *
+     * <p>The step count and delay belong to the game, not to this class: S1 and
+     * S2 fade over 120 frames, S3K over 240. Routing through the profile keeps
+     * the object-services fade and the fade-out system command on one set of
+     * values.
+     */
     public void fadeOutMusic() {
-        // ROM default: 0x28 (40) steps, delay of 3 frames between steps
-        fadeOutMusic(0x28, 3);
+        GameAudioProfile.fadeOut(getAudioProfile(), this);
     }
 
     /**

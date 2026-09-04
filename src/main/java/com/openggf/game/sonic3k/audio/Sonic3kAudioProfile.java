@@ -204,24 +204,41 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         return SegaPcmRomReader.read(rom, getSegaPcmSpec());
     }
 
-    /** S3K fade-out uses delay 6 instead of the S1/S2 default delay 3. */
+    /**
+     * {@code zFadeOutMusic} sets {@code zFadeOutTimeout} to 28h and both
+     * {@code zFadeDelayTimeout} and {@code zFadeDelay} to 6
+     * (Sound/Z80 Sound Driver.asm:2306-2311), so S3K takes 240 frames to
+     * silence where S1 and S2 take 120.
+     */
     @Override
-    protected void executeFadeOut(AudioManager manager) {
+    public void fadeOutMusic(AudioManager manager) {
         manager.fadeOutMusic(0x28, 6);
+    }
+
+    /**
+     * {@code Player_ResetAirTimer} (sonic3k.asm:33663-33686) loads
+     * {@code Current_music}, then overrides it in three tests taken in order:
+     * {@code Status_Invincible} and {@code Super_Sonic_Knux_flag} both select
+     * {@code mus_Invincibility} ($2C), and {@code Boss_flag} selects
+     * {@code mus_MinibossK} ($18). The boss test comes last, so a boss fight
+     * wins over an invincible or Super player.
+     */
+    @Override
+    public int resolveAirResetMusic(int levelMusicId, boolean invincible,
+            boolean superForm, boolean bossActive) {
+        if (bossActive) {
+            return Sonic3kMusic.MINIBOSS.id;
+        }
+        if (invincible || superForm) {
+            return Sonic3kMusic.INVINCIBILITY.id;
+        }
+        return levelMusicId;
     }
 
     @Override
     public boolean isContinuousSfx(int sfxId) {
         // ROM: sfx__FirstContinuous = 0xBC (sfx_SlideSkidLoud)
         return sfxId >= Sonic3kSfx.SLIDE_SKID_LOUD.id;
-    }
-
-    @Override
-    public float adjustSfxPitch(GameSound sound, float requestedPitch) {
-        if (sound == GameSound.SPINDASH_CHARGE) {
-            return 1.0f;
-        }
-        return requestedPitch;
     }
 
     @Override

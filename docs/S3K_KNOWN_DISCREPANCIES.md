@@ -1498,3 +1498,38 @@ is a product decision, not a parity one.**
 
 Full context:
 [docs/architecture/audits/2026-08-21-timing-constant-provenance-sweep.md](architecture/audits/2026-08-21-timing-constant-provenance-sweep.md).
+
+---
+
+## SFX channel takeover splits `cfSetPSGNoise`'s two writes
+
+**What the ROM does.** The S3K sound driver is built with `fix_sndbugs = 0`
+(`Sound/Z80 Sound Driver.asm:16`), so `cfSetPSGNoise` takes the `else` branch at
+`:3558-3571`. That branch puts exactly two bytes on the PSG bus, back to back and
+with nothing between them: `0DFh` to silence PSG3, then the effect's own noise
+operand. The routine has no calls between the two writes, so their adjacency is
+structural rather than incidental.
+
+**What we do.** The engine emits `DF FF E7`. `SmpsDriver.silencePsgChannel`
+performs the SFX channel takeover lazily, on the first latch of the channel being
+stolen from music, and for a noise-form effect the `0E7h` write is that first
+latch. The takeover's own `0FFh` therefore lands between `cfSetPSGNoise`'s two
+writes. The ROM performs the equivalent takeover during SFX setup instead, before
+the track's first pass runs.
+
+**Scope.** Every S3K effect that carries a PSG form is affected, because all 36 of
+them declare `$E7`. Among them are three behind reported AIZ1 audio faults:
+`sfx_Splash` (`$39`), `sfx_InstaAttack` (`$42`) and `sfx_Collapse` (`$59`).
+
+**Why it is probably not what anyone hears.** The interposed byte sets the noise
+channel to silence, and the effect's real attenuation follows within the same
+driver service. It is an ordering divergence in the write stream, not a sustained
+level change. The audible fault reported against these effects is being tracked
+separately against the PSG noise clock, not against this.
+
+**Coverage.** `TestS3kNoiseFormEffectWriteStream` asserts the ROM's adjacency for
+all three effects, reading each expected noise operand out of the effect's own
+script in the ROM rather than naming it. The class is `@Disabled` against this
+entry; removing that annotation is the whole of enabling it. The write stream is
+not yet arbitrated by the hardware oracle, whose S3K frontier is service 565 while
+the first splash request in the captured window is service 4,087.

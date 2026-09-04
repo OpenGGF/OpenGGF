@@ -277,7 +277,11 @@ public class AizMinibossCutsceneInstance extends AbstractBossInstance
             spawnTrackedChild(() -> new AizMinibossFlameBarrelChild(this, index, true));
         }
 
-        services().playMusic(Sonic3kMusic.MINIBOSS.id);
+        // ROM AIZMiniboss_StartDropMusic plays mus_Miniboss, $2E
+        // (sonic3k.asm:136809-136811), not mus_MinibossK, $18. Both resolve to
+        // the same arrangement in the S&K driver table, so this is inaudible
+        // today and audible the moment the S3 table is selected.
+        services().playMusic(Sonic3kMusic.MINIBOSS_S3.id);
     }
 
     private void onDescendComplete() {

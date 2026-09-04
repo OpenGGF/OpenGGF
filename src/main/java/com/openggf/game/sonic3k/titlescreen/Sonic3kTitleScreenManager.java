@@ -206,6 +206,18 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     /** Whether SEGA sound has been played. */
     private boolean segaSoundPlayed = false;
 
+    /**
+     * Whether the SEGA chant has already been stopped, modelling the ROM's
+     * "have we passed {@code loc_3FE4} yet". {@code Wait_SegaS3K} is left
+     * either by its own timeout or by a Start press, and both exits run the
+     * single {@code cmd_StopSEGA} at sonic3k.asm:5498-5500. Every later skip
+     * is a Start press inside {@code Wait_TitleS3K}, whose branch to
+     * {@code loc_4090} issues no sound command at all (:5541-5546).
+     * {@code segaSoundPlayed} cannot answer this: it records that the chant
+     * once started, never that it has since been stopped.
+     */
+    private boolean segaChantStopped = false;
+
     /** Whether title music has been started. */
     private boolean musicPlaying = false;
 
@@ -358,6 +370,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         currentAnimFrame = 1;
         animFrameTimer = 0;
         segaSoundPlayed = false;
+        segaChantStopped = false;
         musicPlaying = false;
         palTransitionStep = 0;
 
@@ -482,6 +495,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
         frameCounter = 0;
         musicPlaying = false;
         segaSoundPlayed = false;
+        segaChantStopped = false;
         spritesInitialized = false;
 
         // Defensive cleanup in case some earlier flow left a generic FadeManager
@@ -550,6 +564,7 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
 
         if (phaseTimer >= SEGA_HOLD_DURATION) {
             GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
+            segaChantStopped = true;
             phase = Phase.PAL_TRANSITION;
             phaseTimer = 0;
             state = State.INTRO_TEXT_FADE_OUT;
@@ -794,8 +809,16 @@ public class Sonic3kTitleScreenManager implements TitleScreenProvider {
     }
 
     private void transitionToWhiteFlash() {
-        if (segaSoundPlayed) {
+        // ROM: Wait_SegaS3K's Start press and its timeout share the one
+        // cmd_StopSEGA at sonic3k.asm:5498-5500, so this stop belongs only to a
+        // skip taken while the chant is still playing. A skip taken later is a
+        // Start press inside Wait_TitleS3K, which branches to loc_4090 without
+        // any sound command (:5541-5546). Gating on segaSoundPlayed instead
+        // issued a second stop-all after the title music had started at :5529,
+        // silencing it for the rest of the title screen.
+        if (!segaChantStopped) {
             GameServices.audio().playMusic(Sonic3kSmpsConstants.CMD_STOP_SEGA);
+            segaChantStopped = true;
         }
         phase = Phase.WHITE_FLASH;
         phaseTimer = 0;
