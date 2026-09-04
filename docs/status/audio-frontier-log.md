@@ -71,7 +71,20 @@ defined by `com.openggf.tools.audio.parity`.
   `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
   keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
   `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
-  tests, 0 failures, 10 skips.
+  tests, 0 failures, 10 skips. The whole suite with three ROM paths is 16,396
+  tests, 0 failures, 22 skips, and `-Pguards` is 607 tests, 0 failures.
+- **Two snapshots outside the audio gate needed updating, and the reason is
+  recorded.** `TestSonic3kCoordFlagParity`'s two `zDoModulation` tests assert
+  a packed frequency captured after running the engine for 60,000 samples.
+  Those are end-state snapshots of engine output, not ROM-derived constants,
+  and they shift whenever the run's start phase does; this change moved them
+  from `2A94h` to `2A84h` and from `2AADh` to `2AD6h`. The mechanisms they
+  name, the step-counter decrement on sustain ticks and the wait-zero
+  same-tick application, are untouched, and the reference oracle is the
+  authority for the shift. Both now carry a comment saying what kind of value
+  they hold. They are reached only by the whole suite, not by the audio gate,
+  which is why they surfaced at the final full-suite run rather than at the
+  per-cycle one.
 
 
 ## 2026-09-04 - The S3K music fade becomes driver state; tick 421 -> tick 495
