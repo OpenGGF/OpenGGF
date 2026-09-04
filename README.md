@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Sonic 2 write stream matches through 1,789 services:** SFX tracks walk in
+  RAM slot order, PSG takeover claims a channel with one bit and no write, and
+  a PSG3 noise SFX re-latches its noise byte on release; every remaining
+  divergence on the v2 fixture is the speed-shoes timer phase.
 - **S3K music fade is driver-owned:** E1/E5 arm the fade counters and halt
   the DAC and PSG tracks per the S3K driver, the fade handler and tempo step run
   before the mailbox is read, and the capture reports no unsupported requests;
