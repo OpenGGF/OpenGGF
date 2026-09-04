@@ -83,6 +83,17 @@ local SOUND_PLAY_SPECIAL = 0x7230C
 -- and "4efb7002" (jmp Sound_ExIndex(pc,d7.w)); the two bytes before it are the
 -- "4e75" rts the disassembly labels locret_71F8C.
 local SOUND_E0_TO_E4 = 0x71F8E
+-- cfFadeInToPrevious (s1.sounddriver.asm:2166), the E4 coordination flag that
+-- ends a 1-up jingle. It restores the whole of v_1up_ram (variables and every
+-- music track) from the copy Sound_PlayBGM's 1-up branch made before it loaded
+-- the jingle (:776-784), and it issues no Sound_PlayBGM of its own. So it is a
+-- second ROM epoch that replaces the music track RAM wholesale, and a window
+-- has to close here for the same reason it closes at a BGM dispatch: past this
+-- point the tracks point into the *previous* song's data, outside the current
+-- window's asset range. Verified by opcode: $72B14 is "204e" (movea.l a6,a0),
+-- "43ee03a0" (lea v_1up_ram_copy(a6),a1) and "303c0087" (move.w #$87,d0, the
+-- $220/4-1 longword count the listing names).
+local CF_FADE_IN_TO_PREVIOUS = 0x72B14
 -- sonic1-complete-withemeralds.bk2 (SHA-256 f2e81793...) has 225,101 input
 -- rows covering the entire pinned complete run; see ACCEPTED_MOVIES.
 -- Secondary bound only: a frame budget from power-on, never movie end (see
@@ -221,7 +232,9 @@ local dispatchManifest = {
     -- same opcode -- see the SOUND_PLAY_SPECIAL comment above)
     {address = SOUND_PLAY_SPECIAL, expectedOpcode = "4a2e0027"},
     -- Sound_E0toE4 entry: subi.b #flg__First,d7 then lsl.w #2,d7
-    {address = SOUND_E0_TO_E4, expectedOpcode = "040700e0e54f"}
+    {address = SOUND_E0_TO_E4, expectedOpcode = "040700e0e54f"},
+    -- cfFadeInToPrevious entry: movea.l a6,a0 / lea v_1up_ram_copy(a6),a1
+    {address = CF_FADE_IN_TO_PREVIOUS, expectedOpcode = "204e43ee03a0303c0087"}
 }
 
 local function verifyOpcodeSites(sites, label)
@@ -623,12 +636,18 @@ end
 -- accumulate.
 local windowOrdinal = -1
 local windowMusicId = nil
+-- The song the current window interrupted, which is the one cfFadeInToPrevious
+-- restores: Sound_PlayBGM's 1-up branch copies the driver RAM before loading
+-- the jingle, so the restore returns to whatever was playing then.
+local previousWindowMusicId = nil
 local windowOpenFrame = nil
 local windowAbandoned = 0
 local windowFile = nil
 local windowRecordCount = 0
 local windowManifest = {}
 local runDormantInvocations = 0
+
+local windowBoundary = "bgm_dispatch"
 
 local function windowOutputPath(ordinal, musicId)
     local base = assert(os.getenv("OGGF_OUT"), "OGGF_OUT must be set")
@@ -783,6 +802,7 @@ local function closeWindow(context, closeFrame)
         abandoned_invocations = windowAbandoned,
         close_frame = closeFrame,
         music_id = windowMusicId,
+        open_boundary = windowBoundary,
         open_frame = windowOpenFrame,
         ordinal = windowOrdinal,
         published = selected,
@@ -806,8 +826,10 @@ local function closeWindow(context, closeFrame)
     os.remove(bodyPath)
 end
 
-local function openWindow(musicId, frame)
+local function openWindow(musicId, frame, boundary)
+    previousWindowMusicId = windowMusicId
     windowOrdinal = windowOrdinal + 1
+    windowBoundary = boundary or "bgm_dispatch"
     windowMusicId = musicId
     windowOpenFrame = frame
     windowAbandoned = 0
@@ -1103,6 +1125,31 @@ addHook({
         -- needed for the replay host to route this through the driver's
         -- special-SFX sequencer mode.
         currentDispatches[#currentDispatches + 1] = soundId
+    end
+})
+
+addHook({
+    name = "s1_audio_fade_in_to_previous",
+    address = CF_FADE_IN_TO_PREVIOUS,
+    callback = function(context)
+        if not invocationLifecycle:isArmed() or VALIDATE_ONLY then return end
+        local frame = emu.framecount()
+        assert(invocationLifecycle:isActive(),
+            "cfFadeInToPrevious ran outside an UpdateMusic invocation")
+        assert(previousWindowMusicId ~= nil,
+            "a 1-up restore has no song to return to; the run did not start at a BGM dispatch")
+        -- Closes the jingle's window and opens one for the song being
+        -- restored. The in-flight invocation is dropped for the same reason a
+        -- BGM dispatch drops it: the ROM has already replaced the music track
+        -- RAM, so the rest of this walk belongs to the restored song. The flag
+        -- also tampers with the stack to avoid returning to its caller
+        -- (s1.sounddriver.asm:2222-2223), so the walk does not resume where it
+        -- left off either.
+        assert(windowRecordCount > 0, "1-up restore before any invocation was captured")
+        local resumed = previousWindowMusicId
+        closeWindow(context, frame)
+        openWindow(resumed, frame, "one_up_restore")
+        beginCapturedInvocation(0, frame)
     end
 })
 

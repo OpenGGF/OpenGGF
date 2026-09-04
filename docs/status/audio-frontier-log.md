@@ -27,6 +27,49 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The 1-up restore is a second window epoch; the first whole-run capture found it by aborting
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `a7e2dc866`.
+- **Capture failure, recorded as such and not as a parity result.** The first
+  full pass over `s1-complete-run.bk2` aborted at emulator frame 138,347, 212
+  frames into window 58, with `ROM sequence pointer is outside the GHZ asset
+  range` from the shared contract (`s1_audio_parity_contract.lua:318`). Windows
+  0 through 57 completed normally.
+
+**Why the window rule was incomplete.** Window 58's song is `$88`,
+`bgm_ExtraLife`. The jingle ends at the `E4` coordination flag,
+`cfFadeInToPrevious` (s1.sounddriver.asm:2166-2223), which restores the whole
+of `v_1up_ram` -- every variable and every music track -- from the copy
+`Sound_PlayBGM`'s 1-up branch made before it loaded the jingle (:776-784). It
+issues **no** `Sound_PlayBGM` of its own. The window rule closed a window only
+at a BGM dispatch, so the `$88` window ran through the restore and on into the
+*previous* song's playback, whose sequence pointers lie outside `$88`'s asset
+range. The contract asserts that pointer is in range, correctly, and the
+capture stopped.
+
+**The rule, corrected.** A window now closes at either ROM epoch that replaces
+the music track RAM wholesale: a `Sound_PlayBGM` dispatch, or a
+`cfFadeInToPrevious` restore. The window opening at a restore is normalized
+against the song being restored, which is the one the jingle interrupted, so
+the probe carries the interrupted song's id forward. Each window records which
+boundary opened it. The address is `$72B14`, verified by opcode rather than by
+label, since labels in this area have drifted: `204e` (`movea.l a6,a0`),
+`43ee03a0` (`lea v_1up_ram_copy(a6),a1`), `303c0087` (`move.w #$87,d0`, the
+`$220/4-1` longword count the listing names).
+
+**What this does not change.** A window containing no 1-up is unaffected, so
+the ordinals of windows before a run's first restore are stable, and the GHZ
+window's byte-identity with the committed gameplay fixture is untouched.
+Ordinals *after* a run's first restore shift by one per restore, so anything
+citing a window should quote its epoch frame alongside its ordinal.
+
+**How it was found is the point.** A single-song contract that asserts its own
+asset range turned an unmodelled ROM epoch into a loud capture failure at the
+exact frame, rather than into plausible-looking parity data normalized against
+the wrong song. The assertion earned its keep.
+
+
 ## 2026-09-04 - Music $8E's new frontier at tick 360: the engine's tempo timer stops, it does not merely shift
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
