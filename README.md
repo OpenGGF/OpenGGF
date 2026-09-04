@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Music after drowning and S3K fades follow the ROM:** surfacing restores the
+  invincibility, Super or boss theme per each game's own routine (a per-game
+  audio-profile rule), and S3K object fades use the driver's delay 6 / 40 steps
+  instead of the S1/S2 values.
 - **S1 per-song oracle windows cover every song in a complete run:** 20 windows
   from the complete-run movie, all 15 songs, eight matching end to end across six
   songs (Green Hill, Labyrinth, Spring Yard, title, special stage, credits); the

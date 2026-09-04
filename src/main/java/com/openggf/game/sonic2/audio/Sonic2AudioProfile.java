@@ -156,4 +156,29 @@ public class Sonic2AudioProfile extends AbstractAudioProfile {
     public int getSfxPriority(int soundId) {
         return Sonic2SmpsConstants.getSfxPriority(soundId);
     }
+
+    /**
+     * {@code ResumeMusic} (s2disasm s2.asm:42296-42318) loads
+     * {@code Level_Music}, then overrides it in three tests taken in order:
+     * {@code status_secondary.invincible} selects {@code MusID_Invincible},
+     * {@code Super_Sonic_flag} selects {@code MusID_SuperSonic}, and
+     * {@code Current_Boss_ID} selects {@code MusID_Boss}. Each later test
+     * overwrites the earlier one, so a boss wins over Super, which wins over
+     * invincibility. Unlike S3K, Sonic 2 gives Super its own track rather than
+     * reusing the invincibility theme.
+     */
+    @Override
+    public int resolveAirResetMusic(int levelMusicId, boolean invincible,
+            boolean superForm, boolean bossActive) {
+        if (bossActive) {
+            return Sonic2Music.BOSS.id;
+        }
+        if (superForm) {
+            return Sonic2Music.SUPER_SONIC.id;
+        }
+        if (invincible) {
+            return Sonic2Music.INVINCIBILITY.id;
+        }
+        return levelMusicId;
+    }
 }

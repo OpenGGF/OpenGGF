@@ -27,6 +27,40 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The miniboss fade is real, and the drowning restore had no overrides
+
+- **Worktree/branch:** `.worktrees/s3k-issue-coverage`,
+  `feature/ai-s3k-aiz1-audio-issue-coverage`, over `develop` at `633ee400f`.
+- **The fade-rate claim stands, and the run that seemed to contradict it was
+  measuring elsewhere.** A source reading said the AIZ miniboss and fire-curtain
+  fades ran at the S1/S2 delay of 3; a later engine-driven run of seven AIZ1
+  music events recorded no fade at all and appeared to retract it. Both were
+  right. That run drove the fire-curtain restore through `setEventsFg5`, which
+  enters after the cutscene's own trigger has already run, so it never reached
+  either fade site.
+- **Settled by execution.** Driving `updateWaitTrigger` with a real
+  `AudioManager` carrying the S3K profile records exactly one `cmd_FadeOut`
+  carrying `28h/6`, the values `zFadeOutMusic` loads
+  (Sound/Z80 Sound Driver.asm:2306-2311). Before the routing fix it carried
+  `28h/3`. Pinned by `TestAizMinibossCutsceneInstance`, which fails on the
+  parameters if the profile supplies another game's.
+- **The drowning restore ignored all three ROM overrides, confirmed by
+  running it.** `Player_ResetAirTimer` (sonic3k.asm:33663-33686) loads
+  `Current_music` and substitutes `mus_Invincibility` for an invincible player,
+  the same track again for Super or Hyper, and `mus_MinibossK` during a boss.
+  On a real AIZ1 fixture the engine requested the zone track in every case, so
+  surfacing while invincible or Super cut the theme dead.
+- **All three games' rules are filled from their own routines, not defaulted.**
+  The shapes differ and the differences matter: Sonic 1's overrides are
+  conditional on `Revision<>0`, which holds for the REV01 ROM the engine models
+  (sonic.asm:14), and it has no Super form; Sonic 2 gives Super its own track
+  rather than reusing the invincibility theme (s2.asm:42296-42318); S3K reuses
+  it. In all three the boss test is taken last, so a boss wins.
+- **Coverage.** `TestAirResetMusicSelection` pins each game's choice and the
+  precedence, `TestS3kAirResetMusicRestore` drives a real AIZ1 fixture and pins
+  that the restore asks for it. The second was red on the invincible and Super
+  cases before the fix and is green after.
+
 ## 2026-09-04 - The subset is published: 20 per-song windows, all 15 songs, six matching
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
