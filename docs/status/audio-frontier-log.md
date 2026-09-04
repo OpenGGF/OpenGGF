@@ -91,6 +91,37 @@ boundary between them, which is a better frame for this oracle than one window
 holding two songs. I stopped my own redundant survey rather than compete for
 the emulator.
 
+**The exact windows that would fix this, from the S1 lane's survey.** They
+hold the survey and have not captured the 1-up tile, so it is unclaimed. Quote
+the epoch frame alongside the ordinal in anything published, because adding the
+restore boundary shifts every ordinal after a run's first restore.
+
+| Movie | Ordinal | Opens | Closes | Invocations | SFX dispatches |
+|---|---|---|---|---|---|
+| `sonic1-complete-withemeralds.bk2` | 30 | 59,713 | 62,658 | 2,943 | 117 |
+| `s1-complete-run.bk2` | 58 | 138,135 | 142,570 | 4,433 | 81 |
+| `sonic1-complete-withemeralds.bk2` | 54 | 115,139 | 115,236 | 96 | too short to use |
+
+Ordinal 30 is the one that lane recommends. Ordinal 58's close frame is a
+survey number rather than a capture they hold: their whole-run pass aborted a
+couple of hundred frames into it, on the out-of-range sequence pointer, before
+the boundary fix. The artefact this oracle wants is **two consecutive windows**,
+the `$88` window and the restore window that follows it, whose first ticks are
+the resumed song. A single artefact spanning the crossing would need a
+multi-song contract on both sides, which is a larger piece of work than a
+capture.
+
+**One correction to my own earlier note.** `Sound_E0toE4` in commit `48184eb4d`
+is the fourth dispatch branch of `PlaySoundID`, for sound ids `$E0` to `$E4`,
+reaching fade out, speed up and slow down. That is not the `E4` coordination
+flag inside track data, which is a different mechanism. The two are easy to
+conflate and I conflated them when I first read that commit.
+
+**Adopt the S1 lane's negative control.** Their oracle has a companion test
+that corrupts one byte of a committed reference and requires the comparator to
+report it at the corrupted tick. Any replacement for this test must carry the
+same guard, or it inherits exactly the defect being fixed.
+
 **Where the divergence should land, more precisely.** At the restore boundary
 the ROM continues the interrupted song from restored RAM with the fade-in armed
 at counter `$28` and the rest bit set on every playing track, while the engine

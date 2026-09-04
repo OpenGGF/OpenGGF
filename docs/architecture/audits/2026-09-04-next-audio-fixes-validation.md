@@ -273,3 +273,37 @@ state before writes.
 One consequence worth carrying: ordinals after a run's first restore shift by
 one per restore, so anything citing a window must quote its epoch frame
 alongside its ordinal.
+
+## The windows that would fix it, for whoever picks this up
+
+From the `s1-audio-complete` lane's survey. They have not captured the 1-up
+tile, so it is unclaimed, and they have said they will consume a reference this
+lane publishes rather than recapture it. Adding the restore boundary shifts
+every ordinal after a run's first restore, so quote the epoch frame alongside
+the ordinal.
+
+| Movie | Ordinal | Opens | Closes | Invocations | SFX dispatches |
+|---|---|---|---|---|---|
+| `sonic1-complete-withemeralds.bk2` | 30 | 59,713 | 62,658 | 2,943 | 117 |
+| `s1-complete-run.bk2` | 58 | 138,135 | 142,570 | 4,433 | 81 |
+| `sonic1-complete-withemeralds.bk2` | 54 | 115,139 | 115,236 | 96 | too short |
+
+Ordinal 30 is the recommended one. Ordinal 58's close frame is a survey number,
+not a capture that lane holds: their whole-run pass aborted a couple of hundred
+frames into it on the out-of-range sequence pointer, before the boundary fix.
+
+The artefact wanted is **two consecutive windows**, the `$88` window and the
+restore window following it, whose first ticks are the resumed song. One
+artefact spanning the crossing would need a genuine multi-song contract on both
+sides, which is more work than a capture and is not required to prove the
+restored track advances.
+
+Whatever replaces the test must carry the negative control that lane already
+uses: corrupt one byte of the committed reference and require the comparator to
+report it at the corrupted tick. Without it the replacement inherits the defect
+being fixed.
+
+**Correction to this audit's own earlier reading.** `Sound_E0toE4` in
+`48184eb4d` is the fourth dispatch branch of `PlaySoundID` for sound ids `$E0`
+to `$E4`, reaching fade out, speed up and slow down. It is not the `E4`
+coordination flag inside track data. I conflated the two on first reading.
