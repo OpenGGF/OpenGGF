@@ -116525,3 +116525,71 @@ repeated.
   frame 25589), the S3K Sonic+Tails chain, and
   `TestTraceRunReplayWalkerControlFlow` -- all unchanged. Ordinary suite 16,404
   tests, 0 failures, 17 skips. `-Pguards` 607 tests, 0 failures.
+
+## 2026-09-04 - Baseline refreshed on merged develop, and two corrections before the leader hold
+
+Worktree `.worktrees/s2-art-gaps`, branch `bugfix/ai-s2-runchain-art-gaps`, with
+`origin/develop` merged in (the seg15 fix). `src/` carries only the two landed
+special-stage/locator commits.
+
+### Baseline on the merged tree
+
+- `-Ptrace-replay`: **854 tests, 7 failures, 0 errors, 6 skips.**
+  `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` is gone from the red set;
+  the remaining seven are `TestS1CompleteEmeraldRunChain`,
+  `TestS2CompleteEmeraldRunChain`, `TestS2EhzHalfpipeRoundTripChain`,
+  `TestS3kAizTraceReplay`, `TestS3kReplayReferenceClosureIntegration`,
+  `TestS3kSonicTailsCompleteEmeraldRunChain`,
+  `TestTraceRunReplayWalkerControlFlow`.
+- Ordinary suite: 16,410 tests, 0 failures, 0 errors, 22 skips.
+- `-Pguards`: 607 tests, 0 failures, 0 errors, 0 skips.
+
+### Correction 1: the ROM's init row DOES record
+
+The plan for the leader hold assumed `Obj01`'s init prefills the ring and the
+main routine records only from the following frame. It does not.
+`Obj01_Init_Continued` has no `rts`: after restoring the position it falls
+straight through into `Obj01_Control` (`docs/s2disasm/s2.asm:36217-36225`), whose
+tail runs `bsr.w Sonic_RecordPos` at `:36250`. The prefill has just wrapped
+`Sonic_Pos_Record_Index` back to 0, so that call writes slot 0 and leaves the
+index at 4.
+
+The ROM's ledger for a level entry is therefore:
+
+| rows | ring writes |
+|---|---|
+| the whole load, before `InitPlayers` | **0** (Obj01 does not exist) |
+| the `InitPlayers` row itself | **1** (prefill, then the fall-through record) |
+| every title-card row after it | 1 each |
+
+The engine's is 2 / 0 / 1-each, which is the same net `+1` either way -- but a
+hold built on "the init row records nothing" would land it at `-1` instead of 0.
+
+### Correction 2: creation timing is not consistent across gap types, and that is the blocker
+
+The leader's ring reset -- the engine's `Obj01_Init_Continued` -- does not sit in
+the same place relative to the load-completion row in different transitions:
+
+| gap | load-completion row | engine's leader ring reset | reset relative to it |
+|---|---|---|---|
+| `seg7_ehz2 -> seg8_cpz1` | 61180 | 61050 | **130 rows before** |
+| `ss -> seg2_ehz1` | 10308 | 10309 | **1 row after** |
+
+So at a level-to-level gap the engine's leader exists for the whole load and
+takes its two premature writes; at a special-stage return it is created *after*
+the load has already completed and takes none. **A single hold window over the
+load span cannot be right for both**, and that is precisely why every arm so far
+has fixed one and broken the other: suppression targets writes that only exist at
+the level-to-level gaps, while at the special-stage returns it instead removes
+rows the destination's players legitimately need, which is the 3px `sidekick_x`
+deficit.
+
+### What this means for the leader hold
+
+It is still the right shape, but it cannot be armed on the art hold's window
+alone. The engine's leader creation row has to be brought onto the ROM's
+`InitPlayers` row *first* -- at both gap kinds -- and only then does holding its
+execution for the load span mean the same thing in both. Establish where the
+engine decides that row for each kind before writing the hold.
+
+No code change this round beyond the merge.
