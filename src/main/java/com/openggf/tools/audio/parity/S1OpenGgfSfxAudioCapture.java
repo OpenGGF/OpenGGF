@@ -163,6 +163,26 @@ public final class S1OpenGgfSfxAudioCapture {
         private static final int S1_FADE_OUT_STEPS = 0x28;
         private static final int S1_FADE_OUT_DELAY = 3;
 
+        /**
+         * The parts of {@code FadeOutMusic} that must not run inside the
+         * driver's own service. {@code StopSFX} removes sequencers, and the
+         * driver iterates its sequencer list by index over a size captured
+         * before the pass, so removing from inside the dispatch point --
+         * which runs within the music sequencer's service -- walks off the end
+         * of the shortened list. The ROM stops the SFX tracks before it walks
+         * any track (s1.sounddriver.asm:1361-1362), and so does this: nothing
+         * between here and the dispatch point reads SFX state, since the fade
+         * step neither reads nor writes it, so the two positions are
+         * observationally the same and this one is safe.
+         */
+        private void submitFlagCommandStops(int soundId) {
+            if (soundId != 0xE0) {
+                return;
+            }
+            driver.stopAllSfx();
+            musicSequencer.setSpeedShoes(false);
+        }
+
         private void submitFlagCommand(int soundId) {
             if (soundId != 0xE0) {
                 // $E1 PlaySegaSound, $E2 SpeedUpMusic, $E3 SlowDownMusic and
@@ -175,8 +195,8 @@ public final class S1OpenGgfSfxAudioCapture {
                         "S1 driver flag command 0x" + Integer.toHexString(soundId)
                                 + " is not modelled by the parity host yet");
             }
-            driver.stopAllSfx();
-            musicSequencer.setSpeedShoes(false);
+            // The stops already ran before the service; only the arming, which
+            // is what the fade step's position actually decides, belongs here.
             musicSequencer.triggerFadeOut(S1_FADE_OUT_STEPS, S1_FADE_OUT_DELAY);
         }
 
@@ -199,6 +219,7 @@ public final class S1OpenGgfSfxAudioCapture {
             for (int requestedSoundId : dispatches) {
                 int soundId = requestedSoundId;
                 if (soundId >= 0xE0) {
+                    submitFlagCommandStops(soundId);
                     deferredFlagCommands.add(soundId);
                     continue;
                 }

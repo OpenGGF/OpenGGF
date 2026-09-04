@@ -27,6 +27,71 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - All 18 captured windows measured: six songs green, and one dominant red class
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` merged at `02f3950df`.
+- **Source:** the completed pass A over `s1-complete-run.bk2`, 84 windows walked,
+  18 written, 33,354 ticks, no capture errors. Publication awaits pass B.
+
+**The extra-life boundary works.** Window 58 is music `$88` alone, 210
+invocations from frame 138,135 to 138,346. Window 59 opens at the restore
+carrying music `$84`, the zone song the jingle interrupted, for 4,223
+invocations. The same capture previously aborted at frame 138,347.
+
+**Results, all 18.**
+
+| Window | Music | Ticks | Result |
+|---|---|---|---|
+| 0 | `$8A` | 72 | `MATCH` |
+| 1 | `$81` | 5,257 | `MATCH` |
+| 3 | `$81` | 1 | `MATCH` |
+| 8 | `$81` | 5,726 | `MATCH` |
+| 9 | `$8C` | 1,426 | `MATCH` |
+| 38 | `$82` | 981 | `MATCH` |
+| 61 | `$84` | 5,535 | `MATCH` |
+| 15 | `$87` | 1,202 | `TRACK_STATE_MISMATCH` tick 0, `overridden`, `true` vs `false` |
+| 16 | `$83` | 443 | same, tick 0 |
+| 77 | `$92` | 189 | same, tick 0 |
+| 80 | `$86` | 1,074 | same, tick 0 |
+| 30 | `$85` | 742 | `TRACK_STATE_MISMATCH` tick 0, `base_frequency`, `922` vs `854` |
+| 58 | `$88` | 210 | `TRACK_STATE_MISMATCH` tick 34, `overridden`, `false` vs `true` |
+| 62, 72 | `$8E` | 569, 524 | `GLOBAL_STATE_MISMATCH` tick 360, `tempo_timeout` |
+| 76 | `$86` | 1,132 | `EVENT_VALUE_DIFFERENT` tick 0 |
+| 82 | `$8B` | 1,223 | `EVENT_VALUE_DIFFERENT` tick 0 |
+| 81 | `$8D` | 4,671 | capture host throws on driver command `$E4` |
+
+**Six distinct songs agree end to end:** `$81`, `$82`, `$84`, `$8A`, `$8C`, and
+`$81` again at 5,726 ticks, a longer GHZ window than any committed fixture.
+Before today only GHZ had ever matched.
+
+**The dominant red class is one thing, and it is not driver accuracy.** Five
+windows diverge at **tick 0** on `overridden`, reference `true` against engine
+`false`: the window's epoch lands while an SFX is still holding a music track,
+and the replay host starts with no SFX admitted because a window's dispatch
+record begins at its own epoch. This is the same shape as the recorded S2
+`zRingSpeaker` discrepancy -- driver state that predates the window and cannot
+be derived from what the window contains. Worth attacking as one item rather
+than five.
+
+**Two defects found by measuring rather than by reasoning.** Window 80 crashed
+the capture host with `Index 1 out of bounds for length 1`: the dispatch-point
+seam called `stopAllSfx()` from inside the music sequencer's own service, and
+the driver iterates its sequencer list by index over a size captured before the
+pass, so removing sequencers there walks off the shortened list. `FadeOutMusic`
+stops the SFX tracks before it walks any track
+(s1.sounddriver.asm:1361-1362), and nothing between the pre-service point and
+the dispatch point reads SFX state, so the stops moved back to pre-service and
+only the fade arming -- which is what the fade step's position actually decides
+-- stays at the dispatch point. Window 81 is the first real occurrence of a
+driver command other than `$E0`: `$E4`, `StopAllSound`. The host throws rather
+than ignoring it, which is why it is visible; routing it is now evidence-backed
+work rather than speculation.
+
+**Gates.** 192 tests, 0 failures, 0 errors, 2 skips, against the merged develop.
+All three published pins unchanged.
+
+
 ## 2026-09-04 - Tick 360 is two VBlank calls a frame apart, and the obvious contract fix is wrong
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
