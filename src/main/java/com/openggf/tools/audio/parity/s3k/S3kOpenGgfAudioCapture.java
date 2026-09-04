@@ -263,13 +263,20 @@ public final class S3kOpenGgfAudioCapture {
         }
         if (id == S3kAudioParitySchema.CMD_FADE_OUT
                 || id == S3kAudioParitySchema.CMD_FADE_OUT2) {
-            // zFadeOutMusic falls through zHaltDACPSG and always silences all
-            // PSG channels on the request service (D:2307-2327). The later
-            // 28h-step, six-service fade remains explicitly unsupported here.
+            // zFadeOutMusic arms the fade and falls through zHaltDACPSG,
+            // which halts FM6/DAC and the three PSG tracks and then jumps to
+            // zPSGSilenceAll (D:2307-2325). The counters are the ROM's own:
+            // zFadeOutTimeout 28h and zFadeDelay 6, which the S3K sequencer
+            // config already carries from the same routine. zDoMusicFadeOut
+            // then steps them once per zUpdateMusic (D:2331-2385), which the
+            // sequencer already drives.
+            SmpsSequencer music = driver.firstMusicSequencer();
+            if (music != null) {
+                music.triggerFadeOut(Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutSteps(),
+                        Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutDelay());
+            }
             applyProgram(driver,
                     Sonic3kSmpsPhysicalPolicy.INSTANCE.silenceAllPsg());
-            unsupported.add("tick " + ordinal + ": active music fade for request 0x"
-                    + Integer.toHexString(id) + " is not modelled by this capture host");
             return;
         }
         if (id == S3kAudioParitySchema.CMD_SEGA) {
