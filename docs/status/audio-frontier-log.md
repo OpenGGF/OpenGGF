@@ -27,6 +27,66 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The fade dispatch class is hooked, and the residual is an ordering fact about UpdateMusic
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `981aece96`.
+- **Fixtures:** still none published; scratch captures of the first four
+  windows of `s1-complete-run.bk2`.
+
+**What landed.** The per-song window probe now hooks `Sound_E0toE4`, and the
+engine host routes the fade-out command. Music `$8A`, the 72-tick
+title-screen window, moves from `GLOBAL.fade_active` `true` against `false` to
+`GLOBAL.fade_delay` `3` against `2`, both at tick 48. The fade now happens; only
+its first step is early.
+
+**The address, verified by opcode rather than by a stale label.** `$71F8E`
+reads `040700e0` (`subi.b #$E0,d7`, `flg__First` = `$E0`), then `e54f`
+(`lsl.w #2,d7`), then `4efb7002` (`jmp Sound_ExIndex(pc,d7.w)`), and the two
+bytes before it are the `4e75` `rts` the disassembly labels `locret_71F8C`.
+That is `Sound_E0toE4` (s1.sounddriver.asm:715), `PlaySoundID`'s fourth
+dispatch branch, reaching `FadeOutMusic` (`$E0`, :1360), `PlaySegaSound`
+(`$E1`), `SpeedUpMusic` (`$E2`, :1568), `SlowDownMusic` (`$E3`, :1587) and
+`StopAllSound` (`$E4`) through `Sound_ExIndex` (:722-726).
+
+**Only `$E0` is modelled, and the rest fail loudly.** The host throws on
+`$E1-$E4` rather than ignoring them, so a window containing one cannot be
+compared as though the request never happened. Across the first four windows
+only `$E0` occurs, once in the title window and once in the act-clear window.
+
+**The GHZ window is still byte-identical.** Adding a dispatch hook changes the
+`dispatches` array only where such a command occurs, and GHZ's window has none,
+so its tick body remains `cmp`-identical to the committed run 2 fixture at
+44,775,538 bytes. That check was re-run after the hook landed.
+
+**The residual is an ordering fact, not a constant to tune.** Inside one
+`UpdateMusic` invocation the ROM runs `DoFadeOut` at :179-181, *before* it
+cycles the sound queue and calls `PlaySoundID` at :197-202. So a fade armed by
+a dispatch in invocation N is not stepped until invocation N+1: `DoFadeOut`
+has already passed for N. The parity host submits dispatches before the whole
+frame service, and the engine's fade update and track walk both live inside
+that service, so the engine steps the fade in the same invocation that armed
+it, one step early. `FadeOutMusic`'s other effects -- `StopSFX`,
+`StopSpecialSFX`, the DAC stop and the `f_speedup` clear -- *do* belong to
+invocation N, before its track walk, so the answer is not to move the whole
+submit later. What the ROM needs is a dispatch point between the fade update
+and the track walk, which `SmpsDriver.serviceOuterFrame` does not currently
+expose. **Left open deliberately, and not absorbed by a compensating step
+count:** a fade armed one delay unit short would make this window agree and
+would be a fitted constant, which is exactly what hard rule 3 forbids.
+
+**The other frontier is unchanged.** Music `$8E`, the 567-tick act-clear
+window, diverges at tick 186, role `PSG1`, field `envelope_cursor`, reference
+`7` against engine `6`.
+
+**Gates, all green and read by content.** Audio parity package with three ROM
+paths: 183 tests, 0 failures, 0 errors, 2 skips. Both S1 gameplay oracles pass
+their `MATCH` assertions at 2,562 and 5,257 ticks. S2 v1 `MATCH (698 ticks)`;
+v2 both lines `MATCH (2198 ticks)`; CPZ state-only `MATCH (720 ticks)` with its
+state-and-writes companion unchanged at tick 237; request windows `MATCH` at
+25, 52 and 27.
+
+
 ## 2026-09-04 - The loop-counter set becomes song-derived, and the fade dispatch class turns out to be unhooked
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,

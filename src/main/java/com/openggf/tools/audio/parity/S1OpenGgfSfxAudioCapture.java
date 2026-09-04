@@ -153,9 +153,40 @@ public final class S1OpenGgfSfxAudioCapture {
             stream.close();
         }
 
+        /**
+         * S1 {@code FadeOutMusic} (s1.sounddriver.asm:1360-1367): stop the SFX
+         * and special-SFX tracks, arm a fade of {@code $28} steps three frames
+         * apart, stop the DAC track, and clear the speed-shoes tempo flag.
+         * {@code triggerFadeOut} performs the step/delay arming and the DAC
+         * stop, so only the two stops and the flag clear are done here.
+         */
+        private static final int S1_FADE_OUT_STEPS = 0x28;
+        private static final int S1_FADE_OUT_DELAY = 3;
+
+        private void submitFlagCommand(int soundId) {
+            if (soundId != 0xE0) {
+                // $E1 PlaySegaSound, $E2 SpeedUpMusic, $E3 SlowDownMusic and
+                // $E4 StopAllSound reach the driver through the same
+                // Sound_E0toE4 branch (s1.sounddriver.asm:715) but are not
+                // modelled here yet. Failing loudly keeps a window that
+                // contains one from being compared as though the request never
+                // happened.
+                throw new IllegalStateException(
+                        "S1 driver flag command 0x" + Integer.toHexString(soundId)
+                                + " is not modelled by the parity host yet");
+            }
+            driver.stopAllSfx();
+            musicSequencer.setSpeedShoes(false);
+            musicSequencer.triggerFadeOut(S1_FADE_OUT_STEPS, S1_FADE_OUT_DELAY);
+        }
+
         private void submitDispatches(List<Integer> dispatches) {
             for (int requestedSoundId : dispatches) {
                 int soundId = requestedSoundId;
+                if (soundId >= 0xE0) {
+                    submitFlagCommand(soundId);
+                    continue;
+                }
                 if (soundId == 0xB5) {
                     // S1 Sound_PlaySFX substitutes the left-speaker program CE
                     // while v_ring_speaker is zero, then toggles the source-owned

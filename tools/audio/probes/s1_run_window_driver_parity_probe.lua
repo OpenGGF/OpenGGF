@@ -73,6 +73,16 @@ local SOUND_PLAY_SFX = 0x721C6
 -- bytes decode to the known Sound_PlaySpecial body (Go_SpecSoundIndex table
 -- lookup, "subi.b #spec__First,d7" against $D0).
 local SOUND_PLAY_SPECIAL = 0x7230C
+-- Sound_E0toE4 (s1.sounddriver.asm:715), PlaySoundID's fourth dispatch branch,
+-- reaching FadeOutMusic ($E0, :1360), PlaySegaSound ($E1), SpeedUpMusic ($E2,
+-- :1568), SlowDownMusic ($E3, :1587) and StopAllSound ($E4) through
+-- Sound_ExIndex (:722-726). These are driver commands the game issues exactly
+-- as it issues SFX, and without them a window spanning a fade shows the engine
+-- a fade it was never asked to perform. Verified by opcode: $71F8E is
+-- "040700e0" (subi.b #$E0,d7, flg__First = $E0) followed by "e54f" (lsl.w #2,d7)
+-- and "4efb7002" (jmp Sound_ExIndex(pc,d7.w)); the two bytes before it are the
+-- "4e75" rts the disassembly labels locret_71F8C.
+local SOUND_E0_TO_E4 = 0x71F8E
 -- sonic1-complete-withemeralds.bk2 (SHA-256 f2e81793...) has 225,101 input
 -- rows covering the entire pinned complete run; see ACCEPTED_MOVIES.
 -- Secondary bound only: a frame budget from power-on, never movie end (see
@@ -191,7 +201,9 @@ local dispatchManifest = {
     {address = SOUND_PLAY_SFX, expectedOpcode = "4a2e0027"},
     -- Sound_PlaySpecial entry: tst.b SMPS_RAM.f_1up_playing(a6) (same field,
     -- same opcode -- see the SOUND_PLAY_SPECIAL comment above)
-    {address = SOUND_PLAY_SPECIAL, expectedOpcode = "4a2e0027"}
+    {address = SOUND_PLAY_SPECIAL, expectedOpcode = "4a2e0027"},
+    -- Sound_E0toE4 entry: subi.b #flg__First,d7 then lsl.w #2,d7
+    {address = SOUND_E0_TO_E4, expectedOpcode = "040700e0e54f"}
 }
 
 local function verifyOpcodeSites(sites, label)
@@ -1063,6 +1075,25 @@ addHook({
         -- side (Sonic1AudioProfile.isSpecialSfx), so no new schema field is
         -- needed for the replay host to route this through the driver's
         -- special-SFX sequencer mode.
+        currentDispatches[#currentDispatches + 1] = soundId
+    end
+})
+
+addHook({
+    name = "s1_audio_flag_dispatch",
+    address = SOUND_E0_TO_E4,
+    callback = function()
+        if not invocationLifecycle:isArmed() then return end
+        local soundId = (emu.getregister("M68K D7") or 0) & 0xFF
+        -- PlaySoundID reaches this branch only for $E0-$E4 (its preceding
+        -- "cmpi.b #flg__Last,d7 / bls.s" gate, s1.sounddriver.asm:709-710).
+        assert(soundId >= 0xE0 and soundId <= 0xE4,
+            string.format("Sound_E0toE4 dispatched a non-flag id $%02X", soundId))
+        assert(invocationLifecycle:isActive() and currentDispatches ~= nil,
+            "flag command dispatched outside a captured UpdateMusic invocation")
+        -- Same flat "dispatches" array as the SFX branches: the id range
+        -- already tells a reader which branch a dispatch came from, exactly as
+        -- $D0-$DF distinguishes a special SFX from a normal one.
         currentDispatches[#currentDispatches + 1] = soundId
     end
 })
