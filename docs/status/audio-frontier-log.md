@@ -27,6 +27,52 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Tick 360 is two VBlank calls a frame apart, and the obvious contract fix is wrong
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `2ea323bbd`.
+- **Result unchanged:** `$8E` still `GLOBAL_STATE_MISMATCH` tick 360,
+  `tempo_timeout`, reference `1` against engine `2`. **A candidate fix was
+  built, measured, and reverted.**
+
+**What tick 360 actually is.** Logging every `UpdateMusic` entry inside the
+recorded invocation, with the caller's return address read off the stack, gives
+two entries: frames 6,203 and 6,204, both from `VBlank_Music`
+(caller return `$B64`, sonic.asm:682), both at stack `$FFFDB2`. So it is one
+call site on two consecutive frames, not the HBlank path, and not two entries
+inside one frame. The first invocation's return was never observed, and the
+shared lifecycle folds a same-stack entry into the one already open, so two
+frames of driver work became one recorded tick with two tempo decrements.
+
+**The candidate, and why it looked right.** The lifecycle's same-stack fold
+exists for the DAC-busy retry, where `bra.s UpdateMusic`
+(s1.sounddriver.asm:165) genuinely re-executes the entry address at the same
+stack. That retry always happens within the frame it started in, so the
+emulator frame looked like a clean discriminator: same stack *and* same frame is
+a retry, same stack a frame later is a new invocation.
+
+**It is wrong, and the measurement said so immediately.** Treating the later
+entry as a new invocation abandons the earlier one, which drops driver work the
+ROM really did. Two things broke at once. `$8E` went from diverging at tick 360
+to diverging at **tick 0**, on the first chip write. And the GHZ window stopped
+being byte-identical to the committed
+`s1-gameplay-ghz1-run2-reference.v1` fixture, which is a reproducibility
+property worth more than this frontier. Reverted.
+
+**Why neither folding nor dropping is right.** The ROM ran its driver twice and
+the record has one tick. Folding attributes both passes' effects to one tick,
+which is what the reference does today and is at least faithful about the
+resulting RAM. Dropping discards a pass outright. Representing it properly needs
+two ticks, which needs the first invocation's end to be observable, and it is
+not. The remaining option is the one already recorded: carry the per-tick driver
+pass count and have the host service that many times, which is the hard rule 4
+question, not a lane's to settle.
+
+**Reproducibility re-verified after the revert.** A third independent capture
+reproduces all three published windows byte for byte, and the GHZ window's
+identity with the committed gameplay fixture. Three captures now agree.
+
+
 ## 2026-09-04 - First per-song windows published: $8A green, $8E red with its frontier pinned
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
