@@ -27,6 +27,55 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The 1-up resume never ran its restore body on the live path
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`. Reported in game: after the extra-life
+  jingle the music has no fade in and the instruments sound briefly wrong.
+- **A premise worth correcting before the fix.** The brief said the engine
+  re-issues the song rather than restoring track RAM. It does not. The previous
+  song's sequencer is kept alive on the presentation override stack and
+  reactivated, which is the engine's equivalent of the ROM's saved track
+  region: the state survives. What was missing was everything
+  `zFadeInToPrevious` does *after* the restore, and on the live path it was
+  missing entirely.
+- **What was actually wrong.** `zFadeInToPrevious` restores the saved tracks
+  and then, per track, marks it playing, leaves the PSG tracks overridden,
+  clears the overriding bit on the FM ones, lowers their volume by 40h,
+  resends their instrument, and arms a fade in of 40h steps with a delay of 2
+  (Sound/Z80 Sound Driver.asm:2725-2789). `SmpsSequencer.triggerFadeIn` already
+  implements that body, and the S3K config already carries 40h and 2 from the
+  same routine. Nothing on the live path called it. The only production caller
+  was `AbstractSmpsAudioBackend.doRestoreMusic`, which is not reached, because
+  `AudioManager.sendLiveBackendCommands` returns false; and even there the call
+  was conditional on SFX being blocked.
+- **Two lines of behaviour.** The presentation restore now asks the session to
+  run the body on the song that just came back. The body's S3K branch also
+  resends each FM track's instrument, which it had not done, in the ROM's own
+  order: clear the bit, attenuate by 40h, then send the voice (:2766-2772). The
+  resend after the attenuation is what stops the voice reaching the chip at the
+  level the song had before the jingle interrupted it.
+- **The test reproduces the report.** `TestS3kOneUpRestoreRom` gained a case
+  that plays the level music, plays the jingle, and follows the restore through
+  `AudioManager.presentFrame`. It asserts the song comes back attenuated
+  against its settled volume, that the restore resends FM voices, that the PSG
+  tracks stay overridden through the fade, and that the attenuation then steps
+  back down. Ablating the new call fails it with "was 15 against a settled 15":
+  the song returning at full volume, which is the reported symptom exactly.
+- **Frontier unchanged** at tick 1490, event 0, and the DAC stream at run 338,
+  byte 0. The intro capture reaches no extra life.
+- **Gates at this commit, all green, on a clean build and a quiet machine.**
+  Audio, per-game audio and parity packages with all three ROM paths: 2,759
+  tests, 0 failures, 16 skips. Ordinary suite 16,476 tests, 0 failures, 22
+  skips. `-Pguards` 608 tests, 0 failures.
+- **Still open, and deliberately not done here.** The driver-level backup of
+  the tempo, tempo speedup, voice table pointer and song bank that
+  `zPlayMusic`'s extra-life branch saves (:1739-1781) has no engine equivalent;
+  the presentation stack preserves the sequencer instead. That is a real
+  structural difference, but it is not what the owner heard, and folding it in
+  would have hidden the two-line fix that was.
+
+
 ## 2026-09-04 - The whole S3K fade-out machine moves to the driver, and both counters gate
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

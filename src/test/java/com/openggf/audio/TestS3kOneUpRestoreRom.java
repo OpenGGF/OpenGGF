@@ -2,6 +2,9 @@ package com.openggf.audio;
 
 import com.openggf.audio.presentation.PresentationMode;
 import com.openggf.audio.rewind.SmpsDriverSnapshot;
+import com.openggf.audio.rewind.SmpsTrackSnapshot;
+import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.data.Rom;
 import com.openggf.game.sonic3k.audio.Sonic3kAudioProfile;
 import com.openggf.game.sonic3k.audio.Sonic3kMusic;
@@ -81,6 +84,94 @@ class TestS3kOneUpRestoreRom {
                         + warnings.stream().map(LogRecord::getMessage).toList());
         assertEquals(1, musicSequencerCount(audio),
                 "the jingle's own sequencer must be gone once it has restored");
+    }
+
+    /**
+     * {@code zFadeInToPrevious} does not merely bring the song back. Per FM
+     * track it clears the overriding bit, lowers the volume by 40h and resends
+     * the instrument, and it then arms a fade in of 40h steps
+     * (skdisasm Sound/Z80 Sound Driver.asm:2744-2789). The PSG tracks keep the
+     * overriding bit, which is what mutes them through the fade. So the level
+     * music must come back attenuated and climb, not appear at full volume.
+     */
+    @Test
+    void theRestoredMusicComesBackAttenuatedAndFadesIn() {
+        AudioManager audio = install();
+        List<String> writes = new ArrayList<>();
+        audio.setChipWriteObserver(new ChipWriteObserver() {
+            @Override public void onYm2612Write(int port, int register, int value) {
+                writes.add(String.format("ym%d[%02X]=%02X", port, register, value));
+            }
+
+            @Override public void onPsgWrite(int value) {
+                writes.add(String.format("psg[%02X]", value));
+            }
+        });
+
+        audio.playMusic(Sonic3kMusic.AIZ1.id);
+        for (int frame = 0; frame < 8; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        int settledVolume = fmVolumeOffset(audio);
+
+        audio.playMusic(Sonic3kMusic.EXTRA_LIFE.id);
+        boolean restored = false;
+        for (int frame = 0; frame < 900 && !restored; frame++) {
+            writes.clear();
+            audio.presentFrame(PresentationMode.FORWARD);
+            restored = playingMusicId(audio) == Sonic3kMusic.AIZ1.id;
+        }
+        assertTrue(restored, "the level music must come back");
+
+        int atRestore = fmVolumeOffset(audio);
+        assertTrue(atRestore > settledVolume,
+                "the restored song must come back attenuated, was " + atRestore
+                        + " against a settled " + settledVolume);
+        assertTrue(writes.stream().anyMatch(write -> write.startsWith("ym")),
+                "the restore must resend the FM voices: " + writes);
+        assertTrue(psgTrackOverridden(audio),
+                "the PSG tracks stay overridden through the fade");
+
+        int previous = atRestore;
+        boolean climbed = false;
+        for (int frame = 0; frame < 400 && !climbed; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+            climbed = fmVolumeOffset(audio) < previous;
+        }
+        assertTrue(climbed,
+                "the fade in must step the attenuation back down from "
+                        + previous);
+    }
+
+    private static int fmVolumeOffset(AudioManager audio) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : audio.shadowSmpsDriverSnapshotForTesting().sequencers()) {
+            if (entry.sfx()) {
+                continue;
+            }
+            for (SmpsTrackSnapshot track : entry.snapshot().tracks()) {
+                if (track.type() == SmpsSequencer.TrackType.FM
+                        && track.active()) {
+                    return track.volumeOffset();
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static boolean psgTrackOverridden(AudioManager audio) {
+        for (SmpsDriverSnapshot.SequencerEntry entry
+                : audio.shadowSmpsDriverSnapshotForTesting().sequencers()) {
+            if (entry.sfx()) {
+                continue;
+            }
+            for (SmpsTrackSnapshot track : entry.snapshot().tracks()) {
+                if (track.type() == SmpsSequencer.TrackType.PSG) {
+                    return track.overridden();
+                }
+            }
+        }
+        return false;
     }
 
     private static int musicSequencerCount(AudioManager audio) {

@@ -4023,6 +4023,15 @@ public class SmpsSequencer implements CoordFlagContext {
                 // through the fade; the FM tracks have it cleared whatever it
                 // was before, and no track is rested.
                 track.overridden = track.type == TrackType.PSG;
+                if (track.type == TrackType.FM) {
+                    // The ROM's per-track order is: clear the overriding bit,
+                    // add 40h to the volume, then fetch and send the FM
+                    // instrument (:2766-2772). The resend comes after the
+                    // attenuation, so the voice reaches the chip already
+                    // carrying the fade's starting level rather than the
+                    // level the song had before the jingle interrupted it.
+                    refreshInstrument(track);
+                }
             }
         }
     }
