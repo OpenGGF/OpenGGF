@@ -116215,3 +116215,70 @@ none above.
   classes as the baseline, no class moved either way.
 - Ordinary suite: 16,404 tests, 0 failures, 0 errors, 22 skips.
 - `-Pguards`: 607 tests, 0 failures, 0 errors, 0 skips.
+
+## 2026-09-04 - The sidekick is created positioned, and the interior hold was armed across the whole special stage
+
+Same worktree and branch. One ROM reading that refutes a model, and one narrowing
+of what landed.
+
+### The ROM: Tails is placed, not walked in, and the displacement is shared
+
+`InitPlayers` creates Obj02 and immediately places it relative to the leader:
+
+```
+move.w  (MainCharacter+x_pos).w,(Sidekick+x_pos).w
+move.w  (MainCharacter+y_pos).w,(Sidekick+y_pos).w
+subi.w  #$20,(Sidekick+x_pos).w
+addi_.w #4,(Sidekick+y_pos).w
+```
+
+(`docs/s2disasm/s2.asm:5191-5195`.) That is the **same displacement**
+`Obj01_Init_Continued` prefills the leader's whole position ring with -- it
+offsets the leader by `(-$20,+4)`, zeroes `Sonic_Pos_Record_Index`, runs
+`Sonic_RecordPos` 64 times, then restores the position (`:36206-36217`). The two
+routines are one design: at level entry the sidekick's position **equals** its
+own delayed follow target, so the follow error is zero and it stands. It begins
+walking on the pass when the first un-displaced entry reaches the read cursor,
+seventeen entries later (`TailsCPU_Normal`, `:39285-39295`).
+
+The engine does the same thing, and a probe confirms the outcome rather than the
+code: through the whole load span Tails reports `targetX=64 myX=64`, standing,
+against the leader at 96. **So the "engine's sidekick walks in from spawn during
+the load" model is refuted** -- it is created positioned, exactly as the ROM
+does, and the only thing wrong is the ring's phase.
+
+### The real cause of the earlier suppression breakage
+
+The special-stage hold that landed was armed in the interior drive's
+**constructor**, which runs before the stage's own represented rows are driven.
+So the window opened at the start of the whole special stage -- thousands of rows
+-- rather than at the destination's level-entry load. That is why gating player
+execution on it destroyed segment 2 from its own frame 0: it suppressed the
+sidekick for the entire stage and the return, not for the load span.
+
+The arm now happens on the **first interstitial row**, so the window is the gap
+only, matching the level-to-level path. Behaviour is unchanged -- same walk-failure
+axis, same segment-15 frontier, the same delta histogram of 106 ones and four twos
+-- because the art hold only ever intercepted the destination's level-entry player
+art, which is not submitted during a special stage. The narrowing matters because
+any future execution hold on this window would have inherited the over-broad
+span.
+
+### Gates, from a clean build with three absolute ROM paths
+
+Walk-failure axis first: the baseline's, and segment 15 at the baseline frontier.
+
+- `-Ptrace-replay`: 854 tests, 8 failures, 0 errors, 6 skips -- the same eight
+  classes, no class moved.
+- Ordinary suite: 16,404 tests, 0 failures, 0 errors, 22 skips.
+- `-Pguards`: 607 tests, 0 failures, 0 errors, 0 skips.
+
+### The uniform 1, restated with the model settled
+
+Both sides create the sidekick positioned and both hold it still through the
+load. The engine simply takes two ring writes during that span where the ROM
+takes none, and misses the one the ROM takes on its own `InitPlayers` row. The
+next round's job is those three writes and nothing else; suppressing the
+sidekick's execution wholesale is now ruled out by the ROM reading above, because
+during the load the ROM's sidekick is not executing either but it IS already
+placed, and the engine's placement is already correct.

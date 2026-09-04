@@ -2407,6 +2407,7 @@ abstract class AbstractRunChainTest {
         private final ReplayPrefixTarget prefixTarget;
         private final List<UncomparedInteriorPhysicalRow> physicalRows;
         private int loadCompletionRowIndex = -1;
+        private boolean levelEntryHoldArmed;
         private final int destinationOffset;
         private int physicalRowIndex;
         private TraceRunSpecialStageRows specialRows;
@@ -2471,7 +2472,6 @@ abstract class AbstractRunChainTest {
             // hold at all, so the destination's level-entry art published on the
             // engine's own instantaneous-load row instead.
             loadCompletionRowIndex = lastNonAdmittedInterstitialRow(physicalRows);
-            holdPlayerArtForLevelEntryLoad(loadCompletionRowIndex >= 0);
         }
 
         /**
@@ -2643,6 +2643,14 @@ abstract class AbstractRunChainTest {
 
         private void driveInterstitialRow() {
             int rowIndex = physicalRowIndex;
+            if (!levelEntryHoldArmed && loadCompletionRowIndex >= 0) {
+                // Armed on the FIRST interstitial row, not at construction: the
+                // drive is built before the stage's own represented rows run,
+                // so arming there would hold across the whole special stage
+                // rather than across the destination's level-entry load.
+                levelEntryHoldArmed = true;
+                holdPlayerArtForLevelEntryLoad(true);
+            }
             UncomparedInteriorPhysicalRow physicalRow = nextPhysicalRow(false);
             assertEquals(physicalRow.movieRow(), playback.getCursorFrame(),
                     "interstitial physical cursor");
