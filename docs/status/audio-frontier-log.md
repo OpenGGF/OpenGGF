@@ -27,6 +27,68 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K music DAC byte pump: the cadence reconciles, the per-tick partition does not
+
+- **Worktree/branch:** `.worktrees/audio-s3k-dac-pump`,
+  `feature/ai-s3k-dac-byte-pump`, over `develop` at `340634eb7`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  entry records why the music DAC byte pump was not implemented against the
+  present model, so the next lane does not re-derive it.
+- **What the reference carries.** In
+  `s3k-aiz1-intro-reference-v2.jsonl.gz`: 725,780 writes over 5,263 ticks, of
+  which 625,699 are `ym2612 port 0 register 2Ah`, spread over 3,489 ticks and
+  contiguous at the head of the tick's write list in 3,015 of them. That is
+  `zPlayDigitalAudio`'s playback loop (Sound/Z80 Sound Driver.asm:4296-4351)
+  streaming between V-int services, exactly as the previous entry predicted.
+- **The engine's cycle model is the right model, and the reference confirms it
+  twice.** First, every contiguous run of `2Ah` writes sums to a ROM sample's
+  own decoded sample count read through `Sonic3kSmpsLoader.loadDacData`:
+  1,438 for `DAC_86`, 3,836 for `DAC_81`, 9,294 for `DAC_88`. One `2Ah` write
+  is one decoded sample, which is what `Ym2612Chip.dacSampleAt` already
+  indexes. Second, taking each tick's `zDACIndex` from the reference's own RAM
+  export (`z80 $1C30`; window base `$1C00`) and pairing it with that sample's
+  rate byte, the Z80 cycles the model leaves unaccounted per frame,
+  `59,736 - count * dacPeriod(297, rate)`, land in a consistent
+  11,600-16,000 band across fifteen distinct samples spanning rates 3 to 27.
+  A wrong per-byte cost would skew that residual with the rate; it does not
+  (rate 3 gives 13,494, rate 27 gives 12,059).
+- **The two base-cycle numbers, and why the reference cannot choose between
+  them.** The listing's own `; total:` annotation for `.dac_playback_loop`
+  (:4351) sums to **303**, because it counts the two `ld a, (hl)` fetches as
+  `7+3` for the ROM-access delay its comment attributes to Kabuto (:4297).
+  `DacData` carries **297** for S3K, the same total with those two penalties
+  excluded. The difference is 6 cycles in ~450, and it disappears into the
+  unaccounted residual above, which is itself unknown to several thousand
+  cycles. So 297 versus 303 is not the frontier and no evidence here refutes
+  either.
+- **Why the per-tick count is not derivable.** The residual is the Z80
+  execution cost of that frame's `zUpdateEverything`, and it is not constant.
+  Within a single uninterrupted play of one sample at one fixed rate the
+  reference's per-tick counts swing by 15 to 86 writes, and four separate
+  plays of the same sample index peak at 268, 258, 257 and 244. The rate is
+  fixed and the cycle model is fixed across all of that, so every write of the
+  variation is service duration. The engine models the driver's semantics, not
+  its Z80 instruction timing, and has no such quantity to offer.
+- **What a correct implementation of the pump would therefore produce.** The
+  oracle capture host never renders (`S3kOpenGgfAudioCapture` drives
+  `serviceOuterFrame` and reads the observer; nothing calls
+  `OwnedSmpsAudioStream.read`), so `Ym2612Chip.serviceDac` never runs there
+  and reporting its writes to the observer emits nothing. Driving one V-int
+  frame of chip time per tick instead would emit `59,736 / dacPeriod` writes,
+  which is the count with the service cost set to zero: about 279 where the
+  reference has 265 at rate 3, and about 133 where the reference has 211. The
+  only quantity that closes that gap is the per-frame service duration, and
+  supplying it as a constant is precisely the fitted model hard rule 3
+  forbids.
+- **The honest next step is a decision, not a fix.** Either the driver gains a
+  Z80 cycle account for its own service (a large piece of work, and the only
+  route that keeps the partition derivable), or the comparison stops
+  partitioning the DAC stream by service boundary and compares the byte stream
+  and its ordering while excusing the per-tick split, with the limit written
+  into the known-discrepancies entry in the same change. Do not close it by
+  measuring this fixture's counts.
+
+
 ## 2026-09-04 - S3K oracle: the DAC enable belongs to the idle loop; tick 139 event 0 -> 1
 
 - **Worktree/branch:** `.worktrees/audio-s3k-tick139`,
