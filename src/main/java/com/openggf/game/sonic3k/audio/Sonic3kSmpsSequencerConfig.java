@@ -160,6 +160,10 @@ public final class Sonic3kSmpsSequencerConfig {
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
                 .fadeInSteps(0x40)          // FadeInSteps = 40h
                 .fadeInDelay(2)             // FadeInDelay = 2
+                // zFadeInToPrevious silences by the overriding bit, not the
+                // resting one: it ORs 84h over every track and clears bit 2
+                // again on the FM ones (Sound/Z80 Sound Driver.asm:2761-2770).
+                .fadeInRestore(SmpsSequencerConfig.FadeInRestore.OVERRIDE_PSG)
                 .build();
     }
 

@@ -3829,14 +3829,57 @@ public class SmpsSequencer implements CoordFlagContext {
         // Add steps to existing volumeOffset (attenuate by 'steps'), then fade
         // decreases it.
         for (Track track : tracks) {
-            // For DAC, mute during fade-in (no volume control available)
+            // For DAC, mute during fade-in (no volume control available). The
+            // ROM expresses the same thing by setting the DAC track's
+            // "SFX is overriding" bit so nothing drives it through the fade
+            // (s2.sounddriver.asm:3094, s1.sounddriver.asm:2183).
             if (track.type == TrackType.DAC) {
                 track.dacMuted = true;
                 stopNote(track);
                 continue;
             }
-            track.volumeOffset += steps;
-            refreshVolume(track);
+            boolean restTracks = config.getFadeInRestore()
+                    == SmpsSequencerConfig.FadeInRestore.REST_TRACKS;
+            // S1 and S2 attenuate every playing FM and PSG track by the fade
+            // depth (s2.sounddriver.asm:3098-3099, :3109, :3134;
+            // s1.sounddriver.asm:2194, :2213). S3K attenuates only the FM
+            // tracks, by 40h, and leaves the PSG volumes alone
+            // (Sound/Z80 Sound Driver.asm:2767-2770).
+            if (restTracks || track.type == TrackType.FM) {
+                track.volumeOffset += steps;
+                refreshVolume(track);
+            }
+            if (!track.active) {
+                continue;
+            }
+            if (restTracks) {
+                // S1/S2: mark the track at rest so the resumed song stays
+                // silent until each track reads its own next note, rather
+                // than holding the note that was sounding when the jingle
+                // interrupted it (s2.sounddriver.asm:3107, :3131;
+                // s1.sounddriver.asm:2193, :2211).
+                track.resting = true;
+                if (track.type == TrackType.PSG) {
+                    // zPSGNoteOff / PSGNoteOff on each rested PSG track
+                    // (s2.sounddriver.asm:3132, s1.sounddriver.asm:2212).
+                    // The FM tracks get no key-off: the ROM re-sends their
+                    // voice instead.
+                    stopNote(track);
+                }
+            } else {
+                // S3K silences by a different bit. zFadeInToPrevious ORs 84h
+                // over every track and then clears bit 2 again on the FM ones
+                // (Sound/Z80 Sound Driver.asm:2761-2770). Bit 2 is "SFX is
+                // overriding this track" and bit 4 is "track is resting" in
+                // this driver (Driver.asm:25, :27; zRestTrack at :4220-4223
+                // sets bit 4 then tests bit 2), so 84h is bits 7 and 2,
+                // playing plus overriding -- the routine's inline comment
+                // naming it "playing and resting" is a mislabel. The PSG
+                // tracks keep the overriding bit, which is what mutes them
+                // through the fade; the FM tracks have it cleared whatever it
+                // was before, and no track is rested.
+                track.overridden = track.type == TrackType.PSG;
+            }
         }
     }
 

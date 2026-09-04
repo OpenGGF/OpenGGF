@@ -119,6 +119,19 @@ This file contains the complete 0.6 development snapshot history carried forward
   one, which is what the original does and what gives the drop its correct
   first frame.
 
+- **The level music no longer comes back distorted after a 1-up:** collecting an
+  extra life plays the jingle, and when it ends the original quietly marks every
+  music channel as resting before fading the level music back in, so each channel
+  stays silent until it reaches its own next note. The engine skipped that step
+  and faded the music back in with whatever note each channel had been holding
+  when the jingle interrupted it, then reloaded the instruments underneath those
+  held notes. The result was a few seconds of wrong-sounding music before the song
+  caught up with itself. The channels are now quietened on restore the way each
+  game's sound program actually does it, so the music returns cleanly. Sonic 1
+  and Sonic 2 rest the channels; Sonic 3 & Knuckles mutes its PSG channels a
+  different way and leaves their volume alone, which the engine now follows
+  too rather than treating all three the same.
+
 - **Speed shoes now slow the music down on the same frame they take your speed
   back:** the original does both in one step at the end of a frame, restoring the
   boosted running values and asking the sound program to drop the tempo together.

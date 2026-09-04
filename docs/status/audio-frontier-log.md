@@ -1215,6 +1215,94 @@ v2 state-and-writes and state-only `MATCH (2198 ticks)`; CPZ state-only
 `writes[4]`, 36 of 719 divergent; request windows `MATCH` at 25, 52 and 27.
 
 
+## 2026-09-04 - S2: the 1-up restore never rested the tracks, in all three drivers
+
+**Date / commit / worktree** 2026-09-04, from `373b4376c` on
+`bugfix/ai-s2-1up-music-restore` in `.worktrees/s2-1up-restore`.
+
+**Fixture** New: `src/test/resources/audio/parity/s2/s2-driver-state-w20107-23600.reference-v2.jsonl.gz`
+(gzip sha256 `1fa3d0bd...5bf786`, uncompressed `725fcd97...f1e875`), cut from
+`sonic-2-sonic-tails-complete-emeralds.bk2`. The first committed S2 window that
+contains a 1-up jingle and the restore that follows it. 3484 ticks over 3493
+frames, 9 zero-service frames, 0 multi-service, 388486 writes. Duplicate capture
+byte-identical.
+
+**Window and epoch** Rows 20107..23600. Tick 0 is a ROM epoch, not a chosen
+frame: the service on which `zCurSong` becomes `82h`, the level music load,
+with `1upPlaying` already cleared by `zPlayMusic`'s ordinary-load branch
+(`s2.sounddriver.asm:1728-1731`). `MusID_ExtraLife` (`98h`,
+`s2.constants.asm:856`) is requested on tick 2875 / row 22991, where
+`zPlayMusic` backs up `zAbsVar` and every track and sets `1upPlaying` to `80h`
+(`s2.sounddriver.asm:1675-1724`). `cfFadeInToPrevious` runs on tick 3085 / row
+23201 (`s2.sounddriver.asm:3083-3163`). 399 further services carry the whole
+`28h`-step fade-in. `zCurSong` stays `98h` across the restore because it lives
+at `1300h`, outside the backed-up region, so `1upPlaying` is the evidence, not
+the song byte.
+
+**Command**
+
+```
+LUA_BIN=lua5.4 mvn -Dmse=off -B "-Dsonic2.rom.path=<s2 REV01>" \
+  "-Dtest=TestS2OneUpRestoreDriverStateOracle" test
+```
+
+**Result** First divergence after the jingle ends, at the restore service
+itself: every playing FM and PSG music track. The reference has all eight at
+rest; the engine had all eight not resting.
+
+```
+FM1..FM5, PSG1..PSG3: engine resting=false against the ROM's true
+```
+
+**Mechanism** `SmpsSequencer.triggerFadeIn` is the engine's port of
+`cfFadeInToPrevious`, and its only production caller is
+`AbstractSmpsAudioBackend.doRestoreMusic`. It applied the `28h` attenuation and
+re-uploaded voices but never marked the playing tracks at rest, and never
+issued the PSG note-off. The resumed song therefore carried whatever note each
+channel was holding when the jingle interrupted it, with the restored
+instrument reloaded underneath it, until each track reached its own next note.
+That is the reported "funky remix".
+
+S1 and S2 rest the tracks: `bset #1` on every playing FM and PSG track with
+`PSGNoteOff` on the PSG ones (`s1disasm/s1.sounddriver.asm:2193, :2211-2212`),
+and `set 1` with `zPSGNoteOff` (`s2.sounddriver.asm:3107, :3131-3132`).
+
+**S3K does not, and the disassembly says it does.** `zFadeInToPrevious` ORs
+`84h` over every track and then clears bit 2 again on the FM ones
+(`skdisasm/Sound/Z80 Sound Driver.asm:2761-2770`). Its inline comment on both
+`or 84h` sites reads "Set 'track is playing' and 'track is resting' flags", but
+in this driver's own layout bit 2 is "SFX is overriding this track" and bit 4 is
+"track is resting" (`Driver.asm:25, :27`), and `zRestTrack` at `:4220-4223` sets
+bit 4 and then tests bit 2. `84h` is bits 7 and 2, so it is playing plus
+overriding, and it sets no resting bit at all. The comment names the wrong bit.
+The `res 2` at `:2767` makes the intent unambiguous: every track is marked
+overridden, the FM tracks are released again and re-voiced, and the PSG tracks
+keep the overriding bit, which is what mutes them through the fade. S3K also
+attenuates only the FM tracks, by `40h` (`:2769`), leaving the PSG volumes
+untouched.
+
+So the restore has two shapes, not one, and they are now a driver config mode:
+`SmpsSequencerConfig.FadeInRestore.REST_TRACKS` for S1/S2 and `OVERRIDE_PSG` for
+S3K. Taking the S3K comment at face value would have rested its tracks and
+attenuated its PSG channels, neither of which that driver does.
+
+**Why the existing oracles could not see it** `PlaybackControl` bit 1 is
+excluded twice over. `S2OracleComparison.MappedTrack.CONTROL_MASK` is `0x98`,
+which omits it on the reference side, and `MappedTrack.fromEngine` composes the
+engine's control byte from active/tieNext/modEnabled only, so the rest bit is
+never mapped from the engine at all. `NOT_COMPARED` records the exclusion. The
+new test compares the field directly rather than widening the mask, so the
+existing windows keep their pinned control-bit semantics.
+
+**Notes** The attenuation half was already correct: the engine's
+`volumeOffset += steps` matches the ROM's `Volume += 28h - FadeInCounter` with
+no fade in flight, and the reference's next service confirms the first fade
+step is immediate. Existing oracles stay green; the 1-up restore is not inside
+any of their windows, so the new PSG note-off writes reach no committed write
+stream.
+
+---
+
 ## 2026-09-04 - The duration seed lands; both red assertions were the suspects
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
