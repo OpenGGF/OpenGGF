@@ -27,6 +27,51 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The SFX load keys off and clears SSG-EG; tick 565 -> tick 588
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `981aece96`. From this
+  cycle the branch stays unmerged until the AIZ1 oracle is MATCH end to end,
+  so the frontier log lives here.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 565, event 0, reference
+  `ym2612 port 0 register 28h = 4` against engine `port 0 register 0A4h = 18`.
+  DAC stream `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 588, event 3, reference
+  `ym2612 port 1 register 0B5h = 64` against engine `port 0 register 28h = 5`.
+  DAC stream unchanged. Twenty-three more services agree.
+- **The routine.** `zSFXTrackInitLoop` calls `zKeyOffIfActive` and then
+  `zFMClearSSGEGOps` for every SFX track it initialises, while the SFX is
+  still being loaded (Sound/Z80 Sound Driver.asm:2092-2103). The clear writes
+  `90h` and the three operator registers above it with zero (:2528-2536). The
+  reference's service 565 opens with exactly that, twice: key off FM4 then
+  `ym1[90h] [94h] [98h] [9Ch] = 0`, key off FM5 then
+  `ym1[91h] [95h] [99h] [9Dh] = 0`, and only afterwards the music's own
+  writes. The engine emitted none of it.
+- **One half deliberately not modelled, and it is the ROM's own bug.** Under
+  `fix_sndbugs = 0` the SSG-EG clear runs for PSG tracks too, which the
+  listing flags with its own "(even on PSG tracks!!!)" note (:2099). A PSG
+  track's `VoiceControl` selects a nonsense YM channel there. No committed
+  fixture exercises it, so modelling it would be a guess; the FM case is
+  implemented and the PSG case is written down in the config's own comment.
+- **S1 and S2 unchanged, read by content.** S1 sound test `MATCH (14690
+  ticks)` and `MATCH (1967 ticks)`. S2 v1 `MATCH (698 ticks)`, v2
+  state-and-writes and state-only `MATCH (2198 ticks)`, CPZ state-only
+  `MATCH (720 ticks)`, request windows `MATCH` at 25, 52 and 27. The CPZ
+  state-and-writes line is unchanged at its own frontier, tick 237.
+- **Open items.** S2's `zNoteFillUpdate` countdown; S1 and S2's post-note
+  do-not-attack clear; the `.dac_playback_loop` cycle total of 303 against
+  `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  and now the SSG-EG clear on PSG tracks described above.
+- **Gates at this commit, all green.** The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,159
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - The duration seed lands; both red assertions were the suspects
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

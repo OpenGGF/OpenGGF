@@ -119,6 +119,10 @@ public final class Sonic3kSmpsSequencerConfig {
                 // (Sound/Z80 Sound Driver.asm:650-701), so an SFX admitted in
                 // a service first updates in the next one.
                 .sfxWalkPrecedesRequest(true)
+                // zSFXTrackInitLoop keys each SFX channel off and clears its
+                // SSG-EG operators while loading (Sound/Z80 Sound
+                // Driver.asm:2092-2103, :2528-2536).
+                .sfxAdmissionKeyOffAndClearsSsgEg(true)
                 // zSFXTrackInitLoop sets bit 2 on the overridden music track
                 // while the SFX is still being loaded (Sound/Z80 Sound
                 // Driver.asm:1997-2003), so ownership exists from the

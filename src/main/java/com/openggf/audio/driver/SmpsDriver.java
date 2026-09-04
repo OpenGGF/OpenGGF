@@ -746,8 +746,39 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         }
     }
 
+    /**
+     * ROM {@code zSFXTrackInitLoop}: while an SFX is still being loaded, each
+     * of its tracks is keyed off and has its SSG-EG operators cleared, in
+     * track order (skdisasm Sound/Z80 Sound Driver.asm:2092-2103). The clear
+     * is {@code zFMClearSSGEGOps}, which writes 90h and the three operator
+     * registers above it with zero (:2528-2536). Under
+     * {@code fix_sndbugs = 0} the ROM runs the clear for PSG tracks as well,
+     * which the listing itself flags; only the FM case is modelled, because
+     * no committed fixture exercises the other and inventing it would be a
+     * guess.
+     */
+    private void emitSfxTrackInitWrites(SmpsSequencer sequencer) {
+        if (!sequencer.getConfig().isSfxAdmissionKeyOffAndClearsSsgEg()) {
+            return;
+        }
+        for (SmpsSequencer.Track track : sequencer.getTracks()) {
+            if (track.type != SmpsSequencer.TrackType.FM) {
+                continue;
+            }
+            int channel = track.channelId;
+            int port = channel < 3 ? 0 : 1;
+            int channelInPort = channel % 3;
+            int keyOffSelect = port == 0 ? channelInPort : channelInPort + 4;
+            writeFm(this, 0, 0x28, keyOffSelect);
+            for (int operator = 0; operator < 4; operator++) {
+                writeFm(this, port, 0x90 + operator * 4 + channelInPort, 0x00);
+            }
+        }
+    }
+
     private void installPreparedSfxChannelOwnership(
             PreparedSfxAdmission admission, SmpsSequencer sequencer) {
+        emitSfxTrackInitWrites(sequencer);
         if (!ownsChannelsAtAdmission(sequencer)) {
             return;
         }

@@ -336,6 +336,7 @@ public final class SmpsSequencerConfig {
     private final boolean tempoWaitPrecedesRequest;
     private final PsgSilenceShape psgSilenceShape;
     private final boolean sfxWalkPrecedesRequest;
+    private final boolean sfxAdmissionKeyOffAndClearsSsgEg;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -395,6 +396,7 @@ public final class SmpsSequencerConfig {
         this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
         this.psgSilenceShape = b.psgSilenceShape;
         this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
+        this.sfxAdmissionKeyOffAndClearsSsgEg = b.sfxAdmissionKeyOffAndClearsSsgEg;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -715,6 +717,20 @@ public final class SmpsSequencerConfig {
         return sfxWalkPrecedesRequest;
     }
 
+    /**
+     * Whether an admitted SFX keys each of its channels off and clears their
+     * SSG-EG operators. {@code zSFXTrackInitLoop} calls
+     * {@code zKeyOffIfActive} and then {@code zFMClearSSGEGOps} for every SFX
+     * track it initialises (skdisasm Sound/Z80 Sound Driver.asm:2092-2103,
+     * :2528-2536), writing 90h, 94h, 98h and 9Ch of the track's channel with
+     * zero. Under {@code fix_sndbugs = 0} the SSG-EG clear runs for PSG
+     * tracks too, which the listing flags itself; only the FM case is
+     * modelled here, because no committed fixture exercises the other.
+     */
+    public boolean isSfxAdmissionKeyOffAndClearsSsgEg() {
+        return sfxAdmissionKeyOffAndClearsSsgEg;
+    }
+
     /** How a single PSG track's silence is written. */
     public enum PsgSilenceShape {
         /** The engine's existing S1/S2 behaviour: one byte for the channel
@@ -852,6 +868,7 @@ public final class SmpsSequencerConfig {
         private boolean tempoWaitPrecedesRequest = false;
         private PsgSilenceShape psgSilenceShape = PsgSilenceShape.SOUNDING_CHANNEL_ONLY;
         private boolean sfxWalkPrecedesRequest = false;
+        private boolean sfxAdmissionKeyOffAndClearsSsgEg = false;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -903,6 +920,7 @@ public final class SmpsSequencerConfig {
         public Builder tempoWaitPrecedesRequest(boolean val) { tempoWaitPrecedesRequest = val; return this; }
         public Builder psgSilenceShape(PsgSilenceShape val) { psgSilenceShape = val; return this; }
         public Builder sfxWalkPrecedesRequest(boolean val) { sfxWalkPrecedesRequest = val; return this; }
+        public Builder sfxAdmissionKeyOffAndClearsSsgEg(boolean val) { sfxAdmissionKeyOffAndClearsSsgEg = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }
