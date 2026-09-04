@@ -63,7 +63,12 @@ defined by `com.openggf.tools.audio.parity`.
   oracle `MATCH (698 ticks)` all pass inside one run of the
   `com.openggf.tools.audio.parity` and `com.openggf.audio` packages,
   `TestSmpsFadeAudioThroughput` and the four S3K keep-green classes: 2,097
-  tests, 0 failures, 10 skips.
+  tests, 0 failures, 10 skips. The ordinary suite with all three ROM
+  paths runs 16,383 tests with 0 failures and 20 skips, and `-Pguards` runs 607
+  with 0 failures. One unit test changed with the mask:
+  `TestSonic3kCoordFlagParity` asserted that a PSG detune underflow wraps to a
+  ten-bit 03FFh, which is the engine's old invention rather than the driver's
+  behaviour, so it now asserts the 08Fh/0FFh the listing produces.
 
 
 ## 2026-09-04 - S3K oracle: the note path sends one frequency and no pan; tick 138 event 151 -> 255
