@@ -337,6 +337,8 @@ public final class SmpsSequencerConfig {
     private final PsgSilenceShape psgSilenceShape;
     private final PsgVolumeTail psgVolumeTail;
     private final boolean sfxWalkPrecedesRequest;
+    private final boolean sfxAdmissionKeyOffAndClearsSsgEg;
+    private final boolean trackEndFlagOwnsTheStop;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -397,6 +399,8 @@ public final class SmpsSequencerConfig {
         this.psgSilenceShape = b.psgSilenceShape;
         this.psgVolumeTail = b.psgVolumeTail;
         this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
+        this.sfxAdmissionKeyOffAndClearsSsgEg = b.sfxAdmissionKeyOffAndClearsSsgEg;
+        this.trackEndFlagOwnsTheStop = b.trackEndFlagOwnsTheStop;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -717,6 +721,35 @@ public final class SmpsSequencerConfig {
         return sfxWalkPrecedesRequest;
     }
 
+    /**
+     * Whether an admitted SFX keys each of its channels off and clears their
+     * SSG-EG operators. {@code zSFXTrackInitLoop} calls
+     * {@code zKeyOffIfActive} and then {@code zFMClearSSGEGOps} for every SFX
+     * track it initialises (skdisasm Sound/Z80 Sound Driver.asm:2092-2103,
+     * :2528-2536), writing 90h, 94h, 98h and 9Ch of the track's channel with
+     * zero. On the shipped {@code fix_sndbugs = 0} branch the clear is also
+     * called for PSG tracks, but {@code zWriteFMIorII} returns on bit 7 of
+     * {@code VoiceControl} before writing anything (:2549-2551), so no PSG
+     * track puts a byte on the bus; the fixed branch merely skips the call.
+     */
+    public boolean isSfxAdmissionKeyOffAndClearsSsgEg() {
+        return sfxAdmissionKeyOffAndClearsSsgEg;
+    }
+
+    /**
+     * Whether the track-end coordination flag is the only thing that stops
+     * the note. S3K's {@code cfStopTrack} calls {@code zKeyOffIfActive}
+     * exactly once as it clears the playing bit (skdisasm Sound/Z80 Sound
+     * Driver.asm:3040-3046), so a second stop after the stream read puts a
+     * duplicate key-off on the bus. S1 and S2 keep the engine's blanket stop:
+     * their handlers do not all stop the note themselves, and removing it
+     * takes the S2 driver-state oracle from MATCH to a missing write at tick
+     * 207, so their track-end paths are unaudited rather than known-equal.
+     */
+    public boolean isTrackEndFlagOwnsTheStop() {
+        return trackEndFlagOwnsTheStop;
+    }
+
     /** How a single PSG track's silence is written. */
     public enum PsgSilenceShape {
         /** The engine's existing S1/S2 behaviour: one byte for the channel
@@ -883,6 +916,8 @@ public final class SmpsSequencerConfig {
         private PsgSilenceShape psgSilenceShape = PsgSilenceShape.SOUNDING_CHANNEL_ONLY;
         private PsgVolumeTail psgVolumeTail = PsgVolumeTail.NOTE_AND_ENVELOPE_ONLY;
         private boolean sfxWalkPrecedesRequest = false;
+        private boolean sfxAdmissionKeyOffAndClearsSsgEg = false;
+        private boolean trackEndFlagOwnsTheStop = false;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -935,6 +970,8 @@ public final class SmpsSequencerConfig {
         public Builder psgSilenceShape(PsgSilenceShape val) { psgSilenceShape = val; return this; }
         public Builder psgVolumeTail(PsgVolumeTail val) { psgVolumeTail = val; return this; }
         public Builder sfxWalkPrecedesRequest(boolean val) { sfxWalkPrecedesRequest = val; return this; }
+        public Builder sfxAdmissionKeyOffAndClearsSsgEg(boolean val) { sfxAdmissionKeyOffAndClearsSsgEg = val; return this; }
+        public Builder trackEndFlagOwnsTheStop(boolean val) { trackEndFlagOwnsTheStop = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }

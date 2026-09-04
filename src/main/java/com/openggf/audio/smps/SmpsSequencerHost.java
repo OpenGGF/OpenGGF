@@ -17,6 +17,11 @@ public interface SmpsSequencerHost {
 
     void reconcileInactiveSfxTracks(SmpsSequencer sequencer);
 
+    /** See {@link CoordFlagContext#releaseChannelToMusic}. */
+    default void releaseChannelToMusic(SmpsSequencer sequencer,
+            SmpsSequencer.TrackType type, int channelId) {
+    }
+
     /**
      * Releases the channels of any inactive SFX track, including those of a
      * sequencer whose every track has now finished.
