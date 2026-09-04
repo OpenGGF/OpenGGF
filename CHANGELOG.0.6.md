@@ -14,6 +14,47 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Four more sound settings now reach playback:** a new guard checks that
+  every sound-driver setting survives the step that prepares a sound for
+  playback, since a setting missing from that step is silently ignored rather
+  than reported. It found four more that were being dropped: three Sonic 3 &
+  Knuckles settings covering DAC channel handling at note and sequence start
+  and the PSG frequency byte order, and one Sonic 1 setting for how a special
+  effect silences the third PSG channel. All four are honoured now.
+
+- **The collapsing-scenery ring-out now survives with music playing:** the
+  fix that restored the effect's fade was reaching the sound chip only when
+  nothing else was playing. The layer that prepares a sound for playback copies
+  each driver setting across by hand, and the new setting was missing from that
+  copy, so in an actual level the effect still ended flat. It is copied now, and
+  the fade is audible over the zone music as well as on its own.
+
+- **The spindash rev pitch now comes from the sound program, as it does on
+  hardware:** the rising pitch while a spindash charges belongs to the sound
+  driver, and both games already carry it. Sonic 2 keeps a rev index beside a
+  60-frame timer, stepping it each time the sound is asked for while the
+  previous one is still playing, capping it, and adding it to the track as a
+  key offset. Sonic 3 & Knuckles carries the same ladder inside the effect's
+  own script. On top of that, the engine was also stretching the sound's
+  playback speed by the player's charge counter, a value the sound program
+  never sees, applied as a speed change rather than a note offset. That
+  invented adjustment is gone, so the rev is whatever the original asks for.
+
+- **Sonic 3 & Knuckles collapsing scenery rings out again, and the spindash
+  release stops buzzing:** both effects put a long noise part alongside a short
+  instrument part, and in both the noise part is what a player actually hears.
+  The sound program hands the noise generator to the effect's third tone track,
+  which has no separate track of its own, so the engine did not recognise that
+  the track was still using it. It took the generator back on the effect's very
+  first update and muted it, which chopped the spindash release into a buzz and
+  cut the collapse short. The collapse also lost its ring-out: its script fades
+  the noise across six repeats by stepping the volume down each time, and the
+  engine only sent a new volume when a note began, so a fade applied mid-note
+  never reached the chip and the effect ended flat. It now sends the volume on
+  every update of a sounding note, as the original does, so the collapse decays
+  away instead of stopping dead. Sonic 1 and Sonic 2 keep their audited volume
+  behaviour.
+
 - **Fading out Sonic 1's music no longer loses its first step:** the original
   steps a fade in progress before it looks at newly requested sounds, so a fade
   asked for on one frame does not begin dimming until the next. The engine
@@ -77,6 +118,19 @@ This file contains the complete 0.6 development snapshot history carried forward
   also becomes the falling blob in place rather than being handed off to a new
   one, which is what the original does and what gives the drop its correct
   first frame.
+
+- **The level music no longer comes back distorted after a 1-up:** collecting an
+  extra life plays the jingle, and when it ends the original quietly marks every
+  music channel as resting before fading the level music back in, so each channel
+  stays silent until it reaches its own next note. The engine skipped that step
+  and faded the music back in with whatever note each channel had been holding
+  when the jingle interrupted it, then reloaded the instruments underneath those
+  held notes. The result was a few seconds of wrong-sounding music before the song
+  caught up with itself. The channels are now quietened on restore the way each
+  game's sound program actually does it, so the music returns cleanly. Sonic 1
+  and Sonic 2 rest the channels; Sonic 3 & Knuckles mutes its PSG channels a
+  different way and leaves their volume alone, which the engine now follows
+  too rather than treating all three the same.
 
 - **Speed shoes now slow the music down on the same frame they take your speed
   back:** the original does both in one step at the end of a frame, restoring the
@@ -9502,3 +9556,9 @@ documentation changes, 18 performance changes, 5 build changes, 31 maintenance
 changes, 682 merges, 4 reverts, and 481 other integration entries. The detailed
 engineering ledger remains under `docs/changelog/`; this file keeps the full release
 history while grouping the public-facing material by release.
+
+- Fix: skipping the Sonic 3 & Knuckles intro with Start no longer silences the
+  title screen. Once the title music had started, the skip re-issued the SEGA
+  chant's stop command, which stops all sound, and then declined to restart the
+  music because it was already marked as playing. The stop is now tied to the
+  chant actually still playing, matching the ROM, which runs it exactly once.
