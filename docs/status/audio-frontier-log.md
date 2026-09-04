@@ -27,6 +27,49 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Roadmap step 4: all three routes to a second S2 span are blocked, and the third is the engine's own chain
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `9f8f21058`.
+- **Measurement and survey, not a comparison run.** Nothing landed and no
+  fixture was published. One experiment was run and reverted.
+- **Route one, the committed CPZ level-select recording.** Already published as
+  `s2-request-window-cpz-w2700-3450`, with its own pinned digests and the CPZ
+  music load inside it at movie row 2724, where `zCurSong` goes `91h` to `8Eh`.
+  The engine cannot be driven through it: `S2PublishedRequestWindows` keeps it
+  out of `COMPLETE_RUN_WINDOWS`, documented as the windows the run-chain
+  harness replays, and the CPZ trace under `traces/s2/cpz` starts at
+  `bk2_frame_offset: 2868`, which is 144 rows after that load.
+- **Route two, a fresh CPZ window of the complete-emeralds movie.** Needs a
+  capture, and the capture needs the patch-0001 GPGX observer core. No core
+  matching `artifact-lock.json`'s
+  `25ee305d…` exists on this machine; every `gpgx.wbx.zst` under the repository
+  and the scratch roots is the stock `c4231296…`. The surviving raw captures
+  from the widen lane, under `<agent-scratch>/claude/s2-widen/runs`, are each
+  already windowed to the range they were published at, so `extract` mode has
+  no complete-run source to cut a new window from. Building the core needs a
+  clean pinned BizHawk, GPGX and musl tree plus eleven exact clang-16 and
+  runtime packages, none staged; the pinned repositories are reachable, so this
+  is a cost question rather than an impossibility.
+- **Route three, the fourth already-published window, and this one is new.**
+  `s2-request-window-w13650-14400` spans the EHZ1 exit into the second special
+  stage at movie row 13712, so it crosses a level transition and opens a new
+  music epoch. It is in `COMPLETE_RUN_WINDOWS` and needs no capture, and it has
+  never been compared because `TestS2WidenedRequestOracle` captures only to row
+  12400 and skips any window ending past that.
+- **Widening that capture was tried and reverted.** With
+  `CAPTURE_EXCLUSIVE_END` at 14400 the run-chain replay itself fails on twelve
+  axes before the audio comparison is reached: an uncompared-interior physical
+  walk overrunning destination 101691, 2,122 physics comparator errors in
+  segment 15 with the first non-camera mismatch at frame 2252 field `air`, and
+  dynamic-art gap mismatches on two special-stage-to-EHZ1 handovers. So the
+  audio window stops at 12400 because that is where the engine's own chain is
+  still green, not because of anything in the audio layer.
+- **What this means for step 4.** A second S2 span cannot be measured today
+  without either building the observer core or moving the run chain's green
+  frontier past row 12400. The second of those is a physics-lane question, not
+  an audio one.
+
 ## 2026-09-04 - The second S2 recording already exists; what is missing is an engine side to compare it against
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
