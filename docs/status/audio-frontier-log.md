@@ -27,6 +27,58 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K service 751 is a music change, and the engine goes quiet just as the ROM gets busy
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `0da7b645a`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  records what tick 751 actually is, because the single-event frontier line
+  had me looking at the wrong thing for a cycle.
+- **What the frontier line says, and why it misleads.** The comparator reports
+  `EVENT_VALUE_DIFFERENT` at tick 751 event 0: reference
+  `ym2612 port 1 register 165 value 80` against engine
+  `port 1 register 130 value 255`. That reads like one wrong write. It is not.
+  Tick 751 carries 274 reference writes, and the two sides are not comparing
+  the same moment at all.
+- **Tick 751 is a music change.** The reference's writes there are
+  unmistakably the six-channel loop of `zStopAllSound`
+  (`Sound/Z80 Sound Driver.asm:2476-2498`) on the `fix_sndbugs = 0` branch:
+  per channel, D1L/RR of `FFh` on all four operators, total level of `7Fh` on
+  all four, a key off on register 28h, then the four SSG-EG registers cleared
+  to zero. Register 165 and 161 are the frequency high and low bytes for
+  linear FM4, sent immediately before that loop begins.
+- **The engine runs it one service early, and much shorter.** Writes per
+  service, engine against reference:
+
+  | Service | 747 | 748 | 749 | 750 | 751 | 752 | 753 | 754 |
+  |---|---|---|---|---|---|---|---|---|
+  | Reference | 28 | 8 | 8 | 8 | 274 | 297 | 270 | 263 |
+  | Engine | 28 | 8 | 8 | 89 | 177 | 10 | 10 | 10 |
+
+  The two agree exactly through 749. The engine then begins its stop at 750,
+  a whole service before the ROM does, and its own tick 751 opens with the
+  *tail* of that stop - a key off of channel 6 and register 27h set to zero,
+  which is `zFM3NormalMode` at the very end of `zStopAllSound` (:2506-2513).
+- **The larger problem is what follows.** The reference sustains roughly 250
+  to 300 writes per service from 751 onward, which is the newly loaded music
+  doing its per-service work. The engine collapses to ten writes per service
+  and stays there. So this is not a one-service phase error to be nudged: the
+  engine is missing almost all of the new song's servicing, and the early stop
+  is likely a symptom of the same mis-modelled music-change sequence rather
+  than a separate bug.
+- **What the next cycle should do.** Start from the request that lands at 751
+  in `s3k-aiz1-intro-requests-v1.json` and follow `zCycleSoundQueue` into
+  `zBGMLoad` (:1790), rather than from the single divergent write. The
+  question to answer first is why the engine's newly loaded song services ten
+  writes where the ROM's services two hundred and fifty, because that gap is
+  far larger than the ordering error and probably explains it.
+- **Ruled out this cycle.** `forceSilence` is not the source of the engine's
+  `82h = FFh`: a probe on that method across services 748 to 754 never fired.
+  The write comes from the engine's own stop-all loop.
+- **Gates.** Not re-run; no engine behaviour changed since `0da7b645a`, whose
+  gates are recorded in the entry below.
+
+
 ## 2026-09-04 - S3K SFX lifecycle: two missing key offs the intro oracle cannot see
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
