@@ -67,11 +67,29 @@ defined by `com.openggf.tools.audio.parity`.
   `Ym2612Chip.dacPeriod` from `DacData.baseCycles` and the sample's rate
   byte. The capture host advances the chip by one V-int of the driver's own
   region cadence per tick.
-- **Next.** Tick 139's remaining service writes are a track-set divergence in
-  the first update after the load: the reference sends FM2's frequency pair
-  (`ym0 0A5h/0A1h`) and three PSG channels, where the engine sends FM4 and
-  FM5 and one PSG channel, and in volume-before-frequency order rather than
-  the reference's frequency-then-volume.
+- **Next, and it is already diagnosed and cross-checked.** Tick 139's
+  remaining service writes are a track-set divergence in the first update
+  after the load: the reference sends FM2's frequency pair (`ym0 0A5h/0A1h`)
+  and three PSG channels, where the engine sends FM4 and FM5 and one PSG
+  channel. The tracks the engine omits are exactly the ones whose frequency
+  did not change since the previous pass, and FM2's `0132h` is identical at
+  ticks 139 and 140. S3K re-sends it anyway: `zUpdateFMorPSGTrack`'s
+  `.note_going` path calls `zUpdateFreq`, returns early only on the
+  sustain-frequency bit, then calls `zDoModulation` and **falls through** to
+  `zFMSendFreq` (Sound/Z80 Sound Driver.asm:783-799), and that
+  `zDoModulation` is an ordinary subroutine whose `ret z` on inactive
+  modulation lands on the fall-through (:1279-1283).
+  S2 is genuinely different and the engine currently implements S2's shape:
+  its `zDoModulation` opens with `pop de` and deliberately does not return to
+  its caller when modulation is off or the track is resting, so
+  `zFMUpdateFreq` is skipped (s2.sounddriver.asm:986-997, :828-834). So this
+  is a real per-game difference belonging in the sequencer config, not a
+  shared correction. In the engine the per-pass write exists only inside
+  `SmpsSequencer.applyModulation`, which returns before writing when
+  modulation is disabled or nothing changed. The PSG ordering difference
+  (engine volume-before-frequency against the reference's
+  frequency-then-volume) should be re-measured after that change rather than
+  before it.
 - **Gates at this commit:** one run of the `com.openggf.tools.audio.parity`
   and `com.openggf.audio` packages plus `TestSmpsFadeAudioThroughput`,
   `TestYm2612DacTiming`, the four S3K keep-green classes,
