@@ -27,6 +27,51 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - StopAllSound routed against the window that contains one: $8D from a crash to tick 4,646 of 4,671
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` merged at `1456a4a51`.
+- **Fixture:** window 81 of the completed pass over `s1-complete-run.bk2`,
+  music `$8D`, 4,671 ticks.
+- **Result before:** the capture host threw, `S1 driver flag command 0xe4 is not
+  modelled by the parity host yet`. Nothing was compared.
+- **Result after:** `EVENT_VALUE_DIFFERENT` tick 4,646, reference
+  `ym2612 port 0 register 28h = 2` against engine `port 1 register B1h = 61`.
+  **Every compared field agrees through tick 4,645, and the first two chip
+  writes of the stop agree.**
+
+**Routed against the real window, not a guess.** `$E4` is the fourth sound id
+`PlaySoundID` sends through `Sound_E0toE4` (s1.sounddriver.asm:715, :726),
+reaching `StopAllSound` (:1461-1482). It is a different mechanism from the `E4`
+*coordination flag* in track data, which ends a 1-up jingle; the engine's
+`handleFadeIn` is that one. Conflating them is easy and this entry records the
+distinction because a reader of the earlier `Sound_E0toE4` commit could make it.
+
+**What the ROM does, and what now happens.** Enable the DAC (`2Bh = 80h`), put
+FM3 and FM6 back in normal mode with the timers off (`27h = 00h`), clear the
+driver's variable and track RAM, set `v_sound_id` to `$80`, then `FMSilenceAll`
+and `PSGSilenceAll`. The host emits the two mode writes, stops the SFX
+sequencers, applies the RAM clear to the music sequencer's own tracks, and
+silences. The clear zeroes the master tempo and its timeout as well as the track
+RAM, which is what took the frontier past its first landing at tick 4,646 on
+`tempo_reload`, reference `0` against engine `6`.
+
+**Where it stops.** The remaining difference is inside the silence itself: the
+ROM's next write is the first `28h` key-off and the engine emits a leftover
+`B1h` pan byte first. That is a write-ordering question inside the stop, with
+the driver state on both sides already agreeing, and it is recorded rather than
+chased.
+
+**Placement, for the same reason as the fade's stops.** The stop runs before the
+frame service rather than at the dispatch point, because it releases sequencers
+and the driver iterates its list by index over a size captured before the pass.
+The ROM likewise clears before it walks any track.
+
+**Gates.** Audio parity and the wider audio packages plus both rewind coverage
+guards: 2,072 tests, 0 failures, 0 errors, 10 skips. All three published pins
+unchanged; both S1 gameplay oracles `MATCH` at 2,562 and 5,257.
+
+
 ## 2026-09-04 - The tick-zero override class is fixable, not a discrepancy: withdrawing my own entry
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
