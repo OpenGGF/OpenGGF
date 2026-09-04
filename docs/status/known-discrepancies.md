@@ -2869,14 +2869,13 @@ The run count must match exactly, and every byte the two sides share within a
 run must be equal, in order. That is what proves the sample selection, the
 `jman2050` nybble decode and the cadence.
 
-A run boundary is the ROM's own and is visible in the write stream on both
-sides, so run structure is pinned by compared data rather than assumed. Sonic
-2's playback loop writes nothing at all between samples: `zWaitLoop` spins on
-the remaining length `de` being zero and touches no register until a sample is
-queued (:647-650). A completed service carrying no `2Ah` byte is therefore a
-real gap between samples. Measured on the committed reference, that rule yields
-92 runs across 2,243 services, against 91 changes of the driver's own `zCurDAC`
-byte over the same window, and the engine independently produces the same 92.
+Every run boundary is the ROM's own and is derived from driver state rather
+than assumed; the next section states the rule in full. Sonic 2's playback loop
+writes nothing at all between samples, because `zWaitLoop` spins on the
+remaining length `de` being zero and touches no register until a sample is
+queued (:647-650), so a completed service carrying no `2Ah` byte is a real gap.
+The sample's own decoded length and the driver's current sample selector supply
+the other two.
 
 Unlike S3K, no `2Bh` write moved into this stream. Sonic 2's playback loop
 never writes the DAC enable register per sample: every `2Bh` write in this
@@ -2890,39 +2889,56 @@ reference's remaining bytes pick up again in the engine's run after a byte
 difference, and it is what separates the two very different situations a byte
 difference can mean.
 
-### The One Case The Run Rule Cannot Split
+### The Run Rule, And The One Thing It Cannot Split
 
-A play that supersedes another with no silent service between them leaves no
-gap, so the rule above merges the two plays into one run and the join lands at
-whatever byte each side's Z80 had reached. That is the same service-duration
-quantity, and it surfaces as a byte difference at the join rather than as a
-length difference.
+A run is at most one decoded sample long. That bound is the one
+`zWriteToDAC` itself enforces: it decrements `de`, loaded from `zDACLenTbl`
+by the same self-modified entry lookup that rebases `zCurDAC`
+(s2.sounddriver.asm:505-518, :528-529), once per source byte, and returns to
+`zWaitLoop` when it reaches zero. So a run ends at its sample's decoded
+length, at a service that carried no sample byte, or at a change of the
+current sample selector. Two consecutive plays of one sample are two runs of
+that length even with nothing between them. Each side reads the bound from the
+ROM's own table through its own selector, and the two selectors are never
+compared to each other.
 
-It is measured, not assumed. On the committed
-`s2-driver-state-w10150-12400` reference the first such join is in run 3. The
-reference's bytes over its services 150-155 sum to exactly 709, and its byte
-709 is `0x80`, the value `zWriteToDAC`'s accumulator starts every sample at
-(`ld a,80h` / `ex af,af'` in `zVInt`'s `.dacqueued`, s2.sounddriver.asm:
-502-517). The step from the preceding `0x89` is minus nine, which no entry of
-`zDACDecodeTbl` can produce, so a second sample begins there. Aligning each
-side's second sample by its own start, 3,612 bytes agree with zero mismatches,
-and the first sample's 709 bytes already agreed. The engine had played 828
-bytes of the first sample where the ROM played 709, a ratio of 1.17 that
-matches the service cost the engine does not charge.
+A run shorter than its bound was cut off by another play rather than
+exhausting its sample, and how far each side got before the cut is the
+service-duration quantity above. The join between two such runs is the one
+place the comparison cannot line up, because the two producers phase a queued
+sample differently: the ROM arms it at the end of `zUpdateDAC` and cannot
+stream a byte until the service returns and re-enables interrupts (:492-536,
+:682-726), while the engine's pump, charging nothing for the service, begins
+inside it.
 
-No symmetric boundary fixes this, and three were built and measured before the
-excusal was written. Splitting on the driver's own sample selector as well as
-on gaps does not, because the ROM's selector changes one service before the new
-sample's first byte while the engine's changes in the same service; splitting
-on the selector alone does not, because two consecutive plays of one sample
-change no selector at all. Phasing the boundary per producer does line the two
-up, and it was rejected because it makes the comparison disagree with itself:
-the break-it control feeds the reference to both sides and fails under an
-asymmetric rule.
+It is measured, not assumed. On the committed `s2-driver-state-w10150-12400`
+reference the first such join is in run 3, whose sample is 1,320 decoded bytes
+long. The ROM played 709 of them before another play superseded it and the
+engine played 1,206. The reference's 709 is exactly the sum of its own
+services 150-155, and its next byte is `0x80`, the value `zWriteToDAC`'s
+accumulator starts every sample at (`ld a,80h` / `ex af,af'` in `zVInt`'s
+`.dacqueued`, :502-517); the step from the preceding `0x89` is minus nine,
+which no entry of `zDACDecodeTbl` can produce, so a second sample begins
+there.
+
+The data itself is not in question, and the result line says so. The three
+runs before the join are full-length plays of 1,320 bytes and agree byte for
+byte on both sides, which is what `complete runs agreed` counts. Aligning each
+side's superseding sample by its own start, 3,612 bytes agree with zero
+mismatches. A byte difference inside a full-length run would be sample data
+and would be a defect; a byte difference after a pair of short runs is this
+join.
 
 The engine's DAC interpolation is not involved and cannot be. `Ym2612Chip`'s
 interpolated write deliberately does not call the write observer, because it
 has no ROM counterpart, so no synthetic byte reaches the compared stream.
+
+Three quantities are reported rather than asserted, so a regression in any of
+them stays visible on the result line: `run-length delta`, the cumulative
+byte-count difference across shared runs; `resync`, where the reference's
+remaining bytes resume in the engine's run after a difference; and
+`previous run superseded`, the two short lengths and the bound they fell short
+of.
 
 ### Verification
 
