@@ -9,7 +9,8 @@ before relying on any of them (see the measurement-hazard table in
 ## Where develop stands
 
 - `develop` head at handover: `a306c0351` (S3K branch `bugfix/ai-s3k-oracle-freq-resend`
-  fully merged at `ebc90caa3`; no lane is running). Before it `37c3f0c0b` (the two
+  fully merged by that merge commit; the branch's last content commit was `ebc90caa3`,
+  and no lane was running at that handover point). Before it `37c3f0c0b` (the two
   audited P1 fade regressions fixed; before it `5dd1b8122`: S3K 1-up fade-in body on the live path,
   driver-owned fade machine, four more gated oracle fields, intro oracle 760 →
   1490, then 1569 on the branch).
@@ -78,7 +79,7 @@ five silently dropped settings on its first run).
 5. S1 second movie (`sonic1-complete-withemeralds.bk2`): surveyed (101 windows,
    plan in the fixture manifest), uncaptured. ~45 min per capture pass, two
    passes per movie.
-6. S2 `TestS1OverrideResumeAudioOracle` is inverted (asserts its reference is
+6. S1 `TestS1OverrideResumeAudioOracle` is inverted (asserts its reference is
    missing). Fix requires the 1-up windows `$88`/`$84` from the S1 whole-run
    probe; notes on branch `feature/ai-validate-next-audio-fixes`.
 7. Driver-level 1-up backup of tempo, tempo speed-up, voice pointer and bank has
