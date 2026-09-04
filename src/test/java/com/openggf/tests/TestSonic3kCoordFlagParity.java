@@ -475,7 +475,15 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2A94, finalPacked,
+        // The expected value is an end-state snapshot of the engine after
+        // 60,000 samples, not a ROM-derived constant: it pins that the named
+        // mechanism keeps working, and it shifts whenever the run's start
+        // phase does. It moved when the load service stopped accumulating
+        // tempo for the song it loads, which the driver oracle's reference
+        // settles (zUpdateEverything runs TempoWait ahead of zUpdateMusic's
+        // zFillSoundQueue, skdisasm Sound/Z80 Sound Driver.asm:653-701,
+        // :2607-2621). The mechanism this test names is untouched.
+        assertEquals(0x2A84, finalPacked,
                 "S3K zDoModulation decrements ModulationSteps on every full"
                         + " track walk, including tempo-delay services");
     }
@@ -490,7 +498,15 @@ public class TestSonic3kCoordFlagParity {
 
         int finalPacked = finalFmPackedFrequency(fmTrack);
 
-        assertEquals(0x2AAD, finalPacked,
+        // The expected value is an end-state snapshot of the engine after
+        // 60,000 samples, not a ROM-derived constant: it pins that the named
+        // mechanism keeps working, and it shifts whenever the run's start
+        // phase does. It moved when the load service stopped accumulating
+        // tempo for the song it loads, which the driver oracle's reference
+        // settles (zUpdateEverything runs TempoWait ahead of zUpdateMusic's
+        // zFillSoundQueue, skdisasm Sound/Z80 Sound Driver.asm:653-701,
+        // :2607-2621). The mechanism this test names is untouched.
+        assertEquals(0x2AD6, finalPacked,
                 "S3K zDoModulation applies the first delta on the tick that ModulationWait decrements to zero");
     }
 

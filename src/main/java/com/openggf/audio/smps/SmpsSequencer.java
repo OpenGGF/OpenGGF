@@ -1086,6 +1086,17 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void primeFirstService() {
+        if (config.isTempoWaitPrecedesRequest()) {
+            // The load service's TempoWait already ran, with the previous
+            // tempo, before zUpdateMusic reached zFillSoundQueue
+            // (Sound/Z80 Sound Driver.asm:653-701, :2607-2621), so this song's
+            // first accumulation belongs to the next service. zBGMLoad's seed
+            // of zTempoAccumulator (:1829-1831) is what the load service ends
+            // on. The track walk still runs here.
+            tick();
+            primed = true;
+            return;
+        }
         if (config.isTempoOnFirstTick()) {
             if (tempoWeight != 0) {
                 processTempoFrame();
@@ -1686,7 +1697,23 @@ public class SmpsSequencer implements CoordFlagContext {
         host.endSequencerService(service);
     }
 
+    /**
+     * Set when a fade is armed from outside a service, which is where a
+     * request-driven fade is armed. In the ROM the request never reaches the
+     * driver until after that service's fade handler has already run:
+     * zUpdateEverything calls zDoMusicFadeOut before zUpdateMusic loads
+     * zMusicNumber for zFillSoundQueue (Sound/Z80 Sound Driver.asm:653-701,
+     * :2628-2643). So the arming service does not advance the fade it armed.
+     * A fade armed by a coordination flag needs no such flag, because that
+     * happens inside the track walk, which already runs after the fade step.
+     */
+    private boolean fadeArmedOutsideService;
+
     private void processFade() {
+        if (fadeArmedOutsideService) {
+            fadeArmedOutsideService = false;
+            return;
+        }
         // ROM: Check if fade counter is already 0 BEFORE processing
         // This happens after all steps have been applied
         if (fadeState.steps == 0) {
@@ -1714,7 +1741,18 @@ public class SmpsSequencer implements CoordFlagContext {
         }
 
         // ROM: Check delay counter, decrement and return if not yet 0
-        if (fadeState.delayCounter > 0) {
+        if (config.getFadeDelayCadence()
+                == SmpsSequencerConfig.FadeDelayCadence.DECREMENT_THEN_TEST) {
+            // zDoMusicFadeOut: dec a / jr z, .timer_expired, so an armed delay
+            // of six steps on the sixth service, not the seventh
+            // (Sound/Z80 Sound Driver.asm:2337-2343).
+            fadeState.delayCounter--;
+            if (fadeState.delayCounter != 0) {
+                return;
+            }
+        } else if (fadeState.delayCounter > 0) {
+            // zUpdateFadeout reads the delay first and steps only when it is
+            // already zero (s2.sounddriver.asm:1686-1697).
             fadeState.delayCounter--;
             return;
         }
@@ -2746,7 +2784,17 @@ public class SmpsSequencer implements CoordFlagContext {
             synth.stopDac(this);
         } else {
             if (t.channelId <= 3) {
-                if (t.noiseMode && t.channelId == 2) {
+                if (config.getPsgSilenceShape()
+                        == SmpsSequencerConfig.PsgSilenceShape.TONE_THEN_NOISE) {
+                    // zSilencePSGChannel silences 1Fh + VoiceControl, which is
+                    // the track's own tone channel, and only then adds 0FFh
+                    // for the noise channel, gated on PlaybackControl bit 0
+                    // (Sound/Z80 Sound Driver.asm:4226-4245).
+                    synth.writePsg(this, 0x80 | (t.channelId << 5) | (1 << 4) | 0x0F);
+                    if (t.noiseMode) {
+                        synth.writePsg(this, 0xFF);
+                    }
+                } else if (t.noiseMode && t.channelId == 2) {
                     synth.writePsg(this, 0x80 | (3 << 5) | (1 << 4) | 0x0F);
                 } else {
                     synth.writePsg(this, 0x80 | (t.channelId << 5) | (1 << 4) | 0x0F);
@@ -3612,6 +3660,25 @@ public class SmpsSequencer implements CoordFlagContext {
             if (track.type == TrackType.DAC) {
                 track.active = false;
                 stopNote(track);
+            }
+        }
+        if (config.getFadeDelayCadence()
+                == SmpsSequencerConfig.FadeDelayCadence.DECREMENT_THEN_TEST) {
+            // See fadeArmedOutsideService. Scoped to the driver whose ordering
+            // has been checked against its listing; S1 and S2 keep the
+            // engine's existing behaviour.
+            fadeArmedOutsideService = true;
+        }
+        if (config.getFadeOutHalt() == SmpsSequencerConfig.FadeOutHalt.DAC_AND_PSG) {
+            // zFadeOutMusic falls through into zHaltDACPSG, which zeroes the
+            // playback control of PSG3, PSG1 and PSG2 alongside FM6/DAC and
+            // then jumps to zPSGSilenceAll (Sound/Z80 Sound
+            // Driver.asm:2307-2325). The halt writes nothing itself; the
+            // silence comes from zPSGSilenceAll, so no note is stopped here.
+            for (Track track : tracks) {
+                if (track.type == TrackType.PSG) {
+                    track.active = false;
+                }
             }
         }
     }
