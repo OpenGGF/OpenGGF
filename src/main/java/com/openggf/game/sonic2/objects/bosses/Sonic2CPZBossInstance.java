@@ -102,6 +102,9 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     // Timing
     private int defeatTimer;
 
+    /** ROM Obj5D_Init runs once, from the boss's own slot. */
+    private boolean childComponentsSpawned;
+
     // Animation
     private int anim;
     private int mappingFrame;
@@ -133,7 +136,30 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
         animationState = new ObjectAnimationState(
                 CPZBossAnimations.getEggpodAnimations(), anim, mappingFrame);
 
-        // Spawn child components
+        // Children are NOT spawned here. ROM Obj5D_Init allocates all five with
+        // AllocateObjectAfterCurrent (docs/s2disasm/s2.asm:61628-61710), and it runs
+        // as the boss's own routine 0 from the boss's SST slot, so every child lands
+        // in a slot ABOVE the boss and the boss executes first each frame. This
+        // engine's boss constructor runs before the object manager has given the
+        // boss a slot, so spawning from here made the children take the lower free
+        // slots and the boss the higher one -- inverting the ROM's execution order,
+        // which left the container reading the boss's previous-frame position.
+        // See spawnChildComponentsFromOwnSlot, called on the boss's first update.
+    }
+
+    /**
+     * ROM {@code Obj5D_Init}: the boss's routine 0, executed from the boss's own
+     * slot, allocating each child with {@code AllocateObjectAfterCurrent} in this
+     * order -- Robotnik, Flame, Pump, Container, Pipe
+     * (docs/s2disasm/s2.asm:61628-61710). Running it from the first update rather
+     * than the constructor is what gives the boss the lowest slot of its family,
+     * so it moves before the container samples its position.
+     */
+    private void spawnChildComponentsFromOwnSlot() {
+        if (childComponentsSpawned) {
+            return;
+        }
+        childComponentsSpawned = true;
         spawnRobotnik();
         spawnFlame();
         spawnPump();
@@ -187,6 +213,7 @@ public class Sonic2CPZBossInstance extends AbstractBossInstance
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity playerEntity) {
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
+        spawnChildComponentsFromOwnSlot();
         lookAtPlayer(player);
 
         switch (state.routine) {

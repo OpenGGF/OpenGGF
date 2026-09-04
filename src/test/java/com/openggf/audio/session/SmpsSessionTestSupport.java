@@ -14,7 +14,7 @@ public final class SmpsSessionTestSupport {
     public static SmpsDriverSession installed(double outputSampleRate) {
         SmpsPhysicalDevice.Settings settings =
                 new SmpsPhysicalDevice.Settings(
-                        outputSampleRate, false, false);
+                        outputSampleRate, false);
         SmpsPhysicalPolicy policy =
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
         SmpsDriverSession session = new SmpsDriverSession(

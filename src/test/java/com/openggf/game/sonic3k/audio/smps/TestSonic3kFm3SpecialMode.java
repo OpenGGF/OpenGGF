@@ -147,7 +147,11 @@ class TestSonic3kFm3SpecialMode {
         // Driver.asm:4226-4245), so the pair repeats per call. The engine used
         // to emit the noise byte alone, which is what the previous
         // 0DFh, 0E5h, 0FFh, 0FFh expectation recorded.
-        assertEquals(List.of(0xDF, 0xE5, 0xDF, 0xFF, 0xDF, 0xFF), synth.psgWriteValues,
+        // The terminal F2 is one cleanup, not two: cfStopTrack keys the
+        // channel off once as it clears the playing bit (skdisasm Sound/Z80
+        // Sound Driver.asm:3040-3046), and the engine no longer stops the
+        // note a second time after the stream read.
+        assertEquals(List.of(0xDF, 0xE5, 0xDF, 0xFF), synth.psgWriteValues,
                 "F3 keeps its existing writes, including the terminal F2 cleanup");
         assertEquals(0x43, psg3.pos);
     }
@@ -166,7 +170,8 @@ class TestSonic3kFm3SpecialMode {
         assertEquals(0, psg3.rawPsgNoise);
         assertTrue(psg3.rawPsgNoiseKnown,
                 "zero is an executed reset byte, not an absent raw value");
-        assertEquals(List.of(0xDF, 0xFF, 0xDF, 0xDF), synth.psgWriteValues,
+        // One terminal cleanup, not two; see the sibling test above.
+        assertEquals(List.of(0xDF, 0xFF, 0xDF), synth.psgWriteValues,
                 "the retained reset byte must not alter existing F2 cleanup writes");
         assertEquals(0x43, psg3.pos);
     }

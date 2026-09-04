@@ -1241,8 +1241,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Add charge on jump press
 		if (inputJumpPress) {
 			setSpindashAnimation();
-			float pitch = 1.0f + (sprite.getSpindashCounter() / 2048.0f) / 3.0f;
-			audioManager.playSfx(GameSound.SPINDASH_CHARGE, pitch);
+			// The rising rev pitch belongs to the sound driver, not here, and
+			// both drivers already own it. S2 keeps zSpindashExtraFrequencyIndex
+			// beside a 3Ch-frame zSpindashPlayingCounter, bumping the index on
+			// each request while the previous one is still sounding, capping it
+			// at 0Ch, and adding it to the track as a key offset
+			// (docs/s2disasm/s2.sounddriver.asm:2152-2175, :2297-2304). S3K
+			// carries the same ladder in the effect's own script through
+			// smpsSpindashRev/cfSpindashRev, which transposes the track and
+			// resets on smpsResetSpindashRev
+			// (docs/skdisasm/Sound/SFX/AB - Spin Dash.asm:11-24).
+			//
+			// The engine additionally scaled playback rate by the player's
+			// spindash charge counter, which is a physics value the drivers
+			// never see, applied as a rate multiplier rather than a key offset.
+			// That was a fabricated quantity stacked on top of a correct ROM
+			// ladder, so the request goes out plain.
+			audioManager.playSfx(GameSound.SPINDASH_CHARGE);
 			counter = (short) Math.min(sprite.getSpindashCounter() + 0x200, 0x800);
 			sprite.setSpindashCounter(counter);
 		}

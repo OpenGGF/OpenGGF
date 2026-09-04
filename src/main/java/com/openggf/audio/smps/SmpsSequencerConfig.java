@@ -335,7 +335,10 @@ public final class SmpsSequencerConfig {
     private final FadeDelayCadence fadeDelayCadence;
     private final boolean tempoWaitPrecedesRequest;
     private final PsgSilenceShape psgSilenceShape;
+    private final PsgVolumeTail psgVolumeTail;
     private final boolean sfxWalkPrecedesRequest;
+    private final boolean sfxAdmissionKeyOffAndClearsSsgEg;
+    private final boolean trackEndFlagOwnsTheStop;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -394,7 +397,10 @@ public final class SmpsSequencerConfig {
         this.fadeDelayCadence = b.fadeDelayCadence;
         this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
         this.psgSilenceShape = b.psgSilenceShape;
+        this.psgVolumeTail = b.psgVolumeTail;
         this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
+        this.sfxAdmissionKeyOffAndClearsSsgEg = b.sfxAdmissionKeyOffAndClearsSsgEg;
+        this.trackEndFlagOwnsTheStop = b.trackEndFlagOwnsTheStop;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -715,6 +721,35 @@ public final class SmpsSequencerConfig {
         return sfxWalkPrecedesRequest;
     }
 
+    /**
+     * Whether an admitted SFX keys each of its channels off and clears their
+     * SSG-EG operators. {@code zSFXTrackInitLoop} calls
+     * {@code zKeyOffIfActive} and then {@code zFMClearSSGEGOps} for every SFX
+     * track it initialises (skdisasm Sound/Z80 Sound Driver.asm:2092-2103,
+     * :2528-2536), writing 90h, 94h, 98h and 9Ch of the track's channel with
+     * zero. On the shipped {@code fix_sndbugs = 0} branch the clear is also
+     * called for PSG tracks, but {@code zWriteFMIorII} returns on bit 7 of
+     * {@code VoiceControl} before writing anything (:2549-2551), so no PSG
+     * track puts a byte on the bus; the fixed branch merely skips the call.
+     */
+    public boolean isSfxAdmissionKeyOffAndClearsSsgEg() {
+        return sfxAdmissionKeyOffAndClearsSsgEg;
+    }
+
+    /**
+     * Whether the track-end coordination flag is the only thing that stops
+     * the note. S3K's {@code cfStopTrack} calls {@code zKeyOffIfActive}
+     * exactly once as it clears the playing bit (skdisasm Sound/Z80 Sound
+     * Driver.asm:3040-3046), so a second stop after the stream read puts a
+     * duplicate key-off on the bus. S1 and S2 keep the engine's blanket stop:
+     * their handlers do not all stop the note themselves, and removing it
+     * takes the S2 driver-state oracle from MATCH to a missing write at tick
+     * 207, so their track-end paths are unaudited rather than known-equal.
+     */
+    public boolean isTrackEndFlagOwnsTheStop() {
+        return trackEndFlagOwnsTheStop;
+    }
+
     /** How a single PSG track's silence is written. */
     public enum PsgSilenceShape {
         /** The engine's existing S1/S2 behaviour: one byte for the channel
@@ -739,6 +774,34 @@ public final class SmpsSequencerConfig {
     /** PSG silence shape: SOUNDING_CHANNEL_ONLY (S1/S2) or TONE_THEN_NOISE (S3K). */
     public PsgSilenceShape getPsgSilenceShape() {
         return psgSilenceShape;
+    }
+
+    /** When a sounding PSG track resends its attenuation byte. */
+    public enum PsgVolumeTail {
+        /**
+         * The engine's existing S1/S2 behaviour: the attenuation goes out when
+         * a note starts or an envelope step changes it, and not otherwise.
+         * Both 68K-era drivers reach their volume write through
+         * {@code PSGDoVolFX} off the note path, and their oracles are pinned to
+         * this shape, so it is left alone rather than re-derived here.
+         */
+        NOTE_AND_ENVELOPE_ONLY,
+        /**
+         * S3K: {@code zUpdatePSGTrack}'s {@code .note_going} path sends the
+         * frequency pair and then falls straight into the volume tail on every
+         * pass of a sounding note, gated only on {@code PlaybackControl} bit 2
+         * (SFX overriding) and bit 4 (track at rest)
+         * (skdisasm Sound/Z80 Sound Driver.asm:4079-4135). This is what
+         * carries a mid-note volume change, such as the
+         * {@code smpsPSGAlterVol} ramp that gives {@code sfx_Collapse} its
+         * decaying tail, out to the chip.
+         */
+        EVERY_NOTE_GOING_PASS
+    }
+
+    /** PSG volume tail: NOTE_AND_ENVELOPE_ONLY (S1/S2) or EVERY_NOTE_GOING_PASS (S3K). */
+    public PsgVolumeTail getPsgVolumeTail() {
+        return psgVolumeTail;
     }
 
     /** Which tracks a music fade-out request halts outright. */
@@ -851,7 +914,10 @@ public final class SmpsSequencerConfig {
         private FadeDelayCadence fadeDelayCadence = FadeDelayCadence.TEST_THEN_DECREMENT;
         private boolean tempoWaitPrecedesRequest = false;
         private PsgSilenceShape psgSilenceShape = PsgSilenceShape.SOUNDING_CHANNEL_ONLY;
+        private PsgVolumeTail psgVolumeTail = PsgVolumeTail.NOTE_AND_ENVELOPE_ONLY;
         private boolean sfxWalkPrecedesRequest = false;
+        private boolean sfxAdmissionKeyOffAndClearsSsgEg = false;
+        private boolean trackEndFlagOwnsTheStop = false;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -902,7 +968,10 @@ public final class SmpsSequencerConfig {
         public Builder fadeDelayCadence(FadeDelayCadence val) { fadeDelayCadence = val; return this; }
         public Builder tempoWaitPrecedesRequest(boolean val) { tempoWaitPrecedesRequest = val; return this; }
         public Builder psgSilenceShape(PsgSilenceShape val) { psgSilenceShape = val; return this; }
+        public Builder psgVolumeTail(PsgVolumeTail val) { psgVolumeTail = val; return this; }
         public Builder sfxWalkPrecedesRequest(boolean val) { sfxWalkPrecedesRequest = val; return this; }
+        public Builder sfxAdmissionKeyOffAndClearsSsgEg(boolean val) { sfxAdmissionKeyOffAndClearsSsgEg = val; return this; }
+        public Builder trackEndFlagOwnsTheStop(boolean val) { trackEndFlagOwnsTheStop = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }

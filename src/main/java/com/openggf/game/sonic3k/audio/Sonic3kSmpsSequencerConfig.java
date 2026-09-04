@@ -115,10 +115,39 @@ public final class Sonic3kSmpsSequencerConfig {
                 // (Sound/Z80 Sound Driver.asm:4226-4245).
                 .psgSilenceShape(
                         SmpsSequencerConfig.PsgSilenceShape.TONE_THEN_NOISE)
+                // zUpdatePSGTrack's .note_going path sends the frequency pair
+                // and then the volume tail on every pass of a sounding note,
+                // with no attack test on the tail
+                // (Sound/Z80 Sound Driver.asm:4079-4135).
+                .psgVolumeTail(
+                        SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS)
                 // zUpdateSFXTracks runs before zUpdateMusic fills the queue
                 // (Sound/Z80 Sound Driver.asm:650-701), so an SFX admitted in
                 // a service first updates in the next one.
                 .sfxWalkPrecedesRequest(true)
+                // zSFXTrackInitLoop keys each SFX channel off and clears its
+                // SSG-EG operators while loading (Sound/Z80 Sound
+                // Driver.asm:2092-2103, :2528-2536).
+                .sfxAdmissionKeyOffAndClearsSsgEg(true)
+                // cfStopTrack keys the channel off exactly once as it clears
+                // the playing bit (Sound/Z80 Sound Driver.asm:3040-3046).
+                .trackEndFlagOwnsTheStop(true)
+                // zSFXTrackInitLoop's only chip writes are that key-off and
+                // SSG-EG clear (Sound/Z80 Sound Driver.asm:2092-2103); the
+                // SFX's own bytecode then loads its voice. The engine's
+                // legacy takeover additionally forced RR = 0FFh and TL = 07Fh
+                // on the channel, which the ROM never writes.
+                .fmSfxTakeoverMode(
+                        SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)
+                // cfStopTrack releases an FM channel by keying it off,
+                // clearing the music track's override bit and restoring its
+                // voice (Sound/Z80 Sound Driver.asm:3040-3070). It does not
+                // force RR = 0FFh and TL = 07Fh: zFMSilenceChannel is reached
+                // only from zInitAudioDriver's boot loop (:2475-2495) and
+                // from the track's own 0F2h flag, cfSilenceStopTrack
+                // (:3082-3096).
+                .fmSfxReleaseMode(
+                        SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE)
                 // zSFXTrackInitLoop sets bit 2 on the overridden music track
                 // while the SFX is still being loaded (Sound/Z80 Sound
                 // Driver.asm:1997-2003), so ownership exists from the
