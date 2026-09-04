@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S2 music restores cleanly after a 1-up:** the driver rests every music
+  track on the fade-in-to-previous as the ROM does (S3K instead keeps its PSG
+  overridden), so the level song no longer resumes on the notes the jingle cut
+  into; pinned by a new 1-up driver-state window.
 - **S3K title theme no longer dies on a late intro skip:** the SEGA chant stop is
   issued once, as the ROM does at `loc_3FE4`, so pressing Start during the Sonic
   animation keeps the title music; pinned by a headless request-order test.
