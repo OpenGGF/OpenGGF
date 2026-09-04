@@ -42,7 +42,9 @@
     "core_zst_sha256": "25ee305d8bcac2567d60fd04c14238784ddd018808d4dafe7d5ef2b8372677b6",
     "lock": "tools/tracechaser/bizhawk-headless/native/gpgx-audio-observer/artifact-lock.json",
     "manifest": "fixtures/gpgx-audio-service-manifest-s2-oracle-v2.json (game s2)",
-    "manifest_sha256": "3f37de6751229f3b9ff1d93f78b3b370e316c0e936b10fdfd3db88b5fd57ab99"
+    "manifest_sha256": "3f37de6751229f3b9ff1d93f78b3b370e316c0e936b10fdfd3db88b5fd57ab99",
+    "tracechaser_producer_commit": "24b009fa99f301724080517e84f5009c7b6f05c0",
+    "tracechaser_branch": "bugfix/ai-s2-request-window-producer"
   },
   "capture_command": "tools/tracechaser/bizhawk-headless/run-s2-request-window.sh --request-window-mode driver-state --rom <s2.gen> --movie <bk2> --movie-sha256 <sha> --service-manifest fixtures/gpgx-audio-service-manifest-s2-oracle-v2.json --bizhawk-home <observer install> --first-row 10150 --exclusive-end 12400 --output <absent file>",
   "duplicate_capture": "met: two serial captures to distinct absent external paths, byte-identical at sha256 e7456239c2f2da0804817d3c47cf81f9346877bbdf4b7f6f912acb7d7ebf0a87",
@@ -59,6 +61,8 @@
     "anchoring": "Both sides anchor on driver state, never on a frame: the engine's first tick carrying exactly one EHZ music sequencer, and the reference's first tick whose music tracks are playing. Both land on movie row 10202 and the rows then pair one to one.",
     "state_only": "first divergence at compared tick 1789, movie row 11991, global.currentTempo expected 9Eh actual BEh; 409 of 2198 compared ticks divergent",
     "state_and_writes": "first divergence at compared tick 0, movie row 10202, writes[0] expected ym0[28h]=06h actual ym0[2Bh]=80h; 1525 of 2198 compared ticks divergent",
-    "tick_counts": "reference 2243, engine 2232, 2198 compared after anchoring"
+    "tick_counts": "reference 2243, engine 2232, 2198 compared after anchoring",
+    "alignment_evidence": "Every one of the 7 zero-service frames falls before the anchor: 10184, 10195 and 10197 to 10201. The compared span 10202 to 12399 contains 2198 frames and 2198 reference ticks, one service per frame, and the engine contributes exactly 2198 ticks after its own anchor. So no overrun frame lies inside the compared span and the ordinal correspondence cannot have drifted; the divergence at movie row 11991 is driver state, not scheduling.",
+    "request_resolution": "Request markers are resolved to services at capture time rather than by a reader rule: a marker observed since the previous boundary is written into the row for the service that completes at this boundary, which is the same resolution as sending each observed row to the first service completing after it."
   }
 }
