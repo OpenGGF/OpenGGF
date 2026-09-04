@@ -263,6 +263,8 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S1 sound-test oracles run in JUnit:** the GHZ music (14,690 ticks) and SFX
+  (1,967 ticks) references are now ROM-gated assertions in the committed suite.
 - **Matching audio oracles are pinned as assertions:** S2 v1 (698), S2 v2 state and
   writes (2,198), the three S2 request windows (25/52/27), S1 run 2 (5,257) and
   S2 CPZ state-only (720) now fail the build on regression.
