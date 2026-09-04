@@ -27,6 +27,53 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The CPZ oracle's music id now comes from zMasterPlaylist, and the tick-237 mechanism narrows
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`, over `develop` at `23e15d8f1`.
+- **Result lines unchanged.** CPZ state only `MATCH (720 ticks)`; state with
+  writes DIVERGENCE at tick 237 (movie row 2968), `writes[4]`, reference
+  `ym1[0xb1]=0x4` against the engine's `ym1[0xb0]=0x4`, 36 of 719 divergent.
+  The EHZ v2 oracle is unchanged at `MATCH (2198 ticks)` on both lines.
+- **The music id is now cited rather than inferred.** `zPlayMusic` strips the
+  flag bits from the request byte and indexes `zMasterPlaylist` with what is
+  left (s2.sounddriver.asm:1748, :1766-1773), and the table's own order is
+  `2PResult, EHZ, MCZ_2P, OOZ, MTZ, HTZ, ARZ, CNZ_2P, CNZ, DEZ, MCZ, EHZ_2P,
+  SCZ, CPZ, WFZ, HPZ, Options, SpecStage` from request `81h` (:3823-3841). So
+  request `8Eh` is CPZ, and request `91h`, which this window's previous song
+  was, is Options, which is the level-select screen music the recording was
+  playing. The oracle now reads that table.
+- **The two id spaces are not a shift, which is why the arithmetic had to go.**
+  Request `82h` is EHZ, which the engine calls `81h`; request `8Eh` is CPZ,
+  which the engine calls `8Ch`. A new test keeps the citation honest by
+  comparing the playlist entry's own header tempo against the `TempoMod` the
+  recording stored at load (:1817-1826); it is `EEh` on both sides.
+- **A runtime ROM read is not available for this, and that is already
+  documented.** `Sonic2SmpsLoader.findMusicOffset` records that the driver's
+  playlist and its pointer tables live inside the Saxman-compressed Z80 blob,
+  so they exist in readable form only after the driver decompresses itself into
+  Z80 RAM. The citation is therefore to the disassembly, checked against the
+  recording, rather than to bytes read from the cartridge.
+- **Tick 237's mechanism narrows, and the obvious hypothesis is dead.** The ROM
+  does not search for a free channel. `zPlaySound` derives the slot from the
+  SFX header's own channel byte, `sub 2` then `add a,a`, and indexes
+  `zMusicTrackOffs`, whose entries are `zSongFM3, 0000h, zSongFM4, zSongFM5`
+  then the three PSG tracks (s2.sounddriver.asm:2210-2251, :747-757). The
+  window's second request, `B5h`, declares channel byte `05h`, which is
+  offset 6, which is `zSongFM5`. The engine's own
+  `SmpsSequencer.mapFmChannel` maps `5` to linear channel 4, which is port 1
+  channel 1, which is `B1h`. So both sides put that SFX on FM5 and the
+  assignment is not the difference.
+- **What is left.** The two sides write the same value to FM4 and FM5 in a
+  different order within one service, which makes this an ordering or
+  suppression question between a music track and the SFX that took its
+  channel, not a channel choice. That is the same family as the PSG release
+  ordering fixed earlier on the EHZ span, and it needs the per-write
+  attribution probe rather than another reading of the header path.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 transfers; audio packages plus the four extra
+  classes with three ROM paths: 2,063 tests, 0 failures, 0 errors, 10 skips.
+
 ## 2026-09-04 - A second S2 driver-state recording: CPZ state MATCHes, writes stop at an SFX channel choice
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
