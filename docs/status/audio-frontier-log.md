@@ -70,6 +70,63 @@ defined by `com.openggf.tools.audio.parity`.
   extra classes with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10
   skips.
 
+## 2026-09-04 - The rest-bit contradiction settled, and a duration-only unit fixed
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `a85d1f7b6`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 551, role `MUS_PSG3`, field
+  `resting`, reference `false` against engine `true`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 551, event 151, reference
+  `psg 192` against engine `psg 223`. DAC stream unchanged. Every compared
+  field at 551 now agrees; the remaining difference is 151 writes into that
+  service.
+- **The contradiction is settled, and both of my candidate explanations were
+  wrong.** A probe over the snapshot's own sequencer list shows exactly one
+  entry at services 546 through 556, so the comparator was never reading a
+  stale instance. Threading the oracle's own ordinal into the sequencer, in
+  place of the probe's home-made service counter, shows what the earlier
+  probe had mis-numbered: at service 551 the engine's `playNote` runs with
+  note `80h` and correctly rests the track for the byte it read. Engine and
+  reference were reading *different* notes, so the rest bit was a symptom.
+- **What the streams actually do at 551, decoded on both sides.** The
+  reference's data pointer moves 63039 to 63281, a jump of 242 bytes. The
+  engine reads `0F8h` at offset 3728, jumps to 3966, reads `0E5h`, then reads
+  `06h` at 3969 and ends at 3970: the same 242 bytes. The pointers agree. The
+  final byte is a *duration*, not a note.
+- **The defect.** `playNote` recomputed the rest bit from `t.note` on every
+  call, including a unit that carried only a duration, where `t.note` still
+  holds the previous unit's byte. The previous byte here was a rest, so the
+  engine re-rested a track the ROM had just brought out of rest. The ROM does
+  not: `zGetNextNote` clears the bit on entry (Sound/Z80 Sound
+  Driver.asm:910-911) and a positive byte goes straight to `zStoreDuration`
+  (:917-919), which touches neither the rest bit nor the saved note. Only a
+  note byte of `80h` reaches `zRestTrack`. `playNote` now takes whether the
+  unit carried a note byte, and the duration-only call site passes false.
+- **This is the narrow form of the change that was rejected last cycle.**
+  Clearing the rest bit for *every* read broke the S2 driver oracle at tick
+  208. Clearing it only where the ROM's own path cannot re-set it leaves all
+  four S2 oracles at MATCH, checked by reading their lines: the v1 driver
+  oracle at 698 ticks, the v2 state-and-writes and state-only oracles at 2,198
+  ticks each, and the three request windows at 25, 52 and 27 transfers.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape. The rest-bit clear at the note read leaves the open list, since this
+  entry resolves it.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; all four S2 oracles MATCH as listed above. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,154
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S2 driver-state v2 reaches MATCH on all 2,198 services; the DAC join is duration, proven
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
