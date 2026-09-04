@@ -2883,9 +2883,46 @@ never writes the DAC enable register per sample: every `2Bh` write in this
 driver belongs to a song load, a fade or the SEGA chant (:1613, :1662, :1936,
 :2555, :3158), so all of them stay in the per-service partition.
 
-One quantity is reported rather than asserted, so a regression in it stays
-visible on the DAC stream's result line: `run-length delta`, the cumulative
-byte-count difference across shared runs.
+Two quantities are reported rather than asserted, so a regression in either
+stays visible on the DAC stream's result line. `run-length delta` is the
+cumulative byte-count difference across shared runs. `resync` is where the
+reference's remaining bytes pick up again in the engine's run after a byte
+difference, and it is what separates the two very different situations a byte
+difference can mean.
+
+### The One Case The Run Rule Cannot Split
+
+A play that supersedes another with no silent service between them leaves no
+gap, so the rule above merges the two plays into one run and the join lands at
+whatever byte each side's Z80 had reached. That is the same service-duration
+quantity, and it surfaces as a byte difference at the join rather than as a
+length difference.
+
+It is measured, not assumed. On the committed
+`s2-driver-state-w10150-12400` reference the first such join is in run 3. The
+reference's bytes over its services 150-155 sum to exactly 709, and its byte
+709 is `0x80`, the value `zWriteToDAC`'s accumulator starts every sample at
+(`ld a,80h` / `ex af,af'` in `zVInt`'s `.dacqueued`, s2.sounddriver.asm:
+502-517). The step from the preceding `0x89` is minus nine, which no entry of
+`zDACDecodeTbl` can produce, so a second sample begins there. Aligning each
+side's second sample by its own start, 3,612 bytes agree with zero mismatches,
+and the first sample's 709 bytes already agreed. The engine had played 828
+bytes of the first sample where the ROM played 709, a ratio of 1.17 that
+matches the service cost the engine does not charge.
+
+No symmetric boundary fixes this, and three were built and measured before the
+excusal was written. Splitting on the driver's own sample selector as well as
+on gaps does not, because the ROM's selector changes one service before the new
+sample's first byte while the engine's changes in the same service; splitting
+on the selector alone does not, because two consecutive plays of one sample
+change no selector at all. Phasing the boundary per producer does line the two
+up, and it was rejected because it makes the comparison disagree with itself:
+the break-it control feeds the reference to both sides and fails under an
+asymmetric rule.
+
+The engine's DAC interpolation is not involved and cannot be. `Ym2612Chip`'s
+interpolated write deliberately does not call the write observer, because it
+has no ROM counterpart, so no synthetic byte reaches the compared stream.
 
 ### Verification
 

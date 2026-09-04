@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S2 DAC stream reports where the reference resyncs:** the byte-709 difference is
+  a merged-play sample join, not decode or selection; the driver-state oracle now
+  matches all 2,198 services for state and writes.
 - **S3K resting a PSG track silences it:** `zRestTrack` runs straight into the
   PSG channel silence when the driver still owns the track, so a parked envelope
   rest silences every pass; S3K oracle at service 551.

@@ -27,6 +27,101 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 driver-state v2 reaches MATCH on all 2,198 services; the DAC join is duration, proven
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `a0a5a47c7`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before:** state with writes and state only both DIVERGENCE at tick 1,789
+  (movie row 11991), `global.currentTempo`, reference `0x9e` against the
+  engine's `0xbe`; 409 of 2,198 ticks divergent. DAC stream `BYTE DIFFERENT in
+  run 3 at byte 709 (92 runs, run-length delta 0)`.
+- **After:** state with writes `MATCH (2198 ticks)` and state only
+  `MATCH (2198 ticks)`. DAC stream `BYTE DIFFERENT in run 3 at byte 709:
+  reference 0x80, engine 0x8D (92 runs, run-length delta 0, reference resyncs
+  at engine byte 828 for 3612 bytes)`.
+- **The tempo closed from the gameplay side.** The speed-shoes countdown moved
+  to the ROM's display step on develop, so this branch's merge of `a0a5a47c7`
+  took the last state divergence with it. Nothing on the audio side changed for
+  it.
+- **The DAC join is duration, and that is now proven rather than argued.** The
+  reference's bytes over its services 150-155 sum to exactly 709 and its byte
+  709 is `0x80`, the value `zWriteToDAC`'s accumulator starts every sample at
+  (s2.sounddriver.asm:502-517); the step from the preceding `0x89` is minus
+  nine, which no `zDACDecodeTbl` entry produces, so a second sample begins
+  there. Aligning each side's second sample by its own start, **3,612 bytes
+  agree with zero mismatches**, and the first sample's 709 bytes had already
+  agreed. The engine had played 828 bytes of the first sample where the ROM
+  played 709, a ratio of 1.17 that matches the service cost it does not charge.
+- **The other two hypotheses are ruled out.** It is not sample data: both
+  samples decode identically once aligned. It is not the engine's DAC
+  interpolation leaking into the observed stream: `Ym2612Chip`'s interpolated
+  write deliberately does not call the write observer, because it has no ROM
+  counterpart, so no synthetic byte can reach the compared stream.
+- **What landed.** The comparator now reports, beside an existing byte
+  difference, where the reference's remaining bytes resume in the engine's run
+  and how many agree from there. It decides nothing and suppresses nothing; it
+  distinguishes a merged-play join, which resyncs, from a decode or selection
+  error, which does not. The excusal and all three rejected boundary rules are
+  written up in docs/status/known-discrepancies.md under "S2 Music DAC Byte
+  Stream Partition (Oracle Comparison)".
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; audio packages plus the four
+  extra classes with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10
+  skips.
+
+## 2026-09-04 - S2 DAC run 3 is a supersede with no gap, and no symmetric run boundary exists
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `042b8a858`.
+- **Measurement, not a comparison run.** Three candidate run rules were built
+  and measured, and all three were reverted. The committed comparator is
+  unchanged, and so are its lines: state with writes and state only both stop at
+  tick 1,789 `global.currentTempo`; DAC stream `BYTE DIFFERENT in run 3 at byte
+  709, reference 0x80, engine 0x8D (92 runs, run-length delta 0)`.
+- **Run 3's byte 709 is not a decode error.** The reference's bytes over its
+  ticks 150-155 sum to exactly 709, and its byte 709 is `0x80`, the value
+  `zWriteToDAC`'s accumulator starts every sample at (`ld a,80h` /
+  `ex af,af'` in `zVInt`'s `.dacqueued`, s2.sounddriver.asm:502-517). The step
+  from the preceding `0x89` to `0x80` is minus nine, which no entry of
+  `zDACDecodeTbl` can produce. So a second sample begins there, and the engine's
+  `0x8D` is a legitimate continuation of the first, plus four, which the table
+  does contain. Both sides play the same sample correctly; they merely reach the
+  join at different byte offsets.
+- **The join has no gap, which is why the committed rule misses it.** The
+  reference's own `zCurDAC` changes at its tick 155 while that service is still
+  emitting 121 bytes of the outgoing sample, and the new sample's bytes begin at
+  tick 156. No service is silent, so the gap rule cannot see the boundary.
+- **Three rules were tried and each failed for a stated reason.**
+  1. *Gap, plus a selector change closing the changing service.* Moved the
+     failure to run 4 byte 0 at 100 runs, because the engine's selector and its
+     bytes change in the same service while the reference's selector leads its
+     bytes by one.
+  2. *Selector change alone.* 91 runs, failure at run 1 byte 0. Measured cause:
+     two consecutive plays of one sample change no selector at all. Over the
+     window's first two plays the reference's selector reads `0` throughout and
+     the engine's reads `129` throughout, and only the silent services between
+     them separate the plays.
+  3. *Selector change, phased per producer* — closing after the changing service
+     for the ROM, before it for the engine, on the stated ground that
+     `zUpdateDAC` arms a sample the loop can only play after the service returns
+     while the engine's pump starts it in the same service. This is the closest
+     to correct and was still reverted, because an asymmetric rule makes the
+     comparison disagree with itself: the break-it control feeds the reference
+     to both sides and it failed, `expected MATCH but was BYTE_DIFFERENT`.
+     Weakening that control to land the rule would remove the only evidence the
+     comparison works at all.
+- **What this means.** A supersede with no intervening gap is not comparable
+  under a partition that must be symmetric, because the two producers phase a
+  queued sample differently and that phase is the service-duration quantity
+  already excused for this stream. The honest next step is not another boundary
+  rule. It is either an engine-side signal that marks the first byte of a
+  sample directly, independent of service phase, or accepting the merge and
+  bounding each run's comparison at its own sample's decoded length, which the
+  ROM knows from `zDACLenTbl` and the engine from its `DacData`.
+- **Gates unchanged**, since nothing landed: S2 v1 driver oracle `MATCH (698
+  ticks)`, request windows `MATCH` at 25, 52 and 27 transfers.
+
 ## 2026-09-04 - S3K tick 551, and an S2 regression that no gate would have failed on
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

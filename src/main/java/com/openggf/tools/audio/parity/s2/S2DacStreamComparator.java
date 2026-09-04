@@ -140,7 +140,8 @@ public final class S2DacStreamComparator {
                 if (expected[index] != actual[index]) {
                     return new Report(Kind.BYTE_DIFFERENT, referenceRuns.size(),
                             bytes + index, runLengthDelta, run, index,
-                            hex(expected[index]), hex(actual[index]));
+                            hex(expected[index]), hex(actual[index]),
+                            resync(expected, actual, index));
                 }
             }
             bytes += shared;
@@ -150,10 +151,58 @@ public final class S2DacStreamComparator {
             return new Report(Kind.RUN_COUNT_DIFFERENT, referenceRuns.size(),
                     bytes, runLengthDelta, common, 0,
                     Integer.toString(referenceRuns.size()),
-                    Integer.toString(engineRuns.size()));
+                    Integer.toString(engineRuns.size()), null);
         }
         return new Report(Kind.MATCH, referenceRuns.size(), bytes,
-                runLengthDelta, null, null, null, null);
+                runLengthDelta, null, null, null, null, null);
+    }
+
+    /** Bytes of agreement required before a later offset counts as a resync. */
+    private static final int RESYNC_WINDOW = 64;
+
+    /**
+     * Where the reference's remaining bytes pick up again in the engine's run,
+     * when they do.
+     *
+     * <p>This decides nothing and suppresses nothing; it only says which of two
+     * very different situations produced a byte difference. A run that merges
+     * two plays, because one superseded the other with no silent service
+     * between them, puts the join at whatever byte each side's Z80 had reached,
+     * which is the service-duration quantity this comparison already excuses.
+     * Such a difference resyncs: the reference's next sample appears intact
+     * further along the engine's run. A genuine decode or sample-selection
+     * error does not.
+     */
+    private static Resync resync(int[] expected, int[] actual, int from) {
+        int remaining = expected.length - from;
+        if (remaining < RESYNC_WINDOW) {
+            return null;
+        }
+        for (int offset = from + 1; offset + RESYNC_WINDOW <= actual.length;
+                offset++) {
+            boolean windowAgrees = true;
+            for (int index = 0; index < RESYNC_WINDOW; index++) {
+                if (expected[from + index] != actual[offset + index]) {
+                    windowAgrees = false;
+                    break;
+                }
+            }
+            if (!windowAgrees) {
+                continue;
+            }
+            int agreeing = 0;
+            int limit = Math.min(remaining, actual.length - offset);
+            while (agreeing < limit
+                    && expected[from + agreeing] == actual[offset + agreeing]) {
+                agreeing++;
+            }
+            return new Resync(offset, agreeing);
+        }
+        return null;
+    }
+
+    /** The engine offset the reference's remaining bytes resume at. */
+    public record Resync(int engineOffset, int agreeingBytes) {
     }
 
     public enum Kind { MATCH, RUN_COUNT_DIFFERENT, BYTE_DIFFERENT }
@@ -161,7 +210,7 @@ public final class S2DacStreamComparator {
     /** The DAC stream result, reported beside the per-service result. */
     public record Report(Kind kind, int runs, int bytesCompared,
             int runLengthDelta, Integer run, Integer byteOffset,
-            String reference, String engine) {
+            String reference, String engine, Resync resync) {
 
         public boolean matches() {
             return kind == Kind.MATCH;
@@ -182,7 +231,13 @@ public final class S2DacStreamComparator {
                         + "run " + run + " at byte " + byteOffset
                         + ": reference " + reference + ", engine " + engine
                         + " (" + runs + " runs, run-length delta "
-                        + runLengthDelta + ")";
+                        + runLengthDelta
+                        + (resync == null
+                                ? ", no resync"
+                                : ", reference resyncs at engine byte "
+                                        + resync.engineOffset() + " for "
+                                        + resync.agreeingBytes() + " bytes")
+                        + ")";
             };
         }
     }
