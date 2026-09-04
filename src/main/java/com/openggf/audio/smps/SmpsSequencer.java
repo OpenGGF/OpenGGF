@@ -1360,6 +1360,22 @@ public class SmpsSequencer implements CoordFlagContext {
             if (t.duration > 0) {
                 t.duration--;
 
+                if (t.duration > 0 && t.type == TrackType.FM && t.resting
+                        && config.isFmNoteGoingReturnsAtRest()) {
+                    // zUpdateFMorPSGTrack's .note_going opens with
+                    // bit 4,(ix+zTrack.PlaybackControl) / ret nz
+                    // (Sound/Z80 Sound Driver.asm:781-783). That branch is
+                    // only reached when the duration timer did NOT expire; an
+                    // expired timer goes to zGetNextNote instead, which is why
+                    // this is gated on the post-decrement duration. So a
+                    // resting FM track whose note is still running advances
+                    // nothing else: no volume envelope, no note fill, no
+                    // frequency update and no modulation step.
+                    // zUpdatePSGTrack has no such test at its matching entry
+                    // (:4066-4076).
+                    return;
+                }
+
                 if (!t.tieNext && t.type != TrackType.DAC) {
                     if (config.isDirect68kDriver()) {
                         if (t.fillCounter > 0 && --t.fillCounter == 0) {
@@ -2347,6 +2363,20 @@ public class SmpsSequencer implements CoordFlagContext {
         boolean preventAttack = shouldPreventNoteAttack(t);
         if (!preventAttack) {
             t.fillCounter = t.fill;
+            if (config.isNoteResetAliasesModulationState()) {
+                // zFinishTrackUpdate clears ModEnvIndex and ModEnvSens for
+                // every stream unit it reads, rest or note, whenever the
+                // do-not-attack bit is clear (Sound/Z80 Sound
+                // Driver.asm:1055-1069). Those are the same bytes as
+                // ModulationSpeed (offset 25h) and ModulationValLow (22h)
+                // (:76-92), so a track running normal modulation has its
+                // speed counter and the low byte of its accumulator zeroed by
+                // an unrelated routine. The engine's resetModEnvelopeState
+                // below clears them only when a modulation envelope is in
+                // use, which is the mod-envelope reading of the same bytes.
+                t.modRateCounter = 0;
+                t.modAccumulator = (short) (t.modAccumulator & 0xFF00);
+            }
             if (t.note != 0x80 || config.isDirect68kDriver()) {
                 if (t.customModEnabled) {
                     prepareCustomModulation(t);
@@ -2816,33 +2846,38 @@ public class SmpsSequencer implements CoordFlagContext {
                 ? bit7CarrierMask(t.voiceData, 21)
                 : ALGO_OUT_MASK_SLOT[t.voiceData[0] & 0x07];
         int[] registerOffsets = operatorRegisterOffsets();
-        if (config.getFmVoiceWriteProfile()
-                == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80) {
-            // zSetChanVol calls zSetFMTLs, whose four-operator loop always
-            // writes every TL. zVolTLMaskTbl controls only whether Volume is
-            // added; non-carriers are rewritten unchanged (sd:3385-3424,
-            // 3438-3457). FixDriverBugs=0 keeps the 8-bit carrier addition.
-            for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
-                int rawTl = t.voiceData[21 + storedOperator] & 0xff;
-                int tl = (mask & (1 << storedOperator)) == 0
-                        ? rawTl
-                        : computeS2TotalLevel(t, rawTl, storedOperator);
-                synth.writeFm(this, port,
-                        0x40 + registerOffsets[storedOperator] + ch, tl);
-            }
-            return;
-        }
+        // Both Z80 drivers write all four operators every time and use the
+        // carrier mask only to decide whether the track volume is added.
+        // S2's zSetFMTLs rewrites non-carriers unchanged (sd:3385-3424,
+        // 3438-3457) and FixDriverBugs=0 keeps its 8-bit carrier addition.
+        // S3K's zSendTL loops over the whole TL table, branching past the
+        // volume add on a positive byte but writing every entry either way,
+        // and its fix_sndbugs=0 path strips the sign bit from what it sends
+        // (skdisasm Sound/Z80 Sound Driver.asm:3149-3178).
+        SmpsSequencerConfig.FmVoiceWriteProfile profile =
+                config.getFmVoiceWriteProfile();
+        boolean writesEveryOperator =
+                profile == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
+                        || profile == SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80;
         for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
-            if ((mask & (1 << storedOperator)) == 0) {
-                continue;
-            }
             int idx = 21 + storedOperator;
             if (idx >= t.voiceData.length) {
                 continue;
             }
-            int tl = config.getFmVoiceWriteProfile() == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
-                    ? computeS2TotalLevel(t, t.voiceData[idx] & 0xFF, storedOperator)
-                    : computeFmTotalLevel(t, t.voiceData[idx] & 0x7F, storedOperator);
+            boolean carrier = (mask & (1 << storedOperator)) != 0;
+            if (!carrier && !writesEveryOperator) {
+                continue;
+            }
+            int rawTl = t.voiceData[idx] & 0xff;
+            int tl;
+            if (!carrier) {
+                tl = profile == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
+                        ? rawTl : rawTl & 0x7f;
+            } else {
+                tl = profile == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
+                        ? computeS2TotalLevel(t, rawTl, storedOperator)
+                        : computeFmTotalLevel(t, rawTl & 0x7f, storedOperator);
+            }
             synth.writeFm(this, port, 0x40 + registerOffsets[storedOperator] + ch, tl);
         }
     }
@@ -3326,9 +3361,11 @@ public class SmpsSequencer implements CoordFlagContext {
             t.modDelay = 1;
 
             boolean accumulatorChanged = false;
-            if (t.modRateCounter > 0) {
-                t.modRateCounter--;
-            }
+            // dec (ix+ModulationSpeed) / jr nz, .mod_sustain: an 8-bit
+            // decrement, so zero wraps to 0FFh and the accumulator then holds
+            // for 255 passes rather than advancing every pass
+            // (Sound/Z80 Sound Driver.asm:1296-1301).
+            t.modRateCounter = (t.modRateCounter - 1) & 0xFF;
             if (t.modRateCounter == 0) {
                 t.modRateCounter = t.modPendingRate;
                 t.modAccumulator += t.modCurrentDelta;

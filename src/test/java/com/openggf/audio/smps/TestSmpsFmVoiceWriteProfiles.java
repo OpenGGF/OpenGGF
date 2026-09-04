@@ -87,7 +87,14 @@ class TestSmpsFmVoiceWriteProfiles {
         voice[24] = (byte) 0x98;
         Sonic3kSmpsData source = new Sonic3kSmpsData(musicBlob(voice), 0);
 
-        assertEquals(List.of("0:48:18", "0:4C:1A"),
+        // zSendTL loops over the whole TL table and writes every entry; the
+        // bit-7 test only branches past the track-volume add, and the
+        // fix_sndbugs=0 path strips the sign bit from what it sends
+        // (skdisasm Sound/Z80 Sound Driver.asm:3149-3178). So the two
+        // non-carriers 15h and 17h go out unchanged and the two carriers
+        // 96h and 98h go out as 16h and 18h plus the track volume, in S3K's
+        // middle-register traversal order.
+        assertEquals(List.of("0:40:15", "0:48:18", "0:44:17", "0:4C:1A"),
                 captureVolume(source, Sonic3kSmpsSequencerConfig.CONFIG, 2));
     }
 
