@@ -115689,3 +115689,98 @@ pair is 2 rows early rather than 1. It should be re-measured on its own.
   segment-15 physics cascade another lane owns, the uncompared-interior walk
   overrunning destination 101691, and the ten dynamic-art gap axes characterised
   above.
+
+## 2026-09-04 - S2 run-chain gaps: the ring re-phase closes six of nine, and the load-completion row is the whole remainder
+
+- **Worktree/branch:** `.worktrees/s2-art-gaps`,
+  `bugfix/ai-s2-runchain-art-gaps`, over `develop` at `7ca24101c`. The candidate
+  described here was measured and then **reverted**; `src/` is unchanged and the
+  branch carries documentation only.
+
+### Root cause, now measured rather than inferred
+
+The engine performs a destination level load in **no frames at all**, so its
+playables take their `Obj01_Init_Continued` dozens of rows before the ROM does.
+Probed on the `seg7_ehz2 -> seg8_cpz1` gap (178 rows, origin 61028, last
+non-admitted row 61180), with the leader's ring index printed per row:
+
+| row | engine | ROM |
+|---|---|---|
+| 61143 | leader ring reset, writes slot 0 | still loading |
+| 61144 | writes slot 1 | still loading |
+| 61145-61180 | 36 lag rows, no gameplay | still loading; `InitPlayers` on 61180 |
+| 61181 | writes slot 2 | writes slot 1 |
+| 61195 | writes slot 16 -> delayed read goes live, Tails walks | writes slot 15 |
+| 61196 | - | writes slot 16 -> Tails walks |
+
+`TailsCPU_Normal` reads the leader ring at `Sonic_Pos_Record_Index - $44`,
+seventeen entries back (`docs/s2disasm/s2.asm:39285-39295`), and
+`Obj01_Init_Continued` zeroes that index, refills the ring over the leader
+displaced by `(-$20,+4)`, restores the position and falls through to
+`Obj01_Control`, whose tail `Sonic_RecordPos` writes slot 0
+(`:36201-36217`, `:36342-36347`). The engine takes **two** premature writes and
+loses the one the ROM takes on its own `InitPlayers` row, so it is exactly one
+write ahead for the rest of the level. That is the uniform 1.
+
+### The candidate, measured: 12 axes -> 6
+
+On the gap's load-completion row -- the row that already releases the held
+level-entry art -- re-zero the leader's ring write cursor and take one record,
+reproducing what `Obj01_Init_Continued` does on the ROM's own row. Cursor only:
+an earlier arm that also rewrote the ring's contents, and an earlier variant
+armed at gap start rather than at the destination's init, both regressed the
+source level's tail.
+
+That takes `TestS2CompleteEmeraldRunChain` from 12 axes to **6**. Every uniform-1
+axis closes at `seg7_ehz2 -> seg8_cpz1`, `seg8_cpz1 -> seg9_cpz2`,
+`seg10_cpz2 -> seg11_arz1` and at all four special-stage returns. It was still
+reverted, because it trades those for a new segment-physics failure.
+
+### Why it was reverted, and why that names the remaining work
+
+Both surviving failure shapes are **one defect: the row the engine calls
+load-completion is not the ROM's `InitPlayers` row.** The engine locates it as
+`lastNonAdmittedRow(gapLag)`, the admission census's last lag row
+(`AbstractRunChainTest`:3734).
+
+- `seg4_ehz1 -> seg5_ehz2`: the walk pair moves from one row early to one row
+  **late** (32922 against a recorded 32921), the gap loses two edges
+  (`edge_count` 10 against 12) and segment 7 then diverges from its own frame 0
+  on `sidekick_x`, `0x004D` recorded against `0x004A`, 117,521 errors, with the
+  segment's exit boundary never observed. Working the arithmetic back, the
+  census's last lag row there is 32906 where the ROM's `InitPlayers` is 32905.
+  One row late.
+- The three special-stage returns keep their 36-40, which is the same locator
+  wrong in the other direction: after a special stage the ROM's load finishes on
+  an ADMITTED row, so the last lag row is far too early.
+
+### The S1 constant does NOT transfer, and this is the trap to avoid
+
+S1's load pair sits at `segment bk2_frame_offset - 26`, and the 26 is derived,
+not measured: `Level_Delay` counts 4 `WaitForVBlank` rows and `PalFadeIn_Alt`
+counts 22 (`Sonic1LevelInitProfile.preLevelMainLoopDelayFrames`). The recorded
+S2 pairs also sit 26 rows before their destination's first row at five of the
+gaps -- and adopting that would be a fitted constant, because **S2's tail is not
+a counted loop**. `Level:` after `InitPlayers` runs
+`move.b #VintID_TitleCard,(Vint_routine).w / WaitForVint / RunObjects /
+BuildSprites / RunPLC_RAM`, looping *while the title-card background object is
+still loaded* (`docs/s2disasm/s2.asm:5060-5066`). Its length is decided by the
+title-card objects' own routines and `anim_frame_duration` values, which the
+engine already models.
+
+So the S2 locator must be the engine's own title-card leave sequence, not a
+constant and not the lag census. `preLevelMainLoopDelayFrames()` returns 0 for
+S2 today.
+
+### Next step
+
+Locate the load-completion row from the destination title-card lifecycle the
+engine already runs, then re-land the ring re-phase above on top of it. Both
+remaining families close together or not at all; do not tune either separately,
+and do not port S1's 26.
+
+### Gates
+
+Not re-run this cycle: the tree is source-identical to the previous entry's,
+which measured `-Ptrace-replay` at 854 tests / 8 failures / 6 skips, the ordinary
+suite at 16,404 tests / 0 failures, and `-Pguards` at 607 tests / 0 failures.
