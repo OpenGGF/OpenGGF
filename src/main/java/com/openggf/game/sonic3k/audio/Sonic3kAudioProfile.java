@@ -204,9 +204,14 @@ public class Sonic3kAudioProfile extends AbstractAudioProfile {
         return SegaPcmRomReader.read(rom, getSegaPcmSpec());
     }
 
-    /** S3K fade-out uses delay 6 instead of the S1/S2 default delay 3. */
+    /**
+     * {@code zFadeOutMusic} sets {@code zFadeOutTimeout} to 28h and both
+     * {@code zFadeDelayTimeout} and {@code zFadeDelay} to 6
+     * (Sound/Z80 Sound Driver.asm:2306-2311), so S3K takes 240 frames to
+     * silence where S1 and S2 take 120.
+     */
     @Override
-    protected void executeFadeOut(AudioManager manager) {
+    public void fadeOutMusic(AudioManager manager) {
         manager.fadeOutMusic(0x28, 6);
     }
 

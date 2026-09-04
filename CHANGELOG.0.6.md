@@ -9444,3 +9444,8 @@ history while grouping the public-facing material by release.
   chant's stop command, which stops all sound, and then declined to restart the
   music because it was already marked as playing. The stop is now tied to the
   chant actually still playing, matching the ROM, which runs it exactly once.
+
+- Fix: Sonic 3 & Knuckles music fades now take the 240 frames its sound driver
+  asks for, rather than the 120 of Sonic 1 and 2. Object-triggered fades used a
+  shared default instead of the game's own value, so every cut the ROM places
+  part-way through a fade landed on silence instead.

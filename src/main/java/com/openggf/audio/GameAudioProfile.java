@@ -162,6 +162,38 @@ public interface GameAudioProfile {
     }
 
     /**
+     * Fades the current music out with this game's own ROM parameters.
+     *
+     * <p>Every fade goes through here, so the driver constants live with the
+     * game that owns them rather than in shared code. The default is the
+     * Sonic 1 and 2 value of forty steps three frames apart; Sonic 3 &amp;
+     * Knuckles overrides it, because {@code zFadeOutMusic} loads a delay of 6
+     * (Sound/Z80 Sound Driver.asm:2306-2311).
+     *
+     * @param manager the audio manager to run the fade on
+     */
+    default void fadeOutMusic(AudioManager manager) {
+        manager.fadeOutMusic(0x28, 3);
+    }
+
+    /**
+     * Runs {@code profile}'s fade, falling back to the S1/S2 parameters when no
+     * profile is installed. Exists so callers stay a single call: {@code
+     * AudioManager.fadeOutMusic()} lives in a class whose compiled shape a
+     * strict zero-allocation presentation assertion is sensitive to.
+     *
+     * @param profile the active profile, or {@code null} when none is installed
+     * @param manager the audio manager to run the fade on
+     */
+    static void fadeOut(GameAudioProfile profile, AudioManager manager) {
+        if (profile == null) {
+            manager.fadeOutMusic(0x28, 3);
+            return;
+        }
+        profile.fadeOutMusic(manager);
+    }
+
+    /**
      * Handle a game-specific system command (e.g., fade out, stop all).
      * Called early in {@code AudioManager.playMusic()} dispatch.
      *
