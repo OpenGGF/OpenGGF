@@ -116095,3 +116095,64 @@ measured two entries above and is NOT addressed here, and the four deltas of 2 a
 `ss_6 -> seg10_cpz2`. The six one-row residuals in the locator table above are
 very likely the same question as that uniform 1 seen from the census side; do not
 close them by biasing the locator, which would be fitting.
+
+## 2026-09-04 - The tick site, read from a stack trace, and why holding AT it is too broad
+
+Same worktree and branch, over the landed commit; the experiment below is
+reverted and `src/main` is clean.
+
+### The call chain, captured rather than reasoned about
+
+A probe armed at the leader's level-entry ring reset, dumping a stack on the
+first writes after it, names the owner exactly:
+
+```
+AbstractPlayableSprite.recordFollowerHistoryForTick
+SpriteManager.tickPlayablePhysics(:1832)
+SpriteManager.processPlayableSlots(:699)
+SpriteManager.update(:487)
+GameLoopTitleCardLifecycle.lambda$update$0(:91)
+LevelFrameStep.execute(:316)
+GameLoopTitleCardLifecycle.update(:89)
+GameLoop.updateTitleCardMode(:1610)
+...
+AbstractRunChainTest.stepEngineFrameInTransitionGap(:5126)
+AbstractRunChainTest.admitLevelWhenReady(:3808)
+```
+
+So the destination playables tick on a gap row through
+**`GameLoopTitleCardLifecycle.update`'s own `shouldRunPlayerPhysics()` branch**,
+which calls `LevelFrameStep.execute(..., () -> spriteManager.update(input),
+...)` at `:88-92`. It is NOT
+`GameLoop.runInputNeutralTitleCardPlayerPrelude`, which the previous round
+suppressed and which a probe showed is never called on these rows. Reading the
+chain settled in one run what two rounds of reasoning about title-card mode got
+wrong.
+
+### Holding at that site is too broad, measured
+
+Gating that branch on the level-entry hold -- so the destination's players do not
+execute for the frames the ROM spends loading -- is **not** correct as it stands:
+
+- walk-failure axis becomes `Segment 7 (seg5_ehz2)`, so the run is truncated and
+  not comparable;
+- segment **2** now diverges from its own frame 0 on `sidekick_x` with 16,404
+  errors, where the baseline's first diverging segment is 15;
+- the delta histogram breaks up completely -- 14s, 24s, 1024s appear where the
+  landed state has only 1s and four 2s.
+
+Segment 2's source is the first special-stage return, so the interior arm's
+window is the one that bites first. The likely reason, not yet established: the
+engine's sidekick is created at its spawn offset and walks into position during
+the span the ROM spends loading, so suppressing that span leaves it at spawn,
+where the ROM's sidekick is created already positioned at `InitPlayers`. If so
+the fix is about WHERE the destination's playables are created, not about
+suppressing their execution -- and suppressing execution alone will keep
+producing this shape.
+
+### Where this leaves the uniform 1
+
+Still open, and the next round should establish the sidekick's position at the
+destination's first row under both arms before suppressing anything again. The
+landed commit is unaffected: it closes the special-stage art family and is
+independent of this.
