@@ -115970,3 +115970,56 @@ No code change this round. The previous candidate is reverted and the tree is
 source-identical to the last gated run, whose gates stand: `-Ptrace-replay` 854
 tests / 8 failures / 6 skips, ordinary 16,404 / 0 failures, `-Pguards` 607 / 0
 failures.
+
+## 2026-09-04 - The title-card player prelude is NOT the path that records during a gap
+
+Same worktree and branch, `src/` reverted and clean. Two candidates measured
+this round, one of them the first that is comparable to the baseline at all.
+
+### The gating rule, applied, and it caught a candidate
+
+Before comparing axis counts, compare the **walk-failure axis name**. The
+baseline's is the uncompared-interior walk overrunning destination 101691. A
+candidate whose walk failure names `Segment 7 (seg5_ehz2)` has stopped a third of
+the way through and its counts mean nothing.
+
+| candidate | walk-failure axis | axes | comparable |
+|---|---|---|---|
+| baseline | walk overruns 101691 | 12 | - |
+| suppress prelude + arm early + run an init row on the release row | `Segment 7 (seg5_ehz2)` | 6 | **no** |
+| suppress prelude + arm early, no init row | walk overruns 101691 | 12 | **yes** |
+
+The second candidate was regression-free: same walk-failure axis, the same
+segment-15 frontier (frame 2252, field `air`), the same ten gap axes. It also
+changed nothing.
+
+### Why it changed nothing, measured
+
+A probe on the suppression site fired **zero times in the whole run** --
+`runInputNeutralTitleCardPlayerPrelude` (`GameLoop`:1903) is never called on a
+transition-gap row -- while a probe on the ring write shows both playables
+recording normally at rows 61143 and 61144, the two premature rows. The
+suppression sat in a path this scenario does not take, so the candidate was a
+clean no-op: safe, and worthless.
+
+That is the "a mechanism that would explain the symptom is not evidence that it
+fires" trap from the skill. The gap rows are `TITLE_CARD` mode, which is what
+made the prelude the obvious owner, and it is not the owner.
+
+### What the next round must find first
+
+**Which call site actually ticks the destination playables on gap rows 61143 and
+61144.** It is reached from `stepEngineFrameInTransitionGap` -> `stepEngineFrame`
+-> `loop.step()` in `TITLE_CARD` mode, but not through the prelude. Instrument
+the callers of `spriteManager.update`, or capture a stack at the ring write,
+before writing any more suppression. Everything downstream -- the special-stage
+arm, the act-advance disagreement -- is blocked behind knowing that site, because
+a hold placed anywhere else is a no-op that looks safe.
+
+### Still true, and unchanged
+
+The premature writes themselves: slots 0 and 1 at rows 61143 and 61144 against
+the ROM's `InitPlayers` at 61180, with the engine one write ahead from there on.
+The arm point measurement: the destination's ring reset precedes
+`admitLevelWhenReady`, so the hold must be armed in `prepareAcrossLevelBoundary`.
+Arming there is safe -- the comparable run above proves it moves nothing.
