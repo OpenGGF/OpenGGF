@@ -27,6 +27,47 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 sends a PSG note-on frequency once, not twice; tick 170 -> tick 228
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `2fed63a53`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 170 (movie row 10372),
+  field `writes[2]`, reference `psg=0x90` against the engine's `psg=0x8f`;
+  515 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 228 (movie row 10430), field
+  `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's `psg=0x87`;
+  496 of 2,198 ticks divergent.
+- **DAC stream and state only:** both unchanged, `BYTE DIFFERENT in run 3 at
+  byte 709` and tick 1,789 `global.currentTempo`.
+- **The divergence.** At tick 170 the reference emitted `psg=8F psg=0E psg=90`,
+  one PSG1 frequency pair then the volume; the engine emitted `psg=8F psg=0E
+  psg=8F psg=0E psg=90`, sending the same unchanged pair twice.
+- **What the ROM actually does, against a comment that said the opposite.** The
+  engine's own comment claimed "S2 genuinely sends it twice: zPSGDoNoteOn
+  writes it, then zPSGUpdateFreq writes it again", citing
+  s2.sounddriver.asm:1046-1053. `zPSGDoNoteOn` is not a separate write: it
+  loads the frequency into `de` and falls straight through into
+  `zPSGUpdateFreq`, which is the send (:1202-1209). And the cited lines are the
+  proof of the opposite. `zDoModulation` pops its caller's return address on
+  entry (:986-987), so each of its early returns lands past `zPSGUpdateTrack`
+  and skips the trailing `jp zPSGUpdateFreq` (:1127-1131). Only the `.calcfreq`
+  path returns normally, through the explicit `jp (hl)` the listing annotates
+  "WILL return to zUpdateTrack" (:1046-1049). So the second send happens only
+  when modulation actually recomputed the frequency.
+- **Where it landed.** The note-on path set `forceModulationWrite`
+  unconditionally whenever modulation was enabled, forcing a send that the ROM
+  gates. It is now set only for a driver whose modulation returns into the send
+  every pass, which is the property `NoteGoingFreqSend` already names. S1 sets
+  `applyModOnNote(false)` and never reaches this path; S3K is `EVERY_PASS` and
+  is unchanged.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 transfers; audio packages plus the four extra classes with three
+  ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** Tick 228 has the reference writing an FM register where the engine
+  writes a PSG latch, so the two sides disagree about which track runs at that
+  point rather than about a value.
+
 ## 2026-09-04 - S2 tempo phase: the audio layer already consumes at the head; the offset is a gameplay compensation constant
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
