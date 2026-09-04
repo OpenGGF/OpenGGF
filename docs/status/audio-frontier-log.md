@@ -27,6 +27,52 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The S3K 1-up restore was lost to a rejected presentation command
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`. Reported in game on develop: after the
+  extra-life jingle the music is wrong.
+- **What happened.** `cfFadeInToPrevious` stores `zFadeToPrevFlag` and the
+  driver's main loop acts on it (`Sound/Z80 Sound Driver.asm:3079-3082`, read
+  at :659-666), so the restore belongs inside the driver's service. The engine
+  splits it: the coordination flag asks, and the presentation layer brings the
+  backed-up song back. The S3K handler asked through the global
+  `AudioManager` instead of the sequencer's injected restore sink. A flag runs
+  inside the service, which for this path runs inside an active presentation
+  command batch, and the batch refuses a command submitted into it. The refusal
+  is logged rather than raised, so the restore was lost in silence and the
+  level music never came back.
+- **The other door was already right.** The sequencer holds a
+  `MusicRestoreSink`, and for presentation-owned sequencers that sink is
+  `AudioManager.restoreShadowMusic`, which sets a flag `presentFrame` drains
+  after the batch closes. S1 and S2 reach the restore through it in
+  `SmpsSequencer.handleFadeIn`, so they were never affected. Confirmed at
+  runtime as well as by reading: an S2 extra-life through the same
+  `presentFrame` path restores Emerald Hill with no warning logged.
+- **The fix.** `CoordFlagContext` now carries `restorePreviousMusic`, the S3K
+  handler calls it, and `SmpsSequencer` implements it against its injected
+  sink. Two lines of behaviour, and the handler no longer reaches a singleton
+  from inside a service.
+- **A design I did not force.** My first test asserted the restore reaches the
+  command timeline. It does not, for any of the three games: the presentation
+  sink raises a presentation command, not an `AudioCommand`, and a rewind
+  replays the jingle itself, whose flag produces the restore again. I dropped
+  the assertion rather than add a timeline entry that would double-apply on
+  replay.
+- **Test.** `TestS3kOneUpRestoreRom` drives `AudioManager.presentFrame` with
+  the S3K profile, plays the level music, plays the jingle, and runs to the
+  flag. It asserts the level music comes back, that no shadow command mirror
+  warning was logged, and that the jingle's own sequencer is gone. Broken on
+  purpose against the old handler, it fails on the first of those: the music
+  never returns, which is the owner's report exactly.
+- **Frontier unchanged** at tick 760, event 20, and the DAC stream at run 338,
+  byte 0. The intro capture never reaches an extra life.
+- **Gates at this commit, all green, on a clean build.** Audio, per-game audio
+  and parity packages with all three ROM paths: 2,727 tests, 0 failures, 16
+  skips. Ordinary suite 16,442 tests, 0 failures, 22 skips. `-Pguards` 608
+  tests, 0 failures.
+
+
 ## 2026-09-04 - S3K 566 was my own double skip; frontier 566 -> 760
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

@@ -646,6 +646,11 @@ public class SmpsSequencer implements CoordFlagContext {
         return dacData;
     }
 
+    @Override
+    public void restorePreviousMusic() {
+        audioManager.restoreMusic();
+    }
+
     public MusicRestoreSink getAudioManager() {
         return audioManager;
     }

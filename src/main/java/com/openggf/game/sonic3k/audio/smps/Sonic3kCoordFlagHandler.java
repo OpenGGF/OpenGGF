@@ -6,7 +6,6 @@ import com.openggf.audio.smps.SmpsCoordFlagRuntimeState;
 import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
-import com.openggf.game.GameServices;
 
 import java.util.Arrays;
 import java.util.Objects;
@@ -92,8 +91,16 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 if (t.pos < program.dataLength()) {
                     int param = program.dataByteAt(t.pos++) & 0xFF;
                     if (param == 0xFF) {
-                        // Restore previous music with fade-in (same as S2 E4 handler)
-                        GameServices.audio().restoreMusic();
+                        // Restore previous music with fade-in, through the
+                        // sequencer's own restore sink. The global AudioManager
+                        // is the wrong door from inside a service: this flag
+                        // runs within the presentation command batch, which
+                        // rejects a command submitted into it, and the failure
+                        // is logged rather than raised, so the restore is
+                        // simply lost. The injected sink defers it to the
+                        // batch boundary instead, which is also how the S1 and
+                        // S2 E4 handler reaches it.
+                        ctx.restorePreviousMusic();
                     }
                     // Other values: no-op
                 }
