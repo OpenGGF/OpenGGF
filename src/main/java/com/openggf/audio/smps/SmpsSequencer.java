@@ -2449,7 +2449,12 @@ public class SmpsSequencer implements CoordFlagContext {
             t.resting = false;
         }
 
-        if (t.note == 0x80) {
+        // The whole rest branch belongs to a note byte of 80h, never to a
+        // duration-only unit that leaves the previous unit's note in place.
+        // zGetNextNote sends a positive byte to zStoreDuration (Sound/Z80
+        // Sound Driver.asm:917-919), which silences nothing; only a real rest
+        // byte reaches zRestTrack.
+        if (noteByteRead && t.note == 0x80) {
             if (t.type != TrackType.DAC) {
                 stopNote(t);
             }
@@ -2522,7 +2527,15 @@ public class SmpsSequencer implements CoordFlagContext {
 
             block &= 7;
 
-            t.baseFnum = fnum;
+            if (noteByteRead) {
+                t.baseFnum = fnum;
+            } else {
+                // zStoreDuration stores no frequency (Sound/Z80 Sound
+                // Driver.asm:917-919), so a duration-only unit re-attacks the
+                // frequency the track already holds.
+                fnum = t.baseFnum;
+                block = t.baseBlock;
+            }
             t.baseBlock = block;
 
             int packed = (block << 11) | fnum;
@@ -2603,8 +2616,15 @@ public class SmpsSequencer implements CoordFlagContext {
                 psgNote = 0;
             if (psgNote >= psgFreqTable.length)
                 psgNote = psgFreqTable.length - 1;
-            int reg = psgFreqTable[psgNote];
-            t.baseFnum = reg;
+            int reg;
+            if (noteByteRead) {
+                reg = psgFreqTable[psgNote];
+                t.baseFnum = reg;
+            } else {
+                // zStoreDuration stores no frequency (Sound/Z80 Sound
+                // Driver.asm:917-919); the track keeps its Freq word.
+                reg = t.baseFnum;
+            }
 
             reg += t.detune;
 
@@ -2865,7 +2885,14 @@ public class SmpsSequencer implements CoordFlagContext {
             if (t.overridden) {
                 return;
             }
-            int vol = t.note == 0x80 ? 0x0f
+            // The rest test is the track's rest BIT, not the last note byte
+            // read. zUpdatePSGTrack's volume tail adds Volume to the envelope
+            // value and only forces 0Fh when that addition sets bit 4
+            // (Sound/Z80 Sound Driver.asm:4098-4112); the rest bit gates
+            // whether the write happens at all, one line above. Keying on the
+            // note byte instead silenced a track whose last byte was a rest
+            // but which a later duration-only unit had already brought back.
+            int vol = t.resting ? 0x0f
                     : Math.min(0x0F, Math.max(0, t.volumeOffset + t.envValue));
             int ch = t.channelId;
             if (t.noiseMode && ch == 2) {

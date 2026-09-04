@@ -119,7 +119,7 @@ public class Sonic1ElectrocuterObjectInstance extends AbstractObjectInstance
         // gives the current frame's v_framecount.
         LevelManager levelManager = services().levelManager();
         if (levelManager != null) {
-            return levelManager.getFrameCounter() + 1;
+            return levelManager.getFrameCounter();
         }
         return vIntRunCount;
     }

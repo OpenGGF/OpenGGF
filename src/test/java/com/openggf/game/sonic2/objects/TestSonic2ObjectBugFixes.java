@@ -1299,12 +1299,14 @@ class TestSonic2ObjectBugFixes {
             }
         });
 
-        when(levelManager.getFrameCounter()).thenReturn(0x07EE);
+        // LevelManager now advances at the loop top as the ROM does, so its
+        // counter IS the ROM-visible Level_frame_counter during the object pass.
+        when(levelManager.getFrameCounter()).thenReturn(0x07EF);
         cog.update(0x6CC1, new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0600));
         assertEquals(0x0800, cog.getPieceX(0),
-                "Stored LevelManager frame $07EE corresponds to ROM-visible $07EF, so Obj70 must not rotate yet");
+                "ROM-visible Level_frame_counter $07EF is not a $10 boundary, so Obj70 must not rotate yet");
 
-        when(levelManager.getFrameCounter()).thenReturn(0x07EF);
+        when(levelManager.getFrameCounter()).thenReturn(0x07F0);
         cog.update(0x6CC2, new TestablePlayableSprite("sonic", (short) 0x0800, (short) 0x0600));
         assertEquals(0x080D, cog.getPieceX(0),
                 "ROM-visible Level_frame_counter $07F0 advances Obj70 to the next tooth phase");

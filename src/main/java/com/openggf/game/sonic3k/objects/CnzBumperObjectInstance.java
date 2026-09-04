@@ -197,7 +197,7 @@ public class CnzBumperObjectInstance extends AbstractObjectInstance
             // therefore owns the adjacent Level_frame_counter epoch read by
             // Obj_Bumper. The retained results owner must not add another
             // orbit tick after its title-card handoff has been published.
-            return levelManager.getFrameCounter() + 1;
+            return levelManager.getFrameCounter();
         }
         return vIntRunCount + 1;
     }

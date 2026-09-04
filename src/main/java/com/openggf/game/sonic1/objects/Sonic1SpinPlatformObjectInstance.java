@@ -303,7 +303,7 @@ public class Sonic1SpinPlatformObjectInstance extends AbstractObjectInstance
     private int resolveVFrameCounter(int vIntRunCount) {
         LevelManager lm = services().levelManager();
         if (lm != null) {
-            return lm.getFrameCounter() + 1;
+            return lm.getFrameCounter();
         }
         return vIntRunCount;
     }

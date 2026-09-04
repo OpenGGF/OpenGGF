@@ -73,7 +73,9 @@ class TestCnzBumperObjectInstance {
 
         bumper.update(0x0D4C, null);
 
-        int expectedAngle = (0x80 + ((0x011C + 1) & 0xFF)) & 0xFF;
+        // LevelManager's counter is now the ROM-visible Level_frame_counter
+        // during the object pass, so no adjustment is applied to the seed.
+        int expectedAngle = (0x80 + (0x011C & 0xFF)) & 0xFF;
         assertEquals(0x03E8 + (TrigLookupTable.cosHex(expectedAngle) >> 2), bumper.getX());
         assertEquals(0x0630 + (TrigLookupTable.sinHex(expectedAngle) >> 2), bumper.getY());
     }
@@ -170,7 +172,7 @@ class TestCnzBumperObjectInstance {
 
         bumper.update(0x0D53, null);
 
-        int expectedVisibleAngle = (0x2B + ((0x0124 + 1) & 0xFF)) & 0xFF;
+        int expectedVisibleAngle = (0x2B + (0x0124 & 0xFF)) & 0xFF;
         assertEquals(0x03E8 + (TrigLookupTable.cosHex(expectedVisibleAngle) >> 2), bumper.getX());
         assertEquals(0x0630 + (TrigLookupTable.sinHex(expectedVisibleAngle) >> 2), bumper.getY());
 
@@ -181,7 +183,7 @@ class TestCnzBumperObjectInstance {
         int visibleY = bumper.getY();
         int dx = visibleX - player.getCentreX();
         int dy = visibleY - player.getCentreY();
-        int visibleLevelFrame = 0x0124 + 1;
+        int visibleLevelFrame = 0x0124;
         int angle = (TrigLookupTable.calcAngle((short) dx, (short) dy)
                 + ((visibleLevelFrame >>> 8) & 0x03)) & 0xFF;
         assertEquals((short) ((TrigLookupTable.cosHex(angle) * -0x700) >> 8), player.getXSpeed());

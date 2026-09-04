@@ -172,6 +172,76 @@ defined by `com.openggf.tools.audio.parity`.
   from a constant and takes recorded requests as stimuli. That avoids both the
   run-chain gap and the v2 event decode. It is an infrastructure task with its
   own risks, which is why it was not started unilaterally.
+
+## 2026-09-04 - The S2 driver-state v2 window matches on state and writes together
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-speed-shoes-timer-phase`, after merging the lead's branch head
+  (develop merged in), measured from `mvn clean`.
+- **Both v2 lines are now MATCH (2,198 ticks):** state only, which this branch's
+  speed-shoes ordering fix closed, and state with writes, which the audio work
+  merged in from develop closed. The last recorded write-stream frontier was a
+  divergence at tick 228, movie row 10430, `writes[2]`.
+- Unchanged in the same run: v1 S2 driver oracle `MATCH (698 ticks)` and the
+  three request windows `MATCH` at 25, 52 and 27 transfers. Parity suite 178
+  tests, 0 failures, 2 skips.
+
+## 2026-09-04 - A duration-only unit reuses everything; tick 551 -> tick 565
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `33d99b0ec`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 551, event 151, reference
+  `psg 192` against engine `psg 223`. DAC stream `BYTE_DIFFERENT` run 338
+  byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 565, role `SFX_FM4`, field
+  `resting`, reference `false` against engine `true`. DAC stream unchanged.
+  Service 551 now agrees in full, and 565 is the first service of an SFX
+  request.
+- **One defect, found three more times in the same service.** Last cycle
+  stopped a duration-only stream unit re-deriving the *rest bit* from the
+  previous unit's note. The same stale byte was still driving three more
+  decisions, each fixed against the same two ROM lines: `zGetNextNote` sends a
+  positive byte straight to `zStoreDuration` (Sound/Z80 Sound
+  Driver.asm:917-919), which stores no frequency and silences nothing, and
+  only a real `80h` byte reaches `zRestTrack`.
+  1. *The silence.* The rest branch called `stopNote`, so a duration-only unit
+     following a rest silenced the channel. It now runs only for a note byte
+     that is actually `80h`. Event 151 was that silence landing where the
+     reference sent PSG3's frequency.
+  2. *The frequency.* With the silence gone, the note path recomputed the
+     frequency from the stale `80h` and produced `03FFh` where the ROM keeps
+     the track's existing Freq word. Both the FM and PSG branches now reuse
+     the stored `baseFnum` and `baseBlock` when the unit carried no note byte.
+  3. *The PSG volume.* `refreshVolume` forced the silence level `0Fh` when the
+     last note byte was `80h`. The ROM's volume tail has no such rule: it adds
+     Volume to the envelope value and forces `0Fh` only when that addition
+     sets bit 4 (:4098-4112), while the rest *bit* one line above gates
+     whether the write happens at all. It now keys on the rest bit.
+- **An approach measured and dropped along the way.** Keeping a separate
+  "last note that carried a frequency" field and recomputing from it still
+  produced `03FFh`, because the ROM recomputes nothing at all on such a unit.
+  Reusing the stored frequency word is the accurate model, and it needed no
+  new state: `baseFnum` and `baseBlock` already hold it.
+- **S1 and S2 checked by reading their result lines, not the failure count.**
+  All four S2 oracles MATCH: the v1 driver oracle at 698 ticks, the v2
+  state-and-writes and state-only oracles at 2,198 ticks each, and the three
+  request windows at 25, 52 and 27 transfers. Both S1 sound-test captures
+  MATCH at 14,690 and 1,967 ticks.
+- **Open items, unchanged.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape.
+- **Gates at this commit, all green.** The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,154
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - S2 DAC runs are bounded by zDACLenTbl; the residual is a supersession join, not data
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
