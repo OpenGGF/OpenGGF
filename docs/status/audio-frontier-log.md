@@ -102,6 +102,24 @@ restore boundary shifts every ordinal after a run's first restore.
 | `s1-complete-run.bk2` | 58 | 138,135 | 142,570 | 4,433 | 81 |
 | `sonic1-complete-withemeralds.bk2` | 54 | 115,139 | 115,236 | 96 | too short to use |
 
+**Superseded for `s1-complete-run.bk2` by a completed capture.** With the
+restore boundary in place the pair is a `$88` jingle window from frame 138,135
+to 138,346 of **210** invocations, then a `$84` restore window from 138,346 of
+**4,223** invocations carrying the Spring Yard song the jingle interrupted. The
+4,433 above was the pre-fix tile running through the restore, which was the bug
+rather than the window. The resume evidence lives in the opening stretch of the
+restore window. No multi-song contract is needed: that window is an ordinary
+single-song window against `$84`'s range, so two windows is the correct
+description rather than a workaround.
+
+**Two engine cautions a 1-up oracle would hit**, both fixed on that lane's
+branch. The engine reaped a music sequencer once all its tracks went inactive,
+freezing its driver state, where the ROM keeps the tempo running until a new
+song loads - and the `E4` deactivates every track, so this is exactly that
+shape. And driver commands must be submitted at the ROM's dispatch point, past
+the fade step and before the track walk, or a fade arms a step early; the
+restore arms a fade-in at counter `$28`.
+
 Ordinal 30 is the one that lane recommends. Ordinal 58's close frame is a
 survey number rather than a capture they hold: their whole-run pass aborted a
 couple of hundred frames into it, on the out-of-range sequence pointer, before

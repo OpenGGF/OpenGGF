@@ -307,3 +307,41 @@ being fixed.
 `48184eb4d` is the fourth dispatch branch of `PlaySoundID` for sound ids `$E0`
 to `$E4`, reaching fade out, speed up and slow down. It is not the `E4`
 coordination flag inside track data. I conflated the two on first reading.
+
+## Corrected: the captured pair, and why the survey number was wrong
+
+The `s1-audio-complete` lane completed a full pass over `s1-complete-run.bk2`
+with the restore boundary in place. These are capture numbers, not survey
+numbers, and they supersede the ordinal-58 row above.
+
+| Window | Music | Opens | Closes | Invocations |
+|---|---|---|---|---|
+| Jingle | `$88` extra life | 138,135 | 138,346 | 210 |
+| Restore | `$84` Spring Yard, the interrupted song | 138,346 | - | 4,223 |
+
+**The 4,433 figure recorded earlier was the pre-fix tile**, which ran through
+the restore and kept going into the interrupted song. That was the bug, not the
+window. The jingle alone is 210 invocations. The resume evidence this oracle
+wants, that the restored track advances rather than merely being reinstated,
+is the opening stretch of the 4,223-invocation restore window, which is far
+more than enough to show it.
+
+The same shift bit its author: adding the boundary moved every ordinal after a
+run's first restore by one, and a credits song dropped out of their published
+selection because the selection was ordinal-based. Cite epoch frames.
+
+**No multi-song contract is needed, retracting what this audit said above.**
+The restore window is an ordinary single-song window normalized against `$84`'s
+asset range, and its first ticks are the restored song resuming. The crossing
+is the boundary between two files, and that boundary is where the ROM changes
+song, so describing it as two windows is correct rather than a workaround.
+
+**Two engine cautions from that lane's measurements, both of which a 1-up
+oracle would hit.** The engine had been reaping a music sequencer once all its
+tracks went inactive, which froze its driver state, where the ROM keeps the
+tempo running until a new song loads. A jingle-and-resume window is exactly
+that shape, since the `E4` deactivates every track. And driver commands must be
+submitted at the ROM's dispatch point, past the fade step and before the track
+walk, or a fade arms a step early. The restore arms a fade-in with counter
+`$28`, so this window exercises that path. Both are fixed on
+`feature/ai-s1-audio-complete-runs`.
