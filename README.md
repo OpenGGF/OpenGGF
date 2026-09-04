@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S2 run-chain segment 15 diagnosed:** the CPZ2 boss gunk falls a frame early
+  because the ROM rewrites the container in place (`Obj5D_Container_Extend`)
+  while the engine respawns it; recorded, not yet closed.
 - **S2 CPZ tick-237 is the ring speaker flag:** the driver alternates left/right
   ring variants on a flag outside the song-load clear, so a capture starting at
   the load inherits its phase; recorded as a capture-start limitation.
