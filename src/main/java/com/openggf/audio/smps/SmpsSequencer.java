@@ -1395,46 +1395,54 @@ public class SmpsSequencer implements CoordFlagContext {
                     return;
                 }
 
-                if (!t.tieNext && t.type != TrackType.DAC) {
-                    if (config.isDirect68kDriver()) {
-                        if (t.fillCounter > 0 && --t.fillCounter == 0) {
-                            // S1/S2 NoteTimeoutUpdate tampers with the return address:
-                            // after note-off, the rest of this track update is skipped.
-                            stopNote(t);
-                            t.resting = true;
-                            return;
-                        }
-                    } else if (config.getNoteFillTail()
-                            == SmpsSequencerConfig.NoteFillTail.S3K_SPLIT) {
-                        if (t.fillCounter > 0 && --t.fillCounter == 0) {
-                        // S3K's note fill is the same per-pass countdown,
-                        // armed unscaled from NoteFillMaster at note start
-                        // (Sound/Z80 Sound Driver.asm:1067-1068), but its two
-                        // tails differ by track type and both are tail jumps,
-                        // so the rest of the pass is skipped either way.
-                        // zUpdatePSGTrack's `jp z, zRestTrack` only sets the
-                        // rest bit and writes nothing (:4070-4074,
-                        // :2160-2164), while zUpdateFMorPSGTrack's
-                        // `jp z, zKeyOffIfActive` keys the channel off
-                        // (:786-790, :2148-2152).
-                            if (t.type == TrackType.PSG) {
-                                restTrack(t);
-                            } else {
-                                stopNote(t);
-                            }
-                            return;
-                        }
-                    } else if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill) {
-                        // S2's zNoteFillUpdate is a per-pass countdown that
-                        // rests the track and sends a note off
-                        // (s2.sounddriver.asm:1153-1163). The engine models it
-                        // as an elapsed comparison instead. That difference is
-                        // unverified against the S2 oracle and is left alone.
-                        stopNote(t);
-                    }
-                }
 
                 if (t.duration > 0) {
+                    // The note fill belongs to the continuing-note branch,
+                    // not to the pass whose duration timer expired. All
+                    // three drivers call it from there: S3K from
+                    // zUpdateFMorPSGTrack's .note_going (Sound/Z80 Sound
+                    // Driver.asm:781-790), S2 from zFMUpdateTrack's
+                    // .notegoing (s2.sounddriver.asm:832-834) and S1 from
+                    // FMUpdateTrack's .notegoing (s1.sounddriver.asm:358-361).
+                    // An expired timer goes to the next stream unit instead.
+                    if (!t.tieNext && t.type != TrackType.DAC) {
+                        if (config.isDirect68kDriver()) {
+                            if (t.fillCounter > 0 && --t.fillCounter == 0) {
+                                // S1/S2 NoteTimeoutUpdate tampers with the return address:
+                                // after note-off, the rest of this track update is skipped.
+                                stopNote(t);
+                                t.resting = true;
+                                return;
+                            }
+                        } else if (config.getNoteFillTail()
+                                == SmpsSequencerConfig.NoteFillTail.S3K_SPLIT) {
+                            if (t.fillCounter > 0 && --t.fillCounter == 0) {
+                            // S3K's note fill is the same per-pass countdown,
+                            // armed unscaled from NoteFillMaster at note start
+                            // (Sound/Z80 Sound Driver.asm:1067-1068), but its two
+                            // tails differ by track type and both are tail jumps,
+                            // so the rest of the pass is skipped either way.
+                            // zUpdatePSGTrack's `jp z, zRestTrack` only sets the
+                            // rest bit and writes nothing (:4070-4074,
+                            // :2160-2164), while zUpdateFMorPSGTrack's
+                            // `jp z, zKeyOffIfActive` keys the channel off
+                            // (:786-790, :2148-2152).
+                                if (t.type == TrackType.PSG) {
+                                    restTrack(t);
+                                } else {
+                                    stopNote(t);
+                                }
+                                return;
+                            }
+                        } else if (t.fill > 0 && (t.scaledDuration - t.duration) >= t.fill) {
+                            // S2's zNoteFillUpdate is a per-pass countdown that
+                            // rests the track and sends a note off
+                            // (s2.sounddriver.asm:1153-1163). The engine models it
+                            // as an elapsed comparison instead. That difference is
+                            // unverified against the S2 oracle and is left alone.
+                            stopNote(t);
+                        }
+                    }
                     // S1/S2 run the PSG volume effects before modulation and
                     // the frequency (s1.sounddriver.asm:1822-1827,
                     // s2.sounddriver.asm:1134-1138). S3K's zUpdatePSGTrack

@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Note fill runs only on the unexpired-timer branch:** all three drivers reach
+  the note-fill routine from the not-expired branch of the duration decrement;
+  the engine now matches, cited per driver.
 - **S2 CPZ oracle music id cited from the driver playlist:** request `8Eh` indexes
   the master playlist to Chemical Plant; the tick-237 write difference is a whole
   voice load one FM channel across, not a slot-search rule.
