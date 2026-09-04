@@ -1381,9 +1381,22 @@ public class SmpsSequencer implements CoordFlagContext {
                     } else if (t.type == TrackType.FM) {
                         processFmVolEnvelope(t);
                     }
-                    if ((t.type == TrackType.FM || t.type == TrackType.PSG)
-                            && t.modEnabled) {
-                        applyModulation(t);
+                    if (t.type == TrackType.FM || t.type == TrackType.PSG) {
+                        // S3K's zDoModulation only computes the frequency; the
+                        // fall-through to zFMSendFreq (Sound/Z80 Sound
+                        // Driver.asm:791-799) and the PSG latch (:4077-4090)
+                        // put it on the bus on every pass of a sounding track.
+                        // S1/S2's DoModulation discards the return address, so
+                        // there the send happens only when modulation ran and
+                        // moved the frequency.
+                        boolean resendEveryPass = config.getNoteGoingFreqSend()
+                                == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS;
+                        int freqDelta = t.modEnabled
+                                ? applyModulation(t, !resendEveryPass)
+                                : 0;
+                        if (resendEveryPass && !t.resting) {
+                            writeTrackFrequency(t, freqDelta);
+                        }
                     }
                     return;
                 }
@@ -3107,27 +3120,43 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     private void applyModulation(Track t) {
+        applyModulation(t, true);
+    }
+
+    /**
+     * Steps modulation for {@code t} and, when {@code write} is set, sends the
+     * resulting frequency. Returns the frequency displacement in effect after
+     * stepping, which is zero whenever modulation is not running, so a caller
+     * that owns the send itself can pass {@code false} and use the returned
+     * displacement.
+     */
+    private int applyModulation(Track t, boolean write) {
         if (!t.modEnabled)
-            return;
+            return 0;
         // Z80-family drivers return before stepping modulation at rest. S1's
         // 68k DoModulation has no rest check and continues advancing its phase.
         if (!config.isDirect68kDriver() && t.resting)
-            return;
+            return 0;
 
         stepCustomModulation(t);
         stepModEnvelope(t);
         if (!t.modStepInEffect && !t.modEnvStepInEffect) {
             t.modEnabled = false;
-            return;
+            return 0;
         }
 
         int freqDelta = t.modStepDelta + t.modEnvStepDelta;
         boolean changed = t.modStepChanged || t.modEnvStepChanged || t.forceModulationWrite;
         t.forceModulationWrite = false;
-        if (!changed) {
-            return;
+        if (!write || !changed) {
+            return freqDelta;
         }
+        writeTrackFrequency(t, freqDelta);
+        return freqDelta;
+    }
 
+    /** Puts the track's frequency plus {@code freqDelta} on the bus. */
+    private void writeTrackFrequency(Track t, int freqDelta) {
         if (t.type == TrackType.FM) {
             int packed = getPacked(t, freqDelta);
 

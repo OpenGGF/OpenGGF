@@ -27,6 +27,72 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K re-sends an unchanged frequency every pass; tick 139 event 1 -> 7
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `2607114d4`.
+- **Command:** unchanged from the previous entry, both result lines.
+- **Result before:**
+  - `S3K audio oracle: MISMATCH`, `EVENT_VALUE_DIFFERENT`, tick 139, event 1,
+    reference `ym2612 port 0 register 0A5h = 19` against engine
+    `port 1 register 0A4h = 27`.
+  - `S3K DAC byte stream: MISMATCH`, `BYTE_DIFFERENT`, run 29, byte 0,
+    reference `0x7C` against engine `0x7F`.
+- **Result after:**
+  - `S3K audio oracle: MISMATCH`, `EVENT_VALUE_DIFFERENT`, tick 139, event 7,
+    reference `psg 128` against engine `psg 178`.
+  - `S3K DAC byte stream: MISMATCH`, `BYTE_DIFFERENT`, run 29, byte 0,
+    unchanged.
+- **The routine, in all three listings.** S3K's `zDoModulation` is an ordinary
+  subroutine: every one of its returns - inactive modulation
+  (`ret z` on `ModulationCtrl`), an unexpired `ModulationWait`, or a completed
+  step - lands on its caller, and both callers fall straight through to the
+  frequency send. For FM that is `zUpdateFMorPSGTrack`'s `.keep_going`, which
+  calls `zUpdateFreq`, returns only on the sustain-frequency bit, calls
+  `zDoModulation` and falls through to `zFMSendFreq`
+  (Sound/Z80 Sound Driver.asm:791-799, :1277-1283). For PSG it is
+  `zUpdatePSGTrack`'s `.skip_fill`, which latches the frequency
+  unconditionally after `zDoModulation` (:4077-4090). So a sounding S3K track
+  puts its frequency on the bus every pass whether or not it moved.
+- **S1 and S2 are genuinely the other shape, and both were checked.** S1's
+  `DoModulation` opens with `addq.w #4,sp`
+  (docs/s1disasm/s1.sounddriver.asm:483-486) and S2's with `pop de`
+  (docs/s2disasm/s2.sounddriver.asm:986-987), discarding the caller's return
+  address, so an inactive or unexpired modulation returns past
+  `FMUpdateTrack`/`zPSGUpdateTrack` entirely and the `bra.w FMUpdateFreq` /
+  `jp zFMUpdateFreq` never runs (s1:358-361, s2:832-834, :1130-1138). The
+  engine implemented that shape for all three games. It is now a per-driver
+  mode, `SmpsSequencerConfig.NoteGoingFreqSend`, defaulting to the S1/S2
+  `MODULATION_ONLY` with only the S3K preset selecting `EVERY_PASS`.
+- **What moved.** All six of the first post-load update's FM frequency sends
+  now agree, which is events 1 through 6. `applyModulation` was split so the
+  step and the send are separate, matching the ROM's own split between
+  `zDoModulation` and `zFMSendFreq`; the S1/S2 path still sends only from
+  inside it. No constant was introduced.
+- **Next.** Event 7 is the PSG half of the same routine. The reference latches
+  PSG1's frequency (`80h`) where the engine writes PSG1's volume (`B2h`),
+  because `zUpdatePSGTrack`'s `.skip_fill` latches frequency before it reaches
+  `zDoVolEnv` and the volume write (:4077-4110), while S2's `.notegoing` calls
+  `zPSGUpdateVolFX` first and only then modulation and frequency
+  (s2.sounddriver.asm:1134-1138). That is a second per-driver difference in
+  the same pair of routines and is the next target.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)` through `S1AudioParityTool` capture + compare; both S1
+  gameplay oracles `MATCH` at 2,562 and 5,257 ticks; S2 driver oracle
+  `MATCH (698 ticks)` and the three request windows `MATCH` at 25, 52 and 27
+  transfers. One run of the `com.openggf.audio` and
+  `com.openggf.tools.audio.parity` packages plus `TestSmpsFadeAudioThroughput`,
+  `TestYm2612DacTiming`, the four S3K keep-green classes,
+  `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,106
+  tests, 0 failures, 10 skips.
+- **Break-it evidence.** The frontier is pinned by assertion, not logged:
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`
+  asserts the exact kind, tick, event index and reference write, and failed
+  against the old event 1 until it was moved to event 7. The sidecar
+  perturbation and DAC corruption tests in the same class remain green.
+
+
 ## 2026-09-04 - S3K music DAC byte pump lands unpartitioned; tick 139 event 1 becomes a track-set frontier
 
 - **Worktree/branch:** `.worktrees/audio-s3k-dac-pump`,

@@ -71,6 +71,31 @@ public final class SmpsSequencerConfig {
         KEEP
     }
 
+    /**
+     * Whether a track whose note has not expired re-sends its frequency on
+     * every driver pass, or only when modulation actually moved it.
+     */
+    public enum NoteGoingFreqSend {
+        /**
+         * S1/S2: DoModulation discards its caller's return address on entry
+         * ({@code addq.w #4,sp} at s1.sounddriver.asm:483-486, {@code pop de}
+         * at s2.sounddriver.asm:986-987), so an inactive modulation, a track at
+         * rest, or an unexpired modulation wait returns past the caller and the
+         * frequency send is skipped entirely (s1.sounddriver.asm:358-361,
+         * s2.sounddriver.asm:832-834).
+         */
+        MODULATION_ONLY,
+        /**
+         * S3K: zDoModulation is an ordinary subroutine, so each of its returns
+         * lands on the fall-through to zFMSendFreq for FM
+         * (skdisasm Sound/Z80 Sound Driver.asm:791-799, :1277-1283) and on the
+         * unconditional PSG frequency latch for PSG (:4077-4090). The
+         * frequency therefore goes out on every pass of a sounding track,
+         * whether or not it changed.
+         */
+        EVERY_PASS
+    }
+
     /** Modulation stepping algorithm. */
     public enum ModAlgo {
         /** S1/S2 (MODALGO_68K): pre-check step counter, then decrement. Reload from raw data. */
@@ -227,6 +252,7 @@ public final class SmpsSequencerConfig {
     private final DelayFreq delayFreq;
     private final CoordFlagHandler coordFlagHandler;
     private final ModAlgo modAlgo;
+    private final NoteGoingFreqSend noteGoingFreqSend;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
     private final int fadeInSteps;
@@ -274,6 +300,7 @@ public final class SmpsSequencerConfig {
         this.delayFreq = b.delayFreq;
         this.coordFlagHandler = b.coordFlagHandler;
         this.modAlgo = b.modAlgo;
+        this.noteGoingFreqSend = b.noteGoingFreqSend;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
         this.fadeInSteps = b.fadeInSteps;
@@ -480,6 +507,13 @@ public final class SmpsSequencerConfig {
         return modAlgo;
     }
 
+    /**
+     * Note-going frequency send: MODULATION_ONLY (S1/S2) or EVERY_PASS (S3K).
+     */
+    public NoteGoingFreqSend getNoteGoingFreqSend() {
+        return noteGoingFreqSend;
+    }
+
     /** Fade-out inter-step delay in frames. S1/S2: 3, S3K: 6. */
     public int getFadeOutDelay() {
         return fadeOutDelay;
@@ -552,6 +586,7 @@ public final class SmpsSequencerConfig {
         private DelayFreq delayFreq = DelayFreq.RESET;
         private CoordFlagHandler coordFlagHandler = null;
         private ModAlgo modAlgo = ModAlgo.MOD_68K;
+        private NoteGoingFreqSend noteGoingFreqSend = NoteGoingFreqSend.MODULATION_ONLY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
         private int fadeInSteps = 0x28;
@@ -591,6 +626,7 @@ public final class SmpsSequencerConfig {
         public Builder delayFreq(DelayFreq val) { delayFreq = val; return this; }
         public Builder coordFlagHandler(CoordFlagHandler val) { coordFlagHandler = val; return this; }
         public Builder modAlgo(ModAlgo val) { modAlgo = val; return this; }
+        public Builder noteGoingFreqSend(NoteGoingFreqSend val) { noteGoingFreqSend = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }
         public Builder fadeInSteps(int val) { fadeInSteps = val; return this; }
