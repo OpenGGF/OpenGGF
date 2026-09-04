@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S1 per-song oracle windows cover every song in a complete run:** 20 windows
+  from the complete-run movie, all 15 songs, eight matching end to end across six
+  songs (Green Hill, Labyrinth, Spring Yard, title, special stage, credits); the
+  rest carry pinned frontiers.
 - **S2 music restores cleanly after a 1-up:** the driver rests every music
   track on the fade-in-to-previous as the ROM does (S3K instead keeps its PSG
   overridden), so the level song no longer resumes on the notes the jingle cut
