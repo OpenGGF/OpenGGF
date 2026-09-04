@@ -115784,3 +115784,55 @@ and do not port S1's 26.
 Not re-run this cycle: the tree is source-identical to the previous entry's,
 which measured `-Ptrace-replay` at 854 tests / 8 failures / 6 skips, the ordinary
 suite at 16,404 tests / 0 failures, and `-Pguards` at 607 tests / 0 failures.
+
+## 2026-09-04 - CORRECTION: the lag census is NOT wrong after a special stage; the hold is not armed there
+
+Same worktree and branch, still documentation only. This corrects the entry
+directly above it, which blamed the special-stage-return family on the
+load-completion locator. A manifest-only query over all 27 transitions of
+`s2-sonic-tails-complete-emeralds` refutes that, and no test run was needed.
+
+For every transition, taking the admission census's run-length encoding
+(alternating, starting non-lag) and the recorded level-entry pair's row:
+
+| shape | gaps | `pair - lastlag` | `dest - pair` |
+|---|---|---|---|
+| pair sits exactly on the census's last lag row | 19 of 27 | 0 | 26 |
+| pair sits 1 row before it | 4 | -1 | 27 |
+| pair sits further before it | 4 | -7, -19, -19, -26, -46 | 27, 28 |
+
+**The three special-stage returns this lane is failing are all in the first
+group.** `ss -> seg2_ehz1` has `lastlag = pair = 10308`; `ss_2 -> seg3_ehz1` has
+`20220`; `ss_3 -> seg4_ehz1` has `31446`. The census locator is exactly right
+there. The engine nevertheless publishes at 10268, 20180 and 31406 -- 40 rows
+early -- which means it is not releasing at its own `loadCompletionIndex` on that
+path at all. The level-entry hold is armed in `awaitDestinationAdmission`
+(`AbstractRunChainTest`:3734), which is the level-to-level destination path; a
+special-stage source reaches its destination through the uncompared-interior
+boundary drive instead.
+
+So the special-stage family is **arm the existing hold on the other destination
+path**, not a new locator and not a new constant. That is why the deltas there
+are 36-40 rather than a clean 26: they are the engine's own instantaneous-load
+row, unheld.
+
+`dest - pair` is also far more stable than the census: 26 in 19 gaps, 27 or 28 in
+the other 8, never further. It is still not adoptable as a constant -- S2's
+pre-main-loop tail is the object-gated `WaitForVint` loop at
+`docs/s2disasm/s2.asm:5060-5066`, not S1's two counted loops -- but its stability
+is a useful cross-check on any locator a future round proposes, and an 8-gap
+spread of 26/27/28 is what an object-gated tail should look like.
+
+### Revised plan, in order
+
+1. Arm the level-entry art hold on the special-stage-return destination path.
+   Expect the three 36-40 axes to collapse to the same shape as the
+   level-to-level gaps.
+2. Re-land the ring cursor re-phase from the entry above, which already closes
+   every uniform-1 axis.
+3. Then, and only then, look at `seg4_ehz1 -> seg5_ehz2`, whose engine-side
+   release lands on 32906 where this query puts the census's last lag row at
+   32905. A one-row disagreement between the engine's gap indexing and this
+   reconstruction, not a locator question.
+
+Do not port S1's 26, and do not treat the census as broken.
