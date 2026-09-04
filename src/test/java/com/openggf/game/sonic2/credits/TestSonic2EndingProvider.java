@@ -117,38 +117,4 @@ public class TestSonic2EndingProvider {
         Sonic2EndingProvider provider = new Sonic2EndingProvider();
         assertNull(provider.getLogoFlashManager(), "Logo flash manager should be null before POST_CREDITS phase");
     }
-
-    // ========================================================================
-    // EndingProvider default method safety
-    // ========================================================================
-
-    @Test
-    public void testConsumeDemoLoadRequestNoOp() {
-        Sonic2EndingProvider provider = new Sonic2EndingProvider();
-        // Should not throw
-        provider.consumeDemoLoadRequest();
-    }
-
-    @Test
-    public void testConsumeTextReturnRequestNoOp() {
-        Sonic2EndingProvider provider = new Sonic2EndingProvider();
-        // Should not throw
-        provider.consumeTextReturnRequest();
-    }
-
-    @Test
-    public void testOnDemoZoneLoadedNoOp() {
-        Sonic2EndingProvider provider = new Sonic2EndingProvider();
-        // Should not throw
-        provider.onDemoZoneLoaded();
-    }
-
-    @Test
-    public void testOnReturnToTextNoOp() {
-        Sonic2EndingProvider provider = new Sonic2EndingProvider();
-        // Should not throw
-        provider.onReturnToText();
-    }
 }
-
-

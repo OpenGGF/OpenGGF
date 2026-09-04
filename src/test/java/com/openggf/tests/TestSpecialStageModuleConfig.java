@@ -25,11 +25,9 @@ public class TestSpecialStageModuleConfig {
     public void tearDown() {
         GameModuleRegistry.reset();
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     private GameStateManager recreateGameState(com.openggf.game.GameModule module) {
-        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(module);
         TestEnvironment.activeGameplayMode();
@@ -77,7 +75,6 @@ public class TestSpecialStageModuleConfig {
         assertTrue(gameState.hasAllEmeralds());
 
         GameModuleRegistry.reset();
-        SessionManager.clear();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         gameState = GameServices.gameState();

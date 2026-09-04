@@ -132,7 +132,6 @@ public final class SharedLevel {
         GameModuleRegistry.detectAndSetModule(rom);
 
         SessionManager.clear();
-        SessionManager.clear();
         TestEnvironment.activeGameplayMode();
     }
 

@@ -61,14 +61,12 @@ class TestSonic3kHCZEvents {
     @AfterEach
     void tearDown() throws IOException {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         deleteRecursively(Path.of("saves").resolve("test_hcz_transition_save"));
     }
 
     @Test
     void act1TransitionWritesProgressionSaveForActiveSlot() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
 
         String gameCode = "test_hcz_transition_save";

@@ -21,7 +21,6 @@ class TestRequiresGameModuleCondition {
     void tearDown() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 

@@ -31,7 +31,6 @@ class TestSonic3kMhzRuntimeStateRegistration {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

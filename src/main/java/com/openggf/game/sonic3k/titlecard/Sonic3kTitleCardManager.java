@@ -1289,10 +1289,6 @@ public class Sonic3kTitleCardManager
         return elemX[idx] - renderWidth >= SCREEN_WIDTH;
     }
 
-    private boolean isElementVertical(int idx) {
-        return !bonusMode && IS_VERTICAL[idx];
-    }
-
     /** Slides an element toward its target or outward until its render bounds leave the screen. */
     private void slideElement(int idx, boolean slideIn) {
         int speed = slideIn ? SLIDE_SPEED_IN : SLIDE_SPEED_OUT;

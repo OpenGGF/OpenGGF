@@ -82,7 +82,6 @@ class TestSonic3kSpringObjectInstance {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 

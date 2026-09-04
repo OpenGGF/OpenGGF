@@ -236,10 +236,6 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
         return player != null && standingPlayers.contains(player);
     }
 
-    private void clearIfNoLongerStanding(AbstractPlayableSprite player) {
-        standingPlayers.removeIf(participant -> !participant.isOnObject());
-    }
-
     /**
      * State 2: Accelerating - platform accelerates toward destination.
      * ROM: loc_3BFD8 (s2.asm lines 80299-80327)
@@ -445,16 +441,6 @@ public class SpeedLauncherObjectInstance extends AbstractObjectInstance
                 syncPlayer((AbstractPlayableSprite) participant);
             }
         }
-    }
-
-    /**
-     * Player is standing on the platform during acceleration.
-     * ROM: loc_3BFD8 bottom half (s2.asm lines 80311-80326)
-     * <p>
-     * Continues to sync player position with platform.
-     */
-    private void onStandingAccelerating(AbstractPlayableSprite player) {
-        syncPlayer(player);
     }
 
     /**

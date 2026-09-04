@@ -25,7 +25,6 @@ class TestS3kSlotPlayerRuntime {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

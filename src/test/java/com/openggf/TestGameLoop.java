@@ -106,7 +106,6 @@ public class TestGameLoop {
         SonicConfigurationService.getInstance().resolveDisplayAspect();
         gameLoop = null;
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
     }
 
@@ -125,24 +124,7 @@ public class TestGameLoop {
         assertEquals(java.util.List.of("tails"), team.sidekicks());
     }
 
-    // ==================== Enum Tests ====================
-
-    @Test
-    void gameMode_containsDataSelect() {
-        assertNotNull(GameMode.valueOf("DATA_SELECT"));
-    }
-
-    @Test
-    void dataSelectMode_canBeResolvedFromEnum() {
-        assertEquals(GameMode.DATA_SELECT, GameMode.valueOf("DATA_SELECT"));
-    }
-
     // ==================== Initialization Tests ====================
-
-    @Test
-    public void testGameLoopStartsInLevelMode() {
-        assertEquals(GameMode.LEVEL, gameLoop.getCurrentGameMode(), "GameLoop should start in LEVEL mode");
-    }
 
     @Test
     public void testGameLoopConstructorWithInputHandler() {
@@ -535,7 +517,6 @@ public class TestGameLoop {
     @Test
     public void testMasterTitleScreenStepDoesNotRequireGameplayRuntime() {
         SessionManager.clear();
-        SessionManager.clear();
 
         InputHandler inputHandler = mock(InputHandler.class);
         MasterTitleScreen masterTitleScreen = mock(MasterTitleScreen.class);
@@ -550,7 +531,6 @@ public class TestGameLoop {
 
     @Test
     public void testMasterTitleScreenSelectionStartsBootstrapFadeWithoutGameplayRuntime() {
-        SessionManager.clear();
         SessionManager.clear();
 
         InputHandler inputHandler = mock(InputHandler.class);
@@ -605,7 +585,6 @@ public class TestGameLoop {
 
     @Test
     void escapeHoldOnMasterTitleFadesAudioAndScreenBeforeExitingApplication() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
 
         AudioManager audioManager = mock(AudioManager.class);
@@ -875,7 +854,6 @@ public class TestGameLoop {
         assertNotNull(gameplayFade, "Test setup binds a gameplay mode, so fadeManager should be cached");
 
         SessionManager.clear();
-        SessionManager.clear();
         gameLoop.setGameplayMode(null);
 
         assertNull(getPrivateField(gameLoop, "fadeManager"),
@@ -968,11 +946,17 @@ public class TestGameLoop {
     // ==================== Game Mode Listener Tests ====================
 
     @Test
-    public void testGameModeChangeListenerCanBeSet() {
+    public void testGameModeChangeListenerReceivesOldAndNewModes() {
         GameLoop.GameModeChangeListener listener = mock(GameLoop.GameModeChangeListener.class);
         gameLoop.setGameModeChangeListener(listener);
-        // Verify the listener was accepted (no exception thrown, mode still valid)
-        assertNotNull(gameLoop.getCurrentGameMode(), "Game mode should remain valid after setting listener");
+
+        gameLoop.setGameMode(GameMode.DATA_SELECT);
+        gameLoop.setGameMode(GameMode.LEVEL);
+
+        InOrder notifications = inOrder(listener);
+        notifications.verify(listener).onGameModeChanged(GameMode.LEVEL, GameMode.DATA_SELECT);
+        notifications.verify(listener).onGameModeChanged(GameMode.DATA_SELECT, GameMode.LEVEL);
+        verifyNoMoreInteractions(listener);
     }
 
     // ==================== Mode Transition Guard Tests ====================
@@ -984,16 +968,6 @@ public class TestGameLoop {
 
         // Verify no results screen is active
         assertNull(gameLoop.getResultsScreen(), "Results screen should be null initially");
-    }
-
-    // ==================== Game Mode Accessor Tests ====================
-
-    @Test
-    public void testGetCurrentGameModeReturnsCorrectMode() {
-        // Initially should be in LEVEL mode
-        GameMode mode = gameLoop.getCurrentGameMode();
-        assertNotNull(mode, "Game mode should not be null");
-        assertEquals(GameMode.LEVEL, mode, "Should be in LEVEL mode");
     }
 
     @Test
@@ -1127,7 +1101,6 @@ public class TestGameLoop {
     @Test
     void testExitDataSelectDispatchesPendingAction() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
 
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
                 DataSelectActionType.NEW_SLOT_START, 2, 0, 0,
@@ -1162,7 +1135,6 @@ public class TestGameLoop {
 
     @Test
     void testExitDataSelectDispatchesPendingActionFromNativeS3kPresentationProvider() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
 
         Sonic3kGameModule module = new Sonic3kGameModule();
@@ -1199,7 +1171,6 @@ public class TestGameLoop {
 
     @Test
     void testExitDataSelectStartsFadeBeforeDispatchingGameplayAction() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
 
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
@@ -1279,7 +1250,6 @@ public class TestGameLoop {
     @Test
     void testExitDataSelectRestoresScreenWhenGameplayLaunchFailsAfterFade() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
 
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
                 DataSelectActionType.LOAD_SLOT, 2, 3, 1,
@@ -1328,7 +1298,6 @@ public class TestGameLoop {
     @Test
     void testExitDataSelectDoesNotResetWhileFadeAlreadyActive() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
 
         StubDataSelectProvider provider = new StubDataSelectProvider(new DataSelectAction(
                 DataSelectActionType.LOAD_SLOT, 2, 3, 1,
@@ -1355,7 +1324,6 @@ public class TestGameLoop {
 
     @Test
     void testDoExitBonusStageDoesNotWriteSaveForActiveSlot() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
 
         String gameCode = "test_bonus_stage_return";
@@ -1406,7 +1374,6 @@ public class TestGameLoop {
     @Test
     void testDoExitResultsScreenWritesSaveForActiveSlot() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
 
         String gameCode = "test_special_stage_return";
         Path saveDir = Path.of("saves").resolve(gameCode);
@@ -1450,7 +1417,6 @@ public class TestGameLoop {
     @Test
     void testStepDoesNotWriteSaveForActiveSlotOnSeamlessTransition() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         gameLoop.setGameplayMode(null);
 
         String gameCode = "test_seamless_transition";
@@ -1488,7 +1454,6 @@ public class TestGameLoop {
 
     @Test
     void testStepWritesSaveForS2CreditsTransition() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         gameLoop.setGameplayMode(null);
 
@@ -1535,7 +1500,6 @@ public class TestGameLoop {
     @Test
     void testDoEnterEndingDoesNotWriteSaveForActiveSlot() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
 
         String gameCode = "test_ending_clear";
         Path saveDir = Path.of("saves").resolve(gameCode);
@@ -1567,7 +1531,6 @@ public class TestGameLoop {
     @Test
     void doEnterEndingStartsRevealWhenPreviousFadeIsHoldingWhite() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
 
         EndingProvider endingProvider = mock(EndingProvider.class);
         when(endingProvider.getCurrentPhase()).thenReturn(EndingPhase.CUTSCENE);
@@ -1595,7 +1558,6 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenRoutesOnePlayerToNativeDataSelect() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1626,7 +1588,6 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenRoutesS1OnePlayerToDonatedDataSelectWhenPresentationResolvesToS3k() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1663,7 +1624,6 @@ public class TestGameLoop {
     @Test
     void testDoExitTitleScreenRoutesS2OnePlayerToDonatedDataSelectWhenPresentationResolvesToS3k() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
 
@@ -1695,7 +1655,6 @@ public class TestGameLoop {
     @Test
     void testDoExitTitleScreenRoutesTwoPlayerAwayFromDataSelect() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
 
@@ -1726,7 +1685,6 @@ public class TestGameLoop {
     @Test
     void testDoExitTitleScreenRoutesToLevelWhenPresentationIsNotS3k() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
 
@@ -1754,7 +1712,6 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenDoesNotUseGenericFadeToBlackWhenRoutingToLevel() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1785,7 +1742,6 @@ public class TestGameLoop {
 
     @Test
     void testDoExitTitleScreenStartsFadeFromBlackWhenRoutingToLevel() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1833,7 +1789,6 @@ public class TestGameLoop {
     @Test
     void testTitleScreenExitHandlerUsesExplicitRouteResolutionWithoutStartingSecondFade() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
 
@@ -1865,7 +1820,6 @@ public class TestGameLoop {
 
     @Test
     void testTitleScreenExitHandlerEntersDataSelectThroughBlackFade() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -1917,7 +1871,6 @@ public class TestGameLoop {
     @Test
     void testTitleScreenExitHandlerRoutesLevelThroughBlackFadeWhenDonationDisabled() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
         com.openggf.configuration.SonicConfigurationService.getInstance()
@@ -1962,7 +1915,6 @@ public class TestGameLoop {
     @Test
     void testExitTitleScreenRoutesLevelWithoutGenericFade() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
         com.openggf.configuration.SonicConfigurationService.getInstance()
@@ -1996,7 +1948,6 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenRoutesLevelThroughBlackFadeWhenDonationDisabled() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -2040,7 +1991,6 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenDoesNotRouteToDonatedDataSelectWhenCrossGameFeaturesDisabled() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -2093,7 +2043,6 @@ public class TestGameLoop {
     @Test
     void testExitTitleScreenRoutesDataSelectThroughBlackFade() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
 
@@ -2139,7 +2088,6 @@ public class TestGameLoop {
 
     @Test
     void testExitTitleScreenDoesNotStartS2PreviewWarmupWhenRoutingToDonatedDataSelect() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -2195,7 +2143,6 @@ public class TestGameLoop {
     @Test
     void testExitTitleScreenDoesNotRestartDataSelectFadeWhileActive() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
 
@@ -2227,7 +2174,6 @@ public class TestGameLoop {
 
     @Test
     void testTitleScreenExitHandlerRoutesDataSelectThroughBlackFade() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
@@ -2276,7 +2222,6 @@ public class TestGameLoop {
     @Test
     void testDoExitTitleScreenDefaultsUnknownActionToOtherInsteadOfDataSelect() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
 
@@ -2303,7 +2248,6 @@ public class TestGameLoop {
 
     @Test
     void testTitleScreenExitHandlerUsesOverlayPathWhenLevelSelectOverlayApplies() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
         com.openggf.configuration.SonicConfigurationService.getInstance()
                 .setConfigValue(com.openggf.configuration.SonicConfiguration.LEVEL_SELECT_ON_STARTUP, true);

@@ -240,6 +240,9 @@ traces.
 
 #### 0.6 highlights
 
+- **Code and test maintenance:** removed unused helpers and duplicate test setup;
+  rewind-boundary, snapshot-immutability, and mode-listener tests now check the
+  production behavior they describe.
 - **Three-game engine:** Sonic 1, Sonic 2, and Sonic 3 & Knuckles each have
   game-specific providers for level loading, physics, objects, bosses, audio,
   rendering, and special stages.

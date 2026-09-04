@@ -54,14 +54,12 @@ class TestZoneLayoutMutationPipeline {
     void setUp() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
     @AfterEach
     void tearDown() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.reset();
     }

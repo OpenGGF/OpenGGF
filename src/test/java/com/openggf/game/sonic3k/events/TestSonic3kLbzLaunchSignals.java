@@ -47,7 +47,6 @@ class TestSonic3kLbzLaunchSignals {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

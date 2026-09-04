@@ -406,7 +406,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             if (ctx.getLevel() != null) {
                 writeCurrentLevel(ctx.getLevel());
             }
-            resetRewindBufferAfterLevelBoundary();
+            markRewindLevelLoadBoundary();
             InitialProcessSpritesLifecycle requestedSetup =
                     ctx.requestedInitialProcessSpritesLifecycle();
             if (requestedSetup != InitialProcessSpritesLifecycle.NONE) {
@@ -441,10 +441,6 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     protected void executeInitialProcessSprites() {
         new InitialProcessSpritesExecutor().execute(
                 gameModule, spriteManager, objectManager, camera, zoneFeatureProvider, frameCounter);
-    }
-
-    private void resetRewindBufferAfterLevelBoundary() {
-        markRewindLevelLoadBoundary();
     }
 
     static void markRewindLevelLoadBoundary() {

@@ -35,7 +35,6 @@ class TestPowerUpGraphicsRegression {
         GraphicsManager.getInstance().resetState();
         RomManager.getInstance().close();
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
         SonicConfigurationService.getInstance().resetToDefaults();
     }
@@ -114,7 +113,6 @@ class TestPowerUpGraphicsRegression {
         config.setConfigValue(SonicConfiguration.CROSS_GAME_SOURCE, "s3k");
 
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
-        SessionManager.clear();
         SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         TestEnvironment.activeGameplayMode();

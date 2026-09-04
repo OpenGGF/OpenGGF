@@ -1263,11 +1263,6 @@ public final class AudioPresentationSourceFactory
                 coordFlagHandlerRequired, coordFlagHandlers);
     }
 
-    private static SmpsSequencerConfig copyStaticConfig(
-            SmpsSequencerConfig sourceConfig) {
-        return SmpsAssetCatalog.copyConfigWithoutHandler(sourceConfig);
-    }
-
     private DecodedPcm decode(String assetId) throws IOException {
         return settings.pcmCache().getOrDecode(
                 assetId, () -> settings.wavAssets().open(assetId));

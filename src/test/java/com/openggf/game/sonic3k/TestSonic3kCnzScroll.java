@@ -41,7 +41,6 @@ public class TestSonic3kCnzScroll {
     public void setUp() {
         TestEnvironment.resetAll();
         SessionManager.clear();
-        SessionManager.clear();
 
         Sonic3kGameModule module = new Sonic3kGameModule();
         GameModuleRegistry.setCurrent(module);
@@ -62,7 +61,6 @@ public class TestSonic3kCnzScroll {
         if (camera != null) {
             camera.setShakeOffsets(0, 0);
         }
-        SessionManager.clear();
         SessionManager.clear();
     }
 

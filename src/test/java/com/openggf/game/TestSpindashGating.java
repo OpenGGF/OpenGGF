@@ -38,7 +38,6 @@ class TestSpindashGating {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
@@ -53,7 +52,6 @@ class TestSpindashGating {
     @MethodSource("spindashGatingProvider")
     void spindashEnabledMatchesModule(GameModule module, boolean expectedEnabled, String label) {
         GameModuleRegistry.setCurrent(module);
-        SessionManager.clear();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
@@ -74,7 +72,6 @@ class TestSpindashGating {
     void sonic1Module_spindashFlagNeverSet() {
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
         SessionManager.clear();
-        SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
 
@@ -85,13 +82,11 @@ class TestSpindashGating {
     void moduleSwitch_updatesGameRules() {
         GameModuleRegistry.setCurrent(new Sonic2GameModule());
         SessionManager.clear();
-        SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         TestablePlayableSprite sprite = new TestablePlayableSprite("test", (short) 100, (short) 100);
         assertTrue(sprite.getGameRules().playerCapability().spindashEnabled(), "Initially S2 spindash");
 
         GameModuleRegistry.setCurrent(new Sonic1GameModule());
-        SessionManager.clear();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
         sprite.resetState();

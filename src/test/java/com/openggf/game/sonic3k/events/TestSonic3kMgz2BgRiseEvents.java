@@ -61,7 +61,6 @@ class TestSonic3kMgz2BgRiseEvents {
     void setUp() {
         previousModule = GameModuleRegistry.getCurrent();
         SessionManager.clear();
-        SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
@@ -69,7 +68,6 @@ class TestSonic3kMgz2BgRiseEvents {
 
     @AfterEach
     void tearDown() {
-        SessionManager.clear();
         SessionManager.clear();
         if (previousModule != null) {
             GameModuleRegistry.setCurrent(previousModule);

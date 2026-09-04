@@ -23,7 +23,6 @@ class TestCnzZoneRuntimeState {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test
