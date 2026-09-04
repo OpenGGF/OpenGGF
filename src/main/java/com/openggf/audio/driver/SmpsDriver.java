@@ -2369,10 +2369,28 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 continue;
             }
             sequencer.serviceOuterFrame();
-            if (sequencer.isComplete()) {
+            if (sequencer.isComplete() && !retainsFinishedMusic(sequencer, sfx)) {
                 pendingRemovals.add(sequencer);
             }
         }
+    }
+
+    /**
+     * Whether a music sequencer whose tracks have all ended must keep being
+     * serviced. S1's {@code UpdateMusic} decrements
+     * {@code v_main_tempo_timeout} and reloads it through {@code TempoWait}
+     * before it looks at any track, and unconditionally
+     * (s1.sounddriver.asm:174-176, :1549-1560), so the driver's tempo keeps
+     * running after a song's last track stops; the RAM only stops changing
+     * when a new song loads or {@code StopAllSound} clears it. The engine
+     * treated an all-tracks-inactive music sequencer as finished and stopped
+     * servicing it, which froze the tempo state a song end onward.
+     *
+     * <p>SFX sequencers are unaffected: those genuinely are released when they
+     * end, and the ROM frees their slots.
+     */
+    private static boolean retainsFinishedMusic(SmpsSequencer sequencer, boolean sfx) {
+        return !sfx && sequencer.getConfig().isDirect68kDriver();
     }
 
     private boolean usesChannelRamOrderSfxWalk() {
@@ -2530,7 +2548,8 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         synchronized (sequencersLock) {
             for (int i = 0; i < sequencers.size(); i++) {
                 SmpsSequencer seq = sequencers.get(i);
-                if (seq.isComplete() && !pendingRemovals.contains(seq)) {
+                if (seq.isComplete() && !pendingRemovals.contains(seq)
+                        && !retainsFinishedMusic(seq, isSfx(seq))) {
                     pendingRemovals.add(seq);
                 }
             }

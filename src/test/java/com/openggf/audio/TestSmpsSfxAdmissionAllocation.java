@@ -152,7 +152,7 @@ class TestSmpsSfxAdmissionAllocation {
                         () -> true, handlers,
                         new AudioPresentationSourceFactory.Settings(
                                 48_000, SmpsSequencer.Region.NTSC,
-                                false, false, false, false, 1,
+                                false, false, false, 1,
                                 AudioManager.getInstance(),
                                 new DecodedPcmCache(), ignored -> null),
                         session);

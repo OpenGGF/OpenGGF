@@ -262,8 +262,6 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
         return new AudioPresentationTuning(
                 region,
                 configService.getBoolean(SonicConfiguration.DAC_INTERPOLATE),
-                configService.getBoolean(
-                        SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE),
                 configService.getBoolean(SonicConfiguration.FM6_DAC_OFF));
     }
 
@@ -759,9 +757,7 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 new SmpsPhysicalDevice.Settings(
                         sampleRate,
                         configService.getBoolean(
-                                SonicConfiguration.DAC_INTERPOLATE),
-                        configService.getBoolean(
-                                SonicConfiguration.PSG_NOISE_SHIFT_EVERY_TOGGLE)),
+                                SonicConfiguration.DAC_INTERPOLATE)),
                 physicalPolicy,
                 diagnosticChipWriteObserver(),
                 new com.openggf.audio.session.SmpsDriverSessionConfiguration(

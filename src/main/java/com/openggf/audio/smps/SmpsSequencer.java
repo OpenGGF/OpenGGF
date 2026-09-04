@@ -309,6 +309,15 @@ public class SmpsSequencer implements CoordFlagContext {
         public int fill; // note-off shortening in ticks
         public int fillCounter; // live S1/S2 NoteTimeout countdown
         public boolean resting; // S1/S2 PlaybackControl bit 1
+        /**
+         * Withholds the PSG attenuation byte while the envelope is stepped.
+         * S1 splits the work in two: PSGDoVolFX advances the envelope and
+         * computes the level, then falls into SetPSGVolume, which decides
+         * whether the byte reaches the chip (s1.sounddriver.asm:1938-1969).
+         * The engine's envelope step sends as it goes, so stepping it without
+         * a send needs this.
+         */
+        public boolean suppressPsgVolumeWrite;
         public int keyOffset; // signed semitone displacement (E9)
         public int volumeOffset; // attenuation applied to TL (FM) or volume (PSG)
         public boolean tieNext; // E7 prevents next attack
@@ -1621,6 +1630,28 @@ public class SmpsSequencer implements CoordFlagContext {
         }
     }
 
+    /**
+     * Runs at the ROM's dispatch point: after the fade step and before the
+     * track walk. S1's {@code UpdateMusic} steps the fade
+     * (s1.sounddriver.asm:179-186) and only then cycles the sound queue and
+     * calls {@code PlaySoundID} (:197-202), before walking any track (:205
+     * onward). A request that arms a fade in one invocation is therefore not
+     * stepped until the next, because that invocation's fade step has already
+     * gone by. Set by the parity host so a recorded driver command lands where
+     * the ROM issues it.
+     */
+    private Runnable dispatchPoint;
+
+    public void setDispatchPointListener(Runnable listener) {
+        this.dispatchPoint = listener;
+    }
+
+    private void runDispatchPoint() {
+        if (dispatchPoint != null) {
+            dispatchPoint.run();
+        }
+    }
+
     private void processTempoFrame() {
         if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW && !sfxMode) {
             // S3K music frame: fades advance inside each zUpdateMusic
@@ -1649,6 +1680,9 @@ public class SmpsSequencer implements CoordFlagContext {
                         t.duration++;
                     }
                 }
+                // The ROM's dispatch point: past the fade step, before any
+                // track is walked (SD:179-202).
+                runDispatchPoint();
             }
             tick(sfxMode);
         } else if (config.getTempoMode() == SmpsSequencerConfig.TempoMode.OVERFLOW2) {
@@ -2744,6 +2778,31 @@ public class SmpsSequencer implements CoordFlagContext {
             // S1 PSGUpdateTrack always falls through PSGDoVolFX after a new
             // stream unit. A tied/no-attack note preserves envelope state but
             // still resends its current volume (SD:1813-1821, 1926-1987).
+            //
+            // PSGDoVolFX advances the envelope as well as sending the volume,
+            // and the new-note path reaches it unconditionally: the branch is
+            // `bra.w PSGDoVolFX` (SD:1819), taken whatever the do-not-attack
+            // bit says. Only the *reset* is conditional, and it lives in
+            // FinishTrackUpdate, which skips `clr.b VolEnvIndex` when bit 4 is
+            // set (SD:438-442). So a tied note keeps its cursor and then steps
+            // it once, where an attacked note clears the cursor and then steps
+            // it once. Stepping here rather than only resending is what makes
+            // the two cases differ by their reset alone, as the ROM does.
+            // S2 reaches its vol-FX the same unconditional way, by `call
+            // zPSGDoVolFX` on the note-on path (s2.sounddriver.asm:1129).
+            //
+            // The ROM splits this in two and so does the engine here: the
+            // step advances the cursor and computes the level, then exactly
+            // one send follows, because PSGDoVolFX falls into SetPSGVolume
+            // (SD:1960-1969). Stepping with the send suppressed and sending
+            // once afterwards keeps a pass to a single write whether or not
+            // the step itself would have emitted one.
+            t.suppressPsgVolumeWrite = true;
+            try {
+                processPsgEnvelope(t);
+            } finally {
+                t.suppressPsgVolumeWrite = false;
+            }
             refreshVolume(t);
         }
     }
@@ -2913,6 +2972,9 @@ public class SmpsSequencer implements CoordFlagContext {
         if (t.type == TrackType.FM) {
             updateFmTotalLevel(t);
         } else if (t.type == TrackType.PSG) {
+            if (t.suppressPsgVolumeWrite) {
+                return;
+            }
             if (t.envAtRest || t.resting) {
                 return;
             }

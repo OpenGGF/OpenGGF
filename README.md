@@ -263,6 +263,17 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S1 audio oracles cover whole complete runs per song:** windows tile each
+  movie by `Sound_PlayBGM` and 1-up restore epochs; the title-screen song matches
+  end to end (72 ticks), tied PSG notes step their envelope, a finished song keeps
+  its tempo, and fade commands dispatch at the ROM's point in `UpdateMusic`.
+- **`audio.psgNoiseShiftEveryToggle` removed:** the PSG noise LFSR now always
+  clocks once per rising edge, the hardware rate; the every-toggle mode from the
+  old PSG core is gone and an old config key is ignored with a warning.
+- **S2 CPZ2 boss segment green:** the boss spawns its children from its own
+  first update in ROM slot order, the container rewrites itself into the gunk
+  in place, and `Obj6B` platforms gate solidity on the previous frame's on-screen
+  bit; trace sweep 8 to 7 failing classes.
 - **S1 sound-test oracles run in JUnit:** the GHZ music (14,690 ticks) and SFX
   (1,967 ticks) references are now ROM-gated assertions in the committed suite.
 - **Matching audio oracles are pinned as assertions:** S2 v1 (698), S2 v2 state and
