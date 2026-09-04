@@ -27,6 +27,49 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 driver-state v2 reaches MATCH on all 2,198 services; the DAC join is duration, proven
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `a0a5a47c7`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before:** state with writes and state only both DIVERGENCE at tick 1,789
+  (movie row 11991), `global.currentTempo`, reference `0x9e` against the
+  engine's `0xbe`; 409 of 2,198 ticks divergent. DAC stream `BYTE DIFFERENT in
+  run 3 at byte 709 (92 runs, run-length delta 0)`.
+- **After:** state with writes `MATCH (2198 ticks)` and state only
+  `MATCH (2198 ticks)`. DAC stream `BYTE DIFFERENT in run 3 at byte 709:
+  reference 0x80, engine 0x8D (92 runs, run-length delta 0, reference resyncs
+  at engine byte 828 for 3612 bytes)`.
+- **The tempo closed from the gameplay side.** The speed-shoes countdown moved
+  to the ROM's display step on develop, so this branch's merge of `a0a5a47c7`
+  took the last state divergence with it. Nothing on the audio side changed for
+  it.
+- **The DAC join is duration, and that is now proven rather than argued.** The
+  reference's bytes over its services 150-155 sum to exactly 709 and its byte
+  709 is `0x80`, the value `zWriteToDAC`'s accumulator starts every sample at
+  (s2.sounddriver.asm:502-517); the step from the preceding `0x89` is minus
+  nine, which no `zDACDecodeTbl` entry produces, so a second sample begins
+  there. Aligning each side's second sample by its own start, **3,612 bytes
+  agree with zero mismatches**, and the first sample's 709 bytes had already
+  agreed. The engine had played 828 bytes of the first sample where the ROM
+  played 709, a ratio of 1.17 that matches the service cost it does not charge.
+- **The other two hypotheses are ruled out.** It is not sample data: both
+  samples decode identically once aligned. It is not the engine's DAC
+  interpolation leaking into the observed stream: `Ym2612Chip`'s interpolated
+  write deliberately does not call the write observer, because it has no ROM
+  counterpart, so no synthetic byte can reach the compared stream.
+- **What landed.** The comparator now reports, beside an existing byte
+  difference, where the reference's remaining bytes resume in the engine's run
+  and how many agree from there. It decides nothing and suppresses nothing; it
+  distinguishes a merged-play join, which resyncs, from a decode or selection
+  error, which does not. The excusal and all three rejected boundary rules are
+  written up in docs/status/known-discrepancies.md under "S2 Music DAC Byte
+  Stream Partition (Oracle Comparison)".
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; the three request windows
+  `MATCH` at 25, 52 and 27 production transfers; audio packages plus the four
+  extra classes with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10
+  skips.
+
 ## 2026-09-04 - S2 DAC run 3 is a supersede with no gap, and no symmetric run boundary exists
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
