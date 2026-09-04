@@ -2496,6 +2496,9 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         if (music != null) {
             music.serviceS3kSpeedupTail();
         }
+        if (music != null) {
+            music.serviceFadeStepAheadOfRequest();
+        }
         stepSonglessFadeIfNoSong();
         runPendingServiceRequest();
         music = firstMusicSequencerLocked();

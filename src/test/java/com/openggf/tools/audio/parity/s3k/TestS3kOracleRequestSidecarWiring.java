@@ -238,8 +238,19 @@ class TestS3kOracleRequestSidecarWiring {
      * note that should have restarted it and parked on its terminator, whose
      * 83h form re-silences the channel on every later pass. The reference
      * restarts that envelope at 559 while the engine was eight entries in.
-     * The divergence was invisible for as long as it was because {@code
-     * volEnv} is a diagnostic field the comparator does not gate.
+     * That divergence was invisible for as long as it was because {@code
+     * volEnv} was then a diagnostic field. It is gated now, and it is what
+     * catches the frontier below.
+     *
+     * <p>1490 to 1569 came from the fade step. {@code zUpdateMusic} runs
+     * {@code TempoWait} and both fade handlers before it reaches
+     * {@code zFillSoundQueue} (:659-701), so the song playing when a request
+     * arrives takes its fade step first and a music change consumed by that
+     * service replaces it afterwards. The engine ran the step inside the song's
+     * own walk, which happens after the request, so a service that changed the
+     * music lost the step entirely: at 1490 the reference spends twenty total
+     * level writes fading five channels and then loads the next song, where the
+     * engine went straight to the load.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -251,12 +262,11 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
                 report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 1352, report.tick());
-        assertEquals(0, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=64, value=33]",
-                report.reference());
+        assertEquals(TITLE_MUSIC_TICK + 1431, report.tick());
+        assertEquals("MUS_PSG3", report.role());
+        assertEquals("volEnv", report.field());
     }
 
     /**

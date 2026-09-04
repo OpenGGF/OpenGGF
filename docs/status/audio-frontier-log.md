@@ -27,6 +27,43 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - A music change was eating that service's fade step; 1490 -> 1569
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, merged with develop at `5dd1b8122`
+  (a fast-forward that did not move the frontier).
+- **What 1490 was.** The reference opens the service with twenty total level
+  writes, four operators across five FM channels, and only then silences FM6
+  and loads the next song. The engine went straight to the silence. Those
+  twenty writes are one fade step: the level music was fading out with 26
+  steps left and its delay counting 4, 3, 2, 1 across services 1486 to 1489, so
+  1490 is the service the step falls on.
+- **The cause.** `zUpdateMusic` runs `TempoWait`, `zDoMusicFadeOut` and
+  `zDoMusicFadeIn` before it reaches `zFillSoundQueue` (Sound/Z80 Sound
+  Driver.asm:659-701). The song playing when a request arrives therefore takes
+  its fade step first, and a music change consumed by that service replaces it
+  afterwards. The engine ran the step inside the song's own walk, which the
+  earlier ordering work had already placed after the request, so a service that
+  changed the music lost the step: at 1490 the engine's music slot is already
+  the new song and the old one never stepped.
+- **The fix.** The driver runs the playing song's fade step before it consumes
+  the queue, and the song's own walk skips the step it has already had. Only a
+  step that actually ran claims the service, which matters because a fade armed
+  by the request that follows must still be left alone by its own arming
+  service.
+- **One wrong turn, recorded.** Latching the service unconditionally, including
+  when no fade was active, swallowed a later real step and put the frontier back
+  at 422 with the delay counter one behind. The oracle caught it immediately.
+- **Frontier 1490 to 1569,** and the field that catches it is one promoted two
+  commits ago: `TRACK_STATE_MISMATCH` on `MUS_PSG3`'s `volEnv`, reference 79
+  against engine 80. Gating that field is already paying for itself. The DAC
+  byte stream is unchanged at run 338, byte 0.
+- **Gates at this commit, all green, on a clean build and a quiet machine.**
+  Audio, per-game audio and parity packages with all three ROM paths: 2,759
+  tests, 0 failures, 16 skips. Ordinary suite 16,476 tests, 0 failures, 22
+  skips. `-Pguards` 608 tests, 0 failures.
+
+
 ## 2026-09-04 - The 1-up resume never ran its restore body on the live path
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,

@@ -1782,7 +1782,39 @@ public class SmpsSequencer implements CoordFlagContext {
         tick();
     }
 
+    /** Set when the driver ran this service's fade step ahead of the queue. */
+    private boolean fadeStepConsumedThisService;
+
+    /**
+     * Runs this service's fade step before the sound queue is consumed.
+     *
+     * <p>{@code zUpdateMusic} calls {@code TempoWait}, {@code zDoMusicFadeOut}
+     * and {@code zDoMusicFadeIn} and only then reaches {@code zFillSoundQueue}
+     * (skdisasm Sound/Z80 Sound Driver.asm:659-701), so the song playing when a
+     * request arrives gets its fade step first, and a music change consumed by
+     * that service replaces the song afterwards. Running the step inside the
+     * song's own walk instead loses it whenever the request swaps the song out.
+     */
+    public void serviceFadeStepAheadOfRequest() {
+        if (!config.isDriverOwnedFadeDelay()) {
+            return;
+        }
+        // Only a step that actually ran claims this service's step. A fade
+        // armed by the request that follows must still be left alone by its
+        // own arming service, which processFade owns through
+        // fadeArmedOutsideService.
+        if (!fadeState.active) {
+            return;
+        }
+        processObservedFadeStep();
+        fadeStepConsumedThisService = true;
+    }
+
     private void processObservedFadeStep() {
+        if (fadeStepConsumedThisService) {
+            fadeStepConsumedThisService = false;
+            return;
+        }
         if (!fadeState.active) {
             return;
         }
