@@ -116654,3 +116654,88 @@ re-creation, and their numbers are recorded here.
 
 `-Ptrace-replay` 854 tests / 7 failures / 6 skips, ordinary 16,410 / 0 failures,
 `-Pguards` 607 / 0 failures. The two landed commits are unaffected.
+
+## 2026-09-04 - HANDOVER: the leader creation row has TWO owners in the engine and ONE in the ROM
+
+Worktree `.worktrees/s2-art-gaps`, branch `bugfix/ai-s2-runchain-art-gaps`, over
+merged `develop`. `src/` carries only the two landed commits. This closes the
+lane's investigation of the uniform 1; everything needed to finish it is below.
+
+### The two engine sites, located
+
+`spawnSidekicks` -- which places the sidekick and prefills the leader's position
+ring -- is reached from two different owners, one per transition kind:
+
+| transition kind | owner | when it runs | creation vs the load-completion row |
+|---|---|---|---|
+| level to level | `AbstractLevelInitProfile`:263, inside the level-init step list | as part of the engine's one-frame level load | **130 rows early** (61050 against 61180) |
+| special-stage return | `GameLoop`:3196 -> `SpecialStageReturnSpawn.respawnSidekicks` | on the return, after the load | **1 row late** (10309 against 10308) |
+
+### The ROM has one site, and the engine's own comment names the mismatch
+
+S2 re-enters `Level:` in full on a special-stage return -- the routine begins at
+`Pal_FadeToBlack` / `LoadTitleCard` / `Level_frame_counter` reset
+(`docs/s2disasm/s2.asm:4765-4774`) and runs through to `InitPlayers`
+(`:4946`) exactly as on a fresh entry; the `Last_star_pole_hit` branch skips only
+the art and saved-position block, never the player init or the ring refill. So
+**`InitPlayers` is the single creation site for both transition kinds**, it sits
+inside the level routine, and it is reached before the transition's first
+`WaitForVint` at the title-card loop (`:5060-5062`).
+
+The engine's special-stage return path does not use it. `SpecialStageReturnSpawn`
+is written against S3K -- its own comment cites
+`docs/skdisasm/sonic3k.asm:8367` and `:8388`,
+`SpawnLevelMainSprites_SpawnPlayers` -- and S2 is routed through it too, where
+the ROM would have run `Level:` again.
+
+### The two ledgers to hit
+
+ROM, per level entry:
+
+| rows | player executions | ring writes |
+|---|---|---|
+| the whole load, before `InitPlayers` | 0 | 0 |
+| the `InitPlayers` row | 1 | 1 (prefill wraps the index to 0, then the fall-through `Sonic_RecordPos` writes slot 0) |
+| each title-card row after | 1 | 1 |
+
+Engine today, at a level-to-level gap: 2 / 2 across the load, 0 / 0 on the
+`InitPlayers` row, 1 / 1 after. Net one ring write ahead, which is the uniform 1.
+At a special-stage return: 0 / 0 across the load, and creation a row after it.
+
+### The five arms already tried, with numbers, so they are not repeated
+
+All measured on the full chain with the landed locator. Every one truncates at
+`Segment 7` and breaks segment 2 at its own frame 0 on `sidekick_x`:
+
+| arm | segment 2 errors |
+|---|---|
+| suppress the destination players for the load span | 16,404 (3px short) |
+| one extra player pass on the load-completion row | 143 |
+| re-zero the leader's ring cursor there | 117,521 |
+| rewrite the ring's contents there | 117,521 |
+| re-run `spawnSidekicks` + a pass there, load span held | 163 |
+
+Three of those are opposite in direction. The signature is stable because no
+single action on the load-completion row can suit two creation rows that sit on
+opposite sides of it.
+
+### The change, and why it is more than one cycle
+
+Route the S2 special-stage return through the same level-init path the
+level-to-level entry uses, so `InitPlayers` has one owner as it does in the ROM,
+and make that path's creation land on the load-completion row rather than on
+whichever row the engine's zero-cost load happened to run on. Only then does the
+ROM ledger above follow with no compensating action, and only then does a hold
+over the load span mean the same thing at both gap kinds.
+
+That touches `SpecialStageReturnSpawn`, the S2 level-init profile and the
+engine's level-load scheduling, and it is cross-game sensitive: the S3K citation
+in `SpecialStageReturnSpawn` is correct for S3K, so the unification must not drag
+S3K onto S2's shape. It needs its own lane with the S3K keep-green set in its
+gate.
+
+### Baseline at handover
+
+`-Ptrace-replay` 854 tests / 7 failures / 6 skips; ordinary 16,410 / 0 failures /
+22 skips; `-Pguards` 607 / 0 failures. The chain's ten gap axes are all delta 1,
+with four at 2 -- the 36-40 family closed by this lane's landed commits.
