@@ -27,6 +27,44 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 walks the fixed SFX RAM slots, not the SFX header order; tick 228 -> tick 557
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, over `develop` at `b637f4171`.
+- **Fixture and command:** as the earlier entries for this fixture.
+- **Before, state with writes:** DIVERGENCE at tick 228 (movie row 10430),
+  field `writes[2]`, reference `ym1[0xb1]=0x4` against the engine's
+  `psg=0x87`; 496 of 2,198 ticks divergent.
+- **After, state with writes:** DIVERGENCE at tick 557 (movie row 10759), field
+  `writes[38]`, reference `psg=0xe7` against the engine's `psg=0xff`; 455 of
+  2,198 ticks divergent.
+- **DAC stream and state only:** both unchanged.
+- **How the divergence was attributed, rather than guessed.** Probes printed
+  the music sequencer's track walk, an end marker per track, a walk-end marker,
+  and every chip write inline. At row 10430 the music walk ran
+  `DAC, FM1-FM5, PSG1-PSG3` in the ROM's own order and produced only
+  `psg=B9` and `psg=F4`. The two writes the comparator flagged, a PSG1 note
+  pair and an FM5 voice load plus note, were both emitted *after* `walk-end`,
+  so neither came from the music walk at all. They are the SFX pass handing
+  channels back.
+- **The routine.** `zVInt` updates the SFX tracks by stepping `ix` through the
+  fixed SFX RAM region: `SFX_FM_TRACK_COUNT` tracks in `.fmloop`, then
+  `SFX_PSG_TRACK_COUNT` more in `.psgloop` (s2.sounddriver.asm:465-487). It
+  never consults the order the SFX header listed its tracks, so every FM SFX
+  slot is serviced before any PSG SFX slot. The engine had S2 on the builder
+  default `HEADER_ORDER` while S1, whose driver does the same thing, was
+  already on `CHANNEL_RAM_ORDER`.
+- **Where it landed.** `Sonic2SmpsSequencerConfig` now sets
+  `SfxTrackWalkMode.CHANNEL_RAM_ORDER`. No constant was introduced and nothing
+  is keyed on a zone, route or fixture.
+- **Gates.** S2 v1 driver oracle `MATCH (698 ticks)`; request windows `MATCH` at
+  25, 52 and 27 production transfers; audio packages plus the four extra classes
+  with three ROM paths: 2,058 tests, 0 failures, 0 errors, 10 skips.
+- **Next.** Tick 557 is a PSG value difference at `writes[38]`, reference
+  `0xe7` against the engine's `0xff`. Both are channel 3 volume writes, so the
+  two sides disagree about the noise channel's attenuation rather than about
+  ordering.
+
 ## 2026-09-04 - S2 tick 228 is a music walk-order difference, not a value difference
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,

@@ -93,6 +93,13 @@ public final class Sonic2SmpsSequencerConfig {
                 // for the PSG3 noise track.
                 .psgSfxReleaseMode(
                         SmpsSequencerConfig.PsgSfxReleaseMode.ROM_REST_RESTORE)
+                // zVInt updates the SFX tracks by walking the fixed SFX RAM
+                // region, not the order the SFX header happened to list them:
+                // it steps ix through SFX_FM_TRACK_COUNT tracks and then
+                // SFX_PSG_TRACK_COUNT more (s2.sounddriver.asm:465-487), so
+                // every FM SFX slot is serviced before any PSG SFX slot.
+                .sfxTrackWalkMode(
+                        SmpsSequencerConfig.SfxTrackWalkMode.CHANNEL_RAM_ORDER)
                 .build();
     }
 
