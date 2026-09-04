@@ -2832,33 +2832,38 @@ public class SmpsSequencer implements CoordFlagContext {
                 ? bit7CarrierMask(t.voiceData, 21)
                 : ALGO_OUT_MASK_SLOT[t.voiceData[0] & 0x07];
         int[] registerOffsets = operatorRegisterOffsets();
-        if (config.getFmVoiceWriteProfile()
-                == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80) {
-            // zSetChanVol calls zSetFMTLs, whose four-operator loop always
-            // writes every TL. zVolTLMaskTbl controls only whether Volume is
-            // added; non-carriers are rewritten unchanged (sd:3385-3424,
-            // 3438-3457). FixDriverBugs=0 keeps the 8-bit carrier addition.
-            for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
-                int rawTl = t.voiceData[21 + storedOperator] & 0xff;
-                int tl = (mask & (1 << storedOperator)) == 0
-                        ? rawTl
-                        : computeS2TotalLevel(t, rawTl, storedOperator);
-                synth.writeFm(this, port,
-                        0x40 + registerOffsets[storedOperator] + ch, tl);
-            }
-            return;
-        }
+        // Both Z80 drivers write all four operators every time and use the
+        // carrier mask only to decide whether the track volume is added.
+        // S2's zSetFMTLs rewrites non-carriers unchanged (sd:3385-3424,
+        // 3438-3457) and FixDriverBugs=0 keeps its 8-bit carrier addition.
+        // S3K's zSendTL loops over the whole TL table, branching past the
+        // volume add on a positive byte but writing every entry either way,
+        // and its fix_sndbugs=0 path strips the sign bit from what it sends
+        // (skdisasm Sound/Z80 Sound Driver.asm:3149-3178).
+        SmpsSequencerConfig.FmVoiceWriteProfile profile =
+                config.getFmVoiceWriteProfile();
+        boolean writesEveryOperator =
+                profile == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
+                        || profile == SmpsSequencerConfig.FmVoiceWriteProfile.S3K_Z80;
         for (int storedOperator = 0; storedOperator < 4; storedOperator++) {
-            if ((mask & (1 << storedOperator)) == 0) {
-                continue;
-            }
             int idx = 21 + storedOperator;
             if (idx >= t.voiceData.length) {
                 continue;
             }
-            int tl = config.getFmVoiceWriteProfile() == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
-                    ? computeS2TotalLevel(t, t.voiceData[idx] & 0xFF, storedOperator)
-                    : computeFmTotalLevel(t, t.voiceData[idx] & 0x7F, storedOperator);
+            boolean carrier = (mask & (1 << storedOperator)) != 0;
+            if (!carrier && !writesEveryOperator) {
+                continue;
+            }
+            int rawTl = t.voiceData[idx] & 0xff;
+            int tl;
+            if (!carrier) {
+                tl = profile == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
+                        ? rawTl : rawTl & 0x7f;
+            } else {
+                tl = profile == SmpsSequencerConfig.FmVoiceWriteProfile.S2_Z80
+                        ? computeS2TotalLevel(t, rawTl, storedOperator)
+                        : computeFmTotalLevel(t, rawTl & 0x7f, storedOperator);
+            }
             synth.writeFm(this, port, 0x40 + registerOffsets[storedOperator] + ch, tl);
         }
     }

@@ -197,13 +197,13 @@ class TestS3kOracleRequestSidecarWiring {
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
      * The comparison now covers the modulation accumulator and its wait,
-     * speed, delta and step counters, which the oracle previously did not
-     * compare at all, and every one of them agrees through service 341 along
-     * with the writes. Two corrections got it there: the aliased clears
-     * {@code zFinishTrackUpdate} performs through {@code ModEnvIndex} and
-     * {@code ModEnvSens}, and the rest test at the top of
-     * {@code zUpdateFMorPSGTrack}'s {@code .note_going}, which freezes a
-     * resting FM track completely.
+     * speed, delta and step counters, and every one of them agrees through
+     * service 420 along with the writes. The most recent correction is that
+     * {@code zSendTL} writes all four operators' total level and uses the
+     * carrier mask only to decide where the track volume is added. What
+     * remains is the DAC track's {@code playing} bit at service 421, which is
+     * the first service of an {@code E1h} music fade the capture host reports
+     * as unmodelled.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -215,11 +215,10 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 204, report.tick());
-        assertEquals(4, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=74, value=16]",
-                report.reference());
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 283, report.tick());
+        assertEquals("MUS_DAC", report.role());
+        assertEquals("playing", report.field());
     }
 
     /**

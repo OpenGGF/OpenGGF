@@ -27,6 +27,54 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K zSendTL writes all four operators; tick 342 -> tick 421
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `9c568300f`.
+- **Command:** unchanged, both result lines.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 342, event 4, reference
+  `ym2612 port 0 register 4Ah = 16` against engine `port 0 register 28h = 2`.
+  DAC stream `BYTE_DIFFERENT` run 29 byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 421, role `MUS_DAC`, field
+  `playing`, reference `false` against engine `true`. DAC stream unchanged.
+  Every compared field and every write now agree through service 420.
+- **The routine.** `zSendTL` walks the whole FM TL table and writes an entry
+  for every operator. The `or a / jp p, .skip_track_vol` test only branches
+  past the track-volume add for a positive byte; the write itself is
+  unconditional, and the `fix_sndbugs = 0` path strips the sign bit from what
+  it sends (Sound/Z80 Sound Driver.asm:3149-3178). The engine wrote only the
+  carriers, so three of the four total-level bytes never reached the chip.
+  Reference service 342 shows the full set in S3K's middle-register traversal
+  order: `42h = 0Fh`, `4Ah = 10h`, `46h = 32h`, `4Eh = 0Ch`, where the engine
+  emitted `42h` alone.
+- **This is the rule S2 already had.** `zSetFMTLs` writes every TL register
+  and uses its mask only to decide where the channel volume is added
+  (s2.sounddriver.asm:3385-3424, :3438-3457), which the engine already
+  modelled and `TestSmpsFmVoiceWriteProfiles` already documented for S2. The
+  two Z80 drivers now share one loop, differing only in the per-operator
+  arithmetic: S2 rewrites non-carriers unchanged, S3K strips their sign bit.
+- **A test pinned the old behaviour and was corrected, not deleted.**
+  `s3kVolumeRefreshUsesBitSevenAndItsMiddleRegisterTraversal` asserted the two
+  carriers alone, with no ROM citation for the omission. It now asserts all
+  four with the `zSendTL` citation, and its values check out byte for byte:
+  the non-carriers `15h` and `17h` go out unchanged, the carriers `96h` and
+  `98h` go out as `16h` and `18h` plus the track volume.
+- **The new frontier is a known capture-host limitation, not a driver defect.**
+  Service 421 is the first service of an `E1h` music fade, which the host
+  reports as unmodelled on every run, including before this change.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; and
+  the `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 driver oracle `MATCH (698 ticks)` and the three request windows
+  `MATCH` at 25, 52 and 27 transfers. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,113
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - A resting S3K FM track freezes completely; tick 150 -> tick 342
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
