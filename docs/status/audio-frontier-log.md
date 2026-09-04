@@ -27,6 +27,65 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Live-regression risk audit of this branch, and one defect fixed
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, unmerged. Clean build before every
+  measurement.
+- **Why this entry exists.** The owner reproduced in-game S3K breakage on
+  develop and a bisect lane asked which of this branch's changes could stop a
+  music track or cut an SFX under live `AudioManager` conditions that the
+  stimulus-replay oracle never exercises. The oracle drives 5,263 services of
+  one intro window with a fixed request list; it sees no malformed track data,
+  no sequencer reaping, no SFX replacement and no live fade interaction.
+- **Confirmed defect, introduced by this branch and fixed here.**
+  `trackEndFlagOwnsTheStop` removed the read loop's blanket
+  `if (!t.active) stopNote(t)` for S3K, on the correct ground that the two
+  track-end flags stop the note themselves. But five *other* S3K sites
+  deactivate a track without stopping it, and all five lost their key-off:
+  `0F9h` return with an empty return stack; an unreadable jump pointer; an
+  unreadable loop-exit pointer; a gosub with an unreadable pointer or a full
+  return stack; and a loop with no jump target. With the stop gone, any of
+  them leaves the channel sounding indefinitely, which presents as a note held
+  for ever. None occurs in the oracle window. All five now stop the note
+  through one helper that says why: the shipped driver never reaches these
+  states, so there is no ROM behaviour to model, only a channel that must not
+  keep sounding.
+- **Remaining risks on this branch, ranked, with the condition that would
+  expose each.** None is a known defect; each is a place where the oracle
+  cannot see and the live path differs.
+  1. *`FmSfxReleaseMode.ROM_VOICE_RESTORE`* removed the force-silence from the
+     driver's release sweep. The key-off now comes from the track-end flag, so
+     a release that happens **without** that flag — a sequencer reaped, an SFX
+     replaced by a new request, a stop-all — leaves no silence at all on that
+     channel. Live SFX interruption is exactly that path.
+  2. *`releaseChannelToMusic` from the `0F2h` flag* drops the channel lock as
+     soon as one SFX track ends. Faithful to `cfStopTrack`, which is per
+     track, but the engine's lock is per channel and per sequencer: a
+     multi-track SFX that ends one track early now returns that channel to
+     music while its other tracks still play. Could cut an SFX short.
+  3. *`sfxWalkPrecedesRequest`* gives an admitted SFX no walk in its own
+     service. Anything that services once and then tests completion sees an
+     unstarted SFX; a very short one could be judged finished before it plays.
+  4. *`trackEndFlagOwnsTheStop`* itself, beyond the five sites fixed above:
+     any future path that clears `active` without stopping inherits the same
+     hole.
+  5. *`restTrack`'s fall-through into the PSG silence* fires on every pass
+     while a track is parked on an envelope rest command. It is guarded on the
+     override bit, so it should not touch a channel an SFX owns, but it does
+     make the music silence its own PSG channel far more often than before.
+  The fade work is the one to check against "abrupt un-faded music changes":
+  this branch made the fade real rather than a no-op, so a request that
+  previously produced no fade now produces one, and the reverse is not
+  possible.
+- **Frontier unchanged** at `EVENT_VALUE_DIFFERENT`, tick 751, event 0, and
+  the DAC stream at run 338 byte 0, since none of the five sites is reached in
+  the oracle window.
+- **Gates at this commit, all green.** 2,159 tests, 0 failures, 10 skips. S1
+  sound test `MATCH (14690 ticks)` and `MATCH (1967 ticks)`; all S2 lines
+  unchanged including the CPZ state-and-writes count of 36 of 719.
+
+
 ## 2026-09-04 - The track-end flag hands the channel back itself; tick 590 -> tick 751
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
