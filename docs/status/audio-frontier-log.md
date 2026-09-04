@@ -27,6 +27,57 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 driver-state v2: two measured causes behind the remaining frontier
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `085b82f81`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  entry records what the two standing divergences are, so the next lane does
+  not re-derive them.
+- **Lines it was measured against.** State with writes: DIVERGENCE at tick 0
+  (movie row 10202), field `writes.count`, reference 145 against the engine's
+  253. State only: DIVERGENCE at tick 1,789 (movie row 11991), field
+  `global.currentTempo`, reference `0x9e` against the engine's `0xbe`; 409 of
+  2,198 ticks divergent.
+- **The 108 surplus writes at tick 0 are DAC bytes in the wrong service.** The
+  engine's tail past the reference's last write is 108 consecutive `2Ah` bytes
+  beginning `80 84 80 78 B8`. Those are byte-for-byte the head of the
+  *reference's next* service, tick 1. The ROM's load service emits no DAC data
+  at all: `zVInt` runs with interrupts disabled and returns to
+  `zPlayDigitalAudio`, so a sample the service queues is played by the loop the
+  service returns to. The engine pumps it inside the same service. This is the
+  same service-boundary question the S3K lane's `enterDacIdleLoop` and
+  `enableDacFromIdleLoop` policy hooks answer for that game, and it did not
+  surface under the v1 oracle because v1's partition was update-music-owned and
+  excluded the DAC transport entirely.
+- **The tempo divergence is one service of phase, not a stuck flag.** Engine
+  `currentTempo` per tick against the reference's:
+
+  | movie row | reference | engine |
+  |---|---|---|
+  | 11990 | BEh | BEh |
+  | 11991 | 9Eh | BEh |
+  | 11992 | 9Eh | 9Eh |
+
+  The engine does apply the slow-down; it applies it one service late. Probes
+  on `SmpsDriverSession`'s `SetSpeedShoes` case and on
+  `SpeedShoesTimer.perform` confirm the command reaches the session with a live
+  music sequencer, so nothing is lost on the way. The ROM consumes the queue at
+  the *head* of the service: `zVInt` falls into `zUpdateEverything`, which runs
+  `zCycleQueue` and `zPlaySoundByIndex` before either `zUpdateMusic` call
+  (s2.sounddriver.asm:411-450), so `zSlowDownMusic`'s store to `CurrentTempo`
+  (:2697-2707) is already visible in that same service's snapshot. The engine
+  applies the command after the row's driver update instead.
+- **What the 409 divergent ticks are not.** They are not 409 ticks holding the
+  wrong tempo: the tempo re-converges at the very next tick. They are the count
+  of ticks divergent on any compared field after the first one, and the
+  accumulating `tempoTimeout` is the obvious carrier of a one-service phase
+  error, but that was not confirmed here and should be measured rather than
+  assumed.
+- **Both are per-service ordering, not values.** Neither needs a constant, and
+  neither is a zone or route condition. Both are questions about where a fixed
+  piece of ROM work sits inside the V-int the oracle partitions on.
+
 ## 2026-09-04 - S2 driver-state v2: the BGM load closes with a note-off sweep over every music slot
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
@@ -67,8 +118,9 @@ defined by `com.openggf.tools.audio.parity`.
 - **Next.** The 108 surplus engine writes at tick 0. Beyond that the state-only
   frontier at tick 1,789 is the speed shoes expiring: reference RAM shows
   `SpeedUpFlag` going `80h` to `00h` and `CurrentTempo` `BEh` to `9Eh` at that
-  service, which is `zSlowDownMusic` (:2697-2707) storing `TempoMod`. The
-  engine holds `BEh` for the remaining 409 ticks.
+  service, which is `zSlowDownMusic` (:2697-2707) storing `TempoMod`. See the
+  entry above for what the engine actually does, which is not what this line
+  first assumed.
 
 ## 2026-09-04 - S2 driver-state v2: the BGM load disposes of FM6 before enabling the DAC
 
