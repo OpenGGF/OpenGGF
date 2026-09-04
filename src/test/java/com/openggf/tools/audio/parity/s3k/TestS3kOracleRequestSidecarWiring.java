@@ -196,13 +196,13 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * The whole of the first update after the load now agrees, and so do the
-     * four steady-state updates that follow it, because the S3K note-going
-     * path re-sends the frequency every pass and {@code zUpdatePSGTrack}
-     * latches it before reading the volume envelope. What remains is a DAC
-     * run-length divergence: the engine's music sample runs out at tick 143
-     * and emits the idle loop's {@code 2Bh = 0}, where the ROM's is still
-     * playing and is superseded by the next play at tick 145.
+     * Forty-one consecutive services now agree. The S3K note-going path
+     * re-sends the frequency every pass, {@code zUpdatePSGTrack} latches it
+     * before reading the volume envelope, the sample-end {@code 2Bh = 0}
+     * moved into the DAC byte stream, no DAC track rests, the PSG volume
+     * envelope's {@code 81h} and {@code 83h} rest the track without silencing
+     * it, and modulation keeps stepping at rest as S3K's {@code zDoModulation}
+     * does. What remains is FM2's {@code doNotAttack} bit.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -214,11 +214,10 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 5, report.tick());
-        assertEquals(0, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=165, value=19]",
-                report.reference());
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
+        assertEquals(TITLE_MUSIC_TICK + 42, report.tick());
+        assertEquals("MUS_FM2", report.role());
+        assertEquals("doNotAttack", report.field());
     }
 
     /**
