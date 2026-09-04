@@ -115241,3 +115241,40 @@ The other three death arms remain coordinates only.
   on the same machine, and the five failures unique to this branch before the
   test port are gone. The three that remain in the `S2` filter fail identically
   at the pinned head. Both policy scanners PASS.
+
+## 2026-09-04 - S2 request windows on the merged tree, measured after a clean build
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`
+  merged with `origin/develop` at `2607114d4`, gitlink at TraceChaser `7ebed3b`.
+- Command: `mvn -Dmse=off -Dtest=com.openggf.tools.audio.parity.**` with the
+  three ROM paths and the complete-run BK2 as absolute properties.
+- Result: **all three replayable windows MATCH**, at 25, 52 and 27 production
+  transfers, and the driver oracle still reports **MATCH (698 ticks)**. The
+  row-12132 divergence is closed by the monitor-mailbox and explosion-ownership
+  fixes this merge brought in. Parity suite 170 tests, 0 failures, 2 skips;
+  `-Pguards` 607 tests, 0 failures, 0 errors.
+- **Measurement hazard worth recording.** The first run after the merge still
+  reported the old divergence at transfer 21, movie row 12132, because Maven's
+  incremental compile had not rebuilt the merged `src/main` classes. The engine
+  under test was the pre-merge engine while the sources on disk were the merged
+  ones. `mvn clean` before the run changed the verdict from DIVERGENCE to MATCH
+  with no source change. After merging another branch's fixes, measure from a
+  clean build or the number is about the wrong engine.
+
+## 2026-09-04 - Every published S2 request window reproduced from the command
+
+- Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
+  TraceChaser `bugfix/ai-s2-request-window-producer` at `7ebed3b`.
+- The two windows that had never been recaptured were recaptured with
+  `run-s2-request-window.sh`, on a core built from the observer patch at that
+  commit, and both reproduce their published digests exactly.
+- `w13650-14400`: raw-v3
+  `5096d2bb02f76045be1b06df5dc72d83d756e360acfc1a6d2b98ba40546ae027`, payload
+  `457e9870c381fef32dd37abfbcf2fe04fa041cfdf3548e62e3e1e789a438c871`.
+- `cpz-w2700-3450`: raw-v3
+  `0db7b9611fc6f17d46d1b517137ac8f5b78ab8906d1bbd053da5cf575210f555`, payload
+  `f1e068cba2fbd342eed5d1d7d784ac8bdecd72a0d6ed58db68aad0893c0d2cbf`.
+- With `w10900-11650` already reproduced, every published window now has a
+  recapture through the shipped command behind it, and no fixture depends on the
+  retired ABI-4 candidate core to be believed. Each EmuHawk run was bounded by a
+  timeout and left no process behind.

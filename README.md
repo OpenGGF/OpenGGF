@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **Every Sonic 2 request window reproduces from the command:** the
+  special-stage transition and Chemical Plant windows were recaptured through
+  the TraceChaser command and match their published digests, so no fixture
+  depends on the retired candidate core.
 - **S2 request capture is reproducible end to end:** the observer core now
   carries the S2 request marker (ABI 5, plain build), the TraceChaser command
   reproduces a published window's raw and payload digests, and the gitlink
