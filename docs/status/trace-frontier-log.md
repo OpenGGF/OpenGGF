@@ -115673,3 +115673,64 @@ The other three death arms remain coordinates only.
   paths: 854 tests, 8 failures, 6 skips, the same eight classes as the baseline
   with every message byte-identical except the two that improved. Ordinary suite
   16,404 tests, 0 failures, 17 skips. `-Pguards` 607 tests, 0 failures.
+
+## 2026-09-04 - S2 segment 15 is GREEN: Obj6B's solid pass reads a latched render bit, not a live test
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-s2-runchain-seg15`, over `develop` at `7ca24101c`.
+- **Result: `TestS2Cpz2Seg10CompleteEmeraldsSegmentTraceReplay` passes.** The
+  S2 complete-emeralds chain drops from 12 axes to 11 and no longer reports a
+  `[segment-physics]` axis at all. The full sweep goes from 8 failing classes to
+  7, with the other six unchanged message for message.
+- **Probed before proposing, as the previous entry said to.** A probe on the
+  platform's solid pass across the wrap shows the engine's own sequence at
+  level frame 2251: slot 35 and 36 tested at their pre-wrap positions with the
+  player grounded, then both wrap, and at that instant the player is correctly
+  airborne -- then slot 36 is tested AGAIN in the same frame at its new position
+  and takes him, `standing=true`. The engine runs a solid pass both before and
+  after an object's own update, so the arriving platform catches the player on
+  the frame it arrives.
+- **Why the ROM does not.** `Obj6B_Main` gates its entire `SolidObject` call on
+  the object's own render on-screen bit,
+  `_btst #render_flags.on_screen,render_flags(a0) / _beq.s .offScreen`
+  (`docs/s2disasm/s2.asm:54443-54456`). That bit is not a live position test: it
+  is set when the object displays, at the tail of its own previous pass, so it
+  describes where the object was at the END of the previous frame. The arriving
+  platform was at `y 0x05EF` with the camera band `0x04A4..0x0584`, 95 pixels
+  below the screen, so its bit was clear and the ROM skipped its solid pass on
+  the arrival frame. The player is airborne for exactly that frame and lands the
+  next, which is the recorded `stand_on_obj 0x23 -> 0x24` a frame later.
+- **Two wrong expressions measured before the right one, recorded so they are
+  not retried.** Latching the coarse camera-bounds test
+  (`isOnScreen()`) gives **12,950 errors**, first error frame 2227 on
+  `camera_y`: that predicate is not the render-flag box. Latching the correct
+  `isWithinBuildSpritesBounds(x, y, width_pixels, 32)` but refreshing it inside
+  the object's own update leaves the lane at **1 error**, unchanged, because the
+  same update that moves the platform also refreshes the latch, so the
+  post-update solid pass reads the new position and the gate never fires. The
+  working model computes the value into a pending field at the end of the update
+  and promotes it at the start of the NEXT update, so the whole frame reads the
+  value the previous frame's display latched. `Obj6B_Init` sets only the
+  `level_fg` render flag and never the custom-height bit, so the vertical band is
+  BuildSprites' fixed 32-pixel `.assumeHeight` path.
+- **Blast radius, measured.** This changes every `Obj6B`, which is MTZ's main
+  platform as well as CPZ's stair blocks. The full sweep is unchanged on every
+  other class, and the ordinary suite and guards are clean, so no MTZ trace
+  moved.
+- **Follow-up the lead asked for: which bosses share the constructor-spawn
+  shape.** `AbstractBossInstance`'s constructor calls `initializeBossState()`,
+  so any boss spawning children there does so before the object manager has
+  given it a slot, and the children take the lower free slots. Seven do; CPZ is
+  fixed by this branch, leaving six to measure against their own traces:
+  `Sonic2EHZBossInstance`, `Sonic2MTZBossInstance`, `Sonic2WFZBossInstance`,
+  `Sonic2MechaSonicInstance`, `Sonic2DeathEggRobotInstance` and
+  `LbzEndBossInstance`. Not chased here. Each needs its own before/after against
+  its trace, because the fix reorders that boss family's slots.
+- **Gates from a clean build.** Full `-Ptrace-replay` with three absolute ROM
+  paths: 854 tests, **7 failures**, 6 skips. The seven are the S1 complete-
+  emerald chain (14 axes), the S2 complete-emerald chain (11 axes, down from
+  12), the S2 EHZ halfpipe round trip (2 axes), `TestS3kAizTraceReplay` (37
+  errors, frame 20713), `TestS3kReplayReferenceClosureIntegration` (113 errors,
+  frame 25589), the S3K Sonic+Tails chain, and
+  `TestTraceRunReplayWalkerControlFlow` -- all unchanged. Ordinary suite 16,404
+  tests, 0 failures, 17 skips. `-Pguards` 607 tests, 0 failures.

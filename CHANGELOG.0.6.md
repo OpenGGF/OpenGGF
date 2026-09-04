@@ -14,6 +14,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Chemical Plant's looping platforms hand you over the way the original does:**
+  when the loop wraps, the platform under your feet leaves and another arrives in
+  its place. The original cannot make the arriving one solid straight away,
+  because a platform only becomes solid once it has been drawn, and that one was
+  still off the bottom of the screen a moment earlier. So you hang in the air for
+  a single frame and land on it next frame. The engine was making the arriving
+  platform solid the instant it appeared and passing you across with no gap.
+
 - **The Chemical Plant boss's parts now take their turns in the original's
   order:** the boss itself moved last among its own components, so its arm and
   container were working from where it had been a frame earlier. Everything
