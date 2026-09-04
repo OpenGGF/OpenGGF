@@ -115836,3 +115836,73 @@ spread of 26/27/28 is what an object-gated tail should look like.
    reconstruction, not a locator question.
 
 Do not port S1's 26, and do not treat the census as broken.
+
+## 2026-09-04 - RETRACTION: the "12 axes -> 6" was a truncated chain, not a closure
+
+Same worktree and branch, `src/` reverted and clean. **This retracts the
+headline result of the two entries above.** They reported that re-phasing the
+leader's position-record ring on the gap's load-completion row took
+`TestS2CompleteEmeraldRunChain` from 12 axes to 6 and closed every uniform-1
+axis. It did not.
+
+### What actually happened
+
+A probe on the release site fired **exactly once in the whole run**, at row
+32905, the `seg4_ehz1 -> seg5_ehz2` gap. The candidate then breaks segment 7
+(`seg5_ehz2`): 117,521 physics errors from its own frame 0 on `sidekick_x`,
+`0x004D` recorded against `0x004A`, and that segment's exit boundary is never
+observed, so **the chain stops there**. Segments 8 onward never run.
+
+The gaps that "closed" -- `seg7_ehz2 -> seg8_cpz1`, `seg8_cpz1 -> seg9_cpz2`,
+`seg10_cpz2 -> seg11_arz1` -- all sit after segment 7. They vanished from the
+axis list because they were never reached. The axis count fell for the same
+reason. This is the truncated-arm hazard in
+`docs/agent-workflow/briefing-trace-rounds.md`, and it produced a plausible
+total that read as a large gain.
+
+**The candidate has therefore never been shown to help anywhere.** Its only
+demonstrated effect is to move the `seg4_ehz1 -> seg5_ehz2` walk pair from one
+row early (32920) to one row late (32922) against a recorded 32921, and to break
+the segment after it. It is reverted.
+
+### What survives from those entries
+
+The per-row measurement of the cause stands, because it was taken on the
+unmodified engine: the destination's playables write leader ring slots 0 and 1
+at rows 61143 and 61144, the ROM's `InitPlayers` is at 61180, and the engine is
+one ring write ahead from there on. The disassembly citations stand too. Only the
+*result* of the candidate was wrong.
+
+### The rule this round re-learned
+
+**A falling axis count is not evidence until the chain is shown to have reached
+the same segment.** Before comparing axis counts, check the walk-failure axis: if
+it names an earlier segment than the baseline's, the arms are not comparable. The
+baseline's walk failure is the uncompared-interior walk overrunning destination
+101691, which is segment 18; a candidate whose walk failure names segment 7 has
+measured a third of the run.
+
+### Also settled, and it removes a proposed refactor
+
+The two `historyPos = 63` lines in `resetPositionAndStatTableHistoryAtCentre`
+and `prefillPositionHistoryWithCentre` are **not compensations for a defect**.
+The ROM's `Sonic_RecordPos` writes at `Sonic_Pos_Record_Index` then advances it
+(`docs/s2disasm/s2.asm:36342-36347`), so the index names the next free slot;
+the engine's `recordFollowerHistoryForTick` advances then writes, so
+`historyPos` names the last written slot. That is a consistent change of base,
+and the two lines are the correct bridge for it: after N writes the ROM reads
+`4N - $44` and the engine reads `historyPos - 16`, which select the same entry.
+`SidekickCpuController.ROM_FOLLOW_DELAY_FRAMES` already documents exactly this.
+
+Re-basing the engine onto the ROM's convention would touch all six delayed
+readers and roughly forty call sites across `src/main` and `src/test`, including
+every `getInputHistory(0)`, and is provably behaviour-neutral. It cannot move any
+axis. Not worth the blast radius; the base is a naming choice, and the defect is
+the phase.
+
+### Next step, unchanged in substance but now un-blocked by a false result
+
+Suppress the destination playables' ring writes for the rows the ROM spends
+loading, rather than re-phasing the cursor afterwards, and make
+`seg4_ehz1 -> seg5_ehz2` survive it -- that gap is the gate on measuring anything
+past segment 7. Until it does, no axis count from this chain means anything.
