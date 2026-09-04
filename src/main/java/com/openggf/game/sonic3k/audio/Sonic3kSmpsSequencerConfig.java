@@ -129,10 +129,14 @@ public final class Sonic3kSmpsSequencerConfig {
                 // SSG-EG operators while loading (Sound/Z80 Sound
                 // Driver.asm:2092-2103, :2528-2536).
                 .sfxAdmissionKeyOffAndClearsSsgEg(true)
+                // fix_sndbugs=0: zGetSFXChannelPointers.is_psg unconditionally
+                // writes FF after its stale-IX silence call (:2131-2136).
+                // The fixed branch relies on corrected channel silence instead.
+                .psgSfxAdmissionSilencesNoise(true)
                 // cfStopTrack keys the channel off exactly once as it clears
                 // the playing bit (Sound/Z80 Sound Driver.asm:3040-3046).
                 .trackEndFlagOwnsTheStop(true)
-                // zSFXTrackInitLoop's only chip writes are that key-off and
+                // zSFXTrackInitLoop's FM chip writes are that key-off and
                 // SSG-EG clear (Sound/Z80 Sound Driver.asm:2092-2103); the
                 // SFX's own bytecode then loads its voice. The engine's
                 // legacy takeover additionally forced RR = 0FFh and TL = 07Fh

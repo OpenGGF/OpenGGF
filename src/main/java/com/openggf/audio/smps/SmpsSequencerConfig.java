@@ -340,6 +340,7 @@ public final class SmpsSequencerConfig {
     private final PsgVolumeTail psgVolumeTail;
     private final boolean sfxWalkPrecedesRequest;
     private final boolean sfxAdmissionKeyOffAndClearsSsgEg;
+    private final boolean psgSfxAdmissionSilencesNoise;
     private final boolean trackEndFlagOwnsTheStop;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
@@ -404,6 +405,7 @@ public final class SmpsSequencerConfig {
         this.psgVolumeTail = b.psgVolumeTail;
         this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
         this.sfxAdmissionKeyOffAndClearsSsgEg = b.sfxAdmissionKeyOffAndClearsSsgEg;
+        this.psgSfxAdmissionSilencesNoise = b.psgSfxAdmissionSilencesNoise;
         this.trackEndFlagOwnsTheStop = b.trackEndFlagOwnsTheStop;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
@@ -734,10 +736,16 @@ public final class SmpsSequencerConfig {
      * zero. On the shipped {@code fix_sndbugs = 0} branch the clear is also
      * called for PSG tracks, but {@code zWriteFMIorII} returns on bit 7 of
      * {@code VoiceControl} before writing anything (:2549-2551), so no PSG
-     * track puts a byte on the bus; the fixed branch merely skips the call.
+     * track's SSG-EG clear puts a byte on the bus; the fixed branch merely
+     * skips the call.
      */
     public boolean isSfxAdmissionKeyOffAndClearsSsgEg() {
         return sfxAdmissionKeyOffAndClearsSsgEg;
+    }
+
+    /** Whether each declared PSG SFX header unconditionally silences noise at admission. */
+    public boolean isPsgSfxAdmissionSilencesNoise() {
+        return psgSfxAdmissionSilencesNoise;
     }
 
     /**
@@ -976,6 +984,7 @@ public final class SmpsSequencerConfig {
         private PsgVolumeTail psgVolumeTail = PsgVolumeTail.NOTE_AND_ENVELOPE_ONLY;
         private boolean sfxWalkPrecedesRequest = false;
         private boolean sfxAdmissionKeyOffAndClearsSsgEg = false;
+        private boolean psgSfxAdmissionSilencesNoise = false;
         private boolean trackEndFlagOwnsTheStop = false;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
@@ -1032,6 +1041,7 @@ public final class SmpsSequencerConfig {
         public Builder psgVolumeTail(PsgVolumeTail val) { psgVolumeTail = val; return this; }
         public Builder sfxWalkPrecedesRequest(boolean val) { sfxWalkPrecedesRequest = val; return this; }
         public Builder sfxAdmissionKeyOffAndClearsSsgEg(boolean val) { sfxAdmissionKeyOffAndClearsSsgEg = val; return this; }
+        public Builder psgSfxAdmissionSilencesNoise(boolean val) { psgSfxAdmissionSilencesNoise = val; return this; }
         public Builder trackEndFlagOwnsTheStop(boolean val) { trackEndFlagOwnsTheStop = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
