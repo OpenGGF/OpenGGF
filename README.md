@@ -263,6 +263,10 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K note cadence follows its own driver:** S3K resends a note's frequency
+  on every pass because its modulation routine returns to the fall-through,
+  and its PSG update latches frequency before volume even at rest; both are
+  per-driver sequencer modes, S1 and S2 unchanged. S3K oracle 139 to 143.
 - **Every Sonic 2 request window reproduces from the command:** the
   special-stage transition and Chemical Plant windows were recaptured through
   the TraceChaser command and match their published digests, so no fixture
