@@ -115554,3 +115554,62 @@ The other three death arms remain coordinates only.
 - **Not the cause, ruled out here.** The droplets, which carry zero collision by
   the ROM's own copy order; the touch box sizes, which match; and the boss-branch
   collision filter, which does not apply to `$87`.
+
+## 2026-09-04 - S2 segment 15: the gunk transform measured on both shapes; the residual owner is the container's dump cycle
+
+- **Worktree/branch:** `.worktrees/s2-speedshoes-timer`,
+  `bugfix/ai-s2-runchain-seg15`, over `develop` at `7ca24101c`.
+- **Method.** Probes on `CPZBossContainerExtend` (the rewrite), `CPZBossGunk`
+  (first execution and the landing transition) and `Sonic2CPZBossInstance`
+  (the frame the spawn-gunk flag is set), run on the ten-second standalone lane
+  under both shapes. The segment carries exactly two gunk drops, so all four
+  events are measurable.
+- **The three hypotheses, each measured.**
+  1. *The ROM's rewrite frame still does display and position work.*
+     **Confirmed.** `Obj5D_Container_Extend` branches to
+     `Obj5D_Container_Floor_End` (`docs/s2disasm/s2.asm:62843-62848`), which
+     copies the parent container's position, render flags and status into this
+     object and animates and displays it
+     (`:62881-62889`). The engine returned before its own
+     `updatePosition()`, so the gunk started from the previous frame's copy.
+     Adding that call makes the first drop's transform position exactly the
+     ROM's, `x=0x2AB9 y=0x0487` against the recorded slot-31 row.
+  2. *The transfer helper double-runs or skips the replacement.*
+     **Refuted.** With the position copy in place the first drop transfers into
+     slot 31, the ROM's own slot, and its first execution is the next frame,
+     which is exactly one deferral and not two. The two-frame figure in the
+     previous entry was the SECOND drop, already displaced by the first.
+  3. *The spawn-gunk flag is observed a frame late after the transfer.*
+     **Refuted.** The container sets it and the extend polls it in the same
+     frame, `BOSS dumpComplete lf=5222 slot=29` against
+     `transform lf=5222 slot=31`.
+- **The four measured frames, against the recording.** Recorded row `R` carries
+  `gameplay_frame_counter` `R-1`, so these are all on the ROM's own clock:
+
+  | event | ROM | engine, spawn-child | engine, in-place transfer |
+  |---|---|---|---|
+  | drop 1 rewrite | 5221 | 5222 | 5222 |
+  | drop 1 landing | 5251 | 5251 | 5252 |
+  | drop 2 rewrite | 5632 | 5632 | 5633 |
+  | drop 2 landing | 5661 | 5660 | 5662 |
+
+- **What this says, and it changes the conclusion.** The shipped spawn-child
+  shape is two compensating errors: the rewrite is a frame late and the gunk's
+  first execution is a frame early, and on drop 1 they cancel exactly. The
+  in-place transfer removes the second error, which is correct against the ROM,
+  and leaves the first exposed, so both drops land one frame late and the
+  segment goes from 370 to 1,377 errors. The transfer is not the defect; it
+  converts a two-error cancellation into a single, constant, upstream one.
+- **The residual owner is named.** The rewrite frame is decided by when the
+  container finishes its dump: `CPZBossContainer.updateMain` decrements `timer2`
+  and calls `onContainerDumpComplete()` at zero, and that fires at engine level
+  frame 5222 where the ROM's is 5221. The extend object's poll and rewrite are
+  correct once the flag is set. So the next round owns the container's dump
+  timer against the ROM's own `Obj5D_Container` state machine, not the gunk.
+- **Landed: documentation only.** The transfer is reverted again rather than
+  landed alone, because alone it regresses the segment; it should land together
+  with the container fix, and this entry records both halves so they are not
+  separated again. The tree is source-identical to `7ca24101c`.
+- **Do not retry.** The in-place transfer on its own, with or without the
+  position copy: both produce 1,377 errors on the segment lane, which is this
+  lever's fingerprint.
