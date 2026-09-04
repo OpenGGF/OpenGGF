@@ -115465,3 +115465,40 @@ The other three death arms remain coordinates only.
   `TestS3kAizTraceReplay` frame 20713.
 - Ordinary suite 16,399 tests, 0 failures, 17 skips; `-Pguards` 607 tests, 0
   failures; parity suite 178 tests, 0 failures, 2 skips.
+
+## 2026-09-04 - S2 CPZ driver-state MATCH after a producer fix, not an engine change
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-second-recording`. TraceChaser at
+  `4fb6d0802cc6ad27f07dd845a1b98ea84d2c7b0e`
+  (`feature/ai-s2-music-mailbox-observer`, pushed; `main` untouched).
+- **Frontier moved by fixing the producer.** The CPZ state-and-writes line
+  diverged on a ring at row 3225 that the request observer never saw. The
+  hundred-ring milestone check plays that ring through `PlayMusic`
+  (docs/s2disasm/s2.asm:25913-25914), so it stores to `sndDriverInput` at
+  `loc_10C0` (:1302-1304) and never reaches
+  `move.b D0,$09(A1,D1.w)` at `0x10D6`, the single PC the observer watched.
+  Nine music loads across the published windows were invisible for the same
+  reason.
+- **Fix:** a second fixed observer site at `M68K BUS` PC `0x0010C0`, opcode
+  `13400008`, slot 4, under the same manifest rules as the first. Every
+  transfer now carries an explicit `site` (`sfx` or `music`), validated per
+  site by the sink; the raw payload schema moved to
+  `openggf.s2-complete-run-audio-raw.v4` and the transfer schema to
+  `openggf.s2-preconsumption-request-transfer.v2`, with no compatibility for
+  the old shape. All five published windows were recaptured, each now bounded
+  to its own window rather than cut from one whole-run capture.
+- **Command:** `mvn -Dmse=off -Dtest=com.openggf.audio.**,com.openggf.tools.audio.parity.**,...`
+  with three absolute ROM paths and the complete-emeralds BK2.
+- **Result: 2063 tests, 0 failures, 0 errors, 10 skipped.** CPZ
+  `state and writes: MATCH (719 ticks)` and `state only: MATCH (720 ticks)`,
+  both now hard assertions. EHZ window `MATCH (2198 ticks)` on both lines, v1
+  oracle `MATCH (698 ticks)`, request windows `MATCH` at 25, 52 and 27
+  production transfers.
+- **Transfer-count deltas** against the old single-site captures:
+  `w10150-10900` 25 -> 27 (rows 10195 `82h` EHZ music, 10791 `FBh` speed
+  shoes), `w10900-11650` 52 -> 52 (one music epoch, no song loaded),
+  `w11650-12400` 27 -> 29 (rows 11991 `FCh` speed-shoes slow-down, 12114
+  `B5h` ring on the music mailbox), `w13650-14400` 5 -> 7 (13712 `F9h`
+  fade-out, 13849 `92h` `zMusIDPtr_SpecStage`), CPZ 33 -> 35 (2724 `8Eh` CPZ
+  music, 3225 `B5h` the milestone ring).

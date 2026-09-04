@@ -525,9 +525,9 @@ class TestS2RequestAwareOracleRawStream {
                 + "\"bk2_sha256\":\"e850798f882b8c580aad148bc97cb50f260cae1d336dd649fe2f4dfae6796aa5\","
                 + "\"service_manifest_sha256\":\"ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0\","
                 + "\"first_row\":10150,\"exclusive_end\":10900,\"state_start\":0,"
-                + "\"state_exclusive_end\":8192,\"source_schema\":\"openggf.s2-complete-run-audio-raw.v3\","
+                + "\"state_exclusive_end\":8192,\"source_schema\":\"openggf.s2-complete-run-audio-raw.v4\","
                 + "\"source_first_row\":769,\"source_exclusive_end\":259590,"
-                + "\"request_transfer_schema\":\"openggf.s2-preconsumption-request-transfer.v1\","
+                + "\"request_transfer_schema\":\"openggf.s2-preconsumption-request-transfer.v2\","
                 + "\"production_bound\":false,\"digest_domains\":{\"inventories\":\"compact-json-lf-v1\","
                 + "\"body\":\"bounded-jsonl-body-bytes-v1\",\"terminal_state\":\"decoded-z80-state-bytes-v1\","
                 + "\"payload_before_cutoff\":\"bounded-jsonl-before-cutoff-bytes-v1\"}}";
@@ -556,13 +556,13 @@ class TestS2RequestAwareOracleRawStream {
         String pcm = "{\"selection\":\"service_frame\",\"row\":10150,\"offset\":0,\"sample_rate\":44100,"
                 + "\"channels\":2,\"format\":\"s16le-interleaved-stereo\",\"stereo_frames\":1,"
                 + "\"byte_count\":4,\"pcm_hex\":\"00000000\",\"sha256\":\"df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119\"}";
-        String transfer = "{\"row\":10150,\"order\":0,\"global_transfer_ordinal\":17,\"request\":181,\"slot\":3,"
+        String transfer = "{\"row\":10150,\"order\":0,\"global_transfer_ordinal\":17,\"site\":\"sfx\",\"request\":181,\"slot\":3,"
                 + "\"pc\":4310,\"a7\":\"4660\",\"native_ordinal\":3,\"source_cpu\":2,\"service_token\":0,"
                 + "\"service_kind\":0,\"depth\":0,\"active_service_owner\":{\"token\":0,\"kind\":0,\"depth\":0}}";
         String secondMarker = "{\"ordinal\":0,\"service_token\":0,\"parent_token\":0,\"pc\":4310,"
                 + "\"subject\":24,\"offset\":0,\"kind\":10,\"service_kind\":0,\"depth\":0,"
                 + "\"source_cpu\":2,\"payload_length\":4,\"value\":3,\"flags\":0,\"reserved\":0,\"payload\":\"4661\"}";
-        String secondTransfer = "{\"row\":10151,\"order\":0,\"global_transfer_ordinal\":18,\"request\":181,\"slot\":2,"
+        String secondTransfer = "{\"row\":10151,\"order\":0,\"global_transfer_ordinal\":18,\"site\":\"sfx\",\"request\":181,\"slot\":2,"
                 + "\"pc\":4310,\"a7\":\"4661\",\"native_ordinal\":0,\"source_cpu\":2,\"service_token\":0,"
                 + "\"service_kind\":0,\"depth\":0,\"active_service_owner\":{\"token\":0,\"kind\":0,\"depth\":0}}";
         List<String> frames = new ArrayList<>();

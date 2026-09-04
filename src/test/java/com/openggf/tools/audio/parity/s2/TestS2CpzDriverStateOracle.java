@@ -219,10 +219,15 @@ class TestS2CpzDriverStateOracle {
         System.out.println("MEASUREMENT_ONLY s2-driver-state-cpz-w2700-3450 "
                 + "state only: " + stateOnly.describe());
 
-        assertNotEquals(S2AudioOracleComparator.Kind.INVALID, withWrites.kind(),
+        // Both lines are pinned as hard assertions. This window is a second
+        // recording, a different movie, zone and song from the widened EHZ
+        // span, and the engine agrees with it on every compared service.
+        assertEquals(S2AudioOracleComparator.Kind.MATCH, withWrites.kind(),
                 withWrites.describe());
-        assertNotEquals(S2AudioOracleComparator.Kind.INVALID, stateOnly.kind(),
+        assertEquals(719, withWrites.comparedTicks(), withWrites.describe());
+        assertEquals(S2AudioOracleComparator.Kind.MATCH, stateOnly.kind(),
                 stateOnly.describe());
+        assertEquals(720, stateOnly.comparedTicks(), stateOnly.describe());
     }
 
     /**
@@ -272,30 +277,30 @@ class TestS2CpzDriverStateOracle {
         com.fasterxml.jackson.databind.ObjectMapper json =
                 new com.fasterxml.jackson.databind.ObjectMapper();
         try (java.io.InputStream raw = TestS2CpzDriverStateOracle.class
-                .getResourceAsStream(REQUEST_SIDECAR_RESOURCE);
-             java.util.zip.GZIPInputStream gz =
-                     new java.util.zip.GZIPInputStream(
-                             java.util.Objects.requireNonNull(raw,
-                                     "committed CPZ request sidecar is absent"));
-             java.io.BufferedReader reader = new java.io.BufferedReader(
-                     new java.io.InputStreamReader(gz,
-                             java.nio.charset.StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                com.fasterxml.jackson.databind.JsonNode node = json.readTree(line);
-                com.fasterxml.jackson.databind.JsonNode transfers =
-                        node.get("request_transfers");
-                if (transfers == null || !transfers.isArray()) {
+                .getResourceAsStream(REQUEST_STIMULI_RESOURCE)) {
+            com.fasterxml.jackson.databind.JsonNode root = json.readTree(
+                    java.util.Objects.requireNonNull(raw,
+                            "committed CPZ request stimuli are absent"));
+            for (com.fasterxml.jackson.databind.JsonNode transfer
+                    : root.get("transfers")) {
+                Integer tick = tickForRow.get(transfer.get("row").asInt());
+                if (tick == null) {
                     continue;
                 }
-                for (com.fasterxml.jackson.databind.JsonNode transfer : transfers) {
-                    Integer tick = tickForRow.get(transfer.get("row").asInt());
-                    if (tick == null) {
-                        continue;
-                    }
-                    stimuli.add(new S2OracleEngineCapture.DriverRequest(
-                            tick, transfer.get("request").asInt()));
+                int request = transfer.get("request").asInt();
+                // Both of sndDriverInput's stores are in the stimuli, and
+                // which mailbox carried a request does not decide what it
+                // plays: the driver classifies it by range at QueueToPlay
+                // (s2.sounddriver.asm:1565-1571). So a sound id arriving
+                // through the music store, as the ring-milestone check's does
+                // (s2.asm:25913-25914), is still that sound, while a music id
+                // is not a stimulus this capture can take, because it plays
+                // the song from a constant.
+                if (request < com.openggf.game.sonic2.audio.Sonic2Sfx.ID_BASE
+                        || request > com.openggf.game.sonic2.audio.Sonic2Sfx.ID_MAX) {
+                    continue;
                 }
+                stimuli.add(new S2OracleEngineCapture.DriverRequest(tick, request));
             }
         }
         return stimuli;
