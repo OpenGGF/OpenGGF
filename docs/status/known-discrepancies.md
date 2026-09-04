@@ -2954,6 +2954,74 @@ the partition derivable, and no fixture measurement may stand in for it.
 
 ---
 
+## S2 Headless Oracle Capture Starts Mid-Run (Driver Variables Outside The Music Load's Clear)
+
+The S2 driver-state oracles drive the engine from a song load, not from
+power-on. Driver variables that a song load does not clear therefore enter the
+comparison with whatever the recording accumulated before the window, and the
+engine capture has no way to know that value. The first one this has cost is
+`zRingSpeaker`.
+
+### Original Implementation
+
+`zPlaySound_CheckRing` alternates the ring sound between two speakers. While
+`zRingSpeaker` is zero it resolves the raw `B5h` request to `CEh`, ring left,
+and either way it complements the flag afterwards, so consecutive rings
+alternate (s2.sounddriver.asm:2124-2135). The flag lives among the driver's own
+byte variables at low Z80 addresses, outside the `zAbsVar`-to-`zTracksSongEnd`
+region `zInitMusicPlayback` clears (:2580-2612), so a song load leaves it
+untouched.
+
+### Engine Behaviour
+
+`S2OracleEngineCapture` starts its alternation at the power-on value, zero, so
+its first ring resolves to `CEh`. That is the correct default and it is
+asserted by
+`TestS2AudioOracleComparator#explicitDriverRequestsResolveAndAdmitTheFirstRingBeforeTheTargetUpdate`,
+which requires `zRingSpeaker = 0` to produce `CEh`.
+
+### Why
+
+A capture that begins at a mid-run song load cannot derive a variable the load
+does not clear. Seeding it from the reference would hydrate driver state that
+decides *which* sound plays, which is outside the hardware-timing exception in
+hard rule 4: that exception may only affect when engine-created work becomes
+ready or which of two existing ROM loops a row takes, never what happens.
+
+### What It Costs, Measured
+
+On the committed `s2-driver-state-cpz-w2700-3450` reference the window's
+`zRingSpeaker` is `FFh` from the anchor through service 261 and flips to `00h`
+at service 262, which is the window's first ring. So the ROM kept `B5h`, ring
+right, where the engine resolved `CEh`, ring left. The two sounds occupy
+different FM channels, so the whole voice load appears one channel across:
+the reference on FM5 at `B1h`, `31h`, `35h`, `39h`, `3Dh`, the engine on FM4 at
+`B0h`, `30h`, `34h`, `38h`, `3Ch`, every value equal.
+
+The attribution was proved by experiment rather than argued. Starting the
+harness alternation at the opposite phase moves the first write divergence from
+service 237, movie row 2968, to service 494, movie row 3225, and halves the
+divergent services from 36 to 18. That change was not kept, because it breaks
+the power-on assertion above; the phase is a property of the window, not a
+constant to pick.
+
+### What Is Still Compared
+
+Everything else. The CPZ window's driver state matches on all 720 compared
+services, and the write stream matches up to the first ring. Nothing is
+excluded from the comparison by this entry; it records why a mid-run window's
+first ring can differ and what that difference looks like, so the next lane
+does not read it as a channel-assignment defect. The slot rule itself is not
+involved: `zPlaySound` derives an SFX slot from the header's own channel byte
+through `zMusicTrackOffs` (:2210-2251, :747-757) and both sides agree on it.
+
+### Removal Condition
+
+A capture that starts from power-on, or a derivation of the flag from something
+the window does contain. Reading it from the reference is not one.
+
+---
+
 ## PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores
 
 **Location:** `PsgChip.tickNoise()` / `PsgChip.linkedNoiseReload()`
