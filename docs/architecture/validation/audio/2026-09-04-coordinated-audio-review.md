@@ -123,6 +123,20 @@ all other ratchets remain unchanged. This is an intentional architecture
 decision, not a pre-existing baseline failure. The initial red reports are
 archived; the full guard suite must pass again before integration.
 
+The full guard rerun at `1da078e31` passed: 609 tests, zero failures/errors/
+skips (2:04). Archived per-test comparison matches the baseline with no added,
+missing, newly skipped or failing guard cases. Production code is unchanged
+from the ordinary-tested `ed9fd1e1b`; intervening changes are the reviewed
+guard declaration and verification prose.
+
+The union of the S3K lane and physical-capture lane's focused selections was
+then run together in the coordination worktree with all three absolute ROM
+properties: 102 tests, zero failures/errors/skips (31.599 seconds). The exact
+individual selections are in the linked lane reports; the combined run is
+`target/audio-round-development-focused.log`. The standalone benchmark
+boundary test also passes in this worktree. No performance timing from the
+contended integration host is promoted to benchmark evidence.
+
 No main-workspace integration, push, or worktree cleanup is claimed by this
 interim report.
 

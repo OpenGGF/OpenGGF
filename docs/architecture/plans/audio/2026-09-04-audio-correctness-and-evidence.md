@@ -110,8 +110,8 @@ Retain one opt-in, ROM-free synthetic benchmark entry point with pinned external
 - [x] Task 2: approve concrete physical capture design, write timing/completeness/non-interference tests, implement and replay captured stream, commit.
 - [x] Task 3: preserve minimal benchmark tooling and research evidence, correct public/handover claims, validate opt-in harness failure controls, commit.
 - [x] Independent per-task spec/code review; return findings to the owner.
-- [ ] Merge reviewed task commits into the coordination branch, reconcile documentation, run ordinary suite and separate guards against the fresh baseline.
-- [ ] Independent whole-branch review and fix verification.
+- [x] Merge reviewed task commits into the coordination branch, reconcile documentation, run ordinary suite and separate guards against the fresh baseline.
+- [x] Independent whole-branch review and fix verification.
 - [ ] Refresh main `develop`, rebaseline if it moved, integrate with README release summary, run post-merge ordinary/guards and exact regression comparison, push only `develop`.
 - [ ] Inspect and remove only this round's fully merged worktrees/branches after successful push.
 
@@ -135,6 +135,14 @@ and integrated into the coordination branch. Physical capture `aefd59738` /
 green. Main disassembly submodule changes are pre-existing
 and out of scope. The [review record](../../validation/audio/2026-09-04-coordinated-audio-review.md)
 tracks findings, corrections and subsequent combined/merged verification.
+
+Combined verification: ordinary `ed9fd1e1b` 16,482 / 0 failures / 0 errors /
+40 skips; guards `1da078e31` 609 / 0 / 0 / 0; combined focused audio selection
+102 / 0 / 0 / 0. The first guard run exposed the new CLI-to-leaf-version edge;
+independent review approved an explicit ratchet declaration, not a bypass.
+Per-test comparisons show no new failures or skips. Main `develop` was fetched
+and fast-forward checked again; it remains `4296bc291`, so no rebaseline is
+needed. Main integration and final push/cleanup remain subsequent steps.
 
 ## End-to-end review
 
