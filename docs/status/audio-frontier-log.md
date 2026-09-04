@@ -27,6 +27,75 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - The duration seed lands; both red assertions were the suspects
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `230e88fcc`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 565, role `SFX_FM4`, field
+  `durationTimeout`, reference `1` against engine `0`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 565, event 0, reference
+  `ym2612 port 0 register 28h = 4` against engine `port 0 register 0A4h = 18`.
+  DAC stream unchanged. Every compared field at service 565 agrees.
+- **The oracles arbitrated first, and they cleared the seed.** With the seed
+  in place all four S1 comparisons still MATCH: the sound-test captures at
+  14,690 and 1,967 ticks, and both gameplay oracles at 2,562 and 5,257. That
+  is real hardware behaviour agreeing with the change, against two synthetic
+  fixtures disagreeing with it.
+- **Hypothesis 1, the S1 note-fill assertion: the fixture was degenerate, not
+  the assertion.** Counting the ROM with the seed of 1 and the fill-after-not-
+  expired ordering gives cursor 2, exactly what the test asserts: the opening
+  walk reads `E8 02`, `F5 01` and the note and takes the first envelope step;
+  the next frame decrements the fill from 2 to 1 and steps again; the frame
+  after that decrements it to zero and `NoteTimeoutUpdate` exits before the
+  envelope. So the ROM says 2 and the assertion was right. A frame-by-frame
+  probe showed the engine's track never reading its stream at all: the fixture
+  declares `tempo = 1`, and S1's `UpdateMusic` adds 1 to every slot's
+  `DurationTimeout` whenever the tempo timeout expires
+  (s1.sounddriver.asm:1549-1561), which at tempo 1 is every frame and exactly
+  cancels the per-frame decrement. A track seeded at the ROM's own 1 can then
+  never reach zero. The fixture now declares `tempo = 2` and the assertion
+  passes at its original value.
+- **Hypothesis 2, the tempo-delay walk: the guard was measuring the wrong
+  frame.** Its `events.size() > 2` required at least one chip write on a
+  tempo-delay frame. That only held while the track had never started, because
+  the write it counted was the opening note read. Once a track is playing, S1's
+  tempo delay adds 1 and the walk's decrement cancels it, so the note does not
+  advance and the frame emits nothing. The guard now asserts what the frame
+  genuinely proves: the walk ran, evidenced by the duration being net
+  unchanged across it, and the frame's event list is exactly the service
+  begin/end pair. The scoping property the test exists for is untouched, and
+  the observer still fails any unscoped write.
+- **No per-driver difference to model.** All three ROMs seed 1: S1 loads
+  `d5 = 1` for both music loops (s1.sounddriver.asm:823, :836, used at :847
+  and :897) and writes 1 for SFX (:1062, :1171); S2 stores 1 with the comment
+  "should expire next update, play first note, etc."
+  (s2.sounddriver.asm:1857); S3K's `zZeroFillTrackRAM` seeds it in the
+  track-RAM fill (skdisasm Sound/Z80 Sound Driver.asm:2168-2184).
+- **The CPZ state-and-writes line is still the S2 lane's own frontier.**
+  `DIVERGENCE at tick 237, field writes[4], expected ym1[0B1h] against
+  ym1[0B0h], 36 of 719 ticks divergent`, unchanged by this branch and
+  previously reproduced with this branch's source change reverted. Its
+  `state only` companion is `MATCH (720 ticks)`.
+- **Open items.** S2's `zNoteFillUpdate` countdown; S1 and S2's post-note
+  do-not-attack clear; the `.dac_playback_loop` cycle total of 303 against
+  `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); and S1's and S2's per-track PSG silence
+  shape. The duration seed leaves the list.
+- **Gates at this commit, all green.** S1 sound test `MATCH (14690 ticks)` and
+  `MATCH (1967 ticks)`; both S1 gameplay oracles `MATCH` at 2,562 and 5,257
+  ticks; S2 v1 `MATCH (698 ticks)`, v2 state-and-writes and state-only
+  `MATCH (2198 ticks)`, CPZ state-only `MATCH (720 ticks)`, request windows
+  `MATCH` at 25, 52 and 27. The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,159
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - CPZ tick 237 attributed: the ring speaker's phase, inherited from before the window
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,

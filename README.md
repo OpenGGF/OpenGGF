@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **First duration timeout seeds at 1 in all three drivers:** cited per ROM; two
+  S1 unit fixtures that could never advance (tempo 1) corrected. S3K oracle at
+  the first write of service 565.
 - **S2 run-chain segment 15 diagnosed:** the CPZ2 boss gunk falls a frame early
   because the ROM rewrites the container in place (`Obj5D_Container_Extend`)
   while the engine respawns it; recorded, not yet closed.
