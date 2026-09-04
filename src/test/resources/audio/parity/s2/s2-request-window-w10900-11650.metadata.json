@@ -34,7 +34,6 @@
     "payload_raw_lines": 753
   },
   "capture": {
-    "tracechaser_base_commit": "85a2a802f8008e11149888cff2f4048d591415db",
     "duplicate_capture_gate": "met: two independent serial power-on captures on two independently built installs, byte-identical raw-v3 and byte-identical extracted payload",
     "source_raw_sha256": "1182a93833c4663d5a71883bd72b6c4edb50f70ab3cd9a122b3f6d0c9dca962e",
     "capture_paths": [
@@ -47,8 +46,7 @@
     "service_manifest_sha256": "ef8f8103c38d70e41cb09cb29751f56815a0401709dc509071aa514d614813a0",
     "extractor_capability_sha256": "04ee02fac0a08d176f3139ee44974ebf364425af2563f37f94ce7f8390920407",
     "extractor_attestation_sha256": "1c9eab4f40a90328bd457bc854137f354ef81f795c639d2aa882883ac8e8b02d",
-    "producer_uncommitted_diff_sha256": "0734f55cdfbdae7da0c5e46dfbfc28c86123aed93ae02a0ce93bbae6d385a39b",
-    "producer_diff_note": "The disposable live producer lives on TraceChaser 85a2a80, which is not an ancestor of the pinned gitlink. Two edits were needed and are not committed anywhere: the capture window was made an environment input instead of a source constant, and the observer profile's single pinned movie identity became a two-entry table of exactly pinned identities so the CPZ recording could be opened. Neither edit relaxes an identity match.",
+    "producer_diff_note": "The producer is TraceChaser bugfix/ai-s2-request-window-producer at 6481d7ebea6b1eb985aa8ff69cc021da53a6384b, cut from the pinned head 8e32d256eea7827877e75d6d6b9482d69333eee2, where the bounded window is a command taking the recording, its SHA-256 and the movie-row interval as arguments. This capture predates that command: it was taken with the same producer logic driven from a scratch copy of the unmerged sibling commit 85a2a802f8008e11149888cff2f4048d591415db, and with the ABI-4 candidate observer core, which the command cannot yet drive because the shipped ABI-5 core rejects the request candidate manifest at configure. Recapturing these windows from the command needs an ABI-5 core carrying the request marker.",
     "control_reproduction": "Rebuilding the apparatus and recapturing the original 10150-10900 window reproduced the published source raw-v3 digest dd8b427d4a9a407102be83442d04dd21ddebebe6c3c7f72a3e453b479f870f05 and, after extraction, the published payload digest a7d56fe71674d9f4a9307e6fb6078f7832409bb310916e808faf28b1e9426c2c with the published capability and attestation digests, so these windows come from a producer proven byte-identical to the one that made the first fixture.",
     "extractor_capability": {
       "schema": "openggf.s2-request-aware-raw-v3-capability.v1",
@@ -89,7 +87,9 @@
         "cutoff_frontier_sha256": "compact-json-lf-v1",
         "terminal_state_sha256": "decoded-z80-state-bytes-v1"
       }
-    }
+    },
+    "tracechaser_commit": "6481d7ebea6b1eb985aa8ff69cc021da53a6384b",
+    "tracechaser_branch": "bugfix/ai-s2-request-window-producer"
   },
   "production_bound": false,
   "production_bound_meaning": "The payload's own metadata line carries production_bound:false and that value is preserved verbatim. This fixture is a committed comparison reference and binds nothing to a production producer. Nothing here hydrates engine state: it is comparison-only, MEASUREMENT_ONLY at the gate.",

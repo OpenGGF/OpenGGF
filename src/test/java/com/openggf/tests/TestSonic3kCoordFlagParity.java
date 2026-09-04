@@ -207,8 +207,17 @@ public class TestSonic3kCoordFlagParity {
         assertTrue(synth.psgWrites.contains(0x3F), "Lowest S3K PSG entry should write high byte 0x3F");
     }
 
+    /**
+     * The S3K driver keeps the PSG frequency in a 16-bit register and never
+     * masks it. {@code zUpdateFreq} adds the sign-extended detune to the stored
+     * word (skdisasm Sound/Z80 Sound Driver.asm:3080-3101), so period zero minus
+     * one is 0FFFFh, not 03FFh. {@code zUpdatePSGTrack} then latches
+     * {@code l & 0Fh} and sends the nibble swap of {@code (l & 0F0h) | h}, with
+     * no six-bit mask (:4085-4095), giving 08Fh followed by 0FFh. S2 masks that
+     * byte (s2.sounddriver.asm:2835-2842); S3K does not.
+     */
     @Test
-    public void psgDetuneUnderflowWrapsTo10BitPeriod() {
+    public void psgDetuneUnderflowKeepsTheWholeSixteenBitPeriod() {
         byte[] psgTrack = {
                 (byte) 0xE1, (byte) 0xFF, // detune -1
                 (byte) 0xD4, 0x01,        // high note -> base period 0x000 in DEF_Z80_T2 tail
@@ -219,8 +228,8 @@ public class TestSonic3kCoordFlagParity {
         SmpsSequencer seq = new SmpsSequencer(smps, EMPTY_DAC, synth, Sonic3kSmpsSequencerConfig.CONFIG);
         seq.advanceSamples(25000);
 
-        assertTrue(synth.psgWrites.contains(0x8F), "Underflow should wrap to 0x3FF low nibble");
-        assertTrue(synth.psgWrites.contains(0x3F), "Underflow should wrap to 0x3FF high bits");
+        assertTrue(synth.psgWrites.contains(0x8F), "Underflow latches the low nibble of 0FFFFh");
+        assertTrue(synth.psgWrites.contains(0xFF), "Underflow sends the unmasked second byte 0FFh");
     }
 
     @Test

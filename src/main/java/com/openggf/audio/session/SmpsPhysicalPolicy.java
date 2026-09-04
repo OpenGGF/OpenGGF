@@ -32,6 +32,21 @@ public interface SmpsPhysicalPolicy {
     }
 
     /**
+     * ROM work performed by the DAC idle loop once a sample has been queued.
+     *
+     * <p>S3K's {@code zPlayDigitalAudio} spins in {@code .dac_idle_loop}
+     * reading {@code zDACIndex}, and the moment that index is non-zero it
+     * writes 2Bh = 80h to enable the DAC before decoding the sample
+     * (Sound/Z80 Sound Driver.asm:4264-4276). The index is set by the DAC
+     * track's own update inside a V-int service, so the enable is emitted by
+     * the idle loop the service returns to, not by the service itself.
+     * Drivers whose DAC enable belongs elsewhere return an empty program.</p>
+     */
+    default SmpsWriteProgram enableDacFromIdleLoop() {
+        return SmpsWriteProgram.EMPTY;
+    }
+
+    /**
      * The driver's blocking SEGA PCM transport, when the driver owns it.
      *
      * <p>S3K streams the chant itself in {@code zPlaySEGAPCM}

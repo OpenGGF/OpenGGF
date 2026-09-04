@@ -57,6 +57,212 @@ defined by `com.openggf.tools.audio.parity`.
   failing class names as a control sweep at the base commit.
 
 
+
+## 2026-09-04 - S3K oracle: the DAC enable belongs to the idle loop; tick 139 event 0 -> 1
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick139`,
+  `bugfix/ai-s3k-oracle-tick139`, over `develop` at `c549f543d`.
+- **Command:** unchanged, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 139, event 0, reference
+  `ym2612 port 0 register 2Bh = 80h` against engine `port 1 register 0A4h = 27`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 139, **event 1**, reference
+  `ym2612 port 0 register 2Ah = 80h` against the same engine write. Event 0 now
+  agrees.
+- **What the ROM does.** `zPlayDigitalAudio` spins in `.dac_idle_loop`
+  (Sound/Z80 Sound Driver.asm:4264-4271) reading `zDACIndex`, and the pass that
+  finds it non-zero writes 2Bh = 80h before decoding (:4272-4276). The index is
+  stored by `zUpdateDACTrack` inside a V-int service (:2896-2903), so the enable
+  is emitted by the idle loop the service returns to, never by the service
+  itself. A sample queued while another plays clears bit 7, so
+  `jp p, .dac_idle_loop` (:4343-4345) sends the loop back through the same
+  enable: one 2Bh = 80h per queued sample. The engine now records the
+  `zDACIndex` store in `SmpsDriver`, discards it wherever the ROM zeroes
+  `zDACIndex` (`zStopAllSound`'s wipe of the variable block that holds it,
+  :134,163,214, :2461-2470), and lets the oracle's capture host emit the
+  physical policy's enable at the start of the following window.
+- **The runtime session deliberately does not emit it yet, and that is
+  measured, not assumed.** The ROM's enable is one half of a pair: it streams
+  every decoded byte to 2Ah and then clears the index and re-enters
+  `zPlayDigitalAudio`, whose 2Bh = 0 turns the DAC off (:4352-4355,
+  :4256-4260). The session plays music DAC inside `Ym2612Chip` and has no
+  sample-end signal, so applying only the enable left the DAC on holding its
+  last level: `TestSonic3kUnifiedAudioPresentationRomIntegration` failed on
+  "stopping the music must actually silence the final packet", and an A/B with
+  the hook disabled passed. The runtime joins the capture host when the
+  sample-end disable is modelled with it.
+- **No constant was introduced.** The write, its value and its position are all
+  stated by the listing. S1 and S2 keep an empty `enableDacFromIdleLoop`, since
+  their DAC enable is not written by an idle loop.
+- **Next, and it is a subsystem, not a write.** Tick 139's remaining 36 events
+  and every tick from 140 on are the music DAC byte pump: the reference carries
+  ~265 `2Ah` writes per tick, contiguous and ahead of that tick's service
+  writes, for 3,498 of its 5,263 ticks. The engine plays music DAC inside
+  `Ym2612Chip` rather than on the write bus, so no 2Ah write is produced. The
+  SEGA chant already streams this way through `SmpsSegaPcmTransport`, which is
+  the shape to reuse; the per-tick count must come from the ROM playback loop's
+  own annotated cycle costs (:4299-4351) and the sample's rate byte, not from
+  counting the fixture's rows.
+
+
+## 2026-09-04 - S3K oracle: the PSG frequency is a whole 16-bit word; tick 138 clears to tick 139
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick138`,
+  `bugfix/ai-s3k-oracle-tick138`, on top of the entry below.
+- **Command:** unchanged, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 138, event 255 of 259,
+  reference `psg 0A0h` against engine `psg 0A3h`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, **tick 139**, event 0, reference
+  `ym2612 port 0 register 2Bh = 80h` against engine `port 1 register 0A4h = 27`.
+  Tick 138 now matches in full: 259 writes, every one of them.
+- **Three PSG facts.** `zUpdatePSGTrack` calls `zUpdateFreq` and `zDoModulation`,
+  which only compute, and then sends the frequency once
+  (Sound/Z80 Sound Driver.asm:4077-4095); S2 genuinely sends it twice, from
+  `zPSGDoNoteOn` and again from `zPSGUpdateFreq`
+  (s2.sounddriver.asm:1046-1053), so the single send is S3K's. The second PSG
+  byte is not a masked shift either: S3K ORs the low byte's high nibble with the
+  whole high byte and rotates right by four with no mask (:4085-4095), where S2
+  masks to six bits (s2.sounddriver.asm:2835-2842). And the frequency itself is
+  never masked: `zUpdateFreq` adds the sign-extended detune to a 16-bit register
+  (:3080-3101), so a word above 03FFh survives into that byte. The engine was
+  masking the period to ten bits, which turned the ROM's 0400h into zero and its
+  0040h second byte into zero. Masking stays on for S1 and S2, where it is
+  invisible because both mask the byte anyway.
+- **No constant was introduced.** Every value here is a register width or a mask
+  read out of the listing.
+- **Next, and it is the write cycle 1 removed on purpose.** `zPlayDigitalAudio`
+  writes 2Bh = 80h from its idle loop, after `zDACIndex` goes non-zero and
+  outside the service that queued the sample (:4265-4275). The capture host
+  models the idle loop already through `enterDacIdleLoop`, so the DAC enable
+  belongs in the window after a service whose DAC track queued a sample.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`; the S1 gameplay v3 and run-2 oracles and the S2 driver
+  oracle `MATCH (698 ticks)` all pass inside one run of the
+  `com.openggf.tools.audio.parity` and `com.openggf.audio` packages,
+  `TestSmpsFadeAudioThroughput` and the four S3K keep-green classes: 2,097
+  tests, 0 failures, 10 skips. The ordinary suite with all three ROM
+  paths runs 16,383 tests with 0 failures and 20 skips, and `-Pguards` runs 607
+  with 0 failures. One unit test changed with the mask:
+  `TestSonic3kCoordFlagParity` asserted that a PSG detune underflow wraps to a
+  ten-bit 03FFh, which is the engine's old invention rather than the driver's
+  behaviour, so it now asserts the 08Fh/0FFh the listing produces.
+
+
+## 2026-09-04 - S3K oracle: the note path sends one frequency and no pan; tick 138 event 151 -> 255
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick138`,
+  `bugfix/ai-s3k-oracle-tick138`, on top of the entry below.
+- **Command:** unchanged, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 138, event 151, reference
+  `ym2612 port 0 register 28h = 0F1h` against engine `port 0 register 0B5h = 0C0h`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 138, event 255 of 259,
+  reference `psg 0A0h` against engine `psg 0A3h`. Every YM2612 write of the
+  title-music load now agrees, across all six FM tracks.
+- **Two writes the S3K note path does not make.** `zUpdateFMorPSGTrack` runs
+  `zGetNextNote`, `zPrepareModulation`, `zUpdateFreq` and `zDoModulation`, all of
+  which only compute, and then a single `zFMSendFreq` before `zFMNoteOn`
+  (Sound/Z80 Sound Driver.asm:776-782). `zFMSendFreq` writes 0A4h and 0A0h and
+  nothing else (:815-871); the track's AMS/FMS/pan reaches the chip from the
+  voice upload (:1533), not from the note. The engine was writing the pan
+  between the frequency and the key-on, and was sending the frequency twice,
+  once unmodulated and once from the forced note-start modulation write. The
+  second write hid the first while it sat between them.
+- **No constant was introduced.** Both changes delete a write the listing does
+  not contain.
+- **Next.** The remaining divergence is a PSG tone byte, reference `0A0h`
+  against engine `0A3h`, on a PSG track's first note.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`; the S1 gameplay v3 and run-2 oracles and the S2 driver
+  oracle `MATCH (698 ticks)` all pass inside one run of the
+  `com.openggf.tools.audio.parity` and `com.openggf.audio` packages,
+  `TestSmpsFadeAudioThroughput` and the four S3K keep-green classes: 2,097
+  tests, 0 failures, 10 skips.
+
+
+## 2026-09-04 - S3K oracle: cfSetVoice releases the envelope first; tick 138 event 87 -> 151
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick138`,
+  `bugfix/ai-s3k-oracle-tick138`, on top of the entry below.
+- **Command:** unchanged from the entry below, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 138, event 87, reference
+  `ym2612 port 0 register 80h = 0FFh` against engine `port 0 register 0B4h = 0C0h`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 138, event 151, reference
+  `ym2612 port 0 register 28h = 0F1h` against engine `port 0 register 0B5h = 0C0h`.
+  The whole of the first FM track now agrees, write for write, through its
+  voice upload and its key-off, as does the second track's voice upload.
+- **What the ROM does.** S3K's `cfSetVoice` calls `zSetMaxRelRate` for any
+  non-PSG track before it even reads the voice index, writing 0FFh to
+  80h + operator for all four operators so D1L is minimum and RR maximum
+  (Sound/Z80 Sound Driver.asm:3444-3447, 2675-2698). `zWriteFMIorII` drops those
+  writes when PlaybackControl bit 2 marks the track as SFX-overridden
+  (:2701-2709). S1 `cfSetVoice` (s1.sounddriver.asm:2313-2360) and S2
+  `cfSetVoice` (s2.sounddriver.asm:3271-3293) make no such call, so the release
+  lives in the S3K coordination-flag handler rather than in shared code.
+- **No constant was introduced.** The register base, the four-operator stride,
+  the channel offset and the suppression condition all come from the listing.
+- **Next, and it is already diagnosed.** The engine writes the track's
+  AMS/FMS/pan between the note frequency and its key-on, but S3K's note path is
+  `zFMSendFreq` then `zFMNoteOn` and writes only 0A4h and 0A0h (:780-782,
+  :815-871). The pan reaches the chip from the voice upload instead.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)`; the S1 gameplay v3 and run-2 oracles and the S2 driver
+  oracle `MATCH (698 ticks)` all pass inside a single run of the
+  `com.openggf.tools.audio.parity` and `com.openggf.audio` packages,
+  `TestSmpsFadeAudioThroughput` and the four S3K keep-green classes: 2,097
+  tests, 0 failures, 0 skips.
+
+
+## 2026-09-04 - S3K oracle: the post-load first update grows its DAC prefix; tick 138 event 85 -> 87
+
+- **Worktree/branch:** `.worktrees/audio-s3k-tick138`,
+  `bugfix/ai-s3k-oracle-tick138`, over `develop` at `a05287cef`.
+- **Command:**
+  `java -cp "target/classes:$(cat target/cp.txt)"
+  com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare
+  --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz
+  --requests src/test/resources/audio/parity/s3k/s3k-aiz1-intro-requests-v1.json
+  --rom <absolute locked-on S3K ROM>`, and the same comparison pinned by
+  `TestS3kOracleRequestSidecarWiring#theOracleReachesTheTitleMusicLoadsTrackCadence`.
+- **Result before:** `EVENT_VALUE_DIFFERENT`, tick 138, event 85, reference
+  `ym2612 port 0 register 28h = 6` against engine `port 0 register 0B4h = 0C0h`.
+- **Result after:** `EVENT_VALUE_DIFFERENT`, tick 138, event 87, reference
+  `ym2612 port 0 register 80h = 0FFh` against engine `port 0 register 0B4h = 0C0h`.
+  Events 85 and 86 now agree: the DAC track's key-off of FM6 and its FM3
+  normal-mode restore.
+- **What the ROM does, and it is three separate facts.** After `zBGMLoad`'s one
+  0B6h write the next writes belong to the same service's `zUpdateMusic` pass,
+  which updates `zSongFM6_DAC` before the FM/PSG loop
+  (Sound/Z80 Sound Driver.asm:717-723). That DAC pass calls `zKeyOffIfActive`
+  and then `zFM3NormalMode` before queuing the sample (:2897-2898), producing
+  28h = 6 and 27h = 0; `zKeyOffIfActive` writes nothing when PlaybackControl bit
+  1 or 2 is set (:3338-3341), and the 6 is the DAC track's VoiceControl byte
+  from `zFMDACInitBytes` (:1897). Neither S1 `DACUpdateTrack`
+  (s1.sounddriver.asm:277-331) nor S2 `zDACUpdateTrack`
+  (s2.sounddriver.asm:759-816) makes either call, so the behaviour is selected
+  by a sequencer-config flag rather than added to every game.
+  Separately, no driver uploads an instrument when a song loads: `zBGMLoad`'s
+  FM/DAC loop only calls `zInitFMDACTrack`, which writes track RAM (:1837-1856,
+  :2171-2199), and S1/S2 reach the same state through `InitMusicPlayback`
+  (s1.sounddriver.asm:1486-1545, s2.sounddriver.asm:1738-1739). The engine was
+  refreshing voice 0 onto the chip for every FM track at load, so it now selects
+  the voice into track RAM only. And the DAC enable is not a load event either:
+  `zPlayDigitalAudio` disables the DAC on entry and writes 2Bh = 80h from its
+  idle loop once `zDACIndex` goes non-zero (:4256-4275), which is why the
+  reference carries that write as tick 139's first event, not tick 138's.
+  Admitting a sequencer no longer enables the DAC under the S3K config.
+- **No constant was introduced.** All three changes remove or add a write whose
+  presence and position are stated by the listing; none was measured from the
+  fixture.
+- **Gates at this commit:** S1 sound-test music `MATCH (14690 ticks)` and SFX
+  `MATCH (1967 ticks)` through `S1AudioParityTool capture` + `compare`; the S1
+  gameplay v3 and run-2 oracles pass at their pinned lines; the S2 driver oracle
+  `MATCH (698 ticks)`; the `com.openggf.tools.audio.parity` and
+  `com.openggf.audio` packages, `TestSmpsFadeAudioThroughput` and the four S3K
+  keep-green classes run 2,097 tests with 0 failures.
+
 ## 2026-09-04 — S1 gameplay run-2 oracle: tick 1,906 → full MATCH, Sound_PlaySpecial's stale-d4 PSG pair
 
 - **Worktree/branch:** `.worktrees/audio-s1-run2`, `bugfix/ai-s1-run2-frontier`,

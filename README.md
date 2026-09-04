@@ -263,6 +263,20 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S3K DAC enable follows the idle loop:** the driver records the sample-index
+  store and the DAC enable is emitted by the idle loop at the next service
+  boundary, as `zPlayDigitalAudio` does; the oracle now stops on the music DAC
+  byte pump, which the engine renders inside the chip rather than on the bus.
+- **ROM-less CI green again:** the complete-run producer tests and two Sonic 2
+  level-init tests now skip without a ROM instead of failing.
+- **Sonic 2 request-window producer is a command:** TraceChaser now captures
+  and extracts request windows from arguments (movie, hash, row interval,
+  manifests, installation, output), the raw sink records the recording it
+  actually opened, and every published S2 window cites that command.
+- **S3K first music update matches the driver:** the post-load DAC pass keys
+  off FM6 and restores FM3 mode, `cfSetVoice` writes the release-rate reset,
+  notes send the frequency once without a pan write, and PSG frequencies keep
+  their full width; the S3K oracle clears tick 138 write for write.
 - **Sonic 2 request oracle widened:** four new duplicate-captured request
   windows (EHZ1 continuation, the special-stage transition, and a Chemical
   Plant level-select route) are committed; the oracle matches all 52 transfers

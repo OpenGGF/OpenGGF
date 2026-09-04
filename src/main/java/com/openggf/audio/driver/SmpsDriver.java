@@ -104,6 +104,16 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
     private AbstractSmpsData s1SpecialVoicePointer;
     /** Shared Z80 PAL cadence byte: zPALUpdTick / zPalDblUpdCounter. */
     private int palUpdateCounter = 5;
+    /**
+     * Whether a DAC sample has been queued since the idle loop last looked.
+     *
+     * <p>Stands for the ROM's {@code zDACIndex} going non-zero
+     * (skdisasm Sound/Z80 Sound Driver.asm:2903). The DAC idle loop reads the
+     * index on its next pass and enables the DAC (:4269-4276), so the caller
+     * that owns the physical write partition consumes this at the service
+     * boundary rather than inside the update that set it.</p>
+     */
+    private boolean dacQueuedSinceIdleLoopPass;
     private long nextSfxAdmissionOrdinal;
     private SfxContentionObserver sfxContentionObserver = SfxContentionObserver.NONE;
     /** Diagnostic-only state; deliberately absent from rewind snapshots. */
@@ -2022,7 +2032,14 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 }
             }
             selectDac(seq.getSourceDescriptor(), seq.getDacData());
-            writeFm(seq, 0, 0x2B, 0x80);
+            if (seq.getConfig().isEnableDacOnSequencerStart()) {
+                // The S3K Z80 driver never enables the DAC when a song loads:
+                // zPlayDigitalAudio disables it on entry and only writes
+                // 2Bh = 80h from its idle loop, after zDACIndex goes non-zero
+                // and outside the V-int service that queued the sample
+                // (skdisasm Sound/Z80 Sound Driver.asm:4256-4275).
+                writeFm(seq, 0, 0x2B, 0x80);
+            }
             sequencers.add(seq);
             if (isSfx) {
                 sfxSequencers.add(seq);
@@ -2096,8 +2113,14 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             continuousSfxFlag = false;
             contSfxLoopCnt = 0;
             // StopAllSound clears the driver RAM globals, v_special_voice_ptr
-            // included (s1.sounddriver.asm:1468-1478).
+            // included (s1.sounddriver.asm:1468-1478). S3K's zStopAllSound
+            // zeroes zTempVariablesStart..zTempVariablesEnd, which contains
+            // zDACIndex (skdisasm Sound/Z80 Sound Driver.asm:134,163,214,
+            // :2461-2470), so a sample queued but not yet seen by the idle
+            // loop is discarded and the DAC stays disabled by the same
+            // routine's own 2Bh = 0 (:2508-2511).
             s1SpecialVoicePointer = null;
+            dacQueuedSinceIdleLoopPass = false;
         }
         // Silence hardware (ROM: zFMSilenceAll + zPSGSilenceAll)
         silenceAll();
@@ -2861,11 +2884,30 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
 
             if (fmLocks[ch] == source) {
                 synthesizer.playDac(source, note);
+                dacQueuedSinceIdleLoopPass = true;
             }
         } else {
             if (fmLocks[ch] == null) {
                 synthesizer.playDac(source, note);
+                dacQueuedSinceIdleLoopPass = true;
             }
+        }
+    }
+
+    /**
+     * Reports and clears whether a DAC sample was queued since the last pass.
+     *
+     * <p>One {@code true} answers one {@code zDACIndex} store, matching the
+     * ROM's one 2Bh = 80h per queued sample: a sample queued while another is
+     * playing clears bit 7, so {@code jp p, .dac_idle_loop} sends the loop
+     * back through the enable (skdisasm Sound/Z80 Sound
+     * Driver.asm:2896-2903, :4343-4345).</p>
+     */
+    public boolean consumeDacIdleLoopPass() {
+        synchronized (sequencersLock) {
+            boolean queued = dacQueuedSinceIdleLoopPass;
+            dacQueuedSinceIdleLoopPass = false;
+            return queued;
         }
     }
 
@@ -3068,6 +3110,15 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             if (fmLocks[ch] == null) {
                 synthesizer.stopDac(source);
             }
+        }
+        // Stopping the DAC is zDACIndex returning to zero, so any sample the
+        // idle loop has not yet seen is gone: zStopAllSound zeroes the
+        // variable block that holds it (skdisasm Sound/Z80 Sound
+        // Driver.asm:134,163,214,:2461-2470) and the playback loop's own exit
+        // clears it before re-entering zPlayDigitalAudio (:4352-4355). Either
+        // way the next idle-loop pass finds zero and writes no enable.
+        synchronized (sequencersLock) {
+            dacQueuedSinceIdleLoopPass = false;
         }
     }
 }

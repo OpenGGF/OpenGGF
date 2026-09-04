@@ -544,7 +544,17 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.keyOffset = (byte) programView.fmKeyOffsetAt(i);
                 t.volumeOffset = programView.fmVolumeOffsetAt(i);
                 t.dividingTiming = dividingTiming;
-                loadVoice(t, 0); // default instrument
+                // No driver uploads an instrument when a song loads: S3K
+                // zBGMLoad's FM/DAC loop only calls zInitFMDACTrack, which
+                // writes track RAM and zeroes the FM instrument index
+                // (skdisasm Sound/Z80 Sound Driver.asm:1837-1856, 2171-2199),
+                // and its single chip write between the bank switch and the
+                // track loops is 0B6h (:1811-1816). S2 zBGMLoad defers to
+                // zInitMusicPlayback (s2.sounddriver.asm:1738-1739) and S1 uses
+                // InitMusicPlayback (s1.sounddriver.asm:1486-1545); neither
+                // sends a voice either. The voice reaches the YM2612 only from
+                // the track's own SetVoice, so select it without refreshing.
+                selectVoice(t, 0); // default instrument, track RAM only
                 tracks.add(t);
             }
         }
@@ -809,7 +819,7 @@ public class SmpsSequencer implements CoordFlagContext {
                 int data = reg & 0xF;
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, (reg >> 4) & 0x3F);
+                synth.writePsg(this, psgFrequencyHighByte(reg));
             }
 
             if (t.noiseMode) {
@@ -2137,6 +2147,30 @@ public class SmpsSequencer implements CoordFlagContext {
         return PSG_FREQ_TABLE_68K;
     }
 
+    /**
+     * YM2612 register 28h channel-select value for a driver channel slot, the
+     * low three bits of the track's VoiceControl byte (bit 2 selects part II).
+     */
+    private static int keyOnOffChannelSelect(int channelId) {
+        return channelId < 3 ? channelId : (channelId % 3) + 4;
+    }
+
+    /**
+     * The PSG frequency's second byte. S2 {@code zPSGUpdateFreq} shifts the
+     * 16-bit frequency right by four and masks to six bits
+     * (s2.sounddriver.asm:2827-2843), but S3K {@code zUpdatePSGTrack} ORs the
+     * low byte's high nibble with the whole high byte and rotates the result
+     * right by four, with no mask, so a frequency above 03FFh keeps bit 6
+     * (skdisasm Sound/Z80 Sound Driver.asm:4085-4095).
+     */
+    private int psgFrequencyHighByte(int reg) {
+        if (!config.isPsgFrequencyHighByteNibbleSwap()) {
+            return (reg >> 4) & 0x3F;
+        }
+        int combined = ((reg & 0xF0) | ((reg >> 8) & 0xFF)) & 0xFF;
+        return ((combined >> 4) | (combined << 4)) & 0xFF;
+    }
+
     private boolean shouldPreventNoteAttack(Track t) {
         // We model the driver's note-on-prevent bit with tieNext.
         // On SMPS Z80 this is the HOLD bit, and on SMPS 68k this maps to AT-REST.
@@ -2267,6 +2301,27 @@ public class SmpsSequencer implements CoordFlagContext {
         }
 
         if (t.type == TrackType.DAC) {
+            if (config.isDacNoteKeysOffFm6AndRestoresFm3()) {
+                // The S3K Z80 driver's DAC track shares FM6, so starting a
+                // sample first kills the FM note on that channel and puts FM3
+                // back into normal mode: zUpdateDACTrack calls zKeyOffIfActive
+                // then zFM3NormalMode before queuing the sample
+                // (skdisasm Sound/Z80 Sound Driver.asm:2897-2898).
+                // zKeyOffIfActive writes nothing when PlaybackControl bit 1
+                // ("do not attack next note") or bit 2 ("SFX overriding this
+                // track") is set (:3338-3341); otherwise zKeyOff sends 28h with
+                // the track's VoiceControl byte, which zFMDACInitBytes gives as
+                // 6 for the DAC/FM6 track (:3348-3358, :1897).
+                // zFM3NormalMode is called unconditionally and writes 27h = 0
+                // (:2511-2521). S1 DACUpdateTrack
+                // (s1.sounddriver.asm:277-331) and S2 zDACUpdateTrack
+                // (s2.sounddriver.asm:759-816) make neither call, so this stays
+                // off for those games.
+                if (!preventAttack && !t.overridden) {
+                    synth.writeFm(this, 0, 0x28, keyOnOffChannelSelect(t.channelId));
+                }
+                synth.writeFm(this, 0, 0x27, 0x00);
+            }
             // Skip DAC playback if muted during fade-in
             if (!t.dacMuted) {
                 synth.playDac(this, t.note);
@@ -2329,18 +2384,26 @@ public class SmpsSequencer implements CoordFlagContext {
                 synth.writeFm(this, 0, 0x28, chVal); // Key Off before frequency change
             }
 
-            writeFmFreq(port, ch, fnum, block);
+            // The S3K HOLD-family path applies its note-start modulation before
+            // key-on. S2 calls zFMNoteOn first and zDoModulation afterwards
+            // (sd:821-835); S1 does not apply modulation at note start.
+            boolean modulationSendsNoteFrequency = t.modEnabled
+                    && config.isApplyModOnNote()
+                    && config.getNoteOnPrevent()
+                            == SmpsSequencerConfig.NoteOnPrevent.HOLD;
+            if (!modulationSendsNoteFrequency) {
+                // zUpdateFreq and zDoModulation only compute the frequency; the
+                // single zFMSendFreq that follows them puts it on the bus
+                // (skdisasm Sound/Z80 Sound Driver.asm:776-782, :815-871), so a
+                // modulated note must not also send the unmodulated value.
+                writeFmFreq(port, ch, fnum, block);
+            }
             // S1/S2 FMPrepareNote writes only A4/A0; pan is written by SetVoice
             // or its coordination flag (S2 sd:821-835, 2797-2807).
             if (config.isWriteFmPanOnNote()) {
                 applyFmPanAmsFms(t);
             }
-            // The S3K HOLD-family path applies its note-start modulation before
-            // key-on. S2 calls zFMNoteOn first and zDoModulation afterwards
-            // (sd:821-835); S1 does not apply modulation at note start.
-            if (t.modEnabled && config.isApplyModOnNote()
-                    && config.getNoteOnPrevent()
-                            == SmpsSequencerConfig.NoteOnPrevent.HOLD) {
+            if (modulationSendsNoteFrequency) {
                 t.forceModulationWrite = true;
                 applyModulation(t);
             }
@@ -2382,11 +2445,21 @@ public class SmpsSequencer implements CoordFlagContext {
             boolean noiseUsesTone2 = t.noiseMode && t.channelId == 2 && (t.psgNoiseParam & 0x03) == 0x03;
             boolean writeToneFreq = t.channelId < 3 && (!t.noiseMode || noiseUsesTone2);
 
-            if (writeToneFreq) {
+            // S3K zUpdatePSGTrack calls zUpdateFreq and zDoModulation, which
+            // only compute, and then sends the frequency once
+            // (skdisasm Sound/Z80 Sound Driver.asm:4077-4095). S2 genuinely
+            // sends it twice: zPSGDoNoteOn writes it, then zPSGUpdateFreq
+            // writes it again after zDoModulation
+            // (s2.sounddriver.asm:1046-1053).
+            boolean modulationSendsNoteFrequency = t.modEnabled
+                    && config.isApplyModOnNote()
+                    && config.getNoteOnPrevent()
+                            == SmpsSequencerConfig.NoteOnPrevent.HOLD;
+            if (writeToneFreq && !modulationSendsNoteFrequency) {
                 int data = reg & 0xF;
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, (reg >> 4) & 0x3F);
+                synth.writePsg(this, psgFrequencyHighByte(reg));
                 // baseFnum stores detune-free period; modulation applies detune dynamically.
             }
 
@@ -2500,7 +2573,7 @@ public class SmpsSequencer implements CoordFlagContext {
             if (writeToneFreq) {
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | (reg & 0x0F));
-                synth.writePsg(this, (reg >> 4) & 0x3F);
+                synth.writePsg(this, psgFrequencyHighByte(reg));
             }
 
             if (t.customModEnabled && !preventAttack) {
@@ -3084,7 +3157,7 @@ public class SmpsSequencer implements CoordFlagContext {
                 int data = reg & 0xF;
                 int ch = t.channelId;
                 synth.writePsg(this, 0x80 | (ch << 5) | data);
-                synth.writePsg(this, (reg >> 4) & 0x3F);
+                synth.writePsg(this, psgFrequencyHighByte(reg));
             }
         }
     }
@@ -3273,9 +3346,19 @@ public class SmpsSequencer implements CoordFlagContext {
         return packed;
     }
 
-    private static int normalizePsgPeriod(int reg) {
+    private int normalizePsgPeriod(int reg) {
         // S1/S2 deliberately use period zero for nMaxPSG noise notes. Preserve the
         // register value here; PsgChip owns the integrated/discrete zero-period rule.
+        if (config.isPsgFrequencyHighByteNibbleSwap()) {
+            // S3K keeps the frequency in a 16-bit register and never masks it:
+            // zUpdateFreq adds the sign-extended detune to the stored word and
+            // zUpdatePSGTrack sends the result straight out
+            // (skdisasm Sound/Z80 Sound Driver.asm:3080-3101, 4077-4095). A word
+            // above 03FFh therefore survives into the second PSG byte. Masking
+            // is invisible on S1/S2 because both mask that byte to six bits
+            // anyway (s2.sounddriver.asm:2835-2842).
+            return reg & 0xFFFF;
+        }
         return reg & 0x3FF;
     }
 
