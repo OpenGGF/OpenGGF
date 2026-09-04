@@ -27,6 +27,65 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S2 tempo phase: the audio layer already consumes at the head; the offset is a gameplay compensation constant
+
+- **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
+  `bugfix/ai-s2-driver-state-frontier`, at `f1f721ed1`.
+- **Measurement, not a comparison run.** No engine behaviour changed. The
+  state-only line is unchanged: DIVERGENCE at tick 1,789 (movie row 11991),
+  `global.currentTempo`, reference `0x9e` against the engine's `0xbe`.
+- **The premise this round started from does not hold.** The engine does not
+  consume the sound queue after its driver update.
+  `AudioPresentationProducer.presentSessionForward` services the request
+  boundary and applies the pending command batch *before* it calls
+  `smpsSession.serviceForward()`, which is the ROM's own order: `zVInt` falls
+  into `zUpdateEverything`, which runs `zCycleQueue` and `zPlaySoundByIndex`
+  before either `zUpdateMusic` call (s2.sounddriver.asm:411-450).
+- **Probes, on the committed BK2 run.** With prints on the speed-shoes timer,
+  on the presentation's forward path and on the session's command case:
+
+  | event | playback cursor |
+  |---|---|
+  | speed-shoes timer fires | 11991 |
+  | next forward presentation begins | 11992 |
+  | session applies the slow-down | 11992 |
+
+  The cursor advances inside the frame's own step, so those are one engine
+  frame, and the command is applied at the first driver service after the game
+  wrote it. That is the same relationship the ROM has, where the 68k writes the
+  queue byte in its main loop and the following V-int consumes it. The
+  reference confirms the consumption side: at row 11991 the tempo is already
+  `9Eh` and `QueueToPlay` is back to `80h`, so the byte arrived and was
+  consumed inside that service.
+- **So the offset is upstream, and it is a named constant.** The engine's
+  speed-shoes expiry lands one frame later than the ROM's write.
+  `PowerUpRules.speedShoesTimerPrePhysicsExtraTicks` is `1` for both S1 and S2
+  (`GameRules.java:161-162`, `:316-317`), added to the timer's duration in
+  `SpeedShoesTimer.durationTicks`. Its documented reason is purely about
+  movement: the ROM decrements the timer inside `Sonic_Display`, which the
+  control routine calls *after* dispatching the movement modes
+  (s2.asm:36240-36244, decrement at :36310-36312), so the frame that zeroes the
+  timer still moved boosted, and the engine ticks its timers before the
+  movement step.
+- **Why that constant reaches the music at all.** The ROM does both things on
+  the one frame the timer hits zero: it restores top speed, acceleration and
+  deceleration, and it jumps to `PlayMusic` with `MusID_SlowDown`
+  (s2.asm:36313-36326). The engine hangs both on one timer, so the tick added
+  to place the *physics* restore on the ROM's frame also pushes the *music*
+  command a frame past it. The music consequence has no dependency on where the
+  movement step sits, so it should not carry the movement compensation.
+- **Not changed here, and deliberately.** The two candidate repairs both move
+  gameplay timing that S2 physics traces depend on: either fire the music
+  consequence `speedShoesTimerPrePhysicsExtraTicks` ticks before the physics
+  one, or move the countdown after the movement step and drop the constant
+  entirely. Neither belongs to an audio lane whose gate list carries no
+  `*TraceReplay` sweep, and the second is the better fix precisely because it
+  removes a compensation constant rather than adding a second one.
+- **What this means for the frontier.** The state-only divergence at tick 1,789
+  is not a driver defect and will not be fixed inside the audio layer. The 409
+  ticks counted after it were never re-measured for cause; the tempo itself
+  re-converges at the very next tick.
+
 ## 2026-09-04 - S2 driver-state v2: the DAC byte stream leaves the service partition; tick 0 -> tick 170
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,
