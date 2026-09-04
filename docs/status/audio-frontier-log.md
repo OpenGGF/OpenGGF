@@ -27,6 +27,62 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K tick 143 is Z80 service duration: the DAC pump gets the whole frame
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `2607114d4`,
+  engine at `29c9d01d3`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  entry records why the tick-143 frontier was not fixed against the present
+  model, so the next lane does not re-derive it.
+- **The frontier.** `EVENT_VALUE_DIFFERENT`, tick 143, event 0: the engine
+  emits the DAC idle loop's `2Bh = 0` at the head of the service, where the
+  reference is still playing and sends FM2's frequency pair. The engine's
+  music sample has run out four services after it started; the ROM's is
+  superseded by the next play at tick 145 without ever exhausting.
+- **What was measured.** Decoded `port 0 register 2Ah` writes per service,
+  reference against engine, over ticks 139-150:
+
+  | ticks | reference | engine |
+  |---|---|---|
+  | 140-143 steady state | 265, 265, 266, 265 | 316, 315, 316, 304 |
+  | 145-149 steady state | 251, 266, 265, 265, 265 | 313, 316, 315, 316, 178 |
+
+  The engine plays about 1.19 times as many samples per service. Both sides
+  play the same 1,438-sample run and the bytes agree, so this is rate, not
+  content.
+- **Where the 1.19 comes from, and it is arithmetic rather than a guess.**
+  The sample is `DAC_86`, whose setup record gives rate `04h`
+  (sonic3k.macros.asm:405, `DAC_Setup`), and `Ym2612Chip.dacPeriod` turns that
+  into `(297 + 2 * 13 * 3) / 2` = 187.5 Z80 cycles per decoded sample. The
+  engine's 316 samples per service is therefore 59,250 Z80 cycles, which is a
+  whole NTSC frame (3,579,545 / 60 = 59,659). The reference's 265 is 49,688
+  cycles, 83 per cent of the frame. The missing sixth of every frame is the
+  time `zUpdateEverything` itself takes with interrupts disabled, during which
+  `zPlayDigitalAudio`'s loop is not running and no `2Ah` byte is written
+  (Sound/Z80 Sound Driver.asm:4299-4351, whose `ei` / `djnz $` pair is the only
+  window the V-int can land in).
+- **So it is Z80 service duration, the category already excused for the byte
+  partition.** The engine's pump advances the chip by a full V-int of the
+  driver's region cadence per service and charges nothing for the service
+  itself. Deriving the real cost means cycle-counting the Z80 driver's own
+  work per pass; it is not available from frame-granularity state, and a
+  measured 0.83 would be a fitted constant of exactly the kind hard rule 3
+  forbids. The run lengths are invisible to the DAC byte-stream comparison,
+  which compares only shared bytes, which is why this surfaced as a `2Bh`
+  write in the partitioned stream rather than as a byte difference.
+- **A separate and much smaller question for whoever takes this on.** The
+  listing's own annotated cycle total for one iteration of
+  `.dac_playback_loop` is 303, and `Sonic3kSmpsLoader` passes 297 as
+  `baseCycles`. That is a 2 per cent difference, not the 19 per cent above, and
+  it was not chased here; it should be checked against the ROM before any
+  service-cost model is built on top of it.
+- **Ruled out.** The SEGA PCM run is not counter-evidence that the rate is
+  right. All 24,111 of its samples are emitted inside service 50 by the SEGA
+  PCM transport, not by the per-service pump, so it exercises none of the
+  cadence above.
+
+
 ## 2026-09-04 - S3K latches the PSG frequency before the volume; tick 139 -> tick 143
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
