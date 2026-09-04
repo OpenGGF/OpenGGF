@@ -27,6 +27,42 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - Music $8E's new frontier at tick 360: the engine's tempo timer stops, it does not merely shift
+
+- **Worktree/branch:** `.worktrees/s1-audio-complete`,
+  `feature/ai-s1-audio-complete-runs`, over `develop` at `817d96e96`.
+- **Fixture:** scratch capture of window 2 of `s1-complete-run.bk2`, music
+  `$8E`, 567 ticks.
+- **Result:** `GLOBAL_STATE_MISMATCH` tick 360, field `tempo_timeout`,
+  reference `1` against engine `2`. Recorded, not fixed.
+
+**The trajectory, which says more than the first divergence does.** The tempo
+timeout cycles 3, 2, 1 on both sides through tick 359. At 360 the reference
+goes straight from 3 to 1, skipping the 2, and then resumes a clean 3, 2, 1
+cycle from 361 onward. The engine reaches 2 at 360 and then **stays at 2 for
+every remaining tick**. So the two sides fail differently: the reference takes
+one extra decrement and carries on, while the engine's tempo timer stops
+advancing altogether.
+
+**What each side's shape suggests.** A single frame in which the tempo timer
+decrements twice is what two `UpdateMusic` invocations folded into one captured
+tick would look like: `UpdateMusic` decrements
+`v_main_tempo_timeout` once per invocation (s1.sounddriver.asm:174-176), and
+the shared lifecycle folds a same-stack re-entry into the invocation already
+open, so a second call at the same depth contributes its decrement without
+producing a second record. The engine's frozen state is not a phase shift and
+not a fold; a state that stops changing is a sequencer that stopped being
+serviced. `$8E` is the act-clear jingle, so a song reaching its end around tick
+360 while the ROM's driver keeps walking the finished song's track RAM is the
+shape to check first.
+
+**Deliberately not fixed here.** These are two different subsystems from the
+PSG envelope work that moved this frontier, and the engine-side half is a
+sequencer-lifetime question rather than a driver-accuracy one. Recorded so the
+next cycle starts from the trajectory rather than from the first divergent
+value, which on its own would have suggested an off-by-one.
+
+
 ## 2026-09-04 - A tied note steps the PSG envelope: music $8E moves from tick 186 to tick 360
 
 - **Worktree/branch:** `.worktrees/s1-audio-complete`,
