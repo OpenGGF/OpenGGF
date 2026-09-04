@@ -71,6 +71,17 @@ public final class Sonic3kSmpsSequencerConfig {
                 .delayFreq(SmpsSequencerConfig.DelayFreq.KEEP)
                 .coordFlagHandler(coordFlagHandler)
                 .modAlgo(SmpsSequencerConfig.ModAlgo.MOD_Z80)
+                // zDoModulation is an ordinary subroutine here, so every one of
+                // its returns falls through to the frequency send
+                // (Sound/Z80 Sound Driver.asm:791-799, :4077-4090). S1 and S2
+                // discard the return address instead and skip it.
+                .noteGoingFreqSend(
+                        SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS)
+                // zUpdatePSGTrack latches the frequency before it reads the
+                // volume envelope (Sound/Z80 Sound Driver.asm:4077-4110); S1
+                // and S2 run their volume effects first instead.
+                .psgNoteGoingOrder(
+                        SmpsSequencerConfig.PsgNoteGoingOrder.FREQUENCY_THEN_VOLUME)
                 .fadeOutDelay(6)            // FadeOutDelay = 6
                 .fadeOutSteps(0x28)         // FadeOutSteps = 28h
                 .fadeInSteps(0x40)          // FadeInSteps = 40h

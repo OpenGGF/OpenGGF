@@ -196,10 +196,13 @@ class TestS3kOracleRequestSidecarWiring {
      * in the following service's window. The music DAC byte pump now streams
      * on the write bus as well, and is compared unpartitioned by
      * {@link #theDacByteStreamAgreesUntilTheServiceStreamDiverges()}. What
-     * remains in the partitioned stream is a track-set divergence in the
-     * first update after the load: the reference sends FM2's frequency pair
-     * and three PSG channels where the engine sends FM4 and FM5 and one PSG
-     * channel.
+     * The whole of the first update after the load now agrees, and so do the
+     * four steady-state updates that follow it, because the S3K note-going
+     * path re-sends the frequency every pass and {@code zUpdatePSGTrack}
+     * latches it before reading the volume envelope. What remains is a DAC
+     * run-length divergence: the engine's music sample runs out at tick 143
+     * and emits the idle loop's {@code 2Bh = 0}, where the ROM's is still
+     * playing and is superseded by the next play at tick 145.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -212,8 +215,8 @@ class TestS3kOracleRequestSidecarWiring {
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT, report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 1, report.tick());
-        assertEquals(1, report.eventIndex());
+        assertEquals(TITLE_MUSIC_TICK + 5, report.tick());
+        assertEquals(0, report.eventIndex());
         assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=165, value=19]",
                 report.reference());
     }
