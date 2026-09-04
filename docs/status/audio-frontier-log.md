@@ -27,6 +27,62 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - HANDOVER: S3K AIZ1 intro oracle, state at branch head
+
+- **Branch:** `bugfix/ai-s3k-oracle-freq-resend`, head `3c552b92a`, merged with
+  develop at `37c3f0c0b`. Worktree `.worktrees/audio-s3k-freq`. Tree clean,
+  nothing in flight.
+- **Resume command.** From the worktree, after `mvn -q -Dmse=off clean package
+  -DskipTests` and `mvn -q -Dmse=off dependency:build-classpath
+  -Dmdep.outputFile=target/gates/cp.txt`:
+
+  ```
+  java -cp "target/classes:$(cat target/gates/cp.txt)" \
+    com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz \
+    --requests src/test/resources/audio/parity/s3k/s3k-aiz1-intro-requests-v1.json \
+    --rom "$PWD/s3k.gen"
+  ```
+
+  Build clean before every measurement: a stale `target/` reports the previous
+  engine. Run only one build or suite in this worktree at a time; two
+  overlapping runs share its `target/` and its Maven temp directory and produce
+  failures that look like regressions and are not.
+- **Current first divergence.** Service stream `EVENT_VALUE_DIFFERENT` at tick
+  1569: the reference emits `psg 0FFh` where the engine emits
+  `ym2612 port 0 register 164 value 34`. That service is where an SFX takes the
+  third PSG channel, so the takeover's own writes are the place to start. DAC
+  byte stream `BYTE_DIFFERENT` at run 338, byte 0, reference `88h` against
+  engine `7Fh`, unchanged for many cycles.
+- **Frontier history this session.** 751, 566, 760, 1490, 1569. The two
+  backwards moves were honest: each uncovered a defect the previous ordering
+  had hidden, and both are described in their own entries.
+- **Open items, carried forward.** S2's `zNoteFillUpdate` countdown; S1 and S2's
+  post-note do-not-attack clear; the `.dac_playback_loop` cycle total of 303
+  against `baseCycles` of 297; S2's `zFadeOutMusic` clearing `SpeedUpFlag`
+  (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG silence shape;
+  S1's and S2's track-end stop. Added this session: the driver-level backup of
+  tempo, tempo speedup, voice table pointer and song bank that `zPlayMusic`'s
+  extra-life branch saves (Sound/Z80 Sound Driver.asm:1739-1781), which has no
+  engine equivalent because the presentation override stack preserves the
+  sequencer instead.
+- **Comparator coverage.** Six fields were promoted from diagnostic to gated
+  this session: `volEnv`, `noteFillTimeout`, `noteFillMaster`,
+  `palDoubleUpdateCounter`, `fadeDelay` and `fadeDelayTimeout`. All were free.
+  `volEnv` has since caught two separate defects. The fields still diagnostic
+  are so for cause, each named in `S3kAudioFieldRegistry`: they name a ROM byte
+  the engine has no equivalent for, a Z80 address, presentation-side state, or
+  a fade shape that genuinely differs.
+- **A habit worth keeping.** Every new or promoted comparison this session was
+  proven to execute by corrupting the engine's value for it and checking the
+  oracle names that field. Twice on this branch a comparison turned out not to
+  be running; a green gate and an absent gate look identical from outside.
+- **Gates at this head, all green, on a clean build and a quiet machine.**
+  Audio, per-game audio and parity packages with all three ROM paths: 2,761
+  tests, 0 failures, 16 skips. Ordinary suite 16,477 tests, 0 failures, 22
+  skips. `-Pguards` 609 tests, 0 failures.
+
+
 ## 2026-09-04 - An overridden PSG track kept running its envelope; 1569 state -> 1569 write
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
