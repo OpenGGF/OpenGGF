@@ -27,6 +27,63 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - S3K holds its PSG modulation after a rest note; tick 331 decoded, not closed
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, engine at `fca8ecd0d`.
+- **Measurement, not a comparison run.** No engine behaviour changed. This
+  entry records the decoded frontier so the next round starts from the numbers
+  rather than re-deriving them.
+- **The frontier.** `EVENT_VALUE_DIFFERENT`, tick 331, event 10, reference
+  `psg 163` against engine `psg 160`. Both are PSG2 tone latches, so the
+  divergence is the emitted period, not the write's presence or position.
+- **Decoded through the ROM's own two-byte PSG encoding.**
+  `zUpdatePSGTrack` sends `l & 0Fh` in the latch byte and the nibble-swapped
+  `(l & 0F0h) | h` in the data byte (Sound/Z80 Sound Driver.asm:4085-4095), so
+  the emitted 16-bit value can be read straight back out. PSG2's emitted
+  period per service:
+
+  | service | reference | engine |
+  |---|---|---|
+  | 320-329 | 01DE stepping to 01C3, minus 3 each service | identical |
+  | 330 | no frequency emitted | no frequency emitted |
+  | 331-335 | 0103 held constant | 01C0 stepping to 01B4, minus 3 each service |
+  | 336 onward | 00C9 | 00C9 |
+
+- **What that says.** Both sides modulate identically until service 329. At
+  330 a rest note is read and neither emits. From 331 the reference stops
+  advancing its modulation and holds one value for the whole of the next note,
+  where the engine carries the ramp straight on at the same minus-three rate
+  it had before the rest. The two re-converge at 336, so this is a bounded
+  five-service divergence, not a permanent drift.
+- **Every compared field agrees across the window,** which is why this
+  surfaces only in the write: `frequency` 1023, `detune` 4, `transpose` 244
+  and `modulationCtrl` 128 are equal on both sides at services 326 through
+  334, and the volume envelope index advances 0, 1, 2, 3, 4 identically from
+  the note at 330. The modulation accumulator is not a compared field.
+- **Candidate owner, with its kill condition.** `zUpdatePSGTrack`'s note-start
+  entry tests the rest bit immediately after `zGetNextNote` and returns before
+  `zPrepareModulation` (:4059-4066), so a rest note leaves the modulation
+  state untouched where a sounding note would re-arm it. The engine's
+  `playNote` skips its own modulation preparation for a rest note too, so the
+  difference is not simply that one re-arms and the other does not. The check
+  that would settle it is a probe on the ROM's `ModulationWait`,
+  `ModulationSpeed` and `ModulationSteps` bytes across services 329 to 336; if
+  the reference's held `0103` corresponds to `zDoModulation` returning early
+  on `dec (ix+ModulationWait) / ret nz` (:1284-1289), the emitted value would
+  be `Frequency + Detune` and that arithmetic must be made to agree before any
+  fix is attempted.
+- **Do not retry.** Reading the held value as `Frequency + Detune` from the
+  *compared* fields does not work: 1023 plus 4 is 0403h, and the reference
+  emits 0103h. Either the compared `frequency` projection is not the ROM's
+  `Frequency` word at this point, or the modulation contributes a constant
+  minus 300h. That contradiction is unresolved and is the first thing to
+  settle.
+- **Still open, unchanged.** S2's `zNoteFillUpdate` countdown against the
+  engine's elapsed comparison; S1 and S2's post-note do-not-attack clear; and
+  the `.dac_playback_loop` cycle total of 303 against `baseCycles` of 297.
+
+
 ## 2026-09-04 - Neither S3K PSG volume flag writes to the chip; tick 258 -> tick 331
 
 - **Worktree/branch:** `.worktrees/audio-s3k-freq`,
