@@ -13,7 +13,6 @@ public class TestLazyMappingHolder {
     @BeforeEach
     public void clearGameplaySession() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

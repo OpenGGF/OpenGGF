@@ -1407,8 +1407,7 @@ None of these predecessor versions is a current compatibility target.
 - `EngineDiagnostics.java`, `EngineNearbyObjectFormatter.java`,
   `TouchResponseDebugHitFormatter.java`, `TraceEventFormatter.java`
 - `TraceExecutionModel.java`, `TraceExecutionPhase.java`
-- `TraceReplayBootstrap.java`, `TraceObjectSnapshotBinder.java`,
-  `TraceHistoryHydration.java`
+- `TraceReplayBootstrap.java`, `TraceObjectSnapshotBinder.java`
 - `s3k/S3kReplayCheckpointDetector.java`, `s3k/S3kCheckpointProbe.java`,
   `s3k/S3kRequiredCheckpointGuard.java`
 - `Sonic1CreditsDemoData.java` (under `src/main/java/com/openggf/game/sonic1/credits/`)

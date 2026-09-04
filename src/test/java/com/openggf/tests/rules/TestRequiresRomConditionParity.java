@@ -29,7 +29,6 @@ class TestRequiresRomConditionParity {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         RomManager.getInstance().setRom(null);
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 

@@ -60,7 +60,6 @@ class TestAiz2BossEndSequenceObjects {
     void tearDown() {
         Aiz2BossEndSequenceState.reset();
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

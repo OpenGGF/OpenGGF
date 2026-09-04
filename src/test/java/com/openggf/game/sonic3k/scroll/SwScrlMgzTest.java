@@ -32,7 +32,6 @@ public class SwScrlMgzTest {
     void setUpRuntime() {
         previousModule = GameModuleRegistry.getCurrent();
         SessionManager.clear();
-        SessionManager.clear();
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
@@ -40,7 +39,6 @@ public class SwScrlMgzTest {
 
     @AfterEach
     void tearDownRuntime() {
-        SessionManager.clear();
         SessionManager.clear();
         if (previousModule != null) {
             GameModuleRegistry.setCurrent(previousModule);

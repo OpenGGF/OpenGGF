@@ -23,7 +23,6 @@ class SwScrlLbzTest {
     @BeforeEach
     void clearRuntimeState() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

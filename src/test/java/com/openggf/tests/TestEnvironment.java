@@ -120,7 +120,6 @@ public final class TestEnvironment {
         LevelInitProfile profile = GameModuleRegistry.getCurrent().getLevelInitProfile();
 
         SessionManager.clear();
-        SessionManager.clear();
 
         // Phase 0: Reset game module (shared across all games)
         GameModuleRegistry.reset();
@@ -137,7 +136,6 @@ public final class TestEnvironment {
     }
 
     private static void recreateGameplayMode() {
-        SessionManager.clear();
         SessionManager.clear();
         activeGameplayMode();
     }

@@ -157,7 +157,6 @@ class TestS3kKosStructuralSequence {
         new Sonic3kAIZEvents(Sonic3kLoadBootstrap.NORMAL).init(0);
         AizPlaneIntroInstance.resetIntroPhaseState();
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

@@ -80,7 +80,6 @@ class TestSonic3kMgz2EndBossEvents {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     private AbstractPlayableSprite triggerBossTransitionWithTailsBelowLine(Sonic3kMGZEvents events) {

@@ -154,7 +154,6 @@ public class TestSonic3kAIZEvents {
     public void tearDown() {
         AizIntroArtLoader.reset();
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
     }
 
@@ -796,7 +795,6 @@ public class TestSonic3kAIZEvents {
 
     @Test
     public void eventsFg5TransitionWritesProgressionSaveForActiveSlot() throws Exception {
-        SessionManager.clear();
         SessionManager.clear();
 
         String gameCode = "test_aiz_transition_save";

@@ -32,7 +32,6 @@ class TestSonic2LevelEventRewindSnapshot {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

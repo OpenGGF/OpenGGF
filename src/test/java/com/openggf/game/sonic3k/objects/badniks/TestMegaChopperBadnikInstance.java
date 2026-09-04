@@ -37,7 +37,6 @@ public class TestMegaChopperBadnikInstance {
     @BeforeEach
     public void setUp() throws Exception {
         SessionManager.clear();
-        SessionManager.clear();
         SessionManager.openGameplaySession(new Sonic3kGameModule());
         TestEnvironment.activeGameplayMode();
 
@@ -48,7 +47,6 @@ public class TestMegaChopperBadnikInstance {
 
     @AfterEach
     public void tearDown() {
-        SessionManager.clear();
         SessionManager.clear();
     }
 

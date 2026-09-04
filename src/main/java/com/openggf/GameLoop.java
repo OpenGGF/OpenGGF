@@ -3879,14 +3879,6 @@ public class GameLoop {
     }
 
     /**
-     * Transitions from the title screen to the data select screen.
-     * Used as the exitToLevelHandler for S3K title screen.
-     */
-    private void startDataSelectFromTitleScreen() {
-        initializeDataSelectMode();
-    }
-
-    /**
      * Exits the data select screen.
      * For now, transitions to level loading.
      * This will be enhanced in later tasks to handle slot selection.

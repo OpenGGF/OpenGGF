@@ -54,7 +54,6 @@ class TestSonic3kMonitorObjectInstance {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 

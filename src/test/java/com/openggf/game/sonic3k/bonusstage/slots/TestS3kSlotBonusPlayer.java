@@ -28,7 +28,6 @@ class TestS3kSlotBonusPlayer {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
     }
 
     @Test

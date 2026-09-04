@@ -61,7 +61,6 @@ class TestSpringObjectInstance {
     @AfterEach
     void tearDown() {
         SessionManager.clear();
-        SessionManager.clear();
         GameModuleRegistry.reset();
     }
 
