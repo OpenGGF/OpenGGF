@@ -4,6 +4,8 @@ import com.openggf.audio.rewind.SmpsDriverSnapshot;
 import com.openggf.audio.rewind.SmpsSequencerSnapshot;
 import com.openggf.audio.rewind.SmpsTrackSnapshot;
 import com.openggf.audio.rewind.SmpsSourceDescriptor;
+import com.openggf.audio.smps.DacData;
+import com.openggf.audio.smps.SmpsSequencer;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import com.openggf.tests.trace.runs.S2RequestProjectionBk2TestBridge;
@@ -127,6 +129,51 @@ final class S2Bk2DriverOracleComparator {
                         == SmpsSourceDescriptor.Kind.BASE_MUSIC)
                 .filter(entry -> entry.source().id() == Sonic2Music.EMERALD_HILL.id)
                 .count() == 1;
+    }
+
+    /**
+     * The engine's music DAC entry at a completion snapshot: the note its DAC
+     * track last played, which is what {@code SmpsSequencer} hands to
+     * {@code playDac}, resolved through the ROM's own DAC table. It is the
+     * engine's counterpart to {@code zCurDAC}, which {@code zUpdateDAC} rebases
+     * by {@code 81h} (s2.sounddriver.asm:505-518), so the two are never
+     * compared to each other; each side reads only its own.
+     *
+     * @return {@code {selector, decoded length}}, the length being -1 when the
+     *     note names no sample.
+     */
+    static int[] dacSampleAndLength(SmpsDriverSnapshot snapshot) {
+        for (SmpsDriverSnapshot.SequencerEntry entry : snapshot.sequencers()) {
+            if (entry.sfx()
+                    || entry.source().kind() != SmpsSourceDescriptor.Kind.BASE_MUSIC
+                    || entry.source().id() != Sonic2Music.EMERALD_HILL.id) {
+                continue;
+            }
+            for (SmpsTrackSnapshot track : entry.snapshot().tracks()) {
+                if (track.type() != SmpsSequencer.TrackType.DAC) {
+                    continue;
+                }
+                int note = track.note() & 0xff;
+                return new int[] { note, decodedLength(entry.dacData(), note) };
+            }
+        }
+        return new int[] { -1, -1 };
+    }
+
+    /**
+     * The decoded length of the sample a note selects, from {@code zDACLenTbl}
+     * as the engine loaded it (s2.sounddriver.asm:513-518, :528-529), or -1.
+     */
+    static int decodedLength(DacData dacData, int note) {
+        if (dacData == null) {
+            return -1;
+        }
+        DacData.DacEntry entry = dacData.mappingForNote(note);
+        if (entry == null) {
+            return -1;
+        }
+        DacData.Sample sample = dacData.sample(entry.sampleId());
+        return sample == null ? -1 : sample.length();
     }
 
     /**

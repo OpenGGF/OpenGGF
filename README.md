@@ -263,6 +263,9 @@ traces.
 - **Sonic 2 special-stage timing authority:** recorded `VBlank_Lag` rows remain
   scheduling-only replay inputs, while ordinary play retains its existing
   stateless slowdown approximation until causal hardware timing can replace it.
+- **S2 DAC runs are bounded by the ROM sample length:** runs end at the
+  `zDACLenTbl` length, a silent service, or a selector change; the residual
+  byte difference is a supersession join and is reported as such.
 - **S3K duration-only notes keep the rest state the ROM left:** the note-start path
   no longer recomputes the rest bit from a stale note byte; S3K oracle at a write
   difference inside service 551.
