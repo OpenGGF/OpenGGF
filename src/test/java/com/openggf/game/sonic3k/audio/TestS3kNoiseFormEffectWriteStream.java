@@ -57,6 +57,7 @@ import org.junit.jupiter.api.Test;
  * docs/S3K_KNOWN_DISCREPANCIES.md; tightening this to strict adjacency is the
  * check to add once the takeover moves.
  */
+@RequiresRom(SonicGame.SONIC_3K)
 class TestS3kNoiseFormEffectWriteStream {
     private static final double SAMPLE_RATE = 44_100.0;
 
