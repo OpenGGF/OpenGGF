@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **The collapsing-scenery ring-out now survives with music playing:** the
+  fix that restored the effect's fade was reaching the sound chip only when
+  nothing else was playing. The layer that prepares a sound for playback copies
+  each driver setting across by hand, and the new setting was missing from that
+  copy, so in an actual level the effect still ended flat. It is copied now, and
+  the fade is audible over the zone music as well as on its own.
+
 - **The spindash rev pitch now comes from the sound program, as it does on
   hardware:** the rising pitch while a spindash charges belongs to the sound
   driver, and both games already carry it. Sonic 2 keeps a rev index beside a

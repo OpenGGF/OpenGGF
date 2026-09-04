@@ -3501,7 +3501,7 @@ public class SmpsSequencer implements CoordFlagContext {
             }
             if (config.getPsgVolumeTail()
                     == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS
-                    && (t.envData == null || t.envData.length == 0)) {
+                    && t.instrumentId == 0) {
                 // zUpdatePSGTrack's .note_going path sends the frequency pair
                 // and then falls straight into the volume tail on every pass
                 // of a sounding note. The only gates on that tail are
@@ -3510,12 +3510,17 @@ public class SmpsSequencer implements CoordFlagContext {
                 // no attack test in it at all
                 // (Sound/Z80 Sound Driver.asm:4079-4135).
                 //
-                // A track that carries a PSG volume envelope already reaches
-                // refreshVolume through its envelope step every pass, so the
-                // tail is taken here only for the envelope-less case. That is
-                // the ROM's own .no_volenv path: a zero VoiceIndex skips
-                // zDoVolEnv with c = 0 and falls through to the same volume
-                // write rather than returning (:4103-4112).
+                // The gate is the ROM's own: zUpdatePSGTrack reads VoiceIndex
+                // and takes .no_volenv when it is zero, skipping zDoVolEnv with
+                // c = 0 and falling through to the same volume write rather
+                // than returning (:4103-4112). A track that does carry a PSG
+                // volume envelope already reaches refreshVolume through its
+                // envelope step each pass, so writing here as well would double
+                // the write. Testing the voice index rather than whether
+                // envelope data happens to be loaded matters: a track that
+                // takes its channel from music can be holding the displaced
+                // track's envelope data while its own voice index is still
+                // zero, and that is exactly the collapse-over-music case.
                 //
                 // Without the tail, a volume the track changed while a note was
                 // already sounding never reached the chip. sfx_Collapse's tail
