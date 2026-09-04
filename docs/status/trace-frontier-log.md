@@ -115154,7 +115154,11 @@ The other three death arms remain coordinates only.
 ## 2026-09-04 - S2 request marker lands in the shipped observer core
 
 - Worktree/branch: `.worktrees/audio-s2-widen`, `feature/ai-s2-oracle-widen`;
-  TraceChaser `bugfix/ai-s2-request-window-producer` at `166b178`.
+  TraceChaser `bugfix/ai-s2-request-window-producer` at `7ebed3b`, which merges
+  TraceChaser main `41beab8` so the gitlink descends from the green main and its
+  CI runs the real checks. The merge conflicted only in the two policy-scanner
+  test files, where main's curated contract-exception tests win outright; this
+  branch changes nothing under `testing/`.
 - The S2 request marker is no longer an unmerged candidate at an abandoned ABI.
   Its patch is folded into the observer patch, its harnesses are selftests that
   run on every build, and the candidates tree is deleted. The core exports one
