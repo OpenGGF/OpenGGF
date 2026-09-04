@@ -207,9 +207,11 @@ class TestS3kOracleRequestSidecarWiring {
      * the 49-service run of PSG3 silences from 502 was, and a duration-only
      * stream unit no longer re-derives anything from the previous unit's note:
      * not the rest bit, not the silence, not the frequency, and not the PSG
-     * volume's silence level. Service 551 agrees in full. What remains is
-     * SFX_FM4's {@code resting} bit at service 565, the first service of an
-     * SFX request.
+     * volume's silence level, and an SFX admission now takes channel
+     * ownership in its own service while deferring the SFX track's first walk
+     * to the next one. What remains is the SFX track's initial
+     * {@code durationTimeout}, which {@code zZeroFillTrackRAM} seeds with 1
+     * and the engine leaves at 0.
      */
     @Test
     void theOracleReachesTheTitleMusicLoadsTrackCadence() {
@@ -224,7 +226,7 @@ class TestS3kOracleRequestSidecarWiring {
         assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH, report.kind());
         assertEquals(TITLE_MUSIC_TICK + 427, report.tick());
         assertEquals("SFX_FM4", report.role());
-        assertEquals("resting", report.field());
+        assertEquals("durationTimeout", report.field());
     }
 
     /**

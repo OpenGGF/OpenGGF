@@ -27,6 +27,67 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-04 - An S3K SFX owns its channel at admission but walks a service later
+
+- **Worktree/branch:** `.worktrees/audio-s3k-freq`,
+  `bugfix/ai-s3k-oracle-freq-resend`, over `develop` at `472f32b17`, merged
+  and clean-built before measuring.
+- **Command:** unchanged, both result lines.
+- **Result before:** `TRACK_STATE_MISMATCH`, tick 565, role `SFX_FM4`, field
+  `resting`, reference `false` against engine `true`. DAC stream
+  `BYTE_DIFFERENT` run 338 byte 0.
+- **Result after:** `TRACK_STATE_MISMATCH`, tick 565, role `SFX_FM4`, field
+  `durationTimeout`, reference `1` against engine `0`. DAC stream unchanged.
+- **The engine's SFX track ran a whole service early, and the probe showed it
+  as a clean shift.** Across services 565 to 570 the engine's `SFX_FM4` state
+  equalled the reference's state one service later, field for field: duration
+  2 against 1, then 1 against 2, then 22 against 1, and so on.
+- **Two halves of one ROM ordering, and they pull in opposite directions.**
+  `zUpdateEverything` calls `zUpdateSFXTracks` and only then falls into
+  `zUpdateMusic`, whose `zFillSoundQueue` consumes the request (Sound/Z80
+  Sound Driver.asm:650-701). So the admitting service has already walked the
+  SFX tracks and gives the new one no update at all; its first walk is the
+  next service. But `zSFXTrackInitLoop` sets bit 2 on the overridden music
+  track while the SFX is still being *loaded* (:1997-2003), so ownership does
+  exist from the admitting service. Deferring the walk alone moved the
+  divergence straight onto `MUS_FM4.overridden`, which is how the second half
+  was found. New `sfxWalkPrecedesRequest` for the deferral, and S3K now
+  selects the existing `SfxChannelOwnershipMode.ADMISSION` that S1 and S2
+  already used.
+- **A third change was tried, measured and dropped.** `zZeroFillTrackRAM`
+  seeds `DurationTimeout` with 1 rather than 0 (:2168-2184), which is exactly
+  the remaining divergence. Seeding it in the engine's track constructor makes
+  that byte agree but changes the first walk's shape for every driver: it
+  turned `TestS1AudioStateNormalizer`'s note-fill assertion red, and that test
+  asserts a named ROM property rather than a snapshot. The engine reaches the
+  same first-unit read from 0 that the ROM reaches from 1, so the seed needs
+  the first walk restructured alongside it. Left for its own change, and it is
+  the frontier.
+- **Three tests re-based, and why that is not laundering.**
+  `TestSonic3kCoordFlagParity`'s three spindash-counter tests admit an SFX and
+  then mix once, expecting its coordination flags to have run. With the ROM's
+  ordering they run on the following service, so each now mixes twice. The
+  property under test, that two `E9` flags increment the persistent counter
+  and a normal SFX start resets it, is untouched; only the amount of driver
+  work needed to reach it changed.
+- **S1 and S2 read by content.** Both S1 sound-test captures MATCH at 14,690
+  and 1,967 ticks. All four S2 oracles MATCH: v1 at 698 ticks, v2
+  state-and-writes and state-only at 2,198 each, and the request windows at
+  25, 52 and 27 transfers.
+- **Open items, unchanged, plus one.** S2's `zNoteFillUpdate` countdown; S1
+  and S2's post-note do-not-attack clear; the `.dac_playback_loop` cycle total
+  of 303 against `baseCycles` of 297; S2's `zFadeOutMusic` clearing
+  `SpeedUpFlag` (s2.sounddriver.asm:1677-1679); S1's and S2's per-track PSG
+  silence shape; and now the track-init `DurationTimeout` seed described
+  above.
+- **Gates at this commit, all green.** The audio packages plus
+  `TestSmpsFadeAudioThroughput`, `TestYm2612DacTiming`, the four S3K
+  keep-green classes, `TestSonic3kUnifiedAudioPresentationRomIntegration`,
+  `TestSonic3kCoordFlagParity`, `TestSonic3kFm3SpecialMode`,
+  `TestRewindCoverageGuard` and `TestStaticStateRewindCoverageGuard`: 2,154
+  tests, 0 failures, 10 skips.
+
+
 ## 2026-09-04 - A second S2 driver-state recording: CPZ state MATCHes, writes stop at an SFX channel choice
 
 - **Worktree/branch:** `.worktrees/audio-s2-state-frontier`,

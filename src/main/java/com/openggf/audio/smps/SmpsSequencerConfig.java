@@ -335,6 +335,7 @@ public final class SmpsSequencerConfig {
     private final FadeDelayCadence fadeDelayCadence;
     private final boolean tempoWaitPrecedesRequest;
     private final PsgSilenceShape psgSilenceShape;
+    private final boolean sfxWalkPrecedesRequest;
     private final NoteFillTail noteFillTail;
     private final int fadeOutDelay;
     private final int fadeOutSteps;
@@ -393,6 +394,7 @@ public final class SmpsSequencerConfig {
         this.fadeDelayCadence = b.fadeDelayCadence;
         this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
         this.psgSilenceShape = b.psgSilenceShape;
+        this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
         this.noteFillTail = b.noteFillTail;
         this.fadeOutDelay = b.fadeOutDelay;
         this.fadeOutSteps = b.fadeOutSteps;
@@ -701,6 +703,18 @@ public final class SmpsSequencerConfig {
         return fadeDelayCadence;
     }
 
+    /**
+     * Whether the SFX track walk runs before the driver reads its request
+     * mailbox. {@code zUpdateEverything} calls {@code zUpdateSFXTracks} and
+     * only then falls into {@code zUpdateMusic}, whose {@code zFillSoundQueue}
+     * consumes the queue (skdisasm Sound/Z80 Sound Driver.asm:650-701). So an
+     * SFX admitted during a service has already missed that service's walk,
+     * and its first update belongs to the next one.
+     */
+    public boolean isSfxWalkPrecedesRequest() {
+        return sfxWalkPrecedesRequest;
+    }
+
     /** How a single PSG track's silence is written. */
     public enum PsgSilenceShape {
         /** The engine's existing S1/S2 behaviour: one byte for the channel
@@ -837,6 +851,7 @@ public final class SmpsSequencerConfig {
         private FadeDelayCadence fadeDelayCadence = FadeDelayCadence.TEST_THEN_DECREMENT;
         private boolean tempoWaitPrecedesRequest = false;
         private PsgSilenceShape psgSilenceShape = PsgSilenceShape.SOUNDING_CHANNEL_ONLY;
+        private boolean sfxWalkPrecedesRequest = false;
         private NoteFillTail noteFillTail = NoteFillTail.LEGACY;
         private int fadeOutDelay = 3;
         private int fadeOutSteps = 0x28;
@@ -887,6 +902,7 @@ public final class SmpsSequencerConfig {
         public Builder fadeDelayCadence(FadeDelayCadence val) { fadeDelayCadence = val; return this; }
         public Builder tempoWaitPrecedesRequest(boolean val) { tempoWaitPrecedesRequest = val; return this; }
         public Builder psgSilenceShape(PsgSilenceShape val) { psgSilenceShape = val; return this; }
+        public Builder sfxWalkPrecedesRequest(boolean val) { sfxWalkPrecedesRequest = val; return this; }
         public Builder noteFillTail(NoteFillTail val) { noteFillTail = val; return this; }
         public Builder fadeOutDelay(int val) { fadeOutDelay = val; return this; }
         public Builder fadeOutSteps(int val) { fadeOutSteps = val; return this; }
