@@ -32,6 +32,12 @@ public interface ChipWriteObserver {
         SNAPSHOT_RESTORE,
         MODEL_MUTATION,
         /**
+         * Only the session's final PCM silence gate changed. Raw chip state and
+         * clocks are unchanged; raw-pin replay may cross this boundary, but a
+         * presentation-PCM consumer cannot reconstruct the gate from bus writes.
+         */
+        OUTPUT_GATE_CHANGE,
+        /**
          * A live session discarded unpublished physical writes after restoring
          * chip state. Consumers must start a new raw-replay segment.
          */

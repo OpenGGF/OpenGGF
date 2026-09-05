@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **FM comparison captures now prove their replay bounds:** internal-rate
+  diagnostics record a checked reset-origin segment and exact chip endpoint,
+  including time spent draining queued writes. Presentation-only output gates
+  are distinguished from chip mutations. Repeated extra-life restoration and
+  mid-fade snapshot tests now cover both AIZ and HCZ acts; human listening
+  approval remains a separate release gate.
+
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data
   strobes, real and interpolated DAC provenance, and PSG writes in explicit
