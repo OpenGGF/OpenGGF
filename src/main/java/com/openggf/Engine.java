@@ -386,8 +386,7 @@ public class Engine {
 						audioManager.beginLiveCaptureAudio(frameRate),
 						resolveLiveCaptureAudioFailAfterFrames()),
 				audioManager::outputSampleRate,
-				viewport -> new GlReadPixelsGrabber(
-						viewport.x(), viewport.y(), viewport.width(), viewport.height()),
+				GlPboFrameGrabber::create,
 				recorderFactory::create,
 				finalizer,
 				Duration.ofSeconds(10)));

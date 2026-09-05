@@ -44,6 +44,9 @@ public final class SmpsPhysicalDevice {
     private final class LiveMutationState implements LiveMutationToken {
         private final Object deviceIdentity;
         private final Snapshot snapshot;
+        private final VirtualSynthesizer.MutationBackup backup;
+        private final long generation;
+        private final boolean outputSilenced;
         private final DacData selectedDac;
         private boolean consumed;
 
@@ -52,7 +55,19 @@ public final class SmpsPhysicalDevice {
                 DacData selectedDac) {
             deviceIdentity = identity;
             this.snapshot = snapshot;
+            backup = null;
+            generation = 0;
+            outputSilenced = snapshot.outputSilenced();
             this.selectedDac = selectedDac;
+        }
+
+        private LiveMutationState(VirtualSynthesizer.MutationBackup backup, long generation) {
+            deviceIdentity = identity;
+            snapshot = null;
+            this.backup = backup;
+            this.generation = generation;
+            selectedDac = synth.selectedDacDataForSnapshot();
+            outputSilenced = SmpsPhysicalDevice.this.outputSilenced;
         }
     }
 
@@ -60,6 +75,8 @@ public final class SmpsPhysicalDevice {
     private final Object identity = new Object();
     private final Settings settings;
     private final VirtualSynthesizer synth;
+    private VirtualSynthesizer.MutationBackup mutationBackup;
+    private long mutationGeneration;
     private int renderInvocationCount;
     private long renderedStereoFrames;
     private boolean outputSilenced = true;
@@ -142,6 +159,14 @@ public final class SmpsPhysicalDevice {
         outputSilenced = resolved.outputSilenced();
     }
 
+    /** Session transactions are exclusive; only their private storage is reusable. */
+    LiveMutationToken captureSessionMutation() {
+        requireActive();
+        if (mutationBackup == null) mutationBackup = synth.createMutationBackup();
+        synth.captureMutation(mutationBackup);
+        return new LiveMutationState(mutationBackup, ++mutationGeneration);
+    }
+
     LiveMutationToken captureLiveMutation() {
         requireActive();
         return new LiveMutationState(
@@ -155,9 +180,13 @@ public final class SmpsPhysicalDevice {
             throw new IllegalStateException(
                     "physical mutation token has already been consumed");
         }
+        if (state.backup != null && state.generation != mutationGeneration) {
+            throw new IllegalStateException("physical mutation token is stale");
+        }
         synth.restoreSelectedDacData(state.selectedDac);
-        synth.restoreSynthSnapshot(state.snapshot.synth());
-        outputSilenced = state.snapshot.outputSilenced();
+        if (state.backup == null) synth.restoreSynthSnapshot(state.snapshot.synth());
+        else synth.restoreMutation(state.backup);
+        outputSilenced = state.outputSilenced;
         state.consumed = true;
     }
 

@@ -211,6 +211,8 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
     }
 
+    private SavedOverride[] mutationOverrides;
+
     private final class SessionLiveMutation implements LiveMutationToken {
         private final Object ownerIdentity;
         private final SmpsPhysicalDevice.LiveMutationToken physical;
@@ -244,8 +246,10 @@ public final class SmpsDriverSession implements AutoCloseable {
                     SmpsDriverSession.this.selectedDacSource;
             pendingService = SmpsDriverSession.this.pendingService == null
                     ? null : SmpsDriverSession.this.pendingService.copy();
-            overrides = Arrays.copyOf(overrideStack,
+            if (mutationOverrides == null) mutationOverrides = new SavedOverride[overrideStack.length];
+            System.arraycopy(overrideStack, 0, mutationOverrides, 0,
                     SmpsDriverSession.this.overrideCount);
+            overrides = mutationOverrides;
             this.overrideCount = SmpsDriverSession.this.overrideCount;
             speedShoesEnabled =
                     SmpsDriverSession.this.speedShoesEnabled;
@@ -1209,9 +1213,10 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
         transactionOpen = true;
         try {
-            return new SessionLiveMutation(device.captureLiveMutation());
+            return new SessionLiveMutation(device.captureSessionMutation());
         } catch (RuntimeException failure) {
             transactionOpen = false;
+            if (mutationOverrides != null) Arrays.fill(mutationOverrides, null);
             throw failure;
         }
     }
@@ -1229,6 +1234,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         }
         state.consumed = true;
         transactionOpen = false;
+        Arrays.fill(mutationOverrides, null);
     }
 
     /** Validates commit while the composite owner can still roll back. */
@@ -1294,6 +1300,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         truncateDiagnostics(state.diagnosticCount);
         state.consumed = true;
         transactionOpen = false;
+        Arrays.fill(mutationOverrides, null);
         // The aborted raw strobes remain private, but the restored chip state
         // and monotonic diagnostic clocks require a surviving segment break.
         device.reportPhysicalTimelineBoundary(

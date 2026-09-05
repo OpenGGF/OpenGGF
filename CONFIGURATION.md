@@ -543,6 +543,14 @@ ones. The bundled `config.yaml` supplies the live toggle default.
 | `CAPTURE_FFMPEG_PASS1_ARGS` | `capture.ffmpegPass1Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the encode pass. See "Overriding the ffmpeg commands" below. |
 | `CAPTURE_FFMPEG_PASS2_ARGS` | `capture.ffmpegPass2Args` | string | `"default"` | **Advanced.** Full ffmpeg argument list for the mux pass; leave empty to skip it and record video only. |
 
+Live recording reuses a bounded pool of RGBA arrays (encoder queue capacity plus
+two in-flight frames). On OpenGL 2.1 or newer, two additional GPU pixel-pack
+buffers overlap readback with the next presentation; their memory is outside
+`capture.queueBudgetMb`. Older contexts use synchronous readback. Video and audio
+remain paired, and stopping flushes the final pending frame. Sustained GPU or
+encoder overload can still block lossless recording; the queue cannot compensate
+for an encoder that remains slower than playback.
+
 Invoke the tool through Maven (requires a ROM in the working directory, an offscreen-capable GL context, and `ffmpeg` on `PATH`):
 
 ```bash
@@ -606,6 +614,13 @@ before BK2 playback can be controlled from the keyboard.
 | `DISCORD_RICH_PRESENCE_ENABLED` | `discord.enabled` | bool | `false` | Opt in to publishing OpenGGF menu/gameplay status through the local Discord desktop client. Disabled by default for privacy and no-ops when Discord is unavailable. |
 | `DISCORD_RICH_PRESENCE_SHOW_TIMER` | `discord.showTimer` | bool | `true` | Include the current level timer in Discord Rich Presence gameplay status when presence is enabled. |
 | `DISCORD_RICH_PRESENCE_SHOW_ZONE` | `discord.showZone` | bool | `true` | Include the current zone and act in Discord Rich Presence gameplay status when presence is enabled. |
+
+Live rewind stores gameplay checkpoints every 10 ticks and audio checkpoints every
+60 ticks. A cold backward step therefore replays at most nine gameplay ticks.
+Compared with the previous 60-tick gameplay cadence, this retains roughly six
+times as many gameplay snapshots and performs more forward-play capture work.
+`rewind.historySeconds` bounds that history; reduce it if memory use matters.
+Trace playback retains its configured checkpoint interval.
 
 ### Level Editor (experimental)
 

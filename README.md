@@ -240,6 +240,12 @@ traces.
 
 #### 0.6 highlights
 
+- **Runtime performance:** live capture reuses pixel buffers and overlaps GPU
+  readback with the next frame; audio transactions reuse private rollback storage.
+  Live rewind bounds cold gameplay replay to nine ticks, trading more retained
+  snapshots for shorter bursts. Animated-art uploads and shader state handling
+  also avoid redundant work. See the [measurements and limits](docs/architecture/validation/2026-09-05-runtime-performance.md).
+
 - **Audio correctness and evidence:** S3K effect admission now sends the
   retail PSG noise-silence write in header order. Opt-in physical chip capture
   distinguishes actual YM/PSG strobes and DAC origins from logical logs, while

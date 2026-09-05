@@ -90,30 +90,44 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     public interface LiveMutationToken {
     }
 
+    /** Only one registry mutation is open; token flags and diagnostics remain independent. */
+    private final class MutationBuffers {
+        private final MusicSlot[] overrides = new MusicSlot[overrideStack.length];
+        private final SampleBackedVoice[] samples = new SampleBackedVoice[sampleSfx.length];
+        private final PresentationVoice[] voices =
+                new PresentationVoice[overrideStack.length + sampleSfx.length + 2];
+        private final Object[] voiceStates = new Object[voices.length];
+        private final long[] removals = new long[deferredRemovals.length];
+        private final long[] warnings = new long[warnedRejectionVoiceIds.length];
+
+        private void clearReferences() {
+            java.util.Arrays.fill(overrides, null);
+            java.util.Arrays.fill(samples, null);
+            java.util.Arrays.fill(voices, null);
+            java.util.Arrays.fill(voiceStates, null);
+        }
+    }
+
+    private MutationBuffers mutationBuffers;
+
     private final class RegistryLiveMutation implements LiveMutationToken {
         private final AudioVoiceRegistry owner = AudioVoiceRegistry.this;
         private final MusicSlot activeMusic =
                 AudioVoiceRegistry.this.activeMusic;
-        private final MusicSlot[] overrides = java.util.Arrays.copyOf(
-                AudioVoiceRegistry.this.overrideStack,
-                AudioVoiceRegistry.this.overrideCount);
+        private final MusicSlot[] overrides = mutationBuffers.overrides;
         private final SampleBackedVoice rawPcm =
                 AudioVoiceRegistry.this.rawPcm;
-        private final SampleBackedVoice[] sampleSfx =
-                java.util.Arrays.copyOf(
-                        AudioVoiceRegistry.this.sampleSfx,
-                        AudioVoiceRegistry.this.sampleSfxCount);
-        private final PresentationVoice[] voices;
-        private final Object[] voiceStates;
+        private final SampleBackedVoice[] sampleSfx = mutationBuffers.samples;
+        private final PresentationVoice[] voices = mutationBuffers.voices;
+        private final Object[] voiceStates = mutationBuffers.voiceStates;
+        private final int voiceCount;
         private final int overrideCount =
                 AudioVoiceRegistry.this.overrideCount;
         private final int sampleSfxCount =
                 AudioVoiceRegistry.this.sampleSfxCount;
         private final int deferredRemovalCount =
                 AudioVoiceRegistry.this.deferredRemovalCount;
-        private final long[] deferredRemovals = java.util.Arrays.copyOf(
-                AudioVoiceRegistry.this.deferredRemovals,
-                AudioVoiceRegistry.this.deferredRemovalCount);
+        private final long[] deferredRemovals = mutationBuffers.removals;
         private final int completionSweepCount =
                 AudioVoiceRegistry.this.completionSweepCount;
         private final boolean completionSweepRequired =
@@ -144,7 +158,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         private final int warnedRejectionCursor =
                 AudioVoiceRegistry.this.warnedRejectionCursor;
         private final long[] warnedRejectionVoiceIds =
-                AudioVoiceRegistry.this.warnedRejectionVoiceIds.clone();
+                mutationBuffers.warnings;
         private final SmpsCoordFlagRuntimeState.Snapshot coordState =
                 coordFlagHandlers.state().snapshot();
         private final AudioPresentationDependencyResolver
@@ -156,9 +170,14 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         private RegistryLiveMutation() {
             diagnostics = dependencyResolver.beginDiagnosticTransaction();
             try {
-                voices = allOwnedVoices();
-                voiceStates = new Object[voices.length];
-                for (int index = 0; index < voices.length; index++) {
+                System.arraycopy(overrideStack, 0, overrides, 0, overrideCount);
+                System.arraycopy(AudioVoiceRegistry.this.sampleSfx, 0, sampleSfx, 0, sampleSfxCount);
+                System.arraycopy(AudioVoiceRegistry.this.deferredRemovals, 0,
+                        deferredRemovals, 0, deferredRemovalCount);
+                System.arraycopy(AudioVoiceRegistry.this.warnedRejectionVoiceIds, 0,
+                        warnedRejectionVoiceIds, 0, warnedRejectionVoiceIds.length);
+                voiceCount = copyOwnedVoices(voices);
+                for (int index = 0; index < voiceCount; index++) {
                     voiceStates[index] = captureVoiceMutationState(
                             voices[index]);
                 }
@@ -579,11 +598,13 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             throw new IllegalStateException(
                     "an audio registry mutation is already active");
         }
+        if (mutationBuffers == null) mutationBuffers = new MutationBuffers();
         liveMutationOpen = true;
         try {
             return new RegistryLiveMutation();
         } catch (RuntimeException failure) {
             liveMutationOpen = false;
+            mutationBuffers.clearReferences();
             throw failure;
         }
     }
@@ -601,6 +622,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
         state.consumed = true;
         liveMutationOpen = false;
+        mutationBuffers.clearReferences();
     }
 
     /** Runs the only fallible commit work while rollback is still possible. */
@@ -650,7 +672,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         } catch (RuntimeException failure) {
             primary = failure;
         }
-        for (int index = state.voices.length - 1; index >= 0; index--) {
+        for (int index = state.voiceCount - 1; index >= 0; index--) {
             try {
                 rollbackVoiceMutation(
                         state.voices[index], state.voiceStates[index]);
@@ -697,6 +719,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         rebuildOrderedVoices();
         state.consumed = true;
         liveMutationOpen = false;
+        mutationBuffers.clearReferences();
         if (primary != null) {
             throw primary;
         }
@@ -1538,6 +1561,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private PresentationVoice[] allOwnedVoices() {
         PresentationVoice[] voices =
                 new PresentationVoice[overrideCount + sampleSfxCount + 4];
+        int count = copyOwnedVoices(voices);
+        return java.util.Arrays.copyOf(voices, count);
+    }
+
+    private int copyOwnedVoices(PresentationVoice[] voices) {
         int count = 0;
         if (activeMusic != null) {
             voices[count++] = activeMusic.voice();
@@ -1551,7 +1579,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         for (int index = 0; index < sampleSfxCount; index++) {
             voices[count++] = sampleSfx[index];
         }
-        return java.util.Arrays.copyOf(voices, count);
+        return count;
     }
 
     private void fadeMusic(int steps, int delay) {

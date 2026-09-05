@@ -824,6 +824,103 @@ public class Ym2612Chip {
 
     // ------------------------------------------------------------ snapshot
 
+    /** Mutable owner-private transaction storage; never used by durable snapshots. */
+    static final class MutationBackup {
+        private int chipType;
+        private int frameSumLeft;
+        private int frameSumRight;
+        private int directFrameCount;
+        private int busHold;
+        private int pendingCount;
+        private int queuedAddress;
+        private int dacSampleId;
+        private int dacPeriod;
+        private int dacIndex;
+        private int dacAccumulator;
+        private int dacPreviousValue;
+        private int dacPendingValue;
+        private int dacWritePhase;
+        private int dacWriteValue;
+        private int dacSampleEndPending;
+        private double outputRate;
+        private boolean dacInterpolate;
+        private boolean[] mutes = new boolean[6];
+        private final NukedOpn2State core = new NukedOpn2State();
+        private final BlipResampler.MutationBackup resampler = new BlipResampler.MutationBackup();
+        private int[] direct = new int[0], ops = new int[0];
+    }
+
+    void captureMutation(MutationBackup backup) {
+        backup.chipType = chipType;
+        backup.frameSumLeft = frameSumLeft;
+        backup.frameSumRight = frameSumRight;
+        backup.directFrameCount = directFrameCount;
+        backup.busHold = busHold;
+        backup.pendingCount = pendingCount;
+        backup.queuedAddress = queuedAddress;
+        backup.dacSampleId = dacSampleId;
+        backup.dacPeriod = dacPeriod;
+        backup.dacIndex = dacIndex;
+        backup.dacAccumulator = dacAccumulator;
+        backup.dacPreviousValue = dacPreviousValue;
+        backup.dacPendingValue = dacPendingValue;
+        backup.dacWritePhase = dacWritePhase;
+        backup.dacWriteValue = dacWriteValue;
+        backup.dacSampleEndPending = dacSampleEndPending;
+        backup.outputRate = outputRate;
+        backup.dacInterpolate = dacInterpolate;
+        if (backup.mutes.length < mutes.length) backup.mutes = new boolean[mutes.length];
+        System.arraycopy(mutes, 0, backup.mutes, 0, mutes.length);
+        backup.core.copyFrom(state);
+        int directSize = directFrameCount * 2;
+        if (backup.direct.length < directSize) backup.direct = new int[directSize];
+        for (int i = 0; i < directFrameCount; i++) {
+            int from = ((directFrameHead + i) % (directFrames.length / 2)) * 2;
+            backup.direct[i * 2] = directFrames[from];
+            backup.direct[i * 2 + 1] = directFrames[from + 1];
+        }
+        int opSize = pendingCount * OP_STRIDE;
+        if (backup.ops.length < opSize) backup.ops = new int[opSize];
+        System.arraycopy(pendingOps, 0, backup.ops, 0, opSize);
+        resampler.captureMutation(backup.resampler);
+    }
+
+    void restoreMutation(MutationBackup backup) {
+        chipType = backup.chipType;
+        frameSumLeft = backup.frameSumLeft;
+        frameSumRight = backup.frameSumRight;
+        directFrameCount = backup.directFrameCount;
+        busHold = backup.busHold;
+        pendingCount = backup.pendingCount;
+        queuedAddress = backup.queuedAddress;
+        dacSampleId = backup.dacSampleId;
+        dacPeriod = backup.dacPeriod;
+        dacIndex = backup.dacIndex;
+        dacAccumulator = backup.dacAccumulator;
+        dacPreviousValue = backup.dacPreviousValue;
+        dacPendingValue = backup.dacPendingValue;
+        dacWritePhase = backup.dacWritePhase;
+        dacWriteValue = backup.dacWriteValue;
+        dacSampleEndPending = backup.dacSampleEndPending;
+        outputRate = backup.outputRate;
+        dacInterpolate = backup.dacInterpolate;
+        System.arraycopy(backup.mutes, 0, mutes, 0, mutes.length);
+        applyChipType(chipType);
+        state.copyFrom(backup.core);
+        int directSize = directFrameCount * 2;
+        if (directFrames.length < directSize) directFrames = new int[directSize];
+        System.arraycopy(backup.direct, 0, directFrames, 0, directSize);
+        directFrameHead = 0;
+        int opSize = pendingCount * OP_STRIDE;
+        if (pendingOps.length < opSize) pendingOps = new int[opSize];
+        System.arraycopy(backup.ops, 0, pendingOps, 0, opSize);
+        dacWriteOrigin = dacWritePhase == 0
+                ? ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS
+                : ChipWriteObserver.PhysicalWriteOrigin.RESTORED_UNKNOWN;
+        resampler.restoreMutation(backup.resampler);
+        emitPhysicalBoundary(ChipWriteObserver.PhysicalTimelineBoundary.SNAPSHOT_RESTORE);
+    }
+
     /** Pure: captures the complete chip, queue, DAC, output-stage and resampler state. */
     public Snapshot captureSnapshot() {
         int[] direct = new int[directFrameCount * 2];
