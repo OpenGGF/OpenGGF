@@ -795,6 +795,18 @@ public class SmpsSequencer implements CoordFlagContext {
                                 == SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE) {
                             t.resting = true;
                         }
+                        if (t.channelId == 2
+                                && config.getFmSfxReleaseMode()
+                                == SmpsSequencerConfig.FmSfxReleaseMode
+                                        .ROM_VOICE_RESTORE_PRESERVE_REST) {
+                            // S3K cfStopTrack restores FM3 settings before the
+                            // covered music voice (:3472-3499). Shipped
+                            // fix_sndbugs=0 also saves this byte in
+                            // zFM3Settings; the fixed branch omits that RAM
+                            // store, but both branches write 27h physically.
+                            synth.writeFm(this, 0, 0x27,
+                                    t.fm3SpecialMode ? 0x4F : 0x0F);
+                        }
                         refreshInstrument(t);
                         continue;
                     }

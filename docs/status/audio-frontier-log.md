@@ -27,6 +27,22 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - FM3 release mode: service 1588 event 1 to service 1592 PSG3 state
+
+- **Before:** service 1588 event 1, reference YM2612 port 0 `27=0F`, engine
+  port 0 `B6=C0`.
+- **After:** `TRACK_STATE_MISMATCH` at service 1592, music PSG3 `volEnv`,
+  reference `0`, engine `1`; the first 1,592 services match.
+- **ROM owner:** shipped `fix_sndbugs=0` `cfStopTrack` clears the music override
+  and writes FM3 mode `0F` or `4F` before uploading the restored music voice
+  (`Sound/Z80 Sound Driver.asm:3443-3518`). The shipped branch also stores the
+  setting in driver RAM; the fixed branch omits that store, but both write
+  register `27` physically.
+- **Evidence:** focused normal/special-mode tests failed red with `B6` as the
+  first restore write and now pin `27` before `B6`; non-FM3 and S1/S2 release
+  modes remain excluded. The ROM-backed oracle pins the new PSG-envelope
+  frontier. The independent DAC frontier is unchanged.
+
 ## 2026-09-05 - PSG frequency transaction: service 1570 event 48 to service 1588 event 1
 
 - **Before:** `EVENT_MISSING` at service 1570 event 48, reference PSG `FF`.

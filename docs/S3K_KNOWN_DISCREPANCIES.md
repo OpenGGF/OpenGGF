@@ -1545,11 +1545,13 @@ volume latch. The engine formerly made a new ownership decision for that
 second bus byte and rejected it. The ROM checks track override once before
 writing the pair and performs no ownership decision between its bytes. The
 driver now admits the source transaction once and forwards both bytes verbatim,
-preserving the chip's final latch and noise attenuation. The oracle advances
-to service **1588**, event **1**: reference YM2612 port 0 `27=0F`, engine port
-0 `B6=C0`, a separate FM discrepancy.
+preserving the chip's final latch and noise attenuation. The next FM3 release
+gap is also resolved: the covered music track's retained normal/special mode
+is written to register `27` before its voice, matching `cfStopTrack`
+(:3443-3518). The oracle advances to service **1592**, where music PSG3
+`volEnv` is reference `0` versus engine `1`, a separate envelope-state gap.
 `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
-matching 1588-service prefix through ordinal 1587. No full-service progress is
+matching 1592-service prefix through ordinal 1591. No full-service progress is
 claimed. The DAC stream
 remains independently red at run 338, byte 0 (`88` versus `7F`). See the
 [2026-09-05 validation report](architecture/validation/audio/2026-09-05-s3k-psg-takeover.md)
