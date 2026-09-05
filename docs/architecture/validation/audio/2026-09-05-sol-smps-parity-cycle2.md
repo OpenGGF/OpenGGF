@@ -1,6 +1,6 @@
 # Second Sol SMPS parity delivery cycle
 
-Status: candidate verified; integration, post-merge comparison and delivery pending.
+Status: merged locally as `d004188d9` and post-merge verified; push and cleanup pending.
 Baseline: develop `3fd7a15fc`. Candidate branch:
 `bugfix/ai-audio-parity-cycle2`, worktree `audio-parity-cycle2`.
 
@@ -58,7 +58,8 @@ mvn -Dmse=off "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" 
 | Final candidate ordinary, `c8b506a34` source | 16,650 tests, 0 failures/errors, 43 skips; baseline outcomes preserved after the explicit S1 rename, nine new passing outcomes |
 | Final candidate guards | 609 tests, 0 failures/errors/skips; exact baseline identity/outcome equality |
 | Final candidate focused selection | 70 tests, 0 failures/errors/skips |
-| Post-merge ordinary and guards | Pending |
+| Post-merge ordinary, `d004188d9` | 16,650 tests, 0 failures/errors, 43 skips; exact candidate identity/outcome equality |
+| Post-merge guards, `d004188d9` | 609 tests, 0 failures/errors/skips; exact candidate identity/outcome equality |
 
 Logs and reports remain under each worktree's `target/`. Compare exact test
 identity, status and message, not just totals. Review intentional assertion
