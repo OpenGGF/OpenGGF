@@ -90,3 +90,37 @@ ownership after submission, and added immediate reference clearing when audio
 transactions finish. A full-suite mock failure in the presentation coordinator
 was corrected by stubbing the recorder's new capture boundary. Its affected
 checks and audio lifetime regressions passed in a 116-test focused run.
+
+## Final verification
+
+Completed on 2026-09-05 with Java 21 and local display access for real GL tests.
+Ordinary suites used `mvn -Dmse=off test -B` with all three absolute ROM path
+properties listed below. Guards ran in separate Maven JVMs using
+`LUA_BIN=/usr/bin/lua5.4 mvn -Dmse=off -Pguards test -B`.
+
+| Tree / commit | Ordinary tests | Failures / errors | Skips | Guards |
+|---|---:|---:|---:|---:|
+| Updated base `e258282e0` | 16,497 | 0 / 0 | 22 | 609 passed, none skipped |
+| Development merge `878d17dad` | 16,522 | 0 / 0 | 23 | 609 passed, none skipped |
+| Integrated develop `c9f472a4a` | 16,522 | 0 / 0 | 23 | 609 passed, none skipped |
+
+```text
+-Dsonic1.rom.path=${REPO_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen
+-Dsonic2.rom.path=${REPO_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen
+-Ds3k.rom.path=${REPO_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen
+```
+
+Set `REPO_ROOT` to the checkout’s absolute path and pass each property as one
+double-quoted shell argument. Recorded runs used the resolved absolute paths. The integrated ordinary run
+finished at 06:02:56 BST; guards finished at 06:05:10 BST. Test-identity comparison
+found no new or worsened failures. The only added skip is the opt-in
+`TestLiveRewindCheckpointCost.compareCheckpointCadencesOnTheSameRecordedRoute`,
+which passed in the explicit measurement run above. All 22 baseline skips remain;
+the suite result does not imply those skipped checks passed.
+
+`mvn -Dmse=off -DskipTests package -B` also succeeded on the integrated code,
+producing the dependency-bundled JAR at 06:06:25 BST without repeating tests.
+
+The integrated tree also retains the other task's documentation closeout through
+`9da9254c1`. Merge conflicts preserved both changelog entries and both sets of
+physical-device tests. No gameplay behavior was fitted to a trace fixture.
