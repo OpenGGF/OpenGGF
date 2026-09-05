@@ -182,7 +182,7 @@ It is not part of this candidate. Neither this prefix nor the running full S1
 diagnostic capture establishes full-game parity or authenticated production
 reference availability.
 
-### Fourth worker cycle: verification candidate
+### Fourth worker cycle: delivered
 
 Candidate `d14277e8f` closes the service-1690 F2 covered-noise restore mismatch:
 release the exact ending track's owned claims, preserve music playing/rest state,
@@ -193,8 +193,10 @@ The focused 125-test and ordinary 16,661-test runs pass; seven new passing
 identities and one reviewed strengthened test rename preserve all baseline
 outcomes, including 43 skips. See the
 [fourth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle4.md)
-for pending integration evidence. All 609 separate guards pass with exact
-baseline outcome equality.
+for integration evidence. All 609 separate guards pass with exact baseline
+outcome equality. Develop merge `1e33747f1` passes both post-merge suites with
+exact candidate outcome equality. Develop was pushed through `250b3409b`, and
+the completed worktree and merged local branch were removed.
 
 The next hard mismatch is service 2012 event 1 (`BF` versus `FF`). Source review
 shows the second Skid header silences the previous header initialized within
@@ -202,6 +204,21 @@ the same admission. Use local header-order state, not a persistent retired-slot
 RAM model; entry state before the first header remains a separate limitation.
 Retail E3's silence prelude plus F2 tail, raw tempo-byte state (including `01`),
 and authenticated full-game references remain separate work.
+
+### Fifth worker cycle: delivered
+
+Source `32a37dd62` separates ROM SFX-header admission order from the fixed
+channel-slot playback walk. Its prior-header PSG silence advances the matching
+intro prefix through service 2356; the next mismatch is service 2357,
+`MUS_FM4.overridden` (`false` versus `true`). Source-derived order, reversed
+headers, an FM separator and snapshot/append identity controls guard this
+boundary without adding persistent retired-slot state. First-entry IX is
+still explicitly unmodelled. The
+[fifth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle5.md)
+records the 92-test focused and 16,666-test ordinary results, negative controls
+and remaining delivery gates. Merge `8a7dc5f15` passes the same ordinary suite
+and 609 separate guards with exact candidate outcome equality. Develop was pushed
+through `9d153cf6a`; the completed worktree and local branch were removed.
 
 ### Phase 1 — truthful coverage reporting
 

@@ -75,6 +75,25 @@ class TestS3kSfxLifecycleRom {
                 "noise silence belongs after the preceding FM headers and before the music walk");
     }
 
+    /**
+     * Skid's shipped headers are PSG2 then PSG1. On the second pass IX still
+     * names the initialized PSG2 header, so zGetSFXChannelPointers emits BF
+     * before its unconditional FF (Sound/Z80 Sound Driver.asm:1997-2103,
+     * 2109-2165; shipped fix_sndbugs=0).
+     */
+    @Test
+    void skidAdmissionUsesThePreviousRomHeaderBeforeCurrentPsgSilence() {
+        AudioManager audio = install();
+        observe(audio);
+
+        assertTrue(audio.playSfx(Sonic3kSfx.SKID.id));
+        service(audio);
+
+        assertTrue(writes.size() >= 3, () -> "Skid admission writes: " + writes);
+        assertEquals(List.of("psg[FF]", "psg[BF]", "psg[FF]"),
+                writes.subList(0, 3));
+    }
+
     @AfterEach
     void tearDown() {
         AudioManager.getInstance().resetState();

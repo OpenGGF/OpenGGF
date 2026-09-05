@@ -815,16 +815,28 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         if (!initializeFm && !silenceNoise) {
             return;
         }
-        for (SmpsSequencer.Track track : sequencer.getTracks()) {
+        SmpsSequencer.Track previousInitializedHeader = null;
+        for (SmpsSequencer.Track track : sequencer.getSfxHeaderOrderTracks()) {
             if (track.type == SmpsSequencer.TrackType.PSG && silenceNoise) {
+                // The first header's incoming IX is pre-existing slot RAM,
+                // which this bounded admission model does not project.
+                // At the next header, IX still identifies the track initialized
+                // by the preceding loop pass. All shipped S3K SFX headers seed
+                // PlaybackControl with 80h, so zSilencePSGChannel's bit-0 gate
+                // is clear (TestSonic3kSmpsMetaCommandReachability).
+                if (previousInitializedHeader != null
+                        && previousInitializedHeader.type
+                        == SmpsSequencer.TrackType.PSG) {
+                    writeRawPsg(0x9F
+                            | (previousInitializedHeader.channelId << 5));
+                }
                 // Retail fix_sndbugs=0: zGetSFXChannelPointers.is_psg writes
                 // FF unconditionally, even for PSG1/2, before initializing
                 // the incoming track (skdisasm Sound/Z80 Sound Driver.asm:2131-2136).
                 // The fixed branch relies on corrected channel silence instead.
-                // The preceding silence call uses stale IX and may add other
-                // writes; this models only the guaranteed FF, in header order.
                 writeRawPsg(0xFF);
             }
+            previousInitializedHeader = track;
             // zWriteFMIorII returns on bit 7 of VoiceControl, so a PSG track's
             // clear writes nothing at all.
             if (track.type != SmpsSequencer.TrackType.FM || !initializeFm) {

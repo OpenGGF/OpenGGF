@@ -14,6 +14,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **S3K SFX admission preserves ROM header ordering:** fixed channel-RAM order
+  still owns the runtime walk, while admission now retains the original header
+  order needed by the shipped driver's stale-IX PSG silence. Consecutive PSG2
+  and PSG1 headers therefore emit the retail `FF BF FF` sequence.
+
 - **Sonic 2 DAC playback uses the retail loop cadence:** the ROM loader now
   supplies the 295 Z80 cycles that `zWriteToDAC` spends delivering each byte's
   two decoded samples, instead of 288. ROM-backed coverage checks the rate-1
