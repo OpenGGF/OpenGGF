@@ -2,6 +2,7 @@ package com.openggf.tools.audio.completerun;
 
 import static com.openggf.tools.audio.completerun.CompleteRunAudioTrace.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -36,6 +37,182 @@ class TestCompleteRunAudioComparator {
 
     @TempDir
     Path temp;
+
+    @Test
+    void coverageRequiresCorrelatedMatchBeforeReportingFullParity() throws Exception {
+        TestProfile profile = registerProfile(2);
+        Path reference = writeCapture("coverage-match-reference", profile,
+                ProducerKind.REFERENCE, 2, this::plainFrame);
+        Path engine = writeCapture("coverage-match-engine", profile,
+                ProducerKind.OPENGGF, 2, this::plainFrame);
+
+        CompleteRunAudioCoverageSummary withoutEvidence =
+                CompleteRunAudioCoverageSummary.from(profile, null);
+        CompleteRunAudioCoverageSummary matched = CompleteRunAudioCoverageSummary.from(
+                profile, CompleteRunAudioComparator.compare(reference, engine));
+
+        assertFalse(withoutEvidence.fullParity());
+        assertTrue(withoutEvidence.layers().stream().allMatch(layer -> layer.evidence()
+                == CompleteRunAudioCoverageSummary.EvidenceDisposition.NOT_RUN));
+        assertTrue(matched.fullParity());
+        assertTrue(matched.layers().stream().allMatch(layer ->
+                layer.authority()
+                        == CompleteRunAudioCoverageSummary.AuthorityDisposition.COMPARABLE
+                        && layer.evidence()
+                        == CompleteRunAudioCoverageSummary.EvidenceDisposition.VERIFIED_MATCH));
+        assertEquals(matched.toText(), CompleteRunAudioCoverageSummary.from(
+                profile, CompleteRunAudioComparator.compare(reference, engine)).toText());
+        assertTrue(matched.toText().startsWith("scope=complete-run profiles only\n"));
+        assertTrue(matched.toText().contains("outside_report=narrow S1/S2/S3K parity adapters"));
+        assertTrue(matched.toText().contains("fixture_rom_sha1=" + profile.fixture().romSha1()));
+        assertTrue(matched.toText().contains("producer=REFERENCE binding=PinnedProducerBinding"));
+    }
+
+    @Test
+    void coverageUsesComparisonLocationAndLeavesWholeCaptureDifferencesUnassigned() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("coverage-owner-reference", profile,
+                ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path engine = writeCapture("coverage-owner-engine", profile,
+                ProducerKind.OPENGGF, 1, this::plainFrame);
+        CompleteRunAudioReport matched = CompleteRunAudioComparator.compare(reference, engine);
+
+        Frame row = plainFrame(0);
+        Frame lagged = fullFrame(row.absoluteFrame(), row.segment(), true,
+                row.requests(), row.decisions(), row.services(), row.postRowState(),
+                row.chipEvents(), row.nativeDiagnostics());
+        assertCoverageOwner(profile, matched,
+                CompleteRunAudioComparator.difference(row, lagged), ComparisonLayer.ROW_LAG);
+
+        Frame otherSegment = fullFrame(row.absoluteFrame(), "other", row.lag(),
+                row.requests(), row.decisions(), row.services(), row.postRowState(),
+                row.chipEvents(), row.nativeDiagnostics());
+        assertCoverageOwner(profile, matched,
+                CompleteRunAudioComparator.difference(row, otherSegment), null);
+
+        DriverService service = service(0, List.of(),
+                List.of(new YmWrite(0, 0, 0x22, 1)), state(1));
+        DriverService changedService = service(0, List.of(),
+                List.of(new YmWrite(0, 0, 0x22, 2)), state(1));
+        assertCoverageOwner(profile, matched,
+                CompleteRunAudioComparator.difference(frame(service), frame(changedService)),
+                ComparisonLayer.FRAME_CHIP_EVENTS);
+
+        CutoffFrontier cutoff = new CutoffFrontier(List.of(), List.of(), List.of(), null,
+                0, 0, state(1));
+        CutoffFrontier changedCutoff = new CutoffFrontier(List.of(), List.of(), List.of(), null,
+                1, 0, state(1));
+        assertCoverageOwner(profile, matched,
+                CompleteRunAudioComparator.difference(cutoff, changedCutoff),
+                ComparisonLayer.BOUNDARY_CHIP_STATE);
+
+        Terminal terminal = new Terminal(FIRST_FRAME + 1, 1, 0, 0, 0, 0, 0, 0,
+                "a".repeat(64));
+        Terminal changedCount = new Terminal(FIRST_FRAME + 1, 1, 1, 0, 0, 0, 0, 0,
+                "b".repeat(64));
+        Terminal changedDigest = new Terminal(FIRST_FRAME + 1, 1, 0, 0, 0, 0, 0, 0,
+                "b".repeat(64));
+        assertCoverageOwner(profile, matched,
+                CompleteRunAudioComparator.difference(terminal, changedCount), null);
+        assertCoverageOwner(profile, matched,
+                CompleteRunAudioComparator.difference(terminal, changedDigest), null);
+    }
+
+    @Test
+    void coveragePinsEvidenceToTheSuppliedProfileFixtureAndRuntime() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("coverage-bound-reference", profile,
+                ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path engine = writeCapture("coverage-bound-engine", profile,
+                ProducerKind.OPENGGF, 1, this::plainFrame);
+        CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
+
+        TestProfile wrongProfile = profile("coverage-wrong-profile."
+                + PROFILE_SEQUENCE.incrementAndGet(), 1);
+        assertThrows(IllegalArgumentException.class,
+                () -> CompleteRunAudioCoverageSummary.from(wrongProfile, report));
+
+        CompleteRunFixture originalFixture = profile.fixture;
+        CompleteRunFixture changedFixture = new CompleteRunFixture(originalFixture.romSha1(),
+                originalFixture.romCrc32(), originalFixture.bk2Sha256(),
+                originalFixture.bk2RowCount(), "f".repeat(64), originalFixture.segments(),
+                originalFixture.firstFrame(), originalFixture.exclusiveEnd());
+        TestProfile wrongFixture = new TestProfile(profile.id, changedFixture);
+        assertThrows(IllegalArgumentException.class,
+                () -> CompleteRunAudioCoverageSummary.from(wrongFixture, report));
+
+        CompleteRunFixture changedRom = new CompleteRunFixture("a".repeat(40),
+                originalFixture.romCrc32(), originalFixture.bk2Sha256(),
+                originalFixture.bk2RowCount(), originalFixture.runManifestSha256(),
+                originalFixture.segments(), originalFixture.firstFrame(), originalFixture.exclusiveEnd());
+        assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioCoverageSummary.from(
+                new TestProfile(profile.id, changedRom), report));
+        CompleteRunFixture changedBk2 = new CompleteRunFixture(originalFixture.romSha1(),
+                originalFixture.romCrc32(), "b".repeat(64), originalFixture.bk2RowCount(),
+                originalFixture.runManifestSha256(), originalFixture.segments(),
+                originalFixture.firstFrame(), originalFixture.exclusiveEnd());
+        assertThrows(IllegalArgumentException.class, () -> CompleteRunAudioCoverageSummary.from(
+                new TestProfile(profile.id, changedBk2), report));
+
+        profile.runtimes.put(ProducerKind.OPENGGF, new ProducerRuntimeIdentity(
+                "OpenGGF", "wrong", "OpenGGF", "wrong", "SMPS", "wrong",
+                Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "9".repeat(64))));
+        assertThrows(IllegalArgumentException.class,
+                () -> CompleteRunAudioCoverageSummary.from(profile, report));
+    }
+
+    @Test
+    void firstMismatchVerifiesNoOtherLayerAndRetainsItsOwningLayer() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("coverage-red-reference", profile,
+                ProducerKind.REFERENCE, 1, row -> fullFrame(FIRST_FRAME + row,
+                        "test", false, List.of(),
+                        List.of(service(0, List.of(), List.of(), state(1)))));
+        Path engine = writeCapture("coverage-red-engine", profile,
+                ProducerKind.OPENGGF, 1, row -> fullFrame(FIRST_FRAME + row,
+                        "test", false, List.of(),
+                        List.of(service(0, List.of(), List.of(), state(2)))));
+
+        CompleteRunAudioCoverageSummary summary = CompleteRunAudioCoverageSummary.from(
+                profile, CompleteRunAudioComparator.compare(reference, engine));
+
+        assertFalse(summary.fullParity());
+        assertEquals(CompleteRunAudioCoverageSummary.EvidenceDisposition.KNOWN_MISMATCH,
+                summary.layer(ComparisonLayer.STATE).evidence());
+        assertTrue(summary.layers().stream()
+                .filter(layer -> layer.layer() != ComparisonLayer.STATE)
+                .allMatch(layer -> layer.evidence()
+                        == CompleteRunAudioCoverageSummary.EvidenceDisposition.NOT_RUN));
+    }
+
+    @Test
+    void unavailableFixedProfilesAndCaptureFailuresCannotAggregateGreen() {
+        List<CompleteRunAudioProfile> profiles = List.of(
+                com.openggf.tools.audio.completerun.s1.S1CompleteRunAudioProfile.profile(),
+                com.openggf.tools.audio.completerun.s2.S2CompleteRunAudioProfile.profile(),
+                com.openggf.tools.audio.completerun.s3k.S3kCompleteRunAudioProfile.profile());
+        assertTrue(profiles.stream().map(profile ->
+                        CompleteRunAudioCoverageSummary.from(profile, null))
+                .noneMatch(CompleteRunAudioCoverageSummary::fullParity));
+        assertTrue(profiles.stream().map(profile ->
+                        CompleteRunAudioCoverageSummary.from(profile, null))
+                .flatMap(summary -> summary.layers().stream())
+                .noneMatch(layer -> layer.evidence()
+                        == CompleteRunAudioCoverageSummary.EvidenceDisposition.VERIFIED_MATCH));
+
+        CompleteRunAudioReport captureFailure = new CompleteRunAudioReport(
+                CompleteRunAudioReport.Kind.CAPTURE_FAILURE, null, null, -1,
+                null, null, null,
+                new CompleteRunAudioReport.Context(List.of(), null, List.of()),
+                new CompleteRunAudioReport.Context(List.of(), null, List.of()),
+                CompleteRunAudioReport.Side.REFERENCE, "broken capture",
+                CompleteRunAudioComparator.ValidationException.Kind.IO_FAILURE,
+                "retained diagnostics");
+        CompleteRunAudioCoverageSummary.EvidenceFailure failure = assertThrows(
+                CompleteRunAudioCoverageSummary.EvidenceFailure.class,
+                () -> CompleteRunAudioCoverageSummary.from(profiles.getFirst(), captureFailure));
+        assertEquals(captureFailure, failure.report());
+    }
 
     @Test
     void exactMatchCarriesBothSourceIdentitiesAndDeterministicEmptyReports() throws Exception {
@@ -74,6 +251,14 @@ class TestCompleteRunAudioComparator {
 
         assertEquals(CompleteRunAudioReport.Kind.REFERENCE_LIMITATION, report.kind(), report.toText());
         assertTrue(report.toJson().contains("comparisonLayerInventory"));
+        CompleteRunAudioCoverageSummary coverage = CompleteRunAudioCoverageSummary.from(profile, report);
+        assertFalse(coverage.fullParity());
+        assertTrue(coverage.layers().stream().allMatch(layer -> layer.evidence()
+                == CompleteRunAudioCoverageSummary.EvidenceDisposition.REFERENCE_LIMITATION));
+        assertEquals(CompleteRunAudioCoverageSummary.AuthorityDisposition.DIAGNOSTIC_ONLY,
+                coverage.layer(ComparisonLayer.ROW_LAG).authority());
+        assertTrue(coverage.toText().contains("comparison_claim=ComparisonLayerClaim[layer=ROW_LAG, status=UNAVAILABLE"));
+        assertTrue(coverage.toText().contains("reason=reference lag authority is unavailable"));
     }
 
     @Test
@@ -3985,6 +4170,25 @@ class TestCompleteRunAudioComparator {
             ComparisonLayerInventory comparisons, ProducerObservationInventory observations) {
         return new Metadata(schema, profileId, fixture, producerKind, runtime, observer, proof, chunks, roles,
                 stateInventory, comparisons, observations);
+    }
+
+    private static void assertCoverageOwner(TestProfile profile, CompleteRunAudioReport identities,
+            CompleteRunAudioComparator.Difference difference, ComparisonLayer expectedLayer) {
+        CompleteRunAudioReport report = new CompleteRunAudioReport(difference.kind(),
+                identities.reference(), identities.engine(), difference.frame(), difference.location(),
+                String.valueOf(difference.referenceValue()), String.valueOf(difference.engineValue()),
+                new CompleteRunAudioReport.Context(List.of(), null, List.of()),
+                new CompleteRunAudioReport.Context(List.of(), null, List.of()),
+                null, null, null, null);
+        CompleteRunAudioCoverageSummary summary = CompleteRunAudioCoverageSummary.from(profile, report);
+        assertFalse(summary.fullParity());
+        assertEquals(expectedLayer == null ? 0 : 1,
+                summary.layers().stream().filter(layer -> layer.evidence()
+                        == CompleteRunAudioCoverageSummary.EvidenceDisposition.KNOWN_MISMATCH).count());
+        if (expectedLayer != null) {
+            assertEquals(CompleteRunAudioCoverageSummary.EvidenceDisposition.KNOWN_MISMATCH,
+                    summary.layer(expectedLayer).evidence());
+        }
     }
 
     private static NormalizedState state(int tempo) {
