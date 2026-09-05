@@ -94,5 +94,14 @@ baseline outcomes and adds exactly five passing cases. Execution totals come
 from the summed per-class and terminal Maven log summaries, not XML testcase
 counts: nested-suite XML reports contain duplicated entries.
 Development structural guards: 609 tests, zero failures/errors/skips, with
-exactly the same distinct outcomes as the baseline. Integrated comparisons
-are recorded after completion.
+exactly the same distinct outcomes as the baseline.
+
+Implementation commit `751e655b2` merged without conflicts into `develop` as
+`4d0c99095`. Post-merge ordinary verification ran 16,584 tests with zero
+failures/errors and 43 skips; its distinct outcomes preserve every baseline
+outcome and add the same five passing cases. Post-merge fresh guards ran 609
+tests with zero failures/errors/skips and identical outcomes to the baseline.
+The external evidence directory retains `baseline-verification.tar.gz`,
+`development-verification.tar.gz`, and `postmerge-verification.tar.gz` with
+the Maven logs and XML reports. `compare_suites.py` checks both completed log
+totals and distinct XML identity/status/message sets.
