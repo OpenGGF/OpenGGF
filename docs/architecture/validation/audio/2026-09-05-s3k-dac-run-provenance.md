@@ -137,7 +137,9 @@ LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=DebugS3kDacRuns \
 
 `s3k.dac.probe.firstRun` and `s3k.dac.probe.lastRun` optionally change the
 printed run range (defaults 335 through 341). They affect diagnostic output
-only. Without `s3k.dac.probe=true`, the explicit probe is disabled.
+only. A final run with no terminating `2B` is included and explicitly marked
+`unterminated=true`; EOF never fabricates a disable. Without
+`s3k.dac.probe=true`, the explicit probe is disabled.
 
 The report regression was run first against the original comparator:
 `LUA_BIN=lua5.4 mvn -Dmse=off -Dtest=TestS3kAudioParityComparator test`.
@@ -157,3 +159,26 @@ Focused result: 47 tests, 0 failures, 0 errors, 0 skipped. The probe's
 successful execution means its diagnostics completed, not that the printed
 oracle mismatch is a pass. Full baseline and integrated-suite comparison
 remain the coordinating branch's delivery responsibility.
+
+## Review follow-up: unterminated final run
+
+The review identified that the diagnostic printer initially emitted a run
+only on a following `2B`, although the comparator also includes the final
+run at EOF. `TestS3kDacRunDiagnostics` reproduced that omission with a
+selected final run spanning two services: 2 tests, 1 failure, 0 errors/skips
+before the fix. The printer now flushes nonempty selected data at EOF,
+retaining its start and byte summary and marking it unterminated.
+
+```bash
+LUA_BIN=lua5.4 mvn -Dmse=off \
+  -Dtest=TestS3kDacRunDiagnostics,TestS3kAudioParityComparator,DebugS3kDacRuns \
+  -Ds3k.dac.probe=true \
+  -Ds3k.dac.probe.firstRun=448 -Ds3k.dac.probe.lastRun=474 \
+  -Ds3k.rom.path="$OPENGGF_ROM_DIR/s3k.gen" test
+```
+
+The regression also covers an empty window and rejects a fabricated terminal
+write. This follow-up changes only diagnostic test/probe code and this
+validation record; no production comparator or playback behavior changes.
+Result: 14 tests, 0 failures, 0 errors, 0 skipped, including the enabled
+ROM-backed tail probe (`target/dac-final-run-green.log`).

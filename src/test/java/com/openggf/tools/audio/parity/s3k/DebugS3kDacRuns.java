@@ -1,6 +1,7 @@
 package com.openggf.tools.audio.parity.s3k;
 
 import com.openggf.tools.audio.parity.AudioParityChipWrite;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,12 +53,16 @@ class DebugS3kDacRuns {
     }
 
     private static void print(String source, List<S3kAudioTick> ticks) {
+        print(source, ticks, Integer.getInteger("s3k.dac.probe.firstRun", 335),
+                Integer.getInteger("s3k.dac.probe.lastRun", 341), System.out);
+    }
+
+    static void print(String source, List<S3kAudioTick> ticks,
+            int fromRun, int toRun, PrintStream output) {
         int run = 0;
         List<Integer> bytes = new ArrayList<>();
         String start = "none";
         Integer precedingNote = null;
-        int fromRun = Integer.getInteger("s3k.dac.probe.firstRun", 335);
-        int toRun = Integer.getInteger("s3k.dac.probe.lastRun", 341);
         Integer runNote = null;
         for (S3kAudioTick tick : ticks) {
             for (int index = 0; index < tick.writes().size(); index++) {
@@ -72,11 +77,11 @@ class DebugS3kDacRuns {
                     bytes.add(write.value());
                 } else if (write.register() == 0x2B) {
                     if (run >= fromRun && run <= toRun) {
-                        System.out.println(source + " boundary " + position + " value=" + write.value());
+                        output.println(source + " boundary " + position + " value=" + write.value());
                     }
                     if (!bytes.isEmpty()) {
                         if (run >= fromRun && run <= toRun) {
-                            System.out.println(source + " run=" + run + " start=" + start
+                            output.println(source + " run=" + run + " start=" + start
                                     + " precedingServiceDacNote=" + runNote
                                     + " length=" + bytes.size() + " first="
                                     + bytes.subList(0, Math.min(12, bytes.size())) + " last="
@@ -88,6 +93,14 @@ class DebugS3kDacRuns {
                 }
             }
             precedingNote = tick.tracks().getFirst().frequency();
+        }
+        if (!bytes.isEmpty() && run >= fromRun && run <= toRun) {
+            output.println(source + " run=" + run + " start=" + start
+                    + " precedingServiceDacNote=" + runNote
+                    + " length=" + bytes.size() + " first="
+                    + bytes.subList(0, Math.min(12, bytes.size())) + " last="
+                    + bytes.subList(Math.max(0, bytes.size() - 12), bytes.size())
+                    + " unterminated=true");
         }
     }
 }
