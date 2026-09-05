@@ -31,6 +31,14 @@ public final class Sonic3kStatefulCommandPolicy
     }
 
     @Override
+    public boolean suppressesSfxDuringOverride() {
+        // zUpdateMusic clears both SFX mailboxes while zFadeToPrevFlag is 29h;
+        // zFadeInToPrevious clears the flag before the restoration fade starts.
+        // Sound/Z80 Sound Driver.asm:662-679,2725-2727 (retail fix_sndbugs=0).
+        return true;
+    }
+
+    @Override
     public boolean fadeOutCompletesWithGlobalStop() {
         // zDoMusicFadeOut jumps to zStopAllSound immediately after decrement
         // reaches zero, before the final volume walk (Z80 driver:2347-2362).

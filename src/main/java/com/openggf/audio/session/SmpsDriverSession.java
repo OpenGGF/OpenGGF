@@ -1089,6 +1089,11 @@ public final class SmpsDriverSession implements AutoCloseable {
         pendingGlobalCommand = SmpsPendingGlobalCommand.STOP_ALL;
     }
 
+    public boolean suppressesSfxDuringOverride() {
+        requireInstalled();
+        return configuration.statefulCommandPolicy().suppressesSfxDuringOverride();
+    }
+
     /**
      * Applies the host policy's complete global stop and clears the matching
      * logical save area at the same physical ownership boundary. Package

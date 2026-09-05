@@ -20,6 +20,11 @@ public interface SmpsStatefulCommandPolicy {
 
     Identity identity();
 
+    /** Blocks new SFX during an override, releasing them at music restoration. */
+    default boolean suppressesSfxDuringOverride() {
+        return false;
+    }
+
     /** State and physical writes owned by the host's music-fade command. */
     default SmpsFadeOutEffects fadeOutEffects() {
         return SmpsFadeOutEffects.NONE;
