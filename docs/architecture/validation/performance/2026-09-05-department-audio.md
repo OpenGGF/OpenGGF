@@ -110,10 +110,31 @@ controlled speedup claim. The resource samples do not establish a consistent
 memory reduction. Cache scope and the separate guard JVM keep its lifetime
 bounded to this verification session.
 
+## Upstream reconciliation
+
+Before integration, develop advanced to `d004188d9`, adding the reviewed S3K
+PSG-envelope and Sonic 2 DAC-cadence repairs. The optimisation commit was rebased
+as `753268b00`; source paths were disjoint. The sole conflict was the changelog's
+newest-first insertion, resolved by retaining both release entries.
+
+Clean ordinary and separate guard suites were repeated on that fixed updated
+baseline and the rebased task tree, each with its own build output:
+
+| Tree | Ordinary Surefire summary | Structural guards |
+|---|---|---|
+| Updated baseline d004188d9 | 16,650 tests; 0 failures/errors; 23 skips | 609 passed; no skips |
+| Rebased task 753268b00 | 16,651 tests; 0 failures/errors; 23 skips | 609 passed; no skips |
+
+Updated XML identity comparison found no missing baseline identity, unchanged
+skip/failure outcomes and exactly the new region-query regression. No focused
+coverage repair was needed for this pair. Performance figures above remain
+attributed to the original base/task comparison; they were not relabeled as
+measurements of the updated base. Subsequent upstream `c7d04fbc3` changes only
+its audio validation document and is retained during integration.
+
 ## Integration
 
 Local integration and post-merge verification remain pending in this task-tree
 record; their completed results will be added before delivery. Raw commands,
 logs, complete test identities/statuses, focused selections and process resource
 reports are retained under `${EVIDENCE_ROOT}/`.
-
