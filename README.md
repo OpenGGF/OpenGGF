@@ -671,6 +671,12 @@ finishing those parity campaigns is deferred to the next release. A frontier
 still returns to the 0.6 fix queue when it exposes a confirmed release-impacting
 gameplay defect.
 
+The [September 6 release assessment](docs/architecture/audits/2026-09-06-release-blockers.md)
+identifies release skip-classification and trace-policy mismatches that must be
+resolved before a frozen candidate's automated/platform checks and human QA can
+establish sign-off. Its findings use completed test evidence and a reproduced
+skip-checker failure; no new gameplay or listening approval is claimed.
+
 Known limitations: some Game Over timing details remain documented in
 `docs/status/known-bugs.md`; there is no modding framework, the level editor
 is a dormant prototype, and complete SMPS audio parity remains unfinished.
