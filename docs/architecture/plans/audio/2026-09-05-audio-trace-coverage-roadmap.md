@@ -162,14 +162,16 @@ These are bounded contributions, not completion of any game's parity programme.
   diagnostic capture continues separately; authenticated producer publication
   remains open.
 
-### Third worker cycle: candidate verification
+### Third worker cycle: merged and verified
 
 Reviewed `b39a47844` selects S3K's fixed SFX slot order; `284e8b3b8` preserves
 the complete retail PSG stop-silence transaction before ownership release.
 The isolated candidate is `8306b9a3a`, based on develop `32522d7cb` including
 the intervening audio-performance change. Its corrected focused run passes 75
 tests and ordinary suite passes 16,654 with 43 unchanged skips; 609 separate
-guards pass with exact baseline equality. Integration verification remains pending. The
+guards pass with exact baseline equality. Develop merge `ebb024201` passes
+both post-merge suites with exact candidate equality. Publication and cleanup
+status is recorded in the
 [third-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle3.md)
 records source review, physical-write mutation proofs and exact delivery status.
 

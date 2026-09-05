@@ -1,6 +1,6 @@
 # Third Sol SMPS parity cycle
 
-Status: isolated candidate; not delivered.
+Status: merged and verified; push and completed-worktree cleanup pending.
 Baseline: develop `32522d7cb`, including the intervening audio-performance
 delivery. Baseline and candidate each have a separate worktree and `target/`
 tree to avoid sharing build output with that concurrent delivery.
@@ -92,7 +92,8 @@ mvn -Dmse=off "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" 
 | Corrected candidate focused, `8306b9a3a` | 75 tests, 0 failures/errors/skips |
 | Corrected candidate ordinary, source/tests `8306b9a3a` | 16,654 tests, 0 failures/errors, 43 skips; every baseline outcome preserved, three passing additions |
 | Corrected candidate guards, `f241de4e0` | 609 tests, 0 failures/errors/skips; exact baseline outcome equality |
-| Post-merge ordinary and guards | Pending |
+| Post-merge ordinary, `ebb024201` | 16,654 tests, 0 failures/errors, 43 skips; exact candidate outcome equality |
+| Post-merge guards, `ebb024201` | 609 tests, 0 failures/errors/skips; exact candidate outcome equality |
 
 Compare exact distinct test identities/statuses/messages as well as log totals.
 Preserve initial failed executions and explicitly review any test rename or
@@ -104,6 +105,22 @@ identity/status/message outcomes and adds three passing tests: physical driver
 silence, tone/noise F2 stop writes, and the service-1652 fixed slot-order case.
 No identity normalization or removed-test allowance was needed. The four
 corrected existing assertions still run under their original identities.
+
+## Integration
+
+Develop merge `ebb024201` was clean. The intervening `cea8ad3d5` update only
+recorded the already-included performance delivery's verification; it was
+reconciled without source or test changes. Ordinary and separate guard runs
+on the merged main workspace exactly match the corrected candidate. A direct
+baseline-to-merged ordinary comparison also preserves every baseline outcome
+and adds only the same three passing identities. No worktree branch was pushed.
+
+Evidence archives under `${EVIDENCE_ROOT}/smps-parity-cycle-20260905/` include
+`cycle3-baseline-32522d7cb.tar.gz` and `cycle3-candidate-33663e4c0.tar.gz`;
+the latter retains the initial failed suite and all correction evidence. Main
+post-merge logs and XML remain in `target/audio-parity-cycle3-postmerge-evidence/`
+with exact comparisons beside it. Public release copy now reports this bounded
+F2/slot-order result, not full-game parity or completed human listening QA.
 
 Native tempo-read work and full-movie S1 diagnostic captures remain separate,
 unpublished work. Their capture progress is not a sealed reference, production

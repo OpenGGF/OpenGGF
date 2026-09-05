@@ -50,13 +50,15 @@ TraceChaser tempo-read capture, native reproducibility repairs and fresh S1
 diagnostic work remain local, separately identified evidence. Production
 provenance and authorized publication are not established by those diagnostics.
 
-### Third Sol cycle (candidate verification)
+### Third Sol cycle (merged and verified)
 
 Candidate `8306b9a3a` combines reviewed S3K fixed SFX slot walking and the
 retail PSG stop-silence transaction. It is based on develop `32522d7cb`, which
 also contains the intervening audio-performance change. Its expanded 75-test
 focused run and 16,654-test ordinary suite pass with 43 unchanged skips; 609
-separate guards pass with exact baseline equality. Post-merge verification is pending in the
+separate guards pass with exact baseline equality. Develop merge `ebb024201`
+passes the same ordinary and guard suites with exact candidate outcome equality;
+publication and cleanup status is recorded in the
 [third-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle3.md).
 The matching intro prefix reaches service 1689; service 1690 event 7 remains
 a raw music-noise restoration discrepancy, separately assigned and not included
