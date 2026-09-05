@@ -17,10 +17,11 @@ controlled differential cases and continuous movies providing complementary
 evidence. Trace infrastructure alone is not the deliverable.
 
 The assembled candidate removes a duplicate PSG note-start volume write and
-advances the S3K frontier from service 1570 event 43 to event 48. Investigation
-identifies the latter as a pair-level PSG ownership issue: the ROM's second
-byte `FF` must retain its actual hardware latch semantics, not be masked into
-a data byte. Its repair is still in progress. Production observer tests now
+repairs pair-level PSG ownership, advancing the S3K frontier from service 1570
+event 43 to service 1588 event 1. The ROM's second byte `FF` retains its actual
+hardware latch semantics; it is not masked into a data byte. The pair is
+admitted once at the source track gate, and rejected pairs change neither bus
+nor latch state. Production observer tests now
 expose blocked ring decisions and detect deliberately disabled suppression.
 These are not full-run parity claims. Candidate integration and full regression
 comparison remain pending; do not read this section as a develop delivery record.
