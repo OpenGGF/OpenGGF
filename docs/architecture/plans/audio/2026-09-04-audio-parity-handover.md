@@ -6,7 +6,7 @@ named. Numbers are stamped with the commit they were measured on; re-measure
 before relying on any of them (see the measurement-hazard table in
 `docs/agent-workflow/briefing-trace-rounds.md`).
 
-## September 5 next-milestone update
+## September 5 next milestone (delivered)
 
 The [next-milestone plan](2026-09-05-audio-next-milestone.md) starts from
 `bbf28b7dc` and is merged into `develop` as `e258282e0`. Post-merge ordinary
@@ -14,7 +14,9 @@ verification passed 16,497 executions (22 existing skips), with 609 separate
 guards and no failures/errors. Six ICZ methods were rerun successfully to
 resolve overwritten nested-class XML records; the
 [delivery record](../../validation/audio/2026-09-05-audio-next-review.md)
-preserves that distinction and push/cleanup status. Original and first
+preserves that distinction. Verified work was pushed through `b8f474379`;
+all five milestone worktrees and their local branches were removed afterward.
+Original and first
 follow-on measurements below remain historical.
 
 - PSG correction `5ee8bb8ae` removes the synthetic takeover FF. Hard comparison

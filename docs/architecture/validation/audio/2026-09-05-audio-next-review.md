@@ -2,10 +2,12 @@
 
 ## Delivery status
 
-Merged into `develop` as `e258282e0`, after refreshing the original `bbf28b7dc`
-base to `ce3b9e291`. Post-merge verification is complete; push and worktree
-cleanup are the remaining delivery steps. This is a bounded milestone, not
-completion of the release gates listed below.
+Delivered on `develop` as merge `e258282e0`, after refreshing the original
+`bbf28b7dc` base to `ce3b9e291`. Verified code and the post-merge evidence
+record were pushed through `b8f474379`. All five milestone worktrees and
+their fully merged local branches were then removed; no worktree branch was
+pushed. This final documentation update records that completed cleanup.
+This is a bounded milestone, not completion of the release gates listed below.
 
 ## Independent task reviews
 
@@ -151,3 +153,35 @@ research/profile/results/log payloads with manifest SHA-256
 Every copied payload was compared byte-for-byte and rehashed. No native
 binary, Java class, upstream source, SDK, ROM or generated audio is in this
 evidence archive; audition material has its own separate manifest.
+
+## Delivery and retained evidence
+
+Only `develop` was pushed. The final merge was clean; the earlier coordination
+changelog conflict retained both entries and the independent guidance update
+retained both README summaries. Main's user-modified disassembly submodules
+and all pre-existing unrelated worktrees remain untouched.
+
+Removed this milestone's `audio-next-{psg,dac,performance,baseline,coordination}`
+worktrees after verifying clean tracked/untracked state and merged ancestry.
+Ignored files were classified: generated Maven output, generated rewind/image
+cache reports, hook-created ROM/reference links, and config copies identical
+to surviving main files. Internal review sidecars and useful results were
+archived before removal. Commit history remains recoverable from develop;
+discarded build products are regenerable.
+
+The external task archive is `audio-next-20260905`. Besides the audition and
+performance manifests above, verified archives include:
+
+- `evidence/baseline.tar.gz` — original and updated isolated baselines;
+- `evidence/coordination-premerge.tar.gz` — focused, ordinary, guard and
+  negative-test evidence;
+- `evidence/merged-verification.tar.gz` — original post-merge runs,
+  comparisons, six-method supplement and report-gap closure, SHA-256
+  `6993f3ea23c7e1f8fe41b0c468c7faca29105114e89519fdac29dfb7277b0404`;
+- `evidence/final-review-sidecars.tar.gz` — independent reviews including
+  the closed reporting-gap audit;
+- `evidence/{dac,psg}/` — individually hashed original investigation outputs.
+
+The invalid main-baseline attempts are separately retained and explicitly
+excluded from regression evidence. No ROM or compiled native backend was
+committed or included in the evidence archives.
