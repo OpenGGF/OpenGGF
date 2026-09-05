@@ -8,6 +8,23 @@ before relying on any of them (see the measurement-hazard table in
 
 ## September 5 next milestone (delivered)
 
+### Active per-game driver parity campaign
+
+Branch `feature/ai-audio-trace-coverage` carries the
+[revised roadmap](2026-09-05-audio-trace-coverage-roadmap.md). The objective is
+faithful behavior of each supported retail SMPS driver, with source-mapped
+controlled differential cases and continuous movies providing complementary
+evidence. Trace infrastructure alone is not the deliverable.
+
+The assembled candidate removes a duplicate PSG note-start volume write and
+advances the S3K frontier from service 1570 event 43 to event 48. Investigation
+identifies the latter as a pair-level PSG ownership issue: the ROM's second
+byte `FF` must retain its actual hardware latch semantics, not be masked into
+a data byte. Its repair is still in progress. Production observer tests now
+expose blocked ring decisions and detect deliberately disabled suppression.
+These are not full-run parity claims. Candidate integration and full regression
+comparison remain pending; do not read this section as a develop delivery record.
+
 ### 1-up admission follow-up
 
 The [1-up suppression audit](../../audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
