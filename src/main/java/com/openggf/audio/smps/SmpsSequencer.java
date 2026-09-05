@@ -2764,6 +2764,7 @@ public class SmpsSequencer implements CoordFlagContext {
 
         int baseNoteOffset = (t.type == TrackType.PSG) ? smpsData.getPsgBaseNoteOffset() : smpsData.getBaseNoteOffset();
         int n = t.note - 0x81 + t.keyOffset + baseNoteOffset;
+        boolean psgVolumeWrittenByFrequencyTail = false;
 
         if (t.type == TrackType.FM) {
             // Match SMPSPlay/GetNote FM note indexing behavior.
@@ -2928,6 +2929,13 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.forceModulationWrite = config.getNoteGoingFreqSend()
                         == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS;
                 applyModulation(t);
+                psgVolumeWrittenByFrequencyTail =
+                        config.getPsgVolumeTail()
+                                == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS
+                        && t.instrumentId == 0
+                        && (t.modStepInEffect || t.modEnvStepInEffect)
+                        && !t.resting
+                        && !t.overridden;
             }
 
         }
@@ -2949,7 +2957,11 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.envValue = 0;
             }
 
-            if (t.type == TrackType.PSG) {
+            if (t.type == TrackType.PSG && !psgVolumeWrittenByFrequencyTail) {
+                // S3K's modulation-driven frequency send already falls through
+                // zUpdatePSGTrack's one volume tail. Do not append a second
+                // attacked-note write when that tail had no envelope to step
+                // (Sound/Z80 Sound Driver.asm:4059-4135).
                 refreshVolume(t); // Apply the first envelope step immediately on note start
             }
             if (t.type == TrackType.FM && t.fmVolEnvData != null) {
