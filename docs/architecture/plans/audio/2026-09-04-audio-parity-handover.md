@@ -28,8 +28,9 @@ Production observer tests now
 expose blocked ring decisions and detect deliberately disabled suppression.
 These are not full-run parity claims. Integration and exact post-merge regression
 comparison passed: 16,641 ordinary executions, no failures/errors, 43 unchanged
-skips, and 609 separate guards with no failures/errors/skips. Push and completed
-worktree cleanup remain pending in the linked validation record.
+skips, and 609 separate guards with no failures/errors/skips. Develop was pushed
+through `7f73667b8`; completed worktrees and their merged local branches were
+removed. The next isolated envelope/S2 cadence cycle is not part of this result.
 
 ### 1-up admission follow-up
 

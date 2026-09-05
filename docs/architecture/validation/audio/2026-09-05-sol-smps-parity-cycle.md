@@ -1,6 +1,7 @@
 # First Sol SMPS parity delivery cycle
 
-Status: merged locally and post-merge verified; push and cleanup are pending.
+Status: delivered on develop through `7f73667b8`; post-merge verification, push
+and completed-worktree cleanup succeeded.
 Integration baseline: `adcd0a3fa` (includes the independently delivered Continue
 screens). Initial investigation baseline was `eb324f5c6`.
 
@@ -114,7 +115,7 @@ actual old-versus-new capture comparison reports no request transcript changes.
 Repeated tempo values are negative/unit-test coverage, not observed occurrences
 in this particular prefix. Service-phase replay still needs explicit validation.
 
-## Integration obligations still open
+## Integration and cleanup
 
 The candidate includes develop's intervening Continue-screen work without
 conflicts. Recording the already-integrated worker histories produced one
@@ -123,7 +124,13 @@ discarded in favor of the reviewed matching-prefix limitation. The candidate
 tree hash was identical before and after those history merges.
 
 Develop merge `a1e00c643` completed without conflicts. Candidate and post-merge
-ordinary and separate-guard outcomes match exactly. Push and completed-worktree
-cleanup remain pending. Subsequent envelope and S2 cadence work uses new isolated
+ordinary and separate-guard outcomes match exactly. Develop was pushed through
+`7f73667b8`. The three completed worktrees (`audio-trace-coverage`,
+`sol-s3k-psg-parity`, `sol-s3k-admission-proof`) and their fully merged local
+branches were removed, then worktree metadata was pruned. Verification artifacts
+and local configuration copies were archived before cleanup. The generated
+rewind probe report was identified by its test writer and archived as well;
+original ROMs and user-modified reference submodules were preserved.
+Subsequent envelope and S2 cadence work uses new isolated
 worktrees and is not part of this delivery; unpublished TraceChaser work remains
 separate. No unmerged work may be discarded for cleanup.
