@@ -38,12 +38,16 @@ class TestSonic2DacCadence {
         double expectedFrames = (double) dac.sample(kick.sampleId()).length()
                 * 4335 / (14 * 2) / 24
                 * Ym2612Chip.getDefaultOutputRate() / Ym2612Chip.getInternalRate();
-        assertEquals(expectedFrames, playbackFrames(dac, 0x81), 16.0,
+        // BlipResampler requires FILTER_TAPS/2 = 8 future internal frames
+        // before exposing an output sample. Converting that look-ahead to the
+        // output clock plus one frame of phase rounding bounds the observation
+        // offset by 9 output frames; this is scheduler latency, not fixture fit.
+        assertEquals(expectedFrames, playbackFrames(dac, 0x81), 9.0,
                 "the loaded kick must finish at the retail cadence");
     }
 
     @Test
-    void s2CorrectionDoesNotChangeOtherDriverInputs() {
+    void cadenceFormulaRetainsIndependentS1AndS3kBudgets() {
         assertEquals(1505, Ym2612Chip.dacPeriod(301, 1),
                 "S1 retains its 301-cycle input");
         assertEquals(1485, Ym2612Chip.dacPeriod(297, 1),
