@@ -14,6 +14,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Small Java FM rendering improvement:** Nuked's phase calculation reuses
+  exact signed-detune values and avoids mathematically zero pitch-modulation
+  arithmetic. Local AIZ1 render benchmarks measured about 2–3% less audio CPU
+  time; chip clocks and output remain reference-checked. This adds no native
+  dependency or replacement core.
+
 - **Less art-loading and frame allocation:** decoders share an immutable reader
   for each open ROM, CNZ palette cycles reuse ROM-derived patches, and the
   performance overlay uses primitive rolling counters. Screenshots encode and
