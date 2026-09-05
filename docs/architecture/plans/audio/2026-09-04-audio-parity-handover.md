@@ -84,8 +84,8 @@ to solve the proven intra-admission mismatch.
 
 The 125-test focused run and 16,661-test ordinary suite pass, with 43 unchanged
 skips. Exact comparison preserves every baseline outcome after one reviewed,
-strengthened music-F2 test rename and adds seven passing identities. Integration
-and separate guard status belong to the
+strengthened music-F2 test rename and adds seven passing identities. All 609
+separate guards pass with exact baseline equality. Pending integration belongs to the
 [fourth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle4.md).
 Native S1 capture remains separate diagnostic work until genuinely sealed and
 authenticated; neither a matching prefix nor the ordinary suite proves full-game

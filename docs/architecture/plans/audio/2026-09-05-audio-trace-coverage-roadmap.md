@@ -193,7 +193,8 @@ The focused 125-test and ordinary 16,661-test runs pass; seven new passing
 identities and one reviewed strengthened test rename preserve all baseline
 outcomes, including 43 skips. See the
 [fourth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle4.md)
-for pending integration and separate-guard evidence.
+for pending integration evidence. All 609 separate guards pass with exact
+baseline outcome equality.
 
 The next hard mismatch is service 2012 event 1 (`BF` versus `FF`). Source review
 shows the second Skid header silences the previous header initialized within
