@@ -412,11 +412,17 @@ public final class S3kAudioParityComparator {
         result = globalField(ordinal, "tempoSpeedup", reference.tempoSpeedup(),
                 openGgf.tempoSpeedup());
         if (result != null) return result;
+        result = globalField(ordinal, "fadeOutTimeout", reference.fadeOutTimeout(),
+                openGgf.fadeOutTimeout());
+        if (result != null) return result;
         result = globalField(ordinal, "fadeDelay", reference.fadeDelay(),
                 openGgf.fadeDelay());
         if (result != null) return result;
         result = globalField(ordinal, "fadeDelayTimeout", reference.fadeDelayTimeout(),
                 openGgf.fadeDelayTimeout());
+        if (result != null) return result;
+        result = globalField(ordinal, "fadeInTimeout", reference.fadeInTimeout(),
+                openGgf.fadeInTimeout());
         if (result != null) return result;
         result = globalField(ordinal, "palDoubleUpdateCounter",
                 reference.palDoubleUpdateCounter(), openGgf.palDoubleUpdateCounter());

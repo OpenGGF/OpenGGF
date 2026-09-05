@@ -373,6 +373,10 @@ This file contains the complete 0.6 development snapshot history carried forward
   are excluded from driver comparison. This removes the false tick-3
   `PSGInitValues` frontier and exposes the first real Z80 boundary at tick 13,
   where the source driver begins its boot-time `zStopAllSound` service.
+- **The S3K sound-driver oracle now compares both fade step counters:**
+  `zFadeOutTimeout` and `zFadeInTimeout` are projected directly from the
+  driver snapshot and checked at each completed service, including services
+  where no music sequencer is active.
 - **Sonic 2 EHZ music-driver parity now reaches the first SFX override:** the
   oracle now samples completed `zUpdateMusic` services rather than a
   begin-frame image that could catch the Z80 halfway through its track walk,
