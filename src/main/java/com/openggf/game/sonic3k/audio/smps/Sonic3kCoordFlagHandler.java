@@ -301,7 +301,17 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
 
             case 0xF2: // TRK_END (TEND_STD) - standard track end
                 t.active = false;
-                ctx.stopNote(t);
+                if (t.type == SmpsSequencer.TrackType.PSG) {
+                    // Retail fix_sndbugs=0 zGetSFXChannelPointers calls
+                    // zSilencePSGChannel, then unconditionally writes FF to
+                    // compensate for that routine's broken noise test. This
+                    // happens before zUpdatingSFX is tested and before music
+                    // ownership is restored (Sound/Z80 Sound Driver.asm:
+                    // 2115-2142, 3443-3469, 4226-4249).
+                    ctx.stopPsgNoteWithDriverSilence(t);
+                } else {
+                    ctx.stopNote(t);
+                }
                 // cfStopTrack does not stop at the key-off: it clears the
                 // overridden music track's bit and sends that track's FM
                 // instrument, inline, before the music update of the same

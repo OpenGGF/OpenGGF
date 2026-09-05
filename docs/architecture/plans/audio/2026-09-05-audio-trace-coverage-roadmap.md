@@ -158,10 +158,27 @@ These are bounded contributions, not completion of any game's parity programme.
   The [second-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle2.md)
   preserves the initial native-GL baseline crash, successful retry, nine added
   passing outcomes and reviewed S1 test rename rather than hiding them.
-- Next: independently review S3K fixed SFX slot-order repair `b39a47844` in
-  a new worktree; its worker reports the next write frontier at service 1690.
-  That repair is not yet integrated. Native full-movie S1 diagnostic captures
-  continue separately; authenticated producer publication remains open.
+- Follow-on work is tracked in the third cycle below. Native full-movie S1
+  diagnostic capture continues separately; authenticated producer publication
+  remains open.
+
+### Third worker cycle: candidate verification
+
+Reviewed `b39a47844` selects S3K's fixed SFX slot order; `284e8b3b8` preserves
+the complete retail PSG stop-silence transaction before ownership release.
+The isolated candidate is `8306b9a3a`, based on develop `32522d7cb` including
+the intervening audio-performance change. Its corrected focused run passes 75
+tests and ordinary suite passes 16,654 with 43 unchanged skips; 609 separate
+guards pass with exact baseline equality. Integration verification remains pending. The
+[third-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle3.md)
+records source review, physical-write mutation proofs and exact delivery status.
+
+The matching prefix reaches service 1689; the remaining service-1690 event-7
+noise-restore mismatch is a separate bounded repair. Two source reviews identify
+S3K's preserve-rest, signed raw-noise restore and its ownership-release boundary.
+It is not part of this candidate. Neither this prefix nor the running full S1
+diagnostic capture establishes full-game parity or authenticated production
+reference availability.
 
 ### Phase 1 — truthful coverage reporting
 

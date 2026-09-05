@@ -6,7 +6,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.openggf.audio.driver.SmpsDriver;
+import com.openggf.audio.driver.SmpsDriverSessionAccess;
 import com.openggf.audio.driver.SmpsDriverTestAccess;
+import com.openggf.audio.rewind.SmpsSourceDescriptor;
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.game.sonic2.audio.smps.Sonic2SmpsData;
 import com.openggf.audio.smps.SmpsSequencer;
@@ -21,6 +23,29 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class TestSmpsDriver {
+
+    private record PsgWrite(Object source, int value) { }
+
+    private static final class RecordingAccess implements SmpsDriverSessionAccess {
+        final List<PsgWrite> psgWrites = new ArrayList<>();
+
+        @Override public void writePsg(Object source, int value) {
+            psgWrites.add(new PsgWrite(source, value & 0xFF));
+        }
+        @Override public void writeFm(Object source, int port, int reg, int val) { }
+        @Override public void setInstrument(Object source, int channel, byte[] voice) { }
+        @Override public void playDac(Object source, int note) { }
+        @Override public void stopDac(Object source) { }
+        @Override public void setDacData(DacData data) { }
+        @Override public void setFmMute(int channel, boolean mute) { }
+        @Override public void setPsgMute(int channel, boolean mute) { }
+        @Override public void setDacInterpolate(boolean interpolate) { }
+        @Override public void silenceAll() { }
+        @Override public void selectDac(SmpsSourceDescriptor source, DacData data) { }
+        @Override public void forceSilenceFmChannel(int channelId) { }
+        @Override public boolean completeFadeOut() { return false; }
+        @Override public boolean fadeOutCompletesWithGlobalStop() { return false; }
+    }
 
     @BeforeEach
     void setUp() {
@@ -47,6 +72,7 @@ public class TestSmpsDriver {
             rawPsgWrites.add(val);
             super.writeRawPsg(val);
         }
+
 
         // Helper to check FM lock via reflection
         public Object getFmLock(int channel) {
@@ -268,6 +294,53 @@ public class TestSmpsDriver {
         // zPlaySound .sfxinitpsg emits the pair from the admitted C0 header;
         // it does not depend on there being an older PSG3 owner.
         assertEquals(List.of(0xDF, 0xFF), driver.rawPsgWrites);
+    }
+
+    @Test
+    public void driverSilenceWritesWhileMusicIsOverriddenWithoutChangingOwnership() {
+        RecordingAccess physical = new RecordingAccess();
+        SmpsDriver driver = SmpsDriver.createSessionDriver(physical);
+        DacData dac = new DacData(new HashMap<>(), new HashMap<>());
+        AbstractSmpsData ownerData = new Sonic2SmpsData(new byte[100]);
+        ownerData.setId(0xCD);
+        SmpsSequencer owner = new SmpsSequencer(
+                ownerData, dac, driver, Sonic2SmpsSequencerConfig.CONFIG);
+        owner.addTrack(createTrack(SmpsSequencer.TrackType.PSG, 2));
+        driver.addSequencer(owner, true);
+        driver.writePsg(owner, 0xC0);
+        physical.psgWrites.clear();
+
+        SmpsSequencer music = new SmpsSequencer(
+                new Sonic2SmpsData(new byte[100]), dac, driver,
+                Sonic2SmpsSequencerConfig.CONFIG);
+        driver.writePsg(music, 0xDF);
+        assertTrue(physical.psgWrites.isEmpty(),
+                "ordinary overridden music write stays gated at the physical bus");
+        driver.writePsgDriverSilence(music, 2, true);
+
+        assertEquals(List.of(new PsgWrite(music, 0xDF),
+                new PsgWrite(music, 0xFF), new PsgWrite(music, 0xFF)),
+                physical.psgWrites);
+        assertSame(owner, psgLock(driver, 2));
+        assertEquals(3, music.getPsgLatchChannel());
+
+        physical.psgWrites.clear();
+        int latchBefore = music.getPsgLatchChannel();
+        assertThrows(IllegalArgumentException.class,
+                () -> driver.writePsgDriverSilence(music, 3, false));
+        assertTrue(physical.psgWrites.isEmpty());
+        assertEquals(latchBefore, music.getPsgLatchChannel());
+        assertSame(owner, psgLock(driver, 2));
+    }
+
+    private static SmpsSequencer psgLock(SmpsDriver driver, int channel) {
+        try {
+            java.lang.reflect.Field field = SmpsDriver.class.getDeclaredField("psgLocks");
+            field.setAccessible(true);
+            return ((SmpsSequencer[]) field.get(driver))[channel];
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError(exception);
+        }
     }
 
     @Test
