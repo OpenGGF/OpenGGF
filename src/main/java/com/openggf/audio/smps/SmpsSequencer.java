@@ -787,11 +787,14 @@ public class SmpsSequencer implements CoordFlagContext {
 
                     if (t.type == TrackType.FM
                             && config.getFmSfxReleaseMode()
-                            == SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE) {
-                        // S1 cfStopTrack: the SFX track already sent FMNoteOff;
-                        // restore the music voice/pan, mark it at rest, and do
-                        // not resend frequency or key on (SD:2489-2537).
-                        t.resting = true;
+                            != SmpsSequencerConfig.FmSfxReleaseMode.LEGACY_FULL_RESTORE) {
+                        // The SFX's note-off stands: restore voice/pan without
+                        // resending frequency or key-on. The profile owns whether
+                        // this handoff also sets the music track's rest bit.
+                        if (config.getFmSfxReleaseMode()
+                                == SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE) {
+                            t.resting = true;
+                        }
                         refreshInstrument(t);
                         continue;
                     }
