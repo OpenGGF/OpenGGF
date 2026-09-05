@@ -222,6 +222,17 @@ through `9d153cf6a`; the completed worktree and local branch were removed.
 
 ### Phase 1 — truthful coverage reporting
 
+The fixed-profile reporting portion is implemented in the sixth delivery group:
+authority/evidence axes, correlated-report validation, strict failure exits and
+negative controls. Narrow S1/S2/S3K adapters remain outside that report, so this
+does not close the wider behavioral evidence inventory or any parity phase.
+See the [group ledger](../../validation/audio/2026-09-05-sol-smps-parity-delivery-group.md)
+for verification and delivery status. S3K's diagnostic frontier is now service
+2409; S1's independent production-request prerequisite frontier is BK2 row 972.
+The next production task must model the full S3K three-slot consume/clear/defer
+transaction, not merely reuse a capture-local ring selector or a one-request
+service that drops the ROM's other consequences.
+
 - [ ] Enumerate actual fixed profiles, fixtures, producer bindings, observation
   layers and assertion modes in an executable coverage report.
 - [ ] Distinguish unavailable, diagnostic-only, known mismatch and verified

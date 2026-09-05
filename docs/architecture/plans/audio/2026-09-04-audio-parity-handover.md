@@ -113,6 +113,31 @@ separate guards with exact candidate outcome equality. Develop was pushed throug
 `9d153cf6a`; the completed worktree and local branch were removed. Evidence is in the
 [fifth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle5.md).
 
+### Sixth Sol delivery group (post-merge verification)
+
+The reviewed coverage report, S1 prerequisite probe and S3K ring capture adapter
+are merged through `ad152601b`. Their individual ordinary/guard comparisons
+preserve the refreshed baseline and add 21 passing tests. Combined verification
+and delivery status are in the
+[group ledger](../../validation/audio/2026-09-05-sol-smps-parity-delivery-group.md).
+
+The fixed complete-run profiles still report `full_parity=false`. S1 production
+requests first differ at BK2 row 972 (`B5` versus no request), before the one-up;
+no restoration values have been compared. The S3K diagnostic prefix now matches
+through service 2408; service 2409 differs in `MUS_PSG1.overridden`.
+
+Next behavioral priority is a source-backed production S3K request consumer:
+three-slot consumption order, one-up conditional music/unconditional SFX
+clearing, restore deferral, dispatch-time ring selection and boot-only speaker
+initialization. Keep load-plan deferral separate: the current
+`blocksForwardRequestConsumption` gate covers a non-immediate pending load,
+not retail one-up suppression. The current forward resolver admits only one
+consequence per boundary, so wiring an incomplete one-request service would
+introduce different errors. Design and test the complete owning transaction
+before connecting it; do not promote the capture-local selector into a false
+production-parity claim. Native authentication/publication remains separately
+blocked on its existing provenance and approval requirements.
+
 ### Full S1 capture A (sealed diagnostic, unpublished)
 
 The native full-movie run completed 225,101 frames and 224,241 audio rows on
