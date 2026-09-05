@@ -205,7 +205,7 @@ RAM model; entry state before the first header remains a separate limitation.
 Retail E3's silence prelude plus F2 tail, raw tempo-byte state (including `01`),
 and authenticated full-game references remain separate work.
 
-### Fifth worker cycle: verification candidate
+### Fifth worker cycle: post-merge verified
 
 Source `32a37dd62` separates ROM SFX-header admission order from the fixed
 channel-slot playback walk. Its prior-header PSG silence advances the matching
@@ -216,7 +216,8 @@ boundary without adding persistent retired-slot state. First-entry IX is
 still explicitly unmodelled. The
 [fifth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle5.md)
 records the 92-test focused and 16,666-test ordinary results, negative controls
-and remaining delivery gates.
+and remaining delivery gates. Merge `8a7dc5f15` passes the same ordinary suite
+and 609 separate guards with exact candidate outcome equality.
 
 ### Phase 1 — truthful coverage reporting
 

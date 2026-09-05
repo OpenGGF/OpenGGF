@@ -1,7 +1,8 @@
 # SMPS parity cycle 5: S3K SFX header-order admission
 
-Status: local candidate, not delivered. Full-suite and post-merge verification
-are pending; full-game audio parity and authenticity remain open.
+Status: merged as develop `8a7dc5f15`; both post-merge suites passed with exact
+candidate outcome equality. Push and cleanup are pending. Full-game audio parity
+and authenticity remain open.
 
 ## Source and representation
 
@@ -56,6 +57,33 @@ locked-on S3K ROM properties.
 | Ordinary | `mvn -Dmse=off test -B` | 16,666 tests, 0 failures/errors, 43 skips | `target/sfx-header-order/final-ordinary.log`; XML in `final-ordinary-reports/` |
 | Structural guards, separate JVM | `mvn -Dmse=off -Pguards test -B` | 609 tests, 0 failures/errors/skips | `target/sfx-header-order/final-guards.log`; XML in `final-guards-reports/` |
 
-The cycle-4 baseline is 16,661 ordinary tests with 43 skips and 609 guard
-tests. This candidate adds five passing ordinary tests; integration and exact
-per-test baseline comparison remain owned by the parent delivery flow.
+The cycle-4 baseline is develop `cc75320b0` (source merge `1e33747f1`): 16,661
+ordinary tests with 43 skips and 609 guard tests. Root comparison preserves all
+15,712 distinct ordinary baseline identity/status/message outcomes, adds five
+passing identities, and preserves all 609 guard outcomes exactly. No rename or
+removal allowance was needed. The logs are main
+`target/audio-parity-cycle5-candidate-{ordinary,guards}-comparison.log`.
+
+## Integration and archived evidence
+
+Fetch and fast-forward pull left main develop unchanged at `cc75320b0`.
+Candidate `3818dca75` already contained that baseline. Merge `8a7dc5f15`
+was conflict-free and preserves the user's three modified disassembly
+submodules. Main post-merge commands use the same JDK and absolute ROM inputs,
+with logs/XML below `target/audio-parity-cycle5-postmerge-evidence/`.
+
+Candidate focused/full/guard logs and XML, initial failures, negative controls,
+and generated local configuration/rewind reports were archived outside the
+repository at `${EVIDENCE_ROOT}/cycle5-candidate-3818dca75.tar.gz`, SHA-256
+`24ff0edff76b50a322c96ae0dae89b27407ae820d25f82667de6fb23ab8e5ffb`.
+This archive preserves reports, not a shared Maven build tree.
+
+Post-merge `mvn -Dmse=off test -B` passes 16,666 tests, zero failures/errors,
+43 skips. The separate `mvn -Dmse=off -Pguards test -B` passes 609 tests,
+zero failures/errors/skips. Both include the same three absolute ROM properties.
+Exact candidate comparison preserves all 15,717 distinct ordinary outcomes and
+609 guard outcomes, with no additions, removals or changed statuses/messages.
+Post-merge evidence and all four comparison logs are archived at
+`${EVIDENCE_ROOT}/cycle5-postmerge-8a7dc5f15.tar.gz`, SHA-256
+`b9c69f048e8bbf0b7257655009d8d3b5bd7b88fab69e2d8bec17ce74ba7f3075`.
+Push and completed-worktree cleanup remain pending.
