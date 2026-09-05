@@ -87,7 +87,8 @@ mvn -Dmse=off "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" 
 | Baseline guards, `32522d7cb` | 609 tests, 0 failures/errors/skips |
 | Initial slot-order candidate focused run | 20 tests, 0 failures/errors/skips |
 | Final candidate focused, `09f8ae434` | 57 tests, 0 failures/errors/skips |
-| Final candidate ordinary and guards | Pending |
+| Initial candidate ordinary, production `09f8ae434` | 16,654 tests, 4 failures, 0 errors, 43 skips; not accepted |
+| Corrected candidate ordinary and guards | Pending |
 | Post-merge ordinary and guards | Pending |
 
 Compare exact distinct test identities/statuses/messages as well as log totals.
@@ -98,3 +99,20 @@ integration; do not overwrite the other delivery's reports or user changes.
 Native tempo-read work and full-movie S1 diagnostic captures remain separate,
 unpublished work. Their capture progress is not a sealed reference, production
 authentication or Java parity pass.
+
+### Initial full-suite failures
+
+The first candidate ordinary run completed with four assertion failures, all
+reproduced in a fresh two-class run (18 tests, four failures, no errors/skips).
+`TestSonic3kFm3SpecialMode` has two F3 raw-operand cases whose terminal F2
+expectations omit the retail unconditional FF; source review confirms the
+expected full sequences need that byte in both noise and reset cases. Their
+raw-operand state assertions remain unchanged.
+
+`TestS3kSfxRuntimePathWithMusic` also fails Collapse and spindash tail assertions:
+observed reduced noise levels contain a final 4 or 6 after silence. Its observer
+collects the whole physical bus until after the final presentation frame, so
+same-service music resumption is a possible measurement leak. This requires
+source-backed observation before changing assertions; no runtime suppression
+or discarded suffix is accepted merely to make the tests green. Failed logs and
+XML are retained in `target/audio-parity-cycle3-initial-failure-evidence/`.
