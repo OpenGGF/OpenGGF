@@ -43,3 +43,21 @@ Supplying absolute reference and engine capture paths runs the strict comparator
 first: `coverage-text <profile-id> <reference> <engine>`. Exit 0 requires full
 parity, exit 3 means limitation or mismatch, exit 4 preserves a capture-failure
 report, and invalid or unknown arguments exit 2.
+
+## Verification record
+
+On merged header-order baseline `8a7dc5f15`, the final candidate preserves the
+main baseline and adds eight ordinary tests:
+
+- focused coverage CLI/comparator controls: 9 passed;
+- ordinary suite with Java 21 and all three absolute ROM paths: 16,674 passed,
+  43 skipped, no failures or errors;
+- the first guard run correctly rejected the new reporter as an unclassified
+  authenticated capture source: 609 run, 1 failure. The reporter is now the one
+  explicitly non-authenticated comparison/reporting source, alongside the
+  comparator and report; a guard mutation rejects any authenticated source that
+  refers to it. The final guard result is recorded with the delivery evidence.
+
+The declaration-as-match mutation failed its no-evidence assertion. A separate
+mismatch-as-full-parity mutation failed both the summary and CLI exit assertions.
+Neither mutation is retained.

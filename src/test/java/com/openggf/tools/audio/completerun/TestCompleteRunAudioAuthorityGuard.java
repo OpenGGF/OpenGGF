@@ -781,7 +781,8 @@ class TestCompleteRunAudioAuthorityGuard {
             boolean authenticatedSource,
             List<String> violations) {
         for (ForbiddenAuthority authority : AUTHORITY_CATEGORIES) {
-            if (authority.label().equals("reference-authority")
+            if ((authority.label().equals("reference-authority")
+                    || authority.label().equals("coverage-summary-authority"))
                     && !authenticatedSource) {
                 continue;
             }

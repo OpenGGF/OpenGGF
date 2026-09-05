@@ -260,6 +260,9 @@ traces.
   retail PSG noise-silence write in header order. Opt-in physical chip capture
   distinguishes actual YM/PSG strobes and DAC origins from logical logs, while
   a pinned, ROM-free benchmark tool supports further backend evaluation.
+  Complete-run profiles can print their fixture, producer, observation, and
+  comparison coverage without treating unavailable or diagnostic-only layers
+  as parity; narrow per-game oracles remain separate.
   Java Nuked remains the production FM core; full parity and listening
   validation remain open. See the [audio handover](docs/architecture/plans/audio/2026-09-04-audio-parity-handover.md).
   Exact phase-arithmetic simplification measured about 2–3% less audio-rendering
