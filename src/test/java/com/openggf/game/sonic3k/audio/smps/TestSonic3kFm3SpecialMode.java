@@ -197,18 +197,12 @@ class TestSonic3kFm3SpecialMode {
         assertTrue(psg3.rawPsgNoiseKnown);
         assertEquals(0x05, psg3.psgNoiseParam,
                 "normalised PSG behaviour remains independent of the retained byte");
-        // Each silence of this noise PSG3 track is a zSilencePSGChannel call,
-        // which writes 1Fh + VoiceControl for the track's own tone channel
-        // and then 0FFh for the noise channel (skdisasm Sound/Z80 Sound
-        // Driver.asm:4226-4245), so the pair repeats per call. The engine used
-        // to emit the noise byte alone, which is what the previous
-        // 0DFh, 0E5h, 0FFh, 0FFh expectation recorded.
-        // The terminal F2 is one cleanup, not two: cfStopTrack keys the
-        // channel off once as it clears the playing bit (skdisasm Sound/Z80
-        // Sound Driver.asm:3040-3046), and the engine no longer stops the
-        // note a second time after the stream read.
-        assertEquals(List.of(0xDF, 0xE5, 0xDF, 0xFF), synth.psgWriteValues,
-                "F3 keeps its existing writes, including the terminal F2 cleanup");
+        // Retail fix_sndbugs=0 cfStopTrack calls zGetSFXChannelPointers:
+        // zSilencePSGChannel emits DF FF for this noise track, then the
+        // pointer helper emits its unconditional FF. The fixed branch omits
+        // that extra write (Sound/Z80 Sound Driver.asm:2115-2142, 3443-3469).
+        assertEquals(List.of(0xDF, 0xE5, 0xDF, 0xFF, 0xFF), synth.psgWriteValues,
+                "F3 preserves its operand independently of the retail F2 transaction");
         assertEquals(0x43, psg3.pos);
     }
 
@@ -226,9 +220,10 @@ class TestSonic3kFm3SpecialMode {
         assertEquals(0, psg3.rawPsgNoise);
         assertTrue(psg3.rawPsgNoiseKnown,
                 "zero is an executed reset byte, not an absent raw value");
-        // One terminal cleanup, not two; see the sibling test above.
-        assertEquals(List.of(0xDF, 0xFF, 0xDF), synth.psgWriteValues,
-                "the retained reset byte must not alter existing F2 cleanup writes");
+        // Reset clears noise mode, so F2 emits the tone mute and only the
+        // pointer helper's unconditional FF (retail fix_sndbugs=0).
+        assertEquals(List.of(0xDF, 0xFF, 0xDF, 0xFF), synth.psgWriteValues,
+                "F3 reset retains the tone-mode retail F2 transaction");
         assertEquals(0x43, psg3.pos);
     }
 

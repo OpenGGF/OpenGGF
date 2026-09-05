@@ -50,6 +50,18 @@ TraceChaser tempo-read capture, native reproducibility repairs and fresh S1
 diagnostic work remain local, separately identified evidence. Production
 provenance and authorized publication are not established by those diagnostics.
 
+### Third Sol cycle (candidate verification)
+
+Candidate `09f8ae434` combines reviewed S3K fixed SFX slot walking and the
+retail PSG stop-silence transaction. It is based on develop `32522d7cb`, which
+also contains the intervening audio-performance change. Its 57-test focused
+run passes; full candidate and post-merge verification are pending in the
+[third-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle3.md).
+The matching intro prefix reaches service 1689; service 1690 event 7 remains
+a raw music-noise restoration discrepancy, separately assigned and not included
+in this candidate. Physical-write mutations prove both a missing final FF and
+an incorrectly admitted ordinary overridden write are detected.
+
 ### 1-up admission follow-up
 
 The [1-up suppression audit](../../audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
