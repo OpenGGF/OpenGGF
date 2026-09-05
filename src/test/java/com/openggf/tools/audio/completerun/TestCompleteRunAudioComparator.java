@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -116,6 +118,62 @@ class TestCompleteRunAudioComparator {
                 CompleteRunAudioComparator.difference(terminal, changedCount), null);
         assertCoverageOwner(profile, matched,
                 CompleteRunAudioComparator.difference(terminal, changedDigest), null);
+    }
+
+    @Test
+    void coverageTextPairPreservesStrictExitAndDiagnosticContracts() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("coverage-cli-reference", profile,
+                ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path matching = writeCapture("coverage-cli-match", profile,
+                ProducerKind.OPENGGF, 1, this::plainFrame);
+        Path mismatch = writeCapture("coverage-cli-mismatch", profile,
+                ProducerKind.OPENGGF, 1, row -> fullFrame(FIRST_FRAME + row,
+                        "test", false, List.of(), List.of(service(0, List.of(), List.of(), state(2)))));
+
+        ToolResult green = runCoverageTool(profile.id(), reference, matching);
+        assertEquals(CompleteRunAudioTool.SUCCESS, green.status());
+        assertTrue(green.out().endsWith("full_parity=true\n"));
+        ToolResult red = runCoverageTool(profile.id(), reference, mismatch);
+        assertEquals(CompleteRunAudioTool.MISMATCH, red.status());
+        assertTrue(red.out().contains("evidence=KNOWN_MISMATCH"));
+
+        TestProfile otherProfile = registerProfile(2);
+        ToolResult wrongProfile = runCoverageTool(otherProfile.id(), reference, matching);
+        assertEquals(CompleteRunAudioTool.USAGE_OR_SECURITY, wrongProfile.status());
+        assertEquals("", wrongProfile.out());
+
+        ProducerRuntimeIdentity wrongRuntimeIdentity = new ProducerRuntimeIdentity(
+                "OpenGGF", "wrong", "OpenGGF", "wrong", "SMPS", "wrong",
+                Map.of(RuntimeArtifact.OPENGGF_PRODUCER, "9".repeat(64)));
+        Path wrongRuntimeCapture = writeCapture("coverage-cli-wrong-runtime",
+                metadata(profile, ProducerKind.OPENGGF, wrongRuntimeIdentity), 1, this::plainFrame);
+        ToolResult wrongRuntime = runCoverageTool(profile.id(), reference, wrongRuntimeCapture);
+        assertEquals(CompleteRunAudioTool.USAGE_OR_SECURITY, wrongRuntime.status());
+        assertEquals("", wrongRuntime.out());
+        assertTrue(wrongRuntime.error().contains("validation_kind=RUNTIME_IDENTITY_INVALID"));
+
+        CompleteRunFixture fixture = profile.fixture();
+        CompleteRunFixture wrongFixture = new CompleteRunFixture(fixture.romSha1(), fixture.romCrc32(),
+                fixture.bk2Sha256(), fixture.bk2RowCount(), "e".repeat(64), fixture.segments(),
+                fixture.firstFrame(), fixture.exclusiveEnd());
+        Metadata wrongFixtureMetadata = testMetadata(CompleteRunAudioTrace.SCHEMA, profile.id(), wrongFixture,
+                ProducerKind.OPENGGF, profile.producerRuntimeIdentities().get(ProducerKind.OPENGGF),
+                profile.observerRuntimeIdentities().get(ProducerKind.OPENGGF),
+                profile.observerProofs().get(ProducerKind.OPENGGF),
+                new ChunkPolicy(CHUNK_FRAME_ROWS, "gzip", 0),
+                profile.hardwareRoles(), profile.stateInventory(), profile.comparisonLayerInventory(),
+                profile.producerObservationInventories().get(ProducerKind.OPENGGF));
+        Path wrongFixtureCapture = writeCapture("coverage-cli-wrong-fixture",
+                wrongFixtureMetadata, 1, this::plainFrame);
+        ToolResult wrongFixtureResult = runCoverageTool(profile.id(), reference, wrongFixtureCapture);
+        assertEquals(CompleteRunAudioTool.USAGE_OR_SECURITY, wrongFixtureResult.status());
+        assertTrue(wrongFixtureResult.error().contains("validation_kind=METADATA_PROFILE_MISMATCH"));
+
+        ToolResult captureFailure = runCoverageTool(profile.id(),
+                temp.resolve("missing-reference"), temp.resolve("missing-engine"));
+        assertEquals(CompleteRunAudioTool.CAPTURE_FAILURE, captureFailure.status());
+        assertTrue(captureFailure.out().startsWith("CAPTURE_FAILURE\n"));
     }
 
     @Test
@@ -4228,6 +4286,18 @@ class TestCompleteRunAudioComparator {
                     summary.layer(expectedLayer).evidence());
         }
     }
+
+    private static ToolResult runCoverageTool(String profileId, Path reference, Path engine) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayOutputStream error = new ByteArrayOutputStream();
+        int status = CompleteRunAudioTool.run(new String[] {"coverage-text", profileId,
+                reference.toAbsolutePath().toString(), engine.toAbsolutePath().toString()},
+                new PrintStream(out), new PrintStream(error));
+        return new ToolResult(status, out.toString(StandardCharsets.UTF_8),
+                error.toString(StandardCharsets.UTF_8));
+    }
+
+    private record ToolResult(int status, String out, String error) { }
 
     private static NormalizedState state(int tempo) {
         return new NormalizedState(List.of(new StateField("tempo", tempo)), inactiveRoles());
