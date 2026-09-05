@@ -86,7 +86,9 @@ This file contains the complete 0.6 development snapshot history carried forward
   driver oracle first advanced within service 1570 from event 43 to event 48.
   PSG frequency pairs are now admitted once as the source driver's transaction
   while both bytes retain their physical chip meaning, advancing the oracle to
-  service 1588; the newly exposed FM write mismatch and independent DAC
+  service 1588. FM3 SFX release now restores the covered music track's normal
+  or special register-27 mode before its voice, advancing the oracle to service
+  1592; the newly exposed PSG-envelope state mismatch and independent DAC
   mismatch remain.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
