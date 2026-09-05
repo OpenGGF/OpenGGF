@@ -1,6 +1,7 @@
 # SMPS evidence delivery group: coverage, S1 probe and S3K ring adapter
 
-Status: merged and post-merge verified; push and cleanup pending.
+Status: delivered. Merged and post-merge verified, pushed through `be4428602`,
+and completed worktrees/local branches removed.
 This group improves evidence and a diagnostic adapter, not full SMPS parity.
 
 ## Reviewed candidates and baseline
@@ -124,3 +125,20 @@ ordinary, guard and focused logs/XML plus exact commands. The baseline,
 post-merge evidence, all comparison logs and comparison helper are archived at
 `${EVIDENCE_ROOT}/delivery-postmerge-f56d4fae1.tar.gz`, SHA-256
 `00c94f54b210f4984b4956d92ce09c72b5261cf47bbedda6508ae9eb0ba6359c`.
+
+## Delivery and cleanup
+
+Only develop was pushed, through verification commit `be4428602`. After
+confirming clean tracked/untracked state and merged ancestry, these completed
+worktrees and their local branches were removed:
+
+- `sol-audio-coverage-truth` / `bugfix/ai-sol-audio-coverage-truth`;
+- `openggf-sol-s1-restore-diagnostic` / `bugfix/ai-sol-s1-restore-diagnostic`;
+- `sol-s3k-ring-dispatch` / `bugfix/ai-sol-s3k-ring-dispatch`.
+
+Stale worktree metadata was pruned. Ignored files were inspected: build output,
+generated configuration/rewind reports and image caches, plus hook-created ROM
+and reference links. Evidence/configuration reports were archived before removal;
+source remains in merged Git history. Original ROMs, user disassembly changes,
+other worktrees, sealed native capture A and its unpublished TraceChaser work
+were preserved. No worktree branch was pushed.
