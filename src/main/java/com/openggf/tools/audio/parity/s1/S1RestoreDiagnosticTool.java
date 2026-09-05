@@ -7,7 +7,6 @@ import com.openggf.audio.driver.SmpsDriverServiceObserver.LifecycleScope;
 import com.openggf.audio.driver.SmpsDriverServiceObserver.LifecycleSource;
 import com.openggf.audio.driver.SmpsDriverServiceObserver.ServiceKind;
 import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.session.EngineServices;
 import com.openggf.tools.HeadlessGameBoot;
@@ -43,21 +42,22 @@ public final class S1RestoreDiagnosticTool {
 
     static ObjectNode run(Path rom, Path movie,
             S1RestoreNativeDiagnostic.Capture reference) throws Exception {
-        SonicConfigurationService config = SonicConfigurationService.getInstance();
-        config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, true);
-        config.setConfigValue(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, false);
-        config.setConfigValue(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP, false);
-        config.setConfigValue(SonicConfiguration.TITLE_SCREEN_ON_STARTUP, true);
-        config.setConfigValue(SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
-        config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
-        config.setConfigValue(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
-        config.setConfigValue(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
-        config.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s1");
-        config.setConfigValue(SonicConfiguration.SONIC_1_ROM, rom.toAbsolutePath().toString());
         Probe probe = new Probe(reference);
         // Reuse only the established hidden GL lifetime; boot(...) would skip
         // the canonical title route and is deliberately not called.
         try (HeadlessGameBoot ignored = new HeadlessGameBoot(320, 224)) {
+            var config = EngineServices.current().configuration();
+            config.setConfigValue(SonicConfiguration.AUDIO_ENABLED, true);
+            config.setConfigValue(SonicConfiguration.SHOW_LEGAL_DISCLAIMER_ON_STARTUP, false);
+            config.setConfigValue(SonicConfiguration.MASTER_TITLE_SCREEN_ON_STARTUP, false);
+            config.setConfigValue(SonicConfiguration.TITLE_SCREEN_ON_STARTUP, true);
+            config.setConfigValue(SonicConfiguration.LEVEL_SELECT_ON_STARTUP, false);
+            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            config.setConfigValue(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
+            config.setConfigValue(SonicConfiguration.SCREEN_HEIGHT_PIXELS, 224);
+            config.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s1");
+            config.setConfigValue(SonicConfiguration.SONIC_1_ROM,
+                    rom.toAbsolutePath().toString());
             try {
                 ProductionBk2AudioRunner.run(EngineServices.current(),
                         new Bk2MovieLoader().load(movie), probe::accept);

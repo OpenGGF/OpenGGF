@@ -32,7 +32,10 @@ current context. A direct-level experiment was rejected because it is not the
 canonical movie startup. The existing `HeadlessGameBoot` constructor supplies
 the hidden context used by `TraceCaptureTool`; only that constructor and
 `close` lifetime wrap the unchanged `ProductionBk2AudioRunner`. Its `boot`
-method is never called.
+method is never called. Configuration is applied through the
+constructor-established `EngineServices` instance, after construction and
+before production startup; configuring the replaced pre-constructor singleton
+would not establish the final runner inputs.
 
 With that existing GL owner, the genuine bounded run completed rows 0 through
 972. Native and OpenGGF request lists matched for every observed row 860--971,
@@ -43,9 +46,11 @@ lifecycle/service end were not reached, and exact write values were not
 compared. This identifies an upstream request-history difference, not an SMPS
 register-parity result.
 
-The final external result is
-`${DIAGNOSTIC_ROOT}/s1-restore-openggf-diagnostic-20260905.json`, SHA-256
+The final-source external result is
+`${DIAGNOSTIC_ROOT}/s1-restore-openggf-diagnostic-20260905-i.json`, SHA-256
 `2a3166b3f9e5cd0bde99cb2825fc9772b8c1a65fe2fcb6ff48e13987811d6daa`.
+The earlier `-h.json` result is retained as prior-source evidence and is not
+relabeled as the final run.
 The native raw begins audio observation at row 860, so its earlier request
 history remains unavailable; its captured baseline snapshot is comparison
 evidence and must not hydrate OpenGGF.
