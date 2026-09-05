@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Continue screens for all three games:** the Game Over exit now opens each
+  game's ROM-backed countdown and character sequence when continues remain.
+  Start spends one continue after the departure animation and restores three
+  lives; timeout returns to title. S1/S2 restart from the act start, while S3K
+  retains its checkpoint and saves the updated life/continue counts. The screens
+  use existing input, palette, mapping/DPLC, fade and restart helpers.
+
 - **S3K 1-up SFX suppression:** jump, ring, and other new SMPS effects are
   discarded during the extra-life jingle. Suppressed rings do not advance
   stereo alternation; effects resume when level-music restoration starts.

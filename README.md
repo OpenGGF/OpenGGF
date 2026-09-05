@@ -240,6 +240,11 @@ traces.
 
 #### 0.6 highlights
 
+- **Continue screens:** ROM-backed countdowns and character sequences now follow
+  Game Over when continues remain. Start restores three lives and spends one
+  continue; S1/S2 restart the act, while S3K retains its checkpoint and saves the
+  updated counts. Timeout returns to title.
+
 - **Runtime performance:** live capture reuses pixel buffers and overlaps GPU
   readback with the next frame; audio transactions reuse private rollback storage.
   Live rewind bounds cold gameplay replay to nine ticks, trading more retained
@@ -633,8 +638,8 @@ finishing those parity campaigns is deferred to the next release. A frontier
 still returns to the 0.6 fix queue when it exposes a confirmed release-impacting
 gameplay defect.
 
-Known limitations: the Game Over / Continue flow is missing in all three games
-(`docs/status/known-bugs.md`), there is no modding framework, the level editor
+Known limitations: some Game Over timing details remain documented in
+`docs/status/known-bugs.md`; there is no modding framework, the level editor
 is a dormant prototype, and complete SMPS audio parity remains unfinished.
 The September 4 audio handover supersedes the August 28 withdrawal statement:
 audio corrections and comparison tooling have landed, not complete parity or

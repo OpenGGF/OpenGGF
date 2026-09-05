@@ -33,7 +33,7 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
         // Known Sonic 2 final music offsets (ROM addresses, Saxman compressed)
         // These ROM addresses were discovered empirically and are correct.
         // The IDs here are what the game uses when requesting music.
-        musicMap.put(0x00, 0x0F0002); // Continue
+        musicMap.put(Sonic2Music.CONTINUE.id, 0x0F0002); // Continue
         musicMap.put(Sonic2Music.CASINO_NIGHT_2P.id, 0x0F84F6); // Casino Night 2P
         musicMap.put(Sonic2Music.EMERALD_HILL.id, 0x0F88C4); // Emerald Hill
         musicMap.put(Sonic2Music.METROPOLIS.id, 0x0F8DEE); // Metropolis
