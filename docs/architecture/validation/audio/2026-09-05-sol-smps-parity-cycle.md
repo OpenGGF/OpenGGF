@@ -16,10 +16,12 @@ remains active. No chip replacement or waveform comparison is involved.
 | Remove duplicate PSG note volume | `c9a79620e`, hardened by `6ba9d0a25` | Collapse note regression fails with two writes before correction; prior service prefix retained |
 | Preserve PSG frequency transaction | `e5622b96a` | Source-track gate admits both exact bytes; AF FF retains physical FF latch semantics; denied/invalid pairs cannot leak writes or mutate latch state |
 | Observe production admission | `3a32b78ba`, `648b864e5`, `dd4661be0` | Jump/ring suppression mutation causes both tests to fail; explicit blocked ring event precedes selection; accepted jump writes attributed to its service |
+| Restore FM3 mode before voice | `5f87e16ae` | Normal/special mode tests fail without YM27 and assert the exact write before voice reload; non-FM3 and other release profiles excluded |
+| Compare driver fade counters | `0c7523b1f` | Independent fade-in/out mutations fail at service 37; songless driver counters are projected rather than omitted |
 
-The hard S3K oracle advances from service 1570 event 43 to service 1588 event 1.
-Services 0 through 1587 match. The next mismatch is reference YM port 0 register
-27=0F versus engine B6=C0; it is not a full-window pass. DAC content/timing
+The hard S3K oracle advances from service 1570 event 43 to service 1592.
+Services 0 through 1591 match. The next mismatch is `MUS_PSG3.volEnv`, reference
+0 versus engine 1; it is not a full-window pass. DAC content/timing
 limitations remain separate. See `docs/status/audio-frontier-log.md` for the
 source-level diagnostic record and selected focused commands.
 
@@ -57,6 +59,7 @@ candidate output stays below its own worktree's `target/`.
 | Updated baseline ordinary, `adcd0a3fa` | 16,626 executions, 0 failures/errors, 43 skips |
 | Updated baseline separate guards, `adcd0a3fa` | 609 executions, 0 failures/errors/skips |
 | Lead's first assembled focused run, before pair integration | 34 tests, 0 failures/errors/skips |
+| First candidate ordinary, before fade gates and FM3 restore | 16,634 executions, 0 failures/errors, 23 skips; execution permissions differed from baseline, so final comparison reruns under matching conditions |
 | Final assembled candidate ordinary/guards | Verification in progress |
 | Post-merge ordinary/guards and baseline comparison | Not run; merge not yet performed |
 
@@ -86,6 +89,14 @@ service-phase correlation and extracted-input integration are still in progress.
 The native worker reports the same 186 failures on pinned and modified standalone
 trees, with two additional passing tests. This is not a full native-suite pass;
 layout/environment attribution must remain separate from focused capability proof.
+
+The compiled extractor produced `observations.json` (14 requests, two tempo
+controls), SHA-256
+`fcf309027da96b811b50db3b47f9acbec2061f75baeab975e7908b25990080c5`.
+Reversing the duplicate inputs produces identical extracted bytes. The worker's
+actual old-versus-new capture comparison reports no request transcript changes.
+Repeated tempo values are negative/unit-test coverage, not observed occurrences
+in this particular prefix. Service-phase replay still needs explicit validation.
 
 ## Integration obligations still open
 

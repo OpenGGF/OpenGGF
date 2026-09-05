@@ -17,11 +17,14 @@ controlled differential cases and continuous movies providing complementary
 evidence. Trace infrastructure alone is not the deliverable.
 
 The assembled candidate removes a duplicate PSG note-start volume write and
-repairs pair-level PSG ownership, advancing the S3K frontier from service 1570
-event 43 to service 1588 event 1. The ROM's second byte `FF` retains its actual
+repairs pair-level PSG ownership and FM3 mode restoration, advancing the S3K
+frontier from service 1570 event 43 to service 1592 (`MUS_PSG3.volEnv`, reference
+0 versus engine 1). The ROM's second byte `FF` retains its actual
 hardware latch semantics; it is not masked into a data byte. The pair is
 admitted once at the source track gate, and rejected pairs change neither bus
-nor latch state. Production observer tests now
+nor latch state. FM3 mode is restored before its music voice, and both driver
+fade counters are now directly compared, including songless services.
+Production observer tests now
 expose blocked ring decisions and detect deliberately disabled suppression.
 These are not full-run parity claims. Candidate integration and full regression
 comparison remain pending; do not read this section as a develop delivery record.

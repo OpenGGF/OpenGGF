@@ -1551,8 +1551,8 @@ is written to register `27` before its voice, matching `cfStopTrack`
 (:3443-3518). The oracle advances to service **1592**, where music PSG3
 `volEnv` is reference `0` versus engine `1`, a separate envelope-state gap.
 `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
-matching 1592-service prefix through ordinal 1591. No full-service progress is
-claimed. The DAC stream
+matching 1592-service prefix through ordinal 1591. Service 1592 and the full
+window are not claimed to match. The DAC stream
 remains independently red at run 338, byte 0 (`88` versus `7F`). See the
 [2026-09-05 validation report](architecture/validation/audio/2026-09-05-s3k-psg-takeover.md)
 for commands and red-first evidence; this is not full-window audio parity.
