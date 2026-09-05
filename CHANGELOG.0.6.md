@@ -100,8 +100,10 @@ This file contains the complete 0.6 development snapshot history carried forward
   envelope without eagerly consuming byte zero before the ROM's override
   return, advancing the oracle to service 1594. S3K's PSG-volume command now
   performs its byte-sized envelope-index decrement at zero too (`00 -> FF`),
-  advancing the oracle to service 1652; the newly exposed ordered-write and
-  independent DAC mismatches remain.
+  advancing the oracle to service 1652. SFX are now serviced in fixed channel
+  RAM order, placing newly admitted Flying FM4 before older Collapse PSG slots
+  and advancing the oracle to service 1690; the new PSG-write and independent
+  DAC mismatches remain.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data
