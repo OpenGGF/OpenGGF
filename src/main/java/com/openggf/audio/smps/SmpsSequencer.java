@@ -1986,6 +1986,18 @@ public class SmpsSequencer implements CoordFlagContext {
         setFadeSteps(fadeSteps() - 1);
         setFadeDelayCounter(fadeDelayReload());
 
+        if (fadeState.fadeOut && config.isDriverOwnedFadeDelay() && fadeSteps() == 0
+                && host.fadeOutCompletesWithGlobalStop()) {
+            // zDoMusicFadeOut jumps to zStopAllSound before the terminal TL
+            // loop (Z80 driver:2347-2362). The host applies that shared stop
+            // after this step; do not emit another volume or note update here.
+            fadeState.active = false;
+            for (Track track : tracks) {
+                track.active = false;
+            }
+            return;
+        }
+
         int dir = fadeState.fadeOut ? 1 : -1;
 
         for (Track t : tracks) {

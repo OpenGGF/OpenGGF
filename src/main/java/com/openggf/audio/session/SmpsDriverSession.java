@@ -524,6 +524,22 @@ public final class SmpsDriverSession implements AutoCloseable {
             });
         }
 
+        @Override
+        public boolean completeFadeOut() {
+            if (logicalMaterialization
+                    || !fadeOutCompletesWithGlobalStop()) {
+                return false;
+            }
+            applyGlobalStopNow();
+            globalStopConsumedDuringService = true;
+            return true;
+        }
+
+        @Override
+        public boolean fadeOutCompletesWithGlobalStop() {
+            return configuration.statefulCommandPolicy().fadeOutCompletesWithGlobalStop();
+        }
+
         private PortCapability currentPort() {
             requireActive();
             if (openOwner == null) {
@@ -566,6 +582,8 @@ public final class SmpsDriverSession implements AutoCloseable {
     private long openEpoch;
     private long nextEpoch;
     private int serviceInvocationCount;
+    // Per-call outcome, not driver state: reset before every forward service.
+    private boolean globalStopConsumedDuringService;
     private boolean transactionOpen;
     private boolean logicalMaterialization;
     private boolean closed;
@@ -700,6 +718,7 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     public SmpsServiceOutcome serviceForward() {
         requireInstalled();
+        globalStopConsumedDuringService = false;
         serviceInvocationCount++;
         if (segaPcmTransport != null) {
             // zPlaySEGAPCM runs under di for its whole duration
@@ -752,7 +771,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             });
         }
         emitDacIdleLoopEnableIfQueued();
-        return SmpsServiceOutcome.ORDINARY;
+        return globalStopConsumedDuringService
+                ? SmpsServiceOutcome.GLOBAL_STOP_CONSUMED : SmpsServiceOutcome.ORDINARY;
     }
 
     /**
@@ -1084,11 +1104,20 @@ public final class SmpsDriverSession implements AutoCloseable {
         speedShoesEnabled = false;
         speedMultiplier = 1;
         ringLeft = true;
-        withPort(driverIdentity, port -> {
+        Consumer<SmpsPhysicalPort> silence = port -> {
             applyProgram(port, policy.stopAll());
             port.silenceOutput();
-            return null;
-        });
+        };
+        // A terminal fade arrives inside the driver's existing write epoch.
+        // Reuse that capability; opening another epoch would reject ownership.
+        if (openOwner != null) {
+            silence.accept(new PortCapability(openOwner, openEpoch));
+        } else {
+            withPort(driverIdentity, port -> {
+                silence.accept(port);
+                return null;
+            });
+        }
         restoreLogicalWithoutWrites(emptyLogicalSnapshot(
                 driver.captureSnapshot()));
         pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
