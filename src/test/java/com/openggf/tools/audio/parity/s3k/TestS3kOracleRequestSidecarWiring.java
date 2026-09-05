@@ -262,16 +262,16 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
                 report.kind(), report::toString);
-        // cfChangePSGVolume's byte-sized DEC now wraps VolEnv 00h to FFh.
-        // The next mismatch is a separate ordered-write divergence.
-        assertEquals(2012, report.tick(), report::toString);
-        assertEquals(1, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=191]",
-                report.reference());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=255]",
-                report.openggf());
+        // zSFXTrackInitLoop now preserves ROM header order independently of
+        // the fixed channel-RAM service walk. Skid's PSG2 header therefore
+        // supplies BF before the following PSG1 header's FF at service 2012.
+        assertEquals(2357, report.tick(), report::toString);
+        assertEquals("MUS_FM4", report.role());
+        assertEquals("overridden", report.field());
+        assertEquals("false", report.reference());
+        assertEquals("true", report.openggf());
     }
 
     @Test
