@@ -68,7 +68,7 @@ The initial ordinary run's four assertion failures are retained: two omitted
 the retail stop byte and two mixed ending SFX with same-frame music traffic.
 Source-backed test corrections preserve that traffic and detect shortened tails.
 
-### Fourth Sol cycle (post-merge verified)
+### Fourth Sol cycle (delivered)
 
 Candidate `d14277e8f`, based on develop `e73ca442f`, restores covered S3K PSG
 music after F2 using the exact signed raw noise byte, preserving playing/rest
@@ -86,7 +86,9 @@ The 125-test focused run and 16,661-test ordinary suite pass, with 43 unchanged
 skips. Exact comparison preserves every baseline outcome after one reviewed,
 strengthened music-F2 test rename and adds seven passing identities. All 609
 separate guards pass with exact baseline equality. Develop merge `1e33747f1`
-passes both suites with exact candidate outcome equality. Push and cleanup status belong to the
+passes both suites with exact candidate outcome equality. Develop was pushed
+through `250b3409b`; the completed worktree and merged local branch were removed.
+Evidence belongs to the
 [fourth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle4.md).
 Native S1 capture A is now genuinely sealed, as recorded below, but remains
 diagnostic rather than authenticated. Neither a matching prefix nor the ordinary

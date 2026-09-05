@@ -1,6 +1,7 @@
 # SMPS parity cycle 4: S3K PSG stop and covered-noise restore
 
-Status: merged and post-merge verified as develop `1e33747f1`; push and cleanup pending.
+Status: delivered on develop as merge `1e33747f1`, verified and pushed through
+`250b3409b`; completed worktree and merged local branch removed.
 full-game audio parity and authenticity remain open.
 
 ## Source boundary
@@ -116,4 +117,15 @@ ordinary distinct outcomes and all 609 guard outcomes are unchanged, with no
 added or removed identities. This preserves the updated baseline plus the seven
 reviewed additions. Exact comparison logs are
 `target/audio-parity-cycle4-postmerge-{ordinary,guards}-comparison.log`.
-Push and worktree cleanup remain pending.
+Develop was pushed through `250b3409b`. Post-merge logs/XML and both comparison
+pairs are archived at `${EVIDENCE_ROOT}/cycle4-postmerge-1e33747f1.tar.gz`, SHA-256
+`0f9094ce492a15095bc0ea3892fecf2c65aea561d9b9e6ef92c64be80cbc9620`.
+
+Cleanup verified clean tracked/untracked status and merged ancestry before
+removing `.worktrees/sol-s3k-noise-restore` and local
+`bugfix/ai-sol-s3k-noise-restore`, then pruned worktree metadata. Every ignored
+path was inspected: ROM/reference entries were hook-created symlinks (original
+targets untouched), configuration and the generated rewind report were archived,
+and `target/` plus `saves/image-cache/s1/` were test-generated rebuildable output.
+No unknown or user-authored work was discarded. The three new worker trees,
+native capture tree, original ROMs and user-modified disassemblies remain intact.

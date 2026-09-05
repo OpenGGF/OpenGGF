@@ -182,7 +182,7 @@ It is not part of this candidate. Neither this prefix nor the running full S1
 diagnostic capture establishes full-game parity or authenticated production
 reference availability.
 
-### Fourth worker cycle: post-merge verified
+### Fourth worker cycle: delivered
 
 Candidate `d14277e8f` closes the service-1690 F2 covered-noise restore mismatch:
 release the exact ending track's owned claims, preserve music playing/rest state,
@@ -195,7 +195,8 @@ outcomes, including 43 skips. See the
 [fourth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle4.md)
 for integration evidence. All 609 separate guards pass with exact baseline
 outcome equality. Develop merge `1e33747f1` passes both post-merge suites with
-exact candidate outcome equality; push and cleanup status remain in the ledger.
+exact candidate outcome equality. Develop was pushed through `250b3409b`, and
+the completed worktree and merged local branch were removed.
 
 The next hard mismatch is service 2012 event 1 (`BF` versus `FF`). Source review
 shows the second Skid header silences the previous header initialized within
