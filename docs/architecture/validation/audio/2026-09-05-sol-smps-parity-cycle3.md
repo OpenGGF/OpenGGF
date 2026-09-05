@@ -88,7 +88,9 @@ mvn -Dmse=off "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" 
 | Initial slot-order candidate focused run | 20 tests, 0 failures/errors/skips |
 | Final candidate focused, `09f8ae434` | 57 tests, 0 failures/errors/skips |
 | Initial candidate ordinary, production `09f8ae434` | 16,654 tests, 4 failures, 0 errors, 43 skips; not accepted |
-| Corrected candidate ordinary and guards | Pending |
+| Candidate guards, `091669935` | 609 tests, 0 failures/errors/skips; exact baseline outcome equality |
+| Corrected candidate focused, `8306b9a3a` | 75 tests, 0 failures/errors/skips |
+| Corrected candidate ordinary | Pending |
 | Post-merge ordinary and guards | Pending |
 
 Compare exact distinct test identities/statuses/messages as well as log totals.
@@ -109,10 +111,29 @@ expectations omit the retail unconditional FF; source review confirms the
 expected full sequences need that byte in both noise and reset cases. Their
 raw-operand state assertions remain unchanged.
 
-`TestS3kSfxRuntimePathWithMusic` also fails Collapse and spindash tail assertions:
+Correction `091669935` passes a 52-test focused run. Deleting the default leaf
+transaction's unconditional FF deliberately makes both corrected F3 cases fail;
+restoring production passes the same 52-test selection again. The nonquiet
+mutation and restored logs plus XML are retained under
+`target/audio-parity-cycle3-candidate-evidence/f2-correction/`. No production
+change from that mutation remains.
+
+`TestS3kSfxRuntimePathWithMusic` also failed Collapse and spindash tail assertions:
 observed reduced noise levels contain a final 4 or 6 after silence. Its observer
-collects the whole physical bus until after the final presentation frame, so
-same-service music resumption is a possible measurement leak. This requires
-source-backed observation before changing assertions; no runtime suppression
-or discarded suffix is accepted merely to make the tests green. Failed logs and
-XML are retained in `target/audio-parity-cycle3-initial-failure-evidence/`.
+collected the whole physical bus until after the final presentation frame,
+mixing the ending effect with same-service covered-track restoration and music.
+Reviewed test-only `ed6167919`, merged as `8306b9a3a`, follows the requested
+base-game SFX identity through an observed alive-to-dead transition and requires
+a unique physical `DF FF FF` stop transaction in that frame. It separately
+retains and characterizes the complete suffix; that known-gap restoration is
+explicitly not asserted as retail parity and must change with the next repair.
+
+Collapse has five 24-tick notes, not six timed repeats; its six attenuation
+levels include silence. Literal ROM durations plus deferred admission and the
+following F2 frame give 122 presented frames in this NTSC fixture; Dash's
+6+79 ticks give 87. A temporary production duration decrement of two instead of
+one makes the tests fail at 62 and 45 respectively. Restored focused verification
+passes all six live-path and isolated-tail tests. No runtime mutation remains.
+Named nonquiet logs are retained in
+`target/audio-parity-cycle3-candidate-evidence/runtime-tail/`. Initial failed logs
+and XML remain in `target/audio-parity-cycle3-initial-failure-evidence/`.
