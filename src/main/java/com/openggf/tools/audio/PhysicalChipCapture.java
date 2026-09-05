@@ -3,6 +3,7 @@ package com.openggf.tools.audio;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.audio.synth.PsgChip;
 import com.openggf.audio.synth.Ym2612Chip;
+import com.openggf.audio.synth.nuked.NukedOpn2;
 import com.openggf.version.BuildIdentity;
 
 import java.io.BufferedWriter;
@@ -60,6 +61,56 @@ final class PhysicalChipCapture implements ChipWriteObserver {
     private final List<Event> events;
     private long nextOrdinal;
     private long dropped;
+    private Long renderedOutputFrames;
+    private Long ymReplayStartOrdinal;
+    private Long terminalYmCycle;
+
+    /** Marks a proven reset-origin YM segment without discarding setup events. */
+    void beginYmReplaySegment(Ym2612Chip.Snapshot snapshot) {
+        NukedOpn2 reset = new NukedOpn2();
+        boolean muted = false;
+        for (boolean value : snapshot.mutes()) {
+            muted |= value;
+        }
+        if (nextOrdinal != events.size() || snapshot.chipType() != 0
+                || snapshot.outputRate() != Ym2612Chip.getInternalRate()
+                || snapshot.dacInterpolate() || muted
+                || snapshot.directFrames().length != 0
+                || !snapshot.hasOnlyPendingBusWrites()
+                || snapshot.frameSumLeft() != 0 || snapshot.frameSumRight() != 0
+                || !reset.state().equals(snapshot.core())
+                || events.stream().anyMatch(event -> event instanceof Ym
+                        || event instanceof Boundary boundary
+                        && boundary.domain == ChipClockDomain.YM2612_INTERNAL_CYCLE
+                        && boundary.clock != 0)) {
+            return;
+        }
+        ymReplayStartOrdinal = nextOrdinal;
+    }
+
+    /**
+     * At native rate every consumed or still-queued frame represents 24 clocks.
+     * Bus draining may also leave a partial frame; output frames alone therefore
+     * understate the endpoint. Non-bus changes make this narrow proof invalid.
+     */
+    void finish(long frames, Ym2612Chip.Snapshot snapshot) {
+        if (frames < 0) {
+            throw new IllegalArgumentException("rendered frames must be non-negative");
+        }
+        renderedOutputFrames = frames;
+        terminalYmCycle = null;
+        if (ymReplayStartOrdinal == null || overflowed()
+                || snapshot.outputRate() != Ym2612Chip.getInternalRate()
+                || events.stream().anyMatch(event -> event.ordinal() >= ymReplayStartOrdinal
+                        && event instanceof Boundary boundary
+                        && boundary.domain == ChipClockDomain.YM2612_INTERNAL_CYCLE
+                        && boundary.boundary != PhysicalTimelineBoundary.OUTPUT_GATE_CHANGE)) {
+            return;
+        }
+        terminalYmCycle = Math.addExact(Math.multiplyExact(
+                Math.addExact(frames, snapshot.directFrames().length / 2), 24),
+                snapshot.core().cycles);
+    }
 
     PhysicalChipCapture(int capacity) {
         if (capacity <= 0) {
@@ -118,13 +169,18 @@ final class PhysicalChipCapture implements ChipWriteObserver {
             BuildIdentity build) throws IOException {
         try (BufferedWriter output = Files.newBufferedWriter(path)) {
             output.write(String.format(Locale.ROOT,
-                    "{\"type\":\"header\",\"format\":\"openggf-physical-chip-bus-v1\",\"engine\":\"openggf\",\"engine_version\":\"%s\",\"engine_commit\":\"%s\",\"engine_dirty\":%s,\"rom_path\":\"%s\",\"rom_sha1\":\"%s\",\"initial_state\":\"constructor_reset\",\"ym_core\":\"nuked-opn2\",\"ym_core_mode\":3,\"ym_chip_type\":\"YM2612\",\"output_sample_rate\":%.6f,\"game\":\"%s\",\"kind\":\"%s\",\"id\":%d,\"ym_domain\":\"YM2612_INTERNAL_CYCLE\",\"ym_ticks_per_second\":%.6f,\"psg_domain\":\"PSG_GENERATOR_TICK\",\"psg_ticks_per_second\":%.6f,\"capture_capacity\":%d,\"events\":%d,\"overflow\":%s,\"dropped\":%d}",
+                    "{\"type\":\"header\",\"format\":\"openggf-physical-chip-bus-v1\",\"engine\":\"openggf\",\"engine_version\":\"%s\",\"engine_commit\":\"%s\",\"engine_dirty\":%s,\"rom_path\":\"%s\",\"rom_sha1\":\"%s\",\"initial_state\":\"constructor_reset\",\"ym_core\":\"nuked-opn2\",\"ym_core_mode\":3,\"ym_chip_type\":\"YM2612\",\"output_sample_rate\":%.6f,\"game\":\"%s\",\"kind\":\"%s\",\"id\":%d,\"ym_domain\":\"YM2612_INTERNAL_CYCLE\",\"ym_ticks_per_second\":%.6f,\"psg_domain\":\"PSG_GENERATOR_TICK\",\"psg_ticks_per_second\":%.6f,\"capture_capacity\":%d,\"events\":%d,\"overflow\":%s,\"dropped\":%d",
                     escape(build.baseVersion()), escape(build.commit()), build.dirty(),
                     escape(romPath), escape(romSha1), outputRate,
                     escape(game), escape(kind), id,
                     Ym2612Chip.getInternalRate() * 24.0, PsgChip.TICK_RATE_HZ,
                     capacity, events.size(),
                     overflowed(), dropped));
+            // Optional endpoint fields are null on an unfinished or unsupported
+            // diagnostic. Older v1 files remain diagnostics, not bounded replays.
+            output.write(String.format(Locale.ROOT,
+                    ",\"rendered_output_frames\":%s,\"ym_replay_start_ordinal\":%s,\"terminal_ym_cycle\":%s}",
+                    renderedOutputFrames, ymReplayStartOrdinal, terminalYmCycle));
             output.newLine();
             for (Event event : events) {
                 output.write(event.toJson());

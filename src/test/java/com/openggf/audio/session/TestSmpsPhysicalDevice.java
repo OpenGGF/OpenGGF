@@ -48,6 +48,25 @@ class TestSmpsPhysicalDevice {
     }
 
     @Test
+    void outputGateBoundaryDoesNotClaimRawChipStateChanged() {
+        PhysicalRecordingObserver observer = new PhysicalRecordingObserver();
+        SmpsPhysicalDevice device = new SmpsPhysicalDevice(
+                SmpsSessionTestFixtures.settings(), observer);
+        device.apply(new SmpsWriteProgram(List.of(new SmpsChipWrite.Psg(0x9F))));
+        JsonNode before = SmpsSessionTestFixtures.json(device.captureSnapshot().synth());
+        observer.events.clear();
+
+        device.silenceOutput();
+
+        assertTrue(device.captureSnapshot().outputSilenced());
+        assertEquals(before, SmpsSessionTestFixtures.json(device.captureSnapshot().synth()),
+                "the presentation gate does not mutate either raw chip");
+        assertEquals(List.of("YM2612_INTERNAL_CYCLE:0:OUTPUT_GATE_CHANGE",
+                "PSG_GENERATOR_TICK:0:OUTPUT_GATE_CHANGE"), observer.events,
+                "raw replay may cross a presentation-only gate, but PCM replay may not");
+    }
+
+    @Test
     void deferredConstructionAppliesSettingsWithoutChipWrites() {
         SmpsSessionTestFixtures.RecordingObserver observer =
                 new SmpsSessionTestFixtures.RecordingObserver();

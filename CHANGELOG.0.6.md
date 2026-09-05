@@ -23,6 +23,19 @@ This file contains the complete 0.6 development snapshot history carried forward
   more gameplay snapshots. Gumball art uploads are batched, HCZ2 deformation
   scratch is reused, and display shaders avoid redundant GL state queries.
 
+- **FM comparison captures now prove their replay bounds:** internal-rate
+  diagnostics record a checked reset-origin segment and exact chip endpoint,
+  including time spent draining queued writes. Presentation-only output gates
+  are distinguished from chip mutations. Repeated extra-life restoration and
+  mid-fade snapshot tests now cover both AIZ and HCZ acts; human listening
+  approval remains a separate release gate.
+
+- **S3K noise effects preserve the original command write order:** sound
+  effects now keep their noise-form command's two writes adjacent, without
+  inserting a second setup mute. Splash, insta-shield and collapse have
+  ROM-backed checks; the AIZ1 oracle advances from event 39 to event 43 within
+  service 1570, where a separate duplicate volume write remains. The independent
+  DAC mismatch and stale-IX admission limitation remain open.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data

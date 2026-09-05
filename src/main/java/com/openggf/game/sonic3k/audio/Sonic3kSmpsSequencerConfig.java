@@ -133,6 +133,13 @@ public final class Sonic3kSmpsSequencerConfig {
                 // writes FF after its stale-IX silence call (:2131-2136).
                 // The fixed branch relies on corrected channel silence instead.
                 .psgSfxAdmissionSilencesNoise(true)
+                // Retail fix_sndbugs=0 owns silence at admission above;
+                // cfSetPSGNoise then writes DF and its operand consecutively
+                // (:3562-3572). Acquiring noise ownership must not inject FF.
+                // The fixed branch changes the command's guards and zero
+                // handling, not the need for a synthetic first-write silence.
+                .psgSfxTakeoverMode(
+                        SmpsSequencerConfig.PsgSfxTakeoverMode.REGISTER_SEQUENCE)
                 // cfStopTrack keys the channel off exactly once as it clears
                 // the playing bit (Sound/Z80 Sound Driver.asm:3040-3046).
                 .trackEndFlagOwnsTheStop(true)

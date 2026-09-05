@@ -1,6 +1,7 @@
 # Runtime performance audit remediation
 
-Base: `ce3b9e291` on `develop`. Implementation worktree:
+Initial base: `ce3b9e291` on `develop`. Updated integration base: `e258282e0`.
+Implementation worktree:
 `.worktrees/ai-runtime-performance`, branch `feature/ai-runtime-performance`.
 
 ## Changes and limits
@@ -74,3 +75,18 @@ not a cross-zone maximum or a statistically controlled frame-time benchmark.
 At a 1280×896 viewport, removing the RGBA clone avoids 4,587,520 bytes per
 captured frame, or 262.5 MiB/s at 60 FPS. This is calculated image payload volume;
 small frame wrappers and PCM ownership copies remain.
+
+## Upstream reconciliation
+
+While the initial verification was running, another task merged the audio milestone
+`e258282e0` into develop. Original baseline suites finished before that merge.
+The new base is tested separately in `.worktrees/ai-runtime-performance-baseline`.
+Both sets of changelog entries and both newly added physical-device tests are
+retained. The merged source preserves the new OUTPUT_GATE_CHANGE diagnostic and
+pending-write replay-bound check alongside private rollback buffers.
+
+Independent review also corrected stop-marker/drop concurrency and final-frame
+ownership after submission, and added immediate reference clearing when audio
+transactions finish. A full-suite mock failure in the presentation coordinator
+was corrected by stubbing the recorder's new capture boundary. Its affected
+checks and audio lifetime regressions passed in a 116-test focused run.

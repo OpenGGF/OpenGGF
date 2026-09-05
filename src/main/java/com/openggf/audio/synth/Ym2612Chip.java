@@ -1079,6 +1079,17 @@ public class Ym2612Chip {
         @Override
         public int[] pendingOps() { return Arrays.copyOf(pendingOps, pendingOps.length); }
 
+        /** Whether deferred work is reconstructable from the future raw bus strobes alone. */
+        public boolean hasOnlyPendingBusWrites() {
+            for (int index = 0; index < pendingOps.length; index += OP_STRIDE) {
+                int kind = pendingOps[index];
+                if (kind != OP_WRITE && kind != OP_ADDRESS && kind != OP_DATA) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
         @Override
         public boolean[] mutes() { return Arrays.copyOf(mutes, mutes.length); }
 

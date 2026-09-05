@@ -1501,41 +1501,44 @@ Full context:
 
 ---
 
-## SFX channel takeover splits `cfSetPSGNoise`'s two writes
+## PSG admission stale-IX silence and first-note volume remain incomplete
 
 **What the ROM does.** The S3K sound driver is built with `fix_sndbugs = 0`
 (`Sound/Z80 Sound Driver.asm:16`), so `cfSetPSGNoise` takes the `else` branch at
-`:3558-3571`. That branch puts exactly two bytes on the PSG bus, back to back and
+`:3559-3572`. That branch puts exactly two bytes on the PSG bus, back to back and
 with nothing between them: `0DFh` to silence PSG3, then the effect's own noise
 operand. The routine has no calls between the two writes, so their adjacency is
 structural rather than incidental.
 
-**What we do.** The engine emits `DF FF E7`. `SmpsDriver.silencePsgChannel`
-performs the SFX channel takeover lazily, on the first latch of the channel being
-stolen from music, and for a noise-form effect the `0E7h` write is that first
-latch. The takeover's own `0FFh` therefore lands between `cfSetPSGNoise`'s two
-writes. The ROM performs the equivalent takeover during SFX setup instead, before
-the track's first pass runs. The engine now also emits the guaranteed setup
-`FF` in PSG header order, but the extra lazy takeover write remains.
+**Resolved ordering gap (2026-09-05).** The engine previously emitted
+`DF FF E7`: noise-channel ownership injected a second silence after the loader
+had already emitted the guaranteed admission `FF`. The S3K profile now selects
+`REGISTER_SEQUENCE`, so admission retains its `FF` in header order and the
+command emits adjacent `DF E7`. Ownership, release and rollback are unchanged.
 
-**Scope.** Every S3K effect that carries a PSG form is affected, because all 36 of
+**Scope of the resolved gap.** Every S3K effect that carries a PSG form was affected, because all 36 of
 them declare `$E7`. Among them are three behind reported AIZ1 audio faults:
 `sfx_Splash` (`$39`), `sfx_InstaAttack` (`$42`) and `sfx_Collapse` (`$59`).
 
-**Why it is probably not what anyone hears.** The interposed byte sets the noise
-channel to silence, and the effect's real attenuation follows within the same
-driver service. It is an ordering divergence in the write stream, not a sustained
-level change. The audible fault reported against these effects is being tracked
-separately against the PSG noise clock, not against this.
+**Remaining admission gap.** `zGetSFXChannelPointers.is_psg` calls
+`zSilencePSGChannel` before replacing IX (:2131-2154). That stale pointer can
+contribute additional PSG writes before the guaranteed `FF`; the engine still
+models only the guaranteed write. Collapse's preceding FM5 header contributes
+none, so this comparison does not establish general stale-IX parity.
 
-**Coverage.** `TestS3kNoiseFormEffectWriteStream` is enabled and asserts that `DF`
-precedes the ROM-derived noise operand for all three effects; it does not assert
-adjacency while the extra `FF` remains. Its observation starts after admission
+**Coverage and next frontier.** `TestS3kNoiseFormEffectWriteStream` asserts that
+`DF` immediately precedes the ROM-derived noise operand for all three effects.
+The synthetic zero-operand test also checks adjacent `DF FF` without a duplicate.
+Observation starts after admission
 so a setup silence cannot be mistaken for the track's first pass.
-The independent committed AIZ1 intro oracle now reaches Collapse's first walk
-at service **1570**, event **39**: reference PSG `E7`, engine PSG `FF`.
-`TestS3kOracleRequestSidecarWiring` pins that exact mismatch and separately
-hard-asserts a matching 1570-service prefix through ordinal 1569. The DAC stream
+The independent committed AIZ1 intro oracle advances within service **1570**
+from event **39** to **43**: reference YM2612 port 0 `A4=22`, engine PSG `F0`.
+Collapse's first pass sends its noise volume twice; the shared frequency tail
+and fresh-note volume send are the next source-inspection candidates, not fixed
+here. `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately
+asserts a matching 1570-service prefix through ordinal 1569 plus all 43 ordered
+service writes before event 43. A 1571-service `MATCH` assertion was tried and
+failed at this new frontier; no full-service progress is claimed. The DAC stream
 remains independently red at run 338, byte 0 (`88` versus `7F`). See the
-[2026-09-04 validation report](architecture/validation/audio/2026-09-04-s3k-admission-silence.md)
+[2026-09-05 validation report](architecture/validation/audio/2026-09-05-s3k-psg-takeover.md)
 for commands and red-first evidence; this is not full-window audio parity.

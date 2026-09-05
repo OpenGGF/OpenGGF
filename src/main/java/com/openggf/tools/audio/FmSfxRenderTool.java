@@ -233,6 +233,9 @@ public final class FmSfxRenderTool {
             SmpsDriver driver = stream.logicalDriver();
             driver.setRegion(SmpsSequencer.Region.NTSC);
             stream.applyChannelMasks(0, mutePsg ? 0x0F : 0);
+            if (physicalCapture != null) {
+                physicalCapture.beginYmReplaySegment(stream.captureSynthSnapshotForTesting().ym());
+            }
             // Keep the historical logical log starting after boot and mask setup,
             // while physical capture has already observed those dispatched strobes.
             stream.setChipWriteObserver(new ChipWriteObserver() {
@@ -286,6 +289,9 @@ public final class FmSfxRenderTool {
             }
             short[] trimmed = new short[frames * 2];
             System.arraycopy(samples, 0, trimmed, 0, trimmed.length);
+            if (physicalCapture != null) {
+                physicalCapture.finish(frames, stream.captureSynthSnapshotForTesting().ym());
+            }
             return new Render(trimmed, frames, driver.isComplete(), writes,
                     physicalCapture);
         }

@@ -6,7 +6,44 @@ named. Numbers are stamped with the commit they were measured on; re-measure
 before relying on any of them (see the measurement-hazard table in
 `docs/agent-workflow/briefing-trace-rounds.md`).
 
-## Coordinated follow-on milestone
+## September 5 next-milestone update
+
+The [next-milestone plan](2026-09-05-audio-next-milestone.md) starts from
+`bbf28b7dc`; integration is in progress, so the original and first follow-on
+measurements below remain historical.
+
+- PSG correction `5ee8bb8ae` removes the synthetic takeover FF. Hard comparison
+  retains 1,570 whole services and now the first 43 ordered writes of service
+  1570; the next difference is event 43, reference YM0 A4=22 versus engine PSG
+  F0. The next source-backed candidate is a duplicate volume tail after a
+  modulated PSG note, not another admission-silence change. Stale-IX admission
+  behavior remains separately incomplete.
+- DAC diagnosis `b710033b2` / `c877fca10` changes reporting, not playback:
+  ordinal run 338 starts at reference service 3658 versus engine 3837. At the
+  same service 3837, reference run 363 has the engine sample's prefix. The
+  first track scheduling difference is service 2940, where reference speed-up
+  state changes without a mailbox request. The retail tempo routine writes
+  that control directly, an input absent from the mailbox-only replay; enable
+  timing first differs at 2943. Do not change the decoder or replace 297 with
+  303 based on the old 88-versus-7F report. See the
+  [source-backed evidence](../../validation/audio/2026-09-05-s3k-dac-run-provenance.md).
+- Replay-bound capture `2d1ecf68d` proves a known reset-origin segment and
+  exact native-cycle endpoint, including queue-drain time. An output gate is
+  distinguished from raw chip mutation. Repeated one-up plus mid-fade snapshot
+  coverage now includes AIZ1/2 and HCZ1/2. See the
+  [scope and focused evidence](../../validation/audio/2026-09-05-bounded-ym-replay-and-slice.md).
+- Required next reference work is observation of the actual external tempo
+  control write, not hydration from later driver RAM. Human listening and
+  low-end hardware validation remain open. Native/fast experiments must not
+  be described as shipped backends.
+- Performance research `c43e61e2e` proves actual-PCM JNI and partial-frame
+  snapshot transfer on HotSpot and GraalVM Native Image on Linux. AIZ1's
+  799,005 raw stereo frames match Java/C Nuked exactly. A small Java trial
+  showed no reliable gain and was reverted; ymfm's deterministic replay uses
+  frame-quantized writes and does not establish equivalent fidelity. See the
+  [new measurements](../../research/audio/2026-09-05-fm-performance-follow-up.md).
+
+## First coordinated follow-on milestone (delivered)
 
 Delivered on September 5 as `develop` merge `078e5df6f`, pushed after post-merge
 ordinary and guard verification with no new failures or skips. All four task
