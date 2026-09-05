@@ -16,6 +16,8 @@ public final class SmpsLogicalTransitionPolicies {
             new Policy(false, false);
     private static final SmpsLogicalTransitionPolicy CLEAR_SFX_AND_TEMPO =
             new Policy(false, true);
+    private static final SmpsLogicalTransitionPolicy PRESERVE_SFX_RESET_TEMPO =
+            new Policy(true, true);
 
     private SmpsLogicalTransitionPolicies() {
     }
@@ -24,7 +26,8 @@ public final class SmpsLogicalTransitionPolicies {
             SmpsSequencerConfig config) {
         Objects.requireNonNull(config, "config");
         if (config.isResetTempoOnMusicLoad()) {
-            return CLEAR_SFX_AND_TEMPO;
+            return config.isDirect68kDriver()
+                    ? PRESERVE_SFX_RESET_TEMPO : CLEAR_SFX_AND_TEMPO;
         }
         return config.isDirect68kDriver()
                 ? PRESERVE_SFX : CLEAR_SFX;

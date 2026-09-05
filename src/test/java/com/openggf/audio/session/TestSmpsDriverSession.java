@@ -57,6 +57,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsDriverSession {
     @Test
+    void resettingTempoDoesNotChangeTheSourcesSfxPreservationPolicy() {
+        var session = SmpsSessionTestFixtures.session(new SmpsSessionTestFixtures.RecordingObserver());
+        session.install();
+        session.queueActivation(activationWithFmTrack(1));
+        session.applyCommand(new SmpsSessionCommand.AdmitSfx(continuousSfx(0x65, 4)));
+        var directWithReset = new SmpsSequencerConfig.Builder()
+                .direct68kDriver(true).resetTempoOnMusicLoad(true).build();
+        session.applyCommand(new SmpsSessionCommand.SetSpeedMultiplier(8));
+        session.queueActivation(activation(2, false, false, true, 0, directWithReset));
+        assertEquals(1, session.captureSnapshot().speedMultiplier());
+        assertTrue(session.captureLogicalSnapshot().sequencers().stream()
+                .anyMatch(entry -> entry.sfx() && entry.source().id() == 0x65),
+                "a tempo reset must not discard the direct driver's continuing SFX");
+    }
+
+    @Test
     void ordinaryS3kMusicLoadsClearTheOutgoingTempoInSessionAndMetadata() {
         SmpsDriverSession session = SmpsSessionTestFixtures.session(
                 new SmpsSessionTestFixtures.RecordingObserver());
