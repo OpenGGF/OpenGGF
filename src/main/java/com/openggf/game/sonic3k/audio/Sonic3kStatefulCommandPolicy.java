@@ -31,6 +31,13 @@ public final class Sonic3kStatefulCommandPolicy
     }
 
     @Override
+    public boolean fadeOutCompletesWithGlobalStop() {
+        // zDoMusicFadeOut jumps to zStopAllSound immediately after decrement
+        // reaches zero, before the final volume walk (Z80 driver:2347-2362).
+        return true;
+    }
+
+    @Override
     public SmpsStatefulCommandOperation prepare(
             SmpsStatefulCommandOperation.Input input) {
         if (!(input.command()
