@@ -392,6 +392,12 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         }
     }
 
+    @Override
+    public boolean fadeOutCompletesWithGlobalStop() {
+        return synthesizer instanceof SmpsDriverSessionAccess access
+                && access.fadeOutCompletesWithGlobalStop();
+    }
+
     /** Installs the disabled-by-default complete-service diagnostic observer. */
     public void setServiceObserver(SmpsDriverServiceObserver observer) {
         serviceObserver = Objects.requireNonNull(observer, "observer");
@@ -2329,7 +2335,15 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             return;
         }
         fadeDelayTimeout = fadeDelay;
+        int previousFadeSteps = fadeOutTimeout;
         fadeOutTimeout = (fadeOutTimeout - 1) & 0xFF;
+        completeHostFadeIfTerminal(previousFadeSteps);
+    }
+
+    private boolean completeHostFadeIfTerminal(int previousFadeSteps) {
+        return previousFadeSteps != 0 && driverOwnedFade && fadeOutTimeout == 0
+                && synthesizer instanceof SmpsDriverSessionAccess access
+                && access.completeFadeOut();
     }
 
     public void stopAllSfx() {
@@ -2504,17 +2518,25 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         SmpsSequencer music = firstMusicSequencerLocked();
         serviceSequencers(true);
         if (music != null) {
+            int previousFadeSteps = fadeOutTimeout;
             music.serviceS3kSpeedupTail();
+            if (completeHostFadeIfTerminal(previousFadeSteps)) {
+                music = null;
+            }
         }
         if (music != null) {
+            int previousFadeSteps = fadeOutTimeout;
             music.serviceFadeStepAheadOfRequest();
+            completeHostFadeIfTerminal(previousFadeSteps);
         }
         stepSonglessFadeIfNoSong();
         runPendingServiceRequest();
         music = firstMusicSequencerLocked();
         serviceSequencers(false);
         if (music != null) {
+            int previousFadeSteps = fadeOutTimeout;
             music.serviceS3kSpeedupTail();
+            completeHostFadeIfTerminal(previousFadeSteps);
         }
     }
 
@@ -2729,7 +2751,12 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         int size = sequencers.size();
         for (int i = 0; i < size; i++) {
             SmpsSequencer seq = sequencers.get(i);
+            int previousFadeSteps = fadeOutTimeout;
             seq.advanceBatch(frames);
+            if (completeHostFadeIfTerminal(previousFadeSteps)) {
+                // Global stop has replaced the sequencer list and save area.
+                return;
+            }
             if (seq.isComplete()) {
                 pendingRemovals.add(seq);
             }

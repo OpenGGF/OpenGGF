@@ -3041,6 +3041,31 @@ window.
 
 ---
 
+## Audio Harness Startup and Compatibility Fade Boundaries
+
+The September 5 [live-boundary audit](../architecture/audits/audio/2026-09-05-live-parity-boundary-audit.md)
+found coverage gaps beyond the corrected native S1/S3K fade commands:
+
+- S1 captures supply startup register writes that are not yet a verified
+  ownership-sensitive production song-load implementation. Comparator reports
+  explicitly exclude production startup from their coverage. Correct startup
+  must respect normal/special SFX ownership; an unconditional harness reset is
+  not a safe production replacement.
+- A S3K donor song on an S1 host retains existing mixed source/host fade
+  semantics, including a possible PSG halt without the source driver's silence
+  burst. The terminal-stop capability check preserves existing donor key-off
+  behavior; it does not certify donor fade parity.
+- The legacy direct-read adapter has no driver-level sample-clock service for
+  a songless fade. Forward presentation and service-based capture advance its
+  counters, but direct-read compatibility calls advance sequencers only.
+
+These are open implementation/coverage limitations, not permission to omit
+differences from an oracle. Closing them requires source-owned initialization
+and host/source command semantics, plus a shared cadence model for songless
+direct reads; no comparison-state hydration or fitted timing is permitted.
+
+---
+
 ## PSG Tone-2-Linked Noise at Period 0/1 Follows the Reference Cores
 
 **Location:** `PsgChip.tickNoise()` / `PsgChip.linkedNoiseReload()`

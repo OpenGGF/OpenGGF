@@ -20,6 +20,16 @@ public interface SmpsStatefulCommandPolicy {
 
     Identity identity();
 
+    /** State and physical writes owned by the host's music-fade command. */
+    default SmpsFadeOutEffects fadeOutEffects() {
+        return SmpsFadeOutEffects.NONE;
+    }
+
+    /** Whether the terminal driver-owned fade step invokes the host's global stop. */
+    default boolean fadeOutCompletesWithGlobalStop() {
+        return false;
+    }
+
     /**
      * Hosts without a stateful operation retain their established behavior.
      */

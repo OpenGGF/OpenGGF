@@ -524,6 +524,22 @@ public final class SmpsDriverSession implements AutoCloseable {
             });
         }
 
+        @Override
+        public boolean completeFadeOut() {
+            if (logicalMaterialization
+                    || !fadeOutCompletesWithGlobalStop()) {
+                return false;
+            }
+            applyGlobalStopNow();
+            globalStopConsumedDuringService = true;
+            return true;
+        }
+
+        @Override
+        public boolean fadeOutCompletesWithGlobalStop() {
+            return configuration.statefulCommandPolicy().fadeOutCompletesWithGlobalStop();
+        }
+
         private PortCapability currentPort() {
             requireActive();
             if (openOwner == null) {
@@ -566,6 +582,8 @@ public final class SmpsDriverSession implements AutoCloseable {
     private long openEpoch;
     private long nextEpoch;
     private int serviceInvocationCount;
+    // Per-call outcome, not driver state: reset before every forward service.
+    private boolean globalStopConsumedDuringService;
     private boolean transactionOpen;
     private boolean logicalMaterialization;
     private boolean closed;
@@ -700,6 +718,7 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     public SmpsServiceOutcome serviceForward() {
         requireInstalled();
+        globalStopConsumedDuringService = false;
         serviceInvocationCount++;
         if (segaPcmTransport != null) {
             // zPlaySEGAPCM runs under di for its whole duration
@@ -752,7 +771,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             });
         }
         emitDacIdleLoopEnableIfQueued();
-        return SmpsServiceOutcome.ORDINARY;
+        return globalStopConsumedDuringService
+                ? SmpsServiceOutcome.GLOBAL_STOP_CONSUMED : SmpsServiceOutcome.ORDINARY;
     }
 
     /**
@@ -975,6 +995,11 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     public void queueActivation(
             PreparedSmpsMusicActivation activation) {
+        queueActivation(activation, true);
+    }
+
+    private void queueActivation(
+            PreparedSmpsMusicActivation activation, boolean ordinaryLoad) {
         requireInstalled();
         PreparedSmpsMusicActivation resolved = Objects.requireNonNull(
                 activation, "activation");
@@ -982,9 +1007,18 @@ public final class SmpsDriverSession implements AutoCloseable {
                 resolved.logicalPolicy().prepareMusicStart(
                         driver.captureSnapshot(),
                         resolved.incomingMusic());
+        boolean resetsTempo = ordinaryLoad
+                && resolved.logicalPolicy().resetsTempoOnMusicStart();
         SmpsLoadReadiness.Context context = new SmpsLoadReadiness.Context(
-                driver.captureSnapshot().region(), speedShoesEnabled);
+                driver.captureSnapshot().region(), !resetsTempo && speedShoesEnabled);
         SmpsLoadReadiness.Work readiness = resolved.readiness().begin(context);
+        if (resetsTempo) {
+            speedShoesEnabled = false;
+            speedMultiplier = 1;
+            // The same ordinary-load boundary abandons any saved song;
+            // retain neither its tracks nor its old tempo for a later restore.
+            clearOverrides();
+        }
         if (resolved.readiness().immediate()) {
             restoreLogicalWithoutWrites(transition.logical());
             applyCurrentLogicalControls();
@@ -1027,13 +1061,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             case SmpsSessionCommand.EndOverride end ->
                     endOverride(end.musicId());
             case SmpsSessionCommand.FadeMusic fade -> {
-                SmpsSequencer music = driver.firstMusicSequencer();
-                if (music != null) {
-                    withPort(driverIdentity, port -> {
-                        music.triggerFadeOut(fade.steps(), fade.delay());
-                        return null;
-                    });
-                }
+                prepareFadeOut();
+                armFadeOut(fade.steps(), fade.delay());
             }
             case SmpsSessionCommand.SetSpeedMultiplier speed -> {
                 speedMultiplier = speed.multiplier();
@@ -1075,14 +1104,29 @@ public final class SmpsDriverSession implements AutoCloseable {
         speedShoesEnabled = false;
         speedMultiplier = 1;
         ringLeft = true;
-        withPort(driverIdentity, port -> {
+        Consumer<SmpsPhysicalPort> silence = port -> {
             applyProgram(port, policy.stopAll());
             port.silenceOutput();
-            return null;
-        });
+        };
+        // A terminal fade arrives inside the driver's existing write epoch.
+        // Reuse that capability; opening another epoch would reject ownership.
+        if (openOwner != null) {
+            silence.accept(new PortCapability(openOwner, openEpoch));
+        } else {
+            withPort(driverIdentity, port -> {
+                silence.accept(port);
+                return null;
+            });
+        }
         restoreLogicalWithoutWrites(emptyLogicalSnapshot(
                 driver.captureSnapshot()));
         pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
+    }
+
+    /** Current retained tempo control for presentation metadata after host commands. */
+    public boolean speedShoesEnabled() {
+        requireActive();
+        return speedShoesEnabled;
     }
 
     public SmpsDriverSessionSnapshot captureSnapshot() {
@@ -1649,7 +1693,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         int activeMusicId = musicId(current);
         if (activeMusicId < 0 || activeMusicId == activation.activation()
                 .source().id()) {
-            queueActivation(activation);
+            queueActivation(activation, false);
             return;
         }
         if (overrideCount == overrideStack.length) {
@@ -1660,7 +1704,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                 current,
                 policyForSavedMusic(current),
                 selectedDacFor(current), pendingService);
-        queueActivation(activation);
+        queueActivation(activation, false);
         driver.observeLifecycle(
                 SmpsDriverServiceObserver.LifecycleKind.SAVE);
     }
@@ -1733,6 +1777,36 @@ public final class SmpsDriverSession implements AutoCloseable {
             overrideStack[--overrideCount] = null;
             return;
         }
+    }
+
+    /** Pre-service effects for hosts whose SFX slots must stop before the music walk. */
+    public void prepareFadeOut() {
+        requireInstalled();
+        SmpsFadeOutEffects effects = configuration.statefulCommandPolicy().fadeOutEffects();
+        if (effects.stopSfx()) {
+            stopAllSfx();
+        }
+        if (effects.clearSpeedShoes()) {
+            speedShoesEnabled = false;
+            applyCurrentLogicalControls();
+        }
+    }
+
+    /** Arms the fade at the host's command-dispatch boundary. */
+    public void armFadeOut(int steps, int delay) {
+        requireInstalled();
+        SmpsFadeOutEffects effects = configuration.statefulCommandPolicy().fadeOutEffects();
+        if (effects.driverOwnedCounters()) {
+            driver.armFadeOut(steps, delay);
+        }
+        SmpsSequencer music = driver.firstMusicSequencer();
+        withPort(driverIdentity, port -> {
+            if (music != null) {
+                music.triggerFadeOut(steps, delay);
+            }
+            port.applyTransientPsgSilence(effects.psgSilence());
+            return null;
+        });
     }
 
     private void hardReset() {

@@ -787,11 +787,14 @@ public class SmpsSequencer implements CoordFlagContext {
 
                     if (t.type == TrackType.FM
                             && config.getFmSfxReleaseMode()
-                            == SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE) {
-                        // S1 cfStopTrack: the SFX track already sent FMNoteOff;
-                        // restore the music voice/pan, mark it at rest, and do
-                        // not resend frequency or key on (SD:2489-2537).
-                        t.resting = true;
+                            != SmpsSequencerConfig.FmSfxReleaseMode.LEGACY_FULL_RESTORE) {
+                        // The SFX's note-off stands: restore voice/pan without
+                        // resending frequency or key-on. The profile owns whether
+                        // this handoff also sets the music track's rest bit.
+                        if (config.getFmSfxReleaseMode()
+                                == SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE) {
+                            t.resting = true;
+                        }
                         refreshInstrument(t);
                         continue;
                     }
@@ -1982,6 +1985,18 @@ public class SmpsSequencer implements CoordFlagContext {
         // ROM: Decrement fade counter and apply volume change
         setFadeSteps(fadeSteps() - 1);
         setFadeDelayCounter(fadeDelayReload());
+
+        if (fadeState.fadeOut && config.isDriverOwnedFadeDelay() && fadeSteps() == 0
+                && host.fadeOutCompletesWithGlobalStop()) {
+            // zDoMusicFadeOut jumps to zStopAllSound before the terminal TL
+            // loop (Z80 driver:2347-2362). The host applies that shared stop
+            // after this step; do not emit another volume or note update here.
+            fadeState.active = false;
+            for (Track track : tracks) {
+                track.active = false;
+            }
+            return;
+        }
 
         int dir = fadeState.fadeOut ? 1 : -1;
 
