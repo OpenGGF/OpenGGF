@@ -1,6 +1,6 @@
 # Third Sol SMPS parity cycle
 
-Status: merged and verified; push and completed-worktree cleanup pending.
+Status: delivered; merged, verified, pushed and completed worktrees removed.
 Baseline: develop `32522d7cb`, including the intervening audio-performance
 delivery. Baseline and candidate each have a separate worktree and `target/`
 tree to avoid sharing build output with that concurrent delivery.
@@ -121,6 +121,18 @@ the latter retains the initial failed suite and all correction evidence. Main
 post-merge logs and XML remain in `target/audio-parity-cycle3-postmerge-evidence/`
 with exact comparisons beside it. Public release copy now reports this bounded
 F2/slot-order result, not full-game parity or completed human listening QA.
+
+Develop was pushed through `74a7c838b` after both post-merge comparisons passed.
+The completed `audio-parity-cycle3`, `audio-parity-cycle3-baseline`,
+`sol-s3k-sfx-slot-order` and `sol-s3k-runtime-tail-harness` worktrees were removed
+after confirming clean tracked state and merged ancestry. Their three named
+local branches were deleted and worktree metadata pruned. Ignored artifacts were
+classified as generated outputs/configuration, test-produced reports/caches or
+hook-created ROM/reference links; evidence and local configurations were archived
+before removal. Originals, the user's disassembly changes and unfinished
+noise-restoration/native work remain intact. Additional archives are
+`cycle3-postmerge-ebb024201.tar.gz` and
+`cycle3-generated-local-configs-and-reports.tar.gz`.
 
 Native tempo-read work and full-movie S1 diagnostic captures remain separate,
 unpublished work. Their capture progress is not a sealed reference, production
