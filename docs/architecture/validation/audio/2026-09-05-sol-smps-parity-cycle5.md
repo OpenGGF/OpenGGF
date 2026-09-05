@@ -43,3 +43,19 @@ exactly `80`; arbitrary synthetic flag forms are outside this bounded repair.
 - Combined restored hard-oracle run: 11 tests, no failures/errors/skips
   (`target/sfx-header-order/restored-focused.log`). The frontier advances from service
   2012 event 1 to service 2357 `MUS_FM4.overridden` (`false` vs `true`).
+
+## Final candidate verification
+
+All commands ran after merging verified develop `cc75320b0`, with
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk` and absolute S1 REV01, S2 REV01, and
+locked-on S3K ROM properties.
+
+| Run | Command scope | Result | Evidence |
+|---|---|---|---|
+| Expanded focused | `mvn -Dmse=off -Dtest=TestPsgSfxAdmissionNoiseSilence,TestS3kSfxLifecycleRom,TestS3kOracleRequestSidecarWiring,TestS3kNoiseFormEffectWriteStream,TestS3kSfxNoiseTailWriteStream,TestS3kSfxRuntimePathWithMusic,TestPreparedSfxAdmission,TestSfxAdmissionMutationJournal,TestSmpsDriver,TestSmpsSequencerSnapshot,TestSmpsSequencerConfigCopyCoverageGuard,TestS2SfxAdmissionChannelMask,TestS1SfxTakeoverOrder test -B` | 92 tests, 0 failures/errors/skips | `target/sfx-header-order/final-focused.log`; XML in `final-focused-reports/` |
+| Ordinary | `mvn -Dmse=off test -B` | 16,666 tests, 0 failures/errors, 43 skips | `target/sfx-header-order/final-ordinary.log`; XML in `final-ordinary-reports/` |
+| Structural guards, separate JVM | `mvn -Dmse=off -Pguards test -B` | 609 tests, 0 failures/errors/skips | `target/sfx-header-order/final-guards.log`; XML in `final-guards-reports/` |
+
+The cycle-4 baseline is 16,661 ordinary tests with 43 skips and 609 guard
+tests. This candidate adds five passing ordinary tests; integration and exact
+per-test baseline comparison remain owned by the parent delivery flow.
