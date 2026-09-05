@@ -126,14 +126,6 @@ public final class CompleteRunAudioTool {
                     report = CompleteRunAudioComparator.compare(
                             safeAbsolute(args[2]), safeAbsolute(args[3]));
                     if (report.kind() == Kind.CAPTURE_FAILURE) {
-                        if (report.validationKind()
-                                == CompleteRunAudioComparator.ValidationException.Kind.PROFILE_UNKNOWN
-                                || report.validationKind() == CompleteRunAudioComparator.ValidationException.Kind.METADATA_PROFILE_MISMATCH
-                                || report.validationKind() == CompleteRunAudioComparator.ValidationException.Kind.RUNTIME_IDENTITY_INVALID
-                                || report.validationKind() == CompleteRunAudioComparator.ValidationException.Kind.PRODUCER_KIND_MISMATCH) {
-                            error.print(report.toText());
-                            return USAGE_OR_SECURITY;
-                        }
                         out.print(report.toText());
                         return CAPTURE_FAILURE;
                     }

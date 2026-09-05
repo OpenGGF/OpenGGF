@@ -149,9 +149,9 @@ class TestCompleteRunAudioComparator {
         Path wrongRuntimeCapture = writeCapture("coverage-cli-wrong-runtime",
                 metadata(profile, ProducerKind.OPENGGF, wrongRuntimeIdentity), 1, this::plainFrame);
         ToolResult wrongRuntime = runCoverageTool(profile.id(), reference, wrongRuntimeCapture);
-        assertEquals(CompleteRunAudioTool.USAGE_OR_SECURITY, wrongRuntime.status());
-        assertEquals("", wrongRuntime.out());
-        assertTrue(wrongRuntime.error().contains("validation_kind=RUNTIME_IDENTITY_INVALID"));
+        assertEquals(CompleteRunAudioTool.CAPTURE_FAILURE, wrongRuntime.status());
+        assertTrue(wrongRuntime.out().contains("validation_kind=RUNTIME_IDENTITY_INVALID"));
+        assertEquals("", wrongRuntime.error());
 
         CompleteRunFixture fixture = profile.fixture();
         CompleteRunFixture wrongFixture = new CompleteRunFixture(fixture.romSha1(), fixture.romCrc32(),
@@ -167,8 +167,9 @@ class TestCompleteRunAudioComparator {
         Path wrongFixtureCapture = writeCapture("coverage-cli-wrong-fixture",
                 wrongFixtureMetadata, 1, this::plainFrame);
         ToolResult wrongFixtureResult = runCoverageTool(profile.id(), reference, wrongFixtureCapture);
-        assertEquals(CompleteRunAudioTool.USAGE_OR_SECURITY, wrongFixtureResult.status());
-        assertTrue(wrongFixtureResult.error().contains("validation_kind=METADATA_PROFILE_MISMATCH"));
+        assertEquals(CompleteRunAudioTool.CAPTURE_FAILURE, wrongFixtureResult.status());
+        assertTrue(wrongFixtureResult.out().contains("validation_kind=METADATA_PROFILE_MISMATCH"));
+        assertEquals("", wrongFixtureResult.error());
 
         ToolResult captureFailure = runCoverageTool(profile.id(),
                 temp.resolve("missing-reference"), temp.resolve("missing-engine"));
