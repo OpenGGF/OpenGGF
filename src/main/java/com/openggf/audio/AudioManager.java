@@ -4,6 +4,9 @@ import com.openggf.audio.rewind.AudioCommand;
 import com.openggf.audio.driver.SfxContentionObserver;
 import com.openggf.audio.driver.SmpsDriverServiceObserver;
 import com.openggf.audio.driver.SmpsRequestAdmissionPolicy;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.AdmissionResult;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.RejectionReason;
+import com.openggf.audio.driver.SmpsRequestAdmissionPolicy.SmpsAdmissionContext;
 import com.openggf.audio.rewind.AudioCommandTimeline;
 import com.openggf.audio.rewind.AudioLogicalSnapshot;
 import com.openggf.audio.rewind.AudioPresentationPolicy;
@@ -2024,6 +2027,7 @@ public class AudioManager implements MusicRestoreSink {
             if (deferredReverseLogicalSnapshot != null
                     ? deferredReverseLogicalSnapshot.presentation().sfxBlocked()
                     : shadowProducer != null && shadowProducer.areSfxRequestsBlocked()) {
+                observeBlockedRingAdmission(rawSoundId);
                 return;
             }
             playGameSfxResolved(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
@@ -2032,6 +2036,29 @@ public class AudioManager implements MusicRestoreSink {
         }
 
         playGameSfxResolved(sound, pitch);
+    }
+
+    /** Reports the caller-owned discard before ring-speaker selection mutates. */
+    private void observeBlockedRingAdmission(Integer rawSoundId) {
+        if (rawSoundId == null || admissionObserver == AudioAdmissionObserver.NONE) {
+            return;
+        }
+        GameAudioProfile profile = baseAudioSource.profile();
+        int priority = profile == null
+                ? SmpsRequestAdmissionPolicy.NO_PRIORITY
+                : profile.getSfxPriority(rawSoundId);
+        boolean special = profile != null && profile.isSpecialSfx(rawSoundId);
+        SmpsAdmissionContext context = new SmpsAdmissionContext(
+                rawSoundId, rawSoundId, priority,
+                SmpsRequestAdmissionPolicy.NO_PRIORITY, special, false);
+        AdmissionResult result = new AdmissionResult(false,
+                RejectionReason.BLOCKED,
+                context.priorityBefore(), context.priorityBefore(),
+                context.resolvedSoundId());
+        AudioDiagnosticObserverException.invoke(() ->
+                admissionObserver.onDecision(
+                        new AudioAdmissionObserver.AudioAdmissionDecision(
+                                context, result)));
     }
 
     private void playGameSfxResolved(GameSound sound, float pitch) {

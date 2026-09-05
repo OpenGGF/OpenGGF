@@ -39,6 +39,13 @@ Frame-entry mailboxes are sampled observations, **not a complete request
 transcript**. A nonzero mailbox at service completion can also be a later
 68K submission; it is not evidence that the suppression branch admitted it.
 
+Production diagnostics preserve that distinction. Ordinary SFX reach the
+registry admission boundary and report `BLOCKED` there. Ring suppression must
+precede speaker selection so it cannot advance the left/right phase; the
+manager-owned pre-selection gate therefore reports the raw ring request as a
+separate `BLOCKED` admission outcome before returning. It does not claim that a
+speaker-specific effect was selected or admitted.
+
 Local raw captures and the controlled production probe are retained under
 `<agent-scratch>/s3k-oneup-overlap-20260905/`.
 The probe plays AIZ1, starts the 1-up through `AudioManager`, then submits a
