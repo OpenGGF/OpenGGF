@@ -27,6 +27,50 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - PSG command takeover: service 1570 event 39 to event 43
+
+- **Context:** `bugfix/ai-audio-next-psg`, `.worktrees/audio-next-psg`,
+  base `develop` `bbf28b7dc`; implementation is the commit containing this
+  entry. JDK 21.0.11, isolated build output, absolute verified ROM paths.
+- **Fixture:** `s3k/s3k-aiz1-intro-reference-v2.jsonl.gz` with
+  `s3k-aiz1-intro-requests-v1.json`.
+- **Command:** after `mvn -Dmse=off -q dependency:build-classpath
+  -Dmdep.outputFile=target/gates/cp.txt`, with `S3K_ROM` denoting the discovered
+  absolute locked-on ROM path (SHA-1
+  `cfbf98c36c776677290a872547ac47c53d2761d6`):
+
+  ```bash
+  java -cp "target/classes:$(cat target/gates/cp.txt)" \
+    com.openggf.tools.audio.parity.s3k.S3kAudioParityTool compare \
+    --reference src/test/resources/audio/parity/s3k/s3k-aiz1-intro-reference-v2.jsonl.gz \
+    --requests src/test/resources/audio/parity/s3k/s3k-aiz1-intro-requests-v1.json \
+    --rom "$S3K_ROM"
+  ```
+
+- **Before:** `EVENT_VALUE_DIFFERENT`, service 1570, event 39,
+  reference PSG `E7`, engine PSG `FF`.
+- **After:** same service, event 43, reference YM2612 port 0 `A4=22`,
+  engine PSG `F0`; full comparison exits 3. Independent DAC remains
+  `BYTE_DIFFERENT`, run 338, byte 0, reference `88`, engine `7F`.
+- **ROM owner:** retail `fix_sndbugs=0` `cfSetPSGNoise`
+  (`Sound/Z80 Sound Driver.asm:3559-3572`) emits adjacent `DF` and its
+  operand. The S3K provider now selects existing `REGISTER_SEQUENCE`, so
+  noise ownership acquisition no longer inserts another silence after the
+  loader's guaranteed `FF`. Locks, admission, release and rollback are unchanged.
+- **Evidence:** all three ROM-backed effect adjacency checks and the
+  zero-operand check were red before the setting. The 1571-service `MATCH`
+  attempt exposed the next volume write, so the approved final gates retain
+  1570 whole matching services and add exact equality for all 43 ordered
+  service writes preceding the new frontier. That ordered-prefix gate was
+  also demonstrated red with the setting removed. Final focused suite:
+  74 tests, zero failures/errors/skips, including cross-game policies,
+  configuration copy, admission rollback, release and noise lifetime.
+- **Limits:** no additional whole matching service, listening-parity or
+  all-green claim. Stale-IX admission writes remain incomplete. The second
+  fresh-note `F0` is the next source-backed investigation candidate; DAC
+  remains separate. Exact red/green commands, observer corrections and
+  attribution are in [the validation report](../architecture/validation/audio/2026-09-05-s3k-psg-takeover.md).
+
 ## 2026-09-04 - PSG SFX admission noise silence: 1569 to 1570
 
 - **Context:** `bugfix/ai-audio-round-s3k`, `.worktrees/audio-round-s3k`,

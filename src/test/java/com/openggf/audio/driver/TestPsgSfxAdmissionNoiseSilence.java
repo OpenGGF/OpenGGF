@@ -6,6 +6,7 @@ import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.synth.ChipWriteObserver;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSfxData;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -16,6 +17,45 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class TestPsgSfxAdmissionNoiseSilence {
+    @Test
+    void zeroNoiseOperandWritesOneNoiseSilenceAfterAdmission() {
+        // Retail cfSetPSGNoise writes DF, FF for operand zero (:3562-3572).
+        // The following rest adds DF through zSilencePSGChannel (:4231-4235).
+        // Include the following rest so an injected FF cannot masquerade as the
+        // command's own, identical FF while pushing a duplicate after it.
+        byte[] bytes = {0, 0, 1, 1,
+                (byte) 0x80, (byte) 0xC0, 10, 0, 0, 0,
+                (byte) 0xF3, 0, (byte) 0x80, 1, (byte) 0xF2};
+        List<Integer> writes = new ArrayList<>();
+        SmpsDriver driver = SmpsDriverTestAccess.create(44_100, new ChipWriteObserver() {
+            @Override
+            public void onYm2612Write(int port, int register, int value) {
+            }
+
+            @Override
+            public void onPsgWrite(int value) {
+                writes.add(value);
+            }
+        });
+        try {
+            SmpsSequencer sfx = new SmpsSequencer(
+                    new Sonic3kSfxData(bytes, 0, 0, 0), new DacData(Map.of(), Map.of()),
+                    driver, () -> { }, Sonic3kSmpsSequencerConfig.CONFIG);
+            driver.addSequencer(sfx, true);
+            assertEquals(List.of(0xFF), writes, "admission owns its separate noise silence");
+            writes.clear();
+
+            for (int service = 0; service < 4 && writes.isEmpty(); service++) {
+                driver.serviceOuterFrame();
+            }
+
+            assertEquals(List.of(0xDF, 0xFF, 0xDF), writes.subList(0, 3),
+                    "zero noise form's DF, FF pair is immediately followed by the rest's DF");
+        } finally {
+            SmpsDriverTestAccess.close(driver);
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(ints = {0x80, 0xA0})
     void retailPsgAdmissionSilencesNoiseForPsgOneAndTwo(int channel) {

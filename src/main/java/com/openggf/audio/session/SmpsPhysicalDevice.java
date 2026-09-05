@@ -288,7 +288,7 @@ public final class SmpsPhysicalDevice {
         // recorder must reject a cross-boundary PCM comparison instead of
         // treating the chip stream as a complete presentation transcript.
         synth.reportPhysicalTimelineBoundary(
-                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
+                ChipWriteObserver.PhysicalTimelineBoundary.OUTPUT_GATE_CHANGE);
     }
 
     AdmissionState captureAdmissionState(

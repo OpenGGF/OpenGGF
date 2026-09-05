@@ -2,6 +2,11 @@
 
 ## Scope
 
+September 5 follow-on: [bounded raw-YM replay and slice evidence](2026-09-05-bounded-ym-replay-and-slice.md)
+adds explicit endpoint proof and distinguishes `OUTPUT_GATE_CHANGE` from
+actual chip mutation. The contract below records the original milestone;
+the linked additive contract governs the new raw-YM-only consumer.
+
 This change adds an opt-in diagnostic capture of the dispatched YM2612 and PSG
 bus streams. It does not select a production FM backend, change driver timing,
 alter trace schema 5, or make captured timing gameplay authority.
