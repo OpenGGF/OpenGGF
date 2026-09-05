@@ -8,6 +8,22 @@ before relying on any of them (see the measurement-hazard table in
 
 ## September 5 next milestone (delivered)
 
+### Later live-boundary follow-up
+
+The [live audio boundary audit](../../audits/audio/2026-09-05-live-parity-boundary-audit.md)
+records the later `develop` merge `4ac8a4a12`: shared native S1/S3K fade
+effects, S3K terminal global stop and presentation cleanup, ordinary-load
+tempo reset, two source-backed blue-sphere/FM-release fixes, and S2 harness
+startup consolidation. Post-merge ordinary verification passes 16,579
+executions with 43 unchanged skips; fresh guards pass 609. Exact comparisons
+preserve every baseline outcome and add 35 passing identities.
+
+Do not read matching driver windows as production song-start validation.
+S1 startup, mixed donor/host PSG fade semantics and songless legacy direct-read
+cadence remain explicit follow-ups. The controlled listening stimulus removes
+the baseline's residual tone, but does not certify the user's exact cutscene
+or orb symptom. The audit links the regenerable probe and remaining gaps.
+
 The [next-milestone plan](2026-09-05-audio-next-milestone.md) starts from
 `bbf28b7dc` and is merged into `develop` as `e258282e0`. Post-merge ordinary
 verification passed 16,497 executions (22 existing skips), with 609 separate

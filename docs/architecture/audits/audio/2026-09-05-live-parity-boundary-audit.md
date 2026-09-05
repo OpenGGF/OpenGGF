@@ -131,8 +131,22 @@ mvn -Dmse=off -B -Pguards -Dsonic1.rom.path=<absolute-s1-rom> -Dsonic2.rom.path=
 - Independent review caught and resolved the source/host terminal capability
   mismatch. Integration between task branches had no textual conflicts;
   overlapping session/config changes were combined and tested together.
-- Post-merge verification and delivery are pending. Console execution totals
-  are not unique testcase counts.
+- Merged into `develop` as `4ac8a4a12`, after fetching and confirming the
+  integration baseline remained `acd3a17cc`. No integration conflicts or
+  upstream changes required reconciliation; pre-existing disassembly edits
+  were preserved.
+- Post-merge ordinary suite: 16,579 executions, zero failures/errors, 43
+  unchanged skips. Exact comparison again preserves all baseline outcomes
+  and adds the same 35 passing identities. Fresh guards: 609, all passing,
+  with an exact baseline identity/status match. Console execution totals
+  are not unique testcase counts: nested XML duplication differs between
+  runs, but both combined and merged runs contain 15,633 unique outcomes.
+
+Final evidence is archived outside Git under the explicit task directory
+`audio-boundary-2026-09-05`: baseline, isolated workstreams, combined and
+post-merge report/log archives, plus the two listening WAVs. Only temporary
+task worktrees/local branches are cleanup targets; ROM/disassembly symlink
+targets and other existing worktrees are not.
 
 Evidence filenames below each producing worktree's `target/` include
 `s3k-fade-red.log`, `s3k-fade-boundary.log`, `legacy-fade-red.log`, and
