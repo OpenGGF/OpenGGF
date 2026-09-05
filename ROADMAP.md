@@ -19,7 +19,8 @@ OpenGGF has crossed an important threshold:
   stabilization; AIZ, HCZ, CNZ, MGZ, ICZ, MHZ, and LBZ have substantial coverage (about 57% of
   the object checklist, 134 unique ids), while FBZ and the S&K-half zones remain the largest
   content frontier and sit outside release-6 trace scope.
-- Game Over / Continue flow is missing in all three games (`docs/status/known-bugs.md`).
+- Game Over / Continue screens are implemented in all three games; remaining
+  timing details are tracked in `docs/status/known-bugs.md`.
 - The engine now has stronger multi-game architecture, better tests, and a more credible release story than before `v0.4`.
 
 That changes the planning problem. The project no longer needs a catch-all "prove this can work" roadmap. It needs a focused roadmap that turns broad momentum into a smaller number of high-value outcomes.
@@ -174,7 +175,7 @@ avoid starting wide new zone work unless it directly advances a route slice or r
 - Use `S3K_OBJECT_CHECKLIST.md` as input to prioritization, not as the prioritization itself.
 - The gaps listed in the June roadmap (AIZ drawbridge, HCZ large fan/block variants, MGZ
   launcher/pulley/boss work, LBZ boss/late-route work) have since landed. Remaining visible gaps
-  are the Game Over / Continue flow, the ~43% of S3K checklist rows still unimplemented (mostly
+  are the ~43% of S3K checklist rows still unimplemented (mostly
   S&K-half and decorative objects), and the mostly unopened FBZ object set.
 
 #### 4. Data Select and Save System
@@ -251,7 +252,7 @@ This release should focus on reducing obvious gaps rather than introducing new s
 
 ### Priority Areas
 
-- Game Over / Continue flow for all three games, unless it lands as a 0.6 fix first.
+- Game Over / Continue screens landed in 0.6; retain their input, save and restart coverage.
 - The withdrawn SMPS and chip-level audio parity programme (retail service ordering, SFX
   priority, pause/resume, fades, regional clocks, YM write scheduling, S3K special-stage and
   SEGA PCM), re-landed with listening validation this time.

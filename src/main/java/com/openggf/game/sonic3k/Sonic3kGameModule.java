@@ -296,6 +296,13 @@ public class Sonic3kGameModule implements GameModule {
     }
 
     @Override
+    public com.openggf.game.ContinueScreenProvider createContinueScreenProvider() {
+        return new com.openggf.game.sonic3k.continuescreen.Sonic3kContinueScreenProvider(
+                com.openggf.game.sonic3k.runtime.S3kRuntimeStates.resolvePlayerCharacter(
+                        GameServices.zoneRuntimeRegistry(), GameServices.configuration()).ordinal(), false);
+    }
+
+    @Override
     public TitleScreenProvider getTitleScreenProvider() {
         return titleScreenProvider;
     }

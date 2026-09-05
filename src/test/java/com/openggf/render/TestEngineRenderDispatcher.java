@@ -46,6 +46,17 @@ class TestEngineRenderDispatcher {
     }
 
     @Test
+    void continueUsesBlackScreenAndOwnRendererEvenWithDebugEnabled() {
+        var dispatcher = new EngineRenderDispatcher();
+        var clear = new RecordingClearActions();
+        var draw = new RecordingDrawActions();
+        dispatcher.applyClearColor(GameMode.CONTINUE_SCREEN, clear);
+        dispatcher.draw(GameMode.CONTINUE_SCREEN, true, DebugState.PATTERNS_VIEW, draw);
+        assertEquals(List.of("black"), clear.calls);
+        assertEquals(List.of("continueScreen"), draw.calls);
+    }
+
+    @Test
     void nullModeClearColorFallsBackToLevelClearColor() {
         EngineRenderDispatcher dispatcher = new EngineRenderDispatcher();
         RecordingClearActions actions = new RecordingClearActions();
@@ -131,6 +142,7 @@ class TestEngineRenderDispatcher {
         @Override public void specialStage() { calls.add("specialStage"); }
         @Override public void specialStageResults() { calls.add("specialStageResults"); }
         @Override public void titleScreen() { calls.add("titleScreen"); }
+        @Override public void continueScreen() { calls.add("continueScreen"); }
         @Override public void levelSelect() { calls.add("levelSelect"); }
         @Override public void dataSelect() { calls.add("dataSelect"); }
         @Override public void endingCutscene() { calls.add("endingCutscene"); }
