@@ -1,6 +1,6 @@
 # First Sol SMPS parity delivery cycle
 
-Status: candidate verification in progress, not a completed develop delivery.
+Status: merged locally and post-merge verified; push and cleanup are pending.
 Integration baseline: `adcd0a3fa` (includes the independently delivered Continue
 screens). Initial investigation baseline was `eb324f5c6`.
 
@@ -62,7 +62,9 @@ candidate output stays below its own worktree's `target/`.
 | First candidate ordinary, before fade gates and FM3 restore | 16,634 executions, 0 failures/errors, 23 skips; execution permissions differed from baseline, so final comparison reruns under matching conditions |
 | Final assembled candidate ordinary | 16,641 executions, 0 failures/errors, 43 skips; every baseline outcome retained after the explicitly reviewed rename, plus 15 new passing outcomes |
 | Final assembled candidate separate guards | 609 executions, 0 failures/errors/skips; exact baseline identity/outcome equality |
-| Post-merge ordinary/guards and baseline comparison | Not run; merge not yet performed |
+| Final focused candidate selection | 65 executions, 0 failures/errors/skips |
+| Post-merge ordinary, `a1e00c643` | 16,641 executions, 0 failures/errors, 43 skips; exact identity/outcome equality with candidate |
+| Post-merge separate guards, `a1e00c643` | 609 executions, 0 failures/errors/skips; exact candidate identity/outcome equality |
 
 Compare exact distinct test identity/status/message outcomes as well as summed
 per-class and terminal log totals. Surefire nested suites duplicate XML entries;
@@ -77,6 +79,12 @@ full run contains all baseline ICZ identities, so no substitute evidence was
 needed for the final ordinary comparison. The raw comparator reports exactly one
 removed passing identity and its renamed replacement; normalizing only that
 explicit pair yields zero removed/changed outcomes and 15 added passing outcomes.
+
+Final focused command:
+
+```bash
+mvn -Dmse=off "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" "-Ds3k.rom.path=$S3K_ROM_PATH" -Dtest=TestS3kProductionAdmissionObservation,TestS3kOneUpRestoreRom,TestAudioManagerDiagnosticObserverLease,TestS1SfxTakeoverOrder,TestS3kSfxNoiseTailWriteStream,TestSonic3kFm3SpecialMode,TestS3kFadeCounterParity,TestS3kOracleRequestSidecarWiring test -B
+```
 
 ## Separate reference-tooling lane
 
@@ -109,6 +117,13 @@ in this particular prefix. Service-phase replay still needs explicit validation.
 ## Integration obligations still open
 
 The candidate includes develop's intervening Continue-screen work without
-conflicts. Final full-suite comparison, develop merge, post-merge comparison,
-push and worktree cleanup are not yet recorded as complete. Active worker trees
-retain subsequent investigations; no unmerged work may be discarded for cleanup.
+conflicts. Recording the already-integrated worker histories produced one
+documentation-only conflict: the stale "No full-service progress" sentence was
+discarded in favor of the reviewed matching-prefix limitation. The candidate
+tree hash was identical before and after those history merges.
+
+Develop merge `a1e00c643` completed without conflicts. Candidate and post-merge
+ordinary and separate-guard outcomes match exactly. Push and completed-worktree
+cleanup remain pending. Subsequent envelope and S2 cadence work uses new isolated
+worktrees and is not part of this delivery; unpublished TraceChaser work remains
+separate. No unmerged work may be discarded for cleanup.

@@ -16,7 +16,7 @@ faithful behavior of each supported retail SMPS driver, with source-mapped
 controlled differential cases and continuous movies providing complementary
 evidence. Trace infrastructure alone is not the deliverable.
 
-The assembled candidate removes a duplicate PSG note-start volume write and
+Develop merge `a1e00c643` removes a duplicate PSG note-start volume write and
 repairs pair-level PSG ownership and FM3 mode restoration, advancing the S3K
 frontier from service 1570 event 43 to service 1592 (`MUS_PSG3.volEnv`, reference
 0 versus engine 1). The ROM's second byte `FF` retains its actual
@@ -26,8 +26,10 @@ nor latch state. FM3 mode is restored before its music voice, and both driver
 fade counters are now directly compared, including songless services.
 Production observer tests now
 expose blocked ring decisions and detect deliberately disabled suppression.
-These are not full-run parity claims. Candidate integration and full regression
-comparison remain pending; do not read this section as a develop delivery record.
+These are not full-run parity claims. Integration and exact post-merge regression
+comparison passed: 16,641 ordinary executions, no failures/errors, 43 unchanged
+skips, and 609 separate guards with no failures/errors/skips. Push and completed
+worktree cleanup remain pending in the linked validation record.
 
 ### 1-up admission follow-up
 

@@ -115770,3 +115770,22 @@ The other three death arms remain coordinates only.
   `B5h` ring on the music mailbox), `w13650-14400` 5 -> 7 (13712 `F9h`
   fade-out, 13849 `92h` `zMusIDPtr_SpecStage`), CPZ 33 -> 35 (2724 `8Eh` CPZ
   music, 3225 `B5h` the milestone ring).
+
+## 2026-09-05 — S3K audio-driver frontier advance
+
+- Audio-only work merged into develop as `a1e00c643`, based on `adcd0a3fa`.
+  No gameplay replay frontier is claimed moved by this entry.
+- The S3K intro oracle advances from service 1570 event 43 to service 1592,
+  `MUS_PSG3.volEnv`: reference 0, engine 1. The comparator reports the first
+  mismatch only; this is not a count of all later divergences.
+- Services 0 through 1591 match, after removing a duplicate PSG volume write,
+  preserving original frequency-pair ownership and restoring FM3 mode before
+  its music voice. Full-window audio parity remains open.
+- Focused command: `mvn -Dmse=off -Ds3k.rom.path=<absolute-ROM-path>
+  -Dtest=TestS3kOracleRequestSidecarWiring test -B`. The final integrated
+  focused selection also includes the admission, PSG transaction, FM3 and fade
+  tests: 65 tests, zero failures/errors/skips. Its known-frontier assertion is
+  deliberately distinct from the matching-prefix assertion.
+- Exact worker commands and source evidence live in [audio-frontier-log.md](audio-frontier-log.md);
+  baseline/candidate/post-merge verification status is recorded in the
+  [delivery ledger](../architecture/validation/audio/2026-09-05-sol-smps-parity-cycle.md).
