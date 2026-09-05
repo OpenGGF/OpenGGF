@@ -14,6 +14,7 @@ import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.Admissi
 import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.Observation;
 import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.PsgWriteObserved;
 import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.RequestObserved;
+import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.ServiceBeginObserved;
 import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.ServiceEndObserved;
 import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.SfxAdmittedObserved;
 import com.openggf.tools.audio.completerun.CompleteRunAudioObserverLease.YmWriteObserved;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -58,6 +60,12 @@ class TestS3kProductionAdmissionObservation {
                     .map(AdmissionObserved.class::cast)
                     .map(event -> event.decision().result().reason()).toList());
             assertTrue(rejected.stream().noneMatch(SfxAdmittedObserved.class::isInstance));
+            assertTrue(indexOf(rejected, RequestObserved.class::isInstance)
+                    < indexOf(rejected, AdmissionObserved.class::isInstance));
+            assertTrue(indexOf(rejected, AdmissionObserved.class::isInstance)
+                    < indexOf(rejected, TestS3kProductionAdmissionObservation::isServiceOrWrite));
+            assertTrue(rejected.stream().noneMatch(
+                    TestS3kProductionAdmissionObservation::isJumpService));
             assertNoSfx(audio);
 
             int frame = 1;
@@ -76,10 +84,28 @@ class TestS3kProductionAdmissionObservation {
                     .filter(AdmissionObserved.class::isInstance)
                     .map(AdmissionObserved.class::cast)
                     .map(event -> event.decision().result().accepted()).toList());
-            assertTrue(accepted.stream().anyMatch(SfxAdmittedObserved.class::isInstance));
-            assertTrue(accepted.stream().anyMatch(ServiceEndObserved.class::isInstance));
-            assertTrue(accepted.stream().anyMatch(event ->
-                    event instanceof YmWriteObserved || event instanceof PsgWriteObserved));
+            SfxAdmittedObserved ownership = accepted.stream()
+                    .filter(SfxAdmittedObserved.class::isInstance)
+                    .map(SfxAdmittedObserved.class::cast)
+                    .filter(event -> event.admission().source().descriptor().id() == JUMP)
+                    .findFirst().orElseThrow();
+            assertFalse(ownership.admission().declaredRoles().isEmpty());
+            int requestIndex = indexOf(accepted, RequestObserved.class::isInstance);
+            int decisionIndex = indexOf(accepted, AdmissionObserved.class::isInstance);
+            int ownershipIndex = accepted.indexOf(ownership);
+            assertTrue(requestIndex < decisionIndex);
+            assertTrue(decisionIndex < ownershipIndex);
+
+            List<Observation> serviced = observeFrame(audio, observations,
+                    frame + 1, () -> { });
+            int serviceBeginIndex = indexOf(serviced,
+                    TestS3kProductionAdmissionObservation::isJumpServiceBegin);
+            int serviceEndIndex = indexOf(serviced,
+                    TestS3kProductionAdmissionObservation::isJumpServiceEnd);
+            int writeIndex = indexOfAfter(serviced, serviceBeginIndex,
+                    TestS3kProductionAdmissionObservation::isWrite);
+            assertTrue(serviceBeginIndex < writeIndex && writeIndex < serviceEndIndex,
+                    "the accepted jump must own a service containing chip writes");
             assertTrue(hasSfx(audio));
         }
     }
@@ -116,9 +142,53 @@ class TestS3kProductionAdmissionObservation {
                     rejection.decision().context().resolvedSoundId(),
                     "blocked ring observation must not invent a speaker selection");
             assertTrue(events.stream().noneMatch(SfxAdmittedObserved.class::isInstance));
+            assertTrue(indexOf(events, RequestObserved.class::isInstance)
+                    < indexOf(events, AdmissionObserved.class::isInstance));
+            assertTrue(indexOf(events, AdmissionObserved.class::isInstance)
+                    < indexOf(events, TestS3kProductionAdmissionObservation::isServiceOrWrite));
             assertEquals(ringLeftBefore, audio.captureLogicalSnapshot().ringLeft());
             assertNoSfx(audio);
         }
+    }
+
+    private static int indexOf(List<Observation> events,
+            Predicate<Observation> predicate) {
+        return indexOfAfter(events, -1, predicate);
+    }
+
+    private static int indexOfAfter(List<Observation> events, int after,
+            Predicate<Observation> predicate) {
+        for (int index = after + 1; index < events.size(); index++) {
+            if (predicate.test(events.get(index))) {
+                return index;
+            }
+        }
+        assertTrue(false, "required observation was not recorded after index " + after);
+        return -1;
+    }
+
+    private static boolean isWrite(Observation event) {
+        return event instanceof YmWriteObserved || event instanceof PsgWriteObserved;
+    }
+
+    private static boolean isServiceOrWrite(Observation event) {
+        return event instanceof ServiceBeginObserved || isWrite(event);
+    }
+
+    private static boolean isJumpService(Observation event) {
+        return isJumpServiceBegin(event) || isJumpServiceEnd(event);
+    }
+
+    private static boolean isJumpServiceBegin(Observation event) {
+        return event instanceof ServiceBeginObserved begin
+                && begin.event().sequencer().sfx()
+                && begin.event().sequencer().source().id() == JUMP;
+    }
+
+    private static boolean isJumpServiceEnd(Observation event) {
+        return event instanceof ServiceEndObserved end
+                && end.event().sequencer().sfx()
+                && end.event().sequencer().source().id() == JUMP;
     }
 
     private static List<Observation> observeFrame(AudioManager audio,
