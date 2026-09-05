@@ -21,6 +21,12 @@ This file contains the complete 0.6 development snapshot history carried forward
   retains its checkpoint and saves the updated life/continue counts. The screens
   use existing input, palette, mapping/DPLC, fade and restart helpers.
 
+- **S3K 1-up SFX suppression:** jump, ring, and other new SMPS effects are
+  discarded during the extra-life jingle. Suppressed rings do not advance
+  stereo alternation; effects resume when level-music restoration starts.
+  Regression coverage includes rewind, ordinary song replacement, a jingle
+  without saved music, and global fade-stop cleanup.
+
 - **Live audio commands share their oracle-tested effects:** S3K fade entry
   now silences halted PSG channels, and S1 fade entry stops SFX and clears
   speed-up state. Capture adapters and the legacy backend use the same host

@@ -268,6 +268,10 @@ traces.
   internal-rate FM captures verified replay bounds. Repeated extra-life and
   snapshot restoration checks cover both AIZ and HCZ acts; native and fast
   cores remain experiments, not runtime options.
+  New S3K effects are also suppressed during the 1-up jingle, without
+  advancing ring stereo alternation, and resume at music restoration.
+  See the [1-up investigation](docs/architecture/audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
+  for the existing-movie reproduction and the limits of current oracle coverage.
 
 - **Contributor guidance:** streamlined agent instructions and all 23 task
   skills, retaining ROM accuracy contracts and searchable technical evidence.

@@ -2019,6 +2019,13 @@ public class AudioManager implements MusicRestoreSink {
             }
         }
         if (sound == GameSound.RING) {
+            // Suppression precedes the driver's ring-speaker selection.
+            // The registry still rejects all other SFX at admission.
+            if (deferredReverseLogicalSnapshot != null
+                    ? deferredReverseLogicalSnapshot.presentation().sfxBlocked()
+                    : shadowProducer != null && shadowProducer.areSfxRequestsBlocked()) {
+                return;
+            }
             playGameSfxResolved(ringLeft ? GameSound.RING_LEFT : GameSound.RING_RIGHT, pitch);
             ringLeft = !ringLeft;
             return;

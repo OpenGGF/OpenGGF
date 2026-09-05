@@ -317,6 +317,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             replaceMusic(replace.music());
         } else if (command instanceof PushMusicOverride push) {
             pushMusicOverride(push.music());
+            blockOverrideSfx();
             sfxInstantiation.observeLifecycle(
                     SmpsDriverServiceObserver.LifecycleEvent.registry(
                             SmpsDriverServiceObserver.LifecycleKind.SAVE,
@@ -557,6 +558,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             activeMusic = replacement;
         }
         noteVoiceId(replacement.voice());
+        blockOverrideSfx();
     }
 
     private void restoreSessionMusic() {
@@ -745,6 +747,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         java.util.Arrays.fill(sampleSfx, null);
         sampleSfxCount = 0;
         pendingRestore = false;
+        releaseOverrideSfx();
         speedShoesEnabled = false;
         speedMultiplier = 1;
         ringLeft = true;
@@ -1161,6 +1164,23 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         sfxBlocked = blocked;
     }
 
+    boolean areSfxRequestsBlocked() {
+        assertOwnerBoundary();
+        return sfxBlocked;
+    }
+
+    private void blockOverrideSfx() {
+        if (smpsSession != null && smpsSession.suppressesSfxDuringOverride()) {
+            sfxBlocked = true;
+        }
+    }
+
+    private void releaseOverrideSfx() {
+        if (smpsSession != null && smpsSession.suppressesSfxDuringOverride()) {
+            sfxBlocked = false;
+        }
+    }
+
     public void setPendingRestore(boolean pending) {
         assertOwnerBoundary();
         pendingRestore = pending;
@@ -1263,6 +1283,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
     private boolean restoreMusicOverride() {
         if (overrideCount == 0) {
             pendingRestore = false;
+            releaseOverrideSfx();
             return false;
         }
         MusicSlot restored = overrideStack[overrideCount - 1];
@@ -1286,6 +1307,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         if (smpsSession != null) {
             smpsSession.fadeInRestoredMusic();
         }
+        releaseOverrideSfx();
         return true;
     }
 
@@ -1543,6 +1565,7 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
         }
         overrideCount = 0;
         pendingRestore = false;
+        releaseOverrideSfx();
     }
 
     private void stopAllSfx() {

@@ -8,6 +8,18 @@ before relying on any of them (see the measurement-hazard table in
 
 ## September 5 next milestone (delivered)
 
+### 1-up admission follow-up
+
+The [1-up suppression audit](../../audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
+records a further live-path gap: S3K admitted new jump/ring effects during the
+jingle. The existing AIZ end-to-end movie exercises jump overlap at frames
+7733–7906 after the 1-up starts at 7700. The correction wires the existing
+rewind-captured admission gate to the host override lifecycle, preserves ring
+stereo selection on discard, and releases at restoration or global stop.
+The 5,400-frame intro oracle still contains no 1-up and still bypasses this
+production admission boundary; do not report these live regressions as a
+full-run oracle pass.
+
 ### Later live-boundary follow-up
 
 The [live audio boundary audit](../../audits/audio/2026-09-05-live-parity-boundary-audit.md)
