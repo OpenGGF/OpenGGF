@@ -28,3 +28,17 @@ Focused verification is in `TestCompleteRunAudioComparator`. Its controls cover
 profile, ROM/BK2/run-manifest fixture and runtime mismatches; declarations with
 no evidence; the shipped S1/S2/S3K fixed-profile limitations; capture failures;
 typed layer attribution; and deterministic output.
+
+The fixed inventories are regenerable without capture files (exit 3 is expected
+because declarations are not evidence):
+
+```bash
+java -cp target/classes com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s1_rev01_complete_emeralds.v1
+java -cp target/classes com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s2_rev01_complete_emeralds.v1
+java -cp target/classes com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s3k_locked_on_knuckles_superemeralds.v1
+```
+
+Supplying absolute reference and engine capture paths runs the strict comparator
+first: `coverage-text <profile-id> <reference> <engine>`. Exit 0 requires full
+parity, exit 3 means limitation or mismatch, exit 4 preserves a capture-failure
+report, and invalid or unknown arguments exit 2.

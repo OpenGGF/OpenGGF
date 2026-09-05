@@ -17,7 +17,8 @@ This file contains the complete 0.6 development snapshot history carried forward
 - **Complete-run audio coverage now reports authority separately from evidence:**
   a deterministic summary distinguishes unavailable and diagnostic-only layers
   from comparable layers, and only calls full parity after a profile-bound full
-  match. Narrow per-game parity adapters remain outside this report.
+  match. The `coverage-text` command prints fixed inventories alone or evaluates
+  a strict capture pair. Narrow per-game parity adapters remain outside this report.
 
 - **Sonic 2 DAC playback uses the retail loop cadence:** the ROM loader now
   supplies the 295 Z80 cycles that `zWriteToDAC` spends delivering each byte's

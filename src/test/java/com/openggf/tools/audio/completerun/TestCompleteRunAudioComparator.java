@@ -127,6 +127,15 @@ class TestCompleteRunAudioComparator {
                 ProducerKind.OPENGGF, 1, this::plainFrame);
         CompleteRunAudioReport report = CompleteRunAudioComparator.compare(reference, engine);
 
+        CompleteRunAudioReport reversedSides = new CompleteRunAudioReport(
+                CompleteRunAudioReport.Kind.STATE_FIELD_VALUE,
+                report.engine(), report.reference(), FIRST_FRAME, "frame.post_row_state.fields[0]",
+                "1", "2", new CompleteRunAudioReport.Context(List.of(), null, List.of()),
+                new CompleteRunAudioReport.Context(List.of(), null, List.of()),
+                null, null, null, null);
+        assertThrows(IllegalArgumentException.class,
+                () -> CompleteRunAudioCoverageSummary.from(profile, reversedSides));
+
         TestProfile wrongProfile = profile("coverage-wrong-profile."
                 + PROFILE_SEQUENCE.incrementAndGet(), 1);
         assertThrows(IllegalArgumentException.class,
@@ -183,6 +192,35 @@ class TestCompleteRunAudioComparator {
                 .filter(layer -> layer.layer() != ComparisonLayer.STATE)
                 .allMatch(layer -> layer.evidence()
                         == CompleteRunAudioCoverageSummary.EvidenceDisposition.NOT_RUN));
+
+        CompleteRunAudioReport mismatch = CompleteRunAudioComparator.compare(reference, engine);
+        profile.bindings = Map.of(
+                ProducerKind.REFERENCE, new UnavailableProducerBinding("reference unavailable"),
+                ProducerKind.OPENGGF, new UnavailableProducerBinding("engine unavailable"));
+        CompleteRunAudioCoverageSummary diagnostic =
+                CompleteRunAudioCoverageSummary.from(profile, mismatch);
+        assertEquals(CompleteRunAudioCoverageSummary.AuthorityDisposition.UNAVAILABLE,
+                diagnostic.layer(ComparisonLayer.STATE).authority());
+        assertEquals(CompleteRunAudioCoverageSummary.EvidenceDisposition.KNOWN_MISMATCH,
+                diagnostic.layer(ComparisonLayer.STATE).evidence());
+        assertFalse(diagnostic.fullParity());
+    }
+
+    @Test
+    void unavailableBindingsRejectEvenACorrelatedMatch() throws Exception {
+        TestProfile profile = registerProfile(1);
+        Path reference = writeCapture("coverage-forged-green-reference", profile,
+                ProducerKind.REFERENCE, 1, this::plainFrame);
+        Path engine = writeCapture("coverage-forged-green-engine", profile,
+                ProducerKind.OPENGGF, 1, this::plainFrame);
+        CompleteRunAudioReport match = CompleteRunAudioComparator.compare(reference, engine);
+
+        profile.bindings = Map.of(
+                ProducerKind.REFERENCE, new UnavailableProducerBinding("reference unavailable"),
+                ProducerKind.OPENGGF, new UnavailableProducerBinding("engine unavailable"));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> CompleteRunAudioCoverageSummary.from(profile, match));
     }
 
     @Test
@@ -4309,6 +4347,7 @@ class TestCompleteRunAudioComparator {
         private Map<ProducerKind, ProducerObservationInventory> observationInventories = Map.of(
                 ProducerKind.REFERENCE, ProducerObservationInventory.allObserved(),
                 ProducerKind.OPENGGF, ProducerObservationInventory.allObserved());
+        private Map<ProducerKind, ProducerBinding> bindings;
 
         private TestProfile(String id, CompleteRunFixture fixture) {
             this.id = id;
@@ -4385,6 +4424,9 @@ class TestCompleteRunAudioComparator {
         }
         @Override public Map<ProducerKind, ProducerRuntimeIdentity> producerRuntimeIdentities() {
             return Map.copyOf(runtimes);
+        }
+        @Override public Map<ProducerKind, ProducerBinding> producerBindings() {
+            return bindings == null ? CompleteRunAudioProfile.super.producerBindings() : bindings;
         }
         @Override public Map<ProducerKind, ObserverProof> observerProofs() {
             return Map.copyOf(observers);
