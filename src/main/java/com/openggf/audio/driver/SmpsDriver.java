@@ -2892,7 +2892,9 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         for (int i = 0; i < 4; i++) {
             if (psgLocks[i] == seq) {
                 if (isSfx && seq.getConfig().getPsgSfxReleaseMode()
-                        == SmpsSequencerConfig.PsgSfxReleaseMode.LEGACY_FULL_RESTORE) {
+                        != SmpsSequencerConfig.PsgSfxReleaseMode.ROM_REST_RESTORE) {
+                    // Preserve the established wholesale-teardown silence for
+                    // profiles whose ROM-specific policy is scoped to F2.
                     seq.forceSilence(SmpsSequencer.TrackType.PSG, i);
                 }
                 psgLocks[i] = null;
@@ -3014,7 +3016,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 continue;
             }
             if (sequencer.getConfig().getPsgSfxReleaseMode()
-                    == SmpsSequencerConfig.PsgSfxReleaseMode.LEGACY_FULL_RESTORE) {
+                    != SmpsSequencerConfig.PsgSfxReleaseMode.ROM_REST_RESTORE) {
                 sequencer.forceSilence(SmpsSequencer.TrackType.PSG, channel);
             }
             SmpsSequencer waitingPsg = waitingSpecialSfx(
