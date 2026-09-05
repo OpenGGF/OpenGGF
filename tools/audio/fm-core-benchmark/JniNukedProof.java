@@ -241,6 +241,19 @@ public final class JniNukedProof {
         return changed;
     }
 
+    static void requireRejectionControls(boolean invalidCapacity,
+            boolean invalidSnapshot, boolean useAfterClose) {
+        if (!invalidCapacity) {
+            throw new AssertionError("invalid capacity rejection did not preserve state");
+        }
+        if (!invalidSnapshot) {
+            throw new AssertionError("invalid snapshot rejection did not preserve state");
+        }
+        if (!useAfterClose) {
+            throw new AssertionError("use after close was not rejected");
+        }
+    }
+
     public static void main(String[] arguments) throws Exception {
         if (arguments.length != 1 && (arguments.length != 4
                 || !arguments[1].equals("--capture-events"))) {
@@ -325,6 +338,8 @@ public final class JniNukedProof {
         } catch (IllegalStateException expected) {
             useAfterClose = true;
         }
+
+        requireRejectionControls(invalidCapacity, invalidSnapshot, useAfterClose);
 
         System.out.printf("{\"schema\":\"openggf.fm-core-jni-proof.v1\"," +
                         "\"timing_collected\":false,\"java_c_pcm_frames\":%d," +
