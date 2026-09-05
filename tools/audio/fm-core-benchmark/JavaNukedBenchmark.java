@@ -20,14 +20,14 @@ public final class JavaNukedBenchmark {
         }
     }
 
-    private static void register(NukedOpn2 chip, int[] pins, int part, int address, int value) {
+    static void register(NukedOpn2 chip, int[] pins, int part, int address, int value) {
         chip.write(part * 2, address);
         clocks(chip, pins, 24);
         chip.write(part * 2 + 1, value);
         clocks(chip, pins, 24);
     }
 
-    private static NukedOpn2 programmed() {
+    static NukedOpn2 programmed() {
         NukedOpn2 chip = new NukedOpn2();
         chip.setChipType(NukedOpn2.MODE_YM2612);
         int[] pins = new int[2];
@@ -66,7 +66,7 @@ public final class JavaNukedBenchmark {
         return hash;
     }
 
-    private static long frame(NukedOpn2 chip, int[] pins) {
+    static long frame(NukedOpn2 chip, int[] pins) {
         int left = 0;
         int right = 0;
         for (int cycle = 0; cycle < 24; cycle++) {
