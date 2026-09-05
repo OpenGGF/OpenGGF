@@ -10,7 +10,6 @@ import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -24,8 +23,9 @@ import static org.junit.jupiter.api.Assertions.*;
 class TestS3kFadeOutPsgSilence {
     private Rom rom;
 
-    @Test
-    void legacyHeadlessBackendUsesTheSameHostFadeEffects() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void legacyHeadlessBackendUsesTheSameHostFadeEffects(boolean withSfx) {
         install();
         var profile = new Sonic3kAudioProfile();
         var loader = profile.createSmpsLoader(rom);
@@ -39,10 +39,18 @@ class TestS3kFadeOutPsgSilence {
         });
         try {
             backend.playSmps(loader.loadMusic(Sonic3kMusic.KNUCKLES.id), loader.loadDacData());
+            if (withSfx) {
+                backend.playSfxSmps(loader.loadSfx(
+                        com.openggf.game.sonic3k.audio.Sonic3kSfx.SPLASH.id), loader.loadDacData());
+                assertTrue(backend.musicDriverForTesting().captureSnapshot().sequencers()
+                        .stream().anyMatch(e -> e.sfx()));
+            }
             writes.clear();
             backend.fadeOutMusic(0x28, 6);
             assertEquals(List.of(0x9f, 0xbf, 0xdf, 0xff), writes);
             assertTrue(backend.musicDriverForTesting().captureSnapshot().driverOwnedFade());
+            assertEquals(withSfx, backend.musicDriverForTesting().captureSnapshot().sequencers()
+                    .stream().anyMatch(e -> e.sfx()), "S3K fade does not stop active SFX");
         } finally {
             backend.destroy();
         }
