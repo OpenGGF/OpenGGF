@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Live audio commands share their oracle-tested effects:** S3K fade entry
+  now silences halted PSG channels, and S1 fade entry stops SFX and clears
+  speed-up state. Capture adapters and the legacy backend use the same host
+  commands. Live-path regressions cover the missing boundary; S1 oracle
+  reports explicitly exclude production song-start initialization from their
+  coverage.
+
 - **Small Java FM rendering improvement:** Nuked's phase calculation reuses
   exact signed-detune values and avoids mathematically zero pitch-modulation
   arithmetic. Local AIZ1 render benchmarks measured about 2–3% less rendering
