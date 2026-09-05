@@ -2836,16 +2836,42 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      */
     @Override
     public void releaseChannelToMusic(SmpsSequencer sequencer,
-            SmpsSequencer.TrackType type, int channelId) {
+            SmpsSequencer.Track endingTrack) {
         if (!isSfx(sequencer)) {
             return;
         }
+        SmpsSequencer.TrackType type = endingTrack.type;
+        int channelId = endingTrack.channelId;
         SmpsSequencer[] locks = type == SmpsSequencer.TrackType.PSG ? psgLocks : fmLocks;
-        if (channelId < 0 || channelId >= locks.length || locks[channelId] != sequencer) {
+        if (channelId < 0 || channelId >= locks.length
+                || locks[channelId] != sequencer
+                || hasOtherActiveTrack(sequencer, endingTrack)) {
             return;
         }
         locks[channelId] = null;
+        if (type == SmpsSequencer.TrackType.PSG) {
+            if (psgSfxClaims[channelId] == sequencer) {
+                psgSfxClaims[channelId] = null;
+            }
+            if (channelId == PSG_TONE3_CHANNEL
+                    && endingTrack.noiseMode
+                    && psgLocks[PSG_NOISE_CHANNEL] == sequencer) {
+                psgLocks[PSG_NOISE_CHANNEL] = null;
+            }
+        }
         updateOverrides(type, channelId, false);
+    }
+
+    private static boolean hasOtherActiveTrack(
+            SmpsSequencer sequencer, SmpsSequencer.Track endingTrack) {
+        for (SmpsSequencer.Track track : sequencer.getTracks()) {
+            if (track != endingTrack && track.active
+                    && track.type == endingTrack.type
+                    && track.channelId == endingTrack.channelId) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void releaseLocks(SmpsSequencer seq) {

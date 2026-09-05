@@ -266,11 +266,11 @@ class TestS3kOracleRequestSidecarWiring {
                 report.kind(), report::toString);
         // cfChangePSGVolume's byte-sized DEC now wraps VolEnv 00h to FFh.
         // The next mismatch is a separate ordered-write divergence.
-        assertEquals(1690, report.tick(), report::toString);
-        assertEquals(7, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=231]",
+        assertEquals(2012, report.tick(), report::toString);
+        assertEquals(1, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=191]",
                 report.reference());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=192]",
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=255]",
                 report.openggf());
     }
 

@@ -782,6 +782,19 @@ public class SmpsSequencer implements CoordFlagContext {
                 boolean wasOverridden = t.overridden;
                 t.overridden = overridden;
                 if (wasOverridden && !overridden) {
+                    if (t.type == TrackType.PSG
+                            && config.getPsgSfxReleaseMode()
+                            == SmpsSequencerConfig.PsgSfxReleaseMode
+                                    .ROM_NOISE_RESTORE_PRESERVE_REST) {
+                        // zStopPSGTrack has no playing-bit guard. It preserves
+                        // rest and re-sends only a negative raw PSGNoise byte
+                        // (skdisasm Sound/Z80 Sound Driver.asm:3521-3533).
+                        if (t.noiseMode && t.rawPsgNoiseKnown
+                                && (t.rawPsgNoise & 0x80) != 0) {
+                            synth.writePsg(this, t.rawPsgNoise);
+                        }
+                        continue;
+                    }
                     if (!t.active)
                         continue;
 
@@ -3157,8 +3170,8 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     @Override
-    public void releaseChannelToMusic(TrackType type, int channelId) {
-        host.releaseChannelToMusic(this, type, channelId);
+    public void releaseChannelToMusic(Track endingTrack) {
+        host.releaseChannelToMusic(this, endingTrack);
     }
 
     @Override

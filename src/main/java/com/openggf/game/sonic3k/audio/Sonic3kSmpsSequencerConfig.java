@@ -165,6 +165,8 @@ public final class Sonic3kSmpsSequencerConfig {
                 // The fixed branch changes key-off/FM3 bookkeeping, not rest.
                 .fmSfxReleaseMode(
                         SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE_PRESERVE_REST)
+                .psgSfxReleaseMode(SmpsSequencerConfig.PsgSfxReleaseMode
+                        .ROM_NOISE_RESTORE_PRESERVE_REST)
                 // zSFXTrackInitLoop sets bit 2 on the overridden music track
                 // while the SFX is still being loaded (Sound/Z80 Sound
                 // Driver.asm:1997-2003), so ownership exists from the

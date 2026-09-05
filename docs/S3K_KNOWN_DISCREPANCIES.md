@@ -1559,9 +1559,10 @@ service **1594** to **1652**. That ordered-write gap is also resolved: retail
 of sound admission/header order (`Sound/Z80 Sound Driver.asm:727-759`). The
 S3K PSG track stop also preserves the shipped pointer helper's unconditional
 `FF` after its channel/noise silence and before ownership restoration
-(`:2115-2142, :3443-3469, :4226-4249`). The oracle remains at service
-**1690**, advancing within it to event 7: reference restored-noise `E7` versus
-engine PSG frequency `C0`.
+(`:2115-2142, :3443-3469, :4226-4249`). The covered music track's signed raw
+noise byte is now restored without changing its playing/rest state
+(`:3521-3533`). The oracle advances to service **2012** event 1: reference PSG
+`BF` versus engine PSG `FF`.
 `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
 matching 1690-service prefix through ordinal 1689. Service 1690 and the full
 window are not claimed to match. The immediate `FF` RAM state is proven; a

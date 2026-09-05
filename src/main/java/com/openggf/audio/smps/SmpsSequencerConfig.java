@@ -249,7 +249,9 @@ public final class SmpsSequencerConfig {
         /** Legacy engine behavior: silence, restore volume, then resend frequency. */
         LEGACY_FULL_RESTORE,
         /** Shipped S1 behavior: the SFX note-off stands; restore at rest/noise only. */
-        ROM_REST_RESTORE
+        ROM_REST_RESTORE,
+        /** S3K: preserve music state and restore only a signed raw noise byte. */
+        ROM_NOISE_RESTORE_PRESERVE_REST
     }
 
     /** How SFX track RAM is walked after header initialization. */
