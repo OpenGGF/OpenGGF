@@ -1010,7 +1010,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         boolean resetsTempo = ordinaryLoad
                 && resolved.logicalPolicy().resetsTempoOnMusicStart();
         SmpsLoadReadiness.Context context = new SmpsLoadReadiness.Context(
-                driver.captureSnapshot().region(), !resetsTempo && speedShoesEnabled);
+                driver.getRegion(), !resetsTempo && speedShoesEnabled);
         SmpsLoadReadiness.Work readiness = resolved.readiness().begin(context);
         if (resetsTempo) {
             speedShoesEnabled = false;
@@ -1753,10 +1753,10 @@ public final class SmpsDriverSession implements AutoCloseable {
                     null, null, transition.firstServiceWrites(),
                     saved.selectedDac(), SmpsLoadReadiness.immediatePlan(),
                     new SmpsLoadReadiness.Context(
-                            driver.captureSnapshot().region(),
+                            driver.getRegion(),
                             speedShoesEnabled), SmpsLoadReadiness.immediatePlan()
                             .begin(new SmpsLoadReadiness.Context(
-                                    driver.captureSnapshot().region(),
+                                    driver.getRegion(),
                                     speedShoesEnabled)));
         }
         applyCurrentLogicalControls();

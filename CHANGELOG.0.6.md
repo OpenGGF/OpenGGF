@@ -20,6 +20,12 @@ This file contains the complete 0.6 development snapshot history carried forward
   path and the shipped kick's rate-23 pitch loop without changing the separate
   S1 or S3K cadence inputs.
 
+- **Cheaper audio region queries and architecture checks:** audio transitions
+  read the clock region without capturing sequencer/track snapshots. The audio
+  architecture guard reuses its production bytecode graph while retaining all
+  checks and separate negative fixtures. ROM timing and snapshot semantics are
+  unchanged; see the [verification](docs/architecture/validation/performance/2026-09-05-department-audio.md).
+
 - **Continue screens for all three games:** the Game Over exit now opens each
   game's ROM-backed countdown and character sequence when continues remain.
   Start spends one continue after the departure animation and restores three
