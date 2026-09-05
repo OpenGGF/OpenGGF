@@ -1,6 +1,8 @@
 # S3K SMPS parity cycle 6: diagnostic ring dispatch
 
-Status: candidate; not delivered or post-merge verified.
+Status: merged through `ad152601b`; combined post-merge verification passed.
+Push and cleanup status are in the
+[group ledger](2026-09-05-sol-smps-parity-delivery-group.md).
 
 Retail `zPlaySound_CheckRing` toggles boot-zeroed `zRingSpeaker` only when raw
 request `33h` reaches dispatch, selecting Sound34/Sound33 in turn
@@ -45,5 +47,7 @@ S3K ROM paths were supplied throughout.
 - `mvn -Dmse=off -Pguards ... test -B`: 609 tests, 0 failures/errors/skips;
   `target/audio-parity-cycle6-ring-dispatch/guards.log` and `guards-reports/`.
 
-The branch is still a candidate: integration, exact baseline comparison,
-post-merge verification and push are pending the parent workflow.
+Root's exact refreshed-baseline comparison preserves every ordinary/guard
+outcome and adds three passing ordinary identities. Combined develop verification
+also preserves every candidate outcome; the group ledger records the complete
+delivery evidence without claiming production mailbox or DAC parity.

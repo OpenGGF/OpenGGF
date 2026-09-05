@@ -61,3 +61,7 @@ main baseline and adds eight ordinary tests:
 The declaration-as-match mutation failed its no-evidence assertion. A separate
 mismatch-as-full-parity mutation failed both the summary and CLI exit assertions.
 Neither mutation is retained.
+
+The candidate is integrated into develop. Combined post-merge verification
+preserves every candidate outcome; push and cleanup status are tracked in the
+[group ledger](2026-09-05-sol-smps-parity-delivery-group.md).

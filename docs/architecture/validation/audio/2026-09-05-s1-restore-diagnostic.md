@@ -65,3 +65,7 @@ source, and a later `SEQUENCER_TICK` service end. Negative controls cover
 admission before request and unrelated lifecycle and service kinds. This is a
 single-one-up bounded probe; it does not claim durable cross-domain token
 correlation.
+
+The candidate is integrated into develop. Combined post-merge verification
+preserves every candidate outcome; push and cleanup status are tracked in the
+[group ledger](2026-09-05-sol-smps-parity-delivery-group.md).

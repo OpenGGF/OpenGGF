@@ -1,6 +1,6 @@
 # SMPS evidence delivery group: coverage, S1 probe and S3K ring adapter
 
-Status: merged; combined post-merge verification, push and cleanup pending.
+Status: merged and post-merge verified; push and cleanup pending.
 This group improves evidence and a diagnostic adapter, not full SMPS parity.
 
 ## Reviewed candidates and baseline
@@ -103,3 +103,24 @@ independently checked by root. Sealed native A, the prior probe and the initial
 GL-abort transcript remain preserved externally. No native publication,
 TraceChaser pin change or authenticated fixture installation is part of this
 group.
+
+## Combined post-merge verification
+
+Develop `f56d4fae1`, including the integrated handover, passes the ordinary
+suite with 16,687 tests, zero failures/errors and 43 unchanged skips. Its
+separate structural run passes all 609 guards. A final focused run of the
+coverage, S1 diagnostic/unavailable-oracle and S3K ring/frontier controls passes
+24 tests with zero failures/errors/skips.
+
+Exact comparison preserves all 15,717 baseline ordinary outcomes and adds
+precisely the union of the candidates' 21 passing identities. Comparisons
+against each candidate independently find no removed or changed outcome: the
+coverage candidate gains only the other 13 tests, S1 gains 11 and ring gains 18.
+All four guard comparisons preserve the same 609 outcomes exactly. There are
+no rename, removal or skip allowances.
+
+Main `target/audio-parity-delivery-postmerge-evidence/` contains separate
+ordinary, guard and focused logs/XML plus exact commands. The baseline,
+post-merge evidence, all comparison logs and comparison helper are archived at
+`${EVIDENCE_ROOT}/delivery-postmerge-f56d4fae1.tar.gz`, SHA-256
+`00c94f54b210f4984b4956d92ce09c72b5261cf47bbedda6508ae9eb0ba6359c`.

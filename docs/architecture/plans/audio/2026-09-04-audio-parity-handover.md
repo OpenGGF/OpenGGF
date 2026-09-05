@@ -113,12 +113,13 @@ separate guards with exact candidate outcome equality. Develop was pushed throug
 `9d153cf6a`; the completed worktree and local branch were removed. Evidence is in the
 [fifth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle5.md).
 
-### Sixth Sol delivery group (post-merge verification)
+### Sixth Sol delivery group (post-merge verified)
 
 The reviewed coverage report, S1 prerequisite probe and S3K ring capture adapter
 are merged through `ad152601b`. Their individual ordinary/guard comparisons
-preserve the refreshed baseline and add 21 passing tests. Combined verification
-and delivery status are in the
+preserve the refreshed baseline and add 21 passing tests. Combined develop
+`f56d4fae1` passes 16,687 ordinary tests with 43 unchanged skips, 609 guards and
+24 focused checks, with exact baseline/candidate comparisons. Delivery status is in the
 [group ledger](../../validation/audio/2026-09-05-sol-smps-parity-delivery-group.md).
 
 The fixed complete-run profiles still report `full_parity=false`. S1 production
