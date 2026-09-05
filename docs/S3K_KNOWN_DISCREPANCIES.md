@@ -1548,11 +1548,20 @@ driver now admits the source transaction once and forwards both bytes verbatim,
 preserving the chip's final latch and noise attenuation. The next FM3 release
 gap is also resolved: the covered music track's retained normal/special mode
 is written to register `27` before its voice, matching `cfStopTrack`
-(:3443-3518). The oracle advances to service **1592**, where music PSG3
-`volEnv` is reference `0` versus engine `1`, a separate envelope-state gap.
+(:3443-3518). The music PSG3 envelope gap is also resolved: an attacked note
+still resets `VolEnv`, but while overridden it no longer consumes the first
+envelope byte before `zUpdatePSGTrack`'s override return (:4058-4115). The
+S3K's `cfChangePSGVolume` envelope rewind is also now byte-accurate: its `DEC`
+wraps `VolEnv` from `00` to `FF`; the prior Java guard incorrectly left zero
+unchanged (`Sound/Z80 Sound Driver.asm:3263-3285`). The oracle advances from
+service **1594** to **1652**, whose first event is reference YM port-I
+`80=FF` versus engine PSG `C8`, a separate ordered-write gap.
 `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
-matching 1592-service prefix through ordinal 1591. Service 1592 and the full
-window are not claimed to match. The DAC stream
+matching 1652-service prefix through ordinal 1651. Service 1652 and the full
+window are not claimed to match. The immediate `FF` RAM state is proven; a
+later envelope walk from `FF` remains unverified because retail `zDoVolEnv`
+uses it as an unsigned `envelope + 255` table offset while Java bounds the
+cursor to the loaded envelope array. The DAC stream
 remains independently red at run 338, byte 0 (`88` versus `7F`). See the
 [2026-09-05 validation report](architecture/validation/audio/2026-09-05-s3k-psg-takeover.md)
 for commands and red-first evidence; this is not full-window audio parity.

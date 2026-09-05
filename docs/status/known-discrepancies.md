@@ -2706,9 +2706,10 @@ the discrete DAC.
   before the pitch loop) but `DacData` carries only the per-byte total, so the
   facade spaces the two samples evenly; the Z80 loop also stalls while the
   chip bus is busy with sequencer writes, which the facade models by pausing
-  the cadence rather than dropping samples. The S2 loader's `baseCycles` of 288
-  differs from the 295 that `s2.sounddriver.asm` counts for its own loop; the
-  loader value is used as found and is a separate follow-up.
+  the cadence rather than dropping samples. The S2 loader now uses the retail
+  loop's 295-cycle byte budget; ROM-backed coverage pins both that value and
+  the resulting rate-1 and kick-rate-23 cadence inputs. S1 and S3K retain their
+  separately owned constants.
 - **DAC interpolation** (`audio.dacInterpolate`, default off since
   2026-09-02) is a presentation option with no hardware counterpart: between
   two PCM samples the facade writes a linearly interpolated `0x2A` value once

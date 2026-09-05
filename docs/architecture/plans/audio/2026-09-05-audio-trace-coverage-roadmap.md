@@ -95,7 +95,7 @@ restoration; startup/stop/pause/fades/jingles/speed-up; service cadence and DAC.
 Reuse the existing driver maps and record source routine, implementation owner,
 direct differential evidence, known mismatch and unverified branches separately.
 
-### First worker cycle: evidence and next assignments
+### First worker cycle: initial findings (historical)
 
 The three Sol investigations established that original ROM/BK2 execution and
 Java production observation already exist. Existing low-level S1/S2/S3K oracle
@@ -120,11 +120,41 @@ frontiers are useful driver evidence, not complete live-path proofs.
   values, zero and special-stage values other than eight, with native ordering.
   No tempo capture or complete-run binding is claimed delivered yet.
 
+Those initial assignments subsequently delivered as develop merge `a1e00c643`,
+pushed with verification and cleanup records through `3fd7a15fc`. The completed
+batch additionally repaired PSG transaction ownership and FM3 mode restoration,
+exposed blocked ring decisions, and gated both fade counters. The hard S3K intro
+frontier moved to service 1592. See the
+[verified delivery ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle.md).
 These are bounded contributions, not completion of any game's parity programme.
-The first two commits are assembled in the lead's isolated integration branch.
-The independent Continue-screen work advanced develop to `adcd0a3fa`; it merged
-without conflicts into that branch, and requires a fresh regression baseline.
-No audio integration into develop or push is claimed by this planning record.
+
+### Second worker cycle: active
+
+- Baseline: develop `3fd7a15fc`; separate integration worktree
+  `audio-parity-cycle2`, branch `bugfix/ai-audio-parity-cycle2`.
+- S3K envelope consumption: reviewed `d8488e080` defers envelope byte zero
+  while a newly attacked music PSG track remains overridden. The isolated
+  oracle now reaches service 1594 (`SFX_PSG3.volEnv`, reference FF, engine 00).
+  Follow-on `eae7934cd` fixes the existing S3K EC handler's guarded decrement,
+  preserving its already-correct rest clearing, clamp and no-direct-write
+  semantics. The frontier advances to service 1652 event 0 (YM write versus
+  PSG write); a wrapped byte is not normalized away. Later envelope+255
+  consumption remains explicitly unverified.
+- S2 DAC cadence: `bc249d9b5` and review follow-up `4daabfb51` correct the
+  loader-owned two-sample budget from 288 to the retail 295 Z80 cycles.
+  Mutation tests and ROM-backed playback tests distinguish metadata from its
+  actual timing consumer; S1/S3K loader implementations are untouched.
+- Reference capture: local TraceChaser `be2ed462` adds tempo-read phase
+  evidence with a new native identity. Duplicate 5,400-row diagnostic captures
+  match; this is neither a full movie nor an authenticated production binding.
+  The 08 write at row 3072 is first read at row 3073; the 00 write at row 4269
+  is read in that same row. Preserve raw values 00 through FF and exact read
+  phase, including repeated writes. Java consumption remains unimplemented.
+  Publication to TraceChaser main needs the separately requested user authority;
+  no parent gitlink points at unpublished commits.
+- Lead: source review, exact updated baseline/candidate/post-merge ordinary and
+  guard comparisons, integration documentation, develop-only publication and
+  completed-worktree cleanup. No second-cycle delivery is claimed yet.
 
 ### Phase 1 — truthful coverage reporting
 
@@ -132,8 +162,9 @@ No audio integration into develop or push is claimed by this planning record.
   layers and assertion modes in an executable coverage report.
 - [ ] Distinguish unavailable, diagnostic-only, known mismatch and verified
   parity; profile declarations alone never produce a verified result.
-- [ ] Rename the S1 absence test and S3K expected-frontier test so their names
-  state what they assert. Preserve their useful regression contracts.
+- [x] Rename the S1 absence test to state what it asserts. Review confirmed
+  S3K's mismatch-pin and bounded-prefix names already distinguish their claims;
+  preserve those useful regression contracts. This closes naming only.
 - [ ] Test that unavailable producers and known mismatches cannot be aggregated
   into a full-parity pass; retain strict capture failure behavior.
 

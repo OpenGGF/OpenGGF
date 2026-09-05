@@ -14,6 +14,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 2 DAC playback uses the retail loop cadence:** the ROM loader now
+  supplies the 295 Z80 cycles that `zWriteToDAC` spends delivering each byte's
+  two decoded samples, instead of 288. ROM-backed coverage checks the rate-1
+  path and the shipped kick's rate-23 pitch loop without changing the separate
+  S1 or S3K cadence inputs.
+
 - **Continue screens for all three games:** the Game Over exit now opens each
   game's ROM-backed countdown and character sequence when continues remain.
   Start spends one continue after the departure animation and restores three
@@ -90,8 +96,12 @@ This file contains the complete 0.6 development snapshot history carried forward
   while both bytes retain their physical chip meaning, advancing the oracle to
   service 1588. FM3 SFX release now restores the covered music track's normal
   or special register-27 mode before its voice, advancing the oracle to service
-  1592; the newly exposed PSG-envelope state mismatch and independent DAC
-  mismatch remain.
+  1592. An attacked PSG note that remains SFX-overridden now resets its volume
+  envelope without eagerly consuming byte zero before the ROM's override
+  return, advancing the oracle to service 1594. S3K's PSG-volume command now
+  performs its byte-sized envelope-index decrement at zero too (`00 -> FF`),
+  advancing the oracle to service 1652; the newly exposed ordered-write and
+  independent DAC mismatches remain.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data

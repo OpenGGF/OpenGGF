@@ -32,6 +32,21 @@ skips, and 609 separate guards with no failures/errors/skips. Develop was pushed
 through `7f73667b8`; completed worktrees and their merged local branches were
 removed. The next isolated envelope/S2 cadence cycle is not part of this result.
 
+### Second Sol cycle (candidate)
+
+The next isolated batch preserves S3K overridden-attack envelope timing and
+byte-wrapped EC cursor state, corrects the S2 loader's DAC budget to the retail
+295 cycles, and renames the S1 missing-reference test truthfully. The S3K
+matching prefix reaches service 1651; service 1652 event 0 remains an ordered
+write mismatch. Read-only diagnosis points to fixed SFX channel-slot walking;
+that repair is not part of this batch. Later envelope+255 consumption is also
+unverified. The [second-cycle record](../../validation/audio/2026-09-05-sol-smps-parity-cycle2.md)
+owns exact verification and delivery status; do not infer full-run parity.
+
+TraceChaser tempo-read capture, native reproducibility repairs and fresh S1
+diagnostic work remain local, separately identified evidence. Production
+provenance and authorized publication are not established by those diagnostics.
+
 ### 1-up admission follow-up
 
 The [1-up suppression audit](../../audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)

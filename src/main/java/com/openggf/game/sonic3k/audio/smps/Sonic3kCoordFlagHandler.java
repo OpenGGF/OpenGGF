@@ -194,14 +194,15 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                         }
                         t.volumeOffset = updated;
                         t.envAtRest = false;
-                        // cfChangePSGVolume opens with res 4, clearing the rest
-                        // bit before it touches the volume at all
-                        // (Sound/Z80 Sound Driver.asm:3186-3190).
+                        // Retail cfChangePSGVolume clears rest, then DEC wraps
+                        // VolEnv from 00h to FFh before the signed add and
+                        // unsigned CP 0Fh clamp.
+                        // (Sound/Z80 Sound Driver.asm:3263-3285).
                         t.resting = false;
-                        if (t.envPos > 0) t.envPos--; // SMPSPlay smps_commands.c:1890 VolEnvIdx--
+                        t.envPos = (t.envPos - 1) & 0xFF;
                         // Like cfSetVolume's PSG branch, this ends at
                         // zStoreTrackVolume, which stores the byte and returns
-                        // without touching the chip (:3191-3199). The track's
+                        // without touching the chip (:3273-3285). The track's
                         // own zUpdatePSGTrack tail sends it.
                     }
                 }
