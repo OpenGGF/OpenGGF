@@ -14,6 +14,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Less art-loading and frame allocation:** decoders share an immutable reader
+  for each open ROM, CNZ palette cycles reuse ROM-derived patches, and the
+  performance overlay uses primitive rolling counters. Screenshots encode and
+  save on a bounded background worker; a busy writer skips new requests before
+  framebuffer readback and reports the skip.
+
 - **Less runtime allocation and shorter rewind replay bursts:** live recording
   reuses bounded pixel buffers and overlaps GPU readback with the next frame,
   while preserving audio pairing and flushing the final frame on stop. Audio

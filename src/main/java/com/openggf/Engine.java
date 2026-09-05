@@ -274,6 +274,7 @@ public class Engine {
 	private int targetFps;
 	private final LiveCaptureChord liveCaptureChord = new LiveCaptureChord();
 	private final LiveCaptureController liveCaptureController;
+	private final AsyncScreenshotWriter screenshotWriter = new AsyncScreenshotWriter();
 	private final LiveCapturePresentationCoordinator liveCapturePresentation;
 	private final LiveCaptureIndicatorRenderer liveCaptureIndicator;
 	/** How long a recording-interrupted notice stays on screen. */
@@ -634,6 +635,8 @@ public class Engine {
 
 	private Throwable cleanupConfiguredHeadlessResources() {
 		Throwable failure = null;
+		failure = appendConfiguredHeadlessCleanupFailure(
+				failure, screenshotWriter::close);
 		failure = appendConfiguredHeadlessCleanupFailure(
 				failure, liveCaptureController::close);
 		failure = appendConfiguredHeadlessCleanupFailure(
@@ -2160,8 +2163,10 @@ public class Engine {
 			String timestamp = java.time.LocalDateTime.now()
 					.format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
 			Path path = Path.of("screenshot_" + timestamp + ".png");
-			ScreenshotCapture.captureAndSavePNG(viewportWidth, viewportHeight, path);
-			LOGGER.info("Screenshot saved: " + path);
+			if (!screenshotWriter.captureAndSubmit(path,
+					() -> ScreenshotCapture.captureFramebuffer(viewportWidth, viewportHeight))) {
+				LOGGER.warning("Screenshot skipped: writer is busy or closed");
+			}
 		} catch (Exception e) {
 			LOGGER.warning("Screenshot failed: " + e.getMessage());
 		}
@@ -2890,6 +2895,7 @@ public class Engine {
 	}
 
 	private void cleanup() {
+		cleanupStep("screenshots", screenshotWriter::close);
 		cleanupStep("live capture", liveCaptureController::close);
 		cleanupStep("session state", SessionManager::clear);
 		cleanupStep("donor audio", audioManager::clearDonorAudio);

@@ -100,6 +100,12 @@ These toggle visual debug information drawn over the game scene. They require
 | F11 | **Touch response** -- Object touch/collision areas |
 | F12 | **Art viewer** -- Loaded sprite art atlas |
 
+F12 also saves a screenshot as `screenshot_yyyyMMdd_HHmmss.png` in the working
+directory. PNG encoding and disk writing run in the background, with at most
+two screenshots in flight. If both slots are busy, the new request is skipped
+and logged. Successful writes and failures are logged; shutdown allows up to
+five seconds for accepted writes to finish.
+
 ## Debug Mode
 
 | Key | Action |

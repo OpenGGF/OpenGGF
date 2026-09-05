@@ -108,10 +108,7 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
         if (palette == null) {
             return;
         }
-        byte[] data = write.segaData();
-        for (int i = 0; i < data.length / 2; i++) {
-            palette.getColor(write.startColor() + i).fromSegaFormat(data, i * 2);
-        }
+        write.applyTo(palette);
         if (normalDirty != null) {
             normalDirty[write.lineIndex()] = true;
         }
