@@ -24,6 +24,8 @@ This file contains the complete 0.6 development snapshot history carried forward
 - **S3K 1-up SFX suppression:** jump, ring, and other new SMPS effects are
   discarded during the extra-life jingle. Suppressed rings do not advance
   stereo alternation; effects resume when level-music restoration starts.
+  Production diagnostics report both registry-owned and pre-selection ring
+  discards as explicit blocked admission decisions.
   Regression coverage includes rewind, ordinary song replacement, a jingle
   without saved music, and global fade-stop cleanup.
 

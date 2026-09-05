@@ -102,8 +102,19 @@ class TestS3kProductionAdmissionObservation {
                     .filter(RequestObserved.class::isInstance)
                     .map(RequestObserved.class::cast)
                     .map(RequestObserved::rawSoundId).toList());
-            assertTrue(events.stream().noneMatch(AdmissionObserved.class::isInstance),
-                    "ring suppression is caller-owned before registry admission");
+            assertEquals(List.of(RejectionReason.BLOCKED), events.stream()
+                    .filter(AdmissionObserved.class::isInstance)
+                    .map(AdmissionObserved.class::cast)
+                    .map(event -> event.decision().result().reason()).toList());
+            AdmissionObserved rejection = events.stream()
+                    .filter(AdmissionObserved.class::isInstance)
+                    .map(AdmissionObserved.class::cast).findFirst().orElseThrow();
+            assertFalse(rejection.decision().result().accepted());
+            assertEquals(0x33,
+                    rejection.decision().context().requestedSoundId());
+            assertEquals(0x33,
+                    rejection.decision().context().resolvedSoundId(),
+                    "blocked ring observation must not invent a speaker selection");
             assertTrue(events.stream().noneMatch(SfxAdmittedObserved.class::isInstance));
             assertEquals(ringLeftBefore, audio.captureLogicalSnapshot().ringLeft());
             assertNoSfx(audio);
