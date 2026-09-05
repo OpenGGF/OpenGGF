@@ -2,8 +2,10 @@
 
 ## Delivery status
 
-In progress on `feature/ai-audio-next-coordination`, based on `develop`
-`bbf28b7dc`. No completion, push or cleanup is claimed here yet.
+Merged into `develop` as `e258282e0`, after refreshing the original `bbf28b7dc`
+base to `ce3b9e291`. Post-merge verification is complete; push and worktree
+cleanup are the remaining delivery steps. This is a bounded milestone, not
+completion of the release gates listed below.
 
 ## Independent task reviews
 
@@ -85,7 +87,7 @@ after each process exited and before a later run reused Surefire output.
 |---|---|---|---|
 | Updated baseline | `ce3b9e291` | 16,482 / 0 / 0 / 22 | 609 / 0 / 0 / 0 |
 | Combined development | `e3e156c04` | 16,497 / 0 / 0 / 22 | 609 / 0 / 0 / 0 at `532e3d1af` |
-| Merged develop | Pending | Pending | Pending |
+| Merged develop | `e258282e0` | 16,497 / 0 / 0 / 22 | 609 / 0 / 0 / 0 |
 
 The development arm adds 15 executions. Per-test comparison has no failures,
 errors or newly skipped tests; guards have identical case sets and outcomes.
@@ -106,7 +108,32 @@ LUA_BIN=lua5.4 mvn -Dmse=off -B "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$
 LUA_BIN=lua5.4 mvn -Dmse=off -B -Pguards "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" test
 ```
 
-Final merged comparisons, pushed identities and cleanup remain pending.
+Merged comparison found no failures/errors or newly skipped tests. The
+ordinary report has one additional reporting issue, independently checked:
+the ICZ nested-suite XML finishes with nine cases then three in the merged
+run, opposite the baseline/development order. The later file overwrites six
+parent-method records; parent XML itself has zero cases in every arm. The
+test source blob is identical across all three heads. Thus merged final XML
+contains 16,395 cases, not 16,401; this is not silently treated as a test skip
+or pass. The complete ordinary archive remains unchanged.
+
+A separate explicit six-method run on `e258282e0` passed six tests with zero
+failures/errors/skips. Its exact method set equals the six missing records;
+after that supplemental check there are no unexplained case differences
+against development. Baseline comparison also retains the documented DAC
+test rename. Guards have identical case sets and outcomes. Evidence is in
+`audio-next-merged-icz-supplement-evidence.json` and
+`audio-next-merged-report-gap-closure.json`, alongside the original archives.
+
+```bash
+LUA_BIN=lua5.4 mvn -Dmse=off -B "-Ds3k.rom.path=$S3K_ROM" '-Dtest=TestSonic3kIczRewindRoundTrip#capturedBytesAreStableAcrossRoundTrip+roundTripPreservesPubliclyObservableState+roundTripPreservesSeamlessTransitionOrdinalsAndPublicationFences+roundTripRetainsSuccessfulPublicationIdentityWithoutClearingOrdinals+schemaCaptureIgnoresLiveSnowboardIntroReference+schemaCaptureProducesNonEmptyPayload' test
+```
+
+The final main merge was clean. A separate main performance baseline and its
+guard run delayed integration; the lead's precondition aborted before merging
+or overwriting reports while either was active. Main's final other-task guard
+reports were preserved before the post-merge run. No other agent was stopped.
+The earlier guidance update and both README summaries remain included.
 
 The final focused oracle/capture/presentation run at `532e3d1af` passed 51
 tests, zero failures/errors/skips (`audio-next-integrated-focused.log`). The

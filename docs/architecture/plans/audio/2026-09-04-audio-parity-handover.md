@@ -9,8 +9,13 @@ before relying on any of them (see the measurement-hazard table in
 ## September 5 next-milestone update
 
 The [next-milestone plan](2026-09-05-audio-next-milestone.md) starts from
-`bbf28b7dc`; integration is in progress, so the original and first follow-on
-measurements below remain historical.
+`bbf28b7dc` and is merged into `develop` as `e258282e0`. Post-merge ordinary
+verification passed 16,497 executions (22 existing skips), with 609 separate
+guards and no failures/errors. Six ICZ methods were rerun successfully to
+resolve overwritten nested-class XML records; the
+[delivery record](../../validation/audio/2026-09-05-audio-next-review.md)
+preserves that distinction and push/cleanup status. Original and first
+follow-on measurements below remain historical.
 
 - PSG correction `5ee8bb8ae` removes the synthetic takeover FF. Hard comparison
   retains 1,570 whole services and now the first 43 ordered writes of service
