@@ -21,8 +21,8 @@ This file contains the complete 0.6 development snapshot history carried forward
   display; optional measurement inputs may be declared absent; unclassified or
   required-but-skipped tests fail closed. The policy carries a category and
   the assumption source line for all 46 identities seen in the September 5
-  ordinary evidence, flags one stale legacy allowlist entry and one gameplay
-  scenario assumption for review. Workflow and guard integration follow
+  ordinary evidence (one stale legacy allowlist entry dropped) and keeps the
+  documented CPZ spin-tube scenario limitation unchanged. Workflow and guard integration follow
   separately (brainpipe P6).
 
 - **S3K audio oracle alternates raw ring requests at dispatch:** the diagnostic

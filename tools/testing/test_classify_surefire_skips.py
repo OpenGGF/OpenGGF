@@ -101,6 +101,25 @@ class ClassifierTests(unittest.TestCase):
         self.write_policy([rule("a.B#gl", category="whatever")])
         self.assertEqual(self.run_cli("gl=false")[0], 2)
 
+    def test_rule_without_explicit_allowed_when_absent_is_a_policy_error(self):
+        write_report(self.reports, "a.B", [("gl", "")])
+        r = rule("a.B#gl"); del r["allowed_when_absent"]
+        self.write_policy([r])
+        rc, _, err = self.run_cli("gl=false")
+        self.assertEqual(rc, 2); self.assertIn("explicitly", err)
+
+    def test_gl_context_rule_may_not_be_optional(self):
+        write_report(self.reports, "a.B", [("gl", "")])
+        self.write_policy([rule("a.B#gl", "gl-context", None)])
+        rc, _, err = self.run_cli("gl=false")
+        self.assertEqual(rc, 2); self.assertIn("never null", err)
+
+    def test_empty_and_duplicate_capabilities_are_rejected(self):
+        write_report(self.reports, "a.B", [("gl", "")])
+        self.write_policy([rule("a.B#gl")])
+        self.assertEqual(self.run_cli("=true")[0], 2)
+        self.assertEqual(self.run_cli("gl=true,gl=false")[0], 2)
+
     def test_parameterized_identities_are_exact(self):
         write_report(self.reports, "a.B", [("p(int)[1]", ""), ("p(int)[2]", "")])
         self.write_policy([rule("a.B#p(int)[1]")])
@@ -144,7 +163,7 @@ class ClassifierTests(unittest.TestCase):
 class CheckedInPolicyTests(unittest.TestCase):
     def test_policy_loads_and_every_rule_is_exact(self):
         pol = csk.load_policy(POLICY)
-        self.assertGreaterEqual(len(pol["rules"]), 46)
+        self.assertGreaterEqual(len(pol["rules"]), 45)
         for r in pol["rules"]:
             self.assertNotIn("*", r["match"])
 
@@ -154,11 +173,10 @@ class CheckedInPolicyTests(unittest.TestCase):
         self.assertGreaterEqual(len(gl), 19)
         self.assertTrue(all(r["allowed_when_absent"] == "gl" for r in gl))
 
-    def test_policy_evidence_sources_exist_except_declared_stale(self):
+    def test_policy_evidence_sources_all_exist(self):
         pol = csk.load_policy(POLICY)
-        stale = csk.stale_rules(pol, ROOT)
-        self.assertEqual({s["identity"] for s in stale},
-                         {r["match"] for r in pol["rules"] if r["category"] == "stale"})
+        self.assertEqual(csk.stale_rules(pol, ROOT), [])
+        self.assertEqual(len(pol["rules"]), 45)
 
     @unittest.skipUnless(EVIDENCE.is_dir(), "preserved f56d4fae1 ordinary reports not present")
     def test_preserved_f56d4fae1_reports(self):
@@ -174,7 +192,7 @@ class CheckedInPolicyTests(unittest.TestCase):
         self.assertEqual(len(with_gl["required_skipped"]), 20)   # 2 GlReadPixels + 15 shader smoke + 2 CNZ capture + 1 data-select capture
         self.assertTrue(all(e["input"] == "gl" for e in with_gl["required_skipped"]))
         legacy_only = {"version": 1, "inputs": pol["inputs"],
-                       "rules": [r for r in pol["rules"] if r["category"] in ("opt-in-benchmark", "opt-in-gate", "opt-in-diagnostic", "opt-in-capture", "scenario-assumption", "stale")
+                       "rules": [r for r in pol["rules"] if r["category"] in ("opt-in-benchmark", "opt-in-gate", "opt-in-diagnostic", "opt-in-capture", "scenario-assumption")
                                  or r["match"].startswith("com.openggf.audio.AudioRegressionTest#")
                                  or r["match"].startswith("com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#")]}
         legacy_only["rules"] = [r for r in legacy_only["rules"] if r["match"] != "com.openggf.game.rewind.TestLiveRewindCheckpointCost#compareCheckpointCadencesOnTheSameRecordedRoute"]

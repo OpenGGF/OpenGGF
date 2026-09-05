@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 CATEGORIES = {"gl-context", "optional-fixture", "opt-in-benchmark", "opt-in-gate", "opt-in-diagnostic",
-              "opt-in-capture", "scenario-assumption", "stale"}
+              "opt-in-capture", "scenario-assumption"}
 
 
 class PolicyError(ValueError):
@@ -46,9 +46,13 @@ def load_policy(path):
         seen.add(ident)
         if rule["category"] not in CATEGORIES:
             raise PolicyError(f"unknown category {rule['category']} for {ident}")
-        absent = rule.get("allowed_when_absent")
-        if absent is not None and absent not in inputs:
+        if "allowed_when_absent" not in rule:
+            raise PolicyError(f"rule {ident} must state allowed_when_absent explicitly (an input name or null)")
+        absent = rule["allowed_when_absent"]
+        if absent is not None and (not isinstance(absent, str) or absent not in inputs):
             raise PolicyError(f"rule {ident} names undeclared input {absent}")
+        if rule["category"] == "gl-context" and absent != "gl":
+            raise PolicyError(f"gl-context rule {ident} must use allowed_when_absent \"gl\" (never null)")
     return policy
 
 
@@ -61,10 +65,14 @@ def parse_capabilities(text):
         if "=" not in item:
             raise PolicyError(f"capability must be name=true|false: {item}")
         name, value = item.split("=", 1)
-        value = value.strip().lower()
+        name = name.strip(); value = value.strip().lower()
+        if not name:
+            raise PolicyError(f"capability name must not be empty: {item}")
         if value not in ("true", "false"):
             raise PolicyError(f"capability {name} must be true or false")
-        caps[name.strip()] = value == "true"
+        if name in caps:
+            raise PolicyError(f"capability {name} declared twice")
+        caps[name] = value == "true"
     return caps
 
 

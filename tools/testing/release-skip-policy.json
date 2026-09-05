@@ -42,7 +42,7 @@
       "category": "scenario-assumption",
       "evidence": "src/test/java/com/openggf/tests/TestCPZObjectBugs.java:134",
       "allowed_when_absent": null,
-      "note": "REVIEW: assumption on gameplay outcome (tube capture/release), not on environment; a real-play defect would be hidden as a skip"
+      "note": "documented prior scenario limitation (tube capture/release assumption at :134); carried unchanged from the release allowlist \u2014 gameplay and assertions are not altered by this gate"
     },
     {
       "match": "com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval",
@@ -134,13 +134,6 @@
       "evidence": "src/test/java/com/openggf/audio/TestSmpsRepeatedPlaybackBenchmark.java:53",
       "allowed_when_absent": null,
       "note": "@EnabledIfSystemProperty"
-    },
-    {
-      "match": "com.openggf.audio.synth.TestYm2612ChipGpgxParity#nativeEnvelopeHarnessReproducesTrackedVectorsWhenCoreIsPresent",
-      "category": "stale",
-      "evidence": "src/test/java/com/openggf/audio/synth/TestYm2612ChipGpgxParity.java",
-      "allowed_when_absent": null,
-      "note": "REVIEW: source file no longer exists; legacy allowlist entry to remove"
     },
     {
       "match": "com.openggf.capture.GlReadPixelsGrabberTest#grabsOnlyNonZeroOriginViewportFromOffscreenBackBuffer",
