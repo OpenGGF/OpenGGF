@@ -46,6 +46,7 @@ class Fixture:
         (self.tree / "src/test/resources/traces/s1").mkdir(parents=True)
         (self.tree / "src/test/resources/traces/s1/physics.csv").write_text("frame,x\n1,2\n")
         (self.tree / "pom.xml").write_text("<project/>\n")
+        (self.tree / ".gitignore").write_text("target/\n")
         git(self.tree, "init", "-q"); git(self.tree, "add", "-A"); git(self.tree, "commit", "-q", "-m", "base")
         self.start = Path(base, "start.json")
         self.log = Path(base, "maven.log")
@@ -110,7 +111,7 @@ class BeginTests(unittest.TestCase):
         with self.assertRaises(crt.EvidenceError):
             self.fx.begin()
 
-    def test_source_digest_covers_dirty_working_tree_not_just_head(self):
+    def test_source_digest_covers_working_tree_content_not_just_head(self):
         before = crt.source_state(self.fx.tree)["source_digest"]
         (self.fx.tree / "src/main/java/com/openggf/Engine.java").write_text("class Engine { int dirty; }\n")
         after = crt.source_state(self.fx.tree)
@@ -219,17 +220,18 @@ class CollectTests(unittest.TestCase):
     def test_source_mutation_during_the_run_is_rejected(self):
         self.fx.write_run()
         (self.fx.tree / "src/main/java/com/openggf/Engine.java").write_text("class Engine { int mutated; }\n")
-        with self.assertRaisesRegex(crt.EvidenceError, "source_digest changed"):
+        with self.assertRaisesRegex(crt.EvidenceError, "clean checkout|source_digest changed"):   # dirty tree is rejected first
             self.fx.collect()
 
     def test_fixture_or_inventory_mutation_during_the_run_is_rejected(self):
         self.fx.write_run()
         (self.fx.tree / "src/test/resources/traces/s1/physics.csv").write_text("frame,x\n1,3\n")
-        with self.assertRaisesRegex(crt.EvidenceError, "changed while the trace run"):   # src/test digest catches it first
+        with self.assertRaisesRegex(crt.EvidenceError, "clean checkout|changed while the trace run"):
             self.fx.collect()
         self.fx.write_run()
         git(self.fx.tree, "checkout", "-q", "--", "src/test/resources/traces/s1/physics.csv")
         (self.fx.tree / "src/test/java/com/openggf/tests/trace/TestExtraTraceReplay.java").write_text("class X {}\n")
+        git(self.fx.tree, "add", "-A"); git(self.fx.tree, "commit", "-q", "-m", "mid-run commit")   # clean again, but inventory/digest moved
         with self.assertRaisesRegex(crt.EvidenceError, "changed while the trace run"):
             self.fx.collect()
 
@@ -240,6 +242,58 @@ class CollectTests(unittest.TestCase):
         self.fx.write_run(cases=(("replayGhz1", "passed"), ("replayGhz1", "failure")))
         with self.assertRaisesRegex(crt.EvidenceError, "conflicting duplicate"):
             self.fx.collect()
+
+
+class CleanCheckoutTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.fx = Fixture(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_dirty_checkout_is_rejected_at_begin_and_at_collect(self):
+        (self.fx.tree / "src/main/java/com/openggf/Engine.java").write_text("class Engine { int local; }\n")
+        with self.assertRaisesRegex(crt.EvidenceError, "clean checkout"):
+            self.fx.begin()
+        git(self.fx.tree, "checkout", "-q", "--", "src/main/java/com/openggf/Engine.java")
+        self.fx.begin(); self.fx.write_run()
+        (self.fx.tree / "untracked.txt").write_text("x")
+        with self.assertRaisesRegex(crt.EvidenceError, "clean checkout"):
+            self.fx.collect()
+
+    def test_ignored_build_output_does_not_count_as_dirty(self):
+        self.fx.begin(); self.fx.write_run()
+        self.assertTrue((self.fx.tree / "target").exists())
+        self.fx.collect()   # target/ is ignored: still a clean checkout
+
+
+class CompareCliTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(); self.fx = Fixture(self.tmp.name); self.fx.begin(); self.fx.write_run()
+        self.manifest = Path(self.tmp.name, "candidate.json")
+        self.manifest.write_text(json.dumps(self.fx.collect(), sort_keys=True))
+        self.commit = json.loads(self.manifest.read_text())["commit"]
+        base = json.loads(self.manifest.read_text()); base["commit"] = "0" * 40
+        self.baseline = Path(self.tmp.name, "baseline.json"); self.baseline.write_text(json.dumps(base))
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def cli(self, expected_baseline, expected_candidate):
+        return subprocess.run([sys.executable, str(ROOT / "tools/testing/compare_release_traces.py"), "compare",
+                               "--baseline", str(self.baseline), "--candidate", str(self.manifest),
+                               "--expected-baseline", expected_baseline, "--expected-candidate", expected_candidate],
+                              capture_output=True, text=True)
+
+    def test_candidate_must_match_the_release_checkout(self):
+        self.assertEqual(self.cli("0" * 40, self.commit).returncode, 0)
+        wrong = self.cli("0" * 40, "1" * 40)
+        self.assertEqual(wrong.returncode, 2); self.assertIn("candidate revision does not match", wrong.stderr)
+
+    def test_baseline_pin_and_distinct_commits_are_enforced(self):
+        self.assertEqual(self.cli("f" * 40, self.commit).returncode, 2)
+        same = json.loads(self.baseline.read_text()); same["commit"] = self.commit; self.baseline.write_text(json.dumps(same))
+        self.assertEqual(self.cli(self.commit, self.commit).returncode, 2)
 
 
 class CompareTests(unittest.TestCase):
