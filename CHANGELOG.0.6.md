@@ -14,6 +14,23 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Audio diagnostics can capture dispatched chip writes:** the opt-in
+  `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data
+  strobes, real and interpolated DAC provenance, and PSG writes in explicit
+  chip-native clocks. Reset, restore, policy changes and transaction rollback
+  delimit replay segments; overflow and export errors fail visibly. Existing
+  logical logs and production synthesis remain unchanged. A ROM-free,
+  source-pinned FM benchmark harness preserves the backend investigation;
+  Java Nuked remains the production core, with no native runtime dependency.
+
+- **S3K sound-effect admission now sends the retail noise-silence write:**
+  every declared PSG effect channel sends the original driver's unconditional
+  noise mute at admission, in header order. This corrects the missing write
+  during collapsing-scenery setup and extends the AIZ1 intro oracle's matching
+  prefix through service 1569. The next service still exposes the separately
+  documented lazy takeover write, and the independent DAC mismatch remains
+  open; this is not a complete audio-parity claim.
+
 - **Four more sound settings now reach playback:** a new guard checks that
   every sound-driver setting survives the step that prepares a sound for
   playback, since a setting missing from that step is silently ignored rather

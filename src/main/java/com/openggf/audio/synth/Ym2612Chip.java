@@ -244,6 +244,8 @@ public class Ym2612Chip {
     private int dacPendingValue = NO_DAC_VALUE;
     private int dacWritePhase;
     private int dacWriteValue;
+    private ChipWriteObserver.PhysicalWriteOrigin dacWriteOrigin =
+            ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS;
     private boolean dacInterpolate = false;
     /**
      * Sample-end edges raised but not yet consumed. Raised where the ROM's
@@ -253,6 +255,8 @@ public class Ym2612Chip {
      * the index without reaching that fall-through, so neither raises one.
      */
     private int dacSampleEndPending;
+    /** Diagnostic-only clock; it deliberately does not participate in snapshots. */
+    private long physicalCycle;
 
     /** Constructs a reset chip at {@link #getDefaultOutputRate()}; nothing global is touched. */
     public Ym2612Chip() {
@@ -282,6 +286,8 @@ public class Ym2612Chip {
         resampler.reset(INTERNAL_RATE, rate);
         directFrameHead = 0;
         directFrameCount = 0;
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     /**
@@ -292,6 +298,8 @@ public class Ym2612Chip {
      */
     public void setChipType(int type) {
         applyChipType(type);
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     private void applyChipType(int type) {
@@ -303,6 +311,8 @@ public class Ym2612Chip {
 
     public void setDacInterpolate(boolean interpolate) {
         dacInterpolate = interpolate;
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     public void setDacData(DacData data) {
@@ -315,6 +325,11 @@ public class Ym2612Chip {
 
     void setWriteObserver(ChipWriteObserver observer) {
         writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
+    }
+
+    void reportPhysicalTimelineBoundary(
+            ChipWriteObserver.PhysicalTimelineBoundary boundary) {
+        emitPhysicalBoundary(boundary);
     }
 
     /** Hardware reset ({@code OPN2_Reset}); chip type, output rate and mutes are retained. */
@@ -335,8 +350,10 @@ public class Ym2612Chip {
         dacPendingValue = NO_DAC_VALUE;
         dacWritePhase = 0;
         dacWriteValue = 0;
+        dacWriteOrigin = ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS;
         dacSampleEndPending = 0;
         resampler.reset(INTERNAL_RATE, outputRate);
+        emitPhysicalBoundary(ChipWriteObserver.PhysicalTimelineBoundary.RESET);
     }
 
     // ---------------------------------------------------------------- writes
@@ -437,12 +454,14 @@ public class Ym2612Chip {
             return;
         }
         enqueue(OP_FORCE_SILENCE, ch, 0, 0, ch);
+        emitPhysicalBoundary(ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     /** Output-stage mute: the channel keeps running and contributes its silent resting level. */
     public void setMute(int ch, boolean mute) {
         if (ch >= 0 && ch < 6) {
             mutes[ch] = mute;
+            emitPhysicalBoundary(ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
         }
     }
 
@@ -556,6 +575,7 @@ public class Ym2612Chip {
             frameSumLeft = 0;
             frameSumRight = 0;
         }
+        physicalCycle++;
     }
 
     private void emitFrame(int leftSample, int rightSample) {
@@ -618,10 +638,13 @@ public class Ym2612Chip {
         }
         if (dacWritePhase == 1) {
             core.write(1, dacWriteValue);
+            emitPhysicalYmWrite(1, dacWriteValue, dacWriteOrigin);
             dacWritePhase = 0;
             busHold = DATA_SETTLE_CYCLES;
         } else if (dacPendingValue != NO_DAC_VALUE) {
             core.write(0, DAC_REGISTER);
+            dacWriteOrigin = ChipWriteObserver.PhysicalWriteOrigin.DAC_STREAM;
+            emitPhysicalYmWrite(0, DAC_REGISTER, dacWriteOrigin);
             dacWriteValue = dacPendingValue;
             dacPendingValue = NO_DAC_VALUE;
             dacWritePhase = 1;
@@ -640,6 +663,8 @@ public class Ym2612Chip {
                         + (int) (((long) (next - dacPreviousValue) * dacAccumulator) / dacPeriod);
                 if (interpolated != dacWriteValue) {
                     core.write(0, DAC_REGISTER);
+                    dacWriteOrigin = ChipWriteObserver.PhysicalWriteOrigin.DAC_INTERPOLATION;
+                    emitPhysicalYmWrite(0, DAC_REGISTER, dacWriteOrigin);
                     dacWriteValue = interpolated;
                     dacWritePhase = 1;
                     busHold = ADDRESS_SETTLE_CYCLES;
@@ -738,13 +763,34 @@ public class Ym2612Chip {
     private void applyAddress(int port, int reg) {
         waitBusIdle();
         core.write(port * 2, reg);
+        emitPhysicalYmWrite(port * 2, reg,
+                ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS);
         busHold = ADDRESS_SETTLE_CYCLES;
     }
 
     private void applyData(int port, int val) {
         waitBusIdle();
         core.write(port * 2 + 1, val);
+        emitPhysicalYmWrite(port * 2 + 1, val,
+                ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS);
         busHold = DATA_SETTLE_CYCLES;
+    }
+
+    private void emitPhysicalYmWrite(int busPort, int value,
+            ChipWriteObserver.PhysicalWriteOrigin origin) {
+        if (writeObserver.observesPhysicalWrites()) {
+            writeObserver.onYm2612BusWrite(physicalCycle, busPort, value,
+                    origin);
+        }
+    }
+
+    private void emitPhysicalBoundary(
+            ChipWriteObserver.PhysicalTimelineBoundary boundary) {
+        if (writeObserver.observesPhysicalWrites()) {
+            writeObserver.onPhysicalTimelineBoundary(
+                    ChipWriteObserver.ChipClockDomain.YM2612_INTERNAL_CYCLE,
+                    physicalCycle, boundary);
+        }
     }
 
     /**
@@ -842,10 +888,15 @@ public class Ym2612Chip {
         dacPendingValue = snapshot.dacPendingValue();
         dacWritePhase = snapshot.dacWritePhase();
         dacWriteValue = snapshot.dacWriteValue();
+        dacWriteOrigin = dacWritePhase == 0
+                ? ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS
+                : ChipWriteObserver.PhysicalWriteOrigin.RESTORED_UNKNOWN;
         dacSampleEndPending = snapshot.dacSampleEndPending();
         dacInterpolate = snapshot.dacInterpolate();
         System.arraycopy(snapshot.mutesRef(), 0, mutes, 0, mutes.length);
         resampler.restoreSnapshot(snapshot.resampler());
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.SNAPSHOT_RESTORE);
     }
 
     /**
@@ -883,6 +934,8 @@ public class Ym2612Chip {
                 queuedAddress = (pendingOps[i * OP_STRIDE + 1] << 8) | pendingOps[i * OP_STRIDE + 2];
             }
         }
+        emitPhysicalBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     /**

@@ -253,7 +253,7 @@ class TestS3kOracleRequestSidecarWiring {
      * engine went straight to the load.
      */
     @Test
-    void theOracleReachesTheTitleMusicLoadsTrackCadence() {
+    void theFullOraclePinsTheNextSfxWriteFrontier() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
         List<S3kAudioTick> reference = read(committed());
@@ -264,9 +264,28 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
                 report.kind());
-        assertEquals(TITLE_MUSIC_TICK + 1431, report.tick());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=255]",
+        // The guaranteed PSG admission FF now matches at 1569. On the first
+        // SFX walk, the reference latches E7 while the engine silences noise.
+        assertEquals(1570, report.tick());
+        assertEquals(39, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=231]",
                 report.reference());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=255]",
+                report.openggf());
+    }
+
+    @Test
+    void theServiceStreamMatchesThroughCollapseAdmission() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> reference = read(committed()).subList(0, 1570);
+        S3kOpenGgfAudioCapture.CaptureResult engine =
+                S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
+        S3kAudioParityComparator.Report report =
+                S3kAudioParityComparator.compare(reference, engine.ticks());
+
+        assertEquals(S3kAudioParityComparator.Report.Kind.MATCH, report.kind(), report::toString);
+        assertEquals(1570, report.ticksCompared());
     }
 
     /**

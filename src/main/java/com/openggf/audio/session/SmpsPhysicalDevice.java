@@ -83,7 +83,7 @@ public final class SmpsPhysicalDevice {
         requireActive();
         var writes = Objects.requireNonNull(program, "program").writes();
         if (!writes.isEmpty()) {
-            outputSilenced = false;
+            setOutputSilenced(false);
         }
         for (SmpsChipWrite write : writes) {
             if (write instanceof SmpsChipWrite.Ym2612 ym) {
@@ -161,6 +161,12 @@ public final class SmpsPhysicalDevice {
         state.consumed = true;
     }
 
+    void reportPhysicalTimelineBoundary(
+            ChipWriteObserver.PhysicalTimelineBoundary boundary) {
+        requireActive();
+        synth.reportPhysicalTimelineBoundary(boundary);
+    }
+
     void setFmMute(int channel, boolean mute) {
         requireActive();
         synth.setFmMute(channel, mute);
@@ -173,13 +179,13 @@ public final class SmpsPhysicalDevice {
 
     void writeFm(int port, int register, int value) {
         requireActive();
-        outputSilenced = false;
+        setOutputSilenced(false);
         synth.writeFm(this, port, register, value);
     }
 
     void writePsg(int value) {
         requireActive();
-        outputSilenced = false;
+        setOutputSilenced(false);
         synth.writePsg(this, value);
     }
 
@@ -204,14 +210,14 @@ public final class SmpsPhysicalDevice {
 
     void setInstrument(int channelId, byte[] voice) {
         requireActive();
-        outputSilenced = false;
+        setOutputSilenced(false);
         synth.setInstrument(this, channelId,
                 Objects.requireNonNull(voice, "voice"));
     }
 
     void playDac(int note) {
         requireActive();
-        outputSilenced = false;
+        setOutputSilenced(false);
         synth.playDac(this, note);
     }
 
@@ -270,7 +276,19 @@ public final class SmpsPhysicalDevice {
 
     void silenceOutput() {
         requireActive();
-        outputSilenced = true;
+        setOutputSilenced(true);
+    }
+
+    private void setOutputSilenced(boolean silenced) {
+        if (outputSilenced == silenced) {
+            return;
+        }
+        outputSilenced = silenced;
+        // This device-level PCM gate is not a chip bus write. A raw-chip
+        // recorder must reject a cross-boundary PCM comparison instead of
+        // treating the chip stream as a complete presentation transcript.
+        synth.reportPhysicalTimelineBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.MODEL_MUTATION);
     }
 
     AdmissionState captureAdmissionState(
@@ -285,7 +303,7 @@ public final class SmpsPhysicalDevice {
         requireActive();
         AdmissionState resolved = Objects.requireNonNull(state, "state");
         synth.restoreSfxAdmissionState(resolved.synth());
-        outputSilenced = resolved.outputSilenced();
+        setOutputSilenced(resolved.outputSilenced());
     }
 
     void close() {

@@ -184,6 +184,31 @@ public final class SmpsDriverSession implements AutoCloseable {
                 observer.onPsgWrite(value);
             }
         }
+
+        record YmBus(long cycle, int busPort, int value,
+                ChipWriteObserver.PhysicalWriteOrigin origin)
+                implements ChipDiagnostic {
+            @Override
+            public void publish(ChipWriteObserver observer) {
+                observer.onYm2612BusWrite(cycle, busPort, value, origin);
+            }
+        }
+
+        record PsgBus(long tick, int value) implements ChipDiagnostic {
+            @Override
+            public void publish(ChipWriteObserver observer) {
+                observer.onPsgBusWrite(tick, value);
+            }
+        }
+
+        record PhysicalBoundary(ChipWriteObserver.ChipClockDomain domain,
+                long clock, ChipWriteObserver.PhysicalTimelineBoundary boundary)
+                implements ChipDiagnostic {
+            @Override
+            public void publish(ChipWriteObserver observer) {
+                observer.onPhysicalTimelineBoundary(domain, clock, boundary);
+            }
+        }
     }
 
     private final class SessionLiveMutation implements LiveMutationToken {
@@ -589,6 +614,34 @@ public final class SmpsDriverSession implements AutoCloseable {
                     @Override
                     public void onPsgWrite(int value) {
                         emitChipDiagnostic(new ChipDiagnostic.Psg(value));
+                    }
+
+                    @Override
+                    public boolean observesPhysicalWrites() {
+                        return chipWriteObserver.observesPhysicalWrites();
+                    }
+
+                    @Override
+                    public void onYm2612BusWrite(long cycle, int busPort,
+                            int value,
+                            ChipWriteObserver.PhysicalWriteOrigin origin) {
+                        emitChipDiagnostic(new ChipDiagnostic.YmBus(cycle,
+                                busPort, value, origin));
+                    }
+
+                    @Override
+                    public void onPsgBusWrite(long tick, int value) {
+                        emitChipDiagnostic(new ChipDiagnostic.PsgBus(tick,
+                                value));
+                    }
+
+                    @Override
+                    public void onPhysicalTimelineBoundary(
+                            ChipWriteObserver.ChipClockDomain domain,
+                            long clock,
+                            ChipWriteObserver.PhysicalTimelineBoundary boundary) {
+                        emitChipDiagnostic(new ChipDiagnostic.PhysicalBoundary(
+                                domain, clock, boundary));
                     }
                 });
         directRenderer = (buffer, frameOffset, frames) -> {
@@ -1241,6 +1294,10 @@ public final class SmpsDriverSession implements AutoCloseable {
         truncateDiagnostics(state.diagnosticCount);
         state.consumed = true;
         transactionOpen = false;
+        // The aborted raw strobes remain private, but the restored chip state
+        // and monotonic diagnostic clocks require a surviving segment break.
+        device.reportPhysicalTimelineBoundary(
+                ChipWriteObserver.PhysicalTimelineBoundary.TRANSACTION_ROLLBACK);
         if (primary != null) {
             throw primary;
         }

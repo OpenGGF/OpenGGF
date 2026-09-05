@@ -1515,7 +1515,8 @@ performs the SFX channel takeover lazily, on the first latch of the channel bein
 stolen from music, and for a noise-form effect the `0E7h` write is that first
 latch. The takeover's own `0FFh` therefore lands between `cfSetPSGNoise`'s two
 writes. The ROM performs the equivalent takeover during SFX setup instead, before
-the track's first pass runs.
+the track's first pass runs. The engine now also emits the guaranteed setup
+`FF` in PSG header order, but the extra lazy takeover write remains.
 
 **Scope.** Every S3K effect that carries a PSG form is affected, because all 36 of
 them declare `$E7`. Among them are three behind reported AIZ1 audio faults:
@@ -1527,9 +1528,14 @@ driver service. It is an ordering divergence in the write stream, not a sustaine
 level change. The audible fault reported against these effects is being tracked
 separately against the PSG noise clock, not against this.
 
-**Coverage.** `TestS3kNoiseFormEffectWriteStream` asserts the ROM's adjacency for
-all three effects, reading each expected noise operand out of the effect's own
-script in the ROM rather than naming it. The class is `@Disabled` against this
-entry; removing that annotation is the whole of enabling it. The write stream is
-not yet arbitrated by the hardware oracle, whose S3K frontier is service 565 while
-the first splash request in the captured window is service 4,087.
+**Coverage.** `TestS3kNoiseFormEffectWriteStream` is enabled and asserts that `DF`
+precedes the ROM-derived noise operand for all three effects; it does not assert
+adjacency while the extra `FF` remains. Its observation starts after admission
+so a setup silence cannot be mistaken for the track's first pass.
+The independent committed AIZ1 intro oracle now reaches Collapse's first walk
+at service **1570**, event **39**: reference PSG `E7`, engine PSG `FF`.
+`TestS3kOracleRequestSidecarWiring` pins that exact mismatch and separately
+hard-asserts a matching 1570-service prefix through ordinal 1569. The DAC stream
+remains independently red at run 338, byte 0 (`88` versus `7F`). See the
+[2026-09-04 validation report](architecture/validation/audio/2026-09-04-s3k-admission-silence.md)
+for commands and red-first evidence; this is not full-window audio parity.

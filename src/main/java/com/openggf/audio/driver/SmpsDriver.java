@@ -787,8 +787,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      * those, because every write goes through {@code zWriteFMIorII}, which
      * returns at once on bit 7 of {@code VoiceControl} (:2549-2551). The
      * fixed branch would test that bit at the call site and skip the call
-     * instead; the observable write stream is identical either way, so this
-     * models the FM tracks alone and is complete rather than partial.
+     * instead; the observable SSG-EG clear stream is identical either way.
      *
      * <p>The same routine's second guard is modelled too: {@code
      * zWriteFMIorII} also returns on bit 2 of {@code PlaybackControl}, the
@@ -805,13 +804,24 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
      * SFX's note before the new one attacks.
      */
     private void emitSfxTrackInitWrites(SmpsSequencer sequencer) {
-        if (!sequencer.getConfig().isSfxAdmissionKeyOffAndClearsSsgEg()) {
+        boolean initializeFm = sequencer.getConfig().isSfxAdmissionKeyOffAndClearsSsgEg();
+        boolean silenceNoise = sequencer.getConfig().isPsgSfxAdmissionSilencesNoise();
+        if (!initializeFm && !silenceNoise) {
             return;
         }
         for (SmpsSequencer.Track track : sequencer.getTracks()) {
+            if (track.type == SmpsSequencer.TrackType.PSG && silenceNoise) {
+                // Retail fix_sndbugs=0: zGetSFXChannelPointers.is_psg writes
+                // FF unconditionally, even for PSG1/2, before initializing
+                // the incoming track (skdisasm Sound/Z80 Sound Driver.asm:2131-2136).
+                // The fixed branch relies on corrected channel silence instead.
+                // The preceding silence call uses stale IX and may add other
+                // writes; this models only the guaranteed FF, in header order.
+                writeRawPsg(0xFF);
+            }
             // zWriteFMIorII returns on bit 7 of VoiceControl, so a PSG track's
             // clear writes nothing at all.
-            if (track.type != SmpsSequencer.TrackType.FM) {
+            if (track.type != SmpsSequencer.TrackType.FM || !initializeFm) {
                 continue;
             }
             if (track.overridden) {
