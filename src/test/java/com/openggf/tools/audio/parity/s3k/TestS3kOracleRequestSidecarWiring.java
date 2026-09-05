@@ -266,11 +266,11 @@ class TestS3kOracleRequestSidecarWiring {
                 report.kind(), report::toString);
         // cfChangePSGVolume's byte-sized DEC now wraps VolEnv 00h to FFh.
         // The next mismatch is a separate ordered-write divergence.
-        assertEquals(1652, report.tick(), report::toString);
-        assertEquals(0, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=1, register=128, value=255]",
+        assertEquals(1690, report.tick(), report::toString);
+        assertEquals(7, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=231]",
                 report.reference());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=200]",
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=192]",
                 report.openggf());
     }
 
@@ -278,14 +278,34 @@ class TestS3kOracleRequestSidecarWiring {
     void theServiceStreamMatchesThroughCollapseAdmission() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
-        List<S3kAudioTick> reference = read(committed()).subList(0, 1652);
+        List<S3kAudioTick> reference = read(committed()).subList(0, 1690);
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
         assertEquals(S3kAudioParityComparator.Report.Kind.MATCH, report.kind(), report::toString);
-        assertEquals(1652, report.ticksCompared());
+        assertEquals(1690, report.ticksCompared());
+    }
+
+    @Test
+    void newlyAdmittedFlyingFm4WalksBeforeOlderCollapsePsgAtService1652() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> reference = read(committed()).subList(0, 1653);
+        List<S3kAudioTick> engine = S3kOpenGgfAudioCapture
+                .capture(rom.toPath(), reference, null).ticks();
+
+        assertEquals(List.of(0, 0x59, 0), reference.get(1569).mailbox(),
+                "the older PSG owner is the recorded Collapse request");
+        assertEquals(List.of(0, 0xBA, 0), reference.get(1651).mailbox(),
+                "Flying is admitted after Collapse and first walks next service");
+        List<AudioParityChipWrite> expected = first48ServiceWrites(reference.get(1652));
+        List<AudioParityChipWrite> actual = first48ServiceWrites(engine.get(1652));
+        assertEquals(48, expected.size());
+        assertEquals(48, actual.size());
+        assertEquals(expected, actual,
+                "fixed FM4 RAM precedes the older sound's PSG slots");
     }
 
     @Test
