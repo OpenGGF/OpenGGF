@@ -96,8 +96,10 @@ This file contains the complete 0.6 development snapshot history carried forward
   while both bytes retain their physical chip meaning, advancing the oracle to
   service 1588. FM3 SFX release now restores the covered music track's normal
   or special register-27 mode before its voice, advancing the oracle to service
-  1592; the newly exposed PSG-envelope state mismatch and independent DAC
-  mismatch remain.
+  1592. An attacked PSG note that remains SFX-overridden now resets its volume
+  envelope without eagerly consuming byte zero before the ROM's override
+  return, advancing the oracle to service 1594; the newly exposed SFX PSG3
+  envelope-state mismatch and independent DAC mismatch remain.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data
