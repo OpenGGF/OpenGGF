@@ -95,6 +95,37 @@ restoration; startup/stop/pause/fades/jingles/speed-up; service cadence and DAC.
 Reuse the existing driver maps and record source routine, implementation owner,
 direct differential evidence, known mismatch and unverified branches separately.
 
+### First worker cycle: evidence and next assignments
+
+The three Sol investigations established that original ROM/BK2 execution and
+Java production observation already exist. Existing low-level S1/S2/S3K oracle
+adapters bypass parts of production admission and restoration, so their write
+frontiers are useful driver evidence, not complete live-path proofs.
+
+- PSG worker commit `c9a79620e` removes a source-backed duplicate S3K PSG
+  note-start volume write. Its differential frontier moves from service 1570
+  event 43 to event 48, which remains a known mismatch. A focused regression
+  failed with two volume writes before the fix and expects one afterwards.
+  Next assignment: explain the distinct missing silence write at event 48 and
+  review the prior emission guard across channel/modulation configurations.
+- Production observer worker commit `3a32b78ba` adds live-path admission tests.
+  Temporarily disabling S3K override suppression makes both new tests fail.
+  Jump rejection is directly observable; blocked ring requests currently emit
+  an attempt but no explicit admission outcome. Next assignment: expose that
+  actual rejection without changing ring phase or runtime acceptance behavior.
+- Reference worker verified `Change_Music_Tempo` against listing and ROM:
+  stop at M68K `$13C2`, store D0.b to Z80 `$1C08` at `$13D4`, release at `$13DA`.
+  Existing snapshot-at-PC capability can observe the release boundary while
+  Z80 is stopped. Next assignment: preserve every invocation, including repeated
+  values, zero and special-stage values other than eight, with native ordering.
+  No tempo capture or complete-run binding is claimed delivered yet.
+
+These are bounded contributions, not completion of any game's parity programme.
+The first two commits are assembled in the lead's isolated integration branch.
+The independent Continue-screen work advanced develop to `adcd0a3fa`; it merged
+without conflicts into that branch, and requires a fresh regression baseline.
+No audio integration into develop or push is claimed by this planning record.
+
 ### Phase 1 — truthful coverage reporting
 
 - [ ] Enumerate actual fixed profiles, fixtures, producer bindings, observation
