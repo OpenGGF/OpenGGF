@@ -252,6 +252,8 @@ traces.
   snapshot restoration checks cover both AIZ and HCZ acts; native and fast
   cores remain experiments, not runtime options.
 
+- **Contributor guidance:** streamlined agent instructions and all 23 task
+  skills, retaining ROM accuracy contracts and searchable technical evidence.
 - **Code and test maintenance:** removed unused helpers and duplicate test setup;
   rewind-boundary, snapshot-immutability, and mode-listener tests now check the
   production behavior they describe.
