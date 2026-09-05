@@ -120,7 +120,7 @@ check collects timing. Logs are under `target/fm-core-integrated-test-logs/`.
 
 The external `performance-evidence/manifest.json` preserves 38 original
 research/profile/results/log payloads with manifest SHA-256
-`8fe48c0e4375562891290e26784400124a91f74bc466ccd4e60b77cfef694c2f`.
+`225d9db1511a2d5a7f37676bc8d0a10db635f9a5371af97c977a222ba183d6f2`.
 Every copied payload was compared byte-for-byte and rehashed. No native
 binary, Java class, upstream source, SDK, ROM or generated audio is in this
 evidence archive; audition material has its own separate manifest.
