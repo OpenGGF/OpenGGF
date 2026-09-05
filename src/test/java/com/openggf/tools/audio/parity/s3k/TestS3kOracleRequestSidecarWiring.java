@@ -264,14 +264,13 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
                 report.kind(), report::toString);
-        // zSFXTrackInitLoop now preserves ROM header order independently of
-        // the fixed channel-RAM service walk. Skid's PSG2 header therefore
-        // supplies BF before the following PSG1 header's FF at service 2012.
-        assertEquals(2357, report.tick(), report::toString);
-        assertEquals("MUS_FM4", report.role());
+        // zPlaySound_CheckRing now selects the alternating 34h/33h program at
+        // request consumption, advancing the prior FM4 ownership mismatch.
+        assertEquals(2409, report.tick(), report::toString);
+        assertEquals("MUS_PSG1", report.role());
         assertEquals("overridden", report.field());
-        assertEquals("false", report.reference());
-        assertEquals("true", report.openggf());
+        assertEquals("true", report.reference());
+        assertEquals("false", report.openggf());
     }
 
     @Test
@@ -286,6 +285,37 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.MATCH, report.kind(), report::toString);
         assertEquals(1690, report.ticksCompared());
+    }
+
+    @Test
+    void firstRawRingSelectsFm5WithExactReferenceWrites() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> reference = read(committed()).subList(0, 2358);
+        List<S3kAudioTick> engine = S3kOpenGgfAudioCapture
+                .capture(rom.toPath(), reference, null).ticks();
+
+        assertEquals(nonDacServiceWrites(reference.get(2357)),
+                nonDacServiceWrites(engine.get(2357)));
+        assertTrue(engine.get(2357).writes().contains(
+                AudioParityChipWrite.ym2612(0, 0x28, 0x05)),
+                "Sound34 must key off the FM5 selector before admission");
+        for (int register : List.of(0x91, 0x95, 0x99, 0x9D)) {
+            assertTrue(engine.get(2357).writes().contains(
+                    AudioParityChipWrite.ym2612(1, register, 0x00)),
+                    () -> "Sound34 must clear FM5 SSG-EG register "
+                            + Integer.toHexString(register));
+        }
+    }
+
+    private static List<AudioParityChipWrite> nonDacServiceWrites(S3kAudioTick tick) {
+        return tick.writes().stream()
+                .filter(write -> !("ym2612".equals(write.chip())
+                        && Integer.valueOf(0).equals(write.port())
+                        && (Integer.valueOf(0x2A).equals(write.register())
+                            || (Integer.valueOf(0x2B).equals(write.register())
+                                && write.value() == 0))))
+                .toList();
     }
 
     @Test

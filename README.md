@@ -265,6 +265,10 @@ traces.
   as parity; narrow per-game oracles remain separate.
   Java Nuked remains the production FM core; full parity and listening
   validation remain open. See the [audio handover](docs/architecture/plans/audio/2026-09-04-audio-parity-handover.md).
+
+  The S3K diagnostic oracle also alternates raw ring request `33h` at the
+  driver's consume callback, moving its first mismatch to service 2409;
+  production three-mailbox scheduling and reset parity remain open.
   Exact phase-arithmetic simplification measured about 2–3% less audio-rendering
   time in local AIZ1 benchmarks, with no native dependency or chip replacement;
   see the [measurement limits and reference checks](docs/architecture/research/audio/2026-09-05-nuked-phase-performance.md).
