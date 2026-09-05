@@ -27,6 +27,25 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - PSG frequency transaction: service 1570 event 48 to service 1588 event 1
+
+- **Before:** `EVENT_MISSING` at service 1570 event 48, reference PSG `FF`.
+- **After:** `EVENT_VALUE_DIFFERENT` at service 1588 event 1, reference YM2612
+  port 0 `27=0F`, engine port 0 `B6=C0`; the first 1,588 services match.
+- **ROM and hardware owner:** `zUpdatePSGTrack` gates the source track before
+  writing both frequency bytes (`Sound/Z80 Sound Driver.asm:4085-4095`). The
+  second byte remains physically literal: `FF` is decoded by the SN76489 as a
+  PSG3-volume latch and silences noise. Only the driver's second ownership
+  decision was extraneous.
+- **Evidence:** the driver-level transaction tests pin exact `AF FF` observer
+  order, final physical latch 7/noise attenuation 15, atomic rejection when
+  the source tone channel is owned, and continued rejection of an unrelated
+  single `FF` latch. Contention diagnostics now report one decision per ROM
+  frequency transaction instead of one per physical byte; source-byte and
+  physical-write observers still receive both bytes in order. The ROM-backed
+  oracle pins the new frontier and preserves the full prior prefix. The
+  independent DAC frontier remains unchanged.
+
 ## 2026-09-05 - S3K first-note volume tail: service 1570 event 43 to event 48
 
 - **Context:** `bugfix/ai-sol-s3k-psg-parity`,

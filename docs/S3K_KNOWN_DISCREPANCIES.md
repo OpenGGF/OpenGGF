@@ -1539,17 +1539,18 @@ single volume tail reached by the ROM's `zUpdatePSGTrack` fall-through
 epilogue sent the same `F0` again. The engine now suppresses that epilogue only
 when the configured S3K frequency tail already performed the write. The new
 frontier is reference PSG `FF` against an exhausted engine service stream.
-That `FF` is the second byte of the ordered `AF FF` tone-frequency pair, not a
-noise-channel silence. The sequencer submits both bytes, but
-`SmpsDriver.writePsg` interprets the high-bit frequency byte as a new PSG3
-latch and rejects it because Collapse owns the noise channel. The ROM checks
-track override once before writing the pair and performs no ownership decision
-between its bytes. The remaining repair therefore belongs at the driver's PSG
-transaction/ownership boundary; changing the sequencer's ROM-derived byte
-stream would conceal the defect.
+That `FF` is the second byte of the ordered `AF FF` source-driver frequency
+transaction and, because bit 7 is set, is also physically decoded as a PSG3
+volume latch. The engine formerly made a new ownership decision for that
+second bus byte and rejected it. The ROM checks track override once before
+writing the pair and performs no ownership decision between its bytes. The
+driver now admits the source transaction once and forwards both bytes verbatim,
+preserving the chip's final latch and noise attenuation. The oracle advances
+to service **1588**, event **1**: reference YM2612 port 0 `27=0F`, engine port
+0 `B6=C0`, a separate FM discrepancy.
 `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
-matching 1570-service prefix through ordinal 1569 plus all 48 ordered service
-writes before event 48. No full-service progress is claimed. The DAC stream
+matching 1588-service prefix through ordinal 1587. No full-service progress is
+claimed. The DAC stream
 remains independently red at run 338, byte 0 (`88` versus `7F`). See the
 [2026-09-05 validation report](architecture/validation/audio/2026-09-05-s3k-psg-takeover.md)
 for commands and red-first evidence; this is not full-window audio parity.
