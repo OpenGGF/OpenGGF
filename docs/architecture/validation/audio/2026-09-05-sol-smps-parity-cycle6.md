@@ -29,4 +29,21 @@ capture's 1-up/fade suppression behavior; that comparison remains unverified.
 - `firstRawRingSelectsFm5WithExactReferenceWrites` compares the service-2357
   non-DAC write sequence and pins FM5 key-off plus its four SSG-EG clears.
 
-Full ordinary and guard suites are pending the requested baseline merge.
+## Final candidate verification
+
+Candidate head `0797b5d8037c4c5db240cab034172ce327849524` includes the
+current develop baseline. JDK 21 and absolute S1 REV01, S2 REV01 and locked-on
+S3K ROM paths were supplied throughout.
+
+- Focused selector/frontier/FM5 write gate: 4 passed, 0 failed/errors/skipped.
+  The exact service comparison excludes DAC `2Ah` bytes and terminal `2Bh=0`
+  under the already documented PCM partitioning limitation; DAC parity remains
+  open.
+- `mvn -Dmse=off ... test -B`: 16,669 tests, 0 failures/errors, 43 skipped;
+  `target/audio-parity-cycle6-ring-dispatch/ordinary-final.log` and
+  `ordinary-reports/`.
+- `mvn -Dmse=off -Pguards ... test -B`: 609 tests, 0 failures/errors/skips;
+  `target/audio-parity-cycle6-ring-dispatch/guards.log` and `guards-reports/`.
+
+The branch is still a candidate: integration, exact baseline comparison,
+post-merge verification and push are pending the parent workflow.
