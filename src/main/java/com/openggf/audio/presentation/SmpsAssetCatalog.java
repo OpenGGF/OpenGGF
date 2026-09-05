@@ -515,6 +515,7 @@ final class SmpsAssetCatalog {
                         source.getExtraTrkEndFlags()))
                 .relativePointers(source.isRelativePointers())
                 .tempoOnFirstTick(source.isTempoOnFirstTick())
+                .resetTempoOnMusicLoad(source.isResetTempoOnMusicLoad())
                 .direct68kDriver(source.isDirect68kDriver())
                 .advancePsgEnvelopeOnRest(source.isAdvancePsgEnvelopeOnRest())
                 .writeFmPanOnNote(source.isWriteFmPanOnNote())

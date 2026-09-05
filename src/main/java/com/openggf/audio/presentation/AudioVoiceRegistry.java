@@ -530,6 +530,11 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
 
     private void replaceSessionMusic(MusicVoiceEntry entry) {
         stopMusic();
+        SmpsVoiceDescriptor descriptor = (SmpsVoiceDescriptor) entry.voiceDescriptor();
+        if (descriptor.activation().logicalPolicy().resetsTempoOnMusicStart()) {
+            speedShoesEnabled = false;
+            speedMultiplier = 1;
+        }
         activeMusic = sessionMusicSlot(entry);
         noteVoiceId(activeMusic.voice());
     }

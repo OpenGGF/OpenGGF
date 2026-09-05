@@ -301,6 +301,7 @@ public final class SmpsSequencerConfig {
     private final PalUpdateMode palUpdateMode;
     private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
     private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
+    private final boolean resetTempoOnMusicLoad;
     private final boolean direct68kDriver;
     private final boolean advancePsgEnvelopeOnRest;
     private final boolean writeFmPanOnNote;
@@ -368,6 +369,7 @@ public final class SmpsSequencerConfig {
         this.palUpdateMode = b.palUpdateMode;
         this.relativePointers = b.relativePointers;
         this.tempoOnFirstTick = b.tempoOnFirstTick;
+        this.resetTempoOnMusicLoad = b.resetTempoOnMusicLoad;
         this.direct68kDriver = b.direct68kDriver;
         this.advancePsgEnvelopeOnRest = b.advancePsgEnvelopeOnRest;
         this.writeFmPanOnNote = b.writeFmPanOnNote;
@@ -582,6 +584,10 @@ public final class SmpsSequencerConfig {
      */
     public boolean isTempoOnFirstTick() {
         return tempoOnFirstTick;
+    }
+
+    public boolean isResetTempoOnMusicLoad() {
+        return resetTempoOnMusicLoad;
     }
 
     /** Volume mode: ALGO (S1/S2) or BIT7 (S3K). */
@@ -941,6 +947,7 @@ public final class SmpsSequencerConfig {
         private PalUpdateMode palUpdateMode = PalUpdateMode.NONE;
         private boolean relativePointers = false;
         private boolean tempoOnFirstTick = false;
+        private boolean resetTempoOnMusicLoad;
         private boolean direct68kDriver = false;
         private boolean advancePsgEnvelopeOnRest = true;
         private boolean writeFmPanOnNote = false;
@@ -1004,6 +1011,7 @@ public final class SmpsSequencerConfig {
         public Builder palUpdateMode(PalUpdateMode val) { palUpdateMode = val; return this; }
         public Builder relativePointers(boolean val) { relativePointers = val; return this; }
         public Builder tempoOnFirstTick(boolean val) { tempoOnFirstTick = val; return this; }
+        public Builder resetTempoOnMusicLoad(boolean val) { resetTempoOnMusicLoad = val; return this; }
         public Builder direct68kDriver(boolean val) { direct68kDriver = val; return this; }
         public Builder advancePsgEnvelopeOnRest(boolean val) { advancePsgEnvelopeOnRest = val; return this; }
         public Builder writeFmPanOnNote(boolean val) { writeFmPanOnNote = val; return this; }
