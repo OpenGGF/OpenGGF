@@ -33,9 +33,10 @@ The fixed inventories are regenerable without capture files (exit 3 is expected
 because declarations are not evidence):
 
 ```bash
-java -cp target/classes com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s1_rev01_complete_emeralds.v1
-java -cp target/classes com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s2_rev01_complete_emeralds.v1
-java -cp target/classes com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s3k_locked_on_knuckles_superemeralds.v1
+mvn -q dependency:build-classpath -Dmdep.outputFile=target/runtime-classpath.txt
+java -cp "target/classes:$(cat target/runtime-classpath.txt)" com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s1_rev01_complete_emeralds.v1
+java -cp "target/classes:$(cat target/runtime-classpath.txt)" com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s2_rev01_complete_emeralds.v1
+java -cp "target/classes:$(cat target/runtime-classpath.txt)" com.openggf.tools.audio.completerun.CompleteRunAudioTool coverage-text s3k_locked_on_knuckles_superemeralds.v1
 ```
 
 Supplying absolute reference and engine capture paths runs the strict comparator
