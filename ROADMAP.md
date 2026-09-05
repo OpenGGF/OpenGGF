@@ -251,6 +251,10 @@ This release should focus on reducing obvious gaps rather than introducing new s
 
 ### Priority Areas
 
+- Prepare ROM-backed art asynchronously during existing PLC/decompression waits
+  and loading transitions, preserving service timing, partial uploads, and rewind.
+  Planned for 0.7; see the [async-loading item](docs/project/v0.7-roadmap.md#planned-performance-work--asynchronous-rom-loading).
+
 - Game Over / Continue flow for all three games, unless it lands as a 0.6 fix first.
 - The withdrawn SMPS and chip-level audio parity programme (retail service ordering, SFX
   priority, pause/resume, fades, regional clocks, YM write scheduling, S3K special-stage and
