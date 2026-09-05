@@ -68,7 +68,7 @@ The initial ordinary run's four assertion failures are retained: two omitted
 the retail stop byte and two mixed ending SFX with same-frame music traffic.
 Source-backed test corrections preserve that traffic and detect shortened tails.
 
-### Fourth Sol cycle (verification candidate)
+### Fourth Sol cycle (post-merge verified)
 
 Candidate `d14277e8f`, based on develop `e73ca442f`, restores covered S3K PSG
 music after F2 using the exact signed raw noise byte, preserving playing/rest
@@ -85,11 +85,34 @@ to solve the proven intra-admission mismatch.
 The 125-test focused run and 16,661-test ordinary suite pass, with 43 unchanged
 skips. Exact comparison preserves every baseline outcome after one reviewed,
 strengthened music-F2 test rename and adds seven passing identities. All 609
-separate guards pass with exact baseline equality. Pending integration belongs to the
+separate guards pass with exact baseline equality. Develop merge `1e33747f1`
+passes both suites with exact candidate outcome equality. Push and cleanup status belong to the
 [fourth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle4.md).
-Native S1 capture remains separate diagnostic work until genuinely sealed and
-authenticated; neither a matching prefix nor the ordinary suite proves full-game
-driver parity.
+Native S1 capture A is now genuinely sealed, as recorded below, but remains
+diagnostic rather than authenticated. Neither a matching prefix nor the ordinary
+suite proves full-game driver parity.
+
+### Full S1 capture A (sealed diagnostic, unpublished)
+
+The native full-movie run completed 225,101 frames and 224,241 audio rows on
+September 5. Its terminal and attestation report zero faults/overflows, and the
+root independently verified the raw SHA-256:
+`798c2197005c88abf99173629815220fe4d574274d9fa774be76fdeb37d57122`.
+The 25,700,433,659-byte raw and its original attestation are preserved under
+`${S1_CAPTURE_EVIDENCE}/s1-capture-a/`; the sibling invocation and diagnostic
+records identify the reproduced observer and exact command. One override/resume
+boundary was observed at frame 3910, with 261 ordered writes and one PCM packet.
+This is successful capture, not verified Java parity.
+
+The genuine metadata reports installed native ABI 5, while the production
+extractor accepts literal ABI 4. S1 still configures the ABI-4 interface; the
+new ABI adds an action not used by S1 and retains the event layout. Compatibility
+and producer authenticity remain different obligations: raw metadata and
+attestation do not contain the exact core/patch/managed producer identity.
+Do not relabel the capture or weaken those gates. Duplicate S1 and S2 capture
+pairs, authenticated producer binding and authorized publication are still
+required; no second capture, native push or OpenGGF submodule pin update occurred.
+Local TraceChaser handover commit `97e7ccc` records the detailed ABI assessment.
 
 ### 1-up admission follow-up
 
