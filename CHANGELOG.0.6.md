@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Continue screens for all three games:** the Game Over exit now opens each
+  game's ROM-backed countdown and character sequence when continues remain.
+  Start spends one continue after the departure animation and restores three
+  lives; timeout returns to title. S1/S2 restart from the act start, while S3K
+  retains its checkpoint and saves the updated life/continue counts. The screens
+  use existing input, palette, mapping/DPLC, fade and restart helpers.
+
 - **Live audio commands share their oracle-tested effects:** S3K fade entry
   now silences halted PSG channels, and S1 fade entry stops SFX and clears
   speed-up state. Capture adapters and the legacy backend use the same host

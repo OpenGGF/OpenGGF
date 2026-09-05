@@ -16,6 +16,9 @@ readable and historical versions can be referenced directly.
 
 ## 0.6 release documentation
 
+The current snapshot includes the three games' ROM-backed Continue screens;
+see the [0.6 development history](CHANGELOG.0.6.md#06-development-history-mid-july-2026--present-newest-first).
+
 - [Release Summary](docs/changelog/v0.6-release-summary.md) — polished copy for
   the website and GitHub release page, including the measured validation status
   and known limitations. `RELEASE_NOTES_v0.6.prerelease.md` is a pointer to it.

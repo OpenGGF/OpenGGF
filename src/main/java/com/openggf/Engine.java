@@ -2058,7 +2058,7 @@ public class Engine {
 		Objects.requireNonNull(presentationSeam, "presentationSeam");
 		boolean renderedMode = switch (Objects.requireNonNull(mode, "mode")) {
 			case LEVEL, TITLE_CARD, SPECIAL_STAGE, SPECIAL_STAGE_RESULTS,
-					TITLE_SCREEN, DATA_SELECT, LEVEL_SELECT, EDITOR, CREDITS_TEXT,
+					TITLE_SCREEN, CONTINUE_SCREEN, DATA_SELECT, LEVEL_SELECT, EDITOR, CREDITS_TEXT,
 					CREDITS_DEMO, MASTER_TITLE_SCREEN, LEGAL_DISCLAIMER, TRY_AGAIN_END,
 					ENDING_CUTSCENE, BONUS_STAGE -> true;
 		};
@@ -2349,6 +2349,11 @@ public class Engine {
 		@Override public void specialStage() { drawSpecialStage(); }
 		@Override public void specialStageResults() { drawSpecialStageResults(); }
 		@Override public void titleScreen() { drawTitleScreen(); }
+		@Override public void continueScreen() {
+			resetCameraForScreenSpace();
+			var provider = gameLoop.getContinueScreenProvider();
+			if (provider != null) provider.draw();
+		}
 		@Override public void levelSelect() { drawLevelSelect(); }
 		@Override public void dataSelect() { drawDataSelect(); }
 		@Override public void endingCutscene() { drawEndingCutscene(); }

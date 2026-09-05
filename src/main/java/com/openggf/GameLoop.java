@@ -1,6 +1,7 @@
 package com.openggf;
 
 import com.openggf.game.GameOverExit;
+import com.openggf.game.ContinueScreenProvider;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.debug.DebugOverlayToggle;
@@ -131,6 +132,9 @@ public class GameLoop {
     private final LiveRewindManager liveRewindManager;
     private final StartupRouteResolver startupRouteResolver = new StartupRouteResolver();
     private final BootScreenModeController bootScreenModeController = new BootScreenModeController();
+    private ContinueScreenProvider continueScreenProvider;
+    private final GameLoopContinueClock continueScreenClock = new GameLoopContinueClock();
+
     private final MenuScreenModeController menuScreenModeController = new MenuScreenModeController();
     private final GameLoopDebugShortcuts debugShortcuts = new GameLoopDebugShortcuts(this);
     private final BonusStageTransitionCoordinator bonusStageTransitionCoordinator =
@@ -494,6 +498,7 @@ public class GameLoop {
     }
 
     public void resetModuleScopedProviders() {
+        clearContinueScreen();
         titleCardProvider = null;
     }
 
@@ -1063,6 +1068,7 @@ public class GameLoop {
     }
 
     private void stepInternal() {
+        continueScreenClock.beginIteration();
         refreshRuntimeBindings();
         GameplayModeContext lifecycleContext = resolveGameplayModeContext();
         if (lifecycleContext == null || !lifecycleContext.isGameplayRuntimeReady()) {
@@ -1077,7 +1083,13 @@ public class GameLoop {
                                     LevelFrameContext.from(lifecycleContext), frame);
                         }
                     },
-                    resolveFadeManager()::update, frame -> {
+                    () -> {
+                        // Continue has no gameplay body while paused; its blocking fade and
+                        // V-int clock must stop together when the window loses focus.
+                        if (currentGameMode != GameMode.CONTINUE_SCREEN || !isPaused()) {
+                            resolveFadeManager().update();
+                        }
+                    }, frame -> {
                         activePlcLifecycleFrame = frame;
                         try {
                             stepInternalBody();
@@ -1281,6 +1293,11 @@ public class GameLoop {
         } else if (currentGameMode == GameMode.LEVEL_SELECT) {
             GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
                     PlcLifecyclePhase.LEVEL_SELECT, this::updateLevelSelectMode);
+            profiler.endSection("input");
+            return;
+        } else if (currentGameMode == GameMode.CONTINUE_SCREEN) {
+            GameLoopPlcLifecycle.runPhase(activePlcLifecycleFrame,
+                    PlcLifecyclePhase.CONTINUE_SCREEN, this::updateContinueScreenMode);
             profiler.endSection("input");
             return;
         } else if (currentGameMode == GameMode.DATA_SELECT) {
@@ -1703,7 +1720,7 @@ public class GameLoop {
             if (gameOverExit != null) {
                 userRecordingControls.stopActiveRecording(UserRecordingStopReason.LEVEL_ENDED);
                 GameLoopGameOverExit.startToBlack(gameOverExit, levelManager, audioManager, fadeManager,
-                        resolveGameplayModeContext(), this::returnToTitleScreenFromLevel);
+                        resolveGameplayModeContext(), () -> finishGameOverFade(gameOverExit));
                 levelIterationAdmission.finishPlaybackBoundary(
                         false, playbackDebugManager, userRecordingControls);
                 updateNonGameplayAudio(doFrameStep);
@@ -4160,6 +4177,67 @@ public class GameLoop {
     }
 
     // ==================== Level Transition Methods with Fade ====================
+
+    private void finishGameOverFade(GameOverExit exit) {
+        if (exit != GameOverExit.CONTINUE_SCREEN || gameState.getContinues() <= 0) {
+            returnToTitleScreenFromLevel();
+            return;
+        }
+        clearContinueScreen();
+        continueScreenProvider = levelManager.getGameModule().createContinueScreenProvider();
+        if (continueScreenProvider == null) {
+            returnToTitleScreenFromLevel();
+            return;
+        }
+        spriteManager.setInputSuppressed(false);
+        setGameMode(GameMode.CONTINUE_SCREEN);
+        int vint = levelManager.getObjectManager() != null
+                ? levelManager.getObjectManager().getVblaCounter() : 0;
+        continueScreenClock.enterAfterFade(continueScreenProvider, gameState.getContinues(),
+                vint, this::publishContinueClock);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+    }
+
+    private void updateContinueScreenMode() {
+        continueScreenClock.update(continueScreenProvider, () ->
+                menuScreenModeController.updateContinueScreen(continueScreenProvider, inputHandler,
+                        fadeManager.isActive() || activePlcLifecycleFrame.isOwnedBy(PlcLifecyclePhase.PALETTE_FADE),
+                        () -> GameLoopPlcLifecycle.startToBlack(
+                                resolveGameplayModeContext(), fadeManager, this::finishContinueScreen)),
+                inputHandler::update, this::publishContinueClock);
+    }
+
+    private void finishContinueScreen() {
+        ContinueScreenProvider provider = continueScreenProvider;
+        continueScreenClock.finishFade(provider, this::publishContinueClock);
+        if (!GameLoopGameOverExit.acceptContinue(provider, gameState, levelManager,
+                () -> requestSessionSave(SaveReason.LIVES_CONTINUES_SAVE))) {
+            clearContinueScreen();
+            returnToTitleScreenFromLevel();
+            return;
+        }
+        clearContinueScreen();
+        levelManager.setLevelInactiveForTransition(false);
+        levelManager.setForceHudSuppressed(false);
+        spriteManager.setInputSuppressed(false);
+        setGameMode(GameMode.LEVEL);
+        doRespawn();
+    }
+
+    private void publishContinueClock(int vintRunCount) {
+        if (levelManager.getObjectManager() != null) {
+            levelManager.getObjectManager().initVblaCounter(vintRunCount);
+        }
+    }
+
+    private void clearContinueScreen() {
+        if (continueScreenProvider != null) continueScreenProvider.reset();
+        continueScreenProvider = null;
+    }
+
+    public ContinueScreenProvider getContinueScreenProvider() {
+        return continueScreenProvider;
+    }
 
     /** Shared by the ending and the GAME OVER card: black screen to title screen. */
     private void returnToTitleScreenFromLevel() {
