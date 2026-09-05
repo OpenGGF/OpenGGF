@@ -6,9 +6,7 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Tracks JVM memory statistics for the debug overlay.
@@ -41,9 +39,7 @@ public class MemoryStats {
     private double allocationRateBytesPerSec;
 
     private static final int AVERAGING_FRAMES = 300; // ~5 seconds at 60fps
-    private final Map<String, long[]> sectionAllocHistories = new LinkedHashMap<>();
-    private final Map<String, Long> sectionAllocSums = new LinkedHashMap<>();
-    private final Map<String, Long> currentFrameAllocations = new LinkedHashMap<>();
+    private final SectionMeasurements sections = new SectionMeasurements(AVERAGING_FRAMES);
     private int frameCount = 0;
 
     private String activeSection = null;
@@ -105,28 +101,8 @@ public class MemoryStats {
         // Update per-section rolling averages
         int historySlot = frameCount % AVERAGING_FRAMES;
 
-        for (Map.Entry<String, Long> entry : currentFrameAllocations.entrySet()) {
-            String name = entry.getKey();
-            long bytes = entry.getValue();
-
-            long[] history = sectionAllocHistories.computeIfAbsent(name, k -> new long[AVERAGING_FRAMES]);
-            long oldValue = history[historySlot];
-            sectionAllocSums.merge(name, bytes - oldValue, Long::sum);
-            history[historySlot] = bytes;
-        }
-
-        // Zero out sections not recorded this frame
-        for (Map.Entry<String, long[]> entry : sectionAllocHistories.entrySet()) {
-            String name = entry.getKey();
-            if (!currentFrameAllocations.containsKey(name)) {
-                long[] history = entry.getValue();
-                long oldValue = history[historySlot];
-                sectionAllocSums.merge(name, -oldValue, Long::sum);
-                history[historySlot] = 0;
-            }
-        }
-
-        currentFrameAllocations.clear();
+        sections.finishFrame(historySlot);
+        sections.clearFrame();
         frameCount++;
     }
 
@@ -161,7 +137,7 @@ public class MemoryStats {
         long currentAllocBytes = getThreadAllocatedBytes();
         long delta = currentAllocBytes - sectionStartAllocBytes;
         if (delta > 0) {
-            currentFrameAllocations.merge(name, delta, Long::sum);
+            sections.add(name, delta);
         }
         activeSection = null;
     }
@@ -171,16 +147,15 @@ public class MemoryStats {
         if (!enabled) {
             activeSection = null;
             sectionStartAllocBytes = 0;
-            currentFrameAllocations.clear();
+            sections.clearFrame();
         }
     }
 
     void reset() {
         activeSection = null;
         sectionStartAllocBytes = 0;
-        currentFrameAllocations.clear();
-        sectionAllocHistories.clear();
-        sectionAllocSums.clear();
+        sections.clearFrame();
+        sections.reset();
         frameCount = 0;
         topAllocatorsCache.clear();
         allocationRateBytesPerSec = 0;
@@ -204,10 +179,11 @@ public class MemoryStats {
             return topAllocatorsCache;
         }
 
-        for (Map.Entry<String, Long> entry : sectionAllocSums.entrySet()) {
-            long avgBytes = entry.getValue() / effectiveFrames;
+        for (int i = 0; i < sections.size(); i++) {
+            SectionMeasurements.Section section = sections.get(i);
+            long avgBytes = section.sum / effectiveFrames;
             if (avgBytes > 0) {
-                topAllocatorsCache.add(new SectionAllocation(entry.getKey(), avgBytes));
+                topAllocatorsCache.add(new SectionAllocation(section.name, avgBytes));
             }
         }
 

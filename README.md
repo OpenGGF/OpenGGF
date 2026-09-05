@@ -244,7 +244,10 @@ traces.
   readback with the next frame; audio transactions reuse private rollback storage.
   Live rewind bounds cold gameplay replay to nine ticks, trading more retained
   snapshots for shorter bursts. Animated-art uploads and shader state handling
-  also avoid redundant work. See the [measurements and limits](docs/architecture/validation/2026-09-05-runtime-performance.md).
+  also avoid redundant work. Art decoders now share ROM readers, CNZ palette
+  patches and profiler counters allocate less, and screenshot PNG writes run
+  on a bounded background worker. See the [initial measurements](docs/architecture/validation/2026-09-05-runtime-performance.md)
+  and [follow-up evidence](docs/architecture/validation/performance/2026-09-05-followup.md).
 
 - **Audio correctness and evidence:** S3K effect admission now sends the
   retail PSG noise-silence write in header order. Opt-in physical chip capture

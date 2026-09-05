@@ -34,7 +34,13 @@ public class Rom implements AutoCloseable {
     // Cached file size for bounds checking (set on open)
     private long fileSize = -1;
 
-    public boolean open(String spath) {
+    // Immutable ROM assets are shared by all decoders for this open ROM.
+    // Keep ownership here rather than in a static cache so closing/replacing
+    // a ROM releases the cache and cannot mix assets from different games.
+    private RomByteReader byteReader;
+
+    public synchronized boolean open(String spath) {
+        byteReader = null;
         try {
             Path path = Path.of(spath);
             // Resolve relative paths against user.dir. In GraalVM native images
@@ -63,7 +69,8 @@ public class Rom implements AutoCloseable {
      * Closes the ROM file channel and releases resources.
      */
     @Override
-    public void close() {
+    public synchronized void close() {
+        byteReader = null;
         if (fileChannel != null) {
             try {
                 fileChannel.close();
@@ -80,6 +87,16 @@ public class Rom implements AutoCloseable {
      */
     public boolean isOpen() {
         return fileChannel != null && fileChannel.isOpen();
+    }
+
+    synchronized RomByteReader byteReader() throws IOException {
+        if (!isOpen()) {
+            throw new IOException("Cannot buffer a closed ROM");
+        }
+        if (byteReader == null) {
+            byteReader = new RomByteReader(readAllBytes());
+        }
+        return byteReader;
     }
 
     public FileChannel getFileChannel() {
@@ -221,7 +238,8 @@ public class Rom implements AutoCloseable {
         }
     }
 
-    public void write16BitAddr(int addr, long offset) throws IOException {
+    public synchronized void write16BitAddr(int addr, long offset) throws IOException {
+        byteReader = null;
         ByteBuffer buffer = ByteBuffer.allocate(2);
         buffer.put((byte) ((addr >> 8) & 0xFF));
         buffer.put((byte) (addr & 0xFF));
@@ -230,7 +248,8 @@ public class Rom implements AutoCloseable {
         fileChannel.write(buffer);
     }
 
-    public void write32BitAddr(int addr, long offset) throws IOException {
+    public synchronized void write32BitAddr(int addr, long offset) throws IOException {
+        byteReader = null;
         ByteBuffer buffer = ByteBuffer.allocate(4);
         buffer.put((byte) ((addr >> 24) & 0xFF));
         buffer.put((byte) ((addr >> 16) & 0xFF));
