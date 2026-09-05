@@ -14,6 +14,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **S3K SFX admission preserves ROM header ordering:** fixed channel-RAM order
+  still owns the runtime walk, while admission now retains the original header
+  order needed by the shipped driver's stale-IX PSG silence. Consecutive PSG2
+  and PSG1 headers therefore emit the retail `FF BF FF` sequence.
+
 - **Complete-run audio coverage now reports authority separately from evidence:**
   a deterministic summary distinguishes unavailable and diagnostic-only layers
   from comparable layers, and only calls full parity after a profile-bound full
