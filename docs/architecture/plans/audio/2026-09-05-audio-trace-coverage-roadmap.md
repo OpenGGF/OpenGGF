@@ -128,7 +128,7 @@ frontier moved to service 1592. See the
 [verified delivery ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle.md).
 These are bounded contributions, not completion of any game's parity programme.
 
-### Second worker cycle: active
+### Second worker cycle: delivered
 
 - Baseline: develop `3fd7a15fc`; separate integration worktree
   `audio-parity-cycle2`, branch `bugfix/ai-audio-parity-cycle2`.
@@ -152,9 +152,16 @@ These are bounded contributions, not completion of any game's parity programme.
   phase, including repeated writes. Java consumption remains unimplemented.
   Publication to TraceChaser main needs the separately requested user authority;
   no parent gitlink points at unpublished commits.
-- Lead: source review, exact updated baseline/candidate/post-merge ordinary and
-  guard comparisons, integration documentation, develop-only publication and
-  completed-worktree cleanup. No second-cycle delivery is claimed yet.
+- Delivered via develop merge `d004188d9`, pushed through `c7d04fbc3` after
+  exact post-merge comparison: 16,650 ordinary tests, 43 unchanged skips and
+  609 guards, no failures/errors. Completed worktrees and branches were removed.
+  The [second-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle2.md)
+  preserves the initial native-GL baseline crash, successful retry, nine added
+  passing outcomes and reviewed S1 test rename rather than hiding them.
+- Next: independently review S3K fixed SFX slot-order repair `b39a47844` in
+  a new worktree; its worker reports the next write frontier at service 1690.
+  That repair is not yet integrated. Native full-movie S1 diagnostic captures
+  continue separately; authenticated producer publication remains open.
 
 ### Phase 1 — truthful coverage reporting
 

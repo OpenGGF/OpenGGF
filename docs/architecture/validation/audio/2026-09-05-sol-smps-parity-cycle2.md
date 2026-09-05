@@ -1,6 +1,7 @@
 # Second Sol SMPS parity delivery cycle
 
-Status: merged locally as `d004188d9` and post-merge verified; push and cleanup pending.
+Status: delivered via develop merge `d004188d9`, pushed through `c7d04fbc3`;
+post-merge verification and completed-worktree cleanup succeeded.
 Baseline: develop `3fd7a15fc`. Candidate branch:
 `bugfix/ai-audio-parity-cycle2`, worktree `audio-parity-cycle2`.
 
@@ -90,6 +91,15 @@ Final focused selection adds `TestPsgVolumeChangeSemantics`,
 class remains an unavailability check, not an authenticated parity comparison.
 
 ## Next bounded task, not included
+
+Integration produced one documentation-only conflict between independently
+appended frontier entries; both were preserved. The final develop merge had
+no conflicts. Ordinary and guard comparisons each found zero changed candidate
+outcomes after integration. The candidate, envelope and cadence worktrees and
+their fully merged local branches were removed after push, then metadata was
+pruned. Verification evidence, local configuration copies and the test-generated
+rewind report were archived first. Original ROMs, user-modified disassembly
+submodules and ongoing SFX-order/native worktrees were preserved.
 
 Read-only source diagnosis of service 1652 identifies S3K SFX walk order.
 Retail `zUpdateSFXTracks` walks seven fixed RAM slots, FM3 through FM6 then
