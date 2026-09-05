@@ -84,7 +84,8 @@ This file contains the complete 0.6 development snapshot history carried forward
   note no longer writes its attenuation twice when note-start modulation has
   already followed the frequency pair with the driver's volume tail. The AIZ1
   driver oracle advances within service 1570 from event 43 to event 48; the
-  newly exposed final PSG-silence mismatch and independent DAC mismatch remain.
+  newly exposed PSG frequency-pair ownership mismatch and independent DAC
+  mismatch remain.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data

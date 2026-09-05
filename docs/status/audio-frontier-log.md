@@ -49,6 +49,13 @@ defined by `com.openggf.tools.audio.parity`.
   exact comparison command remains the `S3kAudioParityTool compare` command in
   the preceding entry, run from this worktree with the same fixture, request
   sidecar and absolute ROM path.
+- **Event-48 diagnosis:** reference `AF FF` is one PSG tone-frequency pair, not
+  a final noise silence. The sequencer submits both bytes; `SmpsDriver.writePsg`
+  reclassifies the high-bit `FF` as a PSG3 latch and drops it because Collapse
+  owns noise. The ROM performs its override check before the pair and has no
+  per-byte ownership arbitration, so the next repair belongs at the driver PSG
+  transaction boundary rather than in `SmpsSequencer`. This diagnosis does not
+  advance the pinned frontier.
 
 ## 2026-09-05 - PSG command takeover: service 1570 event 39 to event 43
 
