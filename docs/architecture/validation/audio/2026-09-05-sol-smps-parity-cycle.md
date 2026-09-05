@@ -60,7 +60,8 @@ candidate output stays below its own worktree's `target/`.
 | Updated baseline separate guards, `adcd0a3fa` | 609 executions, 0 failures/errors/skips |
 | Lead's first assembled focused run, before pair integration | 34 tests, 0 failures/errors/skips |
 | First candidate ordinary, before fade gates and FM3 restore | 16,634 executions, 0 failures/errors, 23 skips; execution permissions differed from baseline, so final comparison reruns under matching conditions |
-| Final assembled candidate ordinary/guards | Verification in progress |
+| Final assembled candidate ordinary | 16,641 executions, 0 failures/errors, 43 skips; every baseline outcome retained after the explicitly reviewed rename, plus 15 new passing outcomes |
+| Final assembled candidate separate guards | 609 executions, 0 failures/errors/skips; exact baseline identity/outcome equality |
 | Post-merge ordinary/guards and baseline comparison | Not run; merge not yet performed |
 
 Compare exact distinct test identity/status/message outcomes as well as summed
@@ -69,6 +70,13 @@ raw XML testcase count is not the execution count. One intentional test rename
 is `collapseFirstWalkMatchesItsFirst43OrderedServiceWrites` to
 `collapseFirstWalkMatchesItsFirst48OrderedServiceWrites`; inspect the strengthened
 assertion separately instead of treating its old identity as a lost test.
+
+The first ordinary comparison also lost six ICZ identities to overwritten nested
+reports. A separate baseline ICZ run passed nine executions. The final candidate
+full run contains all baseline ICZ identities, so no substitute evidence was
+needed for the final ordinary comparison. The raw comparator reports exactly one
+removed passing identity and its renamed replacement; normalizing only that
+explicit pair yields zero removed/changed outcomes and 15 added passing outcomes.
 
 ## Separate reference-tooling lane
 
