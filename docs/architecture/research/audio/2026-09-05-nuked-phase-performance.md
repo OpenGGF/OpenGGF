@@ -154,7 +154,19 @@ mvn -Dmse=off -B -Dtest=TestNukedOpn2PhaseMatrix,TestNukedOpn2BitExactScripts,Te
 - Final development separate guards: 609 tests, zero failures/errors/skips;
   identical baseline identity/status coverage.
 - Final focused rerun: 813 tests, zero failures/errors/skips.
-- Post-merge outcomes: pending.
+- Post-merge ordinary suite at `0c4afd689`: 16,544 tests, zero failures/errors,
+  43 skips. Every baseline identity/status triple retained; only the three
+  new passing matrix tests added.
+- Post-merge separate guards: 609 tests, zero failures/errors/skips; identical
+  baseline identity/status coverage. No new regression in either suite.
 
-Do not interpret this record as integration completion until the pending
-verification is replaced with observed results.
+Implementation commit `8dfe31306` merged into `develop` as `0c4afd689` without
+conflicts or intervening upstream changes. Existing main-workspace submodule
+changes were preserved. The integration record also changes the release note
+from "CPU time" to "rendering time" to describe the wall-clock measurement precisely.
+
+Main and worktree verification logs/XML were archived under
+`<research-root>/nuked-next-gains-20260905/verification-main/` and
+`verification-development/`; the testcase comparison script is retained in
+the sibling `evidence/` directory. Release wording and this final record are
+documentation-only follow-ups to the verified merge.
