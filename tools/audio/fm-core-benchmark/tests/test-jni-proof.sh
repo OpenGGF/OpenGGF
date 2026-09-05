@@ -65,6 +65,48 @@ assert result["capture_replay"]["ignored_output_gate_boundaries"] == 1
 assert result["capture_replay"]["presentation_pcm_reconstructable"] is False
 PY
 
+for control in invalid_capacity invalid_snapshot use_after_close; do
+  mutant_root="$test_root/mutant-$control"
+  mkdir -p "$mutant_root/source" "$mutant_root/classes"
+  case "$control" in
+    invalid_capacity)
+      expression='s/invalidCapacity = Arrays.equals(beforeInvalid, nativeCore.snapshot());/invalidCapacity = false;/'
+      mutation='invalidCapacity = false;'
+      diagnostic='invalid capacity rejection did not preserve state'
+      ;;
+    invalid_snapshot)
+      expression='s/invalidSnapshot = Arrays.equals(beforeInvalid, nativeCore.snapshot());/invalidSnapshot = false;/'
+      mutation='invalidSnapshot = false;'
+      diagnostic='invalid snapshot rejection did not preserve state'
+      ;;
+    use_after_close)
+      expression='s/useAfterClose = true;/useAfterClose = false;/'
+      mutation='useAfterClose = false;'
+      diagnostic='use after close was not rejected'
+      ;;
+  esac
+  sed "$expression" "$tool_root/JniNukedProof.java" \
+    > "$mutant_root/source/JniNukedProof.java"
+  grep -qF "$mutation" \
+    "$mutant_root/source/JniNukedProof.java" || {
+      echo "failed to create $control mutant" >&2
+      exit 1
+    }
+  javac -cp "$test_root/classes" -d "$mutant_root/classes" \
+    "$mutant_root/source/JniNukedProof.java"
+  if java -cp "$mutant_root/classes:$test_root/classes" \
+      com.openggf.tools.audio.benchmark.JniNukedProof \
+      "$test_root/relocated/libopenggf-fm-jni-proof.so" \
+      > "$mutant_root/result.json" 2> "$mutant_root/error.log"; then
+    echo "JNI proof accepted false required control: $control" >&2
+    exit 1
+  fi
+  grep -qF "$diagnostic" "$mutant_root/error.log" || {
+    echo "JNI proof did not name false required control: $control" >&2
+    exit 1
+  }
+done
+
 if "$tool_root/run-jni-proof.sh" \
     --output "$repo_root/jni-proof-outside-target" \
     --nuked-source "$nuked_source" >/dev/null 2>&1; then
