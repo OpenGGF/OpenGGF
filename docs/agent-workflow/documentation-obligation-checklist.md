@@ -7,9 +7,9 @@ changes from failing branch policy or losing institutional knowledge.
 This checklist is enforced, not advisory: the commit-trailer gate lives in
 `.githooks/validate-policy.ps1` (Windows) / `.githooks/validate-policy.sh`
 (macOS/Linux), dispatched by `.githooks/run-policy`. CI mirrors the same rules on
-PRs into `develop`. Maven auto-installs the hooks during the `validate` phase
-(`install-git-hooks` in `pom.xml`); if you commit without building first, run
-`git config core.hooksPath .githooks` once.
+PRs into `develop`. Install hooks explicitly once per worktree with
+`tools/testing/install-hooks.sh` (PowerShell: `.ps1`). Maven does not change
+Git configuration during `validate`.
 
 **Do not bypass with `--no-verify`.** The trailer block is the required attestation
 for the repo's "where relevant" documentation/discrepancy checks.
@@ -31,6 +31,19 @@ if the mapped file(s) are staged, the trailer must say `updated`; if not staged,
 it must say `n/a`. So "lying" in either direction fails the hook.
 
 ---
+
+## Release and artifact destinations
+
+The active release is 0.6. Add release-worthy prose to `CHANGELOG.0.6.md`;
+historical release files change only for factual corrections. `CHANGELOG.md`
+is the release index. Update the README release section for current summary,
+status, scope, or release-link changes (and the required develop merge summary).
+Update `docs/changelog/v0.6-release-summary.md` when public release messaging,
+validation results, or blockers change; substantial investigations/workstreams
+and gate decisions belong in `docs/changelog/v0.6-prerelease-detailed.md`.
+Engineering designs, plans, research, audits, and validation belong under the
+matching `docs/architecture/` subdirectory from `docs/README.md`; stage their
+supporting artifacts with the task. Do not create loose planning documents.
 
 ## Pre-finalize checklist
 
@@ -55,7 +68,7 @@ it must say `n/a`. So "lying" in either direction fails the hook.
     `.claude/skills/s2-implement-object/rom-pitfalls.md`
   - `.agents/skills/s3k-implement-object/rom-pitfalls.md` **and**
     `.claude/skills/s3k-implement-object/rom-pitfalls.md`
-  - (S1 has no `rom-pitfalls.md` yet; if you add one, create it in both trees.)
+  - `.agents/skills/s1-implement-object/rom-pitfalls.md` and its `.claude` mirror.
 - Editing these files **stages skill changes**, so the `Skills` trailer becomes
   **REQUIRED** = `updated` (see item 7). Mark cross-game applicability when the
   pitfall is not game-specific.
@@ -63,8 +76,10 @@ it must say `n/a`. So "lying" in either direction fails the hook.
 
 ### 3. Changelog — `CHANGELOG.md`  →  trailer `Changelog`
 
-- **REQUIRED** if engine behavior under `src/main/` changed in a changelog-worthy
-  way: set `Changelog: updated` and stage `CHANGELOG.md`.
+- **REQUIRED** for release-worthy engine changes: record 0.6 prose in
+  `CHANGELOG.0.6.md`. The root `CHANGELOG.md` is the release index; update it
+  only when the index changes. Its exact path owns the hook trailer: if only
+  the 0.6 file changes, use `Changelog: n/a: release note recorded in CHANGELOG.0.6.md`.
 - **JUSTIFIED SKIP** — special rule: on a `feat`/`fix`/`perf` commit that touches
   `src/main/`, a **bare** `Changelog: n/a` is **rejected**
   (`validate_changelog_justification`). You must either set `Changelog: updated`
@@ -87,7 +102,7 @@ it must say `n/a`. So "lying" in either direction fails the hook.
 
 ### 6. Configuration — `CONFIGURATION.md`  →  trailer `Configuration-Docs`
 
-- **REQUIRED** if configuration behavior changed: new/changed `config.json` flag,
+- **REQUIRED** if configuration behavior changed: new/changed `config.yaml` flag,
   key binding, or feature toggle. Update the file, set
   `Configuration-Docs: updated`, and stage it.
 - **JUSTIFIED SKIP** = `n/a` if no configuration surface changed.
@@ -166,15 +181,10 @@ bash .githooks/validate-policy.sh ci-push "$(git rev-parse @{u})" "$(git rev-par
 
 Two consequences are worth knowing in advance, because both have cost real time:
 
-**Amending a documented commit is rejected.** The `pre-commit` hook validates the
-**staged index** against `HEAD`, not the commit's own diff. When you amend, the
-documentation files are already in `HEAD`, so they are not in the index and
-`Changelog: updated` reads as a lie — even though the file is unambiguously part of
-the commit being amended. `git commit --amend -F msg` therefore fails with
-"`Changelog` says updated, but `CHANGELOG.md` is not staged". Use
-`git reset --soft HEAD~1` followed by a fresh commit instead. Note that a soft reset
-of a **merge** commit drops `MERGE_HEAD`, so for a merge, redo the merge from
-scratch (`git reset --hard <upstream>` then re-merge) rather than resetting.
+**Amendments need care.** Hooks validate the staged diff, which may differ from
+an amended commit's full diff. Prefer a follow-up commit when correcting delivered
+work. Inspect the hook's actual comparison base before rewriting local history;
+do not reset a working tree just to satisfy a documentation trailer.
 
 **A merge commit is measured against its second parent.** `commit_parent_or_empty_tree`
 prefers `^2` for a merge, so `commit_candidates` diffs the merge against the *merged

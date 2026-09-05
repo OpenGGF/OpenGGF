@@ -247,6 +247,8 @@ traces.
   Java Nuked remains the production FM core; full parity and listening
   validation remain open. See the [audio handover](docs/architecture/plans/audio/2026-09-04-audio-parity-handover.md).
 
+- **Contributor guidance:** streamlined agent instructions and all 23 task
+  skills, retaining ROM accuracy contracts and searchable technical evidence.
 - **Code and test maintenance:** removed unused helpers and duplicate test setup;
   rewind-boundary, snapshot-immutability, and mode-listener tests now check the
   production behavior they describe.
