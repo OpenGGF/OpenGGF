@@ -262,16 +262,15 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_MISSING,
-                report.kind());
-        // Collapse's first note now emits its one ROM volume tail rather than
-        // duplicating it. The next unresolved write is the final PSG silence
-        // after the reference has resumed the music-track writes.
-        assertEquals(1570, report.tick());
-        assertEquals(48, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=255]",
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
+                report.kind(), report::toString);
+        // Collapse's complete AF FF transaction now matches. The next
+        // mismatch is a separate FM register-order/value discrepancy.
+        assertEquals(1588, report.tick());
+        assertEquals(1, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=39, value=15]",
                 report.reference());
-        assertEquals("<missing>",
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=182, value=192]",
                 report.openggf());
     }
 
@@ -279,14 +278,14 @@ class TestS3kOracleRequestSidecarWiring {
     void theServiceStreamMatchesThroughCollapseAdmission() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
-        List<S3kAudioTick> reference = read(committed()).subList(0, 1570);
+        List<S3kAudioTick> reference = read(committed()).subList(0, 1588);
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
         assertEquals(S3kAudioParityComparator.Report.Kind.MATCH, report.kind(), report::toString);
-        assertEquals(1570, report.ticksCompared());
+        assertEquals(1588, report.ticksCompared());
     }
 
     @Test

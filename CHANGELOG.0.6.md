@@ -85,8 +85,10 @@ This file contains the complete 0.6 development snapshot history carried forward
 - **S3K modulated PSG notes emit one volume tail:** a fresh envelope-less PSG
   note no longer writes its attenuation twice when note-start modulation has
   already followed the frequency pair with the driver's volume tail. The AIZ1
-  driver oracle advances within service 1570 from event 43 to event 48; the
-  newly exposed PSG frequency-pair ownership mismatch and independent DAC
+  driver oracle first advanced within service 1570 from event 43 to event 48.
+  PSG frequency pairs are now admitted once as the source driver's transaction
+  while both bytes retain their physical chip meaning, advancing the oracle to
+  service 1588; the newly exposed FM write mismatch and independent DAC
   mismatch remain.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in

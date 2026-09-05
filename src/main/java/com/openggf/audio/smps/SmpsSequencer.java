@@ -864,8 +864,9 @@ public class SmpsSequencer implements CoordFlagContext {
 
                 int data = reg & 0xF;
                 int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, psgFrequencyHighByte(reg));
+                synth.writePsgFrequencyPair(this,
+                        0x80 | (ch << 5) | data,
+                        psgFrequencyHighByte(reg));
             }
 
             if (t.noiseMode) {
@@ -2914,8 +2915,9 @@ public class SmpsSequencer implements CoordFlagContext {
             if (writeToneFreq && !modulationSendsNoteFrequency) {
                 int data = reg & 0xF;
                 int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, psgFrequencyHighByte(reg));
+                synth.writePsgFrequencyPair(this,
+                        0x80 | (ch << 5) | data,
+                        psgFrequencyHighByte(reg));
                 // baseFnum stores detune-free period; modulation applies detune dynamically.
             }
 
@@ -3070,8 +3072,9 @@ public class SmpsSequencer implements CoordFlagContext {
             boolean writeToneFreq = t.channelId < 3 && (!t.noiseMode || noiseUsesTone2);
             if (writeToneFreq) {
                 int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | (reg & 0x0F));
-                synth.writePsg(this, psgFrequencyHighByte(reg));
+                synth.writePsgFrequencyPair(this,
+                        0x80 | (ch << 5) | (reg & 0x0F),
+                        psgFrequencyHighByte(reg));
             }
 
             if (t.customModEnabled && !preventAttack) {
@@ -3761,8 +3764,9 @@ public class SmpsSequencer implements CoordFlagContext {
 
                 int data = reg & 0xF;
                 int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | data);
-                synth.writePsg(this, psgFrequencyHighByte(reg));
+                synth.writePsgFrequencyPair(this,
+                        0x80 | (ch << 5) | data,
+                        psgFrequencyHighByte(reg));
             }
             if (config.getPsgVolumeTail()
                     == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS

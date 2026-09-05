@@ -3240,6 +3240,56 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         }
     }
 
+    @Override
+    public void writePsgFrequencyPair(
+            Object source, int latchByte, int followingByte) {
+        int first = latchByte & 0xFF;
+        int second = followingByte & 0xFF;
+        int hardwareChannel = (first >> 5) & 0x03;
+        if ((first & 0x90) != 0x80 || hardwareChannel >= 3) {
+            throw new IllegalArgumentException(
+                    "PSG frequency transaction must start with a tone latch");
+        }
+
+        int ownershipChannel = psgOwnershipChannel(hardwareChannel, source);
+        boolean admitted;
+        if (isSfx(source)) {
+            LockDecision decision = decideLock(SfxContentionObserver.Bus.PSG,
+                    ownershipChannel, psgLocks[ownershipChannel],
+                    (SmpsSequencer) source);
+            if (decision.acquired()) {
+                if (psgLocks[ownershipChannel] != source
+                        && !isSfx(psgLocks[ownershipChannel])
+                        && usesForcedPsgTakeover(source)) {
+                    silencePsgChannel(ownershipChannel);
+                }
+                psgLocks[ownershipChannel] = (SmpsSequencer) source;
+                updateOverrides(SmpsSequencer.TrackType.PSG,
+                        ownershipChannel, true);
+            }
+            reportLockDecision(decision);
+            admitted = psgLocks[ownershipChannel] == source;
+        } else {
+            admitted = psgLocks[ownershipChannel] == null;
+        }
+        if (!admitted) {
+            return;
+        }
+
+        // zUpdatePSGTrack gates the source track once, then writes both bytes
+        // without another ownership check (:4085-4095). Keep both physical
+        // bytes verbatim: S3K's unmasked second byte can itself be a latch.
+        synthesizer.writePsg(source, first);
+        synthesizer.writePsg(source, second);
+        int physicalLatchChannel = (second & 0x80) != 0
+                ? (second >> 5) & 0x03 : hardwareChannel;
+        if (source instanceof SmpsSequencer sequencer) {
+            sequencer.setPsgLatchChannel(physicalLatchChannel);
+        } else {
+            psgLatches.put(source, physicalLatchChannel);
+        }
+    }
+
     /** PSG3, the tone channel a noise track's own slot names. */
     private static final int PSG_TONE3_CHANNEL = 2;
 
