@@ -94,7 +94,7 @@ Native S1 capture A is now genuinely sealed, as recorded below, but remains
 diagnostic rather than authenticated. Neither a matching prefix nor the ordinary
 suite proves full-game driver parity.
 
-### Fifth Sol cycle (post-merge verified)
+### Fifth Sol cycle (delivered)
 
 Reviewed source `32a37dd62`, updated to develop `cc75320b0` as `97aee3f30`,
 keeps SFX admission in ROM header order while retaining fixed channel-slot
@@ -109,7 +109,8 @@ The matching intro prefix reaches service 2356; service 2357 now exposes
 entry-IX behavior and arbitrary non-retail initial header flags remain outside
 the bounded repair. The 92-test focused run and 16,666-test ordinary suite
 pass, with 43 skips. Merge `8a7dc5f15` passes the same ordinary suite and 609
-separate guards with exact candidate outcome equality. Delivery status is in the
+separate guards with exact candidate outcome equality. Develop was pushed through
+`9d153cf6a`; the completed worktree and local branch were removed. Evidence is in the
 [fifth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle5.md).
 
 ### Full S1 capture A (sealed diagnostic, unpublished)
