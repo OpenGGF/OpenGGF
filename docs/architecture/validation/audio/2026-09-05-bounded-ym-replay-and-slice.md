@@ -96,3 +96,22 @@ Java/C Nuked sample mismatches. Its endpoint is 19,176,120 internal clocks;
 One typed output-gate boundary is crossed without claiming presentation PCM.
 The initial artifact records `bbf28b7dc` plus a dirty working tree; final
 archive provenance must retain the exact capture rather than relabel it.
+
+### Reference producer follow-on
+
+Read-only inspection of TraceChaser `4fb6d0802` confirms the missing boundary:
+`GpgxHost.Advance()` disables sound, while `AdvanceDiagnosticAudio()` and
+`DrainDiagnosticAudio()` already provide sound-producing advance and stereo
+sample extraction. `S3kCompleteAudioCaptureRunner` calls the former and its
+supported CLI writes raw-event JSONL for the pinned Knuckles movie, not WAV.
+The Sonic/Tails request runner is bounded to 5,400 rows and has no CLI. Native
+PCM tests inject requests and therefore cannot establish authentic movie audio.
+
+The smallest follow-on is a diagnostic-only continuous Sonic/Tails BK2 WAV
+adapter with row/sample-offset provenance, verified sound-on/off state
+equivalence, exact packet concatenation, and no-replace publication. Faithful
+paired replay also needs actual external tempo-write observation and ordering
+at the stopped-Z80 `$1C08` boundary. The current approved observer exception
+is mailbox `$1C0A` only; extending it requires a scoped producer/input-contract
+review. Later comparison RAM must not be converted into invented commands.
+No TraceChaser code or canonical fixtures changed in this milestone.

@@ -321,12 +321,14 @@ class TestS3kOracleRequestSidecarWiring {
      * The DAC byte stream is compared over the whole window rather than per
      * service, because which window a byte lands in is Z80 service duration;
      * see docs/status/known-discrepancies.md, "S3K Music DAC Byte Stream
-     * Partition". Its content is compared in full, and it agrees for
-     * twenty-eight complete sample runs before following the partitioned
-     * stream's own divergence into a different sample.
+     * Partition". Run pairing deliberately remains strict, but ordinal pairing
+     * does not establish that both sides played the same note at the same time.
+     * The September 5 investigation identifies an unsupplied external speed-up
+     * control before the eventual byte mismatch; retain run-start service
+     * provenance rather than attributing the mismatch to sample decoding.
      */
     @Test
-    void theDacByteStreamAgreesUntilTheServiceStreamDiverges() {
+    void theDacByteMismatchRetainsItsDifferentRunStartServices() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
         List<S3kAudioTick> reference = read(committed());
@@ -342,6 +344,8 @@ class TestS3kOracleRequestSidecarWiring {
         // changes which samples the following services select.
         assertEquals(338, dac.run());
         assertEquals(0, dac.byteOffset());
+        assertEquals(3658, dac.referenceRunStartService());
+        assertEquals(3837, dac.openggfRunStartService());
     }
 
     /**

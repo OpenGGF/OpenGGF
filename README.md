@@ -246,6 +246,11 @@ traces.
   a pinned, ROM-free benchmark tool supports further backend evaluation.
   Java Nuked remains the production FM core; full parity and listening
   validation remain open. See the [audio handover](docs/architecture/plans/audio/2026-09-04-audio-parity-handover.md).
+  Follow-on work removes an extra S3K noise-command mute, exposes mismatched
+  DAC run timing instead of mislabelling it a decoder defect, and gives
+  internal-rate FM captures verified replay bounds. Repeated extra-life and
+  snapshot restoration checks cover both AIZ and HCZ acts; native and fast
+  cores remain experiments, not runtime options.
 
 - **Code and test maintenance:** removed unused helpers and duplicate test setup;
   rewind-boundary, snapshot-immutability, and mode-listener tests now check the
