@@ -50,7 +50,7 @@ On merged header-order baseline `8a7dc5f15`, the final candidate preserves the
 main baseline and adds eight ordinary tests:
 
 - focused coverage CLI/comparator controls: 9 passed;
-- ordinary suite with Java 21 and all three absolute ROM paths: 16,674 passed,
+- ordinary suite with Java 21 and all three absolute ROM paths: 16,674 tests,
   43 skipped, no failures or errors;
 - the first guard run correctly rejected the new reporter as an unclassified
   authenticated capture source: 609 run, 1 failure. The reporter is now the one
