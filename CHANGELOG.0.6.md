@@ -14,6 +14,17 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Release skip classification became an explicit, source-backed policy:**
+  `tools/testing/classify_surefire_skips.py` classifies every skipped surefire
+  identity against `tools/testing/release-skip-policy.json` (exact identities,
+  no wildcards). GL-context tests are required whenever the runner declares a
+  display; optional measurement inputs may be declared absent; unclassified or
+  required-but-skipped tests fail closed. The policy carries a category and
+  the assumption source line for all 46 identities seen in the September 5
+  ordinary evidence, flags one stale legacy allowlist entry and one gameplay
+  scenario assumption for review. Workflow and guard integration follow
+  separately (brainpipe P6).
+
 - **S3K audio oracle alternates raw ring requests at dispatch:** the diagnostic
   capture now applies the shipped driver's Sound34/Sound33 selection when raw
   request `33h` is consumed, advancing its first mismatch from service 2357 to
