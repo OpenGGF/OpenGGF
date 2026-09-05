@@ -372,7 +372,10 @@ This file contains the complete 0.6 development snapshot history carried forward
   exact logical audio snapshots at row boundaries, and tears down gameplay and
   audio ownership without creating a GLFW window or OpenAL device. The ordinary
   outer-frame audio presentation remains the sole cadence owner.
-
+- **Sonic 1 restore prerequisite diagnostics now preserve causal bounds:** the
+  non-publishing tool verifies exact native/ROM/movie identities, reuses the
+  established hidden GL lifetime for canonical title startup, and stops before
+  register comparison when request history first diverges.
 - **DAC samples no longer play ~9.5 semitones flat with interpolation on:**
   `audio.dacInterpolate` (previously the shipped default `true`) queued its
   synthetic DAC write in the slot that gates the real Z80 sample cadence, so
