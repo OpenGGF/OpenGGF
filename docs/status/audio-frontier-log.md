@@ -27,6 +27,21 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - Overridden PSG attack envelope: service 1592 to service 1594
+
+- **Before:** service 1592 music PSG3 `volEnv`, reference `0`, engine `1`.
+- **After:** `TRACK_STATE_MISMATCH` at service 1594, SFX PSG3 `volEnv`,
+  reference `FF`, engine `00`; the first 1,594 services match.
+- **ROM owner:** `zFinishTrackUpdate` resets `VolEnv` on an attacked note, but
+  `zUpdatePSGTrack` returns on the music track's override bit before calling
+  `zDoVolEnv` (`Sound/Z80 Sound Driver.asm:1055-1069, :4058-4115`). The first
+  envelope byte is consumed only on the first pass after release.
+- **Evidence:** a focused red test observed cursor `1` under override; it now
+  pins reset cursor `0`, no volume latch before release, and one first-step
+  volume latch after release. Tied notes still preserve then step their cursor,
+  attacked rests reset without stepping, and S1/S2 keep their existing eager
+  attacked-note step. The independent DAC frontier is unchanged.
+
 ## 2026-09-05 - FM3 release mode: service 1588 event 1 to service 1592 PSG3 state
 
 - **Before:** service 1588 event 1, reference YM2612 port 0 `27=0F`, engine

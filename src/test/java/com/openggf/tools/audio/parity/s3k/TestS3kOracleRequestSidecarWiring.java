@@ -264,14 +264,14 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
                 report.kind(), report::toString);
-        // Collapse's FM3 release now restores register 27 before the music
-        // voice. The next mismatch is separate PSG envelope state.
-        assertEquals(1592, report.tick());
-        assertEquals("MUS_PSG3", report.role());
+        // An overridden music PSG attack now leaves VolEnv at its reset value
+        // until release. The next mismatch is separate SFX PSG3 state.
+        assertEquals(1594, report.tick(), report::toString);
+        assertEquals("SFX_PSG3", report.role());
         assertEquals("volEnv", report.field());
-        assertEquals("0",
+        assertEquals("255",
                 report.reference());
-        assertEquals("1",
+        assertEquals("0",
                 report.openggf());
     }
 
@@ -279,14 +279,14 @@ class TestS3kOracleRequestSidecarWiring {
     void theServiceStreamMatchesThroughCollapseAdmission() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
-        List<S3kAudioTick> reference = read(committed()).subList(0, 1592);
+        List<S3kAudioTick> reference = read(committed()).subList(0, 1594);
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
         assertEquals(S3kAudioParityComparator.Report.Kind.MATCH, report.kind(), report::toString);
-        assertEquals(1592, report.ticksCompared());
+        assertEquals(1594, report.ticksCompared());
     }
 
     @Test

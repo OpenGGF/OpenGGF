@@ -2962,23 +2962,38 @@ public class SmpsSequencer implements CoordFlagContext {
         }
 
         if (!preventAttack) {
+            boolean deferPsgEnvelopeToOverrideGate =
+                    t.type == TrackType.PSG
+                    && t.overridden
+                    && config.getPsgNoteGoingOrder()
+                            == SmpsSequencerConfig.PsgNoteGoingOrder
+                                    .FREQUENCY_THEN_VOLUME;
             t.decayOffset = 0;
             t.decayTimer = 0;
             t.envPos = 0;
             t.envHold = false;
             t.envAtRest = false;
             if (t.envData != null && t.envData.length > 0) {
-                int val = t.envData[0] & 0xFF;
-                if (val < 0x80) {
-                    t.envValue = val;
-                    t.envPos = 1;
+                if (deferPsgEnvelopeToOverrideGate) {
+                    // zFinishTrackUpdate resets VolEnv, but the later S3K
+                    // override gate returns before zDoVolEnv can consume byte
+                    // zero (Sound/Z80 Sound Driver.asm:1055-1069, :4079-4106).
+                    t.envValue = 0;
+                } else {
+                    int val = t.envData[0] & 0xFF;
+                    if (val < 0x80) {
+                        t.envValue = val;
+                        t.envPos = 1;
+                    }
                 }
             } else {
                 t.envData = null;
                 t.envValue = 0;
             }
 
-            if (t.type == TrackType.PSG && !psgVolumeWrittenByFrequencyTail) {
+            if (t.type == TrackType.PSG
+                    && !deferPsgEnvelopeToOverrideGate
+                    && !psgVolumeWrittenByFrequencyTail) {
                 // S3K's modulation-driven frequency send already falls through
                 // zUpdatePSGTrack's one volume tail. Do not append a second
                 // attacked-note write when that tail had no envelope to step
