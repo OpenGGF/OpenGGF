@@ -1301,6 +1301,13 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         return --contSfxLoopCnt <= 0;
     }
 
+    /** Reads the current clock region without capturing sequencer or track state. */
+    public SmpsSequencer.Region getRegion() {
+        synchronized (sequencersLock) {
+            return region;
+        }
+    }
+
     public void setRegion(SmpsSequencer.Region region) {
         this.region = region;
         synchronized (sequencersLock) {

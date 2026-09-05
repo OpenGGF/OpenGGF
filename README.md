@@ -252,7 +252,9 @@ traces.
   also avoid redundant work. Art decoders now share ROM readers, CNZ palette
   patches and profiler counters allocate less, and screenshot PNG writes run
   on a bounded background worker. See the [initial measurements](docs/architecture/validation/2026-09-05-runtime-performance.md)
-  and [follow-up evidence](docs/architecture/validation/performance/2026-09-05-followup.md).
+  and [follow-up evidence](docs/architecture/validation/performance/2026-09-05-followup.md). Audio region queries also avoid full
+  sequencer snapshots, and audio architecture checks reuse their production-class
+  import; see the [department measurements](docs/architecture/validation/performance/2026-09-05-department-audio.md).
 
 - **Audio correctness and evidence:** S3K effect admission now sends the
   retail PSG noise-silence write in header order. Opt-in physical chip capture
