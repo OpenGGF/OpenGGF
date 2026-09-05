@@ -75,7 +75,9 @@ public final class S3kOpenGgfAudioCapture {
                     new SmpsPhysicalDevice.Settings(
                             SAMPLE_RATE, false),
                     Sonic3kSmpsPhysicalPolicy.INSTANCE,
-                    ChipWriteObserver.NONE)) {
+                    ChipWriteObserver.NONE,
+                    new com.openggf.audio.session.SmpsDriverSessionConfiguration(
+                            com.openggf.game.sonic3k.audio.Sonic3kStatefulCommandPolicy.INSTANCE))) {
             SmpsDriver driver = stream.logicalDriver();
             driver.setRegion(SmpsSequencer.Region.NTSC);
             List<AudioParityChipWrite> writes = new ArrayList<>();
@@ -271,26 +273,11 @@ public final class S3kOpenGgfAudioCapture {
         }
         if (id == S3kAudioParitySchema.CMD_FADE_OUT
                 || id == S3kAudioParitySchema.CMD_FADE_OUT2) {
-            // zFadeOutMusic arms the fade and falls through zHaltDACPSG,
-            // which halts FM6/DAC and the three PSG tracks and then jumps to
-            // zPSGSilenceAll (D:2307-2325). The counters are the ROM's own:
-            // zFadeOutTimeout 28h and zFadeDelay 6, which the S3K sequencer
-            // config already carries from the same routine. zDoMusicFadeOut
-            // then steps them once per zUpdateMusic (D:2331-2385), which the
-            // sequencer already drives.
-            // zFadeOutMusic writes zFadeDelayTimeout and zFadeDelay before it
-            // looks at anything else, and never asks whether a song is loaded
-            // (D:2306-2312), so the driver records the pair either way.
-            driver.armFadeOut(
+            // The production session owns zFadeOutMusic's counters, track
+            // halts and physical silence, including the no-music case.
+            stream.fadeOutMusic(
                     Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutSteps(),
                     Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutDelay());
-            SmpsSequencer music = driver.firstMusicSequencer();
-            if (music != null) {
-                music.triggerFadeOut(Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutSteps(),
-                        Sonic3kSmpsSequencerConfig.CONFIG.getFadeOutDelay());
-            }
-            applyProgram(driver,
-                    Sonic3kSmpsPhysicalPolicy.INSTANCE.silenceAllPsg());
             return;
         }
         if (id == S3kAudioParitySchema.CMD_SEGA) {

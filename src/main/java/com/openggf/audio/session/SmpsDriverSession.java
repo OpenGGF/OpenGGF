@@ -1027,13 +1027,8 @@ public final class SmpsDriverSession implements AutoCloseable {
             case SmpsSessionCommand.EndOverride end ->
                     endOverride(end.musicId());
             case SmpsSessionCommand.FadeMusic fade -> {
-                SmpsSequencer music = driver.firstMusicSequencer();
-                if (music != null) {
-                    withPort(driverIdentity, port -> {
-                        music.triggerFadeOut(fade.steps(), fade.delay());
-                        return null;
-                    });
-                }
+                prepareFadeOut();
+                armFadeOut(fade.steps(), fade.delay());
             }
             case SmpsSessionCommand.SetSpeedMultiplier speed -> {
                 speedMultiplier = speed.multiplier();
@@ -1733,6 +1728,36 @@ public final class SmpsDriverSession implements AutoCloseable {
             overrideStack[--overrideCount] = null;
             return;
         }
+    }
+
+    /** Pre-service effects for hosts whose SFX slots must stop before the music walk. */
+    public void prepareFadeOut() {
+        requireInstalled();
+        SmpsFadeOutEffects effects = configuration.statefulCommandPolicy().fadeOutEffects();
+        if (effects.stopSfx()) {
+            stopAllSfx();
+        }
+        if (effects.clearSpeedShoes()) {
+            speedShoesEnabled = false;
+            applyCurrentLogicalControls();
+        }
+    }
+
+    /** Arms the fade at the host's command-dispatch boundary. */
+    public void armFadeOut(int steps, int delay) {
+        requireInstalled();
+        SmpsFadeOutEffects effects = configuration.statefulCommandPolicy().fadeOutEffects();
+        if (effects.driverOwnedCounters()) {
+            driver.armFadeOut(steps, delay);
+        }
+        SmpsSequencer music = driver.firstMusicSequencer();
+        withPort(driverIdentity, port -> {
+            if (music != null) {
+                music.triggerFadeOut(steps, delay);
+            }
+            port.applyTransientPsgSilence(effects.psgSilence());
+            return null;
+        });
     }
 
     private void hardReset() {

@@ -20,6 +20,11 @@ public interface SmpsStatefulCommandPolicy {
 
     Identity identity();
 
+    /** State and physical writes owned by the host's music-fade command. */
+    default SmpsFadeOutEffects fadeOutEffects() {
+        return SmpsFadeOutEffects.NONE;
+    }
+
     /**
      * Hosts without a stateful operation retain their established behavior.
      */
