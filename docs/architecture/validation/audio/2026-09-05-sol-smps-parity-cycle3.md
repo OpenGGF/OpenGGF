@@ -90,13 +90,20 @@ mvn -Dmse=off "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" 
 | Initial candidate ordinary, production `09f8ae434` | 16,654 tests, 4 failures, 0 errors, 43 skips; not accepted |
 | Candidate guards, `091669935` | 609 tests, 0 failures/errors/skips; exact baseline outcome equality |
 | Corrected candidate focused, `8306b9a3a` | 75 tests, 0 failures/errors/skips |
-| Corrected candidate ordinary | Pending |
+| Corrected candidate ordinary, source/tests `8306b9a3a` | 16,654 tests, 0 failures/errors, 43 skips; every baseline outcome preserved, three passing additions |
+| Corrected candidate guards, `f241de4e0` | 609 tests, 0 failures/errors/skips; exact baseline outcome equality |
 | Post-merge ordinary and guards | Pending |
 
 Compare exact distinct test identities/statuses/messages as well as log totals.
 Preserve initial failed executions and explicitly review any test rename or
 coverage supplement. Fetch and reconcile intervening develop changes before
 integration; do not overwrite the other delivery's reports or user changes.
+
+The corrected ordinary comparison preserves all 15,702 distinct baseline
+identity/status/message outcomes and adds three passing tests: physical driver
+silence, tone/noise F2 stop writes, and the service-1652 fixed slot-order case.
+No identity normalization or removed-test allowance was needed. The four
+corrected existing assertions still run under their original identities.
 
 Native tempo-read work and full-movie S1 diagnostic captures remain separate,
 unpublished work. Their capture progress is not a sealed reference, production
