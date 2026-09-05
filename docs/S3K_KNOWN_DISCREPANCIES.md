@@ -1539,6 +1539,14 @@ single volume tail reached by the ROM's `zUpdatePSGTrack` fall-through
 epilogue sent the same `F0` again. The engine now suppresses that epilogue only
 when the configured S3K frequency tail already performed the write. The new
 frontier is reference PSG `FF` against an exhausted engine service stream.
+That `FF` is the second byte of the ordered `AF FF` tone-frequency pair, not a
+noise-channel silence. The sequencer submits both bytes, but
+`SmpsDriver.writePsg` interprets the high-bit frequency byte as a new PSG3
+latch and rejects it because Collapse owns the noise channel. The ROM checks
+track override once before writing the pair and performs no ownership decision
+between its bytes. The remaining repair therefore belongs at the driver's PSG
+transaction/ownership boundary; changing the sequencer's ROM-derived byte
+stream would conceal the defect.
 `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
 matching 1570-service prefix through ordinal 1569 plus all 48 ordered service
 writes before event 48. No full-service progress is claimed. The DAC stream

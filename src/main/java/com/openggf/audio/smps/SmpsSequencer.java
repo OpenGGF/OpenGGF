@@ -2929,11 +2929,18 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.forceModulationWrite = config.getNoteGoingFreqSend()
                         == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS;
                 applyModulation(t);
+                // Claim the shared ROM tail only when this pass necessarily
+                // emitted it: S3K forces every-pass sends, and only a live,
+                // unowned tone channel reaches writeTrackFrequency's PSG pair.
                 psgVolumeWrittenByFrequencyTail =
-                        config.getPsgVolumeTail()
+                        config.getNoteGoingFreqSend()
+                                == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS
+                        && config.getPsgVolumeTail()
                                 == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS
                         && t.instrumentId == 0
                         && (t.modStepInEffect || t.modEnvStepInEffect)
+                        && t.channelId >= 0
+                        && t.channelId < 3
                         && !t.resting
                         && !t.overridden;
             }
