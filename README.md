@@ -276,6 +276,9 @@ traces.
   write, preserves ROM-gated PSG frequency pairs, restores FM3 mode before its
   music voice, and makes blocked ring requests visible to admission diagnostics.
   Driver fade counters are now directly compared as well.
+  S3K PSG envelopes now wait for channel ownership to return before consuming
+  an attacked note's envelope, and S2 DAC playback uses the retail driver's
+  295-cycle compressed-byte budget.
   Mutation-tested production observers complement the driver oracles; neither
   the current movie windows nor a green ordinary suite establishes complete
   per-game driver parity. See the [parity roadmap](docs/architecture/plans/audio/2026-09-05-audio-trace-coverage-roadmap.md).
