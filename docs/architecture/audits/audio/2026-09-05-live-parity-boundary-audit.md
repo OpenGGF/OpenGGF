@@ -38,6 +38,21 @@ silence is reproduced and source-backed, but that alone does not establish
 the exact audible channel in the user's recording. Listening remains a
 separate check.
 
+Review also found a missing terminal boundary: reaching zero stopped only
+local music tracks, or merely decremented the songless counter, instead of
+calling `zStopAllSound`. The shared terminal operation now runs before the
+terminal TL loop, clears SFX/save state/tempo and returns the existing stop
+outcome so presentation metadata is cleared too. Source-configured cadence
+does not imply host support: the new capability gate preserves existing
+S3K-donor/S1-host local key-offs. Service-queued requests remain after the
+stop and are processed in their original later phase.
+
+Open follow-ups are recorded in
+[known discrepancies](../../../status/known-discrepancies.md#audio-harness-startup-and-compatibility-fade-boundaries):
+S1 production startup, mixed donor/host PSG fade semantics, and songless
+legacy direct-read cadence. Native forward presentation and service-based
+captures do not share that last limitation.
+
 ## Tempo ownership and `next`
 
 The relevant historical `next` change (`09d7900a9`) also entered develop,
@@ -60,13 +75,25 @@ state machine.
 
 ## Harness coverage inventory
 
+The blue-sphere audit found no separate unmerged fix in `next` at the pinned
+tips. Historical admission/register-takeover work already exists on develop;
+the old dedicated blue-sphere tests and instruction-timing experiment are not
+present on either tip. Their historical verification is not current coverage.
+Two newly reproduced defects are corrected: `loc_97AA` must reach the sound
+request at `loc_97BE` even when the animation queue is full
+(`sonic3k.asm`, lines 12131–12142), and retail `cfStopTrack` must preserve
+music rest bit 4 while clearing override bit 2 and restoring its voice
+(Z80 driver, lines 3443–3518). A semantic FM release policy preserves the
+different S1/S2 behavior. These defects do not by themselves establish the
+cause of every audible orb complaint.
+
 | Boundary | Finding and implication |
 | --- | --- |
 | S3K fade command | Harness-owned counters/silence masked missing production effects; replaced by shared session operation. |
 | S1 fade command | Harness-owned SFX stops/speed clear masked missing production effects; shared preparation/arming preserves service ordering. |
 | Legacy backend fade | Direct sequencer call bypassed host effects; routed through its owned stream. |
 | S1 song startup | Harness still supplies initialization writes. Ownership-sensitive retail initialization is not established for production by these captures. Reports must state this limitation explicitly. |
-| S2 song startup | Existing production compatibility policy already owns initialization. Harness duplication is a coverage/maintenance risk, not evidence of a confirmed live startup defect. |
+| S2 song startup | Existing production compatibility policy already owns initialization. Harness now emits those same programs; literal partial/full track-header write contracts and unchanged oracle windows cover the consolidation. This is not evidence of a confirmed live startup defect. |
 | S3K ordinary music admission | Capture stops the stream and constructs a fresh sequencer, then uses the production physical activation program. This does not test retained session tempo across a music replacement; the new live regression must cover that boundary. |
 | External S3K tempo writes | Mailbox-only capture cannot reproduce direct game writes to tempo RAM. The existing DAC provenance investigation identifies this missing stimulus; do not hydrate candidate state from comparison RAM. |
 

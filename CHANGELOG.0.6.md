@@ -17,9 +17,20 @@ This file contains the complete 0.6 development snapshot history carried forward
 - **Live audio commands share their oracle-tested effects:** S3K fade entry
   now silences halted PSG channels, and S1 fade entry stops SFX and clears
   speed-up state. Capture adapters and the legacy backend use the same host
-  commands. Live-path regressions cover the missing boundary; S1 oracle
+  commands. S3K terminal fades also perform the global stop and clear saved
+  music/tempo state, including songless service-driven fades. Live-path
+  regressions cover these boundaries; S1 oracle
   reports explicitly exclude production song-start initialization from their
   coverage.
+- **S3K music changes clear old tempo controls:** entering a special stage
+  no longer inherits speed-shoes acceleration. The ordinary music-load
+  boundary owns the reset, including deferred loads and restored snapshots;
+  later special-stage acceleration still works. S2 oracle initialization
+  now reuses the production register programs.
+- **S3K blue-sphere sound and FM handoff:** a full special-stage animation
+  queue no longer suppresses the collection sound request. Ending an S3K FM
+  effect preserves the covered music track's rest state, instead of applying
+  Sonic 1's different release behavior.
 
 - **Small Java FM rendering improvement:** Nuked's phase calculation reuses
   exact signed-detune values and avoids mathematically zero pitch-modulation

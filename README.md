@@ -541,6 +541,10 @@ traces.
   channels; S1 fades stop SFX and clear speed-up state. Capture adapters share
   these production effects, with explicit limits on what their startup
   comparisons validate.
+- **S3K special-stage music tempo:** ordinary song changes clear retained
+  speed-shoes acceleration, without disabling the stage's own later speed-up.
+  Blue-sphere contacts request sound even with a full animation queue, and
+  S3K FM effects preserve the covered music track's rest state on release.
 - **AIZ presentation continuity:** the Angel Island fire curtain now remains
   continuous across exact art-loading seams and completes its ROM-shaped
   release tail in normal play and trace renders, while level music restoration

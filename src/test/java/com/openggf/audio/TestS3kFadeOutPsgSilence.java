@@ -25,6 +25,41 @@ class TestS3kFadeOutPsgSilence {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
+    void completedFadeClearsPresentationStateAndCannotRestoreAnAbandonedSong(boolean override) {
+        AudioManager audio = install();
+        audio.playMusic(Sonic3kMusic.KNUCKLES.id);
+        for (int i = 0; i < 60; i++) audio.presentFrame(PresentationMode.FORWARD);
+        if (override) {
+            audio.playMusic(Sonic3kMusic.EXTRA_LIFE.id);
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertFalse(audio.captureLogicalSnapshot().presentation().overrideStack().isEmpty());
+        }
+        audio.setSpeedMultiplier(8);
+        audio.presentFrame(PresentationMode.FORWARD);
+        // Short command parameters isolate terminal stop from the jingle's
+        // later coordination-flag restore request.
+        audio.fadeOutMusic(3, 1);
+        for (int i = 0; i < 8; i++) audio.presentFrame(PresentationMode.FORWARD);
+
+        var stopped = audio.captureLogicalSnapshot();
+        // zDoMusicFadeOut jumps to zStopAllSound at zero, clearing its backup
+        // area and tempo controls as well as the active tracks.
+        assertNull(stopped.presentation().activeMusic());
+        assertTrue(stopped.presentation().overrideStack().isEmpty());
+        assertEquals(1, stopped.presentation().speedMultiplier());
+        assertFalse(stopped.presentation().speedShoesEnabled());
+        assertTrue(audio.shadowSmpsDriverSnapshotForTesting().sequencers().isEmpty());
+
+        audio.playMusic(Sonic3kMusic.AIZ1.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+        audio.restoreLogicalSnapshot(stopped);
+        for (int i = 0; i < 4; i++) audio.presentFrame(PresentationMode.FORWARD);
+        assertNull(audio.captureLogicalSnapshot().presentation().activeMusic());
+        assertTrue(audio.shadowSmpsDriverSnapshotForTesting().sequencers().isEmpty());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
     void legacyHeadlessBackendUsesTheSameHostFadeEffects(boolean withSfx) {
         install();
         var profile = new Sonic3kAudioProfile();
