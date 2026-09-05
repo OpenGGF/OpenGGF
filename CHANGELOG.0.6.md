@@ -24,6 +24,8 @@ This file contains the complete 0.6 development snapshot history carried forward
 - **S3K 1-up SFX suppression:** jump, ring, and other new SMPS effects are
   discarded during the extra-life jingle. Suppressed rings do not advance
   stereo alternation; effects resume when level-music restoration starts.
+  Production diagnostics report both registry-owned and pre-selection ring
+  discards as explicit blocked admission decisions.
   Regression coverage includes rewind, ordinary song replacement, a jingle
   without saved music, and global fade-stop cleanup.
 
@@ -79,6 +81,17 @@ This file contains the complete 0.6 development snapshot history carried forward
   ROM-backed checks; the AIZ1 oracle advances from event 39 to event 43 within
   service 1570, where a separate duplicate volume write remains. The independent
   DAC mismatch and stale-IX admission limitation remain open.
+
+- **S3K modulated PSG notes emit one volume tail:** a fresh envelope-less PSG
+  note no longer writes its attenuation twice when note-start modulation has
+  already followed the frequency pair with the driver's volume tail. The AIZ1
+  driver oracle first advanced within service 1570 from event 43 to event 48.
+  PSG frequency pairs are now admitted once as the source driver's transaction
+  while both bytes retain their physical chip meaning, advancing the oracle to
+  service 1588. FM3 SFX release now restores the covered music track's normal
+  or special register-27 mode before its voice, advancing the oracle to service
+  1592; the newly exposed PSG-envelope state mismatch and independent DAC
+  mismatch remain.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data
@@ -362,6 +375,10 @@ This file contains the complete 0.6 development snapshot history carried forward
   are excluded from driver comparison. This removes the false tick-3
   `PSGInitValues` frontier and exposes the first real Z80 boundary at tick 13,
   where the source driver begins its boot-time `zStopAllSound` service.
+- **The S3K sound-driver oracle now compares both fade step counters:**
+  `zFadeOutTimeout` and `zFadeInTimeout` are projected directly from the
+  driver snapshot and checked at each completed service, including services
+  where no music sequencer is active.
 - **Sonic 2 EHZ music-driver parity now reaches the first SFX override:** the
   oracle now samples completed `zUpdateMusic` services rather than a
   begin-frame image that could catch the Z80 halfway through its track walk,

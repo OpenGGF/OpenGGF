@@ -27,6 +27,71 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - FM3 release mode: service 1588 event 1 to service 1592 PSG3 state
+
+- **Before:** service 1588 event 1, reference YM2612 port 0 `27=0F`, engine
+  port 0 `B6=C0`.
+- **After:** `TRACK_STATE_MISMATCH` at service 1592, music PSG3 `volEnv`,
+  reference `0`, engine `1`; the first 1,592 services match.
+- **ROM owner:** shipped `fix_sndbugs=0` `cfStopTrack` clears the music override
+  and writes FM3 mode `0F` or `4F` before uploading the restored music voice
+  (`Sound/Z80 Sound Driver.asm:3443-3518`). The shipped branch also stores the
+  setting in driver RAM; the fixed branch omits that store, but both write
+  register `27` physically.
+- **Evidence:** focused normal/special-mode tests failed red with `B6` as the
+  first restore write and now pin `27` before `B6`; non-FM3 and S1/S2 release
+  modes remain excluded. The ROM-backed oracle pins the new PSG-envelope
+  frontier. The independent DAC frontier is unchanged.
+
+## 2026-09-05 - PSG frequency transaction: service 1570 event 48 to service 1588 event 1
+
+- **Before:** `EVENT_MISSING` at service 1570 event 48, reference PSG `FF`.
+- **After:** `EVENT_VALUE_DIFFERENT` at service 1588 event 1, reference YM2612
+  port 0 `27=0F`, engine port 0 `B6=C0`; the first 1,588 services match.
+- **ROM and hardware owner:** `zUpdatePSGTrack` gates the source track before
+  writing both frequency bytes (`Sound/Z80 Sound Driver.asm:4085-4095`). The
+  second byte remains physically literal: `FF` is decoded by the SN76489 as a
+  PSG3-volume latch and silences noise. Only the driver's second ownership
+  decision was extraneous.
+- **Evidence:** the driver-level transaction tests pin exact `AF FF` observer
+  order, final physical latch 7/noise attenuation 15, atomic rejection when
+  the source tone channel is owned, and continued rejection of an unrelated
+  single `FF` latch. Contention diagnostics now report one decision per ROM
+  frequency transaction instead of one per physical byte; source-byte and
+  physical-write observers still receive both bytes in order. The ROM-backed
+  oracle pins the new frontier and preserves the full prior prefix. The
+  independent DAC frontier remains unchanged.
+
+## 2026-09-05 - S3K first-note volume tail: service 1570 event 43 to event 48
+
+- **Context:** `bugfix/ai-sol-s3k-psg-parity`,
+  `.worktrees/sol-s3k-psg-parity`, base `develop` `be5a9e596`; JDK 21.0.11,
+  isolated build output and the absolute verified locked-on ROM path.
+- **Fixture:** `s3k/s3k-aiz1-intro-reference-v2.jsonl.gz` with
+  `s3k-aiz1-intro-requests-v1.json`.
+- **Before:** service 1570 event 43, reference YM2612 port 0 `A4=22`, engine
+  PSG `F0`.
+- **After:** `EVENT_MISSING` at service 1570 event 48, reference PSG `FF`,
+  engine stream exhausted. The first 1,570 services and first 48 ordered writes
+  of service 1570 match. The independent DAC frontier is unchanged at run 338,
+  byte 0, reference `88` versus engine `7F`.
+- **ROM owner:** `zUpdatePSGTrack` has one shared volume tail after the new-note
+  and continuing-note frequency paths (`Sound/Z80 Sound Driver.asm:4059-4135`).
+  Collapse's note-start modulation already reached that tail; the engine then
+  added a second generic attacked-note volume write.
+- **Evidence:** `collapseFirstNoteWritesItsNoiseVolumeOnce` failed red with two
+  writes in the first sounding service and passes with one after the fix. The
+  exact comparison command remains the `S3kAudioParityTool compare` command in
+  the preceding entry, run from this worktree with the same fixture, request
+  sidecar and absolute ROM path.
+- **Event-48 diagnosis:** reference `AF FF` is one PSG tone-frequency pair, not
+  a final noise silence. The sequencer submits both bytes; `SmpsDriver.writePsg`
+  reclassifies the high-bit `FF` as a PSG3 latch and drops it because Collapse
+  owns noise. The ROM performs its override check before the pair and has no
+  per-byte ownership arbitration, so the next repair belongs at the driver PSG
+  transaction boundary rather than in `SmpsSequencer`. This diagnosis does not
+  advance the pinned frontier.
+
 ## 2026-09-05 - PSG command takeover: service 1570 event 39 to event 43
 
 - **Context:** `bugfix/ai-audio-next-psg`, `.worktrees/audio-next-psg`,

@@ -272,6 +272,13 @@ traces.
   advancing ring stereo alternation, and resume at music restoration.
   See the [1-up investigation](docs/architecture/audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
   for the existing-movie reproduction and the limits of current oracle coverage.
+  The follow-on SMPS parity campaign removes a duplicate S3K PSG note-volume
+  write, preserves ROM-gated PSG frequency pairs, restores FM3 mode before its
+  music voice, and makes blocked ring requests visible to admission diagnostics.
+  Driver fade counters are now directly compared as well.
+  Mutation-tested production observers complement the driver oracles; neither
+  the current movie windows nor a green ordinary suite establishes complete
+  per-game driver parity. See the [parity roadmap](docs/architecture/plans/audio/2026-09-05-audio-trace-coverage-roadmap.md).
 
 - **Contributor guidance:** streamlined agent instructions and all 23 task
   skills, retaining ROM accuracy contracts and searchable technical evidence.

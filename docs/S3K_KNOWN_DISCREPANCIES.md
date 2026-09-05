@@ -1501,7 +1501,7 @@ Full context:
 
 ---
 
-## PSG admission stale-IX silence and first-note volume remain incomplete
+## PSG admission stale-IX silence remains incomplete
 
 **What the ROM does.** The S3K sound driver is built with `fix_sndbugs = 0`
 (`Sound/Z80 Sound Driver.asm:16`), so `cfSetPSGNoise` takes the `else` branch at
@@ -1531,14 +1531,28 @@ none, so this comparison does not establish general stale-IX parity.
 The synthetic zero-operand test also checks adjacent `DF FF` without a duplicate.
 Observation starts after admission
 so a setup silence cannot be mistaken for the track's first pass.
-The independent committed AIZ1 intro oracle advances within service **1570**
-from event **39** to **43**: reference YM2612 port 0 `A4=22`, engine PSG `F0`.
-Collapse's first pass sends its noise volume twice; the shared frequency tail
-and fresh-note volume send are the next source-inspection candidates, not fixed
-here. `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately
-asserts a matching 1570-service prefix through ordinal 1569 plus all 43 ordered
-service writes before event 43. A 1571-service `MATCH` assertion was tried and
-failed at this new frontier; no full-service progress is claimed. The DAC stream
+The independent committed AIZ1 intro oracle now advances within service
+**1570** from event **43** to **48**. The event-43 duplicate was an engine
+sequencer defect: note-start modulation sent Collapse's frequency pair and the
+single volume tail reached by the ROM's `zUpdatePSGTrack` fall-through
+(`Sound/Z80 Sound Driver.asm:4059-4135`), then the generic attacked-note
+epilogue sent the same `F0` again. The engine now suppresses that epilogue only
+when the configured S3K frequency tail already performed the write. The new
+frontier is reference PSG `FF` against an exhausted engine service stream.
+That `FF` is the second byte of the ordered `AF FF` source-driver frequency
+transaction and, because bit 7 is set, is also physically decoded as a PSG3
+volume latch. The engine formerly made a new ownership decision for that
+second bus byte and rejected it. The ROM checks track override once before
+writing the pair and performs no ownership decision between its bytes. The
+driver now admits the source transaction once and forwards both bytes verbatim,
+preserving the chip's final latch and noise attenuation. The next FM3 release
+gap is also resolved: the covered music track's retained normal/special mode
+is written to register `27` before its voice, matching `cfStopTrack`
+(:3443-3518). The oracle advances to service **1592**, where music PSG3
+`volEnv` is reference `0` versus engine `1`, a separate envelope-state gap.
+`TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
+matching 1592-service prefix through ordinal 1591. Service 1592 and the full
+window are not claimed to match. The DAC stream
 remains independently red at run 338, byte 0 (`88` versus `7F`). See the
 [2026-09-05 validation report](architecture/validation/audio/2026-09-05-s3k-psg-takeover.md)
 for commands and red-first evidence; this is not full-window audio parity.

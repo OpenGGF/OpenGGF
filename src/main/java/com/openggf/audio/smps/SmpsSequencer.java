@@ -795,6 +795,18 @@ public class SmpsSequencer implements CoordFlagContext {
                                 == SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE) {
                             t.resting = true;
                         }
+                        if (t.channelId == 2
+                                && config.getFmSfxReleaseMode()
+                                == SmpsSequencerConfig.FmSfxReleaseMode
+                                        .ROM_VOICE_RESTORE_PRESERVE_REST) {
+                            // S3K cfStopTrack restores FM3 settings before the
+                            // covered music voice (:3472-3499). Shipped
+                            // fix_sndbugs=0 also saves this byte in
+                            // zFM3Settings; the fixed branch omits that RAM
+                            // store, but both branches write 27h physically.
+                            synth.writeFm(this, 0, 0x27,
+                                    t.fm3SpecialMode ? 0x4F : 0x0F);
+                        }
                         refreshInstrument(t);
                         continue;
                     }
@@ -864,8 +876,9 @@ public class SmpsSequencer implements CoordFlagContext {
 
                 int data = reg & 0xF;
                 int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, psgFrequencyHighByte(reg));
+                synth.writePsgFrequencyPair(this,
+                        0x80 | (ch << 5) | data,
+                        psgFrequencyHighByte(reg));
             }
 
             if (t.noiseMode) {
@@ -2764,6 +2777,7 @@ public class SmpsSequencer implements CoordFlagContext {
 
         int baseNoteOffset = (t.type == TrackType.PSG) ? smpsData.getPsgBaseNoteOffset() : smpsData.getBaseNoteOffset();
         int n = t.note - 0x81 + t.keyOffset + baseNoteOffset;
+        boolean psgVolumeWrittenByFrequencyTail = false;
 
         if (t.type == TrackType.FM) {
             // Match SMPSPlay/GetNote FM note indexing behavior.
@@ -2913,8 +2927,9 @@ public class SmpsSequencer implements CoordFlagContext {
             if (writeToneFreq && !modulationSendsNoteFrequency) {
                 int data = reg & 0xF;
                 int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | (0) | data);
-                synth.writePsg(this, psgFrequencyHighByte(reg));
+                synth.writePsgFrequencyPair(this,
+                        0x80 | (ch << 5) | data,
+                        psgFrequencyHighByte(reg));
                 // baseFnum stores detune-free period; modulation applies detune dynamically.
             }
 
@@ -2928,6 +2943,20 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.forceModulationWrite = config.getNoteGoingFreqSend()
                         == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS;
                 applyModulation(t);
+                // Claim the shared ROM tail only when this pass necessarily
+                // emitted it: S3K forces every-pass sends, and only a live,
+                // unowned tone channel reaches writeTrackFrequency's PSG pair.
+                psgVolumeWrittenByFrequencyTail =
+                        config.getNoteGoingFreqSend()
+                                == SmpsSequencerConfig.NoteGoingFreqSend.EVERY_PASS
+                        && config.getPsgVolumeTail()
+                                == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS
+                        && t.instrumentId == 0
+                        && (t.modStepInEffect || t.modEnvStepInEffect)
+                        && t.channelId >= 0
+                        && t.channelId < 3
+                        && !t.resting
+                        && !t.overridden;
             }
 
         }
@@ -2949,7 +2978,11 @@ public class SmpsSequencer implements CoordFlagContext {
                 t.envValue = 0;
             }
 
-            if (t.type == TrackType.PSG) {
+            if (t.type == TrackType.PSG && !psgVolumeWrittenByFrequencyTail) {
+                // S3K's modulation-driven frequency send already falls through
+                // zUpdatePSGTrack's one volume tail. Do not append a second
+                // attacked-note write when that tail had no envelope to step
+                // (Sound/Z80 Sound Driver.asm:4059-4135).
                 refreshVolume(t); // Apply the first envelope step immediately on note start
             }
             if (t.type == TrackType.FM && t.fmVolEnvData != null) {
@@ -3051,8 +3084,9 @@ public class SmpsSequencer implements CoordFlagContext {
             boolean writeToneFreq = t.channelId < 3 && (!t.noiseMode || noiseUsesTone2);
             if (writeToneFreq) {
                 int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | (reg & 0x0F));
-                synth.writePsg(this, psgFrequencyHighByte(reg));
+                synth.writePsgFrequencyPair(this,
+                        0x80 | (ch << 5) | (reg & 0x0F),
+                        psgFrequencyHighByte(reg));
             }
 
             if (t.customModEnabled && !preventAttack) {
@@ -3742,8 +3776,9 @@ public class SmpsSequencer implements CoordFlagContext {
 
                 int data = reg & 0xF;
                 int ch = t.channelId;
-                synth.writePsg(this, 0x80 | (ch << 5) | data);
-                synth.writePsg(this, psgFrequencyHighByte(reg));
+                synth.writePsgFrequencyPair(this,
+                        0x80 | (ch << 5) | data,
+                        psgFrequencyHighByte(reg));
             }
             if (config.getPsgVolumeTail()
                     == SmpsSequencerConfig.PsgVolumeTail.EVERY_NOTE_GOING_PASS

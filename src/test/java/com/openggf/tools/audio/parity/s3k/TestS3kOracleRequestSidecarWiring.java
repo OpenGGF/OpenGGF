@@ -262,15 +262,16 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
-                report.kind());
-        // Collapse's noise pair now matches. The next unresolved write is
-        // a second noise-volume F0 where the reference has resumed music FM.
-        assertEquals(1570, report.tick());
-        assertEquals(43, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=164, value=34]",
+        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
+                report.kind(), report::toString);
+        // Collapse's FM3 release now restores register 27 before the music
+        // voice. The next mismatch is separate PSG envelope state.
+        assertEquals(1592, report.tick());
+        assertEquals("MUS_PSG3", report.role());
+        assertEquals("volEnv", report.field());
+        assertEquals("0",
                 report.reference());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=240]",
+        assertEquals("1",
                 report.openggf());
     }
 
@@ -278,32 +279,32 @@ class TestS3kOracleRequestSidecarWiring {
     void theServiceStreamMatchesThroughCollapseAdmission() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
-        List<S3kAudioTick> reference = read(committed()).subList(0, 1570);
+        List<S3kAudioTick> reference = read(committed()).subList(0, 1592);
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
         assertEquals(S3kAudioParityComparator.Report.Kind.MATCH, report.kind(), report::toString);
-        assertEquals(1570, report.ticksCompared());
+        assertEquals(1592, report.ticksCompared());
     }
 
     @Test
-    void collapseFirstWalkMatchesItsFirst43OrderedServiceWrites() {
+    void collapseFirstWalkMatchesItsFirst48OrderedServiceWrites() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
         List<S3kAudioTick> reference = read(committed()).subList(0, 1571);
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
 
-        List<AudioParityChipWrite> expected = first43ServiceWrites(reference.get(1570));
-        List<AudioParityChipWrite> actual = first43ServiceWrites(engine.ticks().get(1570));
-        assertEquals(43, expected.size());
+        List<AudioParityChipWrite> expected = first48ServiceWrites(reference.get(1570));
+        List<AudioParityChipWrite> actual = first48ServiceWrites(engine.ticks().get(1570));
+        assertEquals(48, expected.size());
         assertEquals(expected, actual,
                 "the admitted SFX's noise pair and first volume must preserve bus order");
     }
 
-    private static List<AudioParityChipWrite> first43ServiceWrites(S3kAudioTick tick) {
+    private static List<AudioParityChipWrite> first48ServiceWrites(S3kAudioTick tick) {
         // The existing service axis excludes DAC bytes (2A) and sample-end
         // disables (2B=0); their independent full-window DAC gate stays separate.
         // Keep every other bus write in its original order, including 2B=80.
@@ -313,7 +314,7 @@ class TestS3kOracleRequestSidecarWiring {
                         && (Integer.valueOf(0x2A).equals(write.register())
                             || (Integer.valueOf(0x2B).equals(write.register())
                                 && write.value() == 0))))
-                .limit(43)
+                .limit(48)
                 .toList();
     }
 

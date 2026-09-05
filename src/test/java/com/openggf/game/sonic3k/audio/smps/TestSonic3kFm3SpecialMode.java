@@ -2,7 +2,10 @@ package com.openggf.game.sonic3k.audio.smps;
 
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsSequencer;
+import com.openggf.audio.smps.SmpsSequencerConfig;
 import com.openggf.audio.synth.VirtualSynthesizer;
+import com.openggf.game.sonic1.audio.Sonic1SmpsSequencerConfig;
+import com.openggf.game.sonic2.audio.Sonic2SmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import org.junit.jupiter.api.Test;
 
@@ -11,12 +14,65 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** FixBugs=0 semantic state tests for S3K's shared PlaybackControl bit zero. */
 class TestSonic3kFm3SpecialMode {
     private static final DacData EMPTY_DAC = new DacData(
             new HashMap<>(), new HashMap<>(), 297);
+
+    @Test
+    void fm3ReleaseRestoresNormalModeBeforeTheMusicVoice() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = fmSequencerWithVoice(2,
+                new byte[] {(byte) 0xF2}, synth);
+
+        sequencer.setChannelOverridden(SmpsSequencer.TrackType.FM, 2, true);
+        synth.fmWrites.clear();
+        synth.fmSources.clear();
+        sequencer.setChannelOverridden(SmpsSequencer.TrackType.FM, 2, false);
+
+        assertEquals(List.of("27:0F", "B6:C0"),
+                synth.fmWrites.subList(0, 2),
+                "cfStopTrack restores FM3 settings before its music voice");
+        assertEquals(sequencer, synth.fmSources.getFirst(),
+                "the restored music sequencer owns the global mode write source");
+    }
+
+    @Test
+    void fm3ReleaseRetainsSpecialModeBeforeTheMusicVoice() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = fmSequencerWithVoice(2,
+                new byte[] {(byte) 0xF2}, synth);
+        onlyTrack(sequencer).fm3SpecialMode = true;
+
+        sequencer.setChannelOverridden(SmpsSequencer.TrackType.FM, 2, true);
+        synth.fmWrites.clear();
+        sequencer.setChannelOverridden(SmpsSequencer.TrackType.FM, 2, false);
+
+        assertEquals(List.of("27:4F", "B6:C0"),
+                synth.fmWrites.subList(0, 2));
+    }
+
+    @Test
+    void nonFm3AndEarlierDriversDoNotUseTheS3kModeRestorePrelude() {
+        CaptureSynth synth = new CaptureSynth();
+        SmpsSequencer sequencer = fmSequencerWithVoice(1,
+                new byte[] {(byte) 0xF2}, synth);
+
+        sequencer.setChannelOverridden(SmpsSequencer.TrackType.FM, 1, true);
+        synth.fmWrites.clear();
+        sequencer.setChannelOverridden(SmpsSequencer.TrackType.FM, 1, false);
+
+        assertFalse(synth.fmWrites.stream().anyMatch(write -> write.startsWith("27:")));
+        assertNotEquals(SmpsSequencerConfig.FmSfxReleaseMode
+                        .ROM_VOICE_RESTORE_PRESERVE_REST,
+                Sonic1SmpsSequencerConfig.CONFIG.getFmSfxReleaseMode());
+        assertNotEquals(SmpsSequencerConfig.FmSfxReleaseMode
+                        .ROM_VOICE_RESTORE_PRESERVE_REST,
+                Sonic2SmpsSequencerConfig.CONFIG.getFmSfxReleaseMode());
+    }
 
     @Test
     void fm3F3SetsSpecialModeWithoutPsgWritesAndLeavesRawFrequencyIndependent() {
@@ -325,6 +381,8 @@ class TestSonic3kFm3SpecialMode {
         private int fm3ModeWrites;
         private int ssgEgWrites;
         private final java.util.ArrayList<Integer> psgWriteValues = new java.util.ArrayList<>();
+        private final java.util.ArrayList<String> fmWrites = new java.util.ArrayList<>();
+        private final java.util.ArrayList<Object> fmSources = new java.util.ArrayList<>();
 
         @Override
         public void writePsg(Object source, int value) {
@@ -335,6 +393,8 @@ class TestSonic3kFm3SpecialMode {
 
         @Override
         public void writeFm(Object source, int port, int register, int value) {
+            fmWrites.add("%02X:%02X".formatted(register & 0xFF, value & 0xFF));
+            fmSources.add(source);
             if ((register & 0xFF) == 0x27) {
                 fm3ModeWrites++;
             }
