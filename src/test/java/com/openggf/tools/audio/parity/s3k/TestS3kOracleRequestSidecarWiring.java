@@ -267,8 +267,8 @@ class TestS3kOracleRequestSidecarWiring {
         // cfChangePSGVolume's byte-sized DEC now wraps VolEnv 00h to FFh.
         // The next mismatch is a separate ordered-write divergence.
         assertEquals(1690, report.tick(), report::toString);
-        assertEquals(6, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=255]",
+        assertEquals(7, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=231]",
                 report.reference());
         assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=192]",
                 report.openggf());
@@ -296,8 +296,15 @@ class TestS3kOracleRequestSidecarWiring {
         List<S3kAudioTick> engine = S3kOpenGgfAudioCapture
                 .capture(rom.toPath(), reference, null).ticks();
 
-        assertEquals(first48ServiceWrites(reference.get(1652)),
-                first48ServiceWrites(engine.get(1652)),
+        assertEquals(List.of(0, 0x59, 0), reference.get(1569).mailbox(),
+                "the older PSG owner is the recorded Collapse request");
+        assertEquals(List.of(0, 0xBA, 0), reference.get(1651).mailbox(),
+                "Flying is admitted after Collapse and first walks next service");
+        List<AudioParityChipWrite> expected = first48ServiceWrites(reference.get(1652));
+        List<AudioParityChipWrite> actual = first48ServiceWrites(engine.get(1652));
+        assertEquals(48, expected.size());
+        assertEquals(48, actual.size());
+        assertEquals(expected, actual,
                 "fixed FM4 RAM precedes the older sound's PSG slots");
     }
 

@@ -3192,6 +3192,14 @@ public class SmpsSequencer implements CoordFlagContext {
         }
     }
 
+    @Override
+    public void stopPsgNoteWithDriverSilence(Track t) {
+        if (t.type != TrackType.PSG) {
+            throw new IllegalArgumentException("driver PSG silence requires a PSG track");
+        }
+        synth.writePsgDriverSilence(this, t.channelId, t.noiseMode);
+    }
+
     public boolean isComplete() {
         for (Track t : tracks) {
             if (t.active)
