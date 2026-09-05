@@ -115809,3 +115809,15 @@ The other three death arms remain coordinates only.
   -Ds3k.rom.path=<absolute-locked-on-ROM> test`. It advances to one error at
   service 1652 event 0: reference YM2612 port-I `80=FF`, engine PSG `C8`.
   The independent DAC mismatch remains outside this service-stream axis.
+
+## 2026-09-05 - S3K fixed SFX slot walk advances service 1652 to 1690
+
+- Worktree `.worktrees/sol-s3k-sfx-slot-order`, branch
+  `bugfix/ai-sol-s3k-sfx-slot-order`, based on `d004188d9`.
+- `zUpdateSFXTracks` walks fixed FM3..FM6 then PSG1..PSG3 RAM slots
+  (`Sound/Z80 Sound Driver.asm:727-759`). Selecting the existing shared
+  channel-RAM walker makes newly admitted Flying FM4 run before older Collapse
+  PSG slots, rather than preserving sequencer admission order.
+- ROM-backed concurrent service 1652 now matches completely. The hard oracle
+  advances to service 1690 event 6: reference PSG `FF`, engine PSG `C0`, with
+  a matching 1,690-service prefix. The independent DAC mismatch remains.

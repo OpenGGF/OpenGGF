@@ -1554,10 +1554,13 @@ envelope byte before `zUpdatePSGTrack`'s override return (:4058-4115). The
 S3K's `cfChangePSGVolume` envelope rewind is also now byte-accurate: its `DEC`
 wraps `VolEnv` from `00` to `FF`; the prior Java guard incorrectly left zero
 unchanged (`Sound/Z80 Sound Driver.asm:3263-3285`). The oracle advances from
-service **1594** to **1652**, whose first event is reference YM port-I
-`80=FF` versus engine PSG `C8`, a separate ordered-write gap.
+service **1594** to **1652**. That ordered-write gap is also resolved: retail
+`zUpdateSFXTracks` walks fixed FM3..FM6 then PSG1..PSG3 RAM slots, independent
+of sound admission/header order (`Sound/Z80 Sound Driver.asm:727-759`). The
+oracle now reaches service **1690** event 6, reference PSG `FF` versus engine
+PSG `C0`.
 `TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
-matching 1652-service prefix through ordinal 1651. Service 1652 and the full
+matching 1690-service prefix through ordinal 1689. Service 1690 and the full
 window are not claimed to match. The immediate `FF` RAM state is proven; a
 later envelope walk from `FF` remains unverified because retail `zDoVolEnv`
 uses it as an unsigned `envelope + 255` table offset while Java bounds the
