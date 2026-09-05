@@ -264,13 +264,13 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
                 report.kind());
-        // The guaranteed PSG admission FF now matches at 1569. On the first
-        // SFX walk, the reference latches E7 while the engine silences noise.
+        // Collapse's noise pair now matches. The next unresolved write is
+        // a second noise-volume F0 where the reference has resumed music FM.
         assertEquals(1570, report.tick());
-        assertEquals(39, report.eventIndex());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=231]",
+        assertEquals(43, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=0, register=164, value=34]",
                 report.reference());
-        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=255]",
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=240]",
                 report.openggf());
     }
 
@@ -286,6 +286,35 @@ class TestS3kOracleRequestSidecarWiring {
 
         assertEquals(S3kAudioParityComparator.Report.Kind.MATCH, report.kind(), report::toString);
         assertEquals(1570, report.ticksCompared());
+    }
+
+    @Test
+    void collapseFirstWalkMatchesItsFirst43OrderedServiceWrites() {
+        File rom = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
+        List<S3kAudioTick> reference = read(committed()).subList(0, 1571);
+        S3kOpenGgfAudioCapture.CaptureResult engine =
+                S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
+
+        List<AudioParityChipWrite> expected = first43ServiceWrites(reference.get(1570));
+        List<AudioParityChipWrite> actual = first43ServiceWrites(engine.ticks().get(1570));
+        assertEquals(43, expected.size());
+        assertEquals(expected, actual,
+                "the admitted SFX's noise pair and first volume must preserve bus order");
+    }
+
+    private static List<AudioParityChipWrite> first43ServiceWrites(S3kAudioTick tick) {
+        // The existing service axis excludes DAC bytes (2A) and sample-end
+        // disables (2B=0); their independent full-window DAC gate stays separate.
+        // Keep every other bus write in its original order, including 2B=80.
+        return tick.writes().stream()
+                .filter(write -> !("ym2612".equals(write.chip())
+                        && Integer.valueOf(0).equals(write.port())
+                        && (Integer.valueOf(0x2A).equals(write.register())
+                            || (Integer.valueOf(0x2B).equals(write.register())
+                                && write.value() == 0))))
+                .limit(43)
+                .toList();
     }
 
     /**
