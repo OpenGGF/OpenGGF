@@ -3290,6 +3290,28 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
         }
     }
 
+    @Override
+    public void writePsgDriverSilence(
+            Object source, int toneChannel, boolean noiseMode) {
+        if (toneChannel < 0 || toneChannel >= 3) {
+            throw new IllegalArgumentException(
+                    "PSG driver silence requires a tone channel");
+        }
+        // This is one driver-owned physical transaction, reached after the
+        // ROM stream has already selected cfStopTrack. It neither competes
+        // for nor releases the logical channel lock.
+        synthesizer.writePsg(source, 0x80 | (toneChannel << 5) | 0x1F);
+        if (noiseMode) {
+            synthesizer.writePsg(source, 0xFF);
+        }
+        synthesizer.writePsg(source, 0xFF);
+        if (source instanceof SmpsSequencer sequencer) {
+            sequencer.setPsgLatchChannel(PSG_NOISE_CHANNEL);
+        } else {
+            psgLatches.put(source, PSG_NOISE_CHANNEL);
+        }
+    }
+
     /** PSG3, the tone channel a noise track's own slot names. */
     private static final int PSG_TONE3_CHANNEL = 2;
 

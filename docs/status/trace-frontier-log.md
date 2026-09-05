@@ -115821,3 +115821,15 @@ The other three death arms remain coordinates only.
 - ROM-backed concurrent service 1652 now matches completely. The hard oracle
   advances to service 1690 event 6: reference PSG `FF`, engine PSG `C0`, with
   a matching 1,690-service prefix. The independent DAC mismatch remains.
+
+## 2026-09-05 - S3K PSG stop helper advances within service 1690
+
+- Worktree `.worktrees/sol-s3k-sfx-slot-order`, second commit atop
+  `b39a47844`.
+- Retail `fix_sndbugs=0` emits an unconditional PSG `FF` from
+  `zGetSFXChannelPointers` after the stopped channel's own tone/noise silence
+  and before music release. The S3K F2 handler now preserves that transaction
+  order; generic reconciliation and other games are unchanged.
+- The oracle advances within service 1690 from event 6 (`FF` missing) to event
+  7: reference restored-noise `E7`, engine frequency `C0`. Prefix remains
+  1,690 complete services; the independent DAC mismatch remains.

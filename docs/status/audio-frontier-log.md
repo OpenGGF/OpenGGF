@@ -27,6 +27,20 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - S3K PSG stop helper advances service 1690 event 6 to event 7
+
+- **Before:** service 1690 event 6, reference PSG `FF`, engine PSG `C0`.
+- **After:** service 1690 event 7, reference PSG `E7`, engine PSG `C0`; the
+  first 1,690 services and first seven writes of that service match.
+- **ROM owner:** retail `fix_sndbugs=0` `zGetSFXChannelPointers` calls
+  `zSilencePSGChannel` and then emits an unconditional compensating `FF`
+  before `cfStopTrack` restores music ownership (driver:2115-2142,
+  3443-3469, 4226-4249). OpenGGF previously emitted only the channel/noise
+  silence pair.
+- **Evidence:** tone/noise stop tests pin `mute+FF` and `mute+FF+FF`; FM and
+  earlier-game handlers remain untouched. The next `E7` restore gap is
+  separate. The independent DAC frontier is unchanged.
+
 ## 2026-09-05 - Fixed SFX RAM walk: service 1652 to service 1690
 
 - **Before:** service 1652 event 0, reference Flying FM4 voice release

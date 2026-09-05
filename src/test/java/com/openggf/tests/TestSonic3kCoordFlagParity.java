@@ -149,6 +149,26 @@ public class TestSonic3kCoordFlagParity {
     }
 
     @Test
+    public void f2ToneAndNoiseStopsKeepRetailPsgWriteCounts() {
+        CaptureSynth toneSynth = new CaptureSynth();
+        SmpsSequencer tone = new SmpsSequencer(createMusicData(2, 1,
+                new byte[] {(byte) 0xF2}, new byte[] {(byte) 0xF2}, null),
+                EMPTY_DAC, toneSynth, Sonic3kSmpsSequencerConfig.CONFIG);
+        toneSynth.psgWrites.clear();
+        tone.advanceSamples(20000);
+        assertEquals(List.of(0x9F, 0xFF), toneSynth.psgWrites);
+
+        CaptureSynth noiseSynth = new CaptureSynth();
+        SmpsSequencer noise = new SmpsSequencer(createMusicData(2, 1,
+                new byte[] {(byte) 0xF2},
+                new byte[] {(byte) 0xF3, (byte) 0xE7, (byte) 0xF2}, null),
+                EMPTY_DAC, noiseSynth, Sonic3kSmpsSequencerConfig.CONFIG);
+        noiseSynth.psgWrites.clear();
+        noise.advanceSamples(20000);
+        assertEquals(List.of(0xDF, 0xE7, 0x9F, 0xFF, 0xFF), noiseSynth.psgWrites);
+    }
+
+    @Test
     public void fdRawFreqReadsWordAndAppliesRawFrequency() {
         byte[] fmTrack = {
                 (byte) 0xFD, 0x01, // raw frequency mode on
