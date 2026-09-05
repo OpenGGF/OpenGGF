@@ -239,7 +239,9 @@ public final class SmpsSequencerConfig {
         /** Legacy engine behavior: silence, restore all state, then resend frequency. */
         LEGACY_FULL_RESTORE,
         /** Shipped S1 behavior: the SFX note-off stands; restore voice/pan at rest. */
-        ROM_VOICE_RESTORE
+        ROM_VOICE_RESTORE,
+        /** Restore voice/pan without changing the covered music track's rest state. */
+        ROM_VOICE_RESTORE_PRESERVE_REST
     }
 
     /** How a PSG channel returns to music after its SFX track stops. */

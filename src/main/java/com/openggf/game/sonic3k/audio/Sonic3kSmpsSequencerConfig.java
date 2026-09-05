@@ -154,15 +154,12 @@ public final class Sonic3kSmpsSequencerConfig {
                 // on the channel, which the ROM never writes.
                 .fmSfxTakeoverMode(
                         SmpsSequencerConfig.FmSfxTakeoverMode.REGISTER_SEQUENCE)
-                // cfStopTrack releases an FM channel by keying it off,
-                // clearing the music track's override bit and restoring its
-                // voice (Sound/Z80 Sound Driver.asm:3040-3070). It does not
-                // force RR = 0FFh and TL = 07Fh: zFMSilenceChannel is reached
-                // only from zInitAudioDriver's boot loop (:2475-2495) and
-                // from the track's own 0F2h flag, cfSilenceStopTrack
-                // (:3082-3096).
+                // Retail fix_sndbugs=0 cfStopTrack keys off the SFX, clears
+                // music override bit 2 and uploads the voice without synthetic
+                // RR/TL silence or changing rest bit 4 (driver:3443-3518).
+                // The fixed branch changes key-off/FM3 bookkeeping, not rest.
                 .fmSfxReleaseMode(
-                        SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE)
+                        SmpsSequencerConfig.FmSfxReleaseMode.ROM_VOICE_RESTORE_PRESERVE_REST)
                 // zSFXTrackInitLoop sets bit 2 on the overridden music track
                 // while the SFX is still being loaded (Sound/Z80 Sound
                 // Driver.asm:1997-2003), so ownership exists from the

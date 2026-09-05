@@ -884,9 +884,10 @@ public class Sonic3kSpecialStageManager {
                 break;
 
             case BLUE_SPHERE:
-                if (collisionQueue.addBlueSphere(result.gridIndex)) {
-                    GameServices.audio().playSfx(Sonic3kSfx.BLUE_SPHERE.id);
-                }
+                collisionQueue.addBlueSphere(result.gridIndex);
+                // loc_97BE requests the sound even when Find_SStageCollisionResponseSlot
+                // failed; animation admission does not gate audio (sonic3k.asm:12131-12142).
+                GameServices.audio().playSfx(Sonic3kSfx.BLUE_SPHERE.id);
                 break;
 
             case RED_SPHERE:
