@@ -1080,6 +1080,12 @@ public final class SmpsDriverSession implements AutoCloseable {
         pendingGlobalCommand = SmpsPendingGlobalCommand.NONE;
     }
 
+    /** Current retained tempo control for presentation metadata after host commands. */
+    public boolean speedShoesEnabled() {
+        requireActive();
+        return speedShoesEnabled;
+    }
+
     public SmpsDriverSessionSnapshot captureSnapshot() {
         requireActive();
         return new SmpsDriverSessionSnapshot(

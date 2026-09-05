@@ -482,8 +482,13 @@ public final class AudioVoiceRegistry implements PresentationVoiceSource {
             stopAllSfx();
             return true;
         }
-        if (command instanceof FadeMusic
-                || command instanceof ChangeMusicTempo) {
+        if (command instanceof FadeMusic) {
+            // The host fade policy may clear speed shoes. Retain the session's
+            // result so later metadata snapshots/restores cannot resurrect them.
+            speedShoesEnabled = smpsSession.speedShoesEnabled();
+            return true;
+        }
+        if (command instanceof ChangeMusicTempo) {
             return true;
         }
         if (command instanceof SetSpeedShoes speed) {
