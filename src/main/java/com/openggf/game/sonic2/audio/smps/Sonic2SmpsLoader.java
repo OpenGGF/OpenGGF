@@ -20,6 +20,8 @@ import java.util.logging.Logger;
 
 public class Sonic2SmpsLoader extends AbstractSmpsLoader {
     private static final Logger LOGGER = Logger.getLogger(Sonic2SmpsLoader.class.getName());
+    /** Retail fixBugs=0 zWriteToDAC cost per byte/two decoded samples. */
+    private static final int DPCM_BASE_CYCLES = 295;
     private final SaxmanDecompressor decompressor = new SaxmanDecompressor();
     private final DcmDecoder dcmDecoder = new DcmDecoder();
     private final Map<Integer, Integer> musicMap = new HashMap<>();
@@ -738,10 +740,10 @@ public class Sonic2SmpsLoader extends AbstractSmpsLoader {
                 mapping.put(noteId, new DacData.DacEntry(sampleId, rate));
             }
 
-            return new DacData(samples, mapping, 288); // S2 baseCycles = 288
+            return new DacData(samples, mapping, DPCM_BASE_CYCLES);
         } catch (IOException | RuntimeException e) {
             LOGGER.log(Level.SEVERE, "Failed to load DAC Data", e);
-            return new DacData(new HashMap<>(), new HashMap<>(), 288);
+            return new DacData(new HashMap<>(), new HashMap<>(), DPCM_BASE_CYCLES);
         }
     }
 }

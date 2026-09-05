@@ -14,6 +14,12 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Sonic 2 DAC playback uses the retail loop cadence:** the ROM loader now
+  supplies the 295 Z80 cycles that `zWriteToDAC` spends delivering each byte's
+  two decoded samples, instead of 288. ROM-backed coverage checks the rate-1
+  path and the shipped kick's rate-23 pitch loop without changing the separate
+  S1 or S3K cadence inputs.
+
 - **Continue screens for all three games:** the Game Over exit now opens each
   game's ROM-backed countdown and character sequence when continues remain.
   Start spends one continue after the departure animation and restores three
