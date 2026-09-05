@@ -49,6 +49,77 @@ Run the fast malformed-input and failure-control tests with:
 tools/audio/fm-core-benchmark/tests/test-tool.sh
 ```
 
+### Java profile mode
+
+The fixed-work profile driver separates six-channel sustain, channel release,
+and a synthetic DAC write stream. Preparing it compiles and hashes every Java
+input without running the workload:
+
+```bash
+tools/audio/fm-core-benchmark/profile-java.sh --prepare-only \
+  --output "$PWD/target/fm-core-profile/prepare"
+```
+
+On an otherwise quiet host, `--record` produces `profile.jfr` and a JDK
+`hot-methods` view. It deliberately reports no wall-clock timing and marks its
+provenance non-publishable. The synthetic DAC phase clocks address/data writes
+as well as output frames and is not a game-capture substitute.
+
+### JNI correctness proof
+
+The Linux-only JNI experiment builds an ephemeral shared library from the
+pinned Nuked C source and exercises actual interleaved stereo PCM transfer:
+
+```bash
+tools/audio/fm-core-benchmark/run-jni-proof.sh \
+  --output "$PWD/target/fm-core-jni-proof/run-1" \
+  --nuked-source "$PWD/target/fm-core-sources/nuked"
+```
+
+It checks Java/C samples, arbitrary clock chunking, restore of a seven-cycle
+partial frame into a fresh handle, active key-off controls, invalid capacity
+and snapshot rejection before mutation, idempotent close, use after close, and
+loading after the generated library is relocated. The result hashes every
+compiled input and records compiler flags. This proves only a research bridge
+on the tested Linux host. Its opaque snapshot is valid only for the exact same
+library build; it is not a persistence or compatibility format. No generated
+library is a repository or release artifact.
+
+Passing `--capture path/to/complete-bus.jsonl` first applies the fail-closed
+capture validator and then compares Java/C Nuked PCM for the complete declared
+raw-YM segment. Null endpoints, overflow, missing ordinals, non-monotonic or
+out-of-range writes, interpolation/restored-unknown origins, and state-changing
+YM boundaries reject. The only post-start exception is the typed
+`OUTPUT_GATE_CHANGE`, which cannot affect raw chip pins; accepting it explicitly
+means the result does not reconstruct presentation PCM. PSG remains in the
+source artifact but is only counted by this YM-only consumer.
+
+The separately pinned ymfm candidate can consume the same admitted input:
+
+```bash
+tools/audio/fm-core-benchmark/run-fast-capture.sh \
+  --output "$PWD/target/fm-core-fast-capture/run-1" \
+  --ymfm-source "$PWD/target/fm-core-sources/ymfm" \
+  --capture path/to/complete-bus.jsonl
+```
+
+This correctness-only run checks deterministic rendering, native snapshot
+replay, and an active key-off control. ymfm generates whole frames rather than
+Nuked internal cycles, so writes at cycles `24n..24n+23` are applied before
+ymfm frame `n`. That quantization is recorded in `result.json`; neither its
+checksum nor determinism establishes fidelity equivalence.
+
+The focused tool checks are:
+
+```bash
+tools/audio/fm-core-benchmark/tests/test-profile-tool.sh
+tools/audio/fm-core-benchmark/tests/test-jni-proof.sh \
+  --nuked-source "$PWD/target/fm-core-sources/nuked"
+tools/audio/fm-core-benchmark/tests/test-fast-capture.sh \
+  --ymfm-source "$PWD/target/fm-core-sources/ymfm"
+tools/audio/fm-core-benchmark/tests/test-capture-validator.sh
+```
+
 ## Pins, licensing, and exclusions
 
 Nuked-OPN2 is pinned at commit
@@ -76,3 +147,6 @@ different output model, scale, and phase, so its hash is intentionally not
 compared with Nuked. The harness does not
 exercise timers, IRQ/CSM integration, physical output transfer, resampling,
 audio scheduling, full-game load, listening quality, or non-Linux portability.
+The standalone JNI proof closes only its stated PCM-transfer and lifecycle
+questions; it does not establish production integration, packaging, native
+snapshot portability, or Windows/macOS support.
