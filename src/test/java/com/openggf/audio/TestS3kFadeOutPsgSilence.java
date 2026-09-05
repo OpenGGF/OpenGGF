@@ -10,6 +10,7 @@ import com.openggf.tests.RomTestUtils;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -22,6 +23,30 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kFadeOutPsgSilence {
     private Rom rom;
+
+    @Test
+    void legacyHeadlessBackendUsesTheSameHostFadeEffects() {
+        install();
+        var profile = new Sonic3kAudioProfile();
+        var loader = profile.createSmpsLoader(rom);
+        var backend = new HeadlessSmpsAudioBackend(
+                com.openggf.configuration.SonicConfigurationService.getInstance(), null);
+        List<Integer> writes = new ArrayList<>();
+        backend.setAudioProfile(profile);
+        backend.setChipWriteObserver(new ChipWriteObserver() {
+            @Override public void onYm2612Write(int port, int register, int value) { }
+            @Override public void onPsgWrite(int value) { writes.add(value); }
+        });
+        try {
+            backend.playSmps(loader.loadMusic(Sonic3kMusic.KNUCKLES.id), loader.loadDacData());
+            writes.clear();
+            backend.fadeOutMusic(0x28, 6);
+            assertEquals(List.of(0x9f, 0xbf, 0xdf, 0xff), writes);
+            assertTrue(backend.musicDriverForTesting().captureSnapshot().driverOwnedFade());
+        } finally {
+            backend.destroy();
+        }
+    }
 
     @AfterEach
     void tearDown() {

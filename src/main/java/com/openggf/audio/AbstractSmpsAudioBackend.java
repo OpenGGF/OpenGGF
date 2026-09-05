@@ -973,9 +973,10 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
 
     @Override
     public void fadeOutMusic(int steps, int delay) {
-        // Fade only music, not SFX - delegated to the music sequencer
-        if (currentSmps != null) {
-            currentSmps.triggerFadeOut(steps, delay);
+        synchronized (streamLock) {
+            if (smpsStream != null) {
+                smpsStream.fadeOutMusic(steps, delay);
+            }
         }
     }
 
