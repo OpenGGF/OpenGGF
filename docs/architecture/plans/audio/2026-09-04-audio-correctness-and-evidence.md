@@ -112,8 +112,8 @@ Retain one opt-in, ROM-free synthetic benchmark entry point with pinned external
 - [x] Independent per-task spec/code review; return findings to the owner.
 - [x] Merge reviewed task commits into the coordination branch, reconcile documentation, run ordinary suite and separate guards against the fresh baseline.
 - [x] Independent whole-branch review and fix verification.
-- [ ] Refresh main `develop`, rebaseline if it moved, integrate with README release summary, run post-merge ordinary/guards and exact regression comparison, push only `develop`.
-- [ ] Inspect and remove only this round's fully merged worktrees/branches after successful push.
+- [x] Refresh main `develop`, rebaseline if it moved, integrate with README release summary, run post-merge ordinary/guards and exact regression comparison, push only `develop`.
+- [x] Inspect and remove only this round's fully merged worktrees/branches after successful push.
 
 Verification commands (export `SONIC1_ROM`, `SONIC2_ROM`, and `S3K_ROM` as the discovered absolute ROM paths first; this round verified SHA-1 `69e102855d4389c3fd1a8f3dc7d193f8eee5fe5b`, `8bca5dcef1af3e00098666fd892dc1c2a76333f9`, and `cfbf98c36c776677290a872547ac47c53d2761d6` respectively):
 
@@ -142,7 +142,12 @@ Combined verification: ordinary `ed9fd1e1b` 16,482 / 0 failures / 0 errors /
 independent review approved an explicit ratchet declaration, not a bypass.
 Per-test comparisons show no new failures or skips. Main `develop` was fetched
 and fast-forward checked again; it remains `4296bc291`, so no rebaseline is
-needed. Main integration and final push/cleanup remain subsequent steps.
+needed. Delivery completed on September 5: merge `078e5df6f` was verified on
+main (16,482 ordinary tests / 40 skips; 609 guards / no skips; zero failures
+or errors in both), compared against baseline with no new regressions, and
+pushed to `origin/develop`. The four fully merged task worktrees and local
+branches were removed after evidence archival; older worktrees and user
+changes were preserved. See the linked final delivery record for commands.
 
 ## End-to-end review
 

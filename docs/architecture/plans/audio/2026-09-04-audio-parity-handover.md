@@ -8,6 +8,11 @@ before relying on any of them (see the measurement-hazard table in
 
 ## Coordinated follow-on milestone
 
+Delivered on September 5 as `develop` merge `078e5df6f`, pushed after post-merge
+ordinary and guard verification with no new failures or skips. All four task
+worktrees/local branches were cleaned up; the linked delivery record contains
+the exact evidence and the remaining product decisions.
+
 The follow-on round starts at `develop` `4296bc291`; the sections below retain
 the original handover's historical measurements. See the
 [coordination plan](2026-09-04-audio-correctness-and-evidence.md) and

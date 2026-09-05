@@ -137,8 +137,45 @@ individual selections are in the linked lane reports; the combined run is
 boundary test also passes in this worktree. No performance timing from the
 contended integration host is promoted to benchmark evidence.
 
-No main-workspace integration, push, or worktree cleanup is claimed by this
-interim report.
+## Final delivery — 2026-09-05
+
+After explicit user approval, the unchanged staged milestone merged into
+`develop` as `078e5df6f`, without conflicts or branch switching. A fresh fetch
+confirmed `origin/develop` was still `4296bc291`; unrelated updates to `next`
+were not integrated. The three pre-existing modified disassembly submodules
+were preserved.
+
+Post-merge commands used Maven's JDK 21 and the same verified absolute ROM
+paths as the baseline (export `SONIC1_ROM`, `SONIC2_ROM`, `S3K_ROM` first):
+
+```bash
+LUA_BIN=lua5.4 mvn -Dmse=off -B "-Dsonic1.rom.path=$SONIC1_ROM" "-Dsonic2.rom.path=$SONIC2_ROM" "-Ds3k.rom.path=$S3K_ROM" test
+LUA_BIN=lua5.4 mvn -Dmse=off -B -Pguards test
+tools/audio/fm-core-benchmark/tests/test-tool.sh
+```
+
+| Check at `078e5df6f` | Executions | Failures | Errors | Skips |
+|---|---:|---:|---:|---:|
+| Ordinary suite (5:30) | 16,482 | 0 | 0 | 40 |
+| Separate guards (2:13) | 609 | 0 | 0 | 0 |
+| Standalone benchmark boundary checks | pass | — | — | — |
+
+Archived per-test comparisons show no new failures or newly skipped tests
+against the original baseline. Ordinary cases exactly match the combined
+development result; guards have no added, missing or changed outcome. The
+intentional frontier-test rename is the only absent baseline ordinary name,
+as documented above. Final logs, JSON comparisons and compressed reports live
+under `target/audio-round-merged-*`. Development and focused evidence was
+also archived outside the checkout in the explicit task directory
+`audio-coordination-20260904` before cleanup. Generated build/test outputs
+discarded during cleanup are reproducible; no unmerged work was discarded.
+
+`078e5df6f` was pushed to `origin/develop`. Only this round's four worktrees
+(`audio-coordination`, `audio-round-s3k`, `audio-round-capture`,
+`audio-round-evidence`) and their fully merged local branches were removed,
+then worktree metadata was pruned. Older worktrees were left intact. This
+final delivery-record update is documentation-only; the tested production,
+tooling and test sources are unchanged.
 
 ## Remaining product decisions
 
