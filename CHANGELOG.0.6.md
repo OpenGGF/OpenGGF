@@ -14,6 +14,16 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Less runtime allocation and shorter rewind replay bursts:** live recording
+  reuses bounded pixel buffers and overlaps GPU readback with the next frame,
+  while preserving audio pairing and flushing the final frame on stop. Audio
+  transactions reuse private chip rollback storage without changing retained
+  rewind snapshots. Live rewind uses finer gameplay checkpoints and circular
+  input history; this bounds cold replay to nine ticks at the cost of retaining
+  more gameplay snapshots. Gumball art uploads are batched, HCZ2 deformation
+  scratch is reused, and display shaders avoid redundant GL state queries.
+
+
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data
   strobes, real and interpolated DAC provenance, and PSG writes in explicit

@@ -105,6 +105,34 @@ public class VirtualSynthesizer implements SmpsLogicalWriteTarget {
         return chipWriteObserverEnabled;
     }
 
+    /** Opaque mutable rollback storage, separate from immutable rewind snapshots. */
+    public static final class MutationBackup {
+        private final VirtualSynthesizer owner;
+        private final Ym2612Chip.MutationBackup ym = new Ym2612Chip.MutationBackup();
+        private final PsgChip.MutationBackup psg = new PsgChip.MutationBackup();
+        private double outputSampleRate;
+
+        private MutationBackup(VirtualSynthesizer owner) { this.owner = owner; }
+    }
+
+    public MutationBackup createMutationBackup() {
+        return new MutationBackup(this);
+    }
+
+    public void captureMutation(MutationBackup backup) {
+        if (backup.owner != this) throw new IllegalArgumentException("foreign synth backup");
+        backup.outputSampleRate = outputSampleRate;
+        ym.captureMutation(backup.ym);
+        psg.captureMutation(backup.psg);
+    }
+
+    public void restoreMutation(MutationBackup backup) {
+        if (backup.owner != this) throw new IllegalArgumentException("foreign synth backup");
+        outputSampleRate = backup.outputSampleRate;
+        ym.restoreMutation(backup.ym);
+        psg.restoreMutation(backup.psg);
+    }
+
     public Snapshot captureSynthSnapshot() {
         return new Snapshot(outputSampleRate, ym.captureSnapshot(), psg.captureSnapshot());
     }

@@ -22,6 +22,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsPhysicalDevice {
     @Test
+    void reusableTransactionsRestoreRenderedStateAndRejectConsumedTokens() {
+        SmpsDriverSession session = SmpsSessionTestFixtures.session(ChipWriteObserver.NONE);
+        session.install();
+        SmpsDriverServiceObserver.DriverIdentity owner = SmpsSessionTestFixtures.owner(41);
+        session.withPort(owner, port -> {
+            port.writePsg(0x84);
+            port.writePsg(0x12);
+            port.writePsg(0x90);
+            return null;
+        });
+        short[] output = new short[512];
+        session.renderFrames(output, 0, 256);
+        SmpsDriverSession.LiveMutationToken first = session.captureLiveMutation();
+        session.renderFrames(output, 0, 256);
+        short[] expected = output.clone();
+        session.rollbackLiveMutation(first);
+        session.renderFrames(output, 0, 256);
+        assertArrayEquals(expected, output);
+        SmpsDriverSession.LiveMutationToken second = session.captureLiveMutation();
+        assertThrows(IllegalStateException.class, () -> session.rollbackLiveMutation(first));
+        session.renderFrames(output, 0, 256);
+        session.rollbackLiveMutation(second);
+        assertThrows(IllegalStateException.class, () -> session.commitLiveMutation(second));
+    }
+
+    @Test
     void deferredConstructionAppliesSettingsWithoutChipWrites() {
         SmpsSessionTestFixtures.RecordingObserver observer =
                 new SmpsSessionTestFixtures.RecordingObserver();

@@ -57,6 +57,31 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSmpsDriverSession {
     @Test
+    void completedSessionTransactionsReleaseOverrideBackupWithoutAnotherCapture() throws Exception {
+        for (boolean rollback : new boolean[] {false, true}) {
+            SmpsDriverSession session = SmpsSessionTestFixtures.session(
+                    new SmpsSessionTestFixtures.RecordingObserver());
+            session.install();
+            session.queueActivation(activationWithFmTrack(1));
+            session.serviceForward();
+            session.applyCommand(new SmpsSessionCommand.PushOverride(activationWithFmTrack(2)));
+            session.serviceForward();
+            var token = session.captureLiveMutation();
+            Field field = SmpsDriverSession.class.getDeclaredField("mutationOverrides");
+            field.setAccessible(true);
+            Object[] backup = (Object[]) field.get(session);
+            assertTrue(Arrays.stream(backup).anyMatch(java.util.Objects::nonNull));
+            session.applyCommand(new SmpsSessionCommand.HardReset());
+            if (rollback) session.rollbackLiveMutation(token);
+            else session.commitLiveMutation(token);
+            assertTrue(Arrays.stream(backup).allMatch(java.util.Objects::isNull),
+                    "override backup retained references after " + (rollback ? "rollback" : "commit"));
+            assertEquals(rollback ? 1 : 0, session.captureLogicalSnapshot().savedOverrides().size());
+            assertThrows(IllegalStateException.class, () -> session.rollbackLiveMutation(token));
+        }
+    }
+
+    @Test
     void onePhysicalAndLogicalIdentitySurviveAllTransitions() {
         SmpsDriverSession session = SmpsSessionTestFixtures.session(
                 new SmpsSessionTestFixtures.RecordingObserver());
