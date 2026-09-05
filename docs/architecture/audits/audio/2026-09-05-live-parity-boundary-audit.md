@@ -102,7 +102,7 @@ submits the same requests. A full-game capture and a driver-service oracle
 cover different boundaries; both are needed. An engine-to-engine snapshot
 or PCM comparison can preserve a shared bug and is not a ROM oracle.
 
-## Verification record (integration pending)
+## Verification record
 
 All runs use JDK 21, Maven's ordinary output directory, and absolute paths
 to the three user-supplied ROMs. Commands below abbreviate those paths:
@@ -117,11 +117,37 @@ mvn -Dmse=off -B -Pguards -Dsonic1.rom.path=<absolute-s1-rom> -Dsonic2.rom.path=
 - Shared S3K fade focused run: 25 tests, all passing.
 - Legacy backend plus live fade/session/diagnostic focused run: 38 tests,
   all passing. Before the fix the new backend test failed with no PSG writes.
-- Combined, post-merge and exact testcase-status comparisons remain pending.
-  Console execution totals are not unique testcase counts.
+- Combined `3529bf6c6`: 28 focused boundary cases pass; ordinary suite reports
+  16,579 executions, zero failures/errors, 43 skips. The exact identity/status
+  comparison preserves all 15,598 baseline identities and adds 35 passing
+  cases (15,633 total). Fresh guards: 609, all passing, exact baseline match.
+- Isolated speed/harness and orb branches each pass 16,552 ordinary executions
+  and 609 guards; S1/terminal branch passes 16,559 and 609. Each preserves the
+  baseline's existing outcomes. The S1 worker retained stale guard XML in its
+  raw ordinary report directory: the comparison uses a clean selection of
+  the 1,999 XML suite names matching the 1,999 completed ordinary log suites.
+  Raw evidence is preserved separately. The combined run started with an
+  empty report directory and needs no such filtering.
+- Independent review caught and resolved the source/host terminal capability
+  mismatch. Integration between task branches had no textual conflicts;
+  overlapping session/config changes were combined and tested together.
+- Post-merge verification and delivery are pending. Console execution totals
+  are not unique testcase counts.
 
 Evidence filenames below each producing worktree's `target/` include
 `s3k-fade-red.log`, `s3k-fade-boundary.log`, `legacy-fade-red.log`, and
 `legacy-fade-green.log`. Main baseline report sets are
 `s3k-audio-regressions-baseline-reports` and
 `s3k-audio-regressions-baseline-guards-reports`.
+
+## Controlled listening evidence
+
+The [regenerable listening probe](../../research/audio/2026-09-05-live-fade-probe/README.md)
+produces 528,000 stereo frames at 48 kHz: Knuckles music, fade at four
+seconds, AIZ1 request at nine seconds. Baseline `acd3a17cc` and candidate
+`3529bf6c6` are sample-identical for the first four seconds. During seconds
+eight to nine, baseline has 95,994 nonzero channel samples (peak 685,
+RMS 183.316 in signed 16-bit units), while candidate is exactly silent.
+This demonstrates removal of a residual tone in the controlled stimulus,
+not the exact identity/timing of the user's cutscene symptom or human
+listening approval. The WAVs contain ROM-derived audio and stay outside Git.
