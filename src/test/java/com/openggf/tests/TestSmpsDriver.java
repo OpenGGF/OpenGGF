@@ -410,7 +410,8 @@ public class TestSmpsDriver {
         track.overridden = true;
         music.addTrack(track);
 
-        music.setChannelOverridden(SmpsSequencer.TrackType.PSG, 2, false);
+        music.setChannelOverriddenAfterSfxTrackStop(
+                SmpsSequencer.TrackType.PSG, 2);
         assertEquals(List.of(new PsgWrite(music, 0x85)), physical.psgWrites);
         assertFalse(track.active);
         assertFalse(track.resting);
@@ -418,12 +419,14 @@ public class TestSmpsDriver {
         physical.psgWrites.clear();
         track.overridden = true;
         track.rawPsgNoise = 0x7F;
-        music.setChannelOverridden(SmpsSequencer.TrackType.PSG, 2, false);
+        music.setChannelOverriddenAfterSfxTrackStop(
+                SmpsSequencer.TrackType.PSG, 2);
         assertTrue(physical.psgWrites.isEmpty(), "positive raw noise byte is not restored");
 
         track.overridden = true;
         track.rawPsgNoise = 0x80;
-        music.setChannelOverridden(SmpsSequencer.TrackType.PSG, 2, false);
+        music.setChannelOverriddenAfterSfxTrackStop(
+                SmpsSequencer.TrackType.PSG, 2);
         assertEquals(List.of(new PsgWrite(music, 0x80)), physical.psgWrites,
                 "the sign boundary is restored verbatim");
 
@@ -431,8 +434,67 @@ public class TestSmpsDriver {
         track.overridden = true;
         track.rawPsgNoise = 0xE7;
         track.noiseMode = false;
-        music.setChannelOverridden(SmpsSequencer.TrackType.PSG, 2, false);
+        music.setChannelOverriddenAfterSfxTrackStop(
+                SmpsSequencer.TrackType.PSG, 2);
         assertTrue(physical.psgWrites.isEmpty(), "tone-form PSG3 has no restore write");
+    }
+
+    @Test
+    public void genericOverrideReleaseDoesNotUseTheF2RawNoiseRestore() {
+        RecordingAccess physical = new RecordingAccess();
+        SmpsDriver driver = SmpsDriver.createSessionDriver(physical);
+        SmpsSequencer music = new SmpsSequencer(
+                new Sonic3kSmpsData(new byte[64], 0),
+                new DacData(new HashMap<>(), new HashMap<>()), driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track track = createTrack(SmpsSequencer.TrackType.PSG, 2);
+        track.active = true;
+        track.noiseMode = true;
+        track.rawPsgNoiseKnown = true;
+        track.rawPsgNoise = 0x85;
+        track.overridden = true;
+        music.addTrack(track);
+
+        music.setChannelOverridden(SmpsSequencer.TrackType.PSG, 2, false);
+
+        assertFalse(physical.psgWrites.stream().anyMatch(write -> write.value() == 0x85),
+                "generic teardown/replacement callbacks cannot use zStopPSGTrack restore");
+    }
+
+    @Test
+    public void stopAllSfxKeepsLegacyCleanupAndNeverUsesF2RawNoiseRestore() {
+        RecordingAccess physical = new RecordingAccess();
+        SmpsDriver driver = SmpsDriver.createSessionDriver(physical);
+        DacData dac = new DacData(new HashMap<>(), new HashMap<>());
+        SmpsSequencer music = new SmpsSequencer(
+                new Sonic3kSmpsData(new byte[64], 0), dac, driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track covered = createTrack(SmpsSequencer.TrackType.PSG, 2);
+        covered.noiseMode = true;
+        covered.rawPsgNoiseKnown = true;
+        covered.rawPsgNoise = 0x85;
+        music.addTrack(covered);
+        driver.addSequencer(music, false);
+
+        Sonic3kSmpsData sfxData = new Sonic3kSmpsData(new byte[64], 0);
+        sfxData.setId(0x59);
+        SmpsSequencer sfx = new SmpsSequencer(sfxData, dac, driver,
+                Sonic3kSmpsSequencerConfig.CONFIG);
+        SmpsSequencer.Track noise = createTrack(SmpsSequencer.TrackType.PSG, 2);
+        noise.noiseMode = true;
+        sfx.addTrack(noise);
+        driver.addSequencer(sfx, true);
+        driver.writePsg(sfx, 0xC0);
+        driver.writePsg(sfx, 0xE7);
+        assertTrue(covered.overridden,
+                "normal admission must cover music before wholesale teardown");
+        physical.psgWrites.clear();
+
+        driver.stopAllSfx();
+
+        assertEquals(List.of(new PsgWrite(sfx, 0xDF),
+                new PsgWrite(sfx, 0xFF)), physical.psgWrites,
+                "wholesale cleanup retains its established silence and no raw 85 restore");
     }
 
     @Test

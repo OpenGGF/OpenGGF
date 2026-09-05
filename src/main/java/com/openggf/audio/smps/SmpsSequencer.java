@@ -777,12 +777,23 @@ public class SmpsSequencer implements CoordFlagContext {
     }
 
     public void setChannelOverridden(TrackType type, int channelId, boolean overridden) {
+        setChannelOverridden(type, channelId, overridden, false);
+    }
+
+    /** Restore cause owned only by S3K cfStopTrack's immediate handoff. */
+    public void setChannelOverriddenAfterSfxTrackStop(
+            TrackType type, int channelId) {
+        setChannelOverridden(type, channelId, false, true);
+    }
+
+    private void setChannelOverridden(TrackType type, int channelId,
+            boolean overridden, boolean afterSfxTrackStop) {
         for (Track t : tracks) {
             if (t.type == type && t.channelId == channelId) {
                 boolean wasOverridden = t.overridden;
                 t.overridden = overridden;
                 if (wasOverridden && !overridden) {
-                    if (t.type == TrackType.PSG
+                    if (afterSfxTrackStop && t.type == TrackType.PSG
                             && config.getPsgSfxReleaseMode()
                             == SmpsSequencerConfig.PsgSfxReleaseMode
                                     .ROM_NOISE_RESTORE_PRESERVE_REST) {

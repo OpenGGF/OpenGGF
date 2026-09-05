@@ -2859,7 +2859,7 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
                 psgLocks[PSG_NOISE_CHANNEL] = null;
             }
         }
-        updateOverrides(type, channelId, false);
+        updateOverridesAfterSfxTrackStop(type, channelId);
     }
 
     private static boolean hasOtherActiveTrack(
@@ -3113,6 +3113,18 @@ public class SmpsDriver implements SmpsLogicalWriteTarget, SmpsSequencerHost {
             for (SmpsSequencer s : sequencers) {
                 if (!isSfx(s)) {
                     s.setChannelOverridden(type, ch, overridden);
+                }
+            }
+        }
+    }
+
+    private void updateOverridesAfterSfxTrackStop(
+            SmpsSequencer.TrackType type, int channel) {
+        synchronized (sequencersLock) {
+            for (SmpsSequencer sequencer : sequencers) {
+                if (!isSfx(sequencer)) {
+                    sequencer.setChannelOverriddenAfterSfxTrackStop(
+                            type, channel);
                 }
             }
         }
