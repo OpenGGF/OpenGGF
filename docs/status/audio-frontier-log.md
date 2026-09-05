@@ -27,6 +27,19 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - S3K SFX header order advances service 2012 to 2357
+
+- **Before:** service 2012 event 1, reference PSG `BF`, engine PSG `FF`.
+- **After:** service 2357, `MUS_FM4.overridden`, reference `false`, engine
+  `true`.
+- **ROM owner:** `zSFXTrackInitLoop` leaves IX naming the preceding newly
+  initialized header when the next `zGetSFXChannelPointers` call silences it
+  (`Sound/Z80 Sound Driver.asm:1997-2103, 2109-2165`). Skid's shipped PSG2 then
+  PSG1 headers emit `FF BF FF`. Runtime service remains in fixed channel-RAM
+  order; only admission uses immutable ROM header order.
+- **Evidence:** the hard oracle matches through service 2012. The next state
+  mismatch is independent; full-game audio parity remains open.
+
 ## 2026-09-05 - S3K covered-noise restore advances service 1690 to 2012
 
 - **Before:** service 1690 event 7, reference PSG `E7`, engine PSG `C0`.

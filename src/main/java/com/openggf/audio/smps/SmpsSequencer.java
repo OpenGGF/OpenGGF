@@ -50,6 +50,8 @@ public class SmpsSequencer implements CoordFlagContext {
     private final DacData dacData;
     private final int tempoModBase;
     private final List<Track> tracks = new ArrayList<>();
+    /** Immutable ROM-header-order projection into {@link #tracks}. */
+    private int[] sfxHeaderOrderIndices = new int[0];
 
     public enum Region {
         NTSC(60.0), PAL(50.0);
@@ -527,10 +529,13 @@ public class SmpsSequencer implements CoordFlagContext {
 
         if (smpsData instanceof SmpsSfxData sfxData) {
             initSfxTracks(sfxData, z80Start);
+            List<Track> headerOrder = List.copyOf(tracks);
             if (config.getSfxTrackWalkMode()
                     == SmpsSequencerConfig.SfxTrackWalkMode.CHANNEL_RAM_ORDER) {
                 tracks.sort(Comparator.comparingInt(SmpsSequencer::sfxTrackRamOrder));
             }
+            sfxHeaderOrderIndices = headerOrder.stream()
+                    .mapToInt(track -> tracks.indexOf(track)).toArray();
             setSfxMode(true);
             return;
         }
@@ -939,6 +944,22 @@ public class SmpsSequencer implements CoordFlagContext {
 
     public List<Track> getTracks() {
         return Collections.unmodifiableList(tracks);
+    }
+
+    /** SFX header order before any fixed channel-RAM service ordering. */
+    public List<Track> getSfxHeaderOrderTracks() {
+        if (sfxHeaderOrderIndices.length == 0) {
+            return getTracks();
+        }
+        List<Track> ordered = new ArrayList<>(sfxHeaderOrderIndices.length);
+        for (int index : sfxHeaderOrderIndices) {
+            ordered.add(tracks.get(index));
+        }
+        for (int index = sfxHeaderOrderIndices.length;
+                index < tracks.size(); index++) {
+            ordered.add(tracks.get(index));
+        }
+        return Collections.unmodifiableList(ordered);
     }
 
     public int trackCount() {

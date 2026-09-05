@@ -286,6 +286,8 @@ traces.
   F2 also returns covered PSG music ownership before restoring its exact stored
   noise byte, without clearing the music track's rest state. This restoration
   is scoped to the driver's track-stop path, not generic effect teardown.
+  S3K SFX admission also retains ROM header order separately from playback's
+  channel-slot order, preserving the previous header's PSG silence writes.
   Mutation-tested production observers complement the driver oracles; neither
   the current movie windows nor a green ordinary suite establishes complete
   per-game driver parity. See the [parity roadmap](docs/architecture/plans/audio/2026-09-05-audio-trace-coverage-roadmap.md).

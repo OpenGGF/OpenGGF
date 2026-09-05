@@ -94,6 +94,23 @@ Native S1 capture A is now genuinely sealed, as recorded below, but remains
 diagnostic rather than authenticated. Neither a matching prefix nor the ordinary
 suite proves full-game driver parity.
 
+### Fifth Sol cycle (verification candidate)
+
+Reviewed source `32a37dd62`, updated to develop `cc75320b0` as `97aee3f30`,
+keeps SFX admission in ROM header order while retaining fixed channel-slot
+order for ongoing service. The previous initialized header supplies the retail
+PSG silence before the next header's unconditional `FF`. Skid's PSG2→PSG1
+sequence is `FF BF FF`; reverse and intervening-FM controls reject a fitted
+byte or a stale earlier PSG selector. Constructor-derived indices resolve
+current tracks after snapshot restoration without adding temporal state.
+
+The matching intro prefix reaches service 2356; service 2357 now exposes
+`MUS_FM4.overridden`, reference `false` versus engine `true`. First-header
+entry-IX behavior and arbitrary non-retail initial header flags remain outside
+the bounded repair. The 92-test focused run and 16,666-test ordinary suite
+pass, with 43 skips. Remaining verification and delivery status are in the
+[fifth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle5.md).
+
 ### Full S1 capture A (sealed diagnostic, unpublished)
 
 The native full-movie run completed 225,101 frames and 224,241 audio rows on

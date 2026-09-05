@@ -115842,3 +115842,17 @@ The other three death arms remain coordinates only.
   noise locks are cleared before that callback; unrelated owners are retained.
 - The hard oracle advances from service 1690 event 7 (`E7` versus `C0`) to
   service 2012 event 1: reference PSG `BF`, engine PSG `FF`.
+
+## 2026-09-05 - S3K SFX header order advances service 2012 to 2357
+
+- Worktree `.worktrees/sol-s3k-sfx-header-order`, based on `1e33747f1`.
+- Retail `zSFXTrackInitLoop` keeps IX on the preceding newly initialized
+  header across the next `zGetSFXChannelPointers` call. Skid's PSG2 then PSG1
+  headers therefore emit `FF BF FF`; OpenGGF previously retained only each
+  header's unconditional `FF` after sorting tracks for the separate runtime
+  fixed-slot walk.
+- Command: `mvn -Dmse=off
+  -Dtest=TestS3kOracleRequestSidecarWiring#theFullOraclePinsTheNextSfxWriteFrontier
+  -Ds3k.rom.path=<absolute-locked-on-ROM> test`.
+- The hard oracle advances to service 2357, `MUS_FM4.overridden`, reference
+  `false`, engine `true`. Full-game audio parity and authenticity remain open.
