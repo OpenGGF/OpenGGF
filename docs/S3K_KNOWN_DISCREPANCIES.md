@@ -1572,3 +1572,15 @@ cursor to the loaded envelope array. The DAC stream
 remains independently red at run 338, byte 0 (`88` versus `7F`). See the
 [2026-09-05 validation report](architecture/validation/audio/2026-09-05-s3k-psg-takeover.md)
 for commands and red-first evidence; this is not full-window audio parity.
+
+The later SFX-header correction moved the frontier to service 2357. That
+state mismatch was diagnostic input selection: retail raw ring request `33h`
+toggles boot-zeroed `zRingSpeaker` at dispatch and selects Sound34/Sound33
+(`Sound/Z80 Sound Driver.asm:547,1919-1928`), while the capture loaded Sound33
+directly. The capture now applies the alternating transform at its pending
+driver callback and advances to service **2409**, `MUS_PSG1.overridden`
+(`true` versus `false`). This does not close live request parity: S3K still has
+no production three-slot mailbox consumer, AudioManager selects rings before
+retail's consume point and resets its fallback side on stop paths. The
+capture's 1-up/fade mailbox-clearing behavior remains unverified against
+`zUpdateMusic` (:658-701).

@@ -27,6 +27,21 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - S3K diagnostic ring dispatch advances service 2357 to 2409
+
+- **Before:** service 2357, `MUS_FM4.overridden`, reference `false`, engine
+  `true`.
+- **After:** service 2409, `MUS_PSG1.overridden`, reference `true`, engine
+  `false`.
+- **ROM owner:** raw request `33h` reaches `zPlaySound_CheckRing`, toggles the
+  boot-zeroed `zRingSpeaker`, and selects Sound34/Sound33 in turn
+  (`Sound/Z80 Sound Driver.asm:547,1919-1928`, retail `fix_sndbugs=0`). The
+  diagnostic capture now performs that transform inside its pending driver
+  callback, so submission itself cannot advance the side.
+- **Scope:** this is capture-adapter accuracy, not proof of live request
+  parity. The live S3K presentation still lacks the three-slot mailbox cycle;
+  retail's 1-up/fade mailbox clearing remains unverified here.
+
 ## 2026-09-05 - S3K SFX header order advances service 2012 to 2357
 
 - **Before:** service 2012 event 1, reference PSG `BF`, engine PSG `FF`.

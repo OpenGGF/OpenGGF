@@ -14,6 +14,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **S3K audio oracle alternates raw ring requests at dispatch:** the diagnostic
+  capture now applies the shipped driver's Sound34/Sound33 selection when raw
+  request `33h` is consumed, advancing its first mismatch from service 2357 to
+  2409. Production S3K mailbox scheduling remains an explicit open gap.
+
 - **S3K SFX admission preserves ROM header ordering:** fixed channel-RAM order
   still owns the runtime walk, while admission now retains the original header
   order needed by the shipped driver's stale-IX PSG silence. Consecutive PSG2

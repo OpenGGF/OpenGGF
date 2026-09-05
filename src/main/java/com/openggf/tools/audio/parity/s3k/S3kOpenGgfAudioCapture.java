@@ -123,6 +123,7 @@ public final class S3kOpenGgfAudioCapture {
             short[] dacScratch = new short[framesPerVint * 2];
 
             boolean[] segaPending = new boolean[1];
+            RingDispatch ringDispatch = new RingDispatch();
             for (int index = 1; index < reference.size(); index++) {
                 S3kAudioTick referenceTick = reference.get(index);
                 int ordinal = referenceTick.ordinal();
@@ -152,7 +153,8 @@ public final class S3kOpenGgfAudioCapture {
                 // puts it at that point instead of ahead of the whole service.
                 for (int request : referenceTick.mailbox()) {
                     if (request != 0) {
-                        driver.submitServiceRequest(() -> dispatch(request,
+                        driver.submitServiceRequest(() -> dispatch(
+                                ringDispatch.select(request),
                                 loader, dacData, stream, unsupported,
                                 ordinal, segaPending));
                     }
@@ -170,6 +172,33 @@ public final class S3kOpenGgfAudioCapture {
             }
             return new CaptureResult(ticks, unsupported);
             }
+        }
+    }
+
+    /**
+     * Diagnostic model of the retail request transform, deliberately local to
+     * this capture host.  {@code zPlaySound_CheckRing} toggles
+     * {@code zRingSpeaker} only when raw request 33h reaches dispatch, then
+     * selects Sound34/Sound33 (Sound/Z80 Sound Driver.asm:1919-1928,
+     * shipped {@code fix_sndbugs=0}).  Keeping selection inside the pending
+     * service callback prevents submission itself from advancing the latch.
+     * The live presentation still lacks S3K's complete three-slot mailbox
+     * consumer and must not treat this diagnostic state as production parity.
+     */
+    static final class RingDispatch {
+        private boolean leftNext = true;
+
+        int select(int request) {
+            if (request != 0x33) {
+                return request;
+            }
+            int selected = leftNext ? 0x34 : 0x33;
+            leftNext = !leftNext;
+            return selected;
+        }
+
+        boolean leftNext() {
+            return leftNext;
         }
     }
 
