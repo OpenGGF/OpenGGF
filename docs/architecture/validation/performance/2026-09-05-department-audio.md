@@ -134,7 +134,20 @@ its audio validation document and is retained during integration.
 
 ## Integration
 
-Local integration and post-merge verification remain pending in this task-tree
-record; their completed results will be added before delivery. Raw commands,
-logs, complete test identities/statuses, focused selections and process resource
-reports are retained under `${EVIDENCE_ROOT}/`.
+Integrated into `develop` as `32522d7cb`, preserving both upstream documentation
+closeouts (`c7d04fbc3`, `075bbca75`) and adding the README release summary. The
+task worktree was fast-forwarded to that exact integrated commit for verification,
+keeping Maven output isolated from other sessions in the main checkout.
+
+`mvn -Dmse=off -B package` with the explicit ROM properties above passed:
+16,651 tests, zero failures/errors and the same 23 skips. Both ordinary and
+bundled JARs were built. Separate `-Pguards test` passed all 609 guards without
+skips. Integrated identity comparison found no missing baseline identity and no
+changed failure/skip outcome. In addition to the new region regression, integrated
+XML retains the six pre-existing ICZ methods absent from the updated baseline
+XML; all pass. Those are recovered report entries, not newly added tests.
+
+Final documentation-only edits were checked for local links, whitespace and
+repository content/trailer policy; no production/test source changed after the
+integrated run. Raw commands, logs, complete test identities/statuses, focused
+selections and process resource reports are retained under `${EVIDENCE_ROOT}/`.
