@@ -14,6 +14,13 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **S3K noise effects preserve the original command write order:** sound
+  effects now keep their noise-form command's two writes adjacent, without
+  inserting a second setup mute. Splash, insta-shield and collapse have
+  ROM-backed checks; the AIZ1 oracle advances from event 39 to event 43 within
+  service 1570, where a separate duplicate volume write remains. The independent
+  DAC mismatch and stale-IX admission limitation remain open.
+
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data
   strobes, real and interpolated DAC provenance, and PSG writes in explicit
