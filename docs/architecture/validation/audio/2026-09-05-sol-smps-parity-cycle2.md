@@ -19,11 +19,22 @@ Baseline: develop `3fd7a15fc`. Candidate branch:
   1 and 23, and measures loaded kick completion. Its nine-output-frame bound
   follows resampler lookahead and output phase rounding, not fixture fitting.
   The worker's 295-to-288 mutation produced two assertion failures.
+- S3K EC cursor rewind (`eae7934cd`): replace the existing game-specific
+  handler's guarded decrement with an unsigned byte decrement. The rest clear,
+  volume clamp and no-direct-write behavior were already correct. Review
+  rejected moving those semantics into a new shared configuration/context API:
+  the existing handler is the smallest accurate owner. Focused cases include
+  zero wrap, underflow clamp, non-PSG rejection and both PSG/YM write observation.
+- S1 availability naming (`f6374613e`): the test now explicitly asserts
+  authenticated reference unavailability. Its fail-closed assertion is unchanged;
+  no resumed-service or PCM match is claimed.
 
-After the envelope repair the S3K ordered/state oracle first differs at
-service 1594, `SFX_PSG3.volEnv`, reference FF versus engine 00. This is a known
-mismatch, not full-run parity. Retail EC decrements an unsigned byte cursor;
-investigation must preserve that state rather than hide it in normalization.
+The envelope repair moved the S3K ordered/state frontier from 1592 to 1594;
+the cursor repair then moved it to service 1652, event 0: reference YM2612
+port 1 register 80 value FF, engine PSG value C8. The prefix through service
+1651 matches; this is not full-run parity. Future envelope consumption from
+cursor FF remains unverified: retail zero-extends it and reads envelope+255,
+whereas Java has a bounded envelope array. Do not normalize that state away.
 
 ## Verification
 
@@ -41,9 +52,10 @@ mvn -Dmse=off "-Dsonic1.rom.path=$S1_ROM_PATH" "-Dsonic2.rom.path=$S2_ROM_PATH" 
 |---|---|
 | Initial assembled focused selection | 28 tests, 0 failures/errors/skips |
 | First updated baseline ordinary | Incomplete: native fork exit 134 in `TestEditorToggleIntegration`; 16,612 reported executions, no assertion failures/errors, 43 skips; not a completed suite |
-| Updated baseline ordinary retry | In progress |
-| Updated baseline guards | Pending |
-| Final candidate ordinary and guards | Pending |
+| Updated baseline ordinary retry, `3fd7a15fc` | 16,641 tests, 0 failures/errors, 43 skips |
+| Updated baseline guards | In progress |
+| Final candidate ordinary, `c8b506a34` | In progress |
+| Final candidate guards | Pending |
 | Post-merge ordinary and guards | Pending |
 
 Logs and reports remain under each worktree's `target/`. Compare exact test
@@ -55,6 +67,10 @@ context during editor level initialization. No second-cycle production changes
 were present on that baseline. Its log and reports are archived under
 `target/audio-parity-cycle2-baseline-crash-evidence/`; the retry does not erase
 that failed execution record.
+The same reused-fork no-context failure is documented in the
+[July performance validation](../performance/2026-07-28-performance-followup-report.md).
+Its historical standalone passes explain the suspected isolation issue but
+do not substitute for this cycle's completed comparison.
 
 ## Separate native observation evidence
 

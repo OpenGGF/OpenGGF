@@ -135,8 +135,11 @@ These are bounded contributions, not completion of any game's parity programme.
 - S3K envelope consumption: reviewed `d8488e080` defers envelope byte zero
   while a newly attacked music PSG track remains overridden. The isolated
   oracle now reaches service 1594 (`SFX_PSG3.volEnv`, reference FF, engine 00).
-  Follow-on work verifies the retail EC volume command's wrapped cursor,
-  rest clearing, clamping and write timing; a wrapped byte is not normalized away.
+  Follow-on `eae7934cd` fixes the existing S3K EC handler's guarded decrement,
+  preserving its already-correct rest clearing, clamp and no-direct-write
+  semantics. The frontier advances to service 1652 event 0 (YM write versus
+  PSG write); a wrapped byte is not normalized away. Later envelope+255
+  consumption remains explicitly unverified.
 - S2 DAC cadence: `bc249d9b5` and review follow-up `4daabfb51` correct the
   loader-owned two-sample budget from 288 to the retail 295 Z80 cycles.
   Mutation tests and ROM-backed playback tests distinguish metadata from its
