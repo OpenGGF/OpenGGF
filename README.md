@@ -276,6 +276,13 @@ traces.
   New S3K effects are also suppressed during the 1-up jingle, without
   advancing ring stereo alternation, and resume at music restoration.
   See the [1-up investigation](docs/architecture/audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
+
+- **Bounded S1 audio diagnosis:** a strict diagnostic reader and canonical
+  row-zero runner compare independently captured request prerequisites without
+  publishing or hydrating reference state. The current measurement stops at
+  the first request divergence (row 972), before the one-up restore, so it is
+  explicitly not an SMPS register-parity result. See the
+  [validation record](docs/architecture/validation/audio/2026-09-05-s1-restore-diagnostic.md).
   for the existing-movie reproduction and the limits of current oracle coverage.
   The follow-on SMPS parity campaign removes a duplicate S3K PSG note-volume
   write, preserves ROM-gated PSG frequency pairs, restores FM3 mode before its
