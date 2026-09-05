@@ -91,7 +91,27 @@ a new trace target, so the frontier ledger is unchanged.
 
 ## Integration
 
-The final release build and separate structural guard run are recorded here
-after integration into `develop`. The latest base addition `eb324f5c6` changes
-only the unrelated audio validation document; its executable source matches
-the tested base `4d0c99095`.
+Merged into `develop` as `be5a9e596`. The latest base addition `eb324f5c6`
+changes only the unrelated audio validation document; its executable source
+matches the tested base `4d0c99095`. The final merge had no conflicts.
+
+Post-integration checks run in isolated checkouts of that exact merge commit,
+avoiding another session's main-workspace Maven run:
+
+- `mvn -Dmse=off package -B` with all three ROM properties: **16,626 executions,
+  zero failures/errors, 23 existing skips**, completed at 15:34:35. Both ordinary
+  and dependency-inclusive jars were built successfully.
+- `LUA_BIN=/usr/bin/lua5.4 mvn -Dmse=off -Pguards test -B`: **609 executions,
+  zero failures/errors/skips**, completed at 15:31:44 in a separate JVM.
+- Ordinary XML comparison includes every updated-base test identity, with no
+  changed outcomes or missing identities; all 39 added unique identities pass.
+  The 42-execution increase includes repeated nested/parameterized execution.
+  All guard identities and outcomes match. The final ordinary report also
+  retains the six ICZ records lost to report overwriting in earlier runs.
+
+The ROM arguments used for ordinary, focused and trace runs are
+`-Dsonic1.rom.path`, `-Dsonic2.rom.path` and `-Ds3k.rom.path`, each set to the
+verified absolute root ROM path. The trace result above applies to identical
+executable source in the merge; intervening changes are documentation only.
+Release notes, local Markdown targets, `git diff --check` and repository push
+policy were checked. No source changed after the verified merge.
