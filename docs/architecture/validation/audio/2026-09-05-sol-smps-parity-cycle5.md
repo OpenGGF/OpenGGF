@@ -1,7 +1,8 @@
 # SMPS parity cycle 5: S3K SFX header-order admission
 
-Status: merged as develop `8a7dc5f15`; both post-merge suites passed with exact
-candidate outcome equality. Push and cleanup are pending. Full-game audio parity
+Status: delivered. Merged as develop `8a7dc5f15`; both post-merge suites passed
+with exact candidate outcome equality, and develop was pushed through `9d153cf6a`.
+The completed worktree and local branch were removed. Full-game audio parity
 and authenticity remain open.
 
 ## Source and representation
@@ -86,4 +87,10 @@ Exact candidate comparison preserves all 15,717 distinct ordinary outcomes and
 Post-merge evidence and all four comparison logs are archived at
 `${EVIDENCE_ROOT}/cycle5-postmerge-8a7dc5f15.tar.gz`, SHA-256
 `b9c69f048e8bbf0b7257655009d8d3b5bd7b88fab69e2d8bec17ce74ba7f3075`.
-Push and completed-worktree cleanup remain pending.
+Develop was pushed through evidence commit `9d153cf6a`. After confirming clean
+tracked/untracked state and merged ancestry, the completed
+`.worktrees/sol-s3k-sfx-header-order` worktree and
+`bugfix/ai-sol-s3k-sfx-header-order` local branch were removed and metadata pruned.
+Only inspected generated build/cache/config/report files and hook-created links
+were discarded; original ROMs, user disassembly modifications and other
+worktrees were preserved. Archived evidence remains recoverable outside the repo.
