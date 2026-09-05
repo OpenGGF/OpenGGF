@@ -57,6 +57,10 @@ public final class Sonic3kSmpsSequencerConfig {
                 .halveModSteps(true)        // Z80 driver halves mod steps (srl a)
                 .relativePointers(false)    // PtrFmt = Z80 (absolute addresses)
                 .tempoOnFirstTick(true)     // Tempo1Tick = DOTEMPO
+                // Retail fix_sndbugs=0: ordinary zPlayMusic_DoFade calls
+                // zStopAllSound, which clears zTempoSpeedup (driver:1786,
+                // 2459-2473). The one-up save/load bypasses this boundary.
+                .resetTempoOnMusicLoad(true)
                 // Preserve the existing S3K Z80 rest path; the S2 oracle's
                 // post-rest envelope step is selected independently.
                 .advancePsgEnvelopeOnRest(false)

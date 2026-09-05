@@ -975,6 +975,11 @@ public final class SmpsDriverSession implements AutoCloseable {
 
     public void queueActivation(
             PreparedSmpsMusicActivation activation) {
+        queueActivation(activation, true);
+    }
+
+    private void queueActivation(
+            PreparedSmpsMusicActivation activation, boolean ordinaryLoad) {
         requireInstalled();
         PreparedSmpsMusicActivation resolved = Objects.requireNonNull(
                 activation, "activation");
@@ -982,9 +987,18 @@ public final class SmpsDriverSession implements AutoCloseable {
                 resolved.logicalPolicy().prepareMusicStart(
                         driver.captureSnapshot(),
                         resolved.incomingMusic());
+        boolean resetsTempo = ordinaryLoad
+                && resolved.logicalPolicy().resetsTempoOnMusicStart();
         SmpsLoadReadiness.Context context = new SmpsLoadReadiness.Context(
-                driver.captureSnapshot().region(), speedShoesEnabled);
+                driver.captureSnapshot().region(), !resetsTempo && speedShoesEnabled);
         SmpsLoadReadiness.Work readiness = resolved.readiness().begin(context);
+        if (resetsTempo) {
+            speedShoesEnabled = false;
+            speedMultiplier = 1;
+            // The same ordinary-load boundary abandons any saved song;
+            // retain neither its tracks nor its old tempo for a later restore.
+            clearOverrides();
+        }
         if (resolved.readiness().immediate()) {
             restoreLogicalWithoutWrites(transition.logical());
             applyCurrentLogicalControls();
@@ -1649,7 +1663,7 @@ public final class SmpsDriverSession implements AutoCloseable {
         int activeMusicId = musicId(current);
         if (activeMusicId < 0 || activeMusicId == activation.activation()
                 .source().id()) {
-            queueActivation(activation);
+            queueActivation(activation, false);
             return;
         }
         if (overrideCount == overrideStack.length) {
@@ -1660,7 +1674,7 @@ public final class SmpsDriverSession implements AutoCloseable {
                 current,
                 policyForSavedMusic(current),
                 selectedDacFor(current), pendingService);
-        queueActivation(activation);
+        queueActivation(activation, false);
         driver.observeLifecycle(
                 SmpsDriverServiceObserver.LifecycleKind.SAVE);
     }
