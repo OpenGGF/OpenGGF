@@ -115,3 +115,37 @@ at the stopped-Z80 `$1C08` boundary. The current approved observer exception
 is mailbox `$1C0A` only; extending it requires a scoped producer/input-contract
 review. Later comparison RAM must not be converted into invented commands.
 No TraceChaser code or canonical fixtures changed in this milestone.
+
+### Standalone audition corpus
+
+An external task archive contains `slice-music/s3k-music-{01,02,03,04}` FM and
+mixed WAVs, physical JSONL and logical-write logs: AIZ1, AIZ2, HCZ1 and HCZ2.
+The manifest SHA-256 is
+`75e226ac3301e51e6e238566cb136f621bac03dddd3260b02dc63e13db4c6ea3`.
+All sixteen file hashes/sizes were independently rechecked. Each WAV contains
+3,196,022 stereo PCM16 frames (approximately 60 seconds); its integer header
+rate is 53,267 Hz, versus the producer's exact internal rate 53,267.034722 Hz.
+All logs identify producer `25a8c34f31ddb84d0f4a24964ff3c8c4c577493a`, clean,
+and the verified locked-on ROM SHA-1. All have start ordinal 21, terminal cycle
+76,704,528, capacity 3,000,000 and no overflow or dropped events.
+
+| Music | Physical events | Validated YM events | Retained PSG events |
+|---|---:|---:|---:|
+| AIZ1 (`01`) | 982,278 | 951,050 | 31,209 |
+| AIZ2 (`02`) | 1,645,318 | 1,616,872 | 28,427 |
+| HCZ1 (`03`) | 808,627 | 778,720 | 29,888 |
+| HCZ2 (`04`) | 1,073,278 | 1,042,094 | 31,165 |
+
+The maintained validator accepted every log, with one typed output-gate
+boundary each. These are audition inputs, not a claimed listening result.
+Reproduce in a new external output directory, setting `S3K_ROM` and
+`AUDIO_ARCHIVE` to verified absolute paths (substitute IDs `02`–`04`):
+
+```bash
+mvn -o -Dmse=off -B org.codehaus.mojo:exec-maven-plugin:3.6.3:java \
+  -Dexec.mainClass=com.openggf.tools.audio.FmSfxRenderTool \
+  "-Dexec.args=--game s3k --rom $S3K_ROM --music 01 --rate internal --max-seconds 60 --physical-writes --physical-capacity 3000000 --out $AUDIO_ARCHIVE/slice-music"
+```
+
+Build the intended producer revision before using this command. Preserve its
+generated identity rather than labeling old compiled classes as a later commit.

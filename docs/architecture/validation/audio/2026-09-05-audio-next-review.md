@@ -12,7 +12,7 @@ In progress on `feature/ai-audio-next-coordination`, based on `develop`
 | S3K PSG takeover | `5ee8bb8ae` | Independent DAC investigator approved scope, retail source, ownership and hard prefix; 74 focused tests passed |
 | DAC run provenance | `b710033b2`, `c877fca10` | Independent PSG investigator approved attribution and unchanged comparison semantics; 47 focused tests passed, then 14 after EOF diagnostic correction |
 | Bounded capture and slice tests | `2d1ecf68d` | Independent PSG investigator found queued non-bus reset-origin gap; reproducing test failed, queue predicate fixed it, re-review approved; final 40 focused tests passed |
-| Performance tooling | `c43e61e2e` | 896 focused tests and standalone proof tools passed in its worktree; independent review and integrated verification remain required |
+| Performance tooling | `c43e61e2e`, `de1f964f3` | 896 focused tests and standalone tools passed; independent review found missing direct-proof failure enforcement, fixed with three subprocess mutation controls; re-review approved and all five integrated tool checks passed |
 
 Lead independently inspected the retail PSG admission/noise routines and the
 engine ownership policy before implementation. The semantic change uses the
@@ -42,7 +42,7 @@ Its complete run at `bbf28b7dc` passed: 16,482 reported executions, zero
 failures/errors, 22 skips (16,386 distinct XML cases; nested-class reporting
 accounts for the difference). Develop subsequently advanced to `ce3b9e291`
 with agent-guidance/documentation changes only. A fresh isolated baseline on
-that updated commit is required and running; the earlier result is not relabeled.
+that updated commit passed independently; the earlier result is not relabeled.
 
 The combined oracle/capture/presentation focused run on `d27d4992e` plus the
 lead's provenance-assertion and documentation edits passed 51 tests with zero
@@ -50,6 +50,16 @@ failures/errors/skips (`target/audio-next-final-focused.log`). Its oracle DAC
 test was deliberately renamed to describe different run-start services rather
 than imply a decoder attribution; baseline comparison must account for that
 name change, not silently treat a missing old name as coverage loss.
+
+Final independent runtime review inspected reset/endpoint proof, the actual CLI
+read/close lifecycle, post-render output gating, queued-operation semantics and
+repeated-jingle preconditions. It approved the bounded change with no new
+blocker; it did not claim listening or sample-identical rewind validation.
+The performance review's P2 was confined to the research proof's success path:
+false rejection-control booleans now throw before emitting success JSON. Three
+copied-source mutants exercise direct subprocess failure, and a fresh Native
+Image executable passed the corrected positive path. No production synthesis
+change was needed.
 
 Benchmarks are deliberately sequenced outside build/capture windows. A quiet
 window is a checked host condition, not a claim that CPU affinity reserves a
@@ -65,5 +75,52 @@ core or that a Ryzen 9950X establishes low-end performance.
   speed-up state from later comparison snapshots.
 - Next PSG volume-tail discrepancy and previously documented stale-IX behavior.
 
-Full ordinary, separate structural guards, exact baseline/development/merged
-comparison and final pushed commit identities will be recorded after execution.
+## Full-suite comparison
+
+All runs use JDK 21.0.11, Lua 5.4, `-Dmse=off`, all three verified absolute
+ROM paths and the same host graphics environment. Reports were archived only
+after each process exited and before a later run reused Surefire output.
+
+| Arm | Head | Ordinary: reported / failures / errors / skips | Separate guards |
+|---|---|---|---|
+| Updated baseline | `ce3b9e291` | 16,482 / 0 / 0 / 22 | 609 / 0 / 0 / 0 |
+| Combined development | `e3e156c04` | 16,497 / 0 / 0 / 22 | 609 / 0 / 0 / 0 at `532e3d1af` |
+| Merged develop | Pending | Pending | Pending |
+
+The development arm adds 15 executions. Per-test comparison has no failures,
+errors or newly skipped tests; guards have identical case sets and outcomes.
+The only missing old name is the deliberately
+renamed DAC provenance test, whose replacement retains the old assertions and
+adds both run-start services. Distinct XML cases are 16,386 baseline versus
+16,401 development; the 96-execution nested-class reporting difference is
+present in both. The 22 skips include seven absent legacy PCM reference files,
+opt-in diagnostics/soak/movie inputs, and the pre-existing CPZ spin-tube
+assumption. They are not hidden ROM-fixture skips or proof of those gates.
+
+`e3e156c04..532e3d1af` changes only the standalone JNI research proof and its
+shell test, not `src/`, `pom.xml` or `.mvn/`. Those corrected tools are tested
+separately; the final merged suite still runs on the delivered tree.
+
+```bash
+LUA_BIN=lua5.4 mvn -Dmse=off -B "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" test
+LUA_BIN=lua5.4 mvn -Dmse=off -B -Pguards "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" "-Ds3k.rom.path=$S3K_ROM" test
+```
+
+Final merged comparisons, pushed identities and cleanup remain pending.
+
+The final focused oracle/capture/presentation run at `532e3d1af` passed 51
+tests, zero failures/errors/skips (`audio-next-integrated-focused.log`). The
+five standalone checks also passed: `tests/test-tool.sh`,
+`tests/test-profile-tool.sh`, `tests/test-capture-validator.sh` at `e3e156c04`,
+then `tests/test-jni-proof.sh --nuked-source "$NUKED_SOURCE"` and
+`tests/test-fast-capture.sh --ymfm-source "$YMFM_SOURCE"` at `532e3d1af`, all
+under `tools/audio/fm-core-benchmark/`. Their verified upstream source trees
+are external; the latter runs verify the pinned compiled inputs. No integrated
+check collects timing. Logs are under `target/fm-core-integrated-test-logs/`.
+
+The external `performance-evidence/manifest.json` preserves 38 original
+research/profile/results/log payloads with manifest SHA-256
+`8fe48c0e4375562891290e26784400124a91f74bc466ccd4e60b77cfef694c2f`.
+Every copied payload was compared byte-for-byte and rehashed. No native
+binary, Java class, upstream source, SDK, ROM or generated audio is in this
+evidence archive; audition material has its own separate manifest.

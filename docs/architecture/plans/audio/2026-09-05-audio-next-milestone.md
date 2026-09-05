@@ -47,51 +47,51 @@ Use existing semantic policies and observation surfaces. No new production backe
 
 Files: `Sonic3kSmpsSequencerConfig.java`, `TestS3kNoiseFormEffectWriteStream.java`, `TestS3kOracleRequestSidecarWiring.java`, relevant admission tests, a validation record and audio frontier log.
 
-- [ ] Tighten the existing ROM-backed noise-pair test to `formAt == silenceAt + 1`; observe red for Splash, InstaAttack and Collapse.
-- [ ] Add an admitted PSG3 zero-operand case proving DF,FF is adjacent and admission retains its existing FF.
-- [ ] Apply `.psgSfxTakeoverMode(SmpsSequencerConfig.PsgSfxTakeoverMode.REGISTER_SEQUENCE)` in the S3K provider with retail source citation.
-- [ ] Verify focused admission, release, lifetime, rollback, cross-game policy and config-copy tests.
+- [x] Tighten the existing ROM-backed noise-pair test to `formAt == silenceAt + 1`; observe red for Splash, InstaAttack and Collapse.
+- [x] Add an admitted PSG3 zero-operand case proving DF,FF is adjacent and admission retains its existing FF.
+- [x] Apply `.psgSfxTakeoverMode(SmpsSequencerConfig.PsgSfxTakeoverMode.REGISTER_SEQUENCE)` in the S3K provider with retail source citation.
+- [x] Verify focused admission, release, lifetime, rollback, cross-game policy and config-copy tests.
 - [x] Attempt 1,571 matching services, then preserve the measured result: 1,570 whole services plus the first 43 ordered writes of service 1570. The isolated fix exposes a second mismatch at event 43, so claiming another full service would be false.
-- [ ] Record red/green commands, new frontier and remaining stale-IX limitation; commit for review.
+- [x] Record red/green commands, new frontier and remaining stale-IX limitation; commit for review.
 
 ### Task 2: DAC boundary diagnosis and regression
 
 Files: existing `S3kOpenGgfAudioCapture`, `S3kAudioParityComparator`, `Ym2612Chip` tests and diagnostic utilities only as the measured owner requires; separate validation record. Coordinate shared frontier prose through lead.
 
-- [ ] Generate current annotated engine runs 337-339, including every 2B boundary, service/write indices, lengths, first/last bytes and actual sample submissions.
-- [ ] Compare existing physical observer address/data strobes against logical callbacks using a bounded diagnostic, without trace hydration or production timing mutation.
-- [ ] Create a synthetic distinct-sentinel two-sample test that discriminates enqueue ordering from physical handoff behavior.
-- [ ] If capture or comparator is wrong, correct that boundary with a failing test; if physical playback is wrong, derive and test the smallest physical fix. Do not change cadence based solely on run bytes.
-- [ ] Re-run focused DAC timing, snapshot, physical observer and oracle tests; document evidence even if no playback change is justified.
-- [ ] Commit the tested bounded result for review, retaining any unresolved timing question explicitly.
+- [x] Generate current annotated engine runs 337-339, including every 2B boundary, service/write indices, lengths, first/last bytes and actual sample submissions.
+- [x] Compare existing physical observer address/data strobes against logical callbacks using a bounded diagnostic, without trace hydration or production timing mutation.
+- [x] Create a synthetic distinct-sentinel two-sample test that discriminates enqueue ordering from physical handoff behavior.
+- [x] If capture or comparator is wrong, correct that boundary with a failing test; if physical playback is wrong, derive and test the smallest physical fix. Do not change cadence based solely on run bytes.
+- [x] Re-run focused DAC timing, snapshot, physical observer and oracle tests; document evidence even if no playback change is justified.
+- [x] Commit the tested bounded result for review, retaining any unresolved timing question explicitly.
 
 ### Task 3: FM performance experiments
 
 Files: `tools/audio/fm-core-benchmark/`, optional focused synth tests, and a new report under `docs/architecture/research/audio/`.
 
-- [ ] Inspect retained harness and available JFR/perf/native tools; select repeatable sustained workloads with snapshots and complete write input.
-- [ ] Record a quiet-host Java profile, identify actual hot methods, and trial a narrow optimization only under pinned sample/state equality and negative controls.
-- [ ] Compare baseline and candidate in repeated equal-order runs; retain a production optimization only if both exactness and meaningful speedup are demonstrated.
-- [ ] Extend the existing JNI experiment to actual stereo PCM transfer and snapshot/lifecycle round trips, with Java/C sample equality and invalid-input tests; record Native Image feasibility separately from packaging/platform support.
-- [ ] Compare native/fast candidate throughput honestly; report licensing, fidelity, packaging and lower-end evidence gaps without adding a runtime selector.
-- [ ] Commit reproducible tooling and research conclusions for review; no bundled binaries or unverified results.
+- [x] Inspect retained harness and available JFR/perf/native tools; select repeatable sustained workloads with snapshots and complete write input.
+- [x] Record a quiet-host Java profile, identify actual hot methods, and trial a narrow optimization only under pinned sample/state equality and negative controls.
+- [x] Compare baseline and candidate in repeated equal-order runs; retain a production optimization only if both exactness and meaningful speedup are demonstrated.
+- [x] Extend the existing JNI experiment to actual stereo PCM transfer and snapshot/lifecycle round trips, with Java/C sample equality and invalid-input tests; record Native Image feasibility separately from packaging/platform support.
+- [x] Compare native/fast candidate throughput honestly; report licensing, fidelity, packaging and lower-end evidence gaps without adding a runtime selector.
+- [x] Commit reproducible tooling and research conclusions for review; no bundled binaries or unverified results.
 
 ### Task 4: AIZ-to-HCZ evidence and delivery
 
 Files: existing render/capture tooling if a demonstrated gap requires changes, listening checklist, handover, validation/research docs, release notes and README release summary.
 
-- [ ] Inventory existing movie/reference PCM capability and current engine presentation tests; identify equivalent bounded audio events before making clips.
+- [x] Inventory existing movie/reference PCM capability and current engine presentation tests; identify equivalent bounded audio events before making clips.
 - [ ] Produce available engine/reference artifacts externally with commit, ROM, settings, event and tool provenance; do not label unrelated renders as synchronized A/B evidence.
-- [ ] Verify first/repeated 1-up terminal fade and snapshot/rewind continuation through presentation tests; retain human listening approval as pending unless actually supplied.
-- [ ] Independently review each lane and resolve findings, then combine in the coordination worktree.
-- [ ] Run full ordinary and fresh guards with focused audio tests; compare per-test outcomes with the pinned baseline.
+- [x] Verify first/repeated 1-up terminal fade and snapshot/rewind continuation through presentation tests; retain human listening approval as pending unless actually supplied.
+- [x] Independently review each lane and resolve findings, then combine in the coordination worktree.
+- [x] Run full ordinary and fresh guards with focused audio tests; compare per-test outcomes with the pinned baseline.
 - [ ] Update handover and release claims, independently review whole branch, refresh and merge into main develop, run post-merge comparisons, push develop and clean only this round's worktrees/branches.
 
 ## Integration report
 
-In progress. Main ordinary baseline is running at `bbf28b7dc`; no result claimed yet. The previous milestone is already delivered and is not being reimplemented.
+In progress. Isolated ordinary baseline at `bbf28b7dc` passed 16,482 reported executions with zero failures/errors and 22 skips. Develop's independent guidance update `ce3b9e291` merged cleanly into coordination (both README entries retained). Updated baseline passed 16,482 ordinary and 609 guard executions; combined development passed 16,497 ordinary and 609 guards, with no failures/errors or new skips. The ordinary 22 skips remain explicitly recorded. The previous milestone is already delivered and is not being reimplemented.
 
-First baseline invocation aborted in `TestEditorToggleIntegration`: native `glGenTextures` was called without a current context, after a prior GLFW initialization failure. Reported 16,453 executions are an incomplete run, not the baseline suite total. The class passes alone; a complete same-tree retry is running. Preserve the crashed run's archived reports rather than comparing its truncated count.
+First baseline invocation aborted in `TestEditorToggleIntegration`: native `glGenTextures` was called without a current context, after a prior GLFW initialization failure. Reported 16,453 executions are an incomplete run, not the baseline suite total. The class passed alone; a later same-tree retry collided with an independent main Maven build and is also excluded. The completed isolated baseline above replaces these invalid attempts. Preserve their provenance rather than comparing truncated counts.
 
 ## End-to-end review
 
@@ -116,3 +116,15 @@ Ruling: distinguish the session's final PCM silence gate with `OUTPUT_GATE_CHANG
 | 2 | Investigation and implementation | Measurement precedes choosing owner; absence of proof is recorded, not replaced by a guessed fix |
 | 3 | Profiling and timing | Heavy jobs are sequenced before publishable measurements |
 | 4 | Evidence and release gate | Automated results and pending human/hardware work remain separate |
+
+## Measured scope adjustments
+
+Task 2 completed as diagnostic provenance and regressions, not a playback fix:
+reference and engine run 338 represent different plays after missing external
+tempo control. Task 3 retained no Java optimization because the measured trial
+showed no reliable gain. Native actual-PCM/GraalVM and deterministic ymfm
+proofs are research; direct-proof failure controls passed independent re-review.
+Task 4 produced four verified 60-second standalone engine music sets externally;
+equivalent full-slice retail/gameplay A/B needs a reviewed TraceChaser sound-on
+WAV adapter and tempo-input contract, and human listening remains pending.
+These gaps are not marked complete by generated files or green automated tests.
