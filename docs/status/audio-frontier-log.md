@@ -27,6 +27,16 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - S3K covered-noise restore advances service 1690 to 2012
+
+- **Before:** service 1690 event 7, reference PSG `E7`, engine PSG `C0`.
+- **After:** service 2012 event 1, reference PSG `BF`, engine PSG `FF`.
+- **ROM owner:** `zStopPSGTrack` preserves the covered music track's state and
+  writes its exact stored `PSGNoise` byte only for noise mode and a negative
+  raw byte (driver:3521-3533). Tone and positive-byte cases write nothing.
+- **Ownership:** the ended noise-form PSG3 SFX releases only its own tone/noise
+  locks and channel-2 admission claim before the one music callback.
+
 ## 2026-09-05 - S3K PSG stop helper advances service 1690 event 6 to event 7
 
 - **Before:** service 1690 event 6, reference PSG `FF`, engine PSG `C0`.

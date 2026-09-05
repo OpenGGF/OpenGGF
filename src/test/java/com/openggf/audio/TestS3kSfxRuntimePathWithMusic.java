@@ -82,11 +82,12 @@ class TestS3kSfxRuntimePathWithMusic {
         assertEquals(122, observation.framesThroughTerminalStop(),
                 "at one SFX tick per presented NTSC frame, five $18-tick notes"
                 + " are bracketed by deferred admission and the following F2 frame");
-        assertEquals(List.of(0xC0, 0x00, 0xFF, 0x80, 0x14, 0x9F,
+        assertEquals(List.of(0xE7, 0x80, 0x14, 0x9F,
                         0xAD, 0x17, 0xBF, 0xC0, 0x00, 0xF4),
                 observation.postStopWrites(),
-                "characterize today's known-gap covered-track restore and later"
-                + " AIZ1 writes; the pending raw-E7 repair must update this suffix");
+                "the source-proven zStopPSGTrack E7 restore precedes the"
+                + " characterized later AIZ1 writes"
+                + " (Sound/Z80 Sound Driver.asm:3521-3533)");
     }
 
     /**
@@ -132,10 +133,11 @@ class TestS3kSfxRuntimePathWithMusic {
         assertEquals(87, observation.framesThroughTerminalStop(),
                 "at one SFX tick per presented NTSC frame, $06 rest + $4F"
                 + " noise are bracketed by deferred admission and the following F2 frame");
-        assertEquals(List.of(0xC0, 0x00, 0xFF, 0x9F, 0xBF,
+        assertEquals(List.of(0xE7, 0x9F, 0xBF,
                         0xC0, 0x00, 0xF6), observation.postStopWrites(),
-                "characterize today's known-gap covered-track restore and later"
-                + " AIZ1 writes; the pending raw-E7 repair must update this suffix");
+                "the source-proven zStopPSGTrack E7 restore precedes the"
+                + " characterized later AIZ1 writes"
+                + " (Sound/Z80 Sound Driver.asm:3521-3533)");
     }
 
     /**

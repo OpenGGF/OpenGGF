@@ -69,7 +69,7 @@ public interface CoordFlagContext {
     default void restorePreviousMusic() {
     }
 
-    default void releaseChannelToMusic(SmpsSequencer.TrackType type, int channelId) {
+    default void releaseChannelToMusic(SmpsSequencer.Track endingTrack) {
     }
 
     /** Refresh the track's volume (re-apply TL for FM, attenuation for PSG). */

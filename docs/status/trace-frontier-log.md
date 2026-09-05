@@ -115833,3 +115833,12 @@ The other three death arms remain coordinates only.
 - The oracle advances within service 1690 from event 6 (`FF` missing) to event
   7: reference restored-noise `E7`, engine frequency `C0`. Prefix remains
   1,690 complete services; the independent DAC mismatch remains.
+
+## 2026-09-05 - S3K covered-noise restore advances to service 2012
+
+- Worktree `.worktrees/sol-s3k-noise-restore` atop reviewed stop transaction.
+- `zStopPSGTrack` restores only the exact signed raw noise byte of the covered
+  music track, preserving active/rest state. The ended SFX's matching PSG3 and
+  noise locks are cleared before that callback; unrelated owners are retained.
+- The hard oracle advances from service 1690 event 7 (`E7` versus `C0`) to
+  service 2012 event 1: reference PSG `BF`, engine PSG `FF`.

@@ -24,7 +24,7 @@ public interface SmpsSequencerHost {
 
     /** See {@link CoordFlagContext#releaseChannelToMusic}. */
     default void releaseChannelToMusic(SmpsSequencer sequencer,
-            SmpsSequencer.TrackType type, int channelId) {
+            SmpsSequencer.Track endingTrack) {
     }
 
     /**

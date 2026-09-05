@@ -316,7 +316,7 @@ public class Sonic3kCoordFlagHandler implements CoordFlagHandler {
                 // overridden music track's bit and sends that track's FM
                 // instrument, inline, before the music update of the same
                 // service (Sound/Z80 Sound Driver.asm:3059-3086).
-                ctx.releaseChannelToMusic(t.type, t.channelId);
+                ctx.releaseChannelToMusic(t);
                 return true;
 
             case 0xF3: // PSG_NOISE (PNOIS_SRES) - set + reset
