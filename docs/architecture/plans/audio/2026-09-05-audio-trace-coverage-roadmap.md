@@ -182,6 +182,26 @@ It is not part of this candidate. Neither this prefix nor the running full S1
 diagnostic capture establishes full-game parity or authenticated production
 reference availability.
 
+### Fourth worker cycle: verification candidate
+
+Candidate `d14277e8f` closes the service-1690 F2 covered-noise restore mismatch:
+release the exact ending track's owned claims, preserve music playing/rest state,
+and restore only the signed raw noise byte. A dedicated stop cause prevents this
+behavior leaking into generic teardown. The public `stopAllSfx` negative control
+detects that leak after successful admission, at the physical write boundary.
+The focused 125-test and ordinary 16,661-test runs pass; seven new passing
+identities and one reviewed strengthened test rename preserve all baseline
+outcomes, including 43 skips. See the
+[fourth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle4.md)
+for pending integration and separate-guard evidence.
+
+The next hard mismatch is service 2012 event 1 (`BF` versus `FF`). Source review
+shows the second Skid header silences the previous header initialized within
+the same admission. Use local header-order state, not a persistent retired-slot
+RAM model; entry state before the first header remains a separate limitation.
+Retail E3's silence prelude plus F2 tail, raw tempo-byte state (including `01`),
+and authenticated full-game references remain separate work.
+
 ### Phase 1 — truthful coverage reporting
 
 - [ ] Enumerate actual fixed profiles, fixtures, producer bindings, observation

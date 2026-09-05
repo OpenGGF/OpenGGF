@@ -43,6 +43,17 @@ callbacks retain their established behavior.
   restore policy. A dedicated F2 restore cause closes that leak. Routing generic
   callbacks through it makes the negative control fail
   (`target/e7-verification/focused/mutation-generic-routed-through-f2.log`).
+- A public-path mutation preserved normal SFX admission but routed only the
+  generic release callback through the F2 setter. `stopAllSfx` then emitted the
+  music source's raw `85` between the effect's physical `DF` and `FF` writes,
+  failing the actual-bus assertion; restoring the generic callback passes
+  (`target/e7-verification/focused/mutation-driver-release-callback-to-f2.log`,
+  `target/e7-verification/focused/restored-driver-public-path.log`). The
+  asserted `DF FF` sequence is the established Java generic cleanup boundary,
+  not a projection of retail E4: retail `zStopSFX` reaches `cfStopTrack` through
+  `zSilenceStopTrack` / `cfSilenceStopTrack`, while Java's separately owned
+  `S3kE4StopSfxPlan` and `stopAllSfxWithoutRestoreWrites` boundary remains the
+  retail-E4 modelling seam.
 
 ## Verification ledger
 
@@ -57,6 +68,6 @@ S3K ROM paths.
 | Diagnostic ordinary before final cause split | 16,659 tests, 0 failures/errors, 43 skips | `target/e7-verification/ordinary/run.log` |
 | Diagnostic ordinary after cause split, before updated develop | 16,660 tests, 0 failures/errors, 43 skips | `target/e7-verification/ordinary/pre-e73-post-cause-run.log` |
 | F2/generic cause boundary | passed | `target/e7-verification/focused/cause-boundary.log` |
-| Final expanded focused | pending | `target/e7-verification/focused/final-run.log` |
-| Final ordinary | pending | `target/e7-verification/ordinary/final-run.log` |
-| Final guards, separate JVM | pending | `target/e7-verification/guards/final-run.log` |
+| Final expanded focused after merging `e73ca442f` | 125 tests, 0 failures/errors/skips | `target/e7-verification/focused/post-e73-final-run.log`; XML in `target/e7-verification/focused/post-e73-reports/` |
+| Final ordinary after merging `e73ca442f` | 16,661 tests, 0 failures/errors, 43 skips | `target/e7-verification/ordinary/post-e73-final-run.log`; XML in `target/e7-verification/ordinary/post-e73-reports/` |
+| Final guards, separate JVM after merging `e73ca442f` | 609 tests, 0 failures/errors/skips | `target/e7-verification/guards/post-e73-final-run.log`; XML in `target/e7-verification/guards/post-e73-reports/` |

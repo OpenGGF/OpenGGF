@@ -283,6 +283,9 @@ traces.
   cursor. S2 DAC playback uses the retail driver's 295-cycle compressed-byte budget.
   S3K effects now run in the driver's fixed channel-slot order and preserve
   its complete PSG F2 stop-silence transaction, including repeated physical writes.
+  F2 also returns covered PSG music ownership before restoring its exact stored
+  noise byte, without clearing the music track's rest state. This restoration
+  is scoped to the driver's track-stop path, not generic effect teardown.
   Mutation-tested production observers complement the driver oracles; neither
   the current movie windows nor a green ordinary suite establishes complete
   per-game driver parity. See the [parity roadmap](docs/architecture/plans/audio/2026-09-05-audio-trace-coverage-roadmap.md).

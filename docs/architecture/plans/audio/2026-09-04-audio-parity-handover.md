@@ -68,6 +68,29 @@ The initial ordinary run's four assertion failures are retained: two omitted
 the retail stop byte and two mixed ending SFX with same-frame music traffic.
 Source-backed test corrections preserve that traffic and detect shortened tails.
 
+### Fourth Sol cycle (verification candidate)
+
+Candidate `d14277e8f`, based on develop `e73ca442f`, restores covered S3K PSG
+music after F2 using the exact signed raw noise byte, preserving playing/rest
+state. The exact ending track releases only its own locks and admission claim
+before the callback. Generic teardown retains its prior behavior; retail E3/E4
+are distinct source paths, not implicitly certified by this change.
+
+The matching intro prefix now reaches service 2011. Service 2012 event 1 remains
+`BF` versus `FF`: source review identifies the preceding header within the same
+Skid admission, not persistent retired-slot RAM. The first header's entry-IX
+behavior remains separately unverified. Do not introduce historical slot state
+to solve the proven intra-admission mismatch.
+
+The 125-test focused run and 16,661-test ordinary suite pass, with 43 unchanged
+skips. Exact comparison preserves every baseline outcome after one reviewed,
+strengthened music-F2 test rename and adds seven passing identities. Integration
+and separate guard status belong to the
+[fourth-cycle ledger](../../validation/audio/2026-09-05-sol-smps-parity-cycle4.md).
+Native S1 capture remains separate diagnostic work until genuinely sealed and
+authenticated; neither a matching prefix nor the ordinary suite proves full-game
+driver parity.
+
 ### 1-up admission follow-up
 
 The [1-up suppression audit](../../audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
