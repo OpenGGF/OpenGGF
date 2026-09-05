@@ -8,8 +8,9 @@ mapping, decompression, palette and sprite-rendering helpers.
 
 - `GameModule.createContinueScreenProvider` constructs the game-owned screen.
   Providers own ROM countdown, character animation, input acceptance and music.
-- `MenuScreenModeController` handles input dispatch; `GameLoop` connects the
-  existing fade and restart lifecycle. `EngineRenderDispatcher` selects the
+- `MenuScreenModeController` handles input dispatch;
+  `GameLoopContinueCoordinator` connects the existing fade and restart lifecycle
+  without expanding the central loop. `EngineRenderDispatcher` selects the
   screen-space drawing path. Continue is a non-rewindable menu boundary.
 - `GameStateManager` spends a continue and resets lives/score without clearing
   emerald progress. S1/S2 clear the checkpoint; S3K retains it and saves updated
