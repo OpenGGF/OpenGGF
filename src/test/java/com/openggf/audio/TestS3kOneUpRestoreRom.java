@@ -49,6 +49,95 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kOneUpRestoreRom {
     private Rom rom;
 
+    @ParameterizedTest
+    @ValueSource(ints = {0x62, 0x33})
+    void requestsDuringOneUpAreDiscardedAndResumeAtRestoration(int request) {
+        AudioManager audio = install();
+        audio.playMusic(Sonic3kMusic.AIZ1.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+        audio.playMusic(Sonic3kMusic.EXTRA_LIFE.id);
+        // Existing AIZ BK2: 1-up at 7700, first observed jump at 7733.
+        // This is a stimulus offset, not a driver timing expectation.
+        for (int frame = 0; frame < 33; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        boolean ringBefore = audio.captureLogicalSnapshot().ringLeft();
+        audio.playSfx(request);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertEquals(Sonic3kMusic.EXTRA_LIFE.id, playingMusicId(audio));
+        assertNoSfx(audio);
+        assertEquals(ringBefore, audio.captureLogicalSnapshot().ringLeft(),
+                "discarded rings must not advance speaker alternation");
+        for (int frame = 0; frame < 900
+                && playingMusicId(audio) != Sonic3kMusic.AIZ1.id; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+            assertNoSfx(audio);
+        }
+        assertEquals(Sonic3kMusic.AIZ1.id, playingMusicId(audio));
+        audio.playSfx(request);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertTrue(audio.shadowSmpsDriverSnapshotForTesting().sequencers()
+                .stream().anyMatch(SmpsDriverSnapshot.SequencerEntry::sfx),
+                "S3K permits SFX as soon as restoration starts, during the fade");
+    }
+
+    @Test
+    void oneUpSuppressionSurvivesSnapshotRestoreAndOrdinaryMusicReleasesIt() {
+        AudioManager audio = install();
+        audio.playMusic(Sonic3kMusic.AIZ1.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+        audio.playMusic(Sonic3kMusic.EXTRA_LIFE.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+        var duringJingle = audio.captureLogicalSnapshot();
+        audio.playMusic(Sonic3kMusic.AIZ1.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+        audio.playSfx(0x62);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertTrue(audio.shadowSmpsDriverSnapshotForTesting().sequencers()
+                .stream().anyMatch(SmpsDriverSnapshot.SequencerEntry::sfx));
+        audio.restoreLogicalSnapshot(duringJingle);
+        audio.playSfx(0x62);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertNoSfx(audio);
+    }
+
+    private static void assertNoSfx(AudioManager audio) {
+        assertTrue(audio.shadowSmpsDriverSnapshotForTesting().sequencers()
+                .stream().noneMatch(SmpsDriverSnapshot.SequencerEntry::sfx),
+                "zUpdateMusic discards both SFX mailboxes while the 1-up plays");
+    }
+
+    @Test
+    void oneUpWithoutSavedMusicReleasesSuppressionWhenItEnds() {
+        AudioManager audio = install();
+        audio.playMusic(Sonic3kMusic.EXTRA_LIFE.id);
+        for (int frame = 0; frame < 900; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        audio.playSfx(0x62);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertTrue(audio.shadowSmpsDriverSnapshotForTesting().sequencers()
+                .stream().anyMatch(SmpsDriverSnapshot.SequencerEntry::sfx));
+    }
+
+    @Test
+    void globalFadeStopReleasesOneUpSuppression() {
+        AudioManager audio = install();
+        audio.playMusic(Sonic3kMusic.AIZ1.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+        audio.playMusic(Sonic3kMusic.EXTRA_LIFE.id);
+        audio.presentFrame(PresentationMode.FORWARD);
+        audio.fadeOutMusic(1, 1);
+        for (int frame = 0; frame < 16; frame++) {
+            audio.presentFrame(PresentationMode.FORWARD);
+        }
+        assertEquals(-1, playingMusicId(audio));
+        audio.playSfx(0x62);
+        audio.presentFrame(PresentationMode.FORWARD);
+        assertTrue(audio.shadowSmpsDriverSnapshotForTesting().sequencers()
+                .stream().anyMatch(SmpsDriverSnapshot.SequencerEntry::sfx));
+    }
+
     @AfterEach
     void tearDown() {
         AudioManager.getInstance().resetState();
