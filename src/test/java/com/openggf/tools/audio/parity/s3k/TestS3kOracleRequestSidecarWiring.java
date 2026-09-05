@@ -262,16 +262,15 @@ class TestS3kOracleRequestSidecarWiring {
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
-        assertEquals(S3kAudioParityComparator.Report.Kind.TRACK_STATE_MISMATCH,
+        assertEquals(S3kAudioParityComparator.Report.Kind.EVENT_VALUE_DIFFERENT,
                 report.kind(), report::toString);
-        // An overridden music PSG attack now leaves VolEnv at its reset value
-        // until release. The next mismatch is separate SFX PSG3 state.
-        assertEquals(1594, report.tick(), report::toString);
-        assertEquals("SFX_PSG3", report.role());
-        assertEquals("volEnv", report.field());
-        assertEquals("255",
+        // cfChangePSGVolume's byte-sized DEC now wraps VolEnv 00h to FFh.
+        // The next mismatch is a separate ordered-write divergence.
+        assertEquals(1652, report.tick(), report::toString);
+        assertEquals(0, report.eventIndex());
+        assertEquals("AudioParityChipWrite[chip=ym2612, port=1, register=128, value=255]",
                 report.reference());
-        assertEquals("0",
+        assertEquals("AudioParityChipWrite[chip=psg, port=null, register=null, value=200]",
                 report.openggf());
     }
 
@@ -279,14 +278,14 @@ class TestS3kOracleRequestSidecarWiring {
     void theServiceStreamMatchesThroughCollapseAdmission() {
         File rom = RomTestUtils.ensureSonic3kRomAvailable();
         assumeTrue(rom != null && rom.isFile(), "S3K locked-on ROM unavailable");
-        List<S3kAudioTick> reference = read(committed()).subList(0, 1594);
+        List<S3kAudioTick> reference = read(committed()).subList(0, 1652);
         S3kOpenGgfAudioCapture.CaptureResult engine =
                 S3kOpenGgfAudioCapture.capture(rom.toPath(), reference, null);
         S3kAudioParityComparator.Report report =
                 S3kAudioParityComparator.compare(reference, engine.ticks());
 
         assertEquals(S3kAudioParityComparator.Report.Kind.MATCH, report.kind(), report::toString);
-        assertEquals(1594, report.ticksCompared());
+        assertEquals(1652, report.ticksCompared());
     }
 
     @Test

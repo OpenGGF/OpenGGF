@@ -115770,3 +115770,23 @@ The other three death arms remain coordinates only.
   `B5h` ring on the music mailbox), `w13650-14400` 5 -> 7 (13712 `F9h`
   fade-out, 13849 `92h` `zMusIDPtr_SpecStage`), CPZ 33 -> 35 (2724 `8Eh` CPZ
   music, 3225 `B5h` the milestone ring).
+
+## 2026-09-05 - S3K PSG-volume envelope rewind advances service 1594 to 1652
+
+- Worktree `.worktrees/sol-s3k-envelope-parity`, branch
+  `bugfix/ai-sol-s3k-envelope-parity`, atop `d8488e080`.
+- S3K `cfChangePSGVolume` executes an 8-bit `DEC` on `VolEnv`; the engine's
+  `envPos > 0` guard suppressed the retail `00h -> FFh` wrap seen on SFX PSG3
+  at service 1594. The handler now preserves the byte-width operation. Its
+  existing PSG-only gate, rest clear, wrapped add, unsigned `0Fh` clamp, and
+  no-immediate-chip-write behavior remain unchanged
+  (`Sound/Z80 Sound Driver.asm:3263-3285`).
+- Red-first unit command: `mvn -Dmse=off
+  -Dtest=TestPsgVolumeChangeSemantics test`; zero stayed zero before the fix.
+  The focused test now covers the zero wrap, signed-underflow clamp, no direct
+  PSG write, and the non-PSG early return.
+- ROM oracle command: `mvn -Dmse=off
+  -Dtest=TestS3kOracleRequestSidecarWiring#theFullOraclePinsTheNextSfxWriteFrontier
+  -Ds3k.rom.path=<absolute-locked-on-ROM> test`. It advances to one error at
+  service 1652 event 0: reference YM2612 port-I `80=FF`, engine PSG `C8`.
+  The independent DAC mismatch remains outside this service-stream axis.

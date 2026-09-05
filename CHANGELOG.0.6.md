@@ -92,8 +92,10 @@ This file contains the complete 0.6 development snapshot history carried forward
   or special register-27 mode before its voice, advancing the oracle to service
   1592. An attacked PSG note that remains SFX-overridden now resets its volume
   envelope without eagerly consuming byte zero before the ROM's override
-  return, advancing the oracle to service 1594; the newly exposed SFX PSG3
-  envelope-state mismatch and independent DAC mismatch remain.
+  return, advancing the oracle to service 1594. S3K's PSG-volume command now
+  performs its byte-sized envelope-index decrement at zero too (`00 -> FF`),
+  advancing the oracle to service 1652; the newly exposed ordered-write and
+  independent DAC mismatches remain.
 
 - **Audio diagnostics can capture dispatched chip writes:** the opt-in
   `FmSfxRenderTool --physical-writes` sidecar records raw YM address/data

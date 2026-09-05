@@ -27,6 +27,22 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - PSG-volume envelope rewind: service 1594 to service 1652
+
+- **Before:** service 1594 SFX PSG3 `volEnv`, reference `FF`, engine `00`.
+- **After:** `EVENT_VALUE_DIFFERENT` at service 1652 event 0, reference YM2612
+  port I `80=FF`, engine PSG `C8`; the first 1,652 services match.
+- **ROM owner:** S3K `cfChangePSGVolume` clears rest and performs a byte-sized
+  `DEC` on `VolEnv`, so zero wraps to `FF` before its wrapped volume add and
+  unsigned `0Fh` clamp (`Sound/Z80 Sound Driver.asm:3263-3285`). The engine's
+  prior `envPos > 0` guard incorrectly suppressed only that zero wrap.
+- **Evidence:** red-first unit coverage pins `00 -> FF`, signed underflow
+  clamping, the PSG-only gate, and absence of an immediate PSG write. The
+  committed ROM oracle pins the new event-order frontier and its 1,652-service
+  matching prefix. A later envelope walk from unsigned offset `FF` is not yet
+  claimed because Java bounds cursors to the loaded envelope array. The
+  independent DAC frontier is unchanged.
+
 ## 2026-09-05 - Overridden PSG attack envelope: service 1592 to service 1594
 
 - **Before:** service 1592 music PSG3 `volEnv`, reference `0`, engine `1`.
