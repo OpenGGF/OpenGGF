@@ -27,6 +27,29 @@ defined by `com.openggf.tools.audio.parity`.
 
 <!-- entries are prepended below, newest first -->
 
+## 2026-09-05 - S3K first-note volume tail: service 1570 event 43 to event 48
+
+- **Context:** `bugfix/ai-sol-s3k-psg-parity`,
+  `.worktrees/sol-s3k-psg-parity`, base `develop` `be5a9e596`; JDK 21.0.11,
+  isolated build output and the absolute verified locked-on ROM path.
+- **Fixture:** `s3k/s3k-aiz1-intro-reference-v2.jsonl.gz` with
+  `s3k-aiz1-intro-requests-v1.json`.
+- **Before:** service 1570 event 43, reference YM2612 port 0 `A4=22`, engine
+  PSG `F0`.
+- **After:** `EVENT_MISSING` at service 1570 event 48, reference PSG `FF`,
+  engine stream exhausted. The first 1,570 services and first 48 ordered writes
+  of service 1570 match. The independent DAC frontier is unchanged at run 338,
+  byte 0, reference `88` versus engine `7F`.
+- **ROM owner:** `zUpdatePSGTrack` has one shared volume tail after the new-note
+  and continuing-note frequency paths (`Sound/Z80 Sound Driver.asm:4059-4135`).
+  Collapse's note-start modulation already reached that tail; the engine then
+  added a second generic attacked-note volume write.
+- **Evidence:** `collapseFirstNoteWritesItsNoiseVolumeOnce` failed red with two
+  writes in the first sounding service and passes with one after the fix. The
+  exact comparison command remains the `S3kAudioParityTool compare` command in
+  the preceding entry, run from this worktree with the same fixture, request
+  sidecar and absolute ROM path.
+
 ## 2026-09-05 - PSG command takeover: service 1570 event 39 to event 43
 
 - **Context:** `bugfix/ai-audio-next-psg`, `.worktrees/audio-next-psg`,
