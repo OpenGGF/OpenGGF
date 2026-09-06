@@ -256,14 +256,14 @@ class TestFastFmCoreTolerance {
         void dumpWindows(String name) {
             double[] a = flatten(accurateChunks);
             double[] f = flatten(fastChunks);
-            int window = 2048;
+            int window = Integer.getInteger("openggf.fastfm.dumpWindow", 2048);
             for (int start = 0; start < a.length; start += window) {
                 int end = Math.min(a.length, start + window);
                 double[] wa = java.util.Arrays.copyOfRange(a, start, end);
                 double[] wf = java.util.Arrays.copyOfRange(f, start, end);
                 double c = correlation(removeMean(wa), removeMean(wf), 0);
-                System.out.printf(Locale.ROOT, "fastfm-window %s %7d acc=%8.1f fast=%8.1f corr=%6.3f%n",
-                        name, start, rms(wa), rms(wf), c);
+                System.out.printf(Locale.ROOT, "fastfm-window %s %7d acc=%8.1f fast=%8.1f corr=%6.3f hzAcc=%9.3f hzFast=%9.3f%n",
+                        name, start, rms(wa), rms(wf), c, frequencyHz(wa), frequencyHz(wf));
             }
         }
 
@@ -319,6 +319,25 @@ class TestFastFmCoreTolerance {
                 out[i] = x[i] - mean;
             }
             return out;
+        }
+
+        /** Mean frequency of a steady tone from interpolated rising zero crossings. */
+        private static double frequencyHz(double[] x) {
+            double first = -1;
+            double last = -1;
+            int cycles = 0;
+            for (int i = 1; i < x.length; i++) {
+                if (x[i - 1] < 0 && x[i] >= 0) {
+                    double t = (i - 1) + (-x[i - 1]) / (x[i] - x[i - 1]);
+                    if (first < 0) {
+                        first = t;
+                    } else {
+                        cycles++;
+                    }
+                    last = t;
+                }
+            }
+            return cycles == 0 ? 0 : cycles / (last - first) * (7670453.0 / 144.0);
         }
 
         private static double rms(double[] x) {

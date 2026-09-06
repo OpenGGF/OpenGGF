@@ -48,10 +48,29 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int[] LFO_FRAMES_PER_STEP = {109, 78, 72, 68, 63, 45, 9, 6};
     /** AM depth per AMS in envelope units (0.046875 dB): 0, 1.4, 5.9, 11.8 dB. */
     private static final int[] AM_DEPTH = {0, 15, 63, 126};
-    /** PM depth per PMS in cents (manual). */
-    private static final double[] PM_CENTS = {0, 3.4, 6.7, 10, 14, 20, 40, 80};
-    /** F-number multiplier per PMS and LFO step, Q16, from the cents depth on a 32-step triangle. */
-    private static final int[][] PM_MULTIPLIER_Q16 = new int[8][32];
+    /**
+     * PM deviation per PMS and quarter-cycle position, in units of 1/96 of the
+     * PMS 7 maximum. Measured from the cycle-exact oracle with a single-operator
+     * probe tone at every sensitivity: the waveform is stepped, not a linear
+     * triangle, and holds two zero positions before each ramp. The PMS 7 peak
+     * of +4.62 % agrees with the manual's ±80 cents (2^(80/1200) = 1.0473).
+     */
+    private static final int[][] PM_QUARTER_UNITS = {
+        {0, 0, 0, 0, 0, 0, 0, 0},
+        {0, 0, 0, 0, 4, 4, 4, 4},
+        {0, 0, 0, 4, 4, 4, 8, 8},
+        {0, 0, 4, 4, 8, 8, 12, 12},
+        {0, 0, 4, 8, 8, 8, 12, 16},
+        {0, 0, 8, 12, 16, 16, 20, 24},
+        {0, 0, 16, 24, 32, 32, 40, 48},
+        {0, 0, 32, 48, 64, 64, 80, 96},
+    };
+    /**
+     * Signed PM units per PMS and 32-position LFO cycle. The F-number offset is
+     * {@code ((fnum >> 4) * units) >> 7}: the oracle probe gave +28.5 F-number
+     * steps for 96 units at F-number 0x269 (top seven bits 38), i.e. 38 * 96 / 128.
+     */
+    private static final int[][] PM_UNITS = new int[8][32];
     private static final int LFO_STEPS = 128;
     private static final int PM_STEPS = 32;
     /** The envelope clock is master/432: one tick every three internal frames (Nemesis, later digital measurements). */
@@ -108,11 +127,13 @@ public final class FastYm2612Dsp implements FmDsp {
             EG_SHIFT[rate] = Math.max(0, 11 - (rate >> 2));
         }
         for (int pms = 0; pms < 8; pms++) {
-            for (int step = 0; step < PM_STEPS; step++) {
-                // Triangle: 0 → +1 → 0 → -1 → 0 over 32 steps.
-                int tri = step < 8 ? step : step < 24 ? 16 - step : step - 32;
-                double cents = PM_CENTS[pms] * tri / 8.0;
-                PM_MULTIPLIER_Q16[pms][step] = (int) Math.round(Math.pow(2.0, cents / 1200.0) * 65536.0);
+            for (int position = 0; position < PM_STEPS; position++) {
+                int quarter = position & 7;
+                if ((position & 8) != 0) {
+                    quarter = 7 - quarter; // second and fourth quarters mirror
+                }
+                int units = PM_QUARTER_UNITS[pms][quarter];
+                PM_UNITS[pms][position] = (position & 16) != 0 ? -units : units;
             }
         }
     }
@@ -412,9 +433,13 @@ public final class FastYm2612Dsp implements FmDsp {
         // Key code comes from the raw F-number before LFO modulation (Sauraen's die tracing).
         int newKeyCode = (block << 2) | FNUM_NOTE[(fnum >> 7) & 15];
         if (scalar[S_LFO_ENABLED] != 0 && pms != 0) {
-            int step = (scalar[S_LFO_STEP] >> 2) & (PM_STEPS - 1);
-            fnum = (int) (((long) fnum * PM_MULTIPLIER_Q16[pms][step]) >> 16);
-            fnum = Math.min(fnum, 0xFFF);
+            int position = (scalar[S_LFO_STEP] >> 2) & (PM_STEPS - 1);
+            int units = PM_UNITS[pms][position];
+            int fnumHigh = fnum >> 4;
+            // Integer offset, floor of the magnitude: matched the oracle's deltas
+            // at three F-numbers (16, 47 and 58 in the top seven bits).
+            int delta = units >= 0 ? (fnumHigh * units) >> 7 : -((fnumHigh * -units) >> 7);
+            fnum = Math.max(0, Math.min(0xFFF, fnum + delta));
         }
         if (newKeyCode != keyCode[slot]) {
             keyCode[slot] = newKeyCode;
@@ -507,11 +532,12 @@ public final class FastYm2612Dsp implements FmDsp {
             scalar[S_EG_FRAME] -= EG_TICK_MASTER_CYCLES;
             advanceEnvelopes();
         }
-        int amOffset = 0;
+        // A disabled LFO holds its counter at zero, which is the AM triangle's
+        // maximum attenuation (Nemesis); the offset is scaled per channel below.
+        int amOffset = 64;
         if (scalar[S_LFO_ENABLED] != 0) {
             int step = scalar[S_LFO_STEP];
-            int triangle = step < 64 ? 64 - step : step - 64; // 64 at rest, 0 at peak volume
-            amOffset = triangle; // scaled per channel below
+            amOffset = step < 64 ? 64 - step : step - 64; // 64 at rest, 0 at peak volume
         }
         for (int channel = 0; channel < 6; channel++) {
             out[channel] = renderChannel(channel, amOffset);

@@ -79,8 +79,15 @@ default is a separate commit.
 - Algorithms: the eight standard OPN connection graphs; modulator outputs feed
   successors' phase input, carrier outputs sum into the channel output.
 - LFO: 3-bit rate; the manual's 3.98–72.2 Hz table is quoted for an 8 MHz
-  clock and corresponds to 108/77/71/67/62/44/8/5 internal frames per step of
-  a 128-step cycle (approximate: analytical, not measured); AM depth
+  clock and corresponds to 109/78/72/68/63/45/9/6 internal frames per step of
+  a 128-step cycle (nearest integers, analytical). PM, measured black-box
+  from the oracle with single-operator probe tones: a 32-position cycle (one
+  position per four LFO steps) whose quarter is the stepped table
+  {0,0,32,48,64,64,80,96} units at PMS 7, halving per PMS down to
+  {0,0,0,0,4,4,4,4} at PMS 1, applied as the integer F-number offset
+  `((fnum >> 4) * units) >> 7` (verified at top-seven-bit values 16, 38, 47
+  and 58; PMS 7 peaks at +4.62 %, the manual's ±80 cents). A disabled LFO
+  holds its counter at zero, the AM triangle's maximum attenuation; AM depth
   per channel (2 bits: 0, 1.4, 5.9, 11.8 dB) applied to operators with AM
   enabled, PM depth per channel (3 bits) applied as an F-number offset.
 - Output: per-channel L/R enables (0xB4–0xB6 bits 7/6); the real chip's DAC is

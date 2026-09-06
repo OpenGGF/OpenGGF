@@ -119,3 +119,13 @@ fast-fidelity skips in addition to the 23 inherited skips; Maven's final
 aggregate omitted the dynamic skips. Nested suite attributes and testcase
 counts also differ. Compare identities and outcomes from individual cases,
 not aggregate totals. Final candidate/integrated runs remain pending.
+
+## LFO follow-up
+
+BG `152051dd5` replaces the cents-based triangular pitch modulation with a
+stepped, signed F-number offset measured using independent single-carrier
+oracle probes at several F-numbers. A disabled LFO retains maximum amplitude
+attenuation. The release branch imports that behavior and its diagnostic
+frequency probe, while retaining the original waveform/level acceptance
+criterion; the unvalidated contour fallback is excluded. The timer/CSM fix
+remains present. Follow-up strict-vector verification is pending.
