@@ -20,6 +20,14 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Fast FM release integration:** new configurations select `audio.fmCore=fast`;
+  an explicit `accurate` choice survives reload, and physical oracle exports
+  explicitly retain the accurate core. The benchmark rejects misspelled core
+  names, consumes initial title-card requests before replay, and installs the
+  current ROM before rebuilding audio on a repeated pass. These repairs enable
+  comparable multi-iteration FM measurements; fidelity acceptance remains under
+  the [0.6 audio validation record](docs/architecture/validation/audio/2026-09-06-fast-fm-release.md).
+
 - **Fast FM timers and CSM:** timer A and B now advance at one and sixteen
   internal frames per unit, correcting a threefold slowdown. A pending CSM
   key-off finishes when software stops its timer, preventing a stuck note.
@@ -40,15 +48,17 @@ This file contains the complete 0.6 development snapshot history carried forward
   rates 1–2) are listed as deferred in the test and the design document. On
   the S1 GHZ1 and S3K AIZ benchmarks the audio section drops from
   0.88–0.94 ms to 0.17–0.18 ms per frame with identical trajectory digests.
-  The default stays `accurate`; `TraceBenchmarkTool --fm-core` compares both.
+  At this development stage the default stayed `accurate`; the later release
+  integration entry above supersedes that default. `TraceBenchmarkTool --fm-core`
+  compares both.
 
 - **Selectable FM core behind an `FmChip` seam:** `VirtualSynthesizer` now
   drives an `FmChip`, implemented by the cycle-exact Nuked-OPN2 facade and a
   new register-level `FastYm2612Chip` facade over a clean-room `FmDsp`
   contract (queued writes, panning, mutes, DAC streaming, snapshots and SFX
   admission are the facade's; the DSP is register in, six channels out).
-  `audio.fmCore` selects `accurate` (default, unchanged behaviour) or `fast`;
-  no fast DSP is bound yet, so `fast` fails at construction until the
+  At this initial seam stage `audio.fmCore` selected `accurate` by default;
+  no fast DSP was bound, so `fast` failed at construction until the
   clean-room core lands. Physical chip capture requires the accurate core.
   Design and techniques spec:
   [2026-09-06-fast-fm-core-design.md](docs/architecture/designs/2026-09-06-fast-fm-core-design.md).

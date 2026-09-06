@@ -130,6 +130,9 @@ public final class TraceBenchmarkTool {
                 throw new IllegalArgumentException(
                         "--mode must be '" + MODE_UPDATE + "' or '" + MODE_FULL + "', got: " + mode);
             }
+            if (fmCore != null && !"fast".equals(fmCore) && !"accurate".equals(fmCore)) {
+                throw new IllegalArgumentException("--fm-core must be 'fast' or 'accurate', got: " + fmCore);
+            }
             return new Args(trace, mode, warmupFrames, measureFrames, iterations,
                     json, markdown, label, trackAllocations, audio, fmCore);
         }
@@ -189,18 +192,14 @@ public final class TraceBenchmarkTool {
         warnAboutSuspectFlags(environment);
 
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
-        if (args.fmCore() != null) {
-            GameServices.configuration().setConfigValue(
-                    com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE, args.fmCore());
-        }
-        System.out.println("FM core: " + GameServices.configuration().getString(
-                com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE));
+        applyFmCoreSelection(args);
         Path romPath = TraceToolRomLocations.resolve(
                 entry.gameId(), GameServices.configuration(), Path.of(""));
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
         HardwareReadinessAdmissionPolicy admissionPolicy =
                 admissionPolicyFor(trace);
         boot.boot(romPath, entry.zone(), entry.act(), admissionPolicy);
+        swallowTitleCardRequests();
 
         List<BenchmarkReport.Iteration> iterations = new ArrayList<>();
         for (int index = 0; index < args.iterations(); index++) {
@@ -209,14 +208,9 @@ public final class TraceBenchmarkTool {
                 // session whose objects have already run is not the same
                 // workload, and would make later iterations quietly cheaper.
                 TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
-        if (args.fmCore() != null) {
-            GameServices.configuration().setConfigValue(
-                    com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE, args.fmCore());
-        }
-        System.out.println("FM core: " + GameServices.configuration().getString(
-                com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE));
-                boot.reboot(
-                        romPath, entry.zone(), entry.act(), admissionPolicy);
+                applyFmCoreSelection(args);
+                boot.reboot(romPath, entry.zone(), entry.act(), admissionPolicy);
+                swallowTitleCardRequests();
             }
             BenchmarkReport.Iteration iteration =
                     runIteration(index, args, trace, movie);
@@ -239,6 +233,25 @@ public final class TraceBenchmarkTool {
         }
         printSummary(report);
         return boot;
+    }
+
+    private static void applyFmCoreSelection(Args args) {
+        if (args.fmCore() != null) {
+            GameServices.configuration().setConfigValue(
+                    com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE, args.fmCore());
+        }
+        System.out.println("FM core: " + GameServices.configuration().getString(
+                com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE));
+    }
+
+    /**
+     * Match TraceReplayDriver.startLevel: a real GL boot can queue an initial
+     * title card whose PLC wait needs recorded gameplay rows to complete.
+     * Consume it before driving those rows, or the benchmark measures none.
+     */
+    private static void swallowTitleCardRequests() {
+        GameServices.level().skipPendingInitialTitleCardPresentation();
+        GameServices.level().consumeInLevelTitleCardRequest();
     }
 
     static HardwareReadinessAdmissionPolicy admissionPolicyFor(TraceData trace) {
@@ -322,11 +335,14 @@ public final class TraceBenchmarkTool {
 
         int steppedFrames = 0;
         int targetFrames = args.warmupFrames() + args.measureFrames();
+        int[] rowsByPhase = new int[TraceExecutionPhase.values().length];
+        int rowsWithoutGameplay = 0;
         try {
             while (driveTraceIndex < trace.frameCount() && steppedFrames < targetFrames) {
                 TraceFrame driveFrame = trace.getFrame(driveTraceIndex);
                 TraceExecutionPhase phase =
                         TraceReplayBootstrap.phaseForReplay(trace, previousDriveFrame, driveFrame);
+                rowsByPhase[phase.ordinal()]++;
 
                 // beginFrame is unconditional and endFrame is not: a phase that
                 // does not tick gameplay costs almost nothing, and recording it
@@ -341,6 +357,9 @@ public final class TraceBenchmarkTool {
                     // this row, so it must be re-driven rather than skipped. The
                     // frame is left unclosed: it measured setup, not gameplay.
                     continue;
+                }
+                if (!outcome.gameplayFrame()) {
+                    rowsWithoutGameplay++;
                 }
                 if (outcome.gameplayFrame()) {
                     if (render) {
@@ -373,6 +392,14 @@ public final class TraceBenchmarkTool {
         }
 
         if (steppedFrames < targetFrames) {
+            StringBuilder phases = new StringBuilder();
+            for (TraceExecutionPhase phase : TraceExecutionPhase.values()) {
+                if (rowsByPhase[phase.ordinal()] > 0) {
+                    phases.append(' ').append(phase).append('=').append(rowsByPhase[phase.ordinal()]);
+                }
+            }
+            System.out.println("  rows driven by phase:" + phases
+                    + "; consumed without gameplay=" + rowsWithoutGameplay);
             System.out.println("  note: trace ran out after " + steppedFrames
                     + " gameplay frames (asked for " + targetFrames
                     + "); measured window is short");

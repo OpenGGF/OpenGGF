@@ -79,3 +79,43 @@ A proposed BG contour-only acceptance change (`f5393ea9e`) is **not imported**:
 it needs negative controls for wrong pitch/routing and evidence that a lone
 high-feedback write cannot weaken unrelated parts of a script. Current
 release acceptance remains unresolved while the original deferrals remain.
+
+## Default selection and benchmark integration
+
+New configuration defaults and bundled YAML select fast; an explicit accurate
+selection survives save/reload. Legacy direct synthesizer constructors retain
+accurate selection, and `FmSfxRenderTool` now supplies it explicitly for oracle
+exports. `PhysicalChipCapture` rejects fast snapshots. The focused invocation
+`mvn -Dmse=off -Dtest=TestFastFmConfiguration,TestTraceBenchmarkToolArgs,TestPhysicalChipCapture,TestFastFmReleaseContracts,TestFastYm2612Chip test -B`
+completed with 33 passing cases and no skips.
+
+The baseline benchmark at `f658b6fac` reproduced zero measured frames on pass
+one and a closed-ROM exception on pass two. The release branch imports BG's
+prerequisite intent from `0c742ea32`: consume initial title-card requests like
+the replay driver, and set the current ROM before constructing its audio
+profile. A mistyped `--fm-core` is rejected instead of silently measuring the
+accurate fallback. Unrelated P3/P5 allocation changes are not imported.
+
+Fresh local benchmark commands use Java 21 and `TraceBenchmarkTool --trace
+<trace> --mode update --warmup-frames 500 --measure-frames 3000 --iterations 3
+--fm-core <core> --json <report>`. All twelve iterations completed, each
+measuring exactly 3,000 frames. Per-iteration audio medians (milliseconds):
+
+| Trace | Accurate | Fast | Trajectory digest, all six iterations |
+| --- | --- | --- | --- |
+| `ghz1_fullrun` | 0.9978 / 1.0028 / 1.0023 | 0.1481 / 0.1444 / 0.1414 | `f87df78271bbb0d7` |
+| `aiz_completerun` | 1.0023 / 0.9873 / 0.9681 | 0.1495 / 0.1541 / 0.1576 | `aa99e56f4ccbf249` |
+
+These measurements were compiled from `30a6827c7` plus the facade/default/
+benchmark integration changes, before the timer correction. They are local
+CPU measurements, not cross-platform or final-release certification. Raw
+commands and reports are in the task worktree's `target/fast-fm-release/`.
+
+Fresh baseline ordinary Maven summary: 16,687 tests, zero failures/errors,
+23 skips; separate guards: 610, zero failures/errors/skips. The first
+candidate audit reproduced one new failure (Blue Sphere diagnostic bank
+reporting), subsequently fixed by `c979e5f82`. Its class XML also reports 54
+fast-fidelity skips in addition to the 23 inherited skips; Maven's final
+aggregate omitted the dynamic skips. Nested suite attributes and testcase
+counts also differ. Compare identities and outcomes from individual cases,
+not aggregate totals. Final candidate/integrated runs remain pending.

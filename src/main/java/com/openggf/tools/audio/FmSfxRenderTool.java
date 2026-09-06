@@ -227,7 +227,7 @@ public final class FmSfxRenderTool {
         ChipWriteObserver physicalOnly = physicalObserver(physicalCapture);
         try (OwnedSmpsAudioStream stream = new OwnedSmpsAudioStream(
                 "fm-render", 0,
-                new SmpsPhysicalDevice.Settings(rate, false),
+                new SmpsPhysicalDevice.Settings(rate, false, com.openggf.audio.synth.FmCoreSelection.ACCURATE),
                 LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE,
                 physicalOnly)) {
             SmpsDriver driver = stream.logicalDriver();
