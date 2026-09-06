@@ -35,10 +35,14 @@ to execute. Four opt-in benchmark cases and two explicitly unrecorded deferred
 bonus round-trip fixtures retain their exact baseline skip identities/reasons.
 Existing missing-auxiliary-schema lists are fixture coverage limitations preserved
 in the comparison; any change requires review. No report or owner may be missing.
-Surefire logs three identical singleton slots replays but overwrites the class XML;
-all completed per-suite verdicts and multiplicity are compared, and only identical
-all-pass singleton repeats (plus empty parent containers) reconcile totals. An
-overwritten failure, skip or multi-case report is rejected. Ordinary tests and structural guards remain independent required runs.
+Surefire logs three identical singleton slots replays and either overwrites the
+class XML or retains all three identical passing rows with a singleton root count.
+The latter form normalizes to the former only when every retained row has its own
+completed all-pass singleton log verdict and the XML failure counters agree.
+All completed per-suite verdicts and multiplicity are compared. Partial retained
+rows, changed identities, failures, skips and multi-case repeats are rejected;
+empty repeated parent containers remain permitted. Ordinary tests and structural
+guards remain independent required runs.
 The fixture runner must expose a working display via DISPLAY or WAYLAND_DISPLAY;
 the graphics tests themselves must execute, so a dummy environment value cannot
 satisfy the skip gate. Optional input capability settings must match supplied inputs.
