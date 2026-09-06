@@ -95,11 +95,11 @@ public final class FastYm2612Dsp implements FmDsp {
     /** Register-slot order S1, S3, S2, S4 → operator index 0..3 (OP1, OP2, OP3, OP4). */
     private static final int[] SLOT_TO_OPERATOR = {0, 2, 1, 3};
     /**
-     * Cached-phase lookahead in this operator evaluation order. Sauraen's
+     * Phase-sampling coordinate in this operator evaluation order. Sauraen's
      * die tracing describes the 12-cycle operator pipeline and its extra
      * delay stages (SpritesMind t=386, start=780/825). Public-facade isolated
-     * pitch-step probes establish these phase coordinates; changing an
-     * increment must replace its already-accounted contribution as well.
+     * pitch-step probes establish these coordinates. The admission delay is
+     * three frames minus the coordinate; phase is never changed retroactively.
      * All-channel, two-octave modulation sequences independently verify the
      * mapping in TestFastFmFrequencyTransitions.
      */
@@ -117,7 +117,9 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int EG_SUSTAIN = 2;
     private static final int EG_RELEASE = 3;
     private static final int MAX_ATTENUATION = 0x3FF;
-    private static final int FM_OUTPUT_DELAY_FRAMES = 3;
+    private static final int WRITE_PIPELINE_FRAMES = 5;
+    /** TL sample slots, logical OP1..4; add the channel index. Public all-offset PCM probes. */
+    private static final int[] TOTAL_LEVEL_SAMPLE_CYCLES = {12, 0, 18, 6};
     private static final int OUTPUT_MAX = 8191;
     private static final int OUTPUT_MIN = -8192;
 
@@ -182,8 +184,15 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] delayedOutput = new int[6];
     /** Pre-tick envelope output sampled by OP2..4 during an envelope update frame. */
     private final int[] sampledEg = new int[24];
-    /** FM computation pipeline before channel-6 DAC selection and facade panning. */
-    private final int[] fmOutputHistory = new int[FM_OUTPUT_DELAY_FRAMES * 6];
+    /** Register results awaiting their measured operator sampling boundary; -1 means no write. */
+    private final int[] scheduledIncrements = new int[WRITE_PIPELINE_FRAMES * 24];
+    private final int[] scheduledLevels = new int[WRITE_PIPELINE_FRAMES * 24];
+    /** Key event: bit 0 on/off, bit 1 an earlier phase admission than the envelope admission. */
+    private final int[] scheduledKeys = new int[WRITE_PIPELINE_FRAMES * 24];
+    /** Key requests before pipeline admission, retaining timer/CSM ownership semantics. */
+    private final int[] requestedKeyOn = new int[24];
+    /** Remaining frames in which instant attack must not take a coincident decay step. */
+    private final int[] keyedThisFrame = new int[24];
     /** Three DAC output slots as enable/value pairs; final entry marks a sampled write. */
     private final int[] dacOutputSlots = new int[7];
     private final int[] detune = new int[24];
@@ -237,7 +246,7 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int S_SSG_ENABLED_MASK = 15;
     private static final int S_TIMER_A_RELOAD = 16;
     private static final int S_TIMER_B_RELOAD = 17;
-    private static final int S_FM_OUTPUT_CURSOR = 18;
+    private static final int S_WRITE_PIPELINE_CURSOR = 18;
 
     public FastYm2612Dsp() {
         reset();
@@ -248,7 +257,11 @@ public final class FastYm2612Dsp implements FmDsp {
         Arrays.fill(olderOp1, 0);
         Arrays.fill(delayedOutput, 0);
         Arrays.fill(sampledEg, 0);
-        Arrays.fill(fmOutputHistory, 0);
+        Arrays.fill(scheduledIncrements, -1);
+        Arrays.fill(scheduledLevels, -1);
+        Arrays.fill(scheduledKeys, -1);
+        Arrays.fill(requestedKeyOn, 0);
+        Arrays.fill(keyedThisFrame, 0);
         Arrays.fill(dacOutputSlots, 0);
         Arrays.fill(registers, 0);
         for (int[] array : new int[][] {phase, phaseIncrement, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output, detune,
@@ -298,7 +311,7 @@ public final class FastYm2612Dsp implements FmDsp {
         int group = register & 0xF0;
         if (group >= 0x30 && group <= 0x90) {
             int slot = channel * 4 + SLOT_TO_OPERATOR[(register >> 2) & 3];
-            writeOperator(slot, group, value);
+            writeOperator(slot, group, value, frameCycle);
             return;
         }
         switch (group) {
@@ -370,21 +383,14 @@ public final class FastYm2612Dsp implements FmDsp {
                     return;
                 }
                 int channel = channelBits + ((value >> 2) & 1) * 3;
+                // The phase latch can admit the key one frame before its
+                // envelope latch. Keep the instant-attack hold until both have
+                // sampled it, rather than consuming a premature decay step.
+                int earlyPhase = 1 + Math.floorDiv(channel - 1 - frameCycle, 24);
                 for (int bit = 0; bit < 4; bit++) {
                     int slot = channel * 4 + KEY_BIT_TO_OPERATOR[bit];
-                    if ((value & (0x10 << bit)) != 0) {
-                        if (keyOn[slot] == 0) {
-                            keyOnSlot(slot);
-                            // Public-facade PCM and bus-strobe probes over all
-                            // 24 offsets: the key latch is sampled in channel
-                            // order. A strobe before this channel's slot admits
-                            // one earlier phase step; cycle 24 crosses a frame.
-                            int steps = 1 + Math.floorDiv(channel - 1 - frameCycle, 24);
-                            phase[slot] = (phase[slot] + steps * phaseIncrement[slot]) & 0xFFFFF;
-                        }
-                    } else {
-                        keyOffSlot(slot);
-                    }
+                    scheduleKey(slot, (value & (0x10 << bit)) != 0,
+                            3 - earlyPhase, Math.max(earlyPhase, 0));
                 }
             }
             case 0x2A, 0x2B -> writeDac(register, value, frameCycle);
@@ -414,14 +420,19 @@ public final class FastYm2612Dsp implements FmDsp {
         }
     }
 
-    private void writeOperator(int slot, int group, int value) {
+    private void writeOperator(int slot, int group, int value, int frameCycle) {
         switch (group) {
             case 0x30 -> {
                 detune[slot] = (value >> 4) & 7;
                 multiple[slot] = value & 15;
                 refreshPhaseIncrement(slot);
             }
-            case 0x40 -> totalLevel[slot] = (value & 0x7F) << 3;
+            case 0x40 -> {
+                int boundary = TOTAL_LEVEL_SAMPLE_CYCLES[slot & 3] + (slot >> 2);
+                int baseDelay = (slot & 3) == 2 ? 2 : 1;
+                int delay = baseDelay + Math.floorDiv(frameCycle + 24 - boundary, 24);
+                scheduledLevels[scheduledIndex(slot, delay)] = (value & 0x7F) << 3;
+            }
             case 0x50 -> {
                 rateScaling[slot] = (value >> 6) & 3;
                 attackRate[slot] = value & 0x1F;
@@ -547,12 +558,10 @@ public final class FastYm2612Dsp implements FmDsp {
         base &= 0x1FFFF;
         int mul = multiple[slot];
         int nextIncrement = (mul == 0 ? base >> 1 : base * mul) & 0xFFFFF;
-        // Phase is cached ahead of the register-commit boundary, rather than
-        // being an unqualified instantaneous accumulator. Replace the old
-        // increment's contribution for FNUM, DT, MUL and LFO changes alike.
-        phase[slot] = (phase[slot] + (nextIncrement - phaseIncrement[slot])
-                * lookahead) & 0xFFFFF;
-        phaseIncrement[slot] = nextIncrement;
+        // Admit the new increment at its pipeline boundary. Retrospectively
+        // jumping the phase leaves an already-computed feedback sample wrong;
+        // a single such sample can alter the entire high-feedback sequence.
+        scheduledIncrements[scheduledIndex(slot, 3 - lookahead)] = nextIncrement;
     }
 
     private void refreshRates(int slot) {
@@ -585,6 +594,7 @@ public final class FastYm2612Dsp implements FmDsp {
         ssgPendingRestart[slot] = (ssgMode[slot] & 8) != 0 && rateAttack[slot] < 62
                 ? ((ssgMode[slot] & 2) != 0 ? 2 : 0) : 0;
         if (rateAttack[slot] >= 62) {
+            keyedThisFrame[slot] = 1;
             attenuation[slot] = 0;
             egState[slot] = EG_DECAY;
         } else {
@@ -607,10 +617,45 @@ public final class FastYm2612Dsp implements FmDsp {
         egState[slot] = EG_RELEASE;
     }
 
+    private int scheduledIndex(int slot, int delay) {
+        return ((scalar[S_WRITE_PIPELINE_CURSOR] + delay) % WRITE_PIPELINE_FRAMES) * 24 + slot;
+    }
+
+    private void scheduleKey(int slot, boolean on, int delay, int envelopeHold) {
+        requestedKeyOn[slot] = on ? 1 : 0;
+        scheduledKeys[scheduledIndex(slot, delay)] = on ? 1 | (envelopeHold << 1) : 0;
+    }
+
+    private void admitScheduledWrites() {
+        int base = scalar[S_WRITE_PIPELINE_CURSOR] * 24;
+        for (int slot = 0; slot < 24; slot++) {
+            int index = base + slot;
+            if (scheduledIncrements[index] >= 0) {
+                phaseIncrement[slot] = scheduledIncrements[index];
+                scheduledIncrements[index] = -1;
+            }
+            if (scheduledLevels[index] >= 0) {
+                totalLevel[slot] = scheduledLevels[index];
+                scheduledLevels[index] = -1;
+            }
+            int key = scheduledKeys[index];
+            if (key >= 0) {
+                scheduledKeys[index] = -1;
+                if ((key & 1) == 0) {
+                    keyOffSlot(slot);
+                } else if (keyOn[slot] == 0) {
+                    keyOnSlot(slot);
+                    if (keyedThisFrame[slot] != 0) keyedThisFrame[slot] += key >> 1;
+                }
+            }
+        }
+    }
+
     // ------------------------------------------------------------- render
 
     @Override
     public void renderFrame(int[] out) {
+        admitScheduledWrites();
         advanceTimers();
         advanceLfo();
         // SSG-EG's half-way boundary is tested every FM frame, before a coincident envelope update.
@@ -640,17 +685,6 @@ public final class FastYm2612Dsp implements FmDsp {
         for (int channel = 0; channel < 6; channel++) {
             out[channel] = renderChannel(channel, amOffset);
         }
-        // Independent FM/DAC alternation establishes the common FM latency:
-        // these three frames precede DAC selection, rather than delaying the
-        // final mixed stream. This preserves the DAC and FM relative timing.
-        int cursor = scalar[S_FM_OUTPUT_CURSOR];
-        for (int channel = 0; channel < 6; channel++) {
-            int index = cursor * 6 + channel;
-            int current = out[channel];
-            out[channel] = fmOutputHistory[index];
-            fmOutputHistory[index] = current;
-        }
-        scalar[S_FM_OUTPUT_CURSOR] = (cursor + 1) % FM_OUTPUT_DELAY_FRAMES;
         if (dacOutputSlots[6] != 0) {
             int sum = 0;
             for (int sample = 0; sample < 3; sample++) {
@@ -662,6 +696,10 @@ public final class FastYm2612Dsp implements FmDsp {
         } else if (scalar[S_DAC_ENABLED] != 0) {
             out[5] = (scalar[S_DAC_VALUE] - 0x80) << 6;
         }
+        for (int slot = 0; slot < 24; slot++) {
+            if (keyedThisFrame[slot] > 0) keyedThisFrame[slot]--;
+        }
+        scalar[S_WRITE_PIPELINE_CURSOR] = (scalar[S_WRITE_PIPELINE_CURSOR] + 1) % WRITE_PIPELINE_FRAMES;
     }
 
     private int renderChannel(int channel, int lfoTriangle) {
@@ -816,18 +854,23 @@ public final class FastYm2612Dsp implements FmDsp {
     }
 
     private void advanceEnvelopes() {
-        int counter = (scalar[S_EG_COUNTER] + 1) & 0xFFF;
+        // The output-stage envelope sees the counter from before this tick.
+        // Register admission supplies the latency previously approximated by
+        // delaying already-computed audio, so preserve this counter coordinate.
+        int sampledCounter = scalar[S_EG_COUNTER];
+        int counter = (sampledCounter + 1) & 0xFFF;
         if (counter == 0) {
             counter = 1;
         }
         scalar[S_EG_COUNTER] = counter;
         for (int slot = 0; slot < 24; slot++) {
             sampledEg[slot] = egOutput(slot);
-            advanceEnvelope(slot, counter);
+            advanceEnvelope(slot, sampledCounter);
         }
     }
 
     private void advanceEnvelope(int slot, int counter) {
+        if (keyedThisFrame[slot] != 0) return;
         int state = egState[slot];
         if (state == EG_DECAY && attenuation[slot] >= sustainLevel[slot]) {
             // The sustain level is a level comparison, not a step event: with a
@@ -983,8 +1026,8 @@ public final class FastYm2612Dsp implements FmDsp {
                     // CSM: key channel 3 on for this frame.
                     for (int op = 0; op < 4; op++) {
                         int slot = 8 + op;
-                        if (keyOn[slot] == 0) {
-                            keyOnSlot(slot);
+                        if (requestedKeyOn[slot] == 0) {
+                            scheduleKey(slot, true, 3, 0);
                             csmKeyed[0] |= 1 << op;
                         }
                     }
@@ -998,7 +1041,7 @@ public final class FastYm2612Dsp implements FmDsp {
                 || scalar[S_TIMER_A_COUNT] != scalar[S_TIMER_A_RELOAD])) {
             for (int op = 0; op < 4; op++) {
                 if ((csmKeyed[0] & (1 << op)) != 0) {
-                    keyOffSlot(8 + op);
+                    scheduleKey(8 + op, false, 3, 0);
                 }
             }
             csmKeyed[0] = 0;
@@ -1021,7 +1064,7 @@ public final class FastYm2612Dsp implements FmDsp {
     // ---------------------------------------------------------- snapshots
 
     private int[][] arrays() {
-        return new int[][] {dacOutputSlots, fmOutputHistory, sampledEg, delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
+        return new int[][] {scheduledIncrements, scheduledLevels, scheduledKeys, requestedKeyOn, keyedThisFrame, dacOutputSlots, sampledEg, delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
                 detune, multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
                 sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
                 operatorFnum, operatorBlock, channelFnum,

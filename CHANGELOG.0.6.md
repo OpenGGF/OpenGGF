@@ -1,5 +1,9 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM schedules pitch, level and key changes at operator sampling boundaries,
+  preventing persistent high-feedback divergence after a single mistimed sample.
+  Instant key-on no longer takes a premature decay step; pending writes survive rewind.
+
 - Fast FM and DAC now share the correct output timeline, including partial
   DAC samples when a data or enable write lands within an output slot.
 

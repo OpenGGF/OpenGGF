@@ -3176,5 +3176,7 @@ also account for the multiplexed sampling boundary, with all 24 write offsets
 covered on every channel. Frequency sampling has all-operator/all-offset
 coverage and brings S3K effect 3C within tolerance. FM/DAC relative timing
 and all DAC data/enable write offsets have independent output coverage.
-Outstanding LFO and effect fidelity failures are being fixed for 0.6 and are **not** accepted discrepancies merely
+Scheduled frequency, level and key admission now closes the S2 BC and pan/TL
+failures, with independent sample-exact high-feedback transition coverage.
+Outstanding LFO fidelity failures are being fixed for 0.6 and are **not** accepted discrepancies merely
 because this approximation exists. See the [fast FM validation record](../architecture/validation/audio/2026-09-06-fast-fm-release.md).

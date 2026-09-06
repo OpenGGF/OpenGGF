@@ -173,8 +173,9 @@ digital output), busy-flag timing (facade does not model it).
 
 ## Phase-transition refinement (release branch)
 
-Pitch changes must replace the increment contribution already included in the
-cached phase. Isolated public-facade pitch-step probes establish lookahead
+The initial cached-phase replacement model below was superseded by scheduled
+register admission (see the final refinement); retroactive replacement leaves
+one incorrect feedback sample at a pitch change. Isolated public-facade pitch-step probes establish lookahead
 coordinates of 2/1/1/2 frames for logical OP1/OP2/OP3/OP4. The replacement
 applies to every increment change, including F-number, detune, multiple and
 LFO. Independent sequences across all six channels and two octaves verify
@@ -216,3 +217,24 @@ Timed data and enable writes replace only contributions not yet sampled.
 Untimed DAC stream writes remain immediate. These exact output coordinates
 come from independent public-facade FM/DAC alternation and all-offset DAC
 steps; sampled contributions and the FM pipeline are reset and snapshotted.
+The completed-audio delay described here was subsequently replaced by the
+register-admission pipeline below, retaining the same measured output latency.
+
+
+## Scheduled register admission
+
+Frequency increments, total levels and key events now wait for their operator
+sampling boundary. The five-frame ring replaces the three-frame completed-FM
+buffer and retroactive phase jumps. Frequency admission is `3 - lookahead`;
+TL uses logical-operator slots `{12, 0, 18, 6} + channel`, and key admission
+retains the measured all-offset channel boundary. These exact coordinates
+come from public-facade PCM probes, not a claim of exact hardware die labels.
+
+Envelope ticks use the counter value before that tick. An instant attack does
+not also decay on its key-admission tick; where the phase key arrives one
+frame before the envelope key, that hold lasts the additional frame. CSM
+keeps ownership against requested keys and schedules its pulse through the
+same pipeline. Pending writes, requested keys and envelope holds are reset
+and snapshotted. DAC sampling retains its separate three output slots.
+Independent high-feedback pitch changes now match every public digital
+sample after output quantization, including all channels and write offsets.

@@ -320,3 +320,35 @@ DAC state from copying makes its continuation regression fail: expected
 `dac-all-offsets-green.log`, and `dac-sampling-negative/results.log` under
 the task evidence directory. DAC-enabled meets the unchanged corpus bound;
 eleven supported failures remain (nine LFO, pan/TL and S2 BC).
+
+
+## Scheduled register admission and feedback continuity
+
+At `85cc35389` plus this correction, isolated public digital PCM exposes one
+wrong pitch-transition sample even without feedback; feedback amplifies that
+single error into a persistently different sequence. Scheduling increments,
+TL and keys at operator boundaries replaces retrospective phase jumps and
+the completed-audio delay. The envelope counter retains its pre-tick coordinate,
+and instant attack holds decay until envelope key admission. S2 BC now
+correlates 1.000, pan/TL 0.929, and S3K 3C 1.000. No enforced corpus vector
+regresses. Nine LFO cases remain outside tolerance; the factory's 26 existing
+dynamic deferrals are intermediate and must still be removed or explicitly
+separated by supported scope before final release acceptance.
+
+The completed Java 21 command at 2026-09-06 06:16:28 BST is:
+
+```sh
+mvn -Dmse=off -Dtest=TestFastFmFeedbackTransitions,TestFastFmOutputTiming,TestFastFmEnvelopeSampling,TestFastFmFrequencySampling,TestFastFmFrequencyTransitions,TestFastFmCoreTolerance,TestFastFmReleaseContracts,TestFastFmTimersAndChannelThree,TestFastFmDetune,TestFastFmWaveformAlignment,TestFastYm2612Chip test -B
+```
+
+Maven reports 236 tests with no failures/errors; the tolerance XML separately
+contains 26 dynamic skips. Six new feedback cases cover 288 combinations
+(all channels, all 24 padding offsets, held/decaying tones) and require every
+sample to match after the public digital output's 48-unit mono quantization.
+The previous DSP fails these tests. A subsequent output-timing-only run at
+06:18:06 BST passes all 26 cases, adding snapshot/reset coverage with pending
+operator writes. Deliberately omitting the scheduled state from copying fails
+that exact test at sample 2: expected 3280, actual 968. Logs under the task's
+`target/fast-fm-release/`: `scheduled-pipeline-green.log`,
+`scheduled-snapshot-green.log`, `scheduled-snapshot-negative/results.log`,
+and `feedback-transitions-red.log`. Final suites and benchmarks remain pending.

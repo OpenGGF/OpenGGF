@@ -98,6 +98,32 @@ class TestFastFmOutputTiming {
         assertArrayEquals(expected, actual);
     }
 
+    @Test
+    void rewindRetainsWritesAwaitingOperatorSampling() {
+        FastYm2612Chip original = new FastYm2612Chip(new FastYm2612Dsp());
+        prepare(original);
+        voice(original, 1, true);
+        pitchAndKey(original, 1, 937);
+        samples(original, 513);
+        original.write(0, 0xa5, 59);
+        original.write(0, 0xa1, 37);
+        original.write(0, 0x41, 40);
+        original.write(0, 0x28, 1);
+        // Drain enough bus work to queue operator updates, while later
+        // operator and key sampling boundaries are still in the future.
+        samples(original, 3);
+        FmChip.Snapshot snapshot = original.captureSnapshot();
+        double[] expected = samples(original, 128);
+        assertTrue(Arrays.stream(expected).anyMatch(value -> value != 0));
+        FastYm2612Chip restored = new FastYm2612Chip(new FastYm2612Dsp());
+        restored.restoreSnapshot(snapshot);
+        assertArrayEquals(expected, samples(restored, 128));
+        original.restoreSnapshot(snapshot);
+        original.reset();
+        assertTrue(Arrays.stream(samples(original, 16)).allMatch(value -> value == 0),
+                "reset must discard pending operator writes");
+    }
+
     private static double[] dacStep(FmChip chip, int register, int padding) {
         prepare(chip);
         chip.write(0, 0x2b, register == 0x2a ? 0x80 : 0);
