@@ -104,6 +104,12 @@ public final class FastYm2612Dsp implements FmDsp {
      * mapping in TestFastFmFrequencyTransitions.
      */
     private static final int[] PHASE_LOOKAHEAD_FRAMES = {2, 1, 1, 2};
+    /**
+     * F-number sampling slots, logical OP1..4, before the channel offset.
+     * Isolated public-facade pitch steps at every bus residue establish the
+     * 18/6/0/12 ordering; TestFastFmFrequencySampling checks all 24 operators.
+     */
+    private static final int[] FREQUENCY_SAMPLE_CYCLES = {18, 6, 0, 12};
     /** Key-on register bits 4..7 are S1, S3, S2, S4. */
     private static final int[] KEY_BIT_TO_OPERATOR = {0, 2, 1, 3};
     private static final int EG_ATTACK = 0;
@@ -283,7 +289,7 @@ public final class FastYm2612Dsp implements FmDsp {
             return;
         }
         switch (group) {
-            case 0xA0 -> writeFrequency(port, channel, register, value);
+            case 0xA0 -> writeFrequency(port, channel, register, value, frameCycle);
             case 0xB0 -> {
                 if ((register & 0xC) == 0) {
                     feedback[channel] = (value >> 3) & 7;
@@ -416,14 +422,14 @@ public final class FastYm2612Dsp implements FmDsp {
         }
     }
 
-    private void writeFrequency(int port, int channel, int register, int value) {
+    private void writeFrequency(int port, int channel, int register, int value, int frameCycle) {
         int sub = register & 0xC;
         int channelInPort = register & 3;
         if (sub == 0) {
             channelFnum[channel] = ((latchedFnumHigh[port] & 7) << 8) | value;
             channelBlock[channel] = (latchedFnumHigh[port] >> 3) & 7;
             for (int op = 0; op < 4; op++) {
-                refreshPhaseIncrement(channel * 4 + op);
+                refreshFrequencyPhase(channel * 4 + op, frameCycle);
             }
         } else if (sub == 4) {
             latchedFnumHigh[port] = value & 0x3F;
@@ -432,7 +438,7 @@ public final class FastYm2612Dsp implements FmDsp {
             ch3Fnum[channelInPort] = ((latchedCh3FnumHigh[channelInPort] & 7) << 8) | value;
             ch3Block[channelInPort] = (latchedCh3FnumHigh[channelInPort] >> 3) & 7;
             for (int op = 0; op < 4; op++) {
-                refreshPhaseIncrement(8 + op);
+                refreshFrequencyPhase(8 + op, frameCycle);
             }
         } else if (port == 0 && sub == 0xC) {
             latchedCh3FnumHigh[channelInPort] = value & 0x3F;
@@ -461,7 +467,19 @@ public final class FastYm2612Dsp implements FmDsp {
         }
     }
 
+    private void refreshFrequencyPhase(int slot, int frameCycle) {
+        int boundary = FREQUENCY_SAMPLE_CYCLES[slot & 3] + (slot >> 2);
+        // The same register reaches operators at different pipeline positions.
+        // Crossing that sampling slot replaces one fewer cached phase step.
+        int lookahead = 2 + Math.floorDiv(boundary - 1 - frameCycle, 24);
+        refreshPhaseIncrement(slot, lookahead);
+    }
+
     private void refreshPhaseIncrement(int slot) {
+        refreshPhaseIncrement(slot, PHASE_LOOKAHEAD_FRAMES[slot & 3]);
+    }
+
+    private void refreshPhaseIncrement(int slot, int lookahead) {
         resolveFrequency(slot);
         int fnum = operatorFnum[slot];
         int block = operatorBlock[slot];
@@ -500,7 +518,7 @@ public final class FastYm2612Dsp implements FmDsp {
         // being an unqualified instantaneous accumulator. Replace the old
         // increment's contribution for FNUM, DT, MUL and LFO changes alike.
         phase[slot] = (phase[slot] + (nextIncrement - phaseIncrement[slot])
-                * PHASE_LOOKAHEAD_FRAMES[slot & 3]) & 0xFFFFF;
+                * lookahead) & 0xFFFFF;
         phaseIncrement[slot] = nextIncrement;
     }
 

@@ -196,3 +196,10 @@ overload carries the data-strobe offset (0..24) from the existing bus pacing,
 so key-on phase can honor its channel sampling slot. Other register behavior
 continues to use the register-level model. Independent mixed-tone and all-offset
 checks cover the combined behavior; see the release validation record.
+
+Frequency-register writes also use the data-strobe offset: operator sampling
+slots are `{18, 6, 0, 12} + channel` in this implementation's frame coordinates.
+The cached contribution is `2 + floorDiv(slot - 1 - dataOffset, 24)` increments,
+replacing the fixed lookahead for these writes. This is measured from public
+PCM and verified across every channel/operator/write-offset combination; the
+fixed lookahead remains the default for non-frequency refreshes.

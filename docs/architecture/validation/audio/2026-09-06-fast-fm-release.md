@@ -247,3 +247,24 @@ using integer alignment. Fourteen supported corpus failures remain: nine LFO
 cases, DAC enable/disable ramps, pan/TL, S2 BC and S3K 3C. Log:
 `target/fast-fm-release/output-timing-green.log`. This is intermediate evidence;
 final acceptance, suites and benchmarks remain pending.
+
+## Frequency-register sampling
+
+An isolated pitch-step scan on channels 0 and 5, four register slots and all
+24 data-strobe offsets shows phase changes in exact one-increment units. The
+measured frequency-sampling boundaries in logical operator order are
+`{18, 6, 0, 12} + channel`. Writes now replace the cached phase contribution
+according to that boundary, retaining the existing default refresh path for
+LFO and other parameter changes. Independent regression sequences use a
+different multiple and cover all six channels, all four operators and all
+24 write offsets (576 combinations). Each channel case fails before the
+correction and passes after it at correlation above 0.995.
+
+At `e1127b1f9` plus this correction, the preceding focused command with
+`TestFastFmFrequencySampling` added finishes at 2026-09-06 05:24:08 BST: 220
+reported tests, zero failures/errors; the unchanged factory still reports
+26 dynamic skips in its XML. S3K 3C improves from 0.844 to 0.937, with raw
+level ratio 1.000, and no previously enforced vector regresses. Thirteen
+supported corpus failures remain. Evidence:
+`target/fast-fm-release/frequency-sampling-{red,green}.log` and the independent
+`frequency-offsets/results.json`. Final release verification remains pending.

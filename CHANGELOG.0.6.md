@@ -1,5 +1,8 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM samples frequency writes at each operator’s pipeline boundary,
+  preserving phase during dense pitch changes such as S3K effect 3C.
+
 - Fast FM retains carrier and channel output history across the multiplexed
   sampling boundary, keeping mixed voices and repeated CF effects in phase.
   Key-on checks cover every internal write offset on all six channels.
