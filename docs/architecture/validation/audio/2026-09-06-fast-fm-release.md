@@ -1,9 +1,10 @@
 # Fast FM 0.6 delivery evidence
 
-The combined fast FM candidate now passes all 178 supported scripts without
-deferrals and all 280 focused checks. Final integrated suites, performance
-measurements and delivery are pending; older counts below are development
-checkpoints, not the current acceptance policy.
+Candidate `c19899dbb` passes all 178 supported scripts without deferrals,
+280 focused checks, 16,970 ordinary tests and 610 guards. Its fresh trace
+evidence is unchanged from the pinned baseline; final benchmarks and universal
+packaging also pass. Integration, post-merge verification and push remain
+pending. Older counts below are development checkpoints, not current policy.
 
 ## Imported development evidence
 
@@ -465,3 +466,56 @@ existing all-pass nested identities have duplicate-row count differences,
 without changed outcomes. All 23 skips classify as allowed with graphics
 required/present; no required or unclassified skip exists. This intermediate
 red run is retained under `pre-lfo-full-check/` and is not final certification.
+
+
+## Final isolated candidate: c19899dbb
+
+All runs below completed on clean
+`c19899dbbb0f1cf3dd024ed638b7720d84170784` in
+`.worktrees/ai-fast-fm-release`, Java 21, Lua 5.4, with the three verified
+root ROM paths passed absolutely and graphics available. Each report set was
+archived before the next profile ran. Exact commands and timestamps are in
+`target/fast-fm-release/final-candidate/*-command.json`.
+
+| Check | Completed result |
+| --- | --- |
+| `mvn -Dmse=off test -B` plus ROM paths | 16,970 / 0 failures / 0 errors / 23 skips, 07:19:44 BST |
+| `mvn -Dmse=off test -B -Pguards` plus ROM paths | 610 / 0 / 0 / 0, 07:21:50 BST |
+| `mvn -Dmse=off test -B -Ptrace-replay` plus ROM paths | 852 / 7 / 0 / 6, 07:25:11 BST |
+| Pinned fresh trace comparison | All 850 identities and 173 owned reports unchanged |
+| Default-suite skip classification | All 23 allowed; zero required/unclassified skips; graphics required/present |
+| `mvn -Dmse=off package -Puniversal-jar -DskipTests -B` | BUILD SUCCESS, 07:27:38 BST; prior completed suites supply test evidence |
+| Unmodified universal-JAR smoke block from `release.yml` | Manifest, licence notices and all eight native payload classifiers pass |
+
+Ordinary comparison preserves all 15,738 baseline identities and adds 106
+passing identities. Eleven existing nested identities differ only in repeated
+all-pass XML row counts; no outcome changed. Guards retain the same 610
+identities exactly. The trace baseline is the fresh completed run at reviewed
+pin `1f61f5746743938963113ea87ec561027e1569a4`; all seven known failures and
+six skips are retained without changed evidence. An extra diagnostic use of
+the *ordinary* skip classifier on trace XML reports six unclassified skips:
+`release.yml` applies that policy only to ordinary tests; the separate trace
+policy is the exact pinned comparison above. No classifier rule was weakened.
+
+Final matched benchmarks use `TraceBenchmarkTool --mode update
+--warmup-frames 500 --measure-frames 3000 --iterations 3 --fm-core <core>`:
+
+| Trace | Accurate audio p50, each iteration (ms) | Fast audio p50, each iteration (ms) | Shared trajectory digest |
+| --- | --- | --- | --- |
+| S1 GHZ1 | 0.994901 / 0.967920 / 0.963051 | 0.179792 / 0.174312 / 0.173062 | `f87df78271bbb0d7` |
+| S3K AIZ | 0.953240 / 0.954251 / 0.939631 | 0.180712 / 0.174232 / 0.169252 | `aa99e56f4ccbf249` |
+
+Every iteration measures all 3,000 requested frames. Fast audio remains
+below the 0.25 ms budget on this host; this is not cross-platform or low-end
+certification. Raw commands and per-iteration reports are in `final-benchmarks/`.
+The universal JAR is 27,578,569 bytes, SHA-256
+`3b2066017d3c16239a85c6455277136f1201e7fda15853bd2e81c2491d5811f9`.
+Smoke checking bundled native files does not establish native-platform execution.
+Baseline archives already live outside the repo in the task evidence
+directory `brainpipe-fast-fm-0.6/`.
+
+Brainpipe BG reviewed the AM correction without a material finding. Its
+measured PM correction and CS's independent global-PM admission refinement
+are recorded separately above; exact final-review attribution is retained in
+the local department conversation. Native release jobs, fixture-runner host
+configuration and human gameplay/listening sign-off remain release tasks.

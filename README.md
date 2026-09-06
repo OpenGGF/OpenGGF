@@ -280,6 +280,9 @@ traces.
   remains research; fast FM is included in the 0.6 delivery work, with fidelity
   and final performance evidence tracked in the
   [fast FM validation record](docs/architecture/validation/audio/2026-09-06-fast-fm-release.md).
+  The isolated candidate passes all 178 supported chip scripts and measures
+  about 0.17–0.18 ms of audio per frame on this host; full-game listening
+  sign-off remains open.
   New S3K effects are also suppressed during the 1-up jingle, without
   advancing ring stereo alternation, and resume at music restoration.
   See the [1-up investigation](docs/architecture/audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
