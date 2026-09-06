@@ -254,6 +254,10 @@ This release should focus on reducing obvious gaps rather than introducing new s
 - Prepare ROM-backed art asynchronously during existing PLC/decompression waits
   and loading transitions, preserving service timing, partial uploads, and rewind.
   Planned for 0.7; see the [async-loading item](docs/project/v0.7-roadmap.md#planned-performance-work--asynchronous-rom-loading).
+- Live switching between the accurate and fast FM cores with one core running at a
+  time: the standby core is rebuilt from the live register image, warmed up for a
+  fraction of a second and crossfaded in. Planned for 0.7; see the
+  [FM core live switch item](docs/project/v0.7-roadmap.md#planned-audio-work--live-fm-core-switching).
 
 - Game Over / Continue flow for all three games, unless it lands as a 0.6 fix first.
 - The withdrawn SMPS and chip-level audio parity programme (retail service ordering, SFX
