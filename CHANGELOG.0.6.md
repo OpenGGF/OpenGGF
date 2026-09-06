@@ -1,5 +1,9 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM gives global LFO pitch changes their own operator sampling boundary,
+  preventing phase errors when modulation wraps a high F-number. The supported
+  178-script corpus now passes unchanged waveform/level bounds without deferrals.
+
 - Fast FM reproduces the YM2612 LFO clock and pitch modulation as measured
   on the cycle-exact oracle: a free-running prescaler with bit-containment
   terminals (periods 108/77/71/67/62/44/8/5 frames, exact first-step delays

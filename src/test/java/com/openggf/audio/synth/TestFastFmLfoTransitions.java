@@ -20,6 +20,33 @@ class TestFastFmLfoTransitions {
         }
     }
 
+    @ParameterizedTest(name = "channel {0}: fractional modulation and twelve-bit wrap")
+    @ValueSource(ints = {0, 1, 2, 3, 4, 5})
+    void highFnumModulationRetainsFractionalTermsAndWrap(int channel) {
+        for (int carrier = 0; carrier < 4; carrier++) {
+            for (int fnum : new int[] {1008, 2032, 2047}) {
+                double[] reference = highFnumSequence(new Ym2612Chip(), channel, carrier, fnum);
+                double[] candidate = highFnumSequence(new FastYm2612Chip(new FastYm2612Dsp()), channel, carrier, fnum);
+                double correlation = FastFmWaveformAlignment.integer(reference, candidate, 0).correlation();
+                assertTrue(correlation > 0.999, "carrier " + carrier + ", FNUM " + fnum
+                        + ": correlation " + correlation);
+            }
+        }
+    }
+
+    private static double[] highFnumSequence(FmChip chip, int channel, int carrier, int fnum) {
+        prepare(chip, 7, channel, carrier);
+        int port = channel / 3, ch = channel % 3;
+        chip.write(port, 0xa4 + ch, 40 | (fnum >> 8));
+        chip.write(port, 0xa0 + ch, fnum & 255);
+        samples(chip, 701);
+        chip.write(0, 0x22, 8);
+        double[] result = samples(chip, 16003);
+        double mean = Arrays.stream(result).average().orElseThrow();
+        for (int i = 0; i < result.length; i++) result[i] -= mean;
+        return result;
+    }
+
     @Test
     void rewindPreservesDisabledPrescalerAndPendingModulation() {
         FastYm2612Chip chip = new FastYm2612Chip(new FastYm2612Dsp());
@@ -54,23 +81,28 @@ class TestFastFmLfoTransitions {
     }
 
     private static void prepare(FmChip chip, int sensitivity) {
+        prepare(chip, sensitivity, 0, 0);
+    }
+
+    private static void prepare(FmChip chip, int sensitivity, int channel, int carrier) {
         chip.setChipType(1);
         chip.setOutputSampleRate(Ym2612Chip.getInternalRate());
         samples(chip, 1291);
-        chip.write(0, 0xb0, 7);
-        chip.write(0, 0xb4, 0xc0 | sensitivity);
+        int port = channel / 3, ch = channel % 3;
+        chip.write(port, 0xb0 + ch, 7);
+        chip.write(port, 0xb4 + ch, 0xc0 | sensitivity);
         for (int slot = 0; slot < 4; slot++) {
-            int offset = slot * 4;
-            chip.write(0, 0x30 + offset, 1);
-            chip.write(0, 0x40 + offset, slot == 0 ? 9 : 127);
-            chip.write(0, 0x50 + offset, 31);
-            chip.write(0, 0x60 + offset, 0);
-            chip.write(0, 0x70 + offset, 0);
-            chip.write(0, 0x80 + offset, 15);
+            int offset = ch + slot * 4;
+            chip.write(port, 0x30 + offset, 1);
+            chip.write(port, 0x40 + offset, slot == carrier ? 9 : 127);
+            chip.write(port, 0x50 + offset, 31);
+            chip.write(port, 0x60 + offset, 0);
+            chip.write(port, 0x70 + offset, 0);
+            chip.write(port, 0x80 + offset, 15);
         }
-        chip.write(0, 0xa4, 43);
-        chip.write(0, 0xa0, 209); // FNUM 977: exposes fractional PM units.
-        chip.write(0, 0x28, 0x10);
+        chip.write(port, 0xa4 + ch, 43);
+        chip.write(port, 0xa0 + ch, 209); // FNUM 977: exposes fractional PM units.
+        chip.write(0, 0x28, 0xf0 | ch | (port == 0 ? 0 : 4));
         samples(chip, 719);
     }
 

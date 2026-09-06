@@ -1,5 +1,10 @@
 # Fast FM 0.6 delivery evidence
 
+The combined fast FM candidate now passes all 178 supported scripts without
+deferrals and all 280 focused checks. Final integrated suites, performance
+measurements and delivery are pending; older counts below are development
+checkpoints, not the current acceptance policy.
+
 ## Imported development evidence
 
 The measurements below were reported by BG on `feature/ai-perf-p3-fixes`
@@ -422,3 +427,41 @@ The AM-only production patch passes all 80 non-LFO focused contracts at
 `TestFastFmCoreTolerance`, `TestFastFmLfoTransitions` and the AM regression
 until the matching PM/counter correction is imported. This bounded check
 is not substituted for combined acceptance.
+
+
+## Combined production acceptance and global PM refinement
+
+BG `d06f0385e` imports as `0c6c5639f` above CS AM `35120aa79`. Conflicts
+were adjacent constants and release/status prose: both measured models were
+retained. At that commit, the completed Java 21 combined focused run passes
+274 cases, including the complete 178-script factory with zero skips, at
+2026-09-06 07:06:13 BST (`combined-lfo-am-focused.log`).
+
+A new high-FNUM guard then exposes one frame of late PM admission in OP1..3:
+FNUM 2032/2047 correlates about 0.992 there versus 0.999994 on OP4. Global
+LFO PM now uses admission `{1,2,2,2}` instead of frequency-register coordinates.
+The final expanded regression covers six channels, four carriers and three
+F-numbers (72 combinations), retaining its zero-lag 0.999 bound. Running the
+exact six channel cases against the preceding DSP fails every channel at
+FNUM 2032; the corrected implementation passes them all. No bound was lowered.
+
+At `0c6c5639f` plus this refinement, the completed Java 21 command passes
+280 cases, zero failures/errors/skips, at 2026-09-06 07:12:33 BST:
+
+```sh
+mvn -Dmse=off -Dtest=TestFastFmCoreTolerance,TestFastFmLfoTransitions,TestFastFmAmplitudeModulation,TestFastFmFeedbackTransitions,TestFastFmOutputTiming,TestFastFmEnvelopeSampling,TestFastFmFrequencySampling,TestFastFmFrequencyTransitions,TestFastFmReleaseContracts,TestFastFmTimersAndChannelThree,TestFastFmDetune,TestFastFmWaveformAlignment,TestFastYm2612Chip test -B
+```
+
+Evidence: `pm-operator-admission-green.log`, `lfo-final-boundaries.log` (red),
+`lfo-high-fnum-timing/` and `pm-admission-negative/results.log` under the task's
+`target/fast-fm-release/`. These focused results precede final ordinary, guard,
+trace, benchmark and packaging checks.
+
+The earlier full ordinary run at `e4767cea9`, completed 06:37:57 BST, preserved
+all 15,738 baseline test identities' outcomes and added 93 identities. Its
+only failures were the then-open nine corpus and eight independent LFO cases
+(17 XML failures; Maven collapses the factory and reports nine). Thirteen
+existing all-pass nested identities have duplicate-row count differences,
+without changed outcomes. All 23 skips classify as allowed with graphics
+required/present; no required or unclassified skip exists. This intermediate
+red run is retained under `pre-lfo-full-check/` and is not final certification.

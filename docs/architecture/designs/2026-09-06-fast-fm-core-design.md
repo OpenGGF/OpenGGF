@@ -88,12 +88,12 @@ default is a separate commit.
   each frame it is compared before it advances, and a count that contains
   the rate's terminal bits (`(count & terminal) == terminal`, terminals
   108/77/71/67/62/44/8/5) restarts at one and, when enabled, steps the
-  128-step cycle. From a cleared count that gives the periods 108, 77, 71,
+  128-step cycle. That gives steady periods 108, 77, 71,
   67, 62, 44, 8 and 5 frames (the manual's 3.98–72.2 Hz table at its 8 MHz
   clock); after a rate change it explains every measured first-step delay
   (an old count of 84 meets terminal 62 at 126 and 77 at 93), which a modulo
   or equality counter cannot. Disabling holds the step at zero. The step's PM
-  effect reaches the output one frame after the terminal. All of this was
+  effect uses its own operator admission boundaries, described below. This was
   measured on the cycle-exact oracle by global phase fits of a PM-only
   single-operator tone (residual 2e-4 cycles) at every rate, at several
   enable times, with the rate pre-set or changed on enable, and at the
@@ -110,7 +110,7 @@ default is a separate commit.
   PMS 7 code 3 (47 gives 34, 63 gives 46) and a per-bit sum at PMS 4 code 3.
   The modulated F-number is twelve bits including the fraction and wraps
   (positive peaks at 0x7F0 fall to a sub-audio pitch). PMS 7 peaks at
-  +4.62 %, the manual's ±80 cents. A disabled LFO holds its counter at zero,
+  +4.62 %, the manual's ±80 cents. A disabled LFO holds its step at zero,
   the AM triangle's maximum attenuation; AM depth per channel (2 bits: 0,
   1.4, 5.9, 11.8 dB) applied to operators with AM enabled, PM depth per
   channel (3 bits) applied as the F-number offset above.
@@ -279,3 +279,14 @@ one-frame-old AM and OP2..4 two-frame-old AM. Two retained triangle samples
 participate in reset and state copying. Public held/AM tone pairs establish
 both the discrete levels and output timing; the earlier increment-before-compare
 prototype required a different coordinate and is superseded.
+
+
+## Global PM admission refinement
+
+Global LFO PM does not follow the frequency-register slot ordering. Its
+increment is admitted after `{1,2,2,2}` frames for logical OP1..4; phase
+lookup adds one frame and OP1's carrier history adds another, producing the
+common three-frame output boundary. Reusing frequency-write coordinates made
+OP1..3 one frame late. Near the twelve-bit F-number wrap that single step
+leaves a large persistent phase error; all-channel/all-carrier probes at
+FNUM 1008, 2032 and 2047 distinguish it from the correctly modeled wrap.

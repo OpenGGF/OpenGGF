@@ -3181,6 +3181,8 @@ failures, with independent sample-exact high-feedback transition coverage.
 The LFO prescaler and PM arithmetic are now oracle-measured (bit-containment
 terminals, half-step truncated partial sums, twelve-bit wrap). AM preserves
 discrete depths and operator output history, with independent all-channel/
-all-carrier measurements and rewind coverage. Combined release verification
-is pending; fidelity failures are **not** accepted discrepancies merely
-because this approximation exists. See the [fast FM validation record](../architecture/validation/audio/2026-09-06-fast-fm-release.md).
+all-carrier measurements and rewind coverage. All 178 supported scripts now
+meet the unchanged waveform/level bounds without deferrals. Independent
+high-FNUM checks cover global PM sampling across every channel and carrier.
+Final integrated verification and human listening sign-off remain separate
+release gates; this tolerance result does not establish full SMPS parity. See the [fast FM validation record](../architecture/validation/audio/2026-09-06-fast-fm-release.md).

@@ -50,9 +50,9 @@ public final class FastYm2612Dsp implements FmDsp {
     /**
      * LFO prescaler terminal values per rate. A free-running frame counter
      * (running whether or not the LFO is enabled, never reset by the 0x22
-     * write) advances the 128-step LFO and clears itself when it CONTAINS the
-     * value's bits, {@code (counter & value) == value}, which from a cleared
-     * counter yields the periods 108, 77, 71, 67, 62, 44, 8 and 5 frames.
+     * write) advances the 128-step LFO and restarts at one when it CONTAINS the
+     * value's bits, {@code (counter & value) == value}, yielding steady
+     * periods 108, 77, 71, 67, 62, 44, 8 and 5 frames.
      * Measured on the cycle-exact oracle by a global phase fit of a PM-only
      * probe tone (residual 2e-4 cycles): the periods at every rate, and the
      * first-step delay after enabling at different times with a different
@@ -60,8 +60,13 @@ public final class FastYm2612Dsp implements FmDsp {
      * a modulo or equality counter cannot reproduce.
      */
     private static final int[] LFO_STEP_MASK = {108, 77, 71, 67, 62, 44, 8, 5};
-    /** Frames between an LFO step and its PM effect on the output, measured against the oracle. */
-    private static final int LFO_PM_OUTPUT_FRAMES = 1;
+    /**
+     * PM increment admission, logical OP1..4. Global LFO changes reach the
+     * carrier output after three frames: phase lookup adds one, and OP1's
+     * carrier history adds another. All-channel high-FNUM wrap probes expose
+     * a one-frame error hidden by ordinary small pitch changes.
+     */
+    private static final int[] LFO_PM_ADMISSION_FRAMES = {1, 2, 2, 2};
     /** Shift of the doubled 0..63 AM triangle: exact public-tone depths 0, 15, 63, 126. */
     private static final int[] AM_SHIFT = {8, 3, 1, 0};
     /**
@@ -1035,9 +1040,9 @@ public final class FastYm2612Dsp implements FmDsp {
                     if (pmSensitivity[channel] != 0) {
                         for (int op = 0; op < 4; op++) {
                             int slot = channel * 4 + op;
-                            // A PM step reaches the output one frame after the
-                            // prescaler terminal (oracle phase fits at every rate).
-                            refreshPhaseIncrement(slot, PHASE_LOOKAHEAD_FRAMES[op] - LFO_PM_OUTPUT_FRAMES);
+                            // Global PM has its own sampling boundary; the
+                            // frequency-register slot ordering does not apply.
+                            refreshPhaseIncrement(slot, 3 - LFO_PM_ADMISSION_FRAMES[op]);
                         }
                     }
                 }
