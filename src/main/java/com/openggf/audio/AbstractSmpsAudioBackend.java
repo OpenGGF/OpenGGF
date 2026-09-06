@@ -757,7 +757,9 @@ public abstract class AbstractSmpsAudioBackend implements AudioBackend {
                 new SmpsPhysicalDevice.Settings(
                         sampleRate,
                         configService.getBoolean(
-                                SonicConfiguration.DAC_INTERPOLATE)),
+                                SonicConfiguration.DAC_INTERPOLATE),
+                        com.openggf.audio.synth.FmCoreSelection.fromConfig(
+                                configService.getString(SonicConfiguration.AUDIO_FM_CORE))),
                 physicalPolicy,
                 diagnosticChipWriteObserver(),
                 new com.openggf.audio.session.SmpsDriverSessionConfiguration(

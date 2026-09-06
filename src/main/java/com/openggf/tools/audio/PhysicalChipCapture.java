@@ -66,7 +66,8 @@ final class PhysicalChipCapture implements ChipWriteObserver {
     private Long terminalYmCycle;
 
     /** Marks a proven reset-origin YM segment without discarding setup events. */
-    void beginYmReplaySegment(Ym2612Chip.Snapshot snapshot) {
+    void beginYmReplaySegment(com.openggf.audio.synth.FmChip.Snapshot candidate) {
+        Ym2612Chip.Snapshot snapshot = requireAccurate(candidate);
         NukedOpn2 reset = new NukedOpn2();
         boolean muted = false;
         for (boolean value : snapshot.mutes()) {
@@ -93,7 +94,8 @@ final class PhysicalChipCapture implements ChipWriteObserver {
      * Bus draining may also leave a partial frame; output frames alone therefore
      * understate the endpoint. Non-bus changes make this narrow proof invalid.
      */
-    void finish(long frames, Ym2612Chip.Snapshot snapshot) {
+    void finish(long frames, com.openggf.audio.synth.FmChip.Snapshot candidate) {
+        Ym2612Chip.Snapshot snapshot = requireAccurate(candidate);
         if (frames < 0) {
             throw new IllegalArgumentException("rendered frames must be non-negative");
         }
@@ -219,5 +221,15 @@ final class PhysicalChipCapture implements ChipWriteObserver {
             }
         }
         return escaped.toString();
+    }
+
+    /** Physical capture is defined over the cycle-exact core only. */
+    private static Ym2612Chip.Snapshot requireAccurate(com.openggf.audio.synth.FmChip.Snapshot candidate) {
+        if (candidate instanceof Ym2612Chip.Snapshot accurate) {
+            return accurate;
+        }
+        throw new IllegalStateException(
+                "physical chip capture requires audio.fmCore=accurate; got "
+                        + candidate.getClass().getSimpleName());
     }
 }

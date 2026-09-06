@@ -87,7 +87,7 @@ class TestPhysicalChipCapture {
         synth.writeFm(this, 0, 0xA4, 0x22);
         synth.writeFm(this, 0, 0xA0, 0x69);
         synth.render(new short[2]);
-        var live = synth.captureSynthSnapshot().ym();
+        Ym2612Chip.Snapshot live = (Ym2612Chip.Snapshot) synth.captureSynthSnapshot().ym();
         capture.finish(1, live);
 
         Path output = directory.resolve("endpoint.jsonl");

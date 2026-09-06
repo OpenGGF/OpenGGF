@@ -1,0 +1,150 @@
+# Fast FM core: seam and clean-room techniques specification (2026-09-06)
+
+Department problem P7. Motivation: whole-game benchmarks put FM/PSG synthesis
+at 90–97 % of frame CPU (0.85–0.93 ms per frame on this host); the Java
+Nuked-OPN2 port costs about 930 ns per output frame against roughly 170 ns for
+register-level designs ([2026-09-04 FM core performance exploration](../research/audio/2026-09-04-fm-core-performance-exploration.md)).
+The retired Java core was a port of GPGX `ym2612.c` (non-commercial licence)
+and is not resurrected or read.
+
+## Clean-room protocol
+
+- **Spec author (BG)** surveyed public documentation and permissively licensed
+  cores and describes techniques here in words. No source code from any core
+  appears in this document.
+- **Implementer (CS)** writes `com.openggf.audio.synth.fast.FastYm2612Dsp`
+  from this document plus public hardware documentation only: the Yamaha
+  YM2608/YM2612 manuals, Nemesis's SpritesMind write-ups
+  (`gendev.spritesmind.net/forum/viewtopic.php?t=386`, in particular the
+  envelope-generator and phase-generator posts), and the jt12 copy of
+  Nemesis's header notes. The implementer does not open ymfm, MAME, Genesis
+  Plus GX, fmgen, BlastEm, the retired core, or the in-tree Nuked port.
+- **Oracle**: the in-tree Nuked-OPN2 port stays the accurate core and the test
+  oracle; the fast core is judged by tolerance tests against it, not by
+  reading it.
+- Record the sources actually consulted in the class header.
+
+## Seam (delivered with this document)
+
+| Piece | Role |
+| --- | --- |
+| `FmChip` | The chip surface `VirtualSynthesizer` drives: writes, DAC, mutes, render, mutation backup, snapshot, SFX admission. Implemented by `Ym2612Chip` (accurate) and `FastYm2612Chip` (fast). |
+| `fast.FmDsp` | The DSP contract: `reset`, `writeRegister(port, register, value)`, `renderFrame(int[6])` (one internal frame, six pre-pan channel outputs in `-8192..8191`, channel 6 = DAC sample while `0x2B` bit 7 is set, no allocation), `readStatus`, `copyStateTo`, `newInstance`, value `equals`/`hashCode`. |
+| `FastYm2612Chip` | Facade: pending-write queue flushed at render (so SFX admission can withdraw writes), B4–B6 pan masks, per-channel mute, 3/4 scaling to the mixer's 6144 full scale, DAC streaming as `0x2A` writes at the ROM byte cadence, `BlipResampler` to the output rate, snapshots and rewind. |
+| `fast.FastFmCores` | Binding point; `bind(Supplier<FmDsp>)` from the DSP's static wiring. Selecting `fast` without a binding fails at construction. |
+| `FmCoreSelection`, `audio.fmCore` | `accurate` (default) or `fast`; read once per physical device. `PhysicalChipCapture` refuses fast snapshots. |
+
+Default stays `accurate` until the tolerance tests pass and the parity/oracle
+tests that must pin the accurate core have been enumerated; flipping the
+default is a separate commit.
+
+## Hardware facts the DSP must honour (public documentation)
+
+- 6 channels × 4 operators, 24 operator slots serviced per internal frame; the
+  frame rate is the FM clock (master / 6) divided by 24 = 53 267 Hz NTSC.
+- Phase generator: 11-bit F-number, 3-bit block, 3-bit detune, 4-bit multiple;
+  20-bit phase accumulator, top 10 bits address the sine quarter-wave; key code
+  (5 bits) derives from block and the top F-number bits and drives detune and
+  rate scaling. Channel 3 special mode gives each operator its own
+  F-number/block; CSM keys channel 3 on from timer A overflow.
+- Envelope generator: 10-bit attenuation (0 = loudest, 0x3FF = silent),
+  4.6 fixed-point log2 scale (bit 0 = 0.046875 dB, bit 9 = 24 dB, so the
+  usable range is 0–96 dB across the full register but Nemesis's tests show
+  effective 0–48 dB per stage). Rate = 2·R + Rks (rate scaling from key code
+  shifted by RS), R = 0 forces rate 0, cap 63. The EG is clocked at master/351
+  (about every third internal frame); a 64-entry counter-shift table
+  (11 down to 0) decides how often a rate updates and a 64×8 increment table
+  (0..8) supplies the step. Attack:
+  `attenuation += increment * (((1024 - attenuation) / 16) + 1)` (moves toward
+  0, with rate ≥ 62 jumping to 0 immediately); decay, sustain and release are
+  linear `attenuation += increment`. Sustain level is 4 bits with 15 meaning
+  full attenuation; release rate is `2·RR + 1`.
+- SSG-EG: enable, attack (inversion at decay start), alternate (toggle
+  inversion each pass), hold; while enabled the decay-side increment is
+  multiplied by 6 and the envelope restarts/inverts at 0x200.
+- Operator: input phase + modulation (10 bits) → quarter-wave log-sine table
+  (256 entries, 12-bit output) → add envelope attenuation + total level
+  (7 bits, 0.75 dB per step) + AM → exp/power table (256 entries, 11-bit
+  mantissa, exponent from the integer part) → 14-bit signed operator output.
+  Yamaha's trick: attenuations add in the log domain so there is no multiply.
+- Feedback on operator 1: average of its two previous outputs, shifted by the
+  3-bit feedback register (0 = off, 1..7 = π/16 .. 4π of phase).
+- Algorithms: the eight standard OPN connection graphs; modulator outputs feed
+  successors' phase input, carrier outputs sum into the channel output.
+- LFO: 3-bit rate (8 frequencies from 3.98 Hz to 72.2 Hz at NTSC), AM depth
+  per channel (2 bits: 0, 1.4, 5.9, 11.8 dB) applied to operators with AM
+  enabled, PM depth per channel (3 bits) applied as an F-number offset.
+- Output: per-channel L/R enables (0xB4–0xB6 bits 7/6); the real chip's DAC is
+  9-bit time-multiplexed, so per-channel 14-bit values are the digital output
+  before that stage. The YM2612's "ladder effect" crossover distortion is an
+  analog artefact; out of scope for the fast core.
+- Timers A (10-bit) and B (8-bit) with status bits 0/1, reset/enable/load via
+  0x27; DAC enable 0x2B bit 7, data 0x2A (unsigned byte, centred at 0x80).
+
+## Techniques worth adopting (from the survey)
+
+Ranked by cost/benefit for a register-level core:
+
+1. **Log-domain operator math with two 256-entry tables** (ymfm, fmgen,
+   hardware): quarter-wave log-sine (12-bit) and exp (11-bit mantissa). One
+   table lookup, one add, one lookup and a shift per operator per sample; no
+   multiply, no floating point. Generate the tables at class-load from the
+   formulas, do not embed constants.
+2. **Precomputed phase step per operator, refreshed on register write only**
+   (ymfm: 768-entry block/keycode/fraction table plus a 32×4 signed detune
+   table; fmgen: per-operator cached `pg_diff`). Recompute an operator's phase
+   increment when its F-number, block, detune, multiple or the LFO PM input
+   changes; otherwise the per-sample phase update is one add.
+3. **Envelope evaluated every third internal frame, not every sample**
+   (hardware EG clock master/351; ymfm approximates with a fixed divider and a
+   2-bit fractional counter). The per-sample envelope cost becomes a table
+   fetch of the cached attenuation.
+4. **Cached per-operator parameters** (ymfm): effective rates after rate
+   scaling, key-scale shift, total level, sustain level, and the AM enable, all
+   recomputed on register writes. Per sample the operator reads plain ints.
+5. **Silent-voice skipping** (ymfm `prepare`, fmgen channel bitmask): a channel
+   whose four operators are all at maximum attenuation with key off and no
+   pending key-on contributes nothing; skip its four operator evaluations that
+   frame. This is the largest win on SMPS music, where several channels sit
+   idle between notes.
+6. **Branch-free routing** (ymfm): encode each algorithm's connections as a
+   small bitfield/table so the per-sample loop indexes rather than switches;
+   store operator outputs in a fixed 4-slot array and sum carriers by mask.
+7. **AM/PM precomputed per LFO step** (fmgen): compute the LFO's AM offset and
+   PM F-number delta once per LFO advance, then add per operator.
+8. **State in flat primitive arrays** so `copyStateTo` is a handful of
+   `System.arraycopy` calls and `equals` is `Arrays.equals`; no per-sample
+   allocation; `renderFrame` writes into the caller's array.
+9. **Attack curve by the hardware formula, not by an exponential table**:
+   Nemesis's formula above is both accurate and cheap.
+
+Not adopted: cycle-exact operator pipelining and bus timing (Nuked), the
+YM2612 ladder-effect model (analog; the facade scale is defined at the
+digital output), busy-flag timing (facade does not model it).
+
+## Acceptance
+
+- `TestFastYm2612Chip` (facade contract, scripted DSP) — delivered.
+- Tolerance test to add with the DSP: render the `TestNukedOpn2BitExactScripts`
+  register scripts through both cores at the internal rate; require per-script
+  RMS error and cross-correlation bounds agreed in P7, not sample equality.
+- `TraceBenchmarkTool` audio section ≤ 0.25 ms/frame with `fast` on the S1
+  GHZ1 and S3K AIZ traces (current accurate: 0.85–0.93 ms).
+- Ordinary and guard suites green with `audio.fmCore=accurate` (unchanged
+  default), then an audit run with `fast` to list the tests that must pin
+  `accurate` before any default change.
+
+## Sources consulted by the spec author
+
+- ymfm (BSD-3-Clause, Aaron Giles): `GeneralInfo.md`, `src/ymfm_fm.ipp` —
+  read for techniques 1, 2, 3, 4, 5, 6.
+- fmgen (cisc, MIT-compatible, via libOPNMIDI): `fmgen_fmgen.cpp` — read for
+  techniques 1, 5, 7 and its 1024-entry sine / envelope step-table variant.
+- Nemesis, SpritesMind thread t=386 (public research, pages 105–120): envelope
+  generator facts quoted above. jt12 `doc/nemesis/YM2612/YM2612.h`: bit widths
+  and table sizes.
+- libOPNMIDI README: core inventory and licences (MAME GPL-2, Nuked LGPL-2.1,
+  GENS LGPL-2.1, ymfm BSD, fmgen MIT-compatible).
+- Wikipedia "Yamaha YM2612": 9-bit DAC, YM3438 differences.
+- Not read for this document: MAME `fm.c`, Genesis Plus GX, BlastEm, the
+  retired OpenGGF core, and the in-tree Nuked port's synthesis code.

@@ -20,6 +20,17 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Selectable FM core behind an `FmChip` seam:** `VirtualSynthesizer` now
+  drives an `FmChip`, implemented by the cycle-exact Nuked-OPN2 facade and a
+  new register-level `FastYm2612Chip` facade over a clean-room `FmDsp`
+  contract (queued writes, panning, mutes, DAC streaming, snapshots and SFX
+  admission are the facade's; the DSP is register in, six channels out).
+  `audio.fmCore` selects `accurate` (default, unchanged behaviour) or `fast`;
+  no fast DSP is bound yet, so `fast` fails at construction until the
+  clean-room core lands. Physical chip capture requires the accurate core.
+  Design and techniques spec:
+  [2026-09-06-fast-fm-core-design.md](docs/architecture/designs/2026-09-06-fast-fm-core-design.md).
+
 - **Release skip classification became an explicit, source-backed policy:**
   `tools/testing/classify_surefire_skips.py` classifies every skipped surefire
   identity against `tools/testing/release-skip-policy.json` (exact identities,
