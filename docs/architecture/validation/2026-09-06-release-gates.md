@@ -114,3 +114,56 @@ remains restricted to manual dispatch on `master`.
 Candidate and baseline logs, command arrays, XML and JSON are preserved outside
 the repository under `${EVIDENCE_ROOT}/brainpipe-release-0.6-remediation/`.
 Archive hashes are recorded in the adjacent `*-archive.json` manifests.
+
+## Integrated delivery verification
+
+Integrated commit: **1514f4c9c32f4717d0d2a45eea8ebe1a87f8181a**, on `develop`.
+There were no upstream changes or merge conflicts. The existing dirty research
+submodules were preserved. Ordinary/guards/package ran in the main workspace;
+trace ran in an isolated worktree at that exact same integrated commit, with
+fresh worktree-local output directories and the same three verified ROM paths.
+
+| Check | Completed result |
+|---|---|
+| `mvn -Dmse=off test -B` plus three absolute ROM properties | 16,687 tests, 0 failures, 0 errors, 23 skips; all 15,738 unique XML identities retain baseline outcomes. Duplicate passing XML multiplicities differ for 74 cases, with no missing identities or changed outcomes. |
+| Exact skip classifier, `gl=true` and four optional inputs declared absent | 23 accepted; 0 unknown, required, undeclared-input or stale-policy entries. |
+| Fresh `mvn -Dmse=off -Pguards test -B` plus ROM properties | 610 tests, 0 failures/errors/skips; all 610 identities/outcomes match the development run. |
+| Fresh `mvn -Dmse=off test -Ptrace-replay -B` plus ROM properties | 852 executions, 7 existing failures, 0 errors, 6 existing skips; Maven assertion exit 1 retained. |
+| Pinned trace comparison | Exit 0: all 850 XML testcase identities, suite execution multiplicities and 173 owned reports unchanged from the fresh baseline, including warnings/frontiers/coverage gaps. |
+| Source-derived trace coverage | 151 required policy classes / 75 trace classes execute; 809 / 117 executions respectively. |
+| `mvn -Dmse=off package -Puniversal-jar -DskipTests -B` | BUILD SUCCESS; tests were already completed separately above. |
+| Unmodified universal-JAR smoke block extracted from `release.yml` | Passed manifest, licence-notice and all eight native-payload classifier checks. This is packaging evidence, not execution on eight platforms. |
+
+`target/OpenGGF-universal.jar`: **27,541,120 bytes**, SHA-256
+`377ecf484ace693c5a96cfa36a698fc4c2c0bf9a93ce85a7dbcfd7f6a2e086c1`.
+The external `integrated-1514f4c9c.tar.gz` evidence archive has SHA-256
+`081bdbac332f0ef7dac98191c0d13cbd8b7a9301720f62dc8960724e3d6bbf05`.
+It preserves commands, completed logs, XML, owned JSON, comparisons and package
+metadata. The universal JAR is also retained alongside it.
+
+The final delivery follow-up changes documentation only; runtime, tests, tooling,
+POM and fixtures retain the tested integrated content. Push/cleanup completion
+is reported in the delivery result after those operations succeed.
+
+## Retained failure identities
+
+These are unchanged baseline debt, not seven new regressions. Full failure
+messages and report payloads are preserved in the evidence manifests.
+
+- `TestS3kReplayReferenceClosureIntegration#replayMatchesTrace`.
+- `runs.TestS1CompleteEmeraldRunChain#ghz1ToScrapBrainAcrossEverySpecialStage`.
+- `runs.TestS2CompleteEmeraldRunChain#ehz1ToDeathEggAcrossEverySpecialStage`.
+- `runs.TestS2EhzHalfpipeRoundTripChain#ehzHalfpipeRoundTrip`.
+- `runs.TestS3kSonicTailsCompleteEmeraldRunChain#aiz1ToDoomsdayCollectingEverySevenEmeralds`.
+- `runs.TestTraceRunReplayWalkerControlFlow#metadataOnlySpecialStagePlanRejectsNonContiguousStoredRows(Path)`.
+- `s3k.TestS3kAizTraceReplay#replayMatchesTrace`.
+
+The `metadataOnlySpecialStagePlanRejectsNonContiguousStoredRows` failure is a
+bounded test-fixture issue: it supplies a two-column S2 special-stage CSV and
+expects a noncontiguous-row diagnostic, but the strict parser rejects the invalid
+48-column schema first. The test and parser are unchanged here. Its eventual
+repair requires reviewed baseline refresh, as does any changed red evidence.
+
+Release remains pending: choose/configure the fixture runner, complete hosted
+Windows/macOS/Linux native validation for a frozen candidate, and record human
+supported-route gameplay and SMPS listening sign-off. No release was published.

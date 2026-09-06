@@ -676,9 +676,9 @@ identified release skip-classification and trace-policy mismatches. The
 [remediation record](docs/architecture/validation/2026-09-06-release-gates.md)
 tracks their replacement with explicit capability checks and a fresh, pinned
 trace comparison. A frozen candidate still needs complete platform evidence and
-human gameplay/listening sign-off. The remediation candidate passed 16,687 ordinary
+human gameplay/listening sign-off. The integrated remediation passed 16,687 ordinary
 tests and 610 guards, with its known trace failures and reports unchanged against
-a fresh baseline. Hosted validation also requires a configured `release-fixtures` runner.
+a fresh baseline. Its universal JAR passed packaging smoke checks. Hosted validation also requires a configured `release-fixtures` runner.
 
 Known limitations: some Game Over timing details remain documented in
 `docs/status/known-bugs.md`; there is no modding framework, the level editor
