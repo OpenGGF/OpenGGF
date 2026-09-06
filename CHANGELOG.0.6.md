@@ -25,7 +25,7 @@ This file contains the complete 0.6 development snapshot history carried forward
   documentation and the department's techniques specification (no emulator
   source consulted), judged against the cycle-exact core by a tolerance
   oracle over the 183 bit-exact register scripts: every SMPS music log
-  correlates at 0.97–0.99, tones and envelopes at 0.96–1.00, and 108 scripts
+  correlates at 0.97–0.99, tones and envelopes at 0.96–1.00, and 121 scripts
   sit inside the correlation/level bounds; the rest (LFO, channel-3 special
   mode, feedback into summed modulators, some SSG-EG repeat modes, attack
   rates 1–2) are listed as deferred in the test and the design document. On

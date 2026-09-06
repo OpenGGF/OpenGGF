@@ -33,9 +33,9 @@ import org.junit.jupiter.api.TestFactory;
 class TestFastFmCoreTolerance {
     private static final int LAG_SEARCH = 64;
     private static final double MIN_CORRELATION =
-            Double.parseDouble(System.getProperty("openggf.fastfm.minCorrelation", "0.85"));
+            Double.parseDouble(System.getProperty("openggf.fastfm.minCorrelation", "0.9"));
     private static final double MAX_LEVEL_RATIO =
-            Double.parseDouble(System.getProperty("openggf.fastfm.maxLevelRatio", "2.0"));
+            Double.parseDouble(System.getProperty("openggf.fastfm.maxLevelRatio", "1.25"));
     /** Scripts quieter than this RMS on the accurate core are judged on level only. */
     private static final double SILENCE_RMS = 40.0;
     private static final int MAX_FRAMES = Integer.getInteger("openggf.fastfm.maxFrames", 160_000);
@@ -57,8 +57,8 @@ class TestFastFmCoreTolerance {
      * the open defect class from the design document (SSG repeat modes, LFO,
      * channel-3 special mode, feedback into summed modulators, AR 1-2, LSI
      * test registers and bus edge cases which are out of scope). They still
-     * run and print their metrics; the assertion is deferred until the class
-     * is fixed so the list only ever shrinks.
+     * run and print their metrics, then report as skipped (not passed) so the
+     * suite totals show what is enforced; the list only ever shrinks.
      */
     private static final java.util.Set<String> DEFERRED = java.util.Set.of(
             "alg0-fb7",
@@ -119,10 +119,8 @@ class TestFastFmCoreTolerance {
             "s3k-sfx-4e",
             "ssg08-ar20",
             "ssg10-ar20",
-            "ssg10-ar31",
             "ssg12-ar20",
             "ssg14-ar20",
-            "ssg14-ar31",
             "ssg15-ar20",
             "test-regs");
 
@@ -142,9 +140,9 @@ class TestFastFmCoreTolerance {
         System.out.printf(Locale.ROOT, "fastfm %-16s frames=%7d rmsAccurate=%8.1f rmsFast=%8.1f ratio=%6.3f corr=%6.3f lag=%+d%n",
                 script.getFileName().toString().replace(".txt.gz", ""), rendering.frames,
                 metrics.rmsAccurate, metrics.rmsFast, metrics.ratio, metrics.correlation, metrics.lag);
-        if (DEFERRED.contains(script.getFileName().toString().replace(".txt.gz", ""))) {
-            return;
-        }
+        org.junit.jupiter.api.Assumptions.assumeFalse(
+                DEFERRED.contains(script.getFileName().toString().replace(".txt.gz", "")),
+                "deferred: open defect class, metrics printed above");
         if (metrics.rmsAccurate < SILENCE_RMS) {
             assertTrue(metrics.rmsFast < SILENCE_RMS * MAX_LEVEL_RATIO,
                     "accurate core is silent but fast core is not: " + metrics.rmsFast);

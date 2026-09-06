@@ -20,8 +20,11 @@ Fresh acceptance and integrated verification will be recorded separately.
 
 Fidelity oracle (`TestFastFmCoreTolerance`, both cores fed the same register
 script, mono sums compared DC-free by normalised cross-correlation with a
-±64-frame lag search and RMS level ratio): 108 of 183 scripts within
-correlation ≥ 0.9 and level ratio 0.8–1.25; all SMPS music logs 0.967–0.986;
-deferred scripts are enumerated in the test and the open classes in the design
-document. The default core remains `accurate`.
+±64-frame lag search and RMS level ratio): after CS's hardware review
+(keycode from the raw F-number, SSG boundary tested every frame with phase
+reset only in the non-ALT repeat modes, LFO divider terminal counts), 121 of
+183 scripts are within correlation ≥ 0.9 and level ratio 0.8–1.25 or silent
+on both cores; all SMPS music logs 0.967–0.986. The 62 deferred scripts are
+enumerated in the test and reported as skipped, not passed; the open classes
+are in the design document. The default core remains `accurate`.
 

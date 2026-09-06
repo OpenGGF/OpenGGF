@@ -41,12 +41,11 @@ public final class FastYm2612Dsp implements FmDsp {
     /** Envelope counter shift per rate: how many counter LSBs must be zero before a step. */
     private static final int[] EG_SHIFT = new int[64];
     /**
-     * Internal frames per LFO step (128 steps per period). The manual's
-     * frequency table (3.98 .. 72.2 Hz) is quoted for an 8 MHz clock; these
-     * integer step lengths reproduce it at that clock and scale with the
-     * Mega Drive's 7.67 MHz, which is how the hardware counts.
+     * Internal frames per LFO step (128 steps per period): the nearest integer
+     * intervals to the manual's 3.98 .. 72.2 Hz table at its 8 MHz clock
+     * (approximate: an arithmetic inference, not a measured divider table).
      */
-    private static final int[] LFO_FRAMES_PER_STEP = {108, 77, 71, 67, 62, 44, 8, 5};
+    private static final int[] LFO_FRAMES_PER_STEP = {109, 78, 72, 68, 63, 45, 9, 6};
     /** AM depth per AMS in envelope units (0.046875 dB): 0, 1.4, 5.9, 11.8 dB. */
     private static final int[] AM_DEPTH = {0, 15, 63, 126};
     /** PM depth per PMS in cents (manual). */
@@ -378,12 +377,13 @@ public final class FastYm2612Dsp implements FmDsp {
         int block = operatorBlock[slot];
         int channel = slot >> 2;
         int pms = pmSensitivity[channel];
+        // Key code comes from the raw F-number before LFO modulation (Sauraen's die tracing).
+        int newKeyCode = (block << 2) | FNUM_NOTE[(fnum >> 7) & 15];
         if (scalar[S_LFO_ENABLED] != 0 && pms != 0) {
             int step = (scalar[S_LFO_STEP] >> 2) & (PM_STEPS - 1);
             fnum = (int) (((long) fnum * PM_MULTIPLIER_Q16[pms][step]) >> 16);
             fnum = Math.min(fnum, 0xFFF);
         }
-        int newKeyCode = (block << 2) | FNUM_NOTE[(fnum >> 7) & 15];
         if (newKeyCode != keyCode[slot]) {
             keyCode[slot] = newKeyCode;
             refreshRates(slot);
@@ -454,6 +454,13 @@ public final class FastYm2612Dsp implements FmDsp {
     public void renderFrame(int[] out) {
         advanceTimers();
         advanceLfo();
+        // SSG-EG's half-way boundary is tested every FM frame, before a coincident envelope update.
+        for (int slot = 0; slot < 24; slot++) {
+            if ((ssgMode[slot] & 8) != 0 && keyOn[slot] != 0 && egState[slot] != EG_ATTACK
+                    && attenuation[slot] >= 0x200) {
+                handleSsgBoundary(slot);
+            }
+        }
         scalar[S_EG_FRAME] += MASTER_CYCLES_PER_FRAME;
         while (scalar[S_EG_FRAME] >= EG_TICK_MASTER_CYCLES) {
             scalar[S_EG_FRAME] -= EG_TICK_MASTER_CYCLES;
@@ -600,12 +607,8 @@ public final class FastYm2612Dsp implements FmDsp {
     private void advanceEnvelope(int slot, int counter) {
         int state = egState[slot];
         boolean ssg = (ssgMode[slot] & 8) != 0;
-        if (ssg && state != EG_ATTACK && attenuation[slot] >= 0x200) {
-            // The half-way boundary is checked on every envelope clock, not only on a step.
-            handleSsgBoundary(slot);
-            if (egState[slot] == EG_ATTACK || ssgHeld[slot] != 0) {
-                return;
-            }
+        if (ssg && ssgHeld[slot] != 0) {
+            return;
         }
         int rate;
         switch (state) {
@@ -650,8 +653,9 @@ public final class FastYm2612Dsp implements FmDsp {
      * Hold modes toggle the inversion once if ALT is set, then hold: an
      * inverted output freezes at the boundary (heard loud), a plain one goes to
      * full attenuation (silent). Repeat modes toggle the inversion if ALT is set
-     * and restart the attack, which with the inversion yields the manual's
-     * sawtooth and triangle shapes.
+     * and restart the attack from the attained attenuation (phase reset only
+     * without ALT), which with the inversion yields the manual's sawtooth and
+     * triangle shapes.
      */
     private void handleSsgBoundary(int slot) {
         if (keyOn[slot] == 0) {
@@ -673,8 +677,9 @@ public final class FastYm2612Dsp implements FmDsp {
         }
         if (alternate) {
             ssgInvert[slot] ^= 1;
+        } else {
+            phase[slot] = 0; // only the plain repeat modes restart the phase
         }
-        phase[slot] = 0;
         int rate = effectiveRate(slot, attackRate[slot]);
         if (rate >= 62) {
             attenuation[slot] = 0;
