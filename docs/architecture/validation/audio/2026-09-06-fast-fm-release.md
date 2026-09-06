@@ -352,3 +352,31 @@ that exact test at sample 2: expected 3280, actual 968. Logs under the task's
 `target/fast-fm-release/`: `scheduled-pipeline-green.log`,
 `scheduled-snapshot-green.log`, `scheduled-snapshot-negative/results.log`,
 and `feedback-transitions-red.log`. Final suites and benchmarks remain pending.
+
+
+## Supported acceptance restored (LFO still red)
+
+The fast factory now enforces all 178 supported scripts with the unchanged
+waveform/level criteria and no deferrals. Exactly `bus-edges`, `fuzz-s0`,
+`fuzz-s1`, `fuzz-s2`, and `test-regs` are outside the fast contract and run
+only in the separate opt-in diagnostic factory:
+
+```sh
+mvn -Dmse=off -Dtest=TestFastFmCoreTolerance -Dopenggf.fastfm.only=bus-edges,fuzz-s0,fuzz-s1,fuzz-s2,test-regs -Dopenggf.fastfm.outOfScopeDiagnostics=true test -B
+```
+
+The accurate-core 183-script oracle is unchanged. The restored default fast
+factory completes at 06:26:38 BST on `43c8ccf57` plus the test edit with
+178 XML cases, exactly nine LFO failures, zero errors and zero skips. Surefire's
+console collapses dynamic invocations into one failure; the XML and printed
+script metrics retain the full evidence. The explicit five-script diagnostic
+command completes at 06:29:14 BST with five cases and no errors or skips;
+those are diagnostic executions, not fidelity acceptance.
+
+An independent LFO test uses FNUM 977, block 5, PMS 1/3/7, all eight rates,
+and enable/disable/re-enable intervals distinct from the corpus. Its eight
+rate cases currently fail their zero-lag 0.995 correlation requirement; its
+rewind case passes. Completed at 06:28:02 BST. These red checks explicitly
+block integration until the pending LFO correction passes. Evidence: task
+`target/fast-fm-release/{supported-acceptance-red,lfo-transitions-red}.{log,xml}`
+and `out-of-scope-diagnostics.log`.

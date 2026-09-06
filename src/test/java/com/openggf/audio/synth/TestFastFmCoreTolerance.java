@@ -35,9 +35,9 @@ class TestFastFmCoreTolerance {
 
     /**
      * Scripts that exercise the LSI test registers or bus-edge behaviour the
-     * fast core does not model by contract (design document). They still run
-     * for their metrics but are reported as skipped under their own reason,
-     * separate from the deferred defects that are expected to shrink.
+     * fast core does not model by contract (design document). They are excluded from default acceptance. Opt-in metrics are available
+     * with -Dopenggf.fastfm.outOfScopeDiagnostics=true; the accurate-core
+     * 183-script oracle remains unchanged.
      */
     private static final java.util.Set<String> OUT_OF_SCOPE = java.util.Set.of(
             "fuzz-s0", "fuzz-s1", "fuzz-s2", "test-regs", "bus-edges");
@@ -60,6 +60,23 @@ class TestFastFmCoreTolerance {
 
     @TestFactory
     Stream<DynamicTest> scriptsStayWithinTolerance() throws IOException, URISyntaxException {
+        return scripts().filter(script -> !OUT_OF_SCOPE.contains(scriptName(script)))
+                .map(script -> DynamicTest.dynamicTest(scriptName(script), () -> compare(script, false)));
+    }
+
+    @TestFactory
+    Stream<DynamicTest> outOfScopeDiagnostics() throws IOException, URISyntaxException {
+        if (!Boolean.getBoolean("openggf.fastfm.outOfScopeDiagnostics")) return Stream.empty();
+        return scripts().filter(script -> OUT_OF_SCOPE.contains(scriptName(script)))
+                .map(script -> DynamicTest.dynamicTest("diagnostic: " + scriptName(script),
+                        () -> compare(script, true)));
+    }
+
+    private static String scriptName(Path script) {
+        return script.getFileName().toString().replace(".txt.gz", "");
+    }
+
+    private static Stream<Path> scripts() throws IOException, URISyntaxException {
         Path directory = Path.of(TestFastFmCoreTolerance.class
                 .getResource("/audio/nuked-opn2/port/expected.txt").toURI()).getParent();
         List<Path> scripts;
@@ -79,40 +96,8 @@ class TestFastFmCoreTolerance {
             scripts = scripts.stream().filter(p -> wanted.contains(
                     p.getFileName().toString().replace(".txt.gz", ""))).toList();
         }
-        return scripts.stream().map(script -> DynamicTest.dynamicTest(
-                script.getFileName().toString().replace(".txt.gz", ""), () -> compare(script)));
+        return scripts.stream();
     }
-
-    /**
-     * Scripts whose behaviour the fast core does not yet reproduce, listed with
-     * the open defect class from the design document (SSG repeat modes, LFO,
-     * channel-3 special mode, feedback into summed modulators, AR 1-2, LSI
-     * test registers and bus edge cases which are out of scope). They still
-     * run and print their metrics, then report as skipped (not passed) so the
-     * suite totals show what is enforced; the list only ever shrinks.
-     */
-    private static final java.util.Set<String> DEFERRED = java.util.Set.of(
-            "ch3-special",
-            "dac-ramp-dis",
-            "dac-ramp-en",
-            "lfo-f0",
-            "lfo-f1",
-            "lfo-f2",
-            "lfo-f3",
-            "lfo-f4",
-            "lfo-f5",
-            "lfo-f6",
-            "lfo-f7",
-            "lfo-toggle",
-            "pan-tl",
-            "s1-sfx-ac",
-            "s1-sfx-be",
-            "s1-sfx-c6",
-            "s1-sfx-cf",
-            "s2-sfx-ac",
-            "s2-sfx-bc",
-            "s2-sfx-cf",
-            "s3k-sfx-3c");
 
     /**
      * Validation modes for the contour criterion (diagnostic only):
@@ -126,7 +111,7 @@ class TestFastFmCoreTolerance {
      */
     private static final String CONTROL = System.getProperty("openggf.fastfm.control", "");
 
-    private static void compare(Path script) throws IOException {
+    private static void compare(Path script, boolean diagnosticOnly) throws IOException {
         Ym2612Chip accurate = new Ym2612Chip();
         accurate.setOutputSampleRate(Ym2612Chip.getInternalRate());
         // The oracle runs as chip type 1 (YM3438-style output, no ladder): the
@@ -160,20 +145,17 @@ class TestFastFmCoreTolerance {
                 script.getFileName().toString().replace(".txt.gz", ""), rendering.frames,
                 metrics.rmsAccurate, metrics.rmsFast, metrics.ratio, metrics.correlation, metrics.lag,
                 metrics.envelopeCorrelation, metrics.zeroCrossingError, rendering.maxFeedback, rendering.fastDigest());
-        String name = script.getFileName().toString().replace(".txt.gz", "");
-        org.junit.jupiter.api.Assumptions.assumeFalse(OUT_OF_SCOPE.contains(name),
-                "out of scope by contract (LSI test registers / bus edges), metrics printed above");
-        org.junit.jupiter.api.Assumptions.assumeFalse(DEFERRED.contains(name),
-                "deferred: open defect class, metrics printed above");
+        if (diagnosticOnly) return;
+        String name = scriptName(script);
         if (metrics.rmsAccurate < SILENCE_RMS) {
             assertTrue(metrics.rmsFast < SILENCE_RMS * MAX_LEVEL_RATIO,
-                    "accurate core is silent but fast core is not: " + metrics.rmsFast);
+                    name + ": accurate core is silent but fast core is not: " + metrics.rmsFast);
             return;
         }
         assertTrue(metrics.ratio <= MAX_LEVEL_RATIO && metrics.ratio >= 1.0 / MAX_LEVEL_RATIO,
-                "level ratio fast/accurate out of range: " + metrics.ratio);
+                name + ": level ratio fast/accurate out of range: " + metrics.ratio);
         assertTrue(metrics.correlation >= MIN_CORRELATION,
-                "correlation below threshold: " + metrics.correlation);
+                name + ": correlation below threshold: " + metrics.correlation);
     }
 
     private static final class Rendering {
@@ -380,9 +362,8 @@ class TestFastFmCoreTolerance {
 
         /**
          * Correlation of the two cores' RMS envelopes over {@code window}-frame
-         * windows: what a listener hears for noise-like sounds (maximal feedback
-         * is chaotic, so sample correlation there is meaningless even when the
-         * two cores sound the same).
+         * windows. This is a diagnostic only; contour agreement cannot establish
+         * waveform fidelity, including for maximal-feedback sounds.
          */
         private static double envelopeCorrelation(double[] a, double[] f, int window) {
             int n = Math.min(a.length, f.length) / window;

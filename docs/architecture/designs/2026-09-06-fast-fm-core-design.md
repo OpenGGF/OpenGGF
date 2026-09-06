@@ -238,3 +238,13 @@ same pipeline. Pending writes, requested keys and envelope holds are reset
 and snapshotted. DAC sampling retains its separate three output slots.
 Independent high-feedback pitch changes now match every public digital
 sample after output quantization, including all channels and write offsets.
+
+
+## Release acceptance scope
+
+Default fast-core acceptance enforces all 178 supported register scripts with
+no defect deferrals. The five exact scripts `bus-edges`, `fuzz-s0`, `fuzz-s1`,
+`fuzz-s2`, and `test-regs` exercise bus/test-register behavior outside this
+core's contract; `-Dopenggf.fastfm.outOfScopeDiagnostics=true` includes them
+in a separate diagnostic factory. Their metrics do not certify fidelity.
+The accurate-core 183-script oracle retains every script unchanged.
