@@ -672,10 +672,11 @@ still returns to the 0.6 fix queue when it exposes a confirmed release-impacting
 gameplay defect.
 
 The [September 6 release assessment](docs/architecture/audits/2026-09-06-release-blockers.md)
-identifies release skip-classification and trace-policy mismatches that must be
-resolved before a frozen candidate's automated/platform checks and human QA can
-establish sign-off. Its findings use completed test evidence and a reproduced
-skip-checker failure; no new gameplay or listening approval is claimed.
+identified release skip-classification and trace-policy mismatches. The
+[remediation record](docs/architecture/validation/2026-09-06-release-gates.md)
+tracks their replacement with explicit capability checks and a fresh, pinned
+trace comparison. A frozen candidate still needs complete platform evidence and
+human gameplay/listening sign-off.
 
 Known limitations: some Game Over timing details remain documented in
 `docs/status/known-bugs.md`; there is no modding framework, the level editor

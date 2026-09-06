@@ -1,5 +1,11 @@
 # OpenGGF 0.6 Changelog
 
+- Release trace validation compares fresh candidate evidence with a reviewed
+  baseline, retaining unchanged known failures and warnings while rejecting
+  changed or missing evidence. Coverage now respects directory exclusions and
+  nested JUnit tests. Required graphics tests must execute.
+
+
 This file contains the complete 0.6 development snapshot history carried forward from the project changelog. It is intentionally detailed; the public-facing overview is in [README.md](README.md), and the website/GitHub release copy is in [docs/changelog/v0.6-release-summary.md](docs/changelog/v0.6-release-summary.md).
 
 > **How this file is organised.** The 0.6 cycle accumulated three overlapping

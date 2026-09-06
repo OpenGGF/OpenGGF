@@ -160,10 +160,32 @@ class CollectTests(unittest.TestCase):
         with self.assertRaisesRegex(crt.EvidenceError, "no Surefire reports"):
             self.fx.collect()
 
+    def test_repeated_singleton_passes_reconcile_but_changed_or_red_repeats_fail(self):
+        self.fx.write_run(cases=(("replayGhz1", "passed"),))
+        log = self.fx.log.read_text()
+        suite_line = next(line for line in log.splitlines() if "Time elapsed:" in line)
+        log = log.replace("[INFO] Results:", suite_line + "\n" + suite_line + "\n[INFO] Results:")
+        log = log.replace("[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0\n",
+                          "[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0\n")
+        self.fx.log.write_text(log)
+        result = self.fx.collect()
+        self.assertEqual(result["summary"], [3, 0, 0, 0])
+        self.assertEqual(len(next(iter(result["suite_executions"].values()))), 3)
+        self.fx.log.write_text(log.replace(suite_line, suite_line.replace("Failures: 0", "Failures: 1"), 1))
+        with self.assertRaises(crt.EvidenceError):
+            self.fx.collect()
+
+    def test_missing_suite_summary_fails_even_when_aggregate_totals_match(self):
+        self.fx.write_run()
+        self.fx.log.write_text("\n".join(line for line in self.fx.log.read_text().splitlines()
+                                         if "Time elapsed:" not in line))
+        with self.assertRaisesRegex(crt.EvidenceError, "suite inventory"):
+            self.fx.collect()
+
     def test_maven_totals_must_match_xml(self):
         counts = self.fx.write_run()
         self.fx.log.write_text(MAVEN_LOG.format(tests=counts[0] + 1, failures=1, errors=0, skips=0, conclusion="FAILURE"))
-        with self.assertRaisesRegex(crt.EvidenceError, "totals disagree"):
+        with self.assertRaisesRegex(crt.EvidenceError, "Maven/XML"):
             self.fx.collect()
 
     def test_incomplete_xml_declared_count_is_rejected(self):
