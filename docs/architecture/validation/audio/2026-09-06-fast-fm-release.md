@@ -152,3 +152,26 @@ unchanged waveform and level thresholds; `alg1-fb7` improves 0.104 to 0.924,
 `alg2-fb7` 0.117 to 0.912, and `alg5-fb7` 0.444 to 0.929. LFO and remaining
 effects still need work. This is intermediate evidence, not release approval;
 the high-frequency composite failure must be resolved before integration.
+
+## Bounded fractional waveform alignment
+
+The integer-only lag search is sensitive to a fraction of an internal sample
+when several high-frequency carriers are mixed. A separate test helper keeps
+the original waveform correlation and unfiltered RMS bounds, retains the best
+integer result, and refines at 1/16-sample steps within one sample of that lag
+and the original ±64 bound. One constant shift applies to the whole waveform.
+A 32-tap windowed-sinc interpolation uses zero-padded edges and the full original
+overlap: no attack trimming, per-channel alignment, pitch changes or time warp.
+
+Four helper controls pass: a known fractional delay of a three-tone mixture
+is recovered; a semitone error, missing carrier and silence are rejected; the
+search cannot escape its original bound. Independent digital-reference script
+probes at `f495230d2` plus this helper give `dt5/6/7-mul15` correlations
+0.9474 / 0.9481 / 0.9492 (previously 0.8986 / 0.8957 / 0.8942), all at lag
+52.6875. Eight real scripts were also rendered with deliberately wrong pitch
+and routing: none reaches 0.9 (maxima 0.1233 and 0.5351 respectively). Remaining
+LFO, channel-3 and effect mismatches stay below threshold. This refinement does
+not certify those cases. Delayed-accurate controls yield 1.0 on the detune
+vectors, but only 0.4584 on `s2-sfx-bc`, so that effect needs separate timing
+sensitivity investigation. Earlier exploratory probes trimmed 128 edge samples;
+those exploratory values are not this helper's acceptance evidence.
