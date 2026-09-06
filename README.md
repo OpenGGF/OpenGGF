@@ -679,9 +679,11 @@ gameplay defect.
 
 Fast FM is now integrated for 0.6. New configurations select `fast`, while
 explicit `accurate` choices and physical-reference captures retain the accurate
-core. The isolated candidate passes all 178 supported chip scripts, 16,970
-ordinary tests and 610 guards, with unchanged trace evidence and matching
-benchmark gameplay digests. Post-merge verification is in progress; see the
+core. All 178 supported chip scripts pass. Post-merge verification passes
+16,970 ordinary tests and 610 guards, with unchanged pinned trace evidence
+and successful universal-JAR smoke checks. Candidate benchmarks retain matching
+gameplay digests; native-platform execution and full-game listening sign-off
+remain release tasks. See the
 [FM delivery record](docs/architecture/validation/audio/2026-09-06-fast-fm-release.md).
 
 The [September 6 release assessment](docs/architecture/audits/2026-09-06-release-blockers.md)

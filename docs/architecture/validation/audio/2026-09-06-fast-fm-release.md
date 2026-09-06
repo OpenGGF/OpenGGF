@@ -3,8 +3,10 @@
 Candidate `c19899dbb` passes all 178 supported scripts without deferrals,
 280 focused checks, 16,970 ordinary tests and 610 guards. Its fresh trace
 evidence is unchanged from the pinned baseline; final benchmarks and universal
-packaging also pass. Integration, post-merge verification and push remain
-pending. Older counts below are development checkpoints, not current policy.
+packaging also pass. Integration at `7c6b1754d` passes the full post-merge
+ordinary/guard suites, exact trace comparison and universal packaging smoke
+checks. Native-platform execution and human sign-off remain release tasks.
+Older counts below are development checkpoints, not current policy.
 
 ## Imported development evidence
 
@@ -519,3 +521,64 @@ measured PM correction and CS's independent global-PM admission refinement
 are recorded separately above; exact final-review attribution is retained in
 the local department conversation. Native release jobs, fixture-runner host
 configuration and human gameplay/listening sign-off remain release tasks.
+
+## Integrated verification: 7c6b1754d
+
+`develop` merges the local task branch at
+`7c6b1754dabb7a7109b8acdeabf9c946ee61398a`, with the required README summary
+and no code conflicts. Upstream remained `f658b6fac` at the final fetch.
+Executable source, tests, Maven configuration and testing tools are unchanged
+from verified candidate `c19899dbb`; its matched performance measurements
+therefore remain attributed to that candidate. Pre-existing changes in the
+three optional research submodules were preserved and excluded from the
+clean-source check, matching the trace collector's policy.
+
+The first ordinary run completed at 07:38:54 BST with 16,970 executions,
+one failure, zero errors and 23 skips. The failing assertion is
+`EncoderSinkTest.encoderFailureSurfacesWithoutHanging`, line 161, expecting
+the encoder failure message/cause. Repeated invocation of the unmodified test
+against baseline `f658b6fac` compiled classes reproduces the same assertion,
+exception type and message at iteration 340,463 (zero-based). Capture source
+and test blobs are identical between baseline and integration. The probe also
+exposes the test's abort-completion race at line 163. Inspection identifies a
+possible interleaving between the separate failure and lifecycle reads in
+`checkWorker`; no capture implementation or test was changed for this task.
+The failed run also lacks six outer ICZ rewind identities in its nested-suite
+XML reports, so it is not used as complete release evidence.
+
+A fresh full confirmation, without source changes, preserves every baseline
+test outcome and contains every candidate identity. Its evidence is archived
+under `target/fast-fm-release/integrated-confirmation/`, with exact commands,
+timestamps, SHA, logs and separate report sets:
+
+| Command (all test runs include the three verified absolute ROM paths) | Completed result, September 6 BST |
+| --- | --- |
+| `mvn -Dmse=off test -B` | 16,970 / 0 failures / 0 errors / 23 skips, 07:47:25 |
+| `mvn -Dmse=off test -B -Pguards` | 610 / 0 / 0 / 0, 07:49:40 |
+| `mvn -Dmse=off test -B -Ptrace-replay` | 852 / 7 / 0 / 6, 07:53:01 |
+| `compare_release_traces.py compare` against fresh `1f61f5746` and candidate `c19899dbb` | Both pass: 850 identities, 173 owned reports, including unchanged known failures/warnings/skips |
+| `classify_surefire_skips.py --check-evidence`, ordinary policy | All 23 skips allowed, none required/unclassified; graphics required/present |
+| `assert_release_trace_coverage.py` | Pass; text-report executions 116, skipped 0; required replay/policy reports 75/151 present and executed |
+| `mvn -Dmse=off package -Puniversal-jar -DskipTests -B` plus unmodified universal smoke block | Pass; tests supplied by the completed runs above |
+
+Ordinary comparison preserves all 15,738 baseline identities and all 15,844
+candidate identities, including 106 added passing identities. Ten existing
+nested identities differ from baseline only in repeated all-pass XML row
+counts; five differ that way from the candidate. There are no missing
+identities or changed outcomes in the confirmation. All 610 guard identities
+match both references exactly. The trace profile's seven known failures are
+retained, not described as a green trace suite.
+
+The integrated universal JAR is 27,578,569 bytes, SHA-256
+`6c18bd800a075bebd1912a49b2ac68a4bd5492f59924a8411e88a8680c4a0bfa`.
+Manifest, licence notices and all eight native payload classifiers pass the
+workflow's smoke checks. This does not establish native-platform execution.
+Brainpipe BG imported the final PM refinement and independently reran the
+178-script factory and related timing/rewind tests successfully (BG228).
+
+Durable evidence in task directory `brainpipe-fast-fm-0.6/` includes baseline
+and candidate archives, both integrated ordinary runs, the exact encoder
+baseline probe, final comparisons and packaged artifacts. Nonbuild local files
+from the three task worktrees are preserved separately before cleanup.
+The final delivery manifest records the pushed documentation tip and cleanup
+state; the executable verification above remains bound to `7c6b1754d`.
