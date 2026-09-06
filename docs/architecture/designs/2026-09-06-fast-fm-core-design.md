@@ -203,3 +203,8 @@ The cached contribution is `2 + floorDiv(slot - 1 - dataOffset, 24)` increments,
 replacing the fixed lookahead for these writes. This is measured from public
 PCM and verified across every channel/operator/write-offset combination; the
 fixed lookahead remains the default for non-frequency refreshes.
+
+OP2..4 sample the envelope value from before an envelope tick during that
+output frame. OP1 uses the current value with its separate carrier history.
+The sampled envelope is cached only on ticks; public held/decaying tone pairs
+verify the output boundary independently across all channels and carriers.

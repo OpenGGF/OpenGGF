@@ -179,6 +179,8 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] olderOp1 = new int[6];
     /** Previous digital channel sum, retained across the multiplexed output boundary. */
     private final int[] delayedOutput = new int[6];
+    /** Pre-tick envelope output sampled by OP2..4 during an envelope update frame. */
+    private final int[] sampledEg = new int[24];
     private final int[] detune = new int[24];
     private final int[] multiple = new int[24];
     private final int[] totalLevel = new int[24];
@@ -239,6 +241,7 @@ public final class FastYm2612Dsp implements FmDsp {
     public void reset() {
         Arrays.fill(olderOp1, 0);
         Arrays.fill(delayedOutput, 0);
+        Arrays.fill(sampledEg, 0);
         Arrays.fill(registers, 0);
         for (int[] array : new int[][] {phase, phaseIncrement, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output, detune,
                 multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
@@ -725,7 +728,11 @@ public final class FastYm2612Dsp implements FmDsp {
     private int operatorSample(int slot, int modulation, int am) {
         int phaseIndex = ((phase[slot] >> 10) + modulation) & 0x3FF;
         phase[slot] = (phase[slot] + phaseIncrement[slot]) & 0xFFFFF;
-        int level = egOutput(slot) + totalLevel[slot];
+        // Public-facade held/decaying carrier pairs distinguish the envelope
+        // output boundary: OP2..4 consume the pre-tick value on this frame.
+        // OP1's carrier already passes through its separate output history.
+        int envelope = (slot & 3) != 0 && scalar[S_EG_FRAME] == 0 ? sampledEg[slot] : egOutput(slot);
+        int level = envelope + totalLevel[slot];
         if (amEnabled[slot] != 0) {
             level += am;
         }
@@ -766,6 +773,7 @@ public final class FastYm2612Dsp implements FmDsp {
         }
         scalar[S_EG_COUNTER] = counter;
         for (int slot = 0; slot < 24; slot++) {
+            sampledEg[slot] = egOutput(slot);
             advanceEnvelope(slot, counter);
         }
     }
@@ -964,7 +972,7 @@ public final class FastYm2612Dsp implements FmDsp {
     // ---------------------------------------------------------- snapshots
 
     private int[][] arrays() {
-        return new int[][] {delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
+        return new int[][] {sampledEg, delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
                 detune, multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
                 sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
                 operatorFnum, operatorBlock, channelFnum,

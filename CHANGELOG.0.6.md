@@ -1,5 +1,8 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM preserves the envelope’s operator sampling delay, correcting
+  rapid decay changes used as modulation.
+
 - Fast FM samples frequency writes at each operator’s pipeline boundary,
   preserving phase during dense pitch changes such as S3K effect 3C.
 

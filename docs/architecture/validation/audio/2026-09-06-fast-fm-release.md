@@ -268,3 +268,25 @@ level ratio 1.000, and no previously enforced vector regresses. Thirteen
 supported corpus failures remain. Evidence:
 `target/fast-fm-release/frequency-sampling-{red,green}.log` and the independent
 `frequency-offsets/results.json`. Final release verification remains pending.
+
+## Envelope-output sampling
+
+Paired held/decaying public-facade tones show that OP2..4 expose a new decay
+value one frame too early; OP1 already has its carrier history. Those three
+operators now sample the pre-tick envelope on an envelope-update frame. The
+cache is recorded only on envelope ticks and participates in reset and state
+copying. A separate all-channel/all-carrier test derives attenuation from
+paired PCM amplitudes. Its comparison accounts explicitly for the oracle's
+48-unit mono output quantization and the fast facade's two-unit rounding.
+An initial fixed two-attenuation-unit measurement bound falsely failed quiet
+OP1 samples; correcting that measurement does not alter corpus acceptance.
+
+At `b305e0013` plus this fix, the other 220 focused tests have no new failures;
+the corrected six envelope cases pass in the completed command
+`mvn -Dmse=off -Dtest=TestFastFmEnvelopeSampling test -B` at 2026-09-06
+05:35:09 BST. Running those exact six cases with the previous DSP fails every
+channel on the first tested OP2/OP3 decay boundary (approximately 40 versus
+48 attenuation units). DAC-disabled improves 0.877 to 0.904; twelve supported
+corpus failures remain. Logs: `envelope-sampling-green.log`,
+`envelope-sampling-quantized-green.log`, and `envelope-sampling-negative/results.log`
+under the task's `target/fast-fm-release/`. Final verification remains pending.
