@@ -3252,9 +3252,14 @@ public class AudioManager implements MusicRestoreSink {
                         base.profile().smpsPhysicalPolicy(),
                         "smpsPhysicalPolicy")
                 : LegacyCompatibilitySmpsPhysicalPolicy.INSTANCE;
+        com.openggf.configuration.SonicConfigurationService fmCoreConfig = configuredServicesOrNull();
         SmpsPhysicalDevice.Settings physicalSettings =
                 new SmpsPhysicalDevice.Settings(
-                        sampleRate, tuning.dacInterpolate());
+                        sampleRate, tuning.dacInterpolate(),
+                        fmCoreConfig != null
+                                ? com.openggf.audio.synth.FmCoreSelection.fromConfig(
+                                        fmCoreConfig.getString(SonicConfiguration.AUDIO_FM_CORE))
+                                : com.openggf.audio.synth.FmCoreSelection.ACCURATE);
         SmpsDriverSessionConfiguration sessionConfiguration =
                 new SmpsDriverSessionConfiguration(base.profile() != null
                         ? base.profile().smpsStatefulCommandPolicy()

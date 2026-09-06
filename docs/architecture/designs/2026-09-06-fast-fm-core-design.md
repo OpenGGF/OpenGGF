@@ -48,20 +48,27 @@ default is a separate commit.
   rate scaling. Channel 3 special mode gives each operator its own
   F-number/block; CSM keys channel 3 on from timer A overflow.
 - Envelope generator: 10-bit attenuation (0 = loudest, 0x3FF = silent),
-  4.6 fixed-point log2 scale (bit 0 = 0.046875 dB, bit 9 = 24 dB, so the
-  usable range is 0–96 dB across the full register but Nemesis's tests show
-  effective 0–48 dB per stage). Rate = 2·R + Rks (rate scaling from key code
-  shifted by RS), R = 0 forces rate 0, cap 63. The EG is clocked at master/351
-  (about every third internal frame); a 64-entry counter-shift table
-  (11 down to 0) decides how often a rate updates and a 64×8 increment table
-  (0..8) supplies the step. Attack:
-  `attenuation += increment * (((1024 - attenuation) / 16) + 1)` (moves toward
-  0, with rate ≥ 62 jumping to 0 immediately); decay, sustain and release are
-  linear `attenuation += increment`. Sustain level is 4 bits with 15 meaning
-  full attenuation; release rate is `2·RR + 1`.
+  0.09375 dB per step (bit 9 ≈ 48 dB), so the 12-bit operator attenuation is
+  the envelope value shifted left by two plus the log-sine term. Rate =
+  2·R + Rks (rate scaling from key code shifted by 3 − RS), R = 0 forces
+  rate 0, cap 63. The EG is clocked at master/432, one tick every three
+  internal frames (Nemesis's later digital measurements, thread page from
+  post 405, supersede the earlier master/351 figure). A per-rate counter
+  shift (11 down to 0 by rate/4) decides how often a rate updates and an
+  8-entry increment pattern per rate supplies the step; these patterns are
+  measured hardware behaviour (the early text tables in the thread were of
+  MAME provenance and are not to be imported; derive the pattern from the
+  description: below rate 48 the pattern repeats by rate mod 4, above it the
+  base step doubles every four rates and rates 60–63 step by 8). Attack:
+  `attenuation += ((~attenuation) * increment) >> 4` (moves toward 0);
+  entering attack at rate 62 or 63 zeroes the envelope, and changing to 62/63
+  during attack stalls it. Decay, sustain and release are linear
+  `attenuation += increment`. Sustain level is 4 bits in 3 dB steps with 15
+  meaning code 31 (992); release rate is `2·RR + 1`.
 - SSG-EG: enable, attack (inversion at decay start), alternate (toggle
   inversion each pass), hold; while enabled the decay-side increment is
-  multiplied by 6 and the envelope restarts/inverts at 0x200.
+  multiplied by 4, the inversion is `(512 − attenuation) & 1023` applied
+  before TL and AM, and the envelope restarts/inverts at 0x200.
 - Operator: input phase + modulation (10 bits) → quarter-wave log-sine table
   (256 entries, 12-bit output) → add envelope attenuation + total level
   (7 bits, 0.75 dB per step) + AM → exp/power table (256 entries, 11-bit
@@ -71,7 +78,9 @@ default is a separate commit.
   3-bit feedback register (0 = off, 1..7 = π/16 .. 4π of phase).
 - Algorithms: the eight standard OPN connection graphs; modulator outputs feed
   successors' phase input, carrier outputs sum into the channel output.
-- LFO: 3-bit rate (8 frequencies from 3.98 Hz to 72.2 Hz at NTSC), AM depth
+- LFO: 3-bit rate; the manual's 3.98–72.2 Hz table is quoted for an 8 MHz
+  clock and corresponds to 108/77/71/67/62/44/8/5 internal frames per step of
+  a 128-step cycle (approximate: analytical, not measured); AM depth
   per channel (2 bits: 0, 1.4, 5.9, 11.8 dB) applied to operators with AM
   enabled, PM depth per channel (3 bits) applied as an F-number offset.
 - Output: per-channel L/R enables (0xB4–0xB6 bits 7/6); the real chip's DAC is
@@ -122,7 +131,7 @@ Not adopted: cycle-exact operator pipelining and bus timing (Nuked), the
 YM2612 ladder-effect model (analog; the facade scale is defined at the
 digital output), busy-flag timing (facade does not model it).
 
-## Acceptance
+## Acceptance (status 2026-09-06: benchmark met, oracle 108/183 in tolerance, default unchanged)
 
 - `TestFastYm2612Chip` (facade contract, scripted DSP) — delivered.
 - Tolerance test to add with the DSP: render the `TestNukedOpn2BitExactScripts`
@@ -140,9 +149,10 @@ digital output), busy-flag timing (facade does not model it).
   read for techniques 1, 2, 3, 4, 5, 6.
 - fmgen (cisc, MIT-compatible, via libOPNMIDI): `fmgen_fmgen.cpp` — read for
   techniques 1, 5, 7 and its 1024-entry sine / envelope step-table variant.
-- Nemesis, SpritesMind thread t=386 (public research, pages 105–120): envelope
-  generator facts quoted above. jt12 `doc/nemesis/YM2612/YM2612.h`: bit widths
-  and table sizes.
+- Nemesis, SpritesMind thread t=386 (public research): envelope generator
+  facts quoted above, corrected on peer review against the later digital
+  measurements from post 405 onward (EG clock, SSG multiplier, SL 15). jt12
+  `doc/nemesis/YM2612/YM2612.h`: bit widths and table sizes.
 - libOPNMIDI README: core inventory and licences (MAME GPL-2, Nuked LGPL-2.1,
   GENS LGPL-2.1, ymfm BSD, fmgen MIT-compatible).
 - Wikipedia "Yamaha YM2612": 9-bit DAC, YM3438 differences.

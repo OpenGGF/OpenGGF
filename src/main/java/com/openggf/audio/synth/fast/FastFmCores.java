@@ -6,12 +6,13 @@ import java.util.function.Supplier;
 /**
  * Binding point for the fast FM DSP implementation.
  *
- * <p>The facade and configuration were delivered ahead of the clean-room DSP;
- * until an implementation is bound, selecting the fast core fails loudly at
+ * <p>Bound to {@link FastYm2612Dsp} by default; {@link #bind} exists so tests
+ * can substitute a scripted DSP, and an unbound state fails loudly at
  * synthesizer construction instead of producing silence.
  */
 public final class FastFmCores {
-    private static volatile Supplier<FmDsp> factory;
+    /** The production clean-room core; tests may rebind a scripted DSP. */
+    private static volatile Supplier<FmDsp> factory = FastYm2612Dsp::new;
 
     private FastFmCores() {
     }

@@ -91,7 +91,7 @@ public final class TraceBenchmarkTool {
 
     /** Parsed CLI arguments. */
     record Args(String trace, String mode, int warmupFrames, int measureFrames, int iterations,
-                Path json, Path markdown, String label, boolean trackAllocations, boolean audio) {
+                Path json, Path markdown, String label, boolean trackAllocations, boolean audio, String fmCore) {
 
         static Args parse(String[] argv) {
             String trace = null;
@@ -104,6 +104,7 @@ public final class TraceBenchmarkTool {
             String label = null;
             boolean trackAllocations = false;
             boolean audio = true;
+            String fmCore = null;
 
             for (int i = 0; i < argv.length; i++) {
                 String arg = argv[i];
@@ -117,6 +118,7 @@ public final class TraceBenchmarkTool {
                     case "--markdown" -> markdown = Path.of(CliArguments.requireValue(argv, ++i, arg));
                     case "--label" -> label = CliArguments.requireValue(argv, ++i, arg);
                     case "--track-allocations" -> trackAllocations = true;
+                    case "--fm-core" -> fmCore = CliArguments.requireValue(argv, ++i, arg);
                     case "--no-audio" -> audio = false;
                     default -> throw new IllegalArgumentException("Unknown argument: " + arg);
                 }
@@ -129,7 +131,7 @@ public final class TraceBenchmarkTool {
                         "--mode must be '" + MODE_UPDATE + "' or '" + MODE_FULL + "', got: " + mode);
             }
             return new Args(trace, mode, warmupFrames, measureFrames, iterations,
-                    json, markdown, label, trackAllocations, audio);
+                    json, markdown, label, trackAllocations, audio, fmCore);
         }
 
         private static int parseCount(String[] argv, int index, String flag, int minimum) {
@@ -187,6 +189,12 @@ public final class TraceBenchmarkTool {
         warnAboutSuspectFlags(environment);
 
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
+        if (args.fmCore() != null) {
+            GameServices.configuration().setConfigValue(
+                    com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE, args.fmCore());
+        }
+        System.out.println("FM core: " + GameServices.configuration().getString(
+                com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE));
         Path romPath = TraceToolRomLocations.resolve(
                 entry.gameId(), GameServices.configuration(), Path.of(""));
         HeadlessGameBoot boot = new HeadlessGameBoot(SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -201,6 +209,12 @@ public final class TraceBenchmarkTool {
                 // session whose objects have already run is not the same
                 // workload, and would make later iterations quietly cheaper.
                 TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
+        if (args.fmCore() != null) {
+            GameServices.configuration().setConfigValue(
+                    com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE, args.fmCore());
+        }
+        System.out.println("FM core: " + GameServices.configuration().getString(
+                com.openggf.configuration.SonicConfiguration.AUDIO_FM_CORE));
                 boot.reboot(
                         romPath, entry.zone(), entry.act(), admissionPolicy);
             }

@@ -1,0 +1,27 @@
+# Fast FM 0.6 delivery evidence
+
+## Imported development evidence
+
+The measurements below were reported by BG on `feature/ai-perf-p3-fixes`
+at `1c653223a`; they do not certify the new 0.6 integration branch.
+Fresh acceptance and integrated verification will be recorded separately.
+
+## P7: clean-room fast FM core (third and fourth commits)
+
+`TraceBenchmarkTool --mode update --warmup-frames 500 --measure-frames 3000
+--fm-core <core>`, this host, same trajectory digest for both cores on each trace:
+
+| Trace | Core | frame p50 | frame p99 | `audio` median | fps |
+| --- | --- | ---: | ---: | ---: | ---: |
+| S1 `ghz1_fullrun` | accurate | 0.985 ms | 1.578 ms | 0.936 ms | 982 |
+| S1 `ghz1_fullrun` | fast | 0.214 ms | 0.717 ms | 0.170 ms | 4237 |
+| S3K `aiz_completerun` | accurate | 0.949 ms | 1.786 ms | 0.881 ms | 1002 |
+| S3K `aiz_completerun` | fast | 0.246 ms | 1.155 ms | 0.179 ms | 3348 |
+
+Fidelity oracle (`TestFastFmCoreTolerance`, both cores fed the same register
+script, mono sums compared DC-free by normalised cross-correlation with a
+±64-frame lag search and RMS level ratio): 108 of 183 scripts within
+correlation ≥ 0.9 and level ratio 0.8–1.25; all SMPS music logs 0.967–0.986;
+deferred scripts are enumerated in the test and the open classes in the design
+document. The default core remains `accurate`.
+

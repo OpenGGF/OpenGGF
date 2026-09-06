@@ -37,6 +37,17 @@ public final class FastYm2612Chip implements FmChip {
     private static final int OP_DAC_PLAY = 4;
     private static final int OP_DAC_STOP = 5;
     private static final int NO_CHANNEL = -1;
+    /** Both outputs enabled: the chip resets its L/R bits set. */
+    private static final int PAN_BOTH = 3;
+    /**
+     * Bus pacing, matching the accurate facade: an address write settles in 1
+     * internal cycle, a data write in 34, so one register write lands every 35
+     * cycles (about 1.5 frames). Without this the fast core plays a burst of
+     * writes 40-50 frames earlier than the accurate core does.
+     */
+    private static final int ADDRESS_SETTLE_CYCLES = 1;
+    private static final int DATA_SETTLE_CYCLES = 2 + 32;
+    private static final int CYCLES_PER_FRAME = 24;
 
     private static final int[] VOICE_DT_MUL = {1, 3, 2, 4};
     private static final int[] VOICE_TL = {21, 23, 22, 24};
@@ -73,10 +84,13 @@ public final class FastYm2612Chip implements FmChip {
     private int dacIndex;
     private int dacAccumulator;
     private int dacSampleEndPending;
+    /** Internal cycles until the bus is free again; the first write of an idle bus lands at once. */
+    private int busCredit;
 
     public FastYm2612Chip(FmDsp dsp) {
         this.dsp = Objects.requireNonNull(dsp, "dsp");
         this.dsp.reset();
+        Arrays.fill(pan, PAN_BOTH);
     }
 
     @Override
@@ -135,9 +149,10 @@ public final class FastYm2612Chip implements FmChip {
     @Override
     public void reset() {
         dsp.reset();
-        Arrays.fill(pan, 0);
+        Arrays.fill(pan, PAN_BOTH);
         Arrays.fill(latchedRegister, 0);
         pendingCount = 0;
+        busCredit = 0;
         queuedAddress = 0;
         directFrameHead = 0;
         directFrameCount = 0;
@@ -344,12 +359,33 @@ public final class FastYm2612Chip implements FmChip {
         return NO_CHANNEL;
     }
 
+    /** Lands every pending op regardless of pacing (status reads, snapshots of a settled bus). */
     private void flushPendingOps() {
+        int debt = busCredit;
+        busCredit = Integer.MIN_VALUE / 2;
+        landPendingOps();
+        busCredit = Math.max(debt, 0);
+    }
+
+    /** Lands pending ops in order while the bus credit allows; the rest wait for later frames. */
+    private void landPendingOps() {
         if (pendingCount == 0) {
             return;
         }
+        int landed = 0;
         for (int i = 0; i < pendingCount; i++) {
             int base = i * OP_STRIDE;
+            int cost = switch (pendingOps[base]) {
+                case OP_WRITE -> ADDRESS_SETTLE_CYCLES + DATA_SETTLE_CYCLES;
+                case OP_ADDRESS -> ADDRESS_SETTLE_CYCLES;
+                case OP_DATA -> DATA_SETTLE_CYCLES;
+                default -> 0;
+            };
+            if (busCredit >= CYCLES_PER_FRAME) {
+                break; // the bus stays busy past this frame
+            }
+            busCredit += cost;
+            landed++;
             switch (pendingOps[base]) {
                 case OP_WRITE -> applyWrite(pendingOps[base + 1], pendingOps[base + 2], pendingOps[base + 3]);
                 case OP_ADDRESS -> latchedRegister[pendingOps[base + 1]] = pendingOps[base + 2];
@@ -372,8 +408,11 @@ public final class FastYm2612Chip implements FmChip {
                 default -> throw new IllegalStateException("unknown pending op " + pendingOps[base]);
             }
         }
-        flushedOps += pendingCount;
-        pendingCount = 0;
+        if (landed > 0) {
+            System.arraycopy(pendingOps, landed * OP_STRIDE, pendingOps, 0, (pendingCount - landed) * OP_STRIDE);
+            pendingCount -= landed;
+            flushedOps += landed;
+        }
     }
 
     private void applyWrite(int port, int register, int value) {
@@ -415,7 +454,6 @@ public final class FastYm2612Chip implements FmChip {
         if (frames <= 0) {
             return;
         }
-        flushPendingOps();
         if (isDirectOutput()) {
             for (int i = 0; i < frames; i++) {
                 while (directFrameCount == 0) {
@@ -445,6 +483,8 @@ public final class FastYm2612Chip implements FmChip {
     }
 
     private void renderInternalFrame() {
+        busCredit = Math.max(0, busCredit - CYCLES_PER_FRAME);
+        landPendingOps();
         serviceDacFrame();
         dsp.renderFrame(channelOut);
         int leftSum = 0;
@@ -508,6 +548,7 @@ public final class FastYm2612Chip implements FmChip {
         private int dacIndex;
         private int dacAccumulator;
         private int dacSampleEndPending;
+        private int busCredit;
         private int[] direct = new int[0];
         private int[] ops = new int[0];
 
@@ -548,6 +589,7 @@ public final class FastYm2612Chip implements FmChip {
         backup.dacIndex = dacIndex;
         backup.dacAccumulator = dacAccumulator;
         backup.dacSampleEndPending = dacSampleEndPending;
+        backup.busCredit = busCredit;
         int directSize = directFrameCount * 2;
         if (backup.direct.length < directSize) {
             backup.direct = new int[directSize];
@@ -580,6 +622,7 @@ public final class FastYm2612Chip implements FmChip {
         dacIndex = backup.dacIndex;
         dacAccumulator = backup.dacAccumulator;
         dacSampleEndPending = backup.dacSampleEndPending;
+        busCredit = backup.busCredit;
         resampler.restoreMutation(backup.resampler);
         emitBoundary(ChipWriteObserver.PhysicalTimelineBoundary.SNAPSHOT_RESTORE);
     }
@@ -628,6 +671,7 @@ public final class FastYm2612Chip implements FmChip {
             int dacIndex,
             int dacAccumulator,
             int dacSampleEndPending,
+            int busCredit,
             boolean dacInterpolate,
             boolean[] mutes,
             BlipResampler.Snapshot resampler) implements FmChip.Snapshot {
@@ -678,6 +722,7 @@ public final class FastYm2612Chip implements FmChip {
                     && dacIndex == other.dacIndex
                     && dacAccumulator == other.dacAccumulator
                     && dacSampleEndPending == other.dacSampleEndPending
+                    && busCredit == other.busCredit
                     && dacInterpolate == other.dacInterpolate
                     && Arrays.equals(mutes, other.mutes)
                     && Objects.equals(resampler, other.resampler);
@@ -686,7 +731,7 @@ public final class FastYm2612Chip implements FmChip {
         @Override
         public int hashCode() {
             int result = Objects.hash(chipType, outputRate, dsp, flushedOps, queuedAddress,
-                    dacSampleId, dacPeriod, dacIndex, dacAccumulator, dacSampleEndPending,
+                    dacSampleId, dacPeriod, dacIndex, dacAccumulator, dacSampleEndPending, busCredit,
                     dacInterpolate, resampler);
             result = 31 * result + Arrays.hashCode(pan);
             result = 31 * result + Arrays.hashCode(latchedRegister);
@@ -704,7 +749,7 @@ public final class FastYm2612Chip implements FmChip {
         copyDirectFrames(direct);
         return new Snapshot(chipType, outputRate, copy, pan, latchedRegister, direct,
                 Arrays.copyOf(pendingOps, pendingCount * OP_STRIDE), flushedOps, queuedAddress,
-                dacSampleId, dacPeriod, dacIndex, dacAccumulator, dacSampleEndPending,
+                dacSampleId, dacPeriod, dacIndex, dacAccumulator, dacSampleEndPending, busCredit,
                 dacInterpolate, mutes, resampler.captureSnapshot());
     }
 
@@ -728,6 +773,7 @@ public final class FastYm2612Chip implements FmChip {
         dacIndex = snapshot.dacIndex;
         dacAccumulator = snapshot.dacAccumulator;
         dacSampleEndPending = snapshot.dacSampleEndPending;
+        busCredit = snapshot.busCredit;
         dacInterpolate = snapshot.dacInterpolate;
         System.arraycopy(snapshot.mutes, 0, mutes, 0, 6);
         resampler.restoreSnapshot(snapshot.resampler);

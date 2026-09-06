@@ -108,7 +108,7 @@ class TestFastYm2612Chip {
         chip.write(1, 0xB5, 0x40); // channel 5 right only
         assertTrue(dsp.writes.isEmpty(), "writes land at the next render");
 
-        int[] frame = render(chip, 1);
+        int[] frame = render(chip, 8); // one register write lands every 35 cycles (about 1.5 frames)
         assertEquals(2, dsp.writes.size());
         assertEquals(6144, frame[0], "full scale is 6144 at the mixer, i.e. 3/4 of the DSP range");
         assertEquals(-3072, frame[1]);
@@ -120,7 +120,7 @@ class TestFastYm2612Chip {
         FastYm2612Chip chip = internalRateChip(dsp);
         dsp.levels[2] = 1000;
         chip.write(0, 0xB6, 0xC0);
-        assertEquals(750, render(chip, 1)[0]);
+        assertEquals(750, render(chip, 4)[0]);
         chip.setMute(2, true);
         assertEquals(0, render(chip, 1)[0]);
         chip.setMute(2, false);
@@ -186,7 +186,7 @@ class TestFastYm2612Chip {
         chip.write(0, 0x30, 0x11);
         dsp.levels[0] = 99;
         chip.restoreMutation(backup);
-        render(chip, 1);
+        render(chip, 8);
         assertEquals(1, dsp.writes.size(), "only the pre-capture pan write survives");
         assertEquals(0xB4, dsp.writes.get(0)[1]);
         assertEquals(0, dsp.levels[0], "DSP state came back from the backup copy");
@@ -205,7 +205,7 @@ class TestFastYm2612Chip {
         chip.write(0, 0x31, 0x33);                       // channel 2, kept
         chip.write(0, 0x28, 0xF0);                       // key on channel 1, withdrawn
         chip.restoreSfxAdmissionState(admission);
-        render(chip, 1);
+        render(chip, 8);
         assertArrayEquals(new int[] {0xB4, 0x31},
                 dsp.writes.stream().mapToInt(write -> write[1]).toArray());
     }
@@ -223,10 +223,12 @@ class TestFastYm2612Chip {
     }
 
     @Test
-    void fastSelectionWithoutABoundDspFailsLoudly() {
-        assertThrows(IllegalStateException.class,
-                () -> new VirtualSynthesizer(44100.0, ChipWriteObserver.NONE,
-                        VirtualSynthesizer.Initialization.DEFERRED, FmCoreSelection.FAST));
+    void fastSelectionBuildsTheBoundCoreAndConfigParsesLeniently() {
+        assertTrue(com.openggf.audio.synth.fast.FastFmCores.available());
+        VirtualSynthesizer synth = new VirtualSynthesizer(44100.0, ChipWriteObserver.NONE,
+                VirtualSynthesizer.Initialization.DEFERRED, FmCoreSelection.FAST);
+        assertEquals(FmCoreSelection.FAST, synth.fmCore());
+        assertTrue(synth.captureSynthSnapshot().ym() instanceof FastYm2612Chip.Snapshot);
         assertEquals(FmCoreSelection.ACCURATE, FmCoreSelection.fromConfig("nonsense"));
         assertEquals(FmCoreSelection.FAST, FmCoreSelection.fromConfig(" Fast "));
     }

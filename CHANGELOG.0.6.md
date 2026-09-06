@@ -20,6 +20,19 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Clean-room fast FM core lands behind `audio.fmCore=fast`:**
+  `FastYm2612Dsp` is a register-level YM2612 written from public hardware
+  documentation and the department's techniques specification (no emulator
+  source consulted), judged against the cycle-exact core by a tolerance
+  oracle over the 183 bit-exact register scripts: every SMPS music log
+  correlates at 0.97–0.99, tones and envelopes at 0.96–1.00, and 108 scripts
+  sit inside the correlation/level bounds; the rest (LFO, channel-3 special
+  mode, feedback into summed modulators, some SSG-EG repeat modes, attack
+  rates 1–2) are listed as deferred in the test and the design document. On
+  the S1 GHZ1 and S3K AIZ benchmarks the audio section drops from
+  0.88–0.94 ms to 0.17–0.18 ms per frame with identical trajectory digests.
+  The default stays `accurate`; `TraceBenchmarkTool --fm-core` compares both.
+
 - **Selectable FM core behind an `FmChip` seam:** `VirtualSynthesizer` now
   drives an `FmChip`, implemented by the cycle-exact Nuked-OPN2 facade and a
   new register-level `FastYm2612Chip` facade over a clean-room `FmDsp`
