@@ -21,6 +21,6 @@ The [blocker assessment](../audits/2026-09-06-release-blockers.md) and
   isolated base/development trees; compare exact outcomes and skips. Root integrates
   local branches into unchanged main-workspace `develop`, re-verifies, pushes only
   `develop`, then removes only clean, fully accounted task trees and branches.
-- [ ] Record fresh evidence and remaining human gameplay/listening/platform limits
+- [x] Record fresh evidence and remaining human gameplay/listening/platform limits
   in release documentation. Release publication requires actual sign-off; automated
   remediation cannot stand in for human approval.
