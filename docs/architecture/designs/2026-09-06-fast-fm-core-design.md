@@ -248,3 +248,15 @@ no defect deferrals. The five exact scripts `bus-edges`, `fuzz-s0`, `fuzz-s1`,
 core's contract; `-Dopenggf.fastfm.outOfScopeDiagnostics=true` includes them
 in a separate diagnostic factory. Their metrics do not certify fidelity.
 The accurate-core 183-script oracle retains every script unchanged.
+
+
+## Amplitude modulation sampling
+
+The AM triangle has two equal endpoints at each turning point: `63..0,0..63`.
+A disabled LFO holds 63. Double this value, then shift by `{8,3,1,0}` for
+AMS 0..3; interpolating the rounded peak depths changes intermediate steps.
+In the corrected compare-before-advance LFO counter coordinates, OP1 consumes
+one-frame-old AM and OP2..4 two-frame-old AM. Two retained triangle samples
+participate in reset and state copying. Public held/AM tone pairs establish
+both the discrete levels and output timing; the earlier increment-before-compare
+prototype required a different coordinate and is superseded.

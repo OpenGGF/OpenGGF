@@ -380,3 +380,45 @@ rewind case passes. Completed at 06:28:02 BST. These red checks explicitly
 block integration until the pending LFO correction passes. Evidence: task
 `target/fast-fm-release/{supported-acceptance-red,lfo-transitions-red}.{log,xml}`
 and `out-of-scope-diagnostics.log`.
+
+
+## Independent LFO and AM closure probes
+
+Brainpipe BG measured periods `{108,77,71,67,62,44,8,5}`, a free-running
+mask-containment prescaler, and fractional PM. CS independently predicted
+new enable-time offsets with the same containment rule. Terminal-edge probes
+then distinguished counter/control ordering; BG's final compare-before-advance
+implementation also reproduces those edges. CS's independently derived
+whole/half/quarter F-number partial-sum model reduced composite-PM phase-fit
+residuals from about 0.0076 cycles to 0.0003; BG independently verified its
+plateau table and 12-bit wrap before committing the PM correction. The
+standalone probes used copied public-facade measurement helpers, without
+reading the excluded emulator implementations.
+
+Removing AM from task-local corpus copies brings all three sampled LFO
+cases within tolerance, while removing PM leaves the failures. Paired held/AM
+tones establish the symmetric `63..0,0..63` triangle, discrete AMS shifts and
+operator output history. A prototype with those changes and the BG counter
+snapshot passes all 178 supported scripts, no failures or deferrals. This is
+combined prototype evidence, not yet the production branch's final gate.
+
+The permanent AM regression independently varies all six channels, four
+carriers and three depths (72 combinations), comparing attenuation intervals
+that account for public 48-unit oracle and two-unit fast output quantization.
+The original DSP fails all six channel cases. The combined prototype passes
+all six plus rewind/reset; removing AM history from state copying then fails
+the rewind test at sample zero: expected -1866, actual -1062. The initial
+OP1-only snapshot did not retain a needed historical sample and correctly
+failed to detect that mutation; using the OP4 carrier makes it effective.
+
+Evidence under task `target/fast-fm-release/`: `lfo-prescaler-independent/`,
+`lfo-pm-partials-probe/`, `lfo-am-sampling/`,
+`lfo-am-current-delay12-variant/`, `lfo-am-snapshot-negative/`,
+`am-modulation-red.log`, and `am-production-contracts.log`. The AM patch
+requires the matching BG PM/counter correction before final acceptance.
+
+The AM-only production patch passes all 80 non-LFO focused contracts at
+2026-09-06 07:03:30 BST with Java 21: the preceding focused command omits
+`TestFastFmCoreTolerance`, `TestFastFmLfoTransitions` and the AM regression
+until the matching PM/counter correction is imported. This bounded check
+is not substituted for combined acceptance.

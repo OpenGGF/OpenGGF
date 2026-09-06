@@ -1,5 +1,8 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM preserves the discrete LFO amplitude steps and operator output delay,
+  correcting amplitude-modulated voices at every depth and retaining that history on rewind.
+
 - Fast FM schedules pitch, level and key changes at operator sampling boundaries,
   preventing persistent high-feedback divergence after a single mistimed sample.
   Instant key-on no longer takes a premature decay step; pending writes survive rewind.

@@ -53,8 +53,8 @@ public final class FastYm2612Dsp implements FmDsp {
      * (approximate: an arithmetic inference, not a measured divider table).
      */
     private static final int[] LFO_FRAMES_PER_STEP = {109, 78, 72, 68, 63, 45, 9, 6};
-    /** AM depth per AMS in envelope units (0.046875 dB): 0, 1.4, 5.9, 11.8 dB. */
-    private static final int[] AM_DEPTH = {0, 15, 63, 126};
+    /** Shift of the doubled 0..63 AM triangle: exact public-tone depths 0, 15, 63, 126. */
+    private static final int[] AM_SHIFT = {8, 3, 1, 0};
     /**
      * PM deviation per PMS and quarter-cycle position, in units of 1/96 of the
      * PMS 7 maximum. Measured from the cycle-exact oracle with a single-operator
@@ -184,6 +184,8 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] delayedOutput = new int[6];
     /** Pre-tick envelope output sampled by OP2..4 during an envelope update frame. */
     private final int[] sampledEg = new int[24];
+    /** Prior AM triangles: OP1 samples one frame back, OP2..4 two frames back. */
+    private final int[] amHistory = {63, 63};
     /** Register results awaiting their measured operator sampling boundary; -1 means no write. */
     private final int[] scheduledIncrements = new int[WRITE_PIPELINE_FRAMES * 24];
     private final int[] scheduledLevels = new int[WRITE_PIPELINE_FRAMES * 24];
@@ -257,6 +259,7 @@ public final class FastYm2612Dsp implements FmDsp {
         Arrays.fill(olderOp1, 0);
         Arrays.fill(delayedOutput, 0);
         Arrays.fill(sampledEg, 0);
+        Arrays.fill(amHistory, 63);
         Arrays.fill(scheduledIncrements, -1);
         Arrays.fill(scheduledLevels, -1);
         Arrays.fill(scheduledKeys, -1);
@@ -677,13 +680,13 @@ public final class FastYm2612Dsp implements FmDsp {
         }
         // A disabled LFO holds its counter at zero, which is the AM triangle's
         // maximum attenuation (Nemesis); the offset is scaled per channel below.
-        int amOffset = 64;
+        int amOffset = 63;
         if (scalar[S_LFO_ENABLED] != 0) {
             int step = scalar[S_LFO_STEP];
-            amOffset = step < 64 ? 64 - step : step - 64; // 64 at rest, 0 at peak volume
+            amOffset = step < 64 ? 63 - step : step - 64; // both turning points last two steps
         }
         for (int channel = 0; channel < 6; channel++) {
-            out[channel] = renderChannel(channel, amOffset);
+            out[channel] = renderChannel(channel);
         }
         if (dacOutputSlots[6] != 0) {
             int sum = 0;
@@ -699,10 +702,12 @@ public final class FastYm2612Dsp implements FmDsp {
         for (int slot = 0; slot < 24; slot++) {
             if (keyedThisFrame[slot] > 0) keyedThisFrame[slot]--;
         }
+        amHistory[1] = amHistory[0];
+        amHistory[0] = amOffset;
         scalar[S_WRITE_PIPELINE_CURSOR] = (scalar[S_WRITE_PIPELINE_CURSOR] + 1) % WRITE_PIPELINE_FRAMES;
     }
 
-    private int renderChannel(int channel, int lfoTriangle) {
+    private int renderChannel(int channel) {
         int base = channel * 4;
         if (attenuation[base] == MAX_ATTENUATION && attenuation[base + 1] == MAX_ATTENUATION
                 && attenuation[base + 2] == MAX_ATTENUATION && attenuation[base + 3] == MAX_ATTENUATION
@@ -718,8 +723,6 @@ public final class FastYm2612Dsp implements FmDsp {
             output[base + 3] = 0;
             return channelOutput(channel, 0);
         }
-        int amDepth = AM_DEPTH[amSensitivity[channel]];
-        int am = amDepth == 0 ? 0 : (lfoTriangle * amDepth) >> 6;
         int fb = feedback[channel];
         int feedbackInput = fb == 0 ? 0
                 : (feedbackHistory[channel * 2] + feedbackHistory[channel * 2 + 1]) >> (10 - fb);
@@ -735,7 +738,7 @@ public final class FastYm2612Dsp implements FmDsp {
         int oldP1 = olderOp1[channel];
         olderOp1[channel] = p1;
         int p2 = output[base + 1];
-        int op1 = operatorSample(base, feedbackInput, am);
+        int op1 = operatorSample(base, feedbackInput);
         feedbackHistory[channel * 2 + 1] = feedbackHistory[channel * 2];
         feedbackHistory[channel * 2] = op1;
         int op2;
@@ -744,51 +747,51 @@ public final class FastYm2612Dsp implements FmDsp {
         int sum;
         switch (algorithm[channel]) {
             case 0 -> {
-                op2 = operatorSample(base + 1, p1 >> 1, am);
-                op3 = operatorSample(base + 2, p2 >> 1, am);
-                op4 = operatorSample(base + 3, op3 >> 1, am);
+                op2 = operatorSample(base + 1, p1 >> 1);
+                op3 = operatorSample(base + 2, p2 >> 1);
+                op4 = operatorSample(base + 3, op3 >> 1);
                 sum = op4;
             }
             case 1 -> {
-                op2 = operatorSample(base + 1, 0, am);
-                op3 = operatorSample(base + 2, (oldP1 + p2) >> 1, am);
-                op4 = operatorSample(base + 3, op3 >> 1, am);
+                op2 = operatorSample(base + 1, 0);
+                op3 = operatorSample(base + 2, (oldP1 + p2) >> 1);
+                op4 = operatorSample(base + 3, op3 >> 1);
                 sum = op4;
             }
             case 2 -> {
-                op2 = operatorSample(base + 1, 0, am);
-                op3 = operatorSample(base + 2, p2 >> 1, am);
-                op4 = operatorSample(base + 3, (p1 + op3) >> 1, am);
+                op2 = operatorSample(base + 1, 0);
+                op3 = operatorSample(base + 2, p2 >> 1);
+                op4 = operatorSample(base + 3, (p1 + op3) >> 1);
                 sum = op4;
             }
             case 3 -> {
-                op2 = operatorSample(base + 1, p1 >> 1, am);
-                op3 = operatorSample(base + 2, 0, am);
-                op4 = operatorSample(base + 3, (p2 + op3) >> 1, am);
+                op2 = operatorSample(base + 1, p1 >> 1);
+                op3 = operatorSample(base + 2, 0);
+                op4 = operatorSample(base + 3, (p2 + op3) >> 1);
                 sum = op4;
             }
             case 4 -> {
-                op2 = operatorSample(base + 1, p1 >> 1, am);
-                op3 = operatorSample(base + 2, 0, am);
-                op4 = operatorSample(base + 3, op3 >> 1, am);
+                op2 = operatorSample(base + 1, p1 >> 1);
+                op3 = operatorSample(base + 2, 0);
+                op4 = operatorSample(base + 3, op3 >> 1);
                 sum = op2 + op4;
             }
             case 5 -> {
-                op2 = operatorSample(base + 1, p1 >> 1, am);
-                op3 = operatorSample(base + 2, oldP1 >> 1, am);
-                op4 = operatorSample(base + 3, p1 >> 1, am);
+                op2 = operatorSample(base + 1, p1 >> 1);
+                op3 = operatorSample(base + 2, oldP1 >> 1);
+                op4 = operatorSample(base + 3, p1 >> 1);
                 sum = op2 + op3 + op4;
             }
             case 6 -> {
-                op2 = operatorSample(base + 1, p1 >> 1, am);
-                op3 = operatorSample(base + 2, 0, am);
-                op4 = operatorSample(base + 3, 0, am);
+                op2 = operatorSample(base + 1, p1 >> 1);
+                op3 = operatorSample(base + 2, 0);
+                op4 = operatorSample(base + 3, 0);
                 sum = op2 + op3 + op4;
             }
             default -> {
-                op2 = operatorSample(base + 1, 0, am);
-                op3 = operatorSample(base + 2, 0, am);
-                op4 = operatorSample(base + 3, 0, am);
+                op2 = operatorSample(base + 1, 0);
+                op3 = operatorSample(base + 2, 0);
+                op4 = operatorSample(base + 3, 0);
                 // OP1 reaches the carrier accumulator one frame after its
                 // other carrier peers in these evaluation coordinates.
                 sum = p1 + op2 + op3 + op4;
@@ -812,7 +815,7 @@ public final class FastYm2612Dsp implements FmDsp {
     }
 
     /** One operator sample: phase (plus modulation) through log-sine, envelope + TL + AM, exp. */
-    private int operatorSample(int slot, int modulation, int am) {
+    private int operatorSample(int slot, int modulation) {
         int phaseIndex = ((phase[slot] >> 10) + modulation) & 0x3FF;
         phase[slot] = (phase[slot] + phaseIncrement[slot]) & 0xFFFFF;
         // Public-facade held/decaying carrier pairs distinguish the envelope
@@ -821,7 +824,11 @@ public final class FastYm2612Dsp implements FmDsp {
         int envelope = (slot & 3) != 0 && scalar[S_EG_FRAME] == 0 ? sampledEg[slot] : egOutput(slot);
         int level = envelope + totalLevel[slot];
         if (amEnabled[slot] != 0) {
-            level += am;
+            // Paired held/AM public tones resolve this operator's output
+            // boundary independently of pitch and feedback. Discrete shifts
+            // preserve every AM step; scaling a rounded peak does not.
+            int triangle = amHistory[(slot & 3) == 0 ? 0 : 1];
+            level += (triangle << 1) >> AM_SHIFT[amSensitivity[slot >> 2]];
         }
         if (level >= MAX_ATTENUATION) {
             return 0;
@@ -1064,7 +1071,7 @@ public final class FastYm2612Dsp implements FmDsp {
     // ---------------------------------------------------------- snapshots
 
     private int[][] arrays() {
-        return new int[][] {scheduledIncrements, scheduledLevels, scheduledKeys, requestedKeyOn, keyedThisFrame, dacOutputSlots, sampledEg, delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
+        return new int[][] {amHistory, scheduledIncrements, scheduledLevels, scheduledKeys, requestedKeyOn, keyedThisFrame, dacOutputSlots, sampledEg, delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
                 detune, multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
                 sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
                 operatorFnum, operatorBlock, channelFnum,
