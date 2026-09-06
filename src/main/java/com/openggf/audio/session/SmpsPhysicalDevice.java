@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.Objects;
 
 public final class SmpsPhysicalDevice {
+    private static final java.util.logging.Logger LOGGER =
+            java.util.logging.Logger.getLogger(SmpsPhysicalDevice.class.getName());
     public record Settings(
             double outputSampleRate,
             boolean dacInterpolate,
@@ -99,6 +101,8 @@ public final class SmpsPhysicalDevice {
                 VirtualSynthesizer.Initialization.DEFERRED,
                 settings.fmCore());
         synth.setDacInterpolate(settings.dacInterpolate());
+        LOGGER.info("FM core: " + settings.fmCore().configValue()
+                + " (" + settings.outputSampleRate() + " Hz)");
     }
 
     double outputSampleRate() {
