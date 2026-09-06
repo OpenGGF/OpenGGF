@@ -219,25 +219,6 @@ class TestBuildToolingGuard {
             "**/tests/trace/runs/TestS3kMegaRunChain.java",
             "**/tests/trace/s3k/sonictails/*.java",
             "**/tests/trace/s3k/*ZoneSliceTraceReplay.java");
-    private static final List<String> RELEASE_OPTIONAL_TEST_SKIPS = List.of(
-            "com.openggf.game.rewind.TestRewindTorture#tortureProgressiveLongRewinds",
-            "com.openggf.level.objects.TestObjectRewindTypeSafetyDispatchPerformance#measureMixedRouteDispatchAllocationAndTime",
-            "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#captureLiveBackgroundSamplingScenes",
-            "com.openggf.level.TestLevelRendererBackgroundSamplingPerformance#postWarmupRenderSamplingAllocationProbe",
-            "com.openggf.tests.TestCPZObjectBugs#testSpinTubeForcesRolling",
-            "com.openggf.tools.audio.parity.TestS1OpenGgfAudioCapture#capturesTheCompleteReferenceControlledInterval",
-            "com.openggf.tools.audio.completerun.s2.TestS2CompleteRunRealRow769DecodeGate#capturesAndDecodesTheExactRealRow769Boundary",
-            "com.openggf.graphics.shaderlib.TestDisplayShaderPackDiagnostics#writeCompatibilityReportForLocalShaderPack",
-            "com.openggf.tools.audio.timeline.TestS1Ghz1OpenGgfAudioTimelineCapture#captureRequestedOutput",
-            "com.openggf.tools.audio.completerun.s3k.TestS3kCompleteRunRealRow810DecodeGate#capturesAndDecodesTheExactRealRow810Boundary",
-            "com.openggf.audio.AudioRegressionTest#testMusicEhzMatchesReference",
-            "com.openggf.audio.AudioRegressionTest#testMusicCpzMatchesReference",
-            "com.openggf.audio.AudioRegressionTest#testMusicHtzMatchesReference",
-            "com.openggf.audio.AudioRegressionTest#testSfxRingMatchesReference",
-            "com.openggf.audio.AudioRegressionTest#testSfxJumpMatchesReference",
-            "com.openggf.audio.AudioRegressionTest#testSfxSpringMatchesReference",
-            "com.openggf.audio.AudioRegressionTest#testMixedMusicSfxMatchesReference",
-            "com.openggf.audio.TestSmpsRepeatedPlaybackBenchmark#repeatedPublicMusicAndSfxPlaybackEmitsStableRawSamples");
     private static final List<Pattern> TRACE_BOOTSTRAP_POLICY_SIGNALS = List.of(
             Pattern.compile("\\b(?:meta|metadata)\\s*\\.\\s*(?:zoneId|act|traceProfile)\\s*\\("),
             Pattern.compile("\\bhasPerFrameSlotMachineState\\s*\\("),
@@ -1163,7 +1144,8 @@ class TestBuildToolingGuard {
 
     @Test
     void releaseWorkflowShouldAssertTraceReplayCoverageWasNotSkipped() throws Exception {
-        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"))
+                + Files.readString(Path.of("tools/testing/assert_release_trace_coverage.py"));
         List<String> violations = new ArrayList<>();
 
         if (!workflow.contains("Assert trace replay coverage")) {
@@ -1241,7 +1223,8 @@ class TestBuildToolingGuard {
 
     @Test
     void releaseWorkflowShouldMirrorTraceReplayProfileExclusions() throws Exception {
-        String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
+        String workflow = Files.readString(Path.of(".github/workflows/release.yml"))
+                + Files.readString(Path.of("tools/testing/assert_release_trace_coverage.py"));
         List<String> violations = new ArrayList<>();
 
         if (!workflow.contains("TRACE_REPLAY_PROFILE_EXCLUDES")) {
@@ -1266,45 +1249,39 @@ class TestBuildToolingGuard {
     @Test
     void releaseWorkflowShouldClassifyEveryDefaultTestSkip() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
-        List<String> violations = new ArrayList<>();
-
-        if (!workflow.contains("RELEASE_OPTIONAL_TEST_SKIPS")) {
-            violations.add(".github/workflows/release.yml does not define the explicit optional-skip inventory");
-        }
-        for (String skip : RELEASE_OPTIONAL_TEST_SKIPS) {
-            if (!workflow.contains("\"" + skip + "\"")) {
-                violations.add(".github/workflows/release.yml optional-skip inventory is missing " + skip);
-            }
-        }
-        if (!workflow.contains("unexpected_skips")) {
-            violations.add(".github/workflows/release.yml does not reject unclassified default-suite skips");
-        }
-
-        if (!violations.isEmpty()) {
-            fail("release default-suite skips must be explicit and reviewable:\n  "
-                    + String.join("\n  ", new TreeSet<>(violations)));
-        }
+        assertTrue(workflow.contains("python3 tools/testing/classify_surefire_skips.py --reports target/surefire-reports"));
+        assertTrue(workflow.contains("--policy tools/testing/release-skip-policy.json"));
+        assertTrue(workflow.contains("--capabilities gl=true,"), "release graphics tests must execute");
+        assertTrue(workflow.contains("--check-evidence --root ."));
+        assertFalse(workflow.contains("RELEASE_OPTIONAL_TEST_SKIPS"), "policy has one reviewed inventory");
     }
 
     @Test
-    void releaseWorkflowShouldFailTraceReplayWarnings() throws Exception {
+    void releaseWorkflowShouldCompareTraceDebtAgainstReviewedBaseline() throws Exception {
         String workflow = Files.readString(Path.of(".github/workflows/release.yml"));
-        List<String> violations = new ArrayList<>();
+        String comparator = Files.readString(Path.of("tools/testing/compare_release_traces.py"));
+        assertTrue(workflow.contains("python3 tools/testing/compare_release_traces.py compare"));
+        assertTrue(workflow.contains("--expected-baseline"));
+        assertTrue(workflow.contains("--expected-candidate"));
+        assertTrue(workflow.contains("git merge-base --is-ancestor"));
+        assertTrue(workflow.contains("trace_exit=$?"));
+        assertTrue(workflow.contains("--exit-code \"$trace_exit\""));
+        assertTrue(comparator.contains("base[kind][key] != candidate[kind][key]"),
+                "compare complete report payloads including warnings, not only error totals");
+        assertFalse(workflow.contains("Trace replay warnings are release-blocking;"));
+        assertTrue(Files.readString(Path.of("tools/testing/release-trace-baseline.txt")).trim().matches("[0-9a-f]{40}"));
+    }
 
-        if (!workflow.contains("trace_dir = Path(\"target/trace-reports\")")) {
-            violations.add(".github/workflows/release.yml does not inspect the target-local trace report root");
-        }
-        if (!workflow.contains("warning_count")) {
-            violations.add(".github/workflows/release.yml does not check trace replay warning counts");
-        }
-        if (!workflow.contains("Trace replay warnings are release-blocking")) {
-            violations.add(".github/workflows/release.yml does not fail release validation on trace warnings");
-        }
-
-        if (!violations.isEmpty()) {
-            fail("release trace validation must not certify warning-only trace parity fields:\n  "
-                    + String.join("\n  ", new TreeSet<>(violations)));
-        }
+    @Test
+    void releaseGateToolsShouldRejectCorruptAndChangedEvidence() throws Exception {
+        Process process = new ProcessBuilder("python3", "-m", "unittest", "discover", "-s", "tools/testing",
+                "-p", "test_*release*.py").redirectErrorStream(true).start();
+        String output = new String(process.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(0, process.waitFor(), output);
+        Process skips = new ProcessBuilder("python3", "-m", "unittest", "discover", "-s", "tools/testing",
+                "-p", "test_classify_surefire_skips.py").redirectErrorStream(true).start();
+        String skipOutput = new String(skips.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(0, skips.waitFor(), skipOutput);
     }
 
     @Test
@@ -1419,8 +1396,8 @@ class TestBuildToolingGuard {
                 "develop CI must validate every legitimate S2 special-stage owner report");
         assertFalse(ci.contains("len(required_ss_reports) != 1"),
                 "multiple owner-distinct S2 special-stage reports are legitimate");
-        for (String workflow : List.of(ci, release)) {
-            assertTrue(workflow.contains("trace_dir.rglob(\"*.json\")"),
+        for (String workflow : List.of(ci, release + Files.readString(Path.of("tools/testing/compare_release_traces.py")))) {
+            assertTrue(workflow.contains("trace_dir.rglob(\"*.json\")") || workflow.contains("trace_dir.rglob('*.json')"),
                     "trace warning scans must recurse through profile-scoped reports");
             assertFalse(workflow.contains("trace_dir.glob(\"*_report.json\")"),
                     "trace warning scans must not assume retired root-level report names");

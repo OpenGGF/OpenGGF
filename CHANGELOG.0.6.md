@@ -1,5 +1,11 @@
 # OpenGGF 0.6 Changelog
 
+- Release trace validation compares fresh candidate evidence with a reviewed
+  baseline, retaining unchanged known failures and warnings while rejecting
+  changed or missing evidence. Coverage now respects directory exclusions and
+  nested JUnit tests. Required graphics tests must execute.
+
+
 This file contains the complete 0.6 development snapshot history carried forward from the project changelog. It is intentionally detailed; the public-facing overview is in [README.md](README.md), and the website/GitHub release copy is in [docs/changelog/v0.6-release-summary.md](docs/changelog/v0.6-release-summary.md).
 
 > **How this file is organised.** The 0.6 cycle accumulated three overlapping
@@ -13,6 +19,17 @@ This file contains the complete 0.6 development snapshot history carried forward
 > rather than deleted.
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
+
+- **Release skip classification became an explicit, source-backed policy:**
+  `tools/testing/classify_surefire_skips.py` classifies every skipped surefire
+  identity against `tools/testing/release-skip-policy.json` (exact identities,
+  no wildcards). GL-context tests are required whenever the runner declares a
+  display; optional measurement inputs may be declared absent; unclassified or
+  required-but-skipped tests fail closed. The policy carries a category and
+  the assumption source line for all 46 identities seen in the September 5
+  ordinary evidence (one stale legacy allowlist entry dropped) and keeps the
+  documented CPZ spin-tube scenario limitation unchanged. Workflow and guard integration follow
+  separately (brainpipe P6).
 
 - **S3K audio oracle alternates raw ring requests at dispatch:** the diagnostic
   capture now applies the shipped driver's Sound34/Sound33 selection when raw

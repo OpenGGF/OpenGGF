@@ -125,8 +125,13 @@ avoid starting wide new zone work unless it directly advances a route slice or r
   fixtures); S&K-half zones including FBZ and all Knuckles routes are gated into
   `-Ptrace-replay-r7` and are expected red. A known-red trace may not worsen, and every green
   trace must stay green, but 0.6 no longer waits for the frontier to clear.
-- The SMPS/chip-level audio parity programme developed during 0.6 was reverted and deferred to
-  0.7 because it introduced audible regressions its automated coverage did not catch.
+- The SMPS playback authenticity programme of 2026-08-21 was withdrawn on 2026-08-27 (commit
+  `b4c8fbd8a`) because its fixes produced audible regressions the suite could not detect. It was
+  then re-derived piecemeal between 2026-08-28 and 2026-09-04 against emulator-captured
+  per-service driver-state and chip write-stream oracles, each a hard assertion, with every engine
+  fix citing the driver routine it models (`README.md` "September 4 audio handover",
+  `docs/changelog/v0.6-release-summary.md` Audio). Complete SMPS parity and release listening
+  approval remain open; full-game parity is deferred to 0.7.
 - Performance work has moved from generic cleanup to measured release work, including rewind/audio
   and rendering hot-path reductions with trace-equivalence checks.
 
