@@ -17,6 +17,15 @@ Fresh acceptance and integrated verification will be recorded separately.
 | S1 `ghz1_fullrun` | fast | 0.214 ms | 0.717 ms | 0.170 ms | 4237 |
 | S3K `aiz_completerun` | accurate | 0.949 ms | 1.786 ms | 0.881 ms | 1002 |
 | S3K `aiz_completerun` | fast | 0.246 ms | 1.155 ms | 0.179 ms | 3348 |
+| S1 `ghz1_fullrun` | fast, after output-identical optimisation | 0.164 ms | 0.428 ms | 0.137 ms | 5731 |
+| S3K `aiz_completerun` | fast, after output-identical optimisation | 0.164 ms | 0.429 ms | 0.132 ms | 5644 |
+
+The optimisation pass (cached effective rates, timer and released-operator
+early-outs, an SSG-enabled slot mask, explicit per-algorithm routing in the
+hardware evaluation order, no phase advance on silent channels) was proven
+output-identical by the per-script FNV digest the oracle test now prints:
+all 183 digests unchanged. A 2 ms JFR sample before the pass put the FM DSP at
+about 70 % of the audio section, the PSG at 9 % and the resampler at 2 %.
 
 Fidelity oracle (`TestFastFmCoreTolerance`, both cores fed the same register
 script, mono sums compared DC-free by normalised cross-correlation with a

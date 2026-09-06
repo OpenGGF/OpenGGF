@@ -137,9 +137,11 @@ class TestFastFmCoreTolerance {
             }
         }
         Metrics metrics = rendering.metrics();
-        System.out.printf(Locale.ROOT, "fastfm %-16s frames=%7d rmsAccurate=%8.1f rmsFast=%8.1f ratio=%6.3f corr=%6.3f lag=%+d%n",
+        // The digest of the fast core's raw output lets a refactor prove it is bit-identical.
+        System.out.printf(Locale.ROOT, "fastfm %-16s frames=%7d rmsAccurate=%8.1f rmsFast=%8.1f ratio=%6.3f corr=%6.3f lag=%+d fastDigest=%016x%n",
                 script.getFileName().toString().replace(".txt.gz", ""), rendering.frames,
-                metrics.rmsAccurate, metrics.rmsFast, metrics.ratio, metrics.correlation, metrics.lag);
+                metrics.rmsAccurate, metrics.rmsFast, metrics.ratio, metrics.correlation, metrics.lag,
+                rendering.fastDigest());
         org.junit.jupiter.api.Assumptions.assumeFalse(
                 DEFERRED.contains(script.getFileName().toString().replace(".txt.gz", "")),
                 "deferred: open defect class, metrics printed above");
@@ -240,6 +242,17 @@ class TestFastFmCoreTolerance {
                 mono[i] = left[i] + right[i];
             }
             return mono;
+        }
+
+        long fastDigest() {
+            long hash = 0xcbf29ce484222325L;
+            for (int[] chunk : fastChunks) {
+                for (int v : chunk) {
+                    hash ^= v;
+                    hash *= 0x100000001b3L;
+                }
+            }
+            return hash;
         }
 
         Metrics metrics() {

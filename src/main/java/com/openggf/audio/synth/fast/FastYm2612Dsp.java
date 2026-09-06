@@ -138,6 +138,11 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] amEnabled = new int[24];
     private final int[] ssgMode = new int[24];
     private final int[] keyCode = new int[24];
+    /** Effective rates (2R + key scaling, capped) cached per slot; refreshed on register writes and key-code changes. */
+    private final int[] rateAttack = new int[24];
+    private final int[] rateDecay = new int[24];
+    private final int[] rateSustain = new int[24];
+    private final int[] rateRelease = new int[24];
     private final int[] operatorFnum = new int[24];
     private final int[] operatorBlock = new int[24];
     private final int[] channelFnum = new int[6];
@@ -153,7 +158,7 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] feedbackHistory = new int[12];
     private final int[] operatorOut = new int[4];
     private final int[] csmKeyed = new int[1];
-    private final int[] scalar = new int[16];
+    private final int[] scalar = new int[18];
     private static final int S_EG_COUNTER = 0;
     private static final int S_EG_FRAME = 1;
     private static final int S_LFO_ENABLED = 2;
@@ -169,6 +174,9 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int S_CH3_MODE = 12;
     private static final int S_DAC_ENABLED = 13;
     private static final int S_DAC_VALUE = 14;
+    private static final int S_SSG_ENABLED_MASK = 15;
+    private static final int S_TIMER_A_RELOAD = 16;
+    private static final int S_TIMER_B_RELOAD = 17;
 
     public FastYm2612Dsp() {
         reset();
@@ -179,7 +187,8 @@ public final class FastYm2612Dsp implements FmDsp {
         Arrays.fill(registers, 0);
         for (int[] array : new int[][] {phase, phaseIncrement, egState, keyOn, ssgInvert, ssgHeld, output, detune,
                 multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
-                sustainLevel, amEnabled, ssgMode, keyCode, operatorFnum, operatorBlock, channelFnum,
+                sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
+                operatorFnum, operatorBlock, channelFnum,
                 channelBlock, latchedFnumHigh, latchedCh3FnumHigh, ch3Fnum, ch3Block, feedback, algorithm,
                 amSensitivity, pmSensitivity, feedbackHistory, operatorOut, csmKeyed, scalar}) {
             Arrays.fill(array, 0);
@@ -187,6 +196,8 @@ public final class FastYm2612Dsp implements FmDsp {
         Arrays.fill(attenuation, MAX_ATTENUATION);
         Arrays.fill(egState, EG_RELEASE);
         scalar[S_DAC_VALUE] = 0x80;
+        scalar[S_TIMER_A_RELOAD] = 1024 * TIMER_A_FRAMES_PER_UNIT;
+        scalar[S_TIMER_B_RELOAD] = 256 * TIMER_B_FRAMES_PER_UNIT;
         for (int slot = 0; slot < 24; slot++) {
             refreshRates(slot);
             refreshPhaseIncrement(slot);
@@ -247,18 +258,27 @@ public final class FastYm2612Dsp implements FmDsp {
                 }
                 scalar[S_LFO_ENABLED] = enable ? 1 : 0;
             }
-            case 0x24 -> scalar[S_TIMER_A_LOAD] = (scalar[S_TIMER_A_LOAD] & 3) | (value << 2);
-            case 0x25 -> scalar[S_TIMER_A_LOAD] = (scalar[S_TIMER_A_LOAD] & 0x3FC) | (value & 3);
-            case 0x26 -> scalar[S_TIMER_B_LOAD] = value;
+            case 0x24 -> {
+                scalar[S_TIMER_A_LOAD] = (scalar[S_TIMER_A_LOAD] & 3) | (value << 2);
+                scalar[S_TIMER_A_RELOAD] = (1024 - scalar[S_TIMER_A_LOAD]) * TIMER_A_FRAMES_PER_UNIT;
+            }
+            case 0x25 -> {
+                scalar[S_TIMER_A_LOAD] = (scalar[S_TIMER_A_LOAD] & 0x3FC) | (value & 3);
+                scalar[S_TIMER_A_RELOAD] = (1024 - scalar[S_TIMER_A_LOAD]) * TIMER_A_FRAMES_PER_UNIT;
+            }
+            case 0x26 -> {
+                scalar[S_TIMER_B_LOAD] = value;
+                scalar[S_TIMER_B_RELOAD] = (256 - value) * TIMER_B_FRAMES_PER_UNIT;
+            }
             case 0x27 -> {
                 int previous = scalar[S_TIMER_CONTROL];
                 scalar[S_TIMER_CONTROL] = value;
                 scalar[S_CH3_MODE] = (value >> 6) & 3;
                 if ((value & 1) != 0 && (previous & 1) == 0) {
-                    scalar[S_TIMER_A_COUNT] = (1024 - scalar[S_TIMER_A_LOAD]) * TIMER_A_FRAMES_PER_UNIT;
+                    scalar[S_TIMER_A_COUNT] = scalar[S_TIMER_A_RELOAD];
                 }
                 if ((value & 2) != 0 && (previous & 2) == 0) {
-                    scalar[S_TIMER_B_COUNT] = (256 - scalar[S_TIMER_B_LOAD]) * TIMER_B_FRAMES_PER_UNIT;
+                    scalar[S_TIMER_B_COUNT] = scalar[S_TIMER_B_RELOAD];
                 }
                 if ((value & 0x10) != 0) {
                     scalar[S_STATUS] &= ~1;
@@ -320,7 +340,14 @@ public final class FastYm2612Dsp implements FmDsp {
                 releaseRate[slot] = value & 15;
                 refreshRates(slot);
             }
-            case 0x90 -> ssgMode[slot] = value & 15;
+            case 0x90 -> {
+                ssgMode[slot] = value & 15;
+                if ((value & 8) != 0) {
+                    scalar[S_SSG_ENABLED_MASK] |= 1 << slot;
+                } else {
+                    scalar[S_SSG_ENABLED_MASK] &= ~(1 << slot);
+                }
+            }
             default -> {
             }
         }
@@ -405,8 +432,10 @@ public final class FastYm2612Dsp implements FmDsp {
     }
 
     private void refreshRates(int slot) {
-        // Effective rates are computed on demand from key code and rate scaling;
-        // nothing to cache beyond the key code itself, which refreshPhaseIncrement owns.
+        rateAttack[slot] = effectiveRate(slot, attackRate[slot]);
+        rateDecay[slot] = effectiveRate(slot, decayRate[slot]);
+        rateSustain[slot] = effectiveRate(slot, sustainRate[slot]);
+        rateRelease[slot] = effectiveRate(slot, releaseRate[slot] * 2 + 1);
     }
 
     private int effectiveRate(int slot, int rate) {
@@ -425,8 +454,7 @@ public final class FastYm2612Dsp implements FmDsp {
         phase[slot] = 0;
         ssgInvert[slot] = 0;
         ssgHeld[slot] = 0;
-        int rate = effectiveRate(slot, attackRate[slot]);
-        if (rate >= 62) {
+        if (rateAttack[slot] >= 62) {
             attenuation[slot] = 0;
             egState[slot] = EG_DECAY;
         } else {
@@ -455,9 +483,11 @@ public final class FastYm2612Dsp implements FmDsp {
         advanceTimers();
         advanceLfo();
         // SSG-EG's half-way boundary is tested every FM frame, before a coincident envelope update.
-        for (int slot = 0; slot < 24; slot++) {
-            if ((ssgMode[slot] & 8) != 0 && keyOn[slot] != 0 && egState[slot] != EG_ATTACK
-                    && attenuation[slot] >= 0x200) {
+        int ssgMask = scalar[S_SSG_ENABLED_MASK];
+        while (ssgMask != 0) {
+            int slot = Integer.numberOfTrailingZeros(ssgMask);
+            ssgMask &= ssgMask - 1;
+            if (keyOn[slot] != 0 && egState[slot] != EG_ATTACK && attenuation[slot] >= 0x200) {
                 handleSsgBoundary(slot);
             }
         }
@@ -480,78 +510,89 @@ public final class FastYm2612Dsp implements FmDsp {
         }
     }
 
-    /**
-     * Modulation sources per algorithm and operator (bit n = OPn+1 output feeds this operator),
-     * and carrier masks. Operators are evaluated in the hardware slot order S1, S3, S2, S4, so a
-     * modulator evaluated later in the frame than its target contributes its previous frame's
-     * output, exactly as the chip's pipeline does.
-     */
-    private static final int[][] MODULATOR_SOURCES = {
-        {0, 0b0001, 0b0010, 0b0100}, // 0: 1→2→3→4
-        {0, 0, 0b0011, 0b0100},      // 1: (1+2)→3→4
-        {0, 0, 0b0010, 0b0101},      // 2: (1+(2→3))→4
-        {0, 0b0001, 0, 0b0110},      // 3: ((1→2)+3)→4
-        {0, 0b0001, 0, 0b0100},      // 4: 1→2, 3→4
-        {0, 0b0001, 0b0001, 0b0001}, // 5: 1→2, 1→3, 1→4
-        {0, 0b0001, 0, 0},           // 6: 1→2, 3, 4
-        {0, 0, 0, 0},                // 7: 1, 2, 3, 4
-    };
-    private static final int[] CARRIERS = {0b1000, 0b1000, 0b1000, 0b1000, 0b1010, 0b1110, 0b1110, 0b1111};
-    private static final int[] EVALUATION_ORDER = {0, 2, 1, 3};
-
     private int renderChannel(int channel, int lfoTriangle) {
         int base = channel * 4;
-        boolean silent = true;
-        for (int op = 0; op < 4; op++) {
-            if (attenuation[base + op] < MAX_ATTENUATION || egState[base + op] == EG_ATTACK) {
-                silent = false;
-                break;
-            }
-        }
-        if (silent) {
+        if (attenuation[base] == MAX_ATTENUATION && attenuation[base + 1] == MAX_ATTENUATION
+                && attenuation[base + 2] == MAX_ATTENUATION && attenuation[base + 3] == MAX_ATTENUATION
+                && egState[base] != EG_ATTACK && egState[base + 1] != EG_ATTACK
+                && egState[base + 2] != EG_ATTACK && egState[base + 3] != EG_ATTACK) {
+            // Silent channel: key-on resets the phase, so it need not advance here.
             feedbackHistory[channel * 2] = 0;
             feedbackHistory[channel * 2 + 1] = 0;
-            for (int op = 0; op < 4; op++) {
-                phase[base + op] = (phase[base + op] + phaseIncrement[base + op]) & 0xFFFFF;
-                output[base + op] = 0;
-            }
+            output[base] = 0;
+            output[base + 1] = 0;
+            output[base + 2] = 0;
+            output[base + 3] = 0;
             return 0;
         }
         int amDepth = AM_DEPTH[amSensitivity[channel]];
         int am = amDepth == 0 ? 0 : (lfoTriangle * amDepth) >> 6;
         int fb = feedback[channel];
-        int alg = algorithm[channel];
-        int[] sources = MODULATOR_SOURCES[alg];
-        for (int k = 0; k < 4; k++) {
-            int op = EVALUATION_ORDER[k];
-            int modulation;
-            if (op == 0) {
-                modulation = fb == 0 ? 0
-                        : (feedbackHistory[channel * 2] + feedbackHistory[channel * 2 + 1]) >> (10 - fb);
-            } else {
-                int mask = sources[op];
-                int sum = 0;
-                for (int src = 0; src < 4; src++) {
-                    if ((mask & (1 << src)) != 0) {
-                        sum += output[base + src];
-                    }
-                }
-                modulation = sum >> 1;
+        int feedbackInput = fb == 0 ? 0
+                : (feedbackHistory[channel * 2] + feedbackHistory[channel * 2 + 1]) >> (10 - fb);
+        // Hardware slot order S1, S3, S2, S4: OP3 sees OP2's previous-frame output.
+        int previousOp2 = output[base + 1];
+        int op1 = operatorSample(base, feedbackInput, am);
+        feedbackHistory[channel * 2 + 1] = feedbackHistory[channel * 2];
+        feedbackHistory[channel * 2] = op1;
+        int op2;
+        int op3;
+        int op4;
+        int sum;
+        switch (algorithm[channel]) {
+            case 0 -> {
+                op3 = operatorSample(base + 2, previousOp2 >> 1, am);
+                op2 = operatorSample(base + 1, op1 >> 1, am);
+                op4 = operatorSample(base + 3, op3 >> 1, am);
+                sum = op4;
             }
-            int sample = operatorSample(base + op, modulation, am);
-            output[base + op] = sample;
-            if (op == 0) {
-                feedbackHistory[channel * 2 + 1] = feedbackHistory[channel * 2];
-                feedbackHistory[channel * 2] = sample;
+            case 1 -> {
+                op3 = operatorSample(base + 2, (op1 + previousOp2) >> 1, am);
+                op2 = operatorSample(base + 1, 0, am);
+                op4 = operatorSample(base + 3, op3 >> 1, am);
+                sum = op4;
+            }
+            case 2 -> {
+                op3 = operatorSample(base + 2, previousOp2 >> 1, am);
+                op2 = operatorSample(base + 1, 0, am);
+                op4 = operatorSample(base + 3, (op1 + op3) >> 1, am);
+                sum = op4;
+            }
+            case 3 -> {
+                op3 = operatorSample(base + 2, 0, am);
+                op2 = operatorSample(base + 1, op1 >> 1, am);
+                op4 = operatorSample(base + 3, (op2 + op3) >> 1, am);
+                sum = op4;
+            }
+            case 4 -> {
+                op3 = operatorSample(base + 2, 0, am);
+                op2 = operatorSample(base + 1, op1 >> 1, am);
+                op4 = operatorSample(base + 3, op3 >> 1, am);
+                sum = op2 + op4;
+            }
+            case 5 -> {
+                op3 = operatorSample(base + 2, op1 >> 1, am);
+                op2 = operatorSample(base + 1, op1 >> 1, am);
+                op4 = operatorSample(base + 3, op1 >> 1, am);
+                sum = op2 + op3 + op4;
+            }
+            case 6 -> {
+                op3 = operatorSample(base + 2, 0, am);
+                op2 = operatorSample(base + 1, op1 >> 1, am);
+                op4 = operatorSample(base + 3, 0, am);
+                sum = op2 + op3 + op4;
+            }
+            default -> {
+                op3 = operatorSample(base + 2, 0, am);
+                op2 = operatorSample(base + 1, 0, am);
+                op4 = operatorSample(base + 3, 0, am);
+                sum = op1 + op2 + op3 + op4;
             }
         }
-        int carriers = CARRIERS[alg];
-        int sum = 0;
-        for (int op = 0; op < 4; op++) {
-            if ((carriers & (1 << op)) != 0) {
-                sum += output[base + op];
-            }
-        }
+        output[base] = op1;
+        output[base + 1] = op2;
+        output[base + 2] = op3;
+        output[base + 3] = op4;
         return sum > OUTPUT_MAX ? OUTPUT_MAX : Math.max(sum, OUTPUT_MIN);
     }
 
@@ -610,12 +651,15 @@ public final class FastYm2612Dsp implements FmDsp {
         if (ssg && ssgHeld[slot] != 0) {
             return;
         }
+        if (state == EG_RELEASE && attenuation[slot] == MAX_ATTENUATION) {
+            return; // fully released: nothing left to step
+        }
         int rate;
         switch (state) {
-            case EG_ATTACK -> rate = effectiveRate(slot, attackRate[slot]);
-            case EG_DECAY -> rate = effectiveRate(slot, decayRate[slot]);
-            case EG_SUSTAIN -> rate = effectiveRate(slot, sustainRate[slot]);
-            default -> rate = effectiveRate(slot, releaseRate[slot] * 2 + 1);
+            case EG_ATTACK -> rate = rateAttack[slot];
+            case EG_DECAY -> rate = rateDecay[slot];
+            case EG_SUSTAIN -> rate = rateSustain[slot];
+            default -> rate = rateRelease[slot];
         }
         if (rate == 0) {
             return;
@@ -680,8 +724,7 @@ public final class FastYm2612Dsp implements FmDsp {
         } else {
             phase[slot] = 0; // only the plain repeat modes restart the phase
         }
-        int rate = effectiveRate(slot, attackRate[slot]);
-        if (rate >= 62) {
+        if (rateAttack[slot] >= 62) {
             attenuation[slot] = 0;
             egState[slot] = EG_DECAY;
         } else {
@@ -714,9 +757,12 @@ public final class FastYm2612Dsp implements FmDsp {
 
     private void advanceTimers() {
         int control = scalar[S_TIMER_CONTROL];
+        if ((control & 3) == 0 && csmKeyed[0] == 0) {
+            return;
+        }
         if ((control & 1) != 0) {
             if (--scalar[S_TIMER_A_COUNT] <= 0) {
-                scalar[S_TIMER_A_COUNT] = (1024 - scalar[S_TIMER_A_LOAD]) * TIMER_A_FRAMES_PER_UNIT;
+                scalar[S_TIMER_A_COUNT] = scalar[S_TIMER_A_RELOAD];
                 if ((control & 4) != 0) {
                     scalar[S_STATUS] |= 1;
                 }
@@ -732,7 +778,7 @@ public final class FastYm2612Dsp implements FmDsp {
                 }
             }
         }
-        if (csmKeyed[0] != 0 && scalar[S_TIMER_A_COUNT] != (1024 - scalar[S_TIMER_A_LOAD]) * TIMER_A_FRAMES_PER_UNIT) {
+        if (csmKeyed[0] != 0 && scalar[S_TIMER_A_COUNT] != scalar[S_TIMER_A_RELOAD]) {
             for (int op = 0; op < 4; op++) {
                 if ((csmKeyed[0] & (1 << op)) != 0) {
                     keyOffSlot(8 + op);
@@ -742,7 +788,7 @@ public final class FastYm2612Dsp implements FmDsp {
         }
         if ((control & 2) != 0) {
             if (--scalar[S_TIMER_B_COUNT] <= 0) {
-                scalar[S_TIMER_B_COUNT] = (256 - scalar[S_TIMER_B_LOAD]) * TIMER_B_FRAMES_PER_UNIT;
+                scalar[S_TIMER_B_COUNT] = scalar[S_TIMER_B_RELOAD];
                 if ((control & 8) != 0) {
                     scalar[S_STATUS] |= 2;
                 }
@@ -760,7 +806,8 @@ public final class FastYm2612Dsp implements FmDsp {
     private int[][] arrays() {
         return new int[][] {registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, output,
                 detune, multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
-                sustainLevel, amEnabled, ssgMode, keyCode, operatorFnum, operatorBlock, channelFnum,
+                sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
+                operatorFnum, operatorBlock, channelFnum,
                 channelBlock, latchedFnumHigh, latchedCh3FnumHigh, ch3Fnum, ch3Block, feedback, algorithm,
                 amSensitivity, pmSensitivity, feedbackHistory, operatorOut, csmKeyed, scalar};
     }
