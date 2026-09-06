@@ -20,6 +20,10 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Fast FM timers and CSM:** timer A and B now advance at one and sixteen
+  internal frames per unit, correcting a threefold slowdown. A pending CSM
+  key-off finishes when software stops its timer, preventing a stuck note.
+
 - **Fast FM rewind and diagnostics:** snapshots defensively copy DSP state on
   construction and access. Register diagnostics preserve both chip banks and
   report elapsed internal cycles at frame boundaries, including after rewind

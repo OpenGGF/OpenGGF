@@ -61,8 +61,11 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int SSG_STEP_MULTIPLIER = 4;
     /** Sustain level 15 is the full 5-bit code 31 in 3 dB steps (992), not the attenuation ceiling. */
     private static final int SUSTAIN_LEVEL_15 = 31 << 5;
-    private static final int TIMER_A_FRAMES_PER_UNIT = 3;
-    private static final int TIMER_B_FRAMES_PER_UNIT = 48;
+    // Sega YM2612 manual p12: 18/288 us per timer unit at 8 MHz. With
+    // 144 input clocks per FM frame these are 1/16 frames, not EG ticks.
+    // https://www.smspower.org/maxim/Documents/YM2612
+    private static final int TIMER_A_FRAMES_PER_UNIT = 1;
+    private static final int TIMER_B_FRAMES_PER_UNIT = 16;
     /** Register-slot order S1, S3, S2, S4 → operator index 0..3 (OP1, OP2, OP3, OP4). */
     private static final int[] SLOT_TO_OPERATOR = {0, 2, 1, 3};
     /** Key-on register bits 4..7 are S1, S3, S2, S4. */
@@ -820,7 +823,11 @@ public final class FastYm2612Dsp implements FmDsp {
                 }
             }
         }
-        if (csmKeyed[0] != 0 && scalar[S_TIMER_A_COUNT] != scalar[S_TIMER_A_RELOAD]) {
+        // The key-off half of an admitted CSM pulse still finishes when
+        // software stops timer A or leaves CSM before the next FM frame.
+        // Otherwise a stopped counter equal to its reload strands the note.
+        if (csmKeyed[0] != 0 && ((control & 1) == 0 || scalar[S_CH3_MODE] != 2
+                || scalar[S_TIMER_A_COUNT] != scalar[S_TIMER_A_RELOAD])) {
             for (int op = 0; op < 4; op++) {
                 if ((csmKeyed[0] & (1 << op)) != 0) {
                     keyOffSlot(8 + op);

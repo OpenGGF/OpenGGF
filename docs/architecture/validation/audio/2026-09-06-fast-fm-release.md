@@ -44,3 +44,38 @@ more. The 54 deferred scripts are
 enumerated in the test and reported as skipped, not passed; the open classes
 are in the design document. The default core remains `accurate`.
 
+
+## CS timer and facade corrections
+
+CS release branch `feature/ai-fast-fm-release` starts at `f658b6fac` and
+imports only P7 changes through BG `7474fa9fe` (local `30a6827c7`). Facade
+fix `c979e5f82` isolates public DSP snapshots and corrects diagnostic bank
+ports and elapsed clocks, with replay and transaction rollback checks.
+
+The timer correction uses the [Sega YM2612 manual, page 12](https://www.smspower.org/maxim/Documents/YM2612):
+18 and 288 microseconds per unit at 8 MHz correspond to 144 and 2304 input
+clocks, hence 1 and 16 internal frames. The previous 3/48 multipliers mixed
+this clock with the envelope tick. The public timer test observes both
+periods and status acknowledgement. A second test reproduced a CSM note
+stranded by stopping the timer immediately after overflow; pending key-off
+now finishes even with the counter stopped or CSM disabled.
+
+`mvn -Dmse=off -Dtest=TestFastFmTimersAndChannelThree,TestFastFmCoreTolerance test -B`
+completed on the timer working tree: three new contract cases passed and
+all 183 tolerance vectors executed, with the existing 54 deferrals still
+reported in the class XML. CSM improved from correlation 0.352 to 0.997
+(level ratio 0.943). Compared with the saved default-fast audit, **only the
+CSM vector changed its PCM digest**; the other 182 stayed identical.
+Removing the now-passing CSM deferral remains with BG's test ownership.
+
+Four single-carrier channel-3 probes match the accurate core's frequency
+crossing counts independently. A diagnostic copy of `ch3-special` changing
+only B2 from FA (algorithm 2, feedback 7) to C7 (algorithm 7, no feedback)
+passes the original thresholds at correlation 0.988 and level ratio 0.975.
+This narrows the original composite failure to modulation; it does not
+justify changing the verified channel-3 frequency mapping.
+
+A proposed BG contour-only acceptance change (`f5393ea9e`) is **not imported**:
+it needs negative controls for wrong pitch/routing and evidence that a lone
+high-feedback write cannot weaken unrelated parts of a script. Current
+release acceptance remains unresolved while the original deferrals remain.
