@@ -17,10 +17,12 @@ The [blocker assessment](../audits/2026-09-06-release-blockers.md) and
 - [x] CS: wire release workflow to both checks; preserve separate structural JVM,
   fixture preflight, release-only publication and platform artifact validation.
   Add behavioral negative controls and update focused workflow guards.
-- [ ] Both: run focused checks plus full ordinary, guard and trace profiles on
-  isolated base/development trees; compare exact outcomes and skips. Root integrates
-  local branches into unchanged main-workspace `develop`, re-verifies, pushes only
-  `develop`, then removes only clean, fully accounted task trees and branches.
+- [x] Both: focused checks and full ordinary, guard and trace profiles completed
+  on isolated base/development trees; integrated `develop` verified again at
+  `1514f4c9c`. Exact outcomes/skips and package smoke checks are in the
+  [verification record](../validation/2026-09-06-release-gates.md).
+  Push only `develop`, then remove fully accounted task trees/branches; those
+  final operations are reported after completion in the delivery result.
 - [x] Record fresh evidence and remaining human gameplay/listening/platform limits
   in release documentation. Release publication requires actual sign-off; automated
   remediation cannot stand in for human approval.
