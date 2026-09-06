@@ -1,5 +1,11 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM renders about 12 % cheaper on real music (S1 GHZ1 0.173 to 0.151 ms
+  per frame, S3K AIZ 0.164 to 0.147) and 23 % on a six-voice LFO bench, with
+  every oracle output sample unchanged: scheduled writes, key holds, active
+  envelopes and silent channels are tracked by bitmasks, and the operator's
+  log-sine and exponent tables are folded so the inner loop is two lookups.
+
 - Fast FM gives global LFO pitch changes their own operator sampling boundary,
   preventing phase errors when modulation wraps a high F-number. The supported
   178-script corpus now passes unchanged waveform/level bounds without deferrals.
