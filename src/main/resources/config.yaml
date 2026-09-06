@@ -54,6 +54,7 @@ audio:
   enabled: true   # Enable music and SFX
   region: "NTSC"   # Region for audio timing
   dacInterpolate: false   # Optional DAC smoothing (no hardware counterpart); true interpolates between PCM samples
+  fmCore: fast   # FM core: accurate (cycle-exact Nuked-OPN2) or fast (register-level clean-room core)
   internalRateOutput: false   # Output audio at the internal YM2612 rate (~53kHz)
   fm6DacOff: true   # Mute FM6 when a note plays on it while DAC is enabled (SMPSPlay parity hack)
 

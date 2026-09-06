@@ -52,6 +52,7 @@ no discrepancy entry was added or reclassified by the cutover.
 33. [FM:PSG Mix Balance Is Pre-Rewrite Parity, Not a Hardware Calibration](#fmpsg-mix-balance-is-pre-rewrite-parity-not-a-hardware-calibration)
 34. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention)
 35. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
+36. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
 
 ---
 
@@ -3155,3 +3156,33 @@ relative RMS of the FM- and PSG-dominated segments; replace the 38 % with the
 measured value and retire this entry.
 
 ---
+
+
+## Fast FM Register-Level Timing and Output
+
+The selectable `audio.fmCore=fast` core advances synthesis at one internal FM
+frame (144 input clocks), while retaining measured register and DAC output
+sampling boundaries within that frame. It does not emulate the full bus
+pipeline, busy flag, LSI test registers, or analogue ladder-effect output stage.
+Its facade preserves stereo panning and the mixer's nominal 6144 full-scale
+channel level, with writes paced and diagnostics timestamped at frame
+boundaries. These deliberate approximations reduce synthesis CPU cost.
+
+`audio.fmCore=accurate` retains the cycle-exact Nuked implementation and is
+required for physical reference captures. New configurations select fast;
+existing explicit accurate selections are preserved. Pitch-transition phase and per-path modulation history now have independent
+all-channel coverage. Carrier/channel output history and key-on phase now
+also account for the multiplexed sampling boundary, with all 24 write offsets
+covered on every channel. Frequency sampling has all-operator/all-offset
+coverage and brings S3K effect 3C within tolerance. FM/DAC relative timing
+and all DAC data/enable write offsets have independent output coverage.
+Scheduled frequency, level and key admission now closes the S2 BC and pan/TL
+failures, with independent sample-exact high-feedback transition coverage.
+The LFO prescaler and PM arithmetic are now oracle-measured (bit-containment
+terminals, half-step truncated partial sums, twelve-bit wrap). AM preserves
+discrete depths and operator output history, with independent all-channel/
+all-carrier measurements and rewind coverage. All 178 supported scripts now
+meet the unchanged waveform/level bounds without deferrals. Independent
+high-FNUM checks cover global PM sampling across every channel and carrier.
+Final integrated verification and human listening sign-off remain separate
+release gates; this tolerance result does not establish full SMPS parity. See the [fast FM validation record](../architecture/validation/audio/2026-09-06-fast-fm-release.md).

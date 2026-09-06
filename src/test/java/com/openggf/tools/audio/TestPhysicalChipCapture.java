@@ -22,6 +22,15 @@ class TestPhysicalChipCapture {
     Path directory;
 
     @Test
+    void accurateOracleCaptureRejectsFastSnapshots() {
+        PhysicalChipCapture capture = new PhysicalChipCapture(100);
+        var fast = new com.openggf.audio.synth.FastYm2612Chip(
+                new com.openggf.audio.synth.fast.FastYm2612Dsp());
+        assertThrows(IllegalStateException.class,
+                () -> capture.beginYmReplaySegment(fast.captureSnapshot()));
+    }
+
+    @Test
     void boundedCapturePreservesNativeDomainsAndReportsOverflowWithoutThrowing() throws Exception {
         PhysicalChipCapture capture = new PhysicalChipCapture(2);
 
@@ -87,7 +96,7 @@ class TestPhysicalChipCapture {
         synth.writeFm(this, 0, 0xA4, 0x22);
         synth.writeFm(this, 0, 0xA0, 0x69);
         synth.render(new short[2]);
-        var live = synth.captureSynthSnapshot().ym();
+        Ym2612Chip.Snapshot live = (Ym2612Chip.Snapshot) synth.captureSynthSnapshot().ym();
         capture.finish(1, live);
 
         Path output = directory.resolve("endpoint.jsonl");

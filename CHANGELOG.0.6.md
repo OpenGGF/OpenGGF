@@ -1,5 +1,40 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM gives global LFO pitch changes their own operator sampling boundary,
+  preventing phase errors when modulation wraps a high F-number. The supported
+  178-script corpus now passes unchanged waveform/level bounds without deferrals.
+
+- Fast FM reproduces the YM2612 LFO clock and pitch modulation as measured
+  on the cycle-exact oracle: a free-running prescaler with bit-containment
+  terminals (periods 108/77/71/67/62/44/8/5 frames, exact first-step delays
+  after rate changes), half-step PM offsets built from truncated whole, half
+  and quarter F-number terms, and the twelve-bit wrap of the modulated
+  F-number. Single-operator PM probes at every depth now match at 1.000 and
+  a modulated PMS 7 voice rises from 0.39 to 0.99.
+
+- Fast FM preserves the discrete LFO amplitude steps and operator output delay,
+  correcting amplitude-modulated voices at every depth and retaining that history on rewind.
+
+- Fast FM schedules pitch, level and key changes at operator sampling boundaries,
+  preventing persistent high-feedback divergence after a single mistimed sample.
+  Instant key-on no longer takes a premature decay step; pending writes survive rewind.
+
+- Fast FM and DAC now share the correct output timeline, including partial
+  DAC samples when a data or enable write lands within an output slot.
+
+- Fast FM preserves the envelope’s operator sampling delay, correcting
+  rapid decay changes used as modulation.
+
+- Fast FM samples frequency writes at each operator’s pipeline boundary,
+  preserving phase during dense pitch changes such as S3K effect 3C.
+
+- Fast FM retains carrier and channel output history across the multiplexed
+  sampling boundary, keeping mixed voices and repeated CF effects in phase.
+  Key-on checks cover every internal write offset on all six channels.
+
+- Fast FM preserves modulator history and phase continuity across pitch changes;
+  all six channels are covered by independent pitch-transition and rewind checks.
+
 - Release trace validation compares fresh candidate evidence with a reviewed
   baseline, retaining unchanged known failures and warnings while rejecting
   changed or missing evidence. Coverage now respects directory exclusions and
@@ -19,6 +54,48 @@ This file contains the complete 0.6 development snapshot history carried forward
 > rather than deleted.
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
+
+- **Fast FM release integration:** new configurations select `audio.fmCore=fast`;
+  an explicit `accurate` choice survives reload, and physical oracle exports
+  explicitly retain the accurate core. The benchmark rejects misspelled core
+  names, consumes initial title-card requests before replay, and installs the
+  current ROM before rebuilding audio on a repeated pass. These repairs enable
+  comparable multi-iteration FM measurements; fidelity acceptance remains under
+  the [0.6 audio validation record](docs/architecture/validation/audio/2026-09-06-fast-fm-release.md).
+
+- **Fast FM timers and CSM:** timer A and B now advance at one and sixteen
+  internal frames per unit, correcting a threefold slowdown. A pending CSM
+  key-off finishes when software stops its timer, preventing a stuck note.
+
+- **Fast FM rewind and diagnostics:** snapshots defensively copy DSP state on
+  construction and access. Register diagnostics preserve both chip banks and
+  report elapsed internal cycles at frame boundaries, including after rewind
+  or transaction rollback. Physical reference capture remains accurate-only.
+
+- **Clean-room fast FM core lands behind `audio.fmCore=fast`:**
+  `FastYm2612Dsp` is a register-level YM2612 written from public hardware
+  documentation and the department's techniques specification (see the validation record for source provenance), judged against the cycle-exact core by a tolerance
+  oracle over the 183 bit-exact register scripts: every SMPS music log
+  correlates at 0.97–0.99, tones and envelopes at 0.96–1.00, and 121 scripts
+  sit inside the correlation/level bounds; the rest (LFO, channel-3 special
+  mode, feedback into summed modulators, some SSG-EG repeat modes, attack
+  rates 1–2) are listed as deferred in the test and the design document. On
+  the S1 GHZ1 and S3K AIZ benchmarks the audio section drops from
+  0.88–0.94 ms to 0.17–0.18 ms per frame with identical trajectory digests.
+  At this development stage the default stayed `accurate`; the later release
+  integration entry above supersedes that default. `TraceBenchmarkTool --fm-core`
+  compares both.
+
+- **Selectable FM core behind an `FmChip` seam:** `VirtualSynthesizer` now
+  drives an `FmChip`, implemented by the cycle-exact Nuked-OPN2 facade and a
+  new register-level `FastYm2612Chip` facade over a clean-room `FmDsp`
+  contract (queued writes, panning, mutes, DAC streaming, snapshots and SFX
+  admission are the facade's; the DSP is register in, six channels out).
+  At this initial seam stage `audio.fmCore` selected `accurate` by default;
+  no fast DSP was bound, so `fast` failed at construction until the
+  clean-room core lands. Physical chip capture requires the accurate core.
+  Design and techniques spec:
+  [2026-09-06-fast-fm-core-design.md](docs/architecture/designs/2026-09-06-fast-fm-core-design.md).
 
 - **Release skip classification became an explicit, source-backed policy:**
   `tools/testing/classify_surefire_skips.py` classifies every skipped surefire

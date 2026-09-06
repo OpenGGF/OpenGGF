@@ -175,6 +175,50 @@ class CollectTests(unittest.TestCase):
         with self.assertRaises(crt.EvidenceError):
             self.fx.collect()
 
+    def retained_singleton_run(self, cases=None, declared=1, repeats=3):
+        cases = cases or (("replayGhz1", "passed"),) * repeats
+        self.fx.write_run(cases=cases, tests=declared)
+        log = MAVEN_LOG.format(tests=repeats, failures=0, errors=0, skips=0,
+                               conclusion="SUCCESS")
+        line = next(line for line in log.splitlines() if "Time elapsed:" in line)
+        singleton = line.replace(f"Tests run: {repeats},", "Tests run: 1,")
+        self.fx.log.write_text(log.replace(line, "\n".join([singleton] * repeats)))
+        self.fx.exit_code = 0
+
+    def test_retained_identical_singleton_rows_match_overwritten_evidence(self):
+        self.retained_singleton_run(cases=(("replayGhz1", "passed"),))
+        overwritten = self.fx.collect()
+        for declared in (1, 3):
+            with self.subTest(declared=declared):
+                self.retained_singleton_run(declared=declared)
+                retained = self.fx.collect()
+                self.assertEqual(overwritten, retained)
+
+    def test_retained_rows_need_complete_matching_passing_singleton_verdicts(self):
+        invalid = (
+            (("replayGhz1", "passed"),) * 2,
+            (("replayGhz1", "passed"), ("replayMz1", "passed"), ("replayGhz1", "passed")),
+            (("replayGhz1", "passed"), ("replayGhz1", "failure"), ("replayGhz1", "passed")),
+            (("replayGhz1", "passed"), ("replayGhz1", "skipped"), ("replayGhz1", "passed")),
+        )
+        for cases in invalid:
+            with self.subTest(cases=cases):
+                self.retained_singleton_run(cases=cases)
+                with self.assertRaises(crt.EvidenceError):
+                    self.fx.collect()
+        self.retained_singleton_run()
+        self.fx.log.write_text(self.fx.log.read_text().replace(
+            "Tests run: 1, Failures: 0", "Tests run: 1, Failures: 1", 1))
+        with self.assertRaises(crt.EvidenceError):
+            self.fx.collect()
+
+    def test_retained_rows_do_not_hide_declared_failure_counters(self):
+        self.retained_singleton_run()
+        report = next(self.fx.reports.glob("TEST-*.xml"))
+        report.write_text(report.read_text().replace('tests="1"', 'tests="1" failures="1"'))
+        with self.assertRaises(crt.EvidenceError):
+            self.fx.collect()
+
     def test_missing_suite_summary_fails_even_when_aggregate_totals_match(self):
         self.fx.write_run()
         self.fx.log.write_text("\n".join(line for line in self.fx.log.read_text().splitlines()

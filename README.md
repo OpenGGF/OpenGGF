@@ -263,8 +263,9 @@ traces.
   Complete-run profiles can print their fixture, producer, observation, and
   comparison coverage without treating unavailable or diagnostic-only layers
   as parity; narrow per-game oracles remain separate.
-  Java Nuked remains the production FM core; full parity and listening
-  validation remain open. See the [audio handover](docs/architecture/plans/audio/2026-09-04-audio-parity-handover.md).
+  New configurations select the faster register-level FM core; explicit
+  `audio.fmCore=accurate` selections and physical reference captures retain
+  Java Nuked. Full parity and listening validation remain open. See the [audio handover](docs/architecture/plans/audio/2026-09-04-audio-parity-handover.md).
 
   The S3K diagnostic oracle also alternates raw ring request `33h` at the
   driver's consume callback, moving its first mismatch to service 2409;
@@ -275,8 +276,13 @@ traces.
   Follow-on work removes an extra S3K noise-command mute, exposes mismatched
   DAC run timing instead of mislabelling it a decoder defect, and gives
   internal-rate FM captures verified replay bounds. Repeated extra-life and
-  snapshot restoration checks cover both AIZ and HCZ acts; native and fast
-  cores remain experiments, not runtime options.
+  snapshot restoration checks cover both AIZ and HCZ acts. Native-core work
+  remains research; fast FM is included in the 0.6 delivery work, with fidelity
+  and final performance evidence tracked in the
+  [fast FM validation record](docs/architecture/validation/audio/2026-09-06-fast-fm-release.md).
+  The isolated candidate passes all 178 supported chip scripts and measures
+  about 0.17–0.18 ms of audio per frame on this host; full-game listening
+  sign-off remains open.
   New S3K effects are also suppressed during the 1-up jingle, without
   advancing ring stereo alternation, and resume at music restoration.
   See the [1-up investigation](docs/architecture/audits/audio/2026-09-05-s3k-oneup-sfx-suppression.md)
@@ -670,6 +676,13 @@ Sonic 3 & Knuckles trace/run-chain frontiers are documented 0.6 limitations;
 finishing those parity campaigns is deferred to the next release. A frontier
 still returns to the 0.6 fix queue when it exposes a confirmed release-impacting
 gameplay defect.
+
+Fast FM is now integrated for 0.6. New configurations select `fast`, while
+explicit `accurate` choices and physical-reference captures retain the accurate
+core. The isolated candidate passes all 178 supported chip scripts, 16,970
+ordinary tests and 610 guards, with unchanged trace evidence and matching
+benchmark gameplay digests. Post-merge verification is in progress; see the
+[FM delivery record](docs/architecture/validation/audio/2026-09-06-fast-fm-release.md).
 
 The [September 6 release assessment](docs/architecture/audits/2026-09-06-release-blockers.md)
 identified release skip-classification and trace-policy mismatches. The

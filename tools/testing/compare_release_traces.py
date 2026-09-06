@@ -142,11 +142,29 @@ def collect(tree, start, log_path, exit_code):
         except ET.ParseError as error:
             raise EvidenceError(f'malformed XML {path}: {error}') from error
         cases = list(root.iter('testcase'))
-        require(int(root.get('tests', '-1')) == len(cases), f'incomplete testcase XML: {path}')
         suite_name = root.get('name', '')
+        declared = int(root.get('tests', '-1'))
+        # Surefire may retain every repeated singleton row while its root
+        # counter describes only the final invocation. Reconcile only complete,
+        # identical all-pass rows backed by one completed log verdict per row.
+        # Canonical evidence then matches the overwritten-single-row variant.
+        executions = suite_executions.get(suite_name, [])
+        if len(cases) > 1 and len(executions) == len(cases) and all(
+                row == [1, 0, 0, 0] for row in executions):
+            identities = {(c.get('classname', ''), c.get('name', '')) for c in cases}
+            all_passed = all(c.find(tag) is None for c in cases
+                             for tag in ('failure', 'error', 'skipped'))
+            if len(identities) == 1 and all(next(iter(identities))) and all_passed:
+                require(declared in (1, len(cases)), f'incomplete testcase XML: {path}')
+                cases = cases[:1]
+                declared = 1
+        require(declared == len(cases), f'incomplete testcase XML: {path}')
         suite_counts = [len(cases), sum(c.find('failure') is not None for c in cases),
                         sum(c.find('error') is not None for c in cases),
                         sum(c.find('skipped') is not None for c in cases)]
+        for attribute, count in zip(('failures', 'errors', 'skipped'), suite_counts[1:]):
+            require(root.get(attribute) is None or int(root.get(attribute)) == count,
+                    f'XML {attribute} counter disagrees: {path}')
         require(suite_name and suite_name not in xml_suites, f'missing/duplicate XML suite: {path}')
         xml_suites[suite_name] = suite_counts
         for case in cases:

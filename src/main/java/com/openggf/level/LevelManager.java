@@ -472,8 +472,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
 
     /** Establishes the current game's production audio/request service. */
     public void configureAudio() throws IOException {
-        audioManager.setAudioProfile(gameModule.getAudioProfile());
+        // Profile installation builds the SMPS loader immediately. Install the
+        // current ROM first so a reboot or ROM swap cannot use the closed one.
         audioManager.setRom(GameServices.rom().getRom());
+        audioManager.setAudioProfile(gameModule.getAudioProfile());
         audioManager.setSoundMap(game.getSoundMap());
         audioManager.resetRingSound();
     }

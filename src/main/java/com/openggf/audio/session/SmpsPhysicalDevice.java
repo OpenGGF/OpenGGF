@@ -2,16 +2,26 @@ package com.openggf.audio.session;
 
 import com.openggf.audio.smps.DacData;
 import com.openggf.audio.synth.ChipWriteObserver;
+import com.openggf.audio.synth.FmCoreSelection;
 import com.openggf.audio.synth.VirtualSynthesizer;
 
 import java.util.Arrays;
 import java.util.Objects;
 
 public final class SmpsPhysicalDevice {
+    private static final java.util.logging.Logger LOGGER =
+            java.util.logging.Logger.getLogger(SmpsPhysicalDevice.class.getName());
     public record Settings(
             double outputSampleRate,
-            boolean dacInterpolate) {
+            boolean dacInterpolate,
+            FmCoreSelection fmCore) {
+        /** Accurate-core settings; the core is the Nuked-OPN2 port unless configured otherwise. */
+        public Settings(double outputSampleRate, boolean dacInterpolate) {
+            this(outputSampleRate, dacInterpolate, FmCoreSelection.ACCURATE);
+        }
+
         public Settings {
+            Objects.requireNonNull(fmCore, "fmCore");
             if (!Double.isFinite(outputSampleRate)
                     || outputSampleRate <= 0.0) {
                 throw new IllegalArgumentException(
@@ -88,8 +98,11 @@ public final class SmpsPhysicalDevice {
         synth = new VirtualSynthesizer(
                 settings.outputSampleRate(),
                 Objects.requireNonNull(observer, "observer"),
-                VirtualSynthesizer.Initialization.DEFERRED);
+                VirtualSynthesizer.Initialization.DEFERRED,
+                settings.fmCore());
         synth.setDacInterpolate(settings.dacInterpolate());
+        LOGGER.info("FM core: " + settings.fmCore().configValue()
+                + " (" + settings.outputSampleRate() + " Hz)");
     }
 
     double outputSampleRate() {

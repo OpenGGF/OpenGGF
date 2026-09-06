@@ -94,7 +94,7 @@ import java.util.Objects;
  * resampler tail, so restoring into any chip and clocking on is bit-identical
  * to never having stopped.
  */
-public class Ym2612Chip {
+public class Ym2612Chip implements FmChip {
 
     private static final double MASTER_CLOCK_HZ = 7670453.0;
     /** Six master clocks per internal cycle, 24 cycles per frame. */
@@ -319,15 +319,18 @@ public class Ym2612Chip {
         dacData = data;
     }
 
-    DacData liveDacDataReference() {
+    @Override
+    public DacData liveDacDataReference() {
         return dacData;
     }
 
-    void setWriteObserver(ChipWriteObserver observer) {
+    @Override
+    public void setWriteObserver(ChipWriteObserver observer) {
         writeObserver = observer == null ? ChipWriteObserver.NONE : observer;
     }
 
-    void reportPhysicalTimelineBoundary(
+    @Override
+    public void reportPhysicalTimelineBoundary(
             ChipWriteObserver.PhysicalTimelineBoundary boundary) {
         emitPhysicalBoundary(boundary);
     }
@@ -825,7 +828,8 @@ public class Ym2612Chip {
     // ------------------------------------------------------------ snapshot
 
     /** Mutable owner-private transaction storage; never used by durable snapshots. */
-    static final class MutationBackup {
+    static final class MutationBackup implements FmChip.MutationBackup {
+        private Ym2612Chip owner;
         private int chipType;
         private int frameSumLeft;
         private int frameSumRight;
@@ -850,7 +854,23 @@ public class Ym2612Chip {
         private int[] direct = new int[0], ops = new int[0];
     }
 
-    void captureMutation(MutationBackup backup) {
+    @Override
+    public FmChip.MutationBackup createMutationBackup() {
+        MutationBackup backup = new MutationBackup();
+        backup.owner = this;
+        return backup;
+    }
+
+    private MutationBackup own(FmChip.MutationBackup candidate) {
+        if (!(candidate instanceof MutationBackup backup) || (backup.owner != null && backup.owner != this)) {
+            throw new IllegalArgumentException("foreign FM mutation backup");
+        }
+        return backup;
+    }
+
+    @Override
+    public void captureMutation(FmChip.MutationBackup candidate) {
+        MutationBackup backup = own(candidate);
         backup.chipType = chipType;
         backup.frameSumLeft = frameSumLeft;
         backup.frameSumRight = frameSumRight;
@@ -885,7 +905,9 @@ public class Ym2612Chip {
         resampler.captureMutation(backup.resampler);
     }
 
-    void restoreMutation(MutationBackup backup) {
+    @Override
+    public void restoreMutation(FmChip.MutationBackup candidate) {
+        MutationBackup backup = own(candidate);
         chipType = backup.chipType;
         frameSumLeft = backup.frameSumLeft;
         frameSumRight = backup.frameSumRight;
@@ -956,7 +978,12 @@ public class Ym2612Chip {
     }
 
     /** Total and authoritative: the chip continues bit-exactly from the snapshot. */
-    public void restoreSnapshot(Snapshot snapshot) {
+    @Override
+    public void restoreSnapshot(FmChip.Snapshot candidate) {
+        if (!(candidate instanceof Snapshot snapshot)) {
+            throw new IllegalArgumentException(
+                    "snapshot was captured by a different FM core: " + candidate.getClass().getSimpleName());
+        }
         applyChipType(snapshot.chipType());
         outputRate = snapshot.outputRate();
         state.copyFrom(snapshot.coreRef());
@@ -1003,11 +1030,16 @@ public class Ym2612Chip {
      * pending queue; the token records where the queue stood, and restoring
      * removes the entries queued since then that target the masked channels.
      */
-    SfxAdmissionState captureSfxAdmissionState(int affectedChannelMask) {
+    @Override
+    public FmChip.SfxAdmissionState captureSfxAdmissionState(int affectedChannelMask) {
         return new SfxAdmissionState(affectedChannelMask & 0x3f, flushedOps + pendingCount, queuedAddress);
     }
 
-    void restoreSfxAdmissionState(SfxAdmissionState admission) {
+    @Override
+    public void restoreSfxAdmissionState(FmChip.SfxAdmissionState candidate) {
+        if (!(candidate instanceof SfxAdmissionState admission)) {
+            throw new IllegalArgumentException("foreign FM admission state");
+        }
         long firstNewOp = admission.opsEnqueuedAtCapture() - flushedOps;
         int start = (int) Math.max(0, Math.min(pendingCount, firstNewOp));
         int kept = start;
@@ -1062,7 +1094,7 @@ public class Ym2612Chip {
             int dacSampleEndPending,
             boolean dacInterpolate,
             boolean[] mutes,
-            BlipResampler.Snapshot resampler) {
+            BlipResampler.Snapshot resampler) implements FmChip.Snapshot {
         public Snapshot {
             core = core.copy();
             directFrames = Arrays.copyOf(directFrames, directFrames.length);
@@ -1147,5 +1179,6 @@ public class Ym2612Chip {
     }
 
     /** See {@link #captureSfxAdmissionState(int)}. */
-    record SfxAdmissionState(int affectedChannelMask, long opsEnqueuedAtCapture, int queuedAddress) { }
+    record SfxAdmissionState(int affectedChannelMask, long opsEnqueuedAtCapture, int queuedAddress)
+            implements FmChip.SfxAdmissionState { }
 }
