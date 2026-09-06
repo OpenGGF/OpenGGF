@@ -125,6 +125,8 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] keyOn = new int[24];
     private final int[] ssgInvert = new int[24];
     private final int[] ssgHeld = new int[24];
+    /** SSG-EG restart effects deferred until the restarted attack completes: bit 0 phase reset, bit 1 ALT toggle. */
+    private final int[] ssgPendingRestart = new int[24];
     private final int[] output = new int[24];
     private final int[] detune = new int[24];
     private final int[] multiple = new int[24];
@@ -185,7 +187,7 @@ public final class FastYm2612Dsp implements FmDsp {
     @Override
     public void reset() {
         Arrays.fill(registers, 0);
-        for (int[] array : new int[][] {phase, phaseIncrement, egState, keyOn, ssgInvert, ssgHeld, output, detune,
+        for (int[] array : new int[][] {phase, phaseIncrement, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output, detune,
                 multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
                 sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
                 operatorFnum, operatorBlock, channelFnum,
@@ -454,6 +456,11 @@ public final class FastYm2612Dsp implements FmDsp {
         phase[slot] = 0;
         ssgInvert[slot] = 0;
         ssgHeld[slot] = 0;
+        // A key-on with a real attack behaves like an SSG-EG restart: its
+        // ALT toggle or non-ALT phase reset lands when that attack completes
+        // (oracle-established; see handleSsgBoundary).
+        ssgPendingRestart[slot] = (ssgMode[slot] & 8) != 0 && rateAttack[slot] < 62
+                ? ((ssgMode[slot] & 2) != 0 ? 2 : (ssgMode[slot] & 1) != 0 ? 0 : 1) : 0;
         if (rateAttack[slot] >= 62) {
             attenuation[slot] = 0;
             egState[slot] = EG_DECAY;
@@ -472,6 +479,7 @@ public final class FastYm2612Dsp implements FmDsp {
         }
         ssgInvert[slot] = 0;
         ssgHeld[slot] = 0;
+        ssgPendingRestart[slot] = 0;
         keyOn[slot] = 0;
         egState[slot] = EG_RELEASE;
     }
@@ -677,6 +685,7 @@ public final class FastYm2612Dsp implements FmDsp {
             if (level <= 0) {
                 level = 0;
                 egState[slot] = EG_DECAY;
+                applySsgRestartEffects(slot);
             }
             attenuation[slot] = level;
             return;
@@ -694,12 +703,18 @@ public final class FastYm2612Dsp implements FmDsp {
 
     /**
      * SSG-EG at the half-way boundary (attenuation 0x200 and beyond, keyed on).
-     * Hold modes toggle the inversion once if ALT is set, then hold: an
-     * inverted output freezes at the boundary (heard loud), a plain one goes to
-     * full attenuation (silent). Repeat modes toggle the inversion if ALT is set
-     * and restart the attack from the attained attenuation (phase reset only
-     * without ALT), which with the inversion yields the manual's sawtooth and
-     * triangle shapes.
+     * Hold modes hold: an inverted output freezes at the boundary (heard loud),
+     * a plain one goes to full attenuation (silent). Repeat modes toggle the
+     * inversion if ALT is set and restart the attack from the attained
+     * attenuation; when that attack is real (rate below 62) the restart's
+     * side effect lands again when it completes, an ALT toggle or, for the
+     * non-ALT modes, the phase reset, so the attack itself is heard inverted
+     * and the phase restarts with the decay. With an instantaneous attack the
+     * boundary toggle or phase reset is the whole effect. This timing was
+     * established against the cycle-exact oracle (modes 8/10/12/14 with a
+     * real attack moved from about 0.5 to above 0.9 correlation); the
+     * published notes only place the toggle at the boundary, which is the same
+     * thing when the attack is instantaneous.
      */
     private void handleSsgBoundary(int slot) {
         if (keyOn[slot] == 0) {
@@ -708,10 +723,11 @@ public final class FastYm2612Dsp implements FmDsp {
         int mode = ssgMode[slot];
         boolean hold = (mode & 1) != 0;
         boolean alternate = (mode & 2) != 0;
+        boolean instantAttack = rateAttack[slot] >= 62;
         if (hold) {
             if (ssgHeld[slot] == 0) {
                 ssgHeld[slot] = 1;
-                if (alternate) {
+                if (alternate && instantAttack) {
                     ssgInvert[slot] ^= 1;
                 }
                 attenuation[slot] = ssgOutputInverted(slot) ? 0x200 : MAX_ATTENUATION;
@@ -721,15 +737,33 @@ public final class FastYm2612Dsp implements FmDsp {
         }
         if (alternate) {
             ssgInvert[slot] ^= 1;
-        } else {
-            phase[slot] = 0; // only the plain repeat modes restart the phase
+        } else if (instantAttack) {
+            phase[slot] = 0;
         }
-        if (rateAttack[slot] >= 62) {
+        if (instantAttack) {
             attenuation[slot] = 0;
             egState[slot] = EG_DECAY;
+            ssgPendingRestart[slot] = 0;
         } else {
+            ssgPendingRestart[slot] = alternate ? 2 : 1;
             egState[slot] = EG_ATTACK;
         }
+    }
+
+    /** Lands a restart's deferred effects: phase reset (non-ALT) or inversion toggle (ALT). */
+    private void applySsgRestartEffects(int slot) {
+        int effects = ssgPendingRestart[slot];
+        if (effects == 0 || (ssgMode[slot] & 8) == 0) {
+            ssgPendingRestart[slot] = 0;
+            return;
+        }
+        if ((effects & 1) != 0) {
+            phase[slot] = 0;
+        }
+        if ((effects & 2) != 0) {
+            ssgInvert[slot] ^= 1;
+        }
+        ssgPendingRestart[slot] = 0;
     }
 
     private void advanceLfo() {
@@ -804,7 +838,7 @@ public final class FastYm2612Dsp implements FmDsp {
     // ---------------------------------------------------------- snapshots
 
     private int[][] arrays() {
-        return new int[][] {registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, output,
+        return new int[][] {registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
                 detune, multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
                 sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
                 operatorFnum, operatorBlock, channelFnum,

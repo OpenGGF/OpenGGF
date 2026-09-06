@@ -48,6 +48,12 @@ class TestFastFmCoreTolerance {
         try (Stream<Path> listing = Files.list(directory)) {
             scripts = listing.filter(p -> p.toString().endsWith(".txt.gz")).sorted().toList();
         }
+        String only = System.getProperty("openggf.fastfm.only");
+        if (only != null && !only.isBlank()) {
+            java.util.Set<String> wanted = java.util.Set.of(only.split(","));
+            scripts = scripts.stream().filter(p -> wanted.contains(
+                    p.getFileName().toString().replace(".txt.gz", ""))).toList();
+        }
         return scripts.stream().map(script -> DynamicTest.dynamicTest(
                 script.getFileName().toString().replace(".txt.gz", ""), () -> compare(script)));
     }
@@ -118,10 +124,6 @@ class TestFastFmCoreTolerance {
             "s3k-sfx-4d",
             "s3k-sfx-4e",
             "ssg08-ar20",
-            "ssg10-ar20",
-            "ssg12-ar20",
-            "ssg14-ar20",
-            "ssg15-ar20",
             "test-regs");
 
     private static void compare(Path script) throws IOException {
@@ -137,6 +139,9 @@ class TestFastFmCoreTolerance {
             }
         }
         Metrics metrics = rendering.metrics();
+        if (Boolean.getBoolean("openggf.fastfm.dump")) {
+            rendering.dumpWindows(script.getFileName().toString().replace(".txt.gz", ""));
+        }
         // The digest of the fast core's raw output lets a refactor prove it is bit-identical.
         System.out.printf(Locale.ROOT, "fastfm %-16s frames=%7d rmsAccurate=%8.1f rmsFast=%8.1f ratio=%6.3f corr=%6.3f lag=%+d fastDigest=%016x%n",
                 script.getFileName().toString().replace(".txt.gz", ""), rendering.frames,
@@ -242,6 +247,21 @@ class TestFastFmCoreTolerance {
                 mono[i] = left[i] + right[i];
             }
             return mono;
+        }
+
+        /** Diagnostic: RMS of each core per 2048-frame window, and their correlation, to locate a divergence. */
+        void dumpWindows(String name) {
+            double[] a = flatten(accurateChunks);
+            double[] f = flatten(fastChunks);
+            int window = 2048;
+            for (int start = 0; start < a.length; start += window) {
+                int end = Math.min(a.length, start + window);
+                double[] wa = java.util.Arrays.copyOfRange(a, start, end);
+                double[] wf = java.util.Arrays.copyOfRange(f, start, end);
+                double c = correlation(removeMean(wa), removeMean(wf), 0);
+                System.out.printf(Locale.ROOT, "fastfm-window %s %7d acc=%8.1f fast=%8.1f corr=%6.3f%n",
+                        name, start, rms(wa), rms(wf), c);
+            }
         }
 
         long fastDigest() {
