@@ -567,8 +567,13 @@ public final class FastYm2612Dsp implements FmDsp {
         int fb = feedback[channel];
         int feedbackInput = fb == 0 ? 0
                 : (feedbackHistory[channel * 2] + feedbackHistory[channel * 2 + 1]) >> (10 - fb);
-        // Hardware slot order S1, S3, S2, S4: OP3 sees OP2's previous-frame output.
-        int previousOp2 = output[base + 1];
+        // Every modulator reaches its target one frame late: the operator
+        // outputs feeding phase modulation are the previous frame's, whatever
+        // the slot order. Against the oracle this beat both the same-frame
+        // rule and the slot-order rule (alg0 0.91 -> 0.96, alg3 0.93 -> 0.98).
+        int p1 = output[base];
+        int p2 = output[base + 1];
+        int p3 = output[base + 2];
         int op1 = operatorSample(base, feedbackInput, am);
         feedbackHistory[channel * 2 + 1] = feedbackHistory[channel * 2];
         feedbackHistory[channel * 2] = op1;
@@ -578,50 +583,50 @@ public final class FastYm2612Dsp implements FmDsp {
         int sum;
         switch (algorithm[channel]) {
             case 0 -> {
-                op3 = operatorSample(base + 2, previousOp2 >> 1, am);
-                op2 = operatorSample(base + 1, op1 >> 1, am);
-                op4 = operatorSample(base + 3, op3 >> 1, am);
+                op2 = operatorSample(base + 1, p1 >> 1, am);
+                op3 = operatorSample(base + 2, p2 >> 1, am);
+                op4 = operatorSample(base + 3, p3 >> 1, am);
                 sum = op4;
             }
             case 1 -> {
-                op3 = operatorSample(base + 2, (op1 + previousOp2) >> 1, am);
                 op2 = operatorSample(base + 1, 0, am);
-                op4 = operatorSample(base + 3, op3 >> 1, am);
+                op3 = operatorSample(base + 2, (p1 + p2) >> 1, am);
+                op4 = operatorSample(base + 3, p3 >> 1, am);
                 sum = op4;
             }
             case 2 -> {
-                op3 = operatorSample(base + 2, previousOp2 >> 1, am);
                 op2 = operatorSample(base + 1, 0, am);
-                op4 = operatorSample(base + 3, (op1 + op3) >> 1, am);
+                op3 = operatorSample(base + 2, p2 >> 1, am);
+                op4 = operatorSample(base + 3, (p1 + p3) >> 1, am);
                 sum = op4;
             }
             case 3 -> {
+                op2 = operatorSample(base + 1, p1 >> 1, am);
                 op3 = operatorSample(base + 2, 0, am);
-                op2 = operatorSample(base + 1, op1 >> 1, am);
-                op4 = operatorSample(base + 3, (op2 + op3) >> 1, am);
+                op4 = operatorSample(base + 3, (p2 + p3) >> 1, am);
                 sum = op4;
             }
             case 4 -> {
+                op2 = operatorSample(base + 1, p1 >> 1, am);
                 op3 = operatorSample(base + 2, 0, am);
-                op2 = operatorSample(base + 1, op1 >> 1, am);
-                op4 = operatorSample(base + 3, op3 >> 1, am);
+                op4 = operatorSample(base + 3, p3 >> 1, am);
                 sum = op2 + op4;
             }
             case 5 -> {
-                op3 = operatorSample(base + 2, op1 >> 1, am);
-                op2 = operatorSample(base + 1, op1 >> 1, am);
-                op4 = operatorSample(base + 3, op1 >> 1, am);
+                op2 = operatorSample(base + 1, p1 >> 1, am);
+                op3 = operatorSample(base + 2, p1 >> 1, am);
+                op4 = operatorSample(base + 3, p1 >> 1, am);
                 sum = op2 + op3 + op4;
             }
             case 6 -> {
+                op2 = operatorSample(base + 1, p1 >> 1, am);
                 op3 = operatorSample(base + 2, 0, am);
-                op2 = operatorSample(base + 1, op1 >> 1, am);
                 op4 = operatorSample(base + 3, 0, am);
                 sum = op2 + op3 + op4;
             }
             default -> {
-                op3 = operatorSample(base + 2, 0, am);
                 op2 = operatorSample(base + 1, 0, am);
+                op3 = operatorSample(base + 2, 0, am);
                 op4 = operatorSample(base + 3, 0, am);
                 sum = op1 + op2 + op3 + op4;
             }

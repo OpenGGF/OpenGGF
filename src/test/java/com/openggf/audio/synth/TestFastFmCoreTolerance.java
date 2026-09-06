@@ -36,6 +36,15 @@ class TestFastFmCoreTolerance {
             Double.parseDouble(System.getProperty("openggf.fastfm.minCorrelation", "0.9"));
     private static final double MAX_LEVEL_RATIO =
             Double.parseDouble(System.getProperty("openggf.fastfm.maxLevelRatio", "1.25"));
+    /*
+     * The RMS-envelope and zero-crossing contours below are diagnostics only.
+     * A contour-based acceptance for feedback-heavy scripts was tried and
+     * withdrawn: a second accurate core with a one-frame write delay still
+     * correlates at 0.88-1.0 on those scripts (so they are not chaotic), and
+     * the RMS contour passed a semitone-wrong negative control. See the
+     * control modes in CONTROL.
+     */
+
     /** Scripts quieter than this RMS on the accurate core are judged on level only. */
     private static final double SILENCE_RMS = 40.0;
     private static final int MAX_FRAMES = Integer.getInteger("openggf.fastfm.maxFrames", 160_000);
@@ -82,7 +91,6 @@ class TestFastFmCoreTolerance {
             "alg5-fb7",
             "alg7-fb7",
             "bus-edges",
-            "ch3-csm",
             "ch3-special",
             "dac-ramp-dis",
             "dac-ramp-en",
@@ -110,14 +118,12 @@ class TestFastFmCoreTolerance {
             "lfo-f7",
             "lfo-toggle",
             "pan-tl",
-            "s1-sfx-a6",
             "s1-sfx-ac",
             "s1-sfx-b5",
             "s1-sfx-be",
             "s1-sfx-c6",
             "s1-sfx-ce",
             "s1-sfx-cf",
-            "s2-sfx-a6",
             "s2-sfx-ac",
             "s2-sfx-b5",
             "s2-sfx-bc",
@@ -129,12 +135,32 @@ class TestFastFmCoreTolerance {
             "ssg08-ar20",
             "test-regs");
 
+    /**
+     * Validation modes for the contour criterion (diagnostic only):
+     * {@code accurateDelay} replaces the fast arm with a second accurate core
+     * whose writes land one frame late to measure sensitivity to write timing;
+     * agreement on contours alone does not establish fidelity or chaos.
+     * {@code pitch}, {@code routing} and
+     * {@code feedback} corrupt the fast arm's writes (F-number +1 semitone,
+     * algorithm bit flipped, feedback reduced by one) so a criterion that still
+     * passes them is too weak.
+     */
+    private static final String CONTROL = System.getProperty("openggf.fastfm.control", "");
+
     private static void compare(Path script) throws IOException {
         Ym2612Chip accurate = new Ym2612Chip();
         accurate.setOutputSampleRate(Ym2612Chip.getInternalRate());
-        FastYm2612Chip fast = new FastYm2612Chip(new FastYm2612Dsp());
-        fast.setOutputSampleRate(Ym2612Chip.getInternalRate());
-        Rendering rendering = new Rendering(accurate, fast);
+        FmChip candidate;
+        if (CONTROL.equals("accurateDelay")) {
+            Ym2612Chip delayed = new Ym2612Chip();
+            delayed.setOutputSampleRate(Ym2612Chip.getInternalRate());
+            candidate = delayed;
+        } else {
+            FastYm2612Chip fast = new FastYm2612Chip(new FastYm2612Dsp());
+            fast.setOutputSampleRate(Ym2612Chip.getInternalRate());
+            candidate = fast;
+        }
+        Rendering rendering = new Rendering(accurate, candidate);
         try (BufferedReader reader = NukedOpn2ScriptRunner.open(script)) {
             String line;
             while ((line = reader.readLine()) != null && rendering.frames < MAX_FRAMES) {
@@ -146,10 +172,10 @@ class TestFastFmCoreTolerance {
             rendering.dumpWindows(script.getFileName().toString().replace(".txt.gz", ""));
         }
         // The digest of the fast core's raw output lets a refactor prove it is bit-identical.
-        System.out.printf(Locale.ROOT, "fastfm %-16s frames=%7d rmsAccurate=%8.1f rmsFast=%8.1f ratio=%6.3f corr=%6.3f lag=%+d fastDigest=%016x%n",
+        System.out.printf(Locale.ROOT, "fastfm %-16s frames=%7d rmsAccurate=%8.1f rmsFast=%8.1f ratio=%6.3f corr=%6.3f lag=%+d envCorr=%6.3f zcErr=%6.4f fb=%d fastDigest=%016x%n",
                 script.getFileName().toString().replace(".txt.gz", ""), rendering.frames,
                 metrics.rmsAccurate, metrics.rmsFast, metrics.ratio, metrics.correlation, metrics.lag,
-                rendering.fastDigest());
+                metrics.envelopeCorrelation, metrics.zeroCrossingError, rendering.maxFeedback, rendering.fastDigest());
         org.junit.jupiter.api.Assumptions.assumeFalse(
                 DEFERRED.contains(script.getFileName().toString().replace(".txt.gz", "")),
                 "deferred: open defect class, metrics printed above");
@@ -166,7 +192,9 @@ class TestFastFmCoreTolerance {
 
     private static final class Rendering {
         private final Ym2612Chip accurate;
-        private final FastYm2612Chip fast;
+        private final FmChip fast;
+        private final java.util.ArrayDeque<int[]> delayedWrites = new java.util.ArrayDeque<>();
+        private final int[] latchedHigh = new int[2];
         private final int[] left = new int[1024];
         private final int[] right = new int[1024];
         private final List<int[]> accurateChunks = new ArrayList<>();
@@ -175,8 +203,10 @@ class TestFastFmCoreTolerance {
         private int frames;
         private int paceAddress;
         private int paceData;
+        /** Highest feedback value written to 0xB0–0xB2 on either bank. */
+        int maxFeedback;
 
-        Rendering(Ym2612Chip accurate, FastYm2612Chip fast) {
+        Rendering(Ym2612Chip accurate, FmChip fast) {
             this.accurate = accurate;
             this.fast = fast;
         }
@@ -202,18 +232,29 @@ class TestFastFmCoreTolerance {
                     int value = Integer.parseInt(fields[2]);
                     if ((busPort & 1) == 0) {
                         accurate.writeAddress(busPort >> 1, value);
-                        fast.writeAddress(busPort >> 1, value);
+                        if (CONTROL.equals("accurateDelay")) {
+                            delayedWrites.add(new int[] {2, busPort >> 1, value});
+                        } else {
+                            fast.writeAddress(busPort >> 1, value);
+                        }
                     } else {
                         accurate.writeData(busPort >> 1, value);
-                        fast.writeData(busPort >> 1, value);
+                        if (CONTROL.equals("accurateDelay")) {
+                            delayedWrites.add(new int[] {3, busPort >> 1, value});
+                        } else {
+                            fast.writeData(busPort >> 1, value);
+                        }
                     }
                 }
                 case "reg" -> {
                     int part = Integer.parseInt(fields[1]);
                     int register = Integer.parseInt(fields[2]);
                     int value = Integer.parseInt(fields[3]);
+                    if (register >= 0xB0 && register <= 0xB2) {
+                        maxFeedback = Math.max(maxFeedback, (value >> 3) & 7);
+                    }
                     accurate.write(part, register, value);
-                    fast.write(part, register, value);
+                    writeCandidate(part, register, value);
                     clock(paceAddress + paceData);
                 }
                 case "clock" -> clock(Long.parseLong(fields[1]));
@@ -229,13 +270,66 @@ class TestFastFmCoreTolerance {
             }
         }
 
+        /** Routes a register write to the candidate arm, applying the control or negative mode. */
+        private void writeCandidate(int part, int register, int value) {
+            if (CONTROL.equals("accurateDelay")) {
+                delayedWrites.add(new int[] {1, part, register, value});
+                return;
+            }
+            int port = part & 1;
+            switch (CONTROL) {
+                case "pitch" -> {
+                    if (register >= 0xA4 && register <= 0xA6) {
+                        latchedHigh[port] = value;
+                    } else if (register >= 0xA0 && register <= 0xA2) {
+                        int fnum = ((latchedHigh[port] & 7) << 8) | value;
+                        int block = (latchedHigh[port] >> 3) & 7;
+                        int wrong = Math.min(0x7FF, (int) Math.round(fnum * Math.pow(2.0, 1.0 / 12.0)));
+                        fast.write(part, register + 4, (block << 3) | (wrong >> 8));
+                        fast.write(part, register, wrong & 0xFF);
+                        return;
+                    }
+                }
+                case "routing" -> {
+                    if (register >= 0xB0 && register <= 0xB2) {
+                        value ^= 1;
+                    }
+                }
+                case "feedback" -> {
+                    if (register >= 0xB0 && register <= 0xB2 && ((value >> 3) & 7) > 0) {
+                        value -= 8;
+                    }
+                }
+                default -> {
+                }
+            }
+            fast.write(part, register, value);
+        }
+
         private void clock(long count) {
             cycles += count;
             long due = cycles / 24 - frames;
             while (due > 0) {
                 int chunk = (int) Math.min(due, left.length);
                 accurateChunks.add(render(accurate, chunk));
-                fastChunks.add(render(fast, chunk));
+                if (CONTROL.equals("accurateDelay")) {
+                    // Land the writes queued before this frame one frame late.
+                    java.util.List<int[]> landing = new ArrayList<>(delayedWrites);
+                    delayedWrites.clear();
+                    fastChunks.add(render(fast, 1));
+                    for (int[] w : landing) {
+                        switch (w[0]) {
+                            case 1 -> fast.write(w[1], w[2], w[3]);
+                            case 2 -> fast.writeAddress(w[1], w[2]);
+                            default -> fast.writeData(w[1], w[2]);
+                        }
+                    }
+                    if (chunk > 1) {
+                        fastChunks.add(render(fast, chunk - 1));
+                    }
+                } else {
+                    fastChunks.add(render(fast, chunk));
+                }
                 frames += chunk;
                 due -= chunk;
             }
@@ -262,8 +356,9 @@ class TestFastFmCoreTolerance {
                 double[] wa = java.util.Arrays.copyOfRange(a, start, end);
                 double[] wf = java.util.Arrays.copyOfRange(f, start, end);
                 double c = correlation(removeMean(wa), removeMean(wf), 0);
-                System.out.printf(Locale.ROOT, "fastfm-window %s %7d acc=%8.1f fast=%8.1f corr=%6.3f hzAcc=%9.3f hzFast=%9.3f%n",
-                        name, start, rms(wa), rms(wf), c, frequencyHz(wa), frequencyHz(wf));
+                System.out.printf(Locale.ROOT, "fastfm-window %s %7d acc=%8.1f fast=%8.1f corr=%6.3f hzAcc=%9.3f hzFast=%9.3f zcAcc=%d zcFast=%d%n",
+                        name, start, rms(wa), rms(wf), c, frequencyHz(wa), frequencyHz(wf),
+                        crossings(removeMean(wa), 0, wa.length), crossings(removeMean(wf), 0, wf.length));
             }
         }
 
@@ -292,7 +387,65 @@ class TestFastFmCoreTolerance {
                     bestLag = lag;
                 }
             }
-            return new Metrics(rmsA, rmsF, rmsA == 0 ? (rmsF == 0 ? 1 : Double.POSITIVE_INFINITY) : rmsF / rmsA, best, bestLag);
+            return new Metrics(rmsA, rmsF, rmsA == 0 ? (rmsF == 0 ? 1 : Double.POSITIVE_INFINITY) : rmsF / rmsA, best, bestLag,
+                    envelopeCorrelation(a, f, 256), zeroCrossingContourError(a, f, 256));
+        }
+
+        /**
+         * Correlation of the two cores' RMS envelopes over {@code window}-frame
+         * windows: what a listener hears for noise-like sounds (maximal feedback
+         * is chaotic, so sample correlation there is meaningless even when the
+         * two cores sound the same).
+         */
+        private static double envelopeCorrelation(double[] a, double[] f, int window) {
+            int n = Math.min(a.length, f.length) / window;
+            if (n < 2) {
+                return 0;
+            }
+            double[] ea = new double[n];
+            double[] ef = new double[n];
+            for (int w = 0; w < n; w++) {
+                ea[w] = rms(java.util.Arrays.copyOfRange(a, w * window, (w + 1) * window));
+                ef[w] = rms(java.util.Arrays.copyOfRange(f, w * window, (w + 1) * window));
+            }
+            return correlation(removeMean(ea), removeMean(ef), 0);
+        }
+
+        /**
+         * Mean relative difference of the zero-crossing rate per window: a
+         * pitch/timbre probe that the RMS contour is blind to (a tone a
+         * semitone off has the same envelope but 6 % more crossings).
+         */
+        private static double zeroCrossingContourError(double[] a, double[] f, int window) {
+            int n = Math.min(a.length, f.length) / window;
+            double sum = 0;
+            int counted = 0;
+            for (int w = 0; w < n; w++) {
+                // Per-window mean removal: the accurate core's ladder DC offset otherwise
+                // swallows every crossing of a quiet tail.
+                double[] wa = removeMean(java.util.Arrays.copyOfRange(a, w * window, (w + 1) * window));
+                double[] wf = removeMean(java.util.Arrays.copyOfRange(f, w * window, (w + 1) * window));
+                if (rms(wa) < SILENCE_RMS) {
+                    continue; // both quiet: no pitch to compare
+                }
+                int za = crossings(wa, 0, wa.length);
+                int zf = crossings(wf, 0, wf.length);
+                if (za >= 8) {
+                    sum += Math.abs(zf - za) / (double) za;
+                    counted++;
+                }
+            }
+            return counted == 0 ? 0 : sum / counted;
+        }
+
+        private static int crossings(double[] x, int from, int to) {
+            int count = 0;
+            for (int i = from + 1; i < to; i++) {
+                if ((x[i - 1] < 0) != (x[i] < 0)) {
+                    count++;
+                }
+            }
+            return count;
         }
 
         private static double[] flatten(List<int[]> chunks) {
@@ -363,6 +516,7 @@ class TestFastFmCoreTolerance {
         }
     }
 
-    private record Metrics(double rmsAccurate, double rmsFast, double ratio, double correlation, int lag) {
+    private record Metrics(double rmsAccurate, double rmsFast, double ratio, double correlation, int lag,
+                           double envelopeCorrelation, double zeroCrossingError) {
     }
 }

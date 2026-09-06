@@ -77,7 +77,10 @@ default is a separate commit.
 - Feedback on operator 1: average of its two previous outputs, shifted by the
   3-bit feedback register (0 = off, 1..7 = π/16 .. 4π of phase).
 - Algorithms: the eight standard OPN connection graphs; modulator outputs feed
-  successors' phase input, carrier outputs sum into the channel output.
+  successors' phase input (summed 14-bit outputs, then halved into the 10-bit
+  phase) from the previous frame's outputs on every path (oracle-established:
+  it beat both same-frame and slot-order rules), carrier outputs sum into the
+  channel output.
 - LFO: 3-bit rate; the manual's 3.98–72.2 Hz table is quoted for an 8 MHz
   clock and corresponds to 109/78/72/68/63/45/9/6 internal frames per step of
   a 128-step cycle (nearest integers, analytical). PM, measured black-box
