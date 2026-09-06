@@ -32,6 +32,15 @@ import org.junit.jupiter.api.TestFactory;
  */
 class TestFastFmCoreTolerance {
     private static final int LAG_SEARCH = 64;
+
+    /**
+     * Scripts that exercise the LSI test registers or bus-edge behaviour the
+     * fast core does not model by contract (design document). They still run
+     * for their metrics but are reported as skipped under their own reason,
+     * separate from the deferred defects that are expected to shrink.
+     */
+    private static final java.util.Set<String> OUT_OF_SCOPE = java.util.Set.of(
+            "fuzz-s0", "fuzz-s1", "fuzz-s2", "test-regs", "bus-edges");
     private static final double MIN_CORRELATION =
             Double.parseDouble(System.getProperty("openggf.fastfm.minCorrelation", "0.9"));
     private static final double MAX_LEVEL_RATIO =
@@ -83,16 +92,9 @@ class TestFastFmCoreTolerance {
      * suite totals show what is enforced; the list only ever shrinks.
      */
     private static final java.util.Set<String> DEFERRED = java.util.Set.of(
-            "bus-edges",
             "ch3-special",
             "dac-ramp-dis",
             "dac-ramp-en",
-            "dt5-mul15",
-            "dt6-mul15",
-            "dt7-mul15",
-            "fuzz-s0",
-            "fuzz-s1",
-            "fuzz-s2",
             "lfo-f0",
             "lfo-f1",
             "lfo-f2",
@@ -110,9 +112,7 @@ class TestFastFmCoreTolerance {
             "s2-sfx-ac",
             "s2-sfx-bc",
             "s2-sfx-cf",
-            "s3k-sfx-3c",
-            "ssg08-ar20",
-            "test-regs");
+            "s3k-sfx-3c");
 
     /**
      * Validation modes for the contour criterion (diagnostic only):
@@ -156,12 +156,14 @@ class TestFastFmCoreTolerance {
             rendering.dumpWindows(script.getFileName().toString().replace(".txt.gz", ""));
         }
         // The digest of the fast core's raw output lets a refactor prove it is bit-identical.
-        System.out.printf(Locale.ROOT, "fastfm %-16s frames=%7d rmsAccurate=%8.1f rmsFast=%8.1f ratio=%6.3f corr=%6.3f lag=%+d envCorr=%6.3f zcErr=%6.4f fb=%d fastDigest=%016x%n",
+        System.out.printf(Locale.ROOT, "fastfm %-16s frames=%7d rmsAccurate=%8.1f rmsFast=%8.1f ratio=%6.3f corr=%6.3f lag=%+.3f envCorr=%6.3f zcErr=%6.4f fb=%d fastDigest=%016x%n",
                 script.getFileName().toString().replace(".txt.gz", ""), rendering.frames,
                 metrics.rmsAccurate, metrics.rmsFast, metrics.ratio, metrics.correlation, metrics.lag,
                 metrics.envelopeCorrelation, metrics.zeroCrossingError, rendering.maxFeedback, rendering.fastDigest());
-        org.junit.jupiter.api.Assumptions.assumeFalse(
-                DEFERRED.contains(script.getFileName().toString().replace(".txt.gz", "")),
+        String name = script.getFileName().toString().replace(".txt.gz", "");
+        org.junit.jupiter.api.Assumptions.assumeFalse(OUT_OF_SCOPE.contains(name),
+                "out of scope by contract (LSI test registers / bus edges), metrics printed above");
+        org.junit.jupiter.api.Assumptions.assumeFalse(DEFERRED.contains(name),
                 "deferred: open defect class, metrics printed above");
         if (metrics.rmsAccurate < SILENCE_RMS) {
             assertTrue(metrics.rmsFast < SILENCE_RMS * MAX_LEVEL_RATIO,
@@ -362,16 +364,17 @@ class TestFastFmCoreTolerance {
             double[] f = removeMean(flatten(fastChunks));
             double rmsA = rms(a);
             double rmsF = rms(f);
-            double best = -1;
-            int bestLag = 0;
-            for (int lag = -LAG_SEARCH; lag <= LAG_SEARCH; lag++) {
-                double c = correlation(a, f, lag);
-                if (c > best) {
-                    best = c;
-                    bestLag = lag;
-                }
+            // One coherent shift for the whole waveform: integer frames first,
+            // then (only when still below the threshold) a bounded fractional
+            // refinement within one frame of the winner (CS's validated helper:
+            // it rejects semitone and routing negatives). Levels stay unfiltered.
+            FastFmWaveformAlignment.Alignment alignment =
+                    FastFmWaveformAlignment.integer(a, f, LAG_SEARCH);
+            if (alignment.correlation() < MIN_CORRELATION) {
+                alignment = FastFmWaveformAlignment.refine(a, f, LAG_SEARCH, alignment);
             }
-            return new Metrics(rmsA, rmsF, rmsA == 0 ? (rmsF == 0 ? 1 : Double.POSITIVE_INFINITY) : rmsF / rmsA, best, bestLag,
+            return new Metrics(rmsA, rmsF, rmsA == 0 ? (rmsF == 0 ? 1 : Double.POSITIVE_INFINITY) : rmsF / rmsA,
+                    alignment.correlation(), alignment.lag(),
                     envelopeCorrelation(a, f, 256), zeroCrossingContourError(a, f, 256));
         }
 
@@ -500,7 +503,7 @@ class TestFastFmCoreTolerance {
         }
     }
 
-    private record Metrics(double rmsAccurate, double rmsFast, double ratio, double correlation, int lag,
+    private record Metrics(double rmsAccurate, double rmsFast, double ratio, double correlation, double lag,
                            double envelopeCorrelation, double zeroCrossingError) {
     }
 }

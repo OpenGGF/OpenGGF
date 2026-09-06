@@ -490,11 +490,12 @@ public final class FastYm2612Dsp implements FmDsp {
         phase[slot] = 0;
         ssgInvert[slot] = 0;
         ssgHeld[slot] = 0;
-        // A key-on with a real attack behaves like an SSG-EG restart: its
-        // ALT toggle or non-ALT phase reset lands when that attack completes
-        // (oracle-established; see handleSsgBoundary).
+        // A key-on with a real attack in an ALT mode toggles the inversion when
+        // that attack completes (oracle-established; see handleSsgBoundary).
+        // Non-ALT modes hold the phase at zero while the attenuation sits at or
+        // above the half-way point instead (CS's held-phase measurement).
         ssgPendingRestart[slot] = (ssgMode[slot] & 8) != 0 && rateAttack[slot] < 62
-                ? ((ssgMode[slot] & 2) != 0 ? 2 : (ssgMode[slot] & 1) != 0 ? 0 : 1) : 0;
+                ? ((ssgMode[slot] & 2) != 0 ? 2 : 0) : 0;
         if (rateAttack[slot] >= 62) {
             attenuation[slot] = 0;
             egState[slot] = EG_DECAY;
@@ -529,6 +530,9 @@ public final class FastYm2612Dsp implements FmDsp {
         while (ssgMask != 0) {
             int slot = Integer.numberOfTrailingZeros(ssgMask);
             ssgMask &= ssgMask - 1;
+            if (keyOn[slot] != 0 && (ssgMode[slot] & 3) == 0 && attenuation[slot] >= 0x200) {
+                phase[slot] = 0;
+            }
             if (keyOn[slot] != 0 && egState[slot] != EG_ATTACK && attenuation[slot] >= 0x200) {
                 handleSsgBoundary(slot);
             }
@@ -752,17 +756,14 @@ public final class FastYm2612Dsp implements FmDsp {
     /**
      * SSG-EG at the half-way boundary (attenuation 0x200 and beyond, keyed on).
      * Hold modes hold: an inverted output freezes at the boundary (heard loud),
-     * a plain one goes to full attenuation (silent). Repeat modes toggle the
-     * inversion if ALT is set and restart the attack from the attained
-     * attenuation; when that attack is real (rate below 62) the restart's
-     * side effect lands again when it completes, an ALT toggle or, for the
-     * non-ALT modes, the phase reset, so the attack itself is heard inverted
-     * and the phase restarts with the decay. With an instantaneous attack the
-     * boundary toggle or phase reset is the whole effect. This timing was
-     * established against the cycle-exact oracle (modes 8/10/12/14 with a
-     * real attack moved from about 0.5 to above 0.9 correlation); the
-     * published notes only place the toggle at the boundary, which is the same
-     * thing when the attack is instantaneous.
+     * a plain one goes to full attenuation (silent). Repeat modes restart the
+     * attack from the attained attenuation; ALT modes toggle the inversion at
+     * the boundary and, when the attack is real (rate below 62), again when it
+     * completes (oracle-established). Non-ALT repeat modes reset the phase at
+     * the boundary and keep it held at zero for every frame the attenuation
+     * stays at or above the half-way point, including during the restarted
+     * attack (Nemesis's 2009 notes, confirmed by CS against the oracle:
+     * ssg08 0.81 to 0.999, ssg12 0.93 to 0.998).
      */
     private void handleSsgBoundary(int slot) {
         if (keyOn[slot] == 0) {
@@ -785,7 +786,7 @@ public final class FastYm2612Dsp implements FmDsp {
         }
         if (alternate) {
             ssgInvert[slot] ^= 1;
-        } else if (instantAttack) {
+        } else {
             phase[slot] = 0;
         }
         if (instantAttack) {
@@ -793,7 +794,7 @@ public final class FastYm2612Dsp implements FmDsp {
             egState[slot] = EG_DECAY;
             ssgPendingRestart[slot] = 0;
         } else {
-            ssgPendingRestart[slot] = alternate ? 2 : 1;
+            ssgPendingRestart[slot] = alternate ? 2 : 0;
             egState[slot] = EG_ATTACK;
         }
     }
