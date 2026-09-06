@@ -35,8 +35,12 @@ reset only in the non-ALT repeat modes, LFO divider terminal counts) and the
 oracle-established SSG-EG restart timing (a boundary restart's ALT toggle or
 phase reset lands when the restarted attack completes, at once for rates
 62–63; every SSG mode with a real attack moved from about 0.5 to 0.81–0.95),
-125 of 183 scripts are within correlation ≥ 0.9 and level ratio 0.8–1.25 or
-silent on both cores; all SMPS music logs 0.967–0.986. The 58 deferred scripts are
+and the decay-to-sustain transition as a level comparison (a D1R=0, SL=0
+voice held at full level and made three S3K effects 1.5–2.7× too loud; the
+cause was isolated with synthetic instrument variants), 129 of 183 scripts are
+within correlation ≥ 0.9 and level ratio 0.8–1.25 or silent on both cores; all
+SMPS music logs 0.967–0.986 and no effect is outside the level bounds any
+more. The 54 deferred scripts are
 enumerated in the test and reported as skipped, not passed; the open classes
 are in the design document. The default core remains `accurate`.
 

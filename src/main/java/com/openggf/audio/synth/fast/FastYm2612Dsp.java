@@ -655,6 +655,14 @@ public final class FastYm2612Dsp implements FmDsp {
 
     private void advanceEnvelope(int slot, int counter) {
         int state = egState[slot];
+        if (state == EG_DECAY && attenuation[slot] >= sustainLevel[slot]) {
+            // The sustain level is a level comparison, not a step event: with a
+            // zero decay rate (or a sustain level already reached) the envelope
+            // still moves on to the sustain rate. Without this a D1R=0, SL=0
+            // voice held at full level for ever (S3K effects were 2-4x too loud).
+            state = EG_SUSTAIN;
+            egState[slot] = state;
+        }
         boolean ssg = (ssgMode[slot] & 8) != 0;
         if (ssg && ssgHeld[slot] != 0) {
             return;

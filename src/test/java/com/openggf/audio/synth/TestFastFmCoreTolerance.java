@@ -48,6 +48,13 @@ class TestFastFmCoreTolerance {
         try (Stream<Path> listing = Files.list(directory)) {
             scripts = listing.filter(p -> p.toString().endsWith(".txt.gz")).sorted().toList();
         }
+        String extra = System.getProperty("openggf.fastfm.extraDir");
+        if (extra != null && !extra.isBlank()) {
+            try (Stream<Path> listing = Files.list(Path.of(extra))) {
+                scripts = Stream.concat(scripts.stream(),
+                        listing.filter(p -> p.toString().endsWith(".txt.gz")).sorted()).toList();
+            }
+        }
         String only = System.getProperty("openggf.fastfm.only");
         if (only != null && !only.isBlank()) {
             java.util.Set<String> wanted = java.util.Set.of(only.split(","));
@@ -114,15 +121,11 @@ class TestFastFmCoreTolerance {
             "s2-sfx-ac",
             "s2-sfx-b5",
             "s2-sfx-bc",
-            "s2-sfx-c1",
             "s2-sfx-cf",
             "s2-sfx-d0",
             "s3k-sfx-33",
             "s3k-sfx-3c",
-            "s3k-sfx-3d",
             "s3k-sfx-45",
-            "s3k-sfx-4d",
-            "s3k-sfx-4e",
             "ssg08-ar20",
             "test-regs");
 
