@@ -27,12 +27,18 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int[] LOG_SIN = new int[256];
     /** 2^(x/256) - 1 scaled to 10 bits, indexed by the fractional attenuation. */
     private static final int[] EXP = new int[256];
-    /** Yamaha detune table: units of phase-increment LSB by key code and |DT|. */
+    /**
+     * Detune in phase-increment LSB by key code and |DT|. Measured through
+     * the accurate public facade: isolated MUL1 carrier, all 32 keycodes,
+     * DT0..3, 160,000 samples per tone. Subtract DT0 pitch and convert by
+     * 2^20/internalRate; maximum integer-rounding residual was 0.00554 LSB.
+     * See the fast-FM validation record and TestFastFmDetune.
+     */
     private static final int[][] DETUNE = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7},
-        {1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 11, 12, 13, 14, 16, 16, 16, 16, 16},
-        {2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 6, 6, 7, 8, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 20, 22, 22, 22, 22, 22},
+        {0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 8, 8, 8, 8},
+        {1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 8, 8, 9, 10, 11, 12, 13, 14, 16, 16, 16, 16},
+        {2, 2, 2, 2, 2, 3, 3, 3, 4, 4, 4, 5, 5, 6, 6, 7, 8, 8, 9, 10, 11, 12, 13, 14, 16, 17, 19, 20, 22, 22, 22, 22},
     };
     /** Key-code low bits from the top four F-number bits (manual, "note" bits). */
     private static final int[] FNUM_NOTE = {0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3};

@@ -129,3 +129,26 @@ attenuation. The release branch imports that behavior and its diagnostic
 frequency probe, while retaining the original waveform/level acceptance
 criterion; the unvalidated contour fallback is excluded. The timer/CSM fix
 remains present. Follow-up strict-vector verification is pending.
+
+## Detune measurement and correction
+
+An independent public-facade scan used an isolated OP1 carrier, MUL1, AR31,
+all eight blocks and four representative F-numbers (`200`, `380`, `400`,
+`480` hex), DT0..3, and 160,000 steady samples per arm. Linear regression
+of interpolated rising-crossing times measures pitch; subtracting DT0 and
+multiplying by `2^20/internalRate` recovers the detune increment. Maximum
+rounding residual was 0.00554 phase-increment LSB. The original table had
+43 differing entries; this correction uses the measured integers.
+`TestFastFmDetune` independently compares positive and negative detune pitch
+at five representative keycodes through public facades, without reading or
+repeating either implementation's tables. The red run reproduced DT1 errors
+at keycodes 12, 20 and 28 (1/2, 2/4 and 5/8 LSB respectively).
+
+On `14779f2eb` plus the table and regression, the focused Maven run completed:
+five detune and six facade/timer cases pass; the 183-vector tolerance class
+still lists 51 deferrals and exposes one new enforced failure, `dt7-mul15`
+(correlation 0.894). All 16 original algorithm/feedback vectors now meet the
+unchanged waveform and level thresholds; `alg1-fb7` improves 0.104 to 0.924,
+`alg2-fb7` 0.117 to 0.912, and `alg5-fb7` 0.444 to 0.929. LFO and remaining
+effects still need work. This is intermediate evidence, not release approval;
+the high-frequency composite failure must be resolved before integration.
