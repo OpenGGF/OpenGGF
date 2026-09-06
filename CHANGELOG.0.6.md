@@ -1,5 +1,13 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM reproduces the YM2612 LFO clock and pitch modulation as measured
+  on the cycle-exact oracle: a free-running prescaler with bit-containment
+  terminals (periods 108/77/71/67/62/44/8/5 frames, exact first-step delays
+  after rate changes), half-step PM offsets built from truncated whole, half
+  and quarter F-number terms, and the twelve-bit wrap of the modulated
+  F-number. Single-operator PM probes at every depth now match at 1.000 and
+  a modulated PMS 7 voice rises from 0.39 to 0.99.
+
 - Fast FM preserves the discrete LFO amplitude steps and operator output delay,
   correcting amplitude-modulated voices at every depth and retaining that history on rewind.
 

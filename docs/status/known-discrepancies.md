@@ -3178,7 +3178,9 @@ coverage and brings S3K effect 3C within tolerance. FM/DAC relative timing
 and all DAC data/enable write offsets have independent output coverage.
 Scheduled frequency, level and key admission now closes the S2 BC and pan/TL
 failures, with independent sample-exact high-feedback transition coverage.
-AM now preserves discrete depths and operator output history, with independent
-all-channel/all-carrier measurements and rewind coverage. The combined PM/AM
-release checks are still pending integration and are **not** accepted discrepancies merely
+The LFO prescaler and PM arithmetic are now oracle-measured (bit-containment
+terminals, half-step truncated partial sums, twelve-bit wrap). AM preserves
+discrete depths and operator output history, with independent all-channel/
+all-carrier measurements and rewind coverage. Combined release verification
+is pending; fidelity failures are **not** accepted discrepancies merely
 because this approximation exists. See the [fast FM validation record](../architecture/validation/audio/2026-09-06-fast-fm-release.md).

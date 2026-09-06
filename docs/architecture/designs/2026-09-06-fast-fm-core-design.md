@@ -83,18 +83,37 @@ default is a separate commit.
   two-old output, OP3→OP4 current output, and other edges previous output.
   Carrier outputs sum into the channel output. These precise ages are probe
   results, not exact cycle labels from Sauraen's pipeline research.
-- LFO: 3-bit rate; the manual's 3.98–72.2 Hz table is quoted for an 8 MHz
-  clock and corresponds to 109/78/72/68/63/45/9/6 internal frames per step of
-  a 128-step cycle (nearest integers, analytical). PM, measured black-box
-  from the oracle with single-operator probe tones: a 32-position cycle (one
-  position per four LFO steps) whose quarter is the stepped table
-  {0,0,32,48,64,64,80,96} units at PMS 7, halving per PMS down to
-  {0,0,0,0,4,4,4,4} at PMS 1, applied as the integer F-number offset
-  `((fnum >> 4) * units) >> 7` (verified at top-seven-bit values 16, 38, 47
-  and 58; PMS 7 peaks at +4.62 %, the manual's ±80 cents). A disabled LFO
-  holds its counter at zero, the AM triangle's maximum attenuation; AM depth
-  per channel (2 bits: 0, 1.4, 5.9, 11.8 dB) applied to operators with AM
-  enabled, PM depth per channel (3 bits) applied as an F-number offset.
+- LFO: 3-bit rate. The prescaler is a free-running frame counter that runs
+  whether or not the LFO is enabled and is never touched by the 0x22 write;
+  each frame it is compared before it advances, and a count that contains
+  the rate's terminal bits (`(count & terminal) == terminal`, terminals
+  108/77/71/67/62/44/8/5) restarts at one and, when enabled, steps the
+  128-step cycle. From a cleared count that gives the periods 108, 77, 71,
+  67, 62, 44, 8 and 5 frames (the manual's 3.98–72.2 Hz table at its 8 MHz
+  clock); after a rate change it explains every measured first-step delay
+  (an old count of 84 meets terminal 62 at 126 and 77 at 93), which a modulo
+  or equality counter cannot. Disabling holds the step at zero. The step's PM
+  effect reaches the output one frame after the terminal. All of this was
+  measured on the cycle-exact oracle by global phase fits of a PM-only
+  single-operator tone (residual 2e-4 cycles) at every rate, at several
+  enable times, with the rate pre-set or changed on enable, and at the
+  terminal edge (enable frames 3301/3304 at rate 5, 3030 at rate 7, 3133 at
+  rate 0). PM, measured black-box the same way: a 32-position cycle (one
+  position per four LFO steps) whose quarter is the stepped depth-code table
+  {0,0,2,3,4,4,5,6} at PMS 5–7 (shifted left 0/1/2) down to {0,0,0,0,1,1,1,1}
+  at PMS 1; the code's three bits gate the top seven F-number bits whole,
+  halved and quartered, each truncated before the sum, and the sum shifted
+  by the PMS scale then quartered is the offset in half F-number steps (one
+  fractional bit: F-number 0x269 gives 9.5, 14.0, 19, 23.5 and 28.5 steps at
+  PMS 7). Plateau tables at every PMS for single-bit and composite top-seven
+  values (38, 47, 63, 90) fix that structure: a floored product misses at
+  PMS 7 code 3 (47 gives 34, 63 gives 46) and a per-bit sum at PMS 4 code 3.
+  The modulated F-number is twelve bits including the fraction and wraps
+  (positive peaks at 0x7F0 fall to a sub-audio pitch). PMS 7 peaks at
+  +4.62 %, the manual's ±80 cents. A disabled LFO holds its counter at zero,
+  the AM triangle's maximum attenuation; AM depth per channel (2 bits: 0,
+  1.4, 5.9, 11.8 dB) applied to operators with AM enabled, PM depth per
+  channel (3 bits) applied as the F-number offset above.
 - Output: per-channel L/R enables (0xB4–0xB6 bits 7/6); the real chip's DAC is
   9-bit time-multiplexed, so per-channel 14-bit values are the digital output
   before that stage. The YM2612's "ladder effect" crossover distortion is an

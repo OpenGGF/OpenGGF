@@ -48,36 +48,51 @@ public final class FastYm2612Dsp implements FmDsp {
     /** Envelope counter shift per rate: how many counter LSBs must be zero before a step. */
     private static final int[] EG_SHIFT = new int[64];
     /**
-     * Internal frames per LFO step (128 steps per period): the nearest integer
-     * intervals to the manual's 3.98 .. 72.2 Hz table at its 8 MHz clock
-     * (approximate: an arithmetic inference, not a measured divider table).
+     * LFO prescaler terminal values per rate. A free-running frame counter
+     * (running whether or not the LFO is enabled, never reset by the 0x22
+     * write) advances the 128-step LFO and clears itself when it CONTAINS the
+     * value's bits, {@code (counter & value) == value}, which from a cleared
+     * counter yields the periods 108, 77, 71, 67, 62, 44, 8 and 5 frames.
+     * Measured on the cycle-exact oracle by a global phase fit of a PM-only
+     * probe tone (residual 2e-4 cycles): the periods at every rate, and the
+     * first-step delay after enabling at different times with a different
+     * previous rate (old counter 84 meets 62 at 126, 77 at 93, 5 at 85), which
+     * a modulo or equality counter cannot reproduce.
      */
-    private static final int[] LFO_FRAMES_PER_STEP = {109, 78, 72, 68, 63, 45, 9, 6};
+    private static final int[] LFO_STEP_MASK = {108, 77, 71, 67, 62, 44, 8, 5};
+    /** Frames between an LFO step and its PM effect on the output, measured against the oracle. */
+    private static final int LFO_PM_OUTPUT_FRAMES = 1;
     /** Shift of the doubled 0..63 AM triangle: exact public-tone depths 0, 15, 63, 126. */
     private static final int[] AM_SHIFT = {8, 3, 1, 0};
     /**
-     * PM deviation per PMS and quarter-cycle position, in units of 1/96 of the
-     * PMS 7 maximum. Measured from the cycle-exact oracle with a single-operator
-     * probe tone at every sensitivity: the waveform is stepped, not a linear
-     * triangle, and holds two zero positions before each ramp. The PMS 7 peak
-     * of +4.62 % agrees with the manual's ±80 cents (2^(80/1200) = 1.0473).
+     * PM depth code per PMS and quarter-cycle position. The waveform is
+     * stepped, not a linear triangle, holds two zero positions before each
+     * ramp, and mirrors in the second and fourth quarters. The code's three
+     * bits select the top seven F-number bits ({@code h = fnum >> 4}) whole,
+     * halved and quartered, each truncated before the sum:
+     * {@code sum = (q & 4 ? h : 0) + (q & 2 ? h >> 1 : 0) + (q & 1 ? h >> 2 : 0)};
+     * the offset in half F-number steps is {@code (sum << PM_SHIFT[pms]) >> 2}.
+     * Measured on the cycle-exact oracle by plateau tables at every PMS for
+     * single-bit F-numbers and the composites 38, 47, 63 and 90: a floored
+     * product agrees except where the halved and quartered terms both truncate
+     * (PMS 7 code 3: 47 gives 34 not 35, 63 gives 46 not 47), and a per-bit
+     * sum fails at PMS 4 code 3 (63 gives 11 not 10). PMS 7 peaks at +4.62 %,
+     * the manual's ±80 cents (2^(80/1200) = 1.0473).
      */
-    private static final int[][] PM_QUARTER_UNITS = {
+    private static final int[][] PM_QUARTER_CODE = {
         {0, 0, 0, 0, 0, 0, 0, 0},
-        {0, 0, 0, 0, 4, 4, 4, 4},
-        {0, 0, 0, 4, 4, 4, 8, 8},
-        {0, 0, 4, 4, 8, 8, 12, 12},
-        {0, 0, 4, 8, 8, 8, 12, 16},
-        {0, 0, 8, 12, 16, 16, 20, 24},
-        {0, 0, 16, 24, 32, 32, 40, 48},
-        {0, 0, 32, 48, 64, 64, 80, 96},
+        {0, 0, 0, 0, 1, 1, 1, 1},
+        {0, 0, 0, 1, 1, 1, 2, 2},
+        {0, 0, 1, 1, 2, 2, 3, 3},
+        {0, 0, 1, 2, 2, 2, 3, 4},
+        {0, 0, 2, 3, 4, 4, 5, 6},
+        {0, 0, 2, 3, 4, 4, 5, 6},
+        {0, 0, 2, 3, 4, 4, 5, 6},
     };
-    /**
-     * Signed PM units per PMS and 32-position LFO cycle. The F-number offset is
-     * {@code ((fnum >> 4) * units) >> 7}: the oracle probe gave +28.5 F-number
-     * steps for 96 units at F-number 0x269 (top seven bits 38), i.e. 38 * 96 / 128.
-     */
-    private static final int[][] PM_UNITS = new int[8][32];
+    /** Left shift of the PM sum before the final quarter: PMS 6 doubles and PMS 7 quadruples PMS 5. */
+    private static final int[] PM_SHIFT = {0, 0, 0, 0, 0, 0, 1, 2};
+    /** PM depth code per PMS and 32-position LFO cycle, negative in the second half. */
+    private static final int[][] PM_CODE = new int[8][32];
     private static final int LFO_STEPS = 128;
     private static final int PM_STEPS = 32;
     /** The envelope clock is master/432: one tick every three internal frames (Nemesis, later digital measurements). */
@@ -158,8 +173,8 @@ public final class FastYm2612Dsp implements FmDsp {
                 if ((position & 8) != 0) {
                     quarter = 7 - quarter; // second and fourth quarters mirror
                 }
-                int units = PM_QUARTER_UNITS[pms][quarter];
-                PM_UNITS[pms][position] = (position & 16) != 0 ? -units : units;
+                int code = PM_QUARTER_CODE[pms][quarter];
+                PM_CODE[pms][position] = (position & 16) != 0 ? -code : code;
             }
         }
     }
@@ -234,7 +249,7 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int S_EG_FRAME = 1;
     private static final int S_LFO_ENABLED = 2;
     private static final int S_LFO_RATE = 3;
-    private static final int S_LFO_COUNTER_Q8 = 4;
+    private static final int S_LFO_COUNTER = 4;
     private static final int S_LFO_STEP = 5;
     private static final int S_TIMER_A_LOAD = 6;
     private static final int S_TIMER_B_LOAD = 7;
@@ -342,8 +357,8 @@ public final class FastYm2612Dsp implements FmDsp {
                 boolean enable = (value & 8) != 0;
                 scalar[S_LFO_RATE] = value & 7;
                 if (!enable && scalar[S_LFO_ENABLED] != 0) {
+                    // Disabling holds the step at zero; the prescaler keeps running.
                     scalar[S_LFO_STEP] = 0;
-                    scalar[S_LFO_COUNTER_Q8] = 0;
                     refreshAllPhaseIncrements();
                 }
                 scalar[S_LFO_ENABLED] = enable ? 1 : 0;
@@ -534,20 +549,24 @@ public final class FastYm2612Dsp implements FmDsp {
         int pms = pmSensitivity[channel];
         // Key code comes from the raw F-number before LFO modulation (Sauraen's die tracing).
         int newKeyCode = (block << 2) | FNUM_NOTE[(fnum >> 7) & 15];
+        int fnum2 = fnum << 1; // F-number with one fractional bit for LFO PM
         if (scalar[S_LFO_ENABLED] != 0 && pms != 0) {
             int position = (scalar[S_LFO_STEP] >> 2) & (PM_STEPS - 1);
-            int units = PM_UNITS[pms][position];
-            int fnumHigh = fnum >> 4;
-            // Integer offset, floor of the magnitude: matched the oracle's deltas
-            // at three F-numbers (16, 47 and 58 in the top seven bits).
-            int delta = units >= 0 ? (fnumHigh * units) >> 7 : -((fnumHigh * -units) >> 7);
-            fnum = Math.max(0, Math.min(0xFFF, fnum + delta));
+            int code = PM_CODE[pms][position];
+            int q = Math.abs(code);
+            int h = fnum >> 4;
+            int sum = ((q & 4) != 0 ? h : 0) + ((q & 2) != 0 ? h >> 1 : 0) + ((q & 1) != 0 ? h >> 2 : 0);
+            int halfSteps = (sum << PM_SHIFT[pms]) >> 2; // see PM_QUARTER_CODE
+            // The modulated F-number is twelve bits (eleven plus the fraction)
+            // and wraps: the oracle's positive PM peaks at 0x7F0 fall to a
+            // sub-audio pitch. A negative offset never exceeds the F-number.
+            fnum2 = ((fnum << 1) + (code < 0 ? -halfSteps : halfSteps)) & 0xFFF;
         }
         if (newKeyCode != keyCode[slot]) {
             keyCode[slot] = newKeyCode;
             refreshRates(slot);
         }
-        int base = (fnum << block) >> 1;
+        int base = (fnum2 << block) >> 2;
         int dt = detune[slot];
         int detuneAmount = DETUNE[dt & 3][newKeyCode & 31];
         if ((dt & 4) != 0) {
@@ -996,26 +1015,34 @@ public final class FastYm2612Dsp implements FmDsp {
     }
 
     private void advanceLfo() {
-        if (scalar[S_LFO_ENABLED] == 0) {
+        // The count is compared under the current control before it advances;
+        // a terminal count restarts at one. Enable-time fits at the terminal
+        // edge (a count already containing the new mask steps on the write
+        // frame; the old mask's terminal with the LFO off only restarts) fix
+        // this ordering against the oracle.
+        int counter = scalar[S_LFO_COUNTER];
+        int mask = LFO_STEP_MASK[scalar[S_LFO_RATE]];
+        boolean terminal = (counter & mask) == mask;
+        scalar[S_LFO_COUNTER] = terminal ? 1 : counter + 1;
+        if (!terminal || scalar[S_LFO_ENABLED] == 0) {
             return;
         }
-        int counter = scalar[S_LFO_COUNTER_Q8] + 1;
-        int period = LFO_FRAMES_PER_STEP[scalar[S_LFO_RATE]];
-        if (counter >= period) {
-            counter -= period;
+        {
             int step = (scalar[S_LFO_STEP] + 1) & (LFO_STEPS - 1);
             scalar[S_LFO_STEP] = step;
             if ((step & 3) == 0) {
                 for (int channel = 0; channel < 6; channel++) {
                     if (pmSensitivity[channel] != 0) {
                         for (int op = 0; op < 4; op++) {
-                            refreshPhaseIncrement(channel * 4 + op);
+                            int slot = channel * 4 + op;
+                            // A PM step reaches the output one frame after the
+                            // prescaler terminal (oracle phase fits at every rate).
+                            refreshPhaseIncrement(slot, PHASE_LOOKAHEAD_FRAMES[op] - LFO_PM_OUTPUT_FRAMES);
                         }
                     }
                 }
             }
         }
-        scalar[S_LFO_COUNTER_Q8] = counter;
     }
 
     private void advanceTimers() {
