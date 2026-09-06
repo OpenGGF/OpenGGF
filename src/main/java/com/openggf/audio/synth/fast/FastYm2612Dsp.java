@@ -9,9 +9,10 @@ import java.util.Arrays;
  * public hardware documentation (Yamaha YM2608/YM2612 manuals: register map,
  * detune and LFO tables; Nemesis's SpritesMind envelope/phase research:
  * attenuation scale, rate formula, counter-shift and increment tables, attack
- * formula). No emulator source was consulted; the author read only prose
- * summaries of ymfm and fmgen, which are reproduced as techniques 1–9 in the
- * design document.
+ * formula). The initial author used prose summaries of ymfm and fmgen
+ * reproduced as techniques 1–9 in the design document. Subsequent timing
+ * corrections use public-facade PCM probes and public pipeline research;
+ * see the validation record for the actual source-exposure boundary.
  *
  * <p>Not modelled: operator pipelining within a frame, bus timing, the busy
  * flag, LSI test registers, and the analog output stage. Everything else the
@@ -93,6 +94,16 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int TIMER_B_FRAMES_PER_UNIT = 16;
     /** Register-slot order S1, S3, S2, S4 → operator index 0..3 (OP1, OP2, OP3, OP4). */
     private static final int[] SLOT_TO_OPERATOR = {0, 2, 1, 3};
+    /**
+     * Cached-phase lookahead in this operator evaluation order. Sauraen's
+     * die tracing describes the 12-cycle operator pipeline and its extra
+     * delay stages (SpritesMind t=386, start=780/825). Public-facade isolated
+     * pitch-step probes establish these phase coordinates; changing an
+     * increment must replace its already-accounted contribution as well.
+     * All-channel, two-octave modulation sequences independently verify the
+     * mapping in TestFastFmFrequencyTransitions.
+     */
+    private static final int[] PHASE_LOOKAHEAD_FRAMES = {2, 1, 1, 2};
     /** Key-on register bits 4..7 are S1, S3, S2, S4. */
     private static final int[] KEY_BIT_TO_OPERATOR = {0, 2, 1, 3};
     private static final int EG_ATTACK = 0;
@@ -158,6 +169,8 @@ public final class FastYm2612Dsp implements FmDsp {
     /** SSG-EG restart effects deferred until the restarted attack completes: bit 0 phase reset, bit 1 ALT toggle. */
     private final int[] ssgPendingRestart = new int[24];
     private final int[] output = new int[24];
+    /** OP1 history for the extra memory stage feeding OP3. */
+    private final int[] olderOp1 = new int[6];
     private final int[] detune = new int[24];
     private final int[] multiple = new int[24];
     private final int[] totalLevel = new int[24];
@@ -216,6 +229,7 @@ public final class FastYm2612Dsp implements FmDsp {
 
     @Override
     public void reset() {
+        Arrays.fill(olderOp1, 0);
         Arrays.fill(registers, 0);
         for (int[] array : new int[][] {phase, phaseIncrement, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output, detune,
                 multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
@@ -464,7 +478,13 @@ public final class FastYm2612Dsp implements FmDsp {
         }
         base &= 0x1FFFF;
         int mul = multiple[slot];
-        phaseIncrement[slot] = (mul == 0 ? base >> 1 : base * mul) & 0xFFFFF;
+        int nextIncrement = (mul == 0 ? base >> 1 : base * mul) & 0xFFFFF;
+        // Phase is cached ahead of the register-commit boundary, rather than
+        // being an unqualified instantaneous accumulator. Replace the old
+        // increment's contribution for FNUM, DT, MUL and LFO changes alike.
+        phase[slot] = (phase[slot] + (nextIncrement - phaseIncrement[slot])
+                * PHASE_LOOKAHEAD_FRAMES[slot & 3]) & 0xFFFFF;
+        phaseIncrement[slot] = nextIncrement;
     }
 
     private void refreshRates(int slot) {
@@ -564,6 +584,7 @@ public final class FastYm2612Dsp implements FmDsp {
                 && egState[base] != EG_ATTACK && egState[base + 1] != EG_ATTACK
                 && egState[base + 2] != EG_ATTACK && egState[base + 3] != EG_ATTACK) {
             // Silent channel: key-on resets the phase, so it need not advance here.
+            olderOp1[channel] = 0;
             feedbackHistory[channel * 2] = 0;
             feedbackHistory[channel * 2 + 1] = 0;
             output[base] = 0;
@@ -577,13 +598,18 @@ public final class FastYm2612Dsp implements FmDsp {
         int fb = feedback[channel];
         int feedbackInput = fb == 0 ? 0
                 : (feedbackHistory[channel * 2] + feedbackHistory[channel * 2 + 1]) >> (10 - fb);
-        // Every modulator reaches its target one frame late: the operator
-        // outputs feeding phase modulation are the previous frame's, whatever
-        // the slot order. Against the oracle this beat both the same-frame
-        // rule and the slot-order rule (alg0 0.91 -> 0.96, alg3 0.93 -> 0.98).
+        // Sauraen's die tracing establishes a pipeline and modulation buffers:
+        // https://gendev.spritesmind.net/forum/viewtopic.php?start=780&t=386
+        // https://gendev.spritesmind.net/forum/viewtopic.php?start=825&t=386
+        // The exact ages below are oracle-derived in THIS implementation's
+        // frame coordinates, not cycle labels taken from that research:
+        // OP1 -> OP3 is two frames old, OP3 -> OP4 is current, and the other
+        // edges use the preceding frame. Independent algorithm 5 fanout and
+        // algorithm 4 two-chain probes distinguish these choices.
         int p1 = output[base];
+        int oldP1 = olderOp1[channel];
+        olderOp1[channel] = p1;
         int p2 = output[base + 1];
-        int p3 = output[base + 2];
         int op1 = operatorSample(base, feedbackInput, am);
         feedbackHistory[channel * 2 + 1] = feedbackHistory[channel * 2];
         feedbackHistory[channel * 2] = op1;
@@ -595,36 +621,36 @@ public final class FastYm2612Dsp implements FmDsp {
             case 0 -> {
                 op2 = operatorSample(base + 1, p1 >> 1, am);
                 op3 = operatorSample(base + 2, p2 >> 1, am);
-                op4 = operatorSample(base + 3, p3 >> 1, am);
+                op4 = operatorSample(base + 3, op3 >> 1, am);
                 sum = op4;
             }
             case 1 -> {
                 op2 = operatorSample(base + 1, 0, am);
-                op3 = operatorSample(base + 2, (p1 + p2) >> 1, am);
-                op4 = operatorSample(base + 3, p3 >> 1, am);
+                op3 = operatorSample(base + 2, (oldP1 + p2) >> 1, am);
+                op4 = operatorSample(base + 3, op3 >> 1, am);
                 sum = op4;
             }
             case 2 -> {
                 op2 = operatorSample(base + 1, 0, am);
                 op3 = operatorSample(base + 2, p2 >> 1, am);
-                op4 = operatorSample(base + 3, (p1 + p3) >> 1, am);
+                op4 = operatorSample(base + 3, (p1 + op3) >> 1, am);
                 sum = op4;
             }
             case 3 -> {
                 op2 = operatorSample(base + 1, p1 >> 1, am);
                 op3 = operatorSample(base + 2, 0, am);
-                op4 = operatorSample(base + 3, (p2 + p3) >> 1, am);
+                op4 = operatorSample(base + 3, (p2 + op3) >> 1, am);
                 sum = op4;
             }
             case 4 -> {
                 op2 = operatorSample(base + 1, p1 >> 1, am);
                 op3 = operatorSample(base + 2, 0, am);
-                op4 = operatorSample(base + 3, p3 >> 1, am);
+                op4 = operatorSample(base + 3, op3 >> 1, am);
                 sum = op2 + op4;
             }
             case 5 -> {
                 op2 = operatorSample(base + 1, p1 >> 1, am);
-                op3 = operatorSample(base + 2, p1 >> 1, am);
+                op3 = operatorSample(base + 2, oldP1 >> 1, am);
                 op4 = operatorSample(base + 3, p1 >> 1, am);
                 sum = op2 + op3 + op4;
             }
@@ -891,7 +917,7 @@ public final class FastYm2612Dsp implements FmDsp {
     // ---------------------------------------------------------- snapshots
 
     private int[][] arrays() {
-        return new int[][] {registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
+        return new int[][] {olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
                 detune, multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
                 sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
                 operatorFnum, operatorBlock, channelFnum,

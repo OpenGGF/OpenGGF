@@ -78,9 +78,11 @@ default is a separate commit.
   3-bit feedback register (0 = off, 1..7 = π/16 .. 4π of phase).
 - Algorithms: the eight standard OPN connection graphs; modulator outputs feed
   successors' phase input (summed 14-bit outputs, then halved into the 10-bit
-  phase) from the previous frame's outputs on every path (oracle-established:
-  it beat both same-frame and slot-order rules), carrier outputs sum into the
-  channel output.
+  phase). Public-facade probes supersede the initial uniform previous-frame
+  approximation: in this implementation's frame coordinates OP1→OP3 uses
+  two-old output, OP3→OP4 current output, and other edges previous output.
+  Carrier outputs sum into the channel output. These precise ages are probe
+  results, not exact cycle labels from Sauraen's pipeline research.
 - LFO: 3-bit rate; the manual's 3.98–72.2 Hz table is quoted for an 8 MHz
   clock and corresponds to 109/78/72/68/63/45/9/6 internal frames per step of
   a 128-step cycle (nearest integers, analytical). PM, measured black-box
@@ -168,3 +170,18 @@ digital output), busy-flag timing (facade does not model it).
 - Wikipedia "Yamaha YM2612": 9-bit DAC, YM3438 differences.
 - Not read for this document: MAME `fm.c`, Genesis Plus GX, BlastEm, the
   retired OpenGGF core, and the in-tree Nuked port's synthesis code.
+
+## Phase-transition refinement (release branch)
+
+Pitch changes must replace the increment contribution already included in the
+cached phase. Isolated public-facade pitch-step probes establish lookahead
+coordinates of 2/1/1/2 frames for logical OP1/OP2/OP3/OP4. The replacement
+applies to every increment change, including F-number, detune, multiple and
+LFO. Independent sequences across all six channels and two octaves verify
+modulation continuity; rewind includes the additional OP1 history.
+
+The non-ALT, non-hold SSG repeat modes hold phase at zero whenever attenuation
+is at least 512, including attack. The initial attack-completion reset model
+is superseded. All 16 SSG vectors meet the existing waveform/level bounds.
+The release validation record tracks remaining failures; this design's earlier
+acceptance counts describe development checkpoints, not final certification.

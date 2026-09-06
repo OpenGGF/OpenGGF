@@ -175,3 +175,43 @@ not certify those cases. Delayed-accurate controls yield 1.0 on the detune
 vectors, but only 0.4584 on `s2-sfx-bc`, so that effect needs separate timing
 sensitivity investigation. Earlier exploratory probes trimmed 128 edge samples;
 those exploratory values are not this helper's acceptance evidence.
+
+## Modulation history and pitch transitions
+
+On `9a5530b3f` plus this correction, public-facade controls distinguish the
+modulation path ages and cached phase coordinates described in the design.
+Algorithms 3–7 correlate approximately 1.000; algorithms 0–2 reach 0.962–0.974.
+Channel-3 special mode and S1 C6 now meet the existing bounds. Correcting
+pitch-transition phase clears S1 AC, S2 AC and S1 BE; S2 BC remains outside
+at 0.230 (its feedback-zero-through-five controls reach 0.998). Sixteen
+supported vectors still miss: eight LFO rates, LFO toggle, both DAC ramps,
+pan/TL, S1/S2 CF, S2 BC and S3K 3C. Five test-register/bus/fuzz diagnostics
+are outside the intended contract; their current default skips still require
+separation from release acceptance.
+
+`TestFastFmFrequencyTransitions` uses independently generated up/down pitch
+sequences on all six channels at blocks 4 and 7 with feedback 5. Its twelve
+waveform cases fail before the change and pass after it, with correlation
+above 0.99 and raw level within five percent. A thirteenth continuation case
+fails if the added OP1 history is omitted from snapshots and passes with
+state copying. The completed Java 21 command was:
+
+```sh
+mvn -Dmse=off -Dtest=TestFastFmFrequencyTransitions,TestFastFmCoreTolerance,TestFastFmReleaseContracts,TestFastFmTimersAndChannelThree,TestFastFmDetune,TestFastFmWaveformAlignment,TestFastYm2612Chip test -B
+```
+
+It finished at 2026-09-06 04:56:40 BST with Maven reporting 193 tests and no
+failures/errors. Individual tolerance XML contains 183 vectors, 157 passed
+and 26 skipped; Maven omits those dynamic skips from its aggregate. This is
+focused intermediate evidence, not final suite or release approval. Log:
+`target/fast-fm-release/frequency-transition-green.log` in the release worktree.
+
+Source boundary: implementation corrections were derived from public-facade
+PCM measurements. No excluded emulator implementation file was opened. Web
+search results for the public hardware forum did incidentally display mixed
+posts containing emulator snippets; those snippets were not used to derive
+code. Sauraen's [pipeline discussion](https://gendev.spritesmind.net/forum/viewtopic.php?start=780&t=386)
+and [buffer discussion](https://gendev.spritesmind.net/forum/viewtopic.php?start=825&t=386)
+support the existence of pipeline delays and modulation buffers. They do not
+establish our exact Java per-edge sample ages: those are oracle-derived.
+This records actual exposure rather than asserting a blanket certification.

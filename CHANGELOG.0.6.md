@@ -1,5 +1,8 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM preserves modulator history and phase continuity across pitch changes;
+  all six channels are covered by independent pitch-transition and rewind checks.
+
 - Release trace validation compares fresh candidate evidence with a reviewed
   baseline, retaining unchanged known failures and warnings while rejecting
   changed or missing evidence. Coverage now respects directory exclusions and
@@ -39,8 +42,7 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 - **Clean-room fast FM core lands behind `audio.fmCore=fast`:**
   `FastYm2612Dsp` is a register-level YM2612 written from public hardware
-  documentation and the department's techniques specification (no emulator
-  source consulted), judged against the cycle-exact core by a tolerance
+  documentation and the department's techniques specification (see the validation record for source provenance), judged against the cycle-exact core by a tolerance
   oracle over the 183 bit-exact register scripts: every SMPS music log
   correlates at 0.97–0.99, tones and envelopes at 0.96–1.00, and 121 scripts
   sit inside the correlation/level bounds; the rest (LFO, channel-3 special

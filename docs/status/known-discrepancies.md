@@ -3169,6 +3169,6 @@ boundaries. These deliberate approximations reduce synthesis CPU cost.
 
 `audio.fmCore=accurate` retains the cycle-exact Nuked implementation and is
 required for physical reference captures. New configurations select fast;
-existing explicit accurate selections are preserved. Outstanding fidelity
-failures are being fixed for 0.6 and are **not** accepted discrepancies merely
+existing explicit accurate selections are preserved. Pitch-transition phase and per-path modulation history now have independent
+all-channel coverage. Outstanding LFO and effect fidelity failures are being fixed for 0.6 and are **not** accepted discrepancies merely
 because this approximation exists. See the [fast FM validation record](../architecture/validation/audio/2026-09-06-fast-fm-release.md).
