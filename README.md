@@ -685,6 +685,13 @@ and successful universal-JAR smoke checks. Candidate benchmarks retain matching
 gameplay digests; native-platform execution and full-game listening sign-off
 remain release tasks. See the
 [FM delivery record](docs/architecture/validation/audio/2026-09-06-fast-fm-release.md).
+A follow-up performance pass makes the fast core about 12 % cheaper on real
+music (S1 GHZ1 0.173 to 0.151 ms per frame, S3K AIZ 0.164 to 0.147) with every
+oracle output sample and gameplay digest unchanged; the
+[performance review](docs/architecture/validation/performance/2026-09-06-fast-fm-perf-review.md)
+and the
+[listening-test plan](docs/architecture/validation/audio/2026-09-06-fast-fm-listening-test.md)
+record it.
 
 The [September 6 release assessment](docs/architecture/audits/2026-09-06-release-blockers.md)
 identified release skip-classification and trace-policy mismatches. The
