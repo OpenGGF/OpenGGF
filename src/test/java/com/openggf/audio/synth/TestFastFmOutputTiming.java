@@ -4,6 +4,7 @@ import com.openggf.audio.synth.fast.FastYm2612Dsp;
 import java.util.Arrays;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -37,7 +38,7 @@ class TestFastFmOutputTiming {
             double[] fast = paddedKeyOn(new FastYm2612Chip(new FastYm2612Dsp()), channel, padding);
             var alignment = FastFmWaveformAlignment.integer(accurate, fast, 64);
             assertTrue(alignment.correlation() > 0.995, "padding " + padding + ": " + alignment);
-            assertEquals(-3, alignment.lag(), 0, "common digital-output latency, padding " + padding);
+            assertEquals(0, alignment.lag(), 0, "common digital-output latency, padding " + padding);
         }
     }
 
@@ -59,6 +60,71 @@ class TestFastFmOutputTiming {
         restored.reset();
         assertArrayEquals(samples(chip, 8), samples(restored, 8));
         assertTrue(Arrays.stream(samples(chip, 8)).allMatch(value -> value == 0));
+    }
+
+    @Test
+    void dacSelectionAndFmReachTheSameOutputBoundary() {
+        double[] accurate = alternateFmAndDac(new Ym2612Chip());
+        double[] fast = alternateFmAndDac(new FastYm2612Chip(new FastYm2612Dsp()));
+        var alignment = FastFmWaveformAlignment.integer(accurate, fast, 64);
+        assertTrue(alignment.correlation() > 0.995, "FM and DAC must share one output timeline: " + alignment);
+        assertEquals(0, alignment.lag(), 0, "the pipeline terminates at DAC selection");
+    }
+
+    @ParameterizedTest(name = "DAC register {0}: all data-strobe offsets")
+    @ValueSource(ints = {0x2a, 0x2b})
+    void dacSamplingMatchesEveryBusOffset(int register) {
+        for (int padding = 0; padding < 24; padding++) {
+            double[] accurate = dacStep(new Ym2612Chip(), register, padding);
+            double[] fast = dacStep(new FastYm2612Chip(new FastYm2612Dsp()), register, padding);
+            assertArrayEquals(accurate, fast, "DAC data/selection sampling, padding " + padding);
+        }
+    }
+
+    @Test
+    void snapshotPreservesPartiallySampledDacWrites() {
+        FastYm2612Dsp original = new FastYm2612Dsp();
+        original.writeRegister(0, 0x2b, 0x80);
+        original.writeRegister(0, 0x2a, 224, 5);
+        var restored = original.newInstance();
+        original.copyStateTo(restored);
+        int[] expected = new int[6], actual = new int[6];
+        original.renderFrame(expected);
+        restored.renderFrame(actual);
+        assertTrue(expected[5] > 0);
+        assertArrayEquals(expected, actual);
+        original.renderFrame(expected);
+        restored.renderFrame(actual);
+        assertArrayEquals(expected, actual);
+    }
+
+    private static double[] dacStep(FmChip chip, int register, int padding) {
+        prepare(chip);
+        chip.write(0, 0x2b, register == 0x2a ? 0x80 : 0);
+        chip.write(0, 0x2a, register == 0x2a ? 128 : 224);
+        samples(chip, 500);
+        for (int count = 0; count < padding; count++) chip.write(0, 0x22, 0);
+        chip.write(0, register, register == 0x2a ? 224 : 128);
+        return samples(chip, 100);
+    }
+
+    private static double[] alternateFmAndDac(FmChip chip) {
+        prepare(chip);
+        samples(chip, 113);
+        voice(chip, 5, false);
+        pitchAndKey(chip, 5, 727);
+        java.util.List<double[]> chunks = new java.util.ArrayList<>();
+        chunks.add(samples(chip, 300));
+        for (int repetition = 0; repetition < 4; repetition++) {
+            chip.write(0, 0x2b, 0x80);
+            for (int value : new int[] {32, 192, 64, 224, 48, 208}) {
+                chip.write(0, 0x2a, value);
+                chunks.add(samples(chip, 17 + repetition));
+            }
+            chip.write(0, 0x2b, 0);
+            chunks.add(samples(chip, 400));
+        }
+        return centre(chunks.stream().flatMapToDouble(Arrays::stream).toArray());
     }
 
     private static double[] mixture(FmChip chip, int index, boolean channels) {

@@ -1,5 +1,8 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM and DAC now share the correct output timeline, including partial
+  DAC samples when a data or enable write lands within an output slot.
+
 - Fast FM preserves the envelope’s operator sampling delay, correcting
   rapid decay changes used as modulation.
 

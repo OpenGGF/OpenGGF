@@ -17,8 +17,8 @@ class TestFastFmEnvelopeSampling {
             double[] fastHeld = tone(() -> new FastYm2612Chip(new FastYm2612Dsp()), channel, slot, 0);
             double[] fastDecay = tone(() -> new FastYm2612Chip(new FastYm2612Dsp()), channel, slot, 31);
             int compared = 0;
-            for (int index = 3; index < accurateHeld.length; index++) {
-                int fastIndex = index - 3;
+            for (int index = 0; index < accurateHeld.length; index++) {
+                int fastIndex = index;
                 // Compare attenuation where both waveforms have enough signal
                 // to resolve a decay step despite the oracle's 9-bit output.
                 if (Math.abs(accurateHeld[index]) < 8000 || Math.abs(fastHeld[fastIndex]) < 8000

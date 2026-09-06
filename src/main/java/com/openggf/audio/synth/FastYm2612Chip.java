@@ -421,7 +421,7 @@ public final class FastYm2612Chip implements FmChip {
     }
 
     private void applyWrite(int port, int register, int value) {
-        applyWrite(port, register, value, 23);
+        applyWrite(port, register, value, -1);
     }
 
     private void applyWrite(int port, int register, int value, int frameCycle) {
@@ -431,7 +431,8 @@ public final class FastYm2612Chip implements FmChip {
         }
         // Status-read flushing has no paced frame position; keep its immediate
         // semantics. Ordinary bus writes retain their data-strobe offset.
-        dsp.writeRegister(port, register, value, frameCycle < 0 ? 23 : frameCycle);
+        if (frameCycle < 0) dsp.writeRegister(port, register, value);
+        else dsp.writeRegister(port, register, value, frameCycle);
         if (writeObserver.observesPhysicalWrites()) {
             writeObserver.onYm2612BusWrite(internalCycles, port * 2, register,
                     ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS);

@@ -3161,8 +3161,9 @@ measured value and retire this entry.
 ## Fast FM Register-Level Timing and Output
 
 The selectable `audio.fmCore=fast` core advances synthesis at one internal FM
-frame (144 input clocks). It does not emulate sub-frame bus placement, the
-busy flag, LSI test registers, or the analogue ladder-effect output stage.
+frame (144 input clocks), while retaining measured register and DAC output
+sampling boundaries within that frame. It does not emulate the full bus
+pipeline, busy flag, LSI test registers, or analogue ladder-effect output stage.
 Its facade preserves stereo panning and the mixer's nominal 6144 full-scale
 channel level, with writes paced and diagnostics timestamped at frame
 boundaries. These deliberate approximations reduce synthesis CPU cost.
@@ -3173,5 +3174,7 @@ existing explicit accurate selections are preserved. Pitch-transition phase and 
 all-channel coverage. Carrier/channel output history and key-on phase now
 also account for the multiplexed sampling boundary, with all 24 write offsets
 covered on every channel. Frequency sampling has all-operator/all-offset
-coverage and brings S3K effect 3C within tolerance. Outstanding LFO and effect fidelity failures are being fixed for 0.6 and are **not** accepted discrepancies merely
+coverage and brings S3K effect 3C within tolerance. FM/DAC relative timing
+and all DAC data/enable write offsets have independent output coverage.
+Outstanding LFO and effect fidelity failures are being fixed for 0.6 and are **not** accepted discrepancies merely
 because this approximation exists. See the [fast FM validation record](../architecture/validation/audio/2026-09-06-fast-fm-release.md).

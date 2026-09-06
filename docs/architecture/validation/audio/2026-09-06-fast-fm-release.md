@@ -290,3 +290,33 @@ channel on the first tested OP2/OP3 decay boundary (approximately 40 versus
 corpus failures remain. Logs: `envelope-sampling-green.log`,
 `envelope-sampling-quantized-green.log`, and `envelope-sampling-negative/results.log`
 under the task's `target/fast-fm-release/`. Final verification remains pending.
+
+## FM/DAC output boundary
+
+An independent sequence alternates an FM carrier and short DAC bursts. It
+exposes the common three-frame FM delay before DAC selection: delaying the
+whole mixed stream cannot preserve their relative timing. The FM pipeline
+now retains those frames before channel-6 selection. Explicit common-latency
+checks therefore move from -3 to zero; envelope comparisons use equal sample
+indices. The pipeline cursor and samples participate in reset and snapshots.
+
+Further public DAC steps sweep all 24 bus offsets for registers 2A and 2B.
+They distinguish three output contributions: data admitted through cycles
+4/5/6 yields a full/two-thirds/one-third changed sample, and later strobes
+affect the next frame. The DSP preserves these contributions separately for
+the current frame, including enable changes; untimed DAC streams retain
+immediate semantics. The independent alternating-FM/DAC test initially
+remained below its 0.995 bound (0.989) after adding only the FM delay, then
+passes with DAC sampling modeled. The bound was not lowered.
+
+At `7a946548c` plus this correction, the completed Java 21 focused command
+from the previous sections passes all 227 reported tests at 2026-09-06
+05:54:47 BST; the tolerance XML still reports its 26 intermediate skips.
+An additional `mvn -Dmse=off -Dtest=TestFastFmOutputTiming test -B` completes
+at 05:56:22 BST with all 25 cases passing, including exact public-output
+equality for all 48 DAC register/offset combinations. Omitting the partial
+DAC state from copying makes its continuation regression fail: expected
+4096, actual 6144. Logs: `fm-dac-sampling-green.log`,
+`dac-all-offsets-green.log`, and `dac-sampling-negative/results.log` under
+the task evidence directory. DAC-enabled meets the unchanged corpus bound;
+eleven supported failures remain (nine LFO, pan/TL and S2 BC).

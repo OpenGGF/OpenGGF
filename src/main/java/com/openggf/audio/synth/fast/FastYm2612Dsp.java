@@ -117,6 +117,7 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int EG_SUSTAIN = 2;
     private static final int EG_RELEASE = 3;
     private static final int MAX_ATTENUATION = 0x3FF;
+    private static final int FM_OUTPUT_DELAY_FRAMES = 3;
     private static final int OUTPUT_MAX = 8191;
     private static final int OUTPUT_MIN = -8192;
 
@@ -181,6 +182,10 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] delayedOutput = new int[6];
     /** Pre-tick envelope output sampled by OP2..4 during an envelope update frame. */
     private final int[] sampledEg = new int[24];
+    /** FM computation pipeline before channel-6 DAC selection and facade panning. */
+    private final int[] fmOutputHistory = new int[FM_OUTPUT_DELAY_FRAMES * 6];
+    /** Three DAC output slots as enable/value pairs; final entry marks a sampled write. */
+    private final int[] dacOutputSlots = new int[7];
     private final int[] detune = new int[24];
     private final int[] multiple = new int[24];
     private final int[] totalLevel = new int[24];
@@ -213,7 +218,7 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] feedbackHistory = new int[12];
     private final int[] operatorOut = new int[4];
     private final int[] csmKeyed = new int[1];
-    private final int[] scalar = new int[18];
+    private final int[] scalar = new int[19];
     private static final int S_EG_COUNTER = 0;
     private static final int S_EG_FRAME = 1;
     private static final int S_LFO_ENABLED = 2;
@@ -232,6 +237,7 @@ public final class FastYm2612Dsp implements FmDsp {
     private static final int S_SSG_ENABLED_MASK = 15;
     private static final int S_TIMER_A_RELOAD = 16;
     private static final int S_TIMER_B_RELOAD = 17;
+    private static final int S_FM_OUTPUT_CURSOR = 18;
 
     public FastYm2612Dsp() {
         reset();
@@ -242,6 +248,8 @@ public final class FastYm2612Dsp implements FmDsp {
         Arrays.fill(olderOp1, 0);
         Arrays.fill(delayedOutput, 0);
         Arrays.fill(sampledEg, 0);
+        Arrays.fill(fmOutputHistory, 0);
+        Arrays.fill(dacOutputSlots, 0);
         Arrays.fill(registers, 0);
         for (int[] array : new int[][] {phase, phaseIncrement, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output, detune,
                 multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
@@ -266,8 +274,10 @@ public final class FastYm2612Dsp implements FmDsp {
 
     @Override
     public void writeRegister(int port, int register, int value) {
-        // Untimed clients retain the original immediate phase-reset convention.
-        writeRegister(port, register, value, 23);
+        // Untimed DAC streams apply at this frame's start. Other untimed
+        // clients retain the original immediate phase-reset convention.
+        boolean dac = (port & 1) == 0 && ((register & 0xff) == 0x2a || (register & 0xff) == 0x2b);
+        writeRegister(port, register, value, dac ? -1 : 23);
     }
 
     @Override
@@ -377,9 +387,29 @@ public final class FastYm2612Dsp implements FmDsp {
                     }
                 }
             }
-            case 0x2A -> scalar[S_DAC_VALUE] = value;
-            case 0x2B -> scalar[S_DAC_ENABLED] = (value >> 7) & 1;
+            case 0x2A, 0x2B -> writeDac(register, value, frameCycle);
             default -> {
+            }
+        }
+    }
+
+    private void writeDac(int register, int value, int frameCycle) {
+        if (dacOutputSlots[6] == 0) {
+            for (int sample = 0; sample < 3; sample++) {
+                dacOutputSlots[sample * 2] = scalar[S_DAC_ENABLED];
+                dacOutputSlots[sample * 2 + 1] = scalar[S_DAC_VALUE];
+            }
+            dacOutputSlots[6] = 1;
+        }
+        if (register == 0x2a) scalar[S_DAC_VALUE] = value;
+        else scalar[S_DAC_ENABLED] = (value >> 7) & 1;
+        // Public bus-strobe/PCM steps over all 24 offsets distinguish three
+        // contributions, with new data admitted at cycles 4, 5 and 6. Later
+        // writes change next frame's state but cannot rewrite earlier slots.
+        for (int sample = 0; sample < 3; sample++) {
+            if (frameCycle <= 4 + sample) {
+                dacOutputSlots[sample * 2] = scalar[S_DAC_ENABLED];
+                dacOutputSlots[sample * 2 + 1] = scalar[S_DAC_VALUE];
             }
         }
     }
@@ -610,7 +640,26 @@ public final class FastYm2612Dsp implements FmDsp {
         for (int channel = 0; channel < 6; channel++) {
             out[channel] = renderChannel(channel, amOffset);
         }
-        if (scalar[S_DAC_ENABLED] != 0) {
+        // Independent FM/DAC alternation establishes the common FM latency:
+        // these three frames precede DAC selection, rather than delaying the
+        // final mixed stream. This preserves the DAC and FM relative timing.
+        int cursor = scalar[S_FM_OUTPUT_CURSOR];
+        for (int channel = 0; channel < 6; channel++) {
+            int index = cursor * 6 + channel;
+            int current = out[channel];
+            out[channel] = fmOutputHistory[index];
+            fmOutputHistory[index] = current;
+        }
+        scalar[S_FM_OUTPUT_CURSOR] = (cursor + 1) % FM_OUTPUT_DELAY_FRAMES;
+        if (dacOutputSlots[6] != 0) {
+            int sum = 0;
+            for (int sample = 0; sample < 3; sample++) {
+                sum += dacOutputSlots[sample * 2] != 0
+                        ? (dacOutputSlots[sample * 2 + 1] - 0x80) << 6 : out[5];
+            }
+            out[5] = Math.floorDiv(sum, 3);
+            dacOutputSlots[6] = 0;
+        } else if (scalar[S_DAC_ENABLED] != 0) {
             out[5] = (scalar[S_DAC_VALUE] - 0x80) << 6;
         }
     }
@@ -972,7 +1021,7 @@ public final class FastYm2612Dsp implements FmDsp {
     // ---------------------------------------------------------- snapshots
 
     private int[][] arrays() {
-        return new int[][] {sampledEg, delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
+        return new int[][] {dacOutputSlots, fmOutputHistory, sampledEg, delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
                 detune, multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
                 sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
                 operatorFnum, operatorBlock, channelFnum,

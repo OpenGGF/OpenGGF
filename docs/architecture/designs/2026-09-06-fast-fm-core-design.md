@@ -208,3 +208,11 @@ OP2..4 sample the envelope value from before an envelope tick during that
 output frame. OP1 uses the current value with its separate carrier history.
 The sampled envelope is cached only on ticks; public held/decaying tone pairs
 verify the output boundary independently across all channels and carriers.
+
+The common FM computation-to-output delay is three frames and precedes DAC
+selection; it cannot be represented as a delay of the final mixed stream.
+Channel-6 DAC output samples three contributions at internal cycles 4/5/6.
+Timed data and enable writes replace only contributions not yet sampled.
+Untimed DAC stream writes remain immediate. These exact output coordinates
+come from independent public-facade FM/DAC alternation and all-offset DAC
+steps; sampled contributions and the FM pipeline are reset and snapshotted.
