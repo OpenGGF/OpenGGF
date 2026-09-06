@@ -215,3 +215,35 @@ and [buffer discussion](https://gendev.spritesmind.net/forum/viewtopic.php?start
 support the existence of pipeline delays and modulation buffers. They do not
 establish our exact Java per-edge sample ages: those are oracle-derived.
 This records actual exposure rather than asserting a blanket certification.
+
+## Carrier/channel output and key-on sampling
+
+Public-facade isolated tones distinguish one older OP1 carrier value and one
+additional frame of channel output history on zero-based channels 1/3/5.
+Applying only the latter clears S1/S2 CF but independent six-channel mixtures
+still fail. A second probe varies register-burst length through every internal
+cycle residue and records only public physical bus strobes and PCM. Key-on
+phase advances one step when its data strobe precedes the channel's sampling
+slot; a strobe at cycle 24 crosses into the next frame. The facade now passes
+that strobe offset through an optional DSP write overload. Untimed DSP clients
+and forced status-read flushing retain their immediate convention. These
+exact sample coordinates are measured oracle behavior, consistent with the
+publicly described multiplexed accumulator; no emulator implementation is
+read or imported.
+
+On `ba09b680b` plus this correction, twelve independently generated carrier
+and channel mixtures reach correlation above 0.995 with raw levels within
+one percent. Six cases each exercise all 24 key-on write offsets and require
+a common integer lag of -3, rather than independently accommodating changing
+phase offsets. All eighteen cases fail before the correction. Three snapshot
+continuation cases pass; deliberately omitting the channel-output history from
+state copying fails all three at the first sample (expected -1552, actual 0).
+
+The Java 21 focused command from the previous section, with
+`TestFastFmOutputTiming` added, finishes at 2026-09-06 05:16:59 BST: Maven
+reports 214 tests, zero failures/errors, while the tolerance XML still has
+26 explicit dynamic skips. S1/S2 CF and DT5/6/7 MUL15 now correlate 1.000
+using integer alignment. Fourteen supported corpus failures remain: nine LFO
+cases, DAC enable/disable ramps, pan/TL, S2 BC and S3K 3C. Log:
+`target/fast-fm-release/output-timing-green.log`. This is intermediate evidence;
+final acceptance, suites and benchmarks remain pending.

@@ -185,3 +185,14 @@ is at least 512, including attack. The initial attack-completion reset model
 is superseded. All 16 SSG vectors meet the existing waveform/level bounds.
 The release validation record tracks remaining failures; this design's earlier
 acceptance counts describe development checkpoints, not final certification.
+
+## Output sampling refinement
+
+The carrier accumulator consumes previous OP1 output in algorithm 7. Its
+channel sum retains an additional frame on zero-based channels 1/3/5, matching
+the multiplexed output boundary in this model's frame coordinates. History is
+reset and copied with all other DSP state. The optional four-argument DSP write
+overload carries the data-strobe offset (0..24) from the existing bus pacing,
+so key-on phase can honor its channel sampling slot. Other register behavior
+continues to use the register-level model. Independent mixed-tone and all-offset
+checks cover the combined behavior; see the release validation record.

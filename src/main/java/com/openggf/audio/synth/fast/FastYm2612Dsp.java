@@ -171,6 +171,8 @@ public final class FastYm2612Dsp implements FmDsp {
     private final int[] output = new int[24];
     /** OP1 history for the extra memory stage feeding OP3. */
     private final int[] olderOp1 = new int[6];
+    /** Previous digital channel sum, retained across the multiplexed output boundary. */
+    private final int[] delayedOutput = new int[6];
     private final int[] detune = new int[24];
     private final int[] multiple = new int[24];
     private final int[] totalLevel = new int[24];
@@ -230,6 +232,7 @@ public final class FastYm2612Dsp implements FmDsp {
     @Override
     public void reset() {
         Arrays.fill(olderOp1, 0);
+        Arrays.fill(delayedOutput, 0);
         Arrays.fill(registers, 0);
         for (int[] array : new int[][] {phase, phaseIncrement, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output, detune,
                 multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
@@ -254,12 +257,18 @@ public final class FastYm2612Dsp implements FmDsp {
 
     @Override
     public void writeRegister(int port, int register, int value) {
+        // Untimed clients retain the original immediate phase-reset convention.
+        writeRegister(port, register, value, 23);
+    }
+
+    @Override
+    public void writeRegister(int port, int register, int value, int frameCycle) {
         port &= 1;
         register &= 0xff;
         value &= 0xff;
         registers[(port << 8) | register] = value;
         if (port == 0 && register < 0x30) {
-            writeGlobal(register, value);
+            writeGlobal(register, value, frameCycle);
             return;
         }
         int channelInPort = register & 3;
@@ -292,7 +301,7 @@ public final class FastYm2612Dsp implements FmDsp {
         }
     }
 
-    private void writeGlobal(int register, int value) {
+    private void writeGlobal(int register, int value, int frameCycle) {
         switch (register) {
             case 0x22 -> {
                 boolean enable = (value & 8) != 0;
@@ -345,7 +354,15 @@ public final class FastYm2612Dsp implements FmDsp {
                 for (int bit = 0; bit < 4; bit++) {
                     int slot = channel * 4 + KEY_BIT_TO_OPERATOR[bit];
                     if ((value & (0x10 << bit)) != 0) {
-                        keyOnSlot(slot);
+                        if (keyOn[slot] == 0) {
+                            keyOnSlot(slot);
+                            // Public-facade PCM and bus-strobe probes over all
+                            // 24 offsets: the key latch is sampled in channel
+                            // order. A strobe before this channel's slot admits
+                            // one earlier phase step; cycle 24 crosses a frame.
+                            int steps = 1 + Math.floorDiv(channel - 1 - frameCycle, 24);
+                            phase[slot] = (phase[slot] + steps * phaseIncrement[slot]) & 0xFFFFF;
+                        }
                     } else {
                         keyOffSlot(slot);
                     }
@@ -591,7 +608,7 @@ public final class FastYm2612Dsp implements FmDsp {
             output[base + 1] = 0;
             output[base + 2] = 0;
             output[base + 3] = 0;
-            return 0;
+            return channelOutput(channel, 0);
         }
         int amDepth = AM_DEPTH[amSensitivity[channel]];
         int am = amDepth == 0 ? 0 : (lfoTriangle * amDepth) >> 6;
@@ -664,14 +681,26 @@ public final class FastYm2612Dsp implements FmDsp {
                 op2 = operatorSample(base + 1, 0, am);
                 op3 = operatorSample(base + 2, 0, am);
                 op4 = operatorSample(base + 3, 0, am);
-                sum = op1 + op2 + op3 + op4;
+                // OP1 reaches the carrier accumulator one frame after its
+                // other carrier peers in these evaluation coordinates.
+                sum = p1 + op2 + op3 + op4;
             }
         }
         output[base] = op1;
         output[base + 1] = op2;
         output[base + 2] = op3;
         output[base + 3] = op4;
-        return sum > OUTPUT_MAX ? OUTPUT_MAX : Math.max(sum, OUTPUT_MIN);
+        return channelOutput(channel, sum > OUTPUT_MAX ? OUTPUT_MAX : Math.max(sum, OUTPUT_MIN));
+    }
+
+    private int channelOutput(int channel, int value) {
+        // The time-multiplexed accumulator crosses our frame boundary on
+        // channels 1/3/5 (zero-based). These exact ages are oracle-derived:
+        // isolated tones and independent carrier/channel mixtures, all six
+        // channels and every key-on bus offset. See TestFastFmOutputTiming.
+        int previous = delayedOutput[channel];
+        delayedOutput[channel] = value;
+        return (channel & 1) == 0 ? value : previous;
     }
 
     /** One operator sample: phase (plus modulation) through log-sine, envelope + TL + AM, exp. */
@@ -917,7 +946,7 @@ public final class FastYm2612Dsp implements FmDsp {
     // ---------------------------------------------------------- snapshots
 
     private int[][] arrays() {
-        return new int[][] {olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
+        return new int[][] {delayedOutput, olderOp1, registers, phase, phaseIncrement, attenuation, egState, keyOn, ssgInvert, ssgHeld, ssgPendingRestart, output,
                 detune, multiple, totalLevel, rateScaling, attackRate, decayRate, sustainRate, releaseRate,
                 sustainLevel, amEnabled, ssgMode, keyCode, rateAttack, rateDecay, rateSustain, rateRelease,
                 operatorFnum, operatorBlock, channelFnum,

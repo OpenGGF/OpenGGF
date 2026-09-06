@@ -52,6 +52,18 @@ public interface FmDsp {
     void writeRegister(int port, int register, int value);
 
     /**
+     * Applies a write with its data-strobe position in the frame being rendered.
+     * Implementations may use this to resolve a register's sampling boundary;
+     * the default retains immediate register semantics.
+     *
+     * @param frameCycle internal-cycle offset, 0..24; 24 is the next frame's
+     *                   boundary after an address strobe in cycle 23
+     */
+    default void writeRegister(int port, int register, int value, int frameCycle) {
+        writeRegister(port, register, value);
+    }
+
+    /**
      * Advances one internal frame and writes the six pre-pan channel outputs.
      *
      * @param out at least {@link #CHANNELS} ints; entries 0..5 are written

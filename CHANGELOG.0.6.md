@@ -1,5 +1,9 @@
 # OpenGGF 0.6 Changelog
 
+- Fast FM retains carrier and channel output history across the multiplexed
+  sampling boundary, keeping mixed voices and repeated CF effects in phase.
+  Key-on checks cover every internal write offset on all six channels.
+
 - Fast FM preserves modulator history and phase continuity across pitch changes;
   all six channels are covered by independent pitch-transition and rewind checks.
 

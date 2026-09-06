@@ -387,14 +387,16 @@ public final class FastYm2612Chip implements FmChip {
             if (busCredit >= CYCLES_PER_FRAME) {
                 break; // the bus stays busy past this frame
             }
+            int writeCycle = busCredit;
             busCredit += cost;
             landed++;
             switch (pendingOps[base]) {
-                case OP_WRITE -> applyWrite(pendingOps[base + 1], pendingOps[base + 2], pendingOps[base + 3]);
+                case OP_WRITE -> applyWrite(pendingOps[base + 1], pendingOps[base + 2], pendingOps[base + 3],
+                        writeCycle + ADDRESS_SETTLE_CYCLES);
                 case OP_ADDRESS -> latchedRegister[pendingOps[base + 1]] = pendingOps[base + 2];
                 case OP_DATA -> {
                     int port = pendingOps[base + 1];
-                    applyWrite(port, latchedRegister[port], pendingOps[base + 2]);
+                    applyWrite(port, latchedRegister[port], pendingOps[base + 2], writeCycle);
                 }
                 case OP_FORCE_SILENCE -> silenceChannelNow(pendingOps[base + 1]);
                 case OP_DAC_PLAY -> {
@@ -419,11 +421,17 @@ public final class FastYm2612Chip implements FmChip {
     }
 
     private void applyWrite(int port, int register, int value) {
+        applyWrite(port, register, value, 23);
+    }
+
+    private void applyWrite(int port, int register, int value, int frameCycle) {
         latchedRegister[port] = register;
         if (register >= 0xB4 && register <= 0xB6) {
             pan[port * 3 + (register - 0xB4)] = ((value >> 7) & 1) | ((value >> 5) & 2);
         }
-        dsp.writeRegister(port, register, value);
+        // Status-read flushing has no paced frame position; keep its immediate
+        // semantics. Ordinary bus writes retain their data-strobe offset.
+        dsp.writeRegister(port, register, value, frameCycle < 0 ? 23 : frameCycle);
         if (writeObserver.observesPhysicalWrites()) {
             writeObserver.onYm2612BusWrite(internalCycles, port * 2, register,
                     ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS);
