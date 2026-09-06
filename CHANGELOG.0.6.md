@@ -20,6 +20,11 @@ This file contains the complete 0.6 development snapshot history carried forward
 
 ## 0.6 development history (mid-July 2026 – present, newest first)
 
+- **Fast FM rewind and diagnostics:** snapshots defensively copy DSP state on
+  construction and access. Register diagnostics preserve both chip banks and
+  report elapsed internal cycles at frame boundaries, including after rewind
+  or transaction rollback. Physical reference capture remains accurate-only.
+
 - **Clean-room fast FM core lands behind `audio.fmCore=fast`:**
   `FastYm2612Dsp` is a register-level YM2612 written from public hardware
   documentation and the department's techniques specification (no emulator

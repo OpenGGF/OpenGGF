@@ -77,6 +77,8 @@ public final class FastYm2612Chip implements FmChip {
     private int[] pendingOps = new int[OP_STRIDE * 256];
     private int pendingCount;
     private long flushedOps;
+    /** Elapsed YM internal cycles, quantized to complete 24-cycle FM frames. */
+    private long internalCycles;
     private int queuedAddress;
 
     private int dacSampleId = NO_DAC_VALUE;
@@ -142,7 +144,7 @@ public final class FastYm2612Chip implements FmChip {
     private void emitBoundary(ChipWriteObserver.PhysicalTimelineBoundary boundary) {
         if (writeObserver.observesPhysicalWrites()) {
             writeObserver.onPhysicalTimelineBoundary(
-                    ChipWriteObserver.ChipClockDomain.YM2612_INTERNAL_CYCLE, flushedOps, boundary);
+                    ChipWriteObserver.ChipClockDomain.YM2612_INTERNAL_CYCLE, internalCycles, boundary);
         }
     }
 
@@ -152,6 +154,7 @@ public final class FastYm2612Chip implements FmChip {
         Arrays.fill(pan, PAN_BOTH);
         Arrays.fill(latchedRegister, 0);
         pendingCount = 0;
+        internalCycles = 0;
         busCredit = 0;
         queuedAddress = 0;
         directFrameHead = 0;
@@ -313,9 +316,9 @@ public final class FastYm2612Chip implements FmChip {
         // address/data pair the sequencer uses.
         writeObserver.onYm2612Write(0, DAC_REGISTER, value);
         if (writeObserver.observesPhysicalWrites()) {
-            writeObserver.onYm2612BusWrite(flushedOps, 0, DAC_REGISTER,
+            writeObserver.onYm2612BusWrite(internalCycles, 0, DAC_REGISTER,
                     ChipWriteObserver.PhysicalWriteOrigin.DAC_STREAM);
-            writeObserver.onYm2612BusWrite(flushedOps, 1, value,
+            writeObserver.onYm2612BusWrite(internalCycles, 1, value,
                     ChipWriteObserver.PhysicalWriteOrigin.DAC_STREAM);
         }
     }
@@ -422,9 +425,9 @@ public final class FastYm2612Chip implements FmChip {
         }
         dsp.writeRegister(port, register, value);
         if (writeObserver.observesPhysicalWrites()) {
-            writeObserver.onYm2612BusWrite(flushedOps, 0, register,
+            writeObserver.onYm2612BusWrite(internalCycles, port * 2, register,
                     ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS);
-            writeObserver.onYm2612BusWrite(flushedOps, 1, value,
+            writeObserver.onYm2612BusWrite(internalCycles, port * 2 + 1, value,
                     ChipWriteObserver.PhysicalWriteOrigin.EXTERNAL_BUS);
         }
     }
@@ -502,6 +505,7 @@ public final class FastYm2612Chip implements FmChip {
             }
         }
         emitFrame(leftSum, rightSum);
+        internalCycles += CYCLES_PER_FRAME;
     }
 
     private void emitFrame(int leftSample, int rightSample) {
@@ -542,6 +546,7 @@ public final class FastYm2612Chip implements FmChip {
         private int directFrameCount;
         private int pendingCount;
         private long flushedOps;
+        private long internalCycles;
         private int queuedAddress;
         private int dacSampleId;
         private int dacPeriod;
@@ -583,6 +588,7 @@ public final class FastYm2612Chip implements FmChip {
         backup.directFrameCount = directFrameCount;
         backup.pendingCount = pendingCount;
         backup.flushedOps = flushedOps;
+        backup.internalCycles = internalCycles;
         backup.queuedAddress = queuedAddress;
         backup.dacSampleId = dacSampleId;
         backup.dacPeriod = dacPeriod;
@@ -616,6 +622,7 @@ public final class FastYm2612Chip implements FmChip {
         restoreDirectFrames(backup.direct, backup.directFrameCount);
         restorePendingOps(backup.ops, backup.pendingCount);
         flushedOps = backup.flushedOps;
+        internalCycles = backup.internalCycles;
         queuedAddress = backup.queuedAddress;
         dacSampleId = backup.dacSampleId;
         dacPeriod = backup.dacPeriod;
@@ -665,6 +672,7 @@ public final class FastYm2612Chip implements FmChip {
             int[] directFrames,
             int[] pendingOps,
             long flushedOps,
+            long internalCycles,
             int queuedAddress,
             int dacSampleId,
             int dacPeriod,
@@ -678,11 +686,21 @@ public final class FastYm2612Chip implements FmChip {
 
         public Snapshot {
             Objects.requireNonNull(dsp, "dsp");
+            FmDsp copy = dsp.newInstance();
+            dsp.copyStateTo(copy);
+            dsp = copy;
             pan = pan.clone();
             latchedRegister = latchedRegister.clone();
             directFrames = directFrames.clone();
             pendingOps = pendingOps.clone();
             mutes = mutes.clone();
+        }
+
+        @Override
+        public FmDsp dsp() {
+            FmDsp copy = dsp.newInstance();
+            dsp.copyStateTo(copy);
+            return copy;
         }
 
         @Override
@@ -716,6 +734,7 @@ public final class FastYm2612Chip implements FmChip {
                     && Arrays.equals(directFrames, other.directFrames)
                     && Arrays.equals(pendingOps, other.pendingOps)
                     && flushedOps == other.flushedOps
+                    && internalCycles == other.internalCycles
                     && queuedAddress == other.queuedAddress
                     && dacSampleId == other.dacSampleId
                     && dacPeriod == other.dacPeriod
@@ -730,7 +749,7 @@ public final class FastYm2612Chip implements FmChip {
 
         @Override
         public int hashCode() {
-            int result = Objects.hash(chipType, outputRate, dsp, flushedOps, queuedAddress,
+            int result = Objects.hash(chipType, outputRate, dsp, flushedOps, internalCycles, queuedAddress,
                     dacSampleId, dacPeriod, dacIndex, dacAccumulator, dacSampleEndPending, busCredit,
                     dacInterpolate, resampler);
             result = 31 * result + Arrays.hashCode(pan);
@@ -743,12 +762,10 @@ public final class FastYm2612Chip implements FmChip {
 
     @Override
     public FmChip.Snapshot captureSnapshot() {
-        FmDsp copy = dsp.newInstance();
-        dsp.copyStateTo(copy);
         int[] direct = new int[directFrameCount * 2];
         copyDirectFrames(direct);
-        return new Snapshot(chipType, outputRate, copy, pan, latchedRegister, direct,
-                Arrays.copyOf(pendingOps, pendingCount * OP_STRIDE), flushedOps, queuedAddress,
+        return new Snapshot(chipType, outputRate, dsp, pan, latchedRegister, direct,
+                Arrays.copyOf(pendingOps, pendingCount * OP_STRIDE), flushedOps, internalCycles, queuedAddress,
                 dacSampleId, dacPeriod, dacIndex, dacAccumulator, dacSampleEndPending, busCredit,
                 dacInterpolate, mutes, resampler.captureSnapshot());
     }
@@ -767,6 +784,7 @@ public final class FastYm2612Chip implements FmChip {
         restoreDirectFrames(snapshot.directFrames, snapshot.directFrames.length / 2);
         restorePendingOps(snapshot.pendingOps, snapshot.pendingOps.length / OP_STRIDE);
         flushedOps = snapshot.flushedOps;
+        internalCycles = snapshot.internalCycles;
         queuedAddress = snapshot.queuedAddress;
         dacSampleId = snapshot.dacSampleId;
         dacPeriod = snapshot.dacPeriod;
