@@ -29,7 +29,8 @@ workflow defaults.
 mvn -v                              # must report Java 21
 tools/testing/install-hooks.sh     # once per worktree
 python3 tools/testing/run_categories.py --list
-python3 tools/testing/run_categories.py --base develop --run  # use the actual integration base
+python3 tools/testing/run_categories.py --start-task <task-name> --base <pre-task-commit>
+python3 tools/testing/run_categories.py --base <printed-pinned-base> --run  # once per delivery unless proportionate-validation exception applies
 mvn -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
 mvn -Dmse=off package              # full ordinary suite plus packaging
 mvn -Dmse=off -Psmoke test -B         # what every branch push runs in CI
@@ -45,16 +46,33 @@ mvn -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
 - Use JUnit 5/Jupiter. `-Dmse=off` exposes full Maven logs. PowerShell quotes
   `-D...` arguments and uses `tools/testing/install-hooks.ps1`.
 - During implementation, run focused tests or `run_categories.py --category NAME --run`.
-  Before delivery, use `run_categories.py --base <integration-base> --run` against the
+  Before delivery, unless the proportionate-validation exception below applies, use
+  `run_categories.py --base <integration-base> --run` against the
   actual destination/base commit (not HEAD to hide committed work). Review the plan;
   `--category NAME` adds semantic dependencies the path rules cannot infer. Never
-  narrow its selection manually. See [test categories](tools/testing/README.md#test-categories).
+  narrow a runner invocation’s selection manually. See [test categories](tools/testing/README.md#test-categories).
 - The change-based runner selects related ordinary categories plus common tests and
   runs all structural guards in a separate JVM. This replaces the unconditional
   local full-suite requirement for changes covered by the policy. Shared or unknown
   changes automatically select the full ordinary suite; use `--category all` when
   impact is uncertain. Run affected trace fixtures and domain-mandated checks as well:
   ordinary categories do not cover the separate trace/native/diagnostic profiles.
+- **Proportionate validation:** choose local test scope from the actual behavior changed,
+  its consumers, and plausible failure modes, not file location or the runner's fallback
+  classification alone. Focused validation may replace the local broad run when impact
+  is bounded and understood, relevant production paths and edge cases can be exercised
+  directly, and there is no unresolved cross-cutting risk. This applies to small fixes,
+  configuration/registration changes, and other localized work; line count alone is not
+  evidence of low risk. Inspect the change-based plan before deciding. If its selection
+  is disproportionate, explain why and run the relevant regression, integration, and
+  domain-mandated checks instead. Prefer a regression test that reproduces the reported
+  failure. No extra user approval is needed when these conditions hold. Shared algorithm,
+  public contract, build/selection-policy, timing/physics changes, or uncertain impact
+  still require normal change-based validation. Record commands, results/skips, and
+  coverage limits; call focused validation what it is, never a full-suite pass. Do not
+  edit the runner's selection to manufacture a narrower broad run. Task accounting and
+  retry limits still apply; CI and release gates remain unchanged. Documentation-only
+  follow-ups do not require repeating engine tests.
 - Before a broad run, state the selected class count, expected cost and stopping rule.
   Broad normalization measured about 24 minutes ordinary plus 10 minutes guards; do not
   present this as a short check. Finish focused fixes and documentation first. Run
@@ -62,20 +80,37 @@ mvn -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
   PowerShell in the actual launch environment. On macOS, use the known working native
   display/service permissions from the first graphics run; tool preflight does not prove
   GLFW access. Do not rediscover a documented sandbox failure with another full run.
-- Budget **one completed required selection per candidate**, then focused checks for
-  relevant failures. The runner defaults to 40 minutes total across Maven lanes and a
-  10-minute no-output timeout; expiration stops its process tree and means incomplete,
-  never green. A second broad attempt requires `--repeat-reason` describing new scope or
-  a corrected prerequisite; red results alone are not a reason. Increasing the budget
-  must be justified by measured cost. Do not bypass these controls with raw Maven,
-  another worktree, deleting the receipt, or changing the base.
+- **Validation belongs to the entire user-requested delivery, not each commit or plan
+  item.** One commit per item does not mean one broad run per item. Pin the pre-task
+  integration commit once. Run focused checks during implementation, then one combined
+  change-based selection covering the delivered changes unless the proportionate-validation
+  exception applies. Do not advance the base after
+  each commit or treat the next planned item as new validation scope.
+- Review the **aggregate** testing cost before launching tests. Start one shared task
+  receipt with `run_categories.py --start-task <unique-task-name> --base <pre-task-commit>`;
+  use its printed pinned base for the delivery. The default ceiling is 40 minutes total
+  across the task, including focused and baseline checks, not 40 minutes per invocation.
+  Category runs are timed automatically. Immediately account for externally run focused
+  Maven/baseline checks with `--record-minutes <elapsed> --record-kind focused|baseline`.
+  Inspect `--task-status`; report a budget/mandatory-check conflict before launching work
+  that cannot fit. A ceiling is not an allowance to spend automatically.
+- The runner permits **one broad attempt per task**, including interrupted attempts,
+  and retains accounting in shared Git metadata across worktrees and commits. The
+  10-minute no-output timeout remains; expiration means incomplete, never green.
+  `--repeat-reason` records an explanation only and cannot authorize a repeat. A new
+  plan item, commit, branch, worktree, red result or changed base cannot reset the budget.
+  Do not bypass it with raw Maven, receipt deletion, or closing/reopening the task.
+  `--finish-task` is only for delivery/cancellation. A new identity requires a genuinely
+  new user request or an explicitly user-authorized validation exception. Such exceptions
+  are for material changes after combined validation or repaired prerequisites that
+  invalidated it, not continuation through the original plan. Never self-authorize one.
 - After a red broad run, fix regressions caused by the change and verify those fixes
   narrowly. Attribute disputed failures with a bounded, matched baseline/current check
   of the failing tests, not two full suites. Unattributed failures remain explicitly
   unattributed. Do not fix unrelated donor paths, graphics helpers or platform tooling
   merely to turn the run green. Report remaining failures and incomplete coverage;
   never describe a partially validated candidate as fully green. CI/release gates remain
-  mandatory and unchanged. A later material engine change can justify another broad run.
+  mandatory and unchanged; do not claim a green delivery from partial validation.
 - For changes confined to the Python category-runner implementation/tests and its prose
   guidance (no POM, selection-policy, Java, workflow or hook changes), verify the Python
   safety suite and actual tool preflight. Do not run the engine suite to test its wrapper.
