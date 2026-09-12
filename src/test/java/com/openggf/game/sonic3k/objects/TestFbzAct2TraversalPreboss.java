@@ -65,6 +65,17 @@ public class TestFbzAct2TraversalPreboss {
     private static final int MAGNETIC_PLATFORM_TOUCH_RADIUS_Y = 0x08;
     private static final int PLAYER_TOUCH_HALF_WIDTH = 0x08;
     private static final int MAGNETIC_PLATFORM_WAIT_LIMIT = 0x200;
+    // Obj74 ride: bounded by six AnPal_FBZ half-cycles ($100 frames each).
+    private static final int MAGNETIC_PLATFORM_RIDE_LIMIT = 0x600;
+    // A jump lasts about $3C frames; a hop between risen platforms adds a
+    // short grounded run-up. Never launch inside a shorter polarity runway,
+    // or both platforms fall while P1 is airborne over the ground hazard.
+    private static final int MAGNETIC_PLATFORM_RIDE_MIN_RUNWAY = 0x60;
+    // Adjacent FBZ2 Obj74 columns sit $C0 apart; hop only to the next one.
+    private static final int MAGNETIC_PLATFORM_RIDE_REACH = 0xE0;
+    private static final int MAGNETIC_PLATFORM_RIDE_LAUNCH_OFFSET = 0x08;
+    private static final int MAGNETIC_PLATFORM_RIDE_LANDING_OFFSET = 0x04;
+    private static final int MAGNETIC_PLATFORM_RIDE_ATTEMPT_LIMIT = 3;
     private static final int SQUEEZE_CORRIDOR_RECOVERY_LIMIT = 0x200;
     private static final int BLASTER_TOUCH_RADIUS_Y = 0x08;
     private static final int LATE_HAZARD_JUMP_LOOKAHEAD = 0x70;
@@ -905,6 +916,14 @@ public class TestFbzAct2TraversalPreboss {
             int magneticPlatformCrossingFrames = 0;
             Set<Integer> magneticPlatformEncounteredLayoutIndices = new LinkedHashSet<>();
             Set<Integer> magneticPlatformClearedLayoutIndices = new LinkedHashSet<>();
+            boolean magneticPlatformRideMode = false;
+            int magneticPlatformRideStage = 0;
+            int magneticPlatformRideFrames = 0;
+            int magneticPlatformRideAttempts = 0;
+            boolean magneticPlatformRideJumpStarted = false;
+            boolean magneticPlatformRideSettled = false;
+            FbzMagneticPlatformObjectInstance magneticPlatformRideHopTarget = null;
+            Sonic3kSpikeObjectInstance magneticPlatformRideBlockingSpike = null;
             Sonic3kInvisibleBlockObjectInstance squeezeCorridorTarget = null;
             FbzElevatorObjectInstance.Car squeezeCorridorSupport = null;
             boolean squeezeCorridorSafetyArmed = false;
@@ -1487,7 +1506,214 @@ public class TestFbzAct2TraversalPreboss {
                             && playerYBefore >= 0x0850 && playerYBefore <= 0x0900
                             && descendingCarDeltaY >= descendingCarLandingMinDeltaY
                             && descendingCarDeltaY <= descendingCarLandingMaxDeltaY;
-                    if (magneticPlatformHazardControllerActive) {
+                    if (magneticPlatformHazardControllerActive && !magneticPlatformRideMode
+                            && !magneticPlatformCrossingCommitted) {
+                        // Live geometry decides the traversal kind: a placed
+                        // spike blocking the flat approach at P1's own level
+                        // makes the underpass impossible, so the route must
+                        // jump onto the resting platform and ride it.
+                        Sonic3kSpikeObjectInstance blocking =
+                                magneticPlatformRideBlockingSpike(objects, player,
+                                        playerXBefore, playerYBefore,
+                                        magneticPlatformHazardPlacement.x());
+                        if (blocking != null) {
+                            magneticPlatformRideMode = true;
+                            magneticPlatformRideStage = 0;
+                            magneticPlatformRideFrames = 0;
+                            magneticPlatformRideAttempts = 0;
+                            magneticPlatformRideJumpStarted = false;
+                            magneticPlatformRideHopTarget = null;
+                            magneticPlatformRideBlockingSpike = blocking;
+                        }
+                    }
+                    if (magneticPlatformHazardControllerActive && magneticPlatformRideMode) {
+                        FbzMagneticPlatformObjectInstance target =
+                                magneticPlatformHazardTarget;
+                        magneticPlatformRideFrames++;
+                        int rideFrames = magneticPlatformRideFrames;
+                        int rideStage = magneticPlatformRideStage;
+                        int ridePlacementX = magneticPlatformHazardPlacement.x();
+                        assertTrue(rideFrames <= MAGNETIC_PLATFORM_RIDE_LIMIT,
+                                () -> waypointDiagnostic("obj74-ride-frame-limit",
+                                        ridePlacementX)
+                                        + " stage=" + rideStage
+                                        + " target=" + objectPosition(target));
+                        if (target == null) {
+                            maskOwner = "obj74-ride-await-live";
+                            mask = 0;
+                        } else {
+                            assertFalse(target.isDestroyed(),
+                                    "live Obj74 ride target was destroyed mid-episode");
+                            FbzZoneRuntimeState rideRuntime =
+                                    GameServices.zoneRuntimeRegistry()
+                                            .currentAs(FbzZoneRuntimeState.class)
+                                            .orElseThrow();
+                            int rideRunway = 0xFF - rideRuntime.magneticTimerPhase();
+                            boolean rideActive = rideRuntime.magneticPolarity()
+                                    == Sonic3kFBZEvents.MagneticPolarity.ACTIVE;
+                            boolean standingOnTarget = player.isOnObject()
+                                    && player.getLatchedSolidObjectInstance() == target;
+                            boolean targetResting = target.displacement() == 0
+                                    && !rideActive;
+                            boolean targetRaised =
+                                    target.displacement() == target.maximumRise();
+                            int landingX = target.getX()
+                                    - MAGNETIC_PLATFORM_RIDE_LANDING_OFFSET;
+                            switch (magneticPlatformRideStage) {
+                                case 0 -> {
+                                    // Grounded hold at the blocking spike until
+                                    // the platform rests on its floor with a
+                                    // full jump of INACTIVE runway left.
+                                    maskOwner = "obj74-ride-hold";
+                                    if (!player.getAir() && !player.isOnObject()
+                                            && targetResting
+                                            && rideRunway > MAGNETIC_PLATFORM_RIDE_MIN_RUNWAY) {
+                                        magneticPlatformRideAttempts++;
+                                        int attempts = magneticPlatformRideAttempts;
+                                        assertTrue(attempts <= MAGNETIC_PLATFORM_RIDE_ATTEMPT_LIMIT,
+                                                () -> waypointDiagnostic(
+                                                        "obj74-ride-approach-attempts", landingX)
+                                                        + " attempts=" + attempts);
+                                        magneticPlatformRideStage = 1;
+                                        mask = AbstractPlayableSprite.INPUT_JUMP
+                                                | AbstractPlayableSprite.INPUT_RIGHT;
+                                    } else {
+                                        mask = player.getGSpeed() > 0x80
+                                                ? AbstractPlayableSprite.INPUT_LEFT : 0;
+                                    }
+                                }
+                                case 1 -> {
+                                    // Airborne approach onto the resting platform.
+                                    maskOwner = "obj74-ride-approach";
+                                    if (standingOnTarget) {
+                                        magneticPlatformRideStage = 2;
+                                        magneticPlatformCurrentVerticalClearanceObserved = true;
+                                        mask = 0;
+                                    } else if (player.getAir()) {
+                                        mask = (player.getYSpeed() < 0
+                                                ? AbstractPlayableSprite.INPUT_JUMP : 0)
+                                                | steerMask(player, landingX, 2);
+                                    } else {
+                                        assertFalse(player.isOnObject(),
+                                                () -> waypointDiagnostic(
+                                                        "obj74-ride-approach-landed-elsewhere",
+                                                        landingX));
+                                        magneticPlatformRideStage = 0;
+                                        mask = 0;
+                                    }
+                                }
+                                case 2 -> {
+                                    // Ride: stay centred through the rise, then
+                                    // hop to the next risen column or exit right.
+                                    maskOwner = "obj74-ride";
+                                    if (!standingOnTarget) {
+                                        // loc_3B3C0 drops the platform at $58/frame,
+                                        // faster than P1 gravity; P1 separates and
+                                        // re-lands on the resting platform.
+                                        assertTrue(player.getAir(),
+                                                () -> waypointDiagnostic(
+                                                        "obj74-ride-lost-support", landingX));
+                                        mask = steerMask(player, landingX, 2);
+                                    } else {
+                                        // Hops between columns happen at rest
+                                        // level: the raised columns share their
+                                        // height with the horizontal Obj72 chain
+                                        // links, which would grab an airborne P1.
+                                        // Only the last column is ridden to its
+                                        // top for the exit onto the far floor.
+                                        ObjectSpawn nextPlacement =
+                                                nextMagneticPlatformPlacement(objects, target);
+                                        FbzMagneticPlatformObjectInstance next =
+                                                nextPlacement == null ? null
+                                                        : liveMagneticPlatform(objects,
+                                                                nextPlacement.layoutIndex());
+                                        boolean runwayOk =
+                                                rideRunway > MAGNETIC_PLATFORM_RIDE_MIN_RUNWAY;
+                                        if (nextPlacement == null && targetRaised
+                                                && rideActive && runwayOk) {
+                                            magneticPlatformRideStage = 4;
+                                            magneticPlatformRideJumpStarted = false;
+                                            magneticPlatformRideSettled = false;
+                                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                        } else if (next != null && targetResting
+                                                && next.displacement() == 0
+                                                && next.getY() == target.getY() && runwayOk) {
+                                            magneticPlatformRideHopTarget = next;
+                                            magneticPlatformRideStage = 3;
+                                            magneticPlatformRideJumpStarted = false;
+                                            magneticPlatformRideSettled = false;
+                                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                        } else {
+                                            mask = steerMask(player, target.getX(), 3);
+                                        }
+                                    }
+                                }
+                                case 3, 4 -> {
+                                    FbzMagneticPlatformObjectInstance hop =
+                                            magneticPlatformRideHopTarget;
+                                    boolean hopping = magneticPlatformRideStage == 3;
+                                    maskOwner = hopping ? "obj74-ride-hop" : "obj74-ride-exit";
+                                    if (!magneticPlatformRideJumpStarted) {
+                                        assertTrue(standingOnTarget,
+                                                () -> waypointDiagnostic(
+                                                        "obj74-ride-run-up-lost-support",
+                                                        target.getX()));
+                                        if (!magneticPlatformRideSettled) {
+                                            // Brake the landing inertia at the
+                                            // column centre so every launch
+                                            // leaves from the same short run-up.
+                                            magneticPlatformRideSettled =
+                                                    Math.abs(player.getGSpeed()) <= 0x40
+                                                    && Math.abs(playerXBefore - target.getX()) <= 2;
+                                            mask = magneticPlatformRideSettled
+                                                    ? AbstractPlayableSprite.INPUT_RIGHT
+                                                    : steerMask(player, target.getX(), 2);
+                                        } else if (playerXBefore >= target.getX()
+                                                + MAGNETIC_PLATFORM_RIDE_LAUNCH_OFFSET) {
+                                            magneticPlatformRideJumpStarted = true;
+                                            mask = AbstractPlayableSprite.INPUT_JUMP
+                                                    | AbstractPlayableSprite.INPUT_RIGHT;
+                                        } else {
+                                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                        }
+                                    } else if (hopping && player.isOnObject()
+                                            && player.getLatchedSolidObjectInstance() == hop) {
+                                        // Landed on the next column: the previous
+                                        // one is cleared and the new one bound.
+                                        magneticPlatformClearedLayoutIndices.add(
+                                                magneticPlatformHazardPlacement.layoutIndex());
+                                        magneticPlatformHazardClearances++;
+                                        magneticPlatformHazardCleared = true;
+                                        magneticPlatformHazardPlacement = hop.getSpawn();
+                                        magneticPlatformHazardTarget = hop;
+                                        magneticPlatformEncounteredLayoutIndices.add(
+                                                hop.getSpawn().layoutIndex());
+                                        magneticPlatformLiveBindings++;
+                                        assertEquals(0x0D, hop.getCollisionFlags() & 0x3F,
+                                                "live Obj74 hop target changed Touch_Sizes index");
+                                        magneticPlatformRideHopTarget = null;
+                                        magneticPlatformRideJumpStarted = false;
+                                        magneticPlatformRideStage = 2;
+                                        mask = 0;
+                                    } else if (player.getAir()) {
+                                        int jumpHold = player.getYSpeed() < 0
+                                                ? AbstractPlayableSprite.INPUT_JUMP : 0;
+                                        mask = jumpHold | (hopping
+                                                ? steerMask(player, hop.getX()
+                                                        - MAGNETIC_PLATFORM_RIDE_LANDING_OFFSET, 2)
+                                                : AbstractPlayableSprite.INPUT_RIGHT);
+                                    } else {
+                                        assertFalse(hopping,
+                                                () -> waypointDiagnostic("obj74-ride-hop-missed",
+                                                        hop.getX()));
+                                        mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                    }
+                                }
+                                default -> throw new IllegalStateException(
+                                        "Obj74 ride stage " + magneticPlatformRideStage);
+                            }
+                        }
+                    } else if (magneticPlatformHazardControllerActive) {
                         FbzMagneticPlatformObjectInstance target =
                                 magneticPlatformHazardTarget;
                         if (target != null) {
@@ -2840,6 +3066,14 @@ public class TestFbzAct2TraversalPreboss {
                             + Long.toHexString(magneticPlatformYFixed(
                                     magneticPlatformHazardTarget)))
                             + ",obj74WaitFrames=" + magneticPlatformHazardWaitFrames
+                            + ",obj74Ride=" + magneticPlatformRideMode
+                            + ",obj74RideStage=" + magneticPlatformRideStage
+                            + ",obj74RideFrames=" + magneticPlatformRideFrames
+                            + ",obj74RideAttempts=" + magneticPlatformRideAttempts
+                            + ",obj74RideJump=" + magneticPlatformRideJumpStarted
+                            + ",obj74RideSettled=" + magneticPlatformRideSettled
+                            + ",obj74RideHop=" + objectPosition(magneticPlatformRideHopTarget)
+                            + ",obj74RideSpike=" + objectPosition(magneticPlatformRideBlockingSpike)
                             + ",obj28Target=" + objectPosition(squeezeCorridorTarget)
                             + ",obj28Support=" + objectPosition(squeezeCorridorSupport)
                             + ",obj28RollRequested=" + squeezeCorridorRollRequested
@@ -3054,7 +3288,44 @@ public class TestFbzAct2TraversalPreboss {
                             squeezeCorridorSupportExited = false;
                         }
                     }
-                    if (magneticPlatformHazardPlacement != null) {
+                    if (magneticPlatformHazardPlacement != null && magneticPlatformRideMode) {
+                        ObjectSpawn hazardPlacement = magneticPlatformHazardPlacement;
+                        FbzMagneticPlatformObjectInstance target =
+                                magneticPlatformHazardTarget;
+                        assertFalse(player.getDead() || player.isHurt(),
+                                () -> waypointDiagnostic("obj74-ride-hurt", hazardPlacement.x())
+                                        + " target=" + objectPosition(target));
+                        int ringsAtArm = magneticPlatformHazardRingsAtArm;
+                        assertTrue(GameServices.level().getLevelGamestate().getRings()
+                                        >= ringsAtArm,
+                                () -> waypointDiagnostic("obj74-ride-ring-loss",
+                                        hazardPlacement.x())
+                                        + " ringsAtArm=" + ringsAtArm);
+                        if (magneticPlatformRideStage == 4 && target != null
+                                && magneticPlatformRideJumpStarted) {
+                            int postPlayerTouchLeft = (player.getCentreX() & 0xFFFF)
+                                    - PLAYER_TOUCH_HALF_WIDTH;
+                            int postObjectTouchRight = target.getX()
+                                    + MAGNETIC_PLATFORM_TOUCH_RADIUS_X;
+                            if (postPlayerTouchLeft > postObjectTouchRight) {
+                                magneticPlatformHazardCleared = true;
+                                magneticPlatformHazardClearances++;
+                                magneticPlatformClearedLayoutIndices.add(
+                                        hazardPlacement.layoutIndex());
+                                magneticPlatformHazardPlacement = null;
+                                magneticPlatformHazardTarget = null;
+                                magneticPlatformPreviousLiveYFixed = Long.MIN_VALUE;
+                                magneticPlatformCrossingCommitted = false;
+                                magneticPlatformCrossingBudget = 0;
+                                magneticPlatformCrossingFrames = 0;
+                                magneticPlatformRideMode = false;
+                                magneticPlatformRideStage = 0;
+                                magneticPlatformRideJumpStarted = false;
+                                magneticPlatformRideHopTarget = null;
+                                magneticPlatformRideBlockingSpike = null;
+                            }
+                        }
+                    } else if (magneticPlatformHazardPlacement != null) {
                         ObjectSpawn hazardPlacement = magneticPlatformHazardPlacement;
                         FbzMagneticPlatformObjectInstance target =
                                 magneticPlatformHazardTarget;
@@ -4111,6 +4382,47 @@ public class TestFbzAct2TraversalPreboss {
                     && !player.isOnObject()
                     && player.getMoveLockTimer() == 0
                     && !player.getPushing();
+        }
+
+        /**
+         * A live placed spike between P1 and the Obj74 column, overlapping P1's
+         * standing height, blocks the flat underpass approach. Its solid box is
+         * the ROM Obj_Spikes SolidObject envelope; no route identity is used.
+         */
+        private static Sonic3kSpikeObjectInstance magneticPlatformRideBlockingSpike(
+                ObjectManager objects, AbstractPlayableSprite player,
+                int playerX, int playerY, int platformX) {
+            return objects.activeObjectsOfType(Sonic3kSpikeObjectInstance.class).stream()
+                    .filter(spike -> !spike.isDestroyed())
+                    .filter(spike -> spike.getX() > playerX && spike.getX() < platformX)
+                    .filter(spike -> Math.abs(spike.getY() - playerY)
+                            <= spike.getSolidParams().airHalfHeight() + player.getYRadius())
+                    .min(Comparator.comparingInt(spike -> spike.getX() - playerX))
+                    .orElse(null);
+        }
+
+        /** The next authored Obj74 column within one hop, by immutable layout placement. */
+        private static ObjectSpawn nextMagneticPlatformPlacement(
+                ObjectManager objects, FbzMagneticPlatformObjectInstance current) {
+            int currentX = current.getX();
+            int restY = current.getSpawn().y() + current.displacement();
+            return objects.getAllSpawns().stream()
+                    .filter(spawn -> spawn.layoutIndex() >= 0)
+                    .filter(spawn -> spawn.objectId() == Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM)
+                    .filter(spawn -> spawn.layoutIndex() != current.getSpawn().layoutIndex())
+                    .filter(spawn -> spawn.x() > currentX
+                            && spawn.x() - currentX <= MAGNETIC_PLATFORM_RIDE_REACH)
+                    .filter(spawn -> spawn.y() == restY)
+                    .min(Comparator.comparingInt(spawn -> spawn.x() - currentX))
+                    .orElse(null);
+        }
+
+        private static FbzMagneticPlatformObjectInstance liveMagneticPlatform(
+                ObjectManager objects, int layoutIndex) {
+            return objects.activeObjectsOfType(FbzMagneticPlatformObjectInstance.class).stream()
+                    .filter(platform -> !platform.isDestroyed())
+                    .filter(platform -> platform.getSpawn().layoutIndex() == layoutIndex)
+                    .findFirst().orElse(null);
         }
 
         private static boolean hasSqueezeLaunchControl(

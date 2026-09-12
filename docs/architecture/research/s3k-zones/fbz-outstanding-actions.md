@@ -32,12 +32,25 @@ the oracle checks the resulting standing clearance instead of requiring rolling
 through the entire crossing. These changes affect ordinary test inputs and
 assertions, not production gameplay or the S1 squeeze assist.
 
-The next measured native obstruction is the spike at `$2330,$0970` beside the
-magnetic platform at `$2360,$0970`. The generic flat-underpass controller commits
-while Sonic is still blocked at `$2315`; the assertion correctly rejects loss
-of ordinary flat-ground control. The recorded route jumps onto and rides this
-platform. Implement that distinct interaction with live geometry and ordinary
-inputs, preserving the existing Obj74 safety checks.
+The spike at `$2330,$0970` beside the magnetic platform at `$2360,$0970` is
+now cleared by a distinct Obj74 ride interaction. When a live placed spike
+blocks the flat approach at P1's own level, the controller holds until the
+platform rests during INACTIVE polarity with a full jump of runway, jumps onto
+it with ordinary inputs, hops between resting columns at floor level (the
+raised columns share their height with the horizontal Obj72 chain links, which
+would grab an airborne P1), rides the last column to its `$C0` rise, and exits
+right onto the far floor. All four `$0970` columns (layouts 331, 340, 348, 355)
+bind and clear exactly once with no damage or ring loss.
+
+The next measured native obstruction is the authored input program itself. On
+`65b555341` it expires at frame 34,978 with P1 alive at `$26FD,$08EC` beside
+the `$26C8` spider crane with 64 rings, before the crane pickup, vertical
+chain-link descents, launcher, elevator and lower-loop backtrack that the
+recorded route uses to reach the subboss. That program already ends about
+1,000 frames below the act's 36,000-frame time-over limit, whereas the recorded
+route reaches the subboss camera 13,038 frames into the act. Closing the route
+therefore needs a faster authored program as well as the remaining live
+controllers; extending the ordinary-RIGHT fallback alone cannot work.
 
 Required complete-route evidence remains:
 
@@ -57,12 +70,15 @@ The 13-row matrix remains pending and must not be relabelled PASS:
 - five viewport widths: 320, 400, 512, 640, and 800;
 - donation off, Sonic 1, and Sonic 2.
 
-The early 640px and 800px deaths are closed by ordinary input recovery. Their
-next measured failures are frame 25729 at `$0D92,$0BE5` near the floating
-platform/ceiling, and frame 25751 at `$0BE5,$0A2C` near the lower spike,
-respectively. The 400px and 512px rows and the two donated profiles still have
-their earlier independent blockers. All five team rows advance past Obj28 to
-the later `$2360` spike/platform interaction.
+The early 640px and 800px deaths are closed by ordinary input recovery. On
+`65b555341` their measured failures are frame 25729 at `$0D92,$0BE5` near the
+floating platform/ceiling and frame 25885 at `$0EE6,$0BDF` at the wire cage.
+The 400px row dies at frame 27356 (`$06EF,$084A`), the 512px row is hurt at
+frame 29138 (`$178F,$05EC`), and the S1 and S2 donated profiles stop at frames
+7343 and 29706. Those six diagnostics are byte-for-byte unchanged by the Obj74
+ride. All five team rows, the native-width viewport row and the donation-off
+row now advance through the Obj74 column ride to the authored-program expiry at
+frame 34,978-34,981 beside the spider crane.
 
 After the native route is green, run the focused donation, team, and viewport
 methods, then the full `TestFbzCompatibilityMatrix`. The S1 row must prove that
