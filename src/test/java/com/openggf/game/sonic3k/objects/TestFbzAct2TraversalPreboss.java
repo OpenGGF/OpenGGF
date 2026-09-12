@@ -52,10 +52,18 @@ public class TestFbzAct2TraversalPreboss {
      */
     private static final String PREBOSS_INPUT_PROGRAM =
             "43:8,433:0,103:8,7:0,8:2,4:12,4:10,20:0,9:2,6:12,2:2,124:0,18:4,45:0,19:4,1:8,33:18,11:8,239:0,52:8,8:18,133:8,14:0,66:2,6:12,49:2,2:a,53:8,10:0,4:10,9:14,5:4,73:0,14:4,7:14,6:4,6:0,24:8,4:0,16:8,8:18,25:8,205:8,14:4,7:0,6:4,30:0,9:8,18:18,28:0,8:4,4:0,3:8,11:0,8:2,25:12,5:2,42:0,11:4,11:14,32:4,29:8,4:0,21:4,6:0,5:2,6:12,1:2,29:0,166:4,9:14,18:4,14:8,51:0,12:8,19:0,11:8,11:0,15:4,262:0,42:8,13:0,29:8,13:18,6:0,19:4,5:0,232:8,8:4,1:8,210:0,41:4,4:8,1:4,10:0,237:4,20:14,224:4,5:8,1:4,80:0,130:4,318:0,92:8,12:4,21:0,4:8,27:0,4:4,45:0,1:8,119:0,299:8,31:4,3:8,1:4,235:0,40:8,20:18,273:8,45:4,26:0,1373:8,31:18,12:8,13:4,2:8,1:4,45:0,39:4,740:8,25:4,105:0,80:8,60:a,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,9:8,16:4,2:8,1:4,110:0,1:8,20:18,63:8,1:18,12:8,31:4,16:8,3:4,1:8,1:4,359:0,33:4,42:8,20:18,24:8,4:4,1:8,9:18,49:8,1:18,81:8,50:4,4:8,1:4,215:0,6:8,20:18,29:14,20:4,20:8,30:18,10:8,8:2,4:12,4:2,4:12,4:2,19:8,42:0,45:8,10:4,208:0,16:8,40:18,1600:0,1:18,1:8,15:18,37:8,12:18,49:8,66:0,1:14,38:4,45:8,4:4,1:8,1:4,206:0,117:4,5:8,1:4,20:0,30:18,583:0,343:4,5:8,1:4,218:0,190:0,8:4,17:18,14:14,20:4,22:14,196:4,6:8,1:4,1:8,1:4,234:0,31:18,24:8,9:4,2:8,1:4,192:0,35:8,1:18,42:8,4:18,12:8,17:4,98:8,20:18,100:8";
-    private static final List<InputRun> NATIVE_START_TO_POST_SPIKES = parseInputProgram();
-    private static final int NATIVE_ROUTE_FRONTIER_FRAMES = 15_010;
-    private static final int SPIKE_CORRIDOR_START_RUN = 68;
-    private static final int SPIKE_CORRIDOR_END_RUN = 80;
+    // The source BK2 program is cadence evidence only up to the landing on the
+    // $0A80 lower floor (run 80 ends its 262-frame neutral settle at frame
+    // 2889 with 23 rings). Its remaining 12,121 frames, the former chain/lower-
+    // door program and nine lower-backtrack cycles never changed a milestone,
+    // ring or position band; they only spent the act's 36,000-frame time-over
+    // budget. The live midpoint controller owns everything after the landing.
+    private static final int NATIVE_START_RUN_COUNT = 81;
+    private static final List<InputRun> NATIVE_START_TO_LOWER_FLOOR =
+            parseInputProgram().subList(0, NATIVE_START_RUN_COUNT);
+    private static final int NATIVE_ROUTE_FRONTIER_FRAMES = 2_889;
+    private static final int SPIKE_CORRIDOR_START_RUN = 27;
+    private static final int SPIKE_CORRIDOR_END_RUN = 39;
     private static final int SPIKE_CORRIDOR_WAYPOINT_FRAMES = 122;
     private static final int LATE_BUTTON_DOOR_EXTENSION_FRAMES = 0x100;
     private static final int FLAME_TOUCH_RADIUS = 0x04;
@@ -80,18 +88,43 @@ public class TestFbzAct2TraversalPreboss {
     private static final int BLASTER_TOUCH_RADIUS_Y = 0x08;
     private static final int LATE_HAZARD_JUMP_LOOKAHEAD = 0x70;
     private static final int LATE_PROJECTILE_LOOKAHEAD = 0xA0;
+    // Post-door corridor ($1718 door to the $1A40 descent): during ACTIVE
+    // polarity the render-flag-2 Blasters ride the magnet to the ceiling and
+    // the Obj73 balls rise off the floor, so the floor is clear. Leave the
+    // late button between $27 and $6F frames into an ACTIVE half-cycle so the
+    // spindash traversal fits before the next INACTIVE edge.
+    private static final int POST_DOOR_CORRIDOR_MIN_RUNWAY = 0x90;
+    // loc_3B18C lifts an Obj73 ball at $18/frame^2 (about $28 frames to the
+    // ceiling) and the Blaster magnet rise adds $20/frame^2; do not leave
+    // before both have cleared the floor band.
+    private static final int POST_DOOR_CORRIDOR_MAX_RUNWAY = 0xD8;
+    private static final int POST_DOOR_CORRIDOR_HOLD_LIMIT = 0x200;
+    private static final int POST_DOOR_CORRIDOR_CHARGE_TAPS = 3;
+    // The non-magnetic $1790 Blaster patrols $1770-$17B0 and fires $10 frames
+    // after P1 enters $80. A spindash roll crosses that window and destroys
+    // it on contact while its shot arcs above the rolling radius.
+    private static final int POST_DOOR_CORRIDOR_HANDOFF_X = 0x1A40;
+    private static final int TRIGGER7_EGRESS_MIN_RUNWAY = 0xC0;
+    // Generic placed button/screw-door pair: Obj_Button publishes trigger bit
+    // (subtype & $F); Obj_FBZScrewDoor with the same low nibble latches on it.
+    private static final int LINKED_DOOR_LOOKAHEAD = 0x60;
+    private static final int LINKED_DOOR_BUTTON_REACH = 0xA0;
+    private static final int LINKED_DOOR_FRAME_LIMIT = 0x300;
+    private static final int SQUEEZE_PROACTIVE_LOOKAHEAD = 0x100;
+    // The $1D38 button top sits on the approach; a fast run hops off it
+    // airborne where ordinary braking is unavailable. Keep the last $30
+    // before the fence at walking speed so the fence stays reachable.
+    private static final int SQUEEZE_APPROACH_SPEED_CAP = 0x180;
+    private static final int SQUEEZE_APPROACH_MARGIN = 0x30;
+    private static final int SQUEEZE_CHARGED_WAIT_LIMIT = 0x200;
+    // The $208E ledge drops $104 onto the $2090/$20F0 spike pair; the gap
+    // pilot must own the airborne brake from the first falling frame.
+    private static final int LOWER_SPIKE_GAP_DROP_LIMIT = 0x120;
+    private static final int LOWER_SPIKE_GAP_LEDGE_LOOKAHEAD = 0x80;
+    private static final int LOWER_SPIKE_GAP_APPROACH_CAP = 0x100;
+    private static final int LOWER_SPIKE_GAP_PLATFORM_WAIT_LIMIT = 0x200;
     private static final int TAIL_ORDINARY_RIGHT_FALLBACK_LIMIT = 0x1800;
     private static final List<InputRun> LATE_STARPOST_INPUT_RUNS = List.of(new InputRun(120, 0x4));
-    private static final List<InputRun> MAGNETIC_CHAIN_TRANSFERS_AND_LOWER_DOOR = List.of(
-            new InputRun(20, 0x18), new InputRun(40, 0x8),
-            new InputRun(20, 0x18), new InputRun(148, 0x8),
-            new InputRun(20, 0x18), new InputRun(140, 0x8),
-            new InputRun(20, 0x14), new InputRun(8, 0x4),
-            new InputRun(20, 0x8), new InputRun(200, 0x0));
-    private static final List<InputRun> LOWER_BACKTRACK_CYCLE = List.of(
-            new InputRun(20, 0x14), new InputRun(20, 0x4));
-    private static final List<InputRun> LOWER_BACKTRACK_FINAL_CYCLE = List.of(
-            new InputRun(30, 0x0), new InputRun(20, 0x14), new InputRun(20, 0x4));
 
     private static boolean postLauncherRecoveryComplete(
             boolean playerAirborne, int playerX, int clearX) {
@@ -246,45 +279,22 @@ public class TestFbzAct2TraversalPreboss {
                         () -> routeEvidence(fixture, frame.frames(), milestones)
                                 + frame.recentDiagnostic());
 
-        runner.run(NATIVE_START_TO_POST_SPIKES, alive);
+        runner.run(NATIVE_START_TO_LOWER_FLOOR, alive);
         assertEquals(NATIVE_ROUTE_FRONTIER_FRAMES, runner.frames(), "fixed frontier length changed");
         // The placed $09C8/$0498 spider crane is an upper optional branch.
         // This mandatory run is already on the authored lower route here;
         // exact $E5 capture/move/release and sidekick-authority coverage lives
         // in FbzCompatibilityInteractionProbe for every compatibility row.
-        runner.run(MAGNETIC_CHAIN_TRANSFERS_AND_LOWER_DOOR, alive);
-        int lowerBacktrackRingFloor = GameServices.level().getLevelGamestate().getRings();
-        assertTrue(lowerBacktrackRingFloor >= 6,
-                () -> "lower-backtrack entry lost the route's safety rings: "
+        int midpointRingFloor = GameServices.level().getLevelGamestate().getRings();
+        assertTrue(midpointRingFloor >= 6,
+                () -> "lower-floor landing lost the route's safety rings: "
                         + routeEvidence(fixture, runner.frames(), milestones));
-        List<InputRun> lowerBacktrackApproach = new java.util.ArrayList<>();
-        for (int cycle = 0; cycle < 9; cycle++) {
-            List<InputRun> cycleRuns = cycle == 8
-                    ? LOWER_BACKTRACK_FINAL_CYCLE : LOWER_BACKTRACK_CYCLE;
-            lowerBacktrackApproach.addAll(cycleRuns);
-        }
+        List<InputRun> midpointApproach = new java.util.ArrayList<>();
+        // Runs 0-26 climb from the $0A80 lower floor to the $06AC ledge, stand
+        // on the $0948 button for the $0918 screw door and board the $08C0
+        // car; the live midpoint controller owns the car itself.
         List<InputRun> elevatorSubbossBossAndExit = List.of(
-                new InputRun(20, 0x18), new InputRun(180, 0x0),
-                new InputRun(20, 0x18), new InputRun(45, 0x8),
-                new InputRun(200, 0x0), new InputRun(20, 0x18),
-                new InputRun(200, 0x8), new InputRun(15, 0x4),
-                new InputRun(330, 0x0), new InputRun(20, 0x18),
-                new InputRun(5, 0x4), new InputRun(205, 0x0),
-                new InputRun(1, 0x8), new InputRun(3, 0x2),
-                new InputRun(1, 0x12), new InputRun(1, 0x2),
-                new InputRun(1, 0x12), new InputRun(1, 0x2),
-                new InputRun(1, 0x12), new InputRun(1, 0x2),
-                new InputRun(2, 0x8), new InputRun(20, 0x18),
-                new InputRun(416, 0x8), new InputRun(70, 0x4),
-                new InputRun(263, 0x0), new InputRun(70, 0x8),
-                new InputRun(265, 0x0), new InputRun(70, 0x4),
-                new InputRun(265, 0x0), new InputRun(70, 0x8),
-                new InputRun(265, 0x0), new InputRun(70, 0x4),
-                new InputRun(265, 0x0), new InputRun(70, 0x8),
-                new InputRun(265, 0x0), new InputRun(70, 0x4),
-                new InputRun(600, 0x0), new InputRun(300, 0x8),
-                new InputRun(20, 0x18), new InputRun(300, 0x8),
-                new InputRun(3000, 0x0), new InputRun(100, 0x8),
+                new InputRun(100, 0x8),
                 new InputRun(120, 0x0),
                 new InputRun(30, 0x18), new InputRun(30, 0x8),
                 new InputRun(40, 0x4), new InputRun(20, 0x14),
@@ -370,7 +380,7 @@ public class TestFbzAct2TraversalPreboss {
         assertEquals(SPIKE_CORRIDOR_WAYPOINT_FRAMES,
                 spikeCorridor.stream().mapToInt(InputRun::frames).sum(),
                 "spike-corridor waypoint must replace only the proven hazard segment");
-        lowerBacktrackApproach.addAll(elevatorSubbossBossAndExit.subList(
+        midpointApproach.addAll(elevatorSubbossBossAndExit.subList(
                 0, SPIKE_CORRIDOR_START_RUN));
         FrameCheck midpointApproachSafety = (frame, player) -> {
             tailSafety.afterFrame(frame, player);
@@ -378,12 +388,12 @@ public class TestFbzAct2TraversalPreboss {
             // (the complete-run trace carries $17 here). No approach damage
             // may reduce the actual entry floor before exact car ownership.
             assertTrue(GameServices.level().getLevelGamestate().getRings()
-                            >= lowerBacktrackRingFloor,
+                            >= midpointRingFloor,
                     () -> routeEvidence(fixture, frame.frames(), milestones)
-                            + " lowerBacktrackRingFloor=" + lowerBacktrackRingFloor);
+                            + " midpointRingFloor=" + midpointRingFloor);
         };
         runner.rideMidpointCarThroughSpikeCorridor(
-                lowerBacktrackApproach, SPIKE_CORRIDOR_WAYPOINT_FRAMES,
+                midpointApproach, SPIKE_CORRIDOR_WAYPOINT_FRAMES,
                 midpointApproachSafety);
         boolean forcedExitRequested = runner.runUntilWithDescendingElevatorCorridor(
                 elevatorSubbossBossAndExit.subList(
@@ -964,6 +974,20 @@ public class TestFbzAct2TraversalPreboss {
             FbzScrewDoorObjectInstance blockingScrewDoor = null;
             FbzScrewDoorObjectInstance lateButtonDoor = null;
             Sonic3kButtonObjectInstance lateButton = null;
+            int lateCorridorStage = 0;
+            int lateCorridorHoldFrames = 0;
+            boolean lateCorridorRollObserved = false;
+            FbzScrewDoorObjectInstance linkedDoor = null;
+            Sonic3kButtonObjectInstance linkedButton = null;
+            int linkedDoorStage = 0;
+            int linkedDoorFrames = 0;
+            Set<Integer> linkedDoorsPassed = new LinkedHashSet<>();
+            boolean squeezeApproachBrake = false;
+            int landingGapWaitFrames = 0;
+            boolean squeezeChargedWaitingForCar = false;
+            int squeezeChargedWaitFrames = 0;
+            Sonic3kInvisibleBlockObjectInstance squeezeAheadBlock = null;
+            int lateCorridorChargeTaps = 0;
             boolean lateButtonControllerSeen = false;
             FbzScrewDoorObjectInstance trigger0Door = null;
             Sonic3kButtonObjectInstance trigger0Button = null;
@@ -1295,6 +1319,74 @@ public class TestFbzAct2TraversalPreboss {
                                     "live Obj74 hazard changed Touch_Sizes index");
                         }
                     }
+                    boolean linkedDoorLatched = linkedDoor != null
+                            && linkedDoor.getY() < linkedDoor.getSpawn().y();
+                    if (squeezeCorridorTarget == null && !squeezeCorridorRecoveryActive
+                            && !player.getAir()
+                            && (linkedDoorStage == 0 || linkedDoorLatched)) {
+                        // A live normal Obj28 ahead over this floor is a squeeze
+                        // corridor whose car may not be live yet. Never walk in
+                        // on the ordinary fallback: hold at the geometry fence
+                        // (the abort hold) until an episode binds.
+                        Sonic3kInvisibleBlockObjectInstance aheadBlock =
+                                objects.activeObjectsOfType(
+                                                Sonic3kInvisibleBlockObjectInstance.class).stream()
+                                        .filter(block -> FbzMovingSqueezeTraversal
+                                                .isLiveNormalInvisibleSolid(block, player))
+                                        .filter(block -> !squeezeCorridorClearedLayoutIndices
+                                                .contains(block.getSpawn().layoutIndex()))
+                                        .filter(block -> squeezeBlockLeft(block)
+                                                > playerRightEdge(player))
+                                        .filter(block -> squeezeBlockLeft(block)
+                                                - playerRightEdge(player)
+                                                <= SQUEEZE_PROACTIVE_LOOKAHEAD)
+                                        .filter(block -> block.getY() < playerYBefore)
+                                        .filter(block -> playerYBefore + player.getYRadius()
+                                                - (block.getY() + block.getSolidParams()
+                                                .airHalfHeight()) <= 0x60)
+                                        .min(Comparator.comparingInt(block ->
+                                                squeezeBlockLeft(block)))
+                                        .orElse(null);
+                        squeezeAheadBlock = aheadBlock;
+                        squeezeApproachBrake = aheadBlock != null
+                                && player.getGSpeed() > SQUEEZE_APPROACH_SPEED_CAP
+                                && squeezeRecoveryStoppingRightEdge(player)
+                                >= squeezeBlockLeft(aheadBlock) - SQUEEZE_APPROACH_MARGIN;
+                        if (aheadBlock == null) squeezeAheadBlock = null;
+                        boolean doorBeforeBlock = aheadBlock != null
+                                && findLinkedBlockingDoor(objects, player, playerXBefore,
+                                        playerYBefore, linkedDoorsPassed) != null;
+                        if (aheadBlock != null && !squeezeApproachBrake && !doorBeforeBlock) {
+                            if (linkedDoorStage > 0) {
+                                // The latched door is crossed by the squeeze
+                                // launch itself; retire the door controller.
+                                linkedDoorsPassed.add(linkedDoor.getSpawn().layoutIndex());
+                                linkedDoorStage = 0;
+                                linkedDoor = null;
+                                linkedButton = null;
+                            }
+                            squeezeCorridorRecoveryActive = true;
+                            squeezeCorridorRecoveryFrontierX = squeezeBlockLeft(aheadBlock);
+                            squeezeCorridorRecoveryHoldX = squeezeCorridorRecoveryFrontierX
+                                    - (player.getStandXRadius() & 0xFFFF) - 0x08;
+                            squeezeCorridorRecoveryFrames = 0;
+                        }
+                    }
+                    if (squeezeAheadBlock != null
+                            && (squeezeAheadBlock.isDestroyed() || squeezeCorridorStage > 0
+                            || squeezeCorridorClearedLayoutIndices.contains(
+                                    squeezeAheadBlock.getSpawn().layoutIndex())
+                            || playerRightEdge(player) >= squeezeBlockLeft(squeezeAheadBlock))) {
+                        squeezeAheadBlock = null;
+                        squeezeApproachBrake = false;
+                    } else if (squeezeAheadBlock != null && !player.getAir()) {
+                        // Bang-bang speed limit on the approach: the recovery
+                        // hold steers RIGHT toward its fence, so re-evaluate the
+                        // ordinary stopping edge every grounded frame.
+                        squeezeApproachBrake = player.getGSpeed() > SQUEEZE_APPROACH_SPEED_CAP
+                                && squeezeRecoveryStoppingRightEdge(player)
+                                >= squeezeBlockLeft(squeezeAheadBlock) - SQUEEZE_APPROACH_MARGIN;
+                    }
                     if (squeezeCorridorTarget == null) {
                         var squeezeEpisode =
                                 squeezeCorridorRecoveryActive
@@ -1389,7 +1481,42 @@ public class TestFbzAct2TraversalPreboss {
                                         .hasLaunchFloorAuthority(player);
                         boolean episodeActive = FbzMovingSqueezeTraversal.isActive(
                                 tentativeEpisode, player);
-                        if (launchAuthorityLost || !episodeActive) {
+                        squeezeChargedWaitingForCar = false;
+                        if (!launchAuthorityLost && !episodeActive
+                                && squeezeCorridorStage == 3) {
+                            // Sonic_Spindash cannot be cancelled: dropping DOWN
+                            // launches. The bound car expired while charged, so
+                            // rebind the next live upward car of this same Obj28
+                            // or keep the charge held until one appears.
+                            Sonic3kInvisibleBlockObjectInstance chargedBlock =
+                                    squeezeCorridorTarget;
+                            FbzElevatorObjectInstance.Car nextCar = objects
+                                    .activeObjectsOfType(FbzElevatorObjectInstance.Car.class)
+                                    .stream()
+                                    .filter(car -> FbzMovingSqueezeTraversal.isActive(
+                                            new FbzMovingSqueezeTraversal.Episode(
+                                                    chargedBlock, car), player))
+                                    .min(Comparator.comparingInt(car ->
+                                            Math.abs(car.getCentreY() - playerYBefore)))
+                                    .orElse(null);
+                            if (nextCar != null) {
+                                squeezeCorridorSupport = nextCar;
+                                squeezeCorridorSupportSlot = nextCar.getSlotIndex();
+                                episodeActive = true;
+                            } else {
+                                squeezeChargedWaitingForCar = true;
+                                squeezeChargedWaitFrames++;
+                                int chargedWait = squeezeChargedWaitFrames;
+                                int chargedFrontier = squeezeBlockLeft(chargedBlock);
+                                assertTrue(chargedWait <= SQUEEZE_CHARGED_WAIT_LIMIT,
+                                        () -> waypointDiagnostic(
+                                                "obj28-charged-wait-for-car-limit",
+                                                chargedFrontier)
+                                                + " chargedWait=" + chargedWait);
+                            }
+                        }
+                        if (!squeezeChargedWaitingForCar
+                                && (launchAuthorityLost || !episodeActive)) {
                             int abortedLayout = squeezeCorridorTarget
                                     .getSpawn().layoutIndex();
                             int abortedFrontierX =
@@ -1805,6 +1932,17 @@ public class TestFbzAct2TraversalPreboss {
                             maskOwner = "obj74-live-crossing";
                             mask = AbstractPlayableSprite.INPUT_RIGHT;
                         }
+                    } else if (squeezeApproachBrake && squeezeCorridorStage == 0
+                            && !squeezeCorridorRollRequested) {
+                        // An Obj28 squeeze lies within the ordinary braking
+                        // distance ahead. Shed the run speed before any episode
+                        // binds so the launch fence stays reachable.
+                        maskOwner = "obj28-approach-brake";
+                        mask = player.getGSpeed() > SQUEEZE_APPROACH_SPEED_CAP
+                                ? AbstractPlayableSprite.INPUT_LEFT : 0;
+                    } else if (squeezeChargedWaitingForCar) {
+                        maskOwner = "obj28-native-charged-wait-for-car";
+                        mask = AbstractPlayableSprite.INPUT_DOWN;
                     } else if (squeezeCorridorRecoveryActive) {
                         assertNull(squeezeCorridorTarget,
                                 "Obj28 recovery retained tentative block authority");
@@ -2104,23 +2242,27 @@ public class TestFbzAct2TraversalPreboss {
                             // merely crossed for one frame at $0200+ speed.
                             mask = steerMask(player, buttonX, 2);
                         } else if (descendingDoorStage == 0) {
-                            assertTrue(withinButtonX && exactButtonFeet && exactButtonOwner,
-                                    () -> waypointDiagnostic(
-                                            "descending-door-trigger-without-button", buttonX));
-                            if (Math.abs(player.getGSpeed()) > 0x80) {
+                            // Obj_Button publishes one shared trigger bit from
+                            // the whole standing mask, so a configured sidekick
+                            // may hold subtype $22 before P1 arrives. Accept that
+                            // shared authority as the late button does; keep P1
+                            // steering onto the button so the bit survives if the
+                            // sidekick steps off before the door latches.
+                            boolean p1HoldsButton = withinButtonX && exactButtonFeet
+                                    && exactButtonOwner;
+                            if (p1HoldsButton && Math.abs(player.getGSpeed()) > 0x80) {
                                 mask = player.getGSpeed() > 0
                                         ? AbstractPlayableSprite.INPUT_LEFT
                                         : AbstractPlayableSprite.INPUT_RIGHT;
                             } else {
                                 descendingDoorStage = 1;
-                                mask = 0;
+                                mask = p1HoldsButton ? 0 : steerMask(player, buttonX, 2);
                             }
                         } else if (descendingDoorStage == 1 && !doorOpeningLatched) {
-                            assertTrue(triggerHeld && withinButtonX
-                                            && exactButtonFeet && exactButtonOwner,
+                            assertTrue(triggerHeld,
                                     () -> waypointDiagnostic(
                                             "descending-door-released-before-latch", buttonX));
-                            mask = 0;
+                            mask = exactButtonOwner ? 0 : steerMask(player, buttonX, 2);
                         } else {
                             descendingDoorStage = 2;
                             // The door routine is now latched independently of
@@ -2415,7 +2557,115 @@ public class TestFbzAct2TraversalPreboss {
                         // there is no active object at that coordinate. Resume
                         // ordinary RIGHT movement toward the next authored
                         // $02/$0A path switch at $1280/$0640.
-                        if (postDoorPathSwitchReached && lateButtonDoorStage == 3) {
+                        if (postDoorPathSwitchReached && lateButtonDoorStage == 3
+                                && spindashEnabled && lateCorridorStage < 5) {
+                            FbzZoneRuntimeState corridorRuntime =
+                                    GameServices.zoneRuntimeRegistry()
+                                            .currentAs(FbzZoneRuntimeState.class)
+                                            .orElseThrow();
+                            boolean lateDoorClearsPlayer = lateButtonDoor == null
+                                    || lateButtonDoor.getY()
+                                    + lateButtonDoor.getSolidParams().airHalfHeight()
+                                    < playerYBefore - player.getYRadius();
+                            int corridorRunway = 0xFF - corridorRuntime.magneticTimerPhase();
+                            boolean corridorGateOpen = lateDoorClearsPlayer
+                                    && corridorRuntime.magneticPolarity()
+                                    == Sonic3kFBZEvents.MagneticPolarity.ACTIVE
+                                    && corridorRunway >= POST_DOOR_CORRIDOR_MIN_RUNWAY
+                                    && corridorRunway <= POST_DOOR_CORRIDOR_MAX_RUNWAY;
+                            int holdX = lateButton != null ? lateButton.getX() : playerXBefore;
+                            switch (lateCorridorStage) {
+                                case 0 -> {
+                                    maskOwner = "late-corridor-polarity-hold";
+                                    lateCorridorHoldFrames++;
+                                    int holdFrames = lateCorridorHoldFrames;
+                                    assertTrue(holdFrames <= POST_DOOR_CORRIDOR_HOLD_LIMIT,
+                                            () -> waypointDiagnostic(
+                                                    "late-corridor-polarity-hold-limit", holdX)
+                                                    + " holdFrames=" + holdFrames);
+                                    if (corridorGateOpen && !player.getAir()
+                                            && Math.abs(player.getGSpeed()) <= 0x80
+                                            && player.getDirection()
+                                            != com.openggf.physics.Direction.LEFT) {
+                                        lateCorridorStage = 1;
+                                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                                    } else if (corridorGateOpen && !player.getAir()
+                                            && Math.abs(player.getGSpeed()) <= 0x80) {
+                                        // Sonic_Spindash releases along the facing
+                                        // direction; face RIGHT before crouching.
+                                        mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                    } else {
+                                        mask = player.getAir() ? 0
+                                                : steerMask(player, holdX, 2);
+                                    }
+                                }
+                                case 1 -> {
+                                    maskOwner = "late-corridor-spindash-crouch";
+                                    if (player.getCrouching()) {
+                                        lateCorridorStage = 2;
+                                        lateCorridorChargeTaps = 1;
+                                        mask = AbstractPlayableSprite.INPUT_DOWN
+                                                | AbstractPlayableSprite.INPUT_JUMP;
+                                    } else {
+                                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                                    }
+                                }
+                                case 2 -> {
+                                    // Sonic_Spindash adds $100 per JUMP edge up
+                                    // to $C00; three edges leave enough rolling
+                                    // speed after loc_3B462-style friction to
+                                    // reach the descent inside one half-cycle.
+                                    maskOwner = "late-corridor-spindash-hold";
+                                    assertTrue(player.getSpindash(),
+                                            "late corridor charge input did not enter spindash");
+                                    if (lateCorridorChargeTaps < POST_DOOR_CORRIDOR_CHARGE_TAPS
+                                            && (lateCorridorHoldFrames & 1) == 0) {
+                                        lateCorridorChargeTaps++;
+                                        mask = AbstractPlayableSprite.INPUT_DOWN
+                                                | AbstractPlayableSprite.INPUT_JUMP;
+                                    } else if (lateCorridorChargeTaps
+                                            < POST_DOOR_CORRIDOR_CHARGE_TAPS) {
+                                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                                    } else {
+                                        lateCorridorStage = 3;
+                                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                                    }
+                                    lateCorridorHoldFrames++;
+                                }
+                                case 3 -> {
+                                    maskOwner = "late-corridor-spindash-release";
+                                    assertTrue(player.getSpindash(),
+                                            "late corridor hold lost spindash state");
+                                    lateCorridorStage = 4;
+                                    mask = 0;
+                                }
+                                case 4 -> {
+                                    maskOwner = "late-corridor-roll";
+                                    lateCorridorRollObserved |= player.getRolling();
+                                    mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                    if (playerXBefore >= POST_DOOR_CORRIDOR_HANDOFF_X) {
+                                        lateCorridorStage = 5;
+                                        lateButtonDoorStage = 4;
+                                    } else if (lateCorridorRollObserved && !player.getAir()
+                                            && !player.getRolling() && !player.getSpindash()) {
+                                        if (Math.abs(player.getGSpeed()) >= 0x80) {
+                                            // Player_TouchFloor unrolled P1 after the
+                                            // drop off the button ledge; Sonic_Roll on
+                                            // DOWN resumes the roll at the live speed.
+                                            mask = AbstractPlayableSprite.INPUT_DOWN;
+                                        } else {
+                                            // The roll ended inside the corridor:
+                                            // re-arm the gate and charge again.
+                                            lateCorridorStage = 0;
+                                            lateCorridorHoldFrames = 0;
+                                            lateCorridorRollObserved = false;
+                                        }
+                                    }
+                                }
+                                default -> throw new IllegalStateException(
+                                        "late corridor stage " + lateCorridorStage);
+                            }
+                        } else if (postDoorPathSwitchReached && lateButtonDoorStage == 3) {
                             maskOwner = "late-button-stage-3-egress";
                             if (lateButtonDoor == null) {
                                 assertTrue(playerXBefore > 0x172B,
@@ -2552,12 +2802,26 @@ public class TestFbzAct2TraversalPreboss {
                                 // new pair can move.
                                 boolean suppressedCadencePhase =
                                         ((GameServices.level().getFrameCounter() + 1) & 3) == 0;
+                                // The magnetic $19B0 Blaster below the egress
+                                // rides the magnet to the ceiling only during
+                                // ACTIVE polarity; leave the button inside a
+                                // fresh ACTIVE half-cycle so the whole left
+                                // egress and turn stay above its shots.
+                                FbzZoneRuntimeState egressRuntime =
+                                        GameServices.zoneRuntimeRegistry()
+                                                .currentAs(FbzZoneRuntimeState.class)
+                                                .orElseThrow();
+                                boolean egressPolarityOpen = egressRuntime.magneticPolarity()
+                                        == Sonic3kFBZEvents.MagneticPolarity.ACTIVE
+                                        && 0xFF - egressRuntime.magneticTimerPhase()
+                                        >= TRIGGER7_EGRESS_MIN_RUNWAY;
                                 if (player.getGSpeed() > 0x0100) {
                                     mask = AbstractPlayableSprite.INPUT_LEFT;
                                 } else if (exactSurfaceOwner
                                         && trigger7Flamethrower.mappingFrame() == 2
                                         && !liveCollisionFlames
-                                        && suppressedCadencePhase) {
+                                        && suppressedCadencePhase
+                                        && egressPolarityOpen) {
                                     trigger7DoorStage = 3;
                                     trigger7EgressJumpStarted = true;
                                     mask = AbstractPlayableSprite.INPUT_LEFT
@@ -2658,6 +2922,60 @@ public class TestFbzAct2TraversalPreboss {
                                 // solid $1718 door; no jump/contact injection is
                                 // required to assert trigger 4.
                                 mask = steerMask(player, buttonX, 2);
+                            }
+                        } else if (postDoorPathSwitchReached
+                                && (linkedDoorStage > 0
+                                || (!player.getAir() && (linkedDoor = findLinkedBlockingDoor(
+                                        objects, player, playerXBefore, playerYBefore,
+                                        linkedDoorsPassed)) != null))) {
+                            maskOwner = "linked-button-door";
+                            if (linkedDoorStage == 0) {
+                                linkedButton = findLinkedButton(objects, linkedDoor,
+                                        playerXBefore, playerYBefore);
+                                int foundDoorX = linkedDoor.getX();
+                                assertNotNull(linkedButton, () -> waypointDiagnostic(
+                                        "linked-door-without-button", foundDoorX));
+                                linkedDoorStage = 1;
+                                linkedDoorFrames = 0;
+                            }
+                            linkedDoorFrames++;
+                            int doorFrames = linkedDoorFrames;
+                            int doorStage = linkedDoorStage;
+                            FbzScrewDoorObjectInstance door = linkedDoor;
+                            Sonic3kButtonObjectInstance button = linkedButton;
+                            assertTrue(doorFrames <= LINKED_DOOR_FRAME_LIMIT,
+                                    () -> waypointDiagnostic("linked-door-frame-limit", door.getX())
+                                            + " stage=" + doorStage
+                                            + " button=" + objectPosition(button));
+                            boolean doorLatched = door.getY() < door.getSpawn().y();
+                            boolean doorClearsPlayer = door.getY()
+                                    + door.getSolidParams().airHalfHeight()
+                                    < playerYBefore - player.getYRadius();
+                            int doorRightEdge = door.getX() + door.getSolidParams().halfWidth();
+                            if (linkedDoorStage == 1) {
+                                boolean p1OnButton = !player.getAir() && player.isOnObject()
+                                        && player.getLatchedSolidObjectInstance() == button;
+                                if (doorLatched) {
+                                    // The door routine is latched independently of
+                                    // the momentary button; walk into its live edge.
+                                    linkedDoorStage = 2;
+                                    mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                } else if (p1OnButton) {
+                                    mask = Math.abs(player.getGSpeed()) > 0x80
+                                            ? (player.getGSpeed() > 0
+                                            ? AbstractPlayableSprite.INPUT_LEFT
+                                            : AbstractPlayableSprite.INPUT_RIGHT) : 0;
+                                } else {
+                                    mask = steerMask(player, button.getX(), 2);
+                                }
+                            } else {
+                                if (playerXBefore > doorRightEdge && doorClearsPlayer) {
+                                    linkedDoorsPassed.add(door.getSpawn().layoutIndex());
+                                    linkedDoorStage = 0;
+                                    linkedDoor = null;
+                                    linkedButton = null;
+                                }
+                                mask = AbstractPlayableSprite.INPUT_RIGHT;
                             }
                         } else if (postDoorPathSwitchReached) {
                             maskOwner = "post-door-live-hazards";
@@ -3000,7 +3318,8 @@ public class TestFbzAct2TraversalPreboss {
                                         || playerXBefore < leftSpike.getX() - leftSpike.getSolidParams().halfWidth()
                                         || playerXBefore > rightSpike.getX() + rightSpike.getSolidParams().halfWidth()
                                         || rightSpike.getY() - playerYBefore < player.getYRadius()
-                                        || rightSpike.getY() - playerYBefore > 0xE0) continue;
+                                        || rightSpike.getY() - playerYBefore
+                                        > LOWER_SPIKE_GAP_DROP_LIMIT) continue;
                                 landingGapRight = rightSpike;
                                 landingGapX = (gapLeft + gapRight) / 2;
                             }
@@ -3010,9 +3329,31 @@ public class TestFbzAct2TraversalPreboss {
                     // ownership; the landing pilot cannot inject a jump into it.
                     if (landingGapRight != null && !magneticPlatformHazardControllerActive) {
                         maskOwner = "lower-spike-gap-landing";
-                        if (!landingGapJump && !player.getAir()
+                        // The gap may hold an Obj74 column. Its raised top sits
+                        // under a wall that blocks the exit jump, so wait on it
+                        // (loc_3B3C0 drops it once polarity clears) and leave
+                        // only from its resting floor position.
+                        FbzMagneticPlatformObjectInstance gapPlatform =
+                                !player.getAir() && player.isOnObject()
+                                        && player.getLatchedSolidObjectInstance()
+                                        instanceof FbzMagneticPlatformObjectInstance platform
+                                        ? platform : null;
+                        boolean gapPlatformMoving = gapPlatform != null
+                                && gapPlatform.displacement() != 0;
+                        if (gapPlatformMoving) {
+                            landingGapWaitFrames++;
+                            int gapWait = landingGapWaitFrames;
+                            int gapCentreX = landingGapX;
+                            assertTrue(gapWait <= LOWER_SPIKE_GAP_PLATFORM_WAIT_LIMIT,
+                                    () -> waypointDiagnostic(
+                                            "lower-spike-gap-platform-wait-limit", gapCentreX)
+                                            + " waitFrames=" + gapWait);
+                        }
+                        if (!landingGapJump && !player.getAir() && !gapPlatformMoving
                                 && Math.abs(player.getXSpeed()) < 0x20) landingGapJump = true;
-                        if (landingGapJump) {
+                        if (gapPlatformMoving) {
+                            mask = steerMask(player, gapPlatform.getX(), 3);
+                        } else if (landingGapJump) {
                             mask = AbstractPlayableSprite.INPUT_RIGHT
                                     | (!player.getAir() || player.getYSpeed() < 0
                                     ? AbstractPlayableSprite.INPUT_JUMP : 0);
@@ -3030,6 +3371,36 @@ public class TestFbzAct2TraversalPreboss {
                             int projectedX = playerXBefore
                                     + velocity * Math.abs(velocity) / (2 * acceleration * 256);
                             mask = steerMask(projectedX, landingGapX, 1);
+                        }
+                    } else if (squeezeCorridorClearances > 0 && landingGapRight == null
+                            && !magneticPlatformHazardControllerActive
+                            && !player.getAir() && player.getGSpeed() > LOWER_SPIKE_GAP_APPROACH_CAP
+                            && "post-door-live-hazards".equals(maskOwner)) {
+                        // A spike-pair gap below a ledge ahead: cap the run-off
+                        // speed so the airborne gap pilot can still brake into
+                        // the gap centre during the drop.
+                        var spikes = objects.activeObjectsOfType(Sonic3kSpikeObjectInstance.class);
+                        boolean gapLedgeAhead = false;
+                        for (var leftSpike : spikes) {
+                            for (var rightSpike : spikes) {
+                                int gapLeft = leftSpike.getX() + leftSpike.getSolidParams().halfWidth();
+                                int gapRight = rightSpike.getX() - rightSpike.getSolidParams().halfWidth();
+                                int leftEdge = leftSpike.getX() - leftSpike.getSolidParams().halfWidth();
+                                if (leftSpike.isDestroyed() || rightSpike.isDestroyed()
+                                        || leftSpike.getY() != rightSpike.getY()
+                                        || gapRight - gapLeft <= 0
+                                        || rightSpike.getX() - leftSpike.getX() > 0x80
+                                        || leftEdge < playerXBefore
+                                        || leftEdge - playerXBefore > LOWER_SPIKE_GAP_LEDGE_LOOKAHEAD
+                                        || rightSpike.getY() - playerYBefore < player.getYRadius()
+                                        || rightSpike.getY() - playerYBefore
+                                        > LOWER_SPIKE_GAP_DROP_LIMIT) continue;
+                                gapLedgeAhead = true;
+                            }
+                        }
+                        if (gapLedgeAhead) {
+                            maskOwner = "lower-spike-gap-approach-brake";
+                            mask = AbstractPlayableSprite.INPUT_LEFT;
                         }
                     }
                     lastControllerDiagnostic = " controller={postSwitch="
@@ -3111,11 +3482,13 @@ public class TestFbzAct2TraversalPreboss {
                             + squeezeCorridorRecoveryHoldX
                             + ",obj28RecoveryFrames="
                             + squeezeCorridorRecoveryFrames
+                            + ",obj28Ahead=" + objectPosition(squeezeAheadBlock)
+                            + ",obj28Brake=" + squeezeApproachBrake
                             + ",obj28LastCandidate="
                             + squeezeCorridorLastCandidateEvidence
                             + ",owner=" + maskOwner + ",mask=$"
                             + Integer.toHexString(mask) + '}';
-                    if (postDoorPathSwitchReached && lateButtonDoorStage == 3) {
+                    if ("late-button-stage-3-egress".equals(maskOwner)) {
                         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, mask,
                                 waypointDiagnostic(
                                         "late-door-egress-mask-override-stage-"
@@ -4423,6 +4796,34 @@ public class TestFbzAct2TraversalPreboss {
                     .filter(platform -> !platform.isDestroyed())
                     .filter(platform -> platform.getSpawn().layoutIndex() == layoutIndex)
                     .findFirst().orElse(null);
+        }
+
+        private static FbzScrewDoorObjectInstance findLinkedBlockingDoor(
+                ObjectManager objects, AbstractPlayableSprite player,
+                int playerX, int playerY, Set<Integer> passed) {
+            return objects.activeObjectsOfType(FbzScrewDoorObjectInstance.class).stream()
+                    .filter(door -> !door.isDestroyed())
+                    .filter(door -> !passed.contains(door.getSpawn().layoutIndex()))
+                    .filter(door -> door.getY() >= door.getSpawn().y())
+                    .filter(door -> door.getX() > playerX
+                            && door.getX() - playerX <= LINKED_DOOR_LOOKAHEAD)
+                    .filter(door -> Math.abs(door.getY() - playerY)
+                            <= door.getSolidParams().airHalfHeight() + player.getYRadius())
+                    .filter(door -> findLinkedButton(objects, door, playerX, playerY) != null)
+                    .min(Comparator.comparingInt(door -> door.getX() - playerX))
+                    .orElse(null);
+        }
+
+        private static Sonic3kButtonObjectInstance findLinkedButton(
+                ObjectManager objects, FbzScrewDoorObjectInstance door,
+                int playerX, int playerY) {
+            return objects.activeObjectsOfType(Sonic3kButtonObjectInstance.class).stream()
+                    .filter(button -> !button.isDestroyed())
+                    .filter(button -> (button.getSpawn().subtype() & 0xF) == door.triggerIndex())
+                    .filter(button -> Math.abs(button.getX() - playerX) <= LINKED_DOOR_BUTTON_REACH)
+                    .filter(button -> Math.abs(button.getY() - playerY) <= 0x40)
+                    .min(Comparator.comparingInt(button -> Math.abs(button.getX() - playerX)))
+                    .orElse(null);
         }
 
         private static boolean hasSqueezeLaunchControl(

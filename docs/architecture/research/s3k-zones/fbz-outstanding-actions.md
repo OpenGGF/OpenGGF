@@ -42,15 +42,40 @@ would grab an airborne P1), rides the last column to its `$C0` rise, and exits
 right onto the far floor. All four `$0970` columns (layouts 331, 340, 348, 355)
 bind and clear exactly once with no damage or ring loss.
 
-The next measured native obstruction is the authored input program itself. On
-`65b555341` it expires at frame 34,978 with P1 alive at `$26FD,$08EC` beside
-the `$26C8` spider crane with 64 rings, before the crane pickup, vertical
-chain-link descents, launcher, elevator and lower-loop backtrack that the
-recorded route uses to reach the subboss. That program already ends about
-1,000 frames below the act's 36,000-frame time-over limit, whereas the recorded
-route reaches the subboss camera 13,038 frames into the act. Closing the route
-therefore needs a faster authored program as well as the remaining live
-controllers; extending the ordinary-RIGHT fallback alone cannot work.
+The authored program was the next obstruction. On `65b555341` the source
+BK2 program spent 12,121 frames after landing on the `$0A80` lower floor
+(frame 2889), and the former chain/lower-door program, nine lower-backtrack
+cycles and a 3,000-frame neutral wait added about 9,000 more, without changing
+a milestone, ring or position band; the program expired at frame 34,978 about
+1,000 frames below the act's 36,000-frame time-over limit. The pilot now ends
+the BK2 program at its 81st run (frame 2889, 23 rings) and the midpoint
+approach is only the 27 runs that climb to the `$06AC` ledge, press the
+`$0948` button and board the `$08C0` car.
+
+That earlier timing exposed every phase-dependent controller. The following
+are now gated on live geometry or AnPal_FBZ polarity instead of arrival phase:
+
+- the `$1718` corridor: hold on the subtype-`$24` button until a fresh ACTIVE
+  half-cycle (render-flag-2 Blasters and Obj73 balls rise off the floor), then
+  spindash; the non-magnetic `$1790` Blaster is destroyed by the roll;
+- the trigger-7 egress: leave the `$1B28` button only inside a fresh ACTIVE
+  half-cycle so the magnetic `$19B0` Blaster hangs from the ceiling;
+- placed button/screw-door pairs (`Obj_Button` trigger bit = subtype low
+  nibble): a generic controller steers onto the linked button, waits for the
+  door routine to latch and walks through; sidekick-held trigger bits are
+  accepted as shared authority for the subtype-`$22` door as well;
+- Obj28 squeeze corridors: a proactive geometry hold before any episode
+  binds, a walking-speed cap over the last `$30` before the fence, and a
+  charged spindash that rebinds the next upward car instead of aborting;
+- the `$208E` ledge over the `$2090`/`$20F0` spike pair: run-off speed is
+  capped, the drop is owned from its first falling frame, and a raised Obj74
+  column in the gap is ridden down to rest before the exit jump.
+
+With those, all five team rows, the 512px viewport row and the S2 donated
+profile reach the authored-program expiry at frame 14,650-14,833 beside the
+`$26C8` spider crane, alive with 43-69 rings and about 21,000 frames of act
+time in hand. The next work is the crane pickup, vertical chain-link
+descents, launcher, elevator and lower-loop backtrack toward the subboss.
 
 Required complete-route evidence remains:
 
@@ -70,15 +95,12 @@ The 13-row matrix remains pending and must not be relabelled PASS:
 - five viewport widths: 320, 400, 512, 640, and 800;
 - donation off, Sonic 1, and Sonic 2.
 
-The early 640px and 800px deaths are closed by ordinary input recovery. On
-`65b555341` their measured failures are frame 25729 at `$0D92,$0BE5` near the
-floating platform/ceiling and frame 25885 at `$0EE6,$0BDF` at the wire cage.
-The 400px row dies at frame 27356 (`$06EF,$084A`), the 512px row is hurt at
-frame 29138 (`$178F,$05EC`), and the S1 and S2 donated profiles stop at frames
-7343 and 29706. Those six diagnostics are byte-for-byte unchanged by the Obj74
-ride. All five team rows, the native-width viewport row and the donation-off
-row now advance through the Obj74 column ride to the authored-program expiry at
-frame 34,978-34,981 beside the spider crane.
+The 640px and 800px rows and the S1 donated profile never leave the BK2 route
+segment: at frame 2889 they stand at `$0890,$02EC` with two to four rings and
+now fail the lower-floor ring floor there instead of dying later inside the
+removed filler (their earlier frames 25729, 25885 and 7343). The 400px row
+advances to frame 10131, hurt at `$1F92,$07D9` beside the `$1F40` descending
+car. Every remaining row reaches the program expiry beside the spider crane.
 
 After the native route is green, run the focused donation, team, and viewport
 methods, then the full `TestFbzCompatibilityMatrix`. The S1 row must prove that

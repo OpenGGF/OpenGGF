@@ -89,10 +89,12 @@ The September controller checks advance the 640px row from frame 1455 to
 floating-platform/ceiling geometry; the latter reaches the lower spike at
 `$0C00`. Neither row is a complete-route pass. The early recovery commits
 preserve the other three viewport diagnostics exactly; the separate late-route
-repair advances the native-width row beyond Obj28 to the `$2360` platform, and
-the Obj74 column ride then carries it to the authored-program expiry at frame
-34,978 beside the `$26C8` spider crane. See
-[outstanding actions](fbz-outstanding-actions.md) for the measured rows.
+repair advances the native-width row beyond Obj28 to the `$2360` platform; the
+Obj74 column ride, the removal of about 22,000 frames of dead authored input
+and the polarity-gated corridor controllers then carry it to the authored-
+program expiry at frame 14,650 beside the `$26C8` spider crane with the act
+timer intact. See [outstanding actions](fbz-outstanding-actions.md) for the
+measured rows.
 
 Every width asserts world-coordinate thresholds, ordinary nonpersistent
 placement entering at the right viewport frontier and culling at the left
