@@ -107,7 +107,7 @@ public class RomManager implements AutoCloseable {
         if (existing != null && existing.isOpen()) {
             return existing;
         }
-        Rom secondaryRom = openCatalogueRom(legacyRomGame(gameId).identity());
+        Rom secondaryRom = openCatalogueRom(legacyRomGame(gameId).identity(), true, gameId);
         LOGGER.info("Opened secondary ROM (" + gameId + "): " + secondaryRom.readDomesticName());
         secondaryRoms.put(gameId, secondaryRom);
         return secondaryRom;
@@ -151,17 +151,32 @@ public class RomManager implements AutoCloseable {
         return catalogue().open(identity);
     }
 
-    private Rom openCatalogueRom(RomIdentity identity) throws IOException {
+    /**
+     * Opens a logical ROM through the catalogue, keeping the diagnostics the
+     * engine and its tests rely on: an explicit key naming a missing file
+     * reports that exact configured value, a blank key with nothing in the
+     * catalogue reports the unconfigured-ROM message, and an unreadable image
+     * reports the configured value it was opened as.
+     */
+    private Rom openCatalogueRom(RomIdentity identity, boolean secondary, String gameId) throws IOException {
         RomImageCatalogue images = catalogue();
-        RomImageCatalogue.Resolution resolution = images.resolve(identity).orElseThrow(() ->
-                new IOException(MISSING_ROM_PREFIX + missingDescription(images, identity)));
-        return Rom.fromReader(images.open(identity), resolution.describe());
-    }
-
-    private static String missingDescription(RomImageCatalogue images, RomIdentity identity) {
-        return images.configuredValue(identity)
-                .map(value -> value + " (no user-supplied image contains logical ROM " + identity + ")")
-                .orElse("no user-supplied image contains logical ROM " + identity);
+        Optional<RomImageCatalogue.Resolution> resolution = images.resolve(identity);
+        if (resolution.isEmpty()) {
+            Optional<String> missing = images.explicitMissingValue(identity);
+            if (missing.isPresent()) {
+                throw new IOException((secondary ? "Failed to open secondary ROM: " : MISSING_ROM_PREFIX) + missing.get());
+            }
+            throw new IOException(secondary
+                    ? "No ROM configured for game: " + gameId
+                    : "ROM filename not configured (DEFAULT_ROM not set or per-game ROM key empty)");
+        }
+        try {
+            return Rom.fromReader(images.open(identity), resolution.get().describe());
+        } catch (IOException e) {
+            String configured = images.configuredValue(identity).orElse(resolution.get().describe());
+            throw new IOException((secondary ? "Failed to open secondary ROM: " : "Failed to open ROM file: ")
+                    + configured, e);
+        }
     }
 
     /**
@@ -180,7 +195,7 @@ public class RomManager implements AutoCloseable {
         String gameId = configService().getString(SonicConfiguration.DEFAULT_ROM);
         RomIdentity identity = legacyRomGame(gameId).identity();
         LOGGER.info("Opening ROM for " + gameId + " (logical ROM " + identity + ")");
-        rom = openCatalogueRom(identity);
+        rom = openCatalogueRom(identity, false, gameId);
         initialized = true;
     }
 
@@ -197,12 +212,13 @@ public class RomManager implements AutoCloseable {
     }
 
     /**
-     * Resolves the ROM file for a given game identifier, for tools that open
-     * a ROM by path.
+     * Returns the configured per-game ROM value verbatim (including blank or
+     * whitespace-only text) for tools that open a ROM by path. This legacy
+     * forwarder does not consult the catalogue; callers that want catalogue
+     * resolution use {@link RomLocationResolver} or {@link #openLogicalRom}.
      *
      * @param gameId "s1", "s2", or "s3k"
-     * @return the file the catalogue serves that game from when it is one
-     *         whole file, otherwise the literal configured value
+     * @return the configured ROM value for that game
      */
     @Deprecated
     public static String resolveRomForGame(String gameId) {
@@ -216,10 +232,7 @@ public class RomManager implements AutoCloseable {
             case "s3k" -> RomGame.S3K;
             default -> throw new IllegalArgumentException("No stock ROM mapping for game: " + gameId);
         };
-        return RomLocationResolver.forCurrentWorkingDirectory(configuration)
-                .resolve(game)
-                .map(location -> location.resolvedPath().toString())
-                .orElseGet(() -> configuration.getString(game.configurationKey()));
+        return configuration.getString(game.configurationKey());
     }
 
     private static List<Object> catalogueKey(SonicConfigurationService configuration) {

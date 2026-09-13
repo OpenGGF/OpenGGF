@@ -25,9 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Boot smoke through the ROM catalogue: the per-game keys name files that do
- * not exist, so every game must be found in {@code roms.directory} by size
- * and header. S3K additionally boots from an {@code SK} + {@code S3}
+ * Boot smoke through the ROM catalogue: the per-game keys are blank, so every
+ * game must be found in {@code roms.directory} by size and header. S3K additionally boots from an {@code SK} + {@code S3}
  * composite assembled from the lock-on dump's two windows. ROM-gated; skips
  * when an image is absent. No file is copied, linked or renamed.
  */
@@ -69,9 +68,9 @@ class TestRomCatalogueHeadlessBoot {
     private static void pointCatalogueAt(File image, boolean preferComposite) {
         Path directory = image.toPath().toAbsolutePath().getParent();
         SonicConfigurationService configuration = SonicConfigurationService.getInstance();
-        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "no-such-s1.gen");
-        configuration.setConfigValue(SonicConfiguration.SONIC_2_ROM, "no-such-s2.gen");
-        configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, "no-such-s3k.gen");
+        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "");
+        configuration.setConfigValue(SonicConfiguration.SONIC_2_ROM, "");
+        configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, "");
         configuration.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, directory.toString());
         configuration.setConfigValue(SonicConfiguration.ROMS_PREFER_COMPOSITE, preferComposite);
         configuration.setConfigValue(SonicConfiguration.TEST_MODE_ENABLED, false);
@@ -97,7 +96,7 @@ class TestRomCatalogueHeadlessBoot {
     }
 
     @Test
-    void sonic1BootsFromTheDirectoryScanWhenItsKeyNamesAMissingFile() throws Exception {
+    void sonic1BootsFromTheDirectoryScanWhenItsKeyIsBlank() throws Exception {
         File image = RomTestUtils.ensureSonic1RomAvailable();
         Assumptions.assumeTrue(image != null, "Sonic 1 image is required");
         pointCatalogueAt(image, false);
@@ -107,7 +106,7 @@ class TestRomCatalogueHeadlessBoot {
     }
 
     @Test
-    void sonic2BootsFromTheDirectoryScanWhenItsKeyNamesAMissingFile() throws Exception {
+    void sonic2BootsFromTheDirectoryScanWhenItsKeyIsBlank() throws Exception {
         File image = RomTestUtils.ensureSonic2RomAvailable();
         Assumptions.assumeTrue(image != null, "Sonic 2 image is required");
         pointCatalogueAt(image, false);

@@ -126,7 +126,7 @@ class TestRomCompositeImages {
         Assumptions.assumeTrue(s1 != null, "Sonic 1 image is required");
         Path directory = s1.toPath().toAbsolutePath().getParent();
         SonicConfigurationService configuration = SonicConfigurationService.createStandalone(directory);
-        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "no-such-file.gen");
+        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "");
         configuration.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, directory.toString());
 
         RomLocation location = new RomLocationResolver(configuration, directory).resolve(RomGame.S1).orElseThrow();

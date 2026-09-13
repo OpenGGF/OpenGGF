@@ -59,11 +59,15 @@ class TestRomImageCatalogue {
     }
 
     @Test
-    void explicitKeyNamingAnImageWithoutTheRomFallsBackToTheCatalogue() {
+    void explicitKeyNamingAnImageWithoutTheRomServesThatImageWhole() throws IOException {
+        // The user named the file: it is served as configured and the game
+        // detectors judge it, never silently swapped for another image.
         RomImageCatalogue catalogue = new RomImageCatalogue(List.of(S3, S1_A), Map.of(RomIdentity.S1, S3), false);
         Resolution resolution = catalogue.resolve(RomIdentity.S1).orElseThrow();
-        assertEquals(Source.DIRECTORY_ORDER, resolution.source());
-        assertSame(S1_A, resolution.parts().get(0).image());
+        assertEquals(Source.EXPLICIT_KEY, resolution.source());
+        assertSame(S3, resolution.parts().get(0).image());
+        assertEquals(S3.path(), resolution.wholeImagePath().orElseThrow());
+        assertEquals(S3_SIZE, catalogue.open(RomIdentity.S1).size());
     }
 
     @Test
@@ -161,7 +165,7 @@ class TestRomImageCatalogue {
 
         SonicConfigurationService configuration = SonicConfigurationService.createStandalone(dir);
         configuration.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, "roms");
-        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "missing-s1.gen");
+        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "");
         configuration.setConfigValue(SonicConfiguration.SONIC_2_ROM, elsewhere.toString());
         configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, "");
 
@@ -177,9 +181,45 @@ class TestRomImageCatalogue {
         Resolution s2 = catalogue.resolve(RomIdentity.S2).orElseThrow();
         assertEquals(Source.EXPLICIT_KEY, s2.source());
         assertEquals(elsewhere.toAbsolutePath().normalize(), s2.wholeImagePath().orElseThrow());
-        assertEquals("missing-s1.gen", catalogue.configuredValue(RomIdentity.S1).orElseThrow());
+        assertTrue(catalogue.configuredValue(RomIdentity.S1).isEmpty());
         assertTrue(catalogue.configuredValue(RomIdentity.S3K).isEmpty());
         assertTrue(catalogue.resolve(RomIdentity.S3K).isEmpty());
+    }
+
+    @Test
+    void explicitKeyNamingAMissingFileFailsClosedButTheDefaultHintDoesNot(@TempDir Path dir) throws IOException {
+        Path roms = Files.createDirectories(dir.resolve("roms"));
+        Files.write(roms.resolve("elsewhere-named.gen"), image(S1_SIZE, (byte) 1, S1_TITLE, null));
+        Files.write(roms.resolve("other-two.gen"), image(S2_SIZE, (byte) 2, S2_TITLE, null));
+        SonicConfigurationService configuration = SonicConfigurationService.createStandalone(dir);
+        configuration.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, "roms");
+        configuration.setConfigValue(SonicConfiguration.SONIC_1_ROM, "typo/../typo-s1.gen");
+        assertEquals("s2.gen", configuration.getString(SonicConfiguration.SONIC_2_ROM), "built-in default hint");
+
+        RomImageCatalogue catalogue = RomImageCatalogue.build(configuration, dir);
+
+        assertTrue(catalogue.resolve(RomIdentity.S1).isEmpty(), "an explicit missing file never falls back");
+        assertEquals("typo/../typo-s1.gen", catalogue.explicitMissingValue(RomIdentity.S1).orElseThrow());
+        assertThrows(IOException.class, () -> catalogue.open(RomIdentity.S1));
+        Resolution s2 = catalogue.resolve(RomIdentity.S2).orElseThrow();
+        assertEquals(Source.DIRECTORY_ORDER, s2.source(), "the absent default hint lets the scan apply");
+        assertTrue(catalogue.explicitMissingValue(RomIdentity.S2).isEmpty());
+    }
+
+    @Test
+    void explicitKeyNamingAnUnrecognisedFileServesItWhole(@TempDir Path dir) throws IOException {
+        Path odd = dir.resolve("odd.bin");
+        Files.write(odd, new byte[] {0x7A, 1, 2, 3});
+        SonicConfigurationService configuration = SonicConfigurationService.createStandalone(dir);
+        configuration.setConfigValue(SonicConfiguration.SONIC_2_ROM, odd.toString());
+
+        RomImageCatalogue catalogue = RomImageCatalogue.build(configuration, dir);
+
+        Resolution s2 = catalogue.resolve(RomIdentity.S2).orElseThrow();
+        assertEquals(Source.EXPLICIT_KEY, s2.source());
+        assertEquals(odd.toAbsolutePath().normalize(), s2.wholeImagePath().orElseThrow());
+        assertEquals(4, catalogue.open(RomIdentity.S2).size());
+        assertEquals(0x7A, catalogue.open(RomIdentity.S2).readU8(0));
     }
 
     @Test
