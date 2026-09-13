@@ -292,7 +292,10 @@ The [detailed 0.8 roadmap](docs/project/v0.8-roadmap.md) owns these workstreams:
   completed routes and declared native/JVM/service boundaries.
 - Preserve scheduled base-game streamed SFX and S1 mod-zone commitments; the
   bounded S3K format-v2 adapter is already delivered. Native Knuckles-in-Sonic-2
-  remains a separate ROM lock-on follow-on, not implied by S3K character donation.
+  remains a separate ROM lock-on follow-on, not implied by S3K character donation;
+  its full-fidelity tier depends on
+  [ROM image normalisation](docs/architecture/designs/2026-09-13-rom-image-normalisation-design.md),
+  which lets any mix of standalone and lock-on images boot each game.
 - Continue observed SMPS/chip-parity and listening work with explicit scope and
   evidence. Optional creator/editor expansion remains demand-driven.
 
