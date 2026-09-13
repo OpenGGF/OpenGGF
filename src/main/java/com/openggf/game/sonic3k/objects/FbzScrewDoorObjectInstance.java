@@ -72,7 +72,7 @@ public final class FbzScrewDoorObjectInstance extends AbstractObjectInstance
       animTimer = 1;
     }
   }
-  private void coarseCull() { coarseXCull(spawn.x(), 0x280); }
+  private void coarseCull() { coarseXCullViewport(spawn.x()); }
   public int getX() {
     if (legacyRestored)
       return spawn.x();

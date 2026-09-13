@@ -46,7 +46,7 @@ public final class FbzEndEggCapsuleAnimalInstance extends AbstractObjectInstance
         activeUpdates++;
         if (!active) {
             if (--waitTimer < 0) active=true;
-            coarseXCull(x,0x280);
+            coarseXCullViewport(x);
             return;
         }
         SubpixelMotion.State motion=new SubpixelMotion.State(x,y,xSub,ySub,xVelocity,yVelocity);
@@ -59,7 +59,7 @@ public final class FbzEndEggCapsuleAnimalInstance extends AbstractObjectInstance
             retargetAfterNegativeFloorHit();
         }
         mappingFrame=(vIntRunCount&8)==0?1:0;
-        coarseXCull(x,0x280);
+        coarseXCullViewport(x);
     }
     @Override public int getX(){return x;}
     @Override public int getY(){return y;}

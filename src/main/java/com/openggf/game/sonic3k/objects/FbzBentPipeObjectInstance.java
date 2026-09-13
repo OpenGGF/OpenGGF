@@ -23,7 +23,7 @@ public final class FbzBentPipeObjectInstance extends AbstractObjectInstance
         // extension belongs only to loc_3B718's SolidObjectFull d1.
         return SIZE[sizeIndex][0];
     }
-    @Override public boolean usesCustomOutOfRangeCheck(){return true;}@Override public boolean isCustomOutOfRange(int cameraX){int object=spawn.x()&0xFF80;int back=(cameraX-0x80)&0xFF80;return ((object-back)&0xFFFF)>0x280;}
+    @Override public boolean usesCustomOutOfRangeCheck(){return true;}@Override public boolean isCustomOutOfRange(int cameraX){return isCoarseXOutOfRange(spawn.x(),cameraX,coarseXCullRange());}
     @Override public SolidRoutineProfile getSolidRoutineProfile(){
         // loc_3B718 reaches SolidObject_cont, whose unsigned BHI comparison
         // retains the exact right boundary of the expanded d1 span.

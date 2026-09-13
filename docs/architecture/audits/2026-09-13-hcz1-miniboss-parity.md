@@ -199,3 +199,13 @@ Direct `develop` working changes against `b1f693fd0104e245f23b2560717da7809b41c5
 Follow-up test accounting totals 12.534 minutes, including failed setup and
 regression checks; no broad attempt. Consumed raw logs, reports and temporary
 native images were removed. The changes remain uncommitted on `develop`.
+
+### Integration
+
+On user request, committed the fixes as `743cbeeedf` and merged latest
+`origin/develop` at `923f141884` directly into `develop`. The only conflict was
+adjacent changelog entries; both HCZ and FBZ entries were retained. Incoming
+runtime changes affect FBZ consumers and add unused viewport-culling helpers to
+`AbstractObjectInstance`; the HCZ implementation and its existing helper behavior
+are unchanged. Completed HCZ checks were not repeated for this integration.
+The broad-validation and inherited trace limitations above still apply.

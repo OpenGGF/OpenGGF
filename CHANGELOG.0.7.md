@@ -12,6 +12,16 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   falling rocket debris, and bubble cleanup at the defeat handoff, including
   after rewinding the explosion sequence.
 
+- **Flying Battery widescreen object windows:** the FBZ objects whose ROM
+  delete-touch check is `Sprite_OnScreen_Test2` (screw doors, elevator cars,
+  magnetic spike balls and pendulums, platform blocks, propellers, spinning
+  poles, spring plungers, missile launchers and wall missiles, the exit hall,
+  the egg prison and capsule debris) now cull with the same width-driven
+  window that loads them (`$80 + screen width + $C0`, unchanged at native
+  320). At 640 and 800 pixels they were deleted on the frame they loaded, so
+  the `$0B68` screw door, its `$0BC0` elevator and the rest never appeared and
+  Act 2 could not be completed on those viewports.
+
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late
   ring appearance in EHZ1 after the 0.7 branch rollover. Ring placement also

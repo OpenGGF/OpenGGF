@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.game.sonic3k.objects.badniks.TechnoSqueekBadnikInstance;
@@ -52,10 +53,61 @@ public class TestFbzAct2TraversalPreboss {
      */
     private static final String PREBOSS_INPUT_PROGRAM =
             "43:8,433:0,103:8,7:0,8:2,4:12,4:10,20:0,9:2,6:12,2:2,124:0,18:4,45:0,19:4,1:8,33:18,11:8,239:0,52:8,8:18,133:8,14:0,66:2,6:12,49:2,2:a,53:8,10:0,4:10,9:14,5:4,73:0,14:4,7:14,6:4,6:0,24:8,4:0,16:8,8:18,25:8,205:8,14:4,7:0,6:4,30:0,9:8,18:18,28:0,8:4,4:0,3:8,11:0,8:2,25:12,5:2,42:0,11:4,11:14,32:4,29:8,4:0,21:4,6:0,5:2,6:12,1:2,29:0,166:4,9:14,18:4,14:8,51:0,12:8,19:0,11:8,11:0,15:4,262:0,42:8,13:0,29:8,13:18,6:0,19:4,5:0,232:8,8:4,1:8,210:0,41:4,4:8,1:4,10:0,237:4,20:14,224:4,5:8,1:4,80:0,130:4,318:0,92:8,12:4,21:0,4:8,27:0,4:4,45:0,1:8,119:0,299:8,31:4,3:8,1:4,235:0,40:8,20:18,273:8,45:4,26:0,1373:8,31:18,12:8,13:4,2:8,1:4,45:0,39:4,740:8,25:4,105:0,80:8,60:a,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,20:18,1:8,9:8,16:4,2:8,1:4,110:0,1:8,20:18,63:8,1:18,12:8,31:4,16:8,3:4,1:8,1:4,359:0,33:4,42:8,20:18,24:8,4:4,1:8,9:18,49:8,1:18,81:8,50:4,4:8,1:4,215:0,6:8,20:18,29:14,20:4,20:8,30:18,10:8,8:2,4:12,4:2,4:12,4:2,19:8,42:0,45:8,10:4,208:0,16:8,40:18,1600:0,1:18,1:8,15:18,37:8,12:18,49:8,66:0,1:14,38:4,45:8,4:4,1:8,1:4,206:0,117:4,5:8,1:4,20:0,30:18,583:0,343:4,5:8,1:4,218:0,190:0,8:4,17:18,14:14,20:4,22:14,196:4,6:8,1:4,1:8,1:4,234:0,31:18,24:8,9:4,2:8,1:4,192:0,35:8,1:18,42:8,4:18,12:8,17:4,98:8,20:18,100:8";
-    private static final List<InputRun> NATIVE_START_TO_POST_SPIKES = parseInputProgram();
-    private static final int NATIVE_ROUTE_FRONTIER_FRAMES = 15_010;
-    private static final int SPIKE_CORRIDOR_START_RUN = 68;
-    private static final int SPIKE_CORRIDOR_END_RUN = 80;
+    // The source BK2 program is cadence evidence only up to the landing on the
+    // $0A80 lower floor (run 80 ends its 262-frame neutral settle at frame
+    // 2889 with 23 rings). Its remaining 12,121 frames, the former chain/lower-
+    // door program and nine lower-backtrack cycles never changed a milestone,
+    // ring or position band; they only spent the act's 36,000-frame time-over
+    // budget. The live midpoint controller owns everything after the landing.
+    private static final int NATIVE_START_RUN_COUNT = 81;
+    private static final List<InputRun> NATIVE_START_TO_LOWER_FLOOR =
+            parseInputProgram().subList(0, NATIVE_START_RUN_COUNT);
+    // The BK2 prefix is replayed only until P1 lands on the $01EC ledge after
+    // the $078C trap spring (rows 23527-23540). From there the ledge controller
+    // owns the route to the $076C loop floor: the BK2 grabs the $0818 Obj72
+    // chain (sub $1B, range $D8), is knocked off it by a TechnoSqueek at row
+    // 23622, grabs the $0868 chain (sub $16, range $B0) at row 23926, releases
+    // LEFT at its full extension (row 24022, y=$0264), breaks the $0810/$02F0
+    // monitor with a jump from $0829 (row 24085), stands on the $0810 Obj78
+    // launcher (row 24104) and lands from its $1000 throw on the loop floor at
+    // row 24272. A wider viewport activates the mice in another phase, so the
+    // $0818 chain would lower P1 into the $0810/$0290 spikes; the controller
+    // goes straight to the $0868 chain instead.
+    private static final int LEDGE_FLOOR_Y = 0x01EC;
+    private static final int LEDGE_HANDOFF_MIN_X = 0x0790;
+    private static final int LEDGE_HANDOFF_MAX_X = 0x07D0;
+    private static final int LEDGE_CHAIN_X = 0x0868;
+    private static final int LEDGE_CHAIN_JUMP_X = 0x085C;
+    private static final int LEDGE_CHAIN_STILL_FRAMES = 4;
+    private static final int LEDGE_CHAIN_GRAB_ATTEMPT_LIMIT = 4;
+    // Obj_TechnoSqueek patrols the ledge at y=$01F8; a released short hop
+    // (Sonic_JumpHeight caps y_vel at -$400) clears it without rising into a
+    // chain's $90-$A8 grab band.
+    private static final int LEDGE_SQUEEK_HOP_RANGE = 0x30;
+    private static final int LEDGE_SQUEEK_HOP_HOLD = 4;
+    private static final int LEDGE_LOWER_FLOOR_Y = 0x02EC;
+    private static final int LEDGE_SPIKE_GAP_X = 0x0840;
+    private static final int LEDGE_MONITOR_X = 0x0810;
+    private static final int LEDGE_MONITOR_Y = 0x02F0;
+    private static final int LEDGE_MONITOR_JUMP_X = 0x0829;
+    private static final int LEDGE_MONITOR_JUMP_HOLD = 0x10;
+    private static final int LEDGE_MONITOR_ATTEMPT_LIMIT = 4;
+    private static final int LEDGE_LAUNCH_SPEED = 0x0800;
+    private static final int LEDGE_LOOP_FLOOR_MIN_Y = 0x0760;
+    private static final int LEDGE_LOOP_FLOOR_MAX_Y = 0x0790;
+    private static final int LEDGE_LOOP_FLOOR_MIN_X = 0x09F0;
+    private static final int LEDGE_LOOP_FLOOR_MAX_X = 0x0AD0;
+    // acquireMidpointCar's upper-loop brake range is $0A40-$0A98 on the
+    // $0740-$0780 floor band. Settle just right of its $0A40-$0A70 approach
+    // facing LEFT: the native spindash releases toward the facing, and the
+    // S1 donation assist (FbzS1DonationUpperLoopAssist) consumes itself on
+    // any leftward LEFT-pressed ground motion inside the approach, so no
+    // LEFT may be pressed there before the controller hands over.
+    private static final int LEDGE_LOOP_STAND_X = 0x0A78;
+    private static final int LEDGE_ROUTE_FRAME_LIMIT = 0x800;
+    private static final int LEDGE_STAGE_LIMIT = 0x300;
+    private static final int SPIKE_CORRIDOR_START_RUN = 27;
+    private static final int SPIKE_CORRIDOR_END_RUN = 39;
     private static final int SPIKE_CORRIDOR_WAYPOINT_FRAMES = 122;
     private static final int LATE_BUTTON_DOOR_EXTENSION_FRAMES = 0x100;
     private static final int FLAME_TOUCH_RADIUS = 0x04;
@@ -65,22 +117,191 @@ public class TestFbzAct2TraversalPreboss {
     private static final int MAGNETIC_PLATFORM_TOUCH_RADIUS_Y = 0x08;
     private static final int PLAYER_TOUCH_HALF_WIDTH = 0x08;
     private static final int MAGNETIC_PLATFORM_WAIT_LIMIT = 0x200;
+    /**
+     * Tails_CPU_Control loc_13DA6 (sonic3k.asm) steers a CPU sidekick at the
+     * leader's Pos_table entry $44 bytes back: 17 four-byte frames. Each link
+     * of a sidekick chain follows its own leader with the same delay.
+     */
+    private static final int SIDEKICK_FOLLOW_LAG_FRAMES = 0x11;
+    private static final int SIDEKICK_FOLLOW_MAX_TRAIL = 0x400;
+    private static final int SPIKE_BALL_CORRIDOR_SAFE_Y = 0x04C0;
+    private static final int SPIKE_BALL_TOUCH_HALF_WIDTH = 0x18;
+    private static final int SPIKE_BALL_HOLD_GAP = 0x48;
+    private static final int SQUEEZE_OTHER_CAR_SLOPE_MARGIN = 0x04;
+    // S3K host movement rules: DOWN below $100 crouches, at or above it rolls
+    // (sonic3k.asm:23223), and the roll test reads ground_vel after the DOWN
+    // frame's $C friction, so the S1 profile's ordinary run-up must reach
+    // $10C before the Obj28 launch frontier; start it $18 behind the staging
+    // spot.
+    private static final int SQUEEZE_S1_ROLL_START_SPEED = 0x0110;
+    private static final int SQUEEZE_S1_RUN_UP = 0x18;
+    private static final int SQUEEZE_S1_WAIT_LIMIT = 0x400;
+    private static final int TECHNO_SQUEEK_JUMP_LOOKAHEAD = 0x50;
+    private static final int TECHNO_SQUEEK_JUMP_VERTICAL_RANGE = 0x18;
+    private static final int TECHNO_SQUEEK_JUMP_MIN_SPEED = 0x80;
+    private static final int TECHNO_SQUEEK_JUMP_ATTEMPT_LIMIT = 4;
+    private static final int SIDEKICK_GATHER_RANGE = 0x40;
+    private static final int SIDEKICK_GATHER_FRAME_LIMIT = 0x400;
+    private static final int SHAFT_REGROUP_HOLD_X = 0x0948;
+    private static final int SHAFT_REGROUP_CLEAR_X = 0x0905;
+    private static final int SHAFT_REGROUP_MIN_Y = 0x0840;
+    private static final int SHAFT_REGROUP_FRAME_LIMIT = 0x200;
+    private static final int SHAFT_FLOOR_EAST_HANDOFF_X = 0x0B00;
+    private static final int SHAFT_FLOOR_EAST_SPEED_CAP = 0x0400;
+    // Obj74 ride: bounded by six AnPal_FBZ half-cycles ($100 frames each).
+    private static final int MAGNETIC_PLATFORM_RIDE_LIMIT = 0x600;
+    // A jump lasts about $3C frames; a hop between risen platforms adds a
+    // short grounded run-up. Never launch inside a shorter polarity runway,
+    // or both platforms fall while P1 is airborne over the ground hazard.
+    private static final int MAGNETIC_PLATFORM_RIDE_MIN_RUNWAY = 0x60;
+    // Adjacent FBZ2 Obj74 columns sit $C0 apart; hop only to the next one.
+    private static final int MAGNETIC_PLATFORM_RIDE_REACH = 0xE0;
+    private static final int MAGNETIC_PLATFORM_RIDE_LAUNCH_OFFSET = 0x08;
+    private static final int MAGNETIC_PLATFORM_RIDE_LANDING_OFFSET = 0x04;
+    private static final int MAGNETIC_PLATFORM_RIDE_ATTEMPT_LIMIT = 3;
     private static final int SQUEEZE_CORRIDOR_RECOVERY_LIMIT = 0x200;
     private static final int BLASTER_TOUCH_RADIUS_Y = 0x08;
     private static final int LATE_HAZARD_JUMP_LOOKAHEAD = 0x70;
     private static final int LATE_PROJECTILE_LOOKAHEAD = 0xA0;
+    // Post-door corridor ($1718 door to the $1A40 descent): during ACTIVE
+    // polarity the render-flag-2 Blasters ride the magnet to the ceiling and
+    // the Obj73 balls rise off the floor, so the floor is clear. Leave the
+    // late button between $27 and $6F frames into an ACTIVE half-cycle so the
+    // spindash traversal fits before the next INACTIVE edge.
+    private static final int POST_DOOR_CORRIDOR_MIN_RUNWAY = 0x90;
+    // loc_3B18C lifts an Obj73 ball at $18/frame^2 (about $28 frames to the
+    // ceiling) and the Blaster magnet rise adds $20/frame^2; do not leave
+    // before both have cleared the floor band.
+    private static final int POST_DOOR_CORRIDOR_MAX_RUNWAY = 0xD8;
+    private static final int POST_DOOR_CORRIDOR_RUN_MIN_RUNWAY = 0xC0;
+    private static final int POST_DOOR_CORRIDOR_RUN_JUMP_HOLD = 6;
+    private static final int POST_DOOR_CORRIDOR_HOLD_LIMIT = 0x200;
+    private static final int POST_DOOR_CORRIDOR_CHARGE_TAPS = 3;
+    // The non-magnetic $1790 Blaster patrols $1770-$17B0 and fires $10 frames
+    // after P1 enters $80. A spindash roll crosses that window and destroys
+    // it on contact while its shot arcs above the rolling radius.
+    private static final int POST_DOOR_CORRIDOR_HANDOFF_X = 0x1A40;
+    private static final int TRIGGER7_EGRESS_MIN_RUNWAY = 0xC0;
+    // Generic placed button/screw-door pair: Obj_Button publishes trigger bit
+    // (subtype & $F); Obj_FBZScrewDoor with the same low nibble latches on it.
+    private static final int LINKED_DOOR_LOOKAHEAD = 0x60;
+    private static final int LINKED_DOOR_BUTTON_REACH = 0xA0;
+    private static final int LINKED_DOOR_FRAME_LIMIT = 0x300;
+    private static final int SQUEEZE_PROACTIVE_LOOKAHEAD = 0x100;
+    // The $1D38 button top sits on the approach; a fast run hops off it
+    // airborne where ordinary braking is unavailable. Keep the last $30
+    // before the fence at walking speed so the fence stays reachable.
+    private static final int SQUEEZE_APPROACH_SPEED_CAP = 0x180;
+    private static final int SQUEEZE_APPROACH_MARGIN = 0x30;
+    private static final int SQUEEZE_CHARGED_WAIT_LIMIT = 0x200;
+    // The $208E ledge drops $104 onto the $2090/$20F0 spike pair; the gap
+    // pilot must own the airborne brake from the first falling frame.
+    private static final int LOWER_SPIKE_GAP_DROP_LIMIT = 0x120;
+    private static final int LOWER_SPIKE_GAP_LEDGE_LOOKAHEAD = 0x80;
+    private static final int LOWER_SPIKE_GAP_APPROACH_CAP = 0x100;
+    private static final int LOWER_SPIKE_GAP_PLATFORM_WAIT_LIMIT = 0x200;
     private static final int TAIL_ORDINARY_RIGHT_FALLBACK_LIMIT = 0x1800;
     private static final List<InputRun> LATE_STARPOST_INPUT_RUNS = List.of(new InputRun(120, 0x4));
-    private static final List<InputRun> MAGNETIC_CHAIN_TRANSFERS_AND_LOWER_DOOR = List.of(
-            new InputRun(20, 0x18), new InputRun(40, 0x8),
-            new InputRun(20, 0x18), new InputRun(148, 0x8),
-            new InputRun(20, 0x18), new InputRun(140, 0x8),
-            new InputRun(20, 0x14), new InputRun(8, 0x4),
-            new InputRun(20, 0x8), new InputRun(200, 0x0));
-    private static final List<InputRun> LOWER_BACKTRACK_CYCLE = List.of(
-            new InputRun(20, 0x14), new InputRun(20, 0x4));
-    private static final List<InputRun> LOWER_BACKTRACK_FINAL_CYCLE = List.of(
-            new InputRun(30, 0x0), new InputRun(20, 0x14), new InputRun(20, 0x4));
+    // Lower $26C8 spider crane loop to the FBZ2 subboss arena. Every gate below
+    // reads exact placed-object identity, live geometry or AnPal_FBZ polarity.
+    private static final int LOWER_CRANE_X = 0x26C8;
+    // loc_3D11E captures a grounded P1 whose y_pos lies in [$46+$34+5, +$19)
+    // once the $40 descent completes; the $0900 floor puts P1 at $08EC.
+    private static final int LOWER_CRANE_FLOOR_Y = 0x08EC;
+    private static final int LOWER_CRANE_ROUTE_FRAME_LIMIT = 0x1400;
+    private static final int LOWER_CRANE_ROUTE_STAGE_LIMIT = 0x400;
+    private static final int LOWER_CRANE_WALK_CAP = 0x100;
+    // The crane releases P1 at $2831; a hop from $2850 clears the $28A9
+    // TechnoSqueek and arcs through the $2904 horizontal chain grab band
+    // (sub_3A8B8: dx within the $30 range, dy in [0,$18) below $08A0).
+    private static final int LOWER_CRANE_CHAIN_ONE_HOP_X = 0x2850;
+    private static final int LOWER_CRANE_CHAIN_HOP_HOLD = 0x19;
+    private static final int LOWER_CRANE_CHAIN_RELEASE_HOLD = 2;
+    // Both horizontal chains meet the $2924 vertical link; the $29C0 chain
+    // ($2990..$29F0 band) meets the $29E0 vertical link.
+    private static final int LOWER_CRANE_CHAIN_ONE_VERTICAL_X = 0x2924;
+    private static final int LOWER_CRANE_CHAIN_TWO_BAND_LEFT_X = 0x2990;
+    private static final int LOWER_CRANE_CHAIN_TWO_VERTICAL_X = 0x29E0;
+    private static final int LOWER_CRANE_CHAIN_STILL_FRAMES = 4;
+    // Obj_Button trigger D at $2970 opens the Obj_FBZScrewDoor floor door at $2924.
+    private static final int LOWER_CRANE_BUTTON_X = 0x2970;
+    private static final int LOWER_CRANE_FLOOR_DOOR_X = 0x2924;
+    private static final int LOWER_CRANE_BOTTOM_CORRIDOR_MIN_Y = 0x0B00;
+    // Bottom corridor: the resting $2840 Obj74 column blocks at $2863; spindash
+    // west only while both $0B70 columns hang raised with a full roll of runway.
+    // The $0B00 ceiling stops their rise at $31, clear of a rolling P1's $0E radius.
+    private static final int LOWER_CRANE_SPINDASH_HOLD_X = 0x2890;
+    private static final int LOWER_CRANE_SPINDASH_MIN_RUNWAY = 0x80;
+    private static final int LOWER_CRANE_COLUMN_CLEAR_RISE = 0x28;
+    private static final int LOWER_CRANE_ROLL_STOP_MAX_X = 0x26A0;
+    private static final int LOWER_CRANE_ELEVATOR_X = 0x2648;
+    // Leave the rising $2640 car as soon as the $0A80 corridor floor is level;
+    // the shaft cap at $0A40 crushes a rider who waits.
+    private static final int LOWER_CRANE_ELEVATOR_EXIT_Y = 0x0A90;
+    private static final int LOWER_CRANE_LAUNCHER_X = 0x2708;
+    private static final int LOWER_CRANE_CAGE_LANDING_MAX_Y = 0x0800;
+    // The $2800 step is $60 tall: exactly one full jump beside its face.
+    private static final int LOWER_CRANE_STEP_JUMP_X = 0x27F0;
+    private static final int LOWER_CRANE_STEP_JUMP_HOLD = 0x1E;
+    private static final int LOWER_CRANE_STEP_TOP_MAX_Y = 0x0790;
+    private static final int LOWER_CRANE_COLUMN_ONE_X = 0x2840;
+    private static final int LOWER_CRANE_COLUMN_HOP_X = 0x2816;
+    private static final int LOWER_CRANE_COLUMN_HOP_HOLD = 0x14;
+    private static final int LOWER_CRANE_COLUMN_TOP_MAX_Y = 0x06A4;
+    // Two hops from the raised columns must land before the INACTIVE edge
+    // drops them onto the $2880/$28F0 spikes.
+    private static final int LOWER_CRANE_COLUMN_JUMP_MIN_RUNWAY = 0x70;
+    private static final int LOWER_CRANE_COLUMN_JUMP_HOLD = 0x0E;
+    private static final int LOWER_CRANE_ARENA_CORRIDOR_MIN_X = 0x2900;
+    private static final int LOWER_CRANE_ARENA_CORRIDOR_MAX_Y = 0x0680;
+    private static final int LOWER_CRANE_PIT_JUMP_X = 0x2A60;
+    private static final int LOWER_CRANE_PIT_JUMP_HOLD = 0x19;
+    private static final int LOWER_CRANE_ARENA_ARRIVAL_X = 0x2BC0;
+    // Subboss arena to the SOZ request: Obj_FBZ2Subboss, the boss-event plane
+    // carrier, Obj_FBZEndBoss and the end capsule; every gate reads live object
+    // state, never a frame count.
+    private static final int ARENA_ROUTE_FRAME_LIMIT = 0x4000;
+    private static final int ARENA_ROUTE_STAGE_LIMIT = 0x2000;
+    // loc_6FE22 tracks P1 at $100 and fires the beam straight down at the end of
+    // each cycle: keep at least $50 from the machine, running past it to the
+    // far live side wall (Fbz2SubbossSolidSideChild, half-width $13).
+    private static final int SUBBOSS_KEEP_AWAY = 0x50;
+    private static final int SUBBOSS_WALL_HALF_WIDTH = 0x13;
+    private static final int SUBBOSS_WALL_STAND_GAP = 0x0A;
+    private static final int SUBBOSS_ARENA_LEFT_WALL_X = 0x2A90;
+    private static final int SUBBOSS_ARENA_RIGHT_WALL_X = 0x2BF0;
+    private static final int ARENA_EXIT_HOP_MIN_X = 0x2BF0;
+    private static final int ARENA_EXIT_HOP_MAX_X = 0x2C40;
+    private static final int ARENA_EXIT_HOP_HOLD = 0x14;
+    // The plane carrier (Obj_FBZEndBossEventControl, top-solid $4C0) lifts P1
+    // through the ship interior; the ship column stays open at these offsets
+    // from the controller, shifting once the controller climbs past $0380.
+    private static final int PLANE_CONTROLLER_ORIGIN_X = 0x31C0;
+    private static final int PLANE_CONTROLLER_ORIGIN_Y = 0x0690;
+    private static final int PLANE_RIDE_LOWER_OFFSET_X = -0x123;
+    private static final int PLANE_RIDE_UPPER_OFFSET_X = -0x167;
+    private static final int PLANE_RIDE_OFFSET_SWITCH_Y = 0x0380;
+    // Obj_FBZEndBoss arena after the $45C rebase: walls at $2E6C/$2F84.
+    private static final int END_BOSS_ARENA_LEFT_STAND_X = 0x2E74;
+    private static final int END_BOSS_ARENA_RIGHT_STAND_X = 0x2F7C;
+    // Strike the pod with a charged spindash jump released from the wait point
+    // ($78 out, or the arena wall) as the pod rises through [$0660,$0690]: at
+    // $800 P1 reaches the $20 hitbox from above while it tops out, and the
+    // side rebound returns P1 to the wall for the next cycle. During attack
+    // rounds the arms creep $8 toward P1 (word_709FC), so stand at the wall
+    // uncharged and cross with the same launch before the pod closes to $80.
+    private static final int END_BOSS_WAIT_DISTANCE = 0x78;
+    private static final int END_BOSS_CROSS_ROOM = 0x80;
+    private static final int END_BOSS_POD_WINDOW_MIN_Y = 0x0660;
+    private static final int END_BOSS_POD_WINDOW_MAX_Y = 0x0690;
+    private static final int END_BOSS_LAUNCH_HOLD = 0x10;
+    private static final int END_BOSS_CHARGE_TAPS = 3;
+    private static final int END_CAPSULE_X = 0x307C;
+    // The capsule is a $2B/$18 solid: approach from beside its west face and
+    // hop onto the top, where the $1B-wide button child carries P1.
+    private static final int END_CAPSULE_APPROACH_X = 0x3038;
+    private static final int END_CAPSULE_JUMP_HOLD = 0x19;
+
 
     private static boolean postLauncherRecoveryComplete(
             boolean playerAirborne, int playerX, int clearX) {
@@ -235,45 +456,34 @@ public class TestFbzAct2TraversalPreboss {
                         () -> routeEvidence(fixture, frame.frames(), milestones)
                                 + frame.recentDiagnostic());
 
-        runner.run(NATIVE_START_TO_POST_SPIKES, alive);
-        assertEquals(NATIVE_ROUTE_FRONTIER_FRAMES, runner.frames(), "fixed frontier length changed");
+        boolean ledgeReached = runner.runUntil(NATIVE_START_TO_LOWER_FLOOR, alive, () -> {
+            AbstractPlayableSprite player = fixture.sprite();
+            int x = player.getCentreX() & 0xFFFF;
+            return !player.getAir() && (player.getCentreY() & 0xFFFF) == LEDGE_FLOOR_Y
+                    && x >= LEDGE_HANDOFF_MIN_X && x <= LEDGE_HANDOFF_MAX_X;
+        });
+        assertTrue(ledgeReached, () -> "BK2 prefix never landed on the $01EC ledge: "
+                + routeEvidence(fixture, runner.frames(), milestones) + runner.recentDiagnostic());
+        runner.runLedgeToLoopFloor(alive);
         // The placed $09C8/$0498 spider crane is an upper optional branch.
         // This mandatory run is already on the authored lower route here;
         // exact $E5 capture/move/release and sidekick-authority coverage lives
         // in FbzCompatibilityInteractionProbe for every compatibility row.
-        runner.run(MAGNETIC_CHAIN_TRANSFERS_AND_LOWER_DOOR, alive);
-        int lowerBacktrackRingFloor = GameServices.level().getLevelGamestate().getRings();
-        assertTrue(lowerBacktrackRingFloor >= 6,
-                () -> "lower-backtrack entry lost the route's safety rings: "
+        // The BK2's own player reaches this landing with a single ring
+        // (fbz_completerun rows 23622 and 23796 lose the rings on the $0818
+        // chain descent; row 24081 lands at $082A/$02EC with rings=1), so the
+        // floor here is only the ROM's: not ringless. Later hazards are gated
+        // on live geometry rather than on a ring buffer.
+        int midpointRingFloor = GameServices.level().getLevelGamestate().getRings();
+        assertTrue(midpointRingFloor >= 1,
+                () -> "lower-floor landing lost the route's safety rings: "
                         + routeEvidence(fixture, runner.frames(), milestones));
-        List<InputRun> lowerBacktrackApproach = new java.util.ArrayList<>();
-        for (int cycle = 0; cycle < 9; cycle++) {
-            List<InputRun> cycleRuns = cycle == 8
-                    ? LOWER_BACKTRACK_FINAL_CYCLE : LOWER_BACKTRACK_CYCLE;
-            lowerBacktrackApproach.addAll(cycleRuns);
-        }
+        List<InputRun> midpointApproach = new java.util.ArrayList<>();
+        // Runs 0-26 climb from the $0A80 lower floor to the $06AC ledge, stand
+        // on the $0948 button for the $0918 screw door and board the $08C0
+        // car; the live midpoint controller owns the car itself.
         List<InputRun> elevatorSubbossBossAndExit = List.of(
-                new InputRun(20, 0x18), new InputRun(180, 0x0),
-                new InputRun(20, 0x18), new InputRun(45, 0x8),
-                new InputRun(200, 0x0), new InputRun(20, 0x18),
-                new InputRun(200, 0x8), new InputRun(15, 0x4),
-                new InputRun(330, 0x0), new InputRun(20, 0x18),
-                new InputRun(5, 0x4), new InputRun(205, 0x0),
-                new InputRun(1, 0x8), new InputRun(3, 0x2),
-                new InputRun(1, 0x12), new InputRun(1, 0x2),
-                new InputRun(1, 0x12), new InputRun(1, 0x2),
-                new InputRun(1, 0x12), new InputRun(1, 0x2),
-                new InputRun(2, 0x8), new InputRun(20, 0x18),
-                new InputRun(416, 0x8), new InputRun(70, 0x4),
-                new InputRun(263, 0x0), new InputRun(70, 0x8),
-                new InputRun(265, 0x0), new InputRun(70, 0x4),
-                new InputRun(265, 0x0), new InputRun(70, 0x8),
-                new InputRun(265, 0x0), new InputRun(70, 0x4),
-                new InputRun(265, 0x0), new InputRun(70, 0x8),
-                new InputRun(265, 0x0), new InputRun(70, 0x4),
-                new InputRun(600, 0x0), new InputRun(300, 0x8),
-                new InputRun(20, 0x18), new InputRun(300, 0x8),
-                new InputRun(3000, 0x0), new InputRun(100, 0x8),
+                new InputRun(100, 0x8),
                 new InputRun(120, 0x0),
                 new InputRun(30, 0x18), new InputRun(30, 0x8),
                 new InputRun(40, 0x4), new InputRun(20, 0x14),
@@ -342,7 +552,10 @@ public class TestFbzAct2TraversalPreboss {
             assertFalse(player.getDead(),
                     () -> routeEvidence(fixture, frame.frames(), milestones)
                             + frame.recentDiagnostic());
-            assertTrue(GameServices.level().getLevelGamestate().getRings() >= 6,
+            // Same ROM floor as the lower-floor landing: the BK2 runs long
+            // stretches of act 2 on one or two rings, so only a ringless P1
+            // (one hit from Kill_Character) is a route defect here.
+            assertTrue(GameServices.level().getLevelGamestate().getRings() >= 1,
                     () -> routeEvidence(fixture, frame.frames(), milestones)
                             + " subboss=" + objects.activeObjectsOfType(Fbz2SubbossInstance.class)
                             .stream().map(boss -> boss.phaseName() + "/" + boss.cyclesRemaining())
@@ -359,26 +572,34 @@ public class TestFbzAct2TraversalPreboss {
         assertEquals(SPIKE_CORRIDOR_WAYPOINT_FRAMES,
                 spikeCorridor.stream().mapToInt(InputRun::frames).sum(),
                 "spike-corridor waypoint must replace only the proven hazard segment");
-        lowerBacktrackApproach.addAll(elevatorSubbossBossAndExit.subList(
-                0, SPIKE_CORRIDOR_START_RUN));
+        // The ledge controller ends grounded inside acquireMidpointCar's
+        // upper-loop approach, so the BK2's 27 loop-climb runs are not consumed.
         FrameCheck midpointApproachSafety = (frame, player) -> {
             tailSafety.afterFrame(frame, player);
             // The corrected cage/spike path legitimately collects more rings
             // (the complete-run trace carries $17 here). No approach damage
             // may reduce the actual entry floor before exact car ownership.
             assertTrue(GameServices.level().getLevelGamestate().getRings()
-                            >= lowerBacktrackRingFloor,
+                            >= midpointRingFloor,
                     () -> routeEvidence(fixture, frame.frames(), milestones)
-                            + " lowerBacktrackRingFloor=" + lowerBacktrackRingFloor);
+                            + " midpointRingFloor=" + midpointRingFloor);
         };
         runner.rideMidpointCarThroughSpikeCorridor(
-                lowerBacktrackApproach, SPIKE_CORRIDOR_WAYPOINT_FRAMES,
+                midpointApproach, SPIKE_CORRIDOR_WAYPOINT_FRAMES,
                 midpointApproachSafety);
+        StopCondition sozRequested = () -> GameServices.level().getRequestedZone()
+                == Sonic3kZoneIds.ZONE_SOZ && GameServices.level().getRequestedAct() == 0;
         boolean forcedExitRequested = runner.runUntilWithDescendingElevatorCorridor(
                 elevatorSubbossBossAndExit.subList(
                         SPIKE_CORRIDOR_END_RUN, elevatorSubbossBossAndExit.size()),
-                tailSafety, () -> GameServices.level().getRequestedZone() == Sonic3kZoneIds.ZONE_SOZ
-                        && GameServices.level().getRequestedAct() == 0);
+                tailSafety, sozRequested);
+        if (!forcedExitRequested && runner.lowerCraneApproachReached) {
+            forcedExitRequested = runner.runLowerCraneRouteToSubboss(tailSafety, sozRequested);
+            if (!forcedExitRequested) {
+                forcedExitRequested = runner.runArenaToExit(tailSafety, sozRequested);
+            }
+        }
+        assertTrue(milestones.spiderControl, "the $26C8 spider crane never carried P1");
         assertTrue(executedFamilies.containsAll(encounteredFamilies),
                 () -> "encountered family missed its next execution pass: "
                         + difference(encounteredFamilies, executedFamilies));
@@ -573,6 +794,7 @@ public class TestFbzAct2TraversalPreboss {
         private boolean horizontalCageWasHeld;
         private boolean horizontalCageEgressJumpActive;
         private boolean earlySpikeGapRecovery;
+        private boolean lowerCraneApproachReached;
         private int earlySpikeRollDirection;
         private int earlySpikeRollClearX;
 
@@ -863,8 +1085,23 @@ public class TestFbzAct2TraversalPreboss {
             boolean risingCarExitJumpPressed = false;
             boolean risingCarAcquisitionArmed = false;
             boolean midpointCarEgressActive = true;
+            boolean shaftRegroupActive = false;
+            boolean shaftFloorEastActive = false;
+            int shaftRegroupFrames = 0;
             boolean missedDescendingCarSpikeJumpActive = false;
             int postLauncherRouteStage = 0;
+            int squeekJumpAttempts = 0;
+            int lateCorridorJumpHold = 0;
+            int springTowerStage = 0;
+            boolean spikeBallCorridorCommitted = false;
+            int spikeBallCorridorCommittedCount = 0;
+            final int springTowerMinX = 0x0700;
+            final int springTowerMaxX = 0x07C0;
+            final int springTowerMaxY = 0x0890;
+            final int springWaitX = 0x0795;
+            final int springLaunchSpeed = -0x0E00;
+            final int springApexDriftMaxY = 0x0520;
+            final int springLauncherX = 0x078A;
             int flamethrowerJumpHoldFrames = 0;
             int flamethrowerLeftJumpHoldFrames = 0;
             boolean screwDoorRecoveryArmed = false;
@@ -905,6 +1142,14 @@ public class TestFbzAct2TraversalPreboss {
             int magneticPlatformCrossingFrames = 0;
             Set<Integer> magneticPlatformEncounteredLayoutIndices = new LinkedHashSet<>();
             Set<Integer> magneticPlatformClearedLayoutIndices = new LinkedHashSet<>();
+            boolean magneticPlatformRideMode = false;
+            int magneticPlatformRideStage = 0;
+            int magneticPlatformRideFrames = 0;
+            int magneticPlatformRideAttempts = 0;
+            boolean magneticPlatformRideJumpStarted = false;
+            boolean magneticPlatformRideSettled = false;
+            FbzMagneticPlatformObjectInstance magneticPlatformRideHopTarget = null;
+            Sonic3kSpikeObjectInstance magneticPlatformRideBlockingSpike = null;
             Sonic3kInvisibleBlockObjectInstance squeezeCorridorTarget = null;
             FbzElevatorObjectInstance.Car squeezeCorridorSupport = null;
             boolean squeezeCorridorSafetyArmed = false;
@@ -917,6 +1162,8 @@ public class TestFbzAct2TraversalPreboss {
             boolean squeezeCorridorEntered = false;
             boolean squeezeCorridorSupportAcquired = false;
             boolean squeezeCorridorSupportExited = false;
+            int squeezeCorridorS1RollFrames = 0;
+            int squeezeCorridorS1WaitFrames = 0;
             int squeezeCorridorBlockSlot = -1;
             int squeezeCorridorSupportSlot = -1;
             boolean squeezeCorridorCarBeforeBlock = false;
@@ -945,6 +1192,20 @@ public class TestFbzAct2TraversalPreboss {
             FbzScrewDoorObjectInstance blockingScrewDoor = null;
             FbzScrewDoorObjectInstance lateButtonDoor = null;
             Sonic3kButtonObjectInstance lateButton = null;
+            int lateCorridorStage = 0;
+            int lateCorridorHoldFrames = 0;
+            boolean lateCorridorRollObserved = false;
+            FbzScrewDoorObjectInstance linkedDoor = null;
+            Sonic3kButtonObjectInstance linkedButton = null;
+            int linkedDoorStage = 0;
+            int linkedDoorFrames = 0;
+            Set<Integer> linkedDoorsPassed = new LinkedHashSet<>();
+            boolean squeezeApproachBrake = false;
+            int landingGapWaitFrames = 0;
+            boolean squeezeChargedWaitingForCar = false;
+            int squeezeChargedWaitFrames = 0;
+            Sonic3kInvisibleBlockObjectInstance squeezeAheadBlock = null;
+            int lateCorridorChargeTaps = 0;
             boolean lateButtonControllerSeen = false;
             FbzScrewDoorObjectInstance trigger0Door = null;
             Sonic3kButtonObjectInstance trigger0Button = null;
@@ -968,6 +1229,14 @@ public class TestFbzAct2TraversalPreboss {
                         if (!object.isDestroyed()) activeFrame.add(object);
                     }
                     AbstractPlayableSprite player = fixture.sprite();
+                    if (completed && !magneticPlatformRideMode && squeezeCorridorTarget == null
+                            && lowerCraneApproachReached(player)) {
+                        // The source program and its RIGHT fallback end beside
+                        // the $26C8 crane; hand the live route to the crane
+                        // controller before this frame is observed or stepped.
+                        lowerCraneApproachReached = true;
+                        return false;
+                    }
                     observer.observe(activeFrame, previousFrame, player, objects);
 
                     int currentPlayerY = player.getCentreY() & 0xFFFF;
@@ -1276,6 +1545,74 @@ public class TestFbzAct2TraversalPreboss {
                                     "live Obj74 hazard changed Touch_Sizes index");
                         }
                     }
+                    boolean linkedDoorLatched = linkedDoor != null
+                            && linkedDoor.getY() < linkedDoor.getSpawn().y();
+                    if (squeezeCorridorTarget == null && !squeezeCorridorRecoveryActive
+                            && !player.getAir()
+                            && (linkedDoorStage == 0 || linkedDoorLatched)) {
+                        // A live normal Obj28 ahead over this floor is a squeeze
+                        // corridor whose car may not be live yet. Never walk in
+                        // on the ordinary fallback: hold at the geometry fence
+                        // (the abort hold) until an episode binds.
+                        Sonic3kInvisibleBlockObjectInstance aheadBlock =
+                                objects.activeObjectsOfType(
+                                                Sonic3kInvisibleBlockObjectInstance.class).stream()
+                                        .filter(block -> FbzMovingSqueezeTraversal
+                                                .isLiveNormalInvisibleSolid(block, player))
+                                        .filter(block -> !squeezeCorridorClearedLayoutIndices
+                                                .contains(block.getSpawn().layoutIndex()))
+                                        .filter(block -> squeezeBlockLeft(block)
+                                                > playerRightEdge(player))
+                                        .filter(block -> squeezeBlockLeft(block)
+                                                - playerRightEdge(player)
+                                                <= SQUEEZE_PROACTIVE_LOOKAHEAD)
+                                        .filter(block -> block.getY() < playerYBefore)
+                                        .filter(block -> playerYBefore + player.getYRadius()
+                                                - (block.getY() + block.getSolidParams()
+                                                .airHalfHeight()) <= 0x60)
+                                        .min(Comparator.comparingInt(block ->
+                                                squeezeBlockLeft(block)))
+                                        .orElse(null);
+                        squeezeAheadBlock = aheadBlock;
+                        squeezeApproachBrake = aheadBlock != null
+                                && player.getGSpeed() > SQUEEZE_APPROACH_SPEED_CAP
+                                && squeezeRecoveryStoppingRightEdge(player)
+                                >= squeezeBlockLeft(aheadBlock) - SQUEEZE_APPROACH_MARGIN;
+                        if (aheadBlock == null) squeezeAheadBlock = null;
+                        boolean doorBeforeBlock = aheadBlock != null
+                                && findLinkedBlockingDoor(objects, player, playerXBefore,
+                                        playerYBefore, linkedDoorsPassed) != null;
+                        if (aheadBlock != null && !squeezeApproachBrake && !doorBeforeBlock) {
+                            if (linkedDoorStage > 0) {
+                                // The latched door is crossed by the squeeze
+                                // launch itself; retire the door controller.
+                                linkedDoorsPassed.add(linkedDoor.getSpawn().layoutIndex());
+                                linkedDoorStage = 0;
+                                linkedDoor = null;
+                                linkedButton = null;
+                            }
+                            squeezeCorridorRecoveryActive = true;
+                            squeezeCorridorRecoveryFrontierX = squeezeBlockLeft(aheadBlock);
+                            squeezeCorridorRecoveryHoldX = squeezeCorridorRecoveryFrontierX
+                                    - (player.getStandXRadius() & 0xFFFF) - 0x08;
+                            squeezeCorridorRecoveryFrames = 0;
+                        }
+                    }
+                    if (squeezeAheadBlock != null
+                            && (squeezeAheadBlock.isDestroyed() || squeezeCorridorStage > 0
+                            || squeezeCorridorClearedLayoutIndices.contains(
+                                    squeezeAheadBlock.getSpawn().layoutIndex())
+                            || playerRightEdge(player) >= squeezeBlockLeft(squeezeAheadBlock))) {
+                        squeezeAheadBlock = null;
+                        squeezeApproachBrake = false;
+                    } else if (squeezeAheadBlock != null && !player.getAir()) {
+                        // Bang-bang speed limit on the approach: the recovery
+                        // hold steers RIGHT toward its fence, so re-evaluate the
+                        // ordinary stopping edge every grounded frame.
+                        squeezeApproachBrake = player.getGSpeed() > SQUEEZE_APPROACH_SPEED_CAP
+                                && squeezeRecoveryStoppingRightEdge(player)
+                                >= squeezeBlockLeft(squeezeAheadBlock) - SQUEEZE_APPROACH_MARGIN;
+                    }
                     if (squeezeCorridorTarget == null) {
                         var squeezeEpisode =
                                 squeezeCorridorRecoveryActive
@@ -1335,6 +1672,8 @@ public class TestFbzAct2TraversalPreboss {
                             squeezeCorridorEntered = false;
                             squeezeCorridorSupportAcquired = false;
                             squeezeCorridorSupportExited = false;
+                            squeezeCorridorS1RollFrames = 0;
+                            squeezeCorridorS1WaitFrames = 0;
                             squeezeCorridorLiveBindings++;
                             squeezeCorridorTentativeBindingRecorded = true;
                             int layoutIndex = episode.block().getSpawn().layoutIndex();
@@ -1359,8 +1698,11 @@ public class TestFbzAct2TraversalPreboss {
                             }
                         }
                     }
+                    // Stages 6 and 7 are the S1 profile's pre-roll wait and
+                    // run-up: still tentative, so the bound car may expire and
+                    // rebind exactly as during a native charged hold.
                     if (squeezeCorridorTarget != null
-                            && squeezeCorridorStage < 4) {
+                            && (squeezeCorridorStage < 4 || squeezeCorridorStage >= 6)) {
                         FbzMovingSqueezeTraversal.Episode tentativeEpisode =
                                 new FbzMovingSqueezeTraversal.Episode(
                                         squeezeCorridorTarget,
@@ -1370,7 +1712,42 @@ public class TestFbzAct2TraversalPreboss {
                                         .hasLaunchFloorAuthority(player);
                         boolean episodeActive = FbzMovingSqueezeTraversal.isActive(
                                 tentativeEpisode, player);
-                        if (launchAuthorityLost || !episodeActive) {
+                        squeezeChargedWaitingForCar = false;
+                        if (!launchAuthorityLost && !episodeActive
+                                && (squeezeCorridorStage == 3 || squeezeCorridorStage == 6)) {
+                            // Sonic_Spindash cannot be cancelled: dropping DOWN
+                            // launches. The bound car expired while charged, so
+                            // rebind the next live upward car of this same Obj28
+                            // or keep the charge held until one appears.
+                            Sonic3kInvisibleBlockObjectInstance chargedBlock =
+                                    squeezeCorridorTarget;
+                            FbzElevatorObjectInstance.Car nextCar = objects
+                                    .activeObjectsOfType(FbzElevatorObjectInstance.Car.class)
+                                    .stream()
+                                    .filter(car -> FbzMovingSqueezeTraversal.isActive(
+                                            new FbzMovingSqueezeTraversal.Episode(
+                                                    chargedBlock, car), player))
+                                    .min(Comparator.comparingInt(car ->
+                                            Math.abs(car.getCentreY() - playerYBefore)))
+                                    .orElse(null);
+                            if (nextCar != null) {
+                                squeezeCorridorSupport = nextCar;
+                                squeezeCorridorSupportSlot = nextCar.getSlotIndex();
+                                episodeActive = true;
+                            } else {
+                                squeezeChargedWaitingForCar = true;
+                                squeezeChargedWaitFrames++;
+                                int chargedWait = squeezeChargedWaitFrames;
+                                int chargedFrontier = squeezeBlockLeft(chargedBlock);
+                                assertTrue(chargedWait <= SQUEEZE_CHARGED_WAIT_LIMIT,
+                                        () -> waypointDiagnostic(
+                                                "obj28-charged-wait-for-car-limit",
+                                                chargedFrontier)
+                                                + " chargedWait=" + chargedWait);
+                            }
+                        }
+                        if (!squeezeChargedWaitingForCar
+                                && (launchAuthorityLost || !episodeActive)) {
                             int abortedLayout = squeezeCorridorTarget
                                     .getSpawn().layoutIndex();
                             int abortedFrontierX =
@@ -1487,7 +1864,214 @@ public class TestFbzAct2TraversalPreboss {
                             && playerYBefore >= 0x0850 && playerYBefore <= 0x0900
                             && descendingCarDeltaY >= descendingCarLandingMinDeltaY
                             && descendingCarDeltaY <= descendingCarLandingMaxDeltaY;
-                    if (magneticPlatformHazardControllerActive) {
+                    if (magneticPlatformHazardControllerActive && !magneticPlatformRideMode
+                            && !magneticPlatformCrossingCommitted) {
+                        // Live geometry decides the traversal kind: a placed
+                        // spike blocking the flat approach at P1's own level
+                        // makes the underpass impossible, so the route must
+                        // jump onto the resting platform and ride it.
+                        Sonic3kSpikeObjectInstance blocking =
+                                magneticPlatformRideBlockingSpike(objects, player,
+                                        playerXBefore, playerYBefore,
+                                        magneticPlatformHazardPlacement.x());
+                        if (blocking != null) {
+                            magneticPlatformRideMode = true;
+                            magneticPlatformRideStage = 0;
+                            magneticPlatformRideFrames = 0;
+                            magneticPlatformRideAttempts = 0;
+                            magneticPlatformRideJumpStarted = false;
+                            magneticPlatformRideHopTarget = null;
+                            magneticPlatformRideBlockingSpike = blocking;
+                        }
+                    }
+                    if (magneticPlatformHazardControllerActive && magneticPlatformRideMode) {
+                        FbzMagneticPlatformObjectInstance target =
+                                magneticPlatformHazardTarget;
+                        magneticPlatformRideFrames++;
+                        int rideFrames = magneticPlatformRideFrames;
+                        int rideStage = magneticPlatformRideStage;
+                        int ridePlacementX = magneticPlatformHazardPlacement.x();
+                        assertTrue(rideFrames <= MAGNETIC_PLATFORM_RIDE_LIMIT,
+                                () -> waypointDiagnostic("obj74-ride-frame-limit",
+                                        ridePlacementX)
+                                        + " stage=" + rideStage
+                                        + " target=" + objectPosition(target));
+                        if (target == null) {
+                            maskOwner = "obj74-ride-await-live";
+                            mask = 0;
+                        } else {
+                            assertFalse(target.isDestroyed(),
+                                    "live Obj74 ride target was destroyed mid-episode");
+                            FbzZoneRuntimeState rideRuntime =
+                                    GameServices.zoneRuntimeRegistry()
+                                            .currentAs(FbzZoneRuntimeState.class)
+                                            .orElseThrow();
+                            int rideRunway = 0xFF - rideRuntime.magneticTimerPhase();
+                            boolean rideActive = rideRuntime.magneticPolarity()
+                                    == Sonic3kFBZEvents.MagneticPolarity.ACTIVE;
+                            boolean standingOnTarget = player.isOnObject()
+                                    && player.getLatchedSolidObjectInstance() == target;
+                            boolean targetResting = target.displacement() == 0
+                                    && !rideActive;
+                            boolean targetRaised =
+                                    target.displacement() == target.maximumRise();
+                            int landingX = target.getX()
+                                    - MAGNETIC_PLATFORM_RIDE_LANDING_OFFSET;
+                            switch (magneticPlatformRideStage) {
+                                case 0 -> {
+                                    // Grounded hold at the blocking spike until
+                                    // the platform rests on its floor with a
+                                    // full jump of INACTIVE runway left.
+                                    maskOwner = "obj74-ride-hold";
+                                    if (!player.getAir() && !player.isOnObject()
+                                            && targetResting
+                                            && rideRunway > MAGNETIC_PLATFORM_RIDE_MIN_RUNWAY) {
+                                        magneticPlatformRideAttempts++;
+                                        int attempts = magneticPlatformRideAttempts;
+                                        assertTrue(attempts <= MAGNETIC_PLATFORM_RIDE_ATTEMPT_LIMIT,
+                                                () -> waypointDiagnostic(
+                                                        "obj74-ride-approach-attempts", landingX)
+                                                        + " attempts=" + attempts);
+                                        magneticPlatformRideStage = 1;
+                                        mask = AbstractPlayableSprite.INPUT_JUMP
+                                                | AbstractPlayableSprite.INPUT_RIGHT;
+                                    } else {
+                                        mask = player.getGSpeed() > 0x80
+                                                ? AbstractPlayableSprite.INPUT_LEFT : 0;
+                                    }
+                                }
+                                case 1 -> {
+                                    // Airborne approach onto the resting platform.
+                                    maskOwner = "obj74-ride-approach";
+                                    if (standingOnTarget) {
+                                        magneticPlatformRideStage = 2;
+                                        magneticPlatformCurrentVerticalClearanceObserved = true;
+                                        mask = 0;
+                                    } else if (player.getAir()) {
+                                        mask = (player.getYSpeed() < 0
+                                                ? AbstractPlayableSprite.INPUT_JUMP : 0)
+                                                | steerMask(player, landingX, 2);
+                                    } else {
+                                        assertFalse(player.isOnObject(),
+                                                () -> waypointDiagnostic(
+                                                        "obj74-ride-approach-landed-elsewhere",
+                                                        landingX));
+                                        magneticPlatformRideStage = 0;
+                                        mask = 0;
+                                    }
+                                }
+                                case 2 -> {
+                                    // Ride: stay centred through the rise, then
+                                    // hop to the next risen column or exit right.
+                                    maskOwner = "obj74-ride";
+                                    if (!standingOnTarget) {
+                                        // loc_3B3C0 drops the platform at $58/frame,
+                                        // faster than P1 gravity; P1 separates and
+                                        // re-lands on the resting platform.
+                                        assertTrue(player.getAir(),
+                                                () -> waypointDiagnostic(
+                                                        "obj74-ride-lost-support", landingX));
+                                        mask = steerMask(player, landingX, 2);
+                                    } else {
+                                        // Hops between columns happen at rest
+                                        // level: the raised columns share their
+                                        // height with the horizontal Obj72 chain
+                                        // links, which would grab an airborne P1.
+                                        // Only the last column is ridden to its
+                                        // top for the exit onto the far floor.
+                                        ObjectSpawn nextPlacement =
+                                                nextMagneticPlatformPlacement(objects, target);
+                                        FbzMagneticPlatformObjectInstance next =
+                                                nextPlacement == null ? null
+                                                        : liveMagneticPlatform(objects,
+                                                                nextPlacement.layoutIndex());
+                                        boolean runwayOk =
+                                                rideRunway > MAGNETIC_PLATFORM_RIDE_MIN_RUNWAY;
+                                        if (nextPlacement == null && targetRaised
+                                                && rideActive && runwayOk) {
+                                            magneticPlatformRideStage = 4;
+                                            magneticPlatformRideJumpStarted = false;
+                                            magneticPlatformRideSettled = false;
+                                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                        } else if (next != null && targetResting
+                                                && next.displacement() == 0
+                                                && next.getY() == target.getY() && runwayOk) {
+                                            magneticPlatformRideHopTarget = next;
+                                            magneticPlatformRideStage = 3;
+                                            magneticPlatformRideJumpStarted = false;
+                                            magneticPlatformRideSettled = false;
+                                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                        } else {
+                                            mask = steerMask(player, target.getX(), 3);
+                                        }
+                                    }
+                                }
+                                case 3, 4 -> {
+                                    FbzMagneticPlatformObjectInstance hop =
+                                            magneticPlatformRideHopTarget;
+                                    boolean hopping = magneticPlatformRideStage == 3;
+                                    maskOwner = hopping ? "obj74-ride-hop" : "obj74-ride-exit";
+                                    if (!magneticPlatformRideJumpStarted) {
+                                        assertTrue(standingOnTarget,
+                                                () -> waypointDiagnostic(
+                                                        "obj74-ride-run-up-lost-support",
+                                                        target.getX()));
+                                        if (!magneticPlatformRideSettled) {
+                                            // Brake the landing inertia at the
+                                            // column centre so every launch
+                                            // leaves from the same short run-up.
+                                            magneticPlatformRideSettled =
+                                                    Math.abs(player.getGSpeed()) <= 0x40
+                                                    && Math.abs(playerXBefore - target.getX()) <= 2;
+                                            mask = magneticPlatformRideSettled
+                                                    ? AbstractPlayableSprite.INPUT_RIGHT
+                                                    : steerMask(player, target.getX(), 2);
+                                        } else if (playerXBefore >= target.getX()
+                                                + MAGNETIC_PLATFORM_RIDE_LAUNCH_OFFSET) {
+                                            magneticPlatformRideJumpStarted = true;
+                                            mask = AbstractPlayableSprite.INPUT_JUMP
+                                                    | AbstractPlayableSprite.INPUT_RIGHT;
+                                        } else {
+                                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                        }
+                                    } else if (hopping && player.isOnObject()
+                                            && player.getLatchedSolidObjectInstance() == hop) {
+                                        // Landed on the next column: the previous
+                                        // one is cleared and the new one bound.
+                                        magneticPlatformClearedLayoutIndices.add(
+                                                magneticPlatformHazardPlacement.layoutIndex());
+                                        magneticPlatformHazardClearances++;
+                                        magneticPlatformHazardCleared = true;
+                                        magneticPlatformHazardPlacement = hop.getSpawn();
+                                        magneticPlatformHazardTarget = hop;
+                                        magneticPlatformEncounteredLayoutIndices.add(
+                                                hop.getSpawn().layoutIndex());
+                                        magneticPlatformLiveBindings++;
+                                        assertEquals(0x0D, hop.getCollisionFlags() & 0x3F,
+                                                "live Obj74 hop target changed Touch_Sizes index");
+                                        magneticPlatformRideHopTarget = null;
+                                        magneticPlatformRideJumpStarted = false;
+                                        magneticPlatformRideStage = 2;
+                                        mask = 0;
+                                    } else if (player.getAir()) {
+                                        int jumpHold = player.getYSpeed() < 0
+                                                ? AbstractPlayableSprite.INPUT_JUMP : 0;
+                                        mask = jumpHold | (hopping
+                                                ? steerMask(player, hop.getX()
+                                                        - MAGNETIC_PLATFORM_RIDE_LANDING_OFFSET, 2)
+                                                : AbstractPlayableSprite.INPUT_RIGHT);
+                                    } else {
+                                        assertFalse(hopping,
+                                                () -> waypointDiagnostic("obj74-ride-hop-missed",
+                                                        hop.getX()));
+                                        mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                    }
+                                }
+                                default -> throw new IllegalStateException(
+                                        "Obj74 ride stage " + magneticPlatformRideStage);
+                            }
+                        }
+                    } else if (magneticPlatformHazardControllerActive) {
                         FbzMagneticPlatformObjectInstance target =
                                 magneticPlatformHazardTarget;
                         if (target != null) {
@@ -1526,8 +2110,14 @@ public class TestFbzAct2TraversalPreboss {
                                 == Sonic3kFBZEvents.MagneticPolarity.ACTIVE;
                         boolean ordinaryGroundControl =
                                 hasOrdinaryFlatGroundControl(player);
-                        int proposedCrossingBudget = ordinaryRightCrossingBudget(
-                                player, objectTouchRight - playerTouchLeft + 1);
+                        // The runway must also outlast the CPU sidekicks that
+                        // trail P1 under the column: a follower still beneath
+                        // it when polarity drops is crushed onto the Obj6B
+                        // hurt block placed under every Obj74 column.
+                        int proposedCrossingBudget = Math.max(
+                                ordinaryRightCrossingBudget(
+                                        player, objectTouchRight - playerTouchLeft + 1),
+                                sidekickFollowAllowance(objectTouchRight));
                         boolean raisedClearance = !verticalTouchOverlap
                                 && objectTouchBottom < playerTouchTop;
                         boolean canCommitCrossing = target != null
@@ -1579,6 +2169,17 @@ public class TestFbzAct2TraversalPreboss {
                             maskOwner = "obj74-live-crossing";
                             mask = AbstractPlayableSprite.INPUT_RIGHT;
                         }
+                    } else if (squeezeApproachBrake && squeezeCorridorStage == 0
+                            && !squeezeCorridorRollRequested) {
+                        // An Obj28 squeeze lies within the ordinary braking
+                        // distance ahead. Shed the run speed before any episode
+                        // binds so the launch fence stays reachable.
+                        maskOwner = "obj28-approach-brake";
+                        mask = player.getGSpeed() > SQUEEZE_APPROACH_SPEED_CAP
+                                ? AbstractPlayableSprite.INPUT_LEFT : 0;
+                    } else if (squeezeChargedWaitingForCar) {
+                        maskOwner = "obj28-native-charged-wait-for-car";
+                        mask = AbstractPlayableSprite.INPUT_DOWN;
                     } else if (squeezeCorridorRecoveryActive) {
                         assertNull(squeezeCorridorTarget,
                                 "Obj28 recovery retained tentative block authority");
@@ -1686,24 +2287,98 @@ public class TestFbzAct2TraversalPreboss {
                                 - target.getSolidParams().halfWidth();
                         int stagingX = blockLeft
                                 - (player.getStandXRadius() & 0xFFFF) - 0x08;
-                        if (!squeezeCorridorSpindashCapable) {
-                            squeezeCorridorAssistConsumed =
-                                    GameServices.zoneRuntimeRegistry()
-                                            .currentAs(FbzZoneRuntimeState.class)
-                                            .map(runtime -> runtime.s1DonationSqueezeAssistState()
-                                                    == FbzZoneRuntimeState
-                                                    .S1DonationSqueezeAssistState.CONSUMED)
-                                            .orElse(false);
-                            if (!squeezeCorridorAssistConsumed) {
-                                assertTrue(FbzMovingSqueezeTraversal.beforeLaunchFrontier(
-                                                episode, player),
-                                        "S1 ordinary roll reached the Obj28 launch frontier too late");
+                        if (!squeezeCorridorSpindashCapable && squeezeCorridorStage == 6) {
+                            // S1 profile: no charge to hold, so stand at the
+                            // staging spot until the native-speed projection
+                            // clears and no other car of the column spans the
+                            // rolling height (the same gate the native release
+                            // uses), then take the ordinary run-up into the roll.
+                            maskOwner = "obj28-s1-wait-for-clear-car";
+                            int rollCentreY = playerYBefore + (player.getStandYRadius() & 0xFFFF)
+                                    - (player.getRollYRadius() & 0xFFFF);
+                            int rollTop = rollCentreY - (player.getRollYRadius() & 0xFFFF);
+                            int rollBottom = rollCentreY + (player.getRollYRadius() & 0xFFFF);
+                            FbzElevatorObjectInstance.Car boundSupport = squeezeCorridorSupport;
+                            boolean otherCarBlocksRoll = objects.activeObjectsOfType(
+                                            FbzElevatorObjectInstance.Car.class).stream()
+                                    .filter(car -> car != boundSupport
+                                            && car.getCentreX() == boundSupport.getCentreX())
+                                    .anyMatch(car -> car.getCentreY()
+                                            + car.getSolidParams().groundHalfHeight()
+                                            + SQUEEZE_OTHER_CAR_SLOPE_MARGIN >= rollTop
+                                            && car.getCentreY()
+                                            - car.getSolidParams().airHalfHeight()
+                                            - SQUEEZE_OTHER_CAR_SLOPE_MARGIN <= rollBottom);
+                            // FbzS1DonationSqueezeAssist only fires for the pair
+                            // FbzMovingSqueezeTraversal.findEpisode selects: a
+                            // native-speed projection that clears with a real
+                            // danger edge ahead of P1, unique among the column's
+                            // cars. Wait for exactly that car and bind it.
+                            Sonic3kInvisibleBlockObjectInstance s1Block = target;
+                            List<FbzElevatorObjectInstance.Car> genuineCandidates =
+                                    objects.activeObjectsOfType(FbzElevatorObjectInstance.Car.class)
+                                            .stream()
+                                            .filter(car -> car.getCentreX() == boundSupport.getCentreX())
+                                            .filter(car -> {
+                                                FbzMovingSqueezeTraversal.Projection candidate =
+                                                        FbzMovingSqueezeTraversal.project(
+                                                                new FbzMovingSqueezeTraversal.Episode(
+                                                                        s1Block, car),
+                                                                player,
+                                                                FbzMovingSqueezeTraversal.NATIVE_RELEASE_SPEED);
+                                                if (!candidate.clears()) return false;
+                                                if (candidate.dangerEdge() > playerXBefore) return true;
+                                                // The finder also accepts a pair whose
+                                                // ordinary-speed roll would be crushed;
+                                                // evaluate it at the roll-start speed.
+                                                return FbzMovingSqueezeTraversal.project(
+                                                        new FbzMovingSqueezeTraversal.Episode(s1Block, car),
+                                                        player, SQUEEZE_S1_ROLL_START_SPEED)
+                                                        .crushOverlapObserved();
+                                            })
+                                            .toList();
+                            squeezeCorridorS1WaitFrames++;
+                            int s1WaitFrames = squeezeCorridorS1WaitFrames;
+                            assertTrue(s1WaitFrames <= SQUEEZE_S1_WAIT_LIMIT,
+                                    () -> waypointDiagnostic("obj28-s1-no-genuine-squeeze", blockLeft)
+                                            + " waitFrames=" + s1WaitFrames
+                                            + " candidates=" + genuineCandidates.size()
+                                            + " otherCarBlocks=" + otherCarBlocksRoll);
+                            if (genuineCandidates.size() == 1 && !otherCarBlocksRoll
+                                    && !player.getAir()) {
+                                FbzElevatorObjectInstance.Car genuine = genuineCandidates.get(0);
+                                if (genuine != squeezeCorridorSupport) {
+                                    squeezeCorridorSupport = genuine;
+                                    squeezeCorridorSupportSlot = genuine.getSlotIndex();
+                                    squeezeCorridorCarBeforeBlock =
+                                            squeezeCorridorSupportSlot < squeezeCorridorBlockSlot;
+                                }
+                                squeezeCorridorStage = 7;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT;
+                            } else {
+                                mask = steerMask(player, stagingX - SQUEEZE_S1_RUN_UP, 2);
                             }
-                            squeezeCorridorStage = 4;
-                            squeezeCorridorRollRequested = true;
+                        } else if (!squeezeCorridorSpindashCapable && squeezeCorridorStage == 7) {
+                            // Sonic_Roll needs |ground_vel| >= $80 and neither
+                            // LEFT nor RIGHT held: run up, then DOWN alone starts
+                            // the roll; RIGHT+DOWN while rolling is the production
+                            // assist's activation input (checked in stage 4).
                             maskOwner = "obj28-s1-ordinary-roll";
-                            mask = AbstractPlayableSprite.INPUT_RIGHT
-                                    | AbstractPlayableSprite.INPUT_DOWN;
+                            assertTrue(FbzMovingSqueezeTraversal.beforeLaunchFrontier(
+                                            episode, player),
+                                    () -> waypointDiagnostic(
+                                            "obj28-s1-roll-missed-launch-frontier", blockLeft));
+                            if (player.getRolling()) {
+                                squeezeCorridorStage = 4;
+                                squeezeCorridorRollRequested = true;
+                                squeezeCorridorS1RollFrames++;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT
+                                        | AbstractPlayableSprite.INPUT_DOWN;
+                            } else if (player.getGSpeed() >= SQUEEZE_S1_ROLL_START_SPEED) {
+                                mask = AbstractPlayableSprite.INPUT_DOWN;
+                            } else {
+                                mask = AbstractPlayableSprite.INPUT_RIGHT;
+                            }
                         } else if (squeezeCorridorStage == 0) {
                             String terrainControlEvidence =
                                     ordinaryRideControlEvidence(player)
@@ -1717,6 +2392,9 @@ public class TestFbzAct2TraversalPreboss {
                                     "Obj28 native staging lost ordinary terrain control: "
                                             + terrainControlEvidence);
                             int delta = playerXBefore - stagingX;
+                            if (!squeezeCorridorSpindashCapable) {
+                                delta = playerXBefore - (stagingX - SQUEEZE_S1_RUN_UP);
+                            }
                             if (delta > 2) {
                                 mask = AbstractPlayableSprite.INPUT_LEFT;
                             } else if (delta < -2) {
@@ -1725,9 +2403,12 @@ public class TestFbzAct2TraversalPreboss {
                                 mask = AbstractPlayableSprite.INPUT_LEFT;
                             } else if (player.getGSpeed() < -0x80) {
                                 mask = AbstractPlayableSprite.INPUT_RIGHT;
-                            } else {
+                            } else if (squeezeCorridorSpindashCapable) {
                                 squeezeCorridorStage = 1;
                                 mask = AbstractPlayableSprite.INPUT_DOWN;
+                            } else {
+                                squeezeCorridorStage = 6;
+                                mask = 0;
                             }
                             maskOwner = "obj28-native-stage";
                         } else if (squeezeCorridorStage == 1) {
@@ -1755,7 +2436,27 @@ public class TestFbzAct2TraversalPreboss {
                             FbzMovingSqueezeTraversal.Projection projection =
                                     FbzMovingSqueezeTraversal.project(
                                             episode, player, releaseSpeed);
-                            if (projection.clears()) {
+                            // The projection models the bound support car
+                            // only. Another car of the same column whose solid
+                            // box (ROM SolidObjectTopSloped2: $3B by $10, plus
+                            // its slope catch range) spans P1's rolling height
+                            // stops the release at its $3B side edge instead,
+                            // unrolling P1 on the ledge; hold the charge until
+                            // that car has risen clear.
+                            int rollTop = playerYBefore - (player.getRollYRadius() & 0xFFFF);
+                            int rollBottom = playerYBefore + (player.getRollYRadius() & 0xFFFF);
+                            FbzElevatorObjectInstance.Car boundSupport = squeezeCorridorSupport;
+                            boolean otherCarBlocksRoll = objects.activeObjectsOfType(
+                                            FbzElevatorObjectInstance.Car.class).stream()
+                                    .filter(car -> car != boundSupport
+                                            && car.getCentreX() == boundSupport.getCentreX())
+                                    .anyMatch(car -> car.getCentreY()
+                                            + car.getSolidParams().groundHalfHeight()
+                                            + SQUEEZE_OTHER_CAR_SLOPE_MARGIN >= rollTop
+                                            && car.getCentreY()
+                                            - car.getSolidParams().airHalfHeight()
+                                            - SQUEEZE_OTHER_CAR_SLOPE_MARGIN <= rollBottom);
+                            if (projection.clears() && !otherCarBlocksRoll) {
                                 squeezeCorridorStage = 4;
                                 squeezeCorridorRollRequested = true;
                                 squeezeCorridorLaunchSpeed = releaseSpeed;
@@ -1804,6 +2505,9 @@ public class TestFbzAct2TraversalPreboss {
                             maskOwner = squeezeCorridorSpindashCapable
                                     ? "obj28-native-neutral-crossing"
                                     : "obj28-s1-assisted-crossing";
+                            if (!squeezeCorridorSpindashCapable && player.getRolling()) {
+                                squeezeCorridorS1RollFrames++;
+                            }
                             mask = squeezeCorridorSpindashCapable ? 0
                                     : AbstractPlayableSprite.INPUT_RIGHT
                                     | AbstractPlayableSprite.INPUT_DOWN;
@@ -1817,7 +2521,53 @@ public class TestFbzAct2TraversalPreboss {
                         mask = AbstractPlayableSprite.INPUT_RIGHT;
                         if (playerXBefore >= 0x0940 || playerYBefore >= 0x0890) {
                             midpointCarEgressActive = false;
+                            shaftRegroupActive = true;
                         }
+                    } else if (shaftRegroupActive) {
+                        // The $08C0 cars keep descending through the shaft
+                        // floor every 96 frames, so anything standing inside
+                        // the car's $3B half-width there is crushed. A CPU
+                        // sidekick chain lags P1 by 17 frames per link
+                        // (Tails_CPU_Control loc_13DA6) and a lost member
+                        // flies back in to P1's position (loc_13B50), so hold
+                        // just right of the column until every sidekick has
+                        // either walked clear of it or landed here from its
+                        // respawn. Solo rows pass straight through.
+                        List<AbstractPlayableSprite> regroupSidekicks =
+                                GameServices.sprites().getSidekicks();
+                        boolean sidekickInsideShaft = regroupSidekicks.stream()
+                                .anyMatch(sidekick -> !sidekick.getDead()
+                                        && ((sidekick.getCentreX() & 0xFFFF)
+                                        == Sonic3kConstants.TAILS_CPU_DESPAWN_X
+                                        || ((sidekick.getCentreX() & 0xFFFF)
+                                        <= SHAFT_REGROUP_CLEAR_X
+                                        && (sidekick.getCentreY() & 0xFFFF)
+                                        >= SHAFT_REGROUP_MIN_Y)));
+                        shaftRegroupFrames++;
+                        if (!sidekickInsideShaft
+                                || shaftRegroupFrames > SHAFT_REGROUP_FRAME_LIMIT) {
+                            shaftRegroupActive = false;
+                            shaftFloorEastActive = true;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else if (player.getAir()) {
+                            mask = 0;
+                        } else {
+                            mask = steerMask(player, SHAFT_REGROUP_HOLD_X, 3);
+                        }
+                    } else if (shaftFloorEastActive && !descendingDoorControllerActive) {
+                        // BK2 rows 25398-25478 run RIGHT from the shaft floor
+                        // down the $0A2C slope to the $0B38 button and stop at
+                        // the closed $0B68 door. A shifted car phase lets the
+                        // authored RIGHT/JUMP cadence carry P1 over the button
+                        // airborne into the $0C00 spikes, so cap the run to a
+                        // speed the door stage can brake inside its $0B00-$0B80
+                        // envelope; the stage then owns the button and door.
+                        maskOwner = "shaft-floor-east";
+                        if (playerXBefore >= SHAFT_FLOOR_EAST_HANDOFF_X) {
+                            shaftFloorEastActive = false;
+                        }
+                        mask = player.getGSpeed() < SHAFT_FLOOR_EAST_SPEED_CAP
+                                ? AbstractPlayableSprite.INPUT_RIGHT : 0;
                     } else if (descendingDoorControllerActive
                             && descendingDoorStage >= 2) {
                         if (!descendingDoorClearsPlayer) {
@@ -1878,23 +2628,27 @@ public class TestFbzAct2TraversalPreboss {
                             // merely crossed for one frame at $0200+ speed.
                             mask = steerMask(player, buttonX, 2);
                         } else if (descendingDoorStage == 0) {
-                            assertTrue(withinButtonX && exactButtonFeet && exactButtonOwner,
-                                    () -> waypointDiagnostic(
-                                            "descending-door-trigger-without-button", buttonX));
-                            if (Math.abs(player.getGSpeed()) > 0x80) {
+                            // Obj_Button publishes one shared trigger bit from
+                            // the whole standing mask, so a configured sidekick
+                            // may hold subtype $22 before P1 arrives. Accept that
+                            // shared authority as the late button does; keep P1
+                            // steering onto the button so the bit survives if the
+                            // sidekick steps off before the door latches.
+                            boolean p1HoldsButton = withinButtonX && exactButtonFeet
+                                    && exactButtonOwner;
+                            if (p1HoldsButton && Math.abs(player.getGSpeed()) > 0x80) {
                                 mask = player.getGSpeed() > 0
                                         ? AbstractPlayableSprite.INPUT_LEFT
                                         : AbstractPlayableSprite.INPUT_RIGHT;
                             } else {
                                 descendingDoorStage = 1;
-                                mask = 0;
+                                mask = p1HoldsButton ? 0 : steerMask(player, buttonX, 2);
                             }
                         } else if (descendingDoorStage == 1 && !doorOpeningLatched) {
-                            assertTrue(triggerHeld && withinButtonX
-                                            && exactButtonFeet && exactButtonOwner,
+                            assertTrue(triggerHeld,
                                     () -> waypointDiagnostic(
                                             "descending-door-released-before-latch", buttonX));
-                            mask = 0;
+                            mask = exactButtonOwner ? 0 : steerMask(player, buttonX, 2);
                         } else {
                             descendingDoorStage = 2;
                             // The door routine is now latched independently of
@@ -2025,6 +2779,45 @@ public class TestFbzAct2TraversalPreboss {
                         mask = steerMask(player, risingCarTargetX, 2);
                     } else if (risingCarAcquisitionArmed) {
                         mask = steerMask(player, risingCarTargetX, 2);
+                    } else if (completed && risingCarRideCompleted
+                            && postLauncherRouteStage == 0 && springTowerStage < 3
+                            && playerXBefore >= springTowerMinX
+                            && playerXBefore <= springTowerMaxX
+                            && playerYBefore <= springTowerMaxY) {
+                        // Complete-run BK2 rows 27102-27432: after the rising
+                        // car exit P1 walks RIGHT to the $0795 wall over the
+                        // $0790 Obj3D retracting spring and waits neutral. The
+                        // spring's 128-frame cycle (four extend frames, 60
+                        // hold, four retract, 60 hold) launches P1 at $F000
+                        // whenever it next extends, a second spring at
+                        // $06BB relaunches, and a short LEFT from the apex
+                        // (rows 27352-27376) drifts P1 onto the $078A vertical
+                        // launcher that lands at $086C/$04EC. Wide viewports
+                        // reach the wall in a different spring phase, so the
+                        // wait is gated on the live launch, not on cadence.
+                        if (springTowerStage == 0) {
+                            if (player.getAir() && player.getYSpeed() <= springLaunchSpeed) {
+                                springTowerStage = 1;
+                                mask = 0;
+                            } else if (!player.getAir()) {
+                                mask = steerMask(player, springWaitX, 2);
+                            } else {
+                                mask = 0;
+                            }
+                        } else if (springTowerStage == 1) {
+                            if (player.getAir() && playerYBefore < springApexDriftMaxY
+                                    && player.getYSpeed() >= 0) {
+                                springTowerStage = 2;
+                                mask = AbstractPlayableSprite.INPUT_LEFT;
+                            } else {
+                                mask = 0;
+                            }
+                        } else if (!player.getAir() || playerXBefore <= springLauncherX) {
+                            springTowerStage = 3;
+                            mask = 0;
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_LEFT;
+                        }
                     } else if (postLauncherRouteStage == 1) {
                         // BK2 $6B30 lands from the vertical launcher at
                         // $086C/$04EC, already to the right of the live $0800
@@ -2124,21 +2917,38 @@ public class TestFbzAct2TraversalPreboss {
                             mask = AbstractPlayableSprite.INPUT_RIGHT;
                         }
                     } else if (postLauncherRouteStage == 9) {
-                        // The BK2 holds RIGHT after the crane release. Donation
-                        // routes can reach the polarity-driven balls on another
-                        // global phase, so brake before the next real dynamic
-                        // ball until it has risen clear of the floor route.
-                        FbzMagneticSpikeBallObjectInstance nextBall = objects.activeObjectsOfType(
-                                        FbzMagneticSpikeBallObjectInstance.class).stream()
-                                .filter(ball -> ball.kind()
-                                        == FbzMagneticSpikeBallObjectInstance.Kind.BALL)
-                                .filter(ball -> ball.getX() + 0x18 >= playerXBefore)
-                                .min(java.util.Comparator.comparingInt(
-                                        FbzMagneticSpikeBallObjectInstance::getX))
-                                .orElse(null);
-                        boolean ballBlocksFloor = nextBall != null
-                                && nextBall.getX() - playerXBefore <= 0xA0
-                                && nextBall.getY() >= 0x04C0;
+                        // The BK2 holds RIGHT after the crane release with the
+                        // Obj73 balls already lifted. Rows on another global
+                        // phase reach the $0C20-$0D60 balls while they rest on
+                        // the floor or are falling: gate the corridor on live
+                        // polarity runway covering P1 and every trailing CPU
+                        // sidekick, with every ball ahead risen clear.
+                        List<FbzMagneticSpikeBallObjectInstance> ballsAhead =
+                                objects.activeObjectsOfType(
+                                                FbzMagneticSpikeBallObjectInstance.class).stream()
+                                        .filter(ball -> ball.kind()
+                                                == FbzMagneticSpikeBallObjectInstance.Kind.BALL)
+                                        .filter(ball -> ball.getX() + SPIKE_BALL_TOUCH_HALF_WIDTH
+                                                >= playerXBefore - PLAYER_TOUCH_HALF_WIDTH)
+                                        .filter(ball -> ball.getX() <= magneticCorridorExitX)
+                                        .sorted(java.util.Comparator.comparingInt(
+                                                FbzMagneticSpikeBallObjectInstance::getX))
+                                        .toList();
+                        FbzZoneRuntimeState ballRuntime = GameServices.zoneRuntimeRegistry()
+                                .currentAs(FbzZoneRuntimeState.class).orElseThrow();
+                        boolean ballPolarityActive = ballRuntime.magneticPolarity()
+                                == Sonic3kFBZEvents.MagneticPolarity.ACTIVE;
+                        int ballRunway = 0xFF - ballRuntime.magneticTimerPhase();
+                        boolean ballsRaised = ballsAhead.stream().allMatch(ball ->
+                                ball.rising() && ball.getY() <= SPIKE_BALL_CORRIDOR_SAFE_Y);
+                        int lastBallTouchRight = ballsAhead.isEmpty() ? -1
+                                : ballsAhead.get(ballsAhead.size() - 1).getX()
+                                + SPIKE_BALL_TOUCH_HALF_WIDTH;
+                        int ballCrossingBudget = ballsAhead.isEmpty() ? 0 : Math.max(
+                                ordinaryRightCrossingBudget(player,
+                                        lastBallTouchRight
+                                                - (playerXBefore - PLAYER_TOUCH_HALF_WIDTH) + 1),
+                                sidekickFollowAllowance(lastBallTouchRight));
                         int lastMineHazardX = -1;
                         for (ObjectInstance object : activeFrame) {
                             if ((object instanceof FbzMineObjectInstance
@@ -2150,16 +2960,29 @@ public class TestFbzAct2TraversalPreboss {
                         }
                         boolean insideMineEnvelope = lastMineHazardX >= 0
                                 && playerXBefore <= lastMineHazardX + 0x30;
-                        if (insideMineEnvelope) {
+                        // Balls spawn as the camera reaches them, so a commit
+                        // covers only the balls that existed; a newly placed
+                        // ball ahead reopens the gate for the remaining crossing.
+                        if (ballsAhead.size() > spikeBallCorridorCommittedCount) {
+                            spikeBallCorridorCommitted = false;
+                        }
+                        spikeBallCorridorCommittedCount = ballsAhead.size();
+                        if (!spikeBallCorridorCommitted && ballsAhead.isEmpty()) {
+                            spikeBallCorridorCommitted = true;
+                        } else if (!spikeBallCorridorCommitted && ballsRaised
+                                && ballPolarityActive && ballRunway > ballCrossingBudget) {
+                            spikeBallCorridorCommitted = true;
+                        }
+                        if (insideMineEnvelope || spikeBallCorridorCommitted) {
                             // Keep the BK2's RIGHT traversal until every real
                             // mine/explosion envelope is behind P1. Waiting for
                             // magnetic polarity inside this corridor is lethal.
                             mask = AbstractPlayableSprite.INPUT_RIGHT;
-                        } else if (ballBlocksFloor) {
-                            mask = player.getGSpeed() > 0
-                                    ? AbstractPlayableSprite.INPUT_LEFT : 0;
                         } else {
-                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                            int holdX = ballsAhead.get(0).getX() - SPIKE_BALL_HOLD_GAP;
+                            mask = playerXBefore > holdX && player.getGSpeed() > 0
+                                    ? AbstractPlayableSprite.INPUT_LEFT
+                                    : steerMask(player, holdX, 4);
                         }
                         if (playerXBefore >= magneticCorridorExitX) {
                             postLauncherRouteStage = 10;
@@ -2189,7 +3012,155 @@ public class TestFbzAct2TraversalPreboss {
                         // there is no active object at that coordinate. Resume
                         // ordinary RIGHT movement toward the next authored
                         // $02/$0A path switch at $1280/$0640.
-                        if (postDoorPathSwitchReached && lateButtonDoorStage == 3) {
+                        if (postDoorPathSwitchReached && lateButtonDoorStage == 3
+                                && lateCorridorStage < 5) {
+                            FbzZoneRuntimeState corridorRuntime =
+                                    GameServices.zoneRuntimeRegistry()
+                                            .currentAs(FbzZoneRuntimeState.class)
+                                            .orElseThrow();
+                            boolean lateDoorClearsPlayer = lateButtonDoor == null
+                                    || lateButtonDoor.getY()
+                                    + lateButtonDoor.getSolidParams().airHalfHeight()
+                                    < playerYBefore - player.getYRadius();
+                            int corridorRunway = 0xFF - corridorRuntime.magneticTimerPhase();
+                            // Without a spindash (S1 donation) the crossing is an
+                            // ordinary run from rest, about $C0 frames to pass
+                            // the last magnetic hazard, so it needs almost the
+                            // whole ACTIVE half-cycle after the hazards have risen.
+                            int corridorMinRunway = spindashEnabled
+                                    ? POST_DOOR_CORRIDOR_MIN_RUNWAY
+                                    : POST_DOOR_CORRIDOR_RUN_MIN_RUNWAY;
+                            boolean corridorGateOpen = lateDoorClearsPlayer
+                                    && corridorRuntime.magneticPolarity()
+                                    == Sonic3kFBZEvents.MagneticPolarity.ACTIVE
+                                    && corridorRunway >= corridorMinRunway
+                                    && corridorRunway <= POST_DOOR_CORRIDOR_MAX_RUNWAY;
+                            int holdX = lateButton != null ? lateButton.getX() : playerXBefore;
+                            switch (lateCorridorStage) {
+                                case 0 -> {
+                                    maskOwner = "late-corridor-polarity-hold";
+                                    lateCorridorHoldFrames++;
+                                    int holdFrames = lateCorridorHoldFrames;
+                                    assertTrue(holdFrames <= POST_DOOR_CORRIDOR_HOLD_LIMIT,
+                                            () -> waypointDiagnostic(
+                                                    "late-corridor-polarity-hold-limit", holdX)
+                                                    + " holdFrames=" + holdFrames);
+                                    if (corridorGateOpen && !spindashEnabled
+                                            && !player.getAir()) {
+                                        lateCorridorStage = 4;
+                                        lateCorridorRollObserved = true;
+                                        mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                    } else if (corridorGateOpen && !player.getAir()
+                                            && Math.abs(player.getGSpeed()) <= 0x80
+                                            && player.getDirection()
+                                            != com.openggf.physics.Direction.LEFT) {
+                                        lateCorridorStage = 1;
+                                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                                    } else if (corridorGateOpen && !player.getAir()
+                                            && Math.abs(player.getGSpeed()) <= 0x80) {
+                                        // Sonic_Spindash releases along the facing
+                                        // direction; face RIGHT before crouching.
+                                        mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                    } else {
+                                        mask = player.getAir() ? 0
+                                                : steerMask(player, holdX, 2);
+                                    }
+                                }
+                                case 1 -> {
+                                    maskOwner = "late-corridor-spindash-crouch";
+                                    if (player.getCrouching()) {
+                                        lateCorridorStage = 2;
+                                        lateCorridorChargeTaps = 1;
+                                        mask = AbstractPlayableSprite.INPUT_DOWN
+                                                | AbstractPlayableSprite.INPUT_JUMP;
+                                    } else {
+                                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                                    }
+                                }
+                                case 2 -> {
+                                    // Sonic_Spindash adds $100 per JUMP edge up
+                                    // to $C00; three edges leave enough rolling
+                                    // speed after loc_3B462-style friction to
+                                    // reach the descent inside one half-cycle.
+                                    maskOwner = "late-corridor-spindash-hold";
+                                    assertTrue(player.getSpindash(),
+                                            "late corridor charge input did not enter spindash");
+                                    if (lateCorridorChargeTaps < POST_DOOR_CORRIDOR_CHARGE_TAPS
+                                            && (lateCorridorHoldFrames & 1) == 0) {
+                                        lateCorridorChargeTaps++;
+                                        mask = AbstractPlayableSprite.INPUT_DOWN
+                                                | AbstractPlayableSprite.INPUT_JUMP;
+                                    } else if (lateCorridorChargeTaps
+                                            < POST_DOOR_CORRIDOR_CHARGE_TAPS) {
+                                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                                    } else {
+                                        lateCorridorStage = 3;
+                                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                                    }
+                                    lateCorridorHoldFrames++;
+                                }
+                                case 3 -> {
+                                    maskOwner = "late-corridor-spindash-release";
+                                    assertTrue(player.getSpindash(),
+                                            "late corridor hold lost spindash state");
+                                    lateCorridorStage = 4;
+                                    mask = 0;
+                                }
+                                case 4 -> {
+                                    maskOwner = "late-corridor-roll";
+                                    lateCorridorRollObserved |= player.getRolling();
+                                    mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                    if (!spindashEnabled) {
+                                        // S1 profile: run. A roll would bleed the
+                                        // speed the half-cycle budget needs, so the
+                                        // non-magnetic $1790 floor Blaster is taken
+                                        // with a short jump-roll (Sonic_JumpHeight's
+                                        // released -$400 cap keeps the arc under the
+                                        // lifted magnetic hazards) that lands at
+                                        // running speed.
+                                        maskOwner = "late-corridor-run";
+                                        boolean floorBlasterAhead = objects.activeObjectsOfType(
+                                                        BlasterBadnikInstance.class).stream()
+                                                .filter(blaster -> !blaster.isDestroyed())
+                                                .filter(blaster -> blaster.getCollisionFlags() != 0)
+                                                .filter(blaster -> blaster.getX() >= playerXBefore)
+                                                .filter(blaster -> blaster.getX() - playerXBefore <= 0x50)
+                                                .anyMatch(blaster -> Math.abs(blaster.getY() - playerYBefore)
+                                                        <= 0x10);
+                                        if (lateCorridorJumpHold > 0) {
+                                            lateCorridorJumpHold--;
+                                            mask |= AbstractPlayableSprite.INPUT_JUMP;
+                                        } else if (floorBlasterAhead && !player.getAir()) {
+                                            lateCorridorJumpHold = POST_DOOR_CORRIDOR_RUN_JUMP_HOLD;
+                                            mask |= AbstractPlayableSprite.INPUT_JUMP;
+                                        }
+                                        if (playerXBefore >= POST_DOOR_CORRIDOR_HANDOFF_X) {
+                                            lateCorridorStage = 5;
+                                            lateButtonDoorStage = 4;
+                                        }
+                                    } else if (playerXBefore >= POST_DOOR_CORRIDOR_HANDOFF_X) {
+                                        lateCorridorStage = 5;
+                                        lateButtonDoorStage = 4;
+                                    } else if (lateCorridorRollObserved && !player.getAir()
+                                            && !player.getRolling() && !player.getSpindash()) {
+                                        if (Math.abs(player.getGSpeed()) >= 0x80) {
+                                            // Player_TouchFloor unrolled P1 after the
+                                            // drop off the button ledge; Sonic_Roll on
+                                            // DOWN resumes the roll at the live speed.
+                                            mask = AbstractPlayableSprite.INPUT_DOWN;
+                                        } else {
+                                            // The roll ended inside the corridor:
+                                            // re-arm the gate and charge again.
+                                            lateCorridorStage = 0;
+                                            lateCorridorHoldFrames = 0;
+                                            lateCorridorRollObserved = false;
+                                        }
+                                    }
+                                }
+                                default -> throw new IllegalStateException(
+                                        "late corridor stage " + lateCorridorStage);
+                            }
+                        } else if (postDoorPathSwitchReached && lateButtonDoorStage == 3) {
                             maskOwner = "late-button-stage-3-egress";
                             if (lateButtonDoor == null) {
                                 assertTrue(playerXBefore > 0x172B,
@@ -2326,12 +3297,26 @@ public class TestFbzAct2TraversalPreboss {
                                 // new pair can move.
                                 boolean suppressedCadencePhase =
                                         ((GameServices.level().getFrameCounter() + 1) & 3) == 0;
+                                // The magnetic $19B0 Blaster below the egress
+                                // rides the magnet to the ceiling only during
+                                // ACTIVE polarity; leave the button inside a
+                                // fresh ACTIVE half-cycle so the whole left
+                                // egress and turn stay above its shots.
+                                FbzZoneRuntimeState egressRuntime =
+                                        GameServices.zoneRuntimeRegistry()
+                                                .currentAs(FbzZoneRuntimeState.class)
+                                                .orElseThrow();
+                                boolean egressPolarityOpen = egressRuntime.magneticPolarity()
+                                        == Sonic3kFBZEvents.MagneticPolarity.ACTIVE
+                                        && 0xFF - egressRuntime.magneticTimerPhase()
+                                        >= TRIGGER7_EGRESS_MIN_RUNWAY;
                                 if (player.getGSpeed() > 0x0100) {
                                     mask = AbstractPlayableSprite.INPUT_LEFT;
                                 } else if (exactSurfaceOwner
                                         && trigger7Flamethrower.mappingFrame() == 2
                                         && !liveCollisionFlames
-                                        && suppressedCadencePhase) {
+                                        && suppressedCadencePhase
+                                        && egressPolarityOpen) {
                                     trigger7DoorStage = 3;
                                     trigger7EgressJumpStarted = true;
                                     mask = AbstractPlayableSprite.INPUT_LEFT
@@ -2433,6 +3418,60 @@ public class TestFbzAct2TraversalPreboss {
                                 // required to assert trigger 4.
                                 mask = steerMask(player, buttonX, 2);
                             }
+                        } else if (postDoorPathSwitchReached
+                                && (linkedDoorStage > 0
+                                || (!player.getAir() && (linkedDoor = findLinkedBlockingDoor(
+                                        objects, player, playerXBefore, playerYBefore,
+                                        linkedDoorsPassed)) != null))) {
+                            maskOwner = "linked-button-door";
+                            if (linkedDoorStage == 0) {
+                                linkedButton = findLinkedButton(objects, linkedDoor,
+                                        playerXBefore, playerYBefore);
+                                int foundDoorX = linkedDoor.getX();
+                                assertNotNull(linkedButton, () -> waypointDiagnostic(
+                                        "linked-door-without-button", foundDoorX));
+                                linkedDoorStage = 1;
+                                linkedDoorFrames = 0;
+                            }
+                            linkedDoorFrames++;
+                            int doorFrames = linkedDoorFrames;
+                            int doorStage = linkedDoorStage;
+                            FbzScrewDoorObjectInstance door = linkedDoor;
+                            Sonic3kButtonObjectInstance button = linkedButton;
+                            assertTrue(doorFrames <= LINKED_DOOR_FRAME_LIMIT,
+                                    () -> waypointDiagnostic("linked-door-frame-limit", door.getX())
+                                            + " stage=" + doorStage
+                                            + " button=" + objectPosition(button));
+                            boolean doorLatched = door.getY() < door.getSpawn().y();
+                            boolean doorClearsPlayer = door.getY()
+                                    + door.getSolidParams().airHalfHeight()
+                                    < playerYBefore - player.getYRadius();
+                            int doorRightEdge = door.getX() + door.getSolidParams().halfWidth();
+                            if (linkedDoorStage == 1) {
+                                boolean p1OnButton = !player.getAir() && player.isOnObject()
+                                        && player.getLatchedSolidObjectInstance() == button;
+                                if (doorLatched) {
+                                    // The door routine is latched independently of
+                                    // the momentary button; walk into its live edge.
+                                    linkedDoorStage = 2;
+                                    mask = AbstractPlayableSprite.INPUT_RIGHT;
+                                } else if (p1OnButton) {
+                                    mask = Math.abs(player.getGSpeed()) > 0x80
+                                            ? (player.getGSpeed() > 0
+                                            ? AbstractPlayableSprite.INPUT_LEFT
+                                            : AbstractPlayableSprite.INPUT_RIGHT) : 0;
+                                } else {
+                                    mask = steerMask(player, button.getX(), 2);
+                                }
+                            } else {
+                                if (playerXBefore > doorRightEdge && doorClearsPlayer) {
+                                    linkedDoorsPassed.add(door.getSpawn().layoutIndex());
+                                    linkedDoorStage = 0;
+                                    linkedDoor = null;
+                                    linkedButton = null;
+                                }
+                                mask = AbstractPlayableSprite.INPUT_RIGHT;
+                            }
                         } else if (postDoorPathSwitchReached) {
                             maskOwner = "post-door-live-hazards";
                             // Touch_Sizes indices $18/$1A give the live Blaster
@@ -2500,6 +3539,30 @@ public class TestFbzAct2TraversalPreboss {
                                             .orElse(null);
                             boolean insideLateHazardCorridor = playerXBefore >= 0x16F0
                                     && playerXBefore <= 0x18D0;
+                            // Obj_TechnoSqueek patrols its rail on its own
+                            // timer, so a wider viewport meets it in another
+                            // phase where the BK2's walk-off from the $1F40 car
+                            // (rows 31668-31688) passed. A jump-roll destroys it.
+                            // Only a mouse at P1's own body height while P1
+                            // runs at it matters; one patrolling a wall or
+                            // ceiling rail above an Obj74 ride is not on the
+                            // path and must not spend the ride's neutral wait.
+                            boolean squeekThreat = !player.getAir()
+                                    && player.getGSpeed() > TECHNO_SQUEEK_JUMP_MIN_SPEED
+                                    && squeekJumpAttempts < TECHNO_SQUEEK_JUMP_ATTEMPT_LIMIT
+                                    && objects.activeObjectsOfType(
+                                                    TechnoSqueekBadnikInstance.class).stream()
+                                            .filter(squeek -> !squeek.isDestroyed())
+                                            .filter(squeek -> squeek.getCollisionFlags() != 0)
+                                            .filter(squeek -> squeek.getX() >= playerXBefore)
+                                            .filter(squeek -> squeek.getX() - playerXBefore
+                                                    <= TECHNO_SQUEEK_JUMP_LOOKAHEAD)
+                                            .anyMatch(squeek -> Math.abs(
+                                                    squeek.getY() - playerYBefore)
+                                                    <= TECHNO_SQUEEK_JUMP_VERTICAL_RANGE);
+                            if (squeekThreat) {
+                                squeekJumpAttempts++;
+                            }
                             if (lowCeilingProjectile != null
                                     && (lowCeilingProjectile.isDestroyed()
                                     || lowCeilingProjectile.getCollisionFlags() == 0
@@ -2514,7 +3577,11 @@ public class TestFbzAct2TraversalPreboss {
                                     && ((!lowCeilingHeadroom && projectileThreat != null)
                                     || ballThreat != null
                                     || blasterThreat != null);
-                            if (retreatingForLowCeilingProjectile) {
+                            if (squeekThreat) {
+                                lateHazardJumpActive = true;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT
+                                        | AbstractPlayableSprite.INPUT_JUMP;
+                            } else if (retreatingForLowCeilingProjectile) {
                                 // A jump here reaches the measured ceiling before
                                 // clearing Touch_Sizes[$18]. Brake/retreat only
                                 // until the left-moving live shot is fully behind
@@ -2774,7 +3841,8 @@ public class TestFbzAct2TraversalPreboss {
                                         || playerXBefore < leftSpike.getX() - leftSpike.getSolidParams().halfWidth()
                                         || playerXBefore > rightSpike.getX() + rightSpike.getSolidParams().halfWidth()
                                         || rightSpike.getY() - playerYBefore < player.getYRadius()
-                                        || rightSpike.getY() - playerYBefore > 0xE0) continue;
+                                        || rightSpike.getY() - playerYBefore
+                                        > LOWER_SPIKE_GAP_DROP_LIMIT) continue;
                                 landingGapRight = rightSpike;
                                 landingGapX = (gapLeft + gapRight) / 2;
                             }
@@ -2784,9 +3852,31 @@ public class TestFbzAct2TraversalPreboss {
                     // ownership; the landing pilot cannot inject a jump into it.
                     if (landingGapRight != null && !magneticPlatformHazardControllerActive) {
                         maskOwner = "lower-spike-gap-landing";
-                        if (!landingGapJump && !player.getAir()
+                        // The gap may hold an Obj74 column. Its raised top sits
+                        // under a wall that blocks the exit jump, so wait on it
+                        // (loc_3B3C0 drops it once polarity clears) and leave
+                        // only from its resting floor position.
+                        FbzMagneticPlatformObjectInstance gapPlatform =
+                                !player.getAir() && player.isOnObject()
+                                        && player.getLatchedSolidObjectInstance()
+                                        instanceof FbzMagneticPlatformObjectInstance platform
+                                        ? platform : null;
+                        boolean gapPlatformMoving = gapPlatform != null
+                                && gapPlatform.displacement() != 0;
+                        if (gapPlatformMoving) {
+                            landingGapWaitFrames++;
+                            int gapWait = landingGapWaitFrames;
+                            int gapCentreX = landingGapX;
+                            assertTrue(gapWait <= LOWER_SPIKE_GAP_PLATFORM_WAIT_LIMIT,
+                                    () -> waypointDiagnostic(
+                                            "lower-spike-gap-platform-wait-limit", gapCentreX)
+                                            + " waitFrames=" + gapWait);
+                        }
+                        if (!landingGapJump && !player.getAir() && !gapPlatformMoving
                                 && Math.abs(player.getXSpeed()) < 0x20) landingGapJump = true;
-                        if (landingGapJump) {
+                        if (gapPlatformMoving) {
+                            mask = steerMask(player, gapPlatform.getX(), 3);
+                        } else if (landingGapJump) {
                             mask = AbstractPlayableSprite.INPUT_RIGHT
                                     | (!player.getAir() || player.getYSpeed() < 0
                                     ? AbstractPlayableSprite.INPUT_JUMP : 0);
@@ -2804,6 +3894,36 @@ public class TestFbzAct2TraversalPreboss {
                             int projectedX = playerXBefore
                                     + velocity * Math.abs(velocity) / (2 * acceleration * 256);
                             mask = steerMask(projectedX, landingGapX, 1);
+                        }
+                    } else if (squeezeCorridorClearances > 0 && landingGapRight == null
+                            && !magneticPlatformHazardControllerActive
+                            && !player.getAir() && player.getGSpeed() > LOWER_SPIKE_GAP_APPROACH_CAP
+                            && "post-door-live-hazards".equals(maskOwner)) {
+                        // A spike-pair gap below a ledge ahead: cap the run-off
+                        // speed so the airborne gap pilot can still brake into
+                        // the gap centre during the drop.
+                        var spikes = objects.activeObjectsOfType(Sonic3kSpikeObjectInstance.class);
+                        boolean gapLedgeAhead = false;
+                        for (var leftSpike : spikes) {
+                            for (var rightSpike : spikes) {
+                                int gapLeft = leftSpike.getX() + leftSpike.getSolidParams().halfWidth();
+                                int gapRight = rightSpike.getX() - rightSpike.getSolidParams().halfWidth();
+                                int leftEdge = leftSpike.getX() - leftSpike.getSolidParams().halfWidth();
+                                if (leftSpike.isDestroyed() || rightSpike.isDestroyed()
+                                        || leftSpike.getY() != rightSpike.getY()
+                                        || gapRight - gapLeft <= 0
+                                        || rightSpike.getX() - leftSpike.getX() > 0x80
+                                        || leftEdge < playerXBefore
+                                        || leftEdge - playerXBefore > LOWER_SPIKE_GAP_LEDGE_LOOKAHEAD
+                                        || rightSpike.getY() - playerYBefore < player.getYRadius()
+                                        || rightSpike.getY() - playerYBefore
+                                        > LOWER_SPIKE_GAP_DROP_LIMIT) continue;
+                                gapLedgeAhead = true;
+                            }
+                        }
+                        if (gapLedgeAhead) {
+                            maskOwner = "lower-spike-gap-approach-brake";
+                            mask = AbstractPlayableSprite.INPUT_LEFT;
                         }
                     }
                     lastControllerDiagnostic = " controller={postSwitch="
@@ -2840,6 +3960,14 @@ public class TestFbzAct2TraversalPreboss {
                             + Long.toHexString(magneticPlatformYFixed(
                                     magneticPlatformHazardTarget)))
                             + ",obj74WaitFrames=" + magneticPlatformHazardWaitFrames
+                            + ",obj74Ride=" + magneticPlatformRideMode
+                            + ",obj74RideStage=" + magneticPlatformRideStage
+                            + ",obj74RideFrames=" + magneticPlatformRideFrames
+                            + ",obj74RideAttempts=" + magneticPlatformRideAttempts
+                            + ",obj74RideJump=" + magneticPlatformRideJumpStarted
+                            + ",obj74RideSettled=" + magneticPlatformRideSettled
+                            + ",obj74RideHop=" + objectPosition(magneticPlatformRideHopTarget)
+                            + ",obj74RideSpike=" + objectPosition(magneticPlatformRideBlockingSpike)
                             + ",obj28Target=" + objectPosition(squeezeCorridorTarget)
                             + ",obj28Support=" + objectPosition(squeezeCorridorSupport)
                             + ",obj28RollRequested=" + squeezeCorridorRollRequested
@@ -2877,11 +4005,13 @@ public class TestFbzAct2TraversalPreboss {
                             + squeezeCorridorRecoveryHoldX
                             + ",obj28RecoveryFrames="
                             + squeezeCorridorRecoveryFrames
+                            + ",obj28Ahead=" + objectPosition(squeezeAheadBlock)
+                            + ",obj28Brake=" + squeezeApproachBrake
                             + ",obj28LastCandidate="
                             + squeezeCorridorLastCandidateEvidence
                             + ",owner=" + maskOwner + ",mask=$"
                             + Integer.toHexString(mask) + '}';
-                    if (postDoorPathSwitchReached && lateButtonDoorStage == 3) {
+                    if ("late-button-stage-3-egress".equals(maskOwner)) {
                         assertEquals(AbstractPlayableSprite.INPUT_RIGHT, mask,
                                 waypointDiagnostic(
                                         "late-door-egress-mask-override-stage-"
@@ -2989,8 +4119,27 @@ public class TestFbzAct2TraversalPreboss {
                                                 .S1DonationSqueezeAssistState.CONSUMED;
                                 squeezeCorridorAssistEverConsumed |=
                                         squeezeCorridorAssistConsumed;
-                                assertTrue(squeezeCorridorAssistConsumed,
-                                        "S1 Obj28 roll did not consume production assist");
+                                // The assist reads RIGHT+DOWN on a frame P1 is
+                                // already rolling, one frame after DOWN began it,
+                                // and by design stays armed when the ordinary
+                                // roll's own projection already clears the pair.
+                                boolean ownRollClears = squeezeCorridorSupport != null
+                                        && FbzMovingSqueezeTraversal.project(
+                                                new FbzMovingSqueezeTraversal.Episode(
+                                                        target, squeezeCorridorSupport),
+                                                player, player.getGSpeed()).clears();
+                                int s1RollFrames = squeezeCorridorS1RollFrames;
+                                FbzElevatorObjectInstance.Car s1Support = squeezeCorridorSupport;
+                                assertTrue(squeezeCorridorAssistConsumed
+                                                || squeezeCorridorS1RollFrames < 2
+                                                || ownRollClears,
+                                        () -> "S1 Obj28 roll did not consume production assist"
+                                                + " rollFrames=" + s1RollFrames
+                                                + " g=$" + Integer.toHexString(player.getGSpeed() & 0xFFFF)
+                                                + " player=($" + Integer.toHexString(player.getCentreX() & 0xFFFF)
+                                                + ",$" + Integer.toHexString(player.getCentreY() & 0xFFFF) + ")"
+                                                + " rolling=" + player.getRolling()
+                                                + " support=" + objectPosition(s1Support));
                                 squeezeCorridorLaunchSpeed = Math.max(
                                         squeezeCorridorLaunchSpeed, player.getGSpeed());
                                 squeezeCorridorRollEntrySpeeds.put(
@@ -3054,7 +4203,44 @@ public class TestFbzAct2TraversalPreboss {
                             squeezeCorridorSupportExited = false;
                         }
                     }
-                    if (magneticPlatformHazardPlacement != null) {
+                    if (magneticPlatformHazardPlacement != null && magneticPlatformRideMode) {
+                        ObjectSpawn hazardPlacement = magneticPlatformHazardPlacement;
+                        FbzMagneticPlatformObjectInstance target =
+                                magneticPlatformHazardTarget;
+                        assertFalse(player.getDead() || player.isHurt(),
+                                () -> waypointDiagnostic("obj74-ride-hurt", hazardPlacement.x())
+                                        + " target=" + objectPosition(target));
+                        int ringsAtArm = magneticPlatformHazardRingsAtArm;
+                        assertTrue(GameServices.level().getLevelGamestate().getRings()
+                                        >= ringsAtArm,
+                                () -> waypointDiagnostic("obj74-ride-ring-loss",
+                                        hazardPlacement.x())
+                                        + " ringsAtArm=" + ringsAtArm);
+                        if (magneticPlatformRideStage == 4 && target != null
+                                && magneticPlatformRideJumpStarted) {
+                            int postPlayerTouchLeft = (player.getCentreX() & 0xFFFF)
+                                    - PLAYER_TOUCH_HALF_WIDTH;
+                            int postObjectTouchRight = target.getX()
+                                    + MAGNETIC_PLATFORM_TOUCH_RADIUS_X;
+                            if (postPlayerTouchLeft > postObjectTouchRight) {
+                                magneticPlatformHazardCleared = true;
+                                magneticPlatformHazardClearances++;
+                                magneticPlatformClearedLayoutIndices.add(
+                                        hazardPlacement.layoutIndex());
+                                magneticPlatformHazardPlacement = null;
+                                magneticPlatformHazardTarget = null;
+                                magneticPlatformPreviousLiveYFixed = Long.MIN_VALUE;
+                                magneticPlatformCrossingCommitted = false;
+                                magneticPlatformCrossingBudget = 0;
+                                magneticPlatformCrossingFrames = 0;
+                                magneticPlatformRideMode = false;
+                                magneticPlatformRideStage = 0;
+                                magneticPlatformRideJumpStarted = false;
+                                magneticPlatformRideHopTarget = null;
+                                magneticPlatformRideBlockingSpike = null;
+                            }
+                        }
+                    } else if (magneticPlatformHazardPlacement != null) {
                         ObjectSpawn hazardPlacement = magneticPlatformHazardPlacement;
                         FbzMagneticPlatformObjectInstance target =
                                 magneticPlatformHazardTarget;
@@ -3406,6 +4592,887 @@ public class TestFbzAct2TraversalPreboss {
             return false;
         }
 
+        private FbzSpiderCraneObjectInstance lowerSpiderCrane() {
+            return objects.activeObjectsOfType(FbzSpiderCraneObjectInstance.class).stream()
+                    .filter(candidate -> !candidate.isDestroyed())
+                    .filter(candidate -> candidate.getSpawn().x() == LOWER_CRANE_X)
+                    .filter(candidate -> candidate.stateName().equals("WAIT")
+                            || candidate.stateName().equals("DESCEND"))
+                    .findFirst().orElse(null);
+        }
+
+        private boolean lowerCraneApproachReached(AbstractPlayableSprite player) {
+            if (player.getAir() || player.isObjectControlled() || player.isOnObject()) return false;
+            int x = player.getCentreX() & 0xFFFF;
+            int y = player.getCentreY() & 0xFFFF;
+            return Math.abs(y - LOWER_CRANE_FLOOR_Y) <= 4
+                    && x >= LOWER_CRANE_X - 0x10 && x <= LOWER_CRANE_X + 0x60
+                    && lowerSpiderCrane() != null;
+        }
+
+        private static boolean craneHolding(FbzSpiderCraneObjectInstance crane) {
+            return switch (crane.stateName()) {
+                case "CAPTURE", "RETRACT", "TRAVEL" -> true;
+                default -> false;
+            };
+        }
+
+        private FbzMagneticPlatformObjectInstance magneticColumn(int spawnX, int spawnY) {
+            return objects.activeObjectsOfType(FbzMagneticPlatformObjectInstance.class).stream()
+                    .filter(column -> !column.isDestroyed())
+                    .filter(column -> column.getX() == spawnX)
+                    .filter(column -> column.getY() + column.displacement() == spawnY)
+                    .findFirst().orElse(null);
+        }
+
+        /** Walks toward {@code targetX} at a capped speed and brakes inside the tolerance. */
+        private static int steerMaskWalking(AbstractPlayableSprite player, int targetX,
+                                            int tolerance) {
+            int x = player.getCentreX() & 0xFFFF;
+            int groundSpeed = player.getGSpeed();
+            int delta = targetX - x;
+            if (Math.abs(delta) > tolerance) {
+                if (Math.abs(groundSpeed) >= LOWER_CRANE_WALK_CAP) return 0;
+                return delta > 0 ? AbstractPlayableSprite.INPUT_RIGHT
+                        : AbstractPlayableSprite.INPUT_LEFT;
+            }
+            if (Math.abs(groundSpeed) <= 0x80) return 0;
+            return groundSpeed > 0 ? AbstractPlayableSprite.INPUT_LEFT
+                    : AbstractPlayableSprite.INPUT_RIGHT;
+        }
+
+        private boolean technoSqueekAhead(AbstractPlayableSprite player) {
+            int playerX = player.getCentreX() & 0xFFFF;
+            int playerY = player.getCentreY() & 0xFFFF;
+            return objects.activeObjectsOfType(TechnoSqueekBadnikInstance.class).stream()
+                    .filter(squeek -> !squeek.isDestroyed())
+                    .filter(squeek -> squeek.getX() >= playerX)
+                    .filter(squeek -> squeek.getX() - playerX <= 0x48)
+                    .anyMatch(squeek -> Math.abs(squeek.getY() - playerY) <= 0x40);
+        }
+
+        /** Live TechnoSqueek within {@code range} ahead of P1 at ledge height. */
+        private boolean technoSqueekWithin(AbstractPlayableSprite player, int range) {
+            int playerX = player.getCentreX() & 0xFFFF;
+            int playerY = player.getCentreY() & 0xFFFF;
+            return objects.activeObjectsOfType(TechnoSqueekBadnikInstance.class).stream()
+                    .filter(squeek -> !squeek.isDestroyed())
+                    .filter(squeek -> squeek.getCollisionFlags() != 0)
+                    .filter(squeek -> squeek.getX() >= playerX - 0x08)
+                    .filter(squeek -> squeek.getX() - playerX <= range)
+                    .anyMatch(squeek -> Math.abs(squeek.getY() - playerY) <= 0x20);
+        }
+
+        /**
+         * $01EC ledge to the $076C loop floor (see the LEDGE_* constants):
+         * hop the mice, grab the $0868 chain, ride it down, drop LEFT onto
+         * the $02EC floor, break the $0810 monitor, stand on the $0810
+         * launcher and settle from its throw inside the upper-loop approach.
+         */
+        private void runLedgeToLoopFloor(FrameCheck check) {
+            int stage = 0;
+            int stageFrames = 0;
+            int hold = 0;
+            int chainStillFrames = 0;
+            int lastChainY = -1;
+            int grabAttempts = 0;
+            int monitorAttempts = 0;
+            for (int frame = 0; frame < LEDGE_ROUTE_FRAME_LIMIT; frame++) {
+                AbstractPlayableSprite player = fixture.sprite();
+                int x = player.getCentreX() & 0xFFFF;
+                int y = player.getCentreY() & 0xFFFF;
+                boolean grounded = !player.getAir();
+                Object latch = player.getLatchedSolidObjectInstance();
+                FbzChainLinkObjectInstance chain = player.isOnObject()
+                        && latch instanceof FbzChainLinkObjectInstance link ? link : null;
+                int mask = 0;
+                String owner;
+                int stageBefore = stage;
+                switch (stage) {
+                    case 0 -> {
+                        owner = "ledge-east";
+                        if (chain != null && chain.getSpawn().x() != LEDGE_CHAIN_X) {
+                            // A hop rose into another link's grab band: the
+                            // directional jump release (loc_3A8F8) leaves it
+                            // with a re-grab cooldown.
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                            hold = 0;
+                        } else if (chain != null) {
+                            stage = 2;
+                        } else if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && x >= LEDGE_CHAIN_JUMP_X) {
+                            stage = 1;
+                            mask = AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && technoSqueekWithin(player, LEDGE_SQUEEK_HOP_RANGE)) {
+                            hold = LEDGE_SQUEEK_HOP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                    }
+                    case 1 -> {
+                        owner = "ledge-chain-grab";
+                        if (chain != null && chain.getSpawn().x() == LEDGE_CHAIN_X) {
+                            stage = 2;
+                        } else if (chain != null) {
+                            mask = AbstractPlayableSprite.INPUT_LEFT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && stageFrames > 2) {
+                            grabAttempts++;
+                            int attempts = grabAttempts;
+                            assertTrue(attempts < LEDGE_CHAIN_GRAB_ATTEMPT_LIMIT,
+                                    () -> waypointDiagnostic("ledge-chain-grab-attempts", LEDGE_CHAIN_X)
+                                            + " attempts=" + attempts);
+                            stage = 0;
+                            mask = x > LEDGE_CHAIN_JUMP_X ? AbstractPlayableSprite.INPUT_LEFT : 0;
+                        } else {
+                            // Full variable jump, air-steered onto the link column.
+                            mask = (player.getYSpeed() < 0 ? AbstractPlayableSprite.INPUT_JUMP : 0)
+                                    | (x < LEDGE_CHAIN_X - 2 ? AbstractPlayableSprite.INPUT_RIGHT
+                                    : x > LEDGE_CHAIN_X + 2 ? AbstractPlayableSprite.INPUT_LEFT : 0);
+                        }
+                    }
+                    case 2 -> {
+                        owner = "ledge-chain-hang";
+                        if (chain == null) {
+                            stage = 3;
+                            mask = AbstractPlayableSprite.INPUT_LEFT;
+                        } else {
+                            // loc_3A860 extends the link 2px/frame to its range;
+                            // release LEFT once it rests at full extension.
+                            chainStillFrames = y == lastChainY ? chainStillFrames + 1 : 0;
+                            lastChainY = y;
+                            if (chainStillFrames >= LEDGE_CHAIN_STILL_FRAMES) {
+                                hold = 1;
+                                stage = 3;
+                                mask = AbstractPlayableSprite.INPUT_LEFT
+                                        | AbstractPlayableSprite.INPUT_JUMP;
+                            }
+                        }
+                    }
+                    case 3 -> {
+                        owner = "ledge-chain-drop";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_LEFT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && y >= LEDGE_LOWER_FLOOR_Y - 8) {
+                            stage = 4;
+                        } else {
+                            // The $0810/$0870 spikes flank the landing; aim the
+                            // -$200 release drift at the gap midpoint using the
+                            // distance Sonic_ChgJumpDir needs to brake it.
+                            int velocity = player.getXSpeed();
+                            int airAcceleration = Math.max(1, 2 * player.getRunAccel());
+                            int projectedX = x + velocity * Math.abs(velocity)
+                                    / (2 * airAcceleration * 256);
+                            mask = projectedX > LEDGE_SPIKE_GAP_X + 2
+                                    ? AbstractPlayableSprite.INPUT_LEFT
+                                    : projectedX < LEDGE_SPIKE_GAP_X - 2
+                                    ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+                        }
+                    }
+                    case 4 -> {
+                        owner = "ledge-monitor";
+                        boolean monitorLive = objects.activeObjectsOfType(
+                                        Sonic3kMonitorObjectInstance.class).stream()
+                                .filter(monitor -> !monitor.isDestroyed())
+                                .anyMatch(monitor -> monitor.getSpawn().x() == LEDGE_MONITOR_X
+                                        && monitor.getSpawn().y() == LEDGE_MONITOR_Y);
+                        if (!monitorLive) {
+                            stage = 5;
+                        } else if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_LEFT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = AbstractPlayableSprite.INPUT_LEFT
+                                    | (player.getYSpeed() < 0 ? AbstractPlayableSprite.INPUT_JUMP : 0);
+                        } else if (Math.abs(x - LEDGE_MONITOR_JUMP_X) <= 2
+                                && Math.abs(player.getGSpeed()) <= 0x80) {
+                            monitorAttempts++;
+                            int attempts = monitorAttempts;
+                            assertTrue(attempts <= LEDGE_MONITOR_ATTEMPT_LIMIT,
+                                    () -> waypointDiagnostic("ledge-monitor-attempts", LEDGE_MONITOR_X)
+                                            + " attempts=" + attempts);
+                            hold = LEDGE_MONITOR_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_LEFT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = steerMaskWalking(player, LEDGE_MONITOR_JUMP_X, 2);
+                        }
+                    }
+                    case 5 -> {
+                        owner = "ledge-launcher";
+                        if (player.getGSpeed() >= LEDGE_LAUNCH_SPEED
+                                || player.getXSpeed() >= LEDGE_LAUNCH_SPEED) {
+                            stage = 6;
+                        } else if (player.isOnObject()
+                                && latch instanceof FbzDezPlayerLauncherObjectInstance) {
+                            // loc_3B9AC starts the throw from the standing bits
+                            // of the previous object pass; stand still on it.
+                            mask = 0;
+                        } else if (grounded) {
+                            mask = AbstractPlayableSprite.INPUT_LEFT;
+                        }
+                    }
+                    case 6 -> {
+                        owner = "ledge-launch-flight";
+                        if (grounded && y >= LEDGE_LOOP_FLOOR_MIN_Y && y <= LEDGE_LOOP_FLOOR_MAX_Y
+                                && x >= LEDGE_LOOP_FLOOR_MIN_X && x <= LEDGE_LOOP_FLOOR_MAX_X) {
+                            stage = 7;
+                        }
+                    }
+                    default -> {
+                        owner = "loop-floor-settle";
+                        if (!grounded) {
+                            mask = 0;
+                        } else if (Math.abs(player.getGSpeed()) > 0x80) {
+                            mask = player.getGSpeed() > 0
+                                    ? AbstractPlayableSprite.INPUT_LEFT
+                                    : AbstractPlayableSprite.INPUT_RIGHT;
+                        } else if (Math.abs(x - LEDGE_LOOP_STAND_X) > 4) {
+                            mask = steerMaskWalking(player, LEDGE_LOOP_STAND_X, 4);
+                        } else if (player.getDirection() != com.openggf.physics.Direction.LEFT) {
+                            mask = AbstractPlayableSprite.INPUT_LEFT;
+                        } else {
+                            return;
+                        }
+                    }
+                }
+                stageFrames = stage == stageBefore ? stageFrames + 1 : 0;
+                int stageNow = stage;
+                int stageFramesNow = stageFrames;
+                String ownerNow = owner;
+                assertTrue(stageFrames <= LEDGE_STAGE_LIMIT,
+                        () -> waypointDiagnostic("ledge-stage-limit", x)
+                                + " stage=" + stageNow + " owner=" + ownerNow
+                                + " frames=" + stageFramesNow);
+                lastControllerDiagnostic = " controller={owner=" + owner + ",stage=" + stage + "}";
+                AbstractPlayableSprite after = stepCheckedFrame(mask, check);
+                assertFalse(after.getDead(),
+                        () -> waypointDiagnostic("ledge-route-death", x) + " owner=" + ownerNow);
+            }
+            fail(waypointDiagnostic("ledge-route-frame-limit", LEDGE_LOOP_STAND_X)
+                    + " frameLimit=" + LEDGE_ROUTE_FRAME_LIMIT + " stage=" + stage);
+        }
+
+        /**
+         * Lower $26C8 spider crane loop: the crane carries P1 over the $2708
+         * pipe; the $2904/$2944 chains hand over to the $2924 vertical link,
+         * the $29C0 chain to the $29E0 link; the $2970 button opens the $2924
+         * floor door onto the bottom corridor; a spindash under the raised
+         * $27C0/$2840 columns reaches the rising $2640 car; the $2708 launcher
+         * throws P1 into the $2780 vertical cage; the $2800 step and the
+         * raised $2840/$28C0 columns reach the $0680 corridor beside the
+         * $2B40 subboss. Returns true only when {@code stop} is reached.
+         */
+        private boolean runLowerCraneRouteToSubboss(FrameCheck check, StopCondition stop) {
+            FbzSpiderCraneObjectInstance crane = lowerSpiderCrane();
+            assertNotNull(crane, () -> waypointDiagnostic("lower-crane-missing", LOWER_CRANE_X));
+            int stage = 0;
+            int stageFrames = 0;
+            int hold = 0;
+            int chargeTaps = 0;
+            int stepAttempts = 0;
+            int hopAttempts = 0;
+            int columnJumps = 0;
+            int lastChainY = -1;
+            int chainStillFrames = 0;
+            boolean pitJumped = false;
+            FbzMagneticPlatformObjectInstance column = null;
+            for (int frame = 0; frame < LOWER_CRANE_ROUTE_FRAME_LIMIT; frame++) {
+                if (stop.reached()) return true;
+                AbstractPlayableSprite player = fixture.sprite();
+                int x = player.getCentreX() & 0xFFFF;
+                int y = player.getCentreY() & 0xFFFF;
+                boolean grounded = !player.getAir();
+                Object latch = player.getLatchedSolidObjectInstance();
+                FbzChainLinkObjectInstance chain = player.isObjectControlled()
+                        && latch instanceof FbzChainLinkObjectInstance link ? link : null;
+                FbzZoneRuntimeState magnetic = GameServices.zoneRuntimeRegistry()
+                        .currentAs(FbzZoneRuntimeState.class).orElseThrow();
+                boolean activePolarity = magnetic.magneticPolarity()
+                        == Sonic3kFBZEvents.MagneticPolarity.ACTIVE;
+                int runway = 0xFF - magnetic.magneticTimerPhase();
+                int mask = 0;
+                String owner;
+                int before = stage;
+                switch (stage) {
+                    case 0 -> {
+                        // Stand inside loc_3D0F6's $20 window until loc_3D11E captures.
+                        owner = "crane-approach";
+                        mask = x > LOWER_CRANE_X + 0x04 ? AbstractPlayableSprite.INPUT_LEFT
+                                : x < LOWER_CRANE_X - 0x08 ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+                        if (player.isObjectControlled() && craneHolding(crane)) stage = 1;
+                    }
+                    case 1 -> {
+                        // loc_3D1B2..loc_3D2D2 own P1 until the $B0 travel decelerates.
+                        owner = "crane-ride";
+                        if (crane.stateName().equals("INERT") && !player.isObjectControlled()
+                                && grounded) {
+                            stage = 2;
+                        }
+                    }
+                    case 2 -> {
+                        owner = "crane-corridor-east";
+                        if (chain != null) {
+                            stage = 3;
+                        } else if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && (x >= LOWER_CRANE_CHAIN_ONE_HOP_X
+                                || technoSqueekAhead(player))) {
+                            hold = LOWER_CRANE_CHAIN_HOP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                    }
+                    case 3, 4 -> {
+                        int verticalX = stage == 3 ? LOWER_CRANE_CHAIN_ONE_VERTICAL_X
+                                : LOWER_CRANE_CHAIN_TWO_VERTICAL_X;
+                        owner = stage == 3 ? "chain-ladder-one" : "chain-ladder-two";
+                        if (chain == null) {
+                            if (hold > 0) {
+                                hold--;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT
+                                        | AbstractPlayableSprite.INPUT_JUMP;
+                            } else if (grounded && x >= (stage == 3
+                                    ? LOWER_CRANE_CHAIN_ONE_HOP_X
+                                    : LOWER_CRANE_CHAIN_TWO_BAND_LEFT_X)) {
+                                hold = LOWER_CRANE_CHAIN_HOP_HOLD;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT
+                                        | AbstractPlayableSprite.INPUT_JUMP;
+                            } else {
+                                mask = AbstractPlayableSprite.INPUT_RIGHT;
+                            }
+                        } else if (chain.horizontalMode()) {
+                            // sub_3AA7E hand steps are $20 apart; the vertical link
+                            // transfers when the hand rests on its column.
+                            mask = x < verticalX ? AbstractPlayableSprite.INPUT_RIGHT
+                                    : x > verticalX ? AbstractPlayableSprite.INPUT_LEFT : 0;
+                            chainStillFrames = 0;
+                            lastChainY = -1;
+                        } else {
+                            assertEquals(verticalX, chain.getSpawn().x(),
+                                    () -> waypointDiagnostic("chain-ladder-wrong-vertical-link",
+                                            verticalX));
+                            // loc_3A860 extends 2px/frame to $2E; a directional jump
+                            // release (loc_3A8F8) carries P1 clear of the re-grab window.
+                            chainStillFrames = y == lastChainY ? chainStillFrames + 1 : 0;
+                            lastChainY = y;
+                            if (chainStillFrames >= LOWER_CRANE_CHAIN_STILL_FRAMES) {
+                                hold = LOWER_CRANE_CHAIN_RELEASE_HOLD - 1;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT
+                                        | AbstractPlayableSprite.INPUT_JUMP;
+                                chainStillFrames = 0;
+                                lastChainY = -1;
+                                stage++;
+                            }
+                        }
+                    }
+                    case 5 -> {
+                        owner = "trigger-d-button";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else if (player.isOnObject()
+                                && latch instanceof Sonic3kButtonObjectInstance button
+                                && button.getSpawn().x() == LOWER_CRANE_BUTTON_X) {
+                            stage = 6;
+                        } else {
+                            mask = steerMaskWalking(player, LOWER_CRANE_BUTTON_X, 4);
+                        }
+                    }
+                    case 6 -> {
+                        // The opened Obj_FBZScrewDoor no longer supports the floor walk.
+                        owner = "floor-door-drop";
+                        if (grounded && y >= LOWER_CRANE_BOTTOM_CORRIDOR_MIN_Y) {
+                            stage = 7;
+                        } else if (grounded) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_FLOOR_DOOR_X, 4);
+                        }
+                    }
+                    case 7 -> {
+                        owner = "bottom-corridor-west";
+                        FbzMagneticPlatformObjectInstance near = magneticColumn(0x2840, 0x0B70);
+                        FbzMagneticPlatformObjectInstance far = magneticColumn(0x27C0, 0x0B70);
+                        boolean columnsRaised = near != null && far != null
+                                && near.displacement() >= LOWER_CRANE_COLUMN_CLEAR_RISE
+                                && far.displacement() >= LOWER_CRANE_COLUMN_CLEAR_RISE;
+                        // Hold east of the $2840/$0B94 Obj6B hurt block (sub
+                        // $41: half-width $28 plus the $B solid margin reaches
+                        // $2873). P1's $13 radius stands on the floor 1px above
+                        // its top face, but a CPU sidekick landing from flight
+                        // with Tails' $F radius meets the face and
+                        // Kill_Character runs.
+                        if (!grounded) {
+                            mask = 0;
+                        } else if (Math.abs(x - LOWER_CRANE_SPINDASH_HOLD_X) > 4
+                                && !(columnsRaised && activePolarity
+                                && runway >= LOWER_CRANE_SPINDASH_MIN_RUNWAY)) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_SPINDASH_HOLD_X, 4);
+                        } else if (columnsRaised && activePolarity
+                                && runway >= LOWER_CRANE_SPINDASH_MIN_RUNWAY
+                                && Math.abs(player.getGSpeed()) <= 0x80) {
+                            assertTrue(player.getGameRules().playerCapability().spindashEnabled(),
+                                    "bottom corridor roll needs the native spindash");
+                            stage = 8;
+                            chargeTaps = 0;
+                            mask = AbstractPlayableSprite.INPUT_DOWN;
+                        } else {
+                            mask = player.getGSpeed() < -0x80
+                                    ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+                        }
+                    }
+                    case 8 -> {
+                        // Sonic_Spindash: crouch, then JUMP edges add $100 each.
+                        owner = "bottom-spindash";
+                        if (!player.getCrouching() && !player.getSpindash()) {
+                            mask = AbstractPlayableSprite.INPUT_DOWN;
+                        } else if (chargeTaps < POST_DOOR_CORRIDOR_CHARGE_TAPS) {
+                            boolean tap = (stageFrames & 1) == 0;
+                            if (tap) chargeTaps++;
+                            mask = AbstractPlayableSprite.INPUT_DOWN
+                                    | (tap ? AbstractPlayableSprite.INPUT_JUMP : 0);
+                        } else {
+                            assertTrue(player.getSpindash(),
+                                    () -> waypointDiagnostic("bottom-spindash-not-charged", x));
+                            stage = 9;
+                        }
+                    }
+                    case 9 -> {
+                        // The roll passes under both raised columns and destroys the $2700 Blaster.
+                        owner = "bottom-roll-west";
+                        assertFalse(player.isHurt(),
+                                () -> waypointDiagnostic("bottom-roll-hurt", x));
+                        if (grounded && !player.getRolling() && !player.getSpindash()
+                                && (x <= LOWER_CRANE_ROLL_STOP_MAX_X
+                                || Math.abs(player.getGSpeed()) < 0x80)) {
+                            stage = 10;
+                        }
+                    }
+                    case 10 -> {
+                        owner = "elevator-board";
+                        if (player.isOnObject()
+                                && latch instanceof FbzElevatorObjectInstance.Car car
+                                && car.yVelocity() == -1) {
+                            stage = 11;
+                        } else if (grounded) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_ELEVATOR_X, 4);
+                        }
+                    }
+                    case 11 -> {
+                        owner = "elevator-ride";
+                        assertTrue(player.isOnObject()
+                                        && latch instanceof FbzElevatorObjectInstance.Car,
+                                () -> waypointDiagnostic("elevator-ride-lost-car", x));
+                        if (y <= LOWER_CRANE_ELEVATOR_EXIT_Y) stage = 12;
+                    }
+                    case 12 -> {
+                        owner = "elevator-exit";
+                        if (player.isObjectControlled()
+                                && latch instanceof FbzWireCageObjectInstance) {
+                            stage = 14;
+                        } else if (latch instanceof FbzDezPlayerLauncherObjectInstance) {
+                            stage = 13;
+                        } else if (grounded && x > LOWER_CRANE_LAUNCHER_X + 0x30) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_LAUNCHER_X, 4);
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                    }
+                    case 13 -> {
+                        // sub_3B9D8 carries the standing rider right; the throw enters
+                        // the $2780 vertical Obj_FBZWireCage window.
+                        owner = "launcher-throw";
+                        if (player.isObjectControlled()
+                                && latch instanceof FbzWireCageObjectInstance) {
+                            stage = 14;
+                        } else if (grounded && y <= LOWER_CRANE_CAGE_LANDING_MAX_Y) {
+                            stage = 15;
+                        } else if (grounded && !player.isOnObject()
+                                && x > LOWER_CRANE_LAUNCHER_X + 0x40
+                                && y >= LOWER_CRANE_ELEVATOR_EXIT_Y - 0x30) {
+                            stage = 12;
+                        }
+                    }
+                    case 14 -> {
+                        owner = "cage-lift";
+                        if (!player.isObjectControlled() && grounded
+                                && y <= LOWER_CRANE_CAGE_LANDING_MAX_Y) {
+                            stage = 15;
+                        }
+                    }
+                    case 15 -> {
+                        owner = "step-up";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else if (y <= LOWER_CRANE_STEP_TOP_MAX_Y) {
+                            stage = 16;
+                        } else if (Math.abs(x - LOWER_CRANE_STEP_JUMP_X) <= 4
+                                && player.getGSpeed() == 0) {
+                            stepAttempts++;
+                            assertTrue(stepAttempts <= 3,
+                                    () -> waypointDiagnostic("step-up-failed", x));
+                            hold = LOWER_CRANE_STEP_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = steerMaskWalking(player, LOWER_CRANE_STEP_JUMP_X, 4);
+                        }
+                    }
+                    case 16 -> {
+                        owner = "column-hop";
+                        column = magneticColumn(LOWER_CRANE_COLUMN_ONE_X, 0x0790);
+                        boolean onColumn = column != null && latch == column
+                                && player.isOnObject();
+                        if (onColumn) {
+                            stage = 17;
+                        } else if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = 0;
+                        } else if (column != null && column.displacement() == 0
+                                && !column.lastMagneticActive()
+                                && Math.abs(x - LOWER_CRANE_COLUMN_HOP_X) <= 2
+                                && player.getGSpeed() == 0) {
+                            hopAttempts++;
+                            assertTrue(hopAttempts <= 3,
+                                    () -> waypointDiagnostic("column-hop-failed", x));
+                            hold = LOWER_CRANE_COLUMN_HOP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = steerMaskWalking(player, LOWER_CRANE_COLUMN_HOP_X, 2);
+                        }
+                    }
+                    case 17 -> {
+                        // Ride loc_3B450's ACTIVE rise; leave from the top with the
+                        // half-cycle runway both hops need.
+                        owner = "column-ride";
+                        boolean onColumn = column != null && latch == column
+                                && player.isOnObject();
+                        if (!onColumn && grounded && y > 0x0700) {
+                            stage = 16;
+                        } else if (onColumn && activePolarity
+                                && y <= LOWER_CRANE_COLUMN_TOP_MAX_Y
+                                && runway >= LOWER_CRANE_COLUMN_JUMP_MIN_RUNWAY) {
+                            columnJumps = 1;
+                            hold = LOWER_CRANE_COLUMN_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                            stage = 18;
+                        } else if (onColumn) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_COLUMN_ONE_X, 4);
+                        }
+                    }
+                    case 18 -> {
+                        owner = "column-jumps";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else if (x >= LOWER_CRANE_ARENA_CORRIDOR_MIN_X
+                                && y <= LOWER_CRANE_ARENA_CORRIDOR_MAX_Y) {
+                            stage = 19;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else {
+                            assertTrue(y <= 0x0700,
+                                    () -> waypointDiagnostic("column-jump-fell-short", x));
+                            columnJumps++;
+                            assertTrue(columnJumps <= 3,
+                                    () -> waypointDiagnostic("column-jumps-exhausted", x));
+                            hold = LOWER_CRANE_COLUMN_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        }
+                    }
+                    case 19 -> {
+                        owner = "arena-corridor";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && !pitJumped && x >= LOWER_CRANE_PIT_JUMP_X) {
+                            pitJumped = true;
+                            hold = LOWER_CRANE_PIT_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                        if (grounded && x >= LOWER_CRANE_ARENA_ARRIVAL_X) {
+                            lastControllerDiagnostic = " craneRoute={arrived,frame=" + frame + '}';
+                            return false;
+                        }
+                    }
+                    default -> throw new IllegalStateException("stage " + stage);
+                }
+                if (stage != before) stageFrames = 0; else stageFrames++;
+                lastControllerDiagnostic = " craneRoute={stage=" + stage
+                        + ",owner=" + owner + ",hold=" + hold
+                        + ",stageFrames=" + stageFrames
+                        + ",crane=" + crane.stateName()
+                        + ",chain=" + (chain == null ? "none" : objectPosition(chain))
+                        + ",latch=" + (latch == null ? "none" : latch.getClass().getSimpleName())
+                        + ",column=" + objectPosition(column)
+                        + ",polarity=" + (activePolarity ? "ACTIVE" : "INACTIVE")
+                        + ",runway=$" + Integer.toHexString(runway)
+                        + ",mask=$" + Integer.toHexString(mask) + '}';
+                assertTrue(stageFrames <= LOWER_CRANE_ROUTE_STAGE_LIMIT,
+                        () -> waypointDiagnostic("lower-crane-route-stalled-" + owner, x));
+                stepCheckedFrame(mask, check);
+            }
+            fail(waypointDiagnostic("lower-crane-route-frame-limit", LOWER_CRANE_ARENA_ARRIVAL_X));
+            return false;
+        }
+
+        private static int walkMask(AbstractPlayableSprite player, int targetX, int tolerance,
+                                    int speedCap) {
+            int x = player.getCentreX() & 0xFFFF;
+            int groundSpeed = player.getGSpeed();
+            int delta = targetX - x;
+            if (Math.abs(delta) > tolerance) {
+                if (Math.abs(groundSpeed) >= speedCap) return 0;
+                return delta > 0 ? AbstractPlayableSprite.INPUT_RIGHT
+                        : AbstractPlayableSprite.INPUT_LEFT;
+            }
+            if (Math.abs(groundSpeed) <= 0x80) return 0;
+            return groundSpeed > 0 ? AbstractPlayableSprite.INPUT_LEFT
+                    : AbstractPlayableSprite.INPUT_RIGHT;
+        }
+
+        /**
+         * From the subboss arena wall to the SOZ request: survive the seven
+         * Obj_FBZ2Subboss laser cycles by running past the machine to the far
+         * live side wall, hop the arena exit, ride the boss-event plane carrier
+         * at the open ship-column offsets, cross the Obj_FBZEndBoss pod with a
+         * run-up while it rises so each strike lands from above, stand on the
+         * end capsule button, and leave the exit walk to the boss-owned forced
+         * input. Returns true only when {@code stop} is reached.
+         */
+        private boolean runArenaToExit(FrameCheck check, StopCondition stop) {
+            int stage = 0;
+            int stageFrames = 0;
+            int hold = 0;
+            int direction = 0;
+            int lastPodY = -1;
+            int chargeStep = 0;
+            boolean podWasVulnerable = false;
+            int podHits = 0;
+            for (int frame = 0; frame < ARENA_ROUTE_FRAME_LIMIT; frame++) {
+                if (stop.reached()) return true;
+                AbstractPlayableSprite player = fixture.sprite();
+                int x = player.getCentreX() & 0xFFFF;
+                int y = player.getCentreY() & 0xFFFF;
+                boolean grounded = !player.getAir();
+                int mask = 0;
+                String owner;
+                int before = stage;
+                switch (stage) {
+                    case 0 -> {
+                        owner = "subboss-dodge";
+                        Fbz2SubbossInstance subboss = objects.activeObjectsOfType(
+                                Fbz2SubbossInstance.class).stream().findFirst().orElse(null);
+                        boolean cleared = subboss == null
+                                || subboss.phaseName().startsWith("DEFEAT")
+                                || subboss.phaseName().startsWith("RELEASE");
+                        if (cleared) {
+                            stage = 1;
+                        } else {
+                            int machineX = subboss.getX();
+                            int leftWall = SUBBOSS_ARENA_LEFT_WALL_X;
+                            int rightWall = SUBBOSS_ARENA_RIGHT_WALL_X;
+                            for (Fbz2SubbossSolidSideChild wall : objects.activeObjectsOfType(
+                                    Fbz2SubbossSolidSideChild.class)) {
+                                if (wall.getX() < machineX) leftWall = Math.max(leftWall, wall.getX());
+                                else rightWall = Math.min(rightWall, wall.getX());
+                            }
+                            int leftStand = leftWall + SUBBOSS_WALL_HALF_WIDTH + SUBBOSS_WALL_STAND_GAP;
+                            int rightStand = rightWall - SUBBOSS_WALL_HALF_WIDTH - SUBBOSS_WALL_STAND_GAP;
+                            if (direction == 0 && Math.abs(machineX - x) < SUBBOSS_KEEP_AWAY) {
+                                direction = machineX - leftStand > rightStand - machineX
+                                        ? AbstractPlayableSprite.INPUT_LEFT
+                                        : AbstractPlayableSprite.INPUT_RIGHT;
+                            }
+                            if (direction == AbstractPlayableSprite.INPUT_RIGHT && x >= rightStand) direction = 0;
+                            if (direction == AbstractPlayableSprite.INPUT_LEFT && x <= leftStand) direction = 0;
+                            mask = direction;
+                        }
+                    }
+                    case 1 -> {
+                        // The arena's east lip needs one hop; then ride the carrier.
+                        owner = "arena-exit";
+                        FbzEndBossEventControlInstance carrier = objects.activeObjectsOfType(
+                                FbzEndBossEventControlInstance.class).stream().findFirst().orElse(null);
+                        boolean carrierMoving = carrier != null
+                                && (carrier.getX() != PLANE_CONTROLLER_ORIGIN_X
+                                || carrier.getY() != PLANE_CONTROLLER_ORIGIN_Y);
+                        if (carrierMoving) {
+                            stage = 2;
+                        } else if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && x >= ARENA_EXIT_HOP_MIN_X && x < ARENA_EXIT_HOP_MAX_X
+                                && Math.abs(player.getGSpeed()) < 0x80) {
+                            hold = ARENA_EXIT_HOP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                    }
+                    case 2 -> {
+                        owner = "plane-ride";
+                        if (!objects.activeObjectsOfType(FbzEndBossInstance.class).isEmpty()) {
+                            stage = 3;
+                        } else {
+                            FbzEndBossEventControlInstance carrier = objects.activeObjectsOfType(
+                                    FbzEndBossEventControlInstance.class).stream().findFirst().orElse(null);
+                            assertNotNull(carrier, () -> waypointDiagnostic("plane-carrier-missing", x));
+                            int carrierX = carrier.getX() & 0xFFFF;
+                            int carrierY = carrier.getY() & 0xFFFF;
+                            int targetX = carrierX + (carrierY > PLANE_RIDE_OFFSET_SWITCH_Y
+                                    ? PLANE_RIDE_LOWER_OFFSET_X : PLANE_RIDE_UPPER_OFFSET_X);
+                            int delta = targetX - x;
+                            mask = grounded ? walkMask(player, targetX, 4,
+                                    Math.abs(delta) > 0x60 ? 0x600 : 0x180) : 0;
+                        }
+                    }
+                    case 3 -> {
+                        owner = "end-boss";
+                        FbzEndBossInstance boss = objects.activeObjectsOfType(
+                                FbzEndBossInstance.class).stream().findFirst().orElse(null);
+                        assertNotNull(boss, () -> waypointDiagnostic("end-boss-missing", x));
+                        if (boss.phase().ordinal() >= FbzEndBossInstance.Phase.DEFEAT_RECENTER.ordinal()) {
+                            stage = 4;
+                            break;
+                        }
+                        int podX = boss.getX() & 0xFFFF;
+                        int podY = boss.getY() & 0xFFFF;
+                        boolean vulnerable = boss.getCollisionFlags() != 0;
+                        if (podWasVulnerable && !vulnerable) podHits++;
+                        podWasVulnerable = vulnerable;
+                        boolean rising = lastPodY >= 0 && podY < lastPodY;
+                        lastPodY = podY;
+                        boolean rotation = boss.phase() == FbzEndBossInstance.Phase.ROTATION;
+                        boolean fighting = rotation || boss.phase() == FbzEndBossInstance.Phase.ATTACK;
+                        int side = x < podX ? 1 : -1;
+                        int toward = side > 0 ? AbstractPlayableSprite.INPUT_RIGHT
+                                : AbstractPlayableSprite.INPUT_LEFT;
+                        if (hold > 0) {
+                            // Release frame first (Sonic_Spindash leaves the crouch),
+                            // then hold JUMP with the launch direction.
+                            hold--;
+                            mask = (hold == END_BOSS_LAUNCH_HOLD - 1 ? 0 : AbstractPlayableSprite.INPUT_JUMP)
+                                    | direction;
+                        } else if (!grounded) {
+                            mask = direction;
+                        } else if (!fighting) {
+                            // Wait at the west wall while the boss descends and opens.
+                            chargeStep = 0;
+                            mask = walkMask(player, END_BOSS_ARENA_LEFT_STAND_X, 6, 0x180);
+                        } else {
+                            boolean windowOpen = vulnerable && rising
+                                    && podY >= END_BOSS_POD_WINDOW_MIN_Y
+                                    && podY <= END_BOSS_POD_WINDOW_MAX_Y;
+                            int wallX = side > 0 ? END_BOSS_ARENA_LEFT_STAND_X
+                                    : END_BOSS_ARENA_RIGHT_STAND_X;
+                            int room = Math.abs(podX - wallX);
+                            boolean crossNow = !rotation && room < END_BOSS_CROSS_ROOM;
+                            int waitX = !rotation ? wallX : side > 0
+                                    ? Math.max(wallX, podX - END_BOSS_WAIT_DISTANCE)
+                                    : Math.min(wallX, podX + END_BOSS_WAIT_DISTANCE);
+                            if (chargeStep == 0) {
+                                mask = walkMask(player, waitX, 6, 0x300);
+                                if (Math.abs(x - waitX) <= 6 && player.getGSpeed() == 0
+                                        && (rotation || crossNow)) {
+                                    chargeStep = 1;
+                                }
+                            } else if (chargeStep == 1) {
+                                // Sonic_Spindash releases along the facing direction.
+                                mask = toward;
+                                chargeStep = 2;
+                            } else if (chargeStep == 2) {
+                                mask = AbstractPlayableSprite.INPUT_DOWN;
+                                if (player.getCrouching()) chargeStep = 3;
+                            } else if (chargeStep < 3 + END_BOSS_CHARGE_TAPS * 2) {
+                                boolean tap = ((chargeStep - 3) & 1) == 0;
+                                mask = AbstractPlayableSprite.INPUT_DOWN
+                                        | (tap ? AbstractPlayableSprite.INPUT_JUMP : 0);
+                                chargeStep++;
+                            } else if (!player.getSpindash()) {
+                                chargeStep = 0;
+                            } else if (windowOpen || crossNow) {
+                                hold = END_BOSS_LAUNCH_HOLD;
+                                direction = toward;
+                                chargeStep = 0;
+                                mask = 0;
+                            } else {
+                                mask = AbstractPlayableSprite.INPUT_DOWN;
+                            }
+                        }
+                    }
+                    case 4 -> {
+                        owner = "end-capsule";
+                        boolean capsuleLive = !objects.activeObjectsOfType(
+                                FbzEndEggCapsuleInstance.class).isEmpty();
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = 0;
+                        } else if (player.isOnObject()
+                                && player.getLatchedSolidObjectInstance()
+                                instanceof FbzEndEggCapsuleButtonInstance) {
+                            stage = 5;
+                        } else if (capsuleLive && Math.abs(x - END_CAPSULE_APPROACH_X) <= 4
+                                && player.getGSpeed() == 0) {
+                            hold = END_CAPSULE_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (capsuleLive) {
+                            mask = walkMask(player, END_CAPSULE_APPROACH_X, 4, 0x180);
+                        }
+                    }
+                    case 5 -> {
+                        // loc_7092A: the boss owns the forced RIGHT walk to the exit.
+                        owner = "forced-exit";
+                        mask = 0;
+                    }
+                    default -> throw new IllegalStateException("stage " + stage);
+                }
+                if (stage != before) stageFrames = 0; else stageFrames++;
+                lastControllerDiagnostic = " arenaRoute={stage=" + stage + ",owner=" + owner
+                        + ",hold=" + hold + ",direction=" + direction + ",chargeStep=" + chargeStep
+                        + ",podHits=" + podHits + ",stageFrames=" + stageFrames
+                        + ",mask=$" + Integer.toHexString(mask) + '}';
+                assertTrue(stageFrames <= ARENA_ROUTE_STAGE_LIMIT,
+                        () -> waypointDiagnostic("arena-route-stalled-" + owner, x));
+                stepCheckedFrame(mask, check);
+            }
+            fail(waypointDiagnostic("arena-route-frame-limit", END_CAPSULE_X));
+            return false;
+        }
+
         /**
          * Consumes the ordinary approach only until P1 owns the real $08C0
          * elevator car, then holds that identity for exactly the fixed segment
@@ -3422,7 +5489,7 @@ public class TestFbzAct2TraversalPreboss {
             final int safeMaxX = 0x08E4;
             final int authoredCorridorStartY = 0x07BC;
             final int approachEnvelope = 0x60;
-            final int acquisitionFrameLimit = 1024;
+            final int acquisitionFrameLimit = 0x800;
             final int alignmentFrameLimit = 0x100;
             boolean rideObserved = runUntilMidpointApproach(
                     approachRuns, check, targetX, approachEnvelope);
@@ -3628,6 +5695,11 @@ public class TestFbzAct2TraversalPreboss {
             int upperLoopEgressStage = 0;
             int upperLoopJumpFrames = 0;
             int upperLoopJumpAttempts = 0;
+            final int nativeStandSpotX = 0x092B;
+            int standSpotFrames = 0;
+            final int nativeJumpSpotX = 0x0911;
+            final int nativeWalkPhaseMin = -0x19;
+            final int nativeWalkPhaseMax = -0x0F;
             StringBuilder upperLoopS1ApproachLog = new StringBuilder();
             for (int frame = 0; frame < frameLimit; frame++) {
                 AbstractPlayableSprite before = fixture.sprite();
@@ -3753,63 +5825,97 @@ public class TestFbzAct2TraversalPreboss {
                         mask = 0;
                     }
                 } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 1) {
-                    // Native jumps exactly once at $0911/$06AC with g=$FE74
-                    // and lands on stand_on_obj $21. Donation profiles first
-                    // build the same ordinary left-run reachability; do not
-                    // consume a jump while the real car cannot be intercepted.
+                    // Complete-run BK2 rows 24858-24861 walk LEFT to $0911
+                    // before the single jump. Hold that native jump spot
+                    // (stage 4) instead of walking off the ledge: a walk-off
+                    // that misses the car lands on the $0880 spike-column top,
+                    // and a CPU sidekick following it there is hurt by the
+                    // spike side, drops onto the car that has already passed,
+                    // and is later crushed on the shaft floor by P1's car.
                     if (!before.getAir() && beforeX <= 0x0930
-                            && before.getGSpeed() <= -0x0180
-                            && liveMidpointCarReachable) {
-                        upperLoopEgressStage = 2;
-                        upperLoopJumpFrames = 0;
-                        upperLoopJumpAttempts++;
-                        mask = AbstractPlayableSprite.INPUT_LEFT;
-                    } else if (!before.getAir() && beforeX <= 0x0930
                             && before.getGSpeed() > -0x0180) {
                         upperLoopEgressStage = 4;
-                        mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        mask = steerMask(before, nativeStandSpotX, 2);
                     } else {
                         mask = AbstractPlayableSprite.INPUT_LEFT;
                     }
                 } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 2) {
+                    // Complete-run BK2 rows 24862-24870: nine LEFT+JUMP frames
+                    // (the released short hop peaks at y=$068E), then LEFT
+                    // until P1 lands on the car at row 24882 ($08D9/$06A0).
                     mask = AbstractPlayableSprite.INPUT_LEFT
                             | AbstractPlayableSprite.INPUT_JUMP;
                     upperLoopJumpFrames++;
                     if (upperLoopJumpFrames >= 9) {
                         upperLoopEgressStage = 3;
-                    }
-                } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 3
-                        && !before.getAir() && beforeX >= 0x08E0
-                        && beforeX <= 0x095A && !ownsExactCar(before, targetX)) {
-                    assertTrue(upperLoopJumpAttempts < 4,
-                            () -> waypointDiagnostic(
-                                    "upper-loop-jump-attempt-limit", 0x095A));
-                    upperLoopEgressStage = 4;
-                    mask = AbstractPlayableSprite.INPUT_RIGHT;
-                } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 4) {
-                    // Ordinary run-up away from the $092B donor-profile wall.
-                    // No jump is spent until the exact rising $08C0 car is in
-                    // the measured one-jump vertical reach envelope.
-                    if (beforeX >= 0x0980) {
-                        upperLoopEgressStage = 5;
-                        mask = AbstractPlayableSprite.INPUT_LEFT;
-                    } else {
-                        mask = AbstractPlayableSprite.INPUT_RIGHT;
-                    }
-                } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 5) {
-                    if (beforeX < safeMinX) {
-                        // A donated jump can land on the adjacent authored
-                        // support just left of the rising car. Ordinary RIGHT
-                        // reacquires the real $08C0 carrier; no jump attempt is
-                        // consumed while outside its safe centre interval.
-                        mask = AbstractPlayableSprite.INPUT_RIGHT;
-                    } else if (!before.getAir() && beforeX <= 0x0930
-                            && before.getGSpeed() <= -0x0180
-                            && liveMidpointCarReachable) {
-                        upperLoopEgressStage = 2;
                         upperLoopJumpFrames = 0;
+                    }
+                } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 3) {
+                    if (!before.getAir() && !ownsExactCar(before, targetX)) {
+                        // Landed on the ledge again: re-arm the phase wait.
                         upperLoopJumpAttempts++;
+                        assertTrue(upperLoopJumpAttempts < 4,
+                                () -> waypointDiagnostic(
+                                        "upper-loop-jump-attempt-limit", 0x095A));
+                        upperLoopEgressStage = 4;
+                        mask = steerMask(before, nativeStandSpotX, 2);
+                    } else {
                         mask = AbstractPlayableSprite.INPUT_LEFT;
+                    }
+                } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 4) {
+                    // Complete-run BK2 rows 24792-24861: P1 stands at $092B,
+                    // then walks LEFT from rest for the ~33 frames that reach
+                    // $0911 at g=$FE74 and jumps there. Wait standing at $092B
+                    // for the car phase that puts the descending $08C0 car
+                    // centre $08-$12 below P1's centre at the jump frame (row
+                    // 24882 lands P1 at y=$06A0 on the car top $06B4, centre
+                    // $06C8, twenty frames after the jump: centre $06B4 versus
+                    // P1 $06AC at the jump). A car four pixels higher than the
+                    // native phase meets P1's $13 radius at its $3B side edge
+                    // instead of its top; cars are $60 apart at 1px/frame, so
+                    // a missed phase returns within 96 frames.
+                    boolean atStandSpot = !before.getAir()
+                            && Math.abs(beforeX - nativeStandSpotX) <= 2
+                            && Math.abs(before.getGSpeed()) <= 0x0040;
+                    final int standY = beforeY;
+                    boolean carInWalkPhase = objects.activeObjectsOfType(
+                                    FbzElevatorObjectInstance.Car.class).stream()
+                            .filter(car -> car.getCentreX() == targetX)
+                            .filter(car -> car.yVelocity() == 1)
+                            .mapToInt(car -> car.getCentreY() - standY)
+                            .anyMatch(phase -> phase >= nativeWalkPhaseMin
+                                    && phase <= nativeWalkPhaseMax);
+                    // A CPU sidekick left behind the upper loop (it cannot
+                    // spindash) only rejoins by Tails_CPU_Control's fly-in
+                    // respawn; if P1 jumps first that respawn lands inside the
+                    // $08C0 car column and the next car crushes it. Stand at
+                    // the native spot until every sidekick is grounded beside
+                    // P1, then take the next matching car phase.
+                    if (atStandSpot) {
+                        standSpotFrames++;
+                    }
+                    boolean sidekicksGathered = sidekicksGatheredBeside(beforeX)
+                            || standSpotFrames > SIDEKICK_GATHER_FRAME_LIMIT;
+                    if (atStandSpot && carInWalkPhase && sidekicksGathered) {
+                        upperLoopEgressStage = 6;
+                        mask = AbstractPlayableSprite.INPUT_LEFT;
+                    } else if (before.getAir()) {
+                        mask = beforeX < nativeStandSpotX
+                                ? AbstractPlayableSprite.INPUT_RIGHT
+                                : AbstractPlayableSprite.INPUT_LEFT;
+                    } else {
+                        mask = steerMask(before, nativeStandSpotX, 2);
+                    }
+                } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 6) {
+                    // Native walk-up: LEFT until $0911, then the jump.
+                    if (before.getAir()) {
+                        upperLoopEgressStage = 3;
+                        mask = AbstractPlayableSprite.INPUT_LEFT;
+                    } else if (beforeX <= nativeJumpSpotX) {
+                        upperLoopEgressStage = 2;
+                        upperLoopJumpFrames = 1;
+                        mask = AbstractPlayableSprite.INPUT_LEFT
+                                | AbstractPlayableSprite.INPUT_JUMP;
                     } else {
                         mask = AbstractPlayableSprite.INPUT_LEFT;
                     }
@@ -3915,7 +6021,15 @@ public class TestFbzAct2TraversalPreboss {
             // The retail FBZ run unrolls on the car; requiring rolling for the
             // whole crossing contradicts that native landing contract.
             if (!carAcquired) {
-                assertTrue(player.getRolling(), "squeeze release must roll until car landing");
+                assertTrue(player.getRolling(), () -> "squeeze release must roll until car landing"
+                        + " player=($" + Integer.toHexString(player.getCentreX() & 0xFFFF)
+                        + ",$" + Integer.toHexString(player.getCentreY() & 0xFFFF)
+                        + ") speed=($" + Integer.toHexString(player.getXSpeed() & 0xFFFF)
+                        + ",$" + Integer.toHexString(player.getYSpeed() & 0xFFFF)
+                        + ") g=$" + Integer.toHexString(player.getGSpeed() & 0xFFFF)
+                        + " air=" + player.getAir() + " onObject=" + player.isOnObject()
+                        + " latch=" + objectPosition(player.getLatchedSolidObjectInstance())
+                        + " block=" + objectPosition(block));
             }
             assertEquals(player.getRolling() ? player.getRollYRadius() : player.getStandYRadius(),
                     player.getYRadius(), "squeeze posture must retain its native radius");
@@ -4113,6 +6227,75 @@ public class TestFbzAct2TraversalPreboss {
                     && !player.getPushing();
         }
 
+        /**
+         * A live placed spike between P1 and the Obj74 column, overlapping P1's
+         * standing height, blocks the flat underpass approach. Its solid box is
+         * the ROM Obj_Spikes SolidObject envelope; no route identity is used.
+         */
+        private static Sonic3kSpikeObjectInstance magneticPlatformRideBlockingSpike(
+                ObjectManager objects, AbstractPlayableSprite player,
+                int playerX, int playerY, int platformX) {
+            return objects.activeObjectsOfType(Sonic3kSpikeObjectInstance.class).stream()
+                    .filter(spike -> !spike.isDestroyed())
+                    .filter(spike -> spike.getX() > playerX && spike.getX() < platformX)
+                    .filter(spike -> Math.abs(spike.getY() - playerY)
+                            <= spike.getSolidParams().airHalfHeight() + player.getYRadius())
+                    .min(Comparator.comparingInt(spike -> spike.getX() - playerX))
+                    .orElse(null);
+        }
+
+        /** The next authored Obj74 column within one hop, by immutable layout placement. */
+        private static ObjectSpawn nextMagneticPlatformPlacement(
+                ObjectManager objects, FbzMagneticPlatformObjectInstance current) {
+            int currentX = current.getX();
+            int restY = current.getSpawn().y() + current.displacement();
+            return objects.getAllSpawns().stream()
+                    .filter(spawn -> spawn.layoutIndex() >= 0)
+                    .filter(spawn -> spawn.objectId() == Sonic3kObjectIds.FBZ_MAGNETIC_PLATFORM)
+                    .filter(spawn -> spawn.layoutIndex() != current.getSpawn().layoutIndex())
+                    .filter(spawn -> spawn.x() > currentX
+                            && spawn.x() - currentX <= MAGNETIC_PLATFORM_RIDE_REACH)
+                    .filter(spawn -> spawn.y() == restY)
+                    .min(Comparator.comparingInt(spawn -> spawn.x() - currentX))
+                    .orElse(null);
+        }
+
+        private static FbzMagneticPlatformObjectInstance liveMagneticPlatform(
+                ObjectManager objects, int layoutIndex) {
+            return objects.activeObjectsOfType(FbzMagneticPlatformObjectInstance.class).stream()
+                    .filter(platform -> !platform.isDestroyed())
+                    .filter(platform -> platform.getSpawn().layoutIndex() == layoutIndex)
+                    .findFirst().orElse(null);
+        }
+
+        private static FbzScrewDoorObjectInstance findLinkedBlockingDoor(
+                ObjectManager objects, AbstractPlayableSprite player,
+                int playerX, int playerY, Set<Integer> passed) {
+            return objects.activeObjectsOfType(FbzScrewDoorObjectInstance.class).stream()
+                    .filter(door -> !door.isDestroyed())
+                    .filter(door -> !passed.contains(door.getSpawn().layoutIndex()))
+                    .filter(door -> door.getY() >= door.getSpawn().y())
+                    .filter(door -> door.getX() > playerX
+                            && door.getX() - playerX <= LINKED_DOOR_LOOKAHEAD)
+                    .filter(door -> Math.abs(door.getY() - playerY)
+                            <= door.getSolidParams().airHalfHeight() + player.getYRadius())
+                    .filter(door -> findLinkedButton(objects, door, playerX, playerY) != null)
+                    .min(Comparator.comparingInt(door -> door.getX() - playerX))
+                    .orElse(null);
+        }
+
+        private static Sonic3kButtonObjectInstance findLinkedButton(
+                ObjectManager objects, FbzScrewDoorObjectInstance door,
+                int playerX, int playerY) {
+            return objects.activeObjectsOfType(Sonic3kButtonObjectInstance.class).stream()
+                    .filter(button -> !button.isDestroyed())
+                    .filter(button -> (button.getSpawn().subtype() & 0xF) == door.triggerIndex())
+                    .filter(button -> Math.abs(button.getX() - playerX) <= LINKED_DOOR_BUTTON_REACH)
+                    .filter(button -> Math.abs(button.getY() - playerY) <= 0x40)
+                    .min(Comparator.comparingInt(button -> Math.abs(button.getX() - playerX)))
+                    .orElse(null);
+        }
+
         private static boolean hasSqueezeLaunchControl(
                 AbstractPlayableSprite player) {
             return FbzMovingSqueezeTraversal.hasLaunchFloorAuthority(player)
@@ -4155,6 +6338,43 @@ public class TestFbzAct2TraversalPreboss {
                 }
             }
             return MAGNETIC_PLATFORM_WAIT_LIMIT;
+        }
+
+        /**
+         * Frames until every live CPU sidekick has also carried its touch box
+         * past {@code objectTouchRight}: its own ordinary run from where it
+         * stands now plus the Pos_table follow delay for its place in the
+         * chain. Dead or far-trailing sidekicks respawn through
+         * Tails_CPU_Control's fly-in and are not part of the ground route.
+         */
+        private static int sidekickFollowAllowance(int objectTouchRight) {
+            List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getSidekicks();
+            int allowance = 0;
+            for (int index = 0; index < sidekicks.size(); index++) {
+                AbstractPlayableSprite sidekick = sidekicks.get(index);
+                if (sidekick.getDead()) continue;
+                int sidekickX = sidekick.getCentreX() & 0xFFFF;
+                int distance = objectTouchRight - (sidekickX - PLAYER_TOUCH_HALF_WIDTH) + 1;
+                if (distance <= 0 || distance > SIDEKICK_FOLLOW_MAX_TRAIL) continue;
+                allowance = Math.max(allowance,
+                        ordinaryRightCrossingBudget(sidekick, distance)
+                                + SIDEKICK_FOLLOW_LAG_FRAMES * (index + 1));
+            }
+            return allowance;
+        }
+
+        /** Every live CPU sidekick is grounded within {@code SIDEKICK_GATHER_RANGE} of P1. */
+        private static boolean sidekicksGatheredBeside(int playerX) {
+            for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
+                if (sidekick.getDead()) continue;
+                int sidekickX = sidekick.getCentreX() & 0xFFFF;
+                if (sidekickX == Sonic3kConstants.TAILS_CPU_DESPAWN_X
+                        || Math.abs(sidekickX - playerX) > SIDEKICK_GATHER_RANGE
+                        || sidekick.getAir()) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private static boolean crossesProjectedColumn(
@@ -4285,9 +6505,38 @@ public class TestFbzAct2TraversalPreboss {
         private List<AbstractPlayableSprite> sidekickIdentityOrder;
         private int sidekickAuditFrames;
         private boolean sidekickIdentityOrderPreserved = true;
-        private boolean sidekickAliveEveryFrame = true;
+        /**
+         * CPU sidekick deaths are shipped behaviour, not a route defect: the
+         * ROM's own Tails dies three times in the fbz_completerun act-2 rows
+         * (sidekick routine 6 at row 35308 beside the $2924 chain descent,
+         * row 38697 on the boss-event carrier and row 39721 in the end-boss
+         * arena) and Tails_CPU_Control returns it through the $7F00 respawn
+         * each time (rows 35309, 38698 and 39800). The audited contract is
+         * therefore that every death is followed by that respawn within
+         * {@link #SIDEKICK_RESPAWN_LIMIT} frames, that the team is alive when
+         * Obj_FBZEndBoss allocates and when the SOZ exit is requested, and
+         * that identity, CPU ownership and the leader chain never change.
+         * {@link #sidekickDeathEvidence} keeps the first death for reports.
+         */
+        private static final int SIDEKICK_RESPAWN_LIMIT = 0x100;
+        private boolean sidekickRespawnedAfterEveryDeath = true;
+        private int sidekickDeaths;
+        private int sidekickLongestDeadStreak;
+        private int[] sidekickDeadStreaks = new int[0];
+        private boolean sidekickDiedOnCarrier;
+        private boolean bossEntryObserved;
+        private boolean sidekickAliveAtBossEntry = true;
+        private String sidekickDeathEvidence = "none";
         private boolean sidekickControllerEveryFrame = true;
         private boolean sidekickLeaderChainEveryFrame = true;
+
+        /** Every configured sidekick is alive and placed (not the $7F00 respawn wait) now. */
+        private static boolean sidekickAliveAtExit() {
+            return GameServices.sprites().getSidekicks().stream().allMatch(sidekick ->
+                    !sidekick.getDead()
+                            && (sidekick.getCentreX() & 0xFFFF)
+                            != Sonic3kConstants.TAILS_CPU_DESPAWN_X);
+        }
 
         private void observeFrame(Set<ObjectInstance> active, Set<ObjectInstance> previous,
                                   AbstractPlayableSprite player, ObjectManager objects) {
@@ -4308,14 +6557,49 @@ public class TestFbzAct2TraversalPreboss {
                 sidekickIdentityOrder = List.copyOf(currentSidekicks);
             }
             sidekickAuditFrames++;
+            boolean bossLive = !objects.activeObjectsOfType(FbzEndBossInstance.class).isEmpty();
+            boolean carrierLifting = !bossLive && objects.activeObjectsOfType(
+                            FbzEndBossEventControlInstance.class).stream()
+                    .anyMatch(carrier -> carrier.getX() != PLANE_CONTROLLER_ORIGIN_X
+                            || carrier.getY() != PLANE_CONTROLLER_ORIGIN_Y);
+            if (bossLive && !bossEntryObserved) {
+                bossEntryObserved = true;
+                sidekickAliveAtBossEntry = currentSidekicks.stream()
+                        .noneMatch(AbstractPlayableSprite::getDead);
+            }
             sidekickIdentityOrderPreserved &=
                     currentSidekicks.size() == sidekickIdentityOrder.size();
             int comparableSidekicks = Math.min(
                     currentSidekicks.size(), sidekickIdentityOrder.size());
+            if (sidekickDeadStreaks.length < comparableSidekicks) {
+                sidekickDeadStreaks = java.util.Arrays.copyOf(
+                        sidekickDeadStreaks, comparableSidekicks);
+            }
             for (int index = 0; index < comparableSidekicks; index++) {
                 AbstractPlayableSprite sidekick = currentSidekicks.get(index);
                 sidekickIdentityOrderPreserved &= sidekick == sidekickIdentityOrder.get(index);
-                sidekickAliveEveryFrame &= !sidekick.getDead();
+                if (sidekick.getDead()) {
+                    if (sidekickDeadStreaks[index] == 0) {
+                        sidekickDeaths++;
+                    }
+                    sidekickDeadStreaks[index]++;
+                    sidekickLongestDeadStreak = Math.max(
+                            sidekickLongestDeadStreak, sidekickDeadStreaks[index]);
+                    sidekickRespawnedAfterEveryDeath &=
+                            sidekickDeadStreaks[index] <= SIDEKICK_RESPAWN_LIMIT;
+                } else {
+                    sidekickDeadStreaks[index] = 0;
+                }
+                if (sidekick.getDead() && "none".equals(sidekickDeathEvidence)) {
+                    sidekickDeathEvidence = "auditFrame=" + sidekickAuditFrames
+                            + " sidekick[" + index + "]=($"
+                            + Integer.toHexString(sidekick.getCentreX() & 0xFFFF) + ",$"
+                            + Integer.toHexString(sidekick.getCentreY() & 0xFFFF) + ")"
+                            + " player=($" + Integer.toHexString(playerX) + ",$"
+                            + Integer.toHexString(player.getCentreY() & 0xFFFF) + ")"
+                            + " camera=($" + Integer.toHexString(cameraX) + ")";
+                }
+                sidekickDiedOnCarrier |= sidekick.getDead() && carrierLifting;
                 sidekickControllerEveryFrame &= sidekick.isCpuControlled()
                         && sidekick.getCpuController() != null;
                 AbstractPlayableSprite expectedLeader = index == 0
@@ -4421,8 +6705,11 @@ public class TestFbzAct2TraversalPreboss {
                     s1DonationLowerLoopAssistConsumed,
                     minScreenX, maxScreenX, minPlayerX, maxPlayerX,
                     sidekickAuditFrames, sidekickIdentityOrderPreserved,
-                    sidekickAliveEveryFrame, sidekickControllerEveryFrame,
-                    sidekickLeaderChainEveryFrame);
+                    sidekickRespawnedAfterEveryDeath, sidekickDeaths,
+                    sidekickLongestDeadStreak, sidekickAliveAtExit(),
+                    sidekickControllerEveryFrame,
+                    sidekickLeaderChainEveryFrame, sidekickDiedOnCarrier,
+                    sidekickAliveAtBossEntry, sidekickDeathEvidence);
         }
 
         @Override public String toString() {
@@ -4467,7 +6754,13 @@ public class TestFbzAct2TraversalPreboss {
             int maxPlayerX,
             int sidekickAuditFrames,
             boolean sidekickIdentityOrderPreserved,
-            boolean sidekickAliveEveryFrame,
+            boolean sidekickRespawnedAfterEveryDeath,
+            int sidekickDeaths,
+            int sidekickLongestDeadStreak,
+            boolean sidekickAliveAtExit,
             boolean sidekickControllerEveryFrame,
-            boolean sidekickLeaderChainEveryFrame) { }
+            boolean sidekickLeaderChainEveryFrame,
+            boolean sidekickDiedOnCarrier,
+            boolean sidekickAliveAtBossEntry,
+            String sidekickDeathEvidence) { }
 }

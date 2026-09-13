@@ -240,7 +240,7 @@ public final class FbzMagneticPendulumObjectInstance extends AbstractObjectInsta
     @Override public int getPriorityBucket() { return 3; }
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     @Override public boolean isCustomOutOfRange(int cameraX) {
-        boolean out = isCoarseXOutOfRange(spawn.x(), cameraX, 0x280);
+        boolean out = isCoarseXOutOfRange(spawn.x(), cameraX, coarseXCullRange());
         if (out) {
             if (services().zoneRuntimeState() instanceof FbzZoneRuntimeState state) {
                 int respawnAngle = angleValue() + (isHorizontal() ? 0 : 0x40);

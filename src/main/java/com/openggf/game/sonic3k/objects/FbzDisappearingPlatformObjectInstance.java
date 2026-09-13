@@ -58,7 +58,7 @@ public final class FbzDisappearingPlatformObjectInstance
           this, DETACH);
     coarseCull(spawn.x());
   }
-  private void coarseCull(int anchor) { coarseXCull(anchor, 0x280); }
+  private void coarseCull(int anchor) { coarseXCullViewport(anchor); }
   private void detachRider(PlayableEntity player) {
     int slot = riders.slot(player);
     if (!riders.flag(slot, 0))

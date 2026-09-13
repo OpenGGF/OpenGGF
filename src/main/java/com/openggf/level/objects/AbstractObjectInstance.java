@@ -8,6 +8,7 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.ModApi;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rewind.GenericFieldCapturer;
@@ -23,7 +24,7 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import java.util.List;
 import java.util.logging.Logger;
 
-@com.openggf.game.ModApi
+@ModApi
 public abstract class AbstractObjectInstance implements ObjectInstance {
     private static final Logger LOG = Logger.getLogger(AbstractObjectInstance.class.getName());
 
@@ -947,6 +948,22 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         int alignedObject = objectX & COARSE_X_ALIGNMENT_MASK;
         int alignedCamera = (cameraX - COARSE_X_CAMERA_BIAS) & COARSE_X_ALIGNMENT_MASK;
         return ((alignedObject - alignedCamera) & 0xFFFF) > maximumDistance;
+    }
+
+    /**
+     * {@code Sprite_OnScreen_Test2}-style delete-touch check: the ROM's fixed
+     * $280 is $80 + the 320-pixel screen + $C0, so the native window is
+     * unchanged and a wider viewport extends only its visible-screen term,
+     * matching the placement window that loads the object (see
+     * docs/status/known-discrepancies.md, Object Despawn and Visibility Windows).
+     */
+    protected final void coarseXCullViewport(int anchorX) {
+        coarseXCull(anchorX, coarseXCullRange());
+    }
+
+    /** The {@code Sprite_OnScreen_Test2} range for this viewport: $280 at native width. */
+    protected final int coarseXCullRange() {
+        return 0x80 + viewportWidth() + 0xC0;
     }
 
     /** Applies a coarse-X delete-touch check when an object has a camera service. */
