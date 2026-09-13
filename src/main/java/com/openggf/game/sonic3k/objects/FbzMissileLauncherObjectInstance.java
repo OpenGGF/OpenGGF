@@ -89,7 +89,7 @@ public final class FbzMissileLauncherObjectInstance
         ? objectServices.levelManager().getFrameCounter() + 1
         : fallbackFrameCounter;
   }
-  private void coarseCull() { coarseXCull(spawn.x(), 0x280); }
+  private void coarseCull() { coarseXCullViewport(spawn.x()); }
   void missileImpacted() {
     if (liveImpacts > 0)
       liveImpacts--;

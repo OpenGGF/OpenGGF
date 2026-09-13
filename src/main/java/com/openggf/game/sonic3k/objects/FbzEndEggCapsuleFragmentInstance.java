@@ -35,7 +35,7 @@ public final class FbzEndEggCapsuleFragmentInstance extends AbstractObjectInstan
         SubpixelMotion.State motion = new SubpixelMotion.State(x,y,xSub,ySub,xVelocity,yVelocity);
         SubpixelMotion.moveSprite(motion, SubpixelMotion.S3K_GRAVITY);
         x=motion.x; y=motion.y; xSub=motion.xSub; ySub=motion.ySub; yVelocity=motion.yVel;
-        coarseXCull(x, 0x280);
+        coarseXCullViewport(x);
         if (tryServices()!=null && services().camera()!=null
                 && (((y-services().camera().getY()+0x80)&0xFFFF)>0x200)) {
             ObjectLifetimeOps.expireDynamic(this);

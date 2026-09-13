@@ -1,8 +1,9 @@
 # Flying Battery Zone compatibility matrix
 
-> **2026-09-13 route push:** the native complete route now reaches the forced
-> SOZ request; 21 of the 24 `TestFbzCompatibilityMatrix` methods pass. The
-> 640px, 800px and S1 rows remain red inside the fixed 2,889-frame BK2 prefix.
+> **2026-09-14 route push:** the native complete route now reaches the forced
+> SOZ request at every viewport width and team; 23 of the 24
+> `TestFbzCompatibilityMatrix` methods pass. Only the S1 donated profile
+> remains red, at the `$1DC0` Obj28 squeeze.
 > See [outstanding actions](fbz-outstanding-actions.md) for the measured
 > blockers. The focused slices below never establish complete-route PASS on
 > their own; the complete-route cells record the full-route result.
@@ -87,8 +88,8 @@ range in the virtual pattern-ID space, including all three duplicate Sonics.
 | `NATIVE_4_3` | 320 | PASS (2026-09-13, team rows) | PASS |
 | `WIDE_16_9` | 400 | PASS (2026-09-13) | PASS |
 | explicit native-pixel override | 512 | PASS (2026-09-13) | PASS |
-| explicit native-pixel override | 640 | FAIL: frame 5877 at `$08BE,$02EC` | PASS |
-| `SUPER_32_9` | 800 | FAIL: frame 5877 at `$08BE,$02EC` | PASS |
+| explicit native-pixel override | 640 | PASS (2026-09-14) | PASS |
+| `SUPER_32_9` | 800 | PASS (2026-09-14) | PASS |
 
 The September controller checks advance the 640px row from frame 1455 to
 25729 and the 800px row from 1291 to 25751. The former now dies near the lower
@@ -106,7 +107,9 @@ arena-to-exit controller (subboss beams, plane carrier, end boss, capsule)
 completes it. The 400px row additionally needed the shaft boarding, spring
 wait, Obj28 other-car and TechnoSqueek gates described in
 [outstanding actions](fbz-outstanding-actions.md); the 640px and 800px rows
-diverge inside the fixed BK2 prefix and are the measured remaining rows.
+needed the BK2 prefix replaced by the ledge controller and the production
+fix to the FBZ objects' delete-touch window, which deleted the `$0B68` door
+and the `$0BC0` cars on the frame the wider placement window loaded them.
 
 Every width asserts world-coordinate thresholds, ordinary nonpersistent
 placement entering at the right viewport frontier and culling at the left
@@ -127,7 +130,7 @@ rebase subsequently normalizes both camera words to `$32B8-$45C = $2E5C`.
 | Capability profile | Donor ROM | Complete mandatory route | Spindash dependency |
 |---|---|---:|---:|
 | Off | none | PASS (2026-09-13) | no |
-| Sonic 1 donation | discovered S1 REV01 ROM | FAIL: frame 5877 at `$08BE,$02EC` | must remain absent |
+| Sonic 1 donation | discovered S1 REV01 ROM | FAIL: `$1DC0` Obj28, `obj28-s1-no-genuine-squeeze` | must remain absent |
 | Sonic 2 donation | discovered S2 REV01 ROM | PASS (2026-09-13) | no required workaround found |
 
 Donation is configured before any playable sprite or level is created. The donor
@@ -169,10 +172,9 @@ Focused authority/lock coverage and all four native configuration rows pass. The
 exact `$74` optional probe and its generic later-solid dead-rider cleanup
 regression also pass in isolation. The complete-route cells marked PASS were
 measured on 2026-09-13 by the full `TestFbzCompatibilityMatrix` run on this
-branch (21 of 24 methods green) without reverting the ROM-accurate
-stationary-cage behavior; the 640px, 800px and S1 cells stay FAIL until the
-fixed BK2 prefix is replaced by controllers. Narrower slices never relabel a
-cell.
+branch (23 of 24 methods green) without reverting the ROM-accurate
+stationary-cage behavior; the S1 cell stays FAIL at the `$1DC0` Obj28 squeeze
+(see outstanding actions). Narrower slices never relabel a cell.
 
 The compatibility matrix contains 13 rows: five multi-sidekick teams, five
 viewport widths, and three donation profiles. Every row runs both the complete

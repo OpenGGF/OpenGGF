@@ -48,7 +48,7 @@ public final class FbzWallMissileObjectInstance
     }
     coarseCull();
   }
-  private void coarseCull() { coarseXCull(spawn.x(), 0x280); }
+  private void coarseCull() { coarseXCullViewport(spawn.x()); }
   int launchInterval() { return interval; }
   public int getPriorityBucket() { return 5; }
   public void appendRenderCommands(List<GLCommand> c) {

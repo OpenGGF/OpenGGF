@@ -949,6 +949,22 @@ public abstract class AbstractObjectInstance implements ObjectInstance {
         return ((alignedObject - alignedCamera) & 0xFFFF) > maximumDistance;
     }
 
+    /**
+     * {@code Sprite_OnScreen_Test2}-style delete-touch check: the ROM's fixed
+     * $280 is $80 + the 320-pixel screen + $C0, so the native window is
+     * unchanged and a wider viewport extends only its visible-screen term,
+     * matching the placement window that loads the object (see
+     * docs/status/known-discrepancies.md, Object Despawn and Visibility Windows).
+     */
+    protected final void coarseXCullViewport(int anchorX) {
+        coarseXCull(anchorX, coarseXCullRange());
+    }
+
+    /** The {@code Sprite_OnScreen_Test2} range for this viewport: $280 at native width. */
+    protected final int coarseXCullRange() {
+        return 0x80 + viewportWidth() + 0xC0;
+    }
+
     /** Applies a coarse-X delete-touch check when an object has a camera service. */
     protected final void coarseXCull(int anchorX, int maximumDistance) {
         if (services().camera() != null

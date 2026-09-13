@@ -443,6 +443,9 @@ class TestFbzFinalEggCapsule {
         when(camera.getY()).thenReturn((short) 0x600);
         when(camera.getWidth()).thenReturn((short) 320);
         when(camera.getHeight()).thenReturn((short) 224);
+        // The Sprite_CheckDelete range is width-driven from the shared bounds
+        // snapshot; pin it to the native window this harness mocks.
+        AbstractObjectInstance.updateCameraBounds(0x2F80, 0x600, 0x2F80 + 320, 0x600 + 224, 0);
         GameStateManager gameState = new GameStateManager();
         GameRng rng = new GameRng(GameRng.Flavour.S3K, 0x12345678L);
         RecordingServices services = new RecordingServices(holder,player,nativeP2,camera,gameState,rng);

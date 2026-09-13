@@ -29,7 +29,7 @@ public final class FbzSpringPlungerInstance extends AbstractObjectInstance
         SolidCheckpointBatch checkpoint = checkpointAll();
         ObjectPlayerQuery query = tryServices() == null ? null : services().playerQuery();
         if (query == null) {
-            coarseXCull(spawn.x(), 0x280);
+            coarseXCullViewport(spawn.x());
             return;
         }
         List<PlayableEntity> natives = query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2);
@@ -59,7 +59,7 @@ public final class FbzSpringPlungerInstance extends AbstractObjectInstance
                 launchIfStanding(this, extra, isStanding(checkpoint, extra));
             }
         }
-        coarseXCull(spawn.x(), 0x280);
+        coarseXCullViewport(spawn.x());
     }
 
     private void validateCheckpointParticipants(
