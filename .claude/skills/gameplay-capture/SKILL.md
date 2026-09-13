@@ -1,0 +1,73 @@
+---
+name: gameplay-capture
+description: Take a picture or a movie of any section of OpenGGF gameplay (any game, zone, act, position, width, donor or team) driven by a BizHawk input log, with a per-frame state CSV that says which frame to look at.
+---
+
+# Gameplay capture
+
+`com.openggf.tools.GameplayCaptureTool` boots a zone/act on the production path
+(`HeadlessGameBoot` + `GameLoop.step()`), optionally teleports the leader, drives it
+frame by frame from a BizHawk input log, and writes PNG frames, `state.csv`, and an
+MP4 when `ffmpeg` is on `PATH`. Use it to show a user what happens at a location, to
+check a visual change, or to reproduce a route failure with real rendering.
+
+It is not parity evidence and does not read traces. For rendering an existing trace
+replay use `trace-capture`; for authoring the input log use `bk2-input-authoring`.
+
+## Run
+
+Author the input first (or use a recorded `.bk2`):
+
+```bash
+mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" \
+  "-Dexec.args=--inline '60 R; 1 D+R; 40 D+R; 60 -' --out target/capture/run.txt"
+mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" \
+  "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C \
+    --input target/capture/run.txt --out-dir target/capture/fbz2-squeeze"
+```
+
+`mvn exec:java` does not recompile; add `compile` after editing engine code.
+Use a task directory outside the repository for captures the user should keep.
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--game s1\|s2\|s3k` | `s3k` | Host game; ROM from configuration unless `--rom <path>` |
+| `--zone <name\|n>` | required | Zone constant name (`aiz`, `fbz`, `ghz`, `ehz`) or number |
+| `--act <n>` | required | One-based act |
+| `--x`, `--y` | level start | Teleport the leader (ROM `x_pos`/`y_pos`, hex `0x`/`$` ok) |
+| `--width <px>` | `320` | 320, 352, 400, 528 or 800; height is always 224 |
+| `--main`, `--sidekick` | `sonic`, `none` | Characters; `--sidekick tails` for a team |
+| `--donor off\|s1\|s2` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
+| `--input <file>` | none | `Input Log.txt` or `.bk2`; neutral input after it ends |
+| `--settle <n>` | `0` | Neutral frames before the input log starts |
+| `--frames <n>` | settle + log length | Total frames to step |
+| `--capture-from`, `--every` | `0`, `1` | First captured frame and PNG stride |
+| `--stills a,b` | none | Extra `still-<frame>.png` copies at those frames |
+| `--stop-on-death`, `--death-grace` | `true`, `60` | Stop after the leader dies plus grace frames |
+| `--no-video`, `--scale`, `--fps` | video on, `3`, `60` | MP4 encoding (nearest-neighbour upscale) |
+| `--out-dir <dir>` | required | Output root |
+
+## Read the result
+
+Read `state.csv` before opening any image. Columns: frame, x, y, xvel, yvel, gspeed,
+air, rolling, spindash, hurt, dead, rings, mapping_frame, cam_x, cam_y, mode, input.
+Find the frame of interest (first `dead=1`, a stall where `x` stops rising, the frame
+`rolling` flips) and view only `frames/<frame>.png` or the matching still. Send the
+user the MP4 plus one or two stills, with the frame numbers and what they show.
+
+## Pitfalls
+
+- A black frame or a frame with tiles but no player is a broken capture, not a
+  gameplay fact. `TestGameplayCaptureSmoke` guards both; if it fails, do not trust
+  the PNGs. The test-fixture render path (`LevelFrameTestStep` +
+  `drawWithSpritePriority`) never draws the playable sprite; this tool avoids it.
+- Donation: the boot resets the cross-game provider, so the session re-initialises it
+  after boot and refuses to continue if it does not report active. If a donor run
+  shows native behaviour (spindash with `--donor s1`), the donor ROM path is wrong.
+- Teleporting with `--x/--y` skips plane switchers and level events between the act
+  start and that point; priority, water and camera bounds reflect a fresh load.
+- One capture per JVM is the supported shape. A second `GameplayCaptureSession` in
+  the same process works only because `close()` releases the graphics singleton.
+- The input log is held state per frame; a jump is one frame of `A` then release.
+  Scripted timing is fixed, so anything keyed to object phases (elevators, polarity
+  cycles) needs the `--settle` count tuned from `state.csv`, not guessed.

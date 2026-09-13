@@ -4,7 +4,7 @@ Support material to help agents implement OpenGGF objects/zones/trace-fixes with
 
 ## Tools
 
-Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
+Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
 
 | Tool | Purpose | Invocation |
 |------|---------|------------|
@@ -15,6 +15,8 @@ Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote eac
 | `ZoneSpecNormalizerTool` | Normalizes an `s3k-zone-analysis` spec into the stable 13-section layout (palette cycling vs mutation kept separate; `(not analyzed)` placeholders for gaps). | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" "-Dexec.args=<path-to-zone-analysis-spec.md>"` |
 | `TraceBenchmarkTool` | Replays a trace headlessly with no pacing and reports per-subsystem frame-time percentiles, for comparing JVMs or catching a performance regression. Writes a JSON report. Never quote its numbers without checking the trajectory digest matched. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceBenchmarkTool" "-Dexec.args=--trace aiz1 --json target/bench/temurin21-g1.json"` |
 | `BenchmarkCompareTool` | Renders a Markdown comparison from two or more benchmark reports; the first is the baseline. Pure post-processing, so it can run under any JVM. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.BenchmarkCompareTool" "-Dexec.args=--out target/bench/comparison.md target/bench/a.json target/bench/b.json"` |
+| `InputLogAuthorTool` | Compiles a short controller script (`60 R; 1 D+R; repeat 3 { 1 A ; 1 - }`) into a BizHawk `Input Log.txt` or minimal `.bk2`, then re-parses it with `Bk2MovieLoader` so the file is proven loadable. Skill: `bk2-input-authoring`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" "-Dexec.args=--inline '60 R; 1 A' --out target/capture/run.txt"` |
+| `GameplayCaptureTool` | Pictures or films any gameplay section: boots a zone/act on the production path (`HeadlessGameBoot` + `GameLoop.step()`), teleports the leader, drives it from an input log or `.bk2`, and writes PNG frames, `state.csv`, and an MP4. Widths, donors and teams are flags. Skill: `gameplay-capture`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C --input target/capture/run.txt --out-dir target/capture/fbz2"` |
 
 ## Docs
 
