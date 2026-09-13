@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.data.RomChannel;
 
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
@@ -42,7 +43,6 @@ import com.openggf.data.compression.NemesisReader;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -336,12 +336,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
      * The first 14 tiles are ring art; tiles 14+ are HUD text (S, C, O, R, R, I, N, G, T, I, M, E).
      */
     private Pattern[] loadHudTextFromNemesis(Rom rom) throws IOException {
-        FileChannel channel = rom.getFileChannel();
-        // Rom exposes a shared FileChannel; lock around seek+decode so concurrent
-        // readers cannot move the channel position mid-stream.
         byte[] data;
-        synchronized (rom) {
-            channel.position(Sonic3kConstants.ART_NEM_RING_HUD_TEXT_ADDR);
+        try (var channel = RomChannel.at(rom, Sonic3kConstants.ART_NEM_RING_HUD_TEXT_ADDR)) {
             data = NemesisReader.decompress(channel);
         }
 

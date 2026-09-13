@@ -54,6 +54,7 @@ no discrepancy entry was added or reclassified by the cutover.
 35. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention)
 36. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
 37. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
+38. [Knuckles in Sonic 2 Tier One Runs From the S&K and S2 Images Alone](#knuckles-in-sonic-2-tier-one-runs-from-the-sk-and-s2-images-alone)
 
 ---
 
@@ -3255,3 +3256,91 @@ fade-in flag from there until the fade-in stepper's counter runs down
   that completes during the jingle leaves SFX refused until the next song
   loads. The engine releases the block on the global stop, as it does for the
   other two games.
+
+---
+
+## Knuckles in Sonic 2 Tier One Runs From the S&K and S2 Images Alone
+
+**Status:** Open (tier one, 2026-09-13). Owner: `com.openggf.game.sonic2.kis2`;
+catalogue: [docs/kis2/BRANCH_DIFFS.md](../kis2/BRANCH_DIFFS.md).
+
+Selecting Knuckles as the Sonic 2 main character activates the built-in
+`kis2` patch, which reproduces the lock-on program from the S&K half of the
+S3K image and the Sonic 2 cart. The shipped Knuckles in Sonic 2 also runs
+code and data from a 256 KiB chip that no image on this machine holds; the
+chip's content is served only by the user-supplied S&K + Sonic 2 lock-on
+dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`), which is
+tier two. Tier one is therefore **not** full Knuckles in Sonic 2.
+
+### Original Implementation
+
+The KiS2 branch (`s2disasm c336fed`) reads Knuckles' art, DPLCs, the
+`Off_Objects_KiS2` layout table, the ending image and `Pal_KnuxEndPose` from
+the S&K cart, stock data from the S2 cart, and everything it added itself
+from the chip: CNZ layouts, the title screen, special-stage Knuckles frames,
+results and continue-screen art, the lives counter, signpost and monitor
+patches, the grey shield/stars, all changed palettes (`Pal_BGND`,
+underwater lines, Super Knuckles cycles) and the modified HUD/object
+mappings.
+
+### Our Implementation
+
+Tier one models what the two available images hold:
+
+- Knuckles physics (`Kis2Physics.KNUCKLES`, `PhysicsModifiers.KNUCKLES`),
+  the KiS2 landing form and `$9C` duck touch-box (`Kis2Rules`), glide/climb
+  through the engine-shared `SecondaryAbility.GLIDE`.
+- The 16 rewritten S&K-side act layouts and the S2-cart HPZ/DEZ/SCZ layouts
+  through `LockOnAddressSpace`. **CNZ 1 and 2 use the stock S2 layouts**
+  (chip pointers `$33F06E`/`$33F74C`), with one logged warning per act.
+- Knuckles art converted through `ArtConvTable` and drawn with the S&K
+  `Pal_KnuxEndPose` line, which byte-matches S2's universal colours; the
+  chip's `Pal_BGND` cannot be compared.
+- The S&K `ArtNem_KnucklesLifeIcon` for the HUD and 1-up monitor face in
+  place of the chip's "Knuckles lives counter.nem".
+
+Known deviations from the shipped lock-on game while tier one is the
+delivered scope (each cites the owning KiS2 routine in the catalogue):
+
+- **Roster.** KiS2 forces Sonic-alone mode (`Level_SetPlayerMode`,
+  `ObjPtr_Tails = ObjNull`). The launch panel selects Knuckles alone when the
+  patch-backed main is entered, but a configured sidekick is still honoured
+  as an intentional engine divergence; that sidekick shares the module-wide
+  `PhysicsModifiers.KNUCKLES` underwater jump.
+- **Balance animation restart.** `Sonic_BalanceOnObjRight/Left` start the
+  balance script at `anim_frame = 4` when Knuckles turns toward the edge;
+  the engine models only the single-facing state.
+- **Glide/climb port deviations.** KiS2 toggles Knuckles' radii to `10/10`
+  around its glide collision calls, plays no grab/land/slide sounds (they do
+  not exist in Sonic 2), and lacks S3K's floor-below detach probe in
+  `Knuckles_Climbing_Wall`. The engine runs the S3K model (sounds resolve to
+  nothing on the S2 sound map; the detach probe is present).
+- **Bugfix blocks without an engine seam.** `Sonic_ChgJumpDir` air-speed cap
+  removal, `Obj01_CheckWallsOnGround` facing-gated push, `Sonic_TurnLeft/Right`
+  angle-band skid gate, `SolidObject_ChkBounds`/`SolidObject_InsideBottom`
+  contact changes, `WindTunnel` clamps and the `$420` tunnel coordinate, and
+  `Obj7F_Action` pinning follow stock Sonic 2. `Touch_Boss` keeps the `$4D`
+  duck frame in KiS2 but the engine's single field applies `$9C` to bosses too.
+- **Checkpoint rings.** KiS2 `Obj79_LoadData` keeps `Ring_count` on respawn;
+  the engine clears rings per stock Sonic 2.
+- **Super Knuckles, special stages, title, results, ending, continue screen,
+  signpost/monitor/shield recolours, CNZ slot pictures, lowered
+  special-stage ring requirements, changed cheat codes** are chip-resident
+  and unchanged from stock Sonic 2 (tier two).
+- Trace fixtures for KiS2 do not exist yet; `TraceReplaySessionBootstrap`
+  resolves a recorded Knuckles team through the patch so they can be added
+  once the lock-on dump is served.
+
+### Rationale
+
+Every runtime byte must come through the ROM pipeline from a user-supplied
+image; the chip is not in any image here, so tier one stops at the data the
+S&K half and S2 cart provide and records the rest instead of substituting
+disassembly data.
+
+### Verification
+
+`TestKis2PhysicsProvider`, `TestKis2GamePatchResolution`,
+`TestKis2PlacementOracle` (walks `$DF370` against the catalogue counts),
+`TestKis2HeadlessBoot`, `TestLaunchProfileKis2Roster`.
+

@@ -166,12 +166,57 @@ display shader application must be gated off for trace capture.
 
 Paths are relative to the working directory (where the JAR is launched).
 
+The engine builds a catalogue of every image it can see: the files named by the
+three per-game keys plus every `*.gen`, `*.bin` or `*.md` file in
+`roms.directory`. Each image is identified by its size and the cartridge header
+titles at `0` and `0x200000`, never by its filename, so nothing needs renaming.
+A game boots when any combination of your images contains its bytes: a lock-on
+dump serves the games it contains, and Sonic 3 & Knuckles can be assembled from a
+separate Sonic 3 image and a separate Sonic & Knuckles image. The assembled view
+lives in memory only; the engine never writes, joins, patches or downloads a file.
+
+The per-game keys are explicit overrides. A key that names an existing file is
+served as configured (as the window that contains the game, or whole when the
+layout is not recognised). A key that names a missing file fails closed with that
+value in the error; the engine never silently substitutes another image. The
+built-in default names (`s1.gen`, `s2.gen`, `s3k.gen`) are only hints: when the
+hinted file is absent, or the key is blank, the directory scan applies. Among
+scanned images an image whose hash matches the identity table below wins, then
+the first image in name order.
+An image whose header matches but whose hash is unknown is still used and is
+logged as unverified; a hash mismatch never blocks boot. Hashing happens only
+when an image is opened or a tie must be broken, so a folder of unrelated images
+costs a few header reads at startup.
+
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `DEFAULT_ROM` | `roms.default` | string | `"s2"` | Which game to boot: `"s1"`, `"s2"`, or `"s3k"`. Selects the corresponding ROM key below. |
-| `SONIC_1_ROM` | `roms.sonic1` | string | `"s1.gen"` | Filename of the Sonic 1 ROM. Expected: World REV01, CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B`. |
-| `SONIC_2_ROM` | `roms.sonic2` | string | `"s2.gen"` | Filename of the Sonic 2 ROM. Expected: World REV01, CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9`. |
-| `SONIC_3K_ROM` | `roms.sonic3k` | string | `"s3k.gen"` | Filename of the Sonic 3&K locked-on ROM. Expected: CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`. |
+| `SONIC_1_ROM` | `roms.sonic1` | string | `"s1.gen"` | Explicit image for Sonic 1. May name any image that contains it, including an S&K + Sonic 1 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
+| `SONIC_2_ROM` | `roms.sonic2` | string | `"s2.gen"` | Explicit image for Sonic 2. May name any image that contains it, including an S&K + Sonic 2 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
+| `SONIC_3K_ROM` | `roms.sonic3k` | string | `"s3k.gen"` | Explicit image for Sonic 3 & Knuckles: a 4 MiB lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies (including the Sonic 3 + Sonic & Knuckles composite); any other missing file is an error. |
+| `ROMS_DIRECTORY` | `roms.directory` | string | `"."` | Directory scanned for images (`*.gen`, `*.bin`, `*.md`), relative to the working directory. |
+| `ROMS_PREFER_COMPOSITE` | `roms.preferComposite` | bool | `false` | When true, a Sonic 3 & Knuckles assembled from separate Sonic 3 and Sonic & Knuckles images is preferred over a single lock-on dump. |
+
+### Image identity
+
+Images are recognised by exact size and header; the hashes below mark the dumps
+the engine is verified against. Lock-on dumps are verified per half, so a lock-on
+dump whose halves match the standalone rows verifies without a row of its own.
+
+| Image | Size | Layout | Verified dump |
+|-------|------|--------|---------------|
+| Sonic 1 | 524,288 bytes (512 KiB) | Sonic 1 at `0` | World REV01: CRC32 `AFE05EEE`, SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 | 1,048,576 bytes (1 MiB) | Sonic 2 at `0` | World REV01: CRC32 `7B905383`, SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 3 | 2,097,152 bytes (2 MiB) | Sonic 3 at `0` | CRC32 `9BC192CE`, SHA-1 `75E9C4705259D84112B3E697A6C00A0813D47D71` |
+| Sonic & Knuckles | 2,097,152 bytes (2 MiB) | S&K at `0` | CRC32 `0658F691`, SHA-1 `88D6499D874DCB5721FF58D76FE1B9AF811192E3` |
+| Sonic 3 & Knuckles (lock-on) | 4,194,304 bytes (4 MiB) | S&K at `0`, Sonic 3 at `0x200000` | CRC32 `63522553`, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| S&K + Sonic 1 (lock-on) | 2,621,440 bytes (2.5 MiB) | S&K at `0`, Sonic 1 at `0x200000` | Verified per half against the S&K and Sonic 1 rows |
+| S&K + Sonic 2 (lock-on) | 3,407,872 bytes (3.25 MiB) | S&K at `0`, Sonic 2 at `0x200000`, 256 KiB Knuckles in Sonic 2 chip at `0x300000` | MD5 `3E5E4B18D035775B916A06F2B3DC5031`, SHA-1 `6CD0537A3AEE0E012BB86D5837DDFF9342595004`, CRC32 `2AC1E7C6` |
+
+The S&K + Sonic 2 dump is the only source of the Knuckles in Sonic 2 chip; the
+engine identifies it by the size and hashes above and has no other way to obtain
+it. The catalogue only exposes the dump's windows to the engine; Knuckles in Sonic 2
+playability is tracked by the KiS2 patch design, not by this table.
 
 ---
 

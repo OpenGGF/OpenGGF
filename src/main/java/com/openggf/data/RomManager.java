@@ -5,9 +5,11 @@ import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
@@ -17,6 +19,13 @@ import java.util.logging.Logger;
  * - Opens the ROM once on first access
  * - Provides thread-safe access to ROM data
  * - Closes the ROM on engine shutdown
+ *
+ * <p>Every ROM the engine opens for itself comes from the
+ * {@link RomImageCatalogue}: the game asks for a {@link RomIdentity} and gets
+ * back an in-memory {@link Rom} over the catalogue's view, whether that view
+ * is one whole file, a window of a lock-on dump, or a composite of several
+ * user-supplied images. The catalogue is rebuilt when the ROM configuration
+ * keys change or when {@link #reloadCatalogue()} is called.
  *
  * Usage:
  * <pre>
@@ -33,6 +42,8 @@ public class RomManager implements AutoCloseable {
     private Rom rom;
     private boolean initialized = false;
     private final Map<String, Rom> secondaryRoms = new HashMap<>();
+    private RomImageCatalogue catalogue;
+    private List<Object> catalogueKey;
 
     private RomManager() {
     }
@@ -96,21 +107,80 @@ public class RomManager implements AutoCloseable {
         if (existing != null && existing.isOpen()) {
             return existing;
         }
-        RomLocation location = resolveRomLocation(legacyRomGame(gameId));
-        if (location == null) {
-            throw new IOException("No ROM configured for game: " + gameId);
-        }
-        Rom secondaryRom = new Rom();
-        if (!secondaryRom.open(location.resolvedPath().toString())) {
-            throw new IOException("Failed to open secondary ROM: " + location.configuredValue());
-        }
+        Rom secondaryRom = openCatalogueRom(legacyRomGame(gameId).identity(), true, gameId);
         LOGGER.info("Opened secondary ROM (" + gameId + "): " + secondaryRom.readDomesticName());
         secondaryRoms.put(gameId, secondaryRom);
         return secondaryRom;
     }
 
     /**
-     * Opens the ROM file using the configured filename.
+     * The catalogue of user-supplied images, rebuilt when the ROM keys change.
+     */
+    public synchronized RomImageCatalogue catalogue() {
+        SonicConfigurationService configuration = configService();
+        List<Object> key = catalogueKey(configuration);
+        if (catalogue == null || !key.equals(catalogueKey)) {
+            catalogue = RomImageCatalogue.forCurrentWorkingDirectory(configuration);
+            catalogueKey = key;
+        }
+        return catalogue;
+    }
+
+    /** Rescans the ROM directory and per-game keys on the next catalogue use. */
+    public synchronized void reloadCatalogue() {
+        catalogue = null;
+        catalogueKey = null;
+    }
+
+    /** How the catalogue would serve the logical ROM, or empty when no image contains it. */
+    public synchronized Optional<RomImageCatalogue.Resolution> resolveLogicalRom(RomIdentity identity) {
+        return catalogue().resolve(identity);
+    }
+
+    /** True when some user-supplied image (or composite of images) contains the logical ROM. */
+    public synchronized boolean isLogicalRomAvailable(RomIdentity identity) {
+        return resolveLogicalRom(identity).isPresent();
+    }
+
+    /**
+     * Opens a reader over the logical ROM's bytes.
+     *
+     * @throws IOException when no image contains it, or an image cannot be read
+     */
+    public synchronized RomByteReader openLogicalRom(RomIdentity identity) throws IOException {
+        return catalogue().open(identity);
+    }
+
+    /**
+     * Opens a logical ROM through the catalogue, keeping the diagnostics the
+     * engine and its tests rely on: an explicit key naming a missing file
+     * reports that exact configured value, a blank key with nothing in the
+     * catalogue reports the unconfigured-ROM message, and an unreadable image
+     * reports the configured value it was opened as.
+     */
+    private Rom openCatalogueRom(RomIdentity identity, boolean secondary, String gameId) throws IOException {
+        RomImageCatalogue images = catalogue();
+        Optional<RomImageCatalogue.Resolution> resolution = images.resolve(identity);
+        if (resolution.isEmpty()) {
+            Optional<String> missing = images.explicitMissingValue(identity);
+            if (missing.isPresent()) {
+                throw new IOException((secondary ? "Failed to open secondary ROM: " : MISSING_ROM_PREFIX) + missing.get());
+            }
+            throw new IOException(secondary
+                    ? "No ROM configured for game: " + gameId
+                    : "ROM filename not configured (DEFAULT_ROM not set or per-game ROM key empty)");
+        }
+        try {
+            return Rom.fromReader(images.open(identity), resolution.get().describe());
+        } catch (IOException e) {
+            String configured = images.configuredValue(identity).orElse(resolution.get().describe());
+            throw new IOException((secondary ? "Failed to open secondary ROM: " : "Failed to open ROM file: ")
+                    + configured, e);
+        }
+    }
+
+    /**
+     * Opens the ROM the {@code DEFAULT_ROM} game boots from.
      *
      * @throws IOException If the ROM cannot be opened
      */
@@ -119,35 +189,14 @@ public class RomManager implements AutoCloseable {
         if (rom != null) {
             rom.close();
         }
+        rom = null;
+        initialized = false;
 
-        RomLocation location = resolveRomLocation(
-                legacyRomGame(configService().getString(SonicConfiguration.DEFAULT_ROM)));
-        if (location == null) {
-            throw new IOException("ROM filename not configured (DEFAULT_ROM not set or per-game ROM key empty)");
-        }
-
-        if (!Files.exists(location.resolvedPath())) {
-            rom = null;
-            initialized = false;
-            throw new IOException(MISSING_ROM_PREFIX + location.configuredValue());
-        }
-
-        LOGGER.info("Opening ROM: " + location.configuredValue());
-
-        rom = new Rom();
-        if (!rom.open(location.resolvedPath().toString())) {
-            rom = null;
-            initialized = false;
-            throw new IOException("Failed to open ROM file: " + location.configuredValue());
-        }
-
+        String gameId = configService().getString(SonicConfiguration.DEFAULT_ROM);
+        RomIdentity identity = legacyRomGame(gameId).identity();
+        LOGGER.info("Opening ROM for " + gameId + " (logical ROM " + identity + ")");
+        rom = openCatalogueRom(identity, false, gameId);
         initialized = true;
-    }
-
-    private RomLocation resolveRomLocation(RomGame game) {
-        return RomLocationResolver.forCurrentWorkingDirectory(configService())
-                .resolve(game)
-                .orElse(null);
     }
 
     public static boolean isConfiguredRomMissing(Throwable failure) {
@@ -163,10 +212,13 @@ public class RomManager implements AutoCloseable {
     }
 
     /**
-     * Resolves the ROM filename for a given game identifier.
+     * Returns the configured per-game ROM value verbatim (including blank or
+     * whitespace-only text) for tools that open a ROM by path. This legacy
+     * forwarder does not consult the catalogue; callers that want catalogue
+     * resolution use {@link RomLocationResolver} or {@link #openLogicalRom}.
      *
      * @param gameId "s1", "s2", or "s3k"
-     * @return the configured ROM filename for that game
+     * @return the configured ROM value for that game
      */
     @Deprecated
     public static String resolveRomForGame(String gameId) {
@@ -174,25 +226,27 @@ public class RomManager implements AutoCloseable {
         if (gameId == null) {
             throw new IllegalArgumentException("Game id must not be null");
         }
-        RomGame game = switch (gameId.toLowerCase(java.util.Locale.ROOT)) {
+        RomGame game = switch (gameId.toLowerCase(Locale.ROOT)) {
             case "s1" -> RomGame.S1;
             case "s2" -> RomGame.S2;
             case "s3k" -> RomGame.S3K;
             default -> throw new IllegalArgumentException("No stock ROM mapping for game: " + gameId);
         };
-        return configuredRomValue(game, configuration);
+        return configuration.getString(game.configurationKey());
     }
 
-    private static String configuredRomValue(RomGame game, SonicConfigurationService configuration) {
-        return switch (game) {
-            case S1 -> configuration.getString(SonicConfiguration.SONIC_1_ROM);
-            case S2 -> configuration.getString(SonicConfiguration.SONIC_2_ROM);
-            case S3K -> configuration.getString(SonicConfiguration.SONIC_3K_ROM);
-        };
+    private static List<Object> catalogueKey(SonicConfigurationService configuration) {
+        return List.of(
+                RomLocationResolver.currentWorkingDirectory().toString(),
+                String.valueOf(configuration.getString(SonicConfiguration.ROMS_DIRECTORY)),
+                String.valueOf(configuration.getString(SonicConfiguration.SONIC_1_ROM)),
+                String.valueOf(configuration.getString(SonicConfiguration.SONIC_2_ROM)),
+                String.valueOf(configuration.getString(SonicConfiguration.SONIC_3K_ROM)),
+                configuration.getBoolean(SonicConfiguration.ROMS_PREFER_COMPOSITE));
     }
 
     private static RomGame legacyRomGame(String gameId) {
-        return switch (gameId != null ? gameId.toLowerCase() : "s2") {
+        return switch (gameId != null ? gameId.toLowerCase(Locale.ROOT) : "s2") {
             case "s1" -> RomGame.S1;
             case "s3k" -> RomGame.S3K;
             default -> RomGame.S2;
@@ -217,6 +271,8 @@ public class RomManager implements AutoCloseable {
         }
         secondaryRoms.clear();
         initialized = false;
+        catalogue = null;
+        catalogueKey = null;
     }
 
 }

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.data.RomChannel;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
@@ -19,8 +20,6 @@ import com.openggf.data.RomManager;
 import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -41,6 +40,9 @@ public class Sonic2Level extends AbstractLevel {
      * decompressed byte count. See {@link #getZoneTileArtByteSize()}.
      */
     private int zoneTileArtByteSize;
+
+    /** Palette line 0 replacement supplied by a game patch, or null for stock loading. */
+    private Palette characterPaletteOverride;
 
     /**
      * LoadZoneTiles' decompressed 8x8 art size in bytes (docs/s2disasm/s2.asm:6482).
@@ -81,7 +83,38 @@ public class Sonic2Level extends AbstractLevel {
             List<RingSpawn> ringSpawns,
             RingSpriteSheet ringSpriteSheet,
             int levelBoundariesAddr) throws IOException {
+        this(rom, zoneIndex, characterPaletteAddr, levelPalettesAddr, levelPalettesSize, patternsAddr,
+                chunksAddr, blocksAddr, mapAddr, collisionsAddr, altCollisionsAddr, solidTileHeightsAddr,
+                solidTileWidthsAddr, solidTilesAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet,
+                levelBoundariesAddr, null);
+    }
+
+    /**
+     * Standard loading with an optional palette line 0 replacement. A non-null
+     * {@code characterPaletteOverride} replaces the {@code Pal_SonicTails} line
+     * and takes precedence over cross-game donation (a patch owns gameplay).
+     */
+    public Sonic2Level(Rom rom,
+            int zoneIndex,
+            int characterPaletteAddr,
+            int levelPalettesAddr,
+            int levelPalettesSize,
+            int patternsAddr,
+            int chunksAddr,
+            int blocksAddr,
+            int mapAddr,
+            int collisionsAddr,
+            int altCollisionsAddr,
+            int solidTileHeightsAddr,
+            int solidTileWidthsAddr,
+            int solidTilesAngleAddr,
+            List<ObjectSpawn> objectSpawns,
+            List<RingSpawn> ringSpawns,
+            RingSpriteSheet ringSpriteSheet,
+            int levelBoundariesAddr,
+            Palette characterPaletteOverride) throws IOException {
         super(zoneIndex);
+        this.characterPaletteOverride = characterPaletteOverride;
         loadPalettes(rom, characterPaletteAddr, levelPalettesAddr, levelPalettesSize);
         loadPatterns(rom, patternsAddr);
         loadSolidTiles(rom, solidTileHeightsAddr, solidTileWidthsAddr, solidTilesAngleAddr);
@@ -226,7 +259,29 @@ public class Sonic2Level extends AbstractLevel {
             List<RingSpawn> ringSpawns,
             RingSpriteSheet ringSpriteSheet,
             int levelBoundariesAddr) throws IOException {
+        this(rom, zoneIndex, characterPaletteAddr, levelPalettesAddr, levelPalettesSize, resourcePlan,
+                mapAddr, solidTileHeightsAddr, solidTileWidthsAddr, solidTilesAngleAddr, objectSpawns,
+                ringSpawns, ringSpriteSheet, levelBoundariesAddr, null);
+    }
+
+    /** Resource-plan loading with an optional palette line 0 replacement (see the standard overload). */
+    public Sonic2Level(Rom rom,
+            int zoneIndex,
+            int characterPaletteAddr,
+            int levelPalettesAddr,
+            int levelPalettesSize,
+            LevelResourcePlan resourcePlan,
+            int mapAddr,
+            int solidTileHeightsAddr,
+            int solidTileWidthsAddr,
+            int solidTilesAngleAddr,
+            List<ObjectSpawn> objectSpawns,
+            List<RingSpawn> ringSpawns,
+            RingSpriteSheet ringSpriteSheet,
+            int levelBoundariesAddr,
+            Palette characterPaletteOverride) throws IOException {
         super(zoneIndex);
+        this.characterPaletteOverride = characterPaletteOverride;
         loadPalettes(rom, characterPaletteAddr, levelPalettesAddr, levelPalettesSize);
         loadPatternsWithPlan(rom, resourcePlan);
         loadSolidTiles(rom, solidTileHeightsAddr, solidTileWidthsAddr, solidTilesAngleAddr);
@@ -262,11 +317,16 @@ public class Sonic2Level extends AbstractLevel {
             palettes[i].fromSegaFormat(lines[i]);
         }
 
-        // "Knuckles in Sonic 2" lock-on: replace palette line 0 with the
+        // A game patch (Knuckles in Sonic 2) owns palette line 0 outright: the
+        // lock-on program's Pal_BGND carries Knuckles' colours in indices 2-5
+        // and S2's universal colours elsewhere (docs/kis2/BRANCH_DIFFS.md).
+        if (characterPaletteOverride != null) {
+            palettes[0] = characterPaletteOverride.deepCopy();
+        } else if (applyCrossGamePalette && com.openggf.game.CrossGameFeatureProvider.isActive()) {
+        // "Knuckles in Sonic 2" donation stand-in: replace palette line 0 with the
         // S2-compatible Knuckles palette from the S3K ROM (0x060BEA).
         // Only indices 2-5 differ (Knuckles' reds vs Sonic's blues);
         // indices 0-1 and 6-15 are identical to S2's Pal_SonicTails.
-        if (applyCrossGamePalette && com.openggf.game.CrossGameFeatureProvider.isActive()) {
             String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
             Palette hostPal = GameServices.crossGameFeatures()
                     .loadHostCompatiblePalette(mainChar);
@@ -285,9 +345,7 @@ public class Sonic2Level extends AbstractLevel {
 
     private void loadPatterns(Rom rom, int patternsAddr) throws IOException {
         byte[] result;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(patternsAddr);
+        try (var channel = RomChannel.at(rom, patternsAddr)) {
             result = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
@@ -304,15 +362,13 @@ public class Sonic2Level extends AbstractLevel {
         byte[] chunkBuffer;
         byte[] solidTileRefBuffer;
         byte[] solidTileAltRefBuffer;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(chunksAddr);
+        try (var channel = RomChannel.at(rom, chunksAddr)) {
             chunkBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
-
-            channel.position(collisionAddr);
+        }
+        try (var channel = RomChannel.at(rom, collisionAddr)) {
             solidTileRefBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
-
-            channel.position(altCollisionAddr);
+        }
+        try (var channel = RomChannel.at(rom, altCollisionAddr)) {
             solidTileAltRefBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
         chunkBuffer = applyAnimatedPatternMappings(rom, chunkBuffer);
@@ -403,9 +459,7 @@ public class Sonic2Level extends AbstractLevel {
 
     private void loadBlocks(Rom rom, int blocksAddr) throws IOException {
         byte[] blockBuffer;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(blocksAddr);
+        try (var channel = RomChannel.at(rom, blocksAddr)) {
             blockBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
@@ -418,9 +472,7 @@ public class Sonic2Level extends AbstractLevel {
         final int MAP_BUFFER_SIZE = 0xFFFF; // 64KB
 
         byte[] buffer;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(mapAddr);
+        try (var channel = RomChannel.at(rom, mapAddr)) {
             buffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
@@ -528,9 +580,7 @@ public class Sonic2Level extends AbstractLevel {
 
             // 1. Decompress cliff art (ArtNem_HTZCliffs → ~6KB)
             byte[] cliffArt;
-            synchronized (rom) {
-                FileChannel ch = rom.getFileChannel();
-                ch.position(Sonic2Constants.ART_NEM_HTZ_CLIFFS_ADDR);
+            try (var ch = RomChannel.at(rom, Sonic2Constants.ART_NEM_HTZ_CLIFFS_ADDR)) {
                 cliffArt = NemesisReader.decompress(ch);
             }
 
@@ -556,15 +606,8 @@ public class Sonic2Level extends AbstractLevel {
             }
 
             // 3. Load uncompressed cloud art and fill cloud tile slots ($0518-$051F)
-            byte[] cloudArt = new byte[Sonic2Constants.ART_UNC_HTZ_CLOUDS_SIZE];
-            synchronized (rom) {
-                FileChannel ch = rom.getFileChannel();
-                ch.position(Sonic2Constants.ART_UNC_HTZ_CLOUDS_ADDR);
-                ByteBuffer buf = ByteBuffer.wrap(cloudArt);
-                while (buf.hasRemaining()) {
-                    if (ch.read(buf) < 0) break;
-                }
-            }
+            byte[] cloudArt = rom.readBytes(Sonic2Constants.ART_UNC_HTZ_CLOUDS_ADDR,
+                    Sonic2Constants.ART_UNC_HTZ_CLOUDS_SIZE);
             destTile = Sonic2Constants.HTZ_CLOUDS_TILE_INDEX;
             srcOff = 0;
             int cloudsFilled = 0;

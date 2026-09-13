@@ -85,13 +85,26 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
     private Pattern[] hudHexDigits;
     private HudStaticArt hudStaticArt;
     private boolean livesNameUsesIconPalette;
+    /** Patch-supplied main-character life icon (HUD and 1-up monitor face), or null for stock. */
+    private final java.util.function.Supplier<Pattern[]> mainCharacterLifeIcon;
 
     /**
      * Creates a new Sonic2ObjectArtProvider.
      * The art loader is lazily initialized when loadArtForZone is first called.
      */
     public Sonic2ObjectArtProvider() {
-        // Lazy initialization
+        this((java.util.function.Supplier<Pattern[]>) null);
+    }
+
+    /**
+     * Creates a provider whose HUD life counter and 1-up monitor face come
+     * from {@code mainCharacterLifeIcon} when it yields a non-empty array.
+     * The lock-on program replaces {@code ArtNem_Sonic_life_counter} and
+     * patches the monitor sheet through {@code PlrList_Std2}; a game patch
+     * supplies that art here so no donor state is consulted.
+     */
+    public Sonic2ObjectArtProvider(java.util.function.Supplier<Pattern[]> mainCharacterLifeIcon) {
+        this.mainCharacterLifeIcon = mainCharacterLifeIcon;
     }
 
     /**
@@ -100,6 +113,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
      */
     public Sonic2ObjectArtProvider(Rom rom, RomByteReader reader) {
         this.artLoader = new Sonic2ObjectArt(rom, reader);
+        this.mainCharacterLifeIcon = null;
     }
 
     private void ensureArtLoader() throws IOException {
@@ -231,8 +245,10 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         hudHexDigits = artData.getDebugFontPatterns();
         livesNameUsesIconPalette = false;
 
-        // Cross-game: override lives icon with donor character art (e.g., Knuckles from S3K)
-        overrideLivesArtFromDonor();
+        // Game patch first (KiS2 lives counter), then cross-game donation.
+        if (!overrideLivesArtFromPatch()) {
+            overrideLivesArtFromDonor();
+        }
         rebuildHudStaticArt();
 
         // The 1-up monitor icon shares VRAM with the life counter, so it must show
@@ -487,6 +503,25 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
      * loads the Knuckles life icon from the S3K donor ROM to replace the
      * S2 Sonic life icon.
      */
+    private Pattern[] patchLifeIcon() {
+        if (mainCharacterLifeIcon == null) {
+            return null;
+        }
+        Pattern[] icon = mainCharacterLifeIcon.get();
+        return icon != null && icon.length > 0 ? icon : null;
+    }
+
+    private boolean overrideLivesArtFromPatch() {
+        Pattern[] icon = patchLifeIcon();
+        if (icon == null) {
+            return false;
+        }
+        hudLivesPatterns = icon;
+        livesNameUsesIconPalette = true;
+        LOGGER.info("Overrode lives icon with patch-supplied main-character art (" + icon.length + " tiles)");
+        return true;
+    }
+
     private void overrideLivesArtFromDonor() {
         if (!com.openggf.game.CrossGameFeatureProvider.isS3kDonorActive()) {
             return;
@@ -547,6 +582,10 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
      * uses the palette-remapped S3K donor art (only when the donor is active).
      */
     private Pattern[] resolveMonitorIconLifeArt(String mainChar) {
+        Pattern[] patchIcon = patchLifeIcon();
+        if (patchIcon != null) {
+            return patchIcon;
+        }
         if ("tails".equalsIgnoreCase(mainChar)) {
             try {
                 return com.openggf.util.PatternDecompressor.nemesis(

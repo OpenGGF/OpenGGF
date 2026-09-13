@@ -6,6 +6,19 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Knuckles in Sonic 2 (tier one):** selecting Knuckles as the Sonic 2 main
+  character now activates a built-in game patch implemented from the s2disasm
+  `knuckles-in-sonic-2` branch instead of S3K donation: KiS2 physics (`$600`
+  jump, `$300` underwater, single-facing balance, KiS2 landing form and duck
+  hit-box), glide and climb, Knuckles' art converted through the lock-on
+  program's `ArtConvTable` with the S2-layout Knuckles palette, and the
+  rewritten object layouts read from the `Off_Objects_KiS2` table through
+  the lock-on address space. It needs only the S3K image (S&K half) and the
+  Sonic 2 ROM. Casino Night keeps the stock layouts and every chip-resident
+  asset (title, special stage, ending banner, recoloured icons) is unchanged
+  until tier two; see the known-discrepancies entry and
+  `docs/kis2/BRANCH_DIFFS.md`.
+
 - **HCZ1 miniboss:** retain the vertical arena lock and full rocket slowdown;
   match the body, rockets and individual exhausts to ROM sprite priorities and
   flicker gates. Restore the whirlpool slowdown, bubble animation and depth,
@@ -85,6 +98,20 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Seamless act handoffs retain fixed object owners without duplicates, avoiding
   a rewind-capture crash after the MHZ signpost.
   Complete routes, finales, and continuous replay chains remain gates.
+
+## ROM images
+
+- **ROM image catalogue:** the engine now recognises every user-supplied image by
+  size and cartridge header instead of filename, from the three per-game keys plus a
+  `roms.directory` scan. Lock-on dumps serve the games they contain (Sonic 2 from an
+  S&K + Sonic 2 dump, Sonic 3 and Sonic & Knuckles from a Sonic 3 & Knuckles dump),
+  and a separate Sonic 3 image plus a separate Sonic & Knuckles image boot Sonic 3 &
+  Knuckles as an in-memory view with no joining on disk (`roms.preferComposite`
+  picks it over a dump). The per-game keys remain explicit overrides; among
+  duplicates a hash-verified image wins, and an unverified image is still used.
+  The master title hub dims games from the same catalogue. Engine code no longer
+  reads through the ROM's shared file channel, so catalogue views and files behave
+  identically.
 
 ## Development features carried forward
 
