@@ -11,6 +11,7 @@ import com.openggf.game.patch.PatchContext;
 import com.openggf.game.patch.PatchEnablement;
 import com.openggf.game.patch.PatchOwner;
 import com.openggf.game.patch.RegisteredPatch;
+import com.openggf.game.session.BuiltInPatches;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.sonic2.Sonic2GameModule;
@@ -114,7 +115,7 @@ class TestKis2GamePatchResolution {
 
     @Test
     void engineContextRegistersKis2AsABuiltInPatch() {
-        List<RegisteredPatch> builtIns = EngineContext.builtInPatches();
+        List<RegisteredPatch> builtIns = BuiltInPatches.registrations();
         assertEquals(1, builtIns.size());
         assertEquals(new PatchOwner.BuiltIn("kis2"), builtIns.getFirst().owner());
         assertInstanceOf(Kis2GamePatch.class, builtIns.getFirst().patch());
@@ -147,7 +148,7 @@ class TestKis2GamePatchResolution {
     }
 
     private ModuleResolutionService serviceWithPrerequisite(boolean skAvailable) {
-        return new ModuleResolutionService(EngineContext.builtInPatches(),
+        return new ModuleResolutionService(BuiltInPatches.registrations(),
                 PatchEnablement.ALL_ENABLED,
                 new LogicalRomResolver(() -> skAvailable ? new byte[0x200000] : null),
                 SonicConfigurationService.createStandalone(tempDir));

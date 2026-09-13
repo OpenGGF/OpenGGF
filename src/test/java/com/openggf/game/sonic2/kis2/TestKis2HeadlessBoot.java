@@ -11,6 +11,7 @@ import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.LogicalRomResolver;
 import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.patch.PatchEnablement;
+import com.openggf.game.session.BuiltInPatches;
 import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.session.GameplayModeContext;
@@ -158,7 +159,7 @@ class TestKis2HeadlessBoot {
     private static EngineContext injectedContext(SonicConfigurationService config, byte[] s3kBytes)
             throws Exception {
         EngineContext old = EngineServices.current();
-        ModuleResolutionService resolver = new ModuleResolutionService(EngineContext.builtInPatches(),
+        ModuleResolutionService resolver = new ModuleResolutionService(BuiltInPatches.registrations(),
                 PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> s3kBytes), config);
         return new EngineContext(config, old.graphics(), old.audio(), isolatedRomManager(),
                 old.profiler(), old.debugOverlay(), old.playbackDebug(), old.romDetection(),
