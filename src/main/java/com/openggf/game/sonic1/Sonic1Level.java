@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomChannel;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GraphicsManager;
@@ -14,7 +15,6 @@ import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -254,9 +254,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
 
         for (PlcEntry cue : sorted) {
             byte[] data;
-            synchronized (rom) {
-                FileChannel channel = rom.getFileChannel();
-                channel.position(cue.romAddr());
+            try (var channel = RomChannel.at(rom, cue.romAddr())) {
                 data = NemesisReader.decompress(channel);
             }
             decompressedData.add(data);
@@ -318,9 +316,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
      */
     private void loadChunks(Rom rom, int chunksAddr, int collisionIndexAddr) throws IOException {
         byte[] chunkBuffer;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(chunksAddr);
+        try (var channel = RomChannel.at(rom, chunksAddr)) {
             chunkBuffer = EnigmaReader.decompress(channel, 0);
         }
 
@@ -365,9 +361,7 @@ public class Sonic1Level extends AbstractLevel implements com.openggf.level.obje
      */
     private void loadBlocks(Rom rom, int blocksAddr) throws IOException {
         byte[] blockBuffer;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(blocksAddr);
+        try (var channel = RomChannel.at(rom, blocksAddr)) {
             blockBuffer = KosinskiReader.decompress(channel, false);
         }
 

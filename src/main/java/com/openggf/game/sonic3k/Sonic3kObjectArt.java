@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomChannel;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
@@ -22,7 +23,6 @@ import com.openggf.util.DplcStaticFlattener;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -1342,12 +1342,8 @@ public class Sonic3kObjectArt {
      */
     private void loadNemesisArtInto(Rom rom, int romAddr, Pattern[] dest, int destIndex, int maxTiles)
             throws IOException {
-        FileChannel channel = rom.getFileChannel();
-        // Rom exposes a shared FileChannel; lock around seek+decode so concurrent
-        // readers cannot move the channel position mid-stream.
         byte[] data;
-        synchronized (rom) {
-            channel.position(romAddr);
+        try (var channel = RomChannel.at(rom, romAddr)) {
             data = NemesisReader.decompress(channel);
         }
         int tileCount = data.length / Pattern.PATTERN_SIZE_IN_ROM;

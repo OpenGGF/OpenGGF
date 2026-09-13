@@ -4361,6 +4361,7 @@ METHOD com.openggf.data.Game public,abstract  java.util.List<java.lang.String> g
 METHOD com.openggf.data.Game public,abstract  java.util.Map<com.openggf.audio.GameSound,java.lang.Integer> getSoundMap()
 METHOD com.openggf.data.PlayerSpriteArtProvider public  com.openggf.level.Palette loadCharacterPalette(java.lang.String)
 METHOD com.openggf.data.PlayerSpriteArtProvider public,abstract  com.openggf.sprites.art.SpriteArtSet loadPlayerSpriteArt(java.lang.String) THROWS java.io.IOException
+METHOD com.openggf.data.Rom public  boolean isInMemory()
 METHOD com.openggf.data.Rom public  boolean isOpen()
 METHOD com.openggf.data.Rom public  byte readByte(long) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  byte[] readAllBytes() THROWS java.io.IOException
@@ -4370,17 +4371,20 @@ METHOD com.openggf.data.Rom public  int read16BitAddr(long) THROWS java.io.IOExc
 METHOD com.openggf.data.Rom public  int read32BitAddr(long) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  int readAddrRange() THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  int readChecksum() THROWS java.io.IOException
+METHOD com.openggf.data.Rom public  java.lang.String describe()
 METHOD com.openggf.data.Rom public  java.lang.String readDomesticName() THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  java.lang.String readInternationalName() THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  java.nio.channels.FileChannel getFileChannel()
 METHOD com.openggf.data.Rom public  long getSize() THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  void writeChecksum(int) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  void writeSize(int) THROWS java.io.IOException
+METHOD com.openggf.data.Rom public,static  com.openggf.data.Rom fromReader(com.openggf.data.RomByteReader,java.lang.String)
 METHOD com.openggf.data.Rom public,synchronized  boolean open(java.lang.String)
 METHOD com.openggf.data.Rom public,synchronized  void close()
 METHOD com.openggf.data.Rom public,synchronized  void write16BitAddr(int,long) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public,synchronized  void write32BitAddr(int,long) THROWS java.io.IOException
 METHOD com.openggf.data.RomByteReader public  byte[] slice(int,int)
+METHOD com.openggf.data.RomByteReader public  com.openggf.data.RomByteReader window(int,int)
 METHOD com.openggf.data.RomByteReader public  int readPointer16(int,int)
 METHOD com.openggf.data.RomByteReader public  int readS16BE(int)
 METHOD com.openggf.data.RomByteReader public  int readU16BE(int)
@@ -4390,6 +4394,7 @@ METHOD com.openggf.data.RomByteReader public  int size()
 METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteReader fromBytes(byte[])
 METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteReader fromBytes(byte[],int,int)
 METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteReader fromRom(com.openggf.data.Rom) THROWS java.io.IOException
+METHOD com.openggf.data.RomByteReader public,static,transient varargs  com.openggf.data.RomByteReader concat(com.openggf.data.RomByteReader[])
 METHOD com.openggf.data.SpindashDustArtProvider public,abstract  com.openggf.sprites.art.SpriteArtSet loadSpindashDustArt(java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.debug.DebugColor public  boolean equals(java.lang.Object)
 METHOD com.openggf.debug.DebugColor public  int getAlpha()

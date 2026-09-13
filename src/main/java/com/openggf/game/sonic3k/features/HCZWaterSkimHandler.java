@@ -596,11 +596,8 @@ public final class HCZWaterSkimHandler {
      * 5 animation frames × 12 tiles per frame.
      */
     private static Pattern[] loadSplashPatterns(Rom rom) throws IOException {
-        byte[] data = new byte[Sonic3kConstants.ART_UNC_HCZ_WATER_SPLASH2_SIZE];
-        synchronized (rom) {
-            rom.getFileChannel().position(Sonic3kConstants.ART_UNC_HCZ_WATER_SPLASH2_ADDR);
-            rom.getFileChannel().read(java.nio.ByteBuffer.wrap(data));
-        }
+        byte[] data = rom.readBytes(Sonic3kConstants.ART_UNC_HCZ_WATER_SPLASH2_ADDR,
+                Sonic3kConstants.ART_UNC_HCZ_WATER_SPLASH2_SIZE);
         int count = data.length / Pattern.PATTERN_SIZE_IN_ROM;
         Pattern[] patterns = new Pattern[count];
         for (int i = 0; i < count; i++) {

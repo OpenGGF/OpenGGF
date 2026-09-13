@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.data.RomChannel;
 
 import com.openggf.audio.GameMusic;
 import com.openggf.data.Rom;
@@ -36,7 +37,6 @@ import com.openggf.level.render.SpriteMappingPiece;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.ObjectControlState;
 
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -1452,12 +1452,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
      */
     private void loadHudTextIntoPatterns(Rom rom, Pattern[] patterns) {
         try {
-            FileChannel channel = rom.getFileChannel();
-            // Rom exposes a shared FileChannel; lock around seek+decode so concurrent
-            // readers cannot move the channel position mid-stream.
             byte[] data;
-            synchronized (rom) {
-                channel.position(Sonic3kConstants.ART_NEM_RING_HUD_TEXT_ADDR);
+            try (var channel = RomChannel.at(rom, Sonic3kConstants.ART_NEM_RING_HUD_TEXT_ADDR)) {
                 data = NemesisReader.decompress(channel);
             }
 

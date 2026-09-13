@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.game.sonic2.constants.Sonic2Constants;
+import com.openggf.data.RomChannel;
 
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
@@ -19,8 +20,6 @@ import com.openggf.data.RomManager;
 import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -285,9 +284,7 @@ public class Sonic2Level extends AbstractLevel {
 
     private void loadPatterns(Rom rom, int patternsAddr) throws IOException {
         byte[] result;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(patternsAddr);
+        try (var channel = RomChannel.at(rom, patternsAddr)) {
             result = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
@@ -304,15 +301,13 @@ public class Sonic2Level extends AbstractLevel {
         byte[] chunkBuffer;
         byte[] solidTileRefBuffer;
         byte[] solidTileAltRefBuffer;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(chunksAddr);
+        try (var channel = RomChannel.at(rom, chunksAddr)) {
             chunkBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
-
-            channel.position(collisionAddr);
+        }
+        try (var channel = RomChannel.at(rom, collisionAddr)) {
             solidTileRefBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
-
-            channel.position(altCollisionAddr);
+        }
+        try (var channel = RomChannel.at(rom, altCollisionAddr)) {
             solidTileAltRefBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
         chunkBuffer = applyAnimatedPatternMappings(rom, chunkBuffer);
@@ -403,9 +398,7 @@ public class Sonic2Level extends AbstractLevel {
 
     private void loadBlocks(Rom rom, int blocksAddr) throws IOException {
         byte[] blockBuffer;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(blocksAddr);
+        try (var channel = RomChannel.at(rom, blocksAddr)) {
             blockBuffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
@@ -418,9 +411,7 @@ public class Sonic2Level extends AbstractLevel {
         final int MAP_BUFFER_SIZE = 0xFFFF; // 64KB
 
         byte[] buffer;
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(mapAddr);
+        try (var channel = RomChannel.at(rom, mapAddr)) {
             buffer = KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
 
@@ -528,9 +519,7 @@ public class Sonic2Level extends AbstractLevel {
 
             // 1. Decompress cliff art (ArtNem_HTZCliffs → ~6KB)
             byte[] cliffArt;
-            synchronized (rom) {
-                FileChannel ch = rom.getFileChannel();
-                ch.position(Sonic2Constants.ART_NEM_HTZ_CLIFFS_ADDR);
+            try (var ch = RomChannel.at(rom, Sonic2Constants.ART_NEM_HTZ_CLIFFS_ADDR)) {
                 cliffArt = NemesisReader.decompress(ch);
             }
 
@@ -556,15 +545,8 @@ public class Sonic2Level extends AbstractLevel {
             }
 
             // 3. Load uncompressed cloud art and fill cloud tile slots ($0518-$051F)
-            byte[] cloudArt = new byte[Sonic2Constants.ART_UNC_HTZ_CLOUDS_SIZE];
-            synchronized (rom) {
-                FileChannel ch = rom.getFileChannel();
-                ch.position(Sonic2Constants.ART_UNC_HTZ_CLOUDS_ADDR);
-                ByteBuffer buf = ByteBuffer.wrap(cloudArt);
-                while (buf.hasRemaining()) {
-                    if (ch.read(buf) < 0) break;
-                }
-            }
+            byte[] cloudArt = rom.readBytes(Sonic2Constants.ART_UNC_HTZ_CLOUDS_ADDR,
+                    Sonic2Constants.ART_UNC_HTZ_CLOUDS_SIZE);
             destTile = Sonic2Constants.HTZ_CLOUDS_TILE_INDEX;
             srcOff = 0;
             int cloudsFilled = 0;

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k;
 
 import com.openggf.camera.Camera;
+import com.openggf.data.RomChannel;
 import com.openggf.data.Rom;
 import com.openggf.game.GameServices;
 import com.openggf.data.RomByteReader;
@@ -16,7 +17,6 @@ import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
 import com.openggf.sprites.managers.ProcessSpritesEpoch;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -106,9 +106,7 @@ public class Sonic3kWaterSurfaceManager {
 
     private Pattern[] loadWaveSplashPatterns(Rom rom) throws IOException {
         byte[] data;
-        FileChannel channel = rom.getFileChannel();
-        synchronized (rom) {
-            channel.position(Sonic3kConstants.ART_NEM_HCZ_WAVE_SPLASH_ADDR);
+        try (var channel = RomChannel.at(rom, Sonic3kConstants.ART_NEM_HCZ_WAVE_SPLASH_ADDR)) {
             data = NemesisReader.decompress(channel);
         }
         int count = data.length / Pattern.PATTERN_SIZE_IN_ROM;

@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomChannel;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -21,7 +22,6 @@ import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -275,9 +275,7 @@ public class AizIntroArtLoader {
             return;
         }
         try {
-            FileChannel channel = rom.getFileChannel();
-            synchronized (rom) {
-                channel.position(Sonic3kConstants.ART_NEM_AIZ_INTRO_SPRITES_ADDR);
+            try (var channel = RomChannel.at(rom, Sonic3kConstants.ART_NEM_AIZ_INTRO_SPRITES_ADDR)) {
                 byte[] data = NemesisReader.decompress(channel);
                 introSpritesPatterns = bytesToPatterns(data);
             }
