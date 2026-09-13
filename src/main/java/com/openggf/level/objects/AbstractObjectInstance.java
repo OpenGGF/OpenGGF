@@ -8,6 +8,7 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameServices;
+import com.openggf.game.ModApi;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rewind.GenericFieldCapturer;
@@ -23,7 +24,7 @@ import com.openggf.game.solid.SolidCheckpointBatch;
 import java.util.List;
 import java.util.logging.Logger;
 
-@com.openggf.game.ModApi
+@ModApi
 public abstract class AbstractObjectInstance implements ObjectInstance {
     private static final Logger LOG = Logger.getLogger(AbstractObjectInstance.class.getName());
 
