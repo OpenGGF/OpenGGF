@@ -10,7 +10,7 @@ backlog; it is not a completed coverage audit.
 | ID | Work | Status | Completion evidence |
 | --- | --- | --- | --- |
 | LTS-01 | Publish standard, matrix template and implementation entrypoint links | Documented | Standard and mirrored guidance; [documentation validation](../architecture/validation/2026-09-13-level-test-standard.md) |
-| LTS-02 | Resolve registry slots, aliases, routes and non-registry gameplay paths; map existing assertions | Pending | Per-act matrices and dispositions for every inventory row |
+| LTS-02 | Resolve registry slots, aliases, routes and non-registry gameplay paths; map existing assertions | In progress | [Initial 26-zone source inventory and estimates](../architecture/audits/2026-09-13-level-test-coverage-inventory.md); per-act matrices and remaining dispositions pending |
 | LTS-03 | FBZ/AIZ/HCZ reference matrices, plus S1 GHZ3 and S2 CPZ2 pilots | Pending | Breadth, rewind boundaries, defect sensitivity and measured cost |
 | LTS-04 | Minimal shared case/rewind helpers and coverage report | Pending | Required-to-executed identity joins and tooling acceptance scenarios |
 | LTS-05 | Enforce explicit-lane prerequisites and missing/skipped case inventory | Pending | Negative prerequisite/selection tests and wired commands |
@@ -22,9 +22,11 @@ backlog; it is not a completed coverage audit.
 ## Initial registry inventory
 
 Seeded by source inspection at `5a3cb848a8d45b7bf236fc5ee8ca30cc8af1a33e`.
-Every row below is **audit pending**, with implementation scope, conformance and
-execution status unassessed. Existing tests may already cover substantial behavior;
-this ledger deliberately awards no passes without an assertion/configuration audit.
+The [initial source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md)
+now covers 26 zones / 55 gameplay acts for estimation, with explicit delivered versus
+conditional S3K scope. Their rows link to that zone-level inventory; **all detailed
+per-act matrices and conformance assessments remain pending**. The other 34 slots
+still need scope/disposition audit. No new execution result or pass is awarded.
 
 Sources: [S1 registry](../../src/main/java/com/openggf/game/sonic1/Sonic1ZoneRegistry.java),
 [S2 registry](../../src/main/java/com/openggf/game/sonic2/Sonic2ZoneRegistry.java),
@@ -41,63 +43,63 @@ matrices; never collapse skipped or unrun into pass.
 
 | Game | Registry descriptor | Disposition / matrix |
 | --- | --- | --- |
-| S1 | `S1_GREEN_HILL_1` | Audit pending |
-| S1 | `S1_GREEN_HILL_2` | Audit pending |
-| S1 | `S1_GREEN_HILL_3` | Audit pending |
-| S1 | `S1_MARBLE_1` | Audit pending |
-| S1 | `S1_MARBLE_2` | Audit pending |
-| S1 | `S1_MARBLE_3` | Audit pending |
-| S1 | `S1_SPRING_YARD_1` | Audit pending |
-| S1 | `S1_SPRING_YARD_2` | Audit pending |
-| S1 | `S1_SPRING_YARD_3` | Audit pending |
-| S1 | `S1_LABYRINTH_1` | Audit pending |
-| S1 | `S1_LABYRINTH_2` | Audit pending |
-| S1 | `S1_LABYRINTH_3` | Audit pending |
-| S1 | `S1_STAR_LIGHT_1` | Audit pending |
-| S1 | `S1_STAR_LIGHT_2` | Audit pending |
-| S1 | `S1_STAR_LIGHT_3` | Audit pending |
-| S1 | `S1_SCRAP_BRAIN_1` | Audit pending |
-| S1 | `S1_SCRAP_BRAIN_2` | Audit pending |
-| S1 | `S1_SCRAP_BRAIN_3` | Audit pending |
-| S1 | `S1_FINAL_ZONE` | Audit pending |
+| S1 | `S1_GREEN_HILL_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_GREEN_HILL_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_GREEN_HILL_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_MARBLE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_MARBLE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_MARBLE_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_SPRING_YARD_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_SPRING_YARD_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_SPRING_YARD_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_LABYRINTH_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_LABYRINTH_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_LABYRINTH_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_STAR_LIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_STAR_LIGHT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_STAR_LIGHT_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_SCRAP_BRAIN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_SCRAP_BRAIN_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_SCRAP_BRAIN_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
+| S1 | `S1_FINAL_ZONE` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-1--deliveredplayable-cohort); matrix pending |
 | S1 | `S1_ENDING_FLOWERS` | Audit pending |
 | S1 | `S1_ENDING_NO_EMERALDS` | Audit pending |
-| S2 | `EMERALD_HILL_1` | Audit pending |
-| S2 | `EMERALD_HILL_2` | Audit pending |
-| S2 | `CHEMICAL_PLANT_1` | Audit pending |
-| S2 | `CHEMICAL_PLANT_2` | Audit pending |
-| S2 | `AQUATIC_RUIN_1` | Audit pending |
-| S2 | `AQUATIC_RUIN_2` | Audit pending |
-| S2 | `CASINO_NIGHT_1` | Audit pending |
-| S2 | `CASINO_NIGHT_2` | Audit pending |
-| S2 | `HILL_TOP_1` | Audit pending |
-| S2 | `HILL_TOP_2` | Audit pending |
-| S2 | `MYSTIC_CAVE_1` | Audit pending |
-| S2 | `MYSTIC_CAVE_2` | Audit pending |
-| S2 | `OIL_OCEAN_1` | Audit pending |
-| S2 | `OIL_OCEAN_2` | Audit pending |
-| S2 | `METROPOLIS_1` | Audit pending |
-| S2 | `METROPOLIS_2` | Audit pending |
-| S2 | `METROPOLIS_3` | Audit pending |
-| S2 | `SKY_CHASE` | Audit pending |
-| S2 | `WING_FORTRESS` | Audit pending |
-| S2 | `DEATH_EGG` | Audit pending |
-| S3K | `S3K_ANGEL_ISLAND_1` | Audit pending |
-| S3K | `S3K_ANGEL_ISLAND_2` | Audit pending |
-| S3K | `S3K_HYDROCITY_1` | Audit pending |
-| S3K | `S3K_HYDROCITY_2` | Audit pending |
-| S3K | `S3K_MARBLE_GARDEN_1` | Audit pending |
-| S3K | `S3K_MARBLE_GARDEN_2` | Audit pending |
-| S3K | `S3K_CARNIVAL_NIGHT_1` | Audit pending |
-| S3K | `S3K_CARNIVAL_NIGHT_2` | Audit pending |
-| S3K | `S3K_FLYING_BATTERY_1` | Audit pending |
-| S3K | `S3K_FLYING_BATTERY_2` | Audit pending |
-| S3K | `S3K_ICECAP_1` | Audit pending |
-| S3K | `S3K_ICECAP_2` | Audit pending |
-| S3K | `S3K_LAUNCH_BASE_1` | Audit pending |
-| S3K | `S3K_LAUNCH_BASE_2` | Audit pending |
-| S3K | `S3K_MUSHROOM_HILL_1` | Audit pending |
-| S3K | `S3K_MUSHROOM_HILL_2` | Audit pending |
+| S2 | `EMERALD_HILL_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `EMERALD_HILL_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `CHEMICAL_PLANT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `CHEMICAL_PLANT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `AQUATIC_RUIN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `AQUATIC_RUIN_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `CASINO_NIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `CASINO_NIGHT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `HILL_TOP_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `HILL_TOP_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `MYSTIC_CAVE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `MYSTIC_CAVE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `OIL_OCEAN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `OIL_OCEAN_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `METROPOLIS_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `METROPOLIS_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `METROPOLIS_3` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `SKY_CHASE` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `WING_FORTRESS` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S2 | `DEATH_EGG` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-2--deliveredplayable-cohort); matrix pending |
+| S3K | `S3K_ANGEL_ISLAND_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_ANGEL_ISLAND_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_HYDROCITY_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_HYDROCITY_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_MARBLE_GARDEN_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_MARBLE_GARDEN_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_CARNIVAL_NIGHT_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_CARNIVAL_NIGHT_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_FLYING_BATTERY_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_FLYING_BATTERY_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_ICECAP_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_ICECAP_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_LAUNCH_BASE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_LAUNCH_BASE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_MUSHROOM_HILL_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_MUSHROOM_HILL_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
 | S3K | `S3K_SANDOPOLIS_1` | Audit pending |
 | S3K | `S3K_SANDOPOLIS_2` | Audit pending |
 | S3K | `S3K_LAVA_REEF_1` | Audit pending |

@@ -16,6 +16,10 @@ Inventory and progress: [coverage backlog](../../status/level-test-coverage.md).
 The shared standard is authoritative. Skills and agent guidance link to it rather
 than maintaining competing copies of configuration lists or rewind requirements.
 
+The [initial zone-level inventory and effort estimate](../audits/2026-09-13-level-test-coverage-inventory.md)
+provides the first source audit for 26 zones / 55 gameplay acts. It does not complete
+the per-act matrix audit or certify current execution results.
+
 ## Phase 1 — establish the inventory and audit evidence
 
 The initial backlog enumerates every slot in the three production zone registries.
