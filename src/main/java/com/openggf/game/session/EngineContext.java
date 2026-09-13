@@ -33,7 +33,7 @@ public final class EngineContext {
                           DebugOverlayManager debugOverlay, PlaybackDebugManager playbackDebug,
                           RomDetectionService romDetection, CrossGameFeatureProvider crossGameFeatures) {
         this(configuration, graphics, audio, roms, profiler, debugOverlay, playbackDebug,
-                romDetection, crossGameFeatures, new ModuleResolutionService(java.util.List.of(),
+                romDetection, crossGameFeatures, new ModuleResolutionService(BuiltInPatches.registrations(),
                         PatchEnablement.ALL_ENABLED, LogicalRomResolver.fromRomManager(roms),
                         configuration));
     }

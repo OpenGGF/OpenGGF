@@ -67,6 +67,28 @@ public final class TraceReplaySessionBootstrap {
     }
 
     /**
+     * Resolves the module a replay must run on: the recorded team, resolved
+     * through the engine's built-in patches with the deterministic policy so
+     * no external mod plan is consulted. Returns {@code rootModule} unchanged
+     * when no built-in patch activates for the recorded team.
+     */
+    public static com.openggf.game.GameModule resolveReplayModule(
+            com.openggf.game.session.EngineContext services,
+            com.openggf.game.GameModule rootModule,
+            TraceMetadata meta) {
+        Objects.requireNonNull(services, "services");
+        Objects.requireNonNull(rootModule, "rootModule");
+        Objects.requireNonNull(meta, "meta");
+        String main = meta.recordedMainCharacter();
+        return services.moduleResolutionService().resolveForLaunch(rootModule,
+                new com.openggf.game.patch.GameplayLaunchRequest(
+                        rootModule.getGameId().code(),
+                        main == null || main.isBlank() ? "sonic" : main,
+                        meta.recordedSidekicks()),
+                com.openggf.game.patch.ModuleResolutionService.LaunchPolicy.DETERMINISTIC);
+    }
+
+    /**
      * Clears the per-zone subsystem state the headless fixture zaps
      * via {@code TestEnvironment.resetPerTest()}: sprites, collision,
      * camera, fade, game state, timers, water, parallax, cross-game

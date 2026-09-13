@@ -86,7 +86,7 @@ Everything downstream cites this document. The s2disasm checkout at `docs/s2disa
 **Files:**
 - Create: `docs/kis2/BRANCH_DIFFS.md`
 
-- [ ] **Step 1: Enumerate the diff**
+- [x] **Step 1: Enumerate the diff**
 
 ```bash
 cd docs/s2disasm
@@ -97,7 +97,7 @@ wc -l /tmp/kis2-s2asm.diff
 
 Also diff any non-`s2.asm` files the `--stat` shows (constants, art/mapping binaries, build files).
 
-- [ ] **Step 2: Read and classify the diff**
+- [x] **Step 2: Read and classify the diff**
 
 Read `/tmp/kis2-s2asm.diff` in chunks. For each hunk, classify into one of:
 `physics-constants`, `player-object-code` (glide/climb/ability dispatch), `art-mapping-dplc-addresses`, `object-placements`, `monitor-life-icon`, `title-level-select` (deferred), `special-stage` (deferred), `two-player` (deferred), `misc`.
@@ -110,11 +110,11 @@ Specifically answer (these feed Tasks 5, 9, 10, 11):
 5. Any changed start positions or object placements (search the diff for `ObjPos`, `StartLoc`, layout binaries). If none, write "None found" — Task 12 then becomes a no-op.
 6. No-Tails enforcement: how the patch removes Tails (options removed, Player_mode forced, etc.) — documented for fidelity context.
 
-- [ ] **Step 3: Write `docs/kis2/BRANCH_DIFFS.md`**
+- [x] **Step 3: Write `docs/kis2/BRANCH_DIFFS.md`**
 
 Structure: one `##` section per category above; each entry gets: disasm location (file:line on the branch), the stock-S2 behavior, the KiS2 behavior, and (for data) the ROM address. Open with a provenance header recording the two commit SHAs compared (`git rev-parse master origin/knuckles-in-sonic-2`).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docs/kis2/BRANCH_DIFFS.md
@@ -845,11 +845,11 @@ Skills: n/a"
 - Create: `src/main/java/com/openggf/game/sonic2/kis2/Kis2PhysicsProvider.java`
 - Test: `src/test/java/com/openggf/game/sonic2/kis2/TestKis2PhysicsProfile.java`
 
-- [ ] **Step 1: Confirm constants against the diff catalogue.** Open `docs/kis2/BRANCH_DIFFS.md` §physics-constants (Task 1). The expected result: KiS2 Knuckles jump velocity `0x600` (vs Sonic's `0x680`), all other movement constants equal to stock S2 Sonic. **If the catalogue shows anything different, the catalogue wins — adjust the constant below and its ROM-reference comment.**
+- [x] **Step 1: Confirm constants against the diff catalogue.** Open `docs/kis2/BRANCH_DIFFS.md` §physics-constants (Task 1). The expected result: KiS2 Knuckles jump velocity `0x600` (vs Sonic's `0x680`), all other movement constants equal to stock S2 Sonic. **If the catalogue shows anything different, the catalogue wins — adjust the constant below and its ROM-reference comment.**
 
-- [ ] **Step 2: Decide the feature set.** Check `BRANCH_DIFFS.md` §player-object-code answer 2 (ability dispatch / jump-height behavior). If KiS2's behavior matches stock S2 for every existing `PhysicsFeatureSet` flag, **reuse `PhysicsFeatureSet.SONIC_2` unchanged** (note: glide/climb is NOT a feature-set flag — it's driven by `SecondaryAbility.GLIDE`, which the existing `Knuckles` sprite class already resolves; nothing to enable). If any flag must differ, add a `KIS2` `PhysicsFeatureSet` constant copying `SONIC_2` with only that flag changed and a ROM-reference comment citing the branch diff — never branch on game/version at a call site.
+- [x] **Step 2: Decide the feature set.** Check `BRANCH_DIFFS.md` §player-object-code answer 2 (ability dispatch / jump-height behavior). If KiS2's behavior matches stock S2 for every existing `PhysicsFeatureSet` flag, **reuse `PhysicsFeatureSet.SONIC_2` unchanged** (note: glide/climb is NOT a feature-set flag — it's driven by `SecondaryAbility.GLIDE`, which the existing `Knuckles` sprite class already resolves; nothing to enable). If any flag must differ, add a `KIS2` `PhysicsFeatureSet` constant copying `SONIC_2` with only that flag changed and a ROM-reference comment citing the branch diff — never branch on game/version at a call site.
 
-- [ ] **Step 3: Write the failing test**
+- [x] **Step 3: Write the failing test**
 
 ```java
 // TestKis2PhysicsProfile.java
@@ -899,7 +899,7 @@ class TestKis2PhysicsProfile {
 
 (If Step 2 produced a `KIS2` feature-set constant, assert `assertSame(PhysicsFeatureSet.KIS2, ...)` instead and add an assertion on the differing flag.)
 
-- [ ] **Step 4: Run — expect FAIL**, then implement
+- [x] **Step 4: Run — expect FAIL**, then implement
 
 Add to `PhysicsProfile.java` after `SONIC_3K_KNUCKLES`:
 
@@ -975,7 +975,7 @@ public class Kis2PhysicsProvider implements PhysicsProvider {
 
 Check `BRANCH_DIFFS.md` for whether KiS2 applies Knuckles-specific modifiers (compare `PhysicsModifiers.KNUCKLES` usage in `Sonic3kPhysicsProvider`); if the branch shows Knuckles modifier behavior, return `PhysicsModifiers.KNUCKLES` for knuckles via a character-keyed `getModifiers` ONLY if the `PhysicsProvider` interface supports it — it does not today, so if the diff requires it, mirror how `Sonic3kPhysicsProvider` is actually consumed (and prefer adding `getModifiers(String characterType)` as a default method delegating to `getModifiers()` over copying the stateful pattern).
 
-- [ ] **Step 5: Run — expect PASS**, then commit
+- [x] **Step 5: Run — expect PASS**, then commit
 
 ```bash
 mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.game.sonic2.kis2.TestKis2PhysicsProfile" "-DfailIfNoTests=false"
@@ -1001,7 +1001,7 @@ Skills: n/a"
 - Modify: `src/main/java/com/openggf/game/patch/GamePatchRegistry.java` (register default)
 - Test: `src/test/java/com/openggf/game/sonic2/kis2/TestKis2GamePatch.java`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```java
 // TestKis2GamePatch.java
@@ -1063,7 +1063,7 @@ class TestKis2GamePatch {
 
 (If `SonicConfigurationService.getInstance()` isn't the accessor, use whatever construction existing config-consuming tests use — and remember the `@TempDir`/`user.dir` rule if the test triggers config file creation; copy the setup from an existing `SonicConfigurationService` test.)
 
-- [ ] **Step 2: Run — expect FAIL**, then implement
+- [x] **Step 2: Run — expect FAIL**, then implement
 
 ```java
 // Kis2GameModule.java
@@ -1149,7 +1149,7 @@ register(new com.openggf.game.sonic2.kis2.Kis2GamePatch());
 
 (keeping the Task 4 test-vs-production `resetState()` semantics intact).
 
-- [ ] **Step 3: Run this test + the registry tests — expect PASS**, then commit
+- [x] **Step 3: Run this test + the registry tests — expect PASS**, then commit
 
 ```bash
 mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.game.sonic2.kis2.TestKis2GamePatch" "-DfailIfNoTests=false"
@@ -1322,7 +1322,7 @@ Skills: n/a"
 - Modify: `src/main/java/com/openggf/tools/HeadlessGameBoot.java:174-180`
 - Test: `src/test/java/com/openggf/game/patch/TestPatchResolutionAtBoot.java`
 
-- [ ] **Step 1: Wire `Engine.initializeGame`** — after detection succeeds (`Engine.java:505`), before `openGameplaySession`:
+- [x] **Step 1: Wire `Engine.initializeGame`** — after detection succeeds (`Engine.java:505`), before `openGameplaySession`:
 
 ```java
 module = detectedModule.orElseThrow();
@@ -1332,9 +1332,9 @@ module = com.openggf.game.patch.GamePatchRegistry.resolveModule(module,
 
 (`getGameId()` returns the `GameId` enum — use its `code()`/string accessor; check `GameId.java` for the exact name. `configService` is the field Engine already holds.)
 
-- [ ] **Step 2: Wire `HeadlessGameBoot`** — same two lines after `detected.orElseThrow(...)` (`HeadlessGameBoot.java:176`), using the config service available in that scope (`SonicConfigurationService.getInstance()` or however the file already obtains config — match its existing style). This automatically covers `TraceReplaySessionBootstrap`, which boots through config + headless paths (`prepareConfiguration` already writes `MAIN_CHARACTER_CODE`), so a future KiS2 trace activates the patch by recording `knuckles` as main character. Verify by reading `TraceReplaySessionBootstrap` — if it opens a session through a path other than `HeadlessGameBoot`, add the same two lines there too.
+- [x] **Step 2: Wire `HeadlessGameBoot`** — same two lines after `detected.orElseThrow(...)` (`HeadlessGameBoot.java:176`), using the config service available in that scope (`SonicConfigurationService.getInstance()` or however the file already obtains config — match its existing style). This automatically covers `TraceReplaySessionBootstrap`, which boots through config + headless paths (`prepareConfiguration` already writes `MAIN_CHARACTER_CODE`), so a future KiS2 trace activates the patch by recording `knuckles` as main character. Verify by reading `TraceReplaySessionBootstrap` — if it opens a session through a path other than `HeadlessGameBoot`, add the same two lines there too.
 
-- [ ] **Step 3: Write the boot resolution test** (headless, no OpenGL; ROM-gated for the S2 ROM only — patch prerequisites are faked)
+- [x] **Step 3: Write the boot resolution test** (headless, no OpenGL; ROM-gated for the S2 ROM only — patch prerequisites are faked)
 
 ```java
 // TestPatchResolutionAtBoot.java
@@ -1389,7 +1389,7 @@ class TestPatchResolutionAtBoot {
 }
 ```
 
-- [ ] **Step 4: Run + compile-check Engine, then commit**
+- [x] **Step 4: Run + compile-check Engine, then commit**
 
 ```bash
 mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.game.patch.TestPatchResolutionAtBoot" "-DfailIfNoTests=false"
@@ -1595,7 +1595,7 @@ Skills: n/a"
 - Modify: `src/main/java/com/openggf/game/sonic2/kis2/Kis2GameModule.java`
 - Test: `src/test/java/com/openggf/game/sonic2/kis2/TestKis2PlayerArt.java` (ROM-gated)
 
-- [ ] **Step 1: Verify addresses.** Take the art/mapping/DPLC/animation addresses from `docs/kis2/BRANCH_DIFFS.md` §art-mapping-dplc-addresses (Task 1 answer 3). Expected (cross-checked against S3K's verified S&K-side constants — all `< 0x200000`, i.e. inside the logical SK window):
+- [x] **Step 1: Verify addresses.** Take the art/mapping/DPLC/animation addresses from `docs/kis2/BRANCH_DIFFS.md` §art-mapping-dplc-addresses (Task 1 answer 3). Expected (cross-checked against S3K's verified S&K-side constants — all `< 0x200000`, i.e. inside the logical SK window):
 
 | Constant | Expected | Source |
 |---|---|---|
@@ -1611,9 +1611,9 @@ If the branch diff records different addresses for any of these, the branch wins
 java -cp target/classes com.openggf.tools.disasm.RomOffsetFinder --game s3k search ArtUnc_Knuckles
 ```
 
-- [ ] **Step 2: Read the two reference implementations** before writing code: `Sonic3kPlayerArt.loadKnuckles()` (`Sonic3kPlayerArt.java:223-279` — art/mapping/DPLC/animation loading from these addresses) and `CrossGameFeatureProvider.loadPlayerSpriteArt()` (`CrossGameFeatureProvider.java:154-176` — how a donor-loaded `SpriteArtSet` is adapted for a host game, including animation-profile translation). The KiS2 loader composes the same mechanics, reading from the logical SK reader.
+- [x] **Step 2: Read the two reference implementations** before writing code: `Sonic3kPlayerArt.loadKnuckles()` (`Sonic3kPlayerArt.java:223-279` — art/mapping/DPLC/animation loading from these addresses) and `CrossGameFeatureProvider.loadPlayerSpriteArt()` (`CrossGameFeatureProvider.java:154-176` — how a donor-loaded `SpriteArtSet` is adapted for a host game, including animation-profile translation). The KiS2 loader composes the same mechanics, reading from the logical SK reader.
 
-- [ ] **Step 3: Implement `Kis2Constants` + `Kis2PlayerArt`**
+- [x] **Step 3: Implement `Kis2Constants` + `Kis2PlayerArt`**
 
 ```java
 // Kis2Constants.java
@@ -1644,9 +1644,9 @@ public final class Kis2Constants {
 
 `Kis2PlayerArt`: a class with `SpriteArtSet loadKnuckles(RomByteReader skReader)` whose body mirrors `Sonic3kPlayerArt.loadKnuckles()` but takes the reader as a parameter and uses `Kis2Constants`. **Prefer refactoring `Sonic3kPlayerArt.loadKnuckles()` to extract a static reader-parameterized helper (e.g. `loadKnucklesFrom(RomByteReader reader, int artAddr, int artSize, int mapAddr, int dplcAddr, int animAddr)`) and calling it from both sites** — the bytes are the identical S&K cart data, so DRY applies; fidelity is owned by the diff-catalogued addresses and the physics/behavior tasks, not by duplicating this loader. If S3K's loader has S3K-specific entanglements (palette handling, art_tile bases) that don't extract cleanly, copy the minimal loading code into `Kis2PlayerArt` instead and say so in its javadoc.
 
-- [ ] **Step 4: Route it through the patched module.** In `Kis2GameModule`, override the player-art surface. `Sonic2`'s `PlayerSpriteArtProvider.loadPlayerSpriteArt(String characterCode)` is the interface (consumed at `LevelManager.java:1213-1225`); find which `GameModule` method exposes it for S2 (the explorer trail: `Sonic2.java` implements `PlayerSpriteArtProvider` directly) and override that method on `Kis2GameModule` to return a provider that answers `"knuckles"` from `Kis2PlayerArt.loadKnuckles(ctx.openLogicalRom(LogicalRom.SK))` (cache the loaded `SpriteArtSet`; reader opened lazily on first request) and delegates every other character code to the base module's provider. Apply the same animation-profile adaptation `CrossGameFeatureProvider.loadPlayerSpriteArt` performs — the `Knuckles` sprite class must see the same animation contract it sees under donation.
+- [x] **Step 4: Route it through the patched module.** In `Kis2GameModule`, override the player-art surface. `Sonic2`'s `PlayerSpriteArtProvider.loadPlayerSpriteArt(String characterCode)` is the interface (consumed at `LevelManager.java:1213-1225`); find which `GameModule` method exposes it for S2 (the explorer trail: `Sonic2.java` implements `PlayerSpriteArtProvider` directly) and override that method on `Kis2GameModule` to return a provider that answers `"knuckles"` from `Kis2PlayerArt.loadKnuckles(ctx.openLogicalRom(LogicalRom.SK))` (cache the loaded `SpriteArtSet`; reader opened lazily on first request) and delegates every other character code to the base module's provider. Apply the same animation-profile adaptation `CrossGameFeatureProvider.loadPlayerSpriteArt` performs — the `Knuckles` sprite class must see the same animation contract it sees under donation.
 
-- [ ] **Step 5: Write the ROM-gated test**
+- [x] **Step 5: Write the ROM-gated test**
 
 ```java
 // TestKis2PlayerArt.java
@@ -1687,7 +1687,7 @@ class TestKis2PlayerArt {
 
 Replace `artSetFrameCount` with the real `SpriteArtSet` accessor while implementing (check `SpriteArtSet`'s API; the donation tests, if any exist for donor art, show the idiomatic assertion — mirror it).
 
-- [ ] **Step 6: Run (with ROM present) — expect PASS**, then commit
+- [x] **Step 6: Run (with ROM present) — expect PASS**, then commit
 
 ```bash
 mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.game.sonic2.kis2.TestKis2PlayerArt" "-DfailIfNoTests=false"
@@ -1712,13 +1712,13 @@ Skills: n/a"
 - Modify: `src/main/java/com/openggf/game/sonic2/kis2/Kis2GameModule.java`
 - Test: `src/test/java/com/openggf/game/sonic2/kis2/TestKis2IconArt.java` (ROM-gated)
 
-- [ ] **Step 1: Get addresses from the catalogue.** `docs/kis2/BRANCH_DIFFS.md` §monitor-life-icon (Task 1 answer 4) records where the KiS2 patch sources the Knuckles HUD life icon and the 1-up monitor face (S&K side). Add them to `Kis2Constants` with the catalogue citation. If the catalogue shows the patch reuses an address already constant-ized for S3K, still declare it in `Kis2Constants` (KiS2 owns its address set; cross-reference in the comment).
+- [x] **Step 1: Get addresses from the catalogue.** `docs/kis2/BRANCH_DIFFS.md` §monitor-life-icon (Task 1 answer 4) records where the KiS2 patch sources the Knuckles HUD life icon and the 1-up monitor face (S&K side). Add them to `Kis2Constants` with the catalogue citation. If the catalogue shows the patch reuses an address already constant-ized for S3K, still declare it in `Kis2Constants` (KiS2 owns its address set; cross-reference in the comment).
 
-- [ ] **Step 2: Find the override seam.** `Sonic2ObjectArtProvider` already loads `hudLivesPatterns` and exposes life-icon override methods (`Sonic2ObjectArtProvider.java:220-234` — added for donation; stock loads `ART_NEM_SONIC_LIFE_ADDR=0x79346` / `ART_NEM_TAILS_LIFE_ADDR=0x7C20C` per `Sonic2Constants.java:128-130`). The monitor sheet is registered at `Sonic2ObjectArtProvider.java:134` with the Sonic face at `MONITOR_LIFE_ICON_TILE = 340` (`Sonic2ObjectArt.java:45`, loading at `:92-100`). Determine how donation swaps these today (search `CrossGameFeatureProvider` usages of the override methods) and route the KiS2 swap through the **same** seam from `Kis2GameModule` — decompress the Knuckles icon art from the logical SK reader and install it via the existing override hooks. If the seam is reachable only via `CrossGameFeatureProvider` statics, add a module-level hook instead (e.g. the patched module overrides whatever `GameModule` method supplies the object-art provider, wrapping S2's provider with the two icon swaps) — do NOT route patch art through `CrossGameFeatureProvider`.
+- [x] **Step 2: Find the override seam.** `Sonic2ObjectArtProvider` already loads `hudLivesPatterns` and exposes life-icon override methods (`Sonic2ObjectArtProvider.java:220-234` — added for donation; stock loads `ART_NEM_SONIC_LIFE_ADDR=0x79346` / `ART_NEM_TAILS_LIFE_ADDR=0x7C20C` per `Sonic2Constants.java:128-130`). The monitor sheet is registered at `Sonic2ObjectArtProvider.java:134` with the Sonic face at `MONITOR_LIFE_ICON_TILE = 340` (`Sonic2ObjectArt.java:45`, loading at `:92-100`). Determine how donation swaps these today (search `CrossGameFeatureProvider` usages of the override methods) and route the KiS2 swap through the **same** seam from `Kis2GameModule` — decompress the Knuckles icon art from the logical SK reader and install it via the existing override hooks. If the seam is reachable only via `CrossGameFeatureProvider` statics, add a module-level hook instead (e.g. the patched module overrides whatever `GameModule` method supplies the object-art provider, wrapping S2's provider with the two icon swaps) — do NOT route patch art through `CrossGameFeatureProvider`.
 
-- [ ] **Step 3: ROM-gated test** — same shape as `TestKis2PlayerArt`: window the SK half, decompress the life-icon art (Nemesis-compressed art uses the engine's existing `tools` decompressors — match whatever loader `Sonic2ObjectArt` uses for `ART_NEM_SONIC_LIFE_ADDR`), assert non-empty pattern output. Assert the monitor-face swap by loading the patched monitor sheet and verifying the face tile region differs from the stock-S2 sheet (byte-level inequality at `MONITOR_LIFE_ICON_TILE` is sufficient).
+- [x] **Step 3: ROM-gated test** — same shape as `TestKis2PlayerArt`: window the SK half, decompress the life-icon art (Nemesis-compressed art uses the engine's existing `tools` decompressors — match whatever loader `Sonic2ObjectArt` uses for `ART_NEM_SONIC_LIFE_ADDR`), assert non-empty pattern output. Assert the monitor-face swap by loading the patched monitor sheet and verifying the face tile region differs from the stock-S2 sheet (byte-level inequality at `MONITOR_LIFE_ICON_TILE` is sufficient).
 
-- [ ] **Step 4: Run, commit**
+- [x] **Step 4: Run, commit**
 
 ```bash
 mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.game.sonic2.kis2.TestKis2IconArt" "-DfailIfNoTests=false"
@@ -1740,9 +1740,9 @@ Skills: n/a"
 
 **Files:** depends on catalogue findings.
 
-- [ ] **Step 1:** Open `docs/kis2/BRANCH_DIFFS.md` §object-placements (Task 1 answer 5).
-- [ ] **Step 2 (if "None found"):** add a line to the catalogue's placements section: "No placement changes — task 12 no-op." Skip to Task 13. No commit needed.
-- [ ] **Step 3 (if entries exist):** for each changed start position or object placement, express it as overlay data inside `Kis2GameModule` over the surface stock S2 uses for that data (start positions load through the module/level path that reads `Sonic2Constants` start-location tables; object placements through the object-spawn table loading). The patched module overrides the narrowest provider method that supplies that data, returning the catalogued KiS2 values for the affected (zone, act) and delegating everything else. One headless test per entry asserting the patched module reports the KiS2 value and the base module reports the stock value. Commit with the standard trailer block, `Changelog: n/a: incremental kis2 slice step; changelog entry lands in the final docs task`.
+- [x] **Step 1:** Open `docs/kis2/BRANCH_DIFFS.md` §object-placements (Task 1 answer 5).
+- [ ] **Step 2 (if "None found"):** add a line to the catalogue's placements section: "No placement changes — task 12 no-op." Skip to Task 13. No commit needed. *(not applicable: all 18 layouts differ, see the 2026-09-13 amendment)*
+- [x] **Step 3 (if entries exist):** for each changed start position or object placement, express it as overlay data inside `Kis2GameModule` over the surface stock S2 uses for that data (start positions load through the module/level path that reads `Sonic2Constants` start-location tables; object placements through the object-spawn table loading). The patched module overrides the narrowest provider method that supplies that data, returning the catalogued KiS2 values for the affected (zone, act) and delegating everything else. One headless test per entry asserting the patched module reports the KiS2 value and the base module reports the stock value. Commit with the standard trailer block, `Changelog: n/a: incremental kis2 slice step; changelog entry lands in the final docs task`.
 
 ---
 
@@ -1751,14 +1751,14 @@ Skills: n/a"
 **Files:**
 - Test: `src/test/java/com/openggf/game/sonic2/kis2/TestKis2HeadlessSession.java` (ROM-gated: needs S2 ROM + combined S3K ROM)
 
-- [ ] **Step 1: Write the integration test.** Model the setup on an existing headless session test (find one with `grep -r "HeadlessGameBoot" src/test --include=*.java -l` or the `HeadlessTestRunner` examples; use `@ExtendWith(SingletonResetExtension.class)` / `@FullReset` for teardown, and `GamePatchRegistry.resetState()` + re-register `Kis2GamePatch` in `@BeforeEach` since the suite runs forked and other tests reset the registry). Assertions:
+- [x] **Step 1: Write the integration test.** Model the setup on an existing headless session test (find one with `grep -r "HeadlessGameBoot" src/test --include=*.java -l` or the `HeadlessTestRunner` examples; use `@ExtendWith(SingletonResetExtension.class)` / `@FullReset` for teardown, and `GamePatchRegistry.resetState()` + re-register `Kis2GamePatch` in `@BeforeEach` since the suite runs forked and other tests reset the registry). Assertions:
 
 1. With config `MAIN_CHARACTER_CODE=knuckles`, sidekick none, S2 ROM as primary: the opened session's module is a `DelegatingGameModule` with `patchId()=="kis2"`, and `GameModuleRegistry.getCurrent().getPhysicsProvider()` is `Kis2PhysicsProvider`.
 2. The bootstrapped team's main sprite is a `com.openggf.sprites.playable.Knuckles` instance (via `GameplayTeamBootstrap.registerActiveTeam`) and its resolved jump speed reflects `0x600` (read via the sprite's physics getters after `resolvePhysicsProfile()` — see `AbstractPlayableSprite`).
 3. No sidekick sprites under the faithful default; with config sidekick `tails`, a Tails sidekick spawns (config override honored).
 4. With the combined ROM renamed away (simulate via `GamePatchRegistry.setPrerequisiteCheckForTests(rom -> false)`), the same config boots the stock module with a Sonic main sprite (fallback path) — and the warning path doesn't throw.
 
-- [ ] **Step 2: Run — expect PASS** (with ROMs present), fix integration fallout, commit
+- [x] **Step 2: Run — expect PASS** (with ROMs present), fix integration fallout, commit
 
 ```bash
 mvn "-Dmse=off" surefire:test "-Dtest=com.openggf.game.sonic2.kis2.TestKis2HeadlessSession" "-DfailIfNoTests=false"
@@ -1789,14 +1789,14 @@ mvn "-Dmse=off" test
 
 Expected: no regressions attributable to this branch (compare failures against the known-flaky list: lwjgl/glfw link errors, `TestBundledConfigResource`). The S3K gate tests must stay green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`.
 
-- [ ] **Step 2: Documentation updates**
+- [x] **Step 2: Documentation updates**
   - `CHANGELOG.md`: one entry covering the GamePatch framework + KiS2 core slice.
   - `docs/status/known-discrepancies.md`: "KiS2 faithful mode is Knuckles alone; the config/launch sidekick selection can add sidekicks (intentional divergence). Trace work uses the faithful default."
   - `ROADMAP.md:235-241`: annotate the KiS2 item with what the core slice delivered and what remains (title/level-select flow, special stages, Super Knuckles, 2P, traces).
   - `CLAUDE.md` + `AGENTS.md`: short subsection under Multi-Game Support describing `com.openggf.game.patch` (GamePatch/registry/choke points) and the KiS2 patch package.
   - Guide ROM tables (`docs/guide/playing/getting-started.md` etc.): note Knuckles-in-S2 requires the combined S3K ROM present.
 
-- [ ] **Step 3: Final commit** — trailers must reflect what's staged:
+- [x] **Step 3: Final commit** — trailers must reflect what's staged:
 
 ```bash
 git add CHANGELOG.md docs/status/known-discrepancies.md ROADMAP.md CLAUDE.md AGENTS.md docs/guide/

@@ -6,6 +6,19 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Knuckles in Sonic 2 (tier one):** selecting Knuckles as the Sonic 2 main
+  character now activates a built-in game patch implemented from the s2disasm
+  `knuckles-in-sonic-2` branch instead of S3K donation: KiS2 physics (`$600`
+  jump, `$300` underwater, single-facing balance, KiS2 landing form and duck
+  hit-box), glide and climb, Knuckles' art converted through the lock-on
+  program's `ArtConvTable` with the S2-layout Knuckles palette, and the
+  rewritten object layouts read from the `Off_Objects_KiS2` table through
+  the lock-on address space. It needs only the S3K image (S&K half) and the
+  Sonic 2 ROM. Casino Night keeps the stock layouts and every chip-resident
+  asset (title, special stage, ending banner, recoloured icons) is unchanged
+  until tier two; see the known-discrepancies entry and
+  `docs/kis2/BRANCH_DIFFS.md`.
+
 - **HCZ1 miniboss:** retain the vertical arena lock and full rocket slowdown;
   match the body, rockets and individual exhausts to ROM sprite priorities and
   flicker gates. Restore the whirlpool slowdown, bubble animation and depth,

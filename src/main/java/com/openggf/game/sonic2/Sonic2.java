@@ -12,6 +12,7 @@ import com.openggf.game.sonic2.audio.Sonic2AudioProfile;
 import com.openggf.game.sonic2.audio.Sonic2Music;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.level.Level;
+import com.openggf.level.Palette;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -133,6 +134,7 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
         ZoneAct zoneAct = getZoneAct(levelIdx);
         ensurePlacementHelpers();
         int characterPaletteAddr = getCharacterPaletteAddr();
+        Palette characterPaletteOverride = characterPaletteOverride();
 
         int[] levelPaletteInfo = getLevelPaletteInfo(zoneAct);
         int levelPalettesAddr = levelPaletteInfo[0];
@@ -154,7 +156,8 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
             // Zone uses custom resource plan with overlay composition
             return new Sonic2Level(rom, zoneAct.zone(), characterPaletteAddr, levelPalettesAddr, levelPalettesSize,
                     resourcePlan, mapAddr, solidTileHeightsAddr, solidTileWidthsAddr,
-                    solidTileAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet, levelBoundariesAddr);
+                    solidTileAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet, levelBoundariesAddr,
+                    characterPaletteOverride);
         }
 
         // Standard loading via ROM directory tables
@@ -173,14 +176,33 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
                     patternsAddr, chunksAddr, blocksAddr, collisionAddr, altCollisionAddr);
             return new Sonic2Level(rom, zoneAct.zone(), characterPaletteAddr, levelPalettesAddr, levelPalettesSize,
                     wfzPlan, mapAddr, solidTileHeightsAddr, solidTileWidthsAddr,
-                    solidTileAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet, levelBoundariesAddr);
+                    solidTileAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet, levelBoundariesAddr,
+                    characterPaletteOverride);
         }
 
         return new Sonic2Level(rom, zoneAct.zone(), characterPaletteAddr, levelPalettesAddr, levelPalettesSize,
                 patternsAddr,
                 chunksAddr,
                 blocksAddr, mapAddr, collisionAddr, altCollisionAddr, solidTileHeightsAddr, solidTileWidthsAddr,
-                solidTileAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet, levelBoundariesAddr);
+                solidTileAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet, levelBoundariesAddr,
+                characterPaletteOverride);
+    }
+
+    /**
+     * Object-layout source for this game data. A patch that reads layouts
+     * from another cart (the S&amp;K lock-on) overrides this seam.
+     */
+    protected Sonic2ObjectPlacement createObjectPlacement(RomByteReader romReader) {
+        return new Sonic2ObjectPlacement(romReader);
+    }
+
+    /**
+     * Palette line 0 replacement for the level, or {@code null} to read the
+     * stock character line from {@code Pal_SonicTails}. A patch that changes
+     * the main character's colours overrides this seam.
+     */
+    protected Palette characterPaletteOverride() {
+        return null;
     }
 
     @Override
@@ -387,7 +409,7 @@ public class Sonic2 extends Game implements PlayerSpriteArtProvider, SpindashDus
             romReader = RomByteReader.fromRom(rom);
         }
         if (objectPlacement == null) {
-            objectPlacement = new Sonic2ObjectPlacement(romReader);
+            objectPlacement = createObjectPlacement(romReader);
         }
         if (ringPlacement == null) {
             ringPlacement = new Sonic2RingPlacement(romReader);
