@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.kis2;
 
+import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.sonic2.Sonic2;
@@ -19,11 +20,13 @@ import java.util.Objects;
 final class Kis2Game extends Sonic2 {
 
     private final RomByteReader sk;
+    private final PlayerSpriteArtProvider skKnucklesArt;
     private Kis2PlayerArt playerArt;
 
-    Kis2Game(Rom rom, RomByteReader sk) {
+    Kis2Game(Rom rom, RomByteReader sk, PlayerSpriteArtProvider skKnucklesArt) {
         super(rom);
         this.sk = Objects.requireNonNull(sk, "sk");
+        this.skKnucklesArt = Objects.requireNonNull(skKnucklesArt, "skKnucklesArt");
     }
 
     @Override
@@ -59,7 +62,7 @@ final class Kis2Game extends Sonic2 {
 
     Kis2PlayerArt playerArt() {
         if (playerArt == null) {
-            playerArt = new Kis2PlayerArt(sk);
+            playerArt = new Kis2PlayerArt(sk, skKnucklesArt);
         }
         return playerArt;
     }

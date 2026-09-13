@@ -114,7 +114,10 @@ class TestKis2HeadlessBoot {
 
             Level level = GameServices.level().getCurrentLevel();
             assertEquals(157, level.getObjects().size(), "EHZ1 uses the KiS2 layout (BRANCH_DIFFS.md)");
-            Palette expected = new Kis2PlayerArt(LogicalRomResolver.windowSkFromCombined(s3kBytes))
+            var skWindow = LogicalRomResolver.windowSkFromCombined(s3kBytes);
+            Palette expected = new Kis2PlayerArt(skWindow,
+                    com.openggf.game.BuiltInRomDetectors.forGame(com.openggf.game.GameId.S3K)
+                            .createModule().getCrossGameDonorProvider().createPlayerArtProvider(skWindow))
                     .loadKnucklesPalette();
             Palette actual = level.getPalette(0);
             for (int i = 0; i < 16; i++) {

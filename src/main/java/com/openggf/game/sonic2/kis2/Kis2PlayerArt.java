@@ -1,25 +1,22 @@
 package com.openggf.game.sonic2.kis2;
 
+import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.RomByteReader;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
-import com.openggf.game.sonic3k.S3kSpriteDataLoader;
-import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.level.Palette;
 import com.openggf.level.Pattern;
 import com.openggf.sprites.animation.ScriptedVelocityAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationProfile;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
-import com.openggf.level.render.SpriteDplcFrame;
-import com.openggf.level.render.SpriteMappingFrame;
 import com.openggf.util.PatternDecompressor;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
-import java.util.List;
+import java.util.Objects;
 
 /**
  * Knuckles' player art for the lock-on patch, read from the logical S&amp;K ROM
@@ -32,18 +29,31 @@ import java.util.List;
  * indices land on Sonic 2's line-0 layout. The engine converts the whole tile
  * set once at load and draws with the S2-layout line
  * ({@code Pal_KnuxEndPose}).
+ *
+ * <p>The S&amp;K-format tiles, mappings, DPLCs and animation scripts come through
+ * the S&amp;K donor surface ({@code CrossGameDonorProvider.createPlayerArtProvider})
+ * so this package never depends on the S3K game package; the lock-on program
+ * reads exactly those S&amp;K tables ({@code ArtUnc_Knuckles},
+ * {@code MapUnc_Knuckles}, {@code MapRUnc_Knuckles}, {@code AniKnuckles}).
  */
 public final class Kis2PlayerArt {
 
     private static final int NEMESIS_READ_SIZE = 8192;
 
     private final RomByteReader sk;
+    private final PlayerSpriteArtProvider skKnucklesArt;
     private SpriteArtSet cachedKnuckles;
     private Palette cachedPalette;
     private Pattern[] cachedLifeIcon;
 
-    public Kis2PlayerArt(RomByteReader sk) {
-        this.sk = sk;
+    /**
+     * @param sk            the logical S&amp;K ROM
+     * @param skKnucklesArt the S&amp;K donor's player-art provider over {@code sk},
+     *                      answering {@code "knuckles"} with the S&amp;K-format set
+     */
+    public Kis2PlayerArt(RomByteReader sk, PlayerSpriteArtProvider skKnucklesArt) {
+        this.sk = Objects.requireNonNull(sk, "sk");
+        this.skKnucklesArt = Objects.requireNonNull(skKnucklesArt, "skKnucklesArt");
     }
 
     /** Knuckles' sprite set, converted to S2 palette indices. */
@@ -51,26 +61,27 @@ public final class Kis2PlayerArt {
         if (cachedKnuckles != null) {
             return cachedKnuckles;
         }
-        Pattern[] tiles = S3kSpriteDataLoader.loadArtTiles(sk,
-                Kis2Constants.ART_UNC_KNUCKLES, Kis2Constants.ART_UNC_KNUCKLES_SIZE);
+        SpriteArtSet sk3Format = skKnucklesArt.loadPlayerSpriteArt("knuckles");
+        if (sk3Format == null) {
+            throw new IOException("S&K donor art provider returned no Knuckles art");
+        }
+        // Copy before converting: the donor provider caches its tile array.
+        Pattern[] tiles = new Pattern[sk3Format.artTiles().length];
+        for (int i = 0; i < tiles.length; i++) {
+            tiles[i] = new Pattern();
+            tiles[i].copyFrom(sk3Format.artTiles()[i]);
+        }
         convertToSonic2Layout(tiles);
-        List<SpriteMappingFrame> mappingFrames =
-                S3kSpriteDataLoader.loadMappingFrames(sk, Kis2Constants.MAP_UNC_KNUCKLES);
-        List<SpriteDplcFrame> dplcFrames =
-                S3kSpriteDataLoader.loadDplcFrames(sk, Kis2Constants.MAP_RUNC_KNUCKLES);
-        SpriteAnimationSet animationSet = S3kSpriteDataLoader.loadAnimationSet(sk,
-                Kis2Constants.KNUCKLES_ANIM_DATA, Kis2Constants.KNUCKLES_ANIM_SCRIPT_COUNT);
-        int bankSize = S3kSpriteDataLoader.resolveBankSize(dplcFrames, mappingFrames);
         cachedKnuckles = new SpriteArtSet(
                 tiles,
-                mappingFrames,
-                dplcFrames,
+                sk3Format.mappingFrames(),
+                sk3Format.dplcFrames(),
                 0,                               // palette line 0 (Obj01_Init art_tile)
                 Sonic2Constants.ART_TILE_SONIC,  // ArtTile_ArtUnc_Sonic ($780): Knuckles takes Sonic's slot
                 1,
-                bankSize,
+                sk3Format.bankSize(),
                 animationProfile(),
-                animationSet);
+                sk3Format.animationSet());
         return cachedKnuckles;
     }
 
@@ -125,25 +136,25 @@ public final class Kis2PlayerArt {
      */
     private static SpriteAnimationProfile animationProfile() {
         return new ScriptedVelocityAnimationProfile()
-                .setIdleAnimId(Sonic3kAnimationIds.WAIT)
-                .setWalkAnimId(Sonic3kAnimationIds.WALK)
-                .setRunAnimId(Sonic3kAnimationIds.RUN)
+                .setIdleAnimId(Kis2Constants.ANIM_WAIT)
+                .setWalkAnimId(Kis2Constants.ANIM_WALK)
+                .setRunAnimId(Kis2Constants.ANIM_RUN)
                 .setRunFramesUseWalkAnimationId(true)
-                .setRollAnimId(Sonic3kAnimationIds.ROLL)
-                .setRoll2AnimId(Sonic3kAnimationIds.ROLL2)
-                .setPushAnimId(Sonic3kAnimationIds.PUSH)
+                .setRollAnimId(Kis2Constants.ANIM_ROLL)
+                .setRoll2AnimId(Kis2Constants.ANIM_ROLL2)
+                .setPushAnimId(Kis2Constants.ANIM_PUSH)
                 .setPushUsesWalkSpecialHandler(true)
                 .setPushDelayShift(8)            // KiS2 SAnim_Push: lsr.w #8,d2
-                .setDuckAnimId(Sonic3kAnimationIds.DUCK)
-                .setLookUpAnimId(Sonic3kAnimationIds.LOOK_UP)
-                .setSpindashAnimId(Sonic3kAnimationIds.SPINDASH)
-                .setSpringAnimId(Sonic3kAnimationIds.SPRING)
-                .setDeathAnimId(Sonic3kAnimationIds.DEATH)
-                .setDrownAnimId(Sonic3kAnimationIds.DROWN)
-                .setHurtAnimId(Sonic3kAnimationIds.HURT)
-                .setSkidAnimId(Sonic3kAnimationIds.SKID)
-                .setAirAnimId(Sonic3kAnimationIds.WALK)
-                .setBalanceAnimId(Sonic3kAnimationIds.BALANCE)
+                .setDuckAnimId(Kis2Constants.ANIM_DUCK)
+                .setLookUpAnimId(Kis2Constants.ANIM_LOOK_UP)
+                .setSpindashAnimId(Kis2Constants.ANIM_SPINDASH)
+                .setSpringAnimId(Kis2Constants.ANIM_SPRING)
+                .setDeathAnimId(Kis2Constants.ANIM_DEATH)
+                .setDrownAnimId(Kis2Constants.ANIM_DROWN)
+                .setHurtAnimId(Kis2Constants.ANIM_HURT)
+                .setSkidAnimId(Kis2Constants.ANIM_STOP)
+                .setAirAnimId(Kis2Constants.ANIM_WALK)
+                .setBalanceAnimId(Kis2Constants.ANIM_BALANCE)
                 .setWalkSpeedThreshold(0x40)
                 .setRunSpeedThreshold(0x600)     // SAnim_WalkRun cmpi.w #$600,d2
                 .setFallbackFrame(0)
