@@ -29,6 +29,8 @@ import com.openggf.sprites.playable.Tails;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -53,10 +55,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Cross-cutting FBZ compatibility audit.
  *
- * <p>Each matrix row first executes the real synchronous FBZ1 -> FBZ2 reload,
- * then reboots a fresh production session for the cold-start FBZ2 mechanical
- * route through traversal, both bosses, capsule, exit, and the Sandopolis Act
- * 0 request. The complete-run BK2 trace, not this direct Act-2 route, is the
+ * <p>Synchronous reloads, local interactions and checkpoint slices execute
+ * independently of the complete routes. The ordinary suite retains a native
+ * Sonic/Tails route; the fbz-routes profile selects all eleven complete routes
+ * through traversal, both bosses, capsule, exit and the Sandopolis Act 0 request.
+ * The complete-run BK2 trace, not this direct Act-2 route, is the
  * oracle for inherited magnetic cadence.</p>
  */
 @RequiresRom(SonicGame.SONIC_3K)
@@ -119,9 +122,21 @@ class TestFbzCompatibilityMatrix {
         }
     }
 
+    @Test
+    @Tag("slow-suite")
+    void nativePairCompletesRepresentativeRoute() throws Exception {
+        verifyConfiguredTeamCompleteRoute(teamCases()
+                .filter(team -> team.sidekicks().equals("tails")).findFirst().orElseThrow());
+    }
+
+    @Tag("fbz-route")
     @ParameterizedTest(name = "multi-sidekick complete route: {0}")
     @MethodSource("teamCases")
     void configuredTeamSurvivesSharedPlaneAndBossState(TeamCase team) throws Exception {
+        verifyConfiguredTeamCompleteRoute(team);
+    }
+
+    private static void verifyConfiguredTeamCompleteRoute(TeamCase team) throws Exception {
         try (ConfigurationScope ignored = ConfigurationScope.open()) {
             boolean nativePair = team.sidekicks().equals("tails");
             boolean donorOff = team.sidekicks().isBlank();
@@ -175,27 +190,10 @@ class TestFbzCompatibilityMatrix {
                 assertFalse(completion.s1DonationLowerLoopAssistConsumed(),
                         "off must not consume the S1-only lower-loop assist");
             }
-            Evidence optional = FbzCompatibilityInteractionProbe.run(320);
-            assertOptionalInteractionCompatibility(optional, team.label());
-
-            // Authority isolation is a separate production fixture after the
-            // fresh cold-start mechanical route.
-            restartFreshGameplaySession();
-            HeadlessTestFixture fixture = buildAct2Fixture();
-            assertTeamGraph(fixture.sprite(), team);
-            assertExtraSidekicksCannotTriggerPlaneEvent(fixture);
-            fixture = buildAct2Fixture();
-            assertTeamGraph(fixture.sprite(), team);
-
-            RouteSliceEvidence evidence = runStarpost6ToBoss(fixture);
-            assertRouteSliceReachedBossAlive(fixture, evidence, team.label());
-            assertTeamGraph(fixture.sprite(), team);
-            // Independent fixture: these width assertions observe event timing
-            // and arena bounds beyond the team slice's ownership assertions.
-            if (nativePair) assertViewportBossSlice(320);
         }
     }
 
+    @Tag("fbz-route")
     @ParameterizedTest(name = "widescreen complete route: {0}px")
     @MethodSource("additionalWidthCases")
     void viewportKeepsWorldThresholdsCullingAndBossContainment(
@@ -211,14 +209,11 @@ class TestFbzCompatibilityMatrix {
                         GameServices.graphics().setViewport(0, 0, width, 224);
                     });
             assertMandatoryRouteCompatibility(completion, width + "px");
-            Evidence optional = FbzCompatibilityInteractionProbe.run(width);
-            assertOptionalInteractionCompatibility(optional, width + "px");
             assertViewportCompletion(completion, width);
-            assertViewportBossSlice(width);
-
         }
     }
 
+    @Tag("fbz-route")
     @ParameterizedTest(name = "donated complete mandatory route: {0}")
     @MethodSource("activeDonationCases")
     void donatedMovementProfileCanReachTheMandatoryBossEntryWithoutSpindash(
@@ -259,16 +254,83 @@ class TestFbzCompatibilityMatrix {
                 assertFalse(completion.s1DonationLowerLoopAssistConsumed(),
                         donor + " must not consume the S1-only lower-loop assist");
             }
-            // Mandatory traversal follows the authored lower route. Upper
-            // optional branches (including the placed $09C8 $E5 crane) are
-            // exercised below through exact production-object probes instead
-            // of being misclassified as boss-entry requirements.
-            Evidence optional = FbzCompatibilityInteractionProbe.run(320);
-            assertOptionalInteractionCompatibility(optional, "donor=" + donor);
             if (donor.equals("s1")) {
                 assertFalse(completion.spindashObserved(),
                         "the S1-donated complete route must not depend on unavailable spindash");
             }
+        }
+    }
+
+    @ParameterizedTest(name = "team event authority: {0}")
+    @MethodSource("teamCases")
+    void configuredTeamRetainsPlaneEventAuthority(TeamCase team) throws Exception {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureTeam(team);
+            HeadlessTestFixture fixture = buildAct2Fixture();
+            assertTeamGraph(fixture.sprite(), team);
+            assertExtraSidekicksCannotTriggerPlaneEvent(fixture);
+        }
+    }
+
+    @ParameterizedTest(name = "team checkpoint-to-boss slice: {0}")
+    @MethodSource("teamCases")
+    void configuredTeamKeepsBossSliceOwnership(TeamCase team) throws Exception {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureTeam(team);
+            HeadlessTestFixture fixture = buildAct2Fixture();
+            assertTeamGraph(fixture.sprite(), team);
+            RouteSliceEvidence evidence = runStarpost6ToBoss(fixture);
+            assertRouteSliceReachedBossAlive(fixture, evidence, team.label());
+            assertTeamGraph(fixture.sprite(), team);
+        }
+    }
+
+    @ParameterizedTest(name = "viewport checkpoint-to-boss slice: {0}px")
+    @MethodSource("widthCases")
+    void viewportKeepsBossSliceThresholdsAndContainment(WidescreenAspect aspect, int width)
+            throws Exception {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureNative("tails", aspect, width);
+            assertViewportBossSlice(width);
+        }
+    }
+
+    @ParameterizedTest(name = "team local interactions: {0}")
+    @MethodSource("teamCases")
+    void configuredTeamOptionalInteractions(TeamCase team) throws Exception {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureTeam(team);
+            assertOptionalInteractionCompatibility(FbzCompatibilityInteractionProbe.run(320), team.label());
+        }
+    }
+
+    @ParameterizedTest(name = "viewport local interactions: {0}px")
+    @MethodSource("additionalWidthCases")
+    void viewportOptionalInteractions(WidescreenAspect aspect, int width) {
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureNative("tails", aspect, width);
+            assertOptionalInteractionCompatibility(FbzCompatibilityInteractionProbe.run(width), width + "px");
+        }
+    }
+
+    @ParameterizedTest(name = "donor local interactions: {0}")
+    @MethodSource("activeDonationCases")
+    void donatedOptionalInteractions(String donor, Path donorRom) throws Exception {
+        assertNotNull(donorRom, "Required " + donor + " donor ROM is unavailable");
+        try (ConfigurationScope ignored = ConfigurationScope.open()) {
+            configureCompatibility("", WidescreenAspect.NATIVE_4_3, donor, donorRom);
+            assertTrue(CrossGameFeatureProvider.isActive());
+            assertEquals(donor, CrossGameFeatureProvider.getInstance().getDonorGameId());
+            assertOptionalInteractionCompatibility(FbzCompatibilityInteractionProbe.run(320), "donor=" + donor);
+        }
+    }
+
+    private static void configureTeam(TeamCase team) throws Exception {
+        // Solo also exercises the native donor-off bootstrap contract.
+        if (team.sidekicks().isBlank()) {
+            configureCompatibility("", WidescreenAspect.NATIVE_4_3, "off", null);
+        } else {
+            configureNative(team.sidekicks(), WidescreenAspect.NATIVE_4_3);
         }
     }
 

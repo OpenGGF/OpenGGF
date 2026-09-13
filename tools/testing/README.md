@@ -82,6 +82,13 @@ Guards keep their separate single-worker invocation. Selection, task accounting 
 limits are unchanged; compare matched runs before choosing two workers on a new machine.
 This distributes test classes between JVMs, so one long class cannot use both workers.
 
+The ordinary FBZ matrix keeps one full native route plus independent compatibility
+checks. `mvn -Dmse=off -Pfbz-routes test -B` selects the exhaustive eleven-route
+matrix instead; supply all three verified ROM paths as described in the
+[headless guide](../../docs/guide/contributing/headless-testing.md#fbz-compatibility-and-exhaustive-routes).
+Run that additional lane for FBZ traversal changes and exhaustive ROM validation.
+The category runner's ordinary/guard result does not include this lane.
+
 The runner discovers existing root `.gen` files by the documented SHA-1 identities and passes
 absolute ROM paths. It never creates ROM links or copies. Missing ROMs still require inspecting
 skips; a successful exit alone does not establish ROM-backed coverage.

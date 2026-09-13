@@ -37,7 +37,7 @@
         <surefire.forkCount>1</surefire.forkCount>
         <surefire.reuseForks>true</surefire.reuseForks>
         <surefire.runOrder>alphabetical</surefire.runOrder>
-        <surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave</surefire.excludedGroups>
+        <surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
         <!-- Escape hatch for the validate-phase build-JDK check; see the antrun
              verify-build-jdk execution. -->
         <openggf.jdk.check.skip>false</openggf.jdk.check.skip>
@@ -176,7 +176,7 @@
         <profile>
             <id>smoke</id>
             <properties>
-                <surefire.excludedGroups>tracechaser-integration,performance-measurement,slow-suite,audio-reference,audio-stress,audio-local-wave</surefire.excludedGroups>
+                <surefire.excludedGroups>tracechaser-integration,performance-measurement,slow-suite,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>
             </properties>
         </profile>
 
@@ -210,6 +210,20 @@
                     <systemPropertyVariables>
                         <junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
                     </systemPropertyVariables>
+                </configuration>
+            </plugin></plugins></build>
+        </profile>
+        <!-- Exhaustive FBZ routes are separate from independent compatibility
+             checks and the ordinary native Sonic/Tails representative. -->
+        <profile>
+            <id>fbz-routes</id>
+            <build><plugins><plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <runOrder>${surefire.runOrder}</runOrder>
+                    <groups>fbz-route</groups>
+                    <excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave</excludedGroups>
                 </configuration>
             </plugin></plugins></build>
         </profile>

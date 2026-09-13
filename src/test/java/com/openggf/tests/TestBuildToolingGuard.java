@@ -788,6 +788,21 @@ class TestBuildToolingGuard {
     }
 
     @Test
+    void exhaustiveFbzRoutesHaveAnExplicitLane() throws Exception {
+        Document pom = parsePom("pom.xml");
+        assertTrue(property(pom, "surefire.excludedGroups").contains("fbz-route"));
+        Element smoke = profileById(pom, "smoke");
+        assertTrue(smoke.getElementsByTagName("surefire.excludedGroups").item(0)
+                .getTextContent().contains("fbz-route"));
+        Element routes = profileById(pom, "fbz-routes");
+        assertNotNull(routes);
+        assertEquals("fbz-route", routes.getElementsByTagName("groups").item(0)
+                .getTextContent().trim());
+        assertFalse(routes.getElementsByTagName("excludedGroups").item(0)
+                .getTextContent().contains("fbz-route"));
+    }
+
+    @Test
     void deeperAudioLanesMustBeExplicit() throws Exception {
         Document pom = parsePom("pom.xml");
         String excluded = property(pom, "surefire.excludedGroups");
@@ -4082,7 +4097,7 @@ class TestBuildToolingGuard {
                 gitOutput(Path.of("."), "ls-files", "-s", "--", "tools/tracechaser").strip());
 
         String pom = Files.readString(Path.of("pom.xml"));
-        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave</surefire.excludedGroups>"));
+        assertTrue(pom.contains("<surefire.excludedGroups>tracechaser-integration,audio-reference,audio-stress,audio-local-wave,fbz-route</surefire.excludedGroups>"));
         assertTrue(pom.contains("<excludedGroups>${surefire.excludedGroups}</excludedGroups>"));
         assertTrue(pom.contains("<id>tracechaser-integration</id>"));
         for (String agentGuide : List.of("AGENTS.md", "CLAUDE.md")) {
