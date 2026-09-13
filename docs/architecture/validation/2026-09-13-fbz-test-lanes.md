@@ -63,4 +63,72 @@ The plan selects 2,511 ordinary source classes and all guards. Reuse the exact-b
 completed broad benchmark and reserve the receipt's single broad run for the
 integrated develop tree, rather than repeating it in both trees.
 
-Final broad results pending.
+## Integrated broad validation
+
+Command on develop `e7cc8de78` (merge of `b322cd1f4`), unchanged throughout testing:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base ce322996eec8aa9e6fd0e18119ebbab809da07cb \
+  --workers 2 --max-minutes 18 --run
+```
+
+Run `20260913T110426Z-1c51d328`: ordinary 2,513 reports, 19,781 tests,
+19,754 passed, 2 failures, 12 errors, 13 skips, 247.04 s. Compared with the
+same-base completed benchmark, ordinary wall time improved 31.44 s (11.3%).
+This is a single before/after observation, not a repeated statistical estimate.
+
+| Ordinary class | Before seconds | After seconds |
+| --- | ---: | ---: |
+| FBZ compatibility | 85.251 | 23.594 |
+| FBZ Act 1 | 26.050 | 27.486 |
+| Rewind torture | 65.592 | 60.838 |
+| Synthetic OPN2 scripts | 27.022 | 26.896 |
+| S2 request-aware stream | 12.133 | 12.696 |
+| Complete-run capture store | 11.808 | 11.921 |
+| Launcher run branch | 10.495 | 10.368 |
+
+FBZ compatibility class time fell 61.657 s (72.3%). Two-worker wall time
+saves less because the workers overlap. The eleven exhaustive routes remain
+available and still fail; fewer ordinary route failures are a selection change,
+not a fix. Ordinary case count increases by 16: replace eleven route cases with
+one representative and add 26 independently runnable checks.
+
+### Failure and skip comparison
+
+The native representative matches old `configuredTeamSurvivesSharedPlaneAndBossState(TeamCase)[2]`
+at frame 31034, `obj74-crossing-lost-flat-control`, target $2360/player ($2315,$96c).
+`TestObjectPlacementEncoding#commonParserPreservesDescendingFullXOrderInsideOnePlacementColumn`
+still expects [448,384] but receives [384,448]. All twelve error identities below
+match the baseline, including message SHA-256
+`d9fd7e303e2685b9fe63d9e459146487691676d1d0e60884f027bccdda52bd46`
+and deepest cause `IllegalArgumentException: invalid S3K level resource profile`:
+
+
+- `TestS3kModZoneLifecycle#taggedIdentitySurvivesSaveReopenEditorAndRealBackwardSeek`
+- `TestSampleFlappyIntegration#firstForwardUpdateCreatesSixIndependentEntriesAndCoversSuper32By9`
+- `TestSampleFlappyIntegration#engineRestartResetsRunAndRecreatesTheSameInitialSequence`
+- `TestSampleFlappyIntegration#scoreCrossingOneHundredDoesNotRunCollectibleRingBonusLogic`
+- `TestSampleFlappyIntegration#pipeAndVisibleBoundsAlwaysUseCrushDeath`
+- `TestSampleFlappyIntegration#initialTitleCardSeesTheResolvedS3kCustomZonePalette`
+- `TestSampleFlappyIntegration#bootsVisibleNativeTailsAtFixedAnchorAndMaintainsFlight`
+- `TestSampleFlappyIntegration#rewindRestoresAndResimulatesScoreAndLiveRecycleExactly`
+- `TestSampleFlappyIntegration#rewindAcrossFirstControllerUpdateKeepsOneControllerAndSixStablePipes`
+- `TestSampleFlappyIntegration#recycleMovesTheSameEntryAndAdvancesCounterPermutation`
+- `TestSampleFlappyIntegration#onePipeScoresOncePerCycleAndResetEnablesTheNextCycle`
+- `TestSampleFlappyIntegration#customZoneComposesNativeTailsHudCreatorClaimsAndDecodedPipeArt`
+
+The thirteen skips remain optional audio/rewind/rendering/timeline diagnostics,
+unavailable surfaceless EGL, the existing CPZ spin-tube capture assumption, and
+an absent local BizHawk audio reference. No missing-ROM skip occurred.
+
+Guards: 82 reports, 665 passed, zero failures/errors/skips, 177.18 s.
+The added profile-policy check accounts for the extra guard case. Combined
+ordinary and guards: 424.22 s (7m04s), versus 460.65 s (7m41s): 36.43 s saved,
+7.9%. No new or worsened failure was observed; the run remains red because of
+baseline failures. This does not certify route completion or skipped native and
+optional diagnostic coverage.
+
+The final follow-up changes only this evidence document; executable files remain
+those validated at `e7cc8de78`. Consumed runner diagnostics and focused reports are
+removed before delivery. No production source changed.
