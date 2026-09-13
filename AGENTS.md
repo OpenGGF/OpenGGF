@@ -315,6 +315,8 @@ never preserved.
   `s3k-disasm-guide` skill.
 - Trace failures: `trace-replay-bug-fixing`; multiple independent traces:
   `trace-green-fleet`; video: `trace-capture`; recording: `bizhawk-headless-trace`.
+- Picture or movie of any gameplay section: `gameplay-capture`; scripted
+  controller input for it or for a probe: `bk2-input-authoring`.
 - PLC/art queues: `plc-system`, plus `s3k-plc-system` for S3K.
 - Zone work: relevant S3K zone/events/parallax/animated-tiles/palette skill;
   whole-zone delivery: `s3k-zone-bring-up`.
