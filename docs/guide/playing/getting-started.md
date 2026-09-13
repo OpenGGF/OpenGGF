@@ -18,14 +18,24 @@ This page gets you from zero to playing in under five minutes.
 The engine is verified against these specific ROM revisions. Other revisions may produce
 incorrect results.
 
-| Game | Expected Filename | Expected revision and hash |
-|------|-------------------|----------------------------|
-| Sonic 1 | `s1.gen` | World, Revision 01; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
-| Sonic 2 | `s2.gen` | World, Revision 01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
-| Sonic 3&K | `s3k.gen` | World lock-on combined ROM; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
+| Game | Expected revision and hash |
+|------|----------------------------|
+| Sonic 1 | World, Revision 01; CRC32 `AFE05EEE`; SHA-1 `69E102855D4389C3FD1A8F3DC7D193F8EEE5FE5B` |
+| Sonic 2 | World, Revision 01; CRC32 `7B905383`; SHA-1 `8BCA5DCEF1AF3E00098666FD892DC1C2A76333F9` |
+| Sonic 3&K | World lock-on combined ROM; CRC32 `63522553`; SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6` |
 
-ROM filenames can be changed through master-title **Settings** or in `config.yaml` if yours differ. See
-[Configuration](configuration.md) for details.
+Filenames do not matter. Put your images next to `config.yaml` (or in the folder named by
+`roms.directory`) and the engine recognises each one by its size and cartridge header:
+
+- a standalone Sonic 1, Sonic 2, Sonic 3 or Sonic & Knuckles image;
+- a Sonic 3 & Knuckles lock-on dump (4 MiB), which also serves as Sonic 3 and Sonic & Knuckles;
+- a Sonic & Knuckles + Sonic 1 or + Sonic 2 lock-on dump, which also serves the game it carries;
+- a separate Sonic 3 image plus a separate Sonic & Knuckles image, which together boot
+  Sonic 3 & Knuckles with no joining on disk.
+
+The per-game keys (`roms.sonic1`, `roms.sonic2`, `roms.sonic3k`) remain as explicit
+overrides through master-title **Settings** or `config.yaml`. See
+[Configuration](configuration.md) for the full identity table.
 
 ## Install and Run
 
@@ -66,7 +76,7 @@ Linux terminal example:
    tools/testing/install-hooks.sh
    mvn package
    ```
-3. Place your ROM files in the project root directory (next to `pom.xml`).
+3. Place your ROM files in the project root directory (next to `pom.xml`); any filename works.
 4. Run:
    ```
    java -jar target/OpenGGF-0.7.prerelease-jar-with-dependencies.jar
@@ -118,6 +128,7 @@ does not exist, defaults are used. A few settings you might want to change immed
 | Setting | What it does | Default |
 |---------|-------------|---------|
 | `roms.default` | Which game boots when the master title is bypassed (`"s1"`, `"s2"`, or `"s3k"`) | `"s2"` |
+| `roms.directory` | Folder scanned for ROM images, identified by size and header rather than name | `"."` |
 | `startup.masterTitleScreen` | Show game picker on launch | `true` |
 | `display.windowAutosize` | Derive the window size from the aspect preset | `true` |
 | `audio.enabled` | Enable or disable sound | `true` |
