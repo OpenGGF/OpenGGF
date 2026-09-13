@@ -1,6 +1,6 @@
 # Flying Battery Zone outstanding actions
 
-Status updated during the 2026-09-12 route investigation. This branch contains a
+Status updated during the 2026-09-13 route push. This branch contains a
 large FBZ implementation uplift, but FBZ is not yet accepted as pixel-perfect.
 The remaining work is intentionally recorded here rather than hidden behind a
 green completion claim.
@@ -20,7 +20,10 @@ trace parity; investigate the measured timing frontier separately.
 
 ## Native FBZ2 compatibility route
 
-The native cold-Act 2 route remains red. The controller now recovers
+The native cold-Act 2 route now runs from the ROM start to the forced SOZ
+Act 0 request for the native 320px team rows, the 400px and 512px rows and
+the S2 donated profile; see "Arena to exit" and "Compatibility matrix" below
+for the measured rows and the three that remain red. The controller recovers
 from button egress using a fresh live elevator candidate, clears Obj28 layout
 273 exactly once, and proves acquisition and exit of that car. It also waits
 for the following descending car to clear its live spike wall and steers the
@@ -97,15 +100,56 @@ live geometry and AnPal_FBZ polarity only:
   hop across the raised `$28C0` column onto the `$0680` corridor, then clear
   the `$2A80` pit into the `$2B40` subboss arena.
 
-All five team rows and the S2 donated profile now stand against the arena's
-`$2BDD` wall at frames 14,345-14,858 with 55-88 rings and no damage, and
-`Obj_FBZ2Subboss` has allocated its children. The 512px row reaches the same
-`$2BD1` position at frame 14,857 but the route's subboss proxy (`Camera_X_pos
->= $2B30`, the native-width `FBZ2SE_Normal` threshold) reads `$2AD1` there,
-so that row still reports the event unreached; the proxy is width-specific,
-not the route. The remaining fixed-program runs are no longer consumed. The
-next work is the subboss fight, the end boss, the capsule and the exit hall;
-the route currently stops at the arena and fails the SOZ request assertion.
+All five team rows, the 400px and 512px rows and the S2 donated profile
+reach the `$2BDD` arena wall with the act timer intact; the remaining
+fixed-program runs are no longer consumed.
+
+### Arena to exit
+
+A dedicated controller now owns everything after the arena wall, gated on
+live object state only:
+
+- `Obj_FBZ2Subboss`: dodge each beam by running past the machine to the far
+  live side wall (`Fbz2SubbossSolidSideChild`, half-width `$13`) whenever the
+  machine tracks within `$50` of P1, until the seventh cycle releases the arena;
+- arena exit: RIGHT with a hop from the `$2BF0`-`$2C40` ledge, then board the
+  `Obj_FBZEndBossEventControl` plane carrier and ride it at the controller's
+  own offset (`-$123`, then `-$167` once the carrier passes `y=$0380`) so the
+  rebase to the `$2E5C`/`$32B8` lock lands P1 inside the arena;
+- `Obj_FBZEndBoss`: stand at `$2E74` during DESCEND, then meet each ATTACK
+  round with a charged spindash from the far wall timed to the pod's
+  `$0660`-`$0690` bob and the `$78` wait distance, releasing on the frame the
+  roll clears (a jump on the release frame cancels the roll); eight hits;
+- capsule: approach from `$3038` and hop onto the `$307C` capsule button;
+  the forced exit walk to Sandopolis is then production-owned (mask 0).
+
+The earlier route stages that a shifted arrival phase exposed are now gated on
+live geometry too: the `$08C0` shaft is boarded exactly as the BK2 does it
+(stand at `$092B`, walk LEFT for the ~33 frames that reach `$0911` at
+`g=$FE74`, jump when the descending car's centre sits `$08`-`$12` below P1;
+rows 24792-24882), the `$0790` retracting spring is waited for at the `$0795`
+wall instead of by cadence (rows 27102-27432), the `$0C20`-`$0D60` Obj73 ball
+corridor commits only with ACTIVE runway covering P1 and every trailing CPU
+sidekick and all balls risen, an Obj28 release holds while another car of the
+same column spans P1's rolling height, and a TechnoSqueek at body height
+ahead of a running P1 is cleared with a jump-roll.
+
+### Sidekick contract
+
+CPU sidekick deaths are shipped behaviour: the ROM's own Tails dies three
+times in the act-2 rows of `fbz_completerun` (sidekick routine 6 at row 35308
+beside the `$2924` chain descent, 38697 on the plane carrier and 39721 in the
+end-boss arena) and `Tails_CPU_Control` brings it back through the `$7F00`
+respawn each time. The audited team contract is therefore: every death
+respawns within `$100` frames, the team is alive when `Obj_FBZEndBoss`
+allocates and when the SOZ exit is requested, and identity, CPU ownership
+and the leader chain never change. The route still keeps followers safe where
+P1 can: Obj74 crossings budget the runway for the trailing chain
+(`Tails_CPU_Control` loc_13DA6 follows the leader's Pos_table entry 17 frames
+back), the shaft jump waits for the gathered chain, and P1 holds right of the
+`$08C0` column until every sidekick is out of it. The two ring floors the
+route once asserted (`>= 6`) are the ROM's `>= 1`: the BK2 reaches the
+`$082A,$02EC` landing with one ring (rows 23622, 23796, 24081).
 
 Required complete-route evidence remains:
 
@@ -125,13 +169,18 @@ The 13-row matrix remains pending and must not be relabelled PASS:
 - five viewport widths: 320, 400, 512, 640, and 800;
 - donation off, Sonic 1, and Sonic 2.
 
-The 640px and 800px rows and the S1 donated profile never leave the BK2 route
-segment: at frame 2889 they stand at `$0890,$02EC` with two to four rings and
-now fail the lower-floor ring floor there instead of dying later inside the
-removed filler (their earlier frames 25729, 25885 and 7343). The 400px row
-advances to frame 10131, hurt at `$1F92,$07D9` beside the `$1F40` descending
-car. Every remaining row reaches the subboss arena through the lower-crane
-controller; the 512px row is held only by the native-width camera proxy.
+Measured on this branch on 2026-09-13 (`TestFbzCompatibilityMatrix`, 24
+methods): 21 green, 3 red. The five team rows, the 320/400/512px viewport rows
+and the off/S2 donation rows complete the mandatory route to the SOZ request
+(about 23,300-24,300 frames). The 640px and 800px rows and the S1 donated
+profile never leave the 2,889-frame BK2 prefix: all three stand at
+`$08BE,$02EC` when the shaft acquisition times out at frame 5877. The prefix
+is a fixed replay, and a wider viewport activates the `$0818` chain's
+neighbours in another phase: the Obj_TechnoSqueek that knocks the BK2 player
+off the chain at row 23622 is absent, so P1 rides the chain into the
+`$0810,$0290` spikes and every later authored input lands elsewhere; the S1
+profile diverges by physics before that. The next work is to replace that
+prefix with live-geometry controllers like the rest of the route.
 
 After the native route is green, run the focused donation, team, and viewport
 methods, then the full `TestFbzCompatibilityMatrix`. The S1 row must prove that

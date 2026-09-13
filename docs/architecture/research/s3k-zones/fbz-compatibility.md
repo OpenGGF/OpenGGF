@@ -1,10 +1,11 @@
 # Flying Battery Zone compatibility matrix
 
-> **2026-09-12 investigation:** the complete-route and 13-row compatibility
-> gates remain pending. The native controller clears the former button/Obj28
-> recovery frontier and reaches a later spike/magnetic-platform interaction.
-> See [outstanding actions](fbz-outstanding-actions.md) for current measured
-> blockers. The focused slices below do not establish complete-route PASS.
+> **2026-09-13 route push:** the native complete route now reaches the forced
+> SOZ request; 21 of the 24 `TestFbzCompatibilityMatrix` methods pass. The
+> 640px, 800px and S1 rows remain red inside the fixed 2,889-frame BK2 prefix.
+> See [outstanding actions](fbz-outstanding-actions.md) for the measured
+> blockers. The focused slices below never establish complete-route PASS on
+> their own; the complete-route cells record the full-route result.
 
 This is the extension-compatibility gate for the production FBZ runtime. It
 supplements, but never replaces, native disassembly parity, the uninterrupted
@@ -60,17 +61,22 @@ because the completion path bypasses them.
 
 | Configuration | Runtime participants | Complete route | Authority/art-bank slice |
 |---|---|---:|---:|
-| Sonic | none | PENDING | PASS |
-| Sonic + Tails | `tails_p2` | PENDING | PASS |
-| Sonic + Tails + Knuckles | `tails_p2`, `knuckles_p3` | PENDING | PASS |
-| Sonic + Tails + Knuckles + Sonic | `tails_p2`, `knuckles_p3`, `sonic_p4` | PENDING | PASS |
-| Sonic + three duplicate Sonics | `sonic_p2`, `sonic_p3`, `sonic_p4` | PENDING | PASS |
+| Sonic | none | PASS (2026-09-13) | PASS |
+| Sonic + Tails | `tails_p2` | PASS (2026-09-13) | PASS |
+| Sonic + Tails + Knuckles | `tails_p2`, `knuckles_p3` | PASS (2026-09-13) | PASS |
+| Sonic + Tails + Knuckles + Sonic | `tails_p2`, `knuckles_p3`, `sonic_p4` | PASS (2026-09-13) | PASS |
+| Sonic + three duplicate Sonics | `sonic_p2`, `sonic_p3`, `sonic_p4` | PASS (2026-09-13) | PASS |
 
 The authority slice deliberately places every extra sidekick beyond world X
 `$2E80` while P1 remains below it and proves that the production controller does
 not advance. Every frame of each complete row accumulates and reasserts the exact
-sprite identities, CPU-control ownership, alive state, participant order, and
-daisy-chain leaders; endpoint-only survival is not accepted.
+sprite identities, CPU-control ownership, participant order, and daisy-chain
+leaders. Sidekick death is audited as the ROM plays it: the BK2's own CPU
+Tails dies three times in act 2 (rows 35308, 38697 and 39721) and returns
+through the `$7F00` respawn, so each row requires every death to respawn
+within `$100` frames, the whole team alive when `Obj_FBZEndBoss` allocates
+and when the SOZ exit is requested, and the first death's evidence in the
+report.
 Live renderer diagnostics prove that every sidekick owns a non-overlapping DPLC
 range in the virtual pattern-ID space, including all three duplicate Sonics.
 
@@ -78,11 +84,11 @@ range in the virtual pattern-ID space, including all three duplicate Sonics.
 
 | Preset | Width | Complete route | Exact lock/rebase slice |
 |---|---:|---:|---:|
-| `NATIVE_4_3` | 320 | PENDING | PASS |
-| `WIDE_16_9` | 400 | PENDING | PASS |
-| explicit native-pixel override | 512 | PENDING | PASS |
-| explicit native-pixel override | 640 | PENDING | PASS |
-| `SUPER_32_9` | 800 | PENDING | PASS |
+| `NATIVE_4_3` | 320 | PASS (2026-09-13, team rows) | PASS |
+| `WIDE_16_9` | 400 | PASS (2026-09-13) | PASS |
+| explicit native-pixel override | 512 | PASS (2026-09-13) | PASS |
+| explicit native-pixel override | 640 | FAIL: frame 5877 at `$08BE,$02EC` | PASS |
+| `SUPER_32_9` | 800 | FAIL: frame 5877 at `$08BE,$02EC` | PASS |
 
 The September controller checks advance the 640px row from frame 1455 to
 25729 and the 800px row from 1291 to 25751. The former now dies near the lower
@@ -95,8 +101,12 @@ and the polarity-gated corridor controllers then carry it to the `$26C8`
 spider crane with the act timer intact, and the lower-crane controller (crane
 pickup, chain descents, floor door, spindash under the raised columns, rising
 car, launcher-into-cage lift, the `$2800` step and the raised `$2840`/`$28C0`
-columns) carries it on to the `$2B40` subboss arena at frame 14,858. See
-[outstanding actions](fbz-outstanding-actions.md) for the measured rows.
+columns) carries it on to the `$2B40` subboss arena at frame 14,858, and the
+arena-to-exit controller (subboss beams, plane carrier, end boss, capsule)
+completes it. The 400px row additionally needed the shaft boarding, spring
+wait, Obj28 other-car and TechnoSqueek gates described in
+[outstanding actions](fbz-outstanding-actions.md); the 640px and 800px rows
+diverge inside the fixed BK2 prefix and are the measured remaining rows.
 
 Every width asserts world-coordinate thresholds, ordinary nonpersistent
 placement entering at the right viewport frontier and culling at the left
@@ -116,9 +126,9 @@ rebase subsequently normalizes both camera words to `$32B8-$45C = $2E5C`.
 
 | Capability profile | Donor ROM | Complete mandatory route | Spindash dependency |
 |---|---|---:|---:|
-| Off | none | PENDING | no |
-| Sonic 1 donation | discovered S1 REV01 ROM | PENDING | must remain absent |
-| Sonic 2 donation | discovered S2 REV01 ROM | PENDING | no required workaround found |
+| Off | none | PASS (2026-09-13) | no |
+| Sonic 1 donation | discovered S1 REV01 ROM | FAIL: frame 5877 at `$08BE,$02EC` | must remain absent |
+| Sonic 2 donation | discovered S2 REV01 ROM | PASS (2026-09-13) | no required workaround found |
 
 Donation is configured before any playable sprite or level is created. The donor
 provider is initialized against the S3K host module, then the route starts in a
@@ -157,10 +167,12 @@ for Tails P2.
 
 Focused authority/lock coverage and all four native configuration rows pass. The
 exact `$74` optional probe and its generic later-solid dead-rider cleanup
-regression also pass in isolation. The complete-route cells remain `PENDING`
-until the post-cage native-start controller oracle is green without reverting
-the ROM-accurate stationary-cage behavior. They must not be relabelled PASS from
-the narrower slices.
+regression also pass in isolation. The complete-route cells marked PASS were
+measured on 2026-09-13 by the full `TestFbzCompatibilityMatrix` run on this
+branch (21 of 24 methods green) without reverting the ROM-accurate
+stationary-cage behavior; the 640px, 800px and S1 cells stay FAIL until the
+fixed BK2 prefix is replaced by controllers. Narrower slices never relabel a
+cell.
 
 The compatibility matrix contains 13 rows: five multi-sidekick teams, five
 viewport widths, and three donation profiles. Every row runs both the complete

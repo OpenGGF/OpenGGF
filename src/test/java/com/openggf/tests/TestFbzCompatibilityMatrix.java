@@ -155,8 +155,21 @@ class TestFbzCompatibilityMatrix {
                     "every complete-route frame must audit the configured team");
             assertTrue(completion.sidekickIdentityOrderPreserved(),
                     "sidekick identity/order changed during the complete route");
-            assertTrue(completion.sidekickAliveEveryFrame(),
-                    "a configured sidekick was dead during the complete route");
+            // CPU sidekick deaths are shipped behaviour (the ROM's own Tails dies
+            // three times in fbz_completerun act 2 and Tails_CPU_Control respawns
+            // it each time); the contract is that every death respawns, and that
+            // the team is alive at the end boss and at the SOZ exit.
+            assertTrue(completion.sidekickRespawnedAfterEveryDeath(),
+                    "a configured sidekick stayed dead beyond the CPU respawn window "
+                            + "(longest streak " + completion.sidekickLongestDeadStreak()
+                            + " frames, first death " + completion.sidekickDeathEvidence() + ")");
+            assertTrue(completion.sidekickAliveAtBossEntry(),
+                    "a configured sidekick had not respawned when the end boss allocated"
+                            + " (first death " + completion.sidekickDeathEvidence() + ")");
+            assertTrue(completion.sidekickAliveAtExit(),
+                    "a configured sidekick was dead or despawned at the SOZ exit request"
+                            + " (deaths " + completion.sidekickDeaths()
+                            + ", first " + completion.sidekickDeathEvidence() + ")");
             assertTrue(completion.sidekickControllerEveryFrame(),
                     "a sidekick lost CPU-controller ownership during the complete route");
             assertTrue(completion.sidekickLeaderChainEveryFrame(),
@@ -469,8 +482,16 @@ class TestFbzCompatibilityMatrix {
                 label + " did not audit the configured team on every route frame");
         assertTrue(evidence.sidekickIdentityOrderPreserved(),
                 label + " changed sidekick identity/order during the complete route");
-        assertTrue(evidence.sidekickAliveEveryFrame(),
-                label + " observed a dead sidekick during the complete route");
+        assertTrue(evidence.sidekickRespawnedAfterEveryDeath(),
+                label + " left a sidekick dead beyond the CPU respawn window (longest streak "
+                        + evidence.sidekickLongestDeadStreak() + " frames, first death "
+                        + evidence.sidekickDeathEvidence() + ")");
+        assertTrue(evidence.sidekickAliveAtBossEntry(),
+                label + " had a sidekick still dead when the end boss allocated (first death "
+                        + evidence.sidekickDeathEvidence() + ")");
+        assertTrue(evidence.sidekickAliveAtExit(),
+                label + " had a sidekick dead or despawned at the SOZ exit request (deaths "
+                        + evidence.sidekickDeaths() + ", first " + evidence.sidekickDeathEvidence() + ")");
         assertTrue(evidence.sidekickControllerEveryFrame(),
                 label + " observed a sidekick without CPU-controller ownership");
         assertTrue(evidence.sidekickLeaderChainEveryFrame(),
