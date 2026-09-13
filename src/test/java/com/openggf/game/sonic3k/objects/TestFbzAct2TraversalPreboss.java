@@ -125,6 +125,61 @@ public class TestFbzAct2TraversalPreboss {
     private static final int LOWER_SPIKE_GAP_PLATFORM_WAIT_LIMIT = 0x200;
     private static final int TAIL_ORDINARY_RIGHT_FALLBACK_LIMIT = 0x1800;
     private static final List<InputRun> LATE_STARPOST_INPUT_RUNS = List.of(new InputRun(120, 0x4));
+    // Lower $26C8 spider crane loop to the FBZ2 subboss arena. Every gate below
+    // reads exact placed-object identity, live geometry or AnPal_FBZ polarity.
+    private static final int LOWER_CRANE_X = 0x26C8;
+    // loc_3D11E captures a grounded P1 whose y_pos lies in [$46+$34+5, +$19)
+    // once the $40 descent completes; the $0900 floor puts P1 at $08EC.
+    private static final int LOWER_CRANE_FLOOR_Y = 0x08EC;
+    private static final int LOWER_CRANE_ROUTE_FRAME_LIMIT = 0x1400;
+    private static final int LOWER_CRANE_ROUTE_STAGE_LIMIT = 0x400;
+    private static final int LOWER_CRANE_WALK_CAP = 0x100;
+    // The crane releases P1 at $2831; a hop from $2850 clears the $28A9
+    // TechnoSqueek and arcs through the $2904 horizontal chain grab band
+    // (sub_3A8B8: dx within the $30 range, dy in [0,$18) below $08A0).
+    private static final int LOWER_CRANE_CHAIN_ONE_HOP_X = 0x2850;
+    private static final int LOWER_CRANE_CHAIN_HOP_HOLD = 0x19;
+    private static final int LOWER_CRANE_CHAIN_RELEASE_HOLD = 2;
+    // Both horizontal chains meet the $2924 vertical link; the $29C0 chain
+    // ($2990..$29F0 band) meets the $29E0 vertical link.
+    private static final int LOWER_CRANE_CHAIN_ONE_VERTICAL_X = 0x2924;
+    private static final int LOWER_CRANE_CHAIN_TWO_BAND_LEFT_X = 0x2990;
+    private static final int LOWER_CRANE_CHAIN_TWO_VERTICAL_X = 0x29E0;
+    private static final int LOWER_CRANE_CHAIN_STILL_FRAMES = 4;
+    // Obj_Button trigger D at $2970 opens the Obj_FBZScrewDoor floor door at $2924.
+    private static final int LOWER_CRANE_BUTTON_X = 0x2970;
+    private static final int LOWER_CRANE_FLOOR_DOOR_X = 0x2924;
+    private static final int LOWER_CRANE_BOTTOM_CORRIDOR_MIN_Y = 0x0B00;
+    // Bottom corridor: the resting $2840 Obj74 column blocks at $2863; spindash
+    // west only while both $0B70 columns hang raised with a full roll of runway.
+    // The $0B00 ceiling stops their rise at $31, clear of a rolling P1's $0E radius.
+    private static final int LOWER_CRANE_SPINDASH_HOLD_X = 0x2870;
+    private static final int LOWER_CRANE_SPINDASH_MIN_RUNWAY = 0x80;
+    private static final int LOWER_CRANE_COLUMN_CLEAR_RISE = 0x28;
+    private static final int LOWER_CRANE_ROLL_STOP_MAX_X = 0x26A0;
+    private static final int LOWER_CRANE_ELEVATOR_X = 0x2648;
+    // Leave the rising $2640 car as soon as the $0A80 corridor floor is level;
+    // the shaft cap at $0A40 crushes a rider who waits.
+    private static final int LOWER_CRANE_ELEVATOR_EXIT_Y = 0x0A90;
+    private static final int LOWER_CRANE_LAUNCHER_X = 0x2708;
+    private static final int LOWER_CRANE_CAGE_LANDING_MAX_Y = 0x0800;
+    // The $2800 step is $60 tall: exactly one full jump beside its face.
+    private static final int LOWER_CRANE_STEP_JUMP_X = 0x27F0;
+    private static final int LOWER_CRANE_STEP_JUMP_HOLD = 0x1E;
+    private static final int LOWER_CRANE_STEP_TOP_MAX_Y = 0x0790;
+    private static final int LOWER_CRANE_COLUMN_ONE_X = 0x2840;
+    private static final int LOWER_CRANE_COLUMN_HOP_X = 0x2816;
+    private static final int LOWER_CRANE_COLUMN_HOP_HOLD = 0x14;
+    private static final int LOWER_CRANE_COLUMN_TOP_MAX_Y = 0x06A4;
+    // Two hops from the raised columns must land before the INACTIVE edge
+    // drops them onto the $2880/$28F0 spikes.
+    private static final int LOWER_CRANE_COLUMN_JUMP_MIN_RUNWAY = 0x70;
+    private static final int LOWER_CRANE_COLUMN_JUMP_HOLD = 0x0E;
+    private static final int LOWER_CRANE_ARENA_CORRIDOR_MIN_X = 0x2900;
+    private static final int LOWER_CRANE_ARENA_CORRIDOR_MAX_Y = 0x0680;
+    private static final int LOWER_CRANE_PIT_JUMP_X = 0x2A60;
+    private static final int LOWER_CRANE_PIT_JUMP_HOLD = 0x19;
+    private static final int LOWER_CRANE_ARENA_ARRIVAL_X = 0x2BC0;
 
     private static boolean postLauncherRecoveryComplete(
             boolean playerAirborne, int playerX, int clearX) {
@@ -395,11 +450,16 @@ public class TestFbzAct2TraversalPreboss {
         runner.rideMidpointCarThroughSpikeCorridor(
                 midpointApproach, SPIKE_CORRIDOR_WAYPOINT_FRAMES,
                 midpointApproachSafety);
+        StopCondition sozRequested = () -> GameServices.level().getRequestedZone()
+                == Sonic3kZoneIds.ZONE_SOZ && GameServices.level().getRequestedAct() == 0;
         boolean forcedExitRequested = runner.runUntilWithDescendingElevatorCorridor(
                 elevatorSubbossBossAndExit.subList(
                         SPIKE_CORRIDOR_END_RUN, elevatorSubbossBossAndExit.size()),
-                tailSafety, () -> GameServices.level().getRequestedZone() == Sonic3kZoneIds.ZONE_SOZ
-                        && GameServices.level().getRequestedAct() == 0);
+                tailSafety, sozRequested);
+        if (!forcedExitRequested && runner.lowerCraneApproachReached) {
+            forcedExitRequested = runner.runLowerCraneRouteToSubboss(tailSafety, sozRequested);
+        }
+        assertTrue(milestones.spiderControl, "the $26C8 spider crane never carried P1");
         assertTrue(executedFamilies.containsAll(encounteredFamilies),
                 () -> "encountered family missed its next execution pass: "
                         + difference(encounteredFamilies, executedFamilies));
@@ -594,6 +654,7 @@ public class TestFbzAct2TraversalPreboss {
         private boolean horizontalCageWasHeld;
         private boolean horizontalCageEgressJumpActive;
         private boolean earlySpikeGapRecovery;
+        private boolean lowerCraneApproachReached;
         private int earlySpikeRollDirection;
         private int earlySpikeRollClearX;
 
@@ -1011,6 +1072,14 @@ public class TestFbzAct2TraversalPreboss {
                         if (!object.isDestroyed()) activeFrame.add(object);
                     }
                     AbstractPlayableSprite player = fixture.sprite();
+                    if (completed && !magneticPlatformRideMode && squeezeCorridorTarget == null
+                            && lowerCraneApproachReached(player)) {
+                        // The source program and its RIGHT fallback end beside
+                        // the $26C8 crane; hand the live route to the crane
+                        // controller before this frame is observed or stepped.
+                        lowerCraneApproachReached = true;
+                        return false;
+                    }
                     observer.observe(activeFrame, previousFrame, player, objects);
 
                     int currentPlayerY = player.getCentreY() & 0xFFFF;
@@ -4047,6 +4116,442 @@ public class TestFbzAct2TraversalPreboss {
                     + " descendingControllerActive=" + descendingControllerActiveLast
                     + " descendingCar=" + (descendingCar == null ? "null"
                     : objectPosition(descendingCar) + "/vy=" + descendingCar.yVelocity()));
+            return false;
+        }
+
+        private FbzSpiderCraneObjectInstance lowerSpiderCrane() {
+            return objects.activeObjectsOfType(FbzSpiderCraneObjectInstance.class).stream()
+                    .filter(candidate -> !candidate.isDestroyed())
+                    .filter(candidate -> candidate.getSpawn().x() == LOWER_CRANE_X)
+                    .filter(candidate -> candidate.stateName().equals("WAIT")
+                            || candidate.stateName().equals("DESCEND"))
+                    .findFirst().orElse(null);
+        }
+
+        private boolean lowerCraneApproachReached(AbstractPlayableSprite player) {
+            if (player.getAir() || player.isObjectControlled() || player.isOnObject()) return false;
+            int x = player.getCentreX() & 0xFFFF;
+            int y = player.getCentreY() & 0xFFFF;
+            return Math.abs(y - LOWER_CRANE_FLOOR_Y) <= 4
+                    && x >= LOWER_CRANE_X - 0x10 && x <= LOWER_CRANE_X + 0x60
+                    && lowerSpiderCrane() != null;
+        }
+
+        private static boolean craneHolding(FbzSpiderCraneObjectInstance crane) {
+            return switch (crane.stateName()) {
+                case "CAPTURE", "RETRACT", "TRAVEL" -> true;
+                default -> false;
+            };
+        }
+
+        private FbzMagneticPlatformObjectInstance magneticColumn(int spawnX, int spawnY) {
+            return objects.activeObjectsOfType(FbzMagneticPlatformObjectInstance.class).stream()
+                    .filter(column -> !column.isDestroyed())
+                    .filter(column -> column.getX() == spawnX)
+                    .filter(column -> column.getY() + column.displacement() == spawnY)
+                    .findFirst().orElse(null);
+        }
+
+        /** Walks toward {@code targetX} at a capped speed and brakes inside the tolerance. */
+        private static int steerMaskWalking(AbstractPlayableSprite player, int targetX,
+                                            int tolerance) {
+            int x = player.getCentreX() & 0xFFFF;
+            int groundSpeed = player.getGSpeed();
+            int delta = targetX - x;
+            if (Math.abs(delta) > tolerance) {
+                if (Math.abs(groundSpeed) >= LOWER_CRANE_WALK_CAP) return 0;
+                return delta > 0 ? AbstractPlayableSprite.INPUT_RIGHT
+                        : AbstractPlayableSprite.INPUT_LEFT;
+            }
+            if (Math.abs(groundSpeed) <= 0x80) return 0;
+            return groundSpeed > 0 ? AbstractPlayableSprite.INPUT_LEFT
+                    : AbstractPlayableSprite.INPUT_RIGHT;
+        }
+
+        private boolean technoSqueekAhead(AbstractPlayableSprite player) {
+            int playerX = player.getCentreX() & 0xFFFF;
+            int playerY = player.getCentreY() & 0xFFFF;
+            return objects.activeObjectsOfType(TechnoSqueekBadnikInstance.class).stream()
+                    .filter(squeek -> !squeek.isDestroyed())
+                    .filter(squeek -> squeek.getX() >= playerX)
+                    .filter(squeek -> squeek.getX() - playerX <= 0x48)
+                    .anyMatch(squeek -> Math.abs(squeek.getY() - playerY) <= 0x40);
+        }
+
+        /**
+         * Lower $26C8 spider crane loop: the crane carries P1 over the $2708
+         * pipe; the $2904/$2944 chains hand over to the $2924 vertical link,
+         * the $29C0 chain to the $29E0 link; the $2970 button opens the $2924
+         * floor door onto the bottom corridor; a spindash under the raised
+         * $27C0/$2840 columns reaches the rising $2640 car; the $2708 launcher
+         * throws P1 into the $2780 vertical cage; the $2800 step and the
+         * raised $2840/$28C0 columns reach the $0680 corridor beside the
+         * $2B40 subboss. Returns true only when {@code stop} is reached.
+         */
+        private boolean runLowerCraneRouteToSubboss(FrameCheck check, StopCondition stop) {
+            FbzSpiderCraneObjectInstance crane = lowerSpiderCrane();
+            assertNotNull(crane, () -> waypointDiagnostic("lower-crane-missing", LOWER_CRANE_X));
+            int stage = 0;
+            int stageFrames = 0;
+            int hold = 0;
+            int chargeTaps = 0;
+            int stepAttempts = 0;
+            int hopAttempts = 0;
+            int columnJumps = 0;
+            int lastChainY = -1;
+            int chainStillFrames = 0;
+            boolean pitJumped = false;
+            FbzMagneticPlatformObjectInstance column = null;
+            for (int frame = 0; frame < LOWER_CRANE_ROUTE_FRAME_LIMIT; frame++) {
+                if (stop.reached()) return true;
+                AbstractPlayableSprite player = fixture.sprite();
+                int x = player.getCentreX() & 0xFFFF;
+                int y = player.getCentreY() & 0xFFFF;
+                boolean grounded = !player.getAir();
+                Object latch = player.getLatchedSolidObjectInstance();
+                FbzChainLinkObjectInstance chain = player.isObjectControlled()
+                        && latch instanceof FbzChainLinkObjectInstance link ? link : null;
+                FbzZoneRuntimeState magnetic = GameServices.zoneRuntimeRegistry()
+                        .currentAs(FbzZoneRuntimeState.class).orElseThrow();
+                boolean activePolarity = magnetic.magneticPolarity()
+                        == Sonic3kFBZEvents.MagneticPolarity.ACTIVE;
+                int runway = 0xFF - magnetic.magneticTimerPhase();
+                int mask = 0;
+                String owner;
+                int before = stage;
+                switch (stage) {
+                    case 0 -> {
+                        // Stand inside loc_3D0F6's $20 window until loc_3D11E captures.
+                        owner = "crane-approach";
+                        mask = x > LOWER_CRANE_X + 0x04 ? AbstractPlayableSprite.INPUT_LEFT
+                                : x < LOWER_CRANE_X - 0x08 ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+                        if (player.isObjectControlled() && craneHolding(crane)) stage = 1;
+                    }
+                    case 1 -> {
+                        // loc_3D1B2..loc_3D2D2 own P1 until the $B0 travel decelerates.
+                        owner = "crane-ride";
+                        if (crane.stateName().equals("INERT") && !player.isObjectControlled()
+                                && grounded) {
+                            stage = 2;
+                        }
+                    }
+                    case 2 -> {
+                        owner = "crane-corridor-east";
+                        if (chain != null) {
+                            stage = 3;
+                        } else if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && (x >= LOWER_CRANE_CHAIN_ONE_HOP_X
+                                || technoSqueekAhead(player))) {
+                            hold = LOWER_CRANE_CHAIN_HOP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                    }
+                    case 3, 4 -> {
+                        int verticalX = stage == 3 ? LOWER_CRANE_CHAIN_ONE_VERTICAL_X
+                                : LOWER_CRANE_CHAIN_TWO_VERTICAL_X;
+                        owner = stage == 3 ? "chain-ladder-one" : "chain-ladder-two";
+                        if (chain == null) {
+                            if (hold > 0) {
+                                hold--;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT
+                                        | AbstractPlayableSprite.INPUT_JUMP;
+                            } else if (grounded && x >= (stage == 3
+                                    ? LOWER_CRANE_CHAIN_ONE_HOP_X
+                                    : LOWER_CRANE_CHAIN_TWO_BAND_LEFT_X)) {
+                                hold = LOWER_CRANE_CHAIN_HOP_HOLD;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT
+                                        | AbstractPlayableSprite.INPUT_JUMP;
+                            } else {
+                                mask = AbstractPlayableSprite.INPUT_RIGHT;
+                            }
+                        } else if (chain.horizontalMode()) {
+                            // sub_3AA7E hand steps are $20 apart; the vertical link
+                            // transfers when the hand rests on its column.
+                            mask = x < verticalX ? AbstractPlayableSprite.INPUT_RIGHT
+                                    : x > verticalX ? AbstractPlayableSprite.INPUT_LEFT : 0;
+                            chainStillFrames = 0;
+                            lastChainY = -1;
+                        } else {
+                            assertEquals(verticalX, chain.getSpawn().x(),
+                                    () -> waypointDiagnostic("chain-ladder-wrong-vertical-link",
+                                            verticalX));
+                            // loc_3A860 extends 2px/frame to $2E; a directional jump
+                            // release (loc_3A8F8) carries P1 clear of the re-grab window.
+                            chainStillFrames = y == lastChainY ? chainStillFrames + 1 : 0;
+                            lastChainY = y;
+                            if (chainStillFrames >= LOWER_CRANE_CHAIN_STILL_FRAMES) {
+                                hold = LOWER_CRANE_CHAIN_RELEASE_HOLD - 1;
+                                mask = AbstractPlayableSprite.INPUT_RIGHT
+                                        | AbstractPlayableSprite.INPUT_JUMP;
+                                chainStillFrames = 0;
+                                lastChainY = -1;
+                                stage++;
+                            }
+                        }
+                    }
+                    case 5 -> {
+                        owner = "trigger-d-button";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else if (player.isOnObject()
+                                && latch instanceof Sonic3kButtonObjectInstance button
+                                && button.getSpawn().x() == LOWER_CRANE_BUTTON_X) {
+                            stage = 6;
+                        } else {
+                            mask = steerMaskWalking(player, LOWER_CRANE_BUTTON_X, 4);
+                        }
+                    }
+                    case 6 -> {
+                        // The opened Obj_FBZScrewDoor no longer supports the floor walk.
+                        owner = "floor-door-drop";
+                        if (grounded && y >= LOWER_CRANE_BOTTOM_CORRIDOR_MIN_Y) {
+                            stage = 7;
+                        } else if (grounded) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_FLOOR_DOOR_X, 4);
+                        }
+                    }
+                    case 7 -> {
+                        owner = "bottom-corridor-west";
+                        FbzMagneticPlatformObjectInstance near = magneticColumn(0x2840, 0x0B70);
+                        FbzMagneticPlatformObjectInstance far = magneticColumn(0x27C0, 0x0B70);
+                        boolean columnsRaised = near != null && far != null
+                                && near.displacement() >= LOWER_CRANE_COLUMN_CLEAR_RISE
+                                && far.displacement() >= LOWER_CRANE_COLUMN_CLEAR_RISE;
+                        if (!grounded) {
+                            mask = 0;
+                        } else if (x > LOWER_CRANE_SPINDASH_HOLD_X) {
+                            mask = AbstractPlayableSprite.INPUT_LEFT;
+                        } else if (columnsRaised && activePolarity
+                                && runway >= LOWER_CRANE_SPINDASH_MIN_RUNWAY
+                                && Math.abs(player.getGSpeed()) <= 0x80) {
+                            assertTrue(player.getGameRules().playerCapability().spindashEnabled(),
+                                    "bottom corridor roll needs the native spindash");
+                            stage = 8;
+                            chargeTaps = 0;
+                            mask = AbstractPlayableSprite.INPUT_DOWN;
+                        } else {
+                            mask = player.getGSpeed() < -0x80
+                                    ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+                        }
+                    }
+                    case 8 -> {
+                        // Sonic_Spindash: crouch, then JUMP edges add $100 each.
+                        owner = "bottom-spindash";
+                        if (!player.getCrouching() && !player.getSpindash()) {
+                            mask = AbstractPlayableSprite.INPUT_DOWN;
+                        } else if (chargeTaps < POST_DOOR_CORRIDOR_CHARGE_TAPS) {
+                            boolean tap = (stageFrames & 1) == 0;
+                            if (tap) chargeTaps++;
+                            mask = AbstractPlayableSprite.INPUT_DOWN
+                                    | (tap ? AbstractPlayableSprite.INPUT_JUMP : 0);
+                        } else {
+                            assertTrue(player.getSpindash(),
+                                    () -> waypointDiagnostic("bottom-spindash-not-charged", x));
+                            stage = 9;
+                        }
+                    }
+                    case 9 -> {
+                        // The roll passes under both raised columns and destroys the $2700 Blaster.
+                        owner = "bottom-roll-west";
+                        assertFalse(player.isHurt(),
+                                () -> waypointDiagnostic("bottom-roll-hurt", x));
+                        if (grounded && !player.getRolling() && !player.getSpindash()
+                                && (x <= LOWER_CRANE_ROLL_STOP_MAX_X
+                                || Math.abs(player.getGSpeed()) < 0x80)) {
+                            stage = 10;
+                        }
+                    }
+                    case 10 -> {
+                        owner = "elevator-board";
+                        if (player.isOnObject()
+                                && latch instanceof FbzElevatorObjectInstance.Car car
+                                && car.yVelocity() == -1) {
+                            stage = 11;
+                        } else if (grounded) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_ELEVATOR_X, 4);
+                        }
+                    }
+                    case 11 -> {
+                        owner = "elevator-ride";
+                        assertTrue(player.isOnObject()
+                                        && latch instanceof FbzElevatorObjectInstance.Car,
+                                () -> waypointDiagnostic("elevator-ride-lost-car", x));
+                        if (y <= LOWER_CRANE_ELEVATOR_EXIT_Y) stage = 12;
+                    }
+                    case 12 -> {
+                        owner = "elevator-exit";
+                        if (player.isObjectControlled()
+                                && latch instanceof FbzWireCageObjectInstance) {
+                            stage = 14;
+                        } else if (latch instanceof FbzDezPlayerLauncherObjectInstance) {
+                            stage = 13;
+                        } else if (grounded && x > LOWER_CRANE_LAUNCHER_X + 0x30) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_LAUNCHER_X, 4);
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                    }
+                    case 13 -> {
+                        // sub_3B9D8 carries the standing rider right; the throw enters
+                        // the $2780 vertical Obj_FBZWireCage window.
+                        owner = "launcher-throw";
+                        if (player.isObjectControlled()
+                                && latch instanceof FbzWireCageObjectInstance) {
+                            stage = 14;
+                        } else if (grounded && y <= LOWER_CRANE_CAGE_LANDING_MAX_Y) {
+                            stage = 15;
+                        } else if (grounded && !player.isOnObject()
+                                && x > LOWER_CRANE_LAUNCHER_X + 0x40
+                                && y >= LOWER_CRANE_ELEVATOR_EXIT_Y - 0x30) {
+                            stage = 12;
+                        }
+                    }
+                    case 14 -> {
+                        owner = "cage-lift";
+                        if (!player.isObjectControlled() && grounded
+                                && y <= LOWER_CRANE_CAGE_LANDING_MAX_Y) {
+                            stage = 15;
+                        }
+                    }
+                    case 15 -> {
+                        owner = "step-up";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else if (y <= LOWER_CRANE_STEP_TOP_MAX_Y) {
+                            stage = 16;
+                        } else if (Math.abs(x - LOWER_CRANE_STEP_JUMP_X) <= 4
+                                && player.getGSpeed() == 0) {
+                            stepAttempts++;
+                            assertTrue(stepAttempts <= 3,
+                                    () -> waypointDiagnostic("step-up-failed", x));
+                            hold = LOWER_CRANE_STEP_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = steerMaskWalking(player, LOWER_CRANE_STEP_JUMP_X, 4);
+                        }
+                    }
+                    case 16 -> {
+                        owner = "column-hop";
+                        column = magneticColumn(LOWER_CRANE_COLUMN_ONE_X, 0x0790);
+                        boolean onColumn = column != null && latch == column
+                                && player.isOnObject();
+                        if (onColumn) {
+                            stage = 17;
+                        } else if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = 0;
+                        } else if (column != null && column.displacement() == 0
+                                && !column.lastMagneticActive()
+                                && Math.abs(x - LOWER_CRANE_COLUMN_HOP_X) <= 2
+                                && player.getGSpeed() == 0) {
+                            hopAttempts++;
+                            assertTrue(hopAttempts <= 3,
+                                    () -> waypointDiagnostic("column-hop-failed", x));
+                            hold = LOWER_CRANE_COLUMN_HOP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = steerMaskWalking(player, LOWER_CRANE_COLUMN_HOP_X, 2);
+                        }
+                    }
+                    case 17 -> {
+                        // Ride loc_3B450's ACTIVE rise; leave from the top with the
+                        // half-cycle runway both hops need.
+                        owner = "column-ride";
+                        boolean onColumn = column != null && latch == column
+                                && player.isOnObject();
+                        if (!onColumn && grounded && y > 0x0700) {
+                            stage = 16;
+                        } else if (onColumn && activePolarity
+                                && y <= LOWER_CRANE_COLUMN_TOP_MAX_Y
+                                && runway >= LOWER_CRANE_COLUMN_JUMP_MIN_RUNWAY) {
+                            columnJumps = 1;
+                            hold = LOWER_CRANE_COLUMN_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                            stage = 18;
+                        } else if (onColumn) {
+                            mask = steerMaskWalking(player, LOWER_CRANE_COLUMN_ONE_X, 4);
+                        }
+                    }
+                    case 18 -> {
+                        owner = "column-jumps";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (!grounded) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else if (x >= LOWER_CRANE_ARENA_CORRIDOR_MIN_X
+                                && y <= LOWER_CRANE_ARENA_CORRIDOR_MAX_Y) {
+                            stage = 19;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        } else {
+                            assertTrue(y <= 0x0700,
+                                    () -> waypointDiagnostic("column-jump-fell-short", x));
+                            columnJumps++;
+                            assertTrue(columnJumps <= 3,
+                                    () -> waypointDiagnostic("column-jumps-exhausted", x));
+                            hold = LOWER_CRANE_COLUMN_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        }
+                    }
+                    case 19 -> {
+                        owner = "arena-corridor";
+                        if (hold > 0) {
+                            hold--;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && !pitJumped && x >= LOWER_CRANE_PIT_JUMP_X) {
+                            pitJumped = true;
+                            hold = LOWER_CRANE_PIT_JUMP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT
+                                    | AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                        if (grounded && x >= LOWER_CRANE_ARENA_ARRIVAL_X) {
+                            lastControllerDiagnostic = " craneRoute={arrived,frame=" + frame + '}';
+                            return false;
+                        }
+                    }
+                    default -> throw new IllegalStateException("stage " + stage);
+                }
+                if (stage != before) stageFrames = 0; else stageFrames++;
+                lastControllerDiagnostic = " craneRoute={stage=" + stage
+                        + ",owner=" + owner + ",hold=" + hold
+                        + ",stageFrames=" + stageFrames
+                        + ",crane=" + crane.stateName()
+                        + ",chain=" + (chain == null ? "none" : objectPosition(chain))
+                        + ",latch=" + (latch == null ? "none" : latch.getClass().getSimpleName())
+                        + ",column=" + objectPosition(column)
+                        + ",polarity=" + (activePolarity ? "ACTIVE" : "INACTIVE")
+                        + ",runway=$" + Integer.toHexString(runway)
+                        + ",mask=$" + Integer.toHexString(mask) + '}';
+                assertTrue(stageFrames <= LOWER_CRANE_ROUTE_STAGE_LIMIT,
+                        () -> waypointDiagnostic("lower-crane-route-stalled-" + owner, x));
+                stepCheckedFrame(mask, check);
+            }
+            fail(waypointDiagnostic("lower-crane-route-frame-limit", LOWER_CRANE_ARENA_ARRIVAL_X));
             return false;
         }
 

@@ -72,10 +72,40 @@ are now gated on live geometry or AnPal_FBZ polarity instead of arrival phase:
   column in the gap is ridden down to rest before the exit jump.
 
 With those, all five team rows, the 512px viewport row and the S2 donated
-profile reach the authored-program expiry at frame 14,650-14,833 beside the
-`$26C8` spider crane, alive with 43-69 rings and about 21,000 frames of act
-time in hand. The next work is the crane pickup, vertical chain-link
-descents, launcher, elevator and lower-loop backtrack toward the subboss.
+profile reach the `$26C8` spider crane alive with about 21,000 frames of act
+time in hand. The fallback tail now hands over beside that crane to a
+dedicated lower-crane controller whose gates read placed-object identity,
+live geometry and AnPal_FBZ polarity only:
+
+- stand in the crane's `$20` window until `loc_3D11E` captures, ride the
+  `$B0` travel to the `$2831` release;
+- hop from `$2850` over the TechnoSqueek into the `$2904` horizontal chain,
+  hand over to the `$2924` vertical link, ride its `$D8` descent and leave
+  with a directional jump; the arc grabs the `$29C0` chain, which hands over
+  to the `$29E0` link and its `$90` descent onto the `$0A80` floor;
+- stand on the trigger-D `$2970` button and walk onto the `$2924` floor door,
+  which drops P1 into the bottom corridor;
+- hold beside the resting `$2840` column until both `$0B70` columns hang
+  raised (`$31`, capped by the `$0B00` ceiling) with `$80` frames of ACTIVE
+  runway, then spindash west; the roll passes under both columns and destroys
+  the `$2700` Blaster;
+- board a rising `$2640` car, walk off the moment the `$0A80` floor is level,
+  stand on the `$2708` launcher, and let its throw enter the `$2780` vertical
+  wire cage, which lifts P1 to the `$0800` room;
+- jump the `$60` step at `$2800`, hop onto the resting `$2840` column from
+  its left face, ride the ACTIVE `$D0` rise and, with `$70` frames of runway,
+  hop across the raised `$28C0` column onto the `$0680` corridor, then clear
+  the `$2A80` pit into the `$2B40` subboss arena.
+
+All five team rows and the S2 donated profile now stand against the arena's
+`$2BDD` wall at frames 14,345-14,858 with 55-88 rings and no damage, and
+`Obj_FBZ2Subboss` has allocated its children. The 512px row reaches the same
+`$2BD1` position at frame 14,857 but the route's subboss proxy (`Camera_X_pos
+>= $2B30`, the native-width `FBZ2SE_Normal` threshold) reads `$2AD1` there,
+so that row still reports the event unreached; the proxy is width-specific,
+not the route. The remaining fixed-program runs are no longer consumed. The
+next work is the subboss fight, the end boss, the capsule and the exit hall;
+the route currently stops at the arena and fails the SOZ request assertion.
 
 Required complete-route evidence remains:
 
@@ -100,7 +130,8 @@ segment: at frame 2889 they stand at `$0890,$02EC` with two to four rings and
 now fail the lower-floor ring floor there instead of dying later inside the
 removed filler (their earlier frames 25729, 25885 and 7343). The 400px row
 advances to frame 10131, hurt at `$1F92,$07D9` beside the `$1F40` descending
-car. Every remaining row reaches the program expiry beside the spider crane.
+car. Every remaining row reaches the subboss arena through the lower-crane
+controller; the 512px row is held only by the native-width camera proxy.
 
 After the native route is green, run the focused donation, team, and viewport
 methods, then the full `TestFbzCompatibilityMatrix`. The S1 row must prove that

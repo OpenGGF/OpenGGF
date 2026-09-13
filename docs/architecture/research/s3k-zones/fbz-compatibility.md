@@ -91,10 +91,12 @@ floating-platform/ceiling geometry; the latter reaches the lower spike at
 preserve the other three viewport diagnostics exactly; the separate late-route
 repair advances the native-width row beyond Obj28 to the `$2360` platform; the
 Obj74 column ride, the removal of about 22,000 frames of dead authored input
-and the polarity-gated corridor controllers then carry it to the authored-
-program expiry at frame 14,650 beside the `$26C8` spider crane with the act
-timer intact. See [outstanding actions](fbz-outstanding-actions.md) for the
-measured rows.
+and the polarity-gated corridor controllers then carry it to the `$26C8`
+spider crane with the act timer intact, and the lower-crane controller (crane
+pickup, chain descents, floor door, spindash under the raised columns, rising
+car, launcher-into-cage lift, the `$2800` step and the raised `$2840`/`$28C0`
+columns) carries it on to the `$2B40` subboss arena at frame 14,858. See
+[outstanding actions](fbz-outstanding-actions.md) for the measured rows.
 
 Every width asserts world-coordinate thresholds, ordinary nonpersistent
 placement entering at the right viewport frontier and culling at the left
