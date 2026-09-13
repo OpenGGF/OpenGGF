@@ -16,6 +16,16 @@ Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote eac
 | `TraceBenchmarkTool` | Replays a trace headlessly with no pacing and reports per-subsystem frame-time percentiles, for comparing JVMs or catching a performance regression. Writes a JSON report. Never quote its numbers without checking the trajectory digest matched. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.TraceBenchmarkTool" "-Dexec.args=--trace aiz1 --json target/bench/temurin21-g1.json"` |
 | `BenchmarkCompareTool` | Renders a Markdown comparison from two or more benchmark reports; the first is the baseline. Pure post-processing, so it can run under any JVM. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.BenchmarkCompareTool" "-Dexec.args=--out target/bench/comparison.md target/bench/a.json target/bench/b.json"` |
 
+## Test harness helpers
+
+- `src/test/java/com/openggf/tests/route/` — shared route primitives for headless
+  route controllers (LTS-04): `InputProgram` (parse and step authored pad runs),
+  `RouteSteering` (steer, walk with a speed cap, brake distance, ordinary crossing
+  budget), `ObjectLifetimeFrames` (spawn/despawn identity sets per frame),
+  `RecentFrameLog` (failure diagnostics) and `SidekickAudit` (CPU team contract:
+  identity, ownership, leader chain, death/respawn). Extracted from the FBZ2 native
+  route; see [live-state route controllers](../architecture/research/2026-09-13-live-state-route-controllers.md).
+
 ## Docs
 
 - [Release publishing](../project/release-publishing.md) — automatic publication on
