@@ -274,6 +274,36 @@ subdirectory from [docs/README.md](docs/README.md), release material under
 an explicit task directory outside the repo; temporary Maven output stays
 under `target/`.
 
+## Preserving how the work was done
+
+OpenGGF is an early large-scale AI-agent reimplementation. The method is
+part of what the project preserves, for future contributors and for anyone
+studying how it was done. Keep the record light and put things where they
+already belong; do not create new document types.
+
+- **Scripts and probes.** A one-off diagnostic stays temporary. A probe,
+  oracle, comparator, or sampler that answered a question likely to recur,
+  or that took more than an hour to get right, is promoted: engine-facing
+  tools to `com.openggf.tools`, analysis scripts to the matching `tools/`
+  subdirectory, trace production to TraceChaser. Give it a header stating
+  purpose, inputs, and the originating commit or task, and a one-line entry
+  in `docs/agent-workflow/README.md`.
+- **Methods and lessons.** A measurement protocol, hazard, or ROM pitfall
+  learned during a task goes into the existing catalogue it belongs to
+  (pitfall catalogue, measurement-hazard table, implementation pitfalls),
+  not a new file.
+- **Decisions and evidence.** Record what was tried and rejected as well as
+  what landed, with commit hashes, in the dated `docs/architecture/`
+  artifact for the task. A rejected approach with its kill evidence saves
+  the next agent from repeating it.
+- **Narrative.** `docs/project/ai-journey.md` grows only at milestones, not
+  per task.
+
+Test: keep it if a future agent would otherwise re-derive it; delete it if
+it can be regenerated from committed inputs in minutes. Raw logs, run
+directories, fitted constants, and rejected code on merged branches are
+never preserved.
+
 ## Find the owning reference
 
 - Release publication/skipped jobs: `release-publishing` and
