@@ -86,6 +86,20 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   a rewind-capture crash after the MHZ signpost.
   Complete routes, finales, and continuous replay chains remain gates.
 
+## ROM images
+
+- **ROM image catalogue:** the engine now recognises every user-supplied image by
+  size and cartridge header instead of filename, from the three per-game keys plus a
+  `roms.directory` scan. Lock-on dumps serve the games they contain (Sonic 2 from an
+  S&K + Sonic 2 dump, Sonic 3 and Sonic & Knuckles from a Sonic 3 & Knuckles dump),
+  and a separate Sonic 3 image plus a separate Sonic & Knuckles image boot Sonic 3 &
+  Knuckles as an in-memory view with no joining on disk (`roms.preferComposite`
+  picks it over a dump). The per-game keys remain explicit overrides; among
+  duplicates a hash-verified image wins, and an unverified image is still used.
+  The master title hub dims games from the same catalogue. Engine code no longer
+  reads through the ROM's shared file channel, so catalogue views and files behave
+  identically.
+
 ## Development features carried forward
 
 - **Unpublished Mod API candidate:** mod loading, creator tooling, characters,

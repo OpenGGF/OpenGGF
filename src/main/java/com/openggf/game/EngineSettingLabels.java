@@ -42,6 +42,8 @@ final class EngineSettingLabels {
             case SONIC_1_ROM -> "Sonic 1 ROM file";
             case SONIC_2_ROM -> "Sonic 2 ROM file";
             case SONIC_3K_ROM -> "Sonic 3 & Knuckles ROM file";
+            case ROMS_DIRECTORY -> "ROM folder";
+            case ROMS_PREFER_COMPOSITE -> "Prefer separate S3 + S&K images";
             case DEFAULT_ROM -> "Default game";
             case MAIN_CHARACTER_CODE -> "Main character";
             case SIDEKICK_CHARACTER_CODE -> "Companion character";

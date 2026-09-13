@@ -2162,6 +2162,8 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_SIZE_MB
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_HISTORY_SECONDS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration RIGHT
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration ROMS_DIRECTORY
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration ROMS_PREFER_COMPOSITE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration S3K_SKIP_INTROS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SCALE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SCREEN_HEIGHT
@@ -2513,6 +2515,12 @@ FIELD com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy public,static,
 FIELD com.openggf.game.mutation.MutationEffects public,static,final com.openggf.game.mutation.MutationEffects NONE
 FIELD com.openggf.game.palette.PaletteSurface public,static,final com.openggf.game.palette.PaletteSurface NORMAL
 FIELD com.openggf.game.palette.PaletteSurface public,static,final com.openggf.game.palette.PaletteSurface UNDERWATER
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom KIS2
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom KIS2_CHIP
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom S1
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom S2
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom S3
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom S3K
 FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom SK
 FIELD com.openggf.game.patch.ModuleResolutionService$LaunchPolicy public,static,final com.openggf.game.patch.ModuleResolutionService$LaunchPolicy DETERMINISTIC
 FIELD com.openggf.game.patch.ModuleResolutionService$LaunchPolicy public,static,final com.openggf.game.patch.ModuleResolutionService$LaunchPolicy STANDARD
@@ -4361,6 +4369,7 @@ METHOD com.openggf.data.Game public,abstract  java.util.List<java.lang.String> g
 METHOD com.openggf.data.Game public,abstract  java.util.Map<com.openggf.audio.GameSound,java.lang.Integer> getSoundMap()
 METHOD com.openggf.data.PlayerSpriteArtProvider public  com.openggf.level.Palette loadCharacterPalette(java.lang.String)
 METHOD com.openggf.data.PlayerSpriteArtProvider public,abstract  com.openggf.sprites.art.SpriteArtSet loadPlayerSpriteArt(java.lang.String) THROWS java.io.IOException
+METHOD com.openggf.data.Rom public  boolean isInMemory()
 METHOD com.openggf.data.Rom public  boolean isOpen()
 METHOD com.openggf.data.Rom public  byte readByte(long) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  byte[] readAllBytes() THROWS java.io.IOException
@@ -4370,17 +4379,20 @@ METHOD com.openggf.data.Rom public  int read16BitAddr(long) THROWS java.io.IOExc
 METHOD com.openggf.data.Rom public  int read32BitAddr(long) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  int readAddrRange() THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  int readChecksum() THROWS java.io.IOException
+METHOD com.openggf.data.Rom public  java.lang.String describe()
 METHOD com.openggf.data.Rom public  java.lang.String readDomesticName() THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  java.lang.String readInternationalName() THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  java.nio.channels.FileChannel getFileChannel()
 METHOD com.openggf.data.Rom public  long getSize() THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  void writeChecksum(int) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public  void writeSize(int) THROWS java.io.IOException
+METHOD com.openggf.data.Rom public,static  com.openggf.data.Rom fromReader(com.openggf.data.RomByteReader,java.lang.String)
 METHOD com.openggf.data.Rom public,synchronized  boolean open(java.lang.String)
 METHOD com.openggf.data.Rom public,synchronized  void close()
 METHOD com.openggf.data.Rom public,synchronized  void write16BitAddr(int,long) THROWS java.io.IOException
 METHOD com.openggf.data.Rom public,synchronized  void write32BitAddr(int,long) THROWS java.io.IOException
 METHOD com.openggf.data.RomByteReader public  byte[] slice(int,int)
+METHOD com.openggf.data.RomByteReader public  com.openggf.data.RomByteReader window(int,int)
 METHOD com.openggf.data.RomByteReader public  int readPointer16(int,int)
 METHOD com.openggf.data.RomByteReader public  int readS16BE(int)
 METHOD com.openggf.data.RomByteReader public  int readU16BE(int)
@@ -4390,6 +4402,7 @@ METHOD com.openggf.data.RomByteReader public  int size()
 METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteReader fromBytes(byte[])
 METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteReader fromBytes(byte[],int,int)
 METHOD com.openggf.data.RomByteReader public,static  com.openggf.data.RomByteReader fromRom(com.openggf.data.Rom) THROWS java.io.IOException
+METHOD com.openggf.data.RomByteReader public,static,transient varargs  com.openggf.data.RomByteReader concat(com.openggf.data.RomByteReader[])
 METHOD com.openggf.data.SpindashDustArtProvider public,abstract  com.openggf.sprites.art.SpriteArtSet loadSpindashDustArt(java.lang.String) THROWS java.io.IOException
 METHOD com.openggf.debug.DebugColor public  boolean equals(java.lang.Object)
 METHOD com.openggf.debug.DebugColor public  int getAlpha()

@@ -1,11 +1,11 @@
 package com.openggf.level.resources;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomChannel;
 import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
-import java.nio.channels.FileChannel;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -288,11 +288,7 @@ public class ResourceLoader {
      * Decompresses Kosinski-compressed data from the specified ROM address.
      */
     private byte[] decompressKosinski(int romAddr) throws IOException {
-        FileChannel channel = rom.getFileChannel();
-        // Rom exposes a shared FileChannel; lock around seek+decode so concurrent
-        // readers cannot move the channel position mid-stream.
-        synchronized (rom) {
-            channel.position(romAddr);
+        try (var channel = RomChannel.at(rom, romAddr)) {
             return KosinskiReader.decompress(channel, KOS_DEBUG_LOG);
         }
     }
@@ -333,11 +329,7 @@ public class ResourceLoader {
      * Decompresses Nemesis-compressed data from the specified ROM address.
      */
     private byte[] decompressNemesis(int romAddr) throws IOException {
-        FileChannel channel = rom.getFileChannel();
-        // Rom exposes a shared FileChannel; lock around seek+decode so concurrent
-        // readers cannot move the channel position mid-stream.
-        synchronized (rom) {
-            channel.position(romAddr);
+        try (var channel = RomChannel.at(rom, romAddr)) {
             return NemesisReader.decompress(channel);
         }
     }

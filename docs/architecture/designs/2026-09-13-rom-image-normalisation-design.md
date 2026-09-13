@@ -1,7 +1,8 @@
 # ROM image normalisation — Design
 
 **Date:** 2026-09-13
-**Status:** Proposed (brief; 0.8 follow-on)
+**Status:** Implemented on `feature/ai-rom-image-normalisation` (2026-09-13); see
+"Implementation notes" at the end.
 **Roadmap anchor:** `docs/project/v0.8-roadmap.md` — "Original commitments and demand-driven follow-ons"
 **Depends on nothing; unblocks:** the KiS2 patch tier two
 (`2026-06-12-game-patch-kis2-design.md`, 2026-09-13 amendment) and S3K boot from
@@ -138,3 +139,32 @@ One bounded item in 0.8 under "Original commitments and demand-driven follow-ons
 It precedes KiS2 tier two and can ship alone. Documentation obligations:
 `CONFIGURATION.md` (new keys, identity table), `docs/guide` ROM setup, and the
 `CHANGELOG.md` Unreleased section on `next`.
+
+## Implementation notes (2026-09-13)
+
+- `RomImageCatalogue`, `PhysicalImage`, `RomImageClassifier`, `RomIdentityTable`,
+  `RomHeaderName` and `RomFingerprint` live in `com.openggf.data`. The data layer
+  may not depend on `com.openggf.game.patch` (frozen ArchUnit layering rule), so the
+  catalogue keys on a data-layer twin enum, `com.openggf.data.RomIdentity`;
+  `LogicalRom` maps onto it through a package-private accessor and a test keeps the
+  two in lockstep. Moving `LogicalRom` itself was rejected because it is a pinned
+  Mod API type that concurrent KiS2 work depends on.
+- `RomByteReader.window` and `concat` are true views (shared backing arrays, seam
+  reads assembled across parts). `Rom.fromReader` wraps a view as a read-only
+  in-memory ROM with no file channel; every engine call site that read through
+  `Rom.getFileChannel()` now opens a private positioned `RomChannel` or calls
+  `readBytes`, which also removes the shared-position lock those sites needed.
+- `RomLocationResolver` returns a path only for a logical ROM served by one whole
+  file; windows and composites have no path, so path-based tools report the ROM as
+  unconfigured rather than opening the wrong bytes. `HeadlessGameBoot.boot(RomIdentity, ...)`
+  boots straight from the catalogue.
+- Verification hashes windows, not files, so lock-on dumps verify per half; hashing
+  is lazy and memoised per image and window. The catalogue is rebuilt when any ROM
+  key changes and when the title hub refreshes after Settings apply.
+- Composite parts follow the same directory-order rule as everything else, so with
+  `roms.preferComposite` a single lock-on dump can serve both halves of its own
+  composite; the ROM-gated tests use this to prove the composite path byte-for-byte
+  without a standalone Sonic 3 or Sonic & Knuckles image on the machine.
+- No S&K + Sonic 2 dump was available while implementing; KiS2 and the chip are
+  covered by the synthetic classifier and catalogue tests, and the ROM-gated KiS2
+  test skips cleanly when the dump is absent.

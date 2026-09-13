@@ -9,6 +9,7 @@ import com.openggf.camera.Camera;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.control.InputHandler;
 import com.openggf.data.Rom;
+import com.openggf.data.RomIdentity;
 import com.openggf.game.GameMode;
 import com.openggf.game.GameModule;
 import com.openggf.game.GameModuleRouting;
@@ -329,21 +330,46 @@ public final class HeadlessGameBoot implements AutoCloseable {
 
     public GameLoop boot(Path romPath, int zone, int act, Long initialRngSeed,
             HardwareReadinessAdmissionPolicy admissionPolicy) throws IOException {
+        Rom fileRom = new Rom();
+        if (!fileRom.open(romPath.toString())) {
+            throw new IOException("Failed to open ROM file: " + romPath);
+        }
+        return boot(fileRom, romPath.toString(), zone, act, initialRngSeed, admissionPolicy);
+    }
+
+    /**
+     * Boots from a logical ROM served by the engine's image catalogue instead
+     * of a path: whatever user-supplied images the configuration and
+     * {@code roms.directory} expose, including a lock-on window or an
+     * {@code SK} + {@code S3} composite.
+     */
+    public GameLoop boot(RomIdentity logicalRom, int zone, int act) throws IOException {
+        return boot(logicalRom, zone, act, null, HardwareReadinessAdmissionPolicy.LIVE);
+    }
+
+    public GameLoop boot(RomIdentity logicalRom, int zone, int act, Long initialRngSeed,
+            HardwareReadinessAdmissionPolicy admissionPolicy) throws IOException {
+        String description = engineServices.roms().resolveLogicalRom(logicalRom)
+                .map(resolution -> resolution.describe())
+                .orElseThrow(() -> new IOException("No user-supplied image contains logical ROM " + logicalRom));
+        Rom view = Rom.fromReader(engineServices.roms().openLogicalRom(logicalRom), description);
+        return boot(view, description, zone, act, initialRngSeed, admissionPolicy);
+    }
+
+    private GameLoop boot(Rom openedRom, String description, int zone, int act, Long initialRngSeed,
+            HardwareReadinessAdmissionPolicy admissionPolicy) throws IOException {
         // Process-wide services were configured in initGl(); resolve them via
         // the EngineServices locator rather than raw singletons.
         EngineContext services = engineServices;
 
         // --- ROM + module ------------------------------------------------
-        rom = new Rom();
-        if (!rom.open(romPath.toString())) {
-            throw new IOException("Failed to open ROM file: " + romPath);
-        }
+        rom = openedRom;
         services.roms().setRom(rom);
 
         Optional<GameModule> detected =
                 services.romDetection().detectAndCreateModule(rom);
         GameModule rootModule = detected.orElseThrow(() ->
-                new IOException("No game module detected for ROM: " + romPath));
+                new IOException("No game module detected for ROM: " + description));
         // --- gameplay session + managers --------------------------------
         SessionManager.armNextGameplayAdmissionPolicy(admissionPolicy);
         GameplayModeContext mode = openResolvedSessionForBoot(services, rootModule);

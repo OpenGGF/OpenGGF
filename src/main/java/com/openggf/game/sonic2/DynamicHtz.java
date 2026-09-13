@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2;
 
 import com.openggf.data.Rom;
+import com.openggf.data.RomChannel;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.graphics.GraphicsManager;
@@ -10,8 +11,6 @@ import com.openggf.game.sonic2.scroll.SwScrlHtz;
 import com.openggf.data.compression.NemesisReader;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.util.logging.Logger;
 
 /**
@@ -118,25 +117,13 @@ public class DynamicHtz {
     }
 
     private void loadCloudArt(Rom rom) throws IOException {
-        cloudArtData = new byte[Sonic2Constants.ART_UNC_HTZ_CLOUDS_SIZE];
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(Sonic2Constants.ART_UNC_HTZ_CLOUDS_ADDR);
-            ByteBuffer buffer = ByteBuffer.wrap(cloudArtData);
-            while (buffer.hasRemaining()) {
-                int read = channel.read(buffer);
-                if (read < 0) {
-                    throw new IOException("Unexpected EOF reading HTZ cloud art");
-                }
-            }
-        }
+        cloudArtData = rom.readBytes(Sonic2Constants.ART_UNC_HTZ_CLOUDS_ADDR,
+                Sonic2Constants.ART_UNC_HTZ_CLOUDS_SIZE);
         LOG.fine("Loaded HTZ cloud art from ROM: " + cloudArtData.length + " bytes");
     }
 
     private void loadCliffArt(Rom rom) throws IOException {
-        synchronized (rom) {
-            FileChannel channel = rom.getFileChannel();
-            channel.position(Sonic2Constants.ART_NEM_HTZ_CLIFFS_ADDR);
+        try (var channel = RomChannel.at(rom, Sonic2Constants.ART_NEM_HTZ_CLIFFS_ADDR)) {
             cliffArtData = NemesisReader.decompress(channel);
         }
         LOG.fine("Loaded and decompressed HTZ cliff art from ROM: " + cliffArtData.length + " bytes");
