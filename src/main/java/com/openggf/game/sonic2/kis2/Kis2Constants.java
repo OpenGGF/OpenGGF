@@ -55,6 +55,31 @@ public final class Kis2Constants {
      */
     public static final int ART_NEM_KNUCKLES_LIFE_ICON = 0x190E4C;
 
+    // ---- KiS2 SonicAniData slots (BRANCH_DIFFS.md §Animation) ----
+    // The lock-on program replaces SonicAniData with the 37-entry KnucklesAni_*
+    // table: entries 0-$1F keep Sonic 2's SonAni_* slot ids and $20-$24 add the
+    // glide states. Ids are slot indexes into that table.
+    public static final int ANIM_WALK = 0x00;          // SonAni_Walk_ptr -> KnucklesAni_Walk
+    public static final int ANIM_RUN = 0x01;           // SonAni_Run_ptr -> KnucklesAni_Run
+    public static final int ANIM_ROLL = 0x02;          // SonAni_Roll_ptr -> KnucklesAni_Roll
+    public static final int ANIM_ROLL2 = 0x03;         // SonAni_Roll2_ptr -> KnucklesAni_Roll2
+    public static final int ANIM_PUSH = 0x04;          // SonAni_Push_ptr -> KnucklesAni_Push
+    public static final int ANIM_WAIT = 0x05;          // SonAni_Wait_ptr -> KnucklesAni_Wait
+    public static final int ANIM_BALANCE = 0x06;       // SonAni_Balance_ptr -> KnucklesAni_Balance
+    public static final int ANIM_LOOK_UP = 0x07;       // SonAni_LookUp_ptr -> KnucklesAni_LookUp
+    public static final int ANIM_DUCK = 0x08;          // SonAni_Duck_ptr -> KnucklesAni_Duck
+    public static final int ANIM_SPINDASH = 0x09;      // SonAni_Spindash_ptr -> KnucklesAni_Spindash
+    public static final int ANIM_STOP = 0x0D;          // SonAni_Stop_ptr -> KnucklesAni_Stop (skid)
+    public static final int ANIM_SPRING = 0x10;        // SonAni_Spring_ptr -> KnucklesAni_Spring
+    public static final int ANIM_DROWN = 0x17;         // SonAni_Drown_ptr -> KnucklesAni_Drown
+    public static final int ANIM_DEATH = 0x18;         // SonAni_Death_ptr -> KnucklesAni_Death
+    public static final int ANIM_HURT = 0x1A;          // SonAni_Hurt2_ptr -> KnucklesAni_Hurt (HurtCharacter)
+    public static final int ANIM_GLIDE = 0x20;         // KnuxAni_Glide_ptr -> KnucklesAni_Gliding
+    public static final int ANIM_FALL_AFTER_GLIDE = 0x21; // KnuxAni_FallAfterGlide_ptr
+    public static final int ANIM_CLIMB_LEDGE = 0x22;   // KnuxAni_ClimbLedge_ptr -> KnucklesAni_GetUp
+    public static final int ANIM_LAND_AFTER_GLIDE = 0x23; // KnuxAni_LandAfterGlide_ptr -> KnucklesAni_HardFall
+    public static final int ANIM_SHADOW_BOX = 0x24;    // KnuxAni_ShadowBox_ptr -> KnucklesAni_Badass
+
     /**
      * {@code ArtConvTable} (KiS2 {@code LoadSonicDynPLC_Part2},
      * {@code KPLC_ConvertArtFromS3K}): S3K palette index → S2-layout index,

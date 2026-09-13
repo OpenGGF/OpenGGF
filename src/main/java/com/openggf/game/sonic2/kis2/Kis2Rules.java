@@ -1,5 +1,6 @@
 package com.openggf.game.sonic2.kis2;
 
+import com.openggf.game.rules.CrossGameRuleComposer;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerLandingRules;
@@ -77,17 +78,6 @@ public final class Kis2Rules {
                 interaction.solidPushReleaseSkipsWalkRunWhenRolling(),
                 interaction.solidPushReleaseSkipsWalkRunWhenSpindashing(),
                 DUCK_TOUCH_BOX_MAPPING_FRAME);
-        return new GameRules(
-                kis2Movement,
-                base.playerCapability(),
-                base.collision(),
-                base.playerAnimation(),
-                base.camera(),
-                base.ring(),
-                kis2Interaction,
-                base.sidekickCpu(),
-                base.powerUp(),
-                base.drowningBubble(),
-                base.dynamicArtDmaService());
+        return CrossGameRuleComposer.withPlayerRules(base, kis2Movement, kis2Interaction);
     }
 }
