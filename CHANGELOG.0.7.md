@@ -119,6 +119,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   execution inside each worker. Public audio tests retain synthetic chip vectors;
   game-derived audio captures move to explicitly supplied, digest-checked external
   fixtures, and the full-size streaming memory check has an explicit stress lane.
+  FBZ local compatibility checks run independently of traversal failures; ordinary
+  runs keep one native route and `fbz-routes` retains the eleven-route matrix.
 
 - **Local test categories:** select related subsystem checks from changed paths, with
   common tests and structural guards retained, broad fallback for shared changes,

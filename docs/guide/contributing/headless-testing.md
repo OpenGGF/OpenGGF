@@ -135,3 +135,28 @@ The default remains one worker. Tests stay serial inside each JVM because the
 engine's global teardown is unsafe alongside another class. Multiple forks divide
 classes, so one large test class remains a lower bound on elapsed time. Guards
 continue with one JVM. Do not run two Maven processes in the same worktree.
+
+### FBZ compatibility and exhaustive routes
+
+The ordinary FBZ compatibility matrix runs 13 synchronous reload checks, 26
+independent local interaction/authority/checkpoint cases, and one complete native
+Sonic/Tails route. Local checks build fresh production fixtures with the intended
+team, viewport or donor configuration; a failing traversal cannot prevent them
+from running. Smoke excludes the complete representative via `slow-suite`.
+
+Run all eleven complete Act 2 routes explicitly for FBZ route changes and exhaustive
+ROM validation (five teams, four additional widths, two active movement donors):
+
+```bash
+mvn -Dmse=off -Pfbz-routes -Dsonic1.rom.path=/absolute/s1.gen \
+  -Dsonic2.rom.path=/absolute/s2.gen -Ds3k.rom.path=/absolute/s3k.gen test -B
+```
+
+Use existing ROM paths with the documented identities. Verify eleven executed
+route cases and zero skips: like other `@RequiresRom` profiles, missing S3K ROMs
+can produce a successful invocation with skipped tests. `fbz-routes` selects only
+complete routes; run ordinary tests as well for local compatibility coverage.
+The native route appears once in each alternative lane. Complete traversal,
+per-frame team identity, boss completion and exit assertions remain in the
+exhaustive lane; passing short scenarios does not establish route completion.
+Act 1 retains its existing 75 configuration combinations and lifecycle checks.
