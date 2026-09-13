@@ -5,6 +5,9 @@ import com.openggf.control.InputHandler;
 import com.openggf.control.MenuInput;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.Rom;
+import com.openggf.data.RomImageCatalogue;
+import com.openggf.data.RomIdentity;
 import com.openggf.game.launch.LaunchProfile;
 import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.graphics.PngTextureLoader;
@@ -37,6 +40,7 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Random;
 import java.util.logging.Logger;
 
@@ -221,6 +225,8 @@ public class MasterTitleScreen {
     private java.util.function.Consumer<Object> catalogLoaded;
     private String catalogLoadingTitle;
     private final Map<GameEntry, String> previewSources = new EnumMap<>(GameEntry.class);
+    /** User-supplied images as last scanned; rebuilt on initialise and after Settings apply. */
+    private RomImageCatalogue romCatalogue;
     private int toolIndex;
     private boolean helpOpen;
     private boolean modsShortcutHeld;
@@ -294,14 +300,7 @@ public class MasterTitleScreen {
     }
 
     public void initialize() {
-        // Check ROM availability
-        for (MasterTitleEntry entry : entries) {
-            if (entry instanceof MasterTitleEntry.Stock stock) {
-                String romPath = configService.getString(stock.game().romConfigKey);
-                stockAvailability.put(stock.game(),
-                        romPath != null && !romPath.isEmpty() && new File(romPath).exists());
-            }
-        }
+        refreshStockAvailability();
 
         try {
             // Initialize renderer and font
@@ -774,24 +773,34 @@ public class MasterTitleScreen {
         playErrorSound();
     }
 
-    private void refreshRomPreviews() {
+    /**
+     * Rescans the user's images. Availability comes from the ROM catalogue
+     * (size and header, never filename), so a game whose only image is a
+     * lock-on dump or a pair of separate cartridges is offered like any other.
+     */
+    private void refreshStockAvailability() {
+        romCatalogue = RomImageCatalogue.forCurrentWorkingDirectory(configService);
         for (GameEntry game : GameEntry.values()) {
-            String path = configService.getString(game.romConfigKey);
-            boolean available = path != null && !path.isBlank() && new File(path).isFile();
-            stockAvailability.put(game, available);
+            stockAvailability.put(game, romCatalogue.isAvailable(logicalRomFor(game)));
+        }
+    }
+
+    private static RomIdentity logicalRomFor(GameEntry game) {
+        return GameId.fromCode(game.gameId).romGame().identity();
+    }
+
+    private void refreshRomPreviews() {
+        refreshStockAvailability();
+        for (GameEntry game : GameEntry.values()) {
+            Optional<RomImageCatalogue.Resolution> resolution = romCatalogue.resolve(logicalRomFor(game));
             boolean listed = entries.stream().anyMatch(entry -> entry instanceof MasterTitleEntry.Stock stock && stock.game() == game);
-            String source = available && listed ? previewSource(path) : null;
+            String source = resolution.isPresent() && listed ? resolution.get().changeToken() : null;
             if (Objects.equals(source, previewSources.get(game))) continue;
             RomPreviewState removed = romPreviews.remove(game);
             if (removed != null) PngTextureLoader.deleteTexture(removed.textureId);
             previewSources.remove(game);
-            if (renderer != null && source != null) loadRomPreview(game, Path.of(path), source);
+            if (renderer != null && source != null) loadRomPreview(game, resolution.get(), source);
         }
-    }
-
-    private static String previewSource(String path) {
-        File file = new File(path);
-        return file.getAbsolutePath() + ":" + file.length() + ":" + file.lastModified();
     }
 
     private void updateStandaloneActionChooser(InputHandler input) {
@@ -1123,18 +1132,34 @@ public class MasterTitleScreen {
     }
 
     private void loadRomPreviews() {
+        if (romCatalogue == null) refreshStockAvailability();
         for (MasterTitleEntry entry : entries) {
             if (!(entry instanceof MasterTitleEntry.Stock stock) || !isEntryAvailable(entry)) continue;
             GameEntry game = stock.game();
-            String path = configService.getString(game.romConfigKey);
-            loadRomPreview(game, Path.of(path), previewSource(path));
+            romCatalogue.resolve(logicalRomFor(game))
+                    .ifPresent(resolution -> loadRomPreview(game, resolution, resolution.changeToken()));
         }
     }
 
-    private void loadRomPreview(GameEntry game, Path path, String source) {
+    private void loadRomPreview(GameEntry game, RomImageCatalogue.Resolution resolution, String source) {
         // Remember even a failed decode: unrelated Apply must not retry disk work.
         previewSources.put(game, source);
-        MasterTitleRomPreview.loadSequenceFor(game, path).ifPresent(sequence -> {
+        Optional<Path> wholeImage = resolution.wholeImagePath();
+        Optional<MasterTitleRomPreview.PreviewSequence> decoded;
+        if (wholeImage.isPresent()) {
+            decoded = MasterTitleRomPreview.loadSequenceFor(game, wholeImage.get());
+        } else {
+            // A window of a lock-on dump or a composite has no file of its own:
+            // decode from the catalogue's in-memory view instead.
+            try {
+                decoded = MasterTitleRomPreview.loadSequenceFor(game,
+                        Rom.fromReader(romCatalogue.open(resolution.rom()), resolution.describe()));
+            } catch (IOException e) {
+                LOGGER.warning("Could not open " + resolution.describe() + " for its title preview: " + e.getMessage());
+                decoded = Optional.empty();
+            }
+        }
+        decoded.ifPresent(sequence -> {
             RomPreviewState preview = new RomPreviewState();
             preview.sequence = sequence;
             MasterTitleRomPreview.Image firstFrame = sequence.imageAt(0);

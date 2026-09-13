@@ -2162,6 +2162,8 @@ FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openg
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_AUDIO_HISTORY_SIZE_MB
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration REWIND_HISTORY_SECONDS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration RIGHT
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration ROMS_DIRECTORY
+FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration ROMS_PREFER_COMPOSITE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration S3K_SKIP_INTROS
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SCALE
 FIELD com.openggf.configuration.SonicConfiguration public,static,final com.openggf.configuration.SonicConfiguration SCREEN_HEIGHT
@@ -2513,6 +2515,12 @@ FIELD com.openggf.game.modzone.ModZoneRuntimeProfile$ScrollPolicy public,static,
 FIELD com.openggf.game.mutation.MutationEffects public,static,final com.openggf.game.mutation.MutationEffects NONE
 FIELD com.openggf.game.palette.PaletteSurface public,static,final com.openggf.game.palette.PaletteSurface NORMAL
 FIELD com.openggf.game.palette.PaletteSurface public,static,final com.openggf.game.palette.PaletteSurface UNDERWATER
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom KIS2
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom KIS2_CHIP
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom S1
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom S2
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom S3
+FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom S3K
 FIELD com.openggf.game.patch.LogicalRom public,static,final com.openggf.game.patch.LogicalRom SK
 FIELD com.openggf.game.patch.ModuleResolutionService$LaunchPolicy public,static,final com.openggf.game.patch.ModuleResolutionService$LaunchPolicy DETERMINISTIC
 FIELD com.openggf.game.patch.ModuleResolutionService$LaunchPolicy public,static,final com.openggf.game.patch.ModuleResolutionService$LaunchPolicy STANDARD
