@@ -42,6 +42,9 @@ public class Sonic2Level extends AbstractLevel {
      */
     private int zoneTileArtByteSize;
 
+    /** Palette line 0 replacement supplied by a game patch, or null for stock loading. */
+    private Palette characterPaletteOverride;
+
     /**
      * LoadZoneTiles' decompressed 8x8 art size in bytes (docs/s2disasm/s2.asm:6482).
      *
@@ -81,7 +84,38 @@ public class Sonic2Level extends AbstractLevel {
             List<RingSpawn> ringSpawns,
             RingSpriteSheet ringSpriteSheet,
             int levelBoundariesAddr) throws IOException {
+        this(rom, zoneIndex, characterPaletteAddr, levelPalettesAddr, levelPalettesSize, patternsAddr,
+                chunksAddr, blocksAddr, mapAddr, collisionsAddr, altCollisionsAddr, solidTileHeightsAddr,
+                solidTileWidthsAddr, solidTilesAngleAddr, objectSpawns, ringSpawns, ringSpriteSheet,
+                levelBoundariesAddr, null);
+    }
+
+    /**
+     * Standard loading with an optional palette line 0 replacement. A non-null
+     * {@code characterPaletteOverride} replaces the {@code Pal_SonicTails} line
+     * and takes precedence over cross-game donation (a patch owns gameplay).
+     */
+    public Sonic2Level(Rom rom,
+            int zoneIndex,
+            int characterPaletteAddr,
+            int levelPalettesAddr,
+            int levelPalettesSize,
+            int patternsAddr,
+            int chunksAddr,
+            int blocksAddr,
+            int mapAddr,
+            int collisionsAddr,
+            int altCollisionsAddr,
+            int solidTileHeightsAddr,
+            int solidTileWidthsAddr,
+            int solidTilesAngleAddr,
+            List<ObjectSpawn> objectSpawns,
+            List<RingSpawn> ringSpawns,
+            RingSpriteSheet ringSpriteSheet,
+            int levelBoundariesAddr,
+            Palette characterPaletteOverride) throws IOException {
         super(zoneIndex);
+        this.characterPaletteOverride = characterPaletteOverride;
         loadPalettes(rom, characterPaletteAddr, levelPalettesAddr, levelPalettesSize);
         loadPatterns(rom, patternsAddr);
         loadSolidTiles(rom, solidTileHeightsAddr, solidTileWidthsAddr, solidTilesAngleAddr);
@@ -226,7 +260,29 @@ public class Sonic2Level extends AbstractLevel {
             List<RingSpawn> ringSpawns,
             RingSpriteSheet ringSpriteSheet,
             int levelBoundariesAddr) throws IOException {
+        this(rom, zoneIndex, characterPaletteAddr, levelPalettesAddr, levelPalettesSize, resourcePlan,
+                mapAddr, solidTileHeightsAddr, solidTileWidthsAddr, solidTilesAngleAddr, objectSpawns,
+                ringSpawns, ringSpriteSheet, levelBoundariesAddr, null);
+    }
+
+    /** Resource-plan loading with an optional palette line 0 replacement (see the standard overload). */
+    public Sonic2Level(Rom rom,
+            int zoneIndex,
+            int characterPaletteAddr,
+            int levelPalettesAddr,
+            int levelPalettesSize,
+            LevelResourcePlan resourcePlan,
+            int mapAddr,
+            int solidTileHeightsAddr,
+            int solidTileWidthsAddr,
+            int solidTilesAngleAddr,
+            List<ObjectSpawn> objectSpawns,
+            List<RingSpawn> ringSpawns,
+            RingSpriteSheet ringSpriteSheet,
+            int levelBoundariesAddr,
+            Palette characterPaletteOverride) throws IOException {
         super(zoneIndex);
+        this.characterPaletteOverride = characterPaletteOverride;
         loadPalettes(rom, characterPaletteAddr, levelPalettesAddr, levelPalettesSize);
         loadPatternsWithPlan(rom, resourcePlan);
         loadSolidTiles(rom, solidTileHeightsAddr, solidTileWidthsAddr, solidTilesAngleAddr);
@@ -262,11 +318,16 @@ public class Sonic2Level extends AbstractLevel {
             palettes[i].fromSegaFormat(lines[i]);
         }
 
-        // "Knuckles in Sonic 2" lock-on: replace palette line 0 with the
+        // A game patch (Knuckles in Sonic 2) owns palette line 0 outright: the
+        // lock-on program's Pal_BGND carries Knuckles' colours in indices 2-5
+        // and S2's universal colours elsewhere (docs/kis2/BRANCH_DIFFS.md).
+        if (characterPaletteOverride != null) {
+            palettes[0] = characterPaletteOverride.deepCopy();
+        } else if (applyCrossGamePalette && com.openggf.game.CrossGameFeatureProvider.isActive()) {
+        // "Knuckles in Sonic 2" donation stand-in: replace palette line 0 with the
         // S2-compatible Knuckles palette from the S3K ROM (0x060BEA).
         // Only indices 2-5 differ (Knuckles' reds vs Sonic's blues);
         // indices 0-1 and 6-15 are identical to S2's Pal_SonicTails.
-        if (applyCrossGamePalette && com.openggf.game.CrossGameFeatureProvider.isActive()) {
             String mainChar = ActiveGameplayTeamResolver.resolveMainCharacterCode(GameServices.configuration());
             Palette hostPal = GameServices.crossGameFeatures()
                     .loadHostCompatiblePalette(mainChar);

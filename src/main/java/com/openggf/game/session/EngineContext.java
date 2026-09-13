@@ -11,6 +11,9 @@ import com.openggf.game.RomDetectionService;
 import com.openggf.game.patch.LogicalRomResolver;
 import com.openggf.game.patch.ModuleResolutionService;
 import com.openggf.game.patch.PatchEnablement;
+import com.openggf.game.patch.PatchOwner;
+import com.openggf.game.patch.RegisteredPatch;
+import com.openggf.game.sonic2.kis2.Kis2GamePatch;
 import com.openggf.graphics.GraphicsManager;
 
 import java.util.Objects;
@@ -33,7 +36,7 @@ public final class EngineContext {
                           DebugOverlayManager debugOverlay, PlaybackDebugManager playbackDebug,
                           RomDetectionService romDetection, CrossGameFeatureProvider crossGameFeatures) {
         this(configuration, graphics, audio, roms, profiler, debugOverlay, playbackDebug,
-                romDetection, crossGameFeatures, new ModuleResolutionService(java.util.List.of(),
+                romDetection, crossGameFeatures, new ModuleResolutionService(builtInPatches(),
                         PatchEnablement.ALL_ENABLED, LogicalRomResolver.fromRomManager(roms),
                         configuration));
     }
@@ -54,6 +57,12 @@ public final class EngineContext {
         this.crossGameFeatures = Objects.requireNonNull(crossGameFeatures, "crossGameFeatures");
         this.moduleResolutionService = Objects.requireNonNull(
                 moduleResolutionService, "moduleResolutionService");
+    }
+
+    /** Engine-owned patches, in registration order. */
+    public static java.util.List<RegisteredPatch> builtInPatches() {
+        return java.util.List.of(new RegisteredPatch(
+                new PatchOwner.BuiltIn(Kis2GamePatch.ID), Kis2GamePatch.ID, new Kis2GamePatch(), 0));
     }
 
     public static EngineContext fromLegacySingletonsForBootstrap() {
