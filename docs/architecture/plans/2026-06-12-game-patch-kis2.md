@@ -1,5 +1,49 @@
 # GamePatch Framework + Knuckles in Sonic 2 Implementation Plan
 
+> **2026-09-13 amendment (task status and ROM tiers).** Read with the design's
+> 2026-09-13 amendment.
+>
+> - **Delivered on `develop`, do not redo:** Task 2 (`DelegatingGameModule` + guard),
+>   Task 3 (`LogicalRom.SK`, `LogicalRomResolver`), Task 4 as superseded by
+>   `ModuleResolutionService`, Task 7 (`LaunchProfile` union via
+>   `patchBackedMainCharacters`), Task 8 for `Engine`, `HeadlessGameBoot` and
+>   `GameLoop`, Task 9 (`GameplayTeamAvailability.sanitizeForLaunch` in
+>   `Engine.launchGameplayFromDataSelect`).
+> - **Task 8 addendum:** wire `TraceReplaySessionBootstrap` through
+>   `ModuleResolutionService` with `LaunchPolicy.DETERMINISTIC`; it currently
+>   bypasses patches entirely, so a future KiS2 fixture could not activate the patch.
+> - **Task 1** is still first. Diff `24f8782..c336fed` in `docs/s2disasm` (branch point
+>   to current `knuckles-in-sonic-2` head); classify by the branch's own
+>   `; KiS2 (...)` tags: Knuckles 120, no-2P 102, title 54, bugfix 32, no-Tails 29,
+>   ending 15, lock-on 10, branch 10, unused 9, mappings-format 9, results 8,
+>   no-options 1. Record for every art/mapping/layout item **which chip** holds it
+>   (S&K half, S2 cart, or the `$300000` chip) using the design amendment's table.
+> - **New Task 3b (blocked on ROM image normalisation):** add `LogicalRom.KIS2` and
+>   `LogicalRom.KIS2_CHIP` served from the S&K + S2 lock-on dump; `PatchContext`
+>   unchanged. Until it lands, `Kis2GamePatch.romPrerequisites()` declares `SK` only
+>   and the patch runs tier one.
+> - **Task 5:** the KiS2 jump velocity `$600` already exists as
+>   `PhysicsProfile.SONIC_3K_KNUCKLES`; the KiS2 provider hands it out for
+>   Knuckles and stock S2 profiles for everyone else. Glide/climb needs no new
+>   flag; `SecondaryAbility.GLIDE` is engine-shared.
+> - **Task 10:** Knuckles art stays S&K-side (tier one). Add the KiS2 art conversion
+>   step the lock-on code performs at boot (`Knuckles_Art_Conversion_Buffer`) so the
+>   S3K-format art matches KiS2's expectations; cite the routine.
+> - **Task 11 splits:** 11a tier one uses the S3K life icon from the S&K half as
+>   donation does today; 11b tier two reads the chip's monitor, signpost, lives and
+>   continue patches through `KIS2_CHIP`, plus the changed HUD/object mappings.
+> - **Task 12 is mandatory:** all 18 act layouts differ. Read the `$DF370` table
+>   through the `KIS2` lock-on address space; tier one resolves S&K-side pointers
+>   and S2-cart pointers and falls back to stock CNZ with a logged, documented
+>   discrepancy.
+> - **Task 13:** add a placement oracle test that walks the `$DF370` table and
+>   asserts each resolvable act's spawn count against the stock S2 count (ROM-gated).
+> - **Task 14:** the 0.8 changelog line and the `known-discrepancies` tier-one
+>   entry; do not describe tier one as full KiS2.
+> - **Execution branch:** the 2026-07-10 "commit directly on `next`" directive
+>   predates the current worktree policy; follow `CLAUDE.md` (isolated
+>   `.worktrees/` checkout on a `feature/ai-*` branch) and the user's delivery flow.
+
 > **2026-07-10 compatibility amendment:** Phase 0 mod foundations supersede this
 > plan's static `GamePatchRegistry` Task 4 and every later static call. Do not create or
 > call that facade. Install `Kis2GamePatch` as
