@@ -168,3 +168,11 @@ It precedes KiS2 tier two and can ship alone. Documentation obligations:
 - No S&K + Sonic 2 dump was available while implementing; KiS2 and the chip are
   covered by the synthetic classifier and catalogue tests, and the ROM-gated KiS2
   test skips cleanly when the dump is absent.
+- Explicit-key contract (post-broad-run fix): a per-game key naming an existing
+  file is always served as configured (window or whole file); a key naming a
+  missing file fails closed with the configured value in the diagnostic, keeping
+  the legacy `RomManager` messages; the built-in default names are hints that let
+  the scan apply when absent, so a default install still benefits from the
+  catalogue. `RomManager.resolveRomForGame` returns the configured text verbatim
+  again; it never consulted the catalogue in the legacy contract and tools that
+  want resolution use `RomLocationResolver`.

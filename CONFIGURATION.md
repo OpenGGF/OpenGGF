@@ -175,8 +175,14 @@ dump serves the games it contains, and Sonic 3 & Knuckles can be assembled from 
 separate Sonic 3 image and a separate Sonic & Knuckles image. The assembled view
 lives in memory only; the engine never writes, joins, patches or downloads a file.
 
-When several images contain the same game, the per-game key wins, then an image
-whose hash matches the identity table below, then the first image in name order.
+The per-game keys are explicit overrides. A key that names an existing file is
+served as configured (as the window that contains the game, or whole when the
+layout is not recognised). A key that names a missing file fails closed with that
+value in the error; the engine never silently substitutes another image. The
+built-in default names (`s1.gen`, `s2.gen`, `s3k.gen`) are only hints: when the
+hinted file is absent, or the key is blank, the directory scan applies. Among
+scanned images an image whose hash matches the identity table below wins, then
+the first image in name order.
 An image whose header matches but whose hash is unknown is still used and is
 logged as unverified; a hash mismatch never blocks boot. Hashing happens only
 when an image is opened or a tie must be broken, so a folder of unrelated images
@@ -185,9 +191,9 @@ costs a few header reads at startup.
 | Key | YAML path | Type | Default | Description |
 |-----|-----------|------|---------|-------------|
 | `DEFAULT_ROM` | `roms.default` | string | `"s2"` | Which game to boot: `"s1"`, `"s2"`, or `"s3k"`. Selects the corresponding ROM key below. |
-| `SONIC_1_ROM` | `roms.sonic1` | string | `"s1.gen"` | Explicit image for Sonic 1. May name any image that contains it, including an S&K + Sonic 1 lock-on dump. When the file is absent the catalogue scan applies. |
-| `SONIC_2_ROM` | `roms.sonic2` | string | `"s2.gen"` | Explicit image for Sonic 2. May name any image that contains it, including an S&K + Sonic 2 lock-on dump. When the file is absent the catalogue scan applies. |
-| `SONIC_3K_ROM` | `roms.sonic3k` | string | `"s3k.gen"` | Explicit image for Sonic 3 & Knuckles: a 4 MiB lock-on dump. When the file is absent the catalogue scan applies, including the Sonic 3 + Sonic & Knuckles composite. |
+| `SONIC_1_ROM` | `roms.sonic1` | string | `"s1.gen"` | Explicit image for Sonic 1. May name any image that contains it, including an S&K + Sonic 1 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
+| `SONIC_2_ROM` | `roms.sonic2` | string | `"s2.gen"` | Explicit image for Sonic 2. May name any image that contains it, including an S&K + Sonic 2 lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies; any other missing file is an error. |
+| `SONIC_3K_ROM` | `roms.sonic3k` | string | `"s3k.gen"` | Explicit image for Sonic 3 & Knuckles: a 4 MiB lock-on dump. Blank, or the default name when that file is absent, means the catalogue scan applies (including the Sonic 3 + Sonic & Knuckles composite); any other missing file is an error. |
 | `ROMS_DIRECTORY` | `roms.directory` | string | `"."` | Directory scanned for images (`*.gen`, `*.bin`, `*.md`), relative to the working directory. |
 | `ROMS_PREFER_COMPOSITE` | `roms.preferComposite` | bool | `false` | When true, a Sonic 3 & Knuckles assembled from separate Sonic 3 and Sonic & Knuckles images is preferred over a single lock-on dump. |
 

@@ -57,7 +57,7 @@ class TestMasterTitlePreviewInvalidation {
     @Test void availabilityComesFromTheCatalogueNotTheConfiguredFilename() throws Exception {
         Files.write(root.resolve("Some Other Name.gen"), sonic1Shaped((byte) 3));
         var config = SonicConfigurationService.createStandalone(root);
-        config.setConfigValue(SonicConfiguration.SONIC_1_ROM, root.resolve("not-here.gen").toString());
+        config.setConfigValue(SonicConfiguration.SONIC_1_ROM, "");
         config.setConfigValue(SonicConfiguration.SONIC_2_ROM, root.resolve("missing2").toString());
         config.setConfigValue(SonicConfiguration.SONIC_3K_ROM, root.resolve("missing3").toString());
         config.setConfigValue(SonicConfiguration.ROMS_DIRECTORY, root.toString());

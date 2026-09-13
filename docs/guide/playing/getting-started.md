@@ -34,8 +34,9 @@ Filenames do not matter. Put your images next to `config.yaml` (or in the folder
   Sonic 3 & Knuckles with no joining on disk.
 
 The per-game keys (`roms.sonic1`, `roms.sonic2`, `roms.sonic3k`) remain as explicit
-overrides through master-title **Settings** or `config.yaml`. See
-[Configuration](configuration.md) for the full identity table.
+overrides through master-title **Settings** or `config.yaml`: leave them at their
+defaults or blank to let the engine find your images, or set one to a file that must
+exist. See [Configuration](configuration.md) for the full identity table.
 
 ## Install and Run
 

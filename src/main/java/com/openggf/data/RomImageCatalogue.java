@@ -25,9 +25,15 @@ import java.util.stream.Stream;
  *
  * <p>Built from the three per-game configuration keys plus a scan of
  * {@code roms.directory}. Identity comes from size and header, never from the
- * filename. Precedence for a logical ROM that several images contain: the
- * explicit per-game key, then a hash-verified image, then the first image in
- * directory (name) order. A composite ({@code SK} + {@code S3} for
+ * filename. A per-game key is an explicit override: when it names an existing
+ * file that file is served (as the window that contains the game, or whole
+ * when the layout is not recognised), and when it names a missing file the
+ * game fails closed with the configured value rather than silently using
+ * another image. The built-in default names ({@code s1.gen} and so on) are
+ * only hints: when the hinted file is absent, or the key is blank, the
+ * directory scan applies. Precedence for a logical ROM that several scanned
+ * images contain: a hash-verified image, then the first image in directory
+ * (name) order. A composite ({@code SK} + {@code S3} for
  * {@code S3K}) is used when no single image contains the logical ROM, or
  * first when {@code roms.preferComposite} is set.
  *
@@ -104,6 +110,8 @@ public final class RomImageCatalogue {
     private final List<PhysicalImage> images;
     private final Map<RomIdentity, PhysicalImage> explicit;
     private final Map<RomIdentity, String> explicitValues;
+    /** Non-default configured values that name a file which does not exist: fail closed. */
+    private final Map<RomIdentity, String> explicitMissing;
     private final boolean preferComposite;
     private final Map<RomIdentity, Optional<Resolution>> resolutions = new EnumMap<>(RomIdentity.class);
     private final Map<RomIdentity, RomByteReader> readers = new EnumMap<>(RomIdentity.class);
@@ -118,14 +126,16 @@ public final class RomImageCatalogue {
      */
     public RomImageCatalogue(List<PhysicalImage> images, Map<RomIdentity, PhysicalImage> explicit,
             boolean preferComposite) {
-        this(images, explicit, Map.of(), preferComposite);
+        this(images, explicit, Map.of(), Map.of(), preferComposite);
     }
 
     private RomImageCatalogue(List<PhysicalImage> images, Map<RomIdentity, PhysicalImage> explicit,
-            Map<RomIdentity, String> explicitValues, boolean preferComposite) {
+            Map<RomIdentity, String> explicitValues, Map<RomIdentity, String> explicitMissing,
+            boolean preferComposite) {
         this.images = List.copyOf(images);
         this.explicit = Map.copyOf(explicit);
         this.explicitValues = Map.copyOf(explicitValues);
+        this.explicitMissing = Map.copyOf(explicitMissing);
         this.preferComposite = preferComposite;
     }
 
@@ -147,6 +157,7 @@ public final class RomImageCatalogue {
         Map<Path, PhysicalImage> byPath = new LinkedHashMap<>();
         Map<RomIdentity, PhysicalImage> explicit = new EnumMap<>(RomIdentity.class);
         Map<RomIdentity, String> explicitValues = new EnumMap<>(RomIdentity.class);
+        Map<RomIdentity, String> explicitMissing = new EnumMap<>(RomIdentity.class);
         for (RomGame game : RomGame.values()) {
             String configured = configuration.getString(game.configurationKey());
             if (configured == null || configured.isBlank()) {
@@ -155,12 +166,21 @@ public final class RomImageCatalogue {
             explicitValues.put(game.identity(), configured);
             Path path = resolve(base, configured);
             if (!Files.isRegularFile(path)) {
-                LOGGER.fine("Configured " + game.configurationKey() + " image is not a file: " + path);
+                Object hint = configuration.getDefaultValue(game.configurationKey());
+                if (hint != null && configured.equals(hint.toString())) {
+                    LOGGER.fine("Default " + game.configurationKey() + " hint " + path
+                            + " is absent; the catalogue scan applies");
+                } else {
+                    LOGGER.fine("Configured " + game.configurationKey() + " image does not exist: " + path);
+                    explicitMissing.put(game.identity(), configured);
+                }
                 continue;
             }
             PhysicalImage image = probe(byPath, path);
             if (image != null) {
                 explicit.put(game.identity(), image);
+            } else {
+                explicitMissing.put(game.identity(), configured);
             }
         }
         String directory = configuration.getString(SonicConfiguration.ROMS_DIRECTORY);
@@ -178,7 +198,8 @@ public final class RomImageCatalogue {
             LOGGER.fine("ROM directory is not a directory: " + scan);
         }
         boolean preferComposite = configuration.getBoolean(SonicConfiguration.ROMS_PREFER_COMPOSITE);
-        return new RomImageCatalogue(new ArrayList<>(byPath.values()), explicit, explicitValues, preferComposite);
+        return new RomImageCatalogue(new ArrayList<>(byPath.values()), explicit, explicitValues,
+                explicitMissing, preferComposite);
     }
 
     /** Every probed image, explicit files first and then in directory order. */
@@ -189,6 +210,16 @@ public final class RomImageCatalogue {
     /** The literal configured value of the per-game key for this logical ROM, if any. */
     public Optional<String> configuredValue(RomIdentity rom) {
         return Optional.ofNullable(explicitValues.get(rom));
+    }
+
+    /**
+     * The configured value when the per-game key names a file that does not
+     * exist (or cannot be probed) and is not the built-in default hint. Such a
+     * logical ROM never resolves: the user asked for that file, so the engine
+     * reports it missing instead of picking another image.
+     */
+    public Optional<String> explicitMissingValue(RomIdentity rom) {
+        return Optional.ofNullable(explicitMissing.get(rom));
     }
 
     public boolean isAvailable(RomIdentity rom) {
@@ -247,14 +278,22 @@ public final class RomImageCatalogue {
     }
 
     private Optional<Resolution> resolveOnce(RomIdentity rom) {
+        if (explicitMissing.containsKey(rom)) {
+            return Optional.empty();
+        }
         PhysicalImage explicitImage = explicit.get(rom);
         if (explicitImage != null) {
             Optional<LogicalWindow> window = RomImageClassifier.windowOf(explicitImage, rom);
             if (window.isPresent()) {
                 return Optional.of(single(rom, explicitImage, window.get(), Source.EXPLICIT_KEY));
             }
-            LOGGER.warning("Configured image for " + rom + " does not contain it: " + explicitImage
-                    + "; falling back to the catalogue");
+            // The user named this file explicitly: serve it whole and let the
+            // game detectors judge it, exactly as a configured path always was.
+            LOGGER.info("Configured image for " + rom + " has no recognised window for it (" + explicitImage
+                    + "); serving the whole file as configured");
+            return Optional.of(new Resolution(rom,
+                    List.of(new Part(rom, explicitImage, 0, Math.toIntExact(explicitImage.size()))),
+                    Source.EXPLICIT_KEY));
         }
         if (preferComposite) {
             Optional<Resolution> composite = composite(rom);
