@@ -121,6 +121,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   fixtures, and the full-size streaming memory check has an explicit stress lane.
   FBZ local compatibility checks run independently of traversal failures; ordinary
   runs keep one native route and `fbz-routes` retains the eleven-route matrix.
+  A shared level-test standard now defines per-act widescreen/donor/character/team
+  breadth, independent mechanic/lifecycle checks and consistent rewind replay spots.
+  New-work guidance links to the standard; an all-game registry inventory and phased
+  coverage backlog track adoption without claiming existing levels already comply.
 
 - **Local test categories:** select related subsystem checks from changed paths, with
   common tests and structural guards retained, broad fallback for shared changes,

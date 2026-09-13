@@ -134,6 +134,22 @@ mvn -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
   [briefing-trace-rounds.md](docs/agent-workflow/briefing-trace-rounds.md#measurement-hazards--all-produce-plausible-output).
   Attribute results to the command, commit, and completed run; inspect skips.
 
+## Level test coverage
+
+New zone/act implementations must follow the
+[zone and act testing standard](docs/guide/contributing/level-test-standard.md)
+and deliver a per-act/character-route matrix linked from the
+[coverage backlog](docs/status/level-test-coverage.md). Cover supported viewport,
+donor, character and team breadth through real behavior, with consistent rewind
+spots for events, interactions, bosses, world changes, camera locks and load/respawn
+boundaries. Verify capture/restore and forward replay; test timeline isolation for
+loads that intentionally reset history. Short independent checks must not sit behind
+long routes. Existing level changes update affected matrix obligations and record
+inherited gaps; a partial level is not certified by loading or test-file presence.
+The standard and [migration plan](docs/architecture/plans/2026-09-13-level-test-standardisation.md)
+define backlog work; generated coverage/prerequisite enforcement is planned, not
+already installed. Existing validation budgets and delivery policy still apply.
+
 ## ROM and reference setup
 
 Discover existing root `.gen` files and pass absolute paths to ROM-backed
