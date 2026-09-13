@@ -104,7 +104,7 @@ public final class FbzMagneticSpikeBallObjectInstance extends AbstractObjectInst
     @Override public boolean isHighPriority() { return kind == Kind.FIELD_WIDE; }
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     @Override public boolean isCustomOutOfRange(int cameraX) {
-        return isCoarseXOutOfRange(spawn.x(), cameraX, 0x280);
+        return isCoarseXOutOfRange(spawn.x(), cameraX, coarseXCullRange());
     }
 
     @Override

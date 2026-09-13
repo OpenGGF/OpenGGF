@@ -35,7 +35,7 @@ public final class FbzDezPlayerLauncherObjectInstance extends AbstractObjectInst
         // Sprite_OnScreen_Test2 reads the saved anchor at $44, never the moving
         // x_pos. The native-width limit remains exactly $280; widescreen extends
         // only the visible-screen term of $80 + screen width + $C0.
-        coarseXCull(anchorX,0x80+viewportWidth()+0xC0);
+        coarseXCullViewport(anchorX);
     }
     private void stepMotion(){
         terminalOutwardEjectThisFrame=false;

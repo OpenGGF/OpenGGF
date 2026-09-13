@@ -39,7 +39,7 @@ public final class FbzSpinningPoleObjectInstance
     if (leader != null && players.flag(players.slot(leader), 0) &&
         services().camera() != null)
       services().camera().requestForcedScroll(spawn.x(), leader.getCentreY());
-    coarseXCull(spawn.x(), 0x280);
+    coarseXCullViewport(spawn.x());
   }
   private void updatePlayer(AbstractPlayableSprite p, int i) {
     if (!players.flag(i, 0)) {

@@ -49,7 +49,7 @@ public final class FbzMissileLauncherCompanionObjectInstance
     // this object is still live so native P1/P2 standing bits and all extension
     // sidekick latches are released before the same-callback cull.
     services().solidExecution().resolveSolidNowAll();
-    coarseXCull(anchorX, 0x280);
+    coarseXCullViewport(anchorX);
   }
   static int[] explosionOffsets() { return OFFSETS.clone(); }
   FbzMissileLauncherObjectInstance parentMember() { return parent; }

@@ -26,7 +26,7 @@ public final class FbzPlatformBlocksObjectInstance
       else if (dy < -0x28 && offset > 0)
         offset = Math.max(0, offset - 8);
     }
-    coarseXCull(spawn.x(), 0x280);
+    coarseXCullViewport(spawn.x());
   }
   int mappingFrame() { return frame; }
   int nativeWidth() { return width; }

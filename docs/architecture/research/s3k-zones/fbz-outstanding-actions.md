@@ -1,6 +1,6 @@
 # Flying Battery Zone outstanding actions
 
-Status updated during the 2026-09-13 route push. This branch contains a
+Status updated during the 2026-09-14 route push. This branch contains a
 large FBZ implementation uplift, but FBZ is not yet accepted as pixel-perfect.
 The remaining work is intentionally recorded here rather than hidden behind a
 green completion claim.
@@ -21,9 +21,9 @@ trace parity; investigate the measured timing frontier separately.
 ## Native FBZ2 compatibility route
 
 The native cold-Act 2 route now runs from the ROM start to the forced SOZ
-Act 0 request for the native 320px team rows, the 400px and 512px rows and
-the S2 donated profile; see "Arena to exit" and "Compatibility matrix" below
-for the measured rows and the three that remain red. The controller recovers
+Act 0 request for every viewport width, every team row and the S2 donated
+profile; only the S1 donated profile remains red (see "Compatibility matrix"
+below). The controller recovers
 from button egress using a fresh live elevator candidate, clears Obj28 layout
 273 exactly once, and proves acquisition and exit of that car. It also waits
 for the following descending car to clear its live spike wall and steers the
@@ -134,6 +134,40 @@ sidekick and all balls risen, an Obj28 release holds while another car of the
 same column spans P1's rolling height, and a TechnoSqueek at body height
 ahead of a running P1 is cleared with a jump-roll.
 
+### BK2 prefix replaced
+
+The BK2 input replay is now consumed only until P1 lands on the `$01EC` ledge
+after the `$078C` trap spring (rows 23527-23540). A ledge controller then
+owns the route to the `$076C` loop floor: hop the `$01F8` mice with released
+short jumps (the chain grab band is `$90`-`$A8` below the link), grab the
+`$0868` Obj72 chain from `$085C` and ride it to its `$B0` extension, release
+LEFT and steer the `-$200` drift into the `$0810`/`$0870` spike gap, break the
+`$0810` monitor with a jump from `$0829`, stand on the `$0810` Obj78 launcher,
+and settle from its `$1000` throw just right of the upper-loop approach facing
+LEFT (the S1 upper-loop assist consumes itself on any LEFT-pressed leftward
+motion inside `$0A40`-`$0A70`, so no LEFT is pressed there). The BK2's own
+player grabbed the `$0818` chain first and was knocked off it by a mouse at
+row 23622; a wider viewport meets the mice in another phase and that chain
+lowers P1 into the spikes, which is why the fixed replay could never finish
+at 640 or 800 pixels. The 27 authored loop-climb runs are no longer consumed:
+the settle point is inside `acquireMidpointCar`'s brake range.
+
+After the `$08C0` shaft the run to the `$0B38` button is capped at `$400` so
+the door stage can brake inside its `$0B00`-`$0B80` envelope instead of the
+authored RIGHT/JUMP cadence carrying P1 over the button into the `$0C00`
+spikes.
+
+### Widescreen object windows (production fix)
+
+At 640 and 800 pixels the `$0B68` screw door never existed when P1 arrived:
+its delete-touch check used the native `$280` while the placement window
+loads objects `$80 + width + $C0` ahead, so it was deleted on the frame it
+loaded, and the `$0BC0` elevator's cars, the Obj73 balls and every other FBZ
+object with a bare `$280` `Sprite_OnScreen_Test2` range did the same. They
+now share `AbstractObjectInstance.coarseXCullViewport()` (native unchanged).
+See [known-discrepancies.md](../../../status/known-discrepancies.md), Object
+Despawn and Visibility Windows.
+
 ### Sidekick contract
 
 CPU sidekick deaths are shipped behaviour: the ROM's own Tails dies three
@@ -169,18 +203,24 @@ The 13-row matrix remains pending and must not be relabelled PASS:
 - five viewport widths: 320, 400, 512, 640, and 800;
 - donation off, Sonic 1, and Sonic 2.
 
-Measured on this branch on 2026-09-13 (`TestFbzCompatibilityMatrix`, 24
-methods): 21 green, 3 red. The five team rows, the 320/400/512px viewport rows
-and the off/S2 donation rows complete the mandatory route to the SOZ request
-(about 23,300-24,300 frames). The 640px and 800px rows and the S1 donated
-profile never leave the 2,889-frame BK2 prefix: all three stand at
-`$08BE,$02EC` when the shaft acquisition times out at frame 5877. The prefix
-is a fixed replay, and a wider viewport activates the `$0818` chain's
-neighbours in another phase: the Obj_TechnoSqueek that knocks the BK2 player
-off the chain at row 23622 is absent, so P1 rides the chain into the
-`$0810,$0290` spikes and every later authored input lands elsewhere; the S1
-profile diverges by physics before that. The next work is to replace that
-prefix with live-geometry controllers like the rest of the route.
+Measured on this branch on 2026-09-14 (`TestFbzCompatibilityMatrix`, 24
+methods): 23 green, 1 red. The five team rows, all five viewport widths and
+the off/S2 donation rows complete the mandatory route to the SOZ request
+(about 19,600-22,300 frames). The S1 donated profile now reaches the `$1DC0`
+Obj28 squeeze at about frame 8,060 with 54 rings, through the `$1718`
+corridor by an ordinary run gated on a `$C0`-frame ACTIVE runway (it cannot
+spindash) with a short jump-roll over the non-magnetic `$1790` Blaster. It
+stops at the squeeze: `FbzS1DonationSqueezeAssist` only fires for the pair
+`FbzMovingSqueezeTraversal.findEpisode` selects, a native-speed projection
+with a real danger edge or a crush at the ordinary roll speed, and in the car
+phases the live-gated route arrives in no `$1DC0` car ever presents one (the
+block stays 71 pixels above a rolling P1 on the car), while an ordinary run
+across the car stalls on the `$0D85`-style lip at `$1D85` and is lifted into
+the block. The row fails fast with `obj28-s1-no-genuine-squeeze` after a
+`$400`-frame wait. The next work is either an S1 crossing that does not
+depend on the assist's episode finder or a finder that accepts this phase;
+both need the ROM's own answer for how a non-spindash character clears this
+pair.
 
 After the native route is green, run the focused donation, team, and viewport
 methods, then the full `TestFbzCompatibilityMatrix`. The S1 row must prove that

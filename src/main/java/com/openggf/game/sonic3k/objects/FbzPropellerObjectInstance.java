@@ -14,7 +14,7 @@ public final class FbzPropellerObjectInstance extends AbstractObjectInstance
   public void update(int vIntRunCount, PlayableEntity p) {
     frame = (frame + 1) & 3;
     flags = FLAGS[frame];
-    coarseXCull(spawn.x(), 0x280);
+    coarseXCullViewport(spawn.x());
   }
   int mappingFrame() { return frame; }
   int[] collisionCycle() { return FLAGS.clone(); }
