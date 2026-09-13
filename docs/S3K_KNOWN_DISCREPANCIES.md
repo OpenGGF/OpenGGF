@@ -1769,3 +1769,15 @@ no production three-slot mailbox consumer, AudioManager selects rings before
 retail's consume point and resets its fallback side on stop paths. The
 capture's 1-up/fade mailbox-clearing behavior remains unverified against
 `zUpdateMusic` (:658-701).
+
+## HCZ1 miniboss local parity corrections (2026-09-13)
+
+Resolved the arena Y-lock reset, omitted second rocket speed-2 wait, and
+lower-engine odd-V-int rendering/touch registration. The follow-up corrected the
+initial audit's inverted priority interpretation and restored independent exhaust
+priority/activation, falling rocket debris, whirlpool slowdown, bubble animation
+and depth, and defeat-handoff bubble deletion. Bubble links and the optional
+explosion controller now survive rewind through that cleanup boundary. See the
+[ROM audit and coverage limits](architecture/audits/2026-09-13-hcz1-miniboss-parity.md).
+Full encounter slot-pressure, transient graph, level rendering and character/donor
+route certification remain open; these local corrections do not close those gaps.

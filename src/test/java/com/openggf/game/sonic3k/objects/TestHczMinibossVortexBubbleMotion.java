@@ -52,6 +52,36 @@ class TestHczMinibossVortexBubbleMotion {
         );
     }
 
+    @Test
+    void bubbleAnimatesChangesDepthAndStopsMovingOnReleaseInstall() throws Exception {
+        AbstractObjectInstance bubble = newBubble(0x3580, 0x0780, 0x3600, 0x0780);
+        assertEquals(5, bubble.getPriorityBucket());
+        bubble.update(0, null);
+        assertEquals(0x16, TestHczMinibossVisualParity.field(bubble, "frame"));
+        assertEquals(2, bubble.getPriorityBucket());
+        bubble.update(1, null);
+        assertEquals(0, TestHczMinibossVisualParity.field(bubble, "frame"));
+        for (int i = 2; i < 32; i++) bubble.update(i, null);
+        assertEquals(1, TestHczMinibossVisualParity.field(bubble, "phase"));
+        int beforeX = bubble.getSpawn().x();
+        int beforeY = bubble.getSpawn().y();
+        var end = bubble.getClass().getDeclaredMethod("signalVortexEnd");
+        end.setAccessible(true);
+        end.invoke(bubble);
+        bubble.update(32, null);
+        assertEquals(beforeX, bubble.getSpawn().x());
+        assertEquals(beforeY, bubble.getSpawn().y());
+        for (int i = 0; i < 31; i++) bubble.update(33 + i, null);
+        org.junit.jupiter.api.Assertions.assertFalse(bubble.isDestroyed());
+        bubble.update(64, null);
+        org.junit.jupiter.api.Assertions.assertTrue(bubble.isDestroyed());
+
+        AbstractObjectInstance right = newBubble(0x367F, 0x0780, 0x3600, 0x0780);
+        right.update(0, null);
+        assertEquals(6, right.getPriorityBucket());
+        org.junit.jupiter.api.Assertions.assertTrue(right.isHighPriority());
+    }
+
     private static AbstractObjectInstance newBubble(
             int x, int y, int vortexX, int vortexY) throws Exception {
         Class<?> type = Class.forName(HczMinibossInstance.class.getName() + "$VortexBubbleChild");

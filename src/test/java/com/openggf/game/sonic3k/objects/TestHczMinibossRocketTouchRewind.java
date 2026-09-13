@@ -113,6 +113,89 @@ class TestHczMinibossRocketTouchRewind {
         assertParentSlots(restoredParent, restoredChildren);
     }
 
+    @Test
+    void thirtyVortexBubblesRecreateAndDeleteAtTheDefeatHandoffOnBothTimelines() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HCZ, 0).build();
+        ObjectManager manager = GameServices.level().getObjectManager();
+        HczMinibossInstance parent = installPlacedHczMinibossParent(manager);
+        invokePrivateNoArg(parent, "beginVortexSequence");
+        List<AbstractObjectInstance> bubbles = liveBubbles(manager);
+        assertEquals(30, bubbles.size(), "ChildObjDat_6AD92 creates $1E children");
+        for (int frame = 0; frame < 40; frame++) {
+            for (AbstractObjectInstance bubble : bubbles) bubble.update(frame, null);
+        }
+        RewindRegistry registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot active = registry.capture();
+        List<Object> expected = advanceAndCaptureBubbles(bubbles, 7);
+        for (AbstractObjectInstance bubble : bubbles) manager.removeDynamicObject(bubble);
+        assertTrue(((List<?>) TestHczMinibossVisualParity.field(parent, "vortexBubbles")).isEmpty(),
+                "removal must unlink children before the owner's next update");
+        manager.validateRewindReferenceClosure();
+        registry.restore(active);
+        parent = findHczMinibossParent(manager);
+        List<AbstractObjectInstance> restored = liveBubbles(manager);
+        assertEquals(30, restored.size());
+        for (AbstractObjectInstance bubble : restored) {
+            assertSame(parent, TestHczMinibossVisualParity.field(bubble, "owner"));
+        }
+        assertEquals(expected, advanceAndCaptureBubbles(restored, 7),
+                "recreation must retain each bubble's centre, chosen frame, depth and fractional motion");
+        assertTrue(restored.stream().noneMatch(bubbles::contains));
+
+        Object state = TestHczMinibossVisualParity.field(parent, "state");
+        TestHczMinibossVisualParity.set(state, "defeated", true);
+        TestHczMinibossVisualParity.set(state, "hitCount", 0);
+        invokePrivateNoArg(parent, "onDefeatStarted");
+        CompositeSnapshot killed = registry.capture();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            if (cycle != 0) {
+                for (AbstractObjectInstance bubble : restored) manager.removeDynamicObject(bubble);
+                registry.restore(killed);
+                parent = findHczMinibossParent(manager);
+                restored = liveBubbles(manager);
+            }
+            assertEquals(30, restored.size());
+            assertNotNull(TestHczMinibossVisualParity.field(parent, "defeatExplosionController"),
+                    "defeat controller must survive restore, cycle " + cycle);
+            List<?> owned = (List<?>) TestHczMinibossVisualParity.field(parent, "vortexBubbles");
+            assertEquals(30, owned.size());
+            assertTrue(owned.containsAll(restored), "parent must link live recreated children, cycle " + cycle);
+            for (int frame = 0; frame < 63; frame++) invokePrivateNoArg(parent, "updateDefeated");
+            assertEquals(30, liveBubbles(manager).size(), "water child bit 4 is not published by the killing hit");
+            invokePrivateNoArg(parent, "updateDefeated");
+            assertEquals(0, liveBubbles(manager).size(), "loc_6A636 -> Child_Draw_Sprite2 deletes the whole live batch");
+            assertTrue(restored.stream().allMatch(AbstractObjectInstance::isDestroyed));
+        }
+    }
+
+    private static List<AbstractObjectInstance> liveBubbles(ObjectManager manager) {
+        return manager.getActiveObjects().stream()
+                .filter(object -> object.getClass().getSimpleName().equals("VortexBubbleChild"))
+                .filter(object -> !object.isDestroyed())
+                .map(AbstractObjectInstance.class::cast)
+                .sorted(Comparator.comparingInt(AbstractObjectInstance::getSlotIndex)).toList();
+    }
+
+    private static List<Object> advanceAndCaptureBubbles(List<AbstractObjectInstance> bubbles, int frames)
+            throws Exception {
+        for (int frame = 0; frame < frames; frame++) {
+            for (AbstractObjectInstance bubble : bubbles) bubble.update(frame, null);
+        }
+        List<Object> states = new ArrayList<>();
+        for (AbstractObjectInstance bubble : bubbles) {
+            List<Object> observation = new ArrayList<>();
+            observation.add(bubble.getSpawn().x());
+            observation.add(bubble.getSpawn().y());
+            for (String name : List.of("xSub", "ySub", "xVel", "vortexX", "vortexY",
+                    "frame", "baseFrame", "priority", "phase", "timer", "vortexEnded")) {
+                observation.add(TestHczMinibossVisualParity.field(bubble, name));
+            }
+            states.add(observation);
+        }
+        return states;
+    }
+
     private static HczMinibossInstance installPlacedHczMinibossParent(ObjectManager objectManager) throws Exception {
         ObjectSpawn spawn = new ObjectSpawn(
                 0x3600, 0x0500, Sonic3kObjectIds.HCZ_MINIBOSS, 0, 0, false, 0, 0x99);

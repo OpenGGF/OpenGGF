@@ -47,6 +47,18 @@ uncaptured `final` scalar, or an object reference not captured as a rewind id fa
 fails `TestStaticStateRewindCoverageGuard` — fix it with a `RewindSnapshottable` adapter,
 not a baseline entry, unless the gap is genuinely intentional.
 
+**Managed children need identity relinking.** `RewindStateful` represents captured
+helper values; applying it to a live managed child can make an owner's captured
+collection retain stale objects after recreation. Use object scalar capture and
+identity relinking for those children. Exercise remove/recreate/restore with the
+real manager, including any optional defeat controller that advances child cleanup.
+
+**ROM sprite priority is SAT order.** Lower priority buckets and earlier object
+slots appear in front; painter rendering reverses both orders. Folded boss parts
+can have independent buckets even when attached to the same rocket. Compare native
+pixels against ROM table-driven composition, rather than testing a numeric
+"front" flag against the same assumption used by the implementation.
+
 **Claimed hardware work is memoized.** `HardwareTimingJob` shares one immutable rewind
 snapshot per claimed job across checkpoints and drops it in every mutator. Unclaimed jobs
 are re-snapshotted each capture because `coordinatorPreparation` still hands out their live

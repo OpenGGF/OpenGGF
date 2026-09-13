@@ -55,6 +55,31 @@ public class S3kBossExplosionController {
 
     public record PendingExplosion(int x, int y, boolean playSfx) {}
 
+    /** Value snapshot for encounter owners that restore this otherwise optional helper. */
+    record Snapshot(int centreX, int centreY, int xRange, int yRange,
+                    int timer, int intervalCounter, com.openggf.game.rewind.snapshot.GameRngSnapshot rng,
+                    PendingExplosion[] pending) {}
+
+    Snapshot captureSnapshot() {
+        return new Snapshot(centreX, centreY, xRange, yRange, timer, intervalCounter,
+                rng.capture(), pendingExplosions.toArray(PendingExplosion[]::new));
+    }
+
+    static S3kBossExplosionController fromSnapshot(Snapshot snapshot) {
+        return new S3kBossExplosionController(snapshot);
+    }
+
+    private S3kBossExplosionController(Snapshot snapshot) {
+        centreX = snapshot.centreX();
+        centreY = snapshot.centreY();
+        xRange = snapshot.xRange();
+        yRange = snapshot.yRange();
+        timer = snapshot.timer();
+        intervalCounter = snapshot.intervalCounter();
+        rng = new GameRng(snapshot.rng().flavour(), snapshot.rng().seed());
+        pendingExplosions.addAll(List.of(snapshot.pending()));
+    }
+
     public S3kBossExplosionController(int centreX, int centreY, int subtype) {
         this(centreX, centreY, subtype, new GameRng(GameRng.Flavour.S3K));
     }

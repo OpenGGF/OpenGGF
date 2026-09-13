@@ -455,6 +455,7 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "rockets"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "rocketTouchChildren"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "vortexBubbles"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance$VortexBubbleChild", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HczMinibossInstance", "vortexControlledPlayers"), RewindFieldPolicy.CAPTURED),
             // HCZ traversal objects retain the actual native-slot owner across roster
             // reorder/replacement. Player-reference codecs serialize these as stable

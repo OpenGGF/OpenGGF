@@ -109543,3 +109543,36 @@ see the audit for ROM/donor limitations and exact commands.
   Those bootstrap failures prevent attributing downstream agreement to this fix.
 - Next target: establish the cause of the scattered-ring count difference
   at row 6,958; preserve alternate bootstrap gaps as independent requirements.
+
+
+## 2026-09-13 — HCZ1 boss local parity fixes; matched replay unchanged
+
+Direct `develop`, pinned pre-task base `b1f693fd0104e245f23b2560717da7809b41c56a`,
+working-tree changes in `HczMinibossInstance`: preserve arena Y lock, retain both
+rocket speed-2 slowdown waits, correct rocket depth, gate lower-engine drawing and
+touch on even V-int counts. [Audit and coverage limits](../architecture/audits/2026-09-13-hcz1-miniboss-parity.md).
+
+Command (both arms): `mvn -Dmse=off -Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay
+"-Ds3k.rom.path=<absolute root locked-on ROM>" test`.
+Both completed 29,302 frames, 2 tests / 1 failure / no errors or skips: **4,571
+comparison errors, first frame 9,482 `air` (expected 1, actual 0)**. The baseline
+arm used the pinned boss source and automatically restored the patch afterward.
+Complete normalized error arrays match (fingerprint in the audit). No new trace
+regression from this patch; the earlier historical HCZ1-clean claim does not
+represent this current baseline. Root cause of the inherited failure remains
+outside this local boss correction. The trace is still red; no frontier advancement
+or full HCZ1 certification is claimed.
+
+### HCZ1 visual/cleanup follow-up, same working tree and pinned base
+
+The initial depth inversion above was corrected after checking SAT ordering.
+The follow-up restores independent exhaust depth/activation, water and bubble
+animation, rocket defeat debris, and defeat-handoff cleanup with rewind.
+The first `-Ptrace-segments -Dtest=TestS3kHczZoneSliceTraceReplay` invocation
+stopped at frame 9,374 with an invalid `vortexBubbles` rewind reference: pruning
+on the next parent update was too late. Bubble unload now unlinks the child on
+the removal boundary. The final invocation, using the same absolute ROM property
+above, completes all 29,302 frames: 2 tests / 1 failure / zero errors or skips.
+All 4,571 comparison errors, first frame 9,482 `air`, have the identical normalized
+fingerprint recorded in the audit and pinned baseline. No frontier movement;
+the inherited trace failure remains open.

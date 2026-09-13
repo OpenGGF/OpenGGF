@@ -6,6 +6,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **HCZ1 miniboss:** retain the vertical arena lock and full rocket slowdown;
+  match the body, rockets and individual exhausts to ROM sprite priorities and
+  flicker gates. Restore the whirlpool slowdown, bubble animation and depth,
+  falling rocket debris, and bubble cleanup at the defeat handoff, including
+  after rewinding the explosion sequence.
+
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late
   ring appearance in EHZ1 after the 0.7 branch rollover. Ring placement also
