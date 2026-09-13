@@ -55,3 +55,14 @@ project-wide verification follow the repository instructions.
 
 For mapping and callback oracles, read
 [the focused reference](references/mapping-and-callbacks.md).
+
+## Per-act coverage obligation
+
+Follow the [zone and act test standard](../../../docs/guide/contributing/level-test-standard.md)
+for this change's affected contracts and the owning act/character-route matrix.
+New acts require the full applicable matrix; local changes record inherited gaps.
+Include supported viewport/donor/team breadth and the applicable rewind spots:
+events, interactions, boss graphs, camera locks, world changes and loads/respawn.
+Prove restoration and forward replay, or timeline isolation at an intentional reset.
+Keep short checks independent of full routes and update the
+[coverage backlog](../../../docs/status/level-test-coverage.md) in the same delivery.

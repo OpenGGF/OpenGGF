@@ -1,5 +1,9 @@
 # Headless testing
 
+For required per-zone/act breadth, rewind spots, execution lanes and the new-level
+delivery checklist, follow the [zone and act testing standard](level-test-standard.md).
+Existing coverage is being audited through the [level backlog](../../status/level-test-coverage.md).
+
 For local check selection, use the [test category runner](../../../tools/testing/README.md#test-categories).
 It selects ordinary tests from the change against the integration base and runs structural
 guards separately. Focused categories do not replace affected trace fixtures or native tests;
