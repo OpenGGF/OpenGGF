@@ -135,9 +135,10 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
         tailsEndingPoseApplied = true;
         if (p2.getCpuController() != null) {
             p2.getCpuController().setController2SignedLocked(false);
-            p2.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
         }
-        else setEndingPose(p2);
+        // Check_TailsEndPose tail-calls Set_PlayerEndingPose in this object slot;
+        // only the unlocked Ctrl_2 raw copy waits for the next Tails_Control pass.
+        setEndingPose(p2);
     }
 
     private void setEndingPose(AbstractPlayableSprite sprite) {
