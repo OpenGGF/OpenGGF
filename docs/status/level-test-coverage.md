@@ -176,3 +176,8 @@ local fix does not certify the remaining native visual checkpoints.
 FBZ Act 2 early `$0DC0` elevator: the 2026-09-14 S1 local phase sweep and
 blocked/safe/crushed gameplay captures establish ordinary roll feasibility;
 the Act 2 matrix records its width, entry-history and permanent-regression limits.
+
+FBZ early elevator direction correction (2026-09-14): right-to-left S1
+feasibility now has separate measured/captured evidence in the Act 2 matrix.
+Its narrow successful script does not inherit the easier left-to-right timing
+windows; extended phase coverage and whole-route guarantees remain open.
