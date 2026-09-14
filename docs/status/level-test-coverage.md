@@ -145,7 +145,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_GUMBALL_2` | Audit pending |
 | S3K | `S3K_GLOWING_SPHERE` | Audit pending |
 | S3K | `S3K_GLOWING_SPHERE_2` | Audit pending |
-| S3K | `S3K_SLOT_MACHINE` | Audit pending |
+| S3K | `S3K_SLOT_MACHINE` | Audit pending; bonus-loop player priority and native glass overlap covered by `TestGameLoopBonusPlayerPriority` and `TestS3kSlotsGlassNative` ([scope and evidence](../architecture/validation/2026-09-14-slots-glass-layering.md)). Donor/team and rewind visual breadth remain open. |
 | S3K | `S3K_SLOT_MACHINE_2` | Audit pending |
 | S3K | `S3K_LRZ_BOSS` | Audit pending |
 | S3K | `S3K_HIDDEN_PALACE_SANCTUARY` | Audit pending |
