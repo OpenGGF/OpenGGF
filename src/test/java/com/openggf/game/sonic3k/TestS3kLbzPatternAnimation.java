@@ -74,6 +74,7 @@ class TestS3kLbzPatternAnimation {
         byte[] inactiveBefore = snapshotRange(level, alarmTiles.startTile(), alarmTiles.endTileInclusive());
         for (int i = 0; i < 4; i++) {
             animator.update();
+            publishQueuedPatternsAtOrdinaryVBlank();
         }
         assertArrayEquals(inactiveBefore,
                 snapshotRange(level, alarmTiles.startTile(), alarmTiles.endTileInclusive()),
@@ -82,8 +83,18 @@ class TestS3kLbzPatternAnimation {
         LbzZoneRuntimeState state = S3kRuntimeStates.currentLbz(GameServices.zoneRuntimeRegistry())
                 .orElseThrow(() -> new AssertionError("Expected LBZ runtime state"));
         state.setAlarmAnimationActive(true);
-        assertRangesChangeAfterUpdates(animator, 4,
-                new TileRange(0x365, 0x36C));
+        boolean publishedChange = false;
+        for (int i = 0; i < 4; i++) {
+            byte[] presentedBefore = snapshotRange(level, alarmTiles.startTile(), alarmTiles.endTileInclusive());
+            animator.update();
+            assertArrayEquals(presentedBefore,
+                    snapshotRange(level, alarmTiles.startTile(), alarmTiles.endTileInclusive()),
+                    "Active alarm AniPLC submits ROM art without publishing it before VBlank");
+            publishQueuedPatternsAtOrdinaryVBlank();
+            publishedChange |= !Arrays.equals(inactiveBefore,
+                    snapshotRange(level, alarmTiles.startTile(), alarmTiles.endTileInclusive()));
+        }
+        assertTrue(publishedChange, "Active LBZ alarm art must publish at a legal VBlank");
     }
 
     @Test
@@ -202,6 +213,20 @@ class TestS3kLbzPatternAnimation {
             assertTrue(channelIds.contains(expectedChannelId),
                     "Expected LBZ graph channel " + expectedChannelId + " but found " + channelIds);
         }
+    }
+
+    private static void publishQueuedPatternsAtOrdinaryVBlank() {
+        // AniPLC queues DMA in the level loop; the next legal VInt publishes
+        // the immutable payload. Exercise the production dispatch rather than
+        // treating CPU animator.update() as an immediate VRAM write.
+        var coordinator = new com.openggf.game.resources.PlcFrameLifecycleCoordinator(
+                (com.openggf.game.resources.PlcLifecycleService) null);
+        var frame = coordinator.latchBeforeFadeUpdate();
+        frame.claim(com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL);
+        com.openggf.LevelFrameStep.dispatchGameVBlank(
+                com.openggf.LevelFrameContext.from(
+                        com.openggf.game.session.SessionManager.getCurrentGameplayMode()), frame);
+        frame.finish();
     }
 
     private static void assertRangesChangeAfterUpdates(Sonic3kPatternAnimator animator,
