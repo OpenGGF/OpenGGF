@@ -15,7 +15,16 @@ import java.util.List;
 public final class FbzRotatingPlatformObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, TouchResponseProvider, RewindRecreatable,
         RomWorldPositionedObject {
-    private static final int[][] RADII={{0x5C,0x44,0x2C,0xD4,0xBC,0xA4},{0x44,0x2C}};
+    // byte_3B780: count-minus-one, special-member bit mask, then radius bytes.
+    private static final int[][] RADII = {
+            {0x5C,0x44,0x2C,0xD4,0xBC,0xA4}, {0x5C,0x44,0x2C,0xD4,0xBC,0xA4},
+            {0x5C,0x44,0x2C,0xD4,0xBC,0xA4}, {0x44,0x2C,0xD4,0xBC},
+            {0x44,0x2C,0xD4,0xBC}, {0x44,0x2C,0xD4,0xBC},
+            {0x2C,0xD4}, {0x2C,0xD4}, {0x2C,0xD4},
+            {0x5C,0x44,0x2C}, {0x5C,0x44,0x2C}, {0x44,0x2C},
+            {0x44,0x2C}, {0x2C}, {0x2C}
+    };
+    private static final int[] SPECIAL_MASKS = {0,1,0x21,0,1,9,0,1,3,0,1,0,1,0,1};
     private int anchorX,anchorY;
     private int radius;
     private boolean special,child;
@@ -33,9 +42,11 @@ public final class FbzRotatingPlatformObjectInstance extends AbstractObjectInsta
     @Override public FbzRotatingPlatformObjectInstance recreateForRewind(RewindRecreateContext ctx){FbzRotatingPlatformObjectInstance restored=new FbzRotatingPlatformObjectInstance(ctx.spawn(),0,false,false,null);if(ctx.state()!=null&&ctx.state().compactGenericState()!=null)GenericFieldCapturer.restoreObjectSubclassScalarsCompact(restored,ctx.state().compactGenericState());if(restored.child)restored.parent=findRestoredParent(ctx.objectManager(),restored.familySlot);return restored;}
     private static FbzRotatingPlatformObjectInstance findRestoredParent(ObjectManager manager,int familySlot){if(manager==null)return null;for(ObjectInstance object:manager.getActiveObjects())if(object instanceof FbzRotatingPlatformObjectInstance candidate&&!candidate.child&&!candidate.isDestroyed()&&candidate.familySlot==familySlot)return candidate;return null;}
     @Override protected void afterRewindRestoreSettled(){if(child&&parent==null)parent=findRestoredParent(services().objectManager(),familySlot);}
-    static int positionX(int anchor,int radius,int angle){return anchor+((TrigLookupTable.cosHex(angle)*radius)>>8);}static int positionY(int anchor,int radius,int angle){return anchor+((TrigLookupTable.sinHex(angle)*radius)>>8);}
-    private static int[] definitions(ObjectSpawn s){return (s.subtype()&0x0F)==0x0C?RADII[1]:RADII[0];}
-    private static boolean isSpecial(ObjectSpawn s,int member){return (s.subtype()&0x0F)==0x0C&&member==0;}
+    // move.b radius,$30 writes the high byte of a signed word; MULS/SWAP
+    // therefore sign-extends the radius byte before the sine product.
+    static int positionX(int anchor,int radius,int angle){return anchor+((TrigLookupTable.cosHex(angle)*(byte)radius)>>8);}static int positionY(int anchor,int radius,int angle){return anchor+((TrigLookupTable.sinHex(angle)*(byte)radius)>>8);}
+    private static int[] definitions(ObjectSpawn s){return RADII[s.subtype()&0x0F];}
+    private static boolean isSpecial(ObjectSpawn s,int member){return ((SPECIAL_MASKS[s.subtype()&0x0F]>>>member)&1)!=0;}
     int[] memberRadii(){return Arrays.copyOf(definitions(spawn),definitions(spawn).length);} boolean[] specialMembers(){boolean[] result=new boolean[definitions(spawn).length];for(int i=0;i<result.length;i++)result[i]=isSpecial(spawn,i);return result;} int angleStep(){return (spawn.renderFlags()&1)!=0?-1:1;}
     int memberRadius(){return radius;} boolean specialMember(){return special;}
     boolean childMember(){return child;} FbzRotatingPlatformObjectInstance parentMember(){return parent;}
@@ -47,6 +58,12 @@ public final class FbzRotatingPlatformObjectInstance extends AbstractObjectInsta
     @Override public void afterRomWorldTransitionOffset(int deltaX,int deltaY){
         anchorX=(anchorX+deltaX)&0xFFFF;anchorY=(anchorY+deltaY)&0xFFFF;
     }
+    // loc_3B802 writes width_pixels=$C for every native member.
+    @Override public int getBalanceWidthPixels(){return 0x0C;}
+    @Override public int getOnScreenHalfWidth(){return 0x0C;}
+    @Override public int getOnScreenHalfHeight(){return 0x0C;}
+    // SolidObjectFull reads the prior Render_Sprites flag after this object moves.
+    @Override public boolean isWithinSolidContactBounds(){return isWithinBuildSpritesBounds(getPreUpdateX(),getPreUpdateY(),0x0C,0x0C);}
     @Override public int getPriorityBucket(){return 5;}
     @Override public int getOutOfRangeReferenceX(){return anchorX;}
     @Override public int getCollisionFlags(){return special?0x86:0;}@Override public int getCollisionProperty(){return 0;}
