@@ -59,7 +59,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   rewind preserves both presented art and queued submissions. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
   preserves the native wait and score bonus before the end sign, and the ending
-  pose retains existing plunger support. Zone-owned tumble
+  pose retains existing plunger support across the seamless manager replacement. Zone-owned tumble
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
   route clears the elevator squeeze with an ordinary run-up and timed roll.
   The Act 1 miniboss submits its native hardware-timed art job, allowing results

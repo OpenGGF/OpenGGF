@@ -24,6 +24,31 @@ class TestSonic3kButtonObjectInstance {
         Sonic3kLevelTriggerManager.reset();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"-16,true", "15,true", "16,false", "17,false"})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void topOnlyButtonLandingUsesInclusiveLeftAndExclusiveRightEdge(int offset, boolean lands) {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var button = manager.createDynamicObject(() -> new Sonic3kButtonObjectInstance(
+                new ObjectSpawn(0x0748, 0x09FA, Sonic3kObjectIds.BUTTON, 0x20, 0, false, 0)));
+        button.snapshotPreUpdatePosition();
+        var player = fixture.sprite();
+        player.setCentreX((short) (button.getX() + offset));
+        player.setCentreY((short) (button.getY() - 0x12));
+        player.setAir(false);
+        player.setYSpeed((short) 0);
+        int beforeY = player.getCentreY();
+
+        manager.processImmediateInlineSolidCheckpoint(button, player, java.util.List.of());
+
+        org.junit.jupiter.api.Assertions.assertEquals(lands, manager.isRidingObject(player, button));
+        org.junit.jupiter.api.Assertions.assertEquals(lands, manager.hasObjectStandingBit(player, button));
+        org.junit.jupiter.api.Assertions.assertEquals(lands, Sonic3kLevelTriggerManager.testBit(0, 0));
+        org.junit.jupiter.api.Assertions.assertEquals(lands ? button.getY() - 6 - player.getYRadius() - 1 : beforeY,
+                player.getCentreY(), "loc_1E42E rejects x >= object x + d1 before any top lift");
+    }
+
     @Test
     void topSolidButtonRejectsExactSurfaceBoundary() {
         EngineServices.configure(EngineContext.fromLegacySingletonsForBootstrap());
@@ -32,6 +57,8 @@ class TestSonic3kButtonObjectInstance {
         Sonic3kButtonObjectInstance topSolid = new Sonic3kButtonObjectInstance(
                 new ObjectSpawn(0x03E0, 0x05B3, Sonic3kObjectIds.BUTTON, 0x20, 0, false, 0));
 
+        assertTrue(fullSolid.usesInclusiveRightEdge());
+        assertFalse(topSolid.usesInclusiveRightEdge());
         assertFalse(fullSolid.rejectsZeroDistanceTopSolidLanding(null));
         assertTrue(topSolid.rejectsZeroDistanceTopSolidLanding(null),
                 "Obj_Button subtype bit 5 calls S3K SolidObjectTop, whose zero-distance boundary rejects");
