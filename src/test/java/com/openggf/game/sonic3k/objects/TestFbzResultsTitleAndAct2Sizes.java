@@ -83,6 +83,30 @@ class TestFbzResultsTitleAndAct2Sizes {
         assertTrue(results.isDestroyed());
     }
 
+    @Test
+    void actTwoResultsExitPreservesTheLiveBossArenaBounds() {
+        RecordingServices services = new RecordingServices();
+        S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(services,
+                () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 1));
+        results.setServices(services);
+        services.camera.setMinX((short) 0x2FDC);
+        services.camera.setMaxX((short) 0x2FDC);
+        services.camera.setMinY((short) 0x060C);
+        services.camera.setMaxY((short) 0x060C);
+
+        results.onExitReady();
+
+        assertEquals(0x2FDC, services.camera.getMinX());
+        assertEquals(0x2FDC, services.camera.getMaxX());
+        assertEquals(0x060C, services.camera.getMinY());
+        assertEquals(0x060C, services.camera.getMaxY());
+        assertEquals(0x060C, services.camera.getMaxYTarget(),
+                "loc_2DCF8 only publishes completion; loc_708AA later expands the arena");
+        verify(services.gameState).setEndOfLevelActive(false);
+        verify(services.gameState).setEndOfLevelFlag(true);
+        assertTrue(results.isDestroyed());
+    }
+
     private static final class RecordingServices extends TestObjectServices {
         private final GameStateManager gameState = mock(GameStateManager.class);
         private final RecordingTitleCard titleCard = new RecordingTitleCard();
