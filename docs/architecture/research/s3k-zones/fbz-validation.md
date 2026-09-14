@@ -838,3 +838,5 @@ both expose retained sprite-table presentation; no local snake movement,
 coordinate offset, animation adjustment or image-dependent exclusion was added.
 
 Object-table observation SHA-256: forward `3B5A4E4F2DECBDFE51C729A38E922780833776805CB67C6714AA89E9ECEA9E0A`; reverse `8B3D3D274FB9A15C09B6554EBB00B705511119ACAD9BDBCA48683CA90D111DD6`.
+
+Root independently accepted the B4 reverse afterstate as well: `boundary4-native-fresh-v4/after-01` against `boundary4-engine-v3/after-01`. Recomputed differences are zero in the declared 320×144 world rectangle, zero Plane-B words and zero palette entries; 381 whole-frame pixels differ outside that rectangle. Root viewed `root-b4-reverse-review.png`. This brings the accepted bounded afterstates to eleven. B4 forward and both B2 directions retain the SAT presentation gaps above; no whole-frame or whole-zone visual parity is claimed.

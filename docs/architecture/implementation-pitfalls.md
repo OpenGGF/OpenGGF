@@ -148,3 +148,7 @@ The internal stage-ring frame provider lets render/bounds consumers read that
 state without changing other games' animation rules. An explicit visual fixture
 LFC reset exposes this ownership difference; copying native ring bytes or fitting
 a renderer offset would conceal it (FBZ paired boundary investigation, 2026-09-14).
+
+### Late object input and follower history
+
+S3K `Sonic_RecordPos` records input in the player's dispatch before later SST objects run. A later object that writes `Ctrl_1_logical` (for example FBZ `loc_86358`) must not rewrite that tick's follower-history sample. Use the logical-input-only API at that boundary; a history rewrite makes delayed CPU input arrive one frame early even when final per-frame controller fields agree. The FBZ completion task (`d87e42bdd`) reproduces this at the actual end-boss exit owner and checks both the retained current sample and the following tick's record.

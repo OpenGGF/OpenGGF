@@ -13,14 +13,9 @@ animation, and 5,109 independent-segment errors, first frame 116 Tails subpixel.
 Both recordings remain red; aggregate mismatch counts do not measure how far a
 playable route completes.
 
-At `6583d90b3`, the complete recording compares 44,152 rows with 5,036 errors,
-zero warnings and zero skips. The first error is the one-frame main-player Y
-handoff at 22,868 (`$05A4` expected, `$05A8` actual); the next main-player
-position disagreement is at 26,451. The actual results reload, retained title
-parent/child dispatch and camera-worker handoff now occur at their native
-boundaries. The earlier claim that results recovered after one bad row was
-rejected by the physical queue evidence: the baseline omitted the miniboss
-KosM parent and stalled in results.
+At `d87e42bdd`, the complete recording compares 44,144 comparison entries with **16 grouped errors / 18 field rows**, zero warnings and zero skips. All FBZ gameplay fields agree; the first remaining error is frame **44,230**, destination SOZ initialization X (`$00C0` expected, `$0000` actual). The remaining position/camera and terrain KosM submission/completion errors belong to that fresh-load boundary. Comparison entries include unmatched timing-completion rows and must not be described as raw gameplay frames.
+
+The native Level prologue waits for title readiness and the Nem queue (`loc_62CC`), then publishes `Get_LevelSizeStart` and `LoadLevelLoadBlock` (`loc_6310`). The recording driver instead retains cleared players/camera until its generic title completion. A bounded observer confirms that it is still in title EXIT during the first mismatching row. Correcting this requires the actual fresh-load/Nem-gated phase; changing a title timer or publishing on an observed row would fit the fixture. No such adjustment was made. Live SOZ load/timeline isolation is tested separately and does not establish this strict boundary's parity.
 
 The independent segment now reports 4,152 errors, first frame 7,619 main
 `x_speed`. This frontier needs an authentic progression prerequisite: native
@@ -271,7 +266,7 @@ immutable native/engine checkpoint pairs and comparison sidecars are incomplete,
 so the visual gate is still FAIL. Do not commit ROM-derived screenshots under
 `refs/`.
 
-After trace and compatibility are green:
+Remaining native visual obligations (the ordinary compatibility routes pass; strict trace gaps above remain):
 
 1. Capture the required BizHawk references and native engine frames.
 2. Complete every named static and time-series comparison sidecar.
