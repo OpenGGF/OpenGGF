@@ -22,7 +22,10 @@ and the published-baseline set. This guide explains that policy but does not def
 version state. The current descriptor has an empty published set.
 
 `targetBranch` identifies the destination branch checked by CI; the three line
-fields describe engine versions. An unpublished candidate on `develop` or `next`
+fields describe engine versions. Pushes to `master`, `develop` and `next` must
+agree with that destination. Feature-branch pushes still validate the descriptor,
+but omit the optional destination property because a feature ref is not a release
+integration destination. Pull-request jobs check their base branch. An unpublished candidate on `develop` or `next`
 may retain an API line at or below its engine line. Thus both the 0.7 and 0.8 engine
 lines carry the same 0.7.0 candidate until an explicit API policy change. This does
 not publish a baseline or rename the candidate pin. Master and publication checks

@@ -1467,7 +1467,7 @@ class TestBuildToolingGuard {
         if (!ci.contains("pull_request:\n    branches:\n      - next\n      - develop")) {
             violations.add(".github/workflows/ci.yml must validate pull requests targeting next and develop");
         }
-        // Every branch push reaches the destination-aware smoke suite.
+        // Every branch push reaches smoke; release destinations are checked only on integration branches.
         if (!ci.contains("push:\n    branches:\n      - '**'")) {
             violations.add(".github/workflows/ci.yml must validate pushes on every branch");
         }
@@ -1480,8 +1480,11 @@ class TestBuildToolingGuard {
 
         assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run tests (pull request)",
                 "github.event_name == 'pull_request'", "github.base_ref", violations);
-        assertDestinationAwareMavenStep(ci, ".github/workflows/ci.yml", "Run smoke suite (push)",
-                "github.event_name == 'push'", "github.ref_name", violations);
+        String pushSmoke = workflowStep(ci, "Run smoke suite (push)");
+        if (pushSmoke == null || !pushSmoke.contains("github.event_name == 'push'")
+                || !hasCanonicalPushDestinationDispatch(pushSmoke)) {
+            violations.add("CI push smoke must validate master/develop/next destinations and omit feature refs");
+        }
         assertMavenStepOmitsDestination(ci, ".github/workflows/ci.yml", "Run tests (manual)",
                 violations);
 
@@ -5281,11 +5284,23 @@ class TestBuildToolingGuard {
                     && !step.contains("-DmodApi.destinationBranch=\"${{ github.base_ref }}\"")) {
                 violations.add(file + " " + name + " is a PR Maven test path without github.base_ref");
             }
-            if (step.contains("github.event_name == 'push'")
+            boolean canonicalCiPush = file.equals(".github/workflows/ci.yml")
+                    && name.equals("- name: Run smoke suite (push)")
+                    && hasCanonicalPushDestinationDispatch(step);
+            if (step.contains("github.event_name == 'push'") && !canonicalCiPush
                     && !step.contains("-DmodApi.destinationBranch=\"${{ github.ref_name }}\"")) {
                 violations.add(file + " " + name + " is a push Maven test path without github.ref_name");
             }
         }
+    }
+
+    /** Only the all-branch CI push path may omit a destination for feature refs. */
+    private static boolean hasCanonicalPushDestinationDispatch(String step) {
+        return step.contains("destination_args=()")
+                && step.contains("case \"$GITHUB_REF_NAME\" in")
+                && step.contains("master|develop|next)")
+                && step.contains("destination_args=(\"-DmodApi.destinationBranch=$GITHUB_REF_NAME\")")
+                && step.contains("mvn -Dmse=off -Psmoke test -B \"${destination_args[@]}\"");
     }
 
     private static String sourceForInventory(Path file) throws IOException {

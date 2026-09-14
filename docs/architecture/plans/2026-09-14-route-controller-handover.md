@@ -3,8 +3,8 @@
 > Continuation on `feature/ai-gameplay-capture`, based at `35488abb6`:
 > entry breadth now covers 15 width/donor configurations with two rewind replays,
 > the late intro gate preserves native timing, and the opposing spring chain
-> now has an independent negative-control/rewind obligation. Full 640/800/S1 routes and HCZ
-> remain open; the [AIZ1 matrix](../validation/levels/s3k-aiz1-sonic.md) records the new
+> now has an independent negative-control/rewind obligation. All seven AIZ route axes
+> reach the AIZ2 reload, and the HCZ pilot reaches its production act-2 reload; the [AIZ1 matrix](../validation/levels/s3k-aiz1-sonic.md) records the new
 > route/rewind evidence and remaining frontiers. The history below describes
 > the original develop delivery; only its reviewed helpers, pilot and documents
 > were imported into this branch.
@@ -83,21 +83,25 @@ ordinary suite whenever `src/test/java/com/openggf/tests/route/` changes
 edits when the evidence probe plus the consumers are green; say so in the
 report rather than running 34 minutes.
 
-## Next steps, in order
+## Original next steps and current disposition
 
-1. **Promote the AIZ1 pilot into the per-act matrix.** Remove the
+1. **Delivered: promote the AIZ1 pilot into the per-act matrix.** Remove the
    `openggf.aiz1.pilot` opt-in, make it the native 320 Sonic+Tails row of an
    AIZ act 1 matrix under the level-test standard, add the standard's rewind
    spots (intro handoff, Knuckles cutscene, hollow-tree camera lock, act-2
    reload; `TestRewindAcrossActBoundary` already drives this fixture), and
    link the matrix from `docs/status/level-test-coverage.md`.
-2. **AIZ1 width and donor rows** (400/512/640/800, S1/S2 donors). Use
+2. **Implemented: AIZ1 width and donor rows** (400/512/640/800, S1/S2 donors). Use
    `FbzRouteEvidenceProbe` as the model for a per-row evidence print. Expect
    widescreen culling and S1 donor physics to be the divergence points; that
    is where the first AIZ live gates belong, authored from live objects only.
-3. **HCZ act 1 pilot** on the same recipe; it prices the water hazard family.
-4. **Stage interface** only after HCZ1 shows what two zones share; AIZ1
-   needed no stages.
+3. **Implemented: HCZ act 1 pilot** using the same ordinary-input authority; the
+   [HCZ1 matrix](../validation/levels/s3k-hcz1-sonic.md) records the water route and
+   live miniboss/reload, plus inherited coverage gaps.
+4. **Stage interface deferred.** The two completed routes share the existing
+   input/steering/audit primitives, while their ownership and navigation gates
+   remain zone-specific. A new generic stage API is not needed for these routes;
+   extracting one would add an unproven contract beyond this green-route delivery.
 5. Small follow-ups: `TestFbzCompatibilityMatrix` still declares its own
    `InputRun`/`stepMask` (use the shared types); fold the row-offset rule into
    the research doc's cost model (section 4); the commit hook only detects
@@ -118,3 +122,68 @@ report rather than running 34 minutes.
   from physics rows, and neither should a successor.
 - The route controllers assert milestones from live objects and never key on
   width, donor or frame index; keep it that way when adding rows.
+
+
+## CI blockers found during green-route delivery
+
+The pre-task feature head `f1843f54a1` had a red push run
+[34822783943](https://github.com/OpenGGF/OpenGGF/actions/runs/34822783943):
+18,661 tests, two failures, zero errors, 2,738 skips. These failures predate the
+new route controllers:
+
+- `TestObjectPlacementEncoding.commonParserPreservesDescendingFullXOrderInsideOnePlacementColumn`
+  expected descending ring X order, contrary to `RingsMgr_SortRings` and the
+  already-correct parser. Develop's focused correction `49fb9d942` was imported
+  as `cecebd2b8`, preserving the separate ROM object-order assertion.
+- `TestModApiReleasePolicy.destinationPropertyIsOptionalButMustAgreeWhenPresent`
+  received `feature/ai-gameplay-capture` from the push workflow. The optional
+  property accepts release integration destinations, not feature refs. The push
+  command now adds it only for `master`, `develop` and `next`; descriptor checks,
+  canonical destination agreement, PR validation and Maven test selection remain
+  intact. No policy descriptor or API pin changed.
+
+Focused verification: `mvn -Dmse=off
+-Dtest=TestObjectPlacementEncoding,Sonic2RingPlacementTest,TestRingViewportWindow,TestModApiReleasePolicy
+-DmodApi.destinationBranch=develop test` with existing absolute ROM properties:
+**34 cases, zero failures/errors/skips**, 19.554 seconds. The actual push script
+also passed `bash -n` and six stub-Maven argument scenarios (three integration
+branches, feature, bugfix and a literal shell-looking feature name). The shell block
+was extracted from the workflow directly for these checks.
+
+Validation remains proportionate: the added CI change repairs the optional
+branch-context argument only, without changing build commands, test selection,
+release rules or production behavior. The existing remote run supplies the
+pre-change failure identities; a new push must still pass its normal CI gate.
+
+
+Review also identified the existing structural assertion requiring the old push
+argument. `TestBuildToolingGuard` now recognises only the CI push step's explicit
+canonical-branch dispatch; PR and release destination requirements remain intact.
+`mvn -Dmse=off -Pguards -Dtest=TestBuildToolingGuard test` passed all **118 cases,
+zero failures/errors/skips**, in 51.789 seconds in a fresh guard JVM. This is the
+build-tooling guard class, not the full structural-guard suite.
+
+
+## Green-route implementation record
+
+`f11cff617` completes the seven AIZ width/donor axes; native 320px retains
+the recorded-only assertion. `d9402b76a` completes the HCZ water route and
+six-hit miniboss through the production act-2 reload. `0139a19c3` repairs
+the optional CI destination argument and its structural guard; `cecebd2b8`
+imports the existing develop ring-order test correction. No runtime physics
+or trace-authority contract changed.
+
+The final change-based plan selects 2,524 ordinary classes plus guards because
+the private controller and CI/guard paths fall back to broad classification.
+Focused validation is used under the repository's proportionate exception:
+these edits are private route logic, a corrected assertion, and an optional
+branch-context argument; relevant route consumers, edge/reload/rewind checks,
+argument scenarios and the complete affected guard class were exercised.
+Test selection, Maven flags and release policy are unchanged. This is not a
+local full-suite pass. The normal feature push CI remains required.
+
+HCZ's final cleaned controller passed in 24.81 seconds, at frame 12,583 with
+zero failures/errors/skips and identical emitted pads to its pre-cleanup
+success. HCZ investigation/checks measured 1,256.97 seconds; its receipt
+conservatively charged 1,328.16 seconds (71.19 seconds overcount, retained
+rather than rewriting shared accounting).

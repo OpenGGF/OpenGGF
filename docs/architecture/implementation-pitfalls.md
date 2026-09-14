@@ -66,6 +66,13 @@ without first removing that alias.
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
 
+**Underwater route liveness.** `getDead() == false` does not exclude the drowning
+pre-death phase. `applyDrownDeath()` locks controls and zeroes velocity before the
+delayed dead flag; no-death route assertions must also reject `isDrowningDeath()`.
+The HCZ route continuation initially mistook the resulting latched logical input
+on a conveyor for an input-publication defect. Inspect the first capture and air
+state before that deadline, not only the later stalled state.
+
 **`FixBugs` / `fixBugs` assembly paths.** All three disassemblies are built with the
 bug-fix conditional OFF — `FixBugs = 0` (`s1disasm/sonic.asm:20`,
 `skdisasm/sonic3k.asm:38`, `skdisasm/s3.asm:25`) and `fixBugs = 0`
