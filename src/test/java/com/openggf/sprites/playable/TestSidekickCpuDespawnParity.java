@@ -1219,6 +1219,30 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kElevatorCarRelatchesItsLiveRoutineWordAfterSpikeContact() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        var controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x0002, false, 0, 0);
+        var car = new com.openggf.game.sonic3k.objects.FbzElevatorObjectInstance.Car(
+                new ObjectSpawn(0x8C0, 0x795, 0xE2, 0, 0, false, 0));
+        tails.setCentreX((short) 0x8C0);
+        tails.setCentreY((short) 0x780);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0xE2, car);
+        tails.setRenderFlagOnScreen(true);
+
+        controller.update(0);
+
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState());
+        assertEquals(0x0003, controller.getDiagnosticInteractId(),
+                "sub_13EFC copies loc_3CA92 instead of keeping the former spike's bank 2");
+    }
+
+    @Test
     void s3kOnScreenWordChangeRelatchesWithoutDespawn() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
