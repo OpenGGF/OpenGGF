@@ -269,3 +269,15 @@ The strengthened entry audit passed all 15 cases, zero skips (36.470 s).
 Pre-integration aggregate testing: **315.924 seconds (5.265 minutes)**,
 including survey setup failures, both survey runs, the pre-wiring controller
 check, integrated gate check, entry checks and final combined validation.
+
+Integration commit: **`32217319b`**, fast-forwarded into the destination without
+conflicts. Post-integration command: `mvn -Dmse=off
+-Dtest=TestAiz1IntroProgram,TestS3kAiz1RoutePilot,TestS3kAiz1EntryMatrix
+-Dopenggf.aiz1.entry=true` with all three existing absolute ROM properties and
+`test`: **18 passed, zero failures/errors/skips**, 39.854 s. The other
+completed checks are unchanged by fast-forward integration; no full-suite or
+full-guard claim is made. Final aggregate: **355.778 seconds
+(5.930 minutes)**, separately accounted because the peer receipt is active.
+Changed-document local links, whitespace and commit policy passed. Raw survey
+and Maven diagnostics are consumed and removed; only this compact evidence
+record remains.
