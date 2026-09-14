@@ -239,7 +239,7 @@ class TestFbzSqueezeOrdinaryRoll {
         }
     }
 
-    private static void assertSnapshotsEqual(CompositeSnapshot expected, CompositeSnapshot actual,
+    static void assertSnapshotsEqual(CompositeSnapshot expected, CompositeSnapshot actual,
                                              String boundary) {
         assertEquals(expected.entries().keySet(), actual.entries().keySet(), boundary);
         for (String key : expected.entries().keySet()) {
@@ -258,6 +258,13 @@ class TestFbzSqueezeOrdinaryRoll {
      */
     private static Object canonicalCollections(Object value) {
         if (value == null) return null;
+        if (value instanceof com.openggf.level.Pattern pattern) {
+            // Title initialization may recreate equal ROM pixels in a new
+            // Pattern identity. Compare its complete (and sole) instance state.
+            byte[] pixels = new byte[com.openggf.level.Pattern.PATTERN_SIZE_IN_MEM];
+            pattern.copyInto(pixels, 0);
+            return canonicalCollections(pixels);
+        }
         if (value instanceof java.util.List<?> list) {
             if (!list.isEmpty() && list.getFirst()
                     instanceof com.openggf.game.rewind.snapshot.ObjectManagerSnapshot.PerSlotEntry) {

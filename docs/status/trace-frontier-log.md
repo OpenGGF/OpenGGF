@@ -109861,3 +109861,10 @@ read-only title observers removed afterward. Each complete replay traversed
 53 boss/rewind, 26 sign/boss, 13 transition/PLC, 37 title/children and 12
 transition checks. The strict tests remain failed; no full-suite pass is claimed.
 See the dated FBZ completion plan for the submission and allocation evidence.
+
+FBZ remaining-items update at0cf340b56 plus retained-title candidate: the native
+parent/child title dispatch correction aligns Act2 camera handoff23011 and moves
+first main X/camera disagreement to23816. The combined chain/prison-frontier
+tree completes strict comparison with3030errors, first22311 `tails_x_speed`
+expected000C/actual0000; one-row main Y22868 remains. Command, focused14pass/0skip
+and66-second invocation are in the2026-09-14 completion plan. This is still red.
