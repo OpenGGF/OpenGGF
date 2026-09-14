@@ -48,7 +48,7 @@ def probe(path):
 
 def capture_plan(start_frame: int, window: int) -> str:
     channels = ("200", "208", "210", "230", "238")
-    return ('return {manifest_sha256="BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",'
+    return ('return {manifest_sha256="261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",'
             'bk2_frame_offset=237913,observation_limit_frames=' + str(window)
             + ',checkpoints={{id="fbz1-start-outdoor",bk2_frame=' + str(start_frame) + '}}'
             + ',cadence_series={' + ','.join('["aniplc-cadence-' + ch + '"]={' + str(start_frame) + '}'
@@ -56,19 +56,22 @@ def capture_plan(start_frame: int, window: int) -> str:
 
 
 def boundary_plan(checkpoint: str) -> str:
-    """Only approved Act1 boundary setup fields; no measured native inputs."""
+    """Only approved boundary setup fields; no measured native inputs."""
     manifest = Path(__file__).resolve().parents[2] / "docs/architecture/research/s3k-zones/fbz-visual-checkpoints.json"
-    if digest(manifest) != "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8":
+    if digest(manifest) != "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1":
         raise ValueError("Unreviewed boundary manifest")
     data = json.loads(manifest.read_text())
-    allowed = {f"fbz1-boundary-{i}-outdoor" for i in (1,2,3,5,6)} | {"fbz1-boundary-4-horizontal"}
+    allowed = {f"fbz1-boundary-{i}-outdoor" for i in (1,2,3,5,6)} | {"fbz1-boundary-4-horizontal", "fbz2-boundary-outdoor"}
     if checkpoint not in allowed:
-        raise ValueError("Only reviewed Act1 boundaries supported")
+        raise ValueError("Only reviewed boundaries supported")
     recipe = data["setup_recipes"][checkpoint]
     target = next(c for c in data["checkpoints"] if c["id"] == checkpoint)["player"]
     axis = "x" if checkpoint == "fbz1-boundary-4-horizontal" else "y"
     return ('{id=' + json.dumps(checkpoint) + ',x=' + str(recipe["centre"]["x"])
-            + ',y=' + str(recipe["centre"]["y"]) + ',region=' + str(recipe["state"]["Events_bg_00"])
+            + ',y=' + str(recipe["centre"]["y"]) + ',region=' + str(recipe["state"].get("Events_bg_00", recipe["state"].get("Events_fg_00")))
+            + ',control=' + str(recipe.get("control", {}).get("native_object_control", 0))
+            + ',act=' + str(recipe["act"]) + ',normal=' + str(recipe["state"]["Events_routine_bg"])
+            + ',region_address=' + str(0xEED2 if recipe["act"]==1 else 0xEEC0)
             + ',address=' + str(0xB010 if axis == "x" else 0xB014)
             + ',forward=' + str(target[axis]) + ',reverse=' + str(recipe["centre"][axis]) + '}')
 

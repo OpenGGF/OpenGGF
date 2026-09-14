@@ -144,6 +144,11 @@ public final class FbzVisualStateProbe {
             if (!(GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager manager)
                     || manager.getFbzEvents() == null) return;
             Sonic3kFBZEvents events = manager.getFbzEvents();
+            var controlledPlayer = GameServices.camera().getFocusedSprite();
+            values.put("visual_movement_control", controlledPlayer.isObjectControlled()
+                    && controlledPlayer.isObjectControlAllowsCpu()
+                    && controlledPlayer.isObjectControlSuppressesMovement()
+                    ? "movement-suppressed-cpu-allowed" : "other");
             values.put("outdoor_hscroll_accumulator", events.getHScrollAccumulator());
             values.put("outdoor_hscroll_sample_frame", events.getHScrollAccumulatorLastFrame());
             values.put("outdoor_hscroll_last_read", events.getHScrollAccumulatorLastRead());
