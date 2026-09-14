@@ -20,9 +20,9 @@ class TestKis2CompleteEmeraldRunChain extends AbstractRunChainTest {
                 ? Path.of("src/test/resources/traces/kis2/runs/kis2-full-run-all-emeralds")
                 : Path.of(candidate);
         if (candidate == null) {
-            org.junit.jupiter.api.Assumptions.assumeTrue(
+            org.junit.jupiter.api.Assertions.assertTrue(
                     Files.isRegularFile(run.resolve("run_manifest.json")),
-                    "KiS2 full-run candidate is not published; set -Dopenggf.trace.kis2.run.dir");
+                    "Published KiS2 full-run manifest is missing");
         }
         var config = GameServices.configuration();
         String previousRom = config.getString(SonicConfiguration.SONIC_2_ROM);

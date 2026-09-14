@@ -1,4 +1,4 @@
-# KiS2 all-emeralds full-run candidate
+# KiS2 all-emeralds full-run capture and publication
 
 User supplied `docs/BizHawk-2.11-linux-x64/Movies/kis2-full-run-all-emeralds.bk2`.
 BK2 SHA-256: `36a0353b249edcf7a229b8682cb93f8563c383fe5a65e92030be2e5acf2c20c0`;
@@ -6,7 +6,7 @@ BK2 SHA-256: `36a0353b249edcf7a229b8682cb93f8563c383fe5a65e92030be2e5acf2c20c0`;
 ROM: 3,407,872-byte KiS2 lock-on dump, SHA-1
 `6CD0537A3AEE0E012BB86D5837DDFF9342595004`.
 
-## Candidate, not a published chain fixture
+## Original capture inventory
 
 Durable capture root: `$KIS2_CAPTURE_ROOT` (external task directory `kis2-full-run-20260914`).
 `full-run/` holds 36 segments, 35 transitions, the source BK2 and manifest:
@@ -191,7 +191,7 @@ ownership before source closure, `mode=TITLE_CARD`, `loadGeneration=3`, EHZ1,
 **BK2 cursor 2003**. This removes the former missing-capability blocker. The
 structural stop does not identify the earliest physics mismatch; the earlier
 standalone row-156 result above belongs to its separate historical invocation.
-Canonical installation remains subject to approval of the sealed candidate.
+The user subsequently approved canonical installation of this exact sealed candidate; see publication below.
 
 ## Integrated result
 
@@ -205,3 +205,29 @@ exercises both classes named `TestSonic3kLevelLoading`. Consumed Java/native
 diagnostics were removed; both original and audited captures and their sealed
 inventories remain external. The subsequent documentation-only update does not
 change engine behavior or require another engine run.
+
+
+## Canonical publication (2026-09-14)
+
+Published the approved `full-run-art-audited/` capture byte-for-byte under
+`src/test/resources/traces/kis2/runs/kis2-full-run-all-emeralds/`, including its
+BK2, manifest and all 36 segments. Source and installed inventories both match
+all 110 stored and logical SHA-256 hashes and sizes: 23,905,326 stored bytes,
+248,042 physics rows. The approved inventory SHA-256 is
+`e9a3d82132e65a485ff14b61de5a517bf43846061d02a710949c7c8ea50f3c9b`.
+No observations, metadata or manifest bytes were edited during publication.
+
+Publication is based on develop `f037a1218` in
+`.worktrees/kis2-fixture-publication`. The change-based plan selected 2,563
+classes because new fixture paths are unclassified. Proportionate validation
+uses the fixture compression, BK2 alignment and lag-input guards, manifest and
+dynamic-art schema tests, and the canonical chain replay. Engine and recorder
+code are unchanged; this is focused validation, not a full-suite pass.
+
+The chain test now asserts that its published default manifest exists, so an
+accidentally removed fixture cannot silently become a publication-pending skip.
+
+Focused publication checks: 42 tests, 41 passed, one unchanged chain failure,
+zero errors/skips. Canonical replay validated all 36 segments before the same
+EHZ1 TITLE_CARD ownership stop at BK2 cursor 2003. Exact command and failure
+are recorded in the [frontier log](../../../status/trace-frontier-log.md).

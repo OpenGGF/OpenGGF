@@ -109941,3 +109941,22 @@ zero failures/errors/skips (48.936 seconds). The capture and EHZ1 structural
 frontier above are unchanged; canonical publication remains pending approval.
 
 FBZ reconciled with incoming KiS2 at `246fe229f` (destination `13bb3b165`, pre-task base `51677cdd2`): queued compiled `test -Ptrace-replay-r7` selected both strict FBZ classes plus dynamic-art lifecycle/transfer, required S3K bootstrap/loading and results queue/rewind checks. All three absolute ROM properties were set. Result 129 tests:127 focused passes,2 strict failures,0 errors/skips,1:12. Complete unchanged16/44,144,first44,230 SOZ X; independent unchanged4,152/33,712,first7,619 Hyper x_speed; zero warnings. This includes the final global physical-results-queue gate on allocation retries.
+
+
+## 2026-09-14 — Approved KiS2 all-emeralds fixture published
+
+Installed the sealed 110-file capture under
+`src/test/resources/traces/kis2/runs/kis2-full-run-all-emeralds/` unchanged:
+36 segments, 248,042 physics rows, 23,905,326 stored bytes. Both source and
+canonical copies match every stored/logical hash in approved inventory
+`e9a3d82132e65a485ff14b61de5a517bf43846061d02a710949c7c8ea50f3c9b`.
+
+On base `f037a1218`, `.worktrees/kis2-fixture-publication`, queued Maven
+`-Dmse=off -Dtest=TestTraceFixtureCompressionGuard,TestTraceFixtureMovieAlignmentGuard,TestTraceFixtureLagPolledInputGuard,TestTraceRunManifest,TestDynamicArtTransferTrace,TestKis2CompleteEmeraldRunChain test -B`
+with absolute `sonic2.rom.path`, `s3k.rom.path` and `kis2.rom.path` selected
+42 tests: **41 passed, one known chain failure, zero errors/skips**. No external
+fixture override was supplied. The complete v5 manifest/art ledger validated;
+segment 0 again lost production ownership before source closure in TITLE_CARD,
+load generation 3, EHZ1, **BK2 cursor 2003**. This structural stop is not a
+measurement of the earliest physics mismatch. Publication does not certify
+end-to-end parity. The default chain manifest is now required, not skip-optional.

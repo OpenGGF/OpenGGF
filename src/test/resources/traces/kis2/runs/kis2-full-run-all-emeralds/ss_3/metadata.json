@@ -1,0 +1,21 @@
+{
+  "game": "s2",
+  "trace_profile": "s2_special_stage",
+  "special_stage_index": 2,
+  "aux_schema_extras": ["dynamic_art_transfer_state_per_frame"],
+  "characters": ["knuckles"],
+  "main_character": "knuckles",
+  "sidekicks": [],
+  "rom_checksum": "6CD0537A3AEE0E012BB86D5837DDFF9342595004",
+  "notes": "logical ROM KIS2 (Sonic & Knuckles lock-on over Sonic 2 World REV01: S&K $000000, S2 $200000, chip $300000); recorded through the S2 recorder with native dynamic-art audit",
+  "bk2_frame_offset": 19308,
+  "trace_frame_count": 6663,
+  "source_bk2": "kis2-full-run-all-emeralds.bk2",
+  "recorder": "native-bizhawk-headless",
+  "recorder_version": "3.0",
+  "trace_schema": 5,
+  "recording_date": "2026-09-14",
+  "run_id": "kis2-full-run-all-emeralds",
+  "fresh_load": false,
+  "segment_index": 5
+}
