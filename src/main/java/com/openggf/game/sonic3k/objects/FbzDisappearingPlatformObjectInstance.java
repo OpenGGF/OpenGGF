@@ -97,8 +97,16 @@ public final class FbzDisappearingPlatformObjectInstance
     // rejecting zero before the first position or riding-state write.
     return true;
   }
+  public boolean isTopSolidOnly() { return true; }
+  public boolean usesStickyContactBuffer() { return false; }
+  public boolean usesPlatformObjectLandingSnap() {
+    // loc_3BB6E -> loc_1E45A writes Y using the entry y_radius before
+    // Player_TouchFloor restores default radii. If Status_Roll was clear,
+    // TouchFloor does not shift Y; a second snap with the new radius is wrong.
+    return false;
+  }
   public SolidRoutineProfile getSolidRoutineProfile() {
-    return SolidRoutineProfile.topSolid(false);
+    return SolidRoutineProfile.fromProvider(this);
   }
   public void appendRenderCommands(List<GLCommand> c) {
     PatternSpriteRenderer r =
