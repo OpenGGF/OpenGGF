@@ -496,6 +496,16 @@ public final class FbzEndBossInstance extends AbstractBossInstance
                 if (entity instanceof AbstractPlayableSprite sprite) {
                     sprite.setControlLocked(false);
                     ObjectControlState.none().applyTo(sprite);
+                    // loc_708AA calls Restore_PlayerControl / Restore_PlayerControl2:
+                    // clear only air and reset the Wait animation word/clocks,
+                    // preserving velocity and standing ownership.
+                    sprite.clearAirForNativeControlRestore();
+                    sprite.setAnimationId(com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.WAIT);
+                    sprite.getAnimationManager().publishPreviousAnimationId(
+                            com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.WAIT.id());
+                    sprite.setAnimationFrameIndex(0);
+                    sprite.setAnimationTick(0);
+                    sprite.setForcedAnimationId(-1);
                     sprite.setHidden(false);
                 }
             }
