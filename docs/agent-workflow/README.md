@@ -18,6 +18,23 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
 | `InputLogAuthorTool` | Compiles a short controller script (`60 R; 1 D+R; repeat 3 { 1 A ; 1 - }`) into a BizHawk `Input Log.txt` or minimal `.bk2`, then re-parses it with `Bk2MovieLoader` so the file is proven loadable. Skill: `bk2-input-authoring`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" "-Dexec.args=--inline '60 R; 1 A' --out target/capture/run.txt"` |
 | `GameplayCaptureTool` | Pictures or films any gameplay section: boots a zone/act on the production path (`HeadlessGameBoot` + `GameLoop.step()`), teleports the leader, drives it from an input log or `.bk2`, and writes PNG frames, `state.csv`, and an MP4. Widths, donors and teams are flags. Skill: `gameplay-capture`. | `mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C --input target/capture/run.txt --out-dir target/capture/fbz2"` |
 
+## Test harness helpers
+
+- `src/test/java/com/openggf/tests/route/` — shared route primitives for headless
+  route controllers: `InputProgram` (parse, derive from a BK2, and step pad runs),
+  `RouteSteering` (steer, walk with a speed cap, brake distance, ordinary crossing
+  budget), `ObjectLifetimeFrames` (spawn/despawn identity sets per frame),
+  `RecentFrameLog` (failure diagnostics) and `SidekickAudit` (CPU team contract:
+  identity, ownership, leader chain, death/respawn). Extracted from the FBZ2 native
+  route in commit 610464952; see
+  [live-state route controllers](../architecture/research/2026-09-13-live-state-route-controllers.md).
+  They overlap only the failure-diagnostics part of backlog item LTS-04, which stays
+  pending.
+- `FbzRouteEvidenceProbe` (test scope, opt-in `-Dmse=off -Dopenggf.fbz.evidence=true`)
+  prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
+  matrix rows without asserting; diff the output before and after a route-controller
+  or primitives refactor to prove byte-identical behaviour.
+
 ## Docs
 
 - [Release publishing](../project/release-publishing.md) — automatic publication on

@@ -19,6 +19,8 @@ import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.Sonic;
 import com.openggf.sprites.playable.Tails;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.tests.route.InputProgram;
+import com.openggf.tests.route.InputRun;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -133,12 +135,7 @@ class TestFbzNativeCharacterRoutes {
         outer:
         for (InputRun run : route) {
             for (int i = 0; i < run.frames(); i++, frame++) {
-                fixture.stepFrame(
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_UP) != 0,
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_DOWN) != 0,
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT) != 0,
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT) != 0,
-                        (run.mask() & com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_JUMP) != 0);
+                InputProgram.step(fixture, run.mask());
                 List<FbzEndBossInstance> bosses = GameServices.level().getObjectManager()
                         .activeObjectsOfType(FbzEndBossInstance.class);
                 if (!bosses.isEmpty()) {
@@ -254,5 +251,4 @@ class TestFbzNativeCharacterRoutes {
     }
 
     private record ConfigSnapshot(String main, String sidekicks) { }
-    private record InputRun(int frames, int mask) { }
 }
