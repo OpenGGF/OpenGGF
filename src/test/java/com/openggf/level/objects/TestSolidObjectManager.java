@@ -1669,6 +1669,26 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void groundedBottomSquashProfileAppliesBeforeVerticalSpeedTest() {
+        for (boolean alwaysSquashes : new boolean[] {false, true}) {
+            TestSolidObject object = new TestSolidObject(100, 100, new SolidObjectParams(32, 8, 8)) {
+                @Override public boolean groundedBottomContactAlwaysSquashes() { return alwaysSquashes; }
+            };
+            TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+            player.useGameRules(GameRules.SONIC_2);
+            player.setWidth(20);
+            player.setHeight(20);
+            player.setAir(false);
+            player.setYSpeed((short) 0x100);
+            player.setCentreX((short) 100);
+            player.setCentreY((short) 119);
+            buildManager(object).updateSolidContacts(player);
+            assertEquals(alwaysSquashes, player.getDead(),
+                    "the patched falling pillar enters squash even at positive y_vel");
+        }
+    }
+
+    @Test
     public void upwardBottomCollisionPreservesGroundSpeed() {
         SolidObjectParams params = new SolidObjectParams(16, 8, 8);
         TestSolidObject object = new TestSolidObject(100, 100, params);

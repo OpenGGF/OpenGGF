@@ -70,7 +70,14 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
     private final Map<Integer, List<String>> namesById = new HashMap<>();
     private final Set<Integer> unknownIds = new HashSet<>();
 
+    private final com.openggf.game.sonic2.Sonic2ObjectBehaviorProfile behavior;
+
     public Sonic2ObjectRegistry() {
+        this(com.openggf.game.sonic2.Sonic2ObjectBehaviorProfile.STOCK);
+    }
+
+    public Sonic2ObjectRegistry(com.openggf.game.sonic2.Sonic2ObjectBehaviorProfile behavior) {
+        this.behavior = java.util.Objects.requireNonNull(behavior);
     }
 
     @Override
@@ -484,7 +491,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         // ARZ Objects
         registerFactory(Sonic2ObjectIds.FALLING_PILLAR,
                 (spawn, registry) -> new FallingPillarObjectInstance(spawn,
-                        registry.getPrimaryName(spawn.objectId())));
+                        registry.getPrimaryName(spawn.objectId()), behavior.fallingPillarAlwaysSquashesGroundedContact()));
         registerFactory(Sonic2ObjectIds.RISING_PILLAR,
                 (spawn, registry) -> new RisingPillarObjectInstance(spawn,
                         registry.getPrimaryName(spawn.objectId())));
@@ -555,7 +562,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
         // MCZ VineSwitch (Object 0x7F) - pull switch that triggers ButtonVine
         registerFactory(Sonic2ObjectIds.VINE_SWITCH,
                 (spawn, registry) -> new VineSwitchObjectInstance(spawn,
-                        registry.getPrimaryName(spawn.objectId())));
+                        registry.getPrimaryName(spawn.objectId()), behavior.heldVinePinsPlayer()));
 
         // MCZ/WFZ MovingVine (Object 0x80) - vine pulley or hook on chain
         registerFactory(Sonic2ObjectIds.MOVING_VINE,
@@ -584,7 +591,7 @@ public class Sonic2ObjectRegistry extends AbstractObjectRegistry {
 
         // WFZ/SCZ Horizontal Propeller (ObjB5) - horizontal spinning blade with upward push
         registerFactory(Sonic2ObjectIds.HPROPELLER,
-                (spawn, registry) -> new HPropellerObjectInstance(spawn));
+                (spawn, registry) -> new HPropellerObjectInstance(spawn, behavior.propellerClearsAirAbility()));
 
         // WFZ Palette Switcher (Obj8B) - cycling palette switcher
         registerFactory(Sonic2ObjectIds.WFZ_PAL_SWITCHER,

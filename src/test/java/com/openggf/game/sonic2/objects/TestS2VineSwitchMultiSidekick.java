@@ -87,6 +87,41 @@ class TestS2VineSwitchMultiSidekick {
         assertReleased(restoredSecond, restoredThird);
     }
 
+    @Test
+    void patchedHeldVinePinsNativeAndExtraPlayersWithoutLosingSubpixels() {
+        TestablePlayableSprite main = player("sonic");
+        TestablePlayableSprite sidekick = player("tails");
+        TestablePlayableSprite extra = player("knuckles");
+        VineSwitchObjectInstance vine = new VineSwitchObjectInstance(
+                new ObjectSpawn(0x400, 0x300, 0x7F, 1, 0, false, 0), "VineSwitch", true);
+        vine.setServices(services(main, List.of(sidekick, extra)));
+        vine.update(1, main);
+        for (TestablePlayableSprite player : List.of(main, sidekick, extra)) {
+            player.setCentreX((short) 0x410);
+            player.setCentreY((short) 0x340);
+            player.setSubpixelRaw(0x1234, 0x5678);
+        }
+        vine.update(2, main);
+        for (TestablePlayableSprite player : List.of(main, sidekick, extra)) {
+            org.junit.jupiter.api.Assertions.assertEquals(0x400, player.getCentreX());
+            org.junit.jupiter.api.Assertions.assertEquals(0x330, player.getCentreY());
+            org.junit.jupiter.api.Assertions.assertEquals(0x1234, player.getXSubpixelRaw());
+            org.junit.jupiter.api.Assertions.assertEquals(0x5678, player.getYSubpixelRaw());
+        }
+    }
+
+    @Test
+    void stockHeldVinePreservesPositionWrittenByAnotherOwner() {
+        TestablePlayableSprite main = player("sonic");
+        VineSwitchObjectInstance vine = vine(main, List.of());
+        vine.update(1, main);
+        main.setCentreX((short) 0x410);
+        main.setCentreY((short) 0x340);
+        vine.update(2, main);
+        org.junit.jupiter.api.Assertions.assertEquals(0x410, main.getCentreX());
+        org.junit.jupiter.api.Assertions.assertEquals(0x340, main.getCentreY());
+    }
+
     private static VineSwitchObjectInstance vine(
             TestablePlayableSprite main,
             List<TestablePlayableSprite> sidekicks) {

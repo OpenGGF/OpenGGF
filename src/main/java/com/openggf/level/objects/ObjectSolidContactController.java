@@ -4652,7 +4652,9 @@ public final class ObjectSolidContactController {
         // ROM: SolidObject_InsideBottom (s2.asm:35307-35333)
         // When y_vel == 0 and player is on ground, the ROM branches to SolidObject_Squash
         // which checks horizontal overlap and kills the player if sandwiched.
-        if (player.getYSpeed() == 0 && !player.getAir()) {
+        if (!player.getAir() && (player.getYSpeed() == 0
+                || (instance instanceof SolidObjectProvider provider
+                    && provider.groundedBottomContactAlwaysSquashes()))) {
             // ROM: SolidObject_Squash (s2.asm:35336-35361)
             // mvabs.w d0,d4; cmpi.w #$10,d4; blo.w SolidObject_LeftRight
             // If player is near the horizontal edge (absDistX < 16), push sideways instead.

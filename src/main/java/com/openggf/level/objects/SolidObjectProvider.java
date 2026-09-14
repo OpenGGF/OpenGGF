@@ -448,6 +448,11 @@ public interface SolidObjectProvider {
         return false;
     }
 
+    /** Whether a grounded bottom overlap enters squash even with nonzero Y velocity. */
+    default boolean groundedBottomContactAlwaysSquashes() {
+        return false;
+    }
+
     /**
      * Whether a grounded lower-half edge escape from the squash path should
      * set the player/object push bits even when the player is not moving into

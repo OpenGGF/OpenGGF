@@ -55,6 +55,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
     private static final Logger LOGGER = Logger.getLogger(VineSwitchObjectInstance.class.getName());
 
     // === Object Configuration ===
+    private final boolean pinsHeldPlayer;
     private int switchId;  // subtype & 0x0F: Switch ID for ButtonVine_Trigger
 
     // === Per-Player Grab State ===
@@ -98,7 +99,12 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
      * @param name  Object name for debugging
      */
     public VineSwitchObjectInstance(ObjectSpawn spawn, String name) {
+        this(spawn, name, false);
+    }
+
+    public VineSwitchObjectInstance(ObjectSpawn spawn, String name, boolean pinsHeldPlayer) {
         super(spawn, name);
+        this.pinsHeldPlayer = pinsHeldPlayer;
 
         // Parse subtype - only bits 0-3 used for switch ID
         // ROM: andi.w #$F,d0 / lea (ButtonVine_Trigger).w,a3
@@ -110,7 +116,7 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
 
     @Override
     public VineSwitchObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new VineSwitchObjectInstance(ctx.spawn(), getName());
+        return new VineSwitchObjectInstance(ctx.spawn(), getName(), pinsHeldPlayer);
     }
 
     @Override
@@ -273,6 +279,14 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
         if (player.isRawControllerJumpJustPressed()) {
             releasePlayer(player, isPlayer2);
             return;
+        }
+
+        // KiS2 Obj7F_Action -> loc_3231D0 (gameRevision=3, fixBugs=0).
+        // Word writes preserve the subpixel parts, including when another owner
+        // moved the held player since the previous object execution.
+        if (pinsHeldPlayer) {
+            com.openggf.sprites.NativePositionOps.writeXPosPreserveSubpixel(player, spawn.x());
+            com.openggf.sprites.NativePositionOps.writeYPosPreserveSubpixel(player, spawn.y() + HANG_Y_OFFSET);
         }
 
         // ROM Obj7F_Action grabbed branch (s2.asm:56500-56522): once a player is
