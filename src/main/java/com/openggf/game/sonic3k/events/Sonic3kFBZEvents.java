@@ -669,6 +669,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         SeamlessLevelTransitionRequest request = SeamlessLevelTransitionRequest
                 .builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(0x04, 1)
+                // FBZ1BGE_Normal reloads terrain/solids only. LoadEnemyArt is
+                // owned by the later in-level title's teardown, not Load_Level.
+                .runtimeArtAdmissionPolicy(com.openggf.game.RuntimeArtAdmissionPolicy.TITLE_OWNER)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
                 .preserveEndOfLevelState(true)

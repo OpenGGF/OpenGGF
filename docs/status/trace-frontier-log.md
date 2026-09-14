@@ -109787,8 +109787,10 @@ surefire:test` passed all 36 child/contact checks, with zero errors/skips.
 The complete 44,152-row recording remains red: **4,501 errors / 0 warnings**,
 first 16,600 Tails animation `$05/$06`, 758,829 mismatching field-rows. The
 first main gameplay-physics error advances to **22,397 `x` `$0102/$2F02`** and
-`camera_x` `$0062/$2E62`, a one-row coordinate-rebase mismatch. Later timing
-and transition differences remain open; these are not full-parity results.
+`camera_x` `$0062/$2E62`. The later remaining-items probe corrects the original
+"one-row" description: results art never becomes ready, so the Act 2 reload
+does not occur; row 22398 is an un-compared lag row. Later timing and transition
+differences remain open; these are not full-parity results.
 
 The real-contact regression lands on the actual plunger, applies the production
 signpost ending pose, and proves retained standing ownership and grounded Y on
