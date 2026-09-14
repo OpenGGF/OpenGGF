@@ -145,3 +145,10 @@ Blocked, successful and four-frames-late crushed videos reproduce this distincti
 The prior 17/32-phase results cover left-to-right only. These are local diagnostic
 observations, not permanent route tests or complete native-parity certification;
 see the completion record for scripts, source identity and capture boundaries.
+
+Matched-phase follow-up (`323e1d2ba`): actual car Ys 1985/2081, controller timer
+79 and Sonic centre 3582/2033 match across ordinary reverse approaches. Entry
+4.48 px/frame is crushed; 4.90 px/frame clears safely. The latter holds Left
+six frames longer before releasing Left and pressing Down. Real synchronized
+videos reproduce both on frame 207. This improves the demonstrated strategy;
+it remains local feasibility evidence with the existing matrix limits.

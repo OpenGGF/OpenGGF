@@ -994,3 +994,59 @@ ordinary S1 controls but substantially more demanding in the tested approaches.
 The two-frame result is a measured window for one fixed script/start, not proof
 that every possible route or control strategy is equally narrow. Only evidence
 and coverage documentation change in this follow-up; no runtime fix is proposed.
+
+### Reverse crossing: speed compared at the same observed elevator phase
+
+Follow-up on `323e1d2ba` tests whether more speed helps while holding the elevator
+phase constant. Four ordinary-input approaches × 96 delays recorded the live
+controller timer, all `$0DC0` car Y positions and Sonic's entry coordinates.
+The initial sample used first X <= 3585: faster entries could survive the same
+car positions that crushed slower entries, but their sampled X coordinates
+varied by several pixels. The final bounded check instead aligns the first
+X <= 3582 sample using small disclosed initial-position adjustments.
+
+At **Sonic centre X=3582, Y=2033**, all three final scenarios have controller
+timer **79** and active car Y positions **1985,2081**:
+
+| Start X | Initial wait | Left held before Down | Entry ground speed (8.8) | Outcome |
+|---|---|---|---|---|
+| `$0E92` | 32 | 70 | -774 | crushed, minimum X=3504 |
+| `$0F10` | 4 | 100 | -1146 (4.4766 px/frame left) | crushed, minimum X=3478 |
+| `$0F12` | 4 | 106 | -1254 (4.8984 px/frame left) | safely clears X=3407 |
+
+All movement comes from ordinary inputs after the cold-boot position; speed,
+car position, controller timer and gameplay state are never written to obtain a
+match. These are matching integer-pixel coordinates and car state, not an assertion
+that unrelated animation clocks or player subpixels are identical. Keeping Left
+held six frames longer before releasing it and pressing Down increases entry
+speed by about 9.4%, enough to turn the latter matched-phase failure into success.
+This establishes a speed benefit; it does not make arbitrary arrival phases safe.
+
+Queued Java 21 diagnostic command uses `-Dmse=off
+-Dtest=TestFbzSqueezeOrdinaryRoll#reverseMatchedPhaseProbe` with verified absolute
+S3K and S1 ROM properties and `test -B`. The 384-scenario sweep took about 1:12
+Maven; the final three-scenario check took **18.213 seconds**, body **0.887**.
+Both diagnostic invocations have zero errors/failures/skips; each asserts donor
+capability while explicitly reporting scenario successes and deaths. They are
+not hundreds of passing traversal tests. The temporary probe was removed.
+
+Direct Java 21 `InputLogAuthorTool` and `GameplayCaptureTool` on this compiled
+checkout independently reproduce the latter pair with `--game s3k --zone fbz
+--act 2 --donor s1 --y 0x7EC --capture-from 40`:
+
+- slower start `$0F10`: `100 -; 100 L; 130 D; 60 -`;
+- faster start `$0F12`: `100 -; 106 L; 130 D; 60 -`.
+
+The extra 96 waiting frames preserve the diagnostic phase. **Both videos reach
+the matched X/Y on frame 207**, with the measured entry speeds above. Slower dies
+on frame 232 at X=3478; faster clears X=3407 on frame 244 with no hurt/death.
+Their individual clips retain original frames 40–292 and 40–304 respectively:
+one second of actual neutral lead-in and one second after each outcome. The
+side-by-side clip preserves synchronization; only the slower clip's final death
+frame is held an extra 12 frames to match the longer panel. Labels identify
+entry speeds, not constant speed throughout the maneuver. Frame 232 was visually
+inspected. Inputs, CSVs, PNGs and videos are in external task directory
+`fbz-speed-phase-20260914`, including `same-phase-comparison.mp4`.
+
+This updates local feasibility evidence only. No engine change, native-parity
+claim, other-width/character guarantee or new full-suite claim is made.
