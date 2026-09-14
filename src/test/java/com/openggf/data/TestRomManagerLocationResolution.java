@@ -168,6 +168,31 @@ class TestRomManagerLocationResolution {
     }
 
     @Test
+    void activeRomAbsentDefaultHintWithEmptyCatalogueIsClassifiedAsMissing() throws Exception {
+        // The ROM-less CI runner: default keys, no images anywhere. Zone-event code
+        // such as Sonic3kFBZEvents tolerates the failure only when
+        // RomManager.isConfiguredRomMissing() recognises it.
+        Path workingDirectory = Files.createDirectory(temporaryDirectory.resolve("romless-working-directory"));
+        configuration.setConfigValue(SonicConfiguration.DEFAULT_ROM, "s3k");
+        String hint = String.valueOf(configuration.getDefaultValue(SonicConfiguration.SONIC_3K_ROM));
+        configuration.setConfigValue(SonicConfiguration.SONIC_3K_ROM, hint);
+        String originalUserDirectory = System.getProperty("user.dir");
+        try {
+            System.setProperty("user.dir", workingDirectory.toString());
+
+            IOException failure = assertThrows(IOException.class, () -> RomManager.getInstance().getRom());
+
+            assertEquals("ROM file does not exist: " + hint, failure.getMessage());
+            assertTrue(RomManager.isConfiguredRomMissing(failure));
+            IOException secondary = assertThrows(IOException.class,
+                    () -> RomManager.getInstance().getSecondaryRom("s3k"));
+            assertEquals("Failed to open secondary ROM: " + hint, secondary.getMessage());
+        } finally {
+            restoreUserDirectory(originalUserDirectory);
+        }
+    }
+
+    @Test
     void activeRomDefaultHintAbsentFallsBackToTheCatalogueScan() throws Exception {
         Path workingDirectory = Files.createDirectory(temporaryDirectory.resolve("hint-scan-working-directory"));
         byte[] image = new byte[0x80000];
