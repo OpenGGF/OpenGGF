@@ -4619,3 +4619,16 @@ identity and registering the carried object. Preserve fixed defaults in slots
 that are not carried. Do not weaken identity-table uniqueness checks or merely
 renumber duplicate owners. Verify one owner, retained slot/identity, and
 capture/restore immediately after a real resource reload.
+
+## Preserve the operand width of animation and clock accesses
+
+FBZ completion (2026-09-14): `move.w #1,anim(a1)` stores big-endian bytes
+`anim = 0`, `prev_anim = 1`; it does not select animation 1. The stationary and
+moving wire cages use this release/entry word write. Preserve both writes,
+including donor animation translation, rather than translating the word as an
+animation ID. Likewise `(Level_frame_counter+1).w` is an address expression
+selecting the low byte of the counter, not an arithmetic increment of its
+value. FBZ floating-platform mode 3 reads that byte after the engine has already
+advanced the level clock. Test equal low bytes with different high bytes to
+catch an incorrectly widened or incremented port. The horizontal chain's timed
+hand-step writes are separate byte writes and must not inherit cage semantics.

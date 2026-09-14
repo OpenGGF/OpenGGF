@@ -365,14 +365,14 @@ class TestFbzAct1RouteHeadless {
                 new TeamShape("tails,knuckles", 2),
                 new TeamShape("tails,knuckles,sonic", 3),
                 new TeamShape("tails,tails", 2));
-        for (int width : List.of(320, 352, 400, 528, 800)) {
+        for (int width : List.of(320, 352, 400, 512, 528, 640, 800)) {
             for (String donor : List.of("off", "s1", "s2")) {
                 for (TeamShape team : teams) {
                     cases.add(new CompatibilityCase(width, donor, team.codes(), team.count()));
                 }
             }
         }
-        // Must be last: rebuild a native-off session after all 75 combinations,
+        // Must be last: rebuild a native-off session after all 105 combinations,
         // proving no donor/team/viewport state leaks.
         cases.add(new CompatibilityCase(320, "off", "", 0));
         try {

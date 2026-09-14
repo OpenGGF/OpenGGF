@@ -7,22 +7,24 @@ green completion claim.
 
 ## Current native trace baseline
 
-The 2026-09-12 replay on `f177bbdb7` reports **5,666 errors, 0 warnings**.
-Its first error is frame **34**, `queue.s3k_kos_direct.busy`
-(expected `true`, actual `false`). This is the current V5 complete-run baseline;
-the July frame-18766/9-error result predates subsequent timing-contract changes
-and must not be used as current release evidence.
+The pinned `435ec2e68` baseline reproduces 5,666 complete-run errors,
+first row 34 queue busy. The completion candidate at `c31bdbd7a` improves to
+**4,667 errors**, first row **13,585 Y** ($0647/$0646), with no bootstrap
+errors, warnings or skips. It compares all 44,152 admitted rows. An independent
+recording improves 5,227 → 5,065 errors; its first row 116 Tails subpixel field
+remains unchanged. Both strict traces are still red.
 
-The baseline used the `trace-replay-r7` profile, one alphabetical fork, and the
-verified locked-on S3K ROM. See [trace frontier log](../../../status/trace-frontier-log.md)
-for the exact command and worktree. Route-controller changes do not establish
-trace parity; investigate the measured timing frontier separately.
+Queue submissions, animation operand widths, the platform low-byte clock,
+zone-owned tumble presentation and snake standing ownership are corrected.
+See the [trace frontier log](../../../status/trace-frontier-log.md) for exact
+commands, commits and counts. Historical July near-green results are obsolete;
+ordinary route completion does not establish emulator parity.
 
 ## Native FBZ2 compatibility route
 
 The native cold-Act 2 route now runs from the ROM start to the forced SOZ
 Act 0 request for every viewport width, every team row and the S2 donated
-profile; only the S1 donated profile remains red (see "Compatibility matrix"
+profile; the new focused S1 route also completes (see "Compatibility matrix"
 below). The controller recovers
 from button egress using a fresh live elevator candidate, clears Obj28 layout
 273 exactly once, and proves acquisition and exit of that car. It also waits
@@ -197,37 +199,27 @@ red. Remove temporary print probes; do not remove the safety assertions.
 
 ## Compatibility matrix
 
-The 13-row matrix remains pending and must not be relabelled PASS:
+Current focused donor evidence on `9fa8fc0a0` plus completion controller
+changes: both S1 and S2 complete the mandatory cold-start route, including the
+boss, capsule and SOZ request, with zero failures/errors/skips. The exact
+command and rejected approaches are recorded in the
+[completion record](../../plans/2026-09-14-fbz-completion.md).
 
-- five multi-sidekick team rows;
-- five viewport widths: 320, 400, 512, 640, and 800;
-- donation off, Sonic 1, and Sonic 2.
+The S1 squeeze uses a longer ordinary run-up and DOWN-only timed roll onto a
+live ascending car. It proves actual acquisition, block clearance, release and
+continued movement without consuming the squeeze assist or using spindash.
+The previous demand to consume that assist exactly once was a controller
+assumption, not a ROM requirement; successful ordinary movement disproves it.
+The helper also authors ordinary bottom-column, Blaster and end-boss inputs.
 
-Measured on this branch on 2026-09-14 (`TestFbzCompatibilityMatrix`, 24
-methods): 23 green, 1 red. The five team rows, all five viewport widths and
-the off/S2 donation rows complete the mandatory route to the SOZ request
-(about 19,600-22,300 frames). The S1 donated profile now reaches the `$1DC0`
-Obj28 squeeze at about frame 8,060 with 54 rings, through the `$1718`
-corridor by an ordinary run gated on a `$C0`-frame ACTIVE runway (it cannot
-spindash) with a short jump-roll over the non-magnetic `$1790` Blaster. It
-stops at the squeeze: `FbzS1DonationSqueezeAssist` only fires for the pair
-`FbzMovingSqueezeTraversal.findEpisode` selects, a native-speed projection
-with a real danger edge or a crush at the ordinary roll speed, and in the car
-phases the live-gated route arrives in no `$1DC0` car ever presents one (the
-block stays 71 pixels above a rolling P1 on the car), while an ordinary run
-across the car stalls on the `$0D85`-style lip at `$1D85` and is lifted into
-the block. The row fails fast with `obj28-s1-no-genuine-squeeze` after a
-`$400`-frame wait. The next work is either an S1 crossing that does not
-depend on the assist's episode finder or a finder that accepts this phase;
-both need the ROM's own answer for how a non-spindash character clears this
-pair.
-
-After the native route is green, run the focused donation, team, and viewport
-methods, then the full `TestFbzCompatibilityMatrix`. The S1 row must prove that
-Spindash remains absent, the squeeze assist is consumed exactly once, and the
-car is acquired/exited. Native and S2 rows must prove that they never consume
-the assist. Keep the existing consumption and car-acquisition/exit evidence
-assertions in the route completion contract.
+The final candidate's eleven exhaustive team/width/donor routes now pass, with
+zero failures/errors/skips (62.31 seconds). All 96 local elevator arrival delays,
+15 width/donor combinations, three independent two-cycle rewind spots and the
+expanded 105-case Act 1 lifecycle product also pass in focused execution.
+These are current focused results, not a full ordinary/guard suite pass. See the
+[Act 1](../../validation/levels/s3k-fbz-act1.md) and
+[Act 2](../../validation/levels/s3k-fbz-act2.md) matrices for remaining full
+main-character route, presentation and rewind obligations.
 
 ## September verification
 

@@ -109576,3 +109576,58 @@ above, completes all 29,302 frames: 2 tests / 1 failure / zero errors or skips.
 All 4,571 comparison errors, first frame 9,482 `air`, have the identical normalized
 fingerprint recorded in the audit and pinned baseline. No frontier movement;
 the inherited trace failure remains open.
+
+## 2026-09-14 — FBZ queue, animation operands and solid standing ownership
+
+Pinned develop base `435ec2e68c398bcc17af78e69f3e92b637bec90a`; investigation
+`.worktrees/ai-fbz-timing`, delivery `.worktrees/ai-fbz-completion`.
+The separately authorized manual FBZ validation budget preserves the concurrent
+KiS2 shared receipt. All runs use verified absolute S1/S2/S3K ROM paths, one
+alphabetical fork, and complete strict V5 comparisons, except the explicitly
+bounded temporary 6,000-row diagnostic used to isolate the snake checkpoint.
+No gameplay values were supplied from comparison rows.
+
+Command: `mvn -Dmse=off -B -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+test`, with `-Ds3k.rom.path=$S3K_ROM` and the
+corresponding absolute donor properties. Matched pre-change runs establish
+5,666 complete-run errors, first row 34 `queue.s3k_kos_direct.busy` true/false;
+independent Sonic+Tails recording 5,227 errors, first row 116
+`tails_x_sub` `$D000/$B800`.
+
+| Integrated correction | Complete errors / first row | Independent recording errors |
+| --- | --- | --- |
+| `ef13df370`: ROM FBZ enemy KosM batch submission | 5,654 / 508 animation | 5,226 |
+| `e8307ddc2`: cage animation word writes and chain hand steps | 5,642 / 2,641 Y | 5,104 |
+| `9fa8fc0a0`: platform low-byte clock address | 4,721 / 3,888 mapping frame | 5,090 |
+| `8eb04d603` (source `0597da5a1`): zone-owned tumble and stable snake standing key | 4,669 / 3,938 mapping frame (31/36) | 5,067 / 116 tails_x_sub, unchanged first field |
+
+| `c31bdbd7a` (source `54d9ff443`): moving-cage landing resets tumble state | **4,667 / 13,585 Y (`0647/0646`)** | **5,065 / 116 tails_x_sub**, unchanged |
+
+The final complete recording compares **44,152 rows** (the fixture's 44,281
+rows include the 129-row prefix); 4,541 physics and 126 animation errors,
+zero bootstrap errors or warnings. First physics error advances from row 5,857
+to **13,585 Y, expected `$0647`, actual `$0646`**. The independent recording
+compares **33,712 rows**, 4,754 physics and 311 animation errors. Both tests
+complete and fail strict comparison, with zero test skips; neither is green.
+
+ROM owners: `PLCKosM_FBZ` submits Blaster, TechnoSqueek and button art in order;
+`move.w #1,anim(a1)` writes animation 0 / previous animation 1;
+`(Level_frame_counter+1).w` selects the low byte instead of incrementing time;
+`Anim_Tumble` retains the negative angle in FBZ/DEZ (and left-facing MHZ);
+`loc_3B5FC` preserves the snake's SST standing bit across `MoveSprite2` before
+`SolidObjectFull`. A regenerated spawn key lost that standing bit and incorrectly
+reseated a jumping rider by one pixel. The existing instance-key capability
+fixes ownership without changing shared movement/collision algorithms.
+
+The prior focused invocation passes **63 tests**, zero failures/errors/skips,
+and the two complete replays retain the known comparison failures. Trace lane
+aggregate including baselines, temporary probes and failed fixture setup:
+743.86 seconds. The final 30 cage tests pass and both strict replays complete
+with known failures. All early cage mapping blips are gone; first animation
+error is row 15,234 `tails_animation_id` 0/$1A. The first physics error is a
+rolling landing on disappearing-platform slot 6 / native routine `$3B3FA`;
+that later owner remains open. See the
+[completion record](../architecture/plans/2026-09-14-fbz-completion.md) and
+[coverage matrices](../architecture/validation/levels/s3k-fbz-act1.md).

@@ -95,6 +95,64 @@ capture tool rejects publication until the exact first-visible state and each
 AniPLC visible-region review are populated and hash-bound. This is the intended
 fail-closed state before fresh BizHawk recapture.
 
+### Native exporter observations (2026-09-14 FBZ completion)
+
+A bounded investigation used official BizHawk 2.11 Linux/GPGX, the verified
+locked-on ROM, and `s3k-complete-sonic-tails.bk2` (SHA-256
+`82EABFBC65E33C160CE209BAA1CA3F967CB677FE22350BC100625D8C41A8E1BF`).
+The sandbox could not reach X11; a read-only host socket check proved X0
+accessible outside it. Subsequent launches used that display with external
+configuration/output and no ROM/RAM writes. Native invocation time totaled
+276.557 seconds. External evidence and hashes are in
+`$FBZ_EVIDENCE_ROOT/native-reference/diagnostic-summary.json`.
+These are diagnostics, not approved checkpoint replacements.
+
+The original display gate was invalid. `sonic3k.constants.asm` places
+`VDP_reg_1_command` at `$F60E` after the six-byte `_tempF608` reserve, not `$F60C`.
+`Init_VDP` stores a command template there; display-enabling routines OR `$40`
+into `d0` and write the hardware without updating that template. Correcting only
+the address still rejected every frame. The exporter now records the template,
+emits `display_enabled: null` with an explicit unverified status, and cannot
+accept start/cadence evidence until a live observation is implemented and
+verified. Installed Genesis Lua APIs expose layer settings, not a verified live
+VDP register reader; emulator register APIs expose CPU registers.
+
+Installed `BizHawk.Client.Common.dll` metadata declares
+`MemoryLuaLibrary.HashRegion(addr, count, domain)`. Its `MemoryApi.HashRegion`
+implementation calls `SHA256Checksum.ComputeDigestHex`, so the third argument
+must name `VRAM`, not `SHA256`. The exporter restores the previous domain on
+success or failure. Title-card ownership also needs its routine pointer:
+native slot `$B250` is later reused by `Obj_FBZFloatingPlatform` update
+`loc_3A5DA` (`$0003A5DA`), not `Obj_TitleCard` (`$0002D690` in this ROM).
+The reused slot's raw child-count-offset word remains recorded but does not
+indicate active title children. `Obj_TitleCardWait2` waits for its children
+before `Delete_Current_Sprite` releases the slot.
+
+The first measured state satisfying the other native-start predicates is BK2
+237948 (trace 34, `Level_frame_counter=$0023`). Player centre is `$0060/$076C`,
+camera `$0000/$070C`, and animation bytes are
+`1C 01 04 05 00 02 04 01 04 05 00 00 00 00 00 00`.
+No exact-frame PNG was captured, so this is not an approved start contract.
+Nine sparse native diagnostic PNGs include clear outdoor gameplay but do not
+prove five per-channel visible regions/cadence. The frozen manifest and pending
+amendment remain unchanged.
+
+The focused regression executes actual Lua observation/publication functions
+with BizHawk API stubs: address correctness, unknown display for either template
+bit value, rejected publication, reused title slot, and hash-domain restoration
+including failures. It reproduced the original wrong-address failure and passed
+against the repaired exporter. Run from the checkout:
+
+```bash
+mkdir -p target/fbz-lua-contract
+lua5.4 src/test/resources/bizhawk/fbz_visual_exporter_contract_test.lua \
+  tools/bizhawk/capture_fbz_visual_references.lua target/fbz-lua-contract
+```
+
+`TestFbzVisualExporterGuard` invokes the same regression through `LUA_BIN`
+(default `lua`) in the guards profile, whose CI job provisions Lua. The ordinary
+tooling-contract test remains Java-only. Native recapture remains outstanding.
+
 <!-- FBZ-VALIDATION:native-pre-compat:BEGIN -->
 ## Native pre-compatibility validation
 
