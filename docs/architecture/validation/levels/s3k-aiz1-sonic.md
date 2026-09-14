@@ -26,6 +26,7 @@ classified unsupported merely because this matrix has not exercised it.
 | LOAD / REWIND AIZ2 | Production seamless reload and new-timeline restore/replay; old timeline rejected under the production boundary policy | `TestS3kAiz1ReloadRewind#seamlessReloadIsolatesHistoryAndNewActReplays`, ordinary | Pass: production root at frame 5,174; backward seek clamps to AIZ2; two 30-frame replays match. The older `TestRewindAcrossActBoundary` is only a smoke check, not evidence for this edge. |
 | ENTRY / LIFE / LOAD breadth | Short width × donor lifecycle cross-product, checkpoints, death/restart, reset behavior and team ownership | `TestS3kAiz1EntryMatrix`, explicit `openggf.aiz1.entry=true` | All 15 width × donor entry cases pass; intro ownership and two 30-frame rewind replays. Checkpoints, death/restart and load breadth remain missing. |
 | ROUTE breadth | Every width and donor, supported main routes and team shapes | `TestS3kAiz1CompatibilityRoutes#axisRouteCompletes`, explicit `openggf.aiz1.routes=true` | 400px/off, 512px/off and 320px/S2 pass; 640px/off, 800px/off and 320px/S1 fail as detailed below. Other teams/main routes remain missing. |
+| OBJECT / REWIND opposing spring chain | Live two-spring approach, RIGHT-only rejection, spring-aware crossing, two whole-state replays | `TestS3kAiz1SpringRecovery`, explicit `openggf.aiz1.recovery=true` | 640/off, 800/off and 320/S1; see spring-chain continuation below. Full-route join remains unresolved. |
 | OBJECT / EVENT / CAMERA local boundaries | Per-mechanic before/at/after, negative activation, authority, culling and release checks | Existing `TestS3kAiz1SkipHeadless` is a source reference, not new execution evidence | Full obligation audit pending; route completion alone does not discharge local checks. |
 | BOSS | Every relevant phase, damage, child graph, defeat and exit | Pending audit | Route is composition evidence only. |
 | PRESENT / ORACLE | Native pixels/audio and independent ROM timing comparison | Separate trace/native lanes | Unrun by this delivery; snapshot equality is not rendering certification. |
@@ -281,3 +282,84 @@ full-guard claim is made. Final aggregate: **355.778 seconds
 Changed-document local links, whitespace and commit policy passed. Raw survey
 and Maven diagnostics are consumed and removed; only this compact evidence
 record remains.
+
+## Spring-chain continuation (base `0bd7c5317`)
+
+Worktree: `.worktrees/ai-aiz-steering`, branch `bugfix/ai-aiz-steering`;
+destination `feature/ai-gameplay-capture`. Main remains `develop`.
+
+This increment adds an independent OBJECT / REWIND obligation at the two
+opposing horizontal springs reached by the failing 640px/off, 800px/off and
+320px/S1 pad programs. `TestS3kAiz1SpringRecovery`, selected explicitly with
+`-Dopenggf.aiz1.recovery=true`, derives the approach and exit from live spring
+positions and collision widths. The recorded input prefix and late intro gate
+are unchanged. The first spring is observed at `$1F39,$04A0`, the second at
+`$1FB9,$0480`; these coordinates are evidence, not controller selectors.
+
+At each independently reached approach, capture A. A 300-frame RIGHT-only
+control fails to cross the first spring and receives its leftward launch.
+Restore A, then choose RIGHT/JUMP from the live opposing-spring approach,
+hold each jump through flight and release on landing. Steering must consider
+both springs: a single-target attempt crosses the first but is thrown back by
+the second. Require P1 to finish beyond the entire chain, without death/load,
+and audit CPU team identity, controller ownership, leader chain and observed
+dead-streak duration. Restore A and replay the generated 300 pad masks twice;
+compare the whole registered snapshot at each restore and endpoint. This
+checks engine replay for those inputs; it does not rewind the test-side policy,
+prove per-frame equality or prove every late sidekick death has recovered.
+
+The four-collision-half-width approach margin and five-second local observation
+window are authored test bounds, not tuned engine physics. X-flipped horizontal
+spring dispatch/launch follows `Obj_Spring` / `sub_23190`; the test uses the
+live subtype and render flags. Trace physics and aux rows never drive gameplay.
+
+### Rejected full-route recoveries
+
+The original full-route assertions remain intact and still have the four known
+frontiers (three AIZ axes, HCZ). No generic tail recovery was integrated.
+Temporary ordinary-input probes established the following limits:
+
+| Attempt | Evidence / decision |
+| --- | --- |
+| RIGHT after the recorded program ends | All three axes cycle against the first opposing spring; no reload in 16,000 total frames. |
+| Jump from the live horizontal-spring approach | Clears the spring chain in all three axes; later stops at `$205D,$043D`. Retained only as the independent local obligation above. |
+| Add a grounded stationary-position jump | 640px/S1 reach a later loop near `$2B39,$0443`; 800px can remain attached to a vine. Not a complete route. |
+| Pulse jump while object-controlled | Releases the vine (the owner reads A/B/C press edges in `sub_220C2` / `loc_22136`), but all three still fail the lower loop. Not retained. |
+| Global furthest-X watchdog | Jumps too aggressively and degrades progress into the `$2226..$22D5` area. Rejected. |
+| Jump at the loop's invisible collision blocks | Does not establish loop traversal. Rejected. |
+| Downhill / approach rolling | The first probe incorrectly held RIGHT+DOWN, which cannot enter a roll; `SonicKnux_Roll` and the S1/S2 equivalents require no left/right held. Corrected DOWN-only probes still do not complete the loop. Rejected. |
+
+The probes approach a lower path, lose forward speed on the loop and reverse;
+this is not evidence of a runtime physics defect. The next route work
+should establish a valid live join into the upper route or a complete lower-loop
+traversal before extracting or enabling a general recovery stage. A coarse
+sampled position beyond one object is insufficient evidence of stable recovery:
+the neighboring spring can return the player. The local negative-control and
+whole-chain exit checks are retained to prevent repeating that mistake.
+
+### Validation scope and accounting
+
+The unchanged runner plan selected 1,616 ordinary common/gameplay classes plus
+guards. This increment adds one explicit test class, changes no production,
+shared helper, build or selection policy, and exercises its complete setup,
+negative control and restore/replay paths directly. Focused validation applies
+under the proportionate policy; no broad attempt was launched. Actual preflight
+passed with `LUA_BIN=/usr/bin/lua5.4` against pinned base `0bd7c5317`. Existing
+complete-route failures are not reclassified as passes by this local obligation.
+Separate accounting remains authorized while the peer receipt is active; all
+probe and failed-check elapsed time is included, not just the final passes.
+
+Final development checks used `mvn -Dmse=off` with the existing absolute S1,
+S2 and S3K ROM properties. `-Dtest=TestS3kAiz1SpringRecovery,TestS3kAiz1RoutePilot,TestAiz1IntroProgram
+-Dopenggf.aiz1.recovery=true test`: **6 passed, zero errors/failures/skips**,
+28.183 s. The review-strengthened spring activation check then passed all three
+rows (28.333 s). The main route runner and existing full-route assertions were
+not edited; no new full-route pass is claimed.
+
+Review found no blocking restore/input-reference issue. It prompted the explicit
+ROM-strength rebound check; its remaining coverage limits are stated above.
+Pre-integration aggregate testing: **522.227 seconds (8.704 minutes)**,
+including every exploratory and failed run. The shared receipt now belongs to
+`kis2-presentation-super-completion` and was left untouched. Local links and
+whitespace checks passed. Temporary probe code and raw logs are removed after
+the compact findings are recorded here.
