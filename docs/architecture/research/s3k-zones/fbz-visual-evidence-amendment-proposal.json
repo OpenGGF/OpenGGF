@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "status": "native-candidates-reviewed-bounded-terrain-accepted-paired-cadence-pending",
+  "status": "bounded-terrain-and-opaque-source-cadence-independently-accepted-frozen-checkpoints-open",
   "scope": "FBZ1 exact start and five AniPLC channels; $230 visible placement applies to Act2",
   "frozen_manifest": "docs/s3k-zones/fbz-visual-checkpoints.json",
   "frozen_manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
@@ -244,7 +244,7 @@
           "height": 28
         },
         "review_status": "approved",
-        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "approval_scope": "Native visible-owner rectangle and independently reviewed opaque source-local appearance/presentation correspondence. Camera, placement, geometry, transparent background and frozen checkpoint PASS remain outside acceptance.",
         "native_candidate": {
           "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
           "frames": [
@@ -299,8 +299,8 @@
           "source": "ROM spike owner near world$CF0,$160; independent stationary capture pose, not native physics-state replay",
           "scope": "Candidate instrument placement only; recheck visible-owner masks independently before acceptance. No reference physics/counters/events are hydrated."
         },
-        "paired_source_pixel_candidate": {
-          "status": "awaiting-independent-review",
+        "paired_source_pixel_acceptance": {
+          "status": "independently-reviewed-bounded-acceptance",
           "pixel_comparison": "PASS",
           "scope": "opaque source-local pixels with matching tile/local/palette/nibble and service phase; excludes transparent backgrounds, occlusions, whole frames",
           "engine_artifact_sha256": "18CAE3F037ECEFC6610A9BE7060A4557304FCF016447620E69AAB3F99CC9FA1A",
@@ -416,7 +416,8 @@
               "engine_receipt_sha256": "E9503D3166DD42A07BDA266009B192847CB927F71BF54B304239DEA1214EAB80",
               "native_source_mask_sha256": "88E5846142341929054FF85C39943FD9AC762CA1C7E68F8BAC30E2019C3CA099"
             }
-          ]
+          ],
+          "independent_review": "paired_source_pixel_review"
         }
       },
       {
@@ -432,7 +433,7 @@
           "height": 40
         },
         "review_status": "approved",
-        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "approval_scope": "Native visible-owner rectangle and independently reviewed opaque source-local appearance/presentation correspondence. Camera, placement, geometry, transparent background and frozen checkpoint PASS remain outside acceptance.",
         "native_candidate": {
           "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
           "frames": [
@@ -490,8 +491,8 @@
           "natural_start_timer": 0,
           "natural_wait_limit": "one complete ROM AniPLC cycle; ordinary stepping only"
         },
-        "paired_source_pixel_candidate": {
-          "status": "awaiting-independent-review",
+        "paired_source_pixel_acceptance": {
+          "status": "independently-reviewed-bounded-acceptance",
           "pixel_comparison": "PASS",
           "scope": "opaque source-local pixels with matching tile/local/palette/nibble and service phase; excludes transparent backgrounds, occlusions, whole frames",
           "engine_artifact_sha256": "18CAE3F037ECEFC6610A9BE7060A4557304FCF016447620E69AAB3F99CC9FA1A",
@@ -607,7 +608,8 @@
               "engine_receipt_sha256": "8B6A6D50B8E2858861E1879E99898C6075EBE96A60A035B5F27B81AB072D0CE3",
               "native_source_mask_sha256": "2B42D9D49886A525088DC24A9E3527701D332EBDCDD2F0925F9D74A940371BD2"
             }
-          ]
+          ],
+          "independent_review": "paired_source_pixel_review"
         }
       },
       {
@@ -638,7 +640,7 @@
           "native_observation": "BK2 237976 timer zero; 237977 timer63/index2; destination VRAM SHA256 remains unchanged through237981, as expected for identical source offsets."
         },
         "required_evidence": "Visible placed destination tile region, stable region/VRAM across natural timer expiry and index advance, exact ROM source identity. Unrelated cloud motion cannot satisfy the region proof.",
-        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "approval_scope": "Native visible-owner rectangle and independently reviewed opaque source-local appearance/presentation correspondence. Camera, placement, geometry, transparent background and frozen checkpoint PASS remain outside acceptance.",
         "native_candidate": {
           "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
           "frames": [
@@ -693,8 +695,8 @@
           "source": "Placed foreground violet mesh near world$300,$630; static source offsets[0,0]",
           "scope": "Candidate instrument placement only; recheck visible-owner masks independently before acceptance. No reference physics/counters/events are hydrated."
         },
-        "paired_source_pixel_candidate": {
-          "status": "awaiting-independent-review",
+        "paired_source_pixel_acceptance": {
+          "status": "independently-reviewed-bounded-acceptance",
           "pixel_comparison": "PASS",
           "scope": "opaque source-local pixels with matching tile/local/palette/nibble and service phase; excludes transparent backgrounds, occlusions, whole frames",
           "engine_artifact_sha256": "18CAE3F037ECEFC6610A9BE7060A4557304FCF016447620E69AAB3F99CC9FA1A",
@@ -810,7 +812,8 @@
               "engine_receipt_sha256": "2E5BB0DD88B669A0A1F740FFE822168BEEE03DD31596E4B33EB5D47B8EE4E71E",
               "native_source_mask_sha256": "D139888C062BD9F0E86B3840C8B106B767EB02F24E926CA8DA82E362802C85C0"
             }
-          ]
+          ],
+          "independent_review": "paired_source_pixel_review"
         }
       },
       {
@@ -828,7 +831,7 @@
         "review_status": "approved",
         "placement_applicability": {
           "act": 2,
-          "status": "approved-applicability-correction-pending-paired-pixels",
+          "status": "approved-applicability-correction-with-bounded-source-pixel-acceptance",
           "reason": "The shared ROM blocks containing tiles $230-$237 are absent from both original Act1 layout planes. Act2 foreground places these blocks. The Act1 upload schedule remains real but has no visible original-layout destination.",
           "blocks_rom_offset": "0x194400",
           "chunks_rom_offset": "0x1974A2",
@@ -850,7 +853,7 @@
           "candidate_world_placement": "x=$880,y=$680-$800",
           "acceptance": "Use native Act2 placement pixels with channel1 ROM source/counter identity; this does not certify the old Act1 checkpoint or modify the frozen manifest."
         },
-        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "approval_scope": "Native visible-owner rectangle and independently reviewed opaque source-local appearance/presentation correspondence. Camera, placement, geometry, transparent background and frozen checkpoint PASS remain outside acceptance.",
         "native_candidate": {
           "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
           "frames": [
@@ -906,8 +909,8 @@
           "source": "ROM Act2 foreground chunk/block placement x$880,y$680-$800; original Act1 placement absent",
           "scope": "Candidate instrument placement only; recheck visible-owner masks independently before acceptance. No reference physics/counters/events are hydrated."
         },
-        "paired_source_pixel_candidate": {
-          "status": "awaiting-independent-review",
+        "paired_source_pixel_acceptance": {
+          "status": "independently-reviewed-bounded-acceptance",
           "pixel_comparison": "PASS",
           "scope": "opaque source-local pixels with matching tile/local/palette/nibble and service phase; excludes transparent backgrounds, occlusions, whole frames",
           "engine_artifact_sha256": "18CAE3F037ECEFC6610A9BE7060A4557304FCF016447620E69AAB3F99CC9FA1A",
@@ -1023,7 +1026,8 @@
               "engine_receipt_sha256": "5ADA1541FE3A2FABB7A65C89D80A9A2ED0947209538ADD1CF08D52F52421E1B8",
               "native_source_mask_sha256": "96B7702F2862B5C7855CBDD28EEC152AC9A7F515EAF132B30FC416EFFE6F0068"
             }
-          ]
+          ],
+          "independent_review": "paired_source_pixel_review"
         }
       },
       {
@@ -1039,7 +1043,7 @@
           "height": 64
         },
         "review_status": "approved",
-        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "approval_scope": "Native visible-owner rectangle and independently reviewed opaque source-local appearance/presentation correspondence. Camera, placement, geometry, transparent background and frozen checkpoint PASS remain outside acceptance.",
         "native_candidate": {
           "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
           "frames": [
@@ -1097,8 +1101,8 @@
           "natural_start_timer": 0,
           "natural_wait_limit": "one complete ROM AniPLC cycle; ordinary stepping only"
         },
-        "paired_source_pixel_candidate": {
-          "status": "awaiting-independent-review",
+        "paired_source_pixel_acceptance": {
+          "status": "independently-reviewed-bounded-acceptance",
           "pixel_comparison": "PASS",
           "scope": "opaque source-local pixels with matching tile/local/palette/nibble and service phase; excludes transparent backgrounds, occlusions, whole frames",
           "engine_artifact_sha256": "18CAE3F037ECEFC6610A9BE7060A4557304FCF016447620E69AAB3F99CC9FA1A",
@@ -1214,7 +1218,8 @@
               "engine_receipt_sha256": "89BFAF8A220D42BD61E47C1AF1C8B541443E7B5462FFF9FA7F883B582DAF0C02",
               "native_source_mask_sha256": "EF432E18DE496877DC5631F324727DAAE5DF99EE848E00E5705D1423646BE208"
             }
-          ]
+          ],
+          "independent_review": "paired_source_pixel_review"
         }
       }
     ],
@@ -1228,7 +1233,7 @@
       "destination VRAM bytes SHA-256",
       "raw framebuffer and 320x224 crop SHA-256"
     ],
-    "visibility_gate": "For changing-art channels, require at least two distinct native-crop hashes plus a reviewed destination-tile region changing after the recorded queued transfer. Act1 channel0 ($210-$22F) deliberately references source offsets[0,0]: require stable destination VRAM and stable placed-art region across the counter cycle instead. Moving clouds, palette/fade/title pixels do not prove either condition. All series remain pending independent review.",
+    "visibility_gate": "For changing-art channels, require at least two distinct native-crop hashes plus a reviewed destination-tile region changing after the recorded queued transfer. Act1 channel0 ($210-$22F) deliberately references source offsets[0,0]: require stable destination VRAM and stable placed-art region across the counter cycle instead. Moving clouds, palette/fade/title pixels do not prove either condition. Opaque source-local appearance/presentation correspondence is independently accepted; whole frames and frozen checkpoints remain open.",
     "service_domain_note": "Native VRAM changes one captured frame after timer expiry/index advance. Engine AniPlcScriptState.tick applies CPU patterns and updates the atlas immediately. These domains must be named and their relative service phases measured before paired cadence acceptance; same-frame correlation must not be assumed."
   },
   "required_tooling_changes_before_recapture": [
@@ -1273,5 +1278,23 @@
     "total_pixels": 2400,
     "normalization": "round(nativeRGB/34), round(engineRGB*7/255)",
     "scope": "This rectangle only; no whole-frame or checkpoint PASS."
+  },
+  "paired_source_pixel_review": {
+    "reviewer": "root integration agent, independent of capture implementation",
+    "date": "2026-09-14",
+    "basis": "Inspected all five native/engine pairs in root-paired-review.png; reviewed native SAT/name-table decoding and actual-GPU source masks; independently reproduced all 30 receipt hashes, framebuffer-match flags and source-local RGB equality using a separate Python implementation.",
+    "accepted_scope": "Opaque source-local tile/local/palette/nibble appearance with matching presented payload phase; all eligible native pixels represented.",
+    "exclusions": [
+      "transparent and retained background",
+      "differing camera, placement and geometry",
+      "HUD and occluded pixels",
+      "whole frames",
+      "frozen checkpoint acceptance",
+      "native route visual parity"
+    ],
+    "source_commits": [
+      "dac3f5e01",
+      "04a9e17eb"
+    ]
   }
 }
