@@ -132,6 +132,33 @@ class TestSonic3kTitleCardTeardownModel {
         assertTrue(restored.isComplete());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1})
+    void fbzBothActsPublishRomEnemyBatchOnlyAfterTitleOwnerRetires(int act) {
+        HeadlessTestFixture.builder().withZoneAndAct(4, act).build();
+        Sonic3kObjectArtProvider provider = (Sonic3kObjectArtProvider)
+                GameServices.module().getObjectArtProvider();
+        // PLCKosM_FBZ: Blaster, Technosqueek, FBZButton. Literal ROM
+        // addresses/destinations pin the production registration independently
+        // of its Java constants (sonic3k.asm:64386-64390).
+        var expected = java.util.List.of(
+                new PlcProgressSnapshot.PendingKosModule(0x0DC6C2, 0x506),
+                new PlcProgressSnapshot.PendingKosModule(0x0DC9C4, 0x52E),
+                new PlcProgressSnapshot.PendingKosModule(0x165E80, 0x500));
+        assertEquals(expected, provider.capture().pendingKosModules());
+        for (int tick = 1; tick <= 34; tick++) {
+            provider.processRuntimeArtQueue();
+            assertTrue(provider.capture().pendingKosOrdinals().isEmpty(),
+                    "the title owner must retain admission through tick " + tick);
+        }
+        provider.processRuntimeArtQueue();
+        assertTrue(provider.capture().pendingKosModules().isEmpty());
+        assertEquals(3, provider.capture().pendingKosOrdinals().size(),
+                "the retiring owner submits every ROM parent exactly once");
+        provider.processRuntimeArtQueue();
+        assertEquals(3, provider.capture().pendingKosOrdinals().size());
+    }
+
     @Test
     @DisplayName("AIZ preserve-current reload keeps the existing enemy batch and lease")
     void aizPreserveCurrentTransitionDoesNotRegisterOrReleaseEnemyArt() throws Exception {
