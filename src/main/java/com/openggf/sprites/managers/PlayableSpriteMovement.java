@@ -837,7 +837,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// this dispatch, so retain the entry decision for updateCrouchState.
 		boolean moveLockActiveAtDispatch = sprite.getMoveLockTimer() > 0;
 
-		if (doCheckSpindash()) return;
+		if (doCheckSpindash()) {
+			// SonicKnux_Spindash loc_11C24 / loc_11D6C and Tails_Spindash
+			// keep the background floor/wall tail on start, charge and release,
+			// even though they pop the ordinary movement return address.
+			if (applyFatalBackgroundFloorOverlap()) return;
+			collisionSystem().resolvePostMovementBackgroundWallClamp(
+					FrameCollisionPlan.terrainOnly(), sprite);
+			return;
+		}
 		if (inputJumpPress && doJump()) {
 			// ROM: Sonic_Jump uses addq.l #4,sp to pop the return address,
 			// skipping the rest of Obj01_MdNormal (SlopeResist, Move,

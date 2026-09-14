@@ -2694,6 +2694,63 @@ public class TestPlayableSpriteMovement {
                                 "each active charge's $0900 word re-arms the later animation clear");
         }
 
+        @org.junit.jupiter.params.ParameterizedTest
+        @org.junit.jupiter.params.provider.CsvSource({
+                "start,false", "hold,false", "release,false",
+                "start,true", "hold,true", "release,true"})
+        void spindashDispatchKeepsBackgroundFloorAndWallTail(String phase, boolean fatal) throws Exception {
+                mockSprite = new Sonic("sonic", (short) 0, (short) 0);
+                setGameRulesForTest(GameRules.SONIC_3K);
+                mockSprite.setAnimationProfile(new ScriptedVelocityAnimationProfile()
+                        .setDuckAnimId(8).setSpindashAnimId(9).setRollAnimId(2));
+                mockSprite.setAnimationId(8);
+                mockSprite.setSpindash(!phase.equals("start"));
+                mockSprite.setAir(false);
+                mockSprite.setCentreX((short) 0x128);
+                mockSprite.setCentreY((short) 0x100);
+                GameServices.camera().setMinX((short) 0);
+                GameServices.camera().setMaxX((short) 0x7FFF);
+                GameServices.camera().setMaxY((short) 0x7FFF);
+                var level = mock(LevelManager.class);
+                var desc = mock(com.openggf.level.ChunkDesc.class);
+                when(desc.isSolidityBitSet(org.mockito.ArgumentMatchers.anyInt())).thenReturn(true);
+                byte[] full = new byte[16]; java.util.Arrays.fill(full, (byte) 16);
+                var tile = new com.openggf.level.SolidTile(7, full, full, (byte) 0);
+                when(level.getSolidTileForChunkDesc(org.mockito.ArgumentMatchers.eq(desc),
+                        org.mockito.ArgumentMatchers.anyInt())).thenReturn(tile);
+                when(level.getChunkDescAt(org.mockito.ArgumentMatchers.anyByte(),
+                        org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt(),
+                        org.mockito.ArgumentMatchers.anyBoolean())).thenAnswer(call -> {
+                    int layer = (byte) call.getArgument(0), x = call.getArgument(1);
+                    int left = fatal ? 0x100 : 0x110;
+                    return layer == 1 && x >= left && x < left + 16 ? desc : null;
+                });
+                GroundSensor.setLevelManager(level);
+                var collision = new CollisionSystem(new TerrainCollisionManager()) {
+                    @Override public void resolveGroundAttachment(FrameCollisionPlan plan,
+                            AbstractPlayableSprite player, int threshold, BooleanSupplier support) {
+                        player.setAir(false); // independent stable object support; real BG probes remain active
+                    }
+                };
+                installRuntimeCollisionSystem(collision);
+                TestEnvironment.activeGameplayMode().attachBackgroundPlaneCollisionProvider(
+                        () -> new com.openggf.physics.BackgroundPlaneCollisionProvider.State(true, 0x20, 0));
+                manager = new PlayableSpriteMovement(mockSprite, collision, GameServices.gameState());
+                setMovementField("inputDown", !phase.equals("release"));
+                setMovementField("inputJumpPress", phase.equals("start"));
+                Method dispatch = PlayableSpriteMovement.class.getDeclaredMethod("modeNormal");
+                dispatch.setAccessible(true);
+                try {
+                    dispatch.invoke(manager);
+                    assertEquals(fatal, mockSprite.getDead(),
+                            "SonicKnux_Spindash start and update/release tails test sub_F846");
+                    assertEquals(fatal ? 0x128 : 0x125, mockSprite.getCentreX(),
+                            "the nonfatal spindash tail must apply CheckRightWallDist -3 without movement");
+                } finally {
+                    GroundSensor.setLevelManager(null);
+                }
+        }
+
         @Test
         public void s2SpindashChargePulseRepublishesSpindashAnimation() throws Exception {
                 setGameRulesForTest(GameRules.SONIC_2);
