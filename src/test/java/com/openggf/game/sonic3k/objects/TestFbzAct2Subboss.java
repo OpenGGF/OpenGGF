@@ -50,6 +50,55 @@ class TestFbzAct2Subboss {
                 "rewinding the pending event republishes the live boundary at the same phase");
     }
 
+    @Test void defeatOwnsBothPhysicalArchivesUntilReadyAndRestoresTheirPendingClaims() throws Exception {
+        var queue = mock(com.openggf.game.sonic3k.resources.S3kKosModuleQueue.class);
+        var coordinator = mock(com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.class);
+        var timing = mock(com.openggf.game.timing.HardwareTimingService.class);
+        var journal = mock(com.openggf.level.resources.KosinskiModuleQueue.class);
+        var rom = mock(com.openggf.data.Rom.class);
+        var kind = com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE;
+        var cloud = new com.openggf.game.timing.HardwareWorkHandle(kind, 7, "cloud-fingerprint");
+        var pillar = new com.openggf.game.timing.HardwareWorkHandle(kind, 8, "pillar-fingerprint");
+        when(coordinator.moduleQueue()).thenReturn(queue);
+        when(rom.readBytes(org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(32)))
+                .thenReturn(new byte[32]);
+        var entries = com.openggf.game.sonic3k.Sonic3kPlcLoader.fbz2SubbossDefeatKosmEntries();
+        for (int i = 0; i < entries.size(); i++) {
+            var entry = entries.get(i);
+            var handle = i == 0 ? cloud : pillar;
+            when(journal.enqueue(rom, entry.sourceAddress(), entry.destinationVramBytes())).thenReturn(true);
+            when(queue.queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32)).thenReturn(handle);
+            when(timing.pendingHandle(kind, handle.ordinal())).thenReturn(java.util.Optional.of(handle));
+        }
+        var boss = boss();
+        boss.setServices(new com.openggf.level.objects.TestObjectServices() {
+            @Override public com.openggf.data.Rom rom() { return rom; }
+            @Override public com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue() { return journal; }
+            @Override public com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator() { return coordinator; }
+            @Override public com.openggf.game.timing.HardwareTimingService hardwareTiming() { return timing; }
+        });
+        boss.update(0, null);
+        for (int i = 0; i < 7; i++) boss.completeLaserCycleForTest();
+        var ordered = org.mockito.Mockito.inOrder(queue);
+        for (var entry : entries) ordered.verify(queue).queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32);
+        var pending = boss.captureRewindState();
+        boss.update(1, null);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.never()).claim(org.mockito.ArgumentMatchers.any());
+        when(queue.isReady(cloud)).thenReturn(true);
+        boss.update(2, null);
+        org.mockito.Mockito.verify(queue).claim(cloud);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.never()).claim(pillar);
+        when(queue.isReady(pillar)).thenReturn(true);
+        boss.update(3, null);
+        boss.update(4, null);
+        org.mockito.Mockito.verify(queue).claim(pillar);
+        boss.restoreRewindState(pending); // the timing owner restores the same pending handles independently
+        boss.update(5, null);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.times(2)).claim(cloud);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.times(2)).claim(pillar);
+        for (var entry : entries) org.mockito.Mockito.verify(queue).queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32);
+    }
+
     @Test void nativeBoundsTriggerAndSevenCycleCounterAreExact() {
         assertArrayEquals(new int[] {0x560, 0x660, 0x2900, 0x2C00},
                 Fbz2SubbossInstance.activationBounds());

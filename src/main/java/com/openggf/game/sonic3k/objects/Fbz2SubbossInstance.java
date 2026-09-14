@@ -70,6 +70,8 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     private boolean defeated;
     private boolean nativeDeletePending;
     private int defeatArtQueuedCount;
+    private long defeatCloudArtOrdinal = -1;
+    private long defeatPillarArtOrdinal = -1;
     private String defeatArtQueueFailure;
     private String paletteLoadFailure;
     private int releaseRawPlcAttempted;
@@ -87,6 +89,8 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity mainPlayer) {
+        defeatCloudArtOrdinal = serviceDefeatArt(defeatCloudArtOrdinal);
+        defeatPillarArtOrdinal = serviceDefeatArt(defeatPillarArtOrdinal);
         if (!initialized) { initialize(); return; }
         if (!defeated && !cameraInActivationRange()) {
             destroyRespawnableIfPastNativeCameraWindow();
@@ -221,6 +225,31 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
         enqueueDefeatArt();
     }
 
+    private long serviceDefeatArt(long ordinal) {
+        if (ordinal < 0) return ordinal;
+        var queue = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        var handle = services().hardwareTiming().pendingHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)
+                .orElseThrow(() -> new IllegalStateException("FBZ2 subboss lost its submitted KosM job"));
+        if (!queue.isReady(handle)) return ordinal;
+        queue.claim(handle);
+        return -1;
+    }
+
+    private long submitDefeatArt(com.openggf.data.Rom rom, Sonic3kPlcLoader.KosmQueueEntry entry)
+            throws IOException {
+        try {
+            // loc_6FE94 is a physical Queue_Kos_Module producer. The legacy
+            // pattern-DMA journal below does not submit to that timing ledger.
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue()
+                    .queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32).ordinal();
+        } catch (IllegalStateException unavailable) {
+            if (!"runtime-art coordination is unavailable in these object services"
+                    .equals(unavailable.getMessage())) throw unavailable;
+            return -1; // explicit lightweight object fixture without runtime coordination
+        }
+    }
+
     private void enqueueDefeatArt() {
         if (tryServices() == null) return;
         defeatArtQueuedCount = 0;
@@ -246,6 +275,9 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
                     LOG.warning("FBZ2 subboss defeat art prefix only: " + defeatArtQueueFailure);
                     break;
                 }
+                long ordinal = submitDefeatArt(rom, entry);
+                if (defeatArtQueuedCount == 0) defeatCloudArtOrdinal = ordinal;
+                else defeatPillarArtOrdinal = ordinal;
                 defeatArtQueuedCount++;
             }
         } catch (IOException failure) {
