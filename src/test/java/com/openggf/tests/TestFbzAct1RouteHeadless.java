@@ -660,6 +660,59 @@ class TestFbzAct1RouteHeadless {
     }
 
     @Test
+    void realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch() throws Exception {
+        HeadlessTestFixture fixture = routeBoundaryFixture();
+        ObjectManager objects = GameServices.level().getObjectManager();
+        FbzMinibossInstance boss = awaitPlacedBoss(fixture, objects, 240);
+        reachPlungerByInput(fixture, objects, boss);
+        driveBossRoute(fixture, objects, boss);
+        assertEquals(6, boss.scriptedImpactCount());
+        await(fixture, 64, boss::hasConvertedToEndSign, "real boss did not convert to sign");
+        S3kResultsScreenObjectInstance results = awaitObject(
+                fixture, objects, S3kResultsScreenObjectInstance.class, 900);
+        await(fixture, 3_000, () -> results.carriedTitlePhase()
+                        == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_INIT,
+                "real results never published the next-dispatch title-init boundary");
+        assertEquals(1, GameServices.level().getCurrentAct());
+        assertEquals(1, GameServices.level().getApparentAct());
+        int slot = results.getSlotIndex();
+        assertTrue(booleanField(results, "titleInitializationPending"));
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var beforeInit = registry.capture();
+        fixture.stepFrame(false, false, false, false, false);
+        assertEquals(S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_WAIT,
+                results.carriedTitlePhase());
+        assertFalse(booleanField(results, "titleInitializationPending"));
+        var afterInit = registry.capture();
+        fixture.stepFrame(false, false, false, false, false);
+        var afterFollowingDispatch = registry.capture();
+
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(beforeInit);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(beforeInit, registry.capture(),
+                    "title-init before restore " + cycle);
+            S3kResultsScreenObjectInstance restored = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(S3kResultsScreenObjectInstance.class).stream()
+                    .filter(candidate -> candidate.getSlotIndex() == slot).findFirst().orElseThrow();
+            assertEquals(S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_INIT,
+                    restored.carriedTitlePhase());
+            assertTrue(booleanField(restored, "titleInitializationPending"));
+            fixture.stepFrame(false, false, false, false, false);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(afterInit, registry.capture(),
+                    "title-init forward dispatch " + cycle);
+            fixture.stepFrame(false, false, false, false, false);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(afterFollowingDispatch, registry.capture(),
+                    "title-init following dispatch " + cycle);
+            registry.restore(afterInit);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(afterInit, registry.capture(),
+                    "title-init after restore " + cycle);
+            fixture.stepFrame(false, false, false, false, false);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(afterFollowingDispatch, registry.capture(),
+                    "title-init after forward replay " + cycle);
+        }
+    }
+
+    @Test
     void realBossSignWaitsForGroundAndAllocatesResultsInEarlierFreeSlot() throws Exception {
         HeadlessTestFixture fixture = routeBoundaryFixture();
         ObjectManager objects = GameServices.level().getObjectManager();
