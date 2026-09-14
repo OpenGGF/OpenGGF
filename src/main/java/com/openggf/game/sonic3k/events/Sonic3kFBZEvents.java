@@ -1126,12 +1126,14 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         }
         if (player != null) player.shiftX(-dx);
         for (AbstractPlayableSprite sidekick : spriteManager().getSidekicks()) sidekick.shiftX(-dx);
-        camera().setY((short) (camera().getY() + dy));
+        // loc_53134 adjusts live and published words independently. Ordinary
+        // setters also publish, which would translate the copy twice here.
+        camera().setYAfterRenderCopy((short) (camera().getY() + dy));
         camera().setYCopy((short) (camera().getYCopy() + dy));
         camera().setMinY((short) (camera().getMinY() + dy));
         camera().setMaxY((short) (camera().getMaxY() + dy));
         camera().setMaxYTarget(camera().getMaxY());
-        camera().setX((short) (camera().getX() - dx));
+        camera().setXAfterRenderCopy((short) (camera().getX() - dx));
         camera().setXCopy((short) (camera().getXCopy() - dx));
         camera().setMinX((short) (camera().getMinX() - dx));
         camera().setMaxX((short) (camera().getMaxX() - dx));
