@@ -3031,12 +3031,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         return false;
                 }
                 setDead(true);
+                // S1 KillSonic / S2 KillCharacter / S3K Kill_Character replace
+                // routine 4 (hurt) with routine 6 (dead). These are exclusive
+                // dispatch states, so hurt gravity must not survive the kill.
+                setHurt(false);
                 // Lock camera when dying - prevent following the falling corpse
                 // Only freeze camera for the main player, not for CPU sidekick
                 if (!cpuControlled) {
                         currentCamera().setFrozen(true);
                 }
-                setInvulnerableFrames(0);
+                // The kill routine preserves the post-hit invulnerability timer;
+                // only the invincibility power-up status is cleared.
                 setInvincibleFrames(0);
                 setSpringing(0);
                 setSpindash(false);

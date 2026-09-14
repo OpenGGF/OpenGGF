@@ -62,7 +62,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         RESULTS,
         TITLE_CARD_WAIT,
         TITLE_CARD_WAIT2,
-        DONE
+        DONE,
+        TITLE_CARD_INIT
     }
     private static final Logger LOG = Logger.getLogger(S3kResultsScreenObjectInstance.class.getName());
 
@@ -980,9 +981,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
                 pendingRetainedReloadTitleHandoff = retainedReloadState;
                 if (fbzCarriedTitleOwner) {
-                    initializePublishedTitleCard();
-                    titleInitializationPending = false;
-                    carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
+                    // loc_2DD06 only replaces this SST's code pointer. The
+                    // following Process_Sprites pass runs Obj_TitleCardInit.
+                    carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_INIT;
                     carriedTitleWaitTimer = 0;
                 }
             }
@@ -1225,6 +1226,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void updateCarriedTitleCard() {
         switch (carriedTitlePhase) {
+            case TITLE_CARD_INIT -> {
+                initializePublishedTitleCard();
+                titleInitializationPending = false;
+                titleCardInitialized = true;
+                carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
+            }
             case TITLE_CARD_WAIT -> {
                 // ROM mutates this same SST owner into Obj_TitleCardWait, then
                 // clears Timer/Ring_count, restores air and music, and advances

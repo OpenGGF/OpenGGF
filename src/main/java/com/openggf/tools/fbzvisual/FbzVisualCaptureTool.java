@@ -114,6 +114,17 @@ public final class FbzVisualCaptureTool {
             FbzVisualGameplayAdvanceVerifier.verify(plan, pre, post, amendment);
             FbzVisualVisibilityVerifier.verifyState(post.values());
             HiddenGlCaptureSession.CapturedImages images = session.renderAndCapture();
+            provenance.put("gpu_sampling_state", session.captureGpuSamplingState());
+            Path textureDirectory = outputRoot.resolve("gpu-textures").resolve(checkpoint);
+            java.nio.file.Files.createDirectories(textureDirectory);
+            Map<String, Object> textures = new java.util.LinkedHashMap<>();
+            for (var entry : session.captureGpuTextures().entrySet()) {
+                Path texture = textureDirectory.resolve(entry.getKey());
+                java.nio.file.Files.write(texture, entry.getValue(), java.nio.file.StandardOpenOption.CREATE_NEW);
+                textures.put(entry.getKey(), Map.of("path", texture.toAbsolutePath().toString(),
+                        "sha256", FbzVisualPrebootVerifier.sha256(entry.getValue())));
+            }
+            provenance.put("gpu_textures", textures);
             EncodedImages encoded = encode(images, outputRoot, mode.nativeMode());
 
             FbzVisualCaptureReceipt receipt = FbzVisualCaptureReceipt.accepted(

@@ -11,6 +11,51 @@ an aggregate report generator is separate tooling work; passing those Java tests
 does not certify the historical 32 evidence groups below. A FAIL means required
 evidence is absent or a named comparison failed; it is not a gameplay waiver.
 
+## GPU sampling and retained background history (2026-09-14)
+
+The remaining-visual worktree based on `51677cdd2` isolated two different causes.
+Actual GPU uniform and descriptor/lookup/atlas readback proved foreground camera
+and VScroll `$070C` were correct. The old shader subtracted `0.5` before scaling
+and flooring: on Radeon RX 9070 XT/radeonsi ACO, reciprocal rounding sampled the
+previous row at 223 of 224 native rows (also 223 of 448 double-size rows).
+Keeping fragment centres through the conversion fixes both foreground and
+background shaders without changing camera, viewport offsets or ROM assets.
+`TestShaderPixelCentreSampling` exercises both actual shaders at 320x224,
+640x448, 960x672 and fractional 528x370 viewports, including offset boundaries.
+The focused native-display command
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Dtest=TestShaderPixelCentreSampling,TestForegroundWindowRendering,TestTilemapGpuRendererPerLineSampling test`
+completed 4 tests, no failures/errors/skips (19.020 seconds). Packaging with
+`-DskipTests package` took 38.210 seconds and is not another test pass.
+
+The corrected paired start artifact SHA-256 is
+`FAE0C144C10AFB3DF9470E8B6DFC23FBFB0B147D3CDEBDD24434CEACF7BAA602`.
+Its state acceptance completed in 1.066284 seconds at LFC 35. Preserved external
+artifacts are under `fbz-remaining-20260914/visual/start-centre-corrected` in the
+shared task scratch directory. The PNG SHA-256 is
+`4ED9FE4829B891F4511F7B514777EBE4AF60EC4CA128C9ECF6F220781A5D77A8`.
+Against native crop `(14,8,320,224)`, terrain `(180,120,120,20)` matches
+2400/2400 pixels at identical coordinates, versus 944/2400 before correction.
+Comparison recovers Genesis 3-bit RGB as `round(native/34)` and
+`round(engine*7/255)`; no image translation is accepted. This is a bounded terrain
+comparison awaiting independent review, not whole-frame or checkpoint PASS.
+
+The sky phase is separately history-dependent. A read-only native savestate
+probe at movie frame 237948 measured `HScroll_table+$1FC` (`$A9FC`) as
+`$440A3CB0`; fresh engine LFC 35 reads `$0001DC00` and advances to `$0001EA00`.
+ROM `Level`/`Clear_DisplayData` do not clear this scratch table, and
+`FBZ1_BackgroundInit` calls `FBZ_Deform` without clearing its tail. Outdoor
+`FBZ_Deform` reads that retained long and increments it by `$E00`. The complete
+movie's preceding-zone history differs from a cold level load. Matching camera,
+LFC and animation bytes therefore never established matching cloud history.
+No native RAM value was injected into gameplay. The exact-start state receipt
+remains state acceptance only; global cloud/pixel parity remains unaccepted.
+
+`FbzVisualCaptureTool` now preserves actual last-draw tilemap uniforms and
+hash-bound descriptor, lookup and atlas GPU bytes under its explicit output
+root. Readback restores GL texture binding and pack alignment; these internal
+provenance helpers add no Mod API signatures. The durable GPU regression replaces
+the temporary arithmetic probe. The frozen manifest remains unchanged.
+
 ## Deterministic engine GL capture
 
 `FbzVisualCaptureTool` boots the requested FBZ act in a hidden real OpenGL
