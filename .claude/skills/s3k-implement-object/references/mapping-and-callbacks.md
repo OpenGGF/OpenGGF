@@ -14,3 +14,14 @@ Trace lifetime outside the object's own `update()` too. Inspect `ObjectManager` 
 Calculate countdown edges with native signed arithmetic. For `subq.w #1,field` followed by `bmi`, an initial word value `N` fires after `N+1` decrements: the update that reaches zero does not branch; the next update reaches `$FFFF` and does. Do not replace this with an unsigned `<= 0` check or derive the delay from an animation script that shares the callback.
 
 When raw animation `$F4` and `Obj_Wait` can invoke the same callback, compare both reachable paths from the actual entry state; the earliest path owns the observed transition, even if the later callback remains reachable but redundant. Add a focused RED test covering the last non-firing update and the exact firing update, plus the competing consumer's later boundary. If implementation, local comments, and the disassembly oracle conflict, stop and obtain independent disassembly adjudication before changing either the expected value or the code.
+
+
+## Orientation-specific art bases
+
+Follow later subtype branches after a zone-specific `art_tile` override. In
+`Obj_Spikes` / `loc_23FD0`, FBZ replaces upright `$49C` art with animated `$200`,
+then frames 4–7 restore shared sideways `$494` art. Applying the zone base to
+the entire combined sheet corrupts both orientations. Preserve the ROM mappings
+and bind each orientation to its owning bank; register both exact tile ranges
+for GPU refresh. Check real level-pattern identity for all frames, not only
+the registry's nominal base. Found in the 2026-09-14 FBZ wall-spike follow-up.

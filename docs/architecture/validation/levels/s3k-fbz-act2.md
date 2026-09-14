@@ -1,5 +1,12 @@
 # FBZ Act 2 coverage matrix
 
+Spike-art follow-up (2026-09-14): the ROM-backed
+`TestSonic3kObjectArtProvider#fbzSpikeOrientationsUseTheirNativeTileBanksInBothActs`
+passes all eight mapping frames in both acts, including piece dimensions/flips,
+live upright `$200` and sideways `$494` pattern references, and exact refresh
+range boundaries. The S1 elevator video is recaptured after this correction;
+this local check does not close the remaining native visual checkpoint matrix.
+
 Status: **partial; not certified**. Source inventory inspected on 2026-09-14
 against develop `435ec2e68`, with focused completion evidence subsequently
 recorded on `c31bdbd7a` plus local task changes. Only the explicit execution

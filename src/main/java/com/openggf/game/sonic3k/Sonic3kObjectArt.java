@@ -254,6 +254,24 @@ public class Sonic3kObjectArt {
         return buildLevelArtSheet(artTileBase, 0, frames, 0, 16);
     }
 
+    /** Obj_Spikes / loc_23FD0: only upright FBZ spikes use the AniPLC bank. */
+    public ObjectSpriteSheet buildFbzSpikesSheet(int uprightTileBase) {
+        ObjectSpriteSheet sheet = buildSpikesSheet(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS);
+        if (sheet == null) return null;
+        // Keep Map_Spikes' geometry/flips and compact indices: sideways at 0,
+        // upright at 8. The size >= 4 branch restores the shared $494 base;
+        // upright FBZ art starts at $200, without the ordinary +8 adjustment.
+        for (int tile = 0; tile < 8; tile++) {
+            sheet.getPatterns()[8 + tile] = level.getPattern(uprightTileBase + tile);
+        }
+        lastBuildStartTile = uprightTileBase;
+        lastBuildTileCount = Sonic3kConstants.ARTTILE_SPIKES_SPRINGS + 8 - uprightTileBase;
+        lastBuildTileRanges = List.of(
+                new Sonic3kPlcLoader.TileRange(uprightTileBase, 8),
+                new Sonic3kPlcLoader.TileRange(Sonic3kConstants.ARTTILE_SPIKES_SPRINGS, 8));
+        return sheet;
+    }
+
     // --- Spring art sheets ---
     // Mapping data parsed from Map - Spring.asm (skdisasm/General/Sprites/Level Misc/)
     // Vertical/Down springs: art_tile = ArtTile_SpikesSprings + $10 = $04A4
