@@ -264,7 +264,12 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
             return drownAnimId;
         }
         if (sprite.getDead() && deathAnimId >= 0) {
-            return deathAnimId;
+            // Kill_Character writes Death once; the dead routine only moves and
+            // animates. A later SolidObject_TestClearPush word remains authoritative,
+            // just as for Hurt below (S3K loc_1E0A2; retail FixBugs=0).
+            // S1 Sonic_Death (_incObj/01 Sonic.asm:1967-1987) and S2
+            // Obj01_Dead/Obj02_Dead (s2.asm:38255,41131) likewise never write anim.
+            return sprite.getAnimationId() == deathAnimId ? deathAnimId : null;
         }
         // Hurt state uses separate hurt animation (animation 0x19).
         //

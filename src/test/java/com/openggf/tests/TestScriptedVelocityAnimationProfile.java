@@ -11,6 +11,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class TestScriptedVelocityAnimationProfile {
+    @Test
+    void deathRetainsTheOneShotByteUntilAnotherNativeOwnerWritesIt() {
+        ScriptedVelocityAnimationProfile profile=createProfile();
+        TestSprite sprite=new TestSprite();
+        sprite.setDead(true);
+        sprite.setAnimationId(profile.getDeathAnimId());
+        assertEquals(profile.getDeathAnimId(),profile.resolveAnimationId(sprite,0,32));
+        sprite.setAnimationId(profile.getWalkAnimId());
+        assertNull(profile.resolveAnimationId(sprite,1,32));
+    }
+
 
     @Test
     void touchSuppressionAloneStillPublishesNormalMovementAnimation() {
