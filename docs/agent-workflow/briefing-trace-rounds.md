@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+Slots glass investigation (2026-09-14): a runtime-only priority assertion does
+not cover the real bonus loop's post-physics overrides. Enter the bonus stage
+through `GameLoop`, reacquire the focused sprite after the coordinator replaces
+it, and check rendered overlap. Loading bonus-zone tiles in LEVEL mode does not
+activate the bonus runtime; inspect the mode and player state before trusting
+a capture. See `TestS3kSlotsGlassNative` and the
+[layering validation](../architecture/validation/2026-09-14-slots-glass-layering.md).
+
 FBZ visual investigation (2026-09-14): matching camera/VSRAM does not prove
 pixel sampling. Read back the actual shader uniforms and descriptor/lookup/atlas
 textures before changing scroll logic. Subtracting fragment-centre `0.5` before

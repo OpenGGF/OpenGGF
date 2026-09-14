@@ -147,7 +147,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_GUMBALL_2` | Audit pending |
 | S3K | `S3K_GLOWING_SPHERE` | Audit pending |
 | S3K | `S3K_GLOWING_SPHERE_2` | Audit pending |
-| S3K | `S3K_SLOT_MACHINE` | Audit pending |
+| S3K | `S3K_SLOT_MACHINE` | Audit pending; bonus-loop player priority and native glass overlap covered by `TestGameLoopBonusPlayerPriority` and `TestS3kSlotsGlassNative` ([scope and evidence](../architecture/validation/2026-09-14-slots-glass-layering.md)). Donor/team and rewind visual breadth remain open. |
 | S3K | `S3K_SLOT_MACHINE_2` | Audit pending |
 | S3K | `S3K_LRZ_BOSS` | Audit pending |
 | S3K | `S3K_HIDDEN_PALACE_SANCTUARY` | Audit pending |
@@ -178,3 +178,12 @@ local fix does not certify the remaining native visual checkpoints.
 FBZ Act 2 early `$0DC0` elevator: the 2026-09-14 S1 local phase sweep and
 blocked/safe/crushed gameplay captures establish ordinary roll feasibility;
 the Act 2 matrix records its width, entry-history and permanent-regression limits.
+
+FBZ early elevator direction correction (2026-09-14): right-to-left S1
+feasibility now has separate measured/captured evidence in the Act 2 matrix.
+Its narrow successful script does not inherit the easier left-to-right timing
+windows; extended phase coverage and whole-route guarantees remain open.
+
+FBZ early reverse squeeze speed comparison: the Act 2 matrix now records
+a matched car-phase/entry-position pair where about 9.4% more roll-entry speed
+changes a crush into a safe crossing, reproduced by synchronized gameplay videos.
