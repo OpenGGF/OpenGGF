@@ -142,6 +142,52 @@ class TestFbzSnakeAndRotatingPlatforms {
         assertTrue(snake.isCustomOutOfRange(0x2000));
     }
 
+    @Test void movingSnakeKeepsItsStandingBitUntilAirborneReleaseCheckpoint() throws Exception {
+        com.openggf.tests.TestEnvironment.activeGameplayMode();
+        final int cameraX = 0x0C00;
+        Camera camera = new Camera() {
+            @Override public short getX() { return (short) cameraX; }
+            @Override public short getY() { return (short) 0x0280; }
+            @Override public short getWidth() { return 320; }
+            @Override public short getHeight() { return 224; }
+        };
+        ObjectManager[] holder = new ObjectManager[1];
+        TestObjectServices services = new TestObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
+        };
+        ObjectManager manager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                0, null, null, GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+        manager.reset(cameraX);
+        var snake = manager.createDynamicObject(() -> new FbzSnakePlatformObjectInstance(spawn(0x75, 3)));
+        Field children = FbzSnakePlatformObjectInstance.class.getDeclaredField("childrenSpawned");
+        children.setAccessible(true);
+        children.setBoolean(snake, true);
+        SolidProbePlayer player = new SolidProbePlayer();
+        player.setCentreX((short) snake.getX());
+        player.setCentreY((short) (snake.getY() - 0x0C - 19 + 1));
+        player.setYSpeed((short) 0x100);
+        player.setAir(true);
+        manager.update(cameraX, player, List.of(), 0, false, true, false);
+        assertTrue(manager.hasObjectStandingBit(player, snake));
+        int jumpY = player.getCentreY() + 5;
+        player.setAir(true);
+        player.setOnObject(false);
+        player.setRolling(true);
+        player.applyRollingRadii(false);
+        player.setCentreY((short) jumpY);
+        player.setYSpeed((short) -0x680);
+
+        manager.update(cameraX, player, List.of(), 1, false, true, false);
+
+        assertEquals(jumpY, player.getCentreY(),
+                "the moving slot's airborne standing-bit branch returns without a new-contact lift");
+        assertFalse(manager.hasObjectStandingBit(player, snake));
+        assertTrue(player.getAir());
+    }
+
     @Test void snakeSolidObjectFullConsumesAnAirborneStaleStandingBitBeforeReseating() {
         var snake = new FbzSnakePlatformObjectInstance(spawn(0x75, 3));
         assertTrue(snake.airborneStaleStandingBitReturnsNoContact(null),

@@ -53,7 +53,16 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider {
+public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy {
+    @Override
+    public boolean negativeTumbleUsesUnreflectedAngle(boolean facingLeft) {
+        // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24938-24984):
+        // FBZ/DEZ retain the angle for both facings; MHZ does so only left.
+        int zone = getFeatureZoneId();
+        return zone == Sonic3kZoneIds.ZONE_FBZ || zone == Sonic3kZoneIds.ZONE_DEZ
+                || (facingLeft && zone == Sonic3kZoneIds.ZONE_MHZ);
+    }
+
     private static final Logger LOGGER = Logger.getLogger(Sonic3kZoneFeatureProvider.class.getName());
     private static final int VDP_BG_PLANE_WIDTH_PX = 512;
 
