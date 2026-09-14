@@ -744,3 +744,46 @@ package completed in 50.875s; paired B2/B4 engine captures took 2.932321s.
 Native B4 player-field observation took 9.031s; the failed Act2 prerequisite
 pilot took 12.333s. Lua fixture guards pass eight scenarios and Python host
 guards pass seven tests. These costs belong to the existing FBZ task accounting.
+
+
+### Controlled B5 / Act2 boundary prerequisites (2026-09-14)
+
+Independent root review authorized the minimal controlled visual setup after
+both uncontrolled positions demonstrably moved. Only B5 and the Act2 boundary
+now declare native `object_control=$01` once before the camera prelude. Native
+`loc_10BFC` skips Sonic_Modes on bit0 while clear bit1 retains Animate_Sonic and
+DPLC. The engine applies its existing movement-suppressed, CPU-allowed semantic
+once; it does not claim to expose an arbitrary raw native control byte. Ordinary
+neutral frame execution owns all subsequent camera, event and redraw work.
+This is controlled visual evidence, **not traversal proof**.
+
+The new active manifest SHA-256 is
+`261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1`.
+Stable checkpoint IDs and all coordinates remain unchanged. Previous binding
+`BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8`
+remains historical for earlier boundary evidence; no prior receipt is rebound.
+The amendment and active Java/Lua/Python/branch contracts carry the new hash.
+
+`boundary5-native-controlled-v1` and `boundary-act2-native-controlled-v1`
+complete both directions. The matching engine directories use the same names
+with `native` replaced by `engine`; actual artifact SHA-256 is
+`060FCA4C5692B4314CFF91ADF8E3E6813822F065A1FA663D757D42F70AF80340`.
+Native and engine prerequisites agree at LFC381 for B5 and LFC220 for Act2,
+including player/camera centres and declared control. Both afterstates occur
+at LFC17/34 with those controls still observed. Each of the four samples has
+zero of 46,080 world pixels, zero of 2,048 Plane-B descriptors and zero of 64
+palette colours different. Each whole frame retains 381 differences outside
+the fixed world rectangle. The `comparison-controlled-v1.json` files preserve
+actual hashes, geometry and no actor exclusions. Independent root review reproduced all four pixel/descriptor/palette results
+and viewed `root-controlled-b5-act2-review.png`, accepting only these bounded
+world afterstates with initial control1. Before/mid redraw phases and
+whole-frame/HUD parity remain unaccepted.
+
+The Lua guard proves exactly one byte write for the controlled fixture and
+zero for ordinary fixtures (eight scenarios). The Python host guard passes
+seven tests. Focused Java contracts pass seven tests/zero skips in 49.351s;
+the added control-scope regression passes with the other three manifest tests
+in the 38.410s package build. A corrected duplicate diagnostic insertion caused
+the preceding compile failure (31.301s); no test ran in that failed build.
+Native B5/Act2 invocations took 10.230s/6.374s; engine captures took
+1.674171s/1.499333s. These remain part of the same FBZ validation accounting.

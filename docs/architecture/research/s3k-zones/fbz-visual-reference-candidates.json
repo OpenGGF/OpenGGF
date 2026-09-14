@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "generated_by": "tools/validation/Find-FbzVisualReferenceCandidates.ps1",
-  "manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",
+  "manifest_sha256": "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",
   "historical_candidate_selection_manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
   "source": {
     "metadata": "src/test/resources/traces/s3k/fbz_completerun/metadata.json",
@@ -510,5 +510,6 @@
   "cadence_blockers": {
     "magnetic_phase": "No Obj_FBZMagneticPlatform ($3B25C) object_state sample exists in the complete-run aux fixture; requires a deterministic savestate branch.",
     "aniplc": "Series frames are capture candidates. Anim_Counters and DMA/VRAM provenance must be recorded by BizHawk before the series is accepted."
-  }
+  },
+  "prior_controlled_fixture_manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8"
 }

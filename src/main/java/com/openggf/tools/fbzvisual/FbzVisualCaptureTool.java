@@ -17,7 +17,7 @@ import java.util.Objects;
 public final class FbzVisualCaptureTool {
 
     public static final String REVIEWED_MANIFEST_SHA256 =
-            "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8";
+            "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 

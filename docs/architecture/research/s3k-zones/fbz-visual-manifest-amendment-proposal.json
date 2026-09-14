@@ -335,5 +335,19 @@
     ],
     "review": "Root independently read all seven comparison pairs and redraw rowcount resets, verified native pilot log SHA and failure, and approved exact safe-side coordinates plus Act2 applicability. This is spec approval only.",
     "applied_manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8"
+  },
+  "controlled_fixture_followup_2026_09_14": {
+    "status": "approved-applied",
+    "prior_manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",
+    "active_manifest_sha256": "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",
+    "review": "Independent root authorized the exact one-time setup control after observing uncontrolled placement failures; no checkpoint acceptance implied.",
+    "checkpoints": [
+      "fbz1-boundary-5-outdoor",
+      "fbz2-boundary-outdoor"
+    ],
+    "native_object_control": 1,
+    "engine_semantic": "movement-suppressed-cpu-allowed",
+    "source": "loc_10BFC: bit0 skips Sonic_Modes; clear bit1 retains Animate_Sonic and DPLC; no repeated setup writes.",
+    "scope": "Controlled visual fixture, not traversal proof. Preserve uncontrolled failed placement evidence."
   }
 }

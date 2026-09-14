@@ -3,7 +3,7 @@
   "status": "bounded-terrain-and-opaque-source-cadence-independently-accepted-frozen-checkpoints-open",
   "scope": "FBZ1 exact start and five AniPLC channels; $230 visible placement applies to Act2",
   "frozen_manifest": "docs/s3k-zones/fbz-visual-checkpoints.json",
-  "frozen_manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",
+  "frozen_manifest_sha256": "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",
   "policy": {
     "current_evidence_status": "rejected-superseded",
     "reason": "The exact-start PNG and all five AniPLC series were captured while the FBZ title card/fade obscured gameplay, and the pixels contain a Lua/debug overlay. They cannot prove outdoor palette/deform or visible AniPLC cadence.",
@@ -1302,5 +1302,6 @@
       "sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
       "scope": "All prior native/start/cadence receipts and bounded acceptances were captured under this manifest; no retroactive rebinding."
     }
-  ]
+  ],
+  "prior_controlled_fixture_manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8"
 }
