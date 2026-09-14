@@ -109993,3 +109993,33 @@ existing uncompared-gameplay policy; entering/returning does not certify SS
 physics parity. All published fixture bytes remain unchanged.
 
 [ROM evidence, rejected probe approach and validation record](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+Reconciled implementation `e8e088432` with develop `6897a6048` at `c2bc3af5d`.
+Queued `-Dtest=TestKis2CompleteEmeraldRunChain` repeats the same 92-error initial
+segment and cursor-9366 stop, one launch pass/one chain failure, zero skips.
+The bounded return diagnostic observes `EXIT_BACKGROUND`, card frame 86,
+state timer 9, leave pass 26, and an empty PLC queue. Investigate the final
+player/object pass and release handoff; this is not unfinished PLC work.
+
+Matched S2/S3K trace command on updated base `6897a6048` and reconciled KiS2
+runtime: queued `-Dtest=TestS3kKnucklesSuperEmeraldRunChain,TestS2Ehz1TraceReplay`
+(with the four required S3K loading/bootstrap/decoding/AIZ class names added on
+the current tree). Stock S2 remains 16,388 errors, zero warnings, first row 6
+`dynamic_art.outstanding_transfer_ids`, expected [2], actual []. S3K remains
+blocked at segment 0's giant ring: 12,679 base errors versus 12,616 current,
+zero warnings, same first row 446 `y_speed`, expected -$0448, actual $0448.
+No new test failure identity or earlier frontier; this does not certify the
+rest of either route. The required S3K checks pass 58 tests. All comparisons
+and required checks executed with zero skips.
+
+The independent short KiS2 EHZ1 report's first post-bootstrap difference is row
+289 `player_animation_id` ($00 vs $20); first position mismatch is row 1159
+`x` ($0938 vs $0940). This separate recording remains red despite the canonical
+first segment's matching positions and velocities.
+
+Combined validation on `73f07afd1`, base `8ce626087`, completed 20,372 ordinary
+tests: 20,353 passed, one inherited rewind-audit pin failure, zero errors and
+18 inspected baseline skips. The runner stopped before guards because this log
+and the evidence note were edited during the run; runtime/test/build inputs did
+not change. This is an incomplete combined run. Upstream's test-only audit
+correction `24cdc64e6` was then reconciled at `382d54d6b` without conflicts.

@@ -72,13 +72,24 @@ add a fixed reward delay without explaining the engine's allocation order.
 
 The chain now enters and runs the first special stage, then reaches cursor
 **9366** still in `TITLE_CARD` rather than rearming the next EHZ1 segment.
+On reconciled tree `c2bc3af5d` (incoming base `6897a6048`), a bounded
+return diagnostic reports `EXIT_BACKGROUND`, card frame 86/state timer 9,
+`leavePass=26`, and an empty PLC queue at that deadline. The next investigation
+is the title-card final-pass/release handoff, not a still-busy art queue. The
+initial segment remains at 92 errors after reconciliation.
+
 This is the next structural frontier. Special-stage interiors use the existing
 uncompared gameplay policy with art-ledger comparison; reaching the return is
 not a claim of special-stage physics parity or emerald success.
 
 The independent short KiS2 EHZ1 fixture improves from 194 to 179 errors, with
 91 history bootstrap errors and zero warnings in each run. It is a different
-BK2 from the full-run segment and remains red.
+BK2 from the full-run segment and remains red. Its first post-bootstrap
+difference is row 289 `player_animation_id` (expected $00, actual $20), with
+mapping disagreement on rows 289–290. Its first position mismatch is row 1159
+`x` (expected $0938, actual $0940), after a wall-grab animation mismatch begins
+at row 1154. Preserve those as independent glide/contact follow-ups rather
+than reading the canonical first segment's clean positions as complete coverage.
 
 ## Validation
 
@@ -103,5 +114,51 @@ focused validation, not full-suite or complete-chain passes.
   `TestS3kKnucklesSuperEmeraldRunChain` fails because segment 0's `giant_ring`
   exit is not observed. Neither baseline test skips.
 
-Shared current-tree comparisons, combined ordinary/guard validation and
-integration evidence will be recorded after they complete.
+Matched updated base `6897a6048` reproduces both trace failures above. The
+reconciled current tree has the identical S2 error count and first error. S3K
+still misses segment 0's giant ring: 12,679 baseline errors versus 12,616 current,
+zero warnings/bootstrap errors, with the same first physics mismatch at row
+446 `y_speed` (expected -$0448, actual $0448). These are still red traces;
+fewer downstream mismatches do not certify S3K route parity. The four required
+S3K loading/bootstrap/decoding/AIZ class names select both identically named
+level-loading classes: **58 tests pass, zero skips**. The combined invocation
+therefore has 60 tests, two known trace failures, zero errors/skips.
+
+Combined ordinary/guard validation and final integration evidence follow below.
+
+## Integration preparation
+
+Implementation `e8e088432` was reconciled with develop `6897a6048` at
+`c2bc3af5d`. Runtime code merged without conflicts. The measurement-hazard
+catalogue had competing insertions; both the KiS2 module-resolution lesson
+and HCZ dynamic-identity rewind lesson were retained. Incoming code includes
+HCZ rewind/contact and object lifecycle changes, so matched S2/S3K traces
+were scheduled on the updated base and this reconciled tree.
+
+## Combined validation before integration
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 8ce626087 --run`
+selected all 2,571 ordinary classes and guards on `73f07afd1`. Run
+`20260914T180654Z-916cce8a` completed the ordinary lane in 598.03 seconds:
+**20,372 tests: 20,353 passed, one failure, zero errors, 18 skips**. The failure
+is the same `TestRewindInPlaceObjectRestore#auditSummaryAndKnownClassifications`
+audit pin observed on the updated base. The suite exercises all nine new
+ordinary regression cases without skips.
+
+The runner stopped before guards because the evidence notes were edited during
+validation. Runtime/test/build files and HEAD remained fixed throughout the
+ordinary lane; only this research note and the frontier log changed. The lane
+completed, but the combined invocation is **incomplete**, not green. Diagnostics
+were inspected and acknowledgment requested. The entire tree is frozen for the
+remaining checks and integrated validation.
+
+The 18 skips retain the baseline reasons: opt-in audio/rewind/allocation and
+rendering probes; opt-in AIZ route/entry/spring matrices; unavailable EGL/OpenGL
+checks; optional local S1 audio/timeline reference; and the pre-existing CPZ
+spin-tube prerequisite. No required game ROM or KiS2 regression was skipped.
+
+Upstream `24cdc64e6` supplies the already-verified test-only audit correction:
+`AnimalFactory` and `PointsFactory` now belong to typed explosion state rather
+than final-reference fallthrough. It was merged without conflicts at `382d54d6b`.
+The earlier `8ce626087` merge (`73f07afd1`) contained render-rate design/roadmap
+prose only. No runtime change followed the completed ordinary lane.
