@@ -33,7 +33,7 @@ See [Act 1](s3k-fbz-act1.md) for shared transition and visual-tooling evidence.
 | Knuckles solo | `TestFbzMainCharacterCompletion#knucklesCompletesColdAct2ThroughCapsuleAndSandopolisRequest`; concrete native Knuckles leader, cold ROM start, all mandatory interactions, boss defeat, capsule and SOZ request | PASS on `190cbd408` plus setup/boss/controller changes, zero skips. Native lower jump/glide inputs use live geometry; total route remains below 35,400 frames. Broader visual/rewind obligations remain open |
 | Width axes | `TestFbzCompatibilityMatrix#viewportKeepsWorldThresholdsCullingAndBossContainment`: additional 400/512/640/800 complete routes; 320 represented by native team route | All four additional-width rows PASS; pixel width/culling acceptance remains separate from camera and gameplay assertions |
 | Donor axes | `donatedMovementProfileCanReachTheMandatoryBossEntryWithoutSpindash`: S1/S2 ordinary-input complete route, actual donated rules and assist evidence; off covered by solo team | S1/S2 focused complete routes PASS (ledger below), replacing the inherited S1 squeeze frontier. Ordinary crossing must consume no assist and preserve no-spindash and acquired/exited-car evidence |
-| Short lifecycle breadth | Standalone synchronous transition preflights sweep teams, widths 320/400/512/640/800 and off/S1/S2; Act 1 results test now includes 512/640 in its passing 105-case product plus native reset | Full required width × donor entry/reload/reset evidence remains pending; the expanded results-boundary scenario alone does not cover every lifecycle; see Act 1 matrix |
+| Short lifecycle breadth | Standalone synchronous transition preflights sweep teams, widths 320/400/512/640/800 and off/S1/S2; Act 1 results test now includes 512/640 in its passing 105-case product plus native reset | `TestFbzEntryReloadResetMatrix` passes the full 2-act × 5-width × off/S1/S2 cold-entry/reload/reset product with concrete Sonic+Tails and two reset cycles per row. Other main-character/team products, checkpoint/death and traversal remain separate; see Act 1 matrix |
 
 ## Obligation map
 
@@ -95,3 +95,19 @@ cannot return. The fresh destination's complete registered snapshots compare
 through two restore/eight-frame forward cycles, excluding only existing
 nonsemantic CoW epoch/render-bucket dirtiness/peak-slot telemetry. No SOZ route,
 visual, donor/width or full FBZ boss/capsule completion claim is added.
+
+
+Entry/reload/reset follow-up (2026-09-14, `15976fff2` plus the standalone test):
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzEntryReloadResetMatrix -Ds3k.rom.path=/absolute/path/to/s3k.gen -Dsonic1.rom.path=/absolute/path/to/s1.gen -Dsonic2.rom.path=/absolute/path/to/s2.gen test`
+passed **30 rows**, zero failures/errors/skips, in 23.909 seconds (test bodies
+3.764 seconds). The product is both acts × 320/400/512/640/800 × off/S1/S2 with
+concrete Sonic P1 and CPU Tails linked to that leader. It checks the actual ROM
+start, effective viewport and composed donor rules, current event/runtime
+binding, then two cycles of opposite-act `loadZoneAndAct` followed by
+`resetState` plus target-act load. Explicit old trigger/contact seeds, and
+Act2-only shake/reversal seeds, do not leak to the fresh destination. The S1,
+S2 REV01 and S3K ROM identities matched the repository's required CRC/SHA-1.
+An initial import typo (14.733s) and invalid Act1 shake seed (20.215s) were test
+setup failures, corrected before this pass. No runtime change was required.
+This closes the named cold-entry/reload/reset configuration product, not
+traversal, other main-character/team products, checkpoint/death or pixel parity.
