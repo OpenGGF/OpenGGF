@@ -593,3 +593,26 @@ test` at ae39e41d7 plus these edits: 18 focused passes, one strict failure, zero
 skips, 64 seconds. Complete replay has 3482 errors, first frame 21379 Tails
 x-speed; main X agrees until 23039. The remaining title/worker dispatch and
 Act2 route differences are still open.
+
+The follow-up disproved the virtual-release request as the solution: native
+world-word rebasing intentionally bypasses generic carried-object callbacks for
+screen-space results, so that request never reached this owner. A bounded live
+probe still measured an eleven-dispatch overlay delay at native width320. The
+request is removed. Instead the retained title SST now owns its higher-slot
+visual children: art/create and movement-latch wait, one90-decrement parent
+timer, child exit, then the next parent poll publishes LoadEnemyArt and the
+completion flag. The generic overlay does not double-dispatch these children.
+This also prevents its generic reset countdown from re-arming a second writer.
+No new rewind fields or measured delay constants are introduced. Native sources
+are Obj_TitleCardCreate/Wait/Wait2 and Obj_TitleCardElement/RedBanner.
+
+At0cf340b56 plus this candidate, queued Maven with `-Ptrace-replay-r7` and
+`-Dtest=TestSonic3kTitleCardManagerRewind,TestFbzResultsTitleAndAct2Sizes,TestFbzAct1RouteHeadless#realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch,TestS3kFbzCompleteRunTraceReplay`
+passed14 focused tests, zero skips, and completed the expected strict failure
+in66seconds. The full-registry title-init round trip passes. Native and engine
+title children settle22906, reset22908, and parent/worker handoff23011; camera
+Y moves23012 and X23014. Main X/camera now agree until23816; the one-row main
+Y difference22868 remains. Strict complete has3030errors, first22311 Tails
+prison interaction, rather than the earlier21379chain attack. The temporary
+observer is removed. Earlier requests to model the delay using overlay timing
+are rejected because the actual retained parent must own child sequencing.

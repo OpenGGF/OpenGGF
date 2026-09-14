@@ -721,6 +721,50 @@ public class Sonic3kTitleCardManager
         }
     }
 
+    /** The retained SST consumes the preceding children's movement latch. */
+    public boolean isExternalInLevelWaitReady() {
+        // Last movement enters DISPLAY with timer zero. The next parent clears
+        // $34 and returns; its children publish one stationary dispatch. Only
+        // the following parent sees the cleared latch (Obj_TitleCardWait).
+        return inLevelMode && !artLoading
+                && state == Sonic3kTitleCardState.DISPLAY && stateTimer >= 1;
+    }
+
+    /** Advances higher-slot visual children after their real parent dispatch. */
+    public void updateExternalInLevelChildren() {
+        if (!inLevelGameplayOwnedExternally) {
+            throw new IllegalStateException("Title children have no retained gameplay owner");
+        }
+        updateOwnedChildren();
+    }
+
+    /** Obj_TitleCardWait2 publishes $32 only after its own wait reaches zero. */
+    public void startExternalInLevelChildExit() {
+        if (state == Sonic3kTitleCardState.DISPLAY) {
+            state = Sonic3kTitleCardState.EXIT;
+            phaseCounter = 0;
+        }
+    }
+
+    public boolean areExternalInLevelChildrenRetired() {
+        if (state != Sonic3kTitleCardState.EXIT) return false;
+        for (int i = 0; i < ELEMENT_COUNT; i++) {
+            if (!actNumberVisible && i == ELEM_ACT_NUM) continue;
+            if (!elemExited[i]) return false;
+        }
+        return true;
+    }
+
+    /** loc_2D86E: the parent observes $30 == 0 and publishes LoadEnemyArt. */
+    public void completeExternalInLevelTitle() {
+        if (!areExternalInLevelChildrenRetired()) {
+            throw new IllegalStateException("Title children have not retired");
+        }
+        consumeRuntimeArtAdmissionIfNeeded();
+        state = Sonic3kTitleCardState.COMPLETE;
+        publishFreshLevelRuntimeArtHandoffIfNeeded();
+    }
+
     /**
      * Initializes for bonus stage mode — shows "BONUS STAGE" text.
      * Uses 2 horizontal elements (frames 19/20) instead of the normal 4-element layout.
@@ -824,6 +868,12 @@ public class Sonic3kTitleCardManager
 
     @Override
     public void update() {
+        // The overlay remains renderable, but its real retained SST owns the
+        // only child dispatch. An earlier generic overlay tick must not run it.
+        if (!inLevelGameplayOwnedExternally) updateOwnedChildren();
+    }
+
+    private void updateOwnedChildren() {
         if (artLoading) {
             if (!finishQueuedArtIfReady()) {
                 if (retainedResultsHeldLevelCounterOwned
@@ -1137,7 +1187,7 @@ public class Sonic3kTitleCardManager
             }
         }
 
-        if (stateTimer >= displayHoldFrames) {
+        if (!inLevelGameplayOwnedExternally && stateTimer >= displayHoldFrames) {
             state = Sonic3kTitleCardState.EXIT;
             if (freshLevelTransitionMode
                     && freshLevelTitleOwnerReplacedAtAssembly) {
@@ -1179,6 +1229,7 @@ public class Sonic3kTitleCardManager
         }
 
         if (allExited) {
+            if (inLevelGameplayOwnedExternally) return;
             // Obj_TitleCardWait2 (sonic3k.asm:62249-62262) spins only while
             // $30(a0) -- the count of card children still on screen -- is
             // non-zero. Each child clears itself out of that count from a
