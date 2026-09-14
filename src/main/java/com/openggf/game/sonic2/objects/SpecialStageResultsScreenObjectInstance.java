@@ -143,6 +143,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private boolean complete = false;
     private Sonic2SpecialStageDataLoader presentationData;
     private SplitNameResultsMessages messagePresentation;
+    private boolean presentationResolved;
 
     /** True once Obj6F_Init has observed an empty PLC queue. */
     private boolean plcReadinessPassed;
@@ -269,7 +270,18 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
      * 4. Special stage results art - from SS DataLoader -> VRAM $590-$6C9
      * 5. HUD text (SCORE/TIME/RING) - from ArtNem_HUD -> VRAM $6CA-$700
      */
+    /** Bind the session presentation once, independently of lazy graphics loading. */
+    private void resolvePresentation() {
+        if (presentationResolved) return;
+        Sonic2SpecialStageManager manager = services().gameService(Sonic2SpecialStageManager.class);
+        presentationData = manager == null ? null : manager.getDataLoader();
+        if (presentationData != null)
+            messagePresentation = presentationData.createResultsMessages(gotEmerald, totalEmeraldCount >= 7);
+        presentationResolved = true;
+    }
+
     private void loadArt() {
+        resolvePresentation();
         try {
             var romManager = services().romManager();
             if (!romManager.isRomAvailable()) {
@@ -296,14 +308,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
 
             // Load special stage results art from DataLoader
             Pattern[] resultsArtPatterns = null;
-            Sonic2SpecialStageManager manager = services().gameService(Sonic2SpecialStageManager.class);
-            if (manager != null) {
-                Sonic2SpecialStageDataLoader dataLoader = manager.getDataLoader();
-                presentationData = dataLoader;
-                if (dataLoader != null) {
-                    messagePresentation = dataLoader.createResultsMessages(gotEmerald, totalEmeraldCount >= 7);
-                    resultsArtPatterns = dataLoader.getResultsArtPatterns();
-                }
+            if (presentationData != null) {
+                resultsArtPatterns = presentationData.getResultsArtPatterns();
             }
             LOGGER.fine("Loaded " + (resultsArtPatterns != null ? resultsArtPatterns.length : 0) + " results art patterns");
 
@@ -799,9 +805,11 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
                 state = STATE_SUPER_SONIC_DISPLAY;
                 stateTimer = 0;
                 superMsgTimer = 0;
-            } else {
+            } else if (messagePresentation == null) {
                 complete = true;
             }
+            // The ROM advances TimedDisplay to DisplayOnly; the next object pass
+            // sets Level_Inactive_flag. Keep the inherited stock timing unchanged.
         }
     }
 
@@ -810,6 +818,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     @Override
     public void update(int frameCounter, Object context) {
         this.frameCounter = frameCounter;
+        resolvePresentation();
         if (!plcReadinessPassed) {
             Sonic2PlcService plcService = services().gameService(Sonic2PlcService.class);
             if (plcService != null && plcService.isBusy()) {

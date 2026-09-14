@@ -9,13 +9,15 @@ import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.*;
 
 @RequiresRom(SonicGame.SONIC_2)
 class TestKis2ResultsMessageHandoff {
-    @Test void productionLoaderSelectsMessageLifecycleAtTheZeroTallyBoundary() {
+    private SpecialStageResultsScreenObjectInstance screen(boolean gotEmerald, int emeralds) {
         var dump = Kis2TestRoms.lockOnDumpOrNull();
         assumeTrue(dump != null, "KiS2 lock-on dump required");
         var rom = TestEnvironment.currentRom();
@@ -30,16 +32,41 @@ class TestKis2ResultsMessageHandoff {
                         : GameServices.module().getGameService(type);
             }
         }.withGameModule(GameServices.module()).withGameState(new GameStateManager());
-        var screen = new SpecialStageResultsScreenObjectInstance(0,0,true,6,7,services);
+        return new SpecialStageResultsScreenObjectInstance(1,0,gotEmerald,6,emeralds,services);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void productionLoaderSelectsMessageLifecycleWithoutRenderingOrAfterLateArtLoad(boolean loadLateArt) throws Exception {
+        var screen = screen(true, 7);
         int frame = 0;
         while (screen.getEmeraldBonus() > 0 && frame < 1000) screen.update(++frame,null);
         assertEquals(0, screen.getEmeraldBonus());
         screen.update(++frame,null); // zero tally pass sets routine $30 immediately
         for (int pass = 1; pass < 210; pass++) {
+            if (loadLateArt && pass == 25) {
+                // Exercise lazy CPU art loading after message movement has started;
+                // this must not recreate its clock or require a graphics context.
+                var loadArt = SpecialStageResultsScreenObjectInstance.class.getDeclaredMethod("loadArt");
+                loadArt.setAccessible(true);
+                loadArt.invoke(screen);
+            }
             screen.update(++frame,null);
             assertFalse(screen.isComplete(), "premature completion at message pass " + pass);
         }
         screen.update(++frame,null);
         assertTrue(screen.isComplete(), "9 out + init +18 in + latch +180hold + DisplayOnly");
+    }
+
+    @Test void nonSuperWaitAdvancesToDisplayOnlyBeforeEndingOnTheNextPass() {
+        var screen = screen(false, 0);
+        int frame = 0;
+        while (screen.getDisplayedRingCount() > 0 && frame < 1000) screen.update(++frame,null);
+        assertEquals(0, screen.getDisplayedRingCount());
+        screen.update(++frame,null); // exhausted tally pass: timer=$78
+        for (int pass = 0; pass < 120; pass++) screen.update(++frame,null);
+        assertFalse(screen.isComplete(), "TimedDisplay advances routine but does not set inactive");
+        screen.update(++frame,null);
+        assertTrue(screen.isComplete());
     }
 }
