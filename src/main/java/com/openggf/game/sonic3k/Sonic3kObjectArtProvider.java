@@ -1252,6 +1252,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     private static ObjectSpriteSheet invokeBuilder(Sonic3kObjectArt art, String builderName, int artTileBase) {
         return switch (builderName) {
             case "buildSpikesSheet" -> art.buildSpikesSheet(artTileBase);
+            case "buildFbzSpikesSheet" -> art.buildFbzSpikesSheet(artTileBase);
             case "buildSpringVerticalSheet" -> art.buildSpringVerticalSheet(artTileBase);
             case "buildSpringVerticalYellowSheet" -> art.buildSpringVerticalYellowSheet(artTileBase);
             case "buildSpringHorizontalSheet" -> art.buildSpringHorizontalSheet(artTileBase);

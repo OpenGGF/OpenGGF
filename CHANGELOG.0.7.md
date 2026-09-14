@@ -60,6 +60,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   pose retains existing plunger support. Zone-owned tumble
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
   route clears the elevator squeeze with an ordinary run-up and timed roll.
+  Upright spikes use their animated FBZ art, while wall spikes retain the shared
+  sideways artwork; both tile banks participate in renderer refresh.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 

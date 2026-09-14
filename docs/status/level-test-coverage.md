@@ -5,6 +5,10 @@ the [delivery plan](../architecture/plans/2026-09-13-level-test-standardisation.
 defines the audit, pilots, reporting and migration work. This ledger starts the
 backlog; it is not a completed coverage audit.
 
+The FBZ matrices record the 2026-09-14 spike-art follow-up: both acts now have
+ROM-backed orientation, tile-bank and refresh-range checks. Full visual
+checkpoint acceptance remains open.
+
 ## Work packages
 
 | ID | Work | Status | Completion evidence |

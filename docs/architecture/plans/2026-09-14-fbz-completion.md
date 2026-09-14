@@ -464,3 +464,45 @@ Final separate FBZ accounting: **4,673.415 seconds / 77.890 minutes**, one combi
 broad attempt, within the agreed 80-minute ceiling. Queue waits did not consume
 execution time. Whitespace, mirrored guidance/skills, proposal JSON and the
 destination push policy were checked; this final follow-up changes prose only.
+
+### Wall-spike rendering follow-up
+
+The user's review of the S1 squeeze video exposed incorrect wall-spike art.
+This separate follow-up starts from develop `ad68609e9` in
+`bugfix/ai-fbz-wall-spikes`. `Obj_Spikes` initially uses shared upright art
+`$49C`, overrides it with FBZ's animated `$200` bank, then `loc_23FD0` restores
+shared `$494` art for mapping frames 4–7. The previous registration applied
+`$200` as the base of the ordinary combined sheet: sideways pieces sampled
+`$200`, while upright pieces incorrectly sampled `$208`. Rotating mappings or
+changing spike collision/placement would treat the symptom, not that ROM branch.
+
+A dedicated FBZ sheet builder retains the existing eight ROM mapping frames,
+compact 16-pattern layout and flips, but binds upright patterns to `$200–$207`
+and sideways patterns to `$494–$49B`. Both exact ranges remain registered for
+GPU refresh; unrelated neighboring tiles do not invalidate this sheet.
+There is no shared decoder, collision, timing or input change.
+
+The new real-ROM orientation regression failed before the fix at Act 1/frame 0,
+tile 0. Afterward, queued Maven with `-Dmse=off -B`, the existing absolute S3K
+ROM property, and
+`-Dtest=TestSonic3kObjectArtProvider,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestFbzAnimatedTiles,TestFbzPlcArtHandoffs,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`
+passed **161 tests, zero failures/errors/skips**, Maven 52.348 seconds.
+This includes the complete ROM-conditional art-registry crawler, exact geometry
+and pattern identity for every spike frame in both acts, refresh boundaries,
+animation/rewind, and the required S3K loading checks.
+
+The change plan against `ad68609e9` selects all 2,553 ordinary classes and guards
+because these art builders live in shared files. Proportionate validation replaces
+that broad run here: the only changed production selection is FBZ's spike-sheet
+builder, with both source banks, mapping shape, renderer refresh and unaffected
+S3K loading directly exercised. Java 21/Lua 5.4/PowerShell preflight passed.
+This is focused validation, not a full-suite or strict replay pass.
+
+The production capture was repeated with the original input, S1 donation active,
+and the same `$1CF0,$076C` local setup. All 582 comparable gameplay-state rows
+match the previous video exactly, including position, velocity, camera, animation,
+rolling, hurt/death and spindash fields. Reviewed frames 328 and 498 show the
+correct sideways spikes. The replacement MP4 contains frames 328–581: 254 frames
+at 60 fps, 960×672, 4.233 seconds, with exactly 60 intro and 60 trailing frames.
+Captures and reproduction inputs remain in the external `fbz-wall-spikes-20260914`
+task directory. Full FBZ visual checkpoint acceptance remains open.

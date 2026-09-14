@@ -1436,14 +1436,14 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.MAP_FBZ_MAGNETIC_PENDULUM_ADDR,
                 Sonic3kConstants.ARTTILE_FBZ_MISC2 + 0x51, 1, null));
 
-        // Override shared spikes to FBZ tile address
+        // Obj_Spikes overrides only upright art; sideways keeps the shared bank.
         levelArt.removeIf(e -> e.key().equals(Sonic3kObjectArtKeys.SPIKES));
         levelArt.add(new LevelArtEntry(
                 Sonic3kObjectArtKeys.SPIKES,
                 Sonic3kConstants.MAP_SPIKES_ADDR,
                 Sonic3kConstants.ARTTILE_FBZ_SPIKES,
                 0,
-                "buildSpikesSheet"));
+                "buildFbzSpikesSheet"));
 
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.FBZ_BLASTER,
