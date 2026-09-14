@@ -188,6 +188,33 @@ class TestFbzPolePropellerPistonAndBlocks {
     assertEquals(p.getRollYRadius(), p.getYRadius());
   }
   @Test
+  void poleAppliesVerticalInputBeforeJumpReleaseAndHonorsBothBounds() {
+    int[][] cases = {{0x790, 1, 0x78F}, {0x790, 0, 0x791},
+                     {0x760, 1, 0x760}, {0x800, 0, 0x800}};
+    for (int[] c : cases) {
+      TestSprite p = new TestSprite();
+      p.setCentreX((short) 0x1000);
+      p.setCentreY((short) 0x790);
+      var pole = new FbzSpinningPoleObjectInstance(spawn(0x7B, 0x14));
+      pole.setServices(new PlayersServices(p, List.of()));
+      pole.update(0, null);
+      assertTrue(p.isObjectControlled());
+      p.setCentreYPreserveSubpixel((short) c[0]);
+      p.setSubpixelRaw(0x1234, 0xA5A5);
+      boolean up = c[1] != 0;
+      p.setLogicalInputState(up, !up, false, false, true, true);
+
+      pole.update(1, null);
+
+      assertEquals(c[2], p.getCentreY(),
+          "sub_3BFA0 applies Up/Down before the jump branch");
+      assertEquals(0xA5A5, p.getYSubpixelRaw(), "native vertical moves write only y_pos");
+      assertFalse(p.isObjectControlled());
+      assertEquals((short) 0x1000, p.getXSpeed());
+      assertEquals((short) -0x100, p.getYSpeed());
+    }
+  }
+  @Test
   void pistonLeavesCustomRangeEvaluationToObjectManagerAndAcceptsNullCamera() {
     TestObjectServices services = new TestObjectServices();
     var piston = new FbzPistonObjectInstance(spawn(0x7D, 0x28));
