@@ -230,7 +230,7 @@ The previous demand to consume that assist exactly once was a controller
 assumption, not a ROM requirement; successful ordinary movement disproves it.
 The helper also authors ordinary bottom-column, Blaster and end-boss inputs.
 
-The final candidate's eleven exhaustive team/width/donor routes now pass, with
+The earlier 2026-09-12 candidate's eleven exhaustive team/width/donor routes passed, with
 zero failures/errors/skips (62.31 seconds). All 96 local elevator arrival delays,
 15 width/donor combinations, three independent two-cycle rewind spots and the
 expanded 105-case Act 1 lifecycle product also pass in focused execution.
@@ -239,7 +239,7 @@ These are current focused results, not a full ordinary/guard suite pass. See the
 [Act 2](../../validation/levels/s3k-fbz-act2.md) matrices for remaining full
 main-character route, presentation and rewind obligations.
 
-## September verification
+## Historical 2026-09-12 verification
 
 The full ordinary baseline on `f177bbdb7` and combined candidate in
 `.worktrees/ai-fbz-route-closure` both completed **20,217 tests, 14 failures,
@@ -262,8 +262,12 @@ complete-route, canonical trace, or visual acceptance gates.
 ## Visual and final validation
 
 [fbz-validation.md](fbz-validation.md) remains the authoritative honest record: the
-immutable native/engine checkpoint pairs and comparison sidecars are incomplete,
-so the visual gate is still FAIL. Do not commit ROM-derived screenshots under
+native/engine checkpoint matrix is incomplete, so the whole-zone visual gate
+remains open. Eleven bounded world afterstates have independent acceptance.
+Both B2 directions and B4 forward differ at retained SAT presentation despite
+matching current object/animation state; B4 reverse is accepted. Controlled
+B5/Act2 fixtures explicitly declare one-time object control and prove visuals
+only. Before/mid-redraw, whole-frame and remaining event pairs still need evidence. Do not commit ROM-derived screenshots under
 `refs/`.
 
 Remaining native visual obligations (the ordinary compatibility routes pass; strict trace gaps above remain):
