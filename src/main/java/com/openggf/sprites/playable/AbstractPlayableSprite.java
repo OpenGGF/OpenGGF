@@ -1,5 +1,7 @@
 package com.openggf.sprites.playable;
 
+import com.openggf.game.ModApi;
+
 import com.openggf.camera.Camera;
 import com.openggf.game.AnimationId;
 import com.openggf.game.CanonicalAnimation;
@@ -69,7 +71,7 @@ import com.openggf.timer.timers.SpeedShoesTimer;
  * @author james
  * 
  */
-@com.openggf.game.ModApi
+@ModApi
 public abstract class AbstractPlayableSprite extends AbstractSprite implements com.openggf.game.PlayableEntity {
         private static final Logger LOGGER = Logger.getLogger(AbstractPlayableSprite.class.getName());
 
@@ -334,6 +336,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * which persists even after {@code status.on_object} is cleared.
          */
         protected int latchedSolidObjectId = 0;
+        /** Released-contact provenance survives rewind even after the SST slot is reused. */
+        private boolean latchedSolidObjectReleased;
 
         /**
          * ROM SST {@code interact(a0)} (s2.constants.asm:69 "last object stood
@@ -834,7 +838,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 this.animationTick = 0;
                 forceAnimationRestart();
                 this.onObject = false;
-                this.latchedSolidObjectId = 0;
+                LatchedSolidContactSupport.bind(this, 0, null);
                 this.sliding = false;
                 this.stickToConvex = false;
                 this.suppressGroundWallCollision = false;
@@ -969,7 +973,8 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                         onObject, controller.isOnObjectAtFrameStart(), controller.isOnObjectAtPreviousFrameStart(),
                         controller.isPushingAtFrameStart(), controller.isHurtAtFrameStart(),
                         controller.isHurtRecoveryCompletedThisFrame(),
-                        latchedSolidObjectId, interactSlotIndex, slopeRepelJustSlipped,
+                        latchedSolidObjectId, interactSlotIndex, isLatchedSolidObjectReleased(),
+                        slopeRepelJustSlipped,
                         stickToConvex, sliding, pushing,
                         skidding, skidDustTimer, fixedSkidDustActive,
                         controller.getMovement().captureLastFixedSkidDustTickFrame(),
@@ -1109,6 +1114,10 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                                 extra.onObjectAtPreviousFrameStart(), extra.pushingAtFrameStart(),
                                 extra.hurtAtFrameStart(), extra.hurtRecoveryCompletedThisFrame());
                 this.latchedSolidObjectId = extra.latchedSolidObjectId();
+                this.latchedSolidObjectReleased = extra.latchedSolidObjectReleased();
+                // ObjectManager restores the live set later. Never reuse a contact
+                // pointer from the future timeline; SpriteManager relinks by slot.
+                this.latchedSolidObjectInstance = null;
                 this.interactSlotIndex = extra.interactSlotIndex();
                 this.slopeRepelJustSlipped = extra.slopeRepelJustSlipped();
                 this.stickToConvex = extra.stickToConvex();
@@ -2116,10 +2125,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
         }
 
         public void setLatchedSolidObjectId(int latchedSolidObjectId) {
-                this.latchedSolidObjectId = latchedSolidObjectId & 0xFF;
-                if (this.latchedSolidObjectId == 0) {
-                        this.latchedSolidObjectInstance = null;
-                }
+                LatchedSolidContactSupport.setId(this, latchedSolidObjectId);
         }
 
         /**
@@ -2143,8 +2149,17 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 return latchedSolidObjectInstance;
         }
 
+        /** Whether the last solid contact was released, including a restored deleted owner. */
+        public boolean isLatchedSolidObjectReleased() {
+                return LatchedSolidContactSupport.isReleased(this, latchedSolidObjectReleased);
+        }
+
+        void clearLatchedSolidObjectRelease() {
+                latchedSolidObjectReleased = false;
+        }
+
         public void setLatchedSolidObjectInstance(com.openggf.level.objects.ObjectInstance instance) {
-                this.latchedSolidObjectInstance = instance;
+                LatchedSolidContactSupport.setInstance(this, instance);
         }
 
         /**
@@ -2155,17 +2170,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          */
         public void setLatchedSolidObject(int latchedSolidObjectId,
                         com.openggf.level.objects.ObjectInstance instance) {
-                this.latchedSolidObjectId = latchedSolidObjectId & 0xFF;
-                this.latchedSolidObjectInstance = instance;
-                // ROM RideObject_SetRide writes interact(a1) = slot index of the
-                // ridden object (s2.asm:36005-36006). Record the slot so the
-                // sidekick despawn comparator can re-dereference the live slot.
-                if (instance instanceof com.openggf.level.objects.AbstractObjectInstance aoi) {
-                        int slot = aoi.getSlotIndex();
-                        if (slot >= 0) {
-                                this.interactSlotIndex = slot;
-                        }
-                }
+                LatchedSolidContactSupport.bind(this, latchedSolidObjectId, instance);
         }
 
         /**
@@ -2176,8 +2181,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
          * specific SST slot is intentionally synthetic.
          */
         public void setSyntheticLatchedSolidObject(int latchedSolidObjectId) {
-                this.latchedSolidObjectId = latchedSolidObjectId & 0xFF;
-                this.latchedSolidObjectInstance = null;
+                LatchedSolidContactSupport.bind(this, latchedSolidObjectId, null);
                 this.interactSlotIndex = SYNTHETIC_INTERACT_SLOT;
         }
 
@@ -4125,7 +4129,7 @@ public abstract class AbstractPlayableSprite extends AbstractSprite implements c
                 objectControlSuppressesMovement = false;
                 controller.setObjectControlledSolidContactOwner(null);
                 onObject = false;           // Clear "standing on object" flag
-                latchedSolidObjectId = 0;
+                LatchedSolidContactSupport.bind(this, 0, null);
                 stickToConvex = false;      // Clear slope adhesion flag (set by slope-mode launches)
                 suppressGroundWallCollision = false;
                 suppressedObjectMoveAndFallAxes = 0;

@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TestSidekickCpuDespawnParity {
@@ -946,11 +947,12 @@ class TestSidekickCpuDespawnParity {
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.hydrateFromRomCpuState(6, 0, 0, 0x4E, false, 0, 0);
+        tails.setCpuController(controller);
         tails.setLatchedSolidObject(0x4E, new DestroyedRideObject(0x4E));
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
 
-        controller.update(2262);
+        assertReleasedRideForwardReplay(tails, controller, 2262);
 
         assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
                 "S3K sub_13EFC reads a freed ride slot as a mismatch and jumps through sub_13ECA");
@@ -975,11 +977,12 @@ class TestSidekickCpuDespawnParity {
 
         SidekickCpuController controller = new SidekickCpuController(tails, sonic);
         controller.hydrateFromRomCpuState(6, 0, 0, 0x47, false, 0, 0);
+        tails.setCpuController(controller);
         tails.setLatchedSolidObject(0x47, new UnloadedRideObject(0x47));
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
 
-        controller.update(18917);
+        assertReleasedRideForwardReplay(tails, controller, 18917);
 
         assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
                 "S3K sub_13EFC compares the cached interact word with a freed slot; "
@@ -989,6 +992,27 @@ class TestSidekickCpuDespawnParity {
         assertEquals((short) 0x0000, tails.getCentreY());
         assertEquals((short) 0x0000, tails.getYSpeed());
         assertTrue(tails.getAir());
+    }
+
+    private static void assertReleasedRideForwardReplay(TestableSprite tails,
+                                                        SidekickCpuController controller, int frame) {
+        var before = tails.captureRewindState();
+        assertTrue(before.playerExtra().latchedSolidObjectReleased());
+        controller.update(frame);
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState());
+        var expected = tails.captureRewindState();
+        for (int cycle = 0; cycle < 2; cycle++) {
+            tails.restoreRewindState(before);
+            assertNull(tails.getLatchedSolidObjectInstance(),
+                    "Deleted/unloaded owners are absent from the restored object set");
+            assertTrue(tails.isLatchedSolidObjectReleased());
+            controller.update(frame);
+            assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                    "The restored release marker must retain the freed-slot despawn branch");
+            var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(
+                    "tails", expected, tails.captureRewindState());
+            assertTrue(differences.isEmpty(), "cycle=" + cycle + " " + differences);
+        }
     }
 
     @Test

@@ -261,3 +261,207 @@ TraceChaser pin also matches that base. Neither assertion nor its failing
 input changed in this merge. They remain visible follow-ups rather than
 unrelated changes in the route delivery. No full-suite or all-guards pass
 is claimed. Conflict-marker, Markdown local-link and whitespace checks pass.
+
+## HCZ rewind and viewport/donor follow-up (2026-09-14)
+
+The requested follow-up starts from develop `14d902d3900104108b3f550d6f8d4841deddabc3`
+in `.worktrees/ai-hcz-route-coverage`, branch `feature/ai-hcz-route-coverage`.
+The main workspace stays on develop and unrelated disassembly/user files are preserved.
+Current queue-based validation policy supersedes the historical receipts above.
+
+Added obligations are independent HCZ water/shield/bridge/fan/conveyor/spring/boss
+restore/replay windows, actual act-2 timeline isolation, and the full 15-configuration
+viewport/donor entry and repeated-reset matrix. The private route helper was first
+extracted with the native 12,583-frame pad hash unchanged. That equivalence applies
+to extraction, not later input-controller refinements.
+
+Two rewind failures had distinct causes and fixes:
+
+- At native frame 2,986, dormant insta-shield identity 1 and active bubble identity
+  450 both used slot 100. Restore changed insertion order, not their state. Pair
+  dynamic entries by stable identity and compare all fields. Reject duplicate IDs,
+  missing entries and altered slot/class/state/owner/auxiliary fields. Suppressing
+  insta-shield recreation was rejected because it would remove captured state.
+- At native fan frame 8,267, CPU Tails retained a destroyed bridge contact while
+  slot 8 had another live owner. Immediate restore passed, but forward replay
+  changed `releasedUnderwaterPushConsumed`. Capture the released-contact provenance,
+  clear future Java references and prefer the recorded slot when relinking. Do not
+  bind a nearby same-type object or a same-type replacement of the deleted owner.
+  The unpublished 0.7 signature pin includes the new snapshot component/accessor;
+  the candidate version is unchanged.
+
+Focused evidence before the final controller refinements (all required existing
+absolute ROM properties supplied, through `tools/testing/maven_queue.py -Dmse=off`):
+
+- `-Dtest=TestRewindSnapshotDiffDynamicIdentity,TestSpriteManagerRewindCapture,TestSidekickCpuFollowParity`:
+  4 comparator, 5 manager and 111 CPU cases passed with zero skips.
+- `-Dtest=TestS3kHcz1RoutePilot,TestS3kHcz1RouteRewind,TestS3kHcz1ReloadRewind,TestModApiSignatureSurface`:
+  21 cases passed, zero failures/errors/skips. Ten rewind windows were reached
+  independently at frames 249, 2986, 2987, 3221, 8267, 8487, 8703, 9633, 10244 and
+  12158. Each checked complete registered state immediately and after the same
+  30 inputs, twice. The production reload established the new timeline root at 12583.
+- `-Dtest=TestS3kHcz1EntryMatrix`: 30 entry/replay and repeated-reset cases passed,
+  zero failures/errors/skips, in a grouped navigation run. Each of five widths
+  (320/400/512/640/800) and three donors (off/S1/S2) ran both obligations.
+
+Controller experiments remain ordinary pad decisions over live state and ROM-loaded
+placement geometry. Repeated dry rollback needs a fresh lower run-up; keeping its
+old once-only latch loops at the first dry bend. A missing-spindash moveset must
+release the charge phase and walk. Preserving early water momentum and directly
+attacking the paired Blastoid completes the 320/off, 400/off, 512/off and 320/S2
+route probes. An earlier unconditional bridge-attack change without the walking
+approach regressed native timing (death at frame 6902), so it was rejected alone.
+
+At the upper ring monitor, a Blastoid can remove the newly collected rings during
+rebound. Predictive steering alone, delayed jump release, lost-ring pursuit and
+preemptive attack did not solve the old 400px prefix: later deaths were at frames
+7780, 7708, 7749 and 7402 respectively. Lost-ring pursuit starts too late after hurt
+control releases; nearby rings can already fall below the platform. These probes
+are temporary; durable decisions and regression checks live in the route helper,
+rewind tests and the existing pitfalls/measurement-hazard catalogues.
+
+
+### Survey outcome and retained delivery scope
+
+Later lower-bridge probes established that Down+Right cannot enter a roll: the
+ROM roll gate requires neutral left/right. Down-only roll plus projected upper
+steering reached the lower shield and final curve for S1, but the missing-spindash
+final run-up remained unresolved. Early/late jumps met the lower Blastoid's upward
+projectile arc; insufficient rolling momentum unrolled before the body. These
+are controller frontiers, not evidence for adjusting runtime physics.
+
+The 800px survey reached the boss waiting routine, with camera X below the arena
+lock. Walking stalled in the current and drowned; repeated jumping stalled on
+upper terrain. Boss activation can precede arena admission in a wider view.
+A runtime camera-contract change is not justified by these input probes alone.
+
+The maintained delivery therefore retains the native controller and adds the
+verified rewind, actual transition and full entry/reset cross-product obligations.
+Temporary full-route probes and the unfinished compatibility-route class are
+removed; the corresponding full-route matrix cells remain open, not skipped or
+claimed green. No route-authoring experiment changes runtime movement or asset data.
+
+Final retained-controller focused group (all three absolute ROM properties,
+`maven_queue.py -Dmse=off -Dtest=TestS3kHcz1RoutePilot,TestS3kHcz1RouteRewind,TestS3kHcz1ReloadRewind,TestS3kHcz1EntryMatrix,TestRewindSnapshotDiffDynamicIdentity,TestSpriteManagerRewindCapture,TestSidekickCpuFollowParity,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test`):
+**229 cases, zero failures/errors/skips**. This includes both matching level-loading
+class names. Native route and independent rewind windows retain the original
+12,583-frame route and recorded checkpoints. The subsequent contact review adds
+focused despawn and live-dynamic membership regressions before broad validation.
+
+Review found that the released-contact marker must also feed offscreen CPU despawn,
+not just underwater push decisions. It also must inspect the complete active object
+collection, including dynamic objects; the placement map alone omits live platforms.
+Those cases now verify capture/restore and subsequent decisions directly.
+
+Contact-review verification: `maven_queue.py -Dmse=off
+-Dtest=TestSpriteManagerRewindCapture,TestSidekickCpuDespawnParity,TestSidekickCpuFollowParity test`:
+**182 cases, zero failures/errors/skips**, 48.326 seconds including compilation.
+This includes six manager, 65 despawn and 111 follow cases.
+
+### Combined validation and guard correction
+
+Updated develop `31a9a6bce` merged cleanly into the candidate; incoming FBZ chain
+rendering and coverage prose were preserved. Preflight passed with
+`LUA_BIN=/usr/bin/lua5.4`. The normal runner selected all **2,567 ordinary classes**
+and all guards from pinned base `14d902d39`:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 14d902d3900104108b3f550d6f8d4841deddabc3 --run
+```
+
+Run `20260914T170709Z-3234639a`, candidate `db56dd8a161709ddd2902d3563e006056deea11d`:
+**20,355 ordinary cases, 20,338 passed, 17 skipped, no failures/errors**, 625.13 seconds.
+All 42 maintained HCZ cases executed with zero skips; AIZ's native route, seven
+rewind spots and production reload also passed. The 17 skips comprise 13 opt-in
+route/diagnostic/performance cases, two unavailable graphics contexts, the inherited
+CPZ spin-tube capture assumption and one unavailable local audio reference. Separate
+trace/native lanes and opt-in AIZ compatibility/entry/spring breadth are not certified
+by this ordinary run.
+
+Guards: **667 cases, 663 passed, four failures, zero errors/skips**, 174.44 seconds.
+Two new failures are corrected locally and verified narrowly: the test object update
+parameter must say `vIntRunCount`, and the released-contact logic must be extracted
+rather than grow `AbstractPlayableSprite` beyond its existing size limit. No guard
+limits or allowlists are raised.
+
+The other two failures match the pre-task baseline by assertion and input identity:
+
+- `TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+  still requires direct Maven, separate-worktree concurrency and printed-pinned-base
+  receipt prose, while unchanged AGENTS/CLAUDE prescribe the shared queue.
+- `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`
+  flags unchanged `FbzRouteEvidenceProbe#printEvidence` and
+  `LevelSolidityMapProbe#writeSolidityMap`. The complete scanned `com/openggf/tests`
+  subtree is unchanged from the pinned base.
+
+These identities also appear in the earlier integrated FBZ guard result recorded
+in `2026-09-14-fbz-completion.md`. No all-guards-green or full-level certification
+claim is made. Results/skips/failure payloads were inspected before acknowledgment;
+raw diagnostics are not retained.
+
+Post-guard correction verification uses the same existing absolute S3K ROM:
+
+- `maven_queue.py -Dmse=off -Dtest=TestSpriteManagerRewindCapture,TestSidekickCpuDespawnParity,TestSidekickCpuFollowParity,TestS3kHcz1RouteRewind,TestS3kHcz1RoutePilot,TestModApiSignatureSurface test`:
+  **202 passed, zero failures/errors/skips**, 1:29 including compilation.
+- `LUA_BIN=/usr/bin/lua5.4 maven_queue.py -Dmse=off -Pguards -Dtest=TestArchitecturalSourceGuard,TestObjectUpdateClockTerminologyGuard,TestHelperStateRewindCoverageGuard,TestStaticStateRewindCoverageGuard test`:
+  **75 passed, zero failures/errors/skips**, 59.624 seconds in a fresh JVM.
+
+The stateless `LatchedSolidContactSupport` extraction retains snapshot ownership
+on the player and the same public signatures. Lifecycle resets call its binding
+operation directly, retaining the old direct-field semantics even for a creator
+subclass overriding the public setter. No capture state is moved into an untracked
+helper, and the large-class budget is unchanged.
+
+
+### Actual bridge-trigger rewind boundary
+
+The original FIRST_BRIDGE/SECOND_BRIDGE selectors captured controller approach
+stages, not the triggered collapse. Requiring the ROM-loaded bridge's live owner
+and corresponding trigger bit moved the checkpoints to frames **3,124 and 4,204**.
+The stronger ten-case run failed exactly those two replay windows (no errors/skips):
+a freshly created explosion restored with null child factories, so it never spawned
+the expected animal/points children. RNG and subsequent dynamic allocation identities
+then diverged. Immediate restore still passed.
+
+The correction captures the exact configured factory references together with all
+seven mutable explosion fields in a typed subclass snapshot. It does not replace
+custom factories with game-selected defaults or retain the original explosion owner;
+rendering and spawned children use restore-time services. Focused regressions exercise
+both custom allocation orders, passed-slot deferral, pending sound, animation/deletion
+and initialized restoration without duplicate children. The stronger bridge selectors
+remain the maintained checks.
+
+After the explosion correction, `maven_queue.py -Dmse=off
+-Dtest=TestS3kHcz1RouteRewind,TestS3kHcz1RoutePilot,TestS3kHcz1ReloadRewind,TestS3kHcz1EntryMatrix test`
+with all three existing absolute ROM paths passed **42 cases, zero failures/errors/skips**,
+2:17 including compilation. Both actual bridge windows pass two restore/replay cycles;
+the native route still completes at frame 12,583. These are focused results on the
+post-`db56dd8a1` corrections, not a second broad-suite result.
+
+Updated-develop matched baseline check before integration:
+`LUA_BIN=/usr/bin/lua5.4 maven_queue.py -Dmse=off -Pguards
+-Dtest=TestBuildToolingGuard,TestNoAssertionFreeDiagnostics test` completed
+**119 cases: 117 passed, the same two failures, no errors/skips**, 51.543 seconds.
+Develop advanced from `71603cbb6` to `f658cc5db` during the queued check only through
+render-rate design/roadmap prose; all scanned assertion inputs were unchanged.
+The failing identities and payloads match the combined candidate run above.
+
+Explosion consumer verification:
+`maven_queue.py -Dmse=off -Dtest=TestExplosionObjectInstance,TestDestructionEffects,TestAnimalObjectRngOwnership,TestSonic2AnimalObjectTiming test`
+passed **15 cases, no failures/errors/skips**, 20.186 seconds. This includes the
+S1 explosion subtype's extra scalar state and initialized-child latch, as well as
+S2 deferred animal RNG timing. A subsequent structural check required explicit
+factory disposition and override triage: factory references are excluded from the
+generic scalar codec because the typed explosion extra captures and restores them.
+They are not omitted from rewind or added to the unresolved field-debt baseline.
+
+The fresh-JVM registration rerun,
+`LUA_BIN=/usr/bin/lua5.4 maven_queue.py -Dmse=off -Pguards
+-Dtest=TestExplosionObjectInstance,TestRewindArchitectureGuard,TestRewindFieldDispositionGuard test`,
+passed **13 cases, no failures/errors/skips**, 49.178 seconds. The prior relevant
+guard group also passed size, clock, transient, helper and static-state checks.
+The two context-aware overrides have a documented architecture triage entry;
+subtype generic scalar capture remains active. Local unpublished task commits are
+folded together so the candidate API signature change and its source stay in one
+reviewable commit after the size-guard extraction.

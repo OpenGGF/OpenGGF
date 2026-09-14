@@ -6,6 +6,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K slots bonus:** keep the player behind the central capsule glass during
+  gameplay; the shared bonus loop no longer overrides the slot player's priority.
+
 - **Knuckles in Sonic 2:** selecting Knuckles as the Sonic 2 main
   character now activates a built-in game patch implemented from the s2disasm
   `knuckles-in-sonic-2` branch instead of S3K donation: KiS2 physics (`$600`
@@ -204,7 +207,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   use one ROM-pattern writer while retaining each game's score and tally policy.
   Monitor contents share icon drawing while keeping their visibility and lifetime rules.
   Deferred lost-ring spawns retain their queue across rewind and release reserved
-  slots when the owning level is reset or rebuilt. Public profile adapters retain
+  slots when the owning level is reset or rebuilt. Released solid contacts retain
+  their provenance across rewind and reused object slots, preserving CPU follower
+  decisions through HCZ fans, conveyors and springs. Pending explosions retain their
+  configured animal/points allocation across recreation. Public profile adapters retain
   their compatibility identities while using canonical profile mechanics.
 
   CNZ rival cutscene deletion reuses the shared coarse range predicate while keeping

@@ -1,5 +1,12 @@
 # FBZ Act 2 coverage matrix
 
+**Known donor challenge — leave unchanged (user decision, 2026-09-14):** the
+right-to-left early `$0DC0` elevator crossing with S1 Sonic is feasible but
+requires a demanding run-up and roll. The tested faster approach has a five-frame
+safe arrival window (~0.083 seconds at 60 Hz). See the
+[retained challenge and decision](../../research/s3k-zones/fbz-outstanding-actions.md#known-s1-donor-challenge-early-act-2-elevator-leave-unchanged).
+
+
 Hanging-handle presentation follow-up (2026-09-14): horizontal `$72` grab regions
 must not submit vertical chain art (`Obj_FBZChainLink` → `loc_3AA5A`).
 `TestFbzRailAndChainPlatforms` covers all six used horizontal subtypes and
@@ -137,3 +144,18 @@ clearance. The 70-frame run-up from `$0CF0` has 17 safe phases per 96; the
 84-frame run-up from `$0CC0` has 32. This temporary diagnostic and capture are
 not a permanent route regression, other-width matrix, or native-parity claim.
 Exact setup, commands, rejected attempts and limits are in the completion record.
+
+Direction correction: the user's intended early `$0DC0` crossing is right-to-left.
+On `31a9a6bce`, S1 ordinary rolls with 70/84-frame leftward run-ups have no safe
+phase among 96 local starts each; 100 frames from `$0F10` has two safe phases.
+Blocked, successful and four-frames-late crushed videos reproduce this distinction.
+The prior 17/32-phase results cover left-to-right only. These are local diagnostic
+observations, not permanent route tests or complete native-parity certification;
+see the completion record for scripts, source identity and capture boundaries.
+
+Matched-phase follow-up (`323e1d2ba`): actual car Ys 1985/2081, controller timer
+79 and Sonic centre 3582/2033 match across ordinary reverse approaches. Entry
+4.48 px/frame is crushed; 4.90 px/frame clears safely. The latter holds Left
+six frames longer before releasing Left and pressing Down. Real synchronized
+videos reproduce both on frame 207. This improves the demonstrated strategy;
+it remains local feasibility evidence with the existing matrix limits.
