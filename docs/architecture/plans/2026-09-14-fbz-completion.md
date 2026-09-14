@@ -921,3 +921,76 @@ video, started 20 frames later. The inspected frame 239 shows the impending
 squeeze. Both clips preserve one second of real stationary lead-in; no freeze
 frame or edited gameplay was used. The safe video retains over one second after
 crossing the clearance threshold. No runtime change or new broad suite was needed.
+
+### Corrected direction: early elevator right-to-left S1 crossing
+
+The user clarified that the intended crossing is **right-to-left**. The preceding
+left-to-right evidence does not establish its difficulty. Investigation base is
+`31a9a6bce`, using a separate `ai-fbz-reverse-squeeze` worktree, width 320, native
+FBZ Act 2 host and real S1 donation, no sidekick or shield ability. The temporary
+probe starts at centre Y=`$07EC`, waits 0–95 ordinary neutral frames, holds Left
+for the stated run-up, then releases Left and holds Down. It observes actual
+rolling and hurt/death; safe clearance requires X <= `$0D50`. No gameplay state
+is injected beyond the disclosed cold-boot position.
+
+| Start X | Left held | First rolled X / ground speed | Safe initial delays | Safe / 96 |
+|---|---|---|---|---|
+| `$0E20` | 24 frames | 3600 / -276 | none | 0 |
+| `$0E90` | 70 frames | 3608 / -828 | none | 0 |
+| `$0EC0` | 84 frames | 3604 / -996 | none | 0 |
+| `$0F10` | 100 frames | 3614 / -1188 | 2–3 inclusive | 2 |
+
+Ground speeds are 8.8 values. The 100-frame run-up reaches approximately
+4.64 pixels/frame at roll entry. Its two-frame local arrival window is about
+0.033 seconds at 60 Hz; it is feasible but substantially less forgiving than
+the preceding left-to-right examples. Unsafe phases 30–66 (70-frame approach),
+19–56 (84), and 4–39 (100) cause injury/death; other unsuccessful phases block
+progress. These measurements are not probabilities of human success.
+
+Queued `JAVA_HOME=<jdk21> python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestFbzSqueezeOrdinaryRoll#reverseEarlyUnderpassTimingProbe
+-Ds3k.rom.path=<locked-on-ROM> -Dsonic1.rom.path=<S1-REV01-ROM> test -B`
+ran the 384 scenarios in one diagnostic method: no skipped test, Maven about
+1:06 including cold compilation. The JUnit assertion verifies unavailable
+spindash; reported scenario outcomes, not a green diagnostic, establish crossings.
+
+Actual video reproductions use `GameplayCaptureTool --game s3k --zone fbz
+--act 2 --donor s1 --y 0x7EC`. Inputs are authored and round-tripped by
+`InputLogAuthorTool`. The compiled application was launched directly with
+Java 21 and its build-resolved classpath while another session owned the Maven
+slot; the queued Maven capture requests were cancelled, not executed twice.
+The actual diagnostic test remained queued. Files live outside the repository
+under task directory `fbz-reverse-squeeze-20260914`.
+
+- Blocked: start `$0E90`, `116 -; 70 L; 100 D; 60 -`, captured from frame 56.
+  Stops at X=3579 without injury. Delivered clip is original frames 56–256.
+- Safe: start `$0F10`, `98 -; 100 L; 130 D; 60 -`, captured from frame 38.
+  Clears X=3406 at frame 246 without hurt/death and eventually stops at X=3243.
+  Delivered clip is frames 38–306.
+- Crushed: same start/run-up, `102 -; 100 L; 130 D; 60 -`, captured from frame 42.
+  Four frames later than safe, dies at frame 233, X=3482, Y=2038. Delivered clip
+  is frames 42–293. Frames 220 (safe) and 232 (crushed) were visually inspected.
+
+All three clips retain one second of real stationary lead-in and one second
+following the observed outcome; trimming changes no input, simulation speed or
+frame order. The extra 96 neutral frames in the safe/crushed recordings retain
+the measured phase. Existing native-parity, entry-history, team and width coverage
+gaps remain. No engine fix is established by this feasibility investigation.
+
+Additional filmed approaches use `98 -; 112 L; 100 D; 60 -` from `$0F50`,
+and `98 -; 128 L; 100 D; 60 -` from `$0FA0`. Both stop at X=3579 without injury.
+An optional 288-case extended sweep (112/128/144 frames × 96 waits) was cancelled
+**before Maven started**, after nearly ten minutes behind an unrelated broad run.
+It contributes no test results. Source inspection shows why long-run-up phase
+claims need care: object placement has a camera-relative initial load window,
+so waiting outside that window need not advance an unloaded elevator's phase.
+No empirical first-load result was obtained; this remains a qualification, not
+an attributed cause of those two blocked videos. The temporary probe was removed.
+The 384 completed scenarios took 24.630 seconds of test-body time, about 1:06
+Maven including compilation, with zero skips; there is no new full-suite claim.
+
+Conclusion: the user's intended reverse crossing is demonstrably possible with
+ordinary S1 controls but substantially more demanding in the tested approaches.
+The two-frame result is a measured window for one fixed script/start, not proof
+that every possible route or control strategy is equally narrow. Only evidence
+and coverage documentation change in this follow-up; no runtime fix is proposed.
