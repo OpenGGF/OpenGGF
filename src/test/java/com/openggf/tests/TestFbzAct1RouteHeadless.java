@@ -438,7 +438,9 @@ class TestFbzAct1RouteHeadless {
                 // stale pre-arena occupants are not carried across the synchronous reload.
                 fixture.stepFrame(false, false, false, false, false);
                 players.forEach(player -> {
-                    player.setControlLocked(true);
+                    // Set_PlayerEndingPose owns object_control=$81, not Ctrl1.
+                    // Check_TailsEndPose clears Ctrl2 before applying that pose.
+                    player.setControlLocked(false);
                     ObjectControlState.nativeBit7FullControl().applyTo(player);
                 });
                 for (int i = 0; i < GameServices.sprites().getSidekicks().size(); i++) {
@@ -481,10 +483,13 @@ class TestFbzAct1RouteHeadless {
                 assertEquals(cameraWidth, fixture.camera().getWidth() & 0xFFFF,
                         "viewport width must survive the results-owned reload for " + compatibility);
                 assertEquals(compatibility.width(), graphics.getViewportWidth());
-                assertEquals(0x0022, fixture.camera().getMinX() & 0xFFFF,
-                        "the native +2 gradual lock step runs between results publication and ScreenEvents copy");
-                assertEquals(0x00A2, fixture.camera().getMaxX() & 0xFFFF,
-                        "the paired right-bound gradual step must remain width-independent");
+                assertEquals(0x0020, fixture.camera().getMinX() & 0xFFFF,
+                        "the native -$2E00 rebase preserves the settled left bound");
+                assertEquals(0x00A0, fixture.camera().getMaxX() & 0xFFFF,
+                        "the native -$2E00 rebase preserves the settled right bound");
+                assertEquals(fixture.camera().getMinX(), fixture.camera().getMinXTarget(),
+                        "the translated target must not ease back toward Act 1 coordinates");
+                assertEquals(fixture.camera().getMaxX(), fixture.camera().getMaxXTarget());
                 assertEquals(0x0540, fixture.camera().getMinY() & 0xFFFF);
                 assertEquals(0x0540, fixture.camera().getMaxY() & 0xFFFF);
                 assertEquals(fixture.camera().getX(),
@@ -500,8 +505,10 @@ class TestFbzAct1RouteHeadless {
                             "every participant must receive the native X offset for " + compatibility);
                     assertEquals(beforeY[i] & 0xFFFF, players.get(i).getCentreY() & 0xFFFF,
                             "the FBZ transition must preserve participant Y for " + compatibility);
-                    assertTrue(players.get(i).isControlLocked(),
-                            "ScreenEvents must preserve the sign/results control lock for " + compatibility);
+                    assertFalse(players.get(i).isControlLocked(),
+                            "ScreenEvents must preserve native ending-pose controller access for " + compatibility);
+                    assertTrue(players.get(i).isObjectControlled(),
+                            "ScreenEvents must preserve the sign/results object-control owner for " + compatibility);
                 }
                 for (int i = 0; i < GameServices.sprites().getSidekicks().size(); i++) {
                     AbstractPlayableSprite expectedLeader = i == 0
@@ -619,16 +626,29 @@ class TestFbzAct1RouteHeadless {
                         "boss cleanup traversal must retain exact participant identity/order at index " + i);
             }
 
-            participants.forEach(participant -> {
-                participant.setControlLocked(true);
+            for (int i = 0; i < participants.size(); i++) {
+                AbstractPlayableSprite participant = participants.get(i);
+                participant.setControlLocked((i & 1) == 0);
+                participant.setAir(true);
+                participant.setXSpeed((short) (0x100 + i));
+                participant.setYSpeed((short) (-0x200 - i));
                 ObjectControlState.nativeBit7FullControl().applyTo(participant);
-            });
+            }
             invokeNoArg(boss, "restoreAllPlayerControls");
 
             for (int i = 0; i < participants.size(); i++) {
                 AbstractPlayableSprite participant = participants.get(i);
-                assertFalse(participant.isControlLocked(),
-                        "boss cleanup must release configured participant " + i + " before the next CPU tick");
+                // Restore_PlayerControl2 clears object_control and Status_InAir,
+                // not controller locks or velocity. Title teardown owns the lock.
+                assertEquals((i & 1) == 0, participant.isControlLocked(),
+                        "boss cleanup must preserve the controller lock for participant " + i);
+                assertEquals(0x100 + i, participant.getXSpeed());
+                assertEquals(-0x200 - i, participant.getYSpeed());
+                assertFalse(participant.getAir());
+                assertEquals(com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.WAIT.id(),
+                        participant.getAnimationId());
+                assertEquals(0, participant.getAnimationFrameIndex());
+                assertEquals(0, participant.getAnimationTick());
                 assertFalse(participant.isObjectControlled(),
                         "boss cleanup must clear native object control for configured participant " + i);
                 assertFalse(participant.isObjectControlSuppressesMovement(),
