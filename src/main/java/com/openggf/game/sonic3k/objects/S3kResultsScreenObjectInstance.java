@@ -1208,8 +1208,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
         boolean actOneInLevelTitleHandoff = act == 0
                 && (zone == 0x00 || zone == 0x01 || zone == 0x02 || zone == 0x04);
-        boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
-        return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
+        // Obj_LevelResults loc_2DCF8 leaves FBZ2's arena words intact.
+        // The surviving boss's loc_708AA owns its later gradual expansion.
+        boolean actTwoPostBossHandoff = act == 1 && (zone == 0x04 || zone == 0x06);
+        return !actOneInLevelTitleHandoff && !actTwoPostBossHandoff;
     }
 
     static boolean isPreloadedNextActHandoff(int resultsAct, int currentAct) {
