@@ -14,6 +14,40 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class TestFbzMagneticObjects {
     @Test
+    void ceilingContactWaitsWithoutDriftingFractionOrVelocity() throws Exception {
+        var events = new Sonic3kFBZEvents();
+        events.init(0);
+        events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.ACTIVE, 1);
+        var runtime = new FbzZoneRuntimeState(0, PlayerCharacter.SONIC_AND_TAILS, events);
+        var platform = new FbzMagneticPlatformObjectInstance(spawn(0x74, 0x0F));
+        ObjectServices services = org.mockito.Mockito.mock(ObjectServices.class);
+        org.mockito.Mockito.when(services.zoneRuntimeState()).thenReturn(runtime);
+        platform.setServices(services);
+        setField(platform, "chainAllocationAttempted", true);
+        setField(platform, "rising", true);
+        setField(platform, "yFixed", 0x0700A000);
+        setField(platform, "yVelocity", -0x80);
+        try (MockedStatic<ObjectTerrainUtils> terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkCeilingDist(0x1000, 0x700, 0x0F))
+                    .thenReturn(new TerrainCheckResult(-1, (byte) 0, 1));
+            platform.update(0, null);
+            assertEquals(0x701, platform.getY());
+            assertEquals(0x2000, platform.yFraction());
+            terrain.clearInvocations();
+            for (int frame = 1; frame <= 12; frame++) platform.update(frame, null);
+            terrain.verifyNoInteractions();
+            assertEquals(0x701, platform.getY());
+            assertEquals(0x2000, platform.yFraction(), "loc_3B450 preserves the entire stationary position");
+
+            events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, 2);
+            platform.update(13, null);
+            terrain.verifyNoInteractions();
+            assertEquals(0x701, platform.getY(), "release changes the routine without moving");
+            assertEquals(0x2000, platform.yFraction());
+        }
+    }
+
+    @Test
     void platformBalanceUsesNativeWidthPixelsAtLeftBoundary() {
         FbzMagneticPlatformObjectInstance platform = new FbzMagneticPlatformObjectInstance(
                 new ObjectSpawn(0x2540, 0x0570, 0x74, 0x0F, 0, false, 1));
