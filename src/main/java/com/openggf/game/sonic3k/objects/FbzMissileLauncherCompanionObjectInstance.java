@@ -59,6 +59,12 @@ public final class FbzMissileLauncherCompanionObjectInstance
     // companion (sonic3k.asm:80143); Sonic_Move reads that byte for balance.
     return 0x20;
   }
+  @Override public boolean suppressesObjectEdgeBalance() {
+    // Obj_FBZMissileLauncher sets status bit 7 on this companion
+    // (sonic3k.asm:80147). Sonic_Move and Tails_Move test the signed
+    // stood-on status before checking width_pixels for edge balance.
+    return true;
+  }
   public SolidObjectParams getSolidParams() {
     return new SolidObjectParams(0x2B, 8, 9);
   }
