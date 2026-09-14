@@ -25,6 +25,8 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
     private Kis2TitleData data;
     private Kis2TitleAnimation animation;
     private State state = State.INACTIVE;
+    private final Kis2TitleInput titleInput = new Kis2TitleInput();
+    private TitleScreenAction exitAction = TitleScreenAction.ONE_PLAYER;
     private PatternSpriteRenderer knuckles, emblem, banner, text, stars;
     private boolean cached, music;
     private int starIndex, starTimer, starFrame, fadeFrames;
@@ -36,6 +38,8 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
         this.rom = rom; this.boot = boot;
     }
     @Override public void initialize() {
+        titleInput.resetSequence();
+        exitAction = TitleScreenAction.ONE_PLAYER;
         data = new Kis2TitleData(rom);
         animation = new Kis2TitleAnimation(); cached = false; music = false;
         starIndex = 0; starTimer = 0; starFrame = 0; fadeFrames = 0;
@@ -56,14 +60,20 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
             if (++fadeFrames >= 22) state = State.ACTIVE;
             return;
         }
-        boolean confirm = input.logical().menuAccept()
-                || input.isKeyPressed(GameServices.configuration().getInt(SonicConfiguration.JUMP));
+        boolean unlocked = titleInput.update(input.logical().player1());
+        if (unlocked) GameServices.audio().playSfx(Sonic2Sfx.RING_RIGHT.id);
+        // TitleScreen_Loop and Obj0E test Start, not the A/B/C action buttons.
+        boolean confirm = input.logical().player1().startPressed() || input.logical().player2().startPressed();
         boolean wasComplete = animation.complete;
         animation.tick(confirm);
         if (!music && (animation.frame >= 56 || animation.complete)) {
             music = true; GameServices.audio().playMusic(Sonic2Music.TITLE.id);
         }
-        if (wasComplete && confirm) state = State.EXITING;
+        if (wasComplete && confirm) {
+            exitAction = titleInput.requestsLevelSelect(input.logical().player1())
+                    ? TitleScreenAction.LEVEL_SELECT : TitleScreenAction.ONE_PLAYER;
+            state = State.EXITING;
+        }
         if (starIndex < data.starPositions.length) {
             starTimer++;
             if (starTimer <= 10) starFrame = STAR_ANIMATION[(starTimer - 1) / 2];
@@ -195,6 +205,6 @@ public final class Kis2TitleScreen implements TitleScreenProvider {
     @Override public State getState() { return state; }
     @Override public boolean isExiting() { return state == State.EXITING; }
     @Override public boolean isActive() { return state != State.INACTIVE; }
-    @Override public TitleScreenAction consumeExitAction() { return isExiting() ? TitleScreenAction.ONE_PLAYER : TitleScreenAction.OTHER; }
+    @Override public TitleScreenAction consumeExitAction() { return isExiting() ? exitAction : TitleScreenAction.OTHER; }
     public Kis2TitleAnimation animation() { return animation; }
 }

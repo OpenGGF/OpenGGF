@@ -233,7 +233,7 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
                 && sprite.getCrouching()
                 && sprite.getGameRules() != null
                 && sprite.getGameRules().playerMovement() != null
-                && sprite.getGameRules().playerMovement().movingCrouchThreshold() > 0;
+                && sprite.getGameRules().playerMovement().groundPose().movingCrouchThreshold() > 0;
         if (sprite.getMoveLockTimer() > 0 && !rollCrouchWriteAfterMoveLock) {
             return null;
         }

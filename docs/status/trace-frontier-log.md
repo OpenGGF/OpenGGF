@@ -109806,3 +109806,29 @@ ROM properties. It completed in 12.384 seconds: **5,109 errors / zero warnings /
 33,712 rows**, first row 116 Tails subpixel `$D000/$B800`, one failed JUnit test,
 zero errors/skips. Upstream reconciliation introduced no Java changes after
 `c84e63ab0`; both strict recordings remain red at the documented frontiers.
+
+
+## 2026-09-14 — KiS2 trace-readiness movement advances EHZ1 comparison
+
+- Candidate `ba3d9d592`, `.worktrees/kis2-trace-ready`; matched base
+  `5e3700a04` (Java tree unchanged from pre-task `ae767f351`).
+- Both commands: `python3 tools/testing/maven_queue.py -Dmse=off
+  -Dtest=TestKis2Ehz1TraceReplay test -B`, with absolute root S2 REV01 and S3K
+  ROM properties and separate fresh report directories. Both executed one test,
+  zero skips, 1,817 compared rows, zero warnings; both remain failing traces.
+- Base: 300 comparison errors, 91 bootstrap errors; first runtime error frame
+  284 rings expected 1 / actual 0. Candidate: 194 comparison errors, 91 bootstrap
+  errors; first runtime error remains the already-existing animation mismatch at
+  289 (`player_animation_id` expected $00 / actual $20, mapping $25 / $C0).
+  First runtime physics difference is now frame 1154 Y expected $022A / actual
+  $0223. The missed glide ring and frame-579 speed cap divergence no longer occur.
+- Bootstrap is unchanged: frame 0 `player_history.pos`, expected $0068 (slot $19),
+  actual $003F. Do not seed history from comparison rows. Further prelude and
+  wall/landing geometry work needs production ROM evidence and the new chain BK2.
+- Changes came from shipped-ROM movement/radius rules, not fixture-specific
+  patches. This is an improved failing trace, not complete KiS2 parity.
+
+- Reconciled candidate `50a4467e6` reran the same queued KiS2 EHZ1 command after
+  merging AIZ/HCZ/FBZ bootstrap and animation changes: unchanged 1,817 rows,
+  194 comparison errors, 91 bootstrap errors, zero warnings/skips (19.354 s).
+  The first bootstrap error and runtime frontier above remain unchanged.

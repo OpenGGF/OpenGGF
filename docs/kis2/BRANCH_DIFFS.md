@@ -413,3 +413,33 @@ objects by owning playable rather than retaining a stale recreated reference.
 
 Remaining scope and validation limits are in the linked completion plan and
 known-discrepancies entry, which supersede the earlier deferred-status prose.
+
+
+## Trace-readiness follow-up (2026-09-14)
+
+The [trace-readiness plan](../architecture/plans/2026-09-14-kis2-trace-readiness.md)
+tracks the movement, checkpoint, wind/object, scroll and menu/results follow-up,
+and supersedes the remaining historical status labels above.
+
+- `Obj79_SaveData` / `Obj79_LoadData`: preserve the checkpoint-saved ring and
+  extra-life bank, not live pre-death values. Both reload and rewind carry it.
+- `Sonic_TurnLeft/Right`: the steep-angle gate already existed; the missing
+  KiS2 difference was preserving d0's low inertia byte by probing angle in d1.
+- `Knuckles_GlideControl`, `.continueSliding`, `Knuckles_Climbing_Wall`: use
+  temporary 10/10 terrain radii, restore standing radii for touch, omit the
+  disabled idle floor probe; broader wall geometry remains inherited.
+- `SpecialCNZBumpers_Act1` zero sentinel bounds a reverse pointer scan; the
+  engine's bounded list already supplies the boundary. No fabricated marker
+  object is needed. `Obj26_Init` skips the respawn-table read for index zero;
+  it does not assign a respawn entry (correcting the historical table wording).
+- `Obj57_Main_SubA`'s corrected animation byte has no visible effect because
+  that state never calls AnimateBoss. `Obj34` signed comparisons are already
+  represented by Java's signed movement and clipped rendering.
+- CNZ slot face zero comes from chip $33B1F0 (512 bytes), selected by the LEA
+  at $32598C; other faces, reward values and slot timing stay unchanged.
+- `Obj6F_Knuckles` deletes on Got_Emerald=0 before all-seven heading offsets.
+  Review rejected applying those offsets to a failed attempt with seven emeralds.
+  Presentation progression must initialize independently of rendering for traces.
+- Attract `TitleScreen_Demo` cycles EHZ1/CPZ1/ARZ1/CNZ1 through normal level
+  lifecycle with Demo_number/Demo_mode_flag. Reusing the credits-demo owner was
+  rejected: its return state and input lifetime belong to credits, not title.

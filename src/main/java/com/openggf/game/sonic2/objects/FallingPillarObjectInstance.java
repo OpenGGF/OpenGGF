@@ -65,6 +65,9 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
 
     private static final LazyMappingHolder MAPPINGS = new LazyMappingHolder();
 
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable Obj23 grounded-squash profile; "
+            + "recreateForRewind passes this constructor configuration to the replacement instance")
+    private final boolean alwaysSquashesGroundedContact;
     private boolean isChild;
     private int x;
     private int y;
@@ -78,16 +81,21 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
     private boolean childSpawned;
 
     public FallingPillarObjectInstance(ObjectSpawn spawn, String name) {
-        this(spawn, name, false, spawn.y());
+        this(spawn, name, false);
+    }
+
+    public FallingPillarObjectInstance(ObjectSpawn spawn, String name, boolean alwaysSquashesGroundedContact) {
+        this(spawn, name, false, spawn.y(), alwaysSquashesGroundedContact);
     }
 
     @Override
     public FallingPillarObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new FallingPillarObjectInstance(ctx.spawn(), getName());
+        return new FallingPillarObjectInstance(ctx.spawn(), getName(), alwaysSquashesGroundedContact);
     }
 
-    private FallingPillarObjectInstance(ObjectSpawn spawn, String name, boolean isChild, int childY) {
+    private FallingPillarObjectInstance(ObjectSpawn spawn, String name, boolean isChild, int childY, boolean alwaysSquashesGroundedContact) {
         super(spawn, name);
+        this.alwaysSquashesGroundedContact = alwaysSquashesGroundedContact;
         this.isChild = isChild;
         this.x = spawn.x();
         this.baseX = spawn.x();
@@ -107,9 +115,15 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
         updateDynamicSpawn(x, y);
     }
 
+    @Override
+    public boolean groundedBottomContactAlwaysSquashes() {
+        // KiS2 SolidObject_InsideBottom tests ObjID_FallingPillar before y_vel.
+        return alwaysSquashesGroundedContact;
+    }
+
     public FallingPillarObjectInstance createChild() {
         int childY = spawn.y() + CHILD_Y_OFFSET;
-        return new FallingPillarObjectInstance(spawn, name, true, childY);
+        return new FallingPillarObjectInstance(spawn, name, true, childY, alwaysSquashesGroundedContact);
     }
 
     @Override

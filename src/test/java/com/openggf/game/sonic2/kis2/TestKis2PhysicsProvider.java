@@ -56,7 +56,7 @@ class TestKis2PhysicsProvider {
     }
 
     @Test
-    void rulesAreSonic2WithTheKis2LandingAndDuckFrameChanges() {
+    void rulesRetainSonic2DefaultsOutsideShippedLockOnChanges() {
         GameRules rules = provider.getRules();
         assertSame(Kis2Rules.RULES, rules);
         assertNotSame(GameRules.SONIC_2, rules);
@@ -66,13 +66,62 @@ class TestKis2PhysicsProvider {
         // KiS2 Touch_Rings / TouchResponse: cmpi.b #$9C,mapping_frame.
         assertEquals(0x9C, rules.objectInteraction().duckTouchBoxMappingFrame());
         assertEquals(0x4D, GameRules.SONIC_2.objectInteraction().duckTouchBoxMappingFrame());
-        // Everything else is stock Sonic 2.
-        assertSame(GameRules.SONIC_2.collision(), rules.collision());
+        // KiS2 ground-wall response stops either facing, but pushes only into
+        // the wall. Its airborne inside-bottom response clears inertia and
+        // always separates; barely-poking solids take the top/bottom branch.
+        var stockCollision = GameRules.SONIC_2.collision();
+        var collision = rules.collision();
+        assertTrue(collision.groundWallPushRequiresFacingIntoWall());
+        assertTrue(collision.air().bottomSolidHitClearsGroundSpeed());
+        assertTrue(collision.air().bottomSolidHitAlwaysSeparates());
+        assertFalse(collision.solidObjectBarelyPokingResolvesAsSide());
+        assertEquals(stockCollision.collisionModel(), collision.collisionModel());
+        assertEquals(stockCollision.groundWallCollisionEnabled(), collision.groundWallCollisionEnabled());
+        assertEquals(stockCollision.repeatedObjectRideGroundWallResponseDeferred(),
+                collision.repeatedObjectRideGroundWallResponseDeferred());
+        assertEquals(stockCollision.topSolidLandingAllowsZeroDist(), collision.topSolidLandingAllowsZeroDist());
+        assertEquals(stockCollision.air().rightWallHitContinuesIntoCeilingSeparation(),
+                collision.air().rightWallHitContinuesIntoCeilingSeparation());
+        assertEquals(stockCollision.air().leftWallHitContinuesIntoCeilingSeparation(),
+                collision.air().leftWallHitContinuesIntoCeilingSeparation());
+        assertEquals(stockCollision.air().probesResetStaleGroundMode(), collision.air().probesResetStaleGroundMode());
+        assertEquals(stockCollision.fullSolidBottomOverlapUsesCurrentYRadiusOnly(),
+                collision.fullSolidBottomOverlapUsesCurrentYRadiusOnly());
+        assertEquals(stockCollision.solidObjectOffscreenGate(), collision.solidObjectOffscreenGate());
+        assertEquals(stockCollision.solidObjectRequiresSidekickOnScreen(),
+                collision.solidObjectRequiresSidekickOnScreen());
+        assertEquals(stockCollision.sidekickPushBypassUsesGraceStatus(), collision.sidekickPushBypassUsesGraceStatus());
+        assertEquals(stockCollision.sidekickSuppressesFastLeaderTinyFollowNudge(),
+                collision.sidekickSuppressesFastLeaderTinyFollowNudge());
+        assertEquals(stockCollision.sidekickClearsStalePushVelocityBeforeGroundMove(),
+                collision.sidekickClearsStalePushVelocityBeforeGroundMove());
+        assertEquals(stockCollision.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(),
+                collision.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity());
+        assertEquals(stockCollision.rightWallDeepProbePreservesPenetration(),
+                collision.rightWallDeepProbePreservesPenetration());
+        assertEquals(stockCollision.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
+                collision.solidObjectKeepsOnObjWhenJumpedOffSameFrame());
+        assertEquals(stockCollision.advanceWaterLevelBeforePlayerPhysics(), collision.advanceWaterLevelBeforePlayerPhysics());
+        assertEquals(stockCollision.defaultCollisionLayoutYMask(), collision.defaultCollisionLayoutYMask());
+        assertEquals(stockCollision.layoutYMaskAppliesToAllLookups(), collision.layoutYMaskAppliesToAllLookups());
+        // The remaining rule families retain stock S2 behavior.
         assertSame(GameRules.SONIC_2.playerAnimation(), rules.playerAnimation());
         assertSame(GameRules.SONIC_2.playerCapability(), rules.playerCapability());
         assertSame(GameRules.SONIC_2.sidekickCpu(), rules.sidekickCpu());
         assertSame(GameRules.SONIC_2.powerUp(), rules.powerUp());
-        assertSame(GameRules.SONIC_2.ring(), rules.ring());
+        var stockRings = GameRules.SONIC_2.ring();
+        var rings = rules.ring();
+        assertTrue(rings.checkpointRestoresSavedRings());
+        assertFalse(stockRings.checkpointRestoresSavedRings());
+        assertEquals(stockRings.ringFloorCheckMask(), rings.ringFloorCheckMask());
+        assertEquals(stockRings.ringFloorCheckCounterPhase(), rings.ringFloorCheckCounterPhase());
+        assertEquals(stockRings.ringFloorProbeRequiresRenderFlag(), rings.ringFloorProbeRequiresRenderFlag());
+        assertEquals(stockRings.lostRingBoundaryChecksOnlyOnProbeCadence(), rings.lostRingBoundaryChecksOnlyOnProbeCadence());
+        assertEquals(stockRings.lostRingRenderVerticalMargin(), rings.lostRingRenderVerticalMargin());
+        assertEquals(stockRings.ringCollisionWidth(), rings.ringCollisionWidth());
+        assertEquals(stockRings.ringCollisionHeight(), rings.ringCollisionHeight());
+        assertEquals(stockRings.stageRingsUseObjectTouchCollection(), rings.stageRingsUseObjectTouchCollection());
+        assertEquals(stockRings.stageRingSweepUsesRawCameraWindow(), rings.stageRingSweepUsesRawCameraWindow());
         assertEquals(GameRules.SONIC_2.playerMovement().levelBoundary(),
                 rules.playerMovement().levelBoundary());
     }

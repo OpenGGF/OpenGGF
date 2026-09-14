@@ -94,6 +94,7 @@ final class LevelCheckpointCoordinator {
                 ctx.getCheckpointCameraX(), ctx.getCheckpointCameraY(),
                 ctx.getCheckpointIndex());
         if (checkpointState instanceof CheckpointState cs) {
+            cs.saveRingState(ctx.getCheckpointRings(), ctx.getCheckpointRingExtraLifeFlags());
             if (ctx.hasWaterState()) {
                 cs.saveWaterState(ctx.getCheckpointWaterLevel(), ctx.getCheckpointWaterRoutine());
             }

@@ -42,6 +42,8 @@ public class LevelLoadContext {
     private byte checkpointLrbSolidBit;
     private boolean hasCheckpointTimer;
     private long checkpointTimerFrames;
+    private int checkpointRings;
+    private int checkpointRingExtraLifeFlags;
 
     // Post-load assembly fields
     private boolean includePostLoadAssembly;
@@ -97,6 +99,8 @@ public class LevelLoadContext {
     /** ROM Saved_Timer / v_lamp_time / Saved_timer -- see CheckpointState. */
     public boolean hasCheckpointTimer() { return hasCheckpointTimer; }
     public long getCheckpointTimerFrames() { return checkpointTimerFrames; }
+    public int getCheckpointRings() { return checkpointRings; }
+    public int getCheckpointRingExtraLifeFlags() { return checkpointRingExtraLifeFlags; }
 
     // Post-load assembly accessors
 
@@ -203,8 +207,11 @@ public class LevelLoadContext {
             checkpointLrbSolidBit = 0;
             hasCheckpointTimer = false;
             checkpointTimerFrames = 0;
+            checkpointRings = checkpointRingExtraLifeFlags = 0;
             return;
         }
+        checkpointRings = state instanceof CheckpointState cs ? cs.getSavedRings() : 0;
+        checkpointRingExtraLifeFlags = state instanceof CheckpointState cs ? cs.getSavedRingExtraLifeFlags() : 0;
         hasCheckpoint = true;
         checkpointX = state.getSavedX();
         checkpointY = state.getSavedY();

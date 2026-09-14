@@ -3325,44 +3325,50 @@ the owning KiS2 routine in the catalogue):
   patch-backed main is entered, but a configured sidekick is still honoured
   as an intentional engine divergence; that sidekick shares the module-wide
   `PhysicsModifiers.KNUCKLES` underwater jump.
-- **Balance animation restart.** `Sonic_BalanceOnObjRight/Left` start the
-  balance script at `anim_frame = 4` when Knuckles turns toward the edge;
-  the engine models only the single-facing state.
-- **Glide/climb port deviations.** KiS2 toggles Knuckles' radii to `10/10`
-  around its glide collision calls, plays no grab/land/slide sounds (they do
-  not exist in Sonic 2), and lacks S3K's floor-below detach probe in
-  `Knuckles_Climbing_Wall`. The engine runs the S3K model (sounds resolve to
-  nothing on the S2 sound map; the detach probe is present).
-- **Bugfix blocks without an engine seam.** `Sonic_ChgJumpDir` air-speed cap
-  removal, `Obj01_CheckWallsOnGround` facing-gated push, `Sonic_TurnLeft/Right`
-  angle-band skid gate, `SolidObject_ChkBounds`/`SolidObject_InsideBottom`
-  contact changes, `WindTunnel` clamps and the `$420` tunnel coordinate,
-  `Obj7F_Action` pinning, `SpecialCNZBumpers_Act1`'s leading boundary marker
-  and `SwScrl_EHZ`'s bottom H-scroll lines follow stock Sonic 2.
-  `Touch_Boss` keeps the `$4D` duck frame in KiS2 but the engine's single
-  field applies `$9C` to bosses too.
-- **Checkpoint rings.** KiS2 `Obj79_LoadData` keeps `Ring_count` on respawn;
-  the engine clears rings per stock Sonic 2.
-- **Presentation follow-up (2026-09-14).** Chip-backed title animation, special-stage
-  player/HUD/mappings and ring targets, normal and special-stage results text,
-  ending and continue-player presentation are implemented. The title retains
-  the existing S2 SEGA logo; attract demos, changed cheat handling, level-select
-  PLC changes, exact VDP sprite-mask limits and CNZ slot pictures remain open.
-  Ending walking cadence and the special-stage results message lifecycle retain
-  the existing S2 owner's approximations; this work does not certify trace parity.
+- **Movement and contacts (2026-09-14 follow-up).** KiS2 now preserves air
+  superspeed, gates wall pushing on facing, keeps the full signed inertia word
+  for skid thresholds, restarts the balance script at index 4 on facing flips,
+  temporarily uses 10/10 radii during glide/climb terrain checks and restores
+  standing radii for later touch checks. Its idle climb omits the S3K floor-below
+  detach probe. Near-edge/inside-bottom solid contacts use the existing matching
+  rules; multi-sprite boss touch keeps $4D while normal duck touch uses $9C.
+  Wall-grab geometry and displacement detachment still inherit the shared glide
+  owner's approximations; these need route evidence, not a blanket parity claim.
+- **Zone mechanics.** Wind tunnels use the $420 first-tunnel minimum, clamp Up
+  movement and clear roll-jump/glide state. Held vines pin the player each pass;
+  propeller launch clears the same state; grounded falling-pillar contact can
+  squash before testing Y velocity. EHZ writes the final two scroll lines.
+  The CNZ boundary sentinel, debug-monitor missing respawn index and signed
+  title-card movement already have bounded/equivalent engine representations.
+- **Checkpoint rings.** Both tiers restore the ring count and extra-life flags
+  saved at checkpoint activation through death reload, special-stage return and
+  checkpoint rewind. New acts clear the bank; stock S2 keeps zero-ring respawn.
+- **Presentation.** Chip-backed title animation, special-stage character/HUD,
+  ring targets, results lettering, ending/continue player and CNZ Knuckles slot
+  pictures are implemented. KiS2's directional title code opens level select
+  with A+Start; its Super sound-test sequence survives new-game initialization.
+  Results headings move independently, including the all-emeralds Super message.
+  Attract demos still need a title-owned gameplay/input/return lifecycle; native
+  debug placement and its cheat remain absent. Level-select extra PLC work and
+  exact VDP sprite masking/debug sprite maps are not modeled. Special-stage
+  perfect-bonus progression and tally sound timing retain shared-owner gaps.
+  Results-mode rewind is absent; message-core snapshots alone do not supply it.
+  The formerly listed ending walk cadence is not a KiS2 gap: its forced
+  Ending_Routine=0 never takes that walk branch.
 - **Super Knuckles.** Chip palettes, sparse colour writes (2/3/5), 16-pass
-  transform freeze, $800/$18/$C0 movement, unchanged $600/$300 jump,
-  seeded ring drain, revert and controller rewind are implemented. The shared
-  air-ability path still requires release/repress: KiS2 also accepts a newly
-  pressed second jump button while the first remains held. The ROM demo-mode
-  gate has no corresponding engine demo path. Controller eligibility and activation are
-  exercised separately from palette-cycle tests; alternative-button input is not covered.
+  transform freeze, $800/$18/$C0 movement, unchanged $600/$300 jump, seeded ring
+  drain, revert and controller rewind are implemented. KiS2 now accepts a fresh
+  second jump-button edge while another remains held. The ROM demo-mode gate
+  still lacks an engine attract-demo owner. Complete powered-form route and
+  gameplay rewind coverage remains open.
 - **Trace coverage.** The EHZ1 KiS2 fixture exists; its current divergence is
   tracked in [the frontier log](trace-frontier-log.md). There are no passing
   end-to-end trace fixtures for these presentation or powered-form paths.
 
 The [completion plan and coverage matrix](../architecture/plans/2026-09-14-kis2-presentation-super.md)
-records exercised paths and inherited coverage gaps.
+records exercised paths and inherited coverage gaps. The
+[trace-readiness follow-up](../architecture/plans/2026-09-14-kis2-trace-readiness.md)
+records the subsequent movement, checkpoint, zone and presentation work.
 
 ### Rationale
 

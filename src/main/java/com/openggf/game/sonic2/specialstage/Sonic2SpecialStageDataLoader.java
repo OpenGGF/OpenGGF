@@ -76,6 +76,13 @@ public class Sonic2SpecialStageDataLoader {
         return com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.getFrame(frame);
     }
 
+    public com.openggf.game.sonic2.objects.SplitNameResultsMessages createResultsMessages(
+            boolean gotEmerald, boolean allEmeralds) { return null; }
+
+    public com.openggf.game.sonic2.objects.Sonic2SpecialStageResultsMappings.ResultsPiece[] getResultsObjectFrame(int frame) {
+        return getResultsFrame(frame);
+    }
+
     public void patchResultsPatterns(Pattern[] patterns, int vramBase, Pattern[] titleCard2) { }
 
     public int getBombPaletteLine() { return 1; }

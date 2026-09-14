@@ -37,8 +37,8 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    (short) 0,
-                    false,
+                    new PlayerGroundPoseRules((short) 0, false, false),
+                    new PlayerAirMovementRules(false, false, true, false),
                     false,
                     false,
                     false,
@@ -117,7 +117,8 @@ public record GameRules(
                     6,
                     6,
                     true,
-                    false
+                    false,
+                    false // checkpointRestoresSavedRings
             ),
             new ObjectInteractionRules(
                     false,
@@ -136,7 +137,8 @@ public record GameRules(
                     true,
                     false,
                     false,
-                    0x39 // duckTouchBoxMappingFrame: S1 fr_Duck ($39)
+                    0x39, // duckTouchBoxMappingFrame: S1 fr_Duck ($39)
+                    0x39 // bossDuckTouchBoxMappingFrame
             ),
             new SidekickCpuRules(
                     16,
@@ -185,8 +187,8 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    (short) 0,
-                    false,
+                    new PlayerGroundPoseRules((short) 0, false, false),
+                    new PlayerAirMovementRules(false, false, true, false),
                     false,
                     true,
                     false,
@@ -272,7 +274,8 @@ public record GameRules(
                     6,
                     6,
                     false,
-                    true
+                    true,
+                    false // checkpointRestoresSavedRings
             ),
             new ObjectInteractionRules(
                     false,
@@ -291,7 +294,8 @@ public record GameRules(
                     true,
                     true,
                     false,
-                    0x4D // duckTouchBoxMappingFrame: S2 SonAni_Duck second frame ($4D)
+                    0x4D, // duckTouchBoxMappingFrame: S2 SonAni_Duck second frame ($4D)
+                    0x4D // bossDuckTouchBoxMappingFrame
             ),
             new SidekickCpuRules(
                     16,
@@ -340,8 +344,8 @@ public record GameRules(
                     false,
                     false,
                     true,
-                    (short) 256,
-                    true,
+                    new PlayerGroundPoseRules((short) 256, false, false),
+                    new PlayerAirMovementRules(true, false, true, false),
                     true,
                     false,
                     true,
@@ -421,7 +425,8 @@ public record GameRules(
                     6,
                     6,
                     false,
-                    true
+                    true,
+                    false // checkpointRestoresSavedRings
             ),
             new ObjectInteractionRules(
                     true,
@@ -440,7 +445,8 @@ public record GameRules(
                     true,
                     true,
                     true,
-                    ObjectInteractionRules.NO_DUCK_TOUCH_BOX // S3K removed the duck touch-box shrink
+                    ObjectInteractionRules.NO_DUCK_TOUCH_BOX, // S3K removed the duck touch-box shrink
+                    ObjectInteractionRules.NO_DUCK_TOUCH_BOX // bossDuckTouchBoxMappingFrame
             ),
             new SidekickCpuRules(
                     48,

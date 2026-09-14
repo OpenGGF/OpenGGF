@@ -705,6 +705,20 @@ final class ObjectTouchResponseController {
         if (!isCandidateForActor(isSidekick, profile)) {
             return false;
         }
+        // Touch_Boss is the multi-sprite path. KiS2 retains its shipped $4D
+        // mapping test here although TouchResponse changes to Knuckles' $9C.
+        // fixBugs=0 tests mapping_frame; the fixed branch would test anim.
+        ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
+        if (!instaShieldActive && rules != null
+                && rules.bossDuckTouchBoxMappingFrame() != rules.duckTouchBoxMappingFrame()) {
+            int baseYRadius = Math.max(1, player.getYRadius() - 3);
+            playerY = player.getCentreY() - baseYRadius;
+            playerHeight = baseYRadius * 2;
+            if (rules.isBossDuckTouchBoxMappingFrame(player.getMappingFrame())) {
+                playerY += ObjectInteractionRules.DUCK_TOUCH_BOX_TOP_SHIFT;
+                playerHeight = ObjectInteractionRules.DUCK_TOUCH_BOX_HEIGHT;
+            }
+        }
         for (TouchResponseProvider.TouchRegion region : regions) {
             int flags = region.collisionFlags();
             if (flags == 0) {

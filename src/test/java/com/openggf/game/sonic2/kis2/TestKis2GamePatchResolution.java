@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -73,6 +74,8 @@ class TestKis2GamePatchResolution {
         Kis2GameModule patched = (Kis2GameModule) patch.apply(base, context);
 
         assertEquals(Kis2GameModule.Fidelity.TIER_ONE, patched.fidelity());
+        assertNotSame(base.getZoneFeatureProvider(), patched.getZoneFeatureProvider());
+        assertSame(patched.getZoneFeatureProvider(), patched.getZoneFeatureProvider());
         assertInstanceOf(Sonic2WaterDataProvider.class, patched.getWaterDataProvider());
         assertInstanceOf(Sonic2ContinueScreenProvider.class, patched.createContinueScreenProvider());
         assertInstanceOf(Sonic2ObjectArtProvider.class, patched.getObjectArtProvider());
@@ -94,6 +97,7 @@ class TestKis2GamePatchResolution {
         Kis2GameModule patched = (Kis2GameModule) patch.apply(base, context);
 
         assertEquals(Kis2GameModule.Fidelity.TIER_TWO, patched.fidelity());
+        assertSame(patched.getZoneFeatureProvider(), patched.getZoneFeatureProvider());
         Palette[] cpz = patched.getWaterDataProvider().getUnderwaterPalette(null,
                 Sonic2ZoneConstants.ROM_ZONE_CPZ, 1, PlayerCharacter.SONIC_ALONE);
         assertEquals(4, cpz.length);

@@ -23,6 +23,16 @@ import java.util.logging.Logger;
 public class Sonic2ScrollHandlerProvider implements ScrollHandlerProvider {
     private static final Logger LOGGER = Logger.getLogger(Sonic2ScrollHandlerProvider.class.getName());
 
+    private final boolean writesFinalTwoEhzLines;
+
+    public Sonic2ScrollHandlerProvider() {
+        this(false);
+    }
+
+    public Sonic2ScrollHandlerProvider(boolean writesFinalTwoEhzLines) {
+        this.writesFinalTwoEhzLines = writesFinalTwoEhzLines;
+    }
+
     private ParallaxTables tables;
     private boolean loaded = false;
 
@@ -60,7 +70,7 @@ public class Sonic2ScrollHandlerProvider implements ScrollHandlerProvider {
             cnzHandler = new SwScrlCnz(tables);
             cpzHandler = new SwScrlCpz(tables);
             dezHandler = new SwScrlDez(tables, bgCamera);
-            ehzHandler = new SwScrlEhz(tables);
+            ehzHandler = new SwScrlEhz(tables, writesFinalTwoEhzLines);
             htzHandler = new SwScrlHtz(tables, bgCamera);
             mczHandler = new SwScrlMcz(tables);
             mtzHandler = new SwScrlMtz(bgCamera);

@@ -4289,6 +4289,7 @@ public class GameLoop {
             }
 
             // Now enter special stage via the normal path
+            levelSelect.onGameplayStart();
             enterSpecialStage();
             LOGGER.info("Level select -> Special Stage");
 
@@ -4306,6 +4307,7 @@ public class GameLoop {
             levelSelect.reset();
 
             GameServices.gameState().startNewGameFromTitle(); // S1 LevSel_Level -> PlayLevel (sonic.asm:2270-2283)
+            levelSelect.onGameplayStart();
             // Fade out level select music
             audioManager.fadeOutMusic();
 

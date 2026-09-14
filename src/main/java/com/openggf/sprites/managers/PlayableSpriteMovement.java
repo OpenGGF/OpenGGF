@@ -1247,7 +1247,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// preserves the visible animation byte during move_lock, but its prior-frame
 		// crouch state records that ROM-owned write and is the native gate here.
 		boolean nativeMovingCrouch = movementRules != null
-				&& movementRules.movingCrouchThreshold() > 0
+				&& movementRules.groundPose().movingCrouchThreshold() > 0
 				&& wasCrouching
 				&& inputDown;
 		if (duckAnimId < 0
@@ -1459,7 +1459,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				jumpReleasedSinceJump = true;
 			}
 			// Shield ability: re-press jump after release while airborne (docs/skdisasm/sonic3k.asm:23397).
-			if (jumpReleasedSinceJump && inputJumpPress && isAirAbilityWindowOpen()) {
+			PlayerMovementRules movementRules = playerMovementRulesOrNull();
+			// KiS2 Sonic_JumpHeight -> Sonic_CheckGoSuper reads Ctrl_1_Press_Logical:
+			// a fresh B edge is valid while A remains held.
+			boolean acceptsOverlappingPress = movementRules != null
+					&& movementRules.air().airAbilityAcceptsOverlappingJumpPress();
+			if ((jumpReleasedSinceJump || acceptsOverlappingPress)
+					&& inputJumpPress && isAirAbilityWindowOpen()) {
 				if (com.openggf.sprites.playable.CharacterRuntimeHooks.activateAbility(
 						sprite, inputUp, inputDown, inputLeft, inputRight)) {
 					jumpReleasedSinceJump = false;
@@ -2015,8 +2021,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// Knuckles has slid off a ledge → enter fall state.
 		// Probe floor distance and snap. ROM's sub_11FD6 (Sonic_CheckFloor) probes
 		// both foot sensors, not just center -- see checkGlideFloorDist() javadoc.
+		if (glideUsesTemporaryCollisionRadii()) sprite.applyCustomRadii(10, 10);
 		var floorResult = checkGlideFloorDist(
 				sprite.getCentreX(), sprite.getCentreY(), sprite.getXRadius(), sprite.getYRadius());
+		if (glideUsesTemporaryCollisionRadii()) sprite.restoreDefaultRadii();
 		if (floorResult != null) {
 			if (floorResult.distance() >= 14) {
 				// Slid off a ledge — enter fall state
@@ -2098,6 +2106,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Animation cycles through frames 0xB7-0xBC every 4 frames of movement.
 	 */
 	private void updateWallClimb() {
+		// KiS2 Knuckles_Climbing_Wall temporarily uses 10/10 for terrain,
+		// then publishes 19/9 for object/ring touch checks after movement.
+		if (glideUsesTemporaryCollisionRadii()) sprite.applyCustomRadii(10, 10);
+		try {
+			updateWallClimbWithCollisionRadii();
+		} finally {
+			if (glideUsesTemporaryCollisionRadii() && sprite.getDoubleJumpFlag() == 4) {
+				sprite.restoreDefaultRadii();
+			}
+		}
+	}
+
+	private void updateWallClimbWithCollisionRadii() {
 		// Maintain X position against wall
 		sprite.setX(sprite.getWallClimbX());
 
@@ -2178,7 +2199,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// while up or down is held (sonic3k.asm:31343-31346 -- similar code already
 		// ran in those branches), and a negative probe result means Knuckles has
 		// reached the floor and detaches (.reachedFloor).
-		if (!inputUp && !inputDown) {
+		if (!inputUp && !inputDown && (playerMovementRulesOrNull() == null
+				|| playerMovementRulesOrNull().air().idleWallClimbChecksFloor())) {
 			// ROM probe point: x_pos, y_pos + 9, top_solid_bit (sonic3k.asm:31349-31352).
 			int probeY = sprite.getCentreY() + 9;
 			int floorDistance = romFloorProbeDistance(
@@ -2347,7 +2369,23 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Custom collision for glide state — probes walls and floor directly
 	 * using ObjectTerrainUtils rather than the generic airborne collision.
 	 */
+	private boolean glideUsesTemporaryCollisionRadii() {
+		PlayerMovementRules rules = playerMovementRulesOrNull();
+		return rules != null && rules.air().glideRestoresStandingRadiiAfterCollision();
+	}
+
 	private void doGlideCollision() {
+		// Knuckles_GlideControl in KiS2 restores standing radii after the
+		// collision pass; S3K retains 10/10 through the later touch pass.
+		if (glideUsesTemporaryCollisionRadii()) sprite.applyCustomRadii(10, 10);
+		try {
+			doGlideCollisionWithRadii();
+		} finally {
+			if (glideUsesTemporaryCollisionRadii()) sprite.restoreDefaultRadii();
+		}
+	}
+
+	private void doGlideCollisionWithRadii() {
 		int cx = sprite.getCentreX();
 		int cy = sprite.getCentreY();
 		int xRad = sprite.getXRadius();
@@ -2836,8 +2874,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// S3K uses movingCrouchThreshold ($100) as the roll speed threshold;
 		// below that speed, down enters crouch (handled in updateCrouchState).
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
-		int rollThreshold = (movementRules != null && movementRules.movingCrouchThreshold() > 0)
-				? movementRules.movingCrouchThreshold() : minStartRollSpeed;
+		int rollThreshold = (movementRules != null && movementRules.groundPose().movingCrouchThreshold() > 0)
+				? movementRules.groundPose().movingCrouchThreshold() : minStartRollSpeed;
 		if (Math.abs(gSpeed) < rollThreshold) return;
 		// ROM roll-entry tests the held controller bits directly, not the
 		// move_lock-filtered left/right movement inputs. In S3K, move_lock only
@@ -3092,7 +3130,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// S1/S2 (s1:01 Sonic.asm:736-750, s2.asm:36826-36840): unconditional cap at max.
 		// S3K (sonic3k.asm:23088-23121): preserves speeds already above max (undo+check).
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
-		boolean preserveSuperspeed = movementRules != null && movementRules.airSuperspeedPreserved();
+		boolean preserveSuperspeed = movementRules != null && movementRules.air().airSuperspeedPreserved();
 		if (!sprite.getRollingJump()) {
 			if (inputLeft) {
 				sprite.setDirection(Direction.LEFT);
@@ -4090,7 +4128,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// the skid threshold cmp.w. Preserve that high-byte/zero-low-byte compare
 		// so marginal counter-direction movement flips facing on the same frame
 		// as the ROM.
-		short compareSpeed = (short) (adjustedGSpeed & 0xFF00);
+		PlayerMovementRules movementRules = playerMovementRulesOrNull();
+		// KiS2 Sonic_TurnLeft/Right use d1 for the angle probe even with
+		// fixBugs=0 (gameRevision=3), preserving the low inertia byte in d0.
+		short compareSpeed = movementRules != null && movementRules.groundPose().skidThresholdPreservesLowByte()
+				? adjustedGSpeed : (short) (adjustedGSpeed & 0xFF00);
 		boolean crossesSkidThreshold = turningRight
 				? compareSpeed <= -SKID_SPEED_THRESHOLD
 				: compareSpeed >= SKID_SPEED_THRESHOLD;
@@ -4413,7 +4455,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// ROM: sonic3k.asm:23223-23240 (SonicKnux_Roll) — down pressed + |gSpeed| < $100
 		// + not left/right + not on object → enter duck animation.
 		PlayerMovementRules movementRules = playerMovementRulesOrNull();
-		short movingThreshold = (movementRules != null) ? movementRules.movingCrouchThreshold() : 0;
+		short movingThreshold = (movementRules != null) ? movementRules.groundPose().movingCrouchThreshold() : 0;
 		boolean nativePlayerSlotOnObject = sprite.isOnObject() || sprite.getOnObjectAtFrameStart();
 		int movingCrouchSpeed = preRollGroundSpeed != NO_PRE_FRICTION_SNAPSHOT
 				? preRollGroundSpeed
@@ -5126,6 +5168,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				boolean facingTowardEdge = !facingRight;
 				int balanceState;
 				if (singleFacingBalanceSet) {
+					restartBalanceOnFacingFlip(facingTowardEdge);
 					sprite.setDirection(Direction.LEFT);
 					balanceState = singleFacingBalanceState(precarious);
 				} else {
@@ -5149,6 +5192,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				boolean facingTowardEdge = facingRight;
 				int balanceState;
 				if (singleFacingBalanceSet) {
+					restartBalanceOnFacingFlip(facingTowardEdge);
 					sprite.setDirection(Direction.RIGHT);
 					balanceState = singleFacingBalanceState(precarious);
 				} else {
@@ -5165,6 +5209,20 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				sprite.setDirection(Direction.RIGHT);
 			}
 		}
+	}
+
+	private void restartBalanceOnFacingFlip(boolean facingTowardEdge) {
+		PlayerMovementRules rules = playerMovementRulesOrNull();
+		if (facingTowardEdge || rules == null || !rules.groundPose().balanceFacingFlipRestartsScript()
+				|| sprite.getSecondaryAbility() != SecondaryAbility.GLIDE) return;
+		// KiS2 Sonic_Balance[OnObj]Left/Right: anim=prev_anim=Balance,
+		// anim_frame=4, anim_frame_duration=0 when turning toward the edge.
+		int balance = sprite.resolveAnimationId(CanonicalAnimation.BALANCE);
+		if (balance < 0) return;
+		sprite.setAnimationId(balance);
+		sprite.getAnimationManager().publishPreviousAnimationId(balance);
+		sprite.setAnimationFrameIndex(4);
+		sprite.setAnimationTick(0);
 	}
 
 	private boolean usesSingleFacingBalance(PlayerAnimationRules animationRules) {
@@ -5347,6 +5405,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		PlayerAnimationRules animationRules = playerAnimationRulesOrNull();
 		if (usesSingleFacingBalance(animationRules)) {
+			restartBalanceOnFacingFlip(facingTowardEdge);
 			sprite.setDirection(isLeftEdge ? Direction.LEFT : Direction.RIGHT);
 			sprite.setBalanceState(singleFacingBalanceState(precarious));
 			return;

@@ -63,6 +63,10 @@ final class Kis2GameModule extends DelegatingGameModule {
     private Kis2ChipArt chipArt;
     private Kis2SpecialStageProvider specialStageProvider;
     private Kis2TitleScreen titleScreen;
+    private Kis2LevelSelect levelSelect;
+    private com.openggf.level.objects.ObjectRegistry objectRegistry;
+    private com.openggf.game.ScrollHandlerProvider scrollHandlerProvider;
+    private com.openggf.game.sonic2.Sonic2ZoneFeatureProvider zoneFeatureProvider;
     private com.openggf.game.DebugModeProvider debugModeProvider;
 
     Kis2GameModule(GameModule base, PatchContext context) {
@@ -99,6 +103,42 @@ final class Kis2GameModule extends DelegatingGameModule {
             objectArtProvider = new Sonic2ObjectArtProvider(artOverlays());
         }
         return objectArtProvider;
+    }
+
+    @Override
+    public com.openggf.game.rules.GameRules getRules() {
+        return Kis2Rules.RULES;
+    }
+
+    @Override
+    public com.openggf.level.objects.ObjectRegistry createObjectRegistry() {
+        if (objectRegistry == null) objectRegistry = new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(
+                new com.openggf.game.sonic2.Sonic2ObjectBehaviorProfile(true, true, true));
+        return objectRegistry;
+    }
+
+    @Override
+    public com.openggf.game.ScrollHandlerProvider getScrollHandlerProvider() {
+        if (scrollHandlerProvider == null) scrollHandlerProvider =
+                new com.openggf.game.sonic2.scroll.Sonic2ScrollHandlerProvider(true);
+        return scrollHandlerProvider;
+    }
+
+    @Override
+    public com.openggf.game.ZoneFeatureProvider getZoneFeatureProvider() {
+        if (zoneFeatureProvider == null) {
+            zoneFeatureProvider = new com.openggf.game.sonic2.Sonic2ZoneFeatureProvider(
+                    new com.openggf.game.sonic2.Sonic2WindTunnelProfile(0x420, true, true),
+                    kis2Image().map(Kis2SlotArt::new).orElse(null));
+        }
+        return zoneFeatureProvider;
+    }
+
+    @Override
+    public com.openggf.game.LevelSelectProvider getLevelSelectProvider() {
+        if (kis2Image().isEmpty()) return base().getLevelSelectProvider();
+        if (levelSelect == null) levelSelect = new Kis2LevelSelect();
+        return levelSelect;
     }
 
     @Override

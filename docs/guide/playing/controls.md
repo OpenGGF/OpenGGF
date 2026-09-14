@@ -185,3 +185,16 @@ controller button. Directions choose a command, Confirm executes it, and Back
 closes the palette. The palette includes placement, hierarchy/focus, library/filter,
 undo/redo, save/export, playtest and fresh-start commands. While it is open,
 underlying editor input and global playtest/fresh-start shortcuts are suppressed.
+
+## Knuckles in Sonic 2 title and sound-test codes
+
+With Knuckles selected as the Sonic 2 main character and the supported lock-on
+ROM dump available, enter **Up, Up, Up, Down, Down, Down, Left, Right, Left,
+Right** on the KiS2 title, then hold controller **A** and press **Start** to
+open level select. These are controller actions, using your configured bindings.
+
+On the sound-test row, A increments the sound number; B or C plays it. Play
+**1, 6, 7, 7, 7, 2, 1, 6** to enable all seven emeralds for the selected gameplay
+start. Super Knuckles still requires at least 50 rings and a fresh jump-button
+press while airborne. A second jump button can be pressed while the first is held.
+Native ROM debug placement and its code are not implemented.

@@ -63,6 +63,20 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
     public static final int SLOT_TILE_MIN = 0x0550;
     public static final int SLOT_TILE_MAX = 0x057F;
 
+    /** Supplies host-specific art without changing slot order or reward behaviour. */
+    public interface ArtPresentation {
+        byte[] apply(byte[] stockPictures);
+        default String faceName(int face) { return getFaceName(face); }
+    }
+
+    private final ArtPresentation artPresentation;
+
+    public CNZSlotMachineRenderer() { this(null); }
+
+    public CNZSlotMachineRenderer(ArtPresentation artPresentation) {
+        this.artPresentation = artPresentation;
+    }
+
     private ShaderProgram shader;
     private int textureId = 0;
     private boolean initialized = false;
@@ -122,6 +136,9 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
             return 0;
         }
 
+        if (artPresentation != null) {
+            slotData = artPresentation.apply(slotData);
+        }
         int offset = 0;
 
         // Convert 4bpp tiled data to linear indexed texture
@@ -353,7 +370,7 @@ public class CNZSlotMachineRenderer implements ZoneFeatureRenderer {
 
     @Override
     public String getDebugFrameName(int frameIndex) {
-        return getFaceName(frameIndex);
+        return artPresentation == null ? getFaceName(frameIndex) : artPresentation.faceName(frameIndex);
     }
 
     /**

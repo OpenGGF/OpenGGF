@@ -40,6 +40,15 @@ engineApiRange: ">=0.7.0 <0.8.0"
 Manifest `formatVersion: 1` is a separate wire-format version. It does not mean
 Mod API 1.x and must not be used to infer compiled-code compatibility.
 
+The KiS2 trace-readiness follow-up adds semantic movement and checkpoint-ring
+rules, the saved ring bank in checkpoint/load snapshots, separate boss duck-frame
+selection, and an explicit title-to-level-select action plus post-reset menu
+handoff. Movement policies now group air and ground-pose decisions separately.
+Candidate records use canonical constructors; owning factories pass stock defaults
+explicitly. These are
+changes to the unpublished candidate; version `0.7.0` remains unchanged and its
+normalized `0.7` signature pin is replaced in place.
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:

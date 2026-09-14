@@ -1440,7 +1440,8 @@ class TestSidekickCpuDespawnParity {
                 objectRules.solidPushReleaseWritesWalkRunAnimationWord(),
                 objectRules.solidPushReleaseSkipsWalkRunWhenRolling(),
                 objectRules.solidPushReleaseSkipsWalkRunWhenSpindashing(),
-                objectRules.duckTouchBoxMappingFrame())));
+                objectRules.duckTouchBoxMappingFrame(),
+                objectRules.bossDuckTouchBoxMappingFrame())));
         tails.setCpuControlled(true);
         tails.setCentreX((short) 0x02BC);
         tails.setCentreY((short) 0x0250);

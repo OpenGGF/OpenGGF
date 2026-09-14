@@ -12,26 +12,26 @@ public final class CrossGameRuleComposer {
     }
 
     /**
-     * Copies {@code base} with its player-movement and object-interaction rules
-     * replaced. Game patches use this to express shipped rule differences
+     * Copies {@code base} with its movement, interaction, collision and ring
+     * policies replaced. Game patches use this to express shipped rule differences
      * (for example the lock-on program's landing form) without positional
      * construction outside the owned rule factories.
      */
     public static GameRules withPlayerRules(GameRules base, PlayerMovementRules playerMovement,
-            ObjectInteractionRules objectInteraction) {
+            ObjectInteractionRules objectInteraction, CollisionRules collision, RingRules ring) {
         if (base == null) {
             throw new IllegalArgumentException("Base GameRules are required");
         }
-        if (playerMovement == null || objectInteraction == null) {
+        if (playerMovement == null || objectInteraction == null || collision == null || ring == null) {
             throw new IllegalArgumentException("Replacement rules are required");
         }
         return new GameRules(
                 playerMovement,
                 base.playerCapability(),
-                base.collision(),
+                collision,
                 base.playerAnimation(),
                 base.camera(),
-                base.ring(),
+                ring,
                 objectInteraction,
                 base.sidekickCpu(),
                 base.powerUp(),

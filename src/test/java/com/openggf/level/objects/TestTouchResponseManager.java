@@ -80,6 +80,31 @@ public class TestTouchResponseManager {
         SessionManager.clear();
     }
 
+    @Test
+    void patchedMultiSpriteTouchRetainsSeparateShippedDuckMappingTest() {
+        var interaction = mock(com.openggf.game.rules.ObjectInteractionRules.class);
+        when(interaction.duckTouchBoxMappingFrame()).thenReturn(0x9C);
+        when(interaction.bossDuckTouchBoxMappingFrame()).thenReturn(0x4D);
+        when(interaction.isDuckTouchBoxMappingFrame(0x9C)).thenReturn(true);
+        GameRules rules = new GameRules(GameRules.SONIC_2.playerMovement(),
+                GameRules.SONIC_2.playerCapability(), GameRules.SONIC_2.collision(),
+                GameRules.SONIC_2.playerAnimation(), GameRules.SONIC_2.camera(),
+                GameRules.SONIC_2.ring(), interaction, GameRules.SONIC_2.sidekickCpu(),
+                GameRules.SONIC_2.powerUp(), GameRules.SONIC_2.drowningBubble());
+        when(player.getGameRules()).thenReturn(rules);
+        when(player.getMappingFrame()).thenReturn(0x9C);
+        setupTableSize(8, 2, 2);
+        // Above the shifted normal duck box, inside the full multi-sprite box.
+        MockTouchObject ordinary = new MockTouchObject(160, 98, 0x08);
+        MockMultiRegionTouchObject multi = new MockMultiRegionTouchObject(
+                new TouchResponseProvider.TouchRegion(160, 98, 0x08));
+        objectManager.addDynamicObject(ordinary);
+        objectManager.addDynamicObject(multi);
+        objectManager.update(0, player, List.of(), 1);
+        assertFalse(ordinary.wasTouched);
+        assertTrue(multi.wasTouched);
+    }
+
     // ==================== Overlap Detection Tests ====================
 
     private void setupTableSize(int sizeIndex, int width, int height) {

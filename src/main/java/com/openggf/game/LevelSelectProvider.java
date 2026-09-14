@@ -7,10 +7,10 @@ import com.openggf.control.InputHandler;
  * Each game (Sonic 1, Sonic 2, etc.) provides its own implementation
  * with game-accurate menu layout, text, and navigation.
  */
-@com.openggf.game.ModApi
+@ModApi
 public interface LevelSelectProvider {
 
-    @com.openggf.game.ModApi
+    @ModApi
     enum State {
         /** Screen is not active */
         INACTIVE,
@@ -108,6 +108,9 @@ public interface LevelSelectProvider {
      * playing from the title screen) and performs no fade transition.
      * <p>Default implementation delegates to {@link #initialize()}.
      */
+    /** Applies menu-earned launch state after the gameplay session has been initialized. */
+    default void onGameplayStart() { }
+
     default void initializeFromTitleScreen() {
         initialize();
     }

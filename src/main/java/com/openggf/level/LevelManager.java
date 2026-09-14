@@ -2968,7 +2968,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         player.setLayer((byte) 0);
         playable.setHighPriority(false);
         playable.setPriorityBucket(RenderPriority.PLAYER_DEFAULT);
-        playable.setRingCount(0);
+        // Obj79_LoadData banks rings/1-up thresholds at checkpoint activation.
+        // The semantic rule keeps the KiS2 saved bank through a death reload;
+        // stock games retain their zero-ring start.
+        boolean restoreCheckpointRings = ctx.hasCheckpoint()
+                && activeGameModule().getRules().ring().checkpointRestoresSavedRings();
+        playable.setRingCount(restoreCheckpointRings ? ctx.getCheckpointRings() : 0);
+        if (levelGamestate != null) {
+            levelGamestate.setRingExtraLifeFlags(
+                    restoreCheckpointRings ? ctx.getCheckpointRingExtraLifeFlags() : 0);
+        }
         if (ctx.hasCheckpoint() && ctx.hasCheckpointSolidBits()) {
             playable.setTopSolidBit(ctx.getCheckpointTopSolidBit());
             playable.setLrbSolidBit(ctx.getCheckpointLrbSolidBit());
