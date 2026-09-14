@@ -20,11 +20,16 @@ import static org.lwjgl.opengl.GL20.glGetUniformi;
 public final class TilemapSamplingDiagnostics {
     private TilemapSamplingDiagnostics() { }
 
-    public static Map<String, byte[]> readTextures(TilemapGpuRenderer renderer, int atlasTexture) {
+    public static Map<String, byte[]> readTextures(TilemapGpuRenderer renderer, int atlasTexture, int paletteTexture) {
         return Map.of(
                 "foreground.rgba", readTexture(GL_TEXTURE_2D, renderer.foregroundTextureForDiagnostics(), GL_RGBA, 4),
                 "lookup.rgba", readTexture(GL_TEXTURE_1D, renderer.lookupTextureForDiagnostics(), GL_RGBA, 4),
-                "atlas.indexed", readTexture(GL_TEXTURE_2D, atlasTexture, GL_RED, 1));
+                "atlas.indexed", readTexture(GL_TEXTURE_2D, atlasTexture, GL_RED, 1),
+                "palette.rgba", readTexture(GL_TEXTURE_2D, paletteTexture, GL_RGBA, 4));
+    }
+
+    public static byte[] readIndexedAtlas(int texture) {
+        return readTexture(GL_TEXTURE_2D, texture, GL_RED, 1);
     }
 
     private static byte[] readTexture(int target, int texture, int format, int channels) {

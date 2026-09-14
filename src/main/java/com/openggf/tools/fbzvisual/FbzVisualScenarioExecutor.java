@@ -466,17 +466,52 @@ public final class FbzVisualScenarioExecutor {
         if (channel != spec.channel()) {
             throw new IllegalStateException("FBZ cadence channel disagrees with reviewed destination");
         }
+        session.stepFrames(1); // Production title/fade/setup admission, not a guessed visible LFC.
+        for (int wait = 0; ; wait++) {
+            Map<String, Object> state = session.captureState().values();
+            if (Boolean.FALSE.equals(state.get("title_card_overlay_active"))
+                    && Boolean.TRUE.equals(state.get("title_card_complete"))
+                    && Boolean.FALSE.equals(state.get("fade_active"))) break;
+            if (wait >= 240) throw new IllegalStateException("Cadence title/fade visibility did not clear");
+            session.stepFrames(1);
+        }
+        new FbzVisualFixture(port).applyVerified(plan.fixtureMutation());
+        GameServices.camera().updatePosition(true);
+        session.stepFrames(1);
+        int requestedIndex = amendment.naturalCadenceStartIndex(plan.checkpointId());
+        FbzVisualCadenceRomContract contract;
+        try {
+            contract = FbzVisualCadenceRomContract.read(
+                    com.openggf.data.RomByteReader.fromRom(GameServices.rom().getRom()),
+                    plan.zeroBasedAct() + 1, spec.destinationTile());
+        } catch (java.io.IOException failure) {
+            throw new IllegalStateException("Cannot read cadence ROM contract", failure);
+        }
+        if (requestedIndex == 0 || requestedIndex > contract.framePayloadHashes().size()
+                || requestedIndex < -1) throw new IllegalStateException("Invalid natural cadence cursor");
+        int maxWait = (contract.duration() + 1) * contract.framePayloadHashes().size();
+        int waited = 0;
+        while (stateInt(session.captureState(), "aniplc_timer_" + channel) != 0
+                || (requestedIndex > 0 && stateInt(session.captureState(), "aniplc_frame_" + channel) != requestedIndex)) {
+            if (waited++ >= maxWait) throw new IllegalStateException("Natural cadence cursor not reached within one ROM cycle");
+            session.stepFrames(1);
+        }
+        observations.add(Map.of("phase", "natural-cadence-selection", "requested_timer", 0,
+                "requested_index", requestedIndex, "ordinary_steps", waited,
+                "maximum_steps_one_rom_cycle", maxWait));
         FbzVisualStateProbe.Snapshot zeroStep = session.captureState();
         FbzVisualVisibilityVerifier.verifyState(zeroStep.values());
         observations.add(cadenceObservation("zero-step", channel, zeroStep, zeroStep));
         HiddenGlCaptureSession.CapturedImages previousImages = session.renderAndCapture();
         cadenceFrames.add(new CadenceFrame(0, "zero-step", zeroStep, zeroStep, previousImages,
                 FbzVisualCadenceCapture.hashDestinationPatterns(spec,
-                        GameServices.level().getCurrentLevel()), false));
+                        GameServices.level().getCurrentLevel()), false,
+                FbzVisualDestinationPixels.measure(spec, previousImages.nativeCrop(),
+                        session.captureGpuSamplingState(), session.captureGpuTextures())));
 
         boolean naturalExpiry = false;
         int captured = 1;
-        for (int i = 0; i < spec.resetTimer() + 4; i++) {
+        for (int i = 0; i < spec.resetTimer() + 6; i++) {
             FbzVisualStateProbe.Snapshot before = session.captureState();
             session.stepFrames(1);
             FbzVisualStateProbe.Snapshot after = session.captureState();
@@ -488,7 +523,9 @@ public final class FbzVisualScenarioExecutor {
                     previousImages.nativeCrop(), images.nativeCrop(), region);
             cadenceFrames.add(new CadenceFrame(captured - 1, "one-step", before, after, images,
                     FbzVisualCadenceCapture.hashDestinationPatterns(spec,
-                            GameServices.level().getCurrentLevel()), regionChanged));
+                            GameServices.level().getCurrentLevel()), regionChanged,
+                    FbzVisualDestinationPixels.measure(spec, images.nativeCrop(),
+                            session.captureGpuSamplingState(), session.captureGpuTextures())));
             previousImages = images;
             int timerBefore = stateInt(before, "aniplc_timer_" + channel);
             int frameBefore = stateInt(before, "aniplc_frame_" + channel);
@@ -496,7 +533,7 @@ public final class FbzVisualScenarioExecutor {
             if (timerBefore == 0 && frameAfter != frameBefore) {
                 naturalExpiry = true;
             }
-            if (naturalExpiry && captured >= 5) return;
+            if (naturalExpiry && captured >= 6) return;
         }
         throw new IllegalStateException("FBZ AniPLC channel " + channel
                 + " did not provide five natural-cadence frames spanning an expiry");
@@ -658,7 +695,7 @@ public final class FbzVisualScenarioExecutor {
                                FbzVisualStateProbe.Snapshot after,
                                HiddenGlCaptureSession.CapturedImages images,
                                String vramSha256,
-                               boolean reviewedVisibleRegionChanged) {
+                               boolean reviewedVisibleRegionChanged, Map<String, Object> destinationPixels) {
     }
 
     private enum Axis { X, Y }

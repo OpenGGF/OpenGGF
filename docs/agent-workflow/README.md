@@ -4,6 +4,8 @@ Support material to help agents implement OpenGGF objects/zones/trace-fixes with
 
 ## Tools
 
+- [FBZ cadence pixel comparator](../../tools/bizhawk/compare_fbz_cadence_pixels.py) pairs native VRAM/SAT/CRAM pixels with reconstructable actual-GPU source masks, retaining occlusions and unmatched source pixels; requires Pillow.
+
 - `FbzVisualCaptureTool` also records actual tilemap GPU uniforms and hash-bound descriptor, lookup and atlas readbacks, so camera-state acceptance can be separated from shader sampling defects. See [FBZ GPU sampling evidence](../architecture/research/s3k-zones/fbz-validation.md#gpu-sampling-and-retained-background-history-2026-09-14).
 
 - [FBZ native visual exporter](../../tools/bizhawk/capture_fbz_visual_references.py) captures ROM/BK2-backed framebuffers and RAM/cadence sidecars with an isolated BizHawk 2.11 configuration; see [native validation](../architecture/research/s3k-zones/fbz-validation.md#reproducible-linux-native-capture).

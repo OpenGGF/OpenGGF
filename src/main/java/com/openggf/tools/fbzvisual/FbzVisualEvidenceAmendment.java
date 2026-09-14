@@ -77,7 +77,8 @@ final class FbzVisualEvidenceAmendment {
                     cadenceStatuses.put(checkpoint, new CadenceReview(
                             series.path("review_status").asText(""),
                             series.path("series").asText(""),
-                            parseVisibleRegion(series.get("reviewed_visible_region"))));
+                            parseVisibleRegion(series.get("reviewed_visible_region")),
+                            series.path("engine_capture_intent")));
                 }
             }
         }
@@ -164,6 +165,22 @@ final class FbzVisualEvidenceAmendment {
         return review.region();
     }
 
+    FbzVisualScenarioDriver.ScenarioPlan applyCadenceCaptureIntent(FbzVisualScenarioDriver.ScenarioPlan plan) {
+        if (!"act1-aniplc".equals(plan.strategy())) return plan;
+        CadenceReview review = cadenceReviews.get(plan.checkpointId());
+        JsonNode intent = review == null ? null : review.captureIntent();
+        if (intent == null || !intent.isObject() || intent.path("source").asText().isBlank())
+            throw new IllegalStateException("Missing hash-bound ROM placement capture intent");
+        int act = intent.path("act").asInt(-1);
+        if (act != 1 && act != 2) throw new IllegalStateException("Invalid capture-intent act");
+        int x = requiredPositiveOrZero(intent, "player_x", true);
+        int y = requiredPositiveOrZero(intent, "player_y", true);
+        return new FbzVisualScenarioDriver.ScenarioPlan(plan.checkpointId(), act - 1,
+                plan.framesToAdvance(), plan.captureSupported(), plan.blocker(), plan.recipe(),
+                new FbzVisualFixture.Mutation(Map.of("zone", 4, "act", act),
+                        Map.of("player_x", x, "player_y", y)), plan.strategy());
+    }
+
     String cadenceSeriesName(String checkpoint) {
         requireApprovedCadenceSeries(checkpoint);
         return cadenceReviews.get(checkpoint).series();
@@ -226,6 +243,12 @@ final class FbzVisualEvidenceAmendment {
         }
     }
 
-    private record CadenceReview(String status, String series, VisibleRegion region) {
+    int naturalCadenceStartIndex(String checkpoint) {
+        CadenceReview review = cadenceReviews.get(checkpoint);
+        return review == null || review.captureIntent() == null ? -1
+                : review.captureIntent().path("natural_start_index").asInt(-1);
+    }
+
+    private record CadenceReview(String status, String series, VisibleRegion region, JsonNode captureIntent) {
     }
 }
