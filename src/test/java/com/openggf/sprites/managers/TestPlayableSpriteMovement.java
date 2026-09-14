@@ -4787,6 +4787,39 @@ public class TestPlayableSpriteMovement {
         }
 
         @Test
+        public void glideFloorKeepsTheTransformedAngleOfTheWinningFoot() throws Exception {
+                try (var terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                        terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(110, 210))
+                                        .thenReturn(new TerrainCheckResult(-2, (byte) 8, 1));
+                        terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(90, 210))
+                                        .thenReturn(new TerrainCheckResult(4, (byte) 0, 2));
+                        Method method = PlayableSpriteMovement.class.getDeclaredMethod(
+                                        "checkGlideFloorDist", int.class, int.class, int.class, int.class);
+                        method.setAccessible(true);
+                        TerrainCheckResult hit = (TerrainCheckResult) method.invoke(manager, 100, 200, 10, 10);
+                        assertNotNull(hit);
+                        assertEquals(-2, hit.distance());
+                        assertEquals(8, hit.angle(), "FindFloor applies the tile flips before returning its angle");
+                }
+        }
+
+        @Test
+        public void knucklesGlideSlideKeepsTheGlideAnimationId() throws Exception {
+                mockSprite.setAir(true);
+                mockSprite.setAngle((byte) 0);
+                mockSprite.setDoubleJumpFlag(1);
+                mockSprite.setForcedAnimationId(0x20);
+                Method method = PlayableSpriteMovement.class.getDeclaredMethod("glideHitFloor");
+                method.setAccessible(true);
+                method.invoke(manager);
+                assertEquals(3, mockSprite.getDoubleJumpFlag());
+                assertTrue(mockSprite.getAir());
+                assertEquals(0xCC, mockSprite.getMappingFrame());
+                assertEquals(0x20, mockSprite.getForcedAnimationId(),
+                                "Knuckles_BeginSlide only replaces the mapping frame");
+        }
+
+        @Test
         public void knucklesSlideGetUpRunsKnuxTouchFloorGroundingTail() throws Exception {
                 mockSprite.setAir(true);
                 mockSprite.setPushing(true);

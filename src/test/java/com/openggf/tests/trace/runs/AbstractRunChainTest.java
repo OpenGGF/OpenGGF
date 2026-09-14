@@ -1244,6 +1244,10 @@ abstract class AbstractRunChainTest {
         // matches the standalone AbstractTraceReplayTest ordering
         // (prepareConfiguration before its one and only fixture build).
         TraceReplaySessionBootstrap.prepareConfiguration(trace0, trace0.metadata());
+        // Match the standalone harness and production launcher: the recorded
+        // team selects built-in patches before the first level load. Merely
+        // registering Knuckles on the stock S2 module omits KiS2 rules/art.
+        com.openggf.tests.trace.TraceReplayTestSession.reopenForRecordedTeam(trace0.metadata());
         boolean recordedHardwareTiming =
                 TraceRunReplayWalker.hasDescriptorHardwareTimingStream(
                         descriptors);
