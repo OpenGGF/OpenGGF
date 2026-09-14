@@ -109832,3 +109832,21 @@ zero errors/skips. Upstream reconciliation introduced no Java changes after
   merging AIZ/HCZ/FBZ bootstrap and animation changes: unchanged 1,817 rows,
   194 comparison errors, 91 bootstrap errors, zero warnings/skips (19.354 s).
   The first bootstrap error and runtime frontier above remain unchanged.
+
+## 2026-09-14 — KiS2 user all-emeralds candidate capture
+
+- Movie `kis2-full-run-all-emeralds.bk2`: 268,301 input rows; scratch capture
+  has 36 segments, seven SS detours and 248,042 aligned physics rows.
+- On develop `ad68609e9`, queued `-Dmse=off -Dtest=TestKis2Ehz1TraceReplay
+  -Dopenggf.trace.candidate.dir=<candidate>/first-segment test -B` with verified
+  absolute S2/S3K ROM properties compared 3,180 rows: 466 errors, 91 bootstrap
+  errors, zero skips. First gameplay difference is row 156 `y_speed`,
+  expected `$0010`, actual `-$00F0`; history bootstrap mismatch remains.
+- `.worktrees/kis2-full-run` adds `TestKis2CompleteEmeraldRunChain`; queued
+  `-Dtest=TestKis2CompleteEmeraldRunChain -Dopenggf.trace.kis2.run.dir=<candidate>/full-run`
+  executed one test with zero skips, stopping before gameplay on
+  `trace_schema 5 segment omits dynamic-art capability`. No chain frontier
+  beyond manifest validation is claimed.
+- [Capture and prerequisite evidence](../architecture/research/trace/2026-09-14-kis2-full-run-candidate.md).
+  Candidate remains outside canonical fixtures; KiS2 converted-art DMA needs
+  explicit native and engine lifecycle support before valid chain publication.
