@@ -230,6 +230,10 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     @Override public boolean isPersistent() { return true; }
     @Override public SolidObjectParams getSolidParams() { return SOLID_PARAMS; }
     @Override public boolean isTopSolidOnly() { return true; }
+    @Override public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        // loc_533B8 -> loc_1E45A accepts only [-$10,-1], even for a grounded new contact.
+        return true;
+    }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public boolean seedsNewRideCarryFromPreUpdateX() { return true; }
     @Override public int getX() { return x; }

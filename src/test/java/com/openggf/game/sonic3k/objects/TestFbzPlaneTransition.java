@@ -78,6 +78,30 @@ class TestFbzPlaneTransition {
         assertEquals(0x2000, state.offsetY16_16());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"0,false", "1,true", "16,true", "17,false"})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void movingBackgroundTopContactRejectsExactSurface(int overlap, boolean lands) {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var controller = manager.createDynamicObject(FbzEndBossEventControlInstance::new);
+        controller.snapshotPreUpdatePosition();
+        var player = fixture.sprite();
+        player.setAir(false);
+        player.setRolling(false);
+        player.setCentreX((short) controller.getX());
+        player.setCentreY((short) (controller.getY() - 0x11 - player.getYRadius() - 4 + overlap));
+        player.setYSpeed((short) 0);
+        int beforeY = player.getCentreY();
+
+        manager.processImmediateInlineSolidCheckpoint(controller, player, java.util.List.of());
+
+        assertEquals(lands, manager.isRidingObject(player, controller));
+        assertEquals(lands, manager.hasObjectStandingBit(player, controller));
+        if (!lands) assertEquals(beforeY, player.getCentreY(),
+                "loc_533B8 calls SolidObjectTop: overlap outside [-$10,-1] performs no Y write");
+    }
+
     @Test
     void controllerInitialBoundsAndSolidContractMatchNative() {
         assertEquals(0x3C, FbzEndBossEventControlInstance.nativeCameraMinY(PlayerCharacter.SONIC_ALONE));
