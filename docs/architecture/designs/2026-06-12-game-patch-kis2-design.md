@@ -1,5 +1,12 @@
 # GamePatch Framework + Knuckles in Sonic 2 (Lock-On) — Design
 
+> **2026-09-14 presentation continuation.** The current implementation work and
+> validation matrix are in [the completion plan](../plans/2026-09-14-kis2-presentation-super.md).
+> It adds chip-backed title, special-stage/results, ending/continue-player and
+> Super Knuckles paths. Earlier missing/deferred status below is historical;
+> the known-discrepancies entry records remaining fidelity limits.
+
+
 > **2026-09-13 amendment (status and ROM premise).** Re-established per the 0.8
 > roadmap before scheduling implementation.
 >

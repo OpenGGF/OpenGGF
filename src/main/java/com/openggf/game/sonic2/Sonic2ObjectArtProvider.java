@@ -89,6 +89,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
     private final java.util.function.Supplier<Pattern[]> mainCharacterLifeIcon;
     /** Patch-supplied tile overwrites applied after the zone's PLC loads. */
     private final List<Sonic2ArtOverlays.SheetPatch> sheetPatches;
+    private final java.util.function.UnaryOperator<ObjectSpriteSheet> resultsSheetOverlay;
 
     /**
      * Creates a new Sonic2ObjectArtProvider.
@@ -119,6 +120,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
     public Sonic2ObjectArtProvider(Sonic2ArtOverlays overlays) {
         this.mainCharacterLifeIcon = overlays == null ? null : overlays.mainCharacterLifeIcon();
         this.sheetPatches = overlays == null ? List.of() : overlays.sheetPatches();
+        this.resultsSheetOverlay = overlays == null ? java.util.function.UnaryOperator.identity() : overlays.resultsSheet();
     }
 
     /**
@@ -129,6 +131,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         this.artLoader = new Sonic2ObjectArt(rom, reader);
         this.mainCharacterLifeIcon = null;
         this.sheetPatches = List.of();
+        this.resultsSheetOverlay = java.util.function.UnaryOperator.identity();
     }
 
     private void ensureArtLoader() throws IOException {
@@ -236,7 +239,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         registerSheet(ObjectArtKeys.GAME_OVER, artLoader.loadGameOverSheet());
 
         // === Results screen (separate namespace) ===
-        resultsSheet = artData.resultsSheet();
+        resultsSheet = java.util.Objects.requireNonNull(resultsSheetOverlay.apply(artData.resultsSheet()));
         resultsRenderer = new PatternSpriteRenderer(resultsSheet);
         sheets.put(ObjectArtKeys.RESULTS, resultsSheet);
         renderers.put(ObjectArtKeys.RESULTS, resultsRenderer);

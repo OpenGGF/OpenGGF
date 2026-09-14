@@ -46,4 +46,12 @@ public final class Kis2Physics {
             true,           // singleFacingBalance: KiS2 Sonic_BalanceOnObjRight/Left
             PhysicsProfile.SONIC_3K_KNUCKLES.onObjectBalanceShift()
     );
+    /** Knuckles_TurnSuper / Obj01_ChkShoes: $800/$18/$C0; Sonic_Jump stays $600. */
+    public static final PhysicsProfile SUPER_KNUCKLES = new PhysicsProfile(
+            (short) 0x18, (short) 0xC0, (short) 0x18, (short) 0x800,
+            KNUCKLES.jump(), KNUCKLES.slopeRunning(), KNUCKLES.slopeRollingUp(),
+            KNUCKLES.slopeRollingDown(), KNUCKLES.rollDecel(), KNUCKLES.minStartRollSpeed(),
+            KNUCKLES.minRollSpeed(), KNUCKLES.maxRoll(), KNUCKLES.rollHeight(),
+            KNUCKLES.runHeight(), KNUCKLES.standXRadius(), KNUCKLES.standYRadius(),
+            KNUCKLES.rollXRadius(), KNUCKLES.rollYRadius(), true, KNUCKLES.onObjectBalanceShift());
 }

@@ -166,8 +166,9 @@ class TestKis2HeadlessBoot {
      * chip's {@code Pal_BGND}, the underwater palette is the chip's
      * {@code Pal_CPZ_U} and the level art carries the chip patches.
      */
-    @Test
-    void withTheLockOnDumpTheBootRunsTierTwoWithChipLayoutsPalettesAndArt() throws Exception {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 426})
+    void withTheLockOnDumpTheBootRunsTierTwoWithChipLayoutsPalettesAndArt(int width) throws Exception {
         File s2File = RomTestUtils.ensureSonic2RomAvailable();
         File s3kFile = RomTestUtils.ensureSonic3kRomAvailable();
         var dump = Kis2TestRoms.lockOnDumpOrNull();
@@ -178,6 +179,7 @@ class TestKis2HeadlessBoot {
             assumeTrue(rom.open(s2File.getAbsolutePath()), "Configured S2 ROM must be readable");
             SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
             config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+            config.setConfigValue(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
             config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
             config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
             EngineContext injected = catalogueBackedContext(config);
@@ -225,7 +227,64 @@ class TestKis2HeadlessBoot {
             }
             assertInstanceOf(com.openggf.game.sonic2.continuescreen.Sonic2ContinueScreenProvider.class,
                     module.createContinueScreenProvider());
+            assertEquals(11, module.getObjectArtProvider().getSheet(
+                    com.openggf.level.objects.ObjectArtKeys.RESULTS).getFrame(0).pieces().size(),
+                    "the actual registered results sheet says KNUCKLES GOT");
+            var superController = assertInstanceOf(Kis2SuperStateController.class,
+                    module.createSuperStateController(team.mainSprite()));
+            team.mainSprite().setSuperStateController(superController);
+            team.mainSprite().setRingCount(50);
+            assertTrue(!superController.activateFromAirAbility(), "emerald gate remains required");
+            for (int i = 0; i < 7; i++) GameServices.gameState().markEmeraldCollected(i);
+            assertTrue(superController.activateFromAirAbility());
+            assertEquals(Kis2Physics.SUPER_KNUCKLES, team.mainSprite().getPhysicsProfile());
+            superController.update();
+            assertEquals(50, team.mainSprite().getRingCount(), "no immediate ring drain in KiS2");
+            for (int i = 1; i < 20; i++) superController.update();
+            var paletteRegistry = GameServices.paletteOwnershipRegistryOrNull();
+            if (paletteRegistry != null) {
+                Palette[] normal = new Palette[level.getPaletteCount()];
+                for (int i = 0; i < normal.length; i++) normal[i] = level.getPalette(i);
+                paletteRegistry.resolveInto(normal, null, GameServices.graphics(), normal[0]);
+            }
+            assertEquals(0x428, com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
+                    level.getPalette(0).getColor(2)), "chip cycle reaches the host palette through its owner");
+            superController.debugDeactivate();
+            superController.update();
+
+            assertInstanceOf(Kis2TitleScreen.class, module.getTitleScreenProvider());
+            assertTrue(module.getTitleScreenProvider() == module.getTitleScreenProvider());
+            var special = assertInstanceOf(Kis2SpecialStageProvider.class, module.getSpecialStageProvider());
+            assertTrue(special == module.getSpecialStageProvider(), "provider is session stable");
+            assertTrue(special.getManager() == module.getGameService(
+                    com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager.class));
+            assertTrue(special.getManager().getDebugSprites() == module.getGameService(
+                    com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug.class));
+            var debug = module.getDebugModeProvider().getSpecialStageDebugController();
+            debug.toggleAlignmentTestMode();
+            assertTrue(special.getManager().isAlignmentTestMode(), "debug commands target the live patched manager");
+            debug.toggleAlignmentTestMode();
+            for (int stage = 0; stage < 7; stage++) {
+                special.initializeStage(stage);
+                assertInstanceOf(Kis2SpecialStageDataLoader.class, special.getManager().getDataLoader());
+                assertEquals(stage, special.getManager().getCurrentStage());
+                replaySpecialStageWindow(special, special.rewindAdapter().orElseThrow());
+            }
+
         }
+    }
+
+    private static <T> void replaySpecialStageWindow(Kis2SpecialStageProvider provider,
+            com.openggf.game.rewind.RewindSnapshottable<T> adapter) {
+        // A short independent window in each auxiliary route exercises the
+        // actual manager and registered rewind owner without a long playthrough.
+        for (int i = 0; i < 160; i++) provider.update();
+        T before = adapter.capture();
+        for (int i = 0; i < 12; i++) provider.update();
+        var after = provider.getManager().captureComparisonState();
+        adapter.restore(before);
+        for (int i = 0; i < 12; i++) provider.update();
+        assertEquals(after, provider.getManager().captureComparisonState());
     }
 
     private static EngineContext injectedContext(SonicConfigurationService config, byte[] s3kBytes)

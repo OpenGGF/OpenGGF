@@ -374,6 +374,11 @@ public class Sonic2SpecialStageManager {
         this.graphicsManager = graphicsManager;
     }
 
+    /** Debug surface owned by this same stage manager, including injected ROM profiles. */
+    public Sonic2SpecialStageSpriteDebug getDebugSprites() {
+        return debugSprites;
+    }
+
     void setDiagnosticClockForTesting(DiagnosticClock diagnosticClock) {
         this.diagnosticClock = java.util.Objects.requireNonNull(diagnosticClock);
     }
@@ -963,6 +968,7 @@ public class Sonic2SpecialStageManager {
 
         // Update debug sprite viewer with all pattern bases
         debugSprites.setPlayerPatternBase(playerPatternBase);
+        debugSprites.setMainPlayerMappings(dataLoader::getMainPlayerFrame);
         debugSprites.setHudPatternBase(hudPatternBase, hudPatterns.length);
         debugSprites.setStartPatternBase(startPatternBase, startPatterns.length);
         debugSprites.setMessagesPatternBase(messagesPatternBase, messagesPatterns.length);

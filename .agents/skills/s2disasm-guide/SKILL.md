@@ -30,8 +30,9 @@ routine's pointer to the asset. Check the actual ROM filename and revision.
 
 ## Porting details
 
-S2/S3K mapping frames have a word piece count and 6-byte pieces (signed word X).
-Y offsets are signed bytes. Decode the size byte and flags using the existing
+Stock S2 mapping frames have a word piece count and 8-byte pieces, including
+the two-player tile word. KiS2 and S3K use 6-byte pieces without that word.
+Both use signed word X and signed byte Y offsets. Decode the size byte and flags using the existing
 mapping loader; sprite tiles are column-major. Do not reuse a parser for a
 different mapping format solely because the art looks similar.
 
