@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestS3kSlotGlassPriority {
 
     @Test
-    void runtimePromotesCentralSlotMachineGlassAndKeepsSlotPlayerLowPriority() {
+    void runtimePreservesLowPriorityGlassBehindSlotPlayer() {
         SonicConfigurationService.getInstance()
                 .setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         HeadlessTestFixture.builder()
@@ -38,17 +38,13 @@ class TestS3kSlotGlassPriority {
         runtime.bootstrap();
 
         assertTrue(runtime.isInitialized());
-        int liveHighPriorityCellsAfterBootstrap = countHighPriorityGlassTiles(level, true);
-        assertTrue(liveHighPriorityCellsAfterBootstrap > 20,
-                "Bootstrap should promote and retain high-priority glass cells in the live foreground tilemap");
-        int promotedCells = runtime.ensureForegroundGlassPriority();
-        assertFalse(promotedCells > 0,
-                "Foreground glass promotion should be idempotent after bootstrap"
-                        + " (secondPassPromoted=" + promotedCells + ")");
-        int liveHighPriorityCells = countHighPriorityGlassTiles(level, true);
-        assertTrue(liveHighPriorityCells > 20,
-                "The promoted live foreground tilemap should retain high-priority glass cells"
-                        + " (promoted=" + promotedCells + ", liveHigh=" + liveHighPriorityCells + ")");
+        assertFalse(hasAnyHighPriorityGlassTile(level, true),
+                "Bootstrap must preserve ROM glass priority so Sonic renders in front");
+        runtime.update(0);
+        new com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider()
+                .renderAfterBackground(GameServices.camera(), 0);
+        assertFalse(hasAnyHighPriorityGlassTile(level, true),
+                "The render hook must preserve low-priority glass after updates");
 
         assertTrue(GameServices.sprites().getSprite("sonic") instanceof S3kSlotBonusPlayer);
         AbstractPlayableSprite slotPlayer = (AbstractPlayableSprite) GameServices.sprites().getSprite("sonic");
