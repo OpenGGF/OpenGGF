@@ -70,7 +70,10 @@ class TestFbzVisualEvidenceToolingContract {
             assertTrue(series.get(index).path("series").asText().endsWith("-v2"));
             amendment.requireApprovedCadenceSeries(checkpoint).requireInside(320, 224);
             assertEquals(series.get(index).path("series").asText(), amendment.cadenceSeriesName(checkpoint));
-            assertTrue(series.get(index).path("approval_scope").asText().contains("pending"));
+            assertTrue(series.get(index).path("approval_scope").asText()
+                    .contains("frozen checkpoint PASS remain outside acceptance"));
+            assertEquals("independently-reviewed-bounded-acceptance",
+                    series.get(index).path("paired_source_pixel_acceptance").path("status").asText());
             assertEquals(6, series.get(index).path("native_candidate").path("frames").size());
         }
     }

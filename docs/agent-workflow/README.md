@@ -125,3 +125,5 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
   records their evidence and remaining coverage.
 
 - `tools/bizhawk/capture_fbz_boundary_fixture.lua`: declared-write native FBZ boundary6 pilot; records every redraw frame with RAM/VDP bytes and bounded failure, launched by the visual host with `--fixture-state` (2026-09-14 FBZ completion).
+
+- `FbzBoundaryFixtureCaptureTool` and [boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) reproduce declared native fixture setup through production frames and compare actual retained Plane-B descriptors, uploaded palettes and framebuffers; acceptance remains independently reviewed.

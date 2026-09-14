@@ -528,10 +528,10 @@ outdoor→indoor at `y <= $640`. Both active redraw handlers call
 `FBZ1_CheckBGChange` again, and `loc_52CD8` resets the delayed row count on every
 flip. Source inspection establishes the same equality overlap for all six
 Act1 boundaries and the Act2 `$A40` boundary; only boundary6 has this fresh
-native execution evidence. The pending followup in
+native execution evidence. The followup, pending at this pilot stage, in
 `fbz-visual-manifest-amendment-proposal.json` gives exact safe-side changes
 and separately corrects `$230` visible-art applicability to Act2. The frozen
-manifest is unchanged pending independent review.
+manifest was unchanged until the independent review recorded below.
 
 This pilot also exposes limits of the current engine boundary instrument:
 its logical redraw loop calls `updateAct1Frame` directly and renders only after
@@ -548,3 +548,73 @@ Instrument check (no ROM/emulator required):
 passed 2 scenarios: bounded alternating failure and completion, with the exact
 12 declared writes and neutral input. Lua syntax and Python host compilation
 also passed; no Maven or engine capture was run for this failed native pilot.
+
+
+### Boundary6 retained-plane correction and paired acceptance (2026-09-14)
+
+Independent root source review approved the minimal recipe amendment: use safe
+sides of all seven inclusive boundary comparisons, and place the `$230` cadence
+recipe in its ROM-backed Act2 owner. The stable checkpoint ID is retained.
+Active manifest SHA-256 is
+`BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8`;
+historical receipts retain their original `D13D037B...90DC40DD` binding. An
+amended recipe does not establish a checkpoint PASS.
+
+The reusable native fixture and production engine fixture now both start from
+the reviewed LFC35 entry, position at `$100/$63F`, and observe 80 ordinary
+gameplay advances before installing the declared event words and LFC zero.
+This lets native foreground layout-copy and camera owners establish matching
+history; no captured RAM is supplied to the engine. The pilot's apparent
+outdoor cloud mismatch was rejected as an attribution: its setup histories
+had different foreground layouts. The matched protocol instead isolated
+retained Plane-B corruption. `Setup_TileRowDraw`/`Setup_TileColumnDraw` subtract
+one before DBF, making their `$20`/`$10` arguments 32/16 blocks. The old FBZ
+copier wrote 33/17. Native vertical redraw also clips the delayed row against
+the masked camera window: outdoor `$100` is outside `$000..$0F0` and must
+consume the redraw step without writing. The production FBZ owner now follows
+both rules. A ROM-backed regression checks the entire retained ring before
+and after that skipped row, the next legal row, and two restore/replay cycles.
+
+Final external evidence under `${TASK_SCRATCH}/fbz-remaining-20260914/visual/`:
+`boundary6-native-safe-v6`, `boundary6-engine-safe-v4` and
+`boundary6-comparison-v4.json`. Both `forward-after-01` (LFC17, outdoor) and
+`after-01` (LFC34, indoor) have **46,080/46,080 exact same-coordinate gameplay
+pixels** in `[0,64,320,144]`, **2,048/2,048 retained Plane-B descriptors**, and
+**64/64 palette entries**. Camera, player and both VScroll words match. There
+is no actor exclusion. Native channels are converted by `/34`, engine channels
+by `round(channel*7/255)`; neither coordinates nor phases are fitted by image
+similarity. Each capture occurs one ordinary frame after redraw reaches normal.
+
+Root independently viewed both final native/engine pairs and reproduced these
+measurements with separate Pillow/struct code. Root accepts this **bounded
+world-presentation pair**, not the entire frozen visual gate. Each full frame
+still differs at 384 HUD pixels: score digits, the flashing ring-label glyph
+and lives/progression display (tile columns 3 at rows3/4, 8–12 at rows1/2,
+6–7 at row26). These HUD regions remain excluded. Before/mid-redraw samples,
+other boundaries, whole frames and remaining frozen checkpoints are not
+accepted by these two afterstates.
+
+Final native PNG hashes, forward then reverse:
+`ADACDEB590283CCB0EC829BD655588C3F80B08488B4F7C5B3478809D5FFCABFB`,
+`3A4000D3AD82B38040D3580CBA08149974F5C6CB0D491485BA8F4FD01380AFB0`.
+Engine PNG hashes:
+`C22A81F22EA8AD2E0B1EDB2EEB074FD64F64B1E5A41CA29D771C5E5BD45F6F28`,
+`D30B98060E84FD88A4A3F86E201F6B0F81445C356EBA95530952432000CC8EED`.
+Native saved state SHA-256:
+`0AC65D13CEF3273AB614E2B3ACE83F693A9F34F06E2A559B371752C1628E67A5`.
+Engine artifact SHA-256:
+`0D4DBF55238375AEF5C53410EAC8A6366D02D1DC0D39702E021DDDD32B1EED05`.
+The artifact includes integrated `917344e02` and CPU `aa52e3aef`, plus this
+retained-plane change. Final native/engine execution cost 4.772/1.602139 seconds.
+
+Focused validation through `tools/testing/maven_queue.py -Dmse=off`, with all
+three absolute ROM properties, selected `TestFbzRetainedPlaneNativeRows`,
+`TestFbzAct1RomRuntimeLifecycle`, `TestFbzEventsAct1`, `TestFbzAct1LayoutMutations`,
+`TestFbzPlaneTransition`, `TestFbzVisualManifestContract`,
+`TestFbzVisualEvidenceToolingContract`, `TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver` and
+`TestSonic3kDecodingUtils`: **105 passed, zero failures/errors/skips**, 51.414s.
+Final package completed in 19.676s. Lua fixture tests passed both scenarios;
+Python descriptor tests passed both cases, and an independent exhaustive
+65,536-word packed-descriptor roundtrip passed. This is focused validation;
+aggregate delivery checks belong to the parent task.

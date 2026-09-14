@@ -7,7 +7,7 @@
 local output = assert(os.getenv("OGGF_FBZ_VISUAL_OUTPUT"))
 local state = assert(os.getenv("OGGF_FBZ_FIXTURE_STATE"))
 local plan = dofile(assert(os.getenv("OGGF_FBZ_VISUAL_PLAN")))
-assert(plan.manifest_sha256 == "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD")
+assert(plan.manifest_sha256 == "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8")
 local allowed = {[0xB010]=true,[0xB014]=true,[0xEED2]=true,[0xEED4]=true,
                  [0xEED6]=true,[0xEEC2]=true,[0xFE04]=true}
 local log = assert(io.open(output.."/fixture.jsonl", "w"))
@@ -31,6 +31,7 @@ local function sample(phase,index)
  client.screenshot(stem..".png")
  dump("VRAM",65536,stem..".vram");dump("CRAM",128,stem..".cram");dump("VSRAM",128,stem..".vsram")
  local parts={string.format('"kind":"sample","phase":"%s","index":%d,"native_frame":%d',phase,index,emu.framecount())}
+ parts[#parts+1]=string.format('"player_routine":%d,"player_status":%d,"player_object_control":%d',mainmemory.read_u8(0xB005),mainmemory.read_u8(0xB02A),mainmemory.read_u8(0xB02E))
  for name,address in pairs(fields) do parts[#parts+1]=string.format('"%s":%d',name,mainmemory.read_u16_be(address)) end
  log:write("{"..table.concat(parts,",").."}\n");log:flush()
 end
@@ -45,11 +46,22 @@ client.invisibleemulation(false);client.speedmode(6400)
 assert(savestate.load(state));assert(mainmemory.read_u16_be(0xFE10)==0x0400)
 movie.stop()
 write(0xB010,0x100,"setup");write(0xB014,0x63F,"setup")
+-- Observe native tracker convergence before installing event/LFC recipe. No
+-- camera, status, control, velocity, or position rewrites during this wait.
+local initial_lfc=mainmemory.read_u16_be(0xFE04)
+local camera_steps=0
+while (mainmemory.read_u16_be(0xFE04)-initial_lfc)%65536<80 do
+ camera_steps=camera_steps+1;assert(camera_steps<=120,"native setup gameplay clock stalled")
+ step();sample("camera-wait",camera_steps)
+end
+sample("camera-prerequisite",0)
+assert(mainmemory.read_u16_be(0xB010)==0x100 and mainmemory.read_u16_be(0xB014)==0x63F,"player moved during native camera setup")
+assert(mainmemory.read_u8(0xB005)==2 and mainmemory.read_u8(0xB02E)==0,"native player is not ordinarily controlled")
 write(0xEED2,0x18,"setup");write(0xEED4,0,"setup");write(0xEED6,0,"setup")
 write(0xEEC2,0,"setup");write(0xFE04,0,"setup")
 sample("setup",0)
-local function cross(phase)
- write(0xB014,0x640,phase)
+local function cross(phase, coordinate)
+ write(0xB014,coordinate,phase)
  local entered=false
  for i=1,40 do
   step();sample(phase,i)
@@ -60,10 +72,11 @@ local function cross(phase)
  log:write('{"kind":"failure","phase":"'..phase..'","reason":"redraw-did-not-settle-within-40-native-frames"}\n');log:flush()
  return false
 end
-local forward = cross("forward")
+local forward = cross("forward",0x641)
+step();sample("forward-after",1)
 write(0xEEC2,0,"reverse-setup")
 write(0xEED4,0xFF00,"reverse-setup");write(0xEED6,0xFF00,"reverse-setup")
-local reverse = cross("reverse")
+local reverse = cross("reverse",0x63F)
 step();sample("after",1)
 log:write('{"kind":"verdict","status":"unaccepted","camera_setup":"native-tracker-observed-not-forced","acceptance":"requires-paired-review"}\n')
 log:close();client.exit()

@@ -48,7 +48,7 @@ def probe(path):
 
 def capture_plan(start_frame: int, window: int) -> str:
     channels = ("200", "208", "210", "230", "238")
-    return ('return {manifest_sha256="D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",'
+    return ('return {manifest_sha256="BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",'
             'bk2_frame_offset=237913,observation_limit_frames=' + str(window)
             + ',checkpoints={{id="fbz1-start-outdoor",bk2_frame=' + str(start_frame) + '}}'
             + ',cadence_series={' + ','.join('["aniplc-cadence-' + ch + '"]={' + str(start_frame) + '}'

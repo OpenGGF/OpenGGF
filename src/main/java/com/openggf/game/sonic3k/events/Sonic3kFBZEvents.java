@@ -180,16 +180,23 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             FbzZoneRuntimeState.S1DonationUpperLoopAssistState.ARMED;
     private FbzZoneRuntimeState.S1DonationSqueezeAssistState s1DonationSqueezeAssistState =
             FbzZoneRuntimeState.S1DonationSqueezeAssistState.ARMED;
+    // Setup_TileRowDraw/Setup_TileColumnDraw subtract one from d6 before
+    // DBF: helper inputs $20/$10 are counts of 32/16 blocks, not 33/17.
     private final StagedBackgroundPlaneRedrawController planeBRedraw =
             new StagedBackgroundPlaneRedrawController(new StagedBackgroundPlaneRedrawController.Surface() {
                 @Override public void copyRow(int sx, int sy, int dy) {
+                    // Draw_PlaneVertTopDown/SingleBottomUp clip before queuing.
+                    // FBZ outdoor callers explicitly pass d2=0 even while the
+                    // bobbing scroll produces a $10-aligned delayed position.
+                    int windowY = (backgroundOutdoor ? 0 : effectiveBackgroundY()) & 0xFF0;
+                    if (sy < windowY || sy > ((windowY + 0xF0) & 0xFF0)) return;
                     int dest = 0xE000 + ((dy >>> 3) & 0x1F) * 0x80;
                     retainedPlaneOwned = true;
-                    planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(sx, sy, dest, 0x21);
+                    planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(sx, sy, dest, 0x20);
                 }
                 @Override public void copyColumn(int sx, int sy, int dx) {
                     retainedPlaneOwned = true;
-                    planeBFrameTouched |= levelManager().copyBackgroundTileColumnsFromWorldToVdpPlane(sx, sy, dx, 1, 0x11);
+                    planeBFrameTouched |= levelManager().copyBackgroundTileColumnsFromWorldToVdpPlane(sx, sy, dx, 1, 0x10);
                 }
             });
 
@@ -430,7 +437,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             if (ownsActiveRuntime()) {
                 retainedPlaneOwned = true;
                 planeBFrameTouched |= levelManager().copyTileRowFromLayerToRetainedPlane(
-                        0, 0x2D00, sourceY, dest, 0x21);
+                        0, 0x2D00, sourceY, dest, 0x20);
             }
         }
         finishPlaneBFrame();
@@ -842,7 +849,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             int dest = 0xE000 + ((position >>> 3) & 0x1F) * 0x80;
             retainedPlaneOwned = true;
             planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(
-                    backgroundOutdoor ? 0x200 : 0, position, dest, 0x21);
+                    backgroundOutdoor ? 0x200 : 0, position, dest, 0x20);
         }
         lastRoundedBackgroundY = rounded;
     }
