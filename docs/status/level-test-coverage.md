@@ -172,3 +172,7 @@ FBZ integration verification (`f037a1218`, 2026-09-14): the full ordinary select
 FBZ hanging-handle follow-up (2026-09-14): both act matrices now track invisible
 horizontal grab-region rendering and the positive vertical descent check. This
 local fix does not certify the remaining native visual checkpoints.
+
+FBZ Act 2 early `$0DC0` elevator: the 2026-09-14 S1 local phase sweep and
+blocked/safe/crushed gameplay captures establish ordinary roll feasibility;
+the Act 2 matrix records its width, entry-history and permanent-regression limits.
