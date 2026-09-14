@@ -10,6 +10,25 @@ import static org.mockito.Mockito.when;
 
 /** Locked-on oracle for Obj_FBZ2Subboss (sonic3k.asm:148033-148695). */
 class TestFbzAct2Subboss {
+    @Test
+    void visibleChildrenRetainNativeArtPriorityIndependentlyOfSatBucket() {
+        var root = boss();
+        var children = java.util.List.of(
+                new Fbz2SubbossCornerChild(root, 0),
+                new Fbz2SubbossCornerChild(root, 2),
+                new Fbz2SubbossSolidSideChild(root, 0),
+                new Fbz2SubbossLaserChild(root),
+                new Fbz2SubbossMachineChild(root),
+                new Fbz2SubbossCharacterChild(root, com.openggf.game.PlayerCharacter.SONIC_AND_TAILS),
+                new Fbz2SubbossCharacterChild(root, com.openggf.game.PlayerCharacter.KNUCKLES));
+        for (var child : children) {
+            assertTrue(child.isHighPriority(), child.getClass().getSimpleName()
+                    + " must draw above high-priority terrain, as art_tile bit 15 requires");
+        }
+        assertEquals(1, children.getFirst().getPriorityBucket());
+        assertEquals(5, children.get(4).getPriorityBucket());
+    }
+
     @Test void defeatOwnsBothPhysicalArchivesUntilReadyAndRestoresTheirPendingClaims() throws Exception {
         var queue = mock(com.openggf.game.sonic3k.resources.S3kKosModuleQueue.class);
         var coordinator = mock(com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.class);

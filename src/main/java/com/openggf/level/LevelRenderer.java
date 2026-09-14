@@ -357,6 +357,9 @@ public final class LevelRenderer {
                 pendingFgWaterlineScreenY_high);
     });
 
+    private final GLCommand reversedRearHighCommand = new GLCommand(GLCommand.CommandType.CUSTOM,
+            (cx, cy, cw, ch) -> renderReversedRearHighTiles(false));
+
     private final GLCommand highPriorityFboCommand = new GLCommand(GLCommand.CommandType.CUSTOM, (cx, cy, cw, ch) -> {
         TilePriorityFBO tileFbo = lm.graphicsManager.getTilePriorityFBO();
         TilemapGpuRenderer tilemapRenderer = lm.graphicsManager.getTilemapGpuRenderer();
@@ -370,6 +373,9 @@ public final class LevelRenderer {
         glBlendEquation(GL_MAX);
         glBlendFunc(GL_ONE, GL_ONE);
 
+        if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
+            renderReversedRearHighTiles(true);
+        }
         applyForegroundScrollFeatures(tilemapRenderer);
         enableForegroundPerColumnVScroll(tilemapRenderer);
         tilemapRenderer.render(
@@ -525,7 +531,7 @@ public final class LevelRenderer {
     }
 
     static final class FrameCommand implements GLCommandable {
-        enum Kind { WATER, BG_ENSURE, BG_RENDER, FG_LOW, FG_HIGH, HIGH_FBO, BG_TILE, TEST }
+        enum Kind { WATER, BG_ENSURE, BG_RENDER, FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO, BG_TILE, TEST }
 
         private final FrameCommandPool pool;
         private final int[] viewport = new int[4];
@@ -635,7 +641,7 @@ public final class LevelRenderer {
                     setShort0(r.pendingBgVScrollData);
                     setShort1(r.pendingBgVScrollColumnData);
                 }
-                case FG_LOW, FG_HIGH, HIGH_FBO -> {
+                case FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO -> {
                     setScroll0(r.lm.parallaxManager.getHScrollForShader());
                     setShort0(r.lm.parallaxManager.getVScrollPerColumnFGForShader());
                 }
@@ -709,7 +715,7 @@ public final class LevelRenderer {
                     r.pendingBgVScrollView = short0Present ? short0View : null;
                     r.pendingBgVScrollColumnView = short1Present ? short1View : null;
                 }
-                case FG_LOW, FG_HIGH, HIGH_FBO -> {
+                case FG_LOW, FG_HIGH, REVERSED_REAR_HIGH, HIGH_FBO -> {
                     r.pendingFgHScrollView = scroll0Present ? scroll0View : null;
                     r.pendingFgDefaultVScrollView = short0Present ? short0View : null;
                 }
@@ -729,6 +735,7 @@ public final class LevelRenderer {
                     case BG_RENDER -> owner.bgRenderWithScrollCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case FG_LOW -> owner.fgTilemapPassLowCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case FG_HIGH -> owner.fgTilemapPassHighCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
+                    case REVERSED_REAR_HIGH -> owner.reversedRearHighCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case HIGH_FBO -> owner.highPriorityFboCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case BG_TILE -> owner.bgTilePassCommand.execute(cameraX, cameraY, cameraWidth, cameraHeight);
                     case TEST -> { }
@@ -1028,6 +1035,11 @@ public final class LevelRenderer {
         }
         lm.ensureForegroundTilemapData();
         enqueueForegroundTilemapPass(camera, 0);
+        if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
+            // VDP order: B-low, A-low, B-high, A-high. The normal background
+            // composite includes both priorities, so replay B-high above A-low.
+            lm.graphicsManager.registerCommand(frameCommandPool.obtain(this, FrameCommand.Kind.REVERSED_REAR_HIGH));
+        }
 
         // Generate collision debug overlay commands (independent of GPU/CPU path)
         DebugOverlayManager overlayManager = lm.overlayManager;
@@ -1221,7 +1233,16 @@ public final class LevelRenderer {
         float upperBandWrapHeightPx = 0.0f;
         float upperBandWrapWidthTiles = 0.0f;
         Camera camera = lm.camera;
-        if (lm.zoneFeatureProvider != null && lm.zoneFeatureProvider.isIntroOceanPhaseActive(lm.currentZone, lm.currentAct)) {
+        if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {
+            // This pass now reads the foreground world texture. A 512px
+            // background cache window would wrap camera X into unrelated
+            // foreground columns. Sample the physical Plane B HScroll word
+            // directly, just as the front pass samples Plane A's word.
+            bgPeriodWidthPixels = lm.cachedScreenWidth;
+            shaderScrollMidpoint = 0;
+            shaderExtraBuffer = 0;
+            perLineScrollActive = true;
+        } else if (lm.zoneFeatureProvider != null && lm.zoneFeatureProvider.isIntroOceanPhaseActive(lm.currentZone, lm.currentAct)) {
             // Per-scanline HScroll in the tilemap shader, matching VDP behavior.
             // Each pixel computes worldX = pixelX - hScroll[scanline] directly,
             // then looks up the correct tile from the full-width tilemap.
@@ -1306,7 +1327,8 @@ public final class LevelRenderer {
         // so we must shift the waterline by the same amount to keep it steady on screen
         int vOffset = actualBgScrollY - alignedBgY;
         int tilePassWorldOffsetY =
-                alignedBgY - lm.tilemapManager.getBackgroundTilemapSourceY();
+                alignedBgY - (currentAdvancedRenderFrameState.reversePlaneAssignment()
+                        ? 0 : lm.tilemapManager.getBackgroundTilemapSourceY());
         float fboWaterlineY = (float) ((waterLevelWorldY - camera.getY()) + vOffset);
 
         // Compute screen-space waterline for BG parallax shimmer
@@ -1622,6 +1644,29 @@ public final class LevelRenderer {
                         backdropOverride[0], backdropOverride[1], backdropOverride[2]);
             }
         }
+    }
+
+    /** High-priority rear-plane pixels participate in both VDP tile order and sprite occlusion. */
+    private void renderReversedRearHighTiles(boolean mask) {
+        TilemapGpuRenderer renderer = lm.graphicsManager.getTilemapGpuRenderer();
+        BackgroundRenderer background = lm.graphicsManager.getBackgroundRenderer();
+        Integer atlas = mask ? pendingFboAtlasId : pendingFgAtlasId_low;
+        Integer palette = mask ? pendingFboPaletteId : pendingFgPaletteId_low;
+        if (renderer == null || background == null || atlas == null || palette == null) return;
+        int width = mask ? pendingFboScreenW : pendingFgScreenW_low;
+        int height = mask ? pendingFboScreenH : pendingFgScreenH_low;
+        // The background buffer extracts the low, physical Plane B HScroll word.
+        background.uploadHScroll(pendingFgHScrollView);
+        renderer.enablePerLineScroll(background.getHScrollTextureId(), 224.0f, 0, 0, 0);
+        float worldY = backgroundVScroll(currentAdvancedRenderFrameState, 0);
+        float waterline = pendingFgWaterlineScreenY_low + pendingFgWorldOffsetY_low - worldY;
+        renderer.render(backgroundPlaneSource(currentAdvancedRenderFrameState), width, height,
+                mask ? 0 : viewportBuffer[0], mask ? 0 : viewportBuffer[1],
+                mask ? width : viewportBuffer[2], mask ? height : viewportBuffer[3],
+                0, worldY, lm.graphicsManager.getPatternAtlasWidth(), lm.graphicsManager.getPatternAtlasHeight(),
+                atlas, palette,
+                !mask && pendingFgUnderwaterPaletteId_low != null ? pendingFgUnderwaterPaletteId_low : 0,
+                1, pendingFgVerticalWrap, mask, !mask && pendingFgUseUnderwater_low, waterline);
     }
 
     private void enqueueForegroundTilemapPass(Camera camera, int priorityPass) {

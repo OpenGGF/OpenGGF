@@ -1,5 +1,13 @@
 # FBZ Act 2 coverage matrix
 
+Laser-room graphics follow-up (2026-09-14): the subboss child family retains
+native high sprite priority. The reversed-plane renderer reads the moving
+background and stationary foreground from their independent ROM coordinates.
+`TestFbzAct2Subboss` checks the child priority contract; `TestFbzBossPlanePixels`
+compares actual room-exit tile pixels with ROM layout/pattern/palette data.
+See the [graphics audit](../../audits/2026-09-14-fbz2-laser-room-graphics.md)
+for execution state and limits; the inherited full-route visual gaps remain open.
+
 **Known donor challenge — leave unchanged (user decision, 2026-09-14):** the
 right-to-left early `$0DC0` elevator crossing with S1 Sonic is feasible but
 requires a demanding run-up and roll. The tested faster approach has a five-frame

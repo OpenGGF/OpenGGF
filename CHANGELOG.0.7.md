@@ -83,7 +83,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   clock; lightning attraction avoids an extra ordinary-ring sweep. Sideways
   spikes release owned push state after their hurt callback, elevator cars
   retain their original Tails interaction bank, and the Act 2 subboss stops
-  movement on its laser-ready wait transition. The final capsule and button keep
+  movement on its laser-ready wait transition. Its beam, walls, and machine retain
+  the ROM's high sprite priority, and the room-exit plane swap uses each plane's
+  own horizontal scroll and terrain source, preserves rear-plane high priority,
+  and rebuilds the full terrain cache after rewind. The final capsule and button keep
   established standing contacts throughout the victory pose. Results retain boss-owned
   controls and camera bounds, and results creation waits for the whole physical
   KosM queue even on allocation retries. The exit door consumes collision in its own dispatch,

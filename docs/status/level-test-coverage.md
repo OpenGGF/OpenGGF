@@ -1,5 +1,10 @@
 # Level test coverage backlog
 
+FBZ2 laser-room graphics: the [Act 2 matrix](../architecture/validation/levels/s3k-fbz-act2.md)
+tracks native child sprite priority and an independent rendered-tile comparison
+at the room-exit plane swap. Execution and inherited visual gaps are recorded
+in the [graphics audit](../architecture/audits/2026-09-14-fbz2-laser-room-graphics.md).
+
 The [standard](../guide/contributing/level-test-standard.md) defines required coverage;
 the [delivery plan](../architecture/plans/2026-09-13-level-test-standardisation.md)
 defines the audit, pilots, reporting and migration work. This ledger starts the
