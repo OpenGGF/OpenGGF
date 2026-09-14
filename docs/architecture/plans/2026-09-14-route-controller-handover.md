@@ -744,3 +744,25 @@ same two guard failures. Its new loop-tail hook is implemented only by the S2
 title card, but its shared load-receipt call warrants bounded combined HCZ reload
 and title-card verification after reconciliation. A second full suite is not
 needed to repeat both completed broad runs.
+
+
+The KiS2 delivery was already running a full post-integration suite on
+`aa3ccf04a` (`20260914T201953Z-a4e26344`). Its worktree is clean and its complete
+code/test/tooling tree equals reconciled HCZ `a5c3d1dec`; only this audit document
+differs. The proposed focused command was canceled while queued, before Maven
+started, so the existing combined run supplies post-integration verification
+without another duplicate execution.
+
+
+Post-integration run `20260914T201953Z-a4e26344` completed on `aa3ccf04a` with
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 2c76300668aaab6a7a962782294f3f2b6f8ba67a --run`:
+**20,411 ordinary tests, 20,393 passes, zero failures/errors, the same 18 inspected
+skips**, 716.36 seconds; **667 guards, 665 passes, the same two failures,
+zero errors/skips**, 169.88 seconds. Exact guard messages and offenders match
+those above. All 62 maintained HCZ route/entry/rewind cases passed without skips,
+including 15 full routes (75.479 seconds), 15 route rewinds (55.363 seconds),
+and the production act-two reload. Shared title-card execution, native exit
+and special-stage return receipt regressions also passed without skips.
+This verifies the combined integrated code; subsequent HCZ audit edits are
+prose-only. No new or worsened failure blocks delivery. The native trace remains
+the unchanged red baseline documented above, not a claimed parity pass.
