@@ -630,7 +630,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 && cnzEvents.consumeSidekickBoundsPublishAfterCameraEasing();
         boolean lbzPublishPending = state != null
                 && state.isLbz1KnucklesBoundaryPublishPending();
-        if (!cnzPublishPending && !lbzPublishPending) {
+        boolean fbzPublishPending = fbzEvents != null
+                && fbzEvents.consumeSidekickBoundsPublishAfterCameraEasing();
+        if (!cnzPublishPending && !lbzPublishPending && !fbzPublishPending) {
             return;
         }
         if (camera == null) {
@@ -652,7 +654,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // DynamicLevelEvents explicitly publishes that post-easing value;
         // unrelated gradual resize owners retain their native cadence
         // (sonic3k.asm:28410-28443).
-        if (cnzPublishPending || boundsMovedPastSidekickMirror) {
+        if (cnzPublishPending || fbzPublishPending || boundsMovedPastSidekickMirror) {
             syncSidekickBoundsToCamera();
         }
     }
@@ -665,6 +667,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      */
     @Override
     public void requestSidekickBoundsPublishAfterCameraEasing() {
+        if (fbzEvents != null) {
+            fbzEvents.requestSidekickBoundsPublishAfterCameraEasing();
+        }
         if (cnzEvents != null) {
             cnzEvents.requestSidekickBoundsPublishAfterCameraEasing();
         }
