@@ -1430,20 +1430,32 @@ class TestFbzAct1RouteHeadless {
         return milestones;
     }
 
-    private static final class EncounterInputDriver {
+    static final class EncounterInputDriver {
         private final FbzMinibossInstance boss;
+        private final boolean leaveDuringNormalAlignment;
         private boolean evading;
         private boolean outwardSeen;
         private int impactAtExit;
 
-        private EncounterInputDriver(FbzMinibossInstance boss) {
+        EncounterInputDriver(FbzMinibossInstance boss) {
+            this(boss, false);
+        }
+
+        EncounterInputDriver(FbzMinibossInstance boss, boolean leaveDuringNormalAlignment) {
             this.boss = boss;
+            this.leaveDuringNormalAlignment = leaveDuringNormalAlignment;
         }
 
         RouteInput next(AbstractPlayableSprite player, ObjectManager objects) {
             boolean onPlunger = objects.getRidingObject(player) instanceof FbzMinibossPlungerChild;
             boolean normalFan = objects.activeObjectsOfType(FbzMinibossChainLink.class).stream()
-                    .anyMatch(link -> link.linkIndex() == 4 && intField(link, "stateOrdinal") == 9);
+                    .anyMatch(link -> {
+                        int state = intField(link, "stateOrdinal");
+                        // NORMAL_ALIGN through NORMAL_FAN: leave before the
+                        // accelerating later fans enter the plunger corridor.
+                        return link.linkIndex() == 4 && (state == 9
+                                || (leaveDuringNormalAlignment && state >= 6 && state <= 8));
+                    });
             boolean outwardActive = objects.activeObjectsOfType(FbzMinibossChainLink.class).stream()
                     .anyMatch(link -> {
                         int state = intField(link, "stateOrdinal");
@@ -1471,7 +1483,7 @@ class TestFbzAct1RouteHeadless {
         }
     }
 
-    private record RouteInput(int targetX, boolean jump) { }
+    record RouteInput(int targetX, boolean jump) { }
 
     private static final class RouteMilestones {
         int waitPlunger = -1;
