@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.kis2;
 
-import com.openggf.game.rules.CrossGameRuleComposer;
+import com.openggf.game.rules.CollisionRules;
+import com.openggf.game.rules.AirCollisionRules;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerLandingRules;
@@ -43,7 +44,7 @@ public final class Kis2Rules {
                 movement.inputAlwaysCapsGroundSpeed(),
                 movement.angleDiffCardinalSnap(),
                 movement.movingCrouchThreshold(),
-                movement.airSuperspeedPreserved(),
+                true, // Sonic_ChgJumpDir: undo acceleration when already above the cap.
                 movement.slopeResistStartsFromRest(),
                 movement.slopeRepelChecksOnObject(),
                 movement.slopeRepelUsesS3kSlipKick(),
@@ -58,7 +59,8 @@ public final class Kis2Rules {
                 movement.slopeResistAppliesAtZeroInertia(),
                 movement.tailsRollSpeedUsesEffectiveDecelQuarter(),
                 movement.waterVelocityChangeGatedByObjectControl(),
-                movement.landingWalkWriteSkippedWhileSpindashing());
+                movement.landingWalkWriteSkippedWhileSpindashing(),
+                true, false, true, true, true);
         ObjectInteractionRules interaction = base.objectInteraction();
         ObjectInteractionRules kis2Interaction = new ObjectInteractionRules(
                 interaction.bossHitNegatesGroundSpeed(),
@@ -78,6 +80,21 @@ public final class Kis2Rules {
                 interaction.solidPushReleaseSkipsWalkRunWhenRolling(),
                 interaction.solidPushReleaseSkipsWalkRunWhenSpindashing(),
                 DUCK_TOUCH_BOX_MAPPING_FRAME);
-        return CrossGameRuleComposer.withPlayerRules(base, kis2Movement, kis2Interaction);
+        CollisionRules c = base.collision();
+        // Obj01_CheckWallsOnGround / loc_1A6A8: collision stops inertia either
+        // way, but only a player facing into the wall acquires pushing status.
+        CollisionRules collision = new CollisionRules(c.collisionModel(), c.groundWallCollisionEnabled(),
+                true, c.repeatedObjectRideGroundWallResponseDeferred(), c.topSolidLandingAllowsZeroDist(),
+                new AirCollisionRules(true, true, c.air().rightWallHitContinuesIntoCeilingSeparation(),
+                        c.air().leftWallHitContinuesIntoCeilingSeparation(), c.air().probesResetStaleGroundMode()),
+                c.fullSolidBottomOverlapUsesCurrentYRadiusOnly(), c.solidObjectOffscreenGate(),
+                c.solidObjectRequiresSidekickOnScreen(), c.sidekickPushBypassUsesGraceStatus(),
+                c.sidekickSuppressesFastLeaderTinyFollowNudge(), c.sidekickClearsStalePushVelocityBeforeGroundMove(),
+                c.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(), c.rightWallDeepProbePreservesPenetration(),
+                false, c.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
+                c.advanceWaterLevelBeforePlayerPhysics(), c.defaultCollisionLayoutYMask(), c.layoutYMaskAppliesToAllLookups());
+        return new GameRules(kis2Movement, base.playerCapability(), collision, base.playerAnimation(),
+                base.camera(), base.ring(), kis2Interaction, base.sidekickCpu(), base.powerUp(),
+                base.drowningBubble(), base.dynamicArtDmaService());
     }
 }
