@@ -66,7 +66,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   to reload Act 2; results allocation and the later title-owned enemy-art batch
   retain their native dispatch boundaries. The carried title initializes on its
   next dispatch, player control restores the native idle pose, and camera easing
-  targets follow the Act 2 coordinate rebase.
+  targets follow the Act 2 coordinate rebase. Retained title children and camera
+  workers follow their original dispatch order. Chains reject hurt/dead grabs,
+  vertical cages keep their orbit separate from the player ground angle, and
+  magnetic platforms use the native ceiling and contact boundaries.
   Upright spikes use their animated FBZ art, while wall spikes retain the shared
   sideways artwork; both tile banks participate in renderer refresh. Foreground
   and background shaders retain fragment centres while scaling, preventing a

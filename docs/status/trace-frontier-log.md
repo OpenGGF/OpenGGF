@@ -109862,9 +109862,22 @@ read-only title observers removed afterward. Each complete replay traversed
 transition checks. The strict tests remain failed; no full-suite pass is claimed.
 See the dated FBZ completion plan for the submission and allocation evidence.
 
-FBZ remaining-items update at0cf340b56 plus retained-title candidate: the native
-parent/child title dispatch correction aligns Act2 camera handoff23011 and moves
-first main X/camera disagreement to23816. The combined chain/prison-frontier
-tree completes strict comparison with3030errors, first22311 `tails_x_speed`
-expected000C/actual0000; one-row main Y22868 remains. Command, focused14pass/0skip
-and66-second invocation are in the2026-09-14 completion plan. This is still red.
+FBZ remaining-items at `a9354be64` aligns retained title completion and the
+Act 2 camera handoff at frame 23,011. Later body/prison, push-release, chain
+hurt-entry and vertical-cage orbit fixes through `6583d90b3` produce **5,036
+errors**, first frame **22,868 main Y** (`$05A4` expected / `$05A8` actual),
+with the next main-position error at frame 26,451. The queued strict command
+above still completes 44,152 rows, zero warnings/skips and fails its strict
+assertion. The accompanying `TestFbzWireCages,TestFbzObjectRewind` selection
+passes 36 focused checks with zero skips; the full invocation takes 63 seconds.
+This is improved failing comparison, not full replay parity.
+
+The independent `TestS3kSonicTailsFbzSegmentTraceReplay` command uses the same
+queued Maven/profile/absolute-ROM setup and reaches **4,152 errors**, first
+frame **7,619 main x_speed**, with zero skips. Native control `$81`, secondary
+status `$02` and slot 96 `Obj_HyperSonicKnux_Trail_Main` identify Hyper Sonic;
+`Sonic_CheckTransform` / `Sonic_Transform` require seven Super Emeralds. The
+isolated segment metadata supplies no progression bootstrap contract, and the
+run walker keeps emerald metadata comparison-only. This prerequisite gap is
+not authority to hydrate gameplay from trace rows or patch FBZ acceleration.
+The independent frontier is attributed but remains red.
