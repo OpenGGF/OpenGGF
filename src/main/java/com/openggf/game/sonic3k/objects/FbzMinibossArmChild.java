@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -174,7 +175,8 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
             PlayableEntity queried = services().playerQuery().mainPlayerOrNull();
             if (queried != null) p1 = queried;
         }
-        if (p1 == null) return;
+        // loc_6F2E4 tests Player_1+$40 (jumping), not object_control at $2E.
+        if (p1 == null || (p1 instanceof AbstractPlayableSprite sprite && sprite.isJumping())) return;
         int playerX = p1.getCentreX();
         boolean facesPlayer = side == 0 ? playerX < boss.getX() : playerX >= boss.getX();
         if (facesPlayer && boss.claimOutwardAttack(this)) {
@@ -213,6 +215,9 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
         }
         angle = signedByte(angle + angleStep);
     }
+
+    int nativeXFixed() { return xFixed; }
+    int nativeYFixed() { return yFixed; }
 
     private boolean waitExpired() { return --timer < 0; }
 

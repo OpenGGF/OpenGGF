@@ -19,6 +19,53 @@ import static org.mockito.Mockito.*;
 
 @org.junit.jupiter.api.parallel.Isolated
 class TestFbzMinibossChildren {
+    @Test
+    void circularChainCarriesParentFractionsThroughAllFiveLinks() throws Exception {
+        var arm = FbzMinibossArmChild.forTest(
+                new FbzMinibossInstance(new ObjectSpawn(0x1000, 0x700, 0xAA, 0, 0, false, 0)), 0);
+        setInt(arm, "xFixed", 0x100080);
+        setInt(arm, "yFixed", 0x70080);
+        int expectedX = 0x100080;
+        int expectedY = 0x70080;
+        var links = arm.createLinksForTest();
+        for (int i = 0; i < links.length; i++) {
+            var link = links[i];
+            setState(link, "STAGGER");
+            setInt(link, "stagger", 10);
+            setInt(link, "angle", 0x20);
+            link.update(0, null);
+            // GetSineCosine($20) returns $B5 for both words; native shifts
+            // by four (ordinary links) or three (the terminal).
+            int displacement = 0xB5 * (i == 4 ? 32 : 16);
+            expectedX += displacement;
+            expectedY += displacement;
+            assertEquals(expectedX, getInt(link, "xFixed"));
+            assertEquals(expectedY, getInt(link, "yFixed"));
+            assertEquals(expectedX >> 8, link.getX());
+            assertEquals(expectedY >> 8, link.getY());
+        }
+    }
+
+    @Test
+    void outwardAttackWaitsWhilePlayerIsJumping() throws Exception {
+        var boss = new FbzMinibossInstance(new ObjectSpawn(0x1000, 0x700, 0xAA, 0, 0, false, 0));
+        var arm = FbzMinibossArmChild.forTest(boss, 0);
+        setState(arm, "PATROL");
+        setInt(arm, "timer", 0);
+        var player = mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        when(player.getCentreX()).thenReturn((short) 0xF00);
+        when(player.isJumping()).thenReturn(true);
+        arm.update(0, player);
+        assertEquals("PATROL", stateName(arm), "loc_6F2E4 tests Player_1+$40 before aiming");
+        assertFalse(boss.rootBit(FbzMinibossInstance.ROOT_OUTWARD_BUSY));
+
+        when(player.isJumping()).thenReturn(false);
+        setInt(arm, "timer", 0);
+        arm.update(1, player);
+        assertEquals("OUTWARD_ARMED", stateName(arm));
+        assertTrue(boss.rootBit(FbzMinibossInstance.ROOT_OUTWARD_BUSY));
+    }
+
     @ParameterizedTest
     @CsvSource({"0,-67,-65,false", "0,-66,-64,true", "0,-65,-64,true",
             "1,67,65,false", "1,66,64,true", "1,65,64,true"})
