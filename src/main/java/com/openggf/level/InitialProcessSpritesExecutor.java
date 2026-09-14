@@ -3,6 +3,8 @@ package com.openggf.level;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameModule;
 import com.openggf.game.ZoneFeatureProvider;
+import com.openggf.level.animation.AnimatedPatternManager;
+import com.openggf.level.animation.InitialLevelAnimationPass;
 import com.openggf.level.objects.InitialObjectDispatchScope;
 import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.managers.ProcessSpritesEpoch;
@@ -19,6 +21,7 @@ final class InitialProcessSpritesExecutor {
             ObjectManager objectManager,
             Camera camera,
             ZoneFeatureProvider zoneFeatureProvider,
+            AnimatedPatternManager animatedPatternManager,
             int frameCounter) {
         InitialFixedSstDispatcher fixed =
                 gameModule.createInitialFixedSstDispatcher(
@@ -29,6 +32,11 @@ final class InitialProcessSpritesExecutor {
         new InitialProcessSpritesCoordinator().execute(new InitialProcessSpritesContext(
                 new InitialProcessSpritesStages(dynamic, spriteManager, collision, fixed),
                 new ProcessSpritesEpoch(frameCounter, objectOrdinal, false)));
+        // S3K loc_6468: Process_Sprites / Render_Sprites / Animate_Tiles precede
+        // LevelLoop. Optional semantic ownership excludes palette and frame clocks.
+        if (animatedPatternManager instanceof InitialLevelAnimationPass initialAnimation) {
+            initialAnimation.runInitialLevelAnimationPass();
+        }
     }
 
     private static InitialDynamicSstDispatcher dynamicDispatcher(

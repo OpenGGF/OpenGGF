@@ -276,7 +276,6 @@ public final class TraceReplaySessionBootstrap {
         }
         OscillationManager.suppressNextFrames(
                 TraceReplayBootstrap.initialOscillationSuppressionFramesForTraceReplay(trace));
-        advanceAnimatedTilePreludeForTraceReplay(trace);
         // S3K level-gated starts deliberately return zero for both replay-only
         // prelude counts. Their first normal frame runs the ordinary production
         // playable dispatch, so Sonic, Tails, objects, input history, and
@@ -470,6 +469,9 @@ public final class TraceReplaySessionBootstrap {
             }
             gameplayMode.getLevelManager().consumePendingInitialProcessSpritesPass();
         }
+        // loc_6468 setup Animate_Tiles precedes any omitted LevelLoop handoff.
+        // Submit animation work in that order, after the initial object owners.
+        advanceAnimatedTilePreludeForTraceReplay(trace);
         alignObjectVblankCounterForReplayStart(trace);
         applyInitialRngSeedForReplay(trace.metadata());
         TraceReplayBootstrap.SnapshotReport snapshotReport =
@@ -1186,6 +1188,11 @@ public final class TraceReplaySessionBootstrap {
                 trace, preTraceOscOverride);
         for (int i = 0; i < preTraceOsc; i++) {
             OscillationManager.update(-(preTraceOsc - i));
+        }
+        // Setup consumes neither a movie row nor Level_frame_counter. Give the
+        // live launcher the same pre-loop owner/order as headless bootstrap.
+        if (GameServices.levelOrNull() != null) {
+            GameServices.levelOrNull().consumePendingInitialProcessSpritesPass();
         }
         advanceAnimatedTilePreludeForTraceReplay(trace);
         TraceReplayBootstrap.SnapshotReport snapshotReport =

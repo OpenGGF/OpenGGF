@@ -1046,6 +1046,45 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    public void sonic3kDeadPlayerRetainsNativeOffscreenOwnedPushRelease() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        ToggleOnScreenSolidObject object = new ToggleOnScreenSolidObject(
+                100, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager manager = buildManager(object);
+
+        TestPlayableSprite player = new TestPlayableSprite((short) 0, (short) 0);
+        player.useGameRules(GameRules.SONIC_3K);
+        player.setWidth(20);
+        player.setHeight(20);
+        player.setAir(false);
+        player.setXSpeed((short) 0x100);
+        player.setCentreX((short) 85);
+        player.setCentreY((short) 81);
+        player.setAnimationId(5);
+        player.getAnimationManager().update(0);
+
+        manager.update(0, player, List.of(), 0, false, true, false);
+        assertTrue(player.getPushing(), "the visible solid should own the native push latch");
+
+        player.setDead(true);
+        player.setAir(true);
+        player.setPushing(false); // Kill_Character clears the player bit, not the object's.
+        player.setAnimationId(0x18);
+        manager.update(0, player, List.of(), 1, false, true, false);
+        assertEquals(0x18, player.getAnimationId(), "visible dead-player check does not release the push");
+        object.withinSolidContactBounds = false;
+        manager.update(0, player, List.of(), 2, false, true, false);
+
+        assertTrue(player.getDead());
+        assertTrue(player.getAir());
+        assertFalse(player.getPushing());
+        assertEquals(0, player.getAnimationId(),
+                "S3K offscreen SolidObject_TestClearPush writes Walk to anim");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "the offscreen release writes Run to the adjacent prev_anim byte");
+    }
+
+    @Test
     public void sonic3kSolidPushReleasePreservesSpindashAnimation() {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         TestMultiPieceSolidObject object = new TestMultiPieceSolidObject(

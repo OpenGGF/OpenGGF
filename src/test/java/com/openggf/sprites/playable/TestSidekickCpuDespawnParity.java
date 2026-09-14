@@ -617,8 +617,14 @@ class TestSidekickCpuDespawnParity {
 
         assertInstanceOf(SonicRespawnStrategy.class, controller.getRespawnStrategy());
         assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState());
-        assertEquals(Sonic3kAnimationIds.DEATH.id(), sonicSidekick.getForcedAnimationId(),
-                "Kill_Character writes the death animation; Sonic sidekicks must not inherit Tails' fly animation");
+        assertEquals(Sonic3kAnimationIds.DEATH.id(), sonicSidekick.getAnimationId(),
+                "Kill_Character writes the death byte once");
+        assertEquals(-1, sonicSidekick.getForcedAnimationId());
+        sonicSidekick.setAnimationId(0);
+        sonicSidekick.publishRunAsPreviousAnimation();
+        controller.update(1);
+        assertEquals(0, sonicSidekick.getAnimationId(), "dead fall preserves a later solid's word write");
+        assertEquals(-1, sonicSidekick.getForcedAnimationId());
     }
 
     @Test

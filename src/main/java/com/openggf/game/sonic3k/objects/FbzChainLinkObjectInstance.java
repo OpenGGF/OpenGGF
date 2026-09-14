@@ -89,6 +89,10 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
         if(participants.get(i,2)==0)return;
         int timer=(byte)(participants.get(i,3)-1);participants.set(i,3,timer);if(timer>=0)return;participants.set(i,3,7);
         int remaining=participants.get(i,2),index=4-remaining;
+        // loc_3ABBE clears anim on every timed hand step; loc_3ABE4
+        // selects hanging ($14) only for the last step. These are BYTE
+        // writes and must leave prev_anim unchanged for the next animator.
+        p.setAnimationId(remaining == 1 ? 0x14 : 0);
         int phase=(participants.get(i,5)&4)==0?0:1;int dx=HAND_DELTAS[phase][index];if(participants.get(i,4)!=0)dx=-dx;
         NativePositionOps.addXPosPreserveSubpixel(p,dx);p.setMappingFrame(HAND_FRAMES[phase][index]);if(remaining==2)services().playSfx(Sonic3kSfx.GRAB.id);
         participants.set(i,2,remaining-1);if(participants.get(i,2)==0){participants.set(i,3,0);participants.set(i,5,participants.get(i,5)^4);if((spawn.subtype()&0x40)!=0){int rel=p.getCentreX()-spawn.x(),endpoint=(spawn.renderFlags()&1)!=0?-rangePixels+0x10:rangePixels-0x10;if(rel==endpoint)releaseInvalid(p,i);}int logicalInput=p.getLogicalInputState();if((logicalInput&(AbstractPlayableSprite.INPUT_LEFT|AbstractPlayableSprite.INPUT_RIGHT))!=0)updateHorizontal(p,i);}

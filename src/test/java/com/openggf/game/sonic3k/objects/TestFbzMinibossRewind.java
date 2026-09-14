@@ -20,6 +20,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
 class TestFbzMinibossRewind {
+    private static class MinibossMechanicsServices extends StubObjectServices {
+        @Override public com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue(){return null;}
+    }
+
     private static final Class<?>[] INITIAL_PREFIX = {
             FbzMinibossCoverChild.class,
             FbzMinibossCoverChild.class,
@@ -74,7 +78,7 @@ class TestFbzMinibossRewind {
                 new FbzMinibossPrisonChild(boss),
                 new FbzMinibossAnimalChild(boss, 2),
                 new FbzMinibossFragmentChild(boss, 4));
-        ObjectServices services = new StubObjectServices();
+        ObjectServices services = new MinibossMechanicsServices();
 
         for (AbstractObjectInstance child : children) {
             RewindRecreatable recreatable = assertInstanceOf(RewindRecreatable.class, child);
@@ -355,7 +359,7 @@ class TestFbzMinibossRewind {
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
         };
-        ObjectServices services = new StubObjectServices() {
+        ObjectServices services = new MinibossMechanicsServices() {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
             @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
@@ -382,7 +386,7 @@ class TestFbzMinibossRewind {
             @Override public short getHeight() { return 224; }
             @Override public boolean isVerticalWrapEnabled() { return false; }
         };
-        ObjectServices services = new StubObjectServices() {
+        ObjectServices services = new MinibossMechanicsServices() {
             @Override public ObjectManager objectManager() { return holder[0]; }
             @Override public Camera camera() { return camera; }
             @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }

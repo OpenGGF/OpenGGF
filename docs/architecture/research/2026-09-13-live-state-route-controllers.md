@@ -262,6 +262,22 @@ about four of the eleven obligations; it answers none of the seven REWIND
 spots (the largest missing block) and none of PRESENT or ORACLE. No per-act
 matrix closes on a controller alone.
 
+**AIZ1 correction (2026-09-14).** The reviewed pilot (`27dd957b3`)
+completes the native act on the fixture's pad program without hazard gates.
+A recorded pre-level prefix costs one derived offset: obtain it through
+`TraceReplayBootstrap.preLevelFrameCountForTraceReplay(trace)` and play row
+`r` on engine frame `r - prefix`. Waiting for the live intro handoff and
+immediately resuming the first non-neutral input moved the program 42 frames
+early in the rejected pilot. Preserve the recorded neutral rows after the
+prefix. A later width survey established one bounded exception: the live
+Knuckles exit can finish after the first non-neutral row in an 800px viewport.
+Hold that row until `Camera.isLevelStarted()`; never discard recorded neutral
+rows or resume early. `loc_61F10` tests the preceding render flag before
+`loc_61F22` releases control, so the wider exit legitimately takes longer.
+This test-side gate leaves native timing intact. See the
+[pilot evidence](../validation/2026-09-13-aiz1-route-pilot.md). This refines the
+cost model: establish alignment before attributing a failure to a hazard.
+
 **Risks.** Every adaptive gate is a place a genuine engine defect could be
 recovered from instead of reported, so gates need cited bounds and the
 short-lane checks stay the primary detectors. A failure deep in a long

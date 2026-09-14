@@ -375,11 +375,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public void updateFixedInLevelObjectsBeforeDynamicObjects() {
         var levelManager = GameServices.levelOrNull();
         if (fbzEvents != null && levelManager != null) {
-            // ROM LevelLoop increments Level_frame_counter, runs AnPal_FBZ,
-            // then Process_Sprites. ObjectManager receives this same +1 frame.
+            // LevelFrameStep already incremented Level_frame_counter before
+            // this prelude. AnPal_FBZ reads its low byte at the address
+            // Level_frame_counter+1 (sonic3k.asm:3371), not counter plus one.
             var fade = GameServices.fadeOrNull();
             fbzEvents.advanceMagneticPhase(
-                    levelManager.getFrameCounter() + 1,
+                    levelManager.getFrameCounter(),
                     fade != null && fade.isActive());
         }
         if (iczEvents != null) {
@@ -1165,6 +1166,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     public java.util.List<com.openggf.game.rewind.RewindSnapshottable<?>> extraRewindAdapters() {
         return java.util.List.of(
                 aizPreparedTransitionArt,
+                new com.openggf.game.sonic3k.objects.AizTreeRevealStaticAdapter(),
                 new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter(),
                 new Sonic3kLevelTriggerStaticAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterSkimStaticAdapter(),

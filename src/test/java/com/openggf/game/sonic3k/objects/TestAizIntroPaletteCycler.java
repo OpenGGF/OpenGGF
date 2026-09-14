@@ -24,6 +24,25 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TestAizIntroPaletteCycler {
 
     @Test
+    void rewindRestoresNonDefaultTimerAndFrameBeforeRepeatingCycle() {
+        var cycler = new AizIntroPaletteCycler();
+        cycler.init();
+        for (int i = 0; i < 10; i++) cycler.advance();
+        var before = cycler.captureRewindStateValue();
+        assertEquals(0x2A, before.paletteFrame());
+        assertEquals(3, before.paletteTimer());
+        for (int i = 0; i < 19; i++) cycler.advance();
+        var expected = cycler.captureRewindStateValue();
+        assertNotEquals(before, expected);
+        for (int cycle = 0; cycle < 2; cycle++) {
+            cycler.restoreRewindStateValue(before);
+            assertEquals(before, cycler.captureRewindStateValue());
+            for (int i = 0; i < 19; i++) cycler.advance();
+            assertEquals(expected, cycler.captureRewindStateValue());
+        }
+    }
+
+    @Test
     public void initialPaletteFrameIs0x24() {
         var cycler = new AizIntroPaletteCycler();
         cycler.init();

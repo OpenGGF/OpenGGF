@@ -129,3 +129,10 @@ of the post-broad corrections, not a second broad-suite pass. The four matched
 upstream guard failures and the trace divergence remain. Changed Markdown links,
 AGENTS/CLAUDE mirrors and `git diff --check` passed; consumed diagnostics were
 removed.
+
+Develop advanced to `42c797e54` during final validation with independently
+validated AIZ/HCZ routes and FBZ work. Integration retained both frontier-log
+entries (the only textual conflict). Shared solid death cleanup, initial animation
+bootstrap and animation ownership merged alongside KiS2 contact/rule changes.
+A bounded integration check covers these overlapping consumers and the KiS2
+surface; prior broad measurements above belong to their recorded commits.

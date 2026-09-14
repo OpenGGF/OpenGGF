@@ -54,6 +54,11 @@ public final class FbzMissileLauncherCompanionObjectInstance
   static int[] explosionOffsets() { return OFFSETS.clone(); }
   FbzMissileLauncherObjectInstance parentMember() { return parent; }
   int familySlot() { return familySlot; }
+  @Override public int getBalanceWidthPixels() {
+    // Obj_FBZMissileLauncher writes width_pixels=$20 to its solid
+    // companion (sonic3k.asm:80143); Sonic_Move reads that byte for balance.
+    return 0x20;
+  }
   public SolidObjectParams getSolidParams() {
     return new SolidObjectParams(0x2B, 8, 9);
   }

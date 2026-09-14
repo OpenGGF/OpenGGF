@@ -541,9 +541,14 @@ public class PlayableSpriteAnimation {
             sprite.setAnimationTick(0);
             return;
         }
+        var levelManager = sprite.currentLevelManagerIfAvailable();
+        var zoneFeatures = levelManager != null ? levelManager.getZoneFeatureProvider() : null;
+        boolean unreflectedNegative = negativeFlipType
+                && zoneFeatures instanceof com.openggf.game.internal.ZoneTumbleAnimationPolicy policy
+                && policy.negativeTumbleUsesUnreflectedAngle(facingLeft);
         if (!facingLeft) {
-            sprite.setRenderFlips(false, negativeFlipType);
-            int adjusted = negativeFlipType
+            sprite.setRenderFlips(false, negativeFlipType && !unreflectedNegative);
+            int adjusted = unreflectedNegative ? d0 : negativeFlipType
                     ? ((-d0 + 0x8F) & 0xFF)
                     : ((d0 + 0x0B) & 0xFF);
             int frame = adjusted / 0x16;
@@ -556,7 +561,7 @@ public class PlayableSpriteAnimation {
         int adjusted;
         boolean hFlip = true;
         boolean vFlip;
-        if (flipTurned) {
+        if (flipTurned || unreflectedNegative) {
             vFlip = false;
             adjusted = (d0 + 0x0B) & 0xFF;
         } else {

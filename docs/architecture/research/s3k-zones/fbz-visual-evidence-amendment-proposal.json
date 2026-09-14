@@ -14,16 +14,70 @@
     "scope": "FBZ1 level initialization before the first gameplay-visible capture frame",
     "note": "This is an initialization/order invariant only. It is deliberately not an assertion about the first accepted visible frame.",
     "script_order": [
-      {"channel": 0, "destination": "$210-$22F", "source": "ArtUnc_AniFBZ__0"},
-      {"channel": 1, "destination": "$230-$237", "source": "ArtUnc_AniFBZ__1"},
-      {"channel": 2, "destination": "$238-$247", "source": "ArtUnc_AniFBZ__2"},
-      {"channel": 3, "destination": "$200-$207", "source": "ArtUnc_AniFBZ__3"},
-      {"channel": 4, "destination": "$208-$20F", "source": "ArtUnc_AniFBZ__4"}
+      {
+        "channel": 0,
+        "destination": "$210-$22F",
+        "source": "ArtUnc_AniFBZ__0"
+      },
+      {
+        "channel": 1,
+        "destination": "$230-$237",
+        "source": "ArtUnc_AniFBZ__1"
+      },
+      {
+        "channel": 2,
+        "destination": "$238-$247",
+        "source": "ArtUnc_AniFBZ__2"
+      },
+      {
+        "channel": 3,
+        "destination": "$200-$207",
+        "source": "ArtUnc_AniFBZ__3"
+      },
+      {
+        "channel": 4,
+        "destination": "$208-$20F",
+        "source": "ArtUnc_AniFBZ__4"
+      }
     ],
-    "anim_counters": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "anim_counters": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
     "first_animation_tick": {
       "note": "Exact ROM script-order counters after the first animation phase; this is independently distinct from the later first fully visible gameplay frame.",
-      "anim_counters": [63, 1, 7, 1, 1, 1, 7, 1, 7, 1, 0, 0, 0, 0, 0, 0]
+      "anim_counters": [
+        63,
+        1,
+        7,
+        1,
+        1,
+        1,
+        7,
+        1,
+        7,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
     }
   },
   "accepted_first_visible_frame": {
@@ -152,7 +206,22 @@
         "source": "ArtUnc_AniFBZ__0",
         "destination": "$210-$22F",
         "reviewed_visible_region": null,
-        "review_status": "awaiting-fresh-independent-review"
+        "review_status": "awaiting-fresh-independent-review",
+        "cadence_expectation": "stable-art-counter-cycle",
+        "rom_evidence": {
+          "owning_routine": "AniPLC_FBZ1 (sonic3k.asm lines 55812-55816)",
+          "table_rom_offset": "0x028906",
+          "declaration_rom_offset": "0x028908",
+          "declaration_bytes_hex": "3F0B69C0420002200000",
+          "source_rom_offset": "0x0B69C0",
+          "frame_source_tile_offsets": [
+            0,
+            0
+          ],
+          "duration": 63,
+          "native_observation": "BK2 237976 timer zero; 237977 timer63/index2; destination VRAM SHA256 remains unchanged through237981, as expected for identical source offsets."
+        },
+        "required_evidence": "Visible placed destination tile region, stable region/VRAM across natural timer expiry and index advance, exact ROM source identity. Unrelated cloud motion cannot satisfy the region proof."
       },
       {
         "checkpoint": "fbz1-aniplc-230",
@@ -161,7 +230,31 @@
         "source": "ArtUnc_AniFBZ__1",
         "destination": "$230-$237",
         "reviewed_visible_region": null,
-        "review_status": "awaiting-fresh-independent-review"
+        "review_status": "awaiting-fresh-independent-review",
+        "placement_applicability": {
+          "act": 2,
+          "status": "approved-applicability-correction-pending-paired-pixels",
+          "reason": "The shared ROM blocks containing tiles $230-$237 are absent from both original Act1 layout planes. Act2 foreground places these blocks. The Act1 upload schedule remains real but has no visible original-layout destination.",
+          "blocks_rom_offset": "0x194400",
+          "chunks_rom_offset": "0x1974A2",
+          "block_ids": [
+            397,
+            398,
+            399,
+            400
+          ],
+          "chunk_ids": [
+            "0x1B",
+            "0x48",
+            "0xB1",
+            "0xC3",
+            "0xCB"
+          ],
+          "original_act1_layout_placements": 0,
+          "original_act2_foreground_layout_placements": 33,
+          "candidate_world_placement": "x=$880,y=$680-$800",
+          "acceptance": "Use native Act2 placement pixels with channel1 ROM source/counter identity; this does not certify the old Act1 checkpoint or modify the frozen manifest."
+        }
       },
       {
         "checkpoint": "fbz1-aniplc-238",
@@ -183,7 +276,7 @@
       "destination VRAM bytes SHA-256",
       "raw framebuffer and 320x224 crop SHA-256"
     ],
-    "visibility_gate": "Each accepted series must contain at least two distinct native-crop PNG hashes and a reviewed pixel region whose visible change corresponds to the recorded channel advance. Counter-only or VRAM-only evidence is insufficient; unrelated palette/fade/title pixels do not count."
+    "visibility_gate": "For changing-art channels, require at least two distinct native-crop hashes plus a reviewed destination-tile region changing after the recorded queued transfer. Act1 channel0 ($210-$22F) deliberately references source offsets[0,0]: require stable destination VRAM and stable placed-art region across the counter cycle instead. Moving clouds, palette/fade/title pixels do not prove either condition. All series remain pending independent review."
   },
   "required_tooling_changes_before_recapture": [
     "The candidate scanner must not treat coordinate/RAM equality during a title card as capture-eligible visual evidence.",

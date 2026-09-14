@@ -23,6 +23,9 @@ import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
+import java.io.IOException;
+import java.util.logging.Logger;
+import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 
 /** Locked-on S3KL object {@code $AA}, {@code Obj_FBZMiniboss}. */
 public final class FbzMinibossInstance extends AbstractObjectInstance
@@ -201,17 +204,25 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         defeated = true;
         rootHitPending = false;
         phaseOrdinal = Phase.DEFEAT_WAIT.ordinal();
+        // loc_6F9DE tail-calls BossDefeated_StopTimer, which falls through
+        // into BossDefeated: $2E=$3F and HUD_AddToScore(d0=100).
+        // Native score units are tens of displayed points (sonic3k.asm:17645,
+        // 180814-180829), so the engine awards 1000 points exactly once.
+        timer = 0x3F;
         if (tryServices() != null) {
             if (services().levelGamestate() != null) services().levelGamestate().pauseTimer();
-            if (services().gameState() != null) services().gameState().setBossDefeatedFlag(true);
+            if (services().gameState() != null) {
+                services().gameState().setBossDefeatedFlag(true);
+                services().gameState().addScore(1000);
+            }
             if (services().objectManager() != null) spawnChild(() -> new FbzMinibossExplosionController(this));
         }
     }
 
     private void updateDefeatWait() {
-        // loc_6EF88 inherits the already-negative Obj_Wait word; it converts on
-        // its first subsequent call rather than introducing another 120-frame delay.
-        if (defeatAllocationsMade) return;
+        // loc_6EF88 decrements the BossDefeated $3F word and converts only
+        // after it becomes negative: 64 subsequent boss dispatches.
+        if (defeatAllocationsMade || --timer >= 0) return;
         defeatAllocationsMade = true;
         bossSlotConverted = true;
         setRootBit(ROOT_DEFEAT_RELEASE);
@@ -321,6 +332,24 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         }
     }
 
+    private void enqueueMinibossArt() {
+        try {
+            if (services().kosinskiModuleQueue() == null) return;
+            var rom = services().rom();
+            if (rom == null) return;
+            Sonic3kPlcLoader.bindRuntimePatternDmaTarget(services().kosinskiModuleQueue(), services());
+            // loc_6EEA8 explicitly queues ArtKosM_FBZMiniboss at ArtTile_FBZMiniboss=$52E.
+            // Renderer registration above only prepares the decoded sheet, not this ROM job.
+            if (!services().kosinskiModuleQueue().enqueue(rom,
+                    Sonic3kConstants.ART_KOSM_FBZ_MINIBOSS_ADDR, 0x52E * 32)) {
+                Logger.getLogger(FbzMinibossInstance.class.getName()).warning("FBZ miniboss KosM queue is full");
+            }
+        } catch (IOException failure) {
+            Logger.getLogger(FbzMinibossInstance.class.getName()).log(
+                    java.util.logging.Level.WARNING, "Could not enqueue FBZ miniboss art", failure);
+        }
+    }
+
     private void loadArtAndPalette() {
         if (tryServices() == null) return;
         if (services().renderManager() != null
@@ -328,6 +357,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
             provider.ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.FBZ_MINIBOSS);
             provider.ensureBossExplosionArtLoaded();
         }
+        enqueueMinibossArt();
         try {
             byte[] palette = services().rom().readBytes(Sonic3kConstants.PAL_FBZ_MINIBOSS_ADDR, 32);
             S3kPaletteWriteSupport.applyLine(services().paletteOwnershipRegistryOrNull(), services().currentLevel(),

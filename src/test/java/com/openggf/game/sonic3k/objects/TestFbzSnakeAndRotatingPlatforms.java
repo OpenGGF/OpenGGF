@@ -21,6 +21,20 @@ import java.util.List;
 import com.openggf.level.objects.TouchResponseProvider;
 
 class TestFbzSnakeAndRotatingPlatforms {
+    @Test void rotatingSolidGateUsesPriorRenderedPositionAndNativeTwelvePixelExtent() {
+        var platform=new FbzRotatingPlatformObjectInstance(spawn(0x77,0xC));
+        AbstractObjectInstance.updateCameraBounds(0x100C,0x780,0x114C,0x860,0);
+        try {
+            platform.snapshotPreUpdatePosition();
+            platform.offsetNativePositionWordsPreserveSubpixel(-1,0);
+            assertTrue(platform.isWithinSolidContactBounds(), "movement cannot replace the prior render flag");
+            platform.snapshotPreUpdatePosition();
+            assertFalse(platform.isWithinSolidContactBounds(), "the next render pass excludes the twelve-pixel edge");
+        } finally {
+            AbstractObjectInstance.updateCameraBounds(0,0,320,224,0);
+        }
+    }
+
     @Test void snakeAllocatesTheExactFourSlotDelayTrainForEveryUsedRoute() {
         for (int subtype = 0; subtype < 8; subtype++) {
             var snake = new FbzSnakePlatformObjectInstance(spawn(0x75, subtype));
@@ -43,6 +57,44 @@ class TestFbzSnakeAndRotatingPlatforms {
         assertEquals(5,two.getPriorityBucket());
         assertEquals(-1, new FbzRotatingPlatformObjectInstance(
                 new ObjectSpawn(0x1000,0x800,0x77,0x0C,1,true,3)).angleStep());
+    }
+
+    @Test void everyNativeRotatingRowDecodesItsCountAndSpecialMask() {
+        int[] counts = {6,6,6,4,4,4,2,2,2,3,3,2,2,1,1};
+        int[] specialMasks = {0,1,0x21,0,1,9,0,1,3,0,1,0,1,0,1};
+        for (int subtype=0;subtype<counts.length;subtype++) {
+            var platform = new FbzRotatingPlatformObjectInstance(spawn(0x77,subtype));
+            assertEquals(counts[subtype],platform.memberRadii().length,"native row "+subtype);
+            int mask=0;
+            boolean[] special=platform.specialMembers();
+            for(int member=0;member<special.length;member++) if(special[member]) mask|=1<<member;
+            assertEquals(specialMasks[subtype],mask,"native mask "+subtype);
+            assertEquals(0x0C,platform.getBalanceWidthPixels());
+        }
+        assertArrayEquals(new int[]{0x5C,0x44,0x2C},
+                new FbzRotatingPlatformObjectInstance(spawn(0x77,9)).memberRadii());
+        assertArrayEquals(new int[]{0x44,0x2C,0xD4,0xBC},
+                new FbzRotatingPlatformObjectInstance(spawn(0x77,3)).memberRadii());
+    }
+
+    @Test void oppositeSideRadiusBytesAreSignedHighWords() {
+        for (int radius : new int[]{0xD4,0xBC,0xA4}) {
+            int signed=radius-0x100;
+            assertEquals(0x1000+signed,FbzRotatingPlatformObjectInstance.positionX(0x1000,radius,0));
+            assertEquals(0x0800+signed,FbzRotatingPlatformObjectInstance.positionY(0x0800,radius,0x40));
+            assertEquals(0x1000-signed,FbzRotatingPlatformObjectInstance.positionX(0x1000,radius,0x80));
+        }
+    }
+
+    @Test void threeMemberRowAllocatesOnlyItsTwoNativeSiblings() {
+        ObjectManager manager=mock(ObjectManager.class);
+        var platform=new FbzRotatingPlatformObjectInstance(spawn(0x77,9));
+        platform.setServices(new ManagerServices(manager));
+        platform.update(0,null);
+        ArgumentCaptor<AbstractObjectInstance> children=ArgumentCaptor.forClass(AbstractObjectInstance.class);
+        verify(manager,times(2)).addDynamicObjectAfterCurrent(children.capture());
+        assertEquals(List.of(0x44,0x2C),children.getAllValues().stream()
+                .map(v->((FbzRotatingPlatformObjectInstance)v).memberRadius()).toList());
     }
 
     @Test void rotatingCoordinatesUseTheGenesisSineCosineRadiusProduct() {
@@ -140,6 +192,52 @@ class TestFbzSnakeAndRotatingPlatforms {
         assertEquals(0x118C,snake.getOutOfRangeReferenceX());
         assertFalse(snake.isCustomOutOfRange(0x1000));
         assertTrue(snake.isCustomOutOfRange(0x2000));
+    }
+
+    @Test void movingSnakeKeepsItsStandingBitUntilAirborneReleaseCheckpoint() throws Exception {
+        com.openggf.tests.TestEnvironment.activeGameplayMode();
+        final int cameraX = 0x0C00;
+        Camera camera = new Camera() {
+            @Override public short getX() { return (short) cameraX; }
+            @Override public short getY() { return (short) 0x0280; }
+            @Override public short getWidth() { return 320; }
+            @Override public short getHeight() { return 224; }
+        };
+        ObjectManager[] holder = new ObjectManager[1];
+        TestObjectServices services = new TestObjectServices() {
+            @Override public ObjectManager objectManager() { return holder[0]; }
+            @Override public Camera camera() { return camera; }
+            @Override public GraphicsManager graphicsManager() { return GraphicsManager.getInstance(); }
+        };
+        ObjectManager manager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                0, null, null, GraphicsManager.getInstance(), camera, services);
+        holder[0] = manager;
+        manager.reset(cameraX);
+        var snake = manager.createDynamicObject(() -> new FbzSnakePlatformObjectInstance(spawn(0x75, 3)));
+        Field children = FbzSnakePlatformObjectInstance.class.getDeclaredField("childrenSpawned");
+        children.setAccessible(true);
+        children.setBoolean(snake, true);
+        SolidProbePlayer player = new SolidProbePlayer();
+        player.setCentreX((short) snake.getX());
+        player.setCentreY((short) (snake.getY() - 0x0C - 19 + 1));
+        player.setYSpeed((short) 0x100);
+        player.setAir(true);
+        manager.update(cameraX, player, List.of(), 0, false, true, false);
+        assertTrue(manager.hasObjectStandingBit(player, snake));
+        int jumpY = player.getCentreY() + 5;
+        player.setAir(true);
+        player.setOnObject(false);
+        player.setRolling(true);
+        player.applyRollingRadii(false);
+        player.setCentreY((short) jumpY);
+        player.setYSpeed((short) -0x680);
+
+        manager.update(cameraX, player, List.of(), 1, false, true, false);
+
+        assertEquals(jumpY, player.getCentreY(),
+                "the moving slot's airborne standing-bit branch returns without a new-contact lift");
+        assertFalse(manager.hasObjectStandingBit(player, snake));
+        assertTrue(player.getAir());
     }
 
     @Test void snakeSolidObjectFullConsumesAnAirborneStaleStandingBitBeforeReseating() {

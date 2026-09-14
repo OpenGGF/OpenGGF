@@ -286,6 +286,10 @@ class TestFbzBossGraphRewind {
                 @Override public LevelEventProvider levelEventProvider() { return levelEvents; }
                 @Override public GameStateManager gameState() { return gameState; }
                 @Override public int currentAct() { return act; }
+                // This graph-only harness deliberately omits ROM art services.
+                @Override public com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue() {
+                    return null;
+                }
             };
             ObjectManager manager = new ObjectManager(List.of(), new Sonic3kObjectRegistry(), 0,
                     null, null, GraphicsManager.getInstance(), camera, services);

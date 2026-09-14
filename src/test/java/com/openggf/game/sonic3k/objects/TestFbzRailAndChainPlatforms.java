@@ -155,17 +155,19 @@ class TestFbzRailAndChainPlatforms {
                 "loc_3A616 loads $44(a0) before jumping to loc_1B666; current x_pos is not the cull key");
     }
 
-    @Test void mode3ReadsRomVisibleLevelFrameCounterInsteadOfObjectVblankClock() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x0050, 0x1250, 0xFF50})
+    void mode3ReadsLowByteOfCurrentLevelCounterInsteadOfIncrementingIt(int levelCounter) {
         LevelManager levelManager=mock(LevelManager.class);
-        when(levelManager.getFrameCounter()).thenReturn(0x50);
+        when(levelManager.getFrameCounter()).thenReturn(levelCounter);
         var platform=new FbzFloatingPlatformObjectInstance(spawn(0x71,0x30));
         platform.setServices(new TestObjectServices().withLevelManager(levelManager));
 
         platform.update(0x91,null);
 
-        int romVisibleCounter=0x51;
+        int romVisibleCounter=0x50;
         assertEquals(0x1000+(com.openggf.physics.TrigLookupTable.sinHex(romVisibleCounter)>>2),platform.getX(),
-                "loc_3A664 reads (Level_frame_counter+1).w, not ObjectManager's free-running VBla clock");
+                "loc_3A664 reads the low-byte address, not counter+1 or the object VBlank clock");
         assertEquals(0x800+(com.openggf.physics.TrigLookupTable.cosHex(romVisibleCounter)>>2),platform.getY());
     }
 
@@ -227,6 +229,25 @@ class TestFbzRailAndChainPlatforms {
         chain.update(26,null);
         assertFalse(chain.stateForParticipant(0).grabbed(),
                 "loc_3ACEA excludes the configured endpoint cell even after cooldown is overwritten");
+    }
+
+    @Test void horizontalHandStepsWriteAnimationByteOnlyOnTimedAdvance() {
+        TestSprite player = new TestSprite("sonic");
+        player.setCentreX((short) 0x1000);
+        player.setCentreY((short) 0x800);
+        var chain = new FbzChainLinkObjectInstance(spawn(0x72, 0x83));
+        chain.setServices(new PlayersServices(player, List.of()));
+        chain.update(0, null);
+        player.getAnimationManager().publishPreviousAnimationId(0x14);
+        player.setDirectionalInputPressed(false, false, false, true);
+        for (int frame = 1; frame <= 25; frame++) {
+            chain.update(frame, null);
+            if (frame == 1) player.setDirectionalInputPressed(false, false, false, false);
+            assertEquals(frame < 25 ? 0 : 0x14, player.getAnimationId(),
+                    "loc_3ABBE selects walk through the first three hand steps");
+            assertEquals(0x14, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                    "the hand-step byte write must not overwrite prev_anim");
+        }
     }
 
     @Test void horizontalHandCycleClearsItsStepTimerBeforeALaterDirectionStarts() {

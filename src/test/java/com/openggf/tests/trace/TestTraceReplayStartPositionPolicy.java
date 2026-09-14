@@ -367,7 +367,7 @@ class TestTraceReplayStartPositionPolicy {
                             + "recorded position, speed, or next-row state shape.");
             boolean hasHandoffCounterTick =
                     TraceReplayBootstrap.isS3kCompleteRunHandoffCounterTickRow(trace);
-            assertEquals(1 + (hasHandoffCounterTick ? 1 : 0),
+            assertEquals(hasHandoffCounterTick ? 1 : 0,
                     TraceReplayBootstrap.s3kCompleteRunAnimatedTilePreludeFramesForTraceReplay(trace),
                     route + " advances only native S3K Animate_Tiles calls skipped before the first driven motion row.");
         }

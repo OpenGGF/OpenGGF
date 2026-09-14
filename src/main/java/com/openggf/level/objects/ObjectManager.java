@@ -4225,14 +4225,17 @@ public class ObjectManager {
                         return false;
                     }
                     objectCallbacks.run(aoi, () -> aoi.setServices(objectServices));
-                    if (adopted != null) {
-                        // Adopt at the captured slot; the construction spawn did not allocate
-                        // one (the slot allocator is already restored from the snapshot).
-                        int slot = entry.slotIndex();
-                        if (slot >= 0) {
-                            objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slot));
-                        }
-                    } else {
+                    // Both adopted children and generic recreations must own the
+                    // captured slot before callbacks and execOrder registration.
+                    // A spawn-only constructor leaves slotIndex at -1; waiting
+                    // for phase-2 field restore loses the slot lookup used to
+                    // rebind riding/standing contacts to moving dynamic objects.
+                    // The allocator already owns the snapshot reservation.
+                    int slot = entry.slotIndex();
+                    if (slot >= 0) {
+                        objectCallbacks.run(aoi, () -> aoi.setSlotIndex(slot));
+                    }
+                    if (adopted == null) {
                         objectCallbacks.run(aoi, () -> ObjectConstructionContext.withRewindActiveRestore(() -> {
                             aoi.recreateConstructionChildrenForRewind();
                             return null;

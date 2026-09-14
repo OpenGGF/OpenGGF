@@ -39,7 +39,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   falling rocket debris, and bubble cleanup at the defeat handoff, including
   after rewinding the explosion sequence.
 
-- **Flying Battery widescreen object windows:** the FBZ objects whose ROM
+- **Flying Battery routes and object behavior:** the FBZ objects whose ROM
   delete-touch check is `Sprite_OnScreen_Test2` (screw doors, elevator cars,
   magnetic spike balls and pendulums, platform blocks, propellers, spinning
   poles, spring plungers, missile launchers and wall missiles, the exit hall,
@@ -47,7 +47,27 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   window that loads them (`$80 + screen width + $C0`, unchanged at native
   320). At 640 and 800 pixels they were deleted on the frame they loaded, so
   the `$0B68` screw door, its `$0BC0` elevator and the rest never appeared and
-  Act 2 could not be completed on those viewports.
+  Act 2 could not be completed on those viewports. FBZ enemy art now enters
+  the ROM-ordered KosM queue; cage/chain animation writes and floating-platform
+  and hazard-producer clock reads match their original byte/word semantics.
+  Magnetic polarity uses the current level clock, and the missile companion
+  exposes its original standing-balance width. Rotating platforms decode all
+  native member rows and signed radii; offscreen solid push release retains its
+  original animation write during death. Fresh S3K loads now run the initial
+  pattern animation pass before gameplay, as the ROM does. The Act 1 boss arms
+  clamp their angles and release their chain state in the original order; defeat
+  preserves the native wait and score bonus before the end sign, and the ending
+  pose retains existing plunger support. Zone-owned tumble
+  presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
+  route clears the elevator squeeze with an ordinary run-up and timed roll.
+  Rewinding a moving dynamic platform restores its execution slot before
+  rebinding the player's riding contact.
+
+- **AIZ1 rewind:** capture the hollow-tree reveal counter and intro Super Sonic
+  palette timer/frame, preserving tree reveal children and palette cadence after
+  restoring gameplay. Add a native route matrix with independently reported intro,
+  cutscene, tree and act-reload replay checks. Route controllers complete the
+  viewport and movement-donor axes using ordinary inputs and live object gates.
 
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late
