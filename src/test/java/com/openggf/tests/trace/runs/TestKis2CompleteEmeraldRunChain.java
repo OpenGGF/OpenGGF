@@ -15,6 +15,26 @@ import java.nio.file.Files;
 class TestKis2CompleteEmeraldRunChain extends AbstractRunChainTest {
     @Test
     void ehz1ThroughAllEmeraldsToDeathEgg() throws Exception {
+        replay();
+    }
+
+    @Test
+    void initialGameplayUsesTheRecordedPatch() throws Exception {
+        afterProductionStep = () -> {
+            var module = org.junit.jupiter.api.Assertions.assertInstanceOf(
+                    com.openggf.game.patch.DelegatingGameModule.class, GameServices.module());
+            org.junit.jupiter.api.Assertions.assertEquals("kis2", module.patchId());
+            org.junit.jupiter.api.Assertions.assertInstanceOf(
+                    com.openggf.sprites.playable.Knuckles.class, GameServices.sprites().getMainPlayable());
+            throw new LaunchVerified();
+        };
+        org.junit.jupiter.api.Assertions.assertThrows(LaunchVerified.class, this::replay);
+    }
+
+    /** Stops after the assertions observe the first production pass. */
+    private static final class LaunchVerified extends RuntimeException { }
+
+    private void replay() throws Exception {
         String candidate = System.getProperty("openggf.trace.kis2.run.dir");
         Path run = candidate == null
                 ? Path.of("src/test/resources/traces/kis2/runs/kis2-full-run-all-emeralds")

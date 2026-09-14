@@ -61,6 +61,13 @@ public final class Kis2Constants {
     // user-supplied dump on 2026-09-14 by matching the branch's binary asset
     // byte for byte; the KiS2 label is the s2.asm BINCLUDE that owns it.
 
+    /**
+     * {@code ArtLoadCues}: 67 relative-word PLC pointers in the lock-on address
+     * space. Verified via PlrList_Std1's chip life-counter pointer at $33A48A,
+     * its $0086 table offset, and every entry's Nemesis header on the ROM.
+     */
+    public static final int ART_LOAD_CUES = 0x33A3FC;
+
     /** {@code Objects_CNZ_1}: CNZ act 1 layout (292 records). */
     public static final int OBJECTS_CNZ_1 = 0x33F06E;
     /** {@code Objects_CNZ_2}: CNZ act 2 layout (257 records). */

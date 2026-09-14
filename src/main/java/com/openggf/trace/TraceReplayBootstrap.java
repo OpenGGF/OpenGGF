@@ -382,9 +382,10 @@ public final class TraceReplayBootstrap {
         if (!meta.hasNativePreludeBootstrap()) {
             return 0;
         }
-        if (meta.recordedSidekicks().isEmpty()) {
-            return 0;
-        }
+        // Level's leading RunObjects and title-card leave loop dispatch level
+        // objects even for a solo player (s2.asm Level, before Level_MainLoop;
+        // the KiS2 branch retains both calls). Only the separate sidekick
+        // prelude requires a recorded sidekick.
         return S2_TITLE_CARD_PRELUDE_FRAMES;
     }
 

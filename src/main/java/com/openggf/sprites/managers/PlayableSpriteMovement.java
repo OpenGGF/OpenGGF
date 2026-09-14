@@ -1972,7 +1972,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.applyCustomRadii(10, 10);  // no-op: already the 0x0A glide radii
 		sprite.setObjectMappingFrameControl(true);
 		sprite.setMappingFrame(0xCC);  // ROM: move.b #$CC,mapping_frame(a0)
-		sprite.setForcedAnimationId(-1);
+		// Knuckles_BeginSlide changes mapping_frame, not anim: retain glide ID.
 	}
 
 	/**
@@ -2469,8 +2469,8 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * segment.
 	 */
 	private TerrainCheckResult checkGlideFloorDist(int cx, int cy, int xRad, int yRad) {
-		var right = ObjectTerrainUtils.checkFloorDist(cx + xRad, cy + yRad);
-		var left = ObjectTerrainUtils.checkFloorDist(cx - xRad, cy + yRad);
+		var right = ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx + xRad, cy + yRad);
+		var left = ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(cx - xRad, cy + yRad);
 		TerrainCheckResult chosen;
 		if (left == null) {
 			chosen = right;
@@ -2503,6 +2503,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private void glideHitWall(boolean wasMovingRight) {
 		// Face toward the wall (use saved direction since xSpeed is already zeroed)
 		sprite.setDirection(wasMovingRight ? Direction.RIGHT : Direction.LEFT);
+
+		// Knuckles_BeginClimb / Knuckles_Gliding_HitWall require either two
+		// zero wall distances or a ledge within [0, 12). A side collision alone
+		// is insufficient: the failure branch keeps inertia/Y speed and falls.
+		if (!com.openggf.physics.GlideWallGrabTerrain.align(sprite, wasMovingRight,
+				sprite.currentGameState().isReverseGravityActive())) {
+			letGoOfWall();
+			sprite.setAir(true);
+			return;
+		}
 
 		int preZeroGroundSpeed = sprite.getGSpeed();
 		SuperStateController superState = sprite.getSuperStateController();

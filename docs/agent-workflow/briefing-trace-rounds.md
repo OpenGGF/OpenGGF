@@ -88,6 +88,20 @@ centres through scaling and test the real shaders at fractional as well as integ
 viewports. A complete-run native background can also retain scratch RAM history
 that a cold level boot never had; do not copy reference RAM into gameplay to fit it.
 
+KiS2 chain investigation (2026-09-14): preparing a recorded roster does not
+install its built-in patch. Verify the resolved session module at the first
+production pass before attributing mass physics/art differences. Standalone
+and chain harnesses must share the recorded-team module resolution; a correct
+character name in metadata is not evidence of the active runtime owner.
+
+HCZ rewind investigation (2026-09-14): persistent dynamic visuals can share a
+fixed slot. The dormant insta-shield and active bubble shield both occupied
+slot 100 with different stable object identities. Deferred recreation reversed
+their insertion order without changing captured state. Compare each identity
+and every entry field, including slot, instead of collapsing the list into one
+value per slot. Suppressing a visual on restore would delete legitimate state;
+it is not a correction for a comparator that paired the wrong objects.
+
 | Rule | Signature | What it looks like |
 |---|---|---|
 | 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |

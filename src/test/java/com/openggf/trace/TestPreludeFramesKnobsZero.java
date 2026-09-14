@@ -110,6 +110,22 @@ class TestPreludeFramesKnobsZero {
     }
 
     @Test
+    void soloS2NativePreludeStillExecutesLevelObjects() {
+        for (String main : List.of("sonic", "tails", "knuckles")) {
+            TraceFrame first = buildFrame(0, 1,
+                    (short) 0, (short) 0, (short) 0, 0, 0);
+            TraceData trace = TraceFixtures.trace(
+                    metadata("s2", "ehz", 0, 0, List.of(main),
+                            List.of("native_prelude_bootstrap")), List.of(first));
+            assertEquals(26,
+                    TraceReplayBootstrap.s2GenericObjectTitleCardPreludeFramesForTraceReplay(trace),
+                    main + ": Level runs its leading object pass and 25 leave-loop passes without a sidekick");
+            assertEquals(0, TraceReplayBootstrap.sidekickTitleCardPreludeFramesForTraceReplay(trace),
+                    "A solo roster still has no sidekick work");
+        }
+    }
+
+    @Test
     void s2FirstFrameGameplayCounterNotOneReturnsZero() {
         // S2 trace whose first frame already saw multiple LevelLoop ticks - old code also
         // returned 0 here; verify the knob still returns 0.

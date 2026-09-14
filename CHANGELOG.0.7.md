@@ -34,7 +34,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The CNZ slot face, title level-select code, Super sound-test code and independent
   results-message motion also use the KiS2 presentation. Dynamic-art lifecycle
   observations model the combined converted-RAM transfer and chip special-stage
-  DPLCs, including pending transfers across loads and rewind. Remaining route and
+  DPLCs, including pending transfers across loads and rewind. The chip supplies
+  its own PLC table and queue workloads. Solo replay retains the title-card object
+  prelude; glide wall grabs check terrain fit, and floor contact preserves flipped
+  tile angles and the slide animation register. Remaining route and
   hardware-rendering limits are listed in the known-discrepancies entry and
   `docs/kis2/BRANCH_DIFFS.md`.
 
@@ -207,7 +210,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   use one ROM-pattern writer while retaining each game's score and tally policy.
   Monitor contents share icon drawing while keeping their visibility and lifetime rules.
   Deferred lost-ring spawns retain their queue across rewind and release reserved
-  slots when the owning level is reset or rebuilt. Public profile adapters retain
+  slots when the owning level is reset or rebuilt. Released solid contacts retain
+  their provenance across rewind and reused object slots, preserving CPU follower
+  decisions through HCZ fans, conveyors and springs. Pending explosions retain their
+  configured animal/points allocation across recreation. Public profile adapters retain
   their compatibility identities while using canonical profile mechanics.
 
   CNZ rival cutscene deletion reuses the shared coarse range predicate while keeping

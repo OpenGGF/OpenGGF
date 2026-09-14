@@ -2,6 +2,7 @@ package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -9,8 +10,8 @@ import java.util.logging.Logger;
 public class ExplosionObjectInstance extends AbstractObjectInstance implements SpawnServicesRewindRecreatable {
     private static final Logger LOGGER = Logger.getLogger(ExplosionObjectInstance.class.getName());
     private final ObjectRenderManager renderManager;
-    private final DestructionEffects.AnimalFactory animalFactory;
-    private final DestructionEffects.PointsFactory pointsFactory;
+    private DestructionEffects.AnimalFactory animalFactory;
+    private DestructionEffects.PointsFactory pointsFactory;
     private int pointsValue;
     private boolean pointsAllocatedBeforeAnimal;
     private int pendingSfxId = -1;
@@ -152,6 +153,47 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
      */
     public void delayFirstUpdateForPassedSlot() {
         firstUpdatePendingForPassedSlot = true;
+    }
+
+    /**
+     * Factories are construction policy, not live object owners. Preserve the
+     * exact configured references: deriving replacements from a game module
+     * would lose custom factories and their allocation order after recreation.
+     * The render manager is supplied by the restore-time services constructor.
+     */
+    private record ExplosionRewindState(
+            DestructionEffects.AnimalFactory animalFactory,
+            DestructionEffects.PointsFactory pointsFactory,
+            int pointsValue,
+            boolean pointsAllocatedBeforeAnimal,
+            int pendingSfxId,
+            boolean firstUpdatePendingForPassedSlot,
+            int animFrame,
+            boolean spawnedDestructionChildren,
+            int animFrameDuration) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra { }
+
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        return super.captureRewindState(context).withObjectSubclassExtra(new ExplosionRewindState(
+                animalFactory, pointsFactory, pointsValue, pointsAllocatedBeforeAnimal,
+                pendingSfxId, firstUpdatePendingForPassedSlot, animFrame,
+                spawnedDestructionChildren, animFrameDuration));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (snapshot.objectSubclassExtra() instanceof ExplosionRewindState state) {
+            animalFactory = state.animalFactory();
+            pointsFactory = state.pointsFactory();
+            pointsValue = state.pointsValue();
+            pointsAllocatedBeforeAnimal = state.pointsAllocatedBeforeAnimal();
+            pendingSfxId = state.pendingSfxId();
+            firstUpdatePendingForPassedSlot = state.firstUpdatePendingForPassedSlot();
+            animFrame = state.animFrame();
+            spawnedDestructionChildren = state.spawnedDestructionChildren();
+            animFrameDuration = state.animFrameDuration();
+        }
     }
 
     @Override

@@ -32,7 +32,7 @@ completion record for commands, commit limits and unexecuted obligations.
 | --- | --- | --- | --- |
 | LTS-01 | Publish standard, matrix template and implementation entrypoint links | Documented | Standard and mirrored guidance; [documentation validation](../architecture/validation/2026-09-13-level-test-standard.md) |
 | LTS-02 | Resolve registry slots, aliases, routes and non-registry gameplay paths; map existing assertions | In progress | [Initial 26-zone source inventory and estimates](../architecture/audits/2026-09-13-level-test-coverage-inventory.md); per-act matrices and remaining dispositions pending |
-| LTS-03 | FBZ/AIZ/HCZ reference matrices, plus S1 GHZ3 and S2 CPZ2 pilots | In progress | [Partial AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md), [HCZ1 pilot](../architecture/validation/levels/s3k-hcz1-sonic.md); Breadth, rewind boundaries, defect sensitivity and measured cost |
+| LTS-03 | FBZ/AIZ/HCZ reference matrices, plus S1 GHZ3 and S2 CPZ2 pilots | In progress | [Partial AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md), [HCZ1 partial matrix](../architecture/validation/levels/s3k-hcz1-sonic.md); Breadth, rewind boundaries, defect sensitivity and measured cost |
 | LTS-04 | Minimal shared case/rewind helpers and coverage report | Pending | Required-to-executed identity joins and tooling acceptance scenarios. Route steering/diagnostic primitives landed separately in `com.openggf.tests.route` (commit 610464952) and cover only the failure-diagnostics part |
 | LTS-05 | Enforce explicit-lane prerequisites and missing/skipped case inventory | Pending | Negative prerequisite/selection tests and wired commands |
 | LTS-06 | Remaining implemented S3K acts/routes | Pending | Conformant matrices; known gaps stay open |
@@ -48,8 +48,10 @@ now covers 26 zones / 55 gameplay acts for estimation, with explicit delivered v
 conditional S3K scope. Their rows link to that zone-level inventory; **conformance assessments remain pending**; the
 [AIZ1 Sonic matrix](../architecture/validation/levels/s3k-aiz1-sonic.md) now records
 the route-controller continuation and its inherited gaps; the
-[HCZ1 pilot](../architecture/validation/levels/s3k-hcz1-sonic.md) records water-route
-and miniboss composition with its separate local/rewind obligations still open. The other 34 slots
+[HCZ1 partial matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) records water-route
+and miniboss composition, ten independent restore/replay spots, the production
+reload boundary and 30 viewport/donor entry/reset cases. Other characters/teams,
+checkpoint/death-restart and presentation obligations remain open. The other 34 slots
 still need scope/disposition audit. No new execution result or pass is awarded.
 
 Sources: [S1 registry](../../src/main/java/com/openggf/game/sonic1/Sonic1ZoneRegistry.java),
@@ -170,7 +172,11 @@ remain in LTS-07/LTS-08.
 [KiS2 trace-readiness follow-up](../architecture/plans/2026-09-14-kis2-trace-readiness.md)
 adds targeted movement/input, checkpoint/reload and results lifecycle obligations.
 It does not replace full special-stage routes or powered-form gameplay rewind
-coverage; those remain pending the chain recording and independent route checks.
+coverage; those still require independent route checks. The full chain recording
+is now published. The [first frontier round](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
+exercises the initial EHZ1 route and first special-stage return, plus independent
+chip PLC capture/restore/forward replay. It does not certify full-act gameplay
+rewind or viewport/donor/team breadth; the return title-card boundary remains open.
 
 FBZ integration verification (`f037a1218`, 2026-09-14): the full ordinary selection passes 20,281 tests with18 inspected skips and no failures/errors. Two structural-guard failures are unchanged from the baseline. This validates the implemented matrix obligations; the explicit strict replay prerequisite/SOZ entry and native SAT presentation gaps remain open. See the [completion record](../architecture/plans/2026-09-14-fbz-completion.md) for exact commands and limits.
 

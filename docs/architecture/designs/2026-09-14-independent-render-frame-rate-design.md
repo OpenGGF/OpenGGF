@@ -149,6 +149,90 @@ No design can maintain real-time gameplay when simulation alone cannot execute
 50/60 ticks per second. Interpolation does not solve that workload. Tests must
 cover both successful catch-up and the explicit degraded policy.
 
+## Desktop windowed variable refresh rate qualification
+
+Added to the proposed 0.7 scope following the September 14 VRR discussion.
+VRR (G-SYNC, FreeSync and Adaptive-Sync) lets the display follow presentation
+cadence; interpolation supplies intermediate motion. Neither changes the fixed
+region simulation clock. Qualify the existing GLFW/OpenGL path first, starting
+with Windows, and assess Linux separately by display server and compositor.
+Ordinary decorated desktop windows and borderless fullscreen are separate cases:
+a pass in one does not establish support in the other.
+
+The inspected Engine uses OpenGL 4.1 and `glfwSwapInterval(1)`. That requests
+VSync, not proof of active VRR. GLFW documents that driver settings can override
+swap behavior. Keep render cap, swap/VSync policy and interpolation as separate
+presentation decisions. Do not label a negative swap interval (adaptive VSync)
+as Adaptive-Sync/VRR or introduce a universal “enable VRR” switch that cannot
+control the OS/driver/display path. See the
+[GLFW buffer swap contract](https://www.glfw.org/docs/latest/window_guide.html#buffer_swap).
+
+### Vendor evidence and unresolved coverage
+
+The following documentation was consulted on 2026-09-14. It is guidance for
+qualification, not evidence that OpenGGF has passed on any vendor.
+
+| Vendor on Windows | Documented path | OpenGGF qualification obligation |
+|---|---|---|
+| NVIDIA | Control Panel exposes G-SYNC for windowed and fullscreen applications | Verify the current OpenGL decorated-window path, borderless mode, driver profile and actual display engagement |
+| AMD Radeon | Adrenalin exposes global and per-application FreeSync controls | Verify the actual OpenGL windowed path; the settings documentation alone does not establish it |
+| Intel | Adaptive-Sync guidance describes DXGI; the Arc guide also specifies Vulkan presentation modes | Verify OpenGL separately; documented support in another API cannot qualify this renderer |
+
+Sources: [NVIDIA windowed G-SYNC setup](https://www.nvidia.com/content/Control-Panel-Help/vLatest/en-gb/mergedProjects/nvdspENG/To_use_variable_refresh_rates.htm),
+[AMD FreeSync setup](https://www.amd.com/en/resources/support-articles/faqs/DH3-013.html),
+and [Intel Arc API guide](https://www.intel.com/content/www/us/en/developer/articles/guide/arc-a-series-gaming-api-developer-optimization.html).
+
+Windows 11's [optimizations for windowed games](https://support.microsoft.com/en-us/windows/hardware/display-graphics/optimizations-for-windowed-games-in-windows-11)
+cover DirectX 10/11; do not assume this setting upgrades OpenGGF's OpenGL
+presentation. If measurements show an unresolved backend limitation, evaluate
+a separate presentation-backend proposal. Microsoft's
+[DXGI windowed VRR contract](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/variable-refresh-rate-displays)
+provides a documented flip-model path with feature-checked tearing flags. This
+is a possible investigation, not a selected renderer migration or prerequisite
+for independent simulation timing.
+
+### Experiment and acceptance matrix
+
+Record GPU, driver, OS build, renderer/backend, GLFW version, display model,
+connection, configured refresh rate, VRR range, window mode and relevant driver
+settings for every result. Include JVM/native launch identity because application
+profiles may differ. Linux results also name X11/Wayland, compositor/version and
+any compositor VRR policy; do not transfer Windows or one compositor's results
+to all Linux desktops. Other platforms remain unqualified by this workstream.
+
+For each available NVIDIA, Radeon and Intel system:
+
+- Test decorated windows and borderless fullscreen at 50/60 FPS, higher rates,
+  irregular delivery and near/beyond both ends of the display's VRR range.
+  Compare interpolation off/on and VRR disabled/enabled with explicit VSync and
+  cap settings. Test a cap below the ceiling; choose headroom from pacing evidence
+  rather than prescribing one vendor-independent magic offset.
+- Verify focus/Alt-Tab, minimize/restore, resizing, overlays, partial occlusion,
+  movement between displays and mixed-refresh multi-monitor setups. On hybrid
+  systems record which GPU renders and which drives the display.
+- Measure frame intervals, swap blocking and authoritative tick counts. Correlate
+  presentation measurements with a vendor VRR indicator or the monitor's live
+  refresh readout where available. A steady FPS counter, a configured VRR toggle,
+  or a reported maximum refresh rate does not prove active panel VRR.
+- Exercise low-framerate compensation where supported and record behavior below
+  the minimum range. LFC may repeat frames; it does not create intermediate motion.
+  See [AMD's LFC description](https://www.amd.com/en/products/graphics/technologies/freesync.html).
+- Verify ordinary fixed-refresh/VSync fallback, non-VRR displays and loss of VRR
+  eligibility. Gameplay speed, input, audio and recording must remain correct.
+
+Diagnostics distinguish requested presentation policy, measured frame pacing and
+verified VRR engagement. When reliable engagement telemetry is unavailable, show
+unknown rather than infer “active” from GPU branding. External indicators and
+manual observations belong in the qualification record with their limitations.
+Do not change global driver or desktop settings automatically.
+
+Deliver a vendor/platform/window-mode matrix with pass, fail or untested status
+and evidence. Advertise only measured combinations. Missing hardware remains
+untested; it is neither a pass nor proof of unsupported functionality. Scope any
+backend follow-up from observed failures, retain VSync fallback, and record the
+0.7 release disposition of unresolved cases. No hardware tests have been run for
+this design update.
+
 ## Delivery sequence and acceptance
 
 1. Audit timing consumers and stateful render paths. Extract the scheduler and
@@ -157,7 +241,10 @@ cover both successful catch-up and the explicit degraded policy.
 2. Add optional presentation history and interpolation for ordinary gameplay,
    camera and supported backgrounds. Qualify object identity, discontinuities,
    attachments and special/custom renderer fallbacks before advertising support.
-3. Update implemented configuration/help/release prose and attach the supported
+3. Qualify desktop windowed VRR on NVIDIA, Radeon and Intel using the matrix
+   above. Preserve fixed-refresh fallback and document untested combinations;
+   evaluate backend changes separately only for demonstrated limitations.
+4. Update implemented configuration/help/release prose and attach the supported
    renderer/platform evidence to the 0.7 qualification record.
 
 | Scenario | Required evidence |
@@ -170,6 +257,7 @@ cover both successful catch-up and the explicit degraded policy.
 | Restore and recording | Capture/restore and forward replay unchanged; render frequency does not alter hashes or tick numbering |
 | Capture | Output timestamps, frame cadence and A/V duration under slower/faster display schedules |
 | Platform pacing | JVM/native and VSync behavior on tested displays; actual limits recorded |
+| Windowed VRR | Vendor/OS/window-mode matrix, panel engagement evidence, range boundaries, multi-monitor/focus behavior and fixed-refresh fallback |
 
 This is a shared timing change: focused tests alone cannot qualify implementation.
 Use repository change-based validation with the actual integration base, structural
