@@ -300,3 +300,42 @@ Incoming develop `2c7630066` adds HCZ viewport/donor route coverage and native
 miniboss camera framing. Runtime files do not overlap this change. The shared
 frontier log had an append conflict; both evidence entries are preserved.
 Post-integration verification will cover the combined runtime.
+
+
+### Integrated return-fix verification
+
+Runtime commit `c85e17571` integrated at
+`aa3ccf04a95c2343944d9b63c18cf9cff4dd9322` on destination `2c7630066`.
+Queued command:
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 2c76300668aaab6a7a962782294f3f2b6f8ba67a --run`.
+The exact integrated commit was checked in `.worktrees/kis2-special-return`;
+main's unrelated dirty FBZ work was preserved. After waiting for the HCZ
+validation slot, run `20260914T201953Z-a4e26344` completed all 2,574 ordinary
+classes: **20,411 tests, 20,393 passes, zero failures/errors, 18 baseline
+skips**, 716.36 seconds. All 15 incoming HCZ compatibility routes pass.
+Guards: **667 tests, 665 passes, two exact baseline failures, zero
+errors/skips**, 169.88 seconds. Failure identities and messages are the same
+stale direct-Maven documentation expectations and unchanged assertion-free
+probes recorded above. Skip identities/reasons match the candidate and base;
+no new required ROM check skipped. No new or worsened failure was observed.
+
+Candidate diagnostics were automatically deleted when integrated validation
+acquired the queue. Both acknowledgment requests were submitted; integrated
+diagnostics were inspected before requesting their deletion. The full KiS2
+chain remains red at the newly recorded frontier, independently of the clean
+ordinary suite and known guard failures.
+
+### Next causal lead: wall-grab anchor
+
+Read-only investigation during the queue wait found the first new movement
+error at `seg3_ehz1` row 2230 coincides with the initial wall grab. Native
+`x_sub` becomes `$21F5`, exactly `x_pos`; the engine retains `$F800`.
+`Knuckles_BeginClimb` (`docs/kis2disasm/s2.asm:38311-38315`) explicitly stores
+`move.w x_pos(a0),x_sub(a0)`. `Knuckles_Climbing_Wall` (:38502-38505) then
+compares those words and detaches if an object has displaced Knuckles.
+S3K's `Knuckles_Gliding_HitWall` uses the same `x_pos+2` alias. This is an
+intentional RAM-field reuse, not a fractional rounding discrepancy. The next
+fix should reproduce the anchor store and its displacement check, with
+shared S3K and rewind regressions, before investigating the downstream row
+2522 publication assertion. No wall-anchor implementation change was made
+in this return-handoff delivery.
