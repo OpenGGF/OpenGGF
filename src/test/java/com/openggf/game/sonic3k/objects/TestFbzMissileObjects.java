@@ -30,6 +30,12 @@ class TestFbzMissileObjects {
     AbstractObjectInstance.resetCameraBoundsForTests();
   }
   @Test
+  void launcherCompanionExposesItsNativeBalanceWidth() {
+    var companion = new FbzMissileLauncherCompanionObjectInstance(spawn(0x7F, 0x80), null);
+    assertEquals(0x20, companion.getBalanceWidthPixels(),
+        "native companion width_pixels differs from both parent width $10 and solid d1=$2B");
+  }
+  @Test
   void everyLauncherSubtypeDecodesExactCadenceBurstPhaseAndCompanion() {
     for (int s : new int[] {2, 0x72, 0xF2}) {
       var o = new FbzMissileLauncherObjectInstance(spawn(0x7F, s));
