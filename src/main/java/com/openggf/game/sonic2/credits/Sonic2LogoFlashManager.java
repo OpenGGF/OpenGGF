@@ -110,6 +110,14 @@ public class Sonic2LogoFlashManager {
     private boolean initialized;
     private int viewportWidth = 320;
 
+    public interface Presentation {
+        Pattern[] patterns(Pattern[] stock) throws IOException;
+        List<SpriteMappingFrame> frames(SpriteMappingFrame stock) throws IOException;
+        Palette bannerPalette();
+    }
+    private Presentation presentation;
+    public void setPresentation(Presentation presentation) { this.presentation = presentation; }
+
     /**
      * Initializes the logo flash manager: loads art, decodes mapping, sets up renderer.
      */
@@ -159,7 +167,8 @@ public class Sonic2LogoFlashManager {
             loadPaletteCycleData(rom);
 
             // Create sprite sheet and renderer
-            List<SpriteMappingFrame> frames = List.of(logoFrame);
+            List<SpriteMappingFrame> frames = presentation == null ? List.of(logoFrame) : presentation.frames(logoFrame);
+            if (presentation != null) logoPatterns = presentation.patterns(logoPatterns);
             ObjectSpriteSheet sheet = new ObjectSpriteSheet(
                     logoPatterns,
                     frames,
@@ -283,6 +292,11 @@ public class Sonic2LogoFlashManager {
         gm.beginPatternBatch();
         // Draw at screen center; piece offsets are relative to center
         renderer.drawFrameIndex(0, centerXForWidth(viewportWidth), SCREEN_CENTER_Y);
+        if (presentation != null) {
+            gm.cachePaletteTexture(presentation.bannerPalette(), 3);
+            renderer.drawFrameIndex(1, centerXForWidth(viewportWidth), 68);
+            renderer.drawFrameIndex(2, centerXForWidth(viewportWidth) + 132, 48);
+        }
         gm.flushPatternBatch();
     }
 
