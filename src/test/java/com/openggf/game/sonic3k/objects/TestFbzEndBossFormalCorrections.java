@@ -130,10 +130,19 @@ class TestFbzEndBossFormalCorrections {
                         0x200,1,1,0x100,-1,true)),
                 KosinskiModuleQueue.Phase.READY_TO_START,null,List.of(),List.of()));
         boss.clearExitInputTimerForTest();
+        p1.clearLogicalInputState();
+        p1.recordFollowerHistoryForTick(); // P1's earlier SST slot already recorded this sample.
         invoke(boss,"updateExitReady");
         assertEquals(FbzEndBossInstance.Phase.EXIT_READY,boss.phase(),
                 "Kos_modules_left must not suppress the native forced-exit task");
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT,p1.getLogicalInputState());
+        assertEquals(0, p1.getInputHistory(0),
+                "loc_86358 writes Ctrl_1_logical without rewriting P1's earlier history sample");
+        p1.endOfTick();
+        p1.recordFollowerHistoryForTick();
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, p1.getInputHistory(0),
+                "the following player dispatch records the new logical word");
+        assertEquals(0, p1.getInputHistory(1));
         services.queue.clear();
         invoke(boss,"updateExitReady");
         assertEquals(FbzEndBossInstance.Phase.EXIT_READY,boss.phase());
