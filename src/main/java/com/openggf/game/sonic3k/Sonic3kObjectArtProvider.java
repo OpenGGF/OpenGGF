@@ -1733,6 +1733,20 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                     new EnemyKosEntry(
                             Sonic3kConstants.ART_KOSM_CNZ_BALLOON_ADDR,
                             Sonic3kConstants.ARTTILE_CNZ_BALLOON_PLC));
+            // LoadEnemyArt selects PLCKosM_FBZ for both acts. Preserve the
+            // ROM batch order and VRAM destinations; these parents produce
+            // the direct Kosinski children through the ordinary module tail.
+            // docs/skdisasm/sonic3k.asm:64325-64326, 64386-64390
+            case Sonic3kZoneIds.ZONE_FBZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_FBZ_BLASTER_ADDR,
+                            Sonic3kConstants.ARTTILE_BLASTER),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_FBZ_TECHNOSQUEEK_ADDR,
+                            Sonic3kConstants.ARTTILE_TECHNOSQUEEK),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_FBZ_BUTTON_ADDR,
+                            Sonic3kConstants.ARTTILE_FBZ_BUTTON));
             // ROM PLCKosM_ICZ queues these entries in this order from
             // LoadEnemyArt after the title-card owner retires.
             // docs/skdisasm/sonic3k.asm:62287-62300, 64392-64395

@@ -97,9 +97,11 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
             case PATROL -> updatePatrol(player);
             case NORMAL_SWING -> updateNormalSwing();
             case NORMAL_HOLD -> {
-                updatePatrolAngle();
+                // Routine $E dispatches Obj_Wait only; loc_6F360 releases
+                // the arm's bit 3 before clearing the root's returned bit.
                 if (waitExpired()) {
                     stateOrdinal = State.WAIT_CHAIN_RETURN.ordinal();
+                    clearControlBit(ARM_TERMINAL_EDGE);
                     boss.clearRootBit(FbzMinibossInstance.ROOT_ARM_RETURNED);
                 }
             }
@@ -191,7 +193,9 @@ final class FbzMinibossArmChild extends AbstractObjectInstance
         int target = side == 0 ? -0x40 : 0x40;
         int step = side == 0 ? 2 : -2;
         angle = signedByte(angle + step);
-        if (angle == target) angle = target;
+        // loc_6F338 calls sub_6F830 until the terminal link signals completion.
+        // Its unsigned bound clamps every pass, including odd-angle overshoot.
+        if (side == 0 ? (angle & 0xFF) >= 0xC0 : (angle & 0xFF) <= 0x40) angle = target;
     }
 
     private void updateOutwardArmed() {

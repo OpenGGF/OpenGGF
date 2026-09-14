@@ -69,6 +69,25 @@ class TestObjectManagerRewindSnapshot {
         }
     }
 
+    /** Moving dynamic solid recreates from spawn, whose value identity changes on motion. */
+    private static final class MovingDynamicSolid extends AbstractObjectInstance
+            implements SolidObjectProvider, SpawnRewindRecreatable {
+        MovingDynamicSolid(ObjectSpawn spawn) {
+            super(spawn, "MovingDynamicSolid");
+            updateDynamicSpawn(spawn.x(), spawn.y());
+        }
+
+        @Override public void update(int vIntRunCount, PlayableEntity player) {
+            updateDynamicSpawn(getX() + 1, getY());
+        }
+
+        @Override public SolidObjectParams getSolidParams() {
+            return new SolidObjectParams(16, 8, 8);
+        }
+
+        @Override public void appendRenderCommands(List<GLCommand> commands) { }
+    }
+
     private static final class NullSpawnRewindable extends AbstractObjectInstance
             implements RewindRecreatable {
         NullSpawnRewindable() {
@@ -356,4 +375,58 @@ class TestObjectManagerRewindSnapshot {
         assertEquals(100, manager.getRidingObject(player).getX());
         assertEquals(100, manager.getRidingObject(player).getY());
     }
+    @Test
+    void movingSpawnRecreatedDynamicSolidRestoresItsExecutionSlotAndRiderTwice() {
+        ObjectManager manager = makeManager(List.of(), new TrackingRegistry());
+        manager.reset(0);
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
+        MovingDynamicSolid original = new MovingDynamicSolid(spawn(100, 100));
+        manager.addDynamicObject(original);
+        manager.update(0, null, null, 1);
+        int capturedX = original.getX();
+        assertEquals(101, capturedX, "precondition: dynamic solid executed and moved");
+        int slot = original.getSlotIndex();
+        assertTrue(slot >= 0, "precondition: dynamic solid owns a managed slot");
+
+        Sonic player = new Sonic("sonic", (short) 0, (short) 0);
+        player.setCentreX((short) capturedX);
+        int maxTop = original.getSolidParams().groundHalfHeight() + player.getYRadius();
+        player.setCentreY((short) (100 - 4 - maxTop + 8));
+        player.setAir(true);
+        player.setYSpeed((short) 0x100);
+        manager.updateSolidContacts(player);
+        assertTrue(manager.isRidingObject(player, original));
+
+        RewindSnapshottable<ObjectManagerSnapshot> adapter = manager.rewindSnapshottable();
+        ObjectManagerSnapshot captured = adapter.capture();
+        assertEquals(1, captured.dynamicObjects().size());
+        assertEquals(slot, captured.dynamicObjects().getFirst().slotIndex());
+        ObjectSpawn capturedSpawn = captured.dynamicObjects().getFirst().spawn();
+        MovingDynamicSolid previous = original;
+        for (int cycle = 0; cycle < 2; cycle++) {
+            manager.clearRidingObject(player);
+            manager.update(0, null, null, 2);
+            adapter.restore(captured);
+
+            MovingDynamicSolid restored = manager.activeObjectsOfType(MovingDynamicSolid.class)
+                    .stream().findFirst().orElseThrow();
+            assertNotSame(previous, restored, "must exercise generic reconstruction on every cycle");
+            assertEquals(slot, restored.getSlotIndex());
+            assertEquals(capturedX, restored.getX());
+            assertNotSame(capturedSpawn, restored.getSpawn(),
+                    "moving dynamic spawn cannot be rebound by ObjectSpawn reference identity");
+            assertSame(restored, manager.findRestoredRidingObject(null, slot),
+                    "captured slot must already be wired into the execution table");
+            assertTrue(manager.isRidingObject(player, restored),
+                    "reconstruction must restore exact dynamic riding authority");
+            assertSame(restored, manager.getRidingObject(player));
+            assertEquals(captured.solidContactRiding(), adapter.capture().solidContactRiding());
+
+            manager.update(0, null, null, 2);
+            assertEquals(capturedX + 1, restored.getX(),
+                    "restored dynamic must execute exactly once through its captured slot");
+            previous = restored;
+        }
+    }
+
 }

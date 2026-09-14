@@ -8,6 +8,7 @@ import com.openggf.level.Level;
 import com.openggf.level.animation.AnimatedPaletteManager;
 import com.openggf.level.animation.AnimatedPatternManager;
 import com.openggf.level.animation.SeamlessTransitionAnimationClock;
+import com.openggf.level.animation.InitialLevelAnimationPass;
 
 import java.nio.ByteBuffer;
 
@@ -18,7 +19,7 @@ import java.nio.ByteBuffer;
  */
 public final class Sonic3kLevelAnimationManager implements AnimatedPatternManager, AnimatedPaletteManager,
         RewindSnapshottable<PatternAnimatorSnapshot>, AizVineAngleProvider,
-        SeamlessTransitionAnimationClock {
+        SeamlessTransitionAnimationClock, InitialLevelAnimationPass {
 
     /** See {@code Sonic2LevelAnimationManager.COMBINED_EXTRA_MAGIC} for rationale. */
     private static final byte COMBINED_EXTRA_MAGIC = (byte) 0xC3;
@@ -81,12 +82,23 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     }
 
     /**
+     * loc_6468 runs Animate_Tiles once after setup objects, at Level_frame_counter
+     * zero. Palette cycling and ChangeRingFrame belong only to LevelLoop.
+     */
+    @Override
+    public void runInitialLevelAnimationPass() {
+        // MHZ's runtime constructor already represents its pre-loop cap counter;
+        // retain that existing ownership while initializing ROM-backed pattern DMA.
+        patternAnimator.updatePatternsPreservingPreseededCounters();
+    }
+
+    /**
      * Replay bootstrap for native {@code Animate_Tiles} calls that happened
      * before the first compared row. This deliberately excludes
      * {@code Animate_Palette}; the ROM setup pass calls only the tile animator.
      */
     public void updatePatternsOnlyForReplayBootstrap() {
-        patternAnimator.updateForReplayBootstrapPrelude();
+        patternAnimator.updatePatternsPreservingPreseededCounters();
     }
 
     Sonic3kPatternAnimator patternAnimatorForTesting() {

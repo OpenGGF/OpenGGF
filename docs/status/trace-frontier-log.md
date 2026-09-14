@@ -109577,6 +109577,131 @@ All 4,571 comparison errors, first frame 9,482 `air`, have the identical normali
 fingerprint recorded in the audit and pinned baseline. No frontier movement;
 the inherited trace failure remains open.
 
+## 2026-09-14 — FBZ queue, animation operands and solid standing ownership
+
+Pinned develop base `435ec2e68c398bcc17af78e69f3e92b637bec90a`; investigation
+`.worktrees/ai-fbz-timing`, delivery `.worktrees/ai-fbz-completion`.
+The separately authorized manual FBZ validation budget preserves the concurrent
+KiS2 shared receipt. All runs use verified absolute S1/S2/S3K ROM paths, one
+alphabetical fork, and complete strict V5 comparisons, except the explicitly
+bounded temporary 6,000-row diagnostic used to isolate the snake checkpoint.
+No gameplay values were supplied from comparison rows.
+
+Command: `mvn -Dmse=off -B -Dsurefire.forkCount=1
+-Dsurefire.runOrder=alphabetical -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+test`, with `-Ds3k.rom.path=$S3K_ROM` and the
+corresponding absolute donor properties. Matched pre-change runs establish
+5,666 complete-run errors, first row 34 `queue.s3k_kos_direct.busy` true/false;
+independent Sonic+Tails recording 5,227 errors, first row 116
+`tails_x_sub` `$D000/$B800`.
+
+| Integrated correction | Complete errors / first row | Independent recording errors |
+| --- | --- | --- |
+| `ef13df370`: ROM FBZ enemy KosM batch submission | 5,654 / 508 animation | 5,226 |
+| `e8307ddc2`: cage animation word writes and chain hand steps | 5,642 / 2,641 Y | 5,104 |
+| `9fa8fc0a0`: platform low-byte clock address | 4,721 / 3,888 mapping frame | 5,090 |
+| `8eb04d603` (source `0597da5a1`): zone-owned tumble and stable snake standing key | 4,669 / 3,938 mapping frame (31/36) | 5,067 / 116 tails_x_sub, unchanged first field |
+
+| `c31bdbd7a` (source `54d9ff443`): moving-cage landing resets tumble state | **4,667 / 13,585 Y (`0647/0646`)** | **5,065 / 116 tails_x_sub**, unchanged |
+
+The final complete recording compares **44,152 rows** (the fixture's 44,281
+rows include the 129-row prefix); 4,541 physics and 126 animation errors,
+zero bootstrap errors or warnings. First physics error advances from row 5,857
+to **13,585 Y, expected `$0647`, actual `$0646`**. The independent recording
+compares **33,712 rows**, 4,754 physics and 311 animation errors. Both tests
+complete and fail strict comparison, with zero test skips; neither is green.
+
+ROM owners: `PLCKosM_FBZ` submits Blaster, TechnoSqueek and button art in order;
+`move.w #1,anim(a1)` writes animation 0 / previous animation 1;
+`(Level_frame_counter+1).w` selects the low byte instead of incrementing time;
+`Anim_Tumble` retains the negative angle in FBZ/DEZ (and left-facing MHZ);
+`loc_3B5FC` preserves the snake's SST standing bit across `MoveSprite2` before
+`SolidObjectFull`. A regenerated spawn key lost that standing bit and incorrectly
+reseated a jumping rider by one pixel. The existing instance-key capability
+fixes ownership without changing shared movement/collision algorithms.
+
+The prior focused invocation passes **63 tests**, zero failures/errors/skips,
+and the two complete replays retain the known comparison failures. Trace lane
+aggregate including baselines, temporary probes and failed fixture setup:
+743.86 seconds. The final 30 cage tests pass and both strict replays complete
+with known failures. All early cage mapping blips are gone; first animation
+error is row 15,234 `tails_animation_id` 0/$1A. The first physics error is a
+rolling landing on magnetic-platform slot 6 / native routine `$3B3FA`;
+that later owner remains open. See the
+[completion record](../architecture/plans/2026-09-14-fbz-completion.md) and
+[coverage matrices](../architecture/validation/levels/s3k-fbz-act1.md).
+
+
+### Continued FBZ correction evidence
+
+The earlier `$3B3FA` owner is a magnetic platform, not a disappearing platform.
+`dbc34c6d5` removes the extra increment from its fixed polarity prelude;
+`d5420f4ec` corrects flame/missile producer byte reads. `0a078cf87` restores the
+launcher companion's `$20` standing-balance width.
+
+`721f7787e` (source `d48dc91eb`) restores all 15 rotating-platform descriptor
+rows, masks, signed radius bytes and previous-render bounds. The route's actual
+bad contact at row 19,501 comes from **subtype 0's signed negative radii**, not
+from a row-9 placement; row 9 is descriptor coverage only. Native Act 1 contains
+six placements, three subtype 0 and three subtype `$C`; Act 2 contains none.
+
+`07254db72` (source `4eaa02e00`) preserves the offscreen full-solid push-release
+word during death. A native saved-state write probe identified PC `$01E0C2`,
+A0 `$B456` (slot 15, rotating platform) at row 15,557. Its write clears the push
+bit, so a post-write status byte without that bit does not disprove ownership.
+The first interpretation rejected this writer incorrectly; the instruction
+probe resolves the ambiguity. Kill_Character writes Death once in S1, S2 and
+S3K; the dead loop does not continually reclaim the animation byte.
+
+`190cbd408` (source `32fa1a5c9`) submits the miniboss art archive at native
+`loc_6EEA8`, `$1652B4` to VRAM `$A5C0`. The direct job's `$D000` destination is
+decompression scratch, not VRAM. This adds the missing producer but does not
+yet prove activation timing at row 19,793.
+
+On the timing worktree before the production initial-animation integration,
+245 focused tests pass with zero failures/errors/skips in 51.18 seconds:
+solid contact, animation profile, sidekick death/rewind, rotating family and
+miniboss/rewind. Latest complete strict replay is still **4,349 errors**, first
+**16,600 Tails animation 5/6**, summed mismatching field-rows 678,539. First main
+animation is 16,663; first main queue mismatch 19,793; first gameplay physics
+20,348 unexpected death, then position 20,349. This run establishes neither
+Act 1 completion nor Act 2 reload. Root's integrated pair on `190cbd408` plus the production setup-animation
+changes completes in 70.73 seconds: 2 tests, 2 comparison failures, zero errors
+or skips. It reproduces **4,349 / first 16,600** and **5,109 / first 116**,
+with zero warnings; moving setup animation into its production owner preserves
+these frontiers.
+
+Error spans are not mismatching-frame totals: after the producer clock repair,
+the independent recording increased from 5,050 to 5,109 spans while summed
+mismatching field-rows decreased from 738,724 to 727,909 (main 369,141 to 367,257).
+A bounded matched run identified removed wrong Tails recovery/speed intervals;
+span fragmentation must not be reported as 59 new bad frames. The independent
+first row 116 subpixel mismatch remains inherited and unresolved.
+
+
+### FBZ Act 1 normal arm cycle, 2026-09-14
+
+On `190cbd408` plus the setup and normal-arm/chain corrections in
+`.worktrees/ai-fbz-completion`, `mvn -Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+surefire:test` (absolute verified S3K ROM, one fork) completed both comparisons:
+4,663 errors / 0 warnings over 44,152 rows and 5,109 / 0 over 33,712 rows;
+two failing tests, zero errors/skips. First errors remain row 16,600
+`tails_animation_id` `$05/$06` and row 116 `tails_x_sub` `$D000/$B800`.
+
+The complete-run error groups increased from 4,349 to 4,663 and mismatching
+field-rows from 678,539 to 751,300. This is not a blanket improvement claim.
+The first main gameplay-physics error nevertheless advances from the unexpected
+death at 20,348 to `x_speed`/`g_speed` `$18/$00` at 22,227. A bounded live owner
+probe confirms Sonic alive at 20,350 and the left chain horizontal at native
+positions. The next boundary starts an engine-only direct Kos job `$0D6A64`
+to `$FFFFD000`, with player animation `$13` instead of `$00`; its timing and
+later cascades remain under investigation. The earlier 19,793 queue comparison
+still differs, although actual miniboss activation and archive `$1652B4` to
+VRAM `$A5C0` were independently observed at that exact row. No comparison
+rows hydrate gameplay, and Act 1 completion is still not certified.
+
 ## 2026-09-14 — First Knuckles in Sonic 2 fixture: `kis2/ehz1` recorded, replay red at the prelude and at frame 284
 
 - Worktree `.worktrees/ai-kis2-trace-fixture`, branch `feature/ai-kis2-trace-fixture`
@@ -109628,3 +109753,56 @@ the inherited trace failure remains open.
   0x800–0x840 and hurts any jump from the pit floor at x ≥ 0x7F1; a post-spring
   hop cannot glide. The pit log platform oscillates with a 252-frame period
   (surface 0x25C–0x2DC, bottom at trace frame 1153 mod 252).
+
+
+### FBZ boss-defeat fallthrough restores the native sign delay
+
+On `a8419498b` plus the `BossDefeated_StopTimer` fallthrough correction,
+`mvn -Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestFbzAct1RouteHeadless#placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5+realConvertedEndSignControllerAllocatesExactWorkerPrefixAndRunsFirstTwoUpdates,TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+surefire:test` with the verified absolute ROM properties completed in 25.96 seconds.
+All five affected Act 1 lifecycle rows passed. Both strict recordings remain red:
+**4,548 errors / 0 warnings / 44,152 rows**, first 16,600 Tails animation `$05/$06`,
+and **5,109 / 0 / 33,712 rows**, first 116 Tails subpixel `$D000/$B800`; no skips.
+The first main gameplay-physics error advances again to **22,388 `air` 0/1**,
+with status `$08/$02`. Complete-run mismatching field-rows are 754,779; the
+independent recording remains 727,909. Later results/transition differences
+remain open, so neither the group count nor the farther clean main prefix is
+reported as full parity.
+
+The rejected explanation was a missing Tails bump caused solely by its earlier
+physics divergence. At native row 22,178 Tails bumps the sign; an engine probe
+showed Tails at nearly the same eligible pose, but the engine sign had arrived
+early. Source proved the actual omission: the tail jump falls through into
+`BossDefeated`, setting the `$3F` wait and awarding 100 native score units
+(1,000 displayed points). Restoring that effect removes the 22,227 early-results
+stop without tuning the sign's wait or consuming recorded gameplay values.
+
+
+### FBZ ending-pose support retained on the defeated plunger
+
+On `cac4ad87a` plus the plunger contact correction, the queued focused command
+`-Ptrace-replay-r7 -Dtest=TestFbzMinibossChildren,TestS3kFbzCompleteRunTraceReplay
+surefire:test` passed all 36 child/contact checks, with zero errors/skips.
+The complete 44,152-row recording remains red: **4,501 errors / 0 warnings**,
+first 16,600 Tails animation `$05/$06`, 758,829 mismatching field-rows. The
+first main gameplay-physics error advances to **22,397 `x` `$0102/$2F02`** and
+`camera_x` `$0062/$2E62`, a one-row coordinate-rebase mismatch. Later timing
+and transition differences remain open; these are not full-parity results.
+
+The real-contact regression lands on the actual plunger, applies the production
+signpost ending pose, and proves retained standing ownership and grounded Y on
+the next manager update. A newly arriving bit-7-controlled player is rejected.
+The existing object-managed support hook applies only after the plunger's
+stationary defeat drop, preserving ordinary active-phase movement. Merely allowing
+controlled solid evaluation was insufficient because the new-contact rejection
+still ran before the generic retained-ride branch; that rejected attempt did not
+move the trace. No shared collision algorithm or trace state was changed.
+
+The final independent confirmation on `38e2e75aa` used queued Maven,
+`-Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestS3kSonicTailsFbzSegmentTraceReplay surefire:test` with verified absolute
+ROM properties. It completed in 12.384 seconds: **5,109 errors / zero warnings /
+33,712 rows**, first row 116 Tails subpixel `$D000/$B800`, one failed JUnit test,
+zero errors/skips. Upstream reconciliation introduced no Java changes after
+`c84e63ab0`; both strict recordings remain red at the documented frontiers.

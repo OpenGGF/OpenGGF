@@ -66,7 +66,8 @@ class TestFbzAct1RouteHeadless {
         FbzMinibossInstance boss = awaitPlacedBoss(fixture, act1Objects, 240);
         reachPlungerByInput(fixture, act1Objects, boss);
         driveBossRoute(fixture, act1Objects, boss);
-        await(fixture, 4, boss::hasConvertedToEndSign,
+        // BossDefeated seeds $3F: conversion needs 64 subsequent dispatches.
+        await(fixture, 64, boss::hasConvertedToEndSign,
                 "the production defeated boss did not convert into Obj_EndSignControl");
 
         S3kSignpostInstance sign = awaitObject(fixture, act1Objects,
@@ -365,14 +366,14 @@ class TestFbzAct1RouteHeadless {
                 new TeamShape("tails,knuckles", 2),
                 new TeamShape("tails,knuckles,sonic", 3),
                 new TeamShape("tails,tails", 2));
-        for (int width : List.of(320, 352, 400, 528, 800)) {
+        for (int width : List.of(320, 352, 400, 512, 528, 640, 800)) {
             for (String donor : List.of("off", "s1", "s2")) {
                 for (TeamShape team : teams) {
                     cases.add(new CompatibilityCase(width, donor, team.codes(), team.count()));
                 }
             }
         }
-        // Must be last: rebuild a native-off session after all 75 combinations,
+        // Must be last: rebuild a native-off session after all 105 combinations,
         // proving no donor/team/viewport state leaks.
         cases.add(new CompatibilityCase(320, "off", "", 0));
         try {
@@ -677,7 +678,8 @@ class TestFbzAct1RouteHeadless {
         assertEquals(6, boss.scriptedImpactCount());
         assertEquals(0, boss.remainingHits());
 
-        await(fixture, 4, boss::hasConvertedToEndSign,
+        // BossDefeated seeds $3F: conversion needs 64 subsequent dispatches.
+        await(fixture, 64, boss::hasConvertedToEndSign,
                 "the defeated placed boss slot did not convert to Obj_EndSignControl");
         assertFalse(boss.isSolidFor(fixture.sprite()));
 

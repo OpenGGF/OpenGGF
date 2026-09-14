@@ -4619,3 +4619,34 @@ identity and registering the carried object. Preserve fixed defaults in slots
 that are not carried. Do not weaken identity-table uniqueness checks or merely
 renumber duplicate owners. Verify one owner, retained slot/identity, and
 capture/restore immediately after a real resource reload.
+
+## Preserve the operand width of animation and clock accesses
+
+FBZ completion (2026-09-14): `move.w #1,anim(a1)` stores big-endian bytes
+`anim = 0`, `prev_anim = 1`; it does not select animation 1. The stationary and
+moving wire cages use this release/entry word write. Preserve both writes,
+including donor animation translation, rather than translating the word as an
+animation ID. Likewise `(Level_frame_counter+1).w` is an address expression
+selecting the low byte of the counter, not an arithmetic increment of its
+value. FBZ floating-platform mode 3 reads that byte after the engine has already
+advanced the level clock. Test equal low bytes with different high bytes to
+catch an incorrectly widened or incremented port. The horizontal chain's timed
+hand-step writes are separate byte writes and must not inherit cage semantics.
+
+## Preserve unsigned angle clamps and the exact parent-bit owner
+
+FBZ miniboss completion (2026-09-14): `sub_6F830` and `sub_6F8C8`
+advance an angle byte by two, compare unsigned bounds, and clamp to the target.
+Equality-only ports miss odd-angle crossings or keep rotating after arrival.
+Do not assume mirrored branches share equality: `sub_6F8F2` accepts left
+`angle <= $80`, but right `angle > $80`, before clamping. Test before, at,
+and across each boundary, including odd angles and repeated clamped updates.
+
+Follow every pointer hop before translating a control-bit write. In
+`sub_6F85A`, `$44 -> arm -> parent3 -> root` publishes root bit 2; it does
+not publish arm bit 2. The terminal recycle tail at `loc_6F64E` owns arm
+readiness later. Arm routine `$E` runs only `Obj_Wait`; its `loc_6F360`
+callback clears arm bit 3 before root bit 2. Advancing patrol during that
+wait, clearing the wrong owner, or publishing readiness early can compensate
+for each other while producing a wrong attack. Regress the whole hold/recycle
+handoff as well as individual angle boundaries.

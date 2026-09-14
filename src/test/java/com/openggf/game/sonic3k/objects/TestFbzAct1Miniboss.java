@@ -17,6 +17,22 @@ import static org.mockito.Mockito.mock;
 /** Locked-on oracle for Obj_FBZMiniboss (sonic3k.asm:146766-148026). */
 class TestFbzAct1Miniboss {
     @Test
+    void initializationSubmitsTheNativeMinibossArchiveExactlyOnce() throws Exception {
+        var queue=mock(com.openggf.level.resources.KosinskiModuleQueue.class);
+        var rom=mock(com.openggf.data.Rom.class);
+        org.mockito.Mockito.when(queue.enqueue(rom,0x1652B4,0xA5C0)).thenReturn(true);
+        var services=new TestObjectServices() {
+            @Override public com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue(){return queue;}
+            @Override public com.openggf.data.Rom rom(){return rom;}
+        };
+        var boss=new FbzMinibossInstance(new ObjectSpawn(0x2E20,0x540,0xAA,0,0,false,0));
+        boss.setServices(services);
+        boss.update(0,null);
+        boss.update(1,null);
+        org.mockito.Mockito.verify(queue).enqueue(rom,0x1652B4,0xA5C0);
+    }
+
+    @Test
     void objectOwnedGateAndWaitDurationsMatchTheRom() {
         assertArrayEquals(new int[] {0x240, 0x600, 0x2D20, 0x2F20},
                 FbzMinibossInstance.activationBounds());
@@ -30,6 +46,8 @@ class TestFbzAct1Miniboss {
     @Test
     void onlySixScriptedTerminalImpactsDefeatTheBoss() {
         RecordingServices services = new RecordingServices();
+        var gameState = new com.openggf.game.GameStateManager();
+        services.withGameState(gameState);
         FbzMinibossInstance boss = boss(services);
         PlayableEntity player = mock(PlayableEntity.class);
         boss.update(-1, player); // setup callback is intentionally setup-only
@@ -47,11 +65,27 @@ class TestFbzAct1Miniboss {
             for (int frame = 0; frame < 31; frame++) boss.update(frame, player);
         }
         assertEquals(5, services.bossHits);
+        assertEquals(0, gameState.getScore(), "ordinary impacts do not award boss-defeat points");
         assertTrue(boss.publishScriptedTerminalImpact());
         boss.update(100, player);
         assertTrue(boss.isDefeated());
         assertEquals(5, services.bossHits, "the sixth impact starts defeat without BossHit");
-        assertEquals(0, services.scoreAwards, "the ROM awards no invented boss-hit score");
+        assertEquals(1000, gameState.getScore(), "BossDefeated adds 100 native score units once");
+        assertFalse(boss.hasConvertedToEndSign());
+        assertFalse(gameState.isEndOfLevelActive());
+        for (int update = 1; update <= 63; update++) {
+            boss.update(100 + update, player);
+            assertFalse(boss.hasConvertedToEndSign(), "the $3F wait includes its zero-valued update");
+            assertFalse(boss.rootBit(FbzMinibossInstance.ROOT_DEFEAT_RELEASE));
+            assertEquals(1000, gameState.getScore());
+        }
+        boss.update(164, player);
+        assertTrue(boss.hasConvertedToEndSign(), "the 64th subsequent dispatch underflows the wait");
+        assertTrue(boss.rootBit(FbzMinibossInstance.ROOT_DEFEAT_RELEASE));
+        assertTrue(gameState.isEndOfLevelActive());
+        assertFalse(boss.publishScriptedTerminalImpact(), "defeated bosses reject duplicate impacts");
+        for (int update = 165; update <= 285; update++) boss.update(update, player);
+        assertEquals(1000, gameState.getScore(), "sign handoff cannot award the defeat score again");
     }
 
     @Test
@@ -118,7 +152,6 @@ class TestFbzAct1Miniboss {
 
     private static final class RecordingServices extends TestObjectServices {
         int bossHits;
-        int scoreAwards;
         private final ObjectPlayerQuery query = new ObjectPlayerQuery(() -> null, List::of);
         @Override public ObjectPlayerQuery playerQuery() { return query; }
         @Override public void playSfx(int id) { if (id == Sonic3kSfx.BOSS_HIT.id) bossHits++; }

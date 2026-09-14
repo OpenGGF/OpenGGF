@@ -511,8 +511,8 @@ class TestSidekickCpuControllerLevelStart {
         assertEquals(0, tails.getGSpeed(), "KillCharacter clears ground_vel");
         assertEquals(0x18, tails.getAnimationId(),
                 "KillCharacter publishes Tails' Death animation in the boundary-kill frame");
-        assertEquals(0x18, tails.getForcedAnimationId(),
-                "dead-fall updates retain the Death animation owner after the kill frame");
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "S2 KillCharacter writes Death once; Obj02_Dead does not override later solid writes");
     }
 
     @Test

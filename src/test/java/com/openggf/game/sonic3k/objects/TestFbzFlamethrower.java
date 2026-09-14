@@ -200,7 +200,7 @@ class TestFbzFlamethrower {
     }
 
     @Test
-    void parentUsesLevelFrameCounterPlusOneInsteadOfObjectManagerClock() {
+    void parentUsesLiveLevelCounterLowByteInsteadOfObjectManagerClock() {
         com.openggf.level.objects.ObjectManager manager =
                 org.mockito.Mockito.mock(com.openggf.level.objects.ObjectManager.class);
         ObjectServices services = org.mockito.Mockito.mock(ObjectServices.class);
@@ -215,15 +215,15 @@ class TestFbzFlamethrower {
 
         // loc_3CD4C reads the low byte at (Level_frame_counter+1).w.  The
         // supplied object clock is deliberately divisible by four here, but
-        // native counter+1 is 3, so this frame must not allocate flames.
-        org.mockito.Mockito.when(levelManager.getFrameCounter()).thenReturn(2);
+        // the live counter byte is 3, so this frame must not allocate flames.
+        org.mockito.Mockito.when(levelManager.getFrameCounter()).thenReturn(0x1203);
         rotating.update(4, null);
         org.mockito.Mockito.verify(manager, org.mockito.Mockito.never())
                 .addDynamicObjectAfterCurrent(org.mockito.Mockito.any());
 
-        // On the following native cadence point, counter+1 is 4 and both
+        // On the following native cadence point, the live counter byte is 4 and both
         // rotating children are allocated after the parent.
-        org.mockito.Mockito.when(levelManager.getFrameCounter()).thenReturn(3);
+        org.mockito.Mockito.when(levelManager.getFrameCounter()).thenReturn(0x1204);
         rotating.update(5, null);
         org.mockito.Mockito.verify(manager, org.mockito.Mockito.times(2))
                 .addDynamicObjectAfterCurrent(org.mockito.Mockito.any());
@@ -244,7 +244,7 @@ class TestFbzFlamethrower {
                 org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
         org.mockito.Mockito.when(services.objectManager()).thenReturn(manager);
         org.mockito.Mockito.when(services.levelManager()).thenReturn(levelManager);
-        org.mockito.Mockito.when(levelManager.getFrameCounter()).thenReturn(3);
+        org.mockito.Mockito.when(levelManager.getFrameCounter()).thenReturn(0x1204);
         org.mockito.Mockito.when(services.solidExecution())
                 .thenReturn(com.openggf.game.solid.ObjectSolidExecutionContext.inert());
         FbzFlamethrowerObjectInstance rotating = new FbzFlamethrowerObjectInstance(

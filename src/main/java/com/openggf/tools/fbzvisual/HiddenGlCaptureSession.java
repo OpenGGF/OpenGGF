@@ -87,11 +87,8 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
             }
             throw bootFailure;
         }
-        // Visual recipes begin at the first gameplay VBlank after native level
-        // setup. The live load path leaves a title-card request queued; consuming
-        // it here is the headless equivalent of waiting for that card to finish,
-        // without spending hundreds of non-gameplay frames in the evidence tool.
-        GameServices.level().consumeTitleCardRequest();
+        // Keep native setup/title requests for GameLoop's production admission
+        // owner. Consuming a request is not equivalent to running its lifecycle.
         if (loop.getCurrentGameMode() != GameMode.LEVEL) {
             throw new IllegalStateException("FBZ capture did not boot into LEVEL gameplay mode: "
                     + loop.getCurrentGameMode());
@@ -104,20 +101,55 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
         if (count < 0) {
             throw new IllegalArgumentException("Negative FBZ capture frame count: " + count);
         }
-        GraphicsManager graphics = GameServices.graphics();
-        UiRenderPipeline ui = graphics.getUiRenderPipeline();
-        for (int i = 0; i < count; i++) {
-            // Seamless fixture loads can queue another card. Evidence recipes
-            // always target the ensuing gameplay frame, never TITLE_CARD mode.
-            GameServices.level().consumeTitleCardRequest();
-            GameMode beforeMode = loop.getCurrentGameMode();
-            int beforeFrame = GameServices.level().getFrameCounter();
-            if (ui != null) {
-                ui.updateFade();
+        advanceGameplayFrames(count, new GameplayStepper() {
+            @Override public GameMode mode() { return loop.getCurrentGameMode(); }
+            @Override public int frame() { return GameServices.level().getFrameCounter(); }
+            @Override public boolean setupPending() {
+                LevelManager level = GameServices.level();
+                return level.hasPendingInitialProcessSpritesPass()
+                        || level.isTitleCardRequested()
+                        || loop.getCurrentGameMode() == GameMode.TITLE_CARD
+                        || GameServices.fade().isActive();
             }
-            loop.step();
-            verifyGameplayFrameAdvance(beforeMode, beforeFrame,
-                    loop.getCurrentGameMode(), GameServices.level().getFrameCounter());
+            @Override public void step() {
+                // GameLoop owns fade advancement and PLC/title-card admission.
+                loop.step();
+            }
+        });
+    }
+
+    interface GameplayStepper {
+        GameMode mode();
+        int frame();
+        boolean setupPending();
+        void step();
+    }
+
+    static void advanceGameplayFrames(int count, GameplayStepper stepper) {
+        int gameplayFrames = 0;
+        int setupIterations = 0;
+        while (gameplayFrames < count) {
+            GameMode beforeMode = stepper.mode();
+            int beforeFrame = stepper.frame();
+            boolean setupPending = stepper.setupPending();
+            stepper.step();
+            GameMode afterMode = stepper.mode();
+            int afterFrame = stepper.frame();
+            if (beforeMode == GameMode.LEVEL && afterMode == GameMode.LEVEL
+                    && afterFrame == beforeFrame + 1) {
+                gameplayFrames++;
+                setupIterations = 0;
+            } else if (setupPending
+                    && (beforeMode == GameMode.LEVEL || beforeMode == GameMode.TITLE_CARD)
+                    && (afterMode == GameMode.LEVEL || afterMode == GameMode.TITLE_CARD)
+                    && afterFrame == beforeFrame) {
+                if (++setupIterations > 1024) {
+                    throw new IllegalStateException("FBZ production setup/title phase did not "
+                            + "release gameplay within 1024 iterations");
+                }
+            } else {
+                verifyGameplayFrameAdvance(beforeMode, beforeFrame, afterMode, afterFrame);
+            }
         }
     }
 

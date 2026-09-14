@@ -1579,7 +1579,9 @@ public final class ObjectSolidContactController {
             return null;
         }
         if (player.getDead()) {
-            clearDeadPlayerStaleStandingBit(player, instance);
+            if (!clearDeadPlayerStaleStandingBit(player, instance)) {
+                clearDeadPlayerOffscreenPush(player, instance);
+            }
             ridingStates.remove(player);
             return null;
         }
@@ -4839,6 +4841,34 @@ public final class ObjectSolidContactController {
     private void notifyZeroDistanceTopSolidLandingRejected(ObjectInstance instance, PlayableEntity player) {
         if (instance instanceof SolidObjectProvider provider) {
             provider.onRejectedZeroDistanceTopSolidLanding(player);
+        }
+    }
+
+    private void clearDeadPlayerOffscreenPush(PlayableEntity player, ObjectInstance instance) {
+        if (!(instance instanceof SolidObjectProvider provider)) {
+            return;
+        }
+        SolidRoutineProfile profile = provider.getSolidRoutineProfile();
+        if (!isSolidObjectOffscreenGateEnabled(player)
+                || profile.bypassesOffscreenSolidGate()
+                || profile.topSolidOnly()
+                || profile.monitorSolidity()
+                || instance instanceof SlopedSolidProvider
+                || !provider.isSolidFor(player)
+                || suppressesSolidPassThisFrame(instance, player)
+                || shouldSkipOffscreenSidekickFullSolid(player, instance, profile)
+                || instance.isWithinSolidContactBounds()) {
+            return;
+        }
+        // Retail SolidObjectFull checks the object's render bounds before
+        // routine >= 6. Its offscreen loc_1DF88 -> loc_1E0A2 tail still writes
+        // WORD #1 to anim when this object's push bit survives Kill_Character
+        // (sonic3k.asm:41287-41316,41517-41528; FixBugs=0).
+        // S1 SolidObject and S2 SolidObject_OnScreenTest use the same ordering.
+        if (clearObjectPushingBit(player, instance)) {
+            publishSolidPushReleaseAnimationWord(player, instance);
+            player.setPushing(false);
+            provider.setPlayerPushing(player, false);
         }
     }
 

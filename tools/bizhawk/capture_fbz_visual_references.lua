@@ -41,7 +41,15 @@ local ADDR_SCREEN_SHAKE_FLAG = 0xEECC
 local ADDR_SCREEN_SHAKE_OFFSET = 0xEECE
 local ADDR_EVENTS_BG = 0xEED2
 local ADDR_GAME_MODE = 0xF600
-local ADDR_VDP_REG1_COMMAND = 0xF60C
+-- Locked-on sonic3k.constants.asm: _tempF608 reserves six bytes.
+-- Init_VDP stores a command template here; display enable is ORed into d0
+-- before hardware writes, without updating this RAM word. It is not VDP state.
+local ADDR_VDP_REG1_COMMAND = 0xF60E
+-- Obj_TitleCard in the verified locked-on ROM (SHA-1 CFBF98C36C776677290A872547AC47C53D2761D6).
+-- Delete_Current_Sprite releases this slot after the title children finish;
+-- FBZ floating platforms can subsequently occupy the same allocator slot.
+local TITLE_CARD_CODE = 0x0002D690
+local DISPLAY_VERIFICATION = "unverified-no-live-vdp-register-observation"
 local ADDR_BACKGROUND_COLLISION_FLAG = 0xF664
 local ADDR_BOSS_FLAG = 0xF7AA
 local ADDR_ANIM_COUNTERS = 0xF7F0
@@ -50,7 +58,7 @@ local ADDR_ZONE_AND_ACT = 0xFE10
 
 local LEVEL_GAME_MODE = 0x0C
 local START_OUTPUT_ID = "fbz1-start-outdoor-gameplay-v2"
-local OBSERVATION_LIMIT_FRAMES = 1024
+local OBSERVATION_LIMIT_FRAMES = plan.observation_limit_frames or 1024
 local CADENCE_FOLLOWUP_FRAMES = 4 -- zero-step + one-step + four more = six images
 
 -- Destination display order is intentionally independent of ROM channel order.
@@ -196,13 +204,56 @@ client.speedmode(6400)
 client.invisibleemulation(true)
 if client.SetSoundOn then pcall(client.SetSoundOn, false) end
 
+-- Verify rendered content on the same paused emulator frame, never infer a live
+-- hardware bit from VDP_reg_1_command. The host probe excludes the border and
+-- requires horizontal pixel variation on separated active rows. GPGX render_line
+-- tests reg[1]&$40; its blanked branch fills the scanline with one backdrop index.
+-- This is framebuffer evidence, not a read of VDP register 1. Human region review
+-- still owns palette/deformation/AniPLC acceptance.
+local framebuffer_cache = nil
+local function shell_quote(value)
+    return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+local function observe_framebuffer()
+    local probe = os.getenv("OGGF_FBZ_FRAMEBUFFER_PROBE")
+    if not probe then return DISPLAY_VERIFICATION, nil end
+    local frame = emu.framecount()
+    if framebuffer_cache and framebuffer_cache.frame == frame then
+        return framebuffer_cache.status, framebuffer_cache.sha256
+    end
+    local path = join_path(OUTPUT_ROOT, "framebuffer-probe.png")
+    local captured = pcall(client.screenshot, path)
+    local status, digest = "unverified-framebuffer-probe-failed", nil
+    if captured then
+        local command = shell_quote(os.getenv("OGGF_FBZ_PYTHON") or "python3")
+            .. " " .. shell_quote(probe) .. " --probe-framebuffer " .. shell_quote(path)
+        local pipe = io.popen(command, "r")
+        if pipe then
+            local result = pipe:read("*a")
+            local closed = pipe:close()
+            digest = result:match("^PASS ([0-9A-F]+) ")
+            if closed and digest and #digest == 64 then
+                status = "verified-framebuffer-content"
+            else digest = nil end
+        end
+    end
+    os.remove(path)
+    framebuffer_cache = {frame=frame,status=status,sha256=digest}
+    return status, digest
+end
+
 local function read_ram_snapshot()
     local counters = {}
     for index = 0, 15 do counters[#counters + 1] = mainmemory.read_u8(ADDR_ANIM_COUNTERS + index) end
     local title_code = read_u32_be(ADDR_TITLE_CARD)
     local title_children = mainmemory.read_u16_be(ADDR_TITLE_CARD_CHILD_COUNT)
     local vdp_reg1_command = mainmemory.read_u16_be(ADDR_VDP_REG1_COMMAND)
-    local title_active = title_code ~= 0
+    local title_active = title_code == TITLE_CARD_CODE
+    local display_verification, framebuffer_sha256 = DISPLAY_VERIFICATION, nil
+    if not title_active and OVERLAYS_DISABLED
+            and mainmemory.read_u16_be(ADDR_PALETTE_FADE_TIMER) == 0 then
+        display_verification, framebuffer_sha256 = observe_framebuffer()
+    end
     return {
         player_x = mainmemory.read_u16_be(ADDR_PLAYER_X),
         player_y = mainmemory.read_u16_be(ADDR_PLAYER_Y),
@@ -233,13 +284,14 @@ local function read_ram_snapshot()
         game_mode = mainmemory.read_u8(ADDR_GAME_MODE),
         palette_fade_timer = mainmemory.read_u16_be(ADDR_PALETTE_FADE_TIMER),
         vdp_reg1_command = vdp_reg1_command,
-        display_enabled = (vdp_reg1_command % 0x80) >= 0x40,
+        display_verification = display_verification,
+        framebuffer_sha256 = framebuffer_sha256,
         title_card_code = title_code,
         title_card_routine = mainmemory.read_u8(ADDR_TITLE_CARD_ROUTINE),
         title_card_wait_timer = mainmemory.read_u16_be(ADDR_TITLE_CARD_WAIT_TIMER),
         title_card_child_count = title_children,
         title_card_active = title_active,
-        title_card_complete = not title_active and title_children == 0,
+        title_card_complete = not title_active,
         overlays_disabled = OVERLAYS_DISABLED,
         anim_counters = counters,
     }
@@ -255,7 +307,9 @@ local function visibility_failures(snapshot)
     append_failure(failures, snapshot.game_mode == LEVEL_GAME_MODE, "game_mode != level ($0C)")
     append_failure(failures, snapshot.title_card_complete, "title card is active or has live children")
     append_failure(failures, snapshot.palette_fade_timer == 0, "palette_fade_timer != 0")
-    append_failure(failures, snapshot.display_enabled, "VDP display-enable bit is clear")
+    append_failure(failures,
+        snapshot.display_verification == "verified-framebuffer-content",
+        "display readiness is unverified (RAM command template is not live VDP state)")
     append_failure(failures, snapshot.overlays_disabled, "BizHawk overlays are not disabled")
     return failures
 end
@@ -290,7 +344,7 @@ local function snapshot_fingerprint(snapshot)
         snapshot.game_mode, snapshot.palette_fade_timer, snapshot.vdp_reg1_command,
         snapshot.title_card_code, snapshot.title_card_routine,
         snapshot.title_card_wait_timer, snapshot.title_card_child_count,
-        tostring(snapshot.display_enabled), tostring(snapshot.title_card_active),
+        snapshot.display_verification, tostring(snapshot.framebuffer_sha256), tostring(snapshot.display_enabled), tostring(snapshot.title_card_active),
         tostring(snapshot.title_card_complete), tostring(snapshot.overlays_disabled),
     }
     for _, value in ipairs(snapshot.anim_counters) do values[#values + 1] = value end
@@ -332,7 +386,10 @@ local function write_snapshot_json(file, snapshot, indent)
     field("game_mode", hex8(snapshot.game_mode))
     field("palette_fade_timer", hex16(snapshot.palette_fade_timer))
     field("vdp_reg1_command", hex16(snapshot.vdp_reg1_command))
-    file:write(indent .. '"display_enabled": ' .. tostring(snapshot.display_enabled) .. ',\n')
+    field("display_verification", snapshot.display_verification)
+    if snapshot.framebuffer_sha256 then field("framebuffer_sha256", snapshot.framebuffer_sha256) end
+    file:write(indent .. '"display_enabled": '
+        .. (snapshot.display_enabled == nil and "null" or tostring(snapshot.display_enabled)) .. ',\n')
     field("title_card_code", hex32(snapshot.title_card_code))
     field("title_card_routine", hex8(snapshot.title_card_routine))
     field("title_card_wait_timer", hex16(snapshot.title_card_wait_timer))
@@ -365,8 +422,11 @@ local function hash_vram(spec)
     assert(previous, "cannot preserve the current BizHawk memory domain")
     local selected, select_failure = pcall(memory.usememorydomain, resolve_vram_domain())
     assert(selected, "cannot select VRAM memory domain: " .. tostring(select_failure))
+    -- BizHawk 2.11 MemoryLuaLibrary.HashRegion(addr, count, domain) delegates
+    -- to MemoryApi.HashRegion, whose implementation uses SHA256Checksum.
+    -- The third argument is a memory domain, never an algorithm name.
     local ok, digest = pcall(memory.hash_region,
-        spec.destination_tile * 32, spec.tile_count * 32, "SHA256")
+        spec.destination_tile * 32, spec.tile_count * 32, resolve_vram_domain())
     local restored, restore_failure = pcall(memory.usememorydomain, previous)
     assert(restored, "cannot restore memory domain: " .. tostring(restore_failure))
     assert(ok, "cannot hash VRAM destination: " .. tostring(digest))
@@ -653,7 +713,7 @@ local function run_export()
     end
 
     if not start_captured then
-        start_failure = start_failure or "no fully visible gameplay frame passed every gate"
+        start_failure = start_failure or (DISPLAY_VERIFICATION .. ": no fully visible gameplay frame passed every gate")
     end
     for _, spec in ipairs(CADENCE_SPECS) do
         if spec.phase ~= "done" and spec.phase ~= "failed" then
@@ -671,6 +731,7 @@ local function run_export()
         file:write('  "schema_version": 2,\n')
         file:write('  "manifest_sha256": "' .. plan.manifest_sha256 .. '",\n')
         file:write('  "preserved_v1_evidence": true,\n')
+        file:write('  "display_verification_method": "current-frame-native-framebuffer-content",\n')
         file:write('  "start_checkpoint": "' .. START_OUTPUT_ID .. '",\n')
         file:write('  "start_capture_pass": ' .. tostring(start_captured) .. ',\n')
         if start_capture_frame then file:write('  "start_bk2_frame": ' .. start_capture_frame .. ',\n') end
