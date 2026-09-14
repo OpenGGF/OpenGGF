@@ -157,9 +157,8 @@ class TestRewindInPlaceObjectRestore {
             // Write-before-use scratch holders rebuilt each frame before any read.
             "com.openggf.level.PatternDesc",
             "com.openggf.level.objects.SubpixelMotion$State",
-            // Stateless functional handles installed at construction.
-            "com.openggf.level.objects.DestructionEffects$AnimalFactory",
-            "com.openggf.level.objects.DestructionEffects$PointsFactory",
+            // Stateless functional handles installed at construction. Explosion
+            // factories now restore from typed state, so are not structural fallthrough.
             "java.util.function.BooleanSupplier",
             "java.util.function.IntSupplier");
 

@@ -465,3 +465,52 @@ The two context-aware overrides have a documented architecture triage entry;
 subtype generic scalar capture remains active. Local unpublished task commits are
 folded together so the candidate API signature change and its source stay in one
 reviewable commit after the size-guard extraction.
+
+
+### Integrated develop verification
+
+Final source commit `abe7497fd` merged into develop as `6897a6048`. Reconciliation
+preserved the incoming slots bonus-stage player-priority fix and FBZ/render-rate
+prose without conflicts. Actual-environment preflight passed. The required
+post-integration command used the original pinned base:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 14d902d3900104108b3f550d6f8d4841deddabc3 --run
+```
+
+Run `20260914T174633Z-16a4b83d` selected all **2,569 ordinary classes** and guards.
+Ordinary completed **20,363 cases: 20,344 passed, one failure, no errors, 18 skips**,
+627.25 seconds. All 42 maintained HCZ cases and AIZ's native route, seven rewind
+windows and reload passed without skips. The extra skip versus the earlier run is
+the incoming opt-in `TestS3kSlotsGlassNative`; the other 17 retain the reasons
+recorded above. No separate trace/native or full-route configuration certification
+is implied.
+
+The sole ordinary failure was
+`TestRewindInPlaceObjectRestore#auditSummaryAndKnownClassifications`: its pinned
+set still included `AnimalFactory` and `PointsFactory` as final non-captured
+references. Those two types now restore through typed explosion state and no
+longer belong to that structural fallthrough set. The correction removes those
+two obsolete entries and documents why; it does not widen reuse eligibility or
+change runtime code. The failed class is verified narrowly after the broad run.
+
+Guards completed **667 cases: 665 passed, the same two baseline failures,
+no errors/skips**, 174.37 seconds. Exact failing test identities and payloads
+match the pre-integration check above. Both lanes completed; the wrapper then
+returned exit 2 because develop advanced concurrently to `8ce626087`. That commit
+only changes the independent render-rate design and roadmap prose; `git diff
+6897a6048 8ce626087 -- src pom.xml .github .githooks tools` is empty. The completed
+lane results therefore describe the same runtime/test/build inputs, with an explicit
+workspace-change caveat; they are not reported as a successful wrapper run.
+Results and all skips were inspected before acknowledging the diagnostic directory.
+
+The narrow correction check,
+`maven_queue.py -Dmse=off -Dtest=TestRewindInPlaceObjectRestore
+-Dsonic2.rom.path=/absolute/path/to/the/existing/S2-ROM.gen test`, passed
+**three cases, no failures/errors/skips**, 50.326 seconds including compilation
+(queue waiting excluded). No production files changed after the completed integrated
+lanes. Only the matched inherited guard failures remain; full-route viewport/donor,
+other-character/team, checkpoint/death and presentation/oracle obligations stay open.
+The broad diagnostics were acknowledged and deleted. Final delivery merges this
+test/documentation correction into develop; the feature branch remains local.
