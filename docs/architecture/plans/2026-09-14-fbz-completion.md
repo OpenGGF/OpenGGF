@@ -122,7 +122,7 @@ an airborne rider lands on a moving cage, matching `Player_TouchFloor` for all
 native characters. Final strict counts are 4,667 / first 13,585 Y for the complete
 recording and 5,065 / first 116 Tails subpixel for the independent recording.
 All early cage mapping discrepancies are gone; the next physics owner is a
-rolling landing on a disappearing platform. Trace parity remains incomplete.
+rolling landing on a magnetic platform (the earlier disappearing-platform attribution was incorrect). Trace parity remains incomplete.
 
 The expanded Act 1 lifecycle method passes all 105 width × donor × team
 combinations plus its final native reset. All 96 local arrival delays and 15
@@ -199,3 +199,102 @@ conditions, leaving insufficient execution time for outstanding strict-trace,
 native-reference/presentation and missing main-character route work. This is an
 explicit validation-budget/completion conflict under the user's forty-minute
 cap, not a claim that the local candidate is fully validated or FBZ complete.
+
+
+## Continued delivery and requested demonstration
+
+The user continued after the proposed increase to an **80-minute aggregate**
+manual FBZ validation ceiling. Earlier execution remains charged; the combined
+broad attempt is still reserved, and the shared KiS2 receipt remains untouched.
+
+`dbc34c6d5` corrects the magnetic-polarity prelude's live frame-counter read;
+`d5420f4ec` applies the same proven byte-address semantics to flame and missile
+producers. The platform at the earlier row 13,585 frontier is native `$3B3FA`,
+a magnetic platform, not a disappearing platform. `0a078cf87` exposes the
+launcher companion's ROM `$20` balance width independently of its collision
+parameter `$2B` and its parent's `$10` width.
+
+The requested S1-donation video is `$FBZ_EVIDENCE_ROOT/s1-runup-roll/`
+`S1-FBZ-run-up-roll.mp4`: 254 frames at 60 fps (4.233333 seconds), 960 × 672
+nearest-neighbour enlargement of 320 × 224 gameplay. The captured runtime is
+`6d0de860e`, with S3K FBZ Act 2, active S1 donation and Sonic alone. After the
+explicit local start-position setup, all movement uses ordinary pad input.
+There are exactly 60 frames before the run-up and 60 after full clearance;
+the actual car is acquired and released once. No squeeze assist, spindash,
+hurt or death occurs. The retained input script, compiled Input Log, state CSV
+and capture receipt make the demonstration reproducible. This is a gameplay
+video, not native pixel-parity evidence.
+
+Two candidate cold Act 2 character drivers now exercise native Tails and
+Knuckles independently. Their initial failures exposed Sonic-specific test
+waypoints (centre height and jump reach); corrections use actual radii and
+ordinary inputs, with all encounter/completion assertions retained. Both now pass every completion assertion; the final native-main evidence below
+supersedes their earlier controller failures. The separate cold Act 1 candidate's raw
+recorded pad sequence also remains incomplete: matching the opening input
+latency improves the route, but later platform phase differences still cause
+a missed jump. No comparison rows supply gameplay values to these drivers.
+
+
+The temporary raw-movie Act 1 controller was not promoted as a passing test.
+Delaying its recorded inputs by one frame matched the opening native position
+samples through row 400, but later unrecorded load timing and floating-platform
+phase made a fixed pad sequence miss the lower outdoor gap. Live landing and
+predicted platform steering advanced the probe to `$0C5C` before death at frame
+3,395; it did not establish a complete route. These are rejected controller
+attempts, not reasons to alter production physics. The committed strict replay
+remains the separate timing-aware oracle, and Act 1 completion remains open.
+
+The production setup animation fix passed 102 focused tests, zero
+failures/errors/skips, in 66.63 seconds: `TestFbzAnimatedTiles`,
+`TestTraceReplayStartPositionPolicy`, `TestS3kMhzPatternAnimation`,
+`TestS3kAiz1SkipHeadless`, both classes named `TestSonic3kLevelLoading`,
+`TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`, and
+`TestFbzVisualGameplayAdvanceContract`. The subsequent neutral method rename
+and replay handoff-order reconciliation require aggregate validation.
+
+The fresh paired engine start capture now accepts the independently observed
+native state at level frame 35, including all raw animation timer/frame bytes.
+The engine image is not identical: the complete-run native HUD carries score
+and lives, while the engine cold start does not, and cloud phase still differs.
+State acceptance therefore does not certify native pixel parity. Both images
+remain outside the committed source tree in the task evidence directory.
+
+
+### Act 1 normal-attack ownership correction
+
+A bounded live replay probe on `190cbd408` plus setup-animation changes confirmed
+that the miniboss activates at row 19,793: the production KosM job uses archive
+`$1652B4`, payload `$1652B6`, destination `$A5C0`. Missing activation was rejected
+as the explanation for the remaining queue comparison. At row 20,348, the engine
+left terminal chain touched Sonic while the native five links were horizontal.
+
+The owning native routines exposed a group of incorrect state ports:
+`sub_6F830` clamps an unsigned angle bound instead of requiring exact equality;
+`loc_6F338` uses that same clamp for the arm. `NORMAL_HOLD` is only `Obj_Wait`,
+and `loc_6F360` clears arm bit 3 before root bit 2. Normal-fan terminal impact
+writes root readiness, while arm readiness belongs to the later recycle tail.
+`sub_6F8C8` also clamps overshoot, and `sub_6F8F2` deliberately differs at equality
+(left accepts `$80`, right requires crossing). Focused boundary and complete
+hold/recycle ownership regressions accompany those source-derived corrections.
+The bounded probe was diagnostic only: its intentional early stop failed terminal
+closure and is not reported as a passing replay. Full comparison remains required.
+
+
+### Native-main Act 2 completion
+
+`TestFbzMainCharacterCompletion` now proves separate native Tails and Knuckles
+cold-start routes through every mandatory interaction, final boss defeat,
+capsule release and the SOZ Act 0 request. The latest Knuckles method passed
+with zero failures/errors/skips (`-Pfbz-routes`, explicit method selector,
+`surefire:test`, 8.48 seconds including Maven; `190cbd408` plus local changes).
+Tails passed in the preceding two-method run; that run's Knuckles failure was
+an exhausted Sonic-specific route budget after already defeating the boss.
+
+The lower-jump controller uses real spring/ledge support, ordinary native glide,
+stopping distance and the boss's ROM-derived flame motion. Confirmed hits reset
+a no-progress watchdog; the complete route remains bounded at 35,400 frames,
+ten seconds before time-over. The capsule driver can jump from its actual body
+support to the live button. No runtime movement, collision or damage allowance
+was altered to make these routes pass. Failed earlier controllers (static flame
+projection, fixed Sonic fight duration and repeating the Sonic capsule approach
+from a successful body landing) are retained here as rejected approaches.

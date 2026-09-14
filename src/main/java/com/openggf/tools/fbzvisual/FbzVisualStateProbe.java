@@ -71,10 +71,21 @@ public final class FbzVisualStateProbe {
         values.put("rng_seed", runtime.rngSeed());
         values.put("rng_state", String.format("0x%08X:%s",
                 runtime.rngSeed() & 0xFFFFFFFFL, runtime.rngFlavour()));
+        addScrollState(values);
         addAnimationState(values);
         addVisibilityState(values);
         addRuntimeDetails(values);
         return new Snapshot(values);
+    }
+
+    private static void addScrollState(Map<String, Object> values) {
+        try {
+            var parallax = GameServices.parallax();
+            values.put("foreground_vscroll", parallax.getVscrollFactorFG() & 0xFFFF);
+            values.put("background_vscroll", parallax.getVscrollFactorBG() & 0xFFFF);
+        } catch (RuntimeException ignored) {
+            // Synthetic RuntimeView contracts have no installed scroll owner.
+        }
     }
 
     private static void addAnimationState(Map<String, Object> values) {

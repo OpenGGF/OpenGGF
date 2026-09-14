@@ -35,7 +35,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the `$0B68` screw door, its `$0BC0` elevator and the rest never appeared and
   Act 2 could not be completed on those viewports. FBZ enemy art now enters
   the ROM-ordered KosM queue; cage/chain animation writes and floating-platform
-  clock reads match their original byte/word semantics. Zone-owned tumble
+  and hazard-producer clock reads match their original byte/word semantics.
+  Magnetic polarity uses the current level clock, and the missile companion
+  exposes its original standing-balance width. Rotating platforms decode all
+  native member rows and signed radii; offscreen solid push release retains its
+  original animation write during death. Fresh S3K loads now run the initial
+  pattern animation pass before gameplay, as the ROM does. The Act 1 boss arms
+  clamp their angles and release their chain state in the original order. Zone-owned tumble
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
   route clears the elevator squeeze with an ordinary run-up and timed roll.
   Rewinding a moving dynamic platform restores its execution slot before

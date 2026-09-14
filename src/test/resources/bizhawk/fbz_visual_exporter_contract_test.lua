@@ -65,4 +65,25 @@ assert(api.hash(spec)==string.rep("A",64)); assert(domain=="Main RAM", "hash cha
 hash_failure=true
 assert(not pcall(api.hash,spec), "hash failure swallowed")
 assert(domain=="Main RAM", "failed hash changed domain")
+-- A valid host content observation is paired with this emulator frame, not
+-- promoted to a fabricated live VDP bit. Same-frame reads share its PNG hash.
+variables.OGGF_FBZ_FRAMEBUFFER_PROBE = "/stub/probe.py"
+local frame, probes, reply = 237948, 0, "PASS " .. string.rep("B",64) .. " 172 7 223"
+emu.framecount=function() return frame end
+io.popen=function(command)
+    probes=probes+1
+    assert(command:find("--probe-framebuffer",1,true))
+    return {read=function() return reply end, close=function() return true end}
+end
+snapshot=api.read()
+assert(snapshot.display_enabled==nil, "framebuffer observation fabricated a hardware bit")
+assert(snapshot.display_verification=="verified-framebuffer-content")
+assert(snapshot.framebuffer_sha256==string.rep("B",64))
+assert(#api.visibility(snapshot)==0)
+assert(api.read().framebuffer_sha256==snapshot.framebuffer_sha256 and probes==1,
+    "same-frame reread did not retain framebuffer binding")
+frame=frame+1; reply="FAIL blank-native-crop"
+snapshot=api.read()
+assert(#api.visibility(snapshot)==1 and snapshot.framebuffer_sha256==nil,
+    "blank-frame probe or stale hash accepted")
 print("FBZ exporter observation and fail-closed publication checks passed")

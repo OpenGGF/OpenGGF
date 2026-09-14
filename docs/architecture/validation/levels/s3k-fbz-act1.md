@@ -42,21 +42,20 @@ and carried owners; it is part of this act's completion contract.
 
 [Native validation](../../research/s3k-zones/fbz-validation.md) and the
 [amendment](../../research/s3k-zones/fbz-visual-evidence-amendment-proposal.json)
-remain authoritative. Native start and five AniPLC regions are awaiting fresh
-measured state and independent review; `exact_state` and visible regions are null.
-The Lua exporter implements replacement start and five AniPLC series in a single
-1,024-frame observation window, not the complete late-checkpoint/branch workflow.
-Engine native checkpoint executors exist; compatibility image publication rejects.
-The missing capture host and aggregate semantic comparison/report entrypoints must
-be implemented before claiming reproducible complete visual acceptance. Historical
-superseded hashes are not passing evidence; no `refs/fbz` directory was present in
-the inspected main checkout. Keep ROM-derived images outside committed source.
+remain authoritative. The new Python/BizHawk host captured a visible native start
+and six-frame native candidates for all five AniPLC channels. The paired engine
+start matches level frame 35 and raw animation counters after the production
+setup pass; terrain raster alignment and cloud phase still differ. `$230` is
+placed only in Act 2, as proven by ROM block/chunk/layout decoding. These are
+candidate references, not completed paired cadence or checkpoint acceptance.
+The frozen checkpoint manifest remains unchanged. See the current native
+validation record for exact artifact hashes, regions and outstanding obligations.
 
 Read-only prerequisite check on 2026-09-14:
 `tools/tracechaser/bizhawk/preflight_bizhawk_2_11.sh --bizhawk-home $BIZHAWK_HOME`
 passed: exact 2.11.0.0 and 30 Lua capabilities. Mono/ffmpeg/pwsh/Lua 5.4 and
 the complete Sonic/Tails BK2 exist; display access and fresh pixels were not tested.
-No accepted capture was produced. Later native diagnostic execution and its
+That initial preflight produced no accepted capture. Later native execution and its
 exporter defects are recorded in the completion record; those PNGs do not close
 visual acceptance.
 

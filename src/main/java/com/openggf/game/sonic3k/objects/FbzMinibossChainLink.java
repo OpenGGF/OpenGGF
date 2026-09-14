@@ -184,7 +184,11 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
         int target = side == 0 ? -0x40 : 0x40;
         int step = side == 0 ? 2 : -2;
         angle = FbzMinibossArmChild.signedByte(angle + step);
-        if (angle == target) {
+        // sub_6F830 uses unsigned byte bounds, including an odd-angle overshoot.
+        // Equality alone can miss the target forever with the two-unit step.
+        boolean reached = side == 0 ? (angle & 0xFF) >= 0xC0 : (angle & 0xFF) <= 0x40;
+        if (reached) {
+            angle = target;
             stateOrdinal = State.NORMAL_WAIT_PARENT.ordinal();
             if (isTerminal()) arm.setControlBit(FbzMinibossArmChild.ARM_TERMINAL_EDGE);
         }
@@ -211,7 +215,8 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
             stateOrdinal = State.RECYCLE_WAIT.ordinal();
             angleStep = FbzMinibossArmChild.signedByte(angleStep + 2);
             if (isTerminal()) {
-                arm.setControlBit(FbzMinibossArmChild.ARM_PATROL_READY);
+                // sub_6F85A follows $44 -> arm -> parent3 -> root. Arm
+                // readiness belongs to the later loc_6F64E recycle tail.
                 boss.setRootBit(FbzMinibossInstance.ROOT_ARM_RETURNED);
                 boss.publishScriptedTerminalImpact();
             }
@@ -229,14 +234,20 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
         int target = side == 0 ? -0x60 : 0x60;
         int step = side == 0 ? 2 : -2;
         angle = FbzMinibossArmChild.signedByte(angle + step);
-        if (angle == target && isTerminal()) arm.setControlBit(FbzMinibossArmChild.ARM_PATROL_READY);
+        // sub_6F8C8 clamps every link; only the terminal publishes readiness.
+        if (side == 0 ? (angle & 0xFF) >= 0xA0 : (angle & 0xFF) <= 0x60) {
+            angle = target;
+            if (isTerminal()) arm.setControlBit(FbzMinibossArmChild.ARM_PATROL_READY);
+        }
         circularMove();
     }
 
     private void updateOutwardAlign() {
         int step = side == 0 ? -2 : 2;
         angle = FbzMinibossArmChild.signedByte(angle + step);
-        if ((angle & 0xFF) == 0x80) {
+        // sub_6F8F2: left accepts equality, right requires a strict crossing.
+        if (side == 0 ? (angle & 0xFF) <= 0x80 : (angle & 0xFF) > 0x80) {
+            angle = -0x80;
             stateOrdinal = State.OUTWARD_WAIT_PARENT.ordinal();
             if (isTerminal()) arm.setControlBit(FbzMinibossArmChild.ARM_TERMINAL_EDGE);
         }

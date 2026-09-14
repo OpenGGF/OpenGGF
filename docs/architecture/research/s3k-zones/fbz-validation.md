@@ -111,11 +111,11 @@ The original display gate was invalid. `sonic3k.constants.asm` places
 `VDP_reg_1_command` at `$F60E` after the six-byte `_tempF608` reserve, not `$F60C`.
 `Init_VDP` stores a command template there; display-enabling routines OR `$40`
 into `d0` and write the hardware without updating that template. Correcting only
-the address still rejected every frame. The exporter now records the template,
-emits `display_enabled: null` with an explicit unverified status, and cannot
-accept start/cadence evidence until a live observation is implemented and
-verified. Installed Genesis Lua APIs expose layer settings, not a verified live
-VDP register reader; emulator register APIs expose CPU registers.
+the address still rejected every frame. The exporter records the template and keeps `display_enabled: null`: no live
+VDP bit is claimed. Installed Genesis Lua APIs expose layer settings, not a
+verified live VDP register reader; emulator register APIs expose CPU registers.
+Without a configured framebuffer probe, readiness remains explicitly unverified
+and cannot pass.
 
 Installed `BizHawk.Client.Common.dll` metadata declares
 `MemoryLuaLibrary.HashRegion(addr, count, domain)`. Its `MemoryApi.HashRegion`
@@ -132,10 +132,13 @@ The first measured state satisfying the other native-start predicates is BK2
 237948 (trace 34, `Level_frame_counter=$0023`). Player centre is `$0060/$076C`,
 camera `$0000/$070C`, and animation bytes are
 `1C 01 04 05 00 02 04 01 04 05 00 00 00 00 00 00`.
-No exact-frame PNG was captured, so this is not an approved start contract.
-Nine sparse native diagnostic PNGs include clear outdoor gameplay but do not
-prove five per-channel visible regions/cadence. The frozen manifest and pending
-amendment remain unchanged.
+The first investigation captured only sparse diagnostics. A further authorized
+116.509-second native run captured the exact frame and five six-image cadence
+sequences under `native-reference/framebuffer-v1`. The exact-start PNG SHA-256 is
+`EA9A56D5A7F3DE1C63D5A0A0BD4E4268FB7B73ACFCC62FF17F0102E7DDCEEA0C`.
+Every sidecar binds its current-frame probe PNG hash; host provenance binds the
+ROM, movie, exporter and emulator. The frozen manifest and pending amendment
+remain unchanged until independent review and paired engine comparison.
 
 The focused regression executes actual Lua observation/publication functions
 with BizHawk API stubs: address correctness, unknown display for either template
@@ -151,7 +154,103 @@ lua5.4 src/test/resources/bizhawk/fbz_visual_exporter_contract_test.lua \
 
 `TestFbzVisualExporterGuard` invokes the same regression through `LUA_BIN`
 (default `lua`) in the guards profile, whose CI job provisions Lua. The ordinary
-tooling-contract test remains Java-only. Native recapture remains outstanding.
+tooling-contract test remains Java-only. The same guard invokes the Python
+predicate tests, which need only the standard library; decoding actual native
+PNGs in the host requires Pillow.
+
+### Reproducible Linux native capture
+
+Use `tools/bizhawk/capture_fbz_visual_references.py` with Mono, `monodis`, Python
+and Pillow installed, and an accessible X display. The launcher verifies exact
+managed version 2.11.0.0 and the locked-on ROM SHA-1, creates a new external output
+directory, copies configuration with private writable paths, and bounds the native
+process. It never changes the installed emulator configuration or movie/ROM.
+
+```bash
+python3 tools/bizhawk/capture_fbz_visual_references.py \
+  --bizhawk-home /absolute/BizHawk-2.11-linux-x64 \
+  --rom /absolute/discovered-locked-on.gen \
+  --movie /absolute/s3k-complete-sonic-tails.bk2 \
+  --output /absolute/external-task/native-reference-new --timeout 180
+```
+
+The framebuffer probe observes the exact emulated frame without advancing it.
+Installed GPGX `render_line` tests `reg[1] & $40`; the blank branch fills each
+scanline with one backdrop index. The probe therefore excludes borders and
+requires horizontal pixel variation on separated rows spanning at least half the
+active height, rejecting blank frames, vertical palette gradients, and small
+upper overlays. Separate Lua gates require title-card ownership gone, fade zero,
+and emulator/debug overlays disabled. Rendering begins before the observation
+window. Same-frame rereads reuse the verified PNG hash, and published images are
+independently checked against it. `verified-framebuffer-content` describes this
+pixel observation; `display_enabled` remains null because no register was read.
+This predicate establishes visible content, not semantic palette/art correctness.
+
+Act 1's `$210-$22F` channel has offsets `[0, 0]` in the ROM's `AniPLC_FBZ1`
+script, so its timer advances while identical art is uploaded. Requiring changed
+pixels/VRAM for that channel is incompatible with the ROM and needs an explicit
+reviewed stable-art contract. Other channels show native VRAM changes one frame
+after the timer/index advance because the queued transfer is serviced later.
+The first start-window cadence sets contain moving clouds; changing whole-PNG
+hashes alone do not prove the animated destination tiles are visible. Each
+channel still needs an independently identified region, with the stable `$210`
+case distinguished from actual changing art.
+
+The later native placement pass sampled 127 states over the first 16,000 FBZ
+frames in 135.131 seconds, preserving PNG/RAM/VRAM/CRAM/VSRAM and native states
+under external `route-samples-v1`. Exact GPGX palette decoding and the live
+plane-A/B name tables, line scroll, vertical scroll and linked sprite table
+established visible owners: `$200` spike tips, `$208` propeller shaft, `$210`
+static violet mesh and `$238` hanging mesh. Independently reviewed native-320
+regions were respectively `(155,155,16,32)`, `(152,140,16,40)`,
+`(16,80,128,80)`, `(90,80,64,64)`. A 5.724-second state-resume capture produced
+four natural six-frame series under `mapped-cadences-v1`; the pixel mapper checks
+actual ROM palette indices against the sampled PNG, accounting for the current
+name-table/scroll/SAT placement rather than treating cloud motion as animation.
+These are native candidates, not paired-engine PASS results.
+
+ROM archive analysis explains the missing fifth placement. Shared FBZ blocks at
+`$194400` and chunks at `$1974A2` decompress to 4,392 and 32,768 bytes.
+Destination tiles `$230–$237` occur in blocks 397–400 and chunks
+`$1B/$48/$B1/$C3/$CB`. The original Act 1 foreground/background layouts contain
+none of these chunks; Act 2 has 33 foreground placements, including
+`x=$680,y=$800–$980`. Thus Act 1's scheduled `$230` uploads cannot supply a
+visible original-layout region. Any acceptance change must explicitly move that
+placement proof to Act 2 rather than invent Act 1 pixels.
+
+A further 5.873-second native state-resume pass reached Act 2's column at
+camera `$089B/$064C` and captured channel `$230` on BK2 frames
+262703–262708, under external `act2-channel230-v1`. Candidate region
+`(20,55,32,40)` maps exactly to 1,280 channel pixels for the first five frames;
+the sixth has two occluded pixels. Timer/index advance at 262704 leaves the
+region and VRAM unchanged; both change at the queued VBlank commit 262705.
+`native-cadence-candidate-summary.json` ties all five channel candidates to
+per-frame PNG/RAM/VRAM and placed-pixel counts. Camera motion changes the `$210`
+rectangle while its placed ROM art stays static; acceptance must compare tile
+identity in world space, not require a stationary screen rectangle.
+
+Paired-start execution exposed missing production setup work. `loc_6468` runs
+`Animate_Tiles` after initial `Process_Sprites`/`Render_Sprites` and before
+`LevelLoop` increments `Level_frame_counter`. Native BK2 frame 237914 has LFC 1
+and script timers `[62,6,0,6,6]`; the engine had `[63,7,1,7,7]` and remained one
+animation call behind at matching LFC 35. The initial object lifecycle now invokes
+an optional semantic animation setup owner, implemented by S3K, without advancing
+palette cycling, gameplay clocks or `ChangeRingFrame`. Replay's former extra
+setup tick is removed; any additional structural handoff animation follows the
+production setup call. MHZ's existing preseeded cap counter is preserved. The
+visual executor observes the amendment's `[63,7,1,7,7]` first-animation phase at
+LFC zero, then advances ordinary production frames to the accepted visible state.
+
+The paired engine start subsequently accepted the exact LFC-35 state. Pixel
+parity remains unaccepted: GPGX expands the 3-bit channels to `[0,34,...,238]`,
+while `Palette.Color.fromSegaFormat` expands them to `[0,36,73,...,255]`.
+Recovering each host's 3-bit channel values distinguishes this encoding choice
+from a ROM palette error. In region `(180,120,120,20)`, 944 of 2,400 normalized
+pixels match at the same coordinates; shifting the engine sample down one row
+matches 2,400/2,400. That shift is diagnostic, not an accepted comparison rule.
+Native start VSRAM is FG `$070C`, BG `$0011`, with camera/copy Y `$070C`.
+The state probe now records the engine's actual foreground/background VScroll
+owners separately from camera position to diagnose the remaining discrepancy.
 
 <!-- FBZ-VALIDATION:native-pre-compat:BEGIN -->
 ## Native pre-compatibility validation

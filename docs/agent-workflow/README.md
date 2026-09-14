@@ -4,6 +4,8 @@ Support material to help agents implement OpenGGF objects/zones/trace-fixes with
 
 ## Tools
 
+- [FBZ native visual exporter](../../tools/bizhawk/capture_fbz_visual_references.py) captures ROM/BK2-backed framebuffers and RAM/cadence sidecars with an isolated BizHawk 2.11 configuration; see [native validation](../architecture/research/s3k-zones/fbz-validation.md#reproducible-linux-native-capture).
+
 Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
 
 | Tool | Purpose | Invocation |

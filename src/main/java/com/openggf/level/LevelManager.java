@@ -515,7 +515,8 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
     @Override
     protected void executeInitialProcessSprites() {
         new InitialProcessSpritesExecutor().execute(
-                gameModule, spriteManager, objectManager, camera, zoneFeatureProvider, frameCounter);
+                gameModule, spriteManager, objectManager, camera, zoneFeatureProvider,
+                animatedPatternManager, frameCounter);
     }
 
     /**

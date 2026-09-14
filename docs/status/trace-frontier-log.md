@@ -109627,7 +109627,77 @@ aggregate including baselines, temporary probes and failed fixture setup:
 743.86 seconds. The final 30 cage tests pass and both strict replays complete
 with known failures. All early cage mapping blips are gone; first animation
 error is row 15,234 `tails_animation_id` 0/$1A. The first physics error is a
-rolling landing on disappearing-platform slot 6 / native routine `$3B3FA`;
+rolling landing on magnetic-platform slot 6 / native routine `$3B3FA`;
 that later owner remains open. See the
 [completion record](../architecture/plans/2026-09-14-fbz-completion.md) and
 [coverage matrices](../architecture/validation/levels/s3k-fbz-act1.md).
+
+
+### Continued FBZ correction evidence
+
+The earlier `$3B3FA` owner is a magnetic platform, not a disappearing platform.
+`dbc34c6d5` removes the extra increment from its fixed polarity prelude;
+`d5420f4ec` corrects flame/missile producer byte reads. `0a078cf87` restores the
+launcher companion's `$20` standing-balance width.
+
+`721f7787e` (source `d48dc91eb`) restores all 15 rotating-platform descriptor
+rows, masks, signed radius bytes and previous-render bounds. The route's actual
+bad contact at row 19,501 comes from **subtype 0's signed negative radii**, not
+from a row-9 placement; row 9 is descriptor coverage only. Native Act 1 contains
+six placements, three subtype 0 and three subtype `$C`; Act 2 contains none.
+
+`07254db72` (source `4eaa02e00`) preserves the offscreen full-solid push-release
+word during death. A native saved-state write probe identified PC `$01E0C2`,
+A0 `$B456` (slot 15, rotating platform) at row 15,557. Its write clears the push
+bit, so a post-write status byte without that bit does not disprove ownership.
+The first interpretation rejected this writer incorrectly; the instruction
+probe resolves the ambiguity. Kill_Character writes Death once in S1, S2 and
+S3K; the dead loop does not continually reclaim the animation byte.
+
+`190cbd408` (source `32fa1a5c9`) submits the miniboss art archive at native
+`loc_6EEA8`, `$1652B4` to VRAM `$A5C0`. The direct job's `$D000` destination is
+decompression scratch, not VRAM. This adds the missing producer but does not
+yet prove activation timing at row 19,793.
+
+On the timing worktree before the production initial-animation integration,
+245 focused tests pass with zero failures/errors/skips in 51.18 seconds:
+solid contact, animation profile, sidekick death/rewind, rotating family and
+miniboss/rewind. Latest complete strict replay is still **4,349 errors**, first
+**16,600 Tails animation 5/6**, summed mismatching field-rows 678,539. First main
+animation is 16,663; first main queue mismatch 19,793; first gameplay physics
+20,348 unexpected death, then position 20,349. This run establishes neither
+Act 1 completion nor Act 2 reload. Root's integrated pair on `190cbd408` plus the production setup-animation
+changes completes in 70.73 seconds: 2 tests, 2 comparison failures, zero errors
+or skips. It reproduces **4,349 / first 16,600** and **5,109 / first 116**,
+with zero warnings; moving setup animation into its production owner preserves
+these frontiers.
+
+Error spans are not mismatching-frame totals: after the producer clock repair,
+the independent recording increased from 5,050 to 5,109 spans while summed
+mismatching field-rows decreased from 738,724 to 727,909 (main 369,141 to 367,257).
+A bounded matched run identified removed wrong Tails recovery/speed intervals;
+span fragmentation must not be reported as 59 new bad frames. The independent
+first row 116 subpixel mismatch remains inherited and unresolved.
+
+
+### FBZ Act 1 normal arm cycle, 2026-09-14
+
+On `190cbd408` plus the setup and normal-arm/chain corrections in
+`.worktrees/ai-fbz-completion`, `mvn -Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+surefire:test` (absolute verified S3K ROM, one fork) completed both comparisons:
+4,663 errors / 0 warnings over 44,152 rows and 5,109 / 0 over 33,712 rows;
+two failing tests, zero errors/skips. First errors remain row 16,600
+`tails_animation_id` `$05/$06` and row 116 `tails_x_sub` `$D000/$B800`.
+
+The complete-run error groups increased from 4,349 to 4,663 and mismatching
+field-rows from 678,539 to 751,300. This is not a blanket improvement claim.
+The first main gameplay-physics error nevertheless advances from the unexpected
+death at 20,348 to `x_speed`/`g_speed` `$18/$00` at 22,227. A bounded live owner
+probe confirms Sonic alive at 20,350 and the left chain horizontal at native
+positions. The next boundary starts an engine-only direct Kos job `$0D6A64`
+to `$FFFFD000`, with player animation `$13` instead of `$00`; its timing and
+later cascades remain under investigation. The earlier 19,793 queue comparison
+still differs, although actual miniboss activation and archive `$1652B4` to
+VRAM `$A5C0` were independently observed at that exact row. No comparison
+rows hydrate gameplay, and Act 1 completion is still not certified.

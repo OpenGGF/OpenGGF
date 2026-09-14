@@ -16,9 +16,31 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzAnimatedTiles {
+    @Test void freshSetupRunsPatternPassOnceWithoutSpendingGameplayOrGlobalAnimationClock() {
+        HeadlessTestFixture.builder().withZoneAndAct(4, 0).build();
+        var level = GameServices.level();
+        var manager = (Sonic3kLevelAnimationManager) level.getAnimatedPatternManager();
+        var scripts = manager.patternAnimatorForTesting().scriptsForTesting();
+        int frame = level.getFrameCounter();
+        int globalAngle = manager.aizVineAngleWord();
+        assertEquals(0, scripts.get(0).getFrameIndex());
+        assertTrue(level.consumePendingInitialProcessSpritesPass());
+        assertEquals(frame, level.getFrameCounter(), "setup runs before the LevelLoop clock");
+        assertEquals(globalAngle, manager.aizVineAngleWord(), "setup has no ChangeRingFrame");
+        assertEquals(List.of(63, 7, 1, 7, 7), scripts.stream().map(AniPlcScriptState::getTimer).toList());
+        assertTrue(scripts.stream().allMatch(script -> script.getFrameIndex() == 1));
+        assertFalse(level.consumePendingInitialProcessSpritesPass());
+        assertEquals(63, scripts.get(0).getTimer(), "one-shot setup must not double tick");
+        manager.update();
+        assertEquals(List.of(62, 6, 0, 6, 6), scripts.stream().map(AniPlcScriptState::getTimer).toList(),
+                "ROM LFC1 is already one ordinary tick after the setup animation pass");
+    }
+
     @Test void bothActsInstallFiveExactRomOwnedChannels() {
         for (int act = 0; act < 2; act++) {
             HeadlessTestFixture.builder().withZoneAndAct(4, act).build();

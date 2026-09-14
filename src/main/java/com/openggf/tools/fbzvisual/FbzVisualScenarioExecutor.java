@@ -69,7 +69,11 @@ public final class FbzVisualScenarioExecutor {
 
     private void executeNativeStart(FbzVisualEvidenceAmendment amendment,
                                     List<Map<String, Object>> observations) {
-        session.stepFrames(1);
+        // The amendment's first animation tick is loc_6468's pre-LevelLoop
+        // Animate_Tiles pass, at LFC zero, not the first gameplay iteration.
+        if (!GameServices.level().consumePendingInitialProcessSpritesPass()) {
+            throw new IllegalStateException("FBZ native start requires fresh production setup");
+        }
         FbzVisualStateProbe.Snapshot firstTick = session.captureState();
         amendment.verifyFirstAnimationTick(firstTick.values());
         observations.add(observation("first-animation-tick", firstTick));

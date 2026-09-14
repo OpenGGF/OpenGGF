@@ -8,11 +8,16 @@ green completion claim.
 ## Current native trace baseline
 
 The pinned `435ec2e68` baseline reproduces 5,666 complete-run errors,
-first row 34 queue busy. The completion candidate at `c31bdbd7a` improves to
-**4,667 errors**, first row **13,585 Y** ($0647/$0646), with no bootstrap
-errors, warnings or skips. It compares all 44,152 admitted rows. An independent
-recording improves 5,227 → 5,065 errors; its first row 116 Tails subpixel field
-remains unchanged. Both strict traces are still red.
+first row 34 queue busy. The current `190cbd408` candidate plus production
+setup and normal-arm/chain corrections reproduces **4,663 errors**, first row
+**16,600 Tails animation 5/6**, and **5,109** in the independent recording,
+first row 116 Tails subpixel `$D000/$B800`. Both complete strict comparisons
+with zero warnings or skips. These remain red, and Act 1 completion has not
+been established. First main queue mismatch is 19,793; the first main gameplay
+physics error now reaches 22,227 (`x_speed`/`g_speed` `$18/$00`) after the earlier
+20,348 chain death was corrected. Aggregate field-row mismatch volume increased
+at this newly reached boundary, so it is not yet accepted as a green candidate.
+See the matched comparison and exact commands in the frontier log.
 
 Queue submissions, animation operand widths, the platform low-byte clock,
 zone-owned tumble presentation and snake standing ownership are corrected.
@@ -21,6 +26,10 @@ commands, commits and counts. Historical July near-green results are obsolete;
 ordinary route completion does not establish emulator parity.
 
 ## Native FBZ2 compatibility route
+
+Native Tails and Knuckles solo routes now also pass every mandatory interaction,
+boss defeat, capsule and outgoing SOZ assertion in `TestFbzMainCharacterCompletion`.
+This closes their complete-route gap but not the separate visual/rewind matrix.
 
 The native cold-Act 2 route now runs from the ROM start to the forced SOZ
 Act 0 request for every viewport width, every team row and the S2 donated

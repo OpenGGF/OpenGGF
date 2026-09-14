@@ -28,4 +28,19 @@ class TestFbzVisualExporterGuard {
         assertEquals(0, process.exitValue(), Files.readString(log, StandardCharsets.UTF_8));
     }
 
+    @Test
+    void framebufferProbeRejectsBlankAndBorderOnlyImages(@TempDir Path output)
+            throws Exception {
+        String python = System.getenv().getOrDefault("PYTHON_BIN", "python3");
+        Path log = output.resolve("python-result.txt");
+        Process process = new ProcessBuilder(python,
+                "src/test/resources/bizhawk/fbz_framebuffer_probe_test.py")
+                .redirectErrorStream(true).redirectOutput(log.toFile()).start();
+        if (!process.waitFor(10, TimeUnit.SECONDS)) {
+            process.destroyForcibly();
+            throw new AssertionError("FBZ framebuffer probe contract timed out");
+        }
+        assertEquals(0, process.exitValue(), Files.readString(log, StandardCharsets.UTF_8));
+    }
+
 }
