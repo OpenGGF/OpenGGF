@@ -432,3 +432,35 @@ validated runtime tree and the focused test corrections are the delivery
 candidate; full Act 1 route proof, strict trace parity and accepted paired visual
 evidence remain outstanding. Push and cleanup outcomes are reported with the
 integrated commit, rather than being inferred from this local validation.
+
+### Integration with the concurrent route delivery
+
+The final FBZ test/evidence commit is `cb3c89f71`. Another session advanced
+develop to `fd45b8b0c` between the final fetch and merge, integrating AIZ/HCZ
+routes, AIZ rewind owners and the feature-branch CI destination fix. FBZ merged
+cleanly as **`42c797e54`**, retaining both deliveries. Its shared S3K event-manager
+change adds the AIZ tree rewind adapter independently of FBZ's art/setup changes;
+no conflict required changing either behavior. Therefore the integrated tree
+was not assumed identical to the earlier broad candidate.
+
+The bounded post-integration command ran in the main workspace on `42c797e54`
+through the automatic queue (all three verified absolute ROM properties supplied):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -B \
+  -Dtest=TestS3kAiz1RoutePilot,TestS3kAiz1CompatibilityRoutes,TestS3kHcz1RoutePilot,TestS3kAiz1EntryMatrix,TestS3kAiz1RouteRewind,TestS3kAiz1ReloadRewind,TestS3kAiz1SpringRecovery,TestAiz1IntroProgram,TestAizIntroPaletteCycler,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestFbzAnimatedTiles,TestFbzBossGraphRewind,TestFbzSqueezeOrdinaryRoll \
+  -Dopenggf.aiz1.routes=true -Dopenggf.aiz1.entry=true \
+  -Dopenggf.aiz1.recovery=true -Dopenggf.hcz1.pilot=true test
+```
+
+**223 tests passed, zero failures/errors/skips**, 116.448 seconds including Maven.
+This covers the newly combined route/setup/rewind consumers and retains the four
+required S3K bootstrap/loading/decoding/AIZ checks. The other delivery's affected
+CI/build and rewind guards are recorded in its route-controller handover; the
+same four unrelated baseline guard failures remain open. This focused integrated
+result is not another full-suite pass. No runtime or test change follows it.
+
+Final separate FBZ accounting: **4,673.415 seconds / 77.890 minutes**, one combined
+broad attempt, within the agreed 80-minute ceiling. Queue waits did not consume
+execution time. Whitespace, mirrored guidance/skills, proposal JSON and the
+destination push policy were checked; this final follow-up changes prose only.
