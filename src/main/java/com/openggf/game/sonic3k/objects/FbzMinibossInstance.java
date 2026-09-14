@@ -77,6 +77,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
     private int paletteRequestCount;
     private int paletteSpawnCount;
     private int armTableInvocations;
+    private long minibossArtOrdinal = -1;
     private FbzMinibossArmChild leftArm;
     private FbzMinibossArmChild rightArm;
 
@@ -89,6 +90,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity mainPlayer) {
         if (!ensureInitialized()) return;
+        serviceMinibossArt();
         switch (phase()) {
             case CAMERA_APPROACH -> updateCameraApproach();
             case WAIT_PLUNGER -> {
@@ -261,7 +263,11 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         if (services().objectManager() != null) {
             // Child6_EndSign uses CreateChild6_Simple: allocate after the boss
             // slot and only report a sign when that allocation succeeds.
-            S3kSignpostInstance sign = spawnChild(() -> new S3kSignpostInstance(x, 0));
+            S3kSignpostInstance sign = spawnChild(() ->
+                    new S3kSignpostInstance(x, 0, 0, 0, 0, true));
+            // The boss SST itself becomes Obj_EndSignControl; retain its real
+            // allocation boundary when Obj_EndSignResults calls AllocateObject.
+            sign.preserveNativeControlAllocationBoundary(getSlotIndex());
             signSpawned = !sign.isDestroyed();
         }
     }
@@ -332,11 +338,34 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         }
     }
 
+    private void serviceMinibossArt() {
+        if (minibossArtOrdinal < 0) return;
+        var queue = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        var handle = services().hardwareTiming().pendingHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, minibossArtOrdinal)
+                .orElseThrow(() -> new IllegalStateException("FBZ miniboss lost its submitted KosM job"));
+        if (queue.isReady(handle)) {
+            queue.claim(handle);
+            minibossArtOrdinal = -1;
+        }
+    }
+
     private void enqueueMinibossArt() {
         try {
-            if (services().kosinskiModuleQueue() == null) return;
             var rom = services().rom();
             if (rom == null) return;
+            try {
+                var queue = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+                // loc_6EEA8 is a physical Queue_Kos_Module producer. The standalone
+                // renderer and legacy DMA journal do not submit to this timing ledger.
+                minibossArtOrdinal = queue.queue(rom,
+                        Sonic3kConstants.ART_KOSM_FBZ_MINIBOSS_ADDR, 0x52E).ordinal();
+            } catch (IllegalStateException unavailable) {
+                if (!"runtime-art coordination is unavailable in these object services"
+                        .equals(unavailable.getMessage())) throw unavailable;
+                // Lightweight object fixtures omit the runtime coordinator explicitly.
+            }
+            if (services().kosinskiModuleQueue() == null) return;
             Sonic3kPlcLoader.bindRuntimePatternDmaTarget(services().kosinskiModuleQueue(), services());
             // loc_6EEA8 explicitly queues ArtKosM_FBZMiniboss at ArtTile_FBZMiniboss=$52E.
             // Renderer registration above only prepares the decoded sheet, not this ROM job.

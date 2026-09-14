@@ -33,6 +33,39 @@ class TestFbzAct1Miniboss {
     }
 
     @Test
+    void initializationOwnsOnePhysicalArchiveUntilReady() throws Exception {
+        var queue = mock(com.openggf.game.sonic3k.resources.S3kKosModuleQueue.class);
+        var coordinator = mock(com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.class);
+        var timing = mock(com.openggf.game.timing.HardwareTimingService.class);
+        var rom = mock(com.openggf.data.Rom.class);
+        var handle = new com.openggf.game.timing.HardwareWorkHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, 7, "test-fingerprint");
+        org.mockito.Mockito.when(coordinator.moduleQueue()).thenReturn(queue);
+        org.mockito.Mockito.when(queue.queue(rom, 0x1652B4, 0x52E)).thenReturn(handle);
+        org.mockito.Mockito.when(timing.pendingHandle(handle.kind(), handle.ordinal()))
+                .thenReturn(java.util.Optional.of(handle));
+        var services = new TestObjectServices() {
+            @Override public com.openggf.data.Rom rom() { return rom; }
+            @Override public com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator() {
+                return coordinator;
+            }
+            @Override public com.openggf.game.timing.HardwareTimingService hardwareTiming() {
+                return timing;
+            }
+        };
+        var boss = new FbzMinibossInstance(new ObjectSpawn(0x2E20, 0x540, 0xAA, 0, 0, false, 0));
+        boss.setServices(services);
+        boss.update(0, null);
+        boss.update(1, null);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.never()).claim(handle);
+        org.mockito.Mockito.when(queue.isReady(handle)).thenReturn(true);
+        boss.update(2, null);
+        boss.update(3, null);
+        org.mockito.Mockito.verify(queue).queue(rom, 0x1652B4, 0x52E);
+        org.mockito.Mockito.verify(queue).claim(handle);
+    }
+
+    @Test
     void objectOwnedGateAndWaitDurationsMatchTheRom() {
         assertArrayEquals(new int[] {0x240, 0x600, 0x2D20, 0x2F20},
                 FbzMinibossInstance.activationBounds());

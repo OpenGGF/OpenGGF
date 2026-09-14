@@ -340,8 +340,9 @@ task receipt remains untouched. The one combined attempt may not be repeated.
 The final focused plunger check passed 36 tests, zero errors/skips, including real
 standing-contact retention after the production signpost ending pose and rejection
 of new controlled contacts. Complete replay reaches the next main physics frontier
-at row 22,397, a one-row world-coordinate rebase difference; the overall trace
-remains red. The detailed counts and rejected two-hook attempt are in the frontier
+at row 22,397, initially described as a one-row world-coordinate rebase
+difference. The remaining-items investigation below corrects that diagnosis to
+a persistent results-art readiness stall; the overall trace remains red. The detailed counts and rejected two-hook attempt are in the frontier
 log. The paired native start/cadence and full Act 1 route acceptance remain open.
 
 ### Combined validation and final strict confirmation
@@ -506,3 +507,51 @@ correct sideways spikes. The replacement MP4 contains frames 328–581: 254 fram
 at 60 fps, 960×672, 4.233 seconds, with exactly 60 intro and 60 trailing frames.
 Captures and reproduction inputs remain in the external `fbz-wall-spikes-20260914`
 task directory. Full FBZ visual checkpoint acceptance remains open.
+
+### Remaining-items continuation after video approval
+
+The user authorized the remaining ordinary Act 1 route, strict replay and visual
+acceptance work after approving the corrected wall-spike video. The integration
+base is develop `51677cdd2`; the coordinating tree is
+`feature/ai-fbz-remaining`. Separate local worktrees own the ordinary input
+controller, Tails replay frontiers, and native visual comparisons. The coordinator
+owns the ending flow and combined verification. This continuation preserves the
+frozen visual proposal and distinguishes new evidence from acceptance.
+
+A read-only results-owner probe overturns the earlier description of frame 22397
+as an isolated coordinate-rebase difference. On the base, results remain in their
+creation state with art unready: Act 2 never reloads. Row 22398 is an un-compared
+lag row, not recovery. The three results fingerprints match the native jobs,
+but their ordinals are 265/266/267 instead of 266/267/268. `loc_6EEA8` queues
+`ArtKosM_FBZMiniboss` (`$1652B4` → VRAM `$A5C0`); the engine's legacy DMA queue
+submission never entered the physical hardware-timing ledger. Adding the native
+parent to the canonical queue and claiming its prepared result restores the
+results-art completion and synchronous reload at row 22397. The existing DMA
+journal remains responsible for pattern writes and their rewind history. No
+trace row supplies gameplay state or bypasses readiness admission.
+
+The same probe finds results initialized one dispatch early: FBZ's sign omitted
+the existing grounded-results/native-control-slot contract. Retaining the boss's
+actual control boundary makes a lower first-free results slot wait for the next
+object pass, matching `Obj_EndSignResults`'s `AllocateObject`. The engine's free
+slot is 4 versus native 5 in this recording; the slot difference remains distinct
+from the corrected dispatch boundary and is not hidden with a reserved slot.
+
+The newly reached reload then exposes a second ownership error: it submits the
+three FBZ enemy-art parents immediately. `FBZ1BGE_Normal` calls `Load_Level` and
+`LoadSolids`, while the later title teardown owns `LoadEnemyArt`. The event request
+now uses the existing `TITLE_OWNER` admission policy, as other ordinary act
+handoffs do. The transition regression checks that the complete three-entry batch
+is retained but no physical handles have been submitted at the resource reload.
+
+Focused ending verification (queued Maven, Java 21, absolute main-workspace
+S3K ROM): `-Ptrace-replay-r7 -Dtest=TestS3kFbzCompleteRunTraceReplay,TestFbzAct1Miniboss,TestFbzMinibossRewind test`
+passed 53 boss/rewind tests, with the expected strict replay failure and zero
+skips (64 seconds). The allocation follow-up passed 26 sign/boss tests, zero
+skips; the transition/title-owner follow-up passed 13 transition/PLC tests, zero
+skips. Strict complete errors move 4501 → 4361 → 4353 → 4323; all runs cover
+44,152 rows with zero warnings. The unchanged overall first error is still row
+16600 Tails animation, pending the parallel Tails fixes. Queue parity now reaches
+row 22868, where the next title publication/control-release boundary differs.
+The temporary read-only observer has been removed. These are focused results,
+not full-suite or strict-replay passes.

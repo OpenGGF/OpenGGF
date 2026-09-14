@@ -51,6 +51,30 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestFbzActTransitionHeadless {
     @Test
+    void seamlessReloadLeavesEnemyKosBatchForTheLaterTitleOwner() throws Exception {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0)
+                .startPosition((short) 0x2EE1, (short) 0x0540)
+                .startPositionIsCentre().build();
+        var manager = (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
+        var events = manager.getFbzEvents();
+        events.setEventsFg5(true);
+        events.updateAct1BackgroundEvent(fixture.sprite().getCentreX(),
+                fixture.sprite().getCentreY(), false);
+        var provider = (com.openggf.game.sonic3k.Sonic3kObjectArtProvider)
+                GameServices.level().getObjectRenderManager().getArtProvider();
+        var pending = provider.capture();
+        assertEquals(com.openggf.game.RuntimeArtAdmissionOwnerKind.TITLE_OWNER,
+                pending.runtimeArtAdmissionOwnerKind());
+        assertFalse(pending.runtimeArtAdmissionConsumed());
+        assertFalse(pending.kosSubmissionArmed());
+        assertTrue(pending.pendingKosOrdinals().isEmpty(),
+                "Load_Level must not submit the later LoadEnemyArt batch");
+        assertEquals(3, pending.pendingKosModules().size(),
+                "the title must retain all three ROM FBZ enemy-art entries");
+    }
+
+    @Test
     void synchronousReloadCarriesRomGlobalMagneticStateAndConsumesOneShotContext()
             throws Exception {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
