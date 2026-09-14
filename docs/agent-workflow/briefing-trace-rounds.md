@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+FBZ visual investigation (2026-09-14): matching camera/VSRAM does not prove
+pixel sampling. Read back the actual shader uniforms and descriptor/lookup/atlas
+textures before changing scroll logic. Subtracting fragment-centre `0.5` before
+division and `floor` places samples on integer boundaries: GPU reciprocal rounding
+can turn `n` into `n - epsilon`, shifting rows even at native scale. Retain pixel
+centres through scaling and test the real shaders at fractional as well as integer
+viewports. A complete-run native background can also retain scratch RAM history
+that a cold level boot never had; do not copy reference RAM into gameplay to fit it.
+
 | Rule | Signature | What it looks like |
 |---|---|---|
 | 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |
