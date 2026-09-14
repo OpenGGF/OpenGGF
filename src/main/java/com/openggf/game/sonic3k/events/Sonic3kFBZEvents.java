@@ -319,7 +319,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
             if (player.getDead()) {
                 screenShakeOffset = 0;
             } else if (screenShakeActive) {
-                screenShakePhase = frameCounter & 0x3F;
+                // loc_4F3FA samples Level_frame_counter, not this event
+                // manager's independently advanced dispatch count.
+                screenShakePhase = levelManager().getFrameCounter() & 0x3F;
                 screenShakeOffset = SCREEN_SHAKE_ARRAY_2[screenShakePhase & 0x1F];
             } else {
                 screenShakeOffset = 0;

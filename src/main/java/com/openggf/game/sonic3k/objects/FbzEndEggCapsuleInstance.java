@@ -150,6 +150,9 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
         sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
     }
 
+    // ObjDat_EggCapsule width_pixels=$20; SolidObjectFull adds $B only to d1.
+    @Override public int getBalanceWidthPixels() { return 0x20; }
+
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x2B, 0x18, 0x18); }
     @Override public int getX() { return spawn.x(); }
     @Override public int getY() { return spawn.y(); }

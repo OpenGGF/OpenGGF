@@ -31,6 +31,15 @@ class TestFbzFinalEggCapsule {
         GraphicsManager.getInstance().resetState();
     }
 
+    @Test
+    void capsuleBalanceUsesObjectDataWidthWithoutFullSolidPadding() {
+        var capsule = new FbzEndEggCapsuleInstance(0x307C, 0x660);
+        assertEquals(0x20, capsule.getBalanceWidthPixels(),
+                "ObjDat_EggCapsule width_pixels=$20 is Sonic_Move's balance operand");
+        assertEquals(0x2B, capsule.getSolidParams().halfWidth(),
+                "SolidObjectFull retains its separate $B contact padding");
+    }
+
     @Test void finalResultsCapsuleOwnsADedicatedRealSstGraph() {
         assertFalse(AbstractS3kUprightEggCapsuleInstance.class.isAssignableFrom(FbzEndEggCapsuleInstance.class),
                 "FBZ must not widen the collapsed shared upright capsule");
