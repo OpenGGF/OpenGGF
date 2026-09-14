@@ -142,6 +142,12 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
             storedCameraMaxY = Short.toUnsignedInt(services().camera().getMaxYTarget());
             services().camera().setMinX((short) 0x2900);
             services().camera().setMaxYTarget((short) 0x5E0);
+            if (services().levelEventProvider() instanceof Sonic3kLevelEventManager manager) {
+                // loc_6FD38 writes the resize target before DynamicLevelEvents
+                // eases Camera_max_Y_pos. The next Tails slot reads that live
+                // word, so publish the eased boundary to its controller mirror.
+                manager.requestSidekickBoundsPublishAfterCameraEasing();
+            }
         }
         initialized = true;
         phaseOrdinal = Phase.WAIT_P1.ordinal();

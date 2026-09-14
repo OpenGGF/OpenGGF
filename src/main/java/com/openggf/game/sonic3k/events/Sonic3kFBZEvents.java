@@ -93,7 +93,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                                      int redrawProgress, int redrawPosition,
                                      int redrawRowCount, int redrawVerticalAnchor,
                                      DeformMode deformMode, PaletteVariant paletteVariant,
-                                     PaletteTarget paletteTarget) {}
+                                     PaletteTarget paletteTarget, boolean sidekickBoundsPublishPending) {}
+
+    private boolean sidekickBoundsPublishPending;
 
     private static final int FG_LAYER = 0;
     private static final int[][] ACT1_LAYOUT_RANGES = {
@@ -226,6 +228,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         magneticEdgeObserved = false;
         magneticLastEdgeFrame = 0;
         pendulumOrientationBits.clear();
+        sidekickBoundsPublishPending = false;
         act2ForegroundStage = 0;
         bossBackgroundStage = 0;
         bossBackgroundOffsetX = 0;
@@ -507,12 +510,31 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         submitAct1PaletteOwnership();
     }
 
+    public void requestSidekickBoundsPublishAfterCameraEasing() {
+        requireAct2("sidekick boundary publication");
+        sidekickBoundsPublishPending = true;
+    }
+
+    public boolean consumeSidekickBoundsPublishAfterCameraEasing() {
+        boolean pending = sidekickBoundsPublishPending;
+        sidekickBoundsPublishPending = false;
+        return pending;
+    }
+
+    public boolean isSidekickBoundsPublishPending() { return sidekickBoundsPublishPending; }
+
+    public void restoreSidekickBoundsPublishPending(boolean pending) {
+        requireAct2("sidekick boundary restore");
+        sidekickBoundsPublishPending = pending;
+    }
+
     public Act2TraversalState captureAct2TraversalState() {
         requireAct2("traversal capture");
         return new Act2TraversalState(foregroundLayoutRegion, foregroundOutdoor, backgroundOutdoor,
                 act2ForegroundStage, bossBackgroundStage, backgroundRedrawDirection,
                 backgroundRedrawProgress, backgroundRedrawPosition, backgroundRedrawRowCount,
-                backgroundRedrawVerticalAnchor, deformMode, paletteVariant, paletteTarget);
+                backgroundRedrawVerticalAnchor, deformMode, paletteVariant, paletteTarget,
+                sidekickBoundsPublishPending);
     }
 
     public void restoreAct2TraversalState(Act2TraversalState state) {
@@ -536,6 +558,7 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         deformMode = Objects.requireNonNull(state.deformMode(), "deform mode");
         paletteVariant = Objects.requireNonNull(state.paletteVariant(), "palette variant");
         paletteTarget = Objects.requireNonNull(state.paletteTarget(), "palette target");
+        sidekickBoundsPublishPending = state.sidekickBoundsPublishPending();
     }
 
     public static int[][] act1LayoutRanges() {

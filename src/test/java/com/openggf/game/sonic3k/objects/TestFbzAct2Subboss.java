@@ -59,6 +59,46 @@ class TestFbzAct2Subboss {
         for (var entry : entries) org.mockito.Mockito.verify(queue).queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32);
     }
 
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void activationPublishesEasedDeathPlaneToTheNextSidekickSlot() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var camera = com.openggf.game.GameServices.camera();
+        camera.setX((short) 0x2900);
+        camera.setY((short) 0x5F0);
+        camera.setMaxY((short) 0xB00);
+        camera.setMaxYTarget((short) 0xB00);
+        var tails = new com.openggf.sprites.playable.Tails("tails_bounds", (short) 0, (short) 0);
+        tails.setCpuControlled(true);
+        var cpu = new com.openggf.sprites.playable.SidekickCpuController(tails, fixture.sprite());
+        tails.setCpuController(cpu);
+        cpu.setLevelBounds(0, 0x3000, 0xB00);
+        com.openggf.game.GameServices.sprites().addSprite(tails, "tails");
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var boss = manager.createDynamicObject(TestFbzAct2Subboss::boss);
+
+        boss.update(0, fixture.sprite());
+        assertEquals("WAIT_P1", boss.phaseName());
+        assertEquals(0xB00, cpu.getMaxYBound(-1), "target publication waits for actual camera easing");
+        var runtime = com.openggf.game.GameServices.zoneRuntimeRegistryOrNull()
+                .currentAs(com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState.class).orElseThrow();
+        byte[] pendingPublication = runtime.captureBytes();
+        camera.updateBoundaryEasing();
+        var events = com.openggf.game.GameServices.module().getLevelEventProvider();
+        events.updateAfterCameraBoundaryEasing();
+
+        assertEquals(0x5EE, camera.getMaxY());
+        assertEquals(camera.getMaxY(), cpu.getMaxYBound(-1),
+                "next Tails_Check_Screen_Boundaries must observe the live eased Camera_max_Y_pos");
+        cpu.setLevelBounds(0, 0x3000, 0xB00);
+        events.updateAfterCameraBoundaryEasing();
+        assertEquals(0xB00, cpu.getMaxYBound(-1), "publication request is consumed exactly once");
+        runtime.restoreBytes(pendingPublication);
+        events.updateAfterCameraBoundaryEasing();
+        assertEquals(camera.getMaxY(), cpu.getMaxYBound(-1),
+                "rewinding the pending event republishes the live boundary at the same phase");
+    }
+
     @Test void nativeBoundsTriggerAndSevenCycleCounterAreExact() {
         assertArrayEquals(new int[] {0x560, 0x660, 0x2900, 0x2C00},
                 Fbz2SubbossInstance.activationBounds());
