@@ -117,3 +117,43 @@ InputRun migration and qualified-@ModApi hook follow-up from the original
 handover remain separate work; the selected branch lacks the later FBZ route
 prerequisites, which were intentionally not imported.
 
+
+## Integration and branch placement
+
+Implementation commit: `bff3e1a7a`. At the user's request, the main workspace
+was restored to `develop` at `435ec2e68` (already up to date), and
+`feature/ai-gameplay-capture` was moved into the continuation worktree and
+fast-forwarded to the implementation. No merge conflict occurred. Disassembly
+HEAD/status/diff fingerprints and the user's notes-file hash matched before and
+after switching the main folder; no hard reset or dirty-content discard occurred.
+The work is intentionally **not merged into develop** by this delivery.
+
+Post-integration focused validation on `bff3e1a7a`: **124 cases, 120 passed,
+4 baseline-identical failures, 0 errors, 0 skips**, 84.702 s invocation wall time.
+The four failures are exactly the three AIZ axis rows and HCZ pilot above;
+case identities and full failure messages were compared again with the untouched
+base. The three focused guards had already passed on identical source; they
+were not repeated. ROM SHA-1 identities for S1 REV01, S2 REV01 and S3K matched
+the repository reference table.
+
+The combined command used `mvn -Dmse=off` with the class list below, both
+`-Dopenggf.aiz1.routes=true` and `-Dopenggf.hcz1.pilot=true`, the existing absolute
+`-Ds3k.rom.path`, `-Dsonic1.rom.path`, `-Dsonic2.rom.path`, and `test`:
+
+```text
+-Dtest=TestS3kAiz1RoutePilot,TestS3kAiz1RouteRewind,TestS3kAiz1ReloadRewind,TestInputProgram,TestAizIntroPaletteCycler,TestAizPlaneIntroInstance,TestS3kAizIntroGraphRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kAizIntroEventsHeadless,TestLiveRewindBoundaryPolicy,TestS3kHcz1RoutePilot,TestS3kAiz1CompatibilityRoutes
+```
+
+Aggregate measured testing: **505.208 seconds (8.420 minutes)**, including
+438.682 s focused/iteration/integration and 66.526 s matched baseline. This
+includes failed setup/debugging runs, not just green checks. The user authorized
+separate accounting because the shared receipt belongs to `kis2-trace-fixture`;
+the final status attempt found its task lock held by another worktree. That
+receipt and lock were left untouched. This document retains the accounting;
+consumed raw diagnostics are removed rather than archived.
+
+One independent static review found no high/medium issues. Its coverage limit:
+these tests compare registered snapshots at restore/replay endpoints, not every
+intermediate frame or unregistered state. `SidekickAudit` tolerates empty-team
+suppression windows and bounds observed dead streaks; it does not prove all
+possible terminal deaths recover. Documentation links and whitespace were checked.
