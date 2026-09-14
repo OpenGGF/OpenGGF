@@ -109827,3 +109827,8 @@ zero errors/skips. Upstream reconciliation introduced no Java changes after
   wall/landing geometry work needs production ROM evidence and the new chain BK2.
 - Changes came from shipped-ROM movement/radius rules, not fixture-specific
   patches. This is an improved failing trace, not complete KiS2 parity.
+
+- Reconciled candidate `50a4467e6` reran the same queued KiS2 EHZ1 command after
+  merging AIZ/HCZ/FBZ bootstrap and animation changes: unchanged 1,817 rows,
+  194 comparison errors, 91 bootstrap errors, zero warnings/skips (19.354 s).
+  The first bootstrap error and runtime frontier above remain unchanged.

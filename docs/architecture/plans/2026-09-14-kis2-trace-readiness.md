@@ -136,3 +136,18 @@ entries (the only textual conflict). Shared solid death cleanup, initial animati
 bootstrap and animation ownership merged alongside KiS2 contact/rule changes.
 A bounded integration check covers these overlapping consumers and the KiS2
 surface; prior broad measurements above belong to their recorded commits.
+
+On reconciled commit `50a4467e6`, queued `-Dmse=off test -B` with verified
+absolute S2/S3K ROM paths and selector
+`TestKis2*,!TestKis2Ehz1TraceReplay,TestSolidObjectManager,TestScriptedVelocityAnimationProfile,TestPlayableSpriteAnimation,TestSidekickCpuDespawnParity,TestPostLoadAssemblyBehavior,TestModApiSignatureSurface,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passed 380 tests, zero failures/errors/skips (55.217 seconds). Queued `-Pguards`
+selected the previous four corrected guard classes plus `TestBuildToolingGuard`,
+`TestTraceChaserBoundaryGuard`, and `TestNoAssertionFreeDiagnostics`: 211 tests,
+207 passed, the same four baseline failures, no errors/skips (54.258 seconds).
+Upstream's guard edits cover CI dispatch, not the stale queue-guidance assertion.
+
+The same queued EHZ1 command reran because upstream changed shared trace bootstrap:
+1,817 rows, 194 comparison errors, 91 bootstrap errors, zero warnings/skips
+(19.354 seconds); the recorded frontier is unchanged. No broad retry was needed:
+combined-tree checks target the reviewed overlap, and prior broad coverage remains
+attributed to its earlier commit.
