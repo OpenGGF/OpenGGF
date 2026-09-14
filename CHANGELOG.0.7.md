@@ -79,7 +79,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   sideways artwork; both tile banks participate in renderer refresh. Foreground
   and background shaders retain fragment centres while scaling, preventing a
   one-pixel sampling shift caused by GPU division rounding. Retained background
-  redraws use native strip counts and clipped windows, preserving untouched rows.
+  redraws use native strip counts, clipped windows and aligned column sources,
+  preserving untouched rows.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 

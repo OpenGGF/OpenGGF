@@ -55,11 +55,31 @@ def capture_plan(start_frame: int, window: int) -> str:
                                             for ch in channels) + '}}')
 
 
+def boundary_plan(checkpoint: str) -> str:
+    """Only approved Act1 boundary setup fields; no measured native inputs."""
+    manifest = Path(__file__).resolve().parents[2] / "docs/architecture/research/s3k-zones/fbz-visual-checkpoints.json"
+    if digest(manifest) != "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8":
+        raise ValueError("Unreviewed boundary manifest")
+    data = json.loads(manifest.read_text())
+    allowed = {f"fbz1-boundary-{i}-outdoor" for i in (1,2,3,5,6)} | {"fbz1-boundary-4-horizontal"}
+    if checkpoint not in allowed:
+        raise ValueError("Only reviewed Act1 boundaries supported")
+    recipe = data["setup_recipes"][checkpoint]
+    target = next(c for c in data["checkpoints"] if c["id"] == checkpoint)["player"]
+    axis = "x" if checkpoint == "fbz1-boundary-4-horizontal" else "y"
+    return ('{id=' + json.dumps(checkpoint) + ',x=' + str(recipe["centre"]["x"])
+            + ',y=' + str(recipe["centre"]["y"]) + ',region=' + str(recipe["state"]["Events_bg_00"])
+            + ',address=' + str(0xB010 if axis == "x" else 0xB014)
+            + ',forward=' + str(target[axis]) + ',reverse=' + str(recipe["centre"][axis]) + '}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--probe-framebuffer", type=Path)
     parser.add_argument("--bizhawk-home", type=Path)
     parser.add_argument("--exporter", type=Path, help="explicit diagnostic Lua override; hash recorded")
+    parser.add_argument("--fresh-entry-act", type=int, choices=(1,2), help="ordinary native level-select target for fresh-entry exporter")
+    parser.add_argument("--boundary-checkpoint", help="approved Act1 boundary recipe for declared native fixture")
     parser.add_argument("--fixture-state", type=Path, help="explicit native fixture saved state; identity recorded, never supplied to engine")
     parser.add_argument("--rom", type=Path)
     parser.add_argument("--movie", type=Path)
@@ -103,7 +123,14 @@ def main():
             path.mkdir(parents=True, exist_ok=True)
         entry["Path"] = str(path)
     (output / "config.ini").write_text(json.dumps(config))
-    (output / "plan.lua").write_text(capture_plan(args.start_frame, args.window))
+    plan_text = capture_plan(args.start_frame, args.window)
+    if args.boundary_checkpoint:
+        if not args.fixture_state or not args.exporter:
+            parser.error("--boundary-checkpoint requires --fixture-state and --exporter")
+        plan_text = plan_text[:-1] + ",boundary=" + boundary_plan(args.boundary_checkpoint) + "}"
+    if args.fresh_entry_act:
+        plan_text = plan_text[:-1] + ",fresh_entry_act=" + str(args.fresh_entry_act) + "}"
+    (output / "plan.lua").write_text(plan_text)
     exporter = (args.exporter or Path(__file__).with_suffix(".lua")).resolve()
     env = os.environ.copy()
     env.update({"LD_LIBRARY_PATH": f"{home}/dll:{home}:/usr/lib/x86_64-linux-gnu",

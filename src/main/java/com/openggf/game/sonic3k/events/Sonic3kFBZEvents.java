@@ -195,6 +195,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                     planeBFrameTouched |= levelManager().copyBackgroundTileRowFromWorldToVdpPlane(sx, sy, dest, 0x20);
                 }
                 @Override public void copyColumn(int sx, int sy, int dx) {
+                    // loc_5293C/loc_52962 supply d1=0 outdoors. Indoors,
+                    // Setup_TileColumnDraw shifts d1 by4 before resolving blocks.
+                    sy = backgroundOutdoor ? 0 : sy & 0xFFF0;
                     retainedPlaneOwned = true;
                     planeBFrameTouched |= levelManager().copyBackgroundTileColumnsFromWorldToVdpPlane(sx, sy, dx, 1, 0x10);
                 }

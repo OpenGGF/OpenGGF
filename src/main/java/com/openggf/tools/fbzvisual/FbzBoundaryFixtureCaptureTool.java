@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Production-frame FBZ boundary6 pilot. Origin: 2026-09-14 FBZ completion.
+/** Production-frame FBZ Act1 boundary fixture. Origin: 2026-09-14 FBZ completion.
  * Inputs: ROM, new external output directory, reviewed manifest. No native RAM
  * or trace rows are read. Every rendered frame includes state and GPU textures.
  */
@@ -17,7 +17,8 @@ public final class FbzBoundaryFixtureCaptureTool {
     private FbzBoundaryFixtureCaptureTool() { }
 
     public static void main(String[] args) throws Exception {
-        if (args.length != 3) throw new IllegalArgumentException("ROM OUTPUT MANIFEST required");
+        if (args.length < 3 || args.length > 4) throw new IllegalArgumentException("ROM OUTPUT MANIFEST [CHECKPOINT] required");
+        String checkpoint = args.length == 4 ? args[3] : "fbz1-boundary-6-outdoor";
         Path rom = Path.of(args[0]), output = Path.of(args[1]);
         String romSha = java.util.HexFormat.of().withUpperCase().formatHex(
                 java.security.MessageDigest.getInstance("SHA-1").digest(Files.readAllBytes(rom)));
@@ -25,7 +26,17 @@ public final class FbzBoundaryFixtureCaptureTool {
             throw new IllegalArgumentException("Verified locked-on ROM required");
         Files.createDirectory(output);
         var manifest = FbzVisualManifest.load(Path.of(args[2]), FbzVisualCaptureTool.REVIEWED_MANIFEST_SHA256);
-        var plan = new FbzVisualScenarioDriver(manifest).plan("fbz1-boundary-6-outdoor");
+        var plan = new FbzVisualScenarioDriver(manifest).plan(checkpoint);
+        if (!plan.strategy().equals("act1-bidirectional-boundary"))
+            throw new IllegalArgumentException("Only reviewed Act1 boundaries supported");
+        var recipe = manifest.recipe(checkpoint);
+        String axis = checkpoint.equals("fbz1-boundary-4-horizontal") ? "player_x" : "player_y";
+        int reverseCoordinate = axis.equals("player_x") ? recipe.centreX() : recipe.centreY();
+        int forwardCoordinate = -1;
+        for (var node : JSON.readTree(Path.of(args[2]).toFile()).path("checkpoints"))
+            if (node.path("id").asText().equals(checkpoint))
+                forwardCoordinate = node.path("player").path(axis.equals("player_x") ? "x" : "y").asInt(-1);
+        if (forwardCoordinate < 0) throw new IllegalArgumentException("Missing approved crossing coordinate");
         var port = new FbzGameServicesFixturePort();
         try (var session = new HiddenGlCaptureSession(FbzVisualCaptureMode.resolve("native-320",320,224,0))) {
             session.boot(rom, 0);
@@ -47,27 +58,40 @@ public final class FbzBoundaryFixtureCaptureTool {
             // event owns the FF->indoor layout copy (loc_527DA); setting its
             // flag to false first would falsely retain initial outdoor chunks.
             new FbzVisualFixture(port).applyVerified(new FbzVisualFixture.Mutation(Map.of(),
-                    Map.of("player_x",0x100,"player_y",0x63F)));
-            for (int i=0;i<80;i++) session.stepFrames(1);
+                    Map.of("player_x",recipe.centreX(),"player_y",recipe.centreY())));
+            for (int i=1;i<=480;i++) {
+                session.stepFrames(1);
+                var cameraState = session.captureState().values();
+                if (i>=80 && ((Number)cameraState.get("camera_x")).intValue()==recipe.centreX()-160
+                        && ((Number)cameraState.get("camera_y")).intValue()==recipe.centreY()-96) break;
+                if (i==480) {
+                    sample(session,output,"camera-prerequisite",0);
+                    throw new IllegalStateException("Ordinary tracker did not centre within480 gameplay frames");
+                }
+            }
             sample(session,output,"camera-prerequisite",0);
+            var prerequisite = session.captureState().values();
+            if (((Number)prerequisite.get("player_x")).intValue() != recipe.centreX()
+                    || ((Number)prerequisite.get("player_y")).intValue() != recipe.centreY())
+                throw new IllegalStateException("Player moved during ordinary camera setup; evidence retained");
             new FbzVisualFixture(port).applyVerified(plan.fixtureMutation());
             sample(session,output,"setup",0);
-            boolean forward = cross(session,port,output,"forward",0x641);
+            boolean forward = cross(session,port,output,"forward",axis,forwardCoordinate);
             session.stepFrames(1);sample(session,output,"forward-after",1);
             new FbzVisualFixture(port).applyVerified(new FbzVisualFixture.Mutation(
                     Map.of(),Map.of("events_routine_bg",0,"foreground_outdoor",true,"background_outdoor",true)));
-            boolean reverse = cross(session,port,output,"reverse",0x63F);
+            boolean reverse = cross(session,port,output,"reverse",axis,reverseCoordinate);
             session.stepFrames(1);sample(session,output,"after",1);
             JSON.writeValue(output.resolve("verdict.json").toFile(),Map.of(
-                    "status","unaccepted-pending-native-comparison","forward_redraw_complete",forward,
+                    "status","unaccepted-pending-native-comparison","checkpoint",checkpoint,"forward_redraw_complete",forward,
                     "reverse_redraw_complete",reverse,"rom_sha1",romSha,
                     "manifest_sha256",FbzVisualCaptureTool.REVIEWED_MANIFEST_SHA256));
         }
     }
 
     private static boolean cross(HiddenGlCaptureSession session,FbzGameServicesFixturePort port,
-                                 Path output,String phase,int coordinate) throws Exception {
-        port.write("player_y",coordinate);
+                                 Path output,String phase,String axis,int coordinate) throws Exception {
+        port.write(axis,coordinate);
         boolean entered=false;
         for (int i=1;i<=40;i++) {
             session.stepFrames(1);sample(session,output,phase,i);
