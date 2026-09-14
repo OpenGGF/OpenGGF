@@ -799,6 +799,28 @@ public class TestGroundSensor {
     }
 
     @Test
+    public void backgroundLeftWallTranslatesTheWorldProbeBeforeItsInternalMirror() throws Exception {
+        setTileAt((byte) 1, 97, 100, 1);
+        GameServices.gameState().setBackgroundCollisionFlag(true);
+        GameServices.camera().setX((short) 3);
+        GameServices.camera().setY((short) 0);
+        setParallaxField("cachedBgCameraX", 0);
+        setParallaxField("vscrollFactorBG", (short) 0);
+        var sensor = new GroundSensor(mockSprite, Direction.LEFT, (byte) 0, (byte) 0, true);
+
+        SensorResult result = invokeBackgroundScan(sensor, (short) 100, (short) 100,
+                mockSprite.getLrbSolidBit(), Direction.LEFT, false);
+
+        assertNotNull(result);
+        // CheckLeftWallDist supplies d3=100^15 to FindWall. Its LEFT BG path
+        // unmirrors, subtracts Camera_X_diff=3, then mirrors again: physical
+        // BG probe x=97, one pixel into the full tile. GroundSensor already
+        // handles the native mirror internally, so penetration is 1-16=-15.
+        assertEquals(-15, result.distance());
+        assertEquals(1, result.tileId());
+    }
+
+    @Test
     public void backgroundCollisionDoesNotOverwriteCloserForegroundLeftWallHit() {
         setTileAt((byte) 0, 100, 100, 1);
 

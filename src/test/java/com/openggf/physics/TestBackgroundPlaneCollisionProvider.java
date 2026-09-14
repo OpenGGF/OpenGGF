@@ -95,15 +95,15 @@ class TestBackgroundPlaneCollisionProvider {
     }
 
     @Test
-    void leftWallUsesRomComplementedWordTranslationForNonAlignedSignedDiff() {
+    void leftWallTranslatesUncomplementedWorldCoordinatesWithSignedWordWrap() {
         BackgroundPlaneCollisionProvider provider = () ->
                 new BackgroundPlaneCollisionProvider.State(true, 3, -5);
 
         assertEquals(0x1231,
                 provider.backgroundX(provider.state(), 0x1234, Direction.RIGHT));
-        assertEquals(0x1237,
+        assertEquals(0x1231,
                 provider.backgroundX(provider.state(), 0x1234, Direction.LEFT));
-        assertEquals((short) -31,
+        assertEquals((short) -5,
                 (short) provider.backgroundX(provider.state(), -2, Direction.LEFT));
     }
 
