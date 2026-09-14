@@ -85,12 +85,22 @@ public record Sonic3kLevelResourceProfile(
                     EventKind.HPZ_SPECIAL_STAGE_HUB,
                     Optional.of(HPZ_RESOURCES));
 
-    public static Sonic3kLevelResourceProfile resolve(int canonicalZone, int canonicalAct) {
+    /**
+     * True for the Hidden Palace sanctuary aliases ($1601 and $1701) without
+     * constructing a profile, so callers that plan art for any zone index
+     * (including mod zones outside the ROM's zone/act table) can ask the
+     * question safely.
+     */
+    public static boolean isHpzSanctuary(int canonicalZone, int canonicalAct) {
         // SSEntryFlash_GoSS / loc_618AC restarts into $1701. Retain
         // $1601 as the existing engine sanctuary alias. Both must select
         // the same resources and HPZS screen-event dispatch.
-        if (canonicalAct == 1 && (canonicalZone == Sonic3kZoneIds.ZONE_HPZ
-                || canonicalZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA)) {
+        return canonicalAct == 1 && (canonicalZone == Sonic3kZoneIds.ZONE_HPZ
+                || canonicalZone == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA);
+    }
+
+    public static Sonic3kLevelResourceProfile resolve(int canonicalZone, int canonicalAct) {
+        if (isHpzSanctuary(canonicalZone, canonicalAct)) {
             return HPZ_SANCTUARY;
         }
         return new Sonic3kLevelResourceProfile(
