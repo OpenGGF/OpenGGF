@@ -17,6 +17,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@org.junit.jupiter.api.parallel.Isolated
 class TestFbzMinibossChildren {
     @ParameterizedTest
     @CsvSource({"0,-67,-65,false", "0,-66,-64,true", "0,-65,-64,true",
@@ -153,6 +154,78 @@ class TestFbzMinibossChildren {
         var field = object.getClass().getDeclaredField(name);
         field.setAccessible(true);
         return field.getInt(object);
+    }
+
+    @Test
+    void endingPoseRetainsExistingPlungerSupportButCannotCreateANewContact() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var camera = new com.openggf.camera.Camera();
+            camera.setX((short) 0x2E20);
+            camera.setY((short) 0x0540);
+            var holder = new com.openggf.level.objects.ObjectManager[1];
+            var player = new PlungerContactPlayer();
+            var query = new ObjectPlayerQuery(() -> player, List::of);
+            var services = new TestObjectServices() {
+                @Override public com.openggf.level.objects.ObjectManager objectManager() { return holder[0]; }
+                @Override public com.openggf.camera.Camera camera() { return camera; }
+                @Override public ObjectPlayerQuery playerQuery() { return query; }
+            };
+            var manager = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                    0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            holder[0] = manager;
+            manager.reset(0x2E20);
+            var boss = boss(services);
+            var defeated = FbzMinibossInstance.class.getDeclaredField("defeated");
+            defeated.setAccessible(true);
+            defeated.setBoolean(boss, true);
+            var plunger = manager.createDynamicObject(() -> new FbzMinibossPlungerChild(boss));
+            player.setCentreX((short) 0x2E30);
+            player.setCentreY((short) 0x0560);
+            manager.update(0x2E20, player, List.of(), 0, false, true, false);
+
+            player.setCentreX((short) plunger.getX());
+            player.setCentreY((short) (plunger.getY() - 8 - 19 + 1));
+            player.setAir(true);
+            player.setYSpeed((short) 0x100);
+            manager.update(0x2E20, player, List.of(), 1, false, true, false);
+            assertTrue(manager.isRidingObject(player, plunger));
+            assertTrue(manager.hasObjectStandingBit(player, plunger));
+            assertFalse(player.getAir());
+            int standingY = player.getCentreY();
+
+            S3kSignpostInstance.applyMainPlayerEndingPose(player);
+            manager.update(0x2E20, player, List.of(), 2, false, true, false);
+            assertTrue(manager.isRidingObject(player, plunger), "the native standing branch precedes bit-7 rejection");
+            assertTrue(manager.hasObjectStandingBit(player, plunger));
+            assertTrue(player.isOnObject());
+            assertFalse(player.getAir());
+            assertEquals(standingY, player.getCentreY());
+
+            var newcomer = new PlungerContactPlayer();
+            newcomer.setCentreX((short) plunger.getX());
+            newcomer.setCentreY((short) (plunger.getY() - 8 - 19 + 1));
+            newcomer.setAir(true);
+            S3kSignpostInstance.applyMainPlayerEndingPose(newcomer);
+            manager.update(0x2E20, newcomer, List.of(), 3, false, true, false);
+            assertFalse(manager.isRidingObject(newcomer, plunger));
+            assertFalse(manager.hasObjectStandingBit(newcomer, plunger));
+            assertTrue(newcomer.getAir(), "a bit-7 player cannot acquire new plunger support");
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+            com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    private static final class PlungerContactPlayer extends com.openggf.sprites.playable.Sonic {
+        private PlungerContactPlayer() {
+            super("FBZ_PLUNGER_CONTACT", (short) 0, (short) 0);
+            setGameRulesForTest(com.openggf.game.rules.GameRules.SONIC_3K);
+            setWidth(20);
+            setHeight(38);
+        }
     }
 
     @Test

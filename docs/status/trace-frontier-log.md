@@ -109777,3 +109777,24 @@ early. Source proved the actual omission: the tail jump falls through into
 `BossDefeated`, setting the `$3F` wait and awarding 100 native score units
 (1,000 displayed points). Restoring that effect removes the 22,227 early-results
 stop without tuning the sign's wait or consuming recorded gameplay values.
+
+
+### FBZ ending-pose support retained on the defeated plunger
+
+On `cac4ad87a` plus the plunger contact correction, the queued focused command
+`-Ptrace-replay-r7 -Dtest=TestFbzMinibossChildren,TestS3kFbzCompleteRunTraceReplay
+surefire:test` passed all 36 child/contact checks, with zero errors/skips.
+The complete 44,152-row recording remains red: **4,501 errors / 0 warnings**,
+first 16,600 Tails animation `$05/$06`, 758,829 mismatching field-rows. The
+first main gameplay-physics error advances to **22,397 `x` `$0102/$2F02`** and
+`camera_x` `$0062/$2E62`, a one-row coordinate-rebase mismatch. Later timing
+and transition differences remain open; these are not full-parity results.
+
+The real-contact regression lands on the actual plunger, applies the production
+signpost ending pose, and proves retained standing ownership and grounded Y on
+the next manager update. A newly arriving bit-7-controlled player is rejected.
+The existing object-managed support hook applies only after the plunger's
+stationary defeat drop, preserving ordinary active-phase movement. Merely allowing
+controlled solid evaluation was insufficient because the new-contact rejection
+still ran before the generic retained-ride branch; that rejected attempt did not
+move the trace. No shared collision algorithm or trace state was changed.

@@ -335,3 +335,11 @@ The unmodified change-based selection against the original pinned base includes
 workers. Recent code-identical destination validation cost 636.43 seconds; budget
 roughly eleven minutes and reserve one minute for bounded follow-up. The shared
 task receipt remains untouched. The one combined attempt may not be repeated.
+
+
+The final focused plunger check passed 36 tests, zero errors/skips, including real
+standing-contact retention after the production signpost ending pose and rejection
+of new controlled contacts. Complete replay reaches the next main physics frontier
+at row 22,397, a one-row world-coordinate rebase difference; the overall trace
+remains red. The detailed counts and rejected two-hook attempt are in the frontier
+log. The paired native start/cadence and full Act 1 route acceptance remain open.

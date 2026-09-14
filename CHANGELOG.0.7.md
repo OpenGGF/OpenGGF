@@ -51,7 +51,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   original animation write during death. Fresh S3K loads now run the initial
   pattern animation pass before gameplay, as the ROM does. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
-  preserves the native wait and score bonus before the end sign. Zone-owned tumble
+  preserves the native wait and score bonus before the end sign, and the ending
+  pose retains existing plunger support. Zone-owned tumble
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
   route clears the elevator squeeze with an ordinary run-up and timed roll.
   Rewinding a moving dynamic platform restores its execution slot before
