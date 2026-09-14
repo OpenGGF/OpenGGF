@@ -23,6 +23,12 @@ public class Sonic2SpecialStageRenderer {
     public static final int H32_TILES_Y = 28;
     public static final int TILE_SIZE = 8;
     public static final int H32_HEIGHT = H32_TILES_Y * TILE_SIZE;
+    private Sonic2SpecialStageDataLoader dataLoader;
+
+    public void setDataLoader(Sonic2SpecialStageDataLoader dataLoader) {
+        this.dataLoader = dataLoader;
+    }
+
     private static final int PALETTE_ROW_COUNT = 4;
     private static final int PALETTE_ROW_CONTENT_BYTES = 2 + Palette.PALETTE_SIZE * 3;
     private static final int MAX_PALETTE_CONTENT_BYTES = PALETTE_ROW_COUNT * PALETTE_ROW_CONTENT_BYTES;
@@ -813,7 +819,8 @@ public class Sonic2SpecialStageRenderer {
         Sonic2SpecialStageSpriteMappings.SpriteFrame frame =
                 player.getPlayerType() == Sonic2SpecialStagePlayer.PlayerType.TAILS
                         ? Sonic2SpecialStageSpriteMappings.getTailsFrame(mappingFrame)
-                        : Sonic2SpecialStageSpriteMappings.getSonicFrame(mappingFrame);
+                        : dataLoader == null ? Sonic2SpecialStageSpriteMappings.getSonicFrame(mappingFrame)
+                                : dataLoader.getMainPlayerFrame(mappingFrame);
 
         boolean playerXFlip = player.isRenderXFlip();
         boolean playerYFlip = player.isRenderYFlip();
@@ -1517,8 +1524,10 @@ public class Sonic2SpecialStageRenderer {
     }
 
     private void renderSonicHudFrame(int objectX) {
-        renderHudLabel(objectX - 0x60, 0x10, HUD_TILE_SONIC, 4, 1, 1);
-        renderHudLabel(objectX - 0x40, 0x10, HUD_TILE_SONIC_END, 1, 1, 1);
+        if (dataLoader == null || dataLoader.showMainPlayerHudName()) {
+            renderHudLabel(objectX - 0x60, 0x10, HUD_TILE_SONIC, 4, 1, 1);
+            renderHudLabel(objectX - 0x40, 0x10, HUD_TILE_SONIC_END, 1, 1, 1);
+        }
         renderHudLabel(objectX - 0x68, 0x18, HUD_TILE_RING, 4, 2, 2);
         renderHudLabel(objectX - 0x48, 0x18, HUD_TILE_S, 1, 2, 2);
     }
@@ -2140,7 +2149,7 @@ public class Sonic2SpecialStageRenderer {
             paletteIndex = 2;  // From make_art_tile(ArtTile_ArtNem_SpecialExplosion,2,0)
         } else {
             patternBase = bombPatternBase;
-            paletteIndex = 1;  // From make_art_tile(ArtTile_ArtNem_SpecialBomb,1,0)
+            paletteIndex = dataLoader == null ? 1 : dataLoader.getBombPaletteLine();
         }
 
         // Render each sprite piece

@@ -351,6 +351,13 @@ public class Sonic2SpecialStageManager {
             0, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 0
     };
 
+    private java.util.function.Function<Rom, Sonic2SpecialStageDataLoader> dataLoaderFactory = Sonic2SpecialStageDataLoader::new;
+
+    public Sonic2SpecialStageManager(java.util.function.Function<Rom, Sonic2SpecialStageDataLoader> factory) {
+        this();
+        this.dataLoaderFactory = java.util.Objects.requireNonNull(factory);
+    }
+
     public Sonic2SpecialStageManager() {
         this(new Sonic2SpecialStageSpriteDebug(), null, null);
     }
@@ -412,7 +419,7 @@ public class Sonic2SpecialStageManager {
             rom = GameServices.rom().getRom();
 
             if (dataLoader == null) {
-                dataLoader = new Sonic2SpecialStageDataLoader(rom);
+                dataLoader = dataLoaderFactory.apply(rom);
             }
 
             this.currentStage = stageIndex;
@@ -868,7 +875,7 @@ public class Sonic2SpecialStageManager {
     }
 
     private void setupPalettes() {
-        palettes = Sonic2SpecialStagePalette.createPalettes(currentStage);
+        palettes = dataLoader.getPalettes(currentStage);
         // SSInitPalAndData (s2.asm:10232, called at 6639) runs after
         // Pal_FadeToWhite and the masked-interrupt load, so the level's
         // palette stays in the shared lines through the fade over the level;
@@ -964,6 +971,7 @@ public class Sonic2SpecialStageManager {
     private void setupRenderer() throws IOException {
         GraphicsManager graphicsManager = graphicsManager();
         renderer = new Sonic2SpecialStageRenderer(graphicsManager);
+        renderer.setDataLoader(dataLoader);
         renderer.setSpecialStageViewport(specialStageViewport);
         renderer.beginStaticBackgroundStage(backgroundStageGeneration);
         renderer.onRenderContextGenerationChanged(graphicsManager.getPatternAtlas());
