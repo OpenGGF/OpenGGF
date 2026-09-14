@@ -24,11 +24,13 @@ public interface BackgroundPlaneCollisionProvider {
         return worldY - current.cameraDiffY();
     }
 
-    /** FindWall LEFT: eori.w #$F,d3; sub.w Camera_X_diff,d3; eori.w #$F,d3. */
+    /**
+     * CheckLeftWallDist complements d3 before FindWall translates it. Our callers
+     * supply an uncomplemented world point; GroundSensor mirrors the tile metric
+     * internally. Translate that world point once, preserving the ROM word wrap.
+     */
     private static int translateLeftWallX(int worldX, int cameraDiffX) {
-        int complemented = (worldX ^ 0x0F) & 0xFFFF;
-        int translated = (complemented - cameraDiffX) & 0xFFFF;
-        return (short) ((translated ^ 0x0F) & 0xFFFF);
+        return (short) (worldX - cameraDiffX);
     }
 
     default State state(LevelManager probeLevel) {
