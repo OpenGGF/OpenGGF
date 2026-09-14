@@ -110023,3 +110023,14 @@ tests: 20,353 passed, one inherited rewind-audit pin failure, zero errors and
 and the evidence note were edited during the run; runtime/test/build inputs did
 not change. This is an incomplete combined run. Upstream's test-only audit
 correction `24cdc64e6` was then reconciled at `382d54d6b` without conflicts.
+
+Integrated runtime/accessor correction at `8fff63a70` on destination `24cdc64e6`.
+The pinned integration commit's queued post-integration command
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 24cdc64e6 --run`
+completed both lanes (`20260914T183031Z-9c8a025d`): **20,354 ordinary passes,
+18 inspected baseline skips, zero ordinary failures/errors**; **665 guard passes,
+two exact baseline failures, zero guard errors/skips**. Those failures are
+`TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+and `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`.
+The new runtime-access guard and corrected upstream rewind audit pass. No new
+failure remains; the KiS2 chain itself remains red at the recorded return frontier.

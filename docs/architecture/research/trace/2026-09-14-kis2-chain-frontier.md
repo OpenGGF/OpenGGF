@@ -182,3 +182,34 @@ in 57.563 seconds. The accessor guard, 177 movement cases, three geometry
 cases and three corrected audit cases pass; the launch check passes and the
 full chain retains cursor 9366. No new guard failure remains after this narrow
 correction. The final integrated suite is still required before push.
+
+## Final integrated verification
+
+Runtime/accessor commit `280d1f477` integrated into develop at
+**`8fff63a7078ba871f852978d520685c099db7803`**, on destination `24cdc64e6`,
+without conflicts. Main remained on develop; unrelated user files and the three
+dirty disassembly submodules were preserved. The task worktree fast-forwarded
+to that exact integrated commit and stayed clean throughout validation.
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py \
+  --base 24cdc64e6 --run
+```
+
+Actual-environment preflight passed. Run `20260914T183031Z-9c8a025d` completed
+both lanes without a workspace-change interruption:
+
+- Ordinary: **20,372 tests — 20,354 passed, 18 skipped, zero failures/errors**,
+  617.07 seconds. The skip identities and reasons match those inspected above;
+  no required ROM or new KiS2 regression was skipped.
+- Guards: **667 tests — 665 passed, two failures, zero errors/skips**,
+  176.75 seconds. The two failures match the baseline by exact identity and
+  payload: stale direct-Maven guidance expectations and the two unchanged
+  assertion-free diagnostic probes listed above. The new playable-runtime
+  access guard passes, and the upstream audit correction is green.
+
+This is a full ordinary-suite pass with two inherited guard failures, not an
+all-gates-green or complete KiS2-chain claim. The canonical first-segment/return
+frontier and the independent short recording's residual differences remain as
+recorded above. Final follow-up changes only this evidence and the frontier log;
+local link targets and whitespace are checked without repeating engine tests.
