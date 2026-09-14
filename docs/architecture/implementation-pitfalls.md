@@ -119,3 +119,15 @@ token and source-proven loop phases. Follow callees: `VInt_12` fades DO drain DM
 through `Do_ControllerPal`; `VInt_0` lag does not. VInt14 is Sega-art loading, not
 the level title-card loop, which arms VIntC. These distinctions were established
 by FBZ native/GPU paired evidence on 2026-09-14.
+
+**S3K retained plane strip counts and clipping.** `Setup_TileRowDraw` and
+`Setup_TileColumnDraw` subtract one before DBF: callers supplying `$20`/`$10`
+write 32/16 blocks, not 33/17. `Draw_PlaneVertSingleTopDown`/`BottomUp`
+first reject delayed rows outside the masked camera window through `+$F0`.
+FBZ outdoor redraw supplies zero as that window origin; a delayed `$100` row
+therefore consumes its redraw step without modifying retained cells. Preserve
+the entire retained ring in a regression, including untouched rows and rewind.
+A fixture event-flag write does not install its associated foreground layout:
+match ordinary layout-copy and camera history before comparing GPU descriptors.
+Count observed LFC advances rather than assuming each host frameadvance call
+advanced gameplay (2026-09-14 FBZ boundary6 native/engine evidence).

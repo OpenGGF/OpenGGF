@@ -1,7 +1,8 @@
 {
   "schema_version": 1,
   "generated_by": "tools/validation/Find-FbzVisualReferenceCandidates.ps1",
-  "manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
+  "manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",
+  "historical_candidate_selection_manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
   "source": {
     "metadata": "src/test/resources/traces/s3k/fbz_completerun/metadata.json",
     "physics": "src/test/resources/traces/s3k/fbz_completerun/physics.csv.gz",

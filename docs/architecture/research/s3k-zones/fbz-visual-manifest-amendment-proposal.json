@@ -13,8 +13,16 @@
       "contradiction": "At x_pos >= $0B00, loc_52AF4 compares y_pos against $0900. The frozen pre-state x=$0B00,y=$09BF,indoor therefore changes outdoors before the requested y=$09C0 crossing.",
       "intended_semantics": "Exercise the x_pos < $0B00 branch's indoor-to-outdoor crossing at y=$09C0 and its reverse path.",
       "minimal_changes": [
-        {"path": "/setup_recipes/fbz1-boundary-1-outdoor/centre/x", "from": 2816, "to": 2815},
-        {"path": "/checkpoints/fbz1-boundary-1-outdoor/player/x", "from": 2816, "to": 2815}
+        {
+          "path": "/setup_recipes/fbz1-boundary-1-outdoor/centre/x",
+          "from": 2816,
+          "to": 2815
+        },
+        {
+          "path": "/checkpoints/fbz1-boundary-1-outdoor/player/x",
+          "from": 2816,
+          "to": 2815
+        }
       ]
     },
     {
@@ -24,8 +32,16 @@
       "contradiction": "At x_pos >= $0C80, loc_52B46 compares y_pos against $0240. The frozen x=$0C80,y=$02C1->$02C0 sequence never crosses that selected threshold.",
       "intended_semantics": "Exercise the x_pos < $0C80 branch's indoor-to-outdoor crossing at y=$02C0 and its reverse path.",
       "minimal_changes": [
-        {"path": "/setup_recipes/fbz1-boundary-2-outdoor/centre/x", "from": 3200, "to": 3199},
-        {"path": "/checkpoints/fbz1-boundary-2-outdoor/player/x", "from": 3200, "to": 3199}
+        {
+          "path": "/setup_recipes/fbz1-boundary-2-outdoor/centre/x",
+          "from": 3200,
+          "to": 3199
+        },
+        {
+          "path": "/checkpoints/fbz1-boundary-2-outdoor/player/x",
+          "from": 3200,
+          "to": 3199
+        }
       ]
     },
     {
@@ -35,8 +51,16 @@
       "contradiction": "At x_pos >= $1880, loc_52B98 compares y_pos against $0940. The frozen pre-state x=$1880,y=$09BF,indoor therefore changes outdoors before the requested y=$09C0 crossing.",
       "intended_semantics": "Exercise the x_pos < $1880 branch's indoor-to-outdoor crossing at y=$09C0 and its reverse path.",
       "minimal_changes": [
-        {"path": "/setup_recipes/fbz1-boundary-3-outdoor/centre/x", "from": 6272, "to": 6271},
-        {"path": "/checkpoints/fbz1-boundary-3-outdoor/player/x", "from": 6272, "to": 6271}
+        {
+          "path": "/setup_recipes/fbz1-boundary-3-outdoor/centre/x",
+          "from": 6272,
+          "to": 6271
+        },
+        {
+          "path": "/checkpoints/fbz1-boundary-3-outdoor/player/x",
+          "from": 6272,
+          "to": 6271
+        }
       ]
     },
     {
@@ -46,8 +70,16 @@
       "contradiction": "FBZ1_BGChange4 tests y_pos against $0100 before testing x_pos. Frozen y=$01C0 selects the vertical branch and immediately changes the indoor state at its y=$01C0 threshold, so x=$1AFF->$1B00 cannot be the triggering branch.",
       "intended_semantics": "Exercise the y_pos < $0100 horizontal branch's indoor-to-outdoor crossing at x=$1B00 and the right-to-left reverse path.",
       "minimal_changes": [
-        {"path": "/setup_recipes/fbz1-boundary-4-horizontal/centre/y", "from": 448, "to": 255},
-        {"path": "/checkpoints/fbz1-boundary-4-horizontal/player/y", "from": 448, "to": 255}
+        {
+          "path": "/setup_recipes/fbz1-boundary-4-horizontal/centre/y",
+          "from": 448,
+          "to": 255
+        },
+        {
+          "path": "/checkpoints/fbz1-boundary-4-horizontal/player/y",
+          "from": 448,
+          "to": 255
+        }
       ]
     },
     {
@@ -57,10 +89,27 @@
       "contradiction": "The boss-event background routine remains Events_routine_bg=$10 and continues drawing the background on plane A with flipped deformation. The defeat/exit sequence spawns the generic capsule, releases camera bounds, queues door/hall art, and requests level $0800, but contains no write that restores the pre-boss plane assignment.",
       "intended_semantics": "Validate the original exit presentation with Events_routine_fg=$0C, Events_routine_bg=$10, explicit FG=B/BG=A assignment, door/hall art, and safe camera release while the boss-event plane reversal remains active until the level transition.",
       "minimal_changes": [
-        {"path": "/setup_recipes/fbz2-exit/state/Events_routine_fg", "operation": "add", "to": 12},
-        {"path": "/setup_recipes/fbz2-exit/state/Events_routine_bg", "operation": "add", "to": 16},
-        {"path": "/setup_recipes/fbz2-exit/state/plane_assignment", "operation": "replace", "from": "normal", "to": "FG=B,BG=A"},
-        {"path": "/checkpoints/fbz2-exit/assertions/1", "from": "plane mode restored", "to": "boss-event plane reversal remains active until level transition"}
+        {
+          "path": "/setup_recipes/fbz2-exit/state/Events_routine_fg",
+          "operation": "add",
+          "to": 12
+        },
+        {
+          "path": "/setup_recipes/fbz2-exit/state/Events_routine_bg",
+          "operation": "add",
+          "to": 16
+        },
+        {
+          "path": "/setup_recipes/fbz2-exit/state/plane_assignment",
+          "operation": "replace",
+          "from": "normal",
+          "to": "FG=B,BG=A"
+        },
+        {
+          "path": "/checkpoints/fbz2-exit/assertions/1",
+          "from": "plane mode restored",
+          "to": "boss-event plane reversal remains active until level transition"
+        }
       ]
     }
   ],
@@ -78,5 +127,213 @@
       "required_change": "Replace the fbz2-exit assertion 'plane mode restored' with 'Events fg=$0C/bg=$10; FG=B/BG=A remains active until level transition' in native and compatibility evidence."
     }
   ],
-  "application_result": "Applied manifest, semantic documents, validator/tool contracts, and transparent exact-start provenance rebind all use D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD."
+  "application_result": "Applied manifest, semantic documents, validator/tool contracts, and transparent exact-start provenance rebind all use D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD.",
+  "pending_followup_2026_09_14": {
+    "status": "approved-applied",
+    "base_manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
+    "scope": "Recipe applicability corrections only; no checkpoint becomes PASS and historical evidence retains its original manifest binding.",
+    "contradiction": "Inclusive opposite comparisons admit equality in both directions. Active redraw handlers call CheckBGChange before drawing; each equality reversal resets Draw_delayed_rowcount. A stationary threshold coordinate cannot reach the frozen normal-routine capture condition.",
+    "redraw_owner": "FBZ1BGE_ChangeTopDown / FBZ1BGE_ChangeBottomUp / FBZ1BGE_ChangeLeftRight / FBZ1BGE_ChangeRightLeft; loc_52CD8 and loc_52C42 reset row count.",
+    "boundary_changes": [
+      {
+        "checkpoint": "fbz1-boundary-1-outdoor",
+        "evidence": "source-proof only; not captured",
+        "source": "FBZ1_BGChange1 / loc_52AFE; x=$AFF selects $9C0",
+        "minimal_changes": [
+          {
+            "path": "/checkpoints[id=fbz1-boundary-1-outdoor]/player/y",
+            "from": 2496,
+            "to": 2497
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-1-outdoor/approaches/0/input",
+            "from": "one deterministic down-crossing position step to y=$9C0",
+            "to": "one deterministic crossing position step to y=$09C1; continue native execution without resetting flags or coordinates during redraw"
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-1-outdoor/approaches/1/input",
+            "from": "reset to outdoor flags $FF and cross reverse threshold",
+            "to": "reset outdoor flags $FF and cross to y=$09BF; continue native execution without resetting flags or coordinates during redraw"
+          }
+        ]
+      },
+      {
+        "checkpoint": "fbz1-boundary-2-outdoor",
+        "evidence": "source-proof only; not captured",
+        "source": "FBZ1_BGChange2 / loc_52B50; x=$C7F selects $2C0",
+        "minimal_changes": [
+          {
+            "path": "/checkpoints[id=fbz1-boundary-2-outdoor]/player/y",
+            "from": 704,
+            "to": 703
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-2-outdoor/approaches/0/input",
+            "from": "one deterministic upward crossing step through y=$2C0/$240 branch",
+            "to": "one deterministic crossing position step to y=$02BF; continue native execution without resetting flags or coordinates during redraw"
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-2-outdoor/approaches/1/input",
+            "from": "reset outdoor flags $FF and cross reverse threshold",
+            "to": "reset outdoor flags $FF and cross to y=$02C1; continue native execution without resetting flags or coordinates during redraw"
+          }
+        ]
+      },
+      {
+        "checkpoint": "fbz1-boundary-3-outdoor",
+        "evidence": "source-proof only; not captured",
+        "source": "FBZ1_BGChange3 / loc_52BA2; x=$187F selects $9C0",
+        "minimal_changes": [
+          {
+            "path": "/checkpoints[id=fbz1-boundary-3-outdoor]/player/y",
+            "from": 2496,
+            "to": 2497
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-3-outdoor/approaches/0/input",
+            "from": "cross y=$9C0/$940 branch",
+            "to": "one deterministic crossing position step to y=$09C1; continue native execution without resetting flags or coordinates during redraw"
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-3-outdoor/approaches/1/input",
+            "from": "reset outdoor flags $FF and cross reverse threshold",
+            "to": "reset outdoor flags $FF and cross to y=$09BF; continue native execution without resetting flags or coordinates during redraw"
+          }
+        ]
+      },
+      {
+        "checkpoint": "fbz1-boundary-4-horizontal",
+        "evidence": "source-proof only; not captured",
+        "source": "loc_52C0C / loc_52C1C; y=$FF selects horizontal $1B00",
+        "minimal_changes": [
+          {
+            "path": "/checkpoints[id=fbz1-boundary-4-horizontal]/player/x",
+            "from": 6912,
+            "to": 6913
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-4-horizontal/approaches/0/input",
+            "from": "cross x=$1B00 while in the documented mid-height branch",
+            "to": "one deterministic crossing position step to x=$1B01; continue native execution without resetting flags or coordinates during redraw"
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-4-horizontal/approaches/1/input",
+            "from": "reset outdoor flags $FF and cross the reverse branch",
+            "to": "reset outdoor flags $FF and cross to x=$1AFF; continue native execution without resetting flags or coordinates during redraw"
+          }
+        ]
+      },
+      {
+        "checkpoint": "fbz1-boundary-5-outdoor",
+        "evidence": "source-proof only; not captured",
+        "source": "FBZ1_BGChange5 / loc_52C84; $240",
+        "minimal_changes": [
+          {
+            "path": "/checkpoints[id=fbz1-boundary-5-outdoor]/player/y",
+            "from": 576,
+            "to": 575
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-5-outdoor/approaches/0/input",
+            "from": "cross y=$240",
+            "to": "one deterministic crossing position step to y=$023F; continue native execution without resetting flags or coordinates during redraw"
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-5-outdoor/approaches/1/input",
+            "from": "reset outdoor flags $FF and cross reverse y=$240 branch",
+            "to": "reset outdoor flags $FF and cross to y=$0241; continue native execution without resetting flags or coordinates during redraw"
+          }
+        ]
+      },
+      {
+        "checkpoint": "fbz1-boundary-6-outdoor",
+        "evidence": "native-forward-and-reverse-40-frame-failure plus source",
+        "source": "FBZ1_BGChange6 / loc_52CB2; $640",
+        "minimal_changes": [
+          {
+            "path": "/checkpoints[id=fbz1-boundary-6-outdoor]/player/y",
+            "from": 1600,
+            "to": 1601
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-6-outdoor/approaches/0/input",
+            "from": "cross y=$640",
+            "to": "one deterministic crossing position step to y=$0641; continue native execution without resetting flags or coordinates during redraw"
+          },
+          {
+            "path": "/setup_recipes/fbz1-boundary-6-outdoor/approaches/1/input",
+            "from": "reset outdoor flags $FF and cross reverse y=$640 branch",
+            "to": "reset outdoor flags $FF and cross to y=$063F; continue native execution without resetting flags or coordinates during redraw"
+          }
+        ]
+      },
+      {
+        "checkpoint": "fbz2-boundary-outdoor",
+        "evidence": "source-proof only; not captured",
+        "source": "FBZ2_CheckBGChange_Index / loc_53258; $A40",
+        "minimal_changes": [
+          {
+            "path": "/checkpoints[id=fbz2-boundary-outdoor]/player/y",
+            "from": 2624,
+            "to": 2625
+          },
+          {
+            "path": "/setup_recipes/fbz2-boundary-outdoor/approaches/0/input",
+            "from": "cross y=$A40",
+            "to": "one deterministic crossing position step to y=$0A41; continue native execution without resetting flags or coordinates during redraw"
+          },
+          {
+            "path": "/setup_recipes/fbz2-boundary-outdoor/approaches/1/input",
+            "from": "reset outdoor flags $FF and cross reverse y=$A40",
+            "to": "reset outdoor flags $FF and cross to y=$0A3F; continue native execution without resetting flags or coordinates during redraw"
+          }
+        ]
+      }
+    ],
+    "aniplc_230_change": {
+      "checkpoint": "fbz1-aniplc-230",
+      "minimal_changes": [
+        {
+          "path": "/setup_recipes/fbz1-aniplc-230/act",
+          "from": 1,
+          "to": 2
+        },
+        {
+          "path": "/checkpoints[id=fbz1-aniplc-230]/act",
+          "from": 1,
+          "to": 2
+        },
+        {
+          "path": "/checkpoints[id=fbz1-aniplc-230]/player",
+          "from": {
+            "x": 2560,
+            "y": 2304
+          },
+          "to": {
+            "x": 2336,
+            "y": 1712
+          }
+        }
+      ],
+      "identity_policy": "Keep stable legacy checkpoint id and reference/output names; explicitly label Act2 applicability. No prior Act1 image may be rebound as Act2 evidence.",
+      "source": "Shared blocks ROM $194400 / chunks $1974A2: tiles $230-$237 occur in blocks397-400, chunks1B/48/B1/C3/CB. Zero Act1 layout placements, 33 Act2 foreground placements. ROM-derived reviewed engine placement x$920,y$6B0, not native physics hydration.",
+      "existing_evidence": "fbz-visual-evidence-amendment-proposal.json proposed_aniplc_replacements.series entry fbz1-aniplc-230; bounded source-pixel acceptance remains bounded."
+    },
+    "native_pilot": {
+      "external_root": "${FBZ_VISUAL_OUTPUT}/boundary6-native-pilot-v2",
+      "fixture_log_sha256": "DEBCF250927EC2D750405EADABE35707B94E1110E45904FEBB509188C4DCFB6E",
+      "result": "FAIL: both40-frame branches alternate routines4/8 and never settle0 at playerY1600",
+      "native_wall_seconds": 3.42,
+      "prior_error_attempt_wall_seconds": 15.027
+    },
+    "dependent_rebinding_requirements": [
+      "Compute reviewed new manifest hash only after approval; preserve old manifest bytes as immutable evidence binding.",
+      "Update FbzVisualManifest/ScenarioDriver/ScenarioExecutor recipe contracts and tests, native host/exporter manifest pin, branch recipes and reference candidates, exporter guard and visual validator bindings.",
+      "Update evidence-amendment active capture intent binding, without rewriting prior accepted receipts or their recorded manifest hashes; keep historical sections explicit.",
+      "New paired captures require new output paths and receipts. Existing source-pixel and terrain acceptance cannot automatically certify amended whole checkpoints.",
+      "Native camera tracker and engine fresh-load visibility must still be matched; safe-side proposal fixes only the demonstrated equality contradiction."
+    ],
+    "review": "Root independently read all seven comparison pairs and redraw rowcount resets, verified native pilot log SHA and failure, and approved exact safe-side coordinates plus Act2 applicability. This is spec approval only.",
+    "applied_manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8"
+  }
 }

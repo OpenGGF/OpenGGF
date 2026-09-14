@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
+  "manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",
   "source_contract": {
     "rom_sha1": "CFBF98C36C776677290A872547AC47C53D2761D6",
     "bizhawk": "2.11",
@@ -45,13 +45,13 @@
       "mutations": [],
       "execution": [
         {"phase": "post-camera FBZ event", "input": "none", "frames": 1, "expected_intent": "remain indoors at y=$09BF"},
-        {"phase": "crossing", "write": {"Player_1.y_pos": "0x09C0"}, "input": "none", "frames": 1, "expected_intent": "indoor-to-outdoor threshold crossing"}
+        {"phase": "crossing", "write": {"Player_1.y_pos": "0x09C1"}, "input": "none", "frames": 1, "expected_intent": "indoor-to-outdoor threshold crossing"}
       ],
       "postconditions": [
         {"symbol": "Events_bg+04", "equals": "0xFF00"},
         {"symbol": "Events_routine_bg", "eventually_equals": "0x0000", "after_observing_one_of": ["0x0004", "0x0008"]}
       ],
-      "branch_order_proof": "At x_pos=$0AFF the locked-on FBZ1_BGChange1 routine takes the x < $0B00 branch and compares y_pos with $09C0 (sonic3k.asm:108952-108959). The reviewed manifest correction therefore preserves the indoor pre-state at y=$09BF and triggers outdoors only on the requested one-step crossing to y=$09C0."
+      "branch_order_proof": "At x_pos=$0AFF the locked-on FBZ1_BGChange1 routine takes the x < $0B00 branch and compares y_pos with $09C0 (sonic3k.asm:108952-108959). The reviewed manifest correction therefore preserves the indoor pre-state at y=$09BF and triggers outdoors only on the requested one-step crossing to y=$09C1; equality at $09C0 re-enters the reverse branch and resets the redraw row count."
     },
     {
       "checkpoint": "fbz1-aniplc-200",
@@ -104,11 +104,11 @@
     {
       "checkpoint": "fbz1-aniplc-230",
       "status": "designed-unexecuted",
-      "source_state": {"kind": "complete-run-savestate", "candidate_trace_frame": 2836, "candidate_bk2_frame": 240750},
+      "source_state": {"kind": "complete-run-savestate", "applicability": "Act2 ROM placement required; prior Act1 candidate is superseded"},
       "preconditions": [
-        {"symbol": "Current_zone_and_act", "equals": "0x0400"},
-        {"symbol": "Player_1.x_pos", "equals": "0x0A00"},
-        {"symbol": "Player_1.y_pos", "equals": "0x0900"},
+        {"symbol": "Current_zone_and_act", "equals": "0x0401"},
+        {"symbol": "Player_1.x_pos", "equals": "0x0920"},
+        {"symbol": "Player_1.y_pos", "equals": "0x06B0"},
         {"symbol": "Events_bg+04", "equals": "0x0000"}
       ],
       "mutations": [{"symbol": "Anim_Counters+2", "write_bytes": [0, 0], "readback_equals": [0, 0]}],

@@ -48,7 +48,7 @@ def probe(path):
 
 def capture_plan(start_frame: int, window: int) -> str:
     channels = ("200", "208", "210", "230", "238")
-    return ('return {manifest_sha256="D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",'
+    return ('return {manifest_sha256="BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",'
             'bk2_frame_offset=237913,observation_limit_frames=' + str(window)
             + ',checkpoints={{id="fbz1-start-outdoor",bk2_frame=' + str(start_frame) + '}}'
             + ',cadence_series={' + ','.join('["aniplc-cadence-' + ch + '"]={' + str(start_frame) + '}'
@@ -60,6 +60,7 @@ def main():
     parser.add_argument("--probe-framebuffer", type=Path)
     parser.add_argument("--bizhawk-home", type=Path)
     parser.add_argument("--exporter", type=Path, help="explicit diagnostic Lua override; hash recorded")
+    parser.add_argument("--fixture-state", type=Path, help="explicit native fixture saved state; identity recorded, never supplied to engine")
     parser.add_argument("--rom", type=Path)
     parser.add_argument("--movie", type=Path)
     parser.add_argument("--output", type=Path)
@@ -122,6 +123,11 @@ def main():
                "client_common_sha256": digest(home / "dll/BizHawk.Client.Common.dll"),
                "gpgx_archive_sha256": digest(home / "dll/gpgx.wbx.zst"),
                "acceptance": "pending-independent-pixel-and-state-review"}
+    if args.fixture_state:
+        fixture_state = args.fixture_state.resolve(strict=True)
+        env["OGGF_FBZ_FIXTURE_STATE"] = str(fixture_state)
+        receipt["fixture_state"] = str(fixture_state)
+        receipt["fixture_state_sha256"] = digest(fixture_state)
     start = time.monotonic()
     try:
         with (output / "launch.log").open("w") as log:
