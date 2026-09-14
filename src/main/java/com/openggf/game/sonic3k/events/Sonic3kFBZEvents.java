@@ -682,8 +682,8 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                 .postTransitionMaxX((int) cam.getMaxX() + ACT_TRANSITION_WORLD_OFFSET_X)
                 .postTransitionMinY((int) cam.getMinY())
                 .postTransitionMaxY((int) cam.getMaxY())
-                .postTransitionMinXTarget((int) cam.getMinXTarget())
-                .postTransitionMaxXTarget((int) cam.getMaxXTarget())
+                .postTransitionMinXTarget((int) cam.getMinXTarget() + ACT_TRANSITION_WORLD_OFFSET_X)
+                .postTransitionMaxXTarget((int) cam.getMaxXTarget() + ACT_TRANSITION_WORLD_OFFSET_X)
                 .postTransitionMinYTarget((int) cam.getMinYTarget())
                 .postTransitionMaxYTarget((int) cam.getMaxYTarget())
                 .objectSurvivalPolicy(

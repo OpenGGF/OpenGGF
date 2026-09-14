@@ -285,8 +285,16 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         for (PlayableEntity participant : services().playerQuery()
                 .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (participant instanceof com.openggf.sprites.playable.AbstractPlayableSprite sprite) {
-                sprite.setControlLocked(false);
+                // Restore_PlayerControl2 clears only object control / Status_InAir
+                // and publishes anim=prev_anim=Wait with fresh animation clocks.
+                // Controller locks, velocities and stood-on ownership remain intact.
                 ObjectControlState.none().applyTo(sprite);
+                sprite.clearAirForNativeControlRestore();
+                sprite.setAnimationId(com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.WAIT);
+                sprite.getAnimationManager().publishPreviousAnimationId(
+                        com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.WAIT.id());
+                sprite.setAnimationFrameIndex(0);
+                sprite.setAnimationTick(0);
                 sprite.setForcedAnimationId(-1);
             }
         }
