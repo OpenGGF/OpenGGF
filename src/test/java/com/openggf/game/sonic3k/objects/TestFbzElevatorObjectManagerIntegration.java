@@ -114,6 +114,8 @@ class TestFbzElevatorObjectManagerIntegration {
         assertEquals(1, restoredCar.yVelocity());
         assertEquals(capturedCarX, restoredCar.getCentreX());
         assertEquals(capturedCarY, restoredCar.getCentreY());
+        assertEquals(0x0003, restoredCar.romObjectCodePointerHighWord(),
+                "rewound car keeps loc_3CA92 for Tails' interact-word owner");
     }
 
     private static FbzElevatorObjectInstance controller(
