@@ -204,17 +204,25 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         defeated = true;
         rootHitPending = false;
         phaseOrdinal = Phase.DEFEAT_WAIT.ordinal();
+        // loc_6F9DE tail-calls BossDefeated_StopTimer, which falls through
+        // into BossDefeated: $2E=$3F and HUD_AddToScore(d0=100).
+        // Native score units are tens of displayed points (sonic3k.asm:17645,
+        // 180814-180829), so the engine awards 1000 points exactly once.
+        timer = 0x3F;
         if (tryServices() != null) {
             if (services().levelGamestate() != null) services().levelGamestate().pauseTimer();
-            if (services().gameState() != null) services().gameState().setBossDefeatedFlag(true);
+            if (services().gameState() != null) {
+                services().gameState().setBossDefeatedFlag(true);
+                services().gameState().addScore(1000);
+            }
             if (services().objectManager() != null) spawnChild(() -> new FbzMinibossExplosionController(this));
         }
     }
 
     private void updateDefeatWait() {
-        // loc_6EF88 inherits the already-negative Obj_Wait word; it converts on
-        // its first subsequent call rather than introducing another 120-frame delay.
-        if (defeatAllocationsMade) return;
+        // loc_6EF88 decrements the BossDefeated $3F word and converts only
+        // after it becomes negative: 64 subsequent boss dispatches.
+        if (defeatAllocationsMade || --timer >= 0) return;
         defeatAllocationsMade = true;
         bossSlotConverted = true;
         setRootBit(ROOT_DEFEAT_RELEASE);

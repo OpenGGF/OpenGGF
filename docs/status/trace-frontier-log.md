@@ -109753,3 +109753,27 @@ rows hydrate gameplay, and Act 1 completion is still not certified.
   0x800–0x840 and hurts any jump from the pit floor at x ≥ 0x7F1; a post-spring
   hop cannot glide. The pit log platform oscillates with a 252-frame period
   (surface 0x25C–0x2DC, bottom at trace frame 1153 mod 252).
+
+
+### FBZ boss-defeat fallthrough restores the native sign delay
+
+On `a8419498b` plus the `BossDefeated_StopTimer` fallthrough correction,
+`mvn -Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestFbzAct1RouteHeadless#placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5+realConvertedEndSignControllerAllocatesExactWorkerPrefixAndRunsFirstTwoUpdates,TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay
+surefire:test` with the verified absolute ROM properties completed in 25.96 seconds.
+All five affected Act 1 lifecycle rows passed. Both strict recordings remain red:
+**4,548 errors / 0 warnings / 44,152 rows**, first 16,600 Tails animation `$05/$06`,
+and **5,109 / 0 / 33,712 rows**, first 116 Tails subpixel `$D000/$B800`; no skips.
+The first main gameplay-physics error advances again to **22,388 `air` 0/1**,
+with status `$08/$02`. Complete-run mismatching field-rows are 754,779; the
+independent recording remains 727,909. Later results/transition differences
+remain open, so neither the group count nor the farther clean main prefix is
+reported as full parity.
+
+The rejected explanation was a missing Tails bump caused solely by its earlier
+physics divergence. At native row 22,178 Tails bumps the sign; an engine probe
+showed Tails at nearly the same eligible pose, but the engine sign had arrived
+early. Source proved the actual omission: the tail jump falls through into
+`BossDefeated`, setting the `$3F` wait and awarding 100 native score units
+(1,000 displayed points). Restoring that effect removes the 22,227 early-results
+stop without tuning the sign's wait or consuming recorded gameplay values.

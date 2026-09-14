@@ -66,7 +66,8 @@ class TestFbzAct1RouteHeadless {
         FbzMinibossInstance boss = awaitPlacedBoss(fixture, act1Objects, 240);
         reachPlungerByInput(fixture, act1Objects, boss);
         driveBossRoute(fixture, act1Objects, boss);
-        await(fixture, 4, boss::hasConvertedToEndSign,
+        // BossDefeated seeds $3F: conversion needs 64 subsequent dispatches.
+        await(fixture, 64, boss::hasConvertedToEndSign,
                 "the production defeated boss did not convert into Obj_EndSignControl");
 
         S3kSignpostInstance sign = awaitObject(fixture, act1Objects,
@@ -677,7 +678,8 @@ class TestFbzAct1RouteHeadless {
         assertEquals(6, boss.scriptedImpactCount());
         assertEquals(0, boss.remainingHits());
 
-        await(fixture, 4, boss::hasConvertedToEndSign,
+        // BossDefeated seeds $3F: conversion needs 64 subsequent dispatches.
+        await(fixture, 64, boss::hasConvertedToEndSign,
                 "the defeated placed boss slot did not convert to Obj_EndSignControl");
         assertFalse(boss.isSolidFor(fixture.sprite()));
 

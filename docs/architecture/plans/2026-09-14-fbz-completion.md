@@ -298,3 +298,40 @@ support to the live button. No runtime movement, collision or damage allowance
 was altered to make these routes pass. Failed earlier controllers (static flame
 projection, fixed Sonic fight duration and repeating the Sonic capsule approach
 from a successful body landing) are retained here as rejected approaches.
+
+
+### Defeat fallthrough and upstream reconciliation
+
+The later sign/results frontier exposed another direct ROM porting omission.
+`loc_6F9DE` tail-calls `BossDefeated_StopTimer`, which falls through the assembler's
+end-of-function banner into `BossDefeated`. That helper seeds `$2E=$3F`, awards
+100 native score units (1,000 displayed points), and clears the render visibility
+bit before returning. The engine had only paused the clock and converted the
+boss on the next update. The correction uses the existing captured timer and
+awards the points once; conversion now follows 64 subsequent boss dispatches.
+No persistent renderer state is invented for the ROM's transient draw flag.
+
+The six boss lifecycle tests passed with exact wait and score assertions.
+The first focused run also passed 35 chain, nine defeat-child and 46 rewind
+checks; five Act 1 integration rows exposed their obsolete four-update conversion
+watchdogs. Those two watchdog sites now allow the native 64 updates, retaining
+all worker-prefix, sign, results, event and transition assertions.
+
+`0fe1d2990` records the setup, native-character route, arm-cycle and capture-tool
+increment. `a8419498b` reconciles it with develop `ae767f351`: source merged cleanly,
+and the sole conflict was append-only trace evidence, resolved by keeping both
+FBZ and KiS2 entries. The destination's executable tree is identical to the
+already validated KiS2 candidate `74006f23b` (only its verification prose differs).
+Its documented full ordinary baseline passed 19,926 tests with 14 skips; guards
+had the three specifically attributed failures recorded in the KiS2 plan.
+
+
+The repaired lifecycle rerun passed all five affected Act 1 rows; both full strict
+recordings remain red at the exact frontiers documented in the trace log.
+Before combined validation, manual accounting totals 67.351
+minutes of the authorized 80-minute cap, with zero broad attempts consumed.
+The unmodified change-based selection against the original pinned base includes
+2,538 ordinary candidate classes and all structural guards, using two ordinary
+workers. Recent code-identical destination validation cost 636.43 seconds; budget
+roughly eleven minutes and reserve one minute for bounded follow-up. The shared
+task receipt remains untouched. The one combined attempt may not be repeated.

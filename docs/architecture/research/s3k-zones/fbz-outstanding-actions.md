@@ -9,13 +9,13 @@ green completion claim.
 
 The pinned `435ec2e68` baseline reproduces 5,666 complete-run errors,
 first row 34 queue busy. The current `190cbd408` candidate plus production
-setup and normal-arm/chain corrections reproduces **4,663 errors**, first row
+setup and normal-arm/chain corrections reproduces **4,548 errors**, first row
 **16,600 Tails animation 5/6**, and **5,109** in the independent recording,
 first row 116 Tails subpixel `$D000/$B800`. Both complete strict comparisons
 with zero warnings or skips. These remain red, and Act 1 completion has not
 been established. First main queue mismatch is 19,793; the first main gameplay
-physics error now reaches 22,227 (`x_speed`/`g_speed` `$18/$00`) after the earlier
-20,348 chain death was corrected. Aggregate field-row mismatch volume increased
+physics error now reaches 22,388 (`air` 0/1, status `$08/$02`) after the earlier
+20,348 chain death and omitted boss-defeat delay were corrected. Aggregate field-row mismatch volume increased
 at this newly reached boundary, so it is not yet accepted as a green candidate.
 See the matched comparison and exact commands in the frontier log.
 
