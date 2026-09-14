@@ -51,25 +51,30 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
         boolean active = magneticActive();
         lastMagneticActive = active;
         if (rising) {
-            moveVertical();
-            yVelocity -= 0x18;
-            int displacement = spawn.y() - y;
-            if (Integer.compareUnsigned(displacement, maximumRise) >= 0) {
-                y = spawn.y() - maximumRise;
-                yFixed = (y << 16) | (yFixed & 0xFFFF);
-                yVelocity = 0;
-                if (!tensionLatched) {
-                    tensionLatched = true;
-                    services().playSfx(Sonic3kSfx.CHAIN_TENSION.id);
-                }
-            } else {
-                TerrainCheckResult ceiling = ObjectTerrainUtils.checkCeilingDist(
-                        spawn.x(), y, collisionRadius);
-                if (ceiling.foundSurface() && ceiling.distance() < 0) {
-                    y -= ceiling.distance();
-                    yFixed += (-ceiling.distance()) << 16;
+            // loc_3B436 / maximum-rise completion changes the code pointer
+            // to loc_3B450. Held magnetism no longer integrates velocity or
+            // probes the ceiling; the position fraction must remain intact.
+            if (!tensionLatched) {
+                moveVertical();
+                yVelocity -= 0x18;
+                int displacement = spawn.y() - y;
+                if (Integer.compareUnsigned(displacement, maximumRise) >= 0) {
+                    y = spawn.y() - maximumRise;
+                    yFixed = (y << 16) | (yFixed & 0xFFFF);
                     yVelocity = 0;
-                    tensionLatched = true;
+                    if (!tensionLatched) {
+                        tensionLatched = true;
+                        services().playSfx(Sonic3kSfx.CHAIN_TENSION.id);
+                    }
+                } else {
+                    TerrainCheckResult ceiling = ObjectTerrainUtils.checkNativeUpwardCeilingDist(
+                            spawn.x(), y, collisionRadius);
+                    if (ceiling.foundSurface() && ceiling.distance() < 0) {
+                        y -= ceiling.distance();
+                        yFixed += (-ceiling.distance()) << 16;
+                        yVelocity = 0;
+                        tensionLatched = true;
+                    }
                 }
             }
             if (!active) {
@@ -143,6 +148,16 @@ public final class FbzMagneticPlatformObjectInstance extends AbstractObjectInsta
         // loc_3B462 calls SolidObjectFull_Offset with d2=$8 and d3=-9.
         // d3 shifts the collision anchor; continued riding still subtracts d2.
         return new SolidObjectParams(0x23, 8, 8, 0, -9);
+    }
+    @Override public boolean fullSolidBottomOverlapUsesCurrentYRadiusOnly(PlayableEntity player) {
+        // SolidObjectFull_Offset_1P doubles d2 + live y_radius, unlike
+        // SolidObject_cont's lower half built with default_y_radius.
+        return true;
+    }
+    @Override public boolean usesInstanceSolidStateLatchKey() {
+        // loc_1E0A2 clears this live SST slot's push bit after it moves out
+        // of contact; updating the display spawn must not lose that bit.
+        return true;
     }
     @Override public SolidRoutineProfile getSolidRoutineProfile() {
         // SolidObjectFull_Offset uses an inclusive fresh-contact right edge and

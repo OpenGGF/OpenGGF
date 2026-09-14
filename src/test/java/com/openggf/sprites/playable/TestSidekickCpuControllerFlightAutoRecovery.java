@@ -214,7 +214,17 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 "ROM Tails_FlySwim_Unknown loc_13C3A ORs Status_InAir every on-screen frame");
         assertEquals(0x21, tails.getAnimationId(),
                 "Tails_Set_Flying_Animation selects the ascending flight byte from negative y_vel");
-        assertEquals(0x21, tails.getForcedAnimationId());
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "The CPU publishes the animation byte without owning later object writes");
+
+        // A later object slot writes Spring, then the next off-screen CPU pass
+        // branches directly to loc_13C50 without Tails_Set_Flying_Animation.
+        tails.setAnimationId(0x10);
+        tails.setRenderFlagOnScreen(false);
+        controller.update(11);
+        assertEquals(0x10, tails.getAnimationId());
+        assertEquals(-1, tails.getForcedAnimationId(),
+                "A persistent flight override would erase the later spring/cage animation");
     }
 
     @Test

@@ -59,9 +59,22 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   rewind preserves both presented art and queued submissions. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
   preserves the native wait and score bonus before the end sign, and the ending
-  pose retains existing plunger support. Zone-owned tumble
+  pose retains existing plunger support across the seamless manager replacement. Zone-owned tumble
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
   route clears the elevator squeeze with an ordinary run-up and timed roll.
+  The Act 1 miniboss submits its native hardware-timed art job, allowing results
+  to reload Act 2; results allocation and the later title-owned enemy-art batch
+  retain their native dispatch boundaries. The carried title initializes on its
+  next dispatch, player control restores the native idle pose, and camera easing
+  targets follow the Act 2 coordinate rebase. Retained title children and camera
+  workers follow their original dispatch order. Chains reject hurt/dead grabs,
+  vertical cages keep their orbit separate from the player ground angle, and
+  magnetic platforms use the native ceiling and contact boundaries. Top-only
+  buttons and disappearing platforms use their native landing edges and level
+  clock; lightning attraction avoids an extra ordinary-ring sweep. Sideways
+  spikes release owned push state after their hurt callback, elevator cars
+  retain their original Tails interaction bank, and the Act 2 subboss stops
+  movement on its laser-ready wait transition.
   Upright spikes use their animated FBZ art, while wall spikes retain the shared
   sideways artwork; both tile banks participate in renderer refresh. Foreground
   and background shaders retain fragment centres while scaling, preventing a

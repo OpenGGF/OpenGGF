@@ -306,15 +306,18 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
 
     private void circularMove() {
         Object parent = previous;
-        int parentX = parent instanceof FbzMinibossArmChild a ? a.getX() : ((FbzMinibossChainLink) parent).getX();
-        int parentY = parent instanceof FbzMinibossArmChild a ? a.getY() : ((FbzMinibossChainLink) parent).getY();
+        int parentXFixed = parent instanceof FbzMinibossArmChild a
+                ? a.nativeXFixed() : ((FbzMinibossChainLink) parent).xFixed;
+        int parentYFixed = parent instanceof FbzMinibossArmChild a
+                ? a.nativeYFixed() : ((FbzMinibossChainLink) parent).yFixed;
         int amplitude = isTerminal() ? 32 : 16;
-        // MoveSprite_CircularSimple maps the returned sine word to X and the
-        // cosine word to Y (d0/d1), rather than the conventional screen axes.
-        x = parentX + ((TrigLookupTable.sinHex(angle & 0xFF) * amplitude) >> 8);
-        y = parentY + ((TrigLookupTable.cosHex(angle & 0xFF) * amplitude) >> 8);
-        xFixed = x << 8;
-        yFixed = y << 8;
+        // MoveSprite_CircularSimple shifts the sine/cosine LONGs, then adds
+        // the parent's full position LONG. Keep the fractions through every
+        // link; rounding each parent word accumulates a visible chain error.
+        xFixed = parentXFixed + TrigLookupTable.sinHex(angle & 0xFF) * amplitude;
+        yFixed = parentYFixed + TrigLookupTable.cosHex(angle & 0xFF) * amplitude;
+        x = xFixed >> 8;
+        y = yFixed >> 8;
     }
 
     private void interpolateBetweenArmAndTerminal() {
@@ -323,8 +326,8 @@ final class FbzMinibossChainLink extends AbstractObjectInstance
         int factor = linkIndex + 1;
         x = arm.getX() + ((end.getX() - arm.getX()) / 5) * factor;
         y = arm.getY() + ((end.getY() - arm.getY()) / 5) * factor;
-        xFixed = x << 8;
-        yFixed = y << 8;
+        xFixed = (x << 8) | (xFixed & 0xFF);
+        yFixed = (y << 8) | (yFixed & 0xFF);
     }
 
     private void refreshFromParent() {

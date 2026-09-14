@@ -108,7 +108,9 @@ public final class FbzWireCageObjectInstance extends AbstractObjectInstance impl
             int band=(dx+0x80)&0xFFFF;if(band>=0x100||((dy+rangePixels)&0xFFFF)>=rangePixels*2||p.isObjectControlled()||(band>=0x20&&band<0xE0))return;
             transferStandingOwner(p);
             if(p.getAir()){p.setXSpeed((short)0);p.setAir(false);}p.setOnObject(true);p.setLatchedSolidObject(spawn.objectId(),this);p.setDirection(com.openggf.physics.Direction.RIGHT);
-            int angle=dx<0?0x80:0;int speed=-p.getYSpeed();if(dy<0){angle=0x40;speed=-speed;}participants.set(i,0,angle);p.setGSpeed((short)(speed==0?1:speed));
+            // loc_3A126 stores the orbit side in (a2). loc_3A14E changes
+            // angle(a1), the player's ground angle, without changing that side.
+            int orbitAngle=dx<0?0x80:0;int speed=-p.getYSpeed();if(dy<0){speed=-speed;}participants.set(i,0,orbitAngle);p.setGSpeed((short)(speed==0?1:speed));
             p.setAngle((byte)(dy<0?0x40:0xC0));
             // loc_3A16C writes the same anim/prev_anim word on vertical entry.
             ObjectControlState.nativeBits0To6CpuAllowedMovementActive().applyTo(p);p.setSuppressGroundWallCollision(true);p.setAnimationId(0);p.publishRunAsPreviousAnimation();p.setFlipAngle(0);p.setObjectMappingFrameControl(true);participants.flag(i,2,true);

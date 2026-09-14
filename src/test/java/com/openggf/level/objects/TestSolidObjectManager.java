@@ -100,6 +100,25 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    void transitionContactsExcludeObjectsWhoseSstDidNotSurvive() {
+        TestPlayableSprite player = createStandingProbePlayer();
+        TestSolidObject removed = new TestSolidObject(100, 100, new SolidObjectParams(16, 8, 8));
+        TestSolidObject retained = new TestSolidObject(200, 100, new SolidObjectParams(16, 8, 8));
+        ObjectManager source = buildManager(removed);
+        source.addDynamicObject(retained);
+        source.forceRidingObjectForBootstrap(player, removed);
+        assertTrue(source.hasObjectStandingBit(player, removed));
+        ObjectManager target = buildManager(retained);
+
+        ObjectTransitionContacts.inherit(target, source, List.of(retained));
+
+        assertFalse(target.isRidingObject(player));
+        assertFalse(target.hasObjectStandingBit(player, removed));
+        assertFalse(target.hasObjectStandingBit(player, retained));
+        assertTrue(source.isRidingObject(player, removed), "the old world's state must remain independent");
+    }
+
+    @Test
     public void nativeFloorReleaseDetachesRideAtNonPositiveDistance() {
         TestPlayableSprite player = createStandingProbePlayer();
         TestSolidObject object = new TestSolidObject(

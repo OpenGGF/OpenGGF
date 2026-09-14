@@ -62,7 +62,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         RESULTS,
         TITLE_CARD_WAIT,
         TITLE_CARD_WAIT2,
-        DONE
+        DONE,
+        TITLE_CARD_INIT
     }
     private static final Logger LOG = Logger.getLogger(S3kResultsScreenObjectInstance.class.getName());
 
@@ -980,9 +981,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
                 pendingRetainedReloadTitleHandoff = retainedReloadState;
                 if (fbzCarriedTitleOwner) {
-                    initializePublishedTitleCard();
-                    titleInitializationPending = false;
-                    carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
+                    // loc_2DD06 only replaces this SST's code pointer. The
+                    // following Process_Sprites pass runs Obj_TitleCardInit.
+                    carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_INIT;
                     carriedTitleWaitTimer = 0;
                 }
             }
@@ -1052,10 +1053,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         var titleCardProvider = services().titleCardProvider();
         titleCardProvider.initializeInLevel(zone, 1);
         if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-            if (act == 0 && zone == 0x04) {
+            boolean retainedSstTitleOwner = carriedTitlePhase == CarriedTitlePhase.TITLE_CARD_INIT;
+            if (retainedSstTitleOwner) {
                 s3kTitleCard.useExternalInLevelGameplayOwner();
             }
-            if (pendingPreloadedTitleHandoff) {
+            if (pendingPreloadedTitleHandoff && !retainedSstTitleOwner) {
                 int releaseDispatches = carriedPreloadedActCameraReleaseDispatches;
                 if (releaseDispatches < 0) {
                     releaseDispatches =
@@ -1069,9 +1071,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                             releaseDispatches);
                 }
             }
-            if (pendingAizTitleHandoff) {
+            if (pendingAizTitleHandoff && !retainedSstTitleOwner) {
                 s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
-            } else if (pendingRetainedReloadTitleHandoff) {
+            } else if (pendingRetainedReloadTitleHandoff && !retainedSstTitleOwner) {
                 // This Obj_LevelResults survived an earlier Load_Level and now
                 // dispatches as Obj_TitleCard. The title owner resets the
                 // counters after its native create dispatches.
@@ -1225,7 +1227,18 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void updateCarriedTitleCard() {
         switch (carriedTitlePhase) {
+            case TITLE_CARD_INIT -> {
+                initializePublishedTitleCard();
+                titleInitializationPending = false;
+                titleCardInitialized = true;
+                carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
+            }
             case TITLE_CARD_WAIT -> {
+                if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title
+                        && !title.isExternalInLevelWaitReady()) {
+                    title.updateExternalInLevelChildren();
+                    return;
+                }
                 // ROM mutates this same SST owner into Obj_TitleCardWait, then
                 // clears Timer/Ring_count, restores air and music, and advances
                 // it to Wait2. Visual children are managed by the shared title
@@ -1245,23 +1258,40 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 }
                 carriedTitleWaitTimer = 90;
                 carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT2;
+                advanceExternalTitleChildren();
             }
             case TITLE_CARD_WAIT2 -> {
                 if (carriedTitleWaitTimer > 0) {
                     carriedTitleWaitTimer--;
+                    advanceExternalTitleChildren();
                     return; // Obj_TitleCardWait2 returns; child polling starts next dispatch.
                 }
-                if (services().titleCardProvider().isComplete()) {
+                var provider = services().titleCardProvider();
+                boolean childrenGone = provider instanceof Sonic3kTitleCardManager title
+                        ? title.areExternalInLevelChildrenRetired() : provider.isComplete();
+                if (childrenGone) {
+                    if (provider instanceof Sonic3kTitleCardManager title) {
+                        title.completeExternalInLevelTitle();
+                    }
                     services().gameState().setEndOfLevelFlag(true);
                     carriedTitlePhase = CarriedTitlePhase.DONE;
                     complete = true;
                     ObjectLifetimeOps.deleteNoRespawn(this);
+                } else if (provider instanceof Sonic3kTitleCardManager title) {
+                    title.startExternalInLevelChildExit();
+                    title.updateExternalInLevelChildren();
                 }
             }
             case RESULTS, DONE -> {
                 // RESULTS is handled by the ordinary results state machine;
                 // DONE is retained only for rewind-visible routine identity.
             }
+        }
+    }
+
+    private void advanceExternalTitleChildren() {
+        if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title) {
+            title.updateExternalInLevelChildren();
         }
     }
 

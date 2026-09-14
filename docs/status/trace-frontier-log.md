@@ -109787,8 +109787,10 @@ surefire:test` passed all 36 child/contact checks, with zero errors/skips.
 The complete 44,152-row recording remains red: **4,501 errors / 0 warnings**,
 first 16,600 Tails animation `$05/$06`, 758,829 mismatching field-rows. The
 first main gameplay-physics error advances to **22,397 `x` `$0102/$2F02`** and
-`camera_x` `$0062/$2E62`, a one-row coordinate-rebase mismatch. Later timing
-and transition differences remain open; these are not full-parity results.
+`camera_x` `$0062/$2E62`. The later remaining-items probe corrects the original
+"one-row" description: results art never becomes ready, so the Act 2 reload
+does not occur; row 22398 is an un-compared lag row. Later timing and transition
+differences remain open; these are not full-parity results.
 
 The real-contact regression lands on the actual plunger, applies the production
 signpost ending pose, and proves retained standing ownership and grounded Y on
@@ -109832,3 +109834,50 @@ zero errors/skips. Upstream reconciliation introduced no Java changes after
   merging AIZ/HCZ/FBZ bootstrap and animation changes: unchanged 1,817 rows,
   194 comparison errors, 91 bootstrap errors, zero warnings/skips (19.354 s).
   The first bootstrap error and runtime frontier above remain unchanged.
+
+### FBZ remaining-items: physical art ownership and carried ending boundaries
+
+Against develop `51677cdd2`, `feature/ai-fbz-remaining` fixes the omitted
+`loc_6EEA8` canonical miniboss KosM parent, first-free results dispatch, and
+TITLE_OWNER enemy-art admission on the seamless reload (`46fe2152f`). The
+base's 4,501-error complete replay stalled in results; it did not recover after
+row 22397. Results fingerprints were correct with ordinals one behind. The
+native parent restores the reload at 22397, and the later policy correction
+retains the enemy batch for its actual title owner.
+
+Combining the parallel launcher/Tails corrections through `5ac5c5b51` yields
+3,502 errors, first 20795 `tails_y` `$05B0/$05AE`, versus the original first
+16600 animation mismatch. Native control-restoration writes and deferred
+Obj_TitleCardInit lower that to 3,493. Rebasing the horizontal camera easing
+targets then removes Sonic's post-results `$03DE` boundary clamp and reaches
+a different Act 2 path: 5,508 errors, still first 20795. Main X agrees until
+23035; camera first differs at 23014. Native title/worker handoff occurs at
+23011, engine title completion at 23021. These later boundaries remain open.
+
+Commands used the shared Maven queue, `-Dmse=off -B`, absolute main `s3k.gen`,
+`-Ptrace-replay-r7 -Dtest=TestS3kFbzCompleteRunTraceReplay test`, with bounded
+read-only title observers removed afterward. Each complete replay traversed
+44,152 rows, zero warnings and zero skips. Focused accompanying checks passed:
+53 boss/rewind, 26 sign/boss, 13 transition/PLC, 37 title/children and 12
+transition checks. The strict tests remain failed; no full-suite pass is claimed.
+See the dated FBZ completion plan for the submission and allocation evidence.
+
+FBZ remaining-items at `a9354be64` aligns retained title completion and the
+Act 2 camera handoff at frame 23,011. Later body/prison, push-release, chain
+hurt-entry and vertical-cage orbit fixes through `6583d90b3` produce **5,036
+errors**, first frame **22,868 main Y** (`$05A4` expected / `$05A8` actual),
+with the next main-position error at frame 26,451. The queued strict command
+above still completes 44,152 rows, zero warnings/skips and fails its strict
+assertion. The accompanying `TestFbzWireCages,TestFbzObjectRewind` selection
+passes 36 focused checks with zero skips; the full invocation takes 63 seconds.
+This is improved failing comparison, not full replay parity.
+
+The independent `TestS3kSonicTailsFbzSegmentTraceReplay` command uses the same
+queued Maven/profile/absolute-ROM setup and reaches **4,152 errors**, first
+frame **7,619 main x_speed**, with zero skips. Native control `$81`, secondary
+status `$02` and slot 96 `Obj_HyperSonicKnux_Trail_Main` identify Hyper Sonic;
+`Sonic_CheckTransform` / `Sonic_Transform` require seven Super Emeralds. The
+isolated segment metadata supplies no progression bootstrap contract, and the
+run walker keeps emerald metadata comparison-only. This prerequisite gap is
+not authority to hydrate gameplay from trace rows or patch FBZ acceleration.
+The independent frontier is attributed but remains red.

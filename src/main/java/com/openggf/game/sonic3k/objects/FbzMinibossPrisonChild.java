@@ -11,13 +11,14 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.RomWorldPositionedObject;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
 /** {@code ChildObjDat_6FAB0}: the fixed FBZ Egg Prison visual and full solid. */
 final class FbzMinibossPrisonChild extends AbstractObjectInstance
-        implements RewindRecreatable, SolidObjectProvider, RomWorldPositionedObject {
+        implements RewindRecreatable, SolidObjectProvider, RomWorldPositionedObject, RomObjectCodePointerProvider {
     private static final SolidObjectParams SOLID_PARAMS = new SolidObjectParams(0x23, 0x20, 0x1C);
 
     private FbzMinibossInstance boss;
@@ -52,6 +53,29 @@ final class FbzMinibossPrisonChild extends AbstractObjectInstance
     public SolidObjectParams getSolidParams() {
         return SOLID_PARAMS;
     }
+
+    @Override
+    public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // loc_6F764 shares sub_6F786 with the boss. ObjDat_FBZEggPrison
+        // supplies width_pixels=$20 to the loc_1E154 landing test.
+        return 0x20;
+    }
+
+    @Override public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // SolidObjectFull_1P consumes its standing bit on jump-off and
+        // returns before fresh side-contact classification (loc_1DC98).
+        return true;
+    }
+    @Override public boolean allowsObjectControlledSolidContacts() { return true; }
+    @Override public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) { return true; }
+    @Override public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        // SolidObjectFull_1P retains standing ownership, while MvSonicOnPtfm
+        // loc_1E1CA skips position writes under signed object_control.
+        return player.isObjectControlled();
+    }
+
+    @Override public int getBalanceWidthPixels() { return 0x20; }
+    @Override public int romObjectCodePointerHighWord() { return 0x0006; }
 
     @Override
     public boolean skipsCpuSidekickWhenRenderFlagOffScreen() {

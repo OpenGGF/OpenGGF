@@ -83,8 +83,8 @@ class TestFbzAct1RouteHeadless {
         // capacity at the later Change_Act2Sizes call (62244-62279).
         await(fixture, 2_500,
                 () -> results.carriedTitlePhase()
-                        != S3kResultsScreenObjectInstance.CarriedTitlePhase.RESULTS,
-                "the real results owner did not mutate into its carried title routine");
+                        == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_WAIT,
+                "the real results owner did not execute its pending title initialization");
         assertTrue(boss.resultsObserved(),
                 "the converted controller must first observe the real results owner completing");
         assertFalse(boss.isDestroyed(),
@@ -129,16 +129,13 @@ class TestFbzAct1RouteHeadless {
                 controlledAfterCurrentSlots.add(slot);
             }
         }
-        assertTrue(controlledAfterCurrentSlots.size() >= 4,
-                "the real route must expose one placement hole plus three "
-                        + "controllable AllocateObjectAfterCurrent slots");
+        assertTrue(controlledAfterCurrentSlots.size() >= 3,
+                "the real route must expose three controllable AllocateObjectAfterCurrent slots");
         act2Objects.reserveAllButNFreeSlots(0);
-        // ExecObjects precedes ObjPosLoad. The persistent ID $2F placement that
-        // native range culling keeps pending therefore claims the first reopened
-        // post-controller hole before the later EndSign controller dispatch.
-        // Reserve that real placement claim explicitly, then expose exactly N
-        // following holes for CreateChild1's successful worker prefix.
-        for (int i = 0; i <= freeCapacity; i++) {
+        // Expose exactly the requested number of live holes after the
+        // controller. The corrected camera/player rebase no longer brings the
+        // formerly expected StillSprite placement into this dispatch window.
+        for (int i = 0; i < freeCapacity; i++) {
             act2Objects.releaseDynamicSlot(controlledAfterCurrentSlots.get(i));
         }
         fixture.stepFrame(false, false, false, false, false);
@@ -151,13 +148,6 @@ class TestFbzAct1RouteHeadless {
         await(fixture, 240, results::isDestroyed,
                 "the external title children did not complete and publish the carried title flag");
 
-        int placementClaimSlot = controlledAfterCurrentSlots.getFirst();
-        assertTrue(act2Objects.activeObjectsOfType(StillSpriteInstance.class).stream()
-                        .anyMatch(still -> still.getSlotIndex() == placementClaimSlot),
-                "native persistent StillSprite must claim the explicitly reserved first hole; "
-                        + "slot=" + placementClaimSlot + ", occupancy="
-                        + act2Objects.occupiedDynamicSlotIds());
-
         List<FbzAct2CameraResizeWorker> workers = act2Objects.activeObjectsOfType(
                 FbzAct2CameraResizeWorker.class);
         assertTrue(GameServices.module().getTitleCardProvider().isComplete());
@@ -166,6 +156,9 @@ class TestFbzAct1RouteHeadless {
         assertTrue(results.isDestroyed(),
                 "the carried title owner deletes after publishing its terminal byte");
         int expectedCount = Math.min(freeCapacity, 3);
+        assertEquals(controlledAfterCurrentSlots.subList(0, expectedCount),
+                workers.stream().map(FbzAct2CameraResizeWorker::getSlotIndex).toList(),
+                "workers must occupy exactly the exposed native post-controller prefix");
         assertEquals(expectedCount, workers.size(),
                 "CreateChild1 must preserve the successful prefix and stop at failure ordinal "
                         + freeCapacity + "; controllerSlot=" + boss.getSlotIndex()
@@ -184,8 +177,10 @@ class TestFbzAct1RouteHeadless {
                 fixture.camera().getMaxYTarget() & 0xFFFF,
                 "Change_Act2Sizes publishes the stored Act-2 target before allocation");
         assertEquals(minXTarget, fixture.camera().getMinXTarget() & 0xFFFF);
-        assertEquals(maxXTarget, fixture.camera().getMaxXTarget() & 0xFFFF);
-        assertEquals(minYTarget, fixture.camera().getMinYTarget() & 0xFFFF);
+        assertEquals(expectedCount >= 1 ? fixture.camera().getMaxX() & 0xFFFF : maxXTarget,
+                fixture.camera().getMaxXTarget() & 0xFFFF);
+        assertEquals(expectedCount >= 2 ? fixture.camera().getMinY() & 0xFFFF : minYTarget,
+                fixture.camera().getMinYTarget() & 0xFFFF);
         assertEquals(fixture.camera().getX(), fixture.camera().getXCopy(),
                 "ScreenEvents copies the live camera X after the first worker update");
         assertEquals(fixture.camera().getY(), fixture.camera().getYCopy(),
@@ -197,10 +192,9 @@ class TestFbzAct1RouteHeadless {
         fixture.stepFrame(false, false, false, false, false);
 
         if (expectedCount >= 1) {
-            assertEquals((maxXAfterFirst + 2) & 0xFFFF,
+            assertEquals(maxXAfterFirst,
                     fixture.camera().getMaxX() & 0xFFFF,
-                    "$4000 + $4000 contributes no integer worker delta on update two; "
-                            + "the concurrent camera-target easing contributes +2");
+                    "update two has no integer worker delta; ordinary camera easing must preserve it");
         }
         if (expectedCount >= 2) {
             assertEquals(minYAfterFirst, fixture.camera().getMinY() & 0xFFFF,
@@ -213,12 +207,30 @@ class TestFbzAct1RouteHeadless {
                             + "concurrent camera-target easing contributes +2");
         }
         assertEquals(minXTarget, fixture.camera().getMinXTarget() & 0xFFFF);
-        assertEquals(maxXTarget, fixture.camera().getMaxXTarget() & 0xFFFF);
-        assertEquals(minYTarget, fixture.camera().getMinYTarget() & 0xFFFF);
+        assertEquals(expectedCount >= 1 ? fixture.camera().getMaxX() & 0xFFFF : maxXTarget,
+                fixture.camera().getMaxXTarget() & 0xFFFF);
+        assertEquals(expectedCount >= 2 ? fixture.camera().getMinY() & 0xFFFF : minYTarget,
+                fixture.camera().getMinYTarget() & 0xFFFF);
         assertEquals(GameServices.level().getCurrentLevel().getMaxY(),
                 fixture.camera().getMaxYTarget() & 0xFFFF);
         assertEquals(fixture.camera().getX(), fixture.camera().getXCopy());
         assertEquals(fixture.camera().getY(), fixture.camera().getYCopy());
+        // Exercise the first nonzero integer delta through the ordinary
+        // frame/camera tail, not isolated worker.update calls.
+        fixture.stepFrame(false, false, false, false, false);
+        fixture.stepFrame(false, false, false, false, false);
+        if (expectedCount >= 1) {
+            assertEquals((maxXAfterFirst + 1) & 0xFFFF, fixture.camera().getMaxX() & 0xFFFF);
+            assertEquals(fixture.camera().getMaxX(), fixture.camera().getMaxXTarget());
+        } else {
+            assertEquals(maxXTarget, fixture.camera().getMaxXTarget() & 0xFFFF);
+        }
+        if (expectedCount >= 2) {
+            assertEquals((minYAfterFirst - 1) & 0xFFFF, fixture.camera().getMinY() & 0xFFFF);
+            assertEquals(fixture.camera().getMinY(), fixture.camera().getMinYTarget());
+        } else {
+            assertEquals(minYTarget, fixture.camera().getMinYTarget() & 0xFFFF);
+        }
     }
 
     @Test
@@ -660,6 +672,113 @@ class TestFbzAct1RouteHeadless {
     }
 
     @Test
+    void realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch() throws Exception {
+        HeadlessTestFixture fixture = routeBoundaryFixture();
+        ObjectManager objects = GameServices.level().getObjectManager();
+        FbzMinibossInstance boss = awaitPlacedBoss(fixture, objects, 240);
+        reachPlungerByInput(fixture, objects, boss);
+        driveBossRoute(fixture, objects, boss);
+        assertEquals(6, boss.scriptedImpactCount());
+        await(fixture, 64, boss::hasConvertedToEndSign, "real boss did not convert to sign");
+        S3kResultsScreenObjectInstance results = awaitObject(
+                fixture, objects, S3kResultsScreenObjectInstance.class, 900);
+        await(fixture, 3_000, () -> results.carriedTitlePhase()
+                        == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_INIT,
+                "real results never published the next-dispatch title-init boundary");
+        assertEquals(1, GameServices.level().getCurrentAct());
+        assertEquals(1, GameServices.level().getApparentAct());
+        int slot = results.getSlotIndex();
+        assertTrue(booleanField(results, "titleInitializationPending"));
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var beforeInit = registry.capture();
+        fixture.stepFrame(false, false, false, false, false);
+        assertEquals(S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_WAIT,
+                results.carriedTitlePhase());
+        assertFalse(booleanField(results, "titleInitializationPending"));
+        var afterInit = registry.capture();
+        fixture.stepFrame(false, false, false, false, false);
+        var afterFollowingDispatch = registry.capture();
+
+        for (int cycle = 0; cycle < 2; cycle++) {
+            registry.restore(beforeInit);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(beforeInit, registry.capture(),
+                    "title-init before restore " + cycle);
+            S3kResultsScreenObjectInstance restored = GameServices.level().getObjectManager()
+                    .activeObjectsOfType(S3kResultsScreenObjectInstance.class).stream()
+                    .filter(candidate -> candidate.getSlotIndex() == slot).findFirst().orElseThrow();
+            assertEquals(S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_INIT,
+                    restored.carriedTitlePhase());
+            assertTrue(booleanField(restored, "titleInitializationPending"));
+            fixture.stepFrame(false, false, false, false, false);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(afterInit, registry.capture(),
+                    "title-init forward dispatch " + cycle);
+            fixture.stepFrame(false, false, false, false, false);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(afterFollowingDispatch, registry.capture(),
+                    "title-init following dispatch " + cycle);
+            registry.restore(afterInit);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(afterInit, registry.capture(),
+                    "title-init after restore " + cycle);
+            fixture.stepFrame(false, false, false, false, false);
+            TestFbzSqueezeOrdinaryRoll.assertSnapshotsEqual(afterFollowingDispatch, registry.capture(),
+                    "title-init after forward replay " + cycle);
+        }
+    }
+
+    @Test
+    void realBossSignWaitsForGroundAndAllocatesResultsInEarlierFreeSlot() throws Exception {
+        HeadlessTestFixture fixture = routeBoundaryFixture();
+        ObjectManager objects = GameServices.level().getObjectManager();
+        FbzMinibossInstance boss = awaitPlacedBoss(fixture, objects, 240);
+        reachPlungerByInput(fixture, objects, boss);
+        driveBossRoute(fixture, objects, boss);
+        assertEquals(6, boss.scriptedImpactCount());
+        assertEquals(0, boss.remainingHits());
+        await(fixture, 64, boss::hasConvertedToEndSign,
+                "real defeated boss must become its native sign controller");
+        S3kSignpostInstance sign = awaitObject(fixture, objects, S3kSignpostInstance.class, 180);
+        await(fixture, 600, sign::isLanded, "real sign did not reach its post-land wait");
+        await(fixture, 80, () -> intField(sign, "postLandTimer") <= 8
+                        && intField(sign, "postLandTimer") >= 0 && !fixture.sprite().getAir(),
+                "grounded P1 did not reach the last sign countdown updates");
+
+        int lowerSlot = objects.firstFreeDynamicSlot();
+        assertTrue(lowerSlot >= ObjectSlotLayout.SONIC_3K.firstDynamicSlot()
+                        && lowerSlot < boss.getSlotIndex(),
+                "the real defeated family must leave an earlier free slot: free="
+                        + lowerSlot + ", boss=" + boss.getSlotIndex());
+        objects.reserveAllButNFreeSlots(0);
+        objects.releaseDynamicSlot(lowerSlot);
+        assertEquals(lowerSlot, objects.firstFreeDynamicSlot());
+
+        // Ordinary jump crosses the sign's routine-6 boundary while airborne;
+        // neither player state nor the sign/results routine is seeded here.
+        fixture.stepFrame(false, false, false, false, true);
+        assertTrue(fixture.sprite().getAir(), "ordinary jump did not leave the arena floor");
+        for (int frame = 0; frame < 12; frame++) {
+            fixture.stepFrame(false, false, false, false, true);
+            assertTrue(fixture.sprite().getAir());
+            assertTrue(objects.activeObjectsOfType(S3kResultsScreenObjectInstance.class).isEmpty(),
+                    "Obj_EndSignResults must wait for real P1 ground contact");
+        }
+        assertTrue(booleanField(sign, "resultsWaitedForPlayerLanding"));
+        S3kResultsScreenObjectInstance results = awaitObject(
+                fixture, objects, S3kResultsScreenObjectInstance.class, 120);
+        assertEquals(lowerSlot, results.getSlotIndex(),
+                "AllocateObject must use the earlier hole instead of an after-sign slot");
+        Field dispatchClock = com.openggf.level.objects.AbstractResultsScreen.class
+                .getDeclaredField("frameCounter");
+        dispatchClock.setAccessible(true);
+        assertEquals(0, dispatchClock.getInt(results),
+                "the earlier slot has already passed in this Process_Sprites walk");
+        assertTrue(booleanField(results, "resultsArtLoadPending"));
+        fixture.stepFrame(false, false, false, false, false);
+        assertTrue(dispatchClock.getInt(results) > 0,
+                "results must first execute on the next Process_Sprites dispatch");
+        assertFalse(booleanField(results, "resultsArtLoadPending"),
+                "the first results dispatch must initialize its production art load");
+    }
+
+    @Test
     void placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5() throws Exception {
         HeadlessTestFixture fixture = routeBoundaryFixture();
         var owningSession = fixture.gameplayMode();
@@ -777,10 +896,13 @@ class TestFbzAct1RouteHeadless {
                     "Apparent_act remains Act 1 until the carried title owner reaches loc_2DD06");
             assertSame(owningSession, SessionManager.getCurrentGameplayMode(),
                     "FBZ ScreenEvents reloads Level state inside the existing gameplay session");
-            assertEquals(0x0022, fixture.camera().getMinX() & 0xFFFF,
-                    "the publication frame must include the native +2 gradual-lock event tail");
-            assertEquals(0x00A2, fixture.camera().getMaxX() & 0xFFFF,
-                    "the paired right bound must advance in the same production frame");
+            // FBZ1BGE_Normal subtracts $2E00 from both current X bounds,
+            // then branches straight to FBZ1BGE_GoDeform. It does not run a
+            // gradual-lock update in the newly selected act on this dispatch.
+            assertEquals(0x0020, fixture.camera().getMinX() & 0xFFFF,
+                    "publication must preserve the native subtraction-only left bound");
+            assertEquals(0x00A0, fixture.camera().getMaxX() & 0xFFFF,
+                    "publication must preserve the native subtraction-only right bound");
             assertEquals(0x0540, fixture.camera().getMinY() & 0xFFFF);
             assertEquals(0x0540, fixture.camera().getMaxY() & 0xFFFF);
             var publicationParallax = GameServices.parallax();
@@ -1311,20 +1433,32 @@ class TestFbzAct1RouteHeadless {
         return milestones;
     }
 
-    private static final class EncounterInputDriver {
+    static final class EncounterInputDriver {
         private final FbzMinibossInstance boss;
+        private final boolean leaveDuringNormalAlignment;
         private boolean evading;
         private boolean outwardSeen;
         private int impactAtExit;
 
-        private EncounterInputDriver(FbzMinibossInstance boss) {
+        EncounterInputDriver(FbzMinibossInstance boss) {
+            this(boss, false);
+        }
+
+        EncounterInputDriver(FbzMinibossInstance boss, boolean leaveDuringNormalAlignment) {
             this.boss = boss;
+            this.leaveDuringNormalAlignment = leaveDuringNormalAlignment;
         }
 
         RouteInput next(AbstractPlayableSprite player, ObjectManager objects) {
             boolean onPlunger = objects.getRidingObject(player) instanceof FbzMinibossPlungerChild;
             boolean normalFan = objects.activeObjectsOfType(FbzMinibossChainLink.class).stream()
-                    .anyMatch(link -> link.linkIndex() == 4 && intField(link, "stateOrdinal") == 9);
+                    .anyMatch(link -> {
+                        int state = intField(link, "stateOrdinal");
+                        // NORMAL_ALIGN through NORMAL_FAN: leave before the
+                        // accelerating later fans enter the plunger corridor.
+                        return link.linkIndex() == 4 && (state == 9
+                                || (leaveDuringNormalAlignment && state >= 6 && state <= 8));
+                    });
             boolean outwardActive = objects.activeObjectsOfType(FbzMinibossChainLink.class).stream()
                     .anyMatch(link -> {
                         int state = intField(link, "stateOrdinal");
@@ -1352,7 +1486,7 @@ class TestFbzAct1RouteHeadless {
         }
     }
 
-    private record RouteInput(int targetX, boolean jump) { }
+    record RouteInput(int targetX, boolean jump) { }
 
     private static final class RouteMilestones {
         int waitPlunger = -1;

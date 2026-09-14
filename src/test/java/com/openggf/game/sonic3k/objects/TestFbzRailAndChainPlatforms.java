@@ -71,6 +71,43 @@ class TestFbzRailAndChainPlatforms {
         assertEquals(0x3C, FbzChainLinkObjectInstance.DIRECTIONAL_JUMP_COOLDOWN);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x1B, 0x83})
+    void chainEntryRejectsHurtDeathAndDebugWithoutChangingRecoil(int subtype) {
+        for (int state = 0; state < 4; state++) {
+            TestSprite player = new TestSprite("sonic");
+            player.setHurt(state == 1);
+            player.setDead(state == 2);
+            player.setDebugMode(state == 3);
+            player.setAir(true);
+            player.setCentreX((short) 0x1002);
+            player.setCentreY((short) ((subtype & 0x80) == 0 ? 0x89F : 0x803));
+            player.setXSpeed((short) -0x200);
+            player.setYSpeed((short) -0x30);
+            player.setSubpixelRaw(0x1234, 0x5678);
+            int x = player.getCentreX(), y = player.getCentreY();
+            var chain = new FbzChainLinkObjectInstance(spawn(0x72, subtype));
+            var services = new PlayersServices(player, List.of());
+            chain.setServices(services);
+            chain.update(0, null);
+            if (state == 0) {
+                assertTrue(chain.stateForParticipant(0).grabbed(), "healthy entry remains eligible");
+                assertSame(chain, player.getLatchedSolidObjectInstance());
+            } else {
+                assertFalse(chain.stateForParticipant(0).grabbed(), "native routine/debug gate " + state);
+                assertFalse(player.isObjectControlled());
+                assertNull(player.getLatchedSolidObjectInstance());
+                assertEquals(x, player.getCentreX());
+                assertEquals(y, player.getCentreY());
+                assertEquals(-0x200, player.getXSpeed());
+                assertEquals(-0x30, player.getYSpeed());
+                assertEquals(0x1234, player.getXSubpixelRaw());
+                assertEquals(0x5678, player.getYSubpixelRaw());
+                assertEquals(0, services.grabSfxCount);
+            }
+        }
+    }
+
     @Test void threePlayersGrabIndependentlyAndChainStaysAliveWhileAnyOwnerRemains() {
         TestSprite p1=new TestSprite("sonic"),p2=new TestSprite("tails"),p3=new TestSprite("sidekick_3");
         for(TestSprite p:List.of(p1,p2,p3)){p.setCentreX((short)0x1000);p.setCentreY((short)0x892);p.setSubpixelRaw(0x1234,0x5678);}

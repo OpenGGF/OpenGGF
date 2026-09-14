@@ -10,6 +10,95 @@ import static org.mockito.Mockito.when;
 
 /** Locked-on oracle for Obj_FBZ2Subboss (sonic3k.asm:148033-148695). */
 class TestFbzAct2Subboss {
+    @Test void defeatOwnsBothPhysicalArchivesUntilReadyAndRestoresTheirPendingClaims() throws Exception {
+        var queue = mock(com.openggf.game.sonic3k.resources.S3kKosModuleQueue.class);
+        var coordinator = mock(com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.class);
+        var timing = mock(com.openggf.game.timing.HardwareTimingService.class);
+        var journal = mock(com.openggf.level.resources.KosinskiModuleQueue.class);
+        var rom = mock(com.openggf.data.Rom.class);
+        var kind = com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE;
+        var cloud = new com.openggf.game.timing.HardwareWorkHandle(kind, 7, "cloud-fingerprint");
+        var pillar = new com.openggf.game.timing.HardwareWorkHandle(kind, 8, "pillar-fingerprint");
+        when(coordinator.moduleQueue()).thenReturn(queue);
+        when(rom.readBytes(org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.eq(32)))
+                .thenReturn(new byte[32]);
+        var entries = com.openggf.game.sonic3k.Sonic3kPlcLoader.fbz2SubbossDefeatKosmEntries();
+        for (int i = 0; i < entries.size(); i++) {
+            var entry = entries.get(i);
+            var handle = i == 0 ? cloud : pillar;
+            when(journal.enqueue(rom, entry.sourceAddress(), entry.destinationVramBytes())).thenReturn(true);
+            when(queue.queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32)).thenReturn(handle);
+            when(timing.pendingHandle(kind, handle.ordinal())).thenReturn(java.util.Optional.of(handle));
+        }
+        var boss = boss();
+        boss.setServices(new com.openggf.level.objects.TestObjectServices() {
+            @Override public com.openggf.data.Rom rom() { return rom; }
+            @Override public com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue() { return journal; }
+            @Override public com.openggf.game.RuntimeArtCoordinator runtimeArtCoordinator() { return coordinator; }
+            @Override public com.openggf.game.timing.HardwareTimingService hardwareTiming() { return timing; }
+        });
+        boss.update(0, null);
+        for (int i = 0; i < 7; i++) boss.completeLaserCycleForTest();
+        var ordered = org.mockito.Mockito.inOrder(queue);
+        for (var entry : entries) ordered.verify(queue).queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32);
+        var pending = boss.captureRewindState();
+        boss.update(1, null);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.never()).claim(org.mockito.ArgumentMatchers.any());
+        when(queue.isReady(cloud)).thenReturn(true);
+        boss.update(2, null);
+        org.mockito.Mockito.verify(queue).claim(cloud);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.never()).claim(pillar);
+        when(queue.isReady(pillar)).thenReturn(true);
+        boss.update(3, null);
+        boss.update(4, null);
+        org.mockito.Mockito.verify(queue).claim(pillar);
+        boss.restoreRewindState(pending); // the timing owner restores the same pending handles independently
+        boss.update(5, null);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.times(2)).claim(cloud);
+        org.mockito.Mockito.verify(queue, org.mockito.Mockito.times(2)).claim(pillar);
+        for (var entry : entries) org.mockito.Mockito.verify(queue).queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32);
+    }
+
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void activationPublishesEasedDeathPlaneToTheNextSidekickSlot() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var camera = com.openggf.game.GameServices.camera();
+        camera.setX((short) 0x2900);
+        camera.setY((short) 0x5F0);
+        camera.setMaxY((short) 0xB00);
+        camera.setMaxYTarget((short) 0xB00);
+        var tails = new com.openggf.sprites.playable.Tails("tails_bounds", (short) 0, (short) 0);
+        tails.setCpuControlled(true);
+        var cpu = new com.openggf.sprites.playable.SidekickCpuController(tails, fixture.sprite());
+        tails.setCpuController(cpu);
+        cpu.setLevelBounds(0, 0x3000, 0xB00);
+        com.openggf.game.GameServices.sprites().addSprite(tails, "tails");
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var boss = manager.createDynamicObject(TestFbzAct2Subboss::boss);
+
+        boss.update(0, fixture.sprite());
+        assertEquals("WAIT_P1", boss.phaseName());
+        assertEquals(0xB00, cpu.getMaxYBound(-1), "target publication waits for actual camera easing");
+        var runtime = com.openggf.game.GameServices.zoneRuntimeRegistryOrNull()
+                .currentAs(com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState.class).orElseThrow();
+        byte[] pendingPublication = runtime.captureBytes();
+        camera.updateBoundaryEasing();
+        var events = com.openggf.game.GameServices.module().getLevelEventProvider();
+        events.updateAfterCameraBoundaryEasing();
+
+        assertEquals(0x5EE, camera.getMaxY());
+        assertEquals(camera.getMaxY(), cpu.getMaxYBound(-1),
+                "next Tails_Check_Screen_Boundaries must observe the live eased Camera_max_Y_pos");
+        cpu.setLevelBounds(0, 0x3000, 0xB00);
+        events.updateAfterCameraBoundaryEasing();
+        assertEquals(0xB00, cpu.getMaxYBound(-1), "publication request is consumed exactly once");
+        runtime.restoreBytes(pendingPublication);
+        events.updateAfterCameraBoundaryEasing();
+        assertEquals(camera.getMaxY(), cpu.getMaxYBound(-1),
+                "rewinding the pending event republishes the live boundary at the same phase");
+    }
+
     @Test void nativeBoundsTriggerAndSevenCycleCounterAreExact() {
         assertArrayEquals(new int[] {0x560, 0x660, 0x2900, 0x2C00},
                 Fbz2SubbossInstance.activationBounds());
@@ -58,6 +147,52 @@ class TestFbzAct2Subboss {
         assertEquals("PRE_LASER_WAIT", boss.phaseName());
         boss.update(120, p1);
         assertEquals("ACTIVE", boss.phaseName());
+    }
+
+    @Test void laserReadyStopsMovementAndRetainsItsBitUntilNextCycleStarts() {
+        Fbz2SubbossInstance boss = boss();
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getCentreX()).thenReturn((short) 0x2B40);
+        boss.update(-1, player);
+        boss.update(0, player);
+        for (int i = 1; i <= 120; i++) boss.update(i, player);
+        assertEquals("ACTIVE", boss.phaseName());
+        boss.update(121, player);
+        int x = boss.getX();
+        boss.setControlBit(Fbz2SubbossInstance.CONTROL_LASER_READY);
+        boss.update(0x40, player);
+        assertAll(
+                () -> assertEquals(x, boss.getX(), "loc_6FEFA returns without MoveSprite2"),
+                () -> assertTrue(boss.controlBit(Fbz2SubbossInstance.CONTROL_LASER_READY),
+                        "loc_6FE3A owns the clear at the next cycle"));
+        assertEquals("CYCLE_WAIT", boss.phaseName());
+        assertEquals(0x7F, boss.waitWordForTest());
+        for (int i = 0; i < 128; i++) boss.update(0x41 + i, player);
+        assertEquals("ACTIVE", boss.phaseName());
+        assertFalse(boss.controlBit(Fbz2SubbossInstance.CONTROL_LASER_READY));
+        assertEquals(x, boss.getX(), "the cycle-start callback creates the laser without moving");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {-1, 0, 1})
+    void nextLaserCycleAimsAtCurrentPlayerBeforePeriodicAim(int side) {
+        Fbz2SubbossInstance boss = boss();
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getCentreX()).thenReturn((short) (boss.getX() + (side > 0 ? -1 : 1)));
+        boss.update(-1, player);
+        boss.update(0, player);
+        for (int i = 1; i <= 120; i++) boss.update(i, player);
+        assertEquals("ACTIVE", boss.phaseName());
+        boss.setControlBit(Fbz2SubbossInstance.CONTROL_LASER_READY);
+        boss.update(121, player);
+        int x = boss.getX();
+        when(player.getCentreX()).thenReturn((short) (x + side));
+        for (int i = 0; i < 128; i++) boss.update(122 + i, player);
+        assertEquals("ACTIVE", boss.phaseName());
+        assertEquals(x, boss.getX(), "loc_6FE3A aims without moving");
+        boss.update(250, player); // not the periodic VInt-low-five-bits aim
+        assertEquals(x + (side > 0 ? 1 : -1), boss.getX(),
+                "loc_6FE28 falls through sub_6FE54 and uses current P1, including equality");
     }
 
     @Test void onlySixNonfinalCyclesMoveTheLeftAnchors() {
@@ -152,6 +287,8 @@ class TestFbzAct2Subboss {
         Fbz2SubbossInstance root = boss();
         Fbz2SubbossLaserChild laser = new Fbz2SubbossLaserChild(root);
 
+        laser.update(0, null);
+        assertEquals(5, laser.frameForTest(), "loc_70192 is a setup-only dispatch");
         laser.update(1, null);
         assertEquals(0xA, laser.frameForTest());
         for (int call = 2; call <= 206; call++) laser.update(call, null);

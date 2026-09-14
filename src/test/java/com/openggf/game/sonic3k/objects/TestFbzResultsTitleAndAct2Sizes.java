@@ -44,14 +44,14 @@ class TestFbzResultsTitleAndAct2Sizes {
         onExitReady.setAccessible(true);
         onExitReady.invoke(results);
 
-        assertTrue(services.titleCard.started,
-                "loc_2DD06 converts the surviving results owner into the in-level title card");
+        assertFalse(services.titleCard.started,
+                "loc_2DD06 replaces the SST code pointer without dispatching Obj_TitleCardInit");
         assertTrue(services.playedMusic.isEmpty(),
                 "Obj_TitleCardWait, not the earlier results exit, restores FBZ2 music");
         assertFalse(results.isDestroyed(),
                 "the live results SST slot survives and owns the carried title-card wait");
         assertTrue(results.carriedTitlePhase()
-                        == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_WAIT,
+                        == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_INIT,
                 "the surviving SST owner must change routine identity, not remain results logic");
         assertEquals(0x20, services.camera.getMinX() & 0xFFFF);
         assertEquals(0xA0, services.camera.getMaxX() & 0xFFFF);
@@ -59,6 +59,9 @@ class TestFbzResultsTitleAndAct2Sizes {
         assertEquals(0x540, services.camera.getMaxY() & 0xFFFF,
                 "carried FBZ results must not restore full Act 2 camera bounds");
 
+        results.update(-1, null);
+        assertTrue(services.titleCard.started, "the following owner pass initializes title art");
+        verify(services.levelManager, never()).resetLevelGamestate(services.freshLevelState);
         results.update(0, null);
         assertTrue(results.carriedTitlePhase()
                         == S3kResultsScreenObjectInstance.CarriedTitlePhase.TITLE_CARD_WAIT2);
