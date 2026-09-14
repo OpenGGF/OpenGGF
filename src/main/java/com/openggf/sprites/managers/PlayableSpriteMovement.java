@@ -2508,7 +2508,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// zero wall distances or a ledge within [0, 12). A side collision alone
 		// is insufficient: the failure branch keeps inertia/Y speed and falls.
 		if (!com.openggf.physics.GlideWallGrabTerrain.align(sprite, wasMovingRight,
-				com.openggf.game.GameServices.gameState().isReverseGravityActive())) {
+				sprite.currentGameState().isReverseGravityActive())) {
 			letGoOfWall();
 			sprite.setAir(true);
 			return;

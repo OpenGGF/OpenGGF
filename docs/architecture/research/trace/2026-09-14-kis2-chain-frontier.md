@@ -162,3 +162,23 @@ Upstream `24cdc64e6` supplies the already-verified test-only audit correction:
 than final-reference fallthrough. It was merged without conflicts at `382d54d6b`.
 The earlier `8ce626087` merge (`73f07afd1`) contained render-rate design/roadmap
 prose only. No runtime change followed the completed ordinary lane.
+
+The full guard lane was completed separately on `30878ca6a` using queued Maven
+`-Dmse=off -Pguards test -B` with Lua 5.4 and absolute ROM properties:
+**667 tests, three failures, zero errors/skips**, 2:56 including compilation.
+Two match the base exactly: `TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+expects superseded direct-Maven guidance, and
+`TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree` flags
+the unchanged `FbzRouteEvidenceProbe#printEvidence` and
+`LevelSolidityMapProbe#writeSolidityMap`.
+
+The new `TestPlayableRuntimeAccessGuard` failure correctly rejected direct
+`GameServices` access from movement. The wall-grab call now reads reverse
+gravity through the existing `sprite.currentGameState()` accessor, preserving
+the same gameplay value through the owned runtime boundary. Queued
+`-Pguards -Dtest=TestPlayableRuntimeAccessGuard,TestPlayableSpriteMovement,TestGlideWallGrabTerrain,TestRewindInPlaceObjectRestore,TestKis2CompleteEmeraldRunChain`
+completed **186 tests: 185 passed, one known chain failure, zero errors/skips**
+in 57.563 seconds. The accessor guard, 177 movement cases, three geometry
+cases and three corrected audit cases pass; the launch check passes and the
+full chain retains cursor 9366. No new guard failure remains after this narrow
+correction. The final integrated suite is still required before push.
