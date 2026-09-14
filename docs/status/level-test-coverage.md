@@ -50,7 +50,8 @@ conditional S3K scope. Their rows link to that zone-level inventory; **conforman
 the route-controller continuation and its inherited gaps; the
 [HCZ1 partial matrix](../architecture/validation/levels/s3k-hcz1-sonic.md) records water-route
 and miniboss composition, ten independent restore/replay spots, the production
-reload boundary and 30 viewport/donor entry/reset cases. Other characters/teams,
+reload boundary, 30 viewport/donor entry/reset cases, all 15 full width/donor
+routes, and five rewind checks crossing horizontal arena admission. Other characters/teams,
 checkpoint/death-restart and presentation obligations remain open. The other 34 slots
 still need scope/disposition audit. No new execution result or pass is awarded.
 

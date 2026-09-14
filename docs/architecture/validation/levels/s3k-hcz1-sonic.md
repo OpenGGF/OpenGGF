@@ -3,7 +3,8 @@
 Canonical game/zone/act: Sonic 3 & Knuckles, Hydrocity, act 1.
 Runtime slots: zone 1, act 0; outgoing production reload: zone 1, act 1.
 Representative configuration: native 320px Sonic with CPU Tails, movement donor off.
-This is a route pilot, not level certification or trace-physics parity.
+Maintained full routes cover 320/400/512/640/800px crossed with off/S1/S2 donors.
+This is Sonic-with-CPU-Tails route coverage, not full level certification or trace-physics parity.
 
 ## Obligations and current evidence
 
@@ -14,7 +15,9 @@ This is a route pilot, not level certification or trace-physics parity.
 | REWIND / local hazards | `TestS3kHcz1RouteRewind`, ten independent cases | Water entry, bubble shield, both early bridges, fan lift, conveyor ride, spring ascent, boss active/hit/defeated. Each reaches its own live spot, captures all registered owners, advances 30 ordinary-input frames and checks immediate restore plus forward replay twice. |
 | LOAD / timeline boundary | `TestS3kHcz1ReloadRewind` | Actual act-2 reload replaces object ownership and clamps live rewind history to the new root; 30 new-act frames restore/replay twice. Checkpoint/death-restart remains open. |
 | Configuration entry and reset | `TestS3kHcz1EntryMatrix`, 30 cases | Full cross product of 320/400/512/640/800px and off/S1/S2 donor: movement admission plus two 30-frame replay cycles; two repeated production resets retain width, donor, player and CPU-team ownership. This is entry/reset breadth, not full-route breadth. |
-| Full-route configuration axes | Survey only; open maintained obligations | Native complete route retained. Temporary ordinary-input probes explored wider widths and donors; incomplete navigation is recorded below. Other main characters/teams and the full width × donor route product remain open. |
+| Full-route configuration axes | `TestS3kHcz1CompatibilityRoutes`, 15 cases | All five supported widths × off/S1/S2 complete with ordinary pad inputs, no P1 death/drowning, CPU lifecycle checks, six-hit defeat and actual reload. Other main characters/teams remain open. |
+| REWIND / horizontal arena admission | `TestS3kHcz1RouteRewind`, five independent width cases | Capture before the horizontal lock; 30 saved-input frames must cross it, then immediate restore and forward replay twice must match all registered owners. Native ROM min/max X bounds remain `3680`. This late checkpoint uses donor off; donor entry replay is covered separately. |
+| Arena trigger boundaries | `TestHczMinibossRomParity` | Initial camera window and horizontal admission checked on both sides at all five widths, retaining vertical-gate independence and native world-bound writes. |
 | PRESENT / ORACLE | Separate trace/native lanes | No pixels/audio or trace comparison is claimed. |
 
 ## Route construction and rejected approaches
@@ -117,3 +120,40 @@ next route-authoring task can start from the observed frontier.
 Shared rewind state and comparator changes require normal combined change-based
 validation. Entry/reset breadth and selected complete routes do not certify HCZ1's
 remaining character/team, checkpoint/death, presentation or trace-parity gaps.
+
+## Full-route viewport/donor completion
+
+Follow-up based on `24cdc64e6`, implemented in
+`.worktrees/ai-hcz-full-route-matrix`. The maintained matrix now passes all 15
+configurations (zero failures/errors/skips), 61.251 test seconds / 1:18 Maven time
+excluding queue waiting. This supersedes the earlier temporary survey and open
+full-route breadth statement above. Completion frames for the combined controller:
+
+| Width | Donor off | S1 donor | S2 donor |
+| --- | ---: | ---: | ---: |
+| 320 | 13,007 | 11,500 | 13,007 |
+| 400 | 11,298 | 13,151 | 11,298 |
+| 512 | 11,831 | 14,773 | 11,831 |
+| 640 | 11,386 | 14,294 | 11,386 |
+| 800 | 10,909 | 11,375 | 10,909 |
+
+These are observed completion frames, not deadlines or runtime inputs. The
+20,000-frame watchdog is unchanged. The controller authors a running early-water
+corridor for 400/512px and retains the jumping approach for other widths. S1 uses
+its actual no-spindash capability: longer running approach, live obstacle jumps,
+and (in wide views) landing left of the upper Blastoid to attack before the ring
+monitor. Boss steering distinguishes actual engine retraction from alternating
+V-int flicker; off/S2 retain their existing side/above approach.
+
+The only production change converts HCZ miniboss camera observations to native
+framing. Wide render origins otherwise cannot reach the ROM arena threshold
+before the player meets the terrain wall. The native bound writes remain unchanged.
+All five before-lock rewind cases pass, and the original native controller retains
+its exact pre-fix completion frame and pad hash with this runtime fix alone.
+
+The matched native trace remains red with 4,699 divergences, first frame 9,482
+`air`; candidate and baseline normalized reports are identical. See the
+[handover](../../plans/2026-09-14-route-controller-handover.md#full-route-viewportdonor-completion-follow-up)
+for commands, rejected approaches and final delivery validation. Other main
+characters/teams, checkpoint/death-restart, donor breadth at late rewind spots,
+presentation/oracle and trace-parity obligations remain open.

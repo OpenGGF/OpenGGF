@@ -42,6 +42,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   `docs/kis2/BRANCH_DIFFS.md`.
 
 - **HCZ1 miniboss:** retain the vertical arena lock and full rocket slowdown;
+  admit the arena at the native gameplay position across supported viewport widths;
   match the body, rockets and individual exhausts to ROM sprite priorities and
   flicker gates. Restore the whirlpool slowdown, bubble animation and depth,
   falling rocket debris, and bubble cleanup at the defeat handoff, including

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.camera.DeadzoneGeometry;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
@@ -639,7 +640,7 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
 
         if (!arenaXLocked) {
             camera.setMinX((short) cameraX);
-            if (cameraX >= ARENA_LOCK_X) {
+            if (nativeFramedCameraX() >= ARENA_LOCK_X) {
                 camera.setMinX((short) ARENA_LOCK_X);
                 camera.setMaxX((short) ARENA_LOCK_X);
                 arenaXLocked = true;
@@ -1979,9 +1980,23 @@ public class HczMinibossInstance extends AbstractBossInstance implements SpawnRe
         return state.routine >= ROUTINE_WAIT_TRIGGER || isCameraInTriggerWindow();
     }
 
+    /**
+     * HCZMiniboss_CameraRange and HCZMiniboss_CheckHorizontalCameraLock observe
+     * the ROM's 160-pixel follow offset. The render camera follows at half the
+     * viewport width; account for that framing when testing those native gates.
+     * Keep the actual camera/level-bound writes in world coordinates: shifting
+     * the physical arena would move its right edge beyond the ROM terrain.
+     */
+    private int nativeFramedCameraX() {
+        var camera = services().camera();
+        int focusExcess = Math.max(0, DeadzoneGeometry.rightEdge(camera.getWidth())
+                - DeadzoneGeometry.rightEdge(320));
+        return camera.getX() + focusExcess;
+    }
+
     private boolean isCameraInTriggerWindow() {
         var camera = services().camera();
-        int cameraX = camera.getX();
+        int cameraX = nativeFramedCameraX();
         int cameraY = camera.getY();
         return cameraX >= TRIGGER_MIN_X && cameraX <= TRIGGER_MAX_X
                 && cameraY >= TRIGGER_MIN_Y && cameraY <= TRIGGER_MAX_Y;

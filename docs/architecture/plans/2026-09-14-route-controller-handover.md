@@ -514,3 +514,174 @@ lanes. Only the matched inherited guard failures remain; full-route viewport/don
 other-character/team, checkpoint/death and presentation/oracle obligations stay open.
 The broad diagnostics were acknowledged and deleted. Final delivery merges this
 test/documentation correction into develop; the feature branch remains local.
+
+
+## Full-route viewport/donor completion (follow-up)
+
+The user requested completing the remaining full-route breadth after the preceding
+delivery. Pinned base: `24cdc64e6697b7624e669abea2f37a35abed94b2`; main remains
+on develop, with work isolated in `.worktrees/ai-hcz-full-route-matrix`.
+`TestS3kHcz1CompatibilityRoutes` exercises all five widths crossed with off/S1/S2,
+using the same production start, ordinary pad controller, CPU-team checks,
+death/drowning rejection, six-hit miniboss and actual act-2 reload assertions.
+
+Baseline matrix: **15 cases, two passed, 13 failures, no errors/skips**.
+Native 320/off and 320/S2 both complete at frame 12,583. Remaining frontiers:
+
+| Configuration | Baseline frontier |
+| --- | --- |
+| 320/S1 | second bridge; drowning at frame 5,147 |
+| 400/off and S2 | lower-tunnel run-up; 20,000-frame watchdog |
+| 400/S1 | second bridge; drowning at frame 5,140 |
+| 512/all donors | first-fan route missed; death at frame 3,014 |
+| 640/off and S2 | repeated lower-tunnel loop; 20,000-frame watchdog |
+| 640/S1 | second bridge; drowning at frame 4,974 |
+| 800/all donors | second bridge; drowning at frame 4,482 |
+
+The first navigation revision preserves FIRST_FAN water momentum, enables direct
+jump attacks for both early bridge-trigger enemies, resets the lower-track latch
+on a new dry rollback, and retains the final run-up until the miniboss actually
+enters routine 4. A live waiting boss is not arena admission: its production owner
+waits for both camera bounds, so wider activation can precede the lock.
+
+Focused navigation probes rejected unconditional FIRST_FAN water walking: S1
+stalls on the approach ledge at `(0F31,078C)` and drowns at frame 3,027.
+The pending matrix instead limits walking to the moving corridor between the fan
+ledge and monitor approach, retaining rising jump holds. This bounded alternative
+is not yet validated. A briefly considered LOWER_TUNNEL walking override was
+removed before execution; it had no supporting measurement.
+
+The S1 prefix can traverse the dry loops when the test controller checks the live
+capability and releases its spindash phase for a character without spindash.
+Projected-position steering at the upper bridge also avoids the side collision
+observed at frame 7,019. That probe then reached the lower bridge at frame 7,040,
+but its grounded jump met a Blastoid projectile at frame 7,112. A grounded rolling
+approach is the next experiment; it is not yet a passing route.
+
+The wide-arena probe establishes that boss routine 2 must retain navigation:
+`HczMinibossInstance.updateWaitTrigger` / ROM `loc_69EDA` requires camera
+`X >= 3680` and `Y >= 0638`. At width 800, the remaining stall is on wet uphill
+terrain around player `375B..377E,06DE..06EB`, not a demonstrated wall or runtime
+collision defect. Suppressing underwater jump pulses alone did not clear it.
+A capability-backed underwater charge is prepared for off/S2; S1 needs an ordinary
+momentum route. All of these experiments change test-owned pad steering only.
+
+The first revised maintained matrix completed in 68.22 test seconds: **15 cases,
+two passed (400/off and 400/S2), 13 failures, no errors/skips**. Both passes
+reloaded at frame 12,714 (pad hash `9114353925844004877`). This revision regressed
+the native route, so it is not an accepted replacement. Its bounded water walk
+changed the lower-loop approach; native and 640px crouched on a shelf above the
+controller's lower-track target. Widening the flat-angle gate alone did not help.
+Low-speed left pulses then oscillated on the shelf; sustained left recovered but
+repeated the loop. These outcomes identify controller recovery problems, not a
+physics discrepancy. The next probe restricts recovery to slow rollback.
+
+A focused 512/off route passed after projected steering retained the spring/fan
+lift corridor at `finalCurve.x()+32`. The same three-case probe still failed
+320/off and 640/off at the earlier loop (three cases, two failures, no skips).
+Separately, S1 passed the lower Blastoid using a Down-only grounded roll at a
+nearby approach speed, and cleared the final curve with an additional 192px of
+ordinary acceleration. Neither result yet certifies the full S1 route.
+
+The 800px underwater-charge experiment disproved insufficient speed as the sole
+arena blocker: repeated releases climbed to `y=0561` with ground speeds around
+3,000, while the player remained clamped at `x=3795` and camera at `x=3605`.
+`DeadzoneGeometry.rightEdge(width)` centres the focus at half the viewport width;
+the unchanged ROM camera-origin trigger therefore demands an unreachable player
+position at 640/800px. A local native-framing conversion for HCZ miniboss camera
+observations is now under regression testing, retaining the ROM world-bound
+writes. This is a production correction and requires normal combined validation;
+the earlier test-only proportionate scope no longer describes the delivery.
+
+### Converged off/S2 routes and arena correction
+
+The experimental slow-rollback and sustained-left loop recovery variants did not
+clear the repeated loop and were removed. The accepted controller retains the
+established rollback algorithm. It explicitly authors a running early-water
+corridor for 400/512px and the jumping approach for 320/640/800px. These are test
+input strategies, not runtime viewport conditions or trace-driven state changes.
+The lower Blastoid approach uses a grounded Down-only roll; upper-bridge and fan
+lift steering use projected player X. S1 receives an additional 192px of ordinary
+run-up because its live capability has no spindash.
+
+With the camera fix, the combined off/S2 probe passes **all ten routes, no
+failures/errors/skips**, 40.649 test seconds / 57.827 Maven seconds (queue excluded).
+Both donors produce the same completion frame for each width:
+
+| Width | Off / S2 production reload frame |
+| --- | --- |
+| 320 | 13,007 |
+| 400 | 11,298 |
+| 512 | 11,831 |
+| 640 | 11,386 |
+| 800 | 10,909 |
+
+The camera regression first produced exactly eight wide-viewport failures among
+17 cases; with the private, stateless native-framing helper all 17 passed. The
+33 short miniboss consumer cases also passed. A matched native-controller check
+used the original `24cdc64e6` helper with only the runtime camera fix and retained
+frame 12,583 / hash `-3592398407471656479` exactly. Native behavior is unchanged.
+The independent wide-route probe completed 800/off and 800/S2 at frame 11,024;
+its controller lacks the final shared spring/bridge refinements, explaining the
+different frame count rather than implying a physics change.
+
+The root focused command selecting the native route, existing rewind/reload and
+entry/reset cases, six miniboss test classes, and the four mandatory S3K foundation
+class names passed **137 cases, no failures/errors/skips**, 2:05 Maven wall time.
+This run predates the final safe-core fight steering. Its four new wide rewind
+cases captured after admission; review correctly identified that they did not
+exercise the changed gate. They are replaced by five independent before-lock
+captures that must cross horizontal admission during the saved-input replay.
+That stronger check is pending; the post-admission pass is not presented as proof
+of rewind across the trigger.
+
+The strengthened horizontal-admission check passed all five widths: **five cases,
+no failures/errors/skips**, 36.251 Maven seconds. Each captures before the lock,
+advances 30 saved pad inputs across it, restores immediately and replays twice;
+assertions require the final native `3680` min/max X bounds. The temporary route
+probe and its compiled class were removed after its results were consumed.
+
+S1 exposed a separate controller mistake in the fight: reading only the current
+engine touch-region list treats the ROM's odd-V-int flicker as retraction. The
+first combined matrix using that rule passed seven and failed eight of 15 cases,
+including regressions in 512/800 off/S2. The corrected test controller requires
+absence in two consecutive observations before S1 approaches the closed core;
+off/S2 retain their previously passing side/above approach. Native S1 then passed
+at frame 11,481. No boss collision or timing code changed for this steering fix.
+
+The 512/S1 diagnostic ruled out drowning: air resets to 30 on leaving water at
+frame 4,237 and remains full until the dry death at `(29BF,056C)`. The ROM placement
+at `(29D0,0570)` is Turbo Spiker (`96`, subtype `20`); S1 was walking into it with
+no rings, whereas the spindash-capable route arrives rolling. An ordinary fresh
+jump over a nearby live Turbo Spiker completes the 512/S1 route at frame 14,773
+(one case, no failures/errors/skips, 23.999 Maven seconds). This is test-owned
+obstacle avoidance; neither movement constants nor enemy behavior changed.
+The temporary air probe and its compiled class were removed after inspection.
+
+### Maintained matrix green
+
+The remaining wide-S1 deaths were verified against live object owners: the upper
+Blastoid's projectile removes rings during the monitor rebound, then the lower
+Blastoid's three-shot stream kills the unprotected falling player. Air and camera
+bounds were healthy. Left/right steering during the drop, left-edge entry and the
+original non-projected upper steering all failed. Landing to the upper Blastoid's
+left and jumping at it before approaching the monitor solved both wide routes.
+The combined helper retains no experimental gap latch and writes only pad inputs.
+
+The maintained `TestS3kHcz1CompatibilityRoutes` now passes **15/15, zero
+failures/errors/skips**, 61.251 test seconds / 1:18 Maven time. Invocation below uses `S3K_ROM`, `S1_ROM`, and `S2_ROM` set to the existing,
+verified absolute ROM paths (machine-local paths omitted by repository policy):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestS3kHcz1CompatibilityRoutes \
+  "-Ds3k.rom.path=$S3K_ROM" \
+  "-Dsonic1.rom.path=$S1_ROM" \
+  "-Dsonic2.rom.path=$S2_ROM" test
+```
+
+Completion frames are recorded in the [HCZ1 matrix](../validation/levels/s3k-hcz1-sonic.md#full-route-viewportdonor-completion).
+Both the no-spindash obstacle jump and wide pre-monitor attack are active in this
+combined result; earlier isolated S1 probe frame counts therefore differ.
+Final controller review found no gameplay-state writes, weakened assertions,
+new shared ownership or teardown defect. The five admission rewind checks cross
+the changed gate. Broad/integrated verification and delivery remain pending.

@@ -8,6 +8,7 @@ import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,24 @@ class TestS3kHcz1RouteRewind {
                 route.step();
             }
             replayTwice(route, 30, spot.name());
+        });
+    }
+
+    @ParameterizedTest(name = "HCZ1 horizontal admission rewind width={0}")
+    @ValueSource(ints = {320, 400, 512, 640, 800})
+    void horizontalArenaAdmissionRestoresAndReplaysTwice(int width) throws Exception {
+        Hcz1Route.withConfiguration(width, "off", route -> {
+            var camera = route.fixture.camera();
+            while (route.boss() == null || route.boss().getState().routine != 2
+                    || camera.getX() + (width - 320) / 2 < 0x3680 - 48) {
+                assertEquals(0, GameServices.level().getCurrentAct(), "missed arena approach");
+                assertNotEquals(0x3680, camera.getMaxX() & 0xffff, "missed horizontal admission");
+                route.step();
+            }
+            assertNotEquals(0x3680, camera.getMaxX() & 0xffff, "capture must precede the lock");
+            replayTwice(route, 30, "HORIZONTAL_ADMISSION_WIDTH_" + width);
+            assertEquals(0x3680, camera.getMinX() & 0xffff, "replay must cross horizontal admission");
+            assertEquals(0x3680, camera.getMaxX() & 0xffff);
         });
     }
 
