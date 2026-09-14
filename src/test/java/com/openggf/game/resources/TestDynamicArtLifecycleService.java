@@ -18,6 +18,61 @@ class TestDynamicArtLifecycleService {
     private static final int SONIC_VRAM = 0xF000;
 
     @Test
+    void convertedBankAggregatesDisjointRunsAndRewindsPendingDma() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        var bank = new PlayerArtTransferProfile.ConvertedBank(0xFFF100, 0xF000);
+        var frame = new SpriteDplcFrame(List.of(
+                new TileLoadRequest(7, 3), new TileLoadRequest(90, 2)));
+        var update = service.observePlayerDplc(GameId.S2, "knuckles", 4, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank);
+        assertEquals(frame.requests(), update.tileRequests(), "renderer retains ROM tile selection");
+        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 4, frame,
+                DynamicArtLifecycleService.DecisionKind.DIRECT_PART2, bank).submitted());
+        var saved = service.capture();
+        var submitted = service.publishRow(0, false);
+        var expected = List.of(DynamicArtDiagnosticsSnapshot.Request.ram(0xFFF100, 0xF000, 160));
+        assertEquals(expected, submitted.edges().getFirst().requests());
+        assertEquals(List.of(update.transferId()), submitted.outstandingTransferIds());
+        service.serviceProductionVBlank();
+        assertEquals(expected, service.publishRow(1, false).edges().getFirst().requests());
+        service.restore(saved);
+        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 4, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).submitted());
+        service.serviceProductionVBlank();
+        var replayed = service.publishRow(0, false);
+        assertEquals(List.of("submitted", "completed"), replayed.edges().stream()
+                .map(DynamicArtDiagnosticsSnapshot.Edge::phase).toList());
+        assertTrue(replayed.outstandingTransferIds().isEmpty());
+    }
+
+    @Test
+    void convertedBankHoldAndPrimePreserveOriginalRequestsAndSharedSpecialStageDedup() {
+        DynamicArtLifecycleService service = new DynamicArtLifecycleService();
+        startOpen(service);
+        var bank = new PlayerArtTransferProfile.ConvertedBank(0xFFF100, 0xF000);
+        var frame = new SpriteDplcFrame(List.of(new TileLoadRequest(12, 2), new TileLoadRequest(3, 1)));
+        assertEquals(frame.requests(), service.primePlayerDplc(GameId.S2, "knuckles", 1, frame, bank).tileRequests());
+        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 1, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).submitted());
+        service.holdPlayerArtDuringLevelEntryLoad();
+        assertEquals(frame.requests(), service.observePlayerDplc(GameId.S2, "knuckles", 2, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).tileRequests());
+        var held = service.capture();
+        service.releasePlayerArtHeldDuringLevelEntryLoad();
+        assertEquals(List.of(DynamicArtDiagnosticsSnapshot.Request.ram(0xFFF100, 0xF000, 96)),
+                service.publishRow(0, false).edges().getFirst().requests());
+        service.restore(held);
+        service.releasePlayerArtHeldDuringLevelEntryLoad();
+        assertEquals(1, service.publishRow(0, false).edges().size());
+        service.primeDplcDedupBaseline("ss-knuckles", 3);
+        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 3, frame,
+                DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).submitted());
+        assertFalse(service.observePlayerDplc(GameId.S2, "knuckles", 4,
+                new SpriteDplcFrame(List.of()), DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, bank).submitted());
+    }
+
+    @Test
     void freshPlayablePrimeUpdatesTheDedupeBankWithoutPublishingAnEdge() {
         DynamicArtLifecycleService service = new DynamicArtLifecycleService();
         startOpen(service);

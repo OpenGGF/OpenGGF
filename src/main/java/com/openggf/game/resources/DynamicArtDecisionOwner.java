@@ -16,12 +16,20 @@ public final class DynamicArtDecisionOwner {
     private final GameId gameId;
     private final String owner;
     private final PlayerSpriteRenderer renderer;
+    private final PlayerArtTransferProfile.ConvertedBank convertedBank;
 
     public DynamicArtDecisionOwner(
             DynamicArtLifecycleService lifecycle,
             GameId gameId,
             String owner,
             PlayerSpriteRenderer renderer) {
+        this(lifecycle, gameId, owner, renderer, null);
+    }
+
+    public DynamicArtDecisionOwner(
+            DynamicArtLifecycleService lifecycle, GameId gameId, String owner,
+            PlayerSpriteRenderer renderer, PlayerArtTransferProfile.ConvertedBank convertedBank) {
+        this.convertedBank = convertedBank;
         this.lifecycle = Objects.requireNonNull(lifecycle, "lifecycle");
         this.gameId = Objects.requireNonNull(gameId, "gameId");
         this.owner = Objects.requireNonNull(owner, "owner");
@@ -35,7 +43,8 @@ public final class DynamicArtDecisionOwner {
         DynamicArtLifecycleService.ArtUpdate update =
                 lifecycle.observePlayerDplc(
                         gameId, owner, mappingFrame,
-                        renderer.dplcFrame(mappingFrame));
+                        renderer.dplcFrame(mappingFrame),
+                        DynamicArtLifecycleService.DecisionKind.NORMAL_OBJECT, convertedBank);
         renderer.applyRuntimeArtUpdate(mappingFrame, update);
         if (gameId == GameId.S1) {
             lifecycle.completePlayerDplc(gameId, owner, update);
@@ -49,7 +58,7 @@ public final class DynamicArtDecisionOwner {
         DynamicArtLifecycleService.ArtUpdate update =
                 lifecycle.primePlayerDplc(
                         gameId, owner, mappingFrame,
-                        renderer.dplcFrame(mappingFrame));
+                        renderer.dplcFrame(mappingFrame), convertedBank);
         renderer.applyRuntimeArtUpdate(mappingFrame, update);
     }
 }

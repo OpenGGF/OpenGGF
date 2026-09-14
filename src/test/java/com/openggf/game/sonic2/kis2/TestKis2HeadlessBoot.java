@@ -204,6 +204,8 @@ class TestKis2HeadlessBoot {
 
             Level level = GameServices.level().getCurrentLevel();
             assertEquals(292, level.getObjects().size(), "CNZ1 uses the chip layout (BRANCH_DIFFS.md)");
+            assertTrue(team.mainSprite().getAnimationManager().hasDynamicArtDecisionOwner(),
+                    "the patched module must wire the real playable art decision owner");
 
             var chip = new Kis2ChipArt(LockOnAddressSpace.tierTwo(
                     LogicalRomResolver.windowSkFromCombined(Files.readAllBytes(s3kFile.toPath())),
@@ -361,6 +363,7 @@ class TestKis2HeadlessBoot {
 
     /** Resolves logical ROMs through the isolated manager's catalogue, as the engine does. */
     private static EngineContext catalogueBackedContext(SonicConfigurationService config) throws Exception {
+        Kis2TestRoms.configureExplicitCatalogue(config);
         EngineContext old = EngineServices.current();
         RomManager roms = isolatedRomManager();
         ModuleResolutionService resolver = new ModuleResolutionService(BuiltInPatches.registrations(),

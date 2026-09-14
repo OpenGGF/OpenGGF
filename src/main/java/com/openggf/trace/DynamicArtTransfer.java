@@ -21,7 +21,7 @@ public final class DynamicArtTransfer {
 
     private static final Set<String> OWNERS = Set.of(
             "sonic", "tails", "tails-tails",
-            "ss-sonic", "ss-tails", "ss-tails-tails");
+            "ss-sonic", "ss-tails", "ss-tails-tails", "knuckles", "ss-knuckles");
     private static final String SHA256_PREFIX = "sha256:";
 
     private DynamicArtTransfer() {
@@ -352,7 +352,7 @@ public final class DynamicArtTransfer {
                     throw new IllegalArgumentException(
                             "terminal_forwarded edge is not on the final stored row");
                 }
-                validateCallback(game, edge.phase(), edge.romCallbackPc());
+                validateCallback(game, edge.owner(), edge.phase(), edge.romCallbackPc());
                 identity.observeEdgeOrdinal(edge.edgeOrdinal());
                 if (edge.logicalFrame() != previousLogicalFrame) {
                     if (edge.logicalFrame() <= previousLogicalFrame) {
@@ -388,7 +388,7 @@ public final class DynamicArtTransfer {
         int nextGapIndex = 0;
         for (GapTransition transition : transitions) {
             GapEdge edge = transition.dynamicArtGapEdge();
-            validateCallback(game, edge.phase(), edge.romCallbackPc());
+            validateCallback(game, edge.owner(), edge.phase(), edge.romCallbackPc());
             identity.observeEdgeOrdinal(edge.edgeOrdinal());
             if (edge.movieLogicalFrame() != previousMovieFrame) {
                 if (edge.movieLogicalFrame() <= previousMovieFrame) {
@@ -582,7 +582,20 @@ public final class DynamicArtTransfer {
         return "s1".equals(game) || "s2".equals(game);
     }
 
-    private static void validateCallback(String game, String phase, int pc) {
+    private static void validateCallback(String game, String owner, String phase, int pc) {
+        if ("knuckles".equals(owner) || "ss-knuckles".equals(owner)) {
+            // KiS2 fixBugs=0: normal LoadKnucklesDynPLC tail-calls the DMA
+            // queue; SS publishes at its shared DPLC return. Both complete
+            // when ProcessDMAQueue services the accepted batch.
+            int expected = "submitted".equals(phase)
+                    ? ("knuckles".equals(owner) ? 0x3011B4 : 0x32CD38)
+                    : 0x3011B6;
+            if (!"s2".equals(game) || pc != expected) {
+                throw new IllegalArgumentException(
+                        "rom_callback_pc is not permitted by the pinned KiS2 owner profile");
+            }
+            return;
+        }
         Set<Integer> allowed = switch (game) {
             case "s1" -> "submitted".equals(phase)
                     ? Set.of(0x0D20, 0x0E34, 0x0F24, 0x1030)

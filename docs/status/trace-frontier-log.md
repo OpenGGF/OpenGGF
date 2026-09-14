@@ -109887,3 +109887,55 @@ FBZ remaining-items final source frontier at `d87e42bdd` (`.worktrees/ai-fbz-tai
 The final late-object input correction preserves P1's already-recorded history: native `Sonic_RecordPos` precedes `loc_86358`, which writes only logical control. Rewriting the current history sample advanced Tails RIGHT by one frame sixteen samples later. Existing `setLogicalInputState` now owns the late write; no CPU threshold changed. Door collision consumption, victory support/control restoration, results camera/control retention, shake clock/camera-copy handling and capsule code-bank identities moved the prior frontiers before this correction. See the completion record for their individual red/fixed commands.
 
 The final compiled root check on `14ce01d48` (`test`, profiles `fbz-routes,trace-replay-r7`, all three absolute ROMs) confirms the same complete 16/44,144 and independent 4,152/33,712 frontiers, zero warnings/skips. The combined 2:12 command additionally exposes ten old short-slice controller failures while all 13 complete Act2 routes pass; those are recorded independently in the Act2 matrix. No stale-class or skipped-test result is used for this confirmation.
+
+## 2026-09-14 — KiS2 user all-emeralds candidate capture
+
+- Movie `kis2-full-run-all-emeralds.bk2`: 268,301 input rows; scratch capture
+  has 36 segments, seven SS detours and 248,042 aligned physics rows.
+- On develop `ad68609e9`, queued `-Dmse=off -Dtest=TestKis2Ehz1TraceReplay
+  -Dopenggf.trace.candidate.dir=<candidate>/first-segment test -B` with verified
+  absolute S2/S3K ROM properties compared 3,180 rows: 466 errors, 91 bootstrap
+  errors, zero skips. First gameplay difference is row 156 `y_speed`,
+  expected `$0010`, actual `-$00F0`; history bootstrap mismatch remains.
+- `.worktrees/kis2-full-run` adds `TestKis2CompleteEmeraldRunChain`; queued
+  `-Dtest=TestKis2CompleteEmeraldRunChain -Dopenggf.trace.kis2.run.dir=<candidate>/full-run`
+  executed one test with zero skips, stopping before gameplay on
+  `trace_schema 5 segment omits dynamic-art capability`. No chain frontier
+  beyond manifest validation is claimed.
+- [Capture and prerequisite evidence](../architecture/research/trace/2026-09-14-kis2-full-run-candidate.md).
+  Candidate remains outside canonical fixtures; KiS2 converted-art DMA needs
+  explicit native and engine lifecycle support before valid chain publication.
+
+
+## 2026-09-14 — KiS2 full-run art-transfer prerequisite
+
+Worktree `feature/ai-kis2-full-run` (`d94ac94c2` plus prerequisite changes,
+base `51677cdd2`), TraceChaser `e0a2443` pushed on `main`. The native observer
+validates converted normal art as one RAM DMA, chip SS DPLCs, accepted tail-call
+closure and gap ledgers; Java models those production transfers and validates
+owner-specific callbacks. No trace state hydrates gameplay.
+
+The sealed all-emeralds capture has 36 segments, 248,042 rows and 79 art gap edges.
+Whole-file comparison preserves every original physics row and existing aux event.
+[Capture inventory, hashes, ROM evidence and validation](../architecture/research/trace/2026-09-14-kis2-full-run-candidate.md)
+record the exact candidate and baseline failures.
+
+Command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestKis2CompleteEmeraldRunChain
+-Dopenggf.trace.kis2.run.dir=$KIS2_CAPTURE_ROOT/full-run-art-audited
+-Dkis2.rom.path=<absolute lock-on dump> test -B`, with verified absolute S2/S3K
+properties. Result: one failure, zero skips. All segments and gap ledgers pass
+v5 validation; replay now reaches gameplay and stops in segment 0 when production
+enters `TITLE_CARD` before source closure, `loadGeneration=3`, EHZ1, **BK2 cursor
+2003**. This is the first reported structural stop, not a claim about the first
+physics mismatch. The missing dynamic-art capability is no longer the frontier.
+
+Corrected focused runtime/parser/SS/CLI tests: 101 passed, zero skips. Exact
+recorder-pin guards: 13 passed, zero skips. The combined broad run's five new SS
+initialization errors were corrected narrowly; two unrelated source-guard failures
+remain matched to the unchanged base. No full-suite green or chain parity is claimed.
+
+Implementation `8af9eb913` integrated without conflicts at `2d74e3de5`.
+The integrated runtime/parser/SS and required S3K selection passed 140 tests,
+zero failures/errors/skips (48.936 seconds). The capture and EHZ1 structural
+frontier above are unchanged; canonical publication remains pending approval.

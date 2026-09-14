@@ -105,6 +105,9 @@ public class Sonic2SpecialStageDataLoader {
         }
     }
 
+    /** Semantic owner of the main player's ROM-backed art bank. */
+    public String mainPlayerDynamicArtOwner() { return "ss-sonic"; }
+
     /**
      * Decodes and caches Obj09's special-stage DPLC records and their source
      * section pointers directly from the supplied Sonic 2 ROM.
