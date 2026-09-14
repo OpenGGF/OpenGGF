@@ -130,3 +130,10 @@ Final compiled integration check on `14ce01d48`: queued `-Dmse=off -Pfbz-routes,
 The ten old short slices are corrected by `d982d0fba`: they reuse the accepted production-input route helper while retaining every observation, world threshold, camera lock, stage order, team identity and exact boss PRE_MUSIC assertion. Queued `-Dmse=off -B -Dtest=TestFbzCompatibilityMatrix#viewportKeepsBossSliceThresholdsAndContainment+configuredTeamKeepsBossSliceOwnership test` with all three absolute ROM properties passes all **ten rows**, zero failures/errors/skips, in **54.675 seconds** (class 5.950 seconds) on runtime `14ce01d48`. This supersedes the ten failures in the compiled combined run above. No production behavior or the passing complete-route controller changed.
 
 Integrated verification on `f037a1218` (develop, destination `13bb3b165`): full ordinary selection completed 20,299 tests with 20,281 passes,18 inspected skips and no failures/errors (512.95s). All prior ordinary FBZ fixture/controller failures are absent. Guards complete 667 cases with only the two exact matched baseline source-guard failures, no errors/skips (173.30s). The strict/native visual gaps above remain independent of this ordinary-suite result; see the completion record for commands and diagnostics.
+
+Early `$0DC0` elevator S1 feasibility (2026-09-14, `7610686a0`): a local
+192-attempt phase sweep and actual gameplay video confirm ordinary run-up/roll
+clearance. The 70-frame run-up from `$0CF0` has 17 safe phases per 96; the
+84-frame run-up from `$0CC0` has 32. This temporary diagnostic and capture are
+not a permanent route regression, other-width matrix, or native-parity claim.
+Exact setup, commands, rejected attempts and limits are in the completion record.

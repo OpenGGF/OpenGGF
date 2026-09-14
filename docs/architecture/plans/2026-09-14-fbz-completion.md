@@ -864,3 +864,60 @@ The fix integrated without conflicts at `0cf0f221e`; unrelated user changes rema
 Integrated verification on `0cf0f221e`: queued `-Dmse=off
 -Dtest=TestFbzRailAndChainPlatforms test -B` recompiles develop and passes all
 **36 tests, zero failures/errors/skips**, in **46.789 seconds** (queue wait excluded).
+
+### Early Act 2 elevator donor feasibility ($0DC0)
+
+User report near top-left (3588,2009), equivalent centre `$0E0E,$07EC`, refers
+to the **Act 2 `$0DC0,$07B0` descending elevator**, not the previously tested
+`$1DC0` underpass. Investigated on `7610686a0` in the isolated
+`ai-fbz-second-squeeze` worktree. Native `$E2` subtype `$0F` has 120-pixel travel
+and a 96-frame allocation period. No engine change was needed.
+
+A temporary ordinary-input probe reused the existing S1 donation fixture at
+centre Y=`$07EC`, native width 320, no sidekick, and zero initial velocity.
+For each delay 0–95 it waits neutral, runs Right, then releases Right and holds
+Down for up to 130 frames. It observes actual rolling, hurt/death, and clearance
+at X >= `$0E30`; no car, velocity, clock, shield or power-up state is injected.
+The 192-case sweep (two approaches × all 96 initial delays) yields:
+
+| Start X | Right held | First rolled X | Safe delays | Safe / 96 | Hurt/death delays |
+|---|---|---|---|---|---|
+| `$0CF0` | 70 frames | 3431 | 13–29 inclusive | 17 | 30–49 |
+| `$0CC0` | 84 frames | 3457 | 8–39 inclusive | 32 | 40–46 |
+
+All other sampled phases stop at the car rather than clear safely. These are
+**local controlled arrival windows**, approximately 0.28 and 0.53 seconds at
+60 Hz, not whole-route guarantees or human success probabilities. The farther
+left `$0C70` cold setup stops at the preceding screw door, so its twelve coarse
+samples say nothing about a still longer uninterrupted run-up. Initial Right+Down
+capture never rolled: the working S1 inputs release Right before holding Down.
+
+Queued diagnostic command: `JAVA_HOME=<jdk21> python3 tools/testing/maven_queue.py
+-Dmse=off -Dtest=TestFbzSqueezeOrdinaryRoll#earlyUnderpassTimingProbe
+-Ds3k.rom.path=<locked-on-ROM> -Dsonic1.rom.path=<S1-REV01-ROM> test -B`.
+The first 36-case coarse sweep took 21.568 seconds (body 3.537); the exhaustive
+192-case sweep took 31.242 seconds (body 13.230), neither skipped. Its one JUnit
+case asserts the S1 capability setup and reports every attempt; a green diagnostic
+is **not** 192 passing crossings. The temporary method was removed after analysis.
+
+Real `GameplayCaptureTool` videos, at the same X/Y and `--donor s1`, reproduce:
+- blocked: `60 -; 70 R; 100 D; 60 -`, recorded through frame 200; rolls at
+  frame 130, stalls X=3461, no injury;
+- safe: `116 -; 70 R; 100 D; 60 -`, capture starts at frame 56 (one-second
+  visible lead-in). It rolls through without hurt/death, reaches X=3632 at
+  frame 281, and stops safely at X=3650. The extra 96 neutral frames preserve
+  the sampled elevator phase. Frames 230 and 281 were visually inspected.
+
+Inputs, state CSVs, PNGs and MP4s remain in the external task directory
+`fbz-early-squeeze-20260914`. These are cold-boot local gameplay captures, not
+native emulator-parity evidence; entry history and other widths/teams remain
+inherited coverage gaps. The evidence supports a difficult but feasible S1
+maneuver, with appreciably more timing margin from the longer available run-up.
+
+The late video uses `136 -; 70 R; 100 D; 60 -`, captured from frame 76.
+It enters the gap but is crushed at frame 240, X=3527, Y=2038; the video retains
+60 trailing death frames. This is the same speed/input sequence as the safe
+video, started 20 frames later. The inspected frame 239 shows the impending
+squeeze. Both clips preserve one second of real stationary lead-in; no freeze
+frame or edited gameplay was used. The safe video retains over one second after
+crossing the clearance threshold. No runtime change or new broad suite was needed.
