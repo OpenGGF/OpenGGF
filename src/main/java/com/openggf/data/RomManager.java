@@ -166,6 +166,15 @@ public class RomManager implements AutoCloseable {
             if (missing.isPresent()) {
                 throw new IOException((secondary ? "Failed to open secondary ROM: " : MISSING_ROM_PREFIX) + missing.get());
             }
+            // A default hint (s1.gen/s2.gen/s3k.gen) whose file is absent lets the
+            // catalogue scan apply; when the scan finds nothing either, report the
+            // hinted file as missing exactly as before the catalogue existed, so
+            // isConfiguredRomMissing() keeps classifying ROM-less runs (CI) as a
+            // skip rather than a failure. Only a truly blank key is "not configured".
+            Optional<String> hinted = images.configuredValue(identity).filter(value -> !value.isBlank());
+            if (hinted.isPresent()) {
+                throw new IOException((secondary ? "Failed to open secondary ROM: " : MISSING_ROM_PREFIX) + hinted.get());
+            }
             throw new IOException(secondary
                     ? "No ROM configured for game: " + gameId
                     : "ROM filename not configured (DEFAULT_ROM not set or per-game ROM key empty)");
