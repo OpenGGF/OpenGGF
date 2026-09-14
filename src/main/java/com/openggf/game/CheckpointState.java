@@ -47,6 +47,8 @@ public class CheckpointState implements RespawnState {
     //   S3K save  docs/skdisasm/sonic3k.asm:61721 (and Saved2 at :61745)
     private long savedTimerFrames;
     private boolean hasSavedTimer;
+    private int savedRings;
+    private int savedRingExtraLifeFlags;
 
     @com.openggf.game.ModApi
     public record RewindState(
@@ -68,7 +70,23 @@ public class CheckpointState implements RespawnState {
             byte savedLrbSolidBit,
             boolean hasSolidBits,
             long savedTimerFrames,
-            boolean hasSavedTimer) {}
+            boolean hasSavedTimer,
+            int savedRings,
+            int savedRingExtraLifeFlags) {
+        public RewindState(int lastCheckpointIndex, int starPostActivationMark,
+                int savedX, int savedY, int savedCameraX, int savedCameraY,
+                boolean cameraLock, boolean usedForSpecialStage, int savedWaterLevel,
+                int savedWaterRoutine, boolean hasWaterState, int savedCameraMaxY,
+                int savedDynamicResizeRoutine, boolean hasS3kRuntimeState,
+                byte savedTopSolidBit, byte savedLrbSolidBit, boolean hasSolidBits,
+                long savedTimerFrames, boolean hasSavedTimer) {
+            this(lastCheckpointIndex, starPostActivationMark, savedX, savedY,
+                    savedCameraX, savedCameraY, cameraLock, usedForSpecialStage,
+                    savedWaterLevel, savedWaterRoutine, hasWaterState, savedCameraMaxY,
+                    savedDynamicResizeRoutine, hasS3kRuntimeState, savedTopSolidBit,
+                    savedLrbSolidBit, hasSolidBits, savedTimerFrames, hasSavedTimer, 0, 0);
+        }
+    }
 
     /**
      * Clear checkpoint state (called on level start/change).
@@ -93,6 +111,7 @@ public class CheckpointState implements RespawnState {
         hasSolidBits = false;
         savedTimerFrames = 0;
         hasSavedTimer = false;
+        savedRings = savedRingExtraLifeFlags = 0;
     }
 
     /**
@@ -113,9 +132,26 @@ public class CheckpointState implements RespawnState {
         saveProviderRuntimeStateIfPresent(camera);
         savePlayerSolidBitsIfPresent();
         saveActTimerIfPresent();
+        saveRingStateIfPresent();
 
         LOGGER.fine("Saved checkpoint " + lastCheckpointIndex + " at (" + savedX + ", " + savedY + ")");
     }
+
+    private void saveRingStateIfPresent() {
+        var level = GameServices.levelOrNull();
+        LevelState state = level == null ? null : level.getLevelGamestate();
+        saveRingState(state == null ? 0 : state.getRings(),
+                state == null ? 0 : state.getRingExtraLifeFlags());
+    }
+
+    /** Obj79_SaveData banks these values at checkpoint activation, not death. */
+    public void saveRingState(int rings, int extraLifeFlags) {
+        savedRings = rings & 0xFFFF;
+        savedRingExtraLifeFlags = extraLifeFlags & 0x06;
+    }
+
+    public int getSavedRings() { return savedRings; }
+    public int getSavedRingExtraLifeFlags() { return savedRingExtraLifeFlags; }
 
     /**
      * ROM {@code move.l (Timer).w,(Saved_Timer).w} at the star post's save
@@ -210,7 +246,7 @@ public class CheckpointState implements RespawnState {
 
     /**
      * Restore state after player death.
-     * ROM behavior: restores position, camera, clears rings.
+     * Restores position, camera and the game-specific checkpoint ring state.
      */
     public void restoreToPlayer(AbstractPlayableSprite player, Camera camera) {
         if (!isActive()) {
@@ -228,8 +264,13 @@ public class CheckpointState implements RespawnState {
         player.setAir(false);
         player.setRolling(false);
 
-        // Clear rings (ROM behavior)
-        player.setRingCount(0);
+        // Obj79_LoadData: gameRevision=3 (shipped KiS2, fixBugs=0) keeps
+        // Saved_Ring_count / Saved_Extra_life_flags; stock S2 clears both.
+        boolean restoreRings = player.getGameRules().ring().checkpointRestoresSavedRings();
+        player.setRingCount(restoreRings ? savedRings : 0);
+        var level = GameServices.levelOrNull();
+        LevelState state = level == null ? null : level.getLevelGamestate();
+        if (state != null) state.setRingExtraLifeFlags(restoreRings ? savedRingExtraLifeFlags : 0);
 
         restoreActTimerIfSaved();
 
@@ -443,7 +484,9 @@ public class CheckpointState implements RespawnState {
                 savedLrbSolidBit,
                 hasSolidBits,
                 savedTimerFrames,
-                hasSavedTimer);
+                hasSavedTimer,
+                savedRings,
+                savedRingExtraLifeFlags);
     }
 
     public void restoreRewindState(RewindState state) {
@@ -470,5 +513,7 @@ public class CheckpointState implements RespawnState {
         this.hasSolidBits = state.hasSolidBits();
         this.savedTimerFrames = state.savedTimerFrames();
         this.hasSavedTimer = state.hasSavedTimer();
+        this.savedRings = state.savedRings();
+        this.savedRingExtraLifeFlags = state.savedRingExtraLifeFlags();
     }
 }

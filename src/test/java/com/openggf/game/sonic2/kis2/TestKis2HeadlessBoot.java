@@ -274,6 +274,63 @@ class TestKis2HeadlessBoot {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"knuckles", "sonic"})
+    void checkpointReloadRestoresOnlyTheGamesSavedRingBank(String character) throws Exception {
+        File s2File = RomTestUtils.ensureSonic2RomAvailable();
+        File s3kFile = RomTestUtils.ensureSonic3kRomAvailable();
+        assumeTrue(s2File != null && s3kFile != null, "S2 and S3K ROMs required");
+        try (Rom rom = new Rom()) {
+            assertTrue(rom.open(s2File.getAbsolutePath()));
+            var config = SonicConfigurationService.createStandalone(tempDir);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, character);
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            var injected = injectedContext(config, Files.readAllBytes(s3kFile.toPath()));
+            EngineServices.configure(injected);
+            injected.roms().setRom(rom);
+            var gameplay = HeadlessGameBoot.openResolvedSessionForBoot(injected, new Sonic2GameModule());
+            GameplaySessionFactory.attachManagers(gameplay, injected);
+            injected.graphics().initHeadless();
+            var module = SessionManager.requireCurrentGameModule();
+            var team = GameplayTeamBootstrap.registerActiveTeam(module, GameServices.sprites(), config);
+            var player = team.mainSprite();
+            GameServices.camera().setFocusedSprite(player);
+            var manager = GameServices.level();
+            manager.loadZoneAndAct(0, 0);
+            GroundSensor.setLevelManager(manager);
+            GameServices.camera().updatePosition(true);
+            player.setRingCount(120);
+            manager.getLevelGamestate().setRingExtraLifeFlags(2);
+            var checkpoint = assertInstanceOf(com.openggf.game.CheckpointState.class, manager.getCheckpointState());
+            checkpoint.saveCheckpoint(1, 0x100, 0x290, false);
+            var saved = checkpoint.captureRewindState();
+            assertEquals(120, saved.savedRings());
+            assertEquals(2, saved.savedRingExtraLifeFlags());
+
+            // A later bank must not survive rewind to the first checkpoint.
+            player.setRingCount(210);
+            manager.getLevelGamestate().setRingExtraLifeFlags(6);
+            checkpoint.saveCheckpoint(2, 0x180, 0x290, false);
+            checkpoint.restoreRewindState(saved);
+            player.setRingCount(0);
+            manager.getLevelGamestate().setRingExtraLifeFlags(0);
+            manager.respawnPlayer();
+            assertEquals(character.equals("knuckles") ? 120 : 0, player.getRingCount());
+            assertEquals(character.equals("knuckles") ? 2 : 0,
+                    manager.getLevelGamestate().getRingExtraLifeFlags());
+            var restored = assertInstanceOf(com.openggf.game.CheckpointState.class, manager.getCheckpointState());
+            assertEquals(120, restored.getSavedRings(), "saved bank survives the level-load clear");
+            assertEquals(1, restored.getLastCheckpointIndex());
+            // Special-stage return uses the direct restore owner, with the same rule.
+            player.setRingCount(17);
+            restored.restoreToPlayer(player, GameServices.camera());
+            assertEquals(character.equals("knuckles") ? 120 : 0, player.getRingCount());
+            manager.loadZoneAndAct(0, 1);
+            assertEquals(0, player.getRingCount(), "a new act must not inherit the checkpoint bank");
+        }
+    }
+
     private static <T> void replaySpecialStageWindow(Kis2SpecialStageProvider provider,
             com.openggf.game.rewind.RewindSnapshottable<T> adapter) {
         // A short independent window in each auxiliary route exercises the
