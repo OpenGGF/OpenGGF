@@ -66,6 +66,14 @@ final class FbzMinibossPrisonChild extends AbstractObjectInstance
         // returns before fresh side-contact classification (loc_1DC98).
         return true;
     }
+    @Override public boolean allowsObjectControlledSolidContacts() { return true; }
+    @Override public boolean rejectsBit7ObjectControlNewSolidContact(PlayableEntity player) { return true; }
+    @Override public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        // SolidObjectFull_1P retains standing ownership, while MvSonicOnPtfm
+        // loc_1E1CA skips position writes under signed object_control.
+        return player.isObjectControlled();
+    }
+
     @Override public int getBalanceWidthPixels() { return 0x20; }
     @Override public int romObjectCodePointerHighWord() { return 0x0006; }
 

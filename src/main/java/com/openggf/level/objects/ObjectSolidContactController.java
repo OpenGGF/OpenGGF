@@ -547,6 +547,21 @@ public final class ObjectSolidContactController {
     // Engine-side push ownership for the synthetic off-screen release above.
     // Not a native predicate: it decides whether that gate is standing in for a
     // solid whose tail the ROM still runs.
+    private void clearPushAfterSignedControlRejection(PlayableEntity player,
+            ObjectInstance instance, SolidObjectProvider provider) {
+        // A dispatched native full-solid helper branches from its signed
+        // object_control gate to the ordinary no-contact push release.
+        // S3K loc_1DFFE -> loc_1E0A2 still reads this object's pushing bit;
+        // controller ownership does not suppress that tail's animation word.
+        if (!instance.isSkipSolidContactThisFrame()
+                && isSignedObjectControlNewSolidContactRejected(player, instance)
+                && clearObjectPushingBit(player, instance)) {
+            publishSolidPushReleaseAnimationWord(player, instance);
+            player.setPushing(false);
+            provider.setPlayerPushing(player, false);
+        }
+    }
+
     private boolean offscreenReleaseStillOwnsWalkRunWord(PlayableEntity player, ObjectInstance instance) {
         if (!(player instanceof AbstractPlayableSprite sprite)) {
             return false;
@@ -1840,6 +1855,7 @@ public final class ObjectSolidContactController {
             return null;
         }
         if (blocksSolidContacts(player, instance)) {
+            clearPushAfterSignedControlRejection(player, instance, provider);
             return null;
         }
         if (instance.isSkipSolidContactThisFrame()) {
@@ -3086,8 +3102,11 @@ public final class ObjectSolidContactController {
             return;
         }
         SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
-        if (blocksSolidContacts(player, instance)
-                || (instance.isSkipSolidContactThisFrame() && instance != ridingObject)) {
+        if (blocksSolidContacts(player, instance)) {
+            clearPushAfterSignedControlRejection(player, instance, provider);
+            return;
+        }
+        if (instance.isSkipSolidContactThisFrame() && instance != ridingObject) {
             return;
         }
         if (provider instanceof MultiPieceSolidProvider multiPiece) {
