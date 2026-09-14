@@ -604,6 +604,9 @@ public final class LevelFrameStep {
             var profile = module != null ? module.getLevelInitProfile() : null;
             if (profile != null) {
                 profile.serviceLevelLoadVBlank();
+                if (profile instanceof com.openggf.game.internal.QueuedPatternDmaPublication publication) {
+                    publication.serviceQueuedPatternDma(frame.ownerPhase(), frame.hasExplicitDmaQueueService());
+                }
             }
         });
     }

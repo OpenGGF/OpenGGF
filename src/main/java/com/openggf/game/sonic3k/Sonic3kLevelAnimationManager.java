@@ -57,6 +57,10 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         }
     }
 
+    void publishAniPlcAtVBlank() {
+        patternAnimator.publishAniPlcAtVBlank();
+    }
+
     @Override
     public void update() {
         patternAnimator.update();

@@ -22,7 +22,8 @@ import com.openggf.game.GameServices;
  *   <li>Sidekick X offset: -32px (ROM: {@code $20}), not S2's -40px</li>
  * </ul>
  */
-public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
+public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
+        implements com.openggf.game.internal.QueuedPatternDmaPublication {
     private static final int[] HPZ_RETURN_CAMERA_X = {
             0x15A0, 0x1540, 0x1600, 0x1500, 0x1640, 0x14B0, 0x1690
     };
@@ -30,6 +31,28 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile {
 
     public Sonic3kLevelInitProfile(Sonic3kLevelEventManager levelEventManager) {
         this.levelEventManager = levelEventManager;
+    }
+
+    @Override
+    public void serviceQueuedPatternDma(com.openggf.game.resources.PlcLifecyclePhase phase,
+                                         boolean explicitDmaService) {
+        // ROM: ordinary/credits LevelLoop arms VInt8 (7886 -> 701 -> 764),
+        // title card loc_62CC arms C (7738 -> 797 -> 836), normal pause arms
+        // 10 -> 8 (1551 -> 697). Fade12 and special1C reach DMA indirectly via
+        // Do_ControllerPal (4908 -> 849 / 904 -> 929 -> 940). The tempting
+        // inference that fade12 omits DMA is wrong: its callee owns the drain.
+        // VInt0 lag (519 -> 567..647) omits it. VInt14's Sega loading loop is
+        // not a level/title-card phase. Unsupported loops remain closed.
+        boolean nativeHandler = phase != null && switch (phase) {
+            case ORDINARY_LEVEL, CREDITS_DEMO, LEVEL_TITLE_CARD, NORMAL_PAUSE,
+                    PALETTE_FADE, CREDITS_DEMO_FADE, SPECIAL_STAGE, SPECIAL_STAGE_PAUSE -> true;
+            default -> false;
+        };
+        if (!explicitDmaService && !nativeHandler) return;
+        // The caller's existing token guard guarantees exactly-once dispatch.
+        if (GameServices.level().getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator) {
+            animator.publishAniPlcAtVBlank();
+        }
     }
 
     @Override

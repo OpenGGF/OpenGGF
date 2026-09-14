@@ -54,7 +54,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   exposes its original standing-balance width. Rotating platforms decode all
   native member rows and signed radii; offscreen solid push release retains its
   original animation write during death. Fresh S3K loads now run the initial
-  pattern animation pass before gameplay, as the ROM does. The Act 1 boss arms
+  pattern animation pass before gameplay, as the ROM does. S3K AniPLC art now
+  publishes at its DMA-serving VBlank after the animation counter advances;
+  rewind preserves both presented art and queued submissions. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
   preserves the native wait and score bonus before the end sign, and the ending
   pose retains existing plunger support. Zone-owned tumble

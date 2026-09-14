@@ -449,6 +449,7 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         private boolean finished;
         private boolean consumedHeldLoopTailPreparation;
         private boolean gameVblankDispatched;
+        private boolean explicitDmaQueueService;
 
         private PlcLifecycleFrame(PlcLifecycleService service) {
             this.service = service;
@@ -497,6 +498,12 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
             // never leak into a later represented V-blank.
             boolean declaredDmaVblank = nextVblankServicesDmaQueue;
             nextVblankServicesDmaQueue = false;
+            // S3K has the same established mid-handler declaration ordering:
+            // VInt_8 calls Process_DMA_Queue (sonic3k.asm:764), returns through
+            // the dispatch at 540, then VInt_Done increments V_int_run_count
+            // at 543. This declaration is distinct from genuine VInt_0 lag,
+            // whose handler never drains the queue.
+            explicitDmaQueueService = representedIterationWithoutVblank || declaredDmaVblank;
             if (dynamicArtLifecycle != null
                     && dynamicArtLifecycle.isRunActive()) {
                 // A represented iteration whose V-blank had not yet bumped
@@ -553,6 +560,12 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
         public boolean isOwnedBy(PlcLifecyclePhase phase) {
             return owner == phase;
         }
+
+        /** Claimed production loop; null means no semantic owner was established. */
+        public PlcLifecyclePhase ownerPhase() { return owner; }
+
+        /** Existing hardware-loop declarations, latched by claim, not reference state. */
+        public boolean hasExplicitDmaQueueService() { return explicitDmaQueueService; }
 
         /** Runs game-owned VBlank work once, independently of PLC ownership. */
         public boolean dispatchGameVBlank(Runnable dispatch) {
