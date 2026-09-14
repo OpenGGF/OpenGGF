@@ -6,18 +6,23 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
-- **Knuckles in Sonic 2 (tier one):** selecting Knuckles as the Sonic 2 main
+- **Knuckles in Sonic 2:** selecting Knuckles as the Sonic 2 main
   character now activates a built-in game patch implemented from the s2disasm
   `knuckles-in-sonic-2` branch instead of S3K donation: KiS2 physics (`$600`
   jump, `$300` underwater, single-facing balance, KiS2 landing form and duck
   hit-box), glide and climb, Knuckles' art converted through the lock-on
-  program's `ArtConvTable` with the S2-layout Knuckles palette, and the
+  program's `ArtConvTable` with the Knuckles palette line, and the
   rewritten object layouts read from the `Off_Objects_KiS2` table through
-  the lock-on address space. It needs only the S3K image (S&K half) and the
-  Sonic 2 ROM. Casino Night keeps the stock layouts and every chip-resident
-  asset (title, special stage, ending banner, recoloured icons) is unchanged
-  until tier two; see the known-discrepancies entry and
-  `docs/kis2/BRANCH_DIFFS.md`.
+  the lock-on address space. Tier one needs only the S3K image (S&K half)
+  and the Sonic 2 ROM. When the user-supplied S&K + Sonic 2 lock-on dump
+  (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`) is present the
+  patch runs tier two and reads the 256 KiB chip through the full lock-on
+  address space: the Casino Night layouts, the Knuckles lives counter and
+  1-up monitor face, the grey shield, invincibility stars and monitor icons,
+  the signpost face, the continue-screen icon, the chip's own line-0 palette
+  and the recoloured Chemical Plant and Aquatic Ruin underwater palettes.
+  Title screen, special stage, results, ending and Super Knuckles remain
+  stock; see the known-discrepancies entry and `docs/kis2/BRANCH_DIFFS.md`.
 
 - **HCZ1 miniboss:** retain the vertical arena lock and full rocket slowdown;
   match the body, rockets and individual exhausts to ROM sprite priorities and

@@ -44,6 +44,32 @@
 >   predates the current worktree policy; follow `CLAUDE.md` (isolated
 >   `.worktrees/` checkout on a `feature/ai-*` branch) and the user's delivery flow.
 
+> **2026-09-14 tier-two amendment (in-level fidelity, delivered in commit
+> `598d8e933` on `feature/ai-kis2-tier-two`).** Task 3b landed with ROM image
+> normalisation (`LogicalRom.KIS2` / `KIS2_CHIP`); the patch reads the chip
+> through `LockOnAddressSpace.tierTwo` when `PatchContext` can open `KIS2`.
+>
+> - [x] `Kis2GamePatch.optionalRomPrerequisites() = {KIS2}`; tier one is
+>   unchanged without the dump (synthetic-context tests for both cases).
+> - [x] Task 12 tier two: the CNZ pointers resolve into the chip window;
+>   `TestKis2PlacementOracle` asserts 292 / 257 records from the chip and that
+>   the dump's S&K and S2 windows reproduce every tier-one layout.
+> - [x] Task 11b: chip lives counter, monitor, signpost and shield/stars
+>   patches and the continue icon through `Sonic2ArtOverlays`,
+>   `Sonic2WaterDataProvider.UnderwaterPaletteSource` and the
+>   `Sonic2ContinueScreenProvider` icon supplier; `hud_a` lives-name palette
+>   modelled by the icon-palette HUD layout.
+> - [x] Chip palettes: `Pal_BGND` line 0 (verified byte-identical to
+>   `Pal_KnuxEndPose`), `Pal_CPZ_U`, `Pal_ARZ_U`.
+> - [x] Task 13 tier two: `TestKis2HeadlessBoot` boots through the
+>   catalogue-backed resolver and checks the CNZ layout, chip palettes and
+>   monitor patch.
+> - [x] Task 14 tier two: changelog, known-discrepancies and design notes.
+> - [ ] Presentation tier: title screen, special stage (`obj09`, `obj5E`,
+>   ring requirements), results (`obj6F`), ending (`objCF`, banner, palettes),
+>   Super Knuckles, continue-screen Knuckles object, CNZ slot pictures,
+>   level-select/cheat changes, KiS2 trace fixtures.
+
 > **2026-07-10 compatibility amendment:** Phase 0 mod foundations supersede this
 > plan's static `GamePatchRegistry` Task 4 and every later static call. Do not create or
 > call that facade. Install `Kis2GamePatch` as
