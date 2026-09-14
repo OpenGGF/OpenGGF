@@ -284,3 +284,19 @@ and `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`).
 This existing completed baseline is retained instead of repeating unchanged
 checks. Preflight passes with Java 21, Lua 5.4 and PowerShell. Candidate
 combined validation and post-integration verification remain required.
+
+
+Candidate `c85e17571` completed queued combined validation
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 9aada6ce693d6a34d50e68552a7f8436c8ee2241 --run`
+(`20260914T195114Z-c12f4900`). All 2,573 ordinary classes completed:
+**20,381 tests, 20,363 passes, zero failures/errors, 18 baseline skips**,
+606.94 seconds. The guard lane completed **667 tests, 665 passes, the same
+two baseline failures, zero errors/skips**, 178.65 seconds. Failure messages
+match the stale direct-Maven guidance and the two unchanged assertion-free
+probes exactly. No new failure; diagnostics inspected and acknowledgment
+queued. All new regression tests ran without skipping.
+
+Incoming develop `2c7630066` adds HCZ viewport/donor route coverage and native
+miniboss camera framing. Runtime files do not overlap this change. The shared
+frontier log had an append conflict; both evidence entries are preserved.
+Post-integration verification will cover the combined runtime.

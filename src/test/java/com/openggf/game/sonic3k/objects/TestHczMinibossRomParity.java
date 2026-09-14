@@ -32,6 +32,43 @@ class TestHczMinibossRomParity {
     }
 
     @ParameterizedTest
+    @ValueSource(ints = {320, 400, 512, 640, 800})
+    void horizontalLockUsesTheNativeFocusPositionAtEveryViewport(int width) throws Exception {
+        Camera camera = mock(Camera.class);
+        when(camera.getWidth()).thenReturn((short) width);
+        when(camera.getY()).thenReturn((short) 0x637);
+        // HCZMiniboss_CheckHorizontalCameraLock admits native camera $3680:
+        // Sonic is then at $3720 with the ROM's 160-pixel follow offset.
+        int reachableFocusX = 0x3720;
+        when(camera.getX()).thenReturn((short) (reachableFocusX - width / 2 - 1));
+        HczMinibossInstance boss = boss(camera);
+        invoke(boss, "updateWaitTrigger");
+        assertFalse((boolean) field(boss, "arenaXLocked"));
+        clearInvocations(camera);
+        when(camera.getX()).thenReturn((short) (reachableFocusX - width / 2));
+        invoke(boss, "updateWaitTrigger");
+        assertTrue((boolean) field(boss, "arenaXLocked"), "reachable native arena admission at width " + width);
+        verify(camera, atLeastOnce()).setMinX((short) 0x3680);
+        verify(camera).setMaxX((short) 0x3680);
+        assertFalse((boolean) field(boss, "arenaYLocked"), "horizontal admission must not bypass the vertical gate");
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {320, 400, 512, 640, 800})
+    void initialCameraRangeUsesTheNativeFocusPositionAtEveryViewport(int width) throws Exception {
+        Camera camera = mock(Camera.class);
+        when(camera.getWidth()).thenReturn((short) width);
+        when(camera.getY()).thenReturn((short) 0x300);
+        HczMinibossInstance boss = boss(camera);
+        for (int nativeX : new int[] {0x34ff, 0x3500, 0x3700, 0x3701}) {
+            int focusX = nativeX + 160;
+            when(camera.getX()).thenReturn((short) (focusX - width / 2));
+            assertEquals(nativeX >= 0x3500 && nativeX <= 0x3700,
+                    invoke(boss, "isCameraInTriggerWindow"), "native camera " + nativeX + " at width " + width);
+        }
+    }
+
+    @ParameterizedTest
     @ValueSource(ints = {0, 1, 2, 3})
     void rocketWindDownRunsBothSpeedTwoWaitsAndRestoresMidway(int index) throws Exception {
         HczMinibossInstance boss = boss(mock(Camera.class));
