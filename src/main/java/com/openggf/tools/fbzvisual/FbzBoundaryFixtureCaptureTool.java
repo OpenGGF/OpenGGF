@@ -8,7 +8,7 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Production-frame FBZ Act1 boundary fixture. Origin: 2026-09-14 FBZ completion.
+/** Production-frame FBZ boundary fixture. Origin: 2026-09-14 FBZ completion.
  * Inputs: ROM, new external output directory, reviewed manifest. No native RAM
  * or trace rows are read. Every rendered frame includes state and GPU textures.
  */
@@ -55,6 +55,10 @@ public final class FbzBoundaryFixtureCaptureTool {
             if(entryFrame>35)throw new IllegalStateException("Missed reviewed first-visible LFC35");
             while(((Number)session.captureState().values().get("level_frame_counter")).intValue()<35)
                 session.stepFrames(1);
+            // Apply a declared control prerequisite exactly once before camera setup.
+            if (recipe.setup().has("control"))
+                new FbzVisualFixture(port).applyVerified(new FbzVisualFixture.Mutation(Map.of(),
+                        Map.of("visual_movement_control", recipe.setup().path("control").path("engine_semantic").asText())));
             // Match the native declared-position camera prelude. The ordinary screen
             // event owns the FF->indoor layout copy (loc_527DA); setting its
             // flag to false first would falsely retain initial outdoor chunks.
@@ -75,7 +79,10 @@ public final class FbzBoundaryFixtureCaptureTool {
             if (((Number)prerequisite.get("player_x")).intValue() != recipe.centreX()
                     || ((Number)prerequisite.get("player_y")).intValue() != recipe.centreY())
                 throw new IllegalStateException("Player moved during ordinary camera setup; evidence retained");
-            new FbzVisualFixture(port).applyVerified(plan.fixtureMutation());
+            var eventWrites = new java.util.LinkedHashMap<>(plan.fixtureMutation().writes());
+            eventWrites.remove("visual_movement_control");
+            new FbzVisualFixture(port).applyVerified(new FbzVisualFixture.Mutation(
+                    plan.fixtureMutation().expectedPreState(),eventWrites));
             sample(session,output,"setup",0);
             boolean forward = cross(session,port,output,"forward",axis,forwardCoordinate,normalStage);
             session.stepFrames(1);sample(session,output,"forward-after",1);

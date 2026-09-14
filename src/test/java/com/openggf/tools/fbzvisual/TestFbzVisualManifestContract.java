@@ -16,7 +16,20 @@ class TestFbzVisualManifestContract {
 
     private static final Path MANIFEST = Path.of("docs/architecture/research/s3k-zones/fbz-visual-checkpoints.json");
     private static final String MANIFEST_SHA256 =
-            "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8";
+            "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1";
+
+    @Test
+    void controlledVisualRecipesDeclareOnlyTheReviewedOneTimeMovementGate() throws Exception {
+        var manifest = FbzVisualManifest.load(MANIFEST, MANIFEST_SHA256);
+        var driver = new FbzVisualScenarioDriver(manifest);
+        for (var plan : driver.plans().values()) {
+            boolean controlled = plan.checkpointId().equals("fbz1-boundary-5-outdoor")
+                    || plan.checkpointId().equals("fbz2-boundary-outdoor");
+            assertEquals(controlled, plan.fixtureMutation().writes().containsKey("visual_movement_control"));
+            if (controlled) assertEquals("movement-suppressed-cpu-allowed",
+                    plan.fixtureMutation().writes().get("visual_movement_control"));
+        }
+    }
 
     @Test
     void reviewedManifestHashAndBranchCoordinatesRemainFrozen() throws Exception {

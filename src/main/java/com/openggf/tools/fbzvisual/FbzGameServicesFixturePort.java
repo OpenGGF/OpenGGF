@@ -29,6 +29,12 @@ public final class FbzGameServicesFixturePort implements FbzVisualFixturePort {
     @Override
     public void write(String key, Object value) {
         switch (key) {
+            case "visual_movement_control" -> {
+                if (!"movement-suppressed-cpu-allowed".equals(value))
+                    throw new IllegalArgumentException("Unsupported controlled visual prerequisite");
+                com.openggf.sprites.playable.ObjectControlState
+                        .nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player());
+            }
             case "player_x" -> NativePositionOps.writeXPosResetSubpixel(player(), number(key, value));
             case "player_y" -> NativePositionOps.writeYPosResetSubpixel(player(), number(key, value));
             case "camera_x" -> camera().setX(word(key, value));

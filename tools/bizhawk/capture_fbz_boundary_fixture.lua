@@ -1,17 +1,20 @@
 -- FBZ boundary fixture pilot, originating 2026-09-14 FBZ completion.
 -- Inputs: verified host ROM/movie, OGGF_FBZ_FIXTURE_STATE saved native state.
 -- This is explicit frozen-recipe setup, NOT a trace recorder or gameplay oracle.
--- Only the declared boundary position/event/LFC fields may be written; all
+-- Only declared position/event/LFC fields and the optional one-time control
+-- byte may be written; all
 -- subsequent event/redraw/VDP progress is native execution. Never copy output
 -- RAM into an engine. Camera/physics/history remain observed, not synthesized.
 local output = assert(os.getenv("OGGF_FBZ_VISUAL_OUTPUT"))
 local state = assert(os.getenv("OGGF_FBZ_FIXTURE_STATE"))
 local plan = dofile(assert(os.getenv("OGGF_FBZ_VISUAL_PLAN")))
-assert(plan.manifest_sha256 == "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8")
+assert(plan.manifest_sha256 == "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1")
 local boundary=plan.boundary or {id="fbz1-boundary-6-outdoor",x=0x100,y=0x63F,region=0x18,address=0xB014,forward=0x641,reverse=0x63F}
 assert(boundary.address==0xB010 or boundary.address==0xB014)
 local act=boundary.act or 1
 local normal=boundary.normal or 0
+local control=boundary.control or 0
+assert(control==0 or control==1,"undeclared control value")
 local region_address=boundary.region_address or 0xEED2
 local allowed = {[0xB010]=true,[0xB014]=true,[0xEED2]=true,[0xEED4]=true,
                  [0xEED6]=true,[0xEEC2]=true,[0xFE04]=true}
@@ -61,6 +64,13 @@ if not savestate.load(state) or mainmemory.read_u16_be(0xFE10)~=0x0400+act-1 the
  log:write('{"kind":"failure","phase":"load","reason":"native-state-load-or-act-mismatch"}\n');log:close();client.exit();return
 end
 write(0xB010,boundary.x,"setup");write(0xB014,boundary.y,"setup")
+-- Approved controlled visual recipes only: one byte, once, before ordinary
+-- camera/event execution. loc_10BFC bit0 skips movement; bit1 remains clear.
+if control==1 then
+ mainmemory.write_u8(0xB02E,1)
+ assert(mainmemory.read_u8(0xB02E)==1)
+ log:write('{"kind":"write","phase":"initial-control","address":45102,"width":1,"value":1}\n');log:flush()
+end
 -- Observe native tracker convergence before installing event/LFC recipe. No
 -- camera, status, control, velocity, or position rewrites during this wait.
 local initial_lfc=mainmemory.read_u16_be(0xFE04)
@@ -81,7 +91,7 @@ sample("camera-prerequisite",0)
 if mainmemory.read_u16_be(0xB010)~=boundary.x or mainmemory.read_u16_be(0xB014)~=boundary.y then
  log:write('{"kind":"failure","phase":"camera-prerequisite","reason":"player-moved-during-native-camera-setup"}\n');log:close();client.exit();return
 end
-assert(mainmemory.read_u8(0xB005)==2 and mainmemory.read_u8(0xB02E)==0,"native player is not ordinarily controlled")
+assert(mainmemory.read_u8(0xB005)==2 and mainmemory.read_u8(0xB02E)==control,"native player control differs from declared prerequisite")
 write(region_address,boundary.region,"setup");write(0xEED4,0,"setup");write(0xEED6,0,"setup")
 write(0xEEC2,normal,"setup");write(0xFE04,0,"setup")
 sample("setup",0)

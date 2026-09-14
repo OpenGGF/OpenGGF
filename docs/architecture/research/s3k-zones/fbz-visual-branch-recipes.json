@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8",
+  "manifest_sha256": "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",
   "source_contract": {
     "rom_sha1": "CFBF98C36C776677290A872547AC47C53D2761D6",
     "bizhawk": "2.11",
@@ -147,5 +147,6 @@
     {"checkpoint":"fbz2-end-boss","status":"schema-only","required_proof":["event routine $0C/$10","exact camera max $32B8","PLC $6F complete","boss identity and active eight-hit state","shake cleared"]},
     {"checkpoint":"fbz2-exit","status":"schema-only","required_proof":["boss defeated","exit PLC complete","door/hall identities","Events_routine_fg=$0C","Events_routine_bg=$10","plane assignment FG=B/BG=A retained through level transition","safe camera release"]},
     {"checkpoint":"fbz2-capsule","status":"schema-only","required_proof":["generic EggCapsule identity distinct from $CF","camera Y exactly $720","pre-StartNewLevel PC hook","requested destination $0800"]}
-  ]
+  ],
+  "prior_controlled_fixture_manifest_sha256": "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8"
 }

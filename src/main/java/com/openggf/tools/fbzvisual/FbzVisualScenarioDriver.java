@@ -184,6 +184,11 @@ public final class FbzVisualScenarioDriver {
         writes.put("background_outdoor", rawFlag(recipe, "Events_bg_04"));
         writes.put("events_routine_bg", requiredNumber(recipe, "Events_routine_bg"));
         writes.put("level_frame_counter", 0);
+        if (recipe.setup().has("control")) {
+            if (recipe.setup().path("control").path("native_object_control").asInt(-1) != 1)
+                throw new IllegalArgumentException("Unsupported native visual control");
+            writes.put("visual_movement_control", recipe.setup().path("control").path("engine_semantic").asText());
+        }
         return new FbzVisualFixture.Mutation(Map.of("zone", 4, "act", 1), writes);
     }
 
@@ -214,6 +219,11 @@ public final class FbzVisualScenarioDriver {
         writes.put("events_routine_fg", requiredNumber(recipe, "Events_fg_00"));
         writes.put("events_routine_bg", requiredNumber(recipe, "Events_routine_bg"));
         writes.put("level_frame_counter", 0);
+        if (recipe.setup().has("control")) {
+            if (recipe.setup().path("control").path("native_object_control").asInt(-1) != 1)
+                throw new IllegalArgumentException("Unsupported native visual control");
+            writes.put("visual_movement_control", recipe.setup().path("control").path("engine_semantic").asText());
+        }
         return new FbzVisualFixture.Mutation(Map.of("zone", 4, "act", 2), writes);
     }
 
