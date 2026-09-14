@@ -43,6 +43,7 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     private boolean screenShakeActive = true;
     private boolean bossSpawnRequested;
     private boolean rebasePending;
+    private boolean rebasingSolidThisUpdate;
     private boolean initialized;
     private boolean bossSpawnAttempted;
     private int x = 0x31C0;
@@ -136,6 +137,7 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
                 mainPlayer == null ? 0 : mainPlayer.getCentreY(), services().camera().getY(),
                 services().camera().getMinY(), S3kFbzEventWriteSupport.getAct2ForegroundStage(services()));
         apply(next);
+        rebasingSolidThisUpdate = before != Phase.COMPLETE && phase() == Phase.COMPLETE;
 
         if (before != Phase.WAIT_ARENA_LOCK && phase() == Phase.WAIT_ARENA_LOCK) {
             services().camera().setMaxY(services().camera().getMinY());
@@ -239,6 +241,12 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     @Override public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
         // loc_533B8 -> loc_1E45A accepts only [-$10,-1], even for a grounded new contact.
         return true;
+    }
+    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // loc_53388 publishes both x_pos and d4=$31C0 on this dispatch.
+        // The later loc_53134 event translates the cohort; carrying the old
+        // platform-to-new-platform delta here would subtract the offset twice.
+        return !rebasingSolidThisUpdate;
     }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     // Fresh SolidObjectTop landings store the current position. loc_533A4
