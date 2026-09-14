@@ -163,6 +163,51 @@ class TestFbzPlaneTransition {
     }
 
     @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void bossAllocationRebasesTheSolidWithoutCarryingThePlayerTwice() throws Exception {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var services = com.openggf.game.GameServices.level();
+        var manager = services.getObjectManager();
+        var controller = manager.createDynamicObject(FbzEndBossEventControlInstance::new);
+        var events = ((com.openggf.game.sonic3k.Sonic3kLevelEventManager)
+                com.openggf.game.GameServices.module().getLevelEventProvider()).getFbzEvents();
+        var apply = FbzEndBossEventControlInstance.class.getDeclaredMethod("apply",
+                FbzEndBossEventControlInstance.NativeState.class);
+        apply.setAccessible(true);
+        apply.invoke(controller, new FbzEndBossEventControlInstance.NativeState(
+                FbzEndBossEventControlInstance.Phase.WAIT_BOSS_STAGE,
+                0x045C1800, 0x05D02000, false, false, false, false));
+        var player = fixture.sprite();
+        events.setAct2ForegroundStage(8);
+        controller.snapshotPreUpdatePosition();
+        controller.update(0, player);
+        assertEquals(0x361C, controller.getX());
+        player.setCentreX((short) 0x3300);
+        player.setCentreY((short) (controller.getY() - 0x11 - player.getYRadius() - 1));
+        player.setAir(false);
+        player.setYSpeed((short) 0);
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertTrue(manager.isRidingObject(player, controller));
+        int beforeX = player.getCentreX();
+
+        events.setAct2ForegroundStage(0x0C);
+        controller.snapshotPreUpdatePosition();
+        controller.update(1, player);
+        assertEquals(0x31C0, controller.getX());
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertEquals(beforeX, player.getCentreX(),
+                "loc_53388 sets d4=$31C0 before SolidObjectTop; loc_53134 alone translates player X");
+        assertEquals(0x690 - 0x11 - player.getYRadius(), player.getCentreY(),
+                "continued SolidObjectTop seating subtracts d3 and the live radius without the fresh-landing bias");
+        assertTrue(manager.isRidingObject(player, controller));
+        var snapshot = controller.captureRewindState();
+        controller.update(2, player);
+        assertTrue(controller.carriesRiderOnHorizontalMove(player), "ordinary d4 sampling resumes next dispatch");
+        controller.restoreRewindState(snapshot);
+        assertFalse(controller.carriesRiderOnHorizontalMove(player), "rewind retains the native zero-delta dispatch");
+    }
+
+    @Test
     void controllerInitialBoundsAndSolidContractMatchNative() {
         assertEquals(0x3C, FbzEndBossEventControlInstance.nativeCameraMinY(PlayerCharacter.SONIC_ALONE));
         assertEquals(0x40, FbzEndBossEventControlInstance.nativeCameraMinY(PlayerCharacter.TAILS_ALONE));
