@@ -181,3 +181,7 @@ FBZ early elevator direction correction (2026-09-14): right-to-left S1
 feasibility now has separate measured/captured evidence in the Act 2 matrix.
 Its narrow successful script does not inherit the easier left-to-right timing
 windows; extended phase coverage and whole-route guarantees remain open.
+
+FBZ early reverse squeeze speed comparison: the Act 2 matrix now records
+a matched car-phase/entry-position pair where about 9.4% more roll-entry speed
+changes a crush into a safe crossing, reproduced by synchronized gameplay videos.
