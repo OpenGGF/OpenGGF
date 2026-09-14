@@ -6,6 +6,7 @@ import com.openggf.game.sonic2.resources.Sonic2RuntimePlcPublisher;
 import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
 import com.openggf.game.titlecard.TitleCardElement;
 import com.openggf.game.titlecard.TitleCardMappings;
+import com.openggf.game.titlecard.TitleCardLoopTail;
 import com.openggf.game.GameServices;
 import com.openggf.game.rewind.RewindSnapshottable;
 import com.openggf.game.session.SessionManager;
@@ -45,7 +46,7 @@ import java.util.logging.Logger;
  * SLIDE_IN → DISPLAY → SLIDE_OUT → COMPLETE
  * </pre>
  */
-public class TitleCardManager implements TitleCardProvider,
+public class TitleCardManager implements TitleCardProvider, TitleCardLoopTail,
         RewindSnapshottable<TitleCardManager.Snapshot> {
     private static final Logger LOGGER = Logger.getLogger(TitleCardManager.class.getName());
     public static final String REWIND_KEY = "s2-title-card";
@@ -964,6 +965,17 @@ public class TitleCardManager implements TitleCardProvider,
         exitTailWaitFrames = TEXT_WAIT_DURATION;
         exitTailZoneNameX = EXIT_TAIL_ZONE_NAME_X_TARGET;
         LOGGER.fine("Title card entered TEXT_WAIT state at frame " + frameCounter);
+    }
+
+    @Override
+    public void completeLockedIteration() {
+        // Level's leave loop tests TitleCard_Background after RunObjects and
+        // RunPLC_RAM, then clears Control_Locked and enters Level_StartGame
+        // without another WaitForVint (s2.asm:5060-5080; KiS2:5374-5405).
+        // Keep all 26 player/object passes, including this final locked pass.
+        if (leavePass == LEAVE_PLAYABLE_PASSES) {
+            enterTextWait();
+        }
     }
 
     /**

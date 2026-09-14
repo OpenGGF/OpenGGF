@@ -213,3 +213,90 @@ all-gates-green or complete KiS2-chain claim. The canonical first-segment/return
 frontier and the independent short recording's residual differences remain as
 recorded above. Final follow-up changes only this evidence and the frontier log;
 local link targets and whitespace are checked without repeating engine tests.
+
+
+## First special-stage return continuation
+
+Worktree `.worktrees/kis2-special-return`, pinned base `9aada6ce6`.
+The native KiS2 `Level` leave loop (`s2.asm:5374-5405`) dispatches
+`RunObjects`, `BuildSprites`, and `RunPLC_RAM`, tests the background object,
+and clears the control locks before its next `WaitForVint`. The existing
+engine counted all 26 player/object passes correctly but tested release on
+the following provider update. An internal `TitleCardLoopTail` now completes
+the locked iteration after its object and PLC work, preserving the last pass
+and releasing without another physical row. S1/S3K providers retain their
+existing lifecycle; no creator API method or trace timing input was added.
+
+A first queued focused run (`-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestTitleCardManagerNativeExitTiming,TestKis2CompleteEmeraldRunChain`,
+with absolute S2/KiS2 ROM properties) passes both native timing regressions
+and the patch-launch check, with no skips. The chain gets beyond the former
+cursor-9366 physical-walk overrun and fails at return admission:
+`production did not publish a level-load receipt`. Segment 0 retains exactly
+92 errors (91 history bootstrap, one ring-reward row) and zero warnings.
+This isolates a second missing connection: `LevelManager`'s synchronous
+reload used the raw playback activation rather than the existing wrapper
+that publishes a completed production load receipt. The reload now uses
+that wrapper, and `SpecialStageTransitionSupport` marks the interior-return
+cause before loading. Receipts observe the production generation and level
+identity only; they cannot restore gameplay from trace rows.
+
+The combined runtime candidate now passes two special-stage return admissions.
+`seg2_ehz1` completes all 1,316 rows with one error: row 826 `rings`, expected
+95, actual 85; no bootstrap errors or warnings. Both represented special-stage
+art ledgers have zero errors. Both return gaps retain their first dynamic-art
+edge 39 movie frames early (9340/9301 and 16756/16717). These newly reachable
+gaps have no matched continuous baseline because the old chain stops earlier;
+this is exposed evidence, not attributed regression or proven art parity.
+
+`seg3_ehz1` reaches row 2522, BK2 cursor 19304, then raises the production
+art-publication atomicity assertion (delivery serial 18212 unchanged). Its
+partial report has 1,524 errors, zero bootstrap errors/warnings; the first
+non-camera physics error is row 2230 `x_sub` ($21F5 versus $F800). Diagnose
+that earlier movement divergence before treating the later assertion as an
+independent cause. The fixture remains unchanged and the full chain remains
+red. SS interiors compare art, not gameplay physics.
+
+The full three-game title lifecycle test already counted the passes before
+release; its old assertion expected 26 *before* the release iteration and
+therefore codified the extra empty iteration. It now asserts 25 before the
+release step and 26 after it, while preserving its next-step counter check.
+Additional tests exercise same-iteration release after rewind and a real
+synchronous S2 return's generation/cause receipt. Broader verification follows.
+
+
+Focused combined regressions used queued Maven `-Dmse=off -Pguards
+-Dsurefire.forkCount=1
+-Dtest=TestTitleCardManagerNativeExitTiming,TestTitleCardObjectExecution,TestSpecialStageReturnLoadReceipt,TestSonic2TitleCardManagerRewind,TestGameLoopHardwareTimingBoundaries,TestRunLevelLoadTracker,TestTraceSessionLauncherRunBranch,TestHardwareTimingAuthorityGuard,TestS2Ehz1TraceReplay,TestS3kKnucklesSuperEmeraldRunChain test`
+with all four absolute ROM properties. **81 tests: 79 passed, two known trace
+failures, zero errors/skips**, 48.691 seconds. S2 retains 16,388 errors and
+first row 6 `dynamic_art.outstanding_transfer_ids`; S3K retains 12,616 errors,
+first row 446 `y_speed` (-$0448/$0448), and the missing first giant-ring exit.
+The title-card, rewind, real reload receipt, launcher/coordinator, and timing
+authority checks pass. No required ROM test skipped.
+
+The pinned base's source, tests, POM, hooks and testing tools are identical to
+already-verified `2e11a08a8` (checked with `git diff`), whose ordinary/guard
+results are recorded in the FBZ2 laser-room graphics audit: 20,378 ordinary
+tests, zero failures/errors, 18 skips; 667 guards, the same two known failures
+(`TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+and `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`).
+This existing completed baseline is retained instead of repeating unchanged
+checks. Preflight passes with Java 21, Lua 5.4 and PowerShell. Candidate
+combined validation and post-integration verification remain required.
+
+
+Candidate `c85e17571` completed queued combined validation
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 9aada6ce693d6a34d50e68552a7f8436c8ee2241 --run`
+(`20260914T195114Z-c12f4900`). All 2,573 ordinary classes completed:
+**20,381 tests, 20,363 passes, zero failures/errors, 18 baseline skips**,
+606.94 seconds. The guard lane completed **667 tests, 665 passes, the same
+two baseline failures, zero errors/skips**, 178.65 seconds. Failure messages
+match the stale direct-Maven guidance and the two unchanged assertion-free
+probes exactly. No new failure; diagnostics inspected and acknowledgment
+queued. All new regression tests ran without skipping.
+
+Incoming develop `2c7630066` adds HCZ viewport/donor route coverage and native
+miniboss camera framing. Runtime files do not overlap this change. The shared
+frontier log had an append conflict; both evidence entries are preserved.
+Post-integration verification will cover the combined runtime.

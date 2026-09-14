@@ -323,8 +323,10 @@ class TestTitleCardObjectExecution {
             }
             assertEquals(GameMode.LEVEL, loop.getCurrentGameMode(),
                     "S2 title card should release within the test guard");
-            assertEquals(26, passesWhileCardUp,
-                    "S2 must run exactly the ROM's 26 pre-Level_MainLoop level-object passes");
+            assertEquals(25, passesWhileCardUp,
+                    "the release iteration must still execute the final locked object pass");
+            assertEquals(26, objectManager.getFrameCounter() - objectFramesBefore,
+                    "S2 releases after all 26 native passes without another VBlank");
             // Level_frame_counter is cleared at s2.asm:4772, and Level_MainLoop
             // increments it at :5092 -- one instruction AFTER its own
             // bsr.w WaitForVint at :5091. That wait is the console frame the

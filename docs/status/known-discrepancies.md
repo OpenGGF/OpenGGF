@@ -3366,8 +3366,13 @@ the owning KiS2 routine in the catalogue):
   has converted-art and chip SS transfer observations; all 36 segments pass
   v5 validation. The corrected patch launch and chip PLC queue let the first
   3,180-row EHZ1 segment complete with 91 history-bootstrap differences and one
-  monitor ring-reward timing difference. The chain now stops at BK2 cursor 9366
-  in the return title card after the first special stage. SS interiors do not
+  monitor ring-reward timing difference. The return title card now releases
+  after its final locked object pass, and synchronous reloads publish their
+  production load receipt. The chain passes two special-stage returns and
+  reaches `seg3_ehz1`, stopping at row 2522 (BK2 cursor 19304) on an art-publication
+  assertion after a movement divergence starts at row 2230. Both return gaps
+  still publish their first dynamic-art edge 39 movie frames early. The first
+  returned EHZ1 segment completes with one ring-count difference. SS interiors do not
   compare gameplay, so this does not establish special-stage physics parity.
   Current evidence is tracked in [the frontier log](trace-frontier-log.md). There are no passing
   end-to-end trace fixtures for these presentation or powered-form paths.

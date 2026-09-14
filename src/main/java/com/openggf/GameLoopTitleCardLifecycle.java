@@ -3,6 +3,7 @@ package com.openggf;
 import com.openggf.camera.Camera;
 import com.openggf.control.InputHandler;
 import com.openggf.game.TitleCardProvider;
+import com.openggf.game.titlecard.TitleCardLoopTail;
 import com.openggf.game.OscillationManager;
 import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame;
 import com.openggf.game.resources.PlcLifecyclePhase;
@@ -111,6 +112,15 @@ final class GameLoopTitleCardLifecycle {
         advanceAudioFrame.run();
         if (!preparedByFrameStep) {
             preparePhase.accept(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+        }
+        if (titleCard instanceof TitleCardLoopTail loopTail) {
+            loopTail.completeLockedIteration();
+            if (titleCard.shouldReleaseControl()) {
+                spriteManager.setFrameCounter(0);
+                destination.completeRelease(levelManager, exitTitleCard, true);
+                releaseResult.accept(LevelFrameResult.SETUP_ONLY);
+                return true;
+            }
         }
         return false;
     }
