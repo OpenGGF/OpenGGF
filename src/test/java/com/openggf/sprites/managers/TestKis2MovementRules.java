@@ -1,6 +1,21 @@
 package com.openggf.sprites.managers;
 
 import com.openggf.game.rules.GameRules;
+import com.openggf.control.InputActionMasks;
+import com.openggf.control.InputHandler;
+import com.openggf.debug.playback.Bk2FrameInput;
+import com.openggf.debug.playback.RecordedInputSnapshots;
+import com.openggf.camera.Camera;
+import com.openggf.game.GameRng;
+import com.openggf.game.GameStateManager;
+import com.openggf.game.solid.DefaultSolidExecutionRegistry;
+import com.openggf.graphics.FadeManager;
+import com.openggf.level.LevelManager;
+import com.openggf.level.ParallaxManager;
+import com.openggf.level.WaterSystem;
+import com.openggf.physics.CollisionSystem;
+import com.openggf.physics.TerrainCollisionManager;
+import com.openggf.timer.TimerManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.kis2.Kis2Rules;
 import com.openggf.game.sonic2.kis2.Kis2Physics;
@@ -192,6 +207,67 @@ class TestKis2MovementRules {
         assertEquals(4, player.getAnimationFrameIndex());
         assertEquals(0, player.getAnimationTick());
         assertEquals(6, player.getAnimationManager().captureRewindState().lastAnimationId());
+    }
+
+    @Test
+    void recordedOverlappingButtonsReachSuperThroughProductionInputPublication() throws Exception {
+        var gameplay = TestEnvironment.activeGameplayMode();
+        SpriteManager sprites = new SpriteManager();
+        Camera camera = new Camera();
+        camera.setMaxX((short) 0x3000);
+        camera.setMaxY((short) 0x1000);
+        camera.setMaxYTarget((short) 0x1000);
+        gameplay.attachGameplayManagers(camera, new TimerManager(), new GameStateManager(),
+                new FadeManager(), new GameRng(GameRng.Flavour.S1_S2),
+                new DefaultSolidExecutionRegistry());
+        gameplay.attachLevelManagers(new WaterSystem(), new ParallaxManager(),
+                mock(TerrainCollisionManager.class), mock(CollisionSystem.class), sprites,
+                mock(LevelManager.class));
+        player.setCentreX((short) 0x100);
+        player.setCentreY((short) 0x200);
+        player.setAir(true);
+        player.setJumping(true);
+        player.setYSpeed((short) -0x300);
+        SuperStateController superState = mock(SuperStateController.class);
+        when(superState.activateFromAirAbility()).thenReturn(true);
+        player.setSuperStateController(superState);
+        sprites.addSprite(player);
+        Bk2FrameInput heldA = new Bk2FrameInput(10, AbstractPlayableSprite.INPUT_JUMP,
+                InputActionMasks.ACTION_A, false, "A held");
+        Bk2FrameInput heldAAndB = new Bk2FrameInput(11, AbstractPlayableSprite.INPUT_JUMP,
+                InputActionMasks.ACTION_A | InputActionMasks.ACTION_B, false, "A held; B pressed");
+        InputHandler input = new InputHandler();
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(heldA, heldA));
+        sprites.update(input);
+        verify(superState, never()).activateFromAirAbility();
+        input.setLogicalOverride(RecordedInputSnapshots.fromBk2(heldAAndB, heldA));
+        assertEquals(InputActionMasks.ACTION_B,
+                RecordedInputSnapshots.fromBk2(heldAAndB, heldA).player1().actionPressedMask());
+        sprites.update(input);
+        assertTrue(player.isJumpPressed());
+        assertTrue(player.isJumpJustPressed());
+        verify(superState).activateFromAirAbility();
+    }
+
+    @Test
+    void temporaryClimbRadiiPreservePinnedTopLeftAndCentre() throws Exception {
+        player.setCentreX((short) 0x100);
+        player.setCentreY((short) 0x200);
+        player.setWallClimbX(player.getX());
+        player.setDoubleJumpFlag(4);
+        player.setMappingFrame(0xB9);
+        int originalX = player.getX();
+        int originalY = player.getY();
+        input(false, false, false, false, false, false);
+        for (int tick = 0; tick < 3; tick++) {
+            try (var terrain = mockStatic(ObjectTerrainUtils.class)) { invoke("updateWallClimb"); }
+            assertEquals(originalX, player.getX());
+            assertEquals(originalY, player.getY());
+            assertEquals(0x100, player.getCentreX());
+            assertEquals(0x200, player.getCentreY());
+            assertEquals(9, player.getXRadius());
+            assertEquals(19, player.getYRadius());
+        }
     }
 
     private void rules(GameRules rules) throws Exception {
