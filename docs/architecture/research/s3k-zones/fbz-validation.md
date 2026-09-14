@@ -36,8 +36,9 @@ shared task scratch directory. The PNG SHA-256 is
 Against native crop `(14,8,320,224)`, terrain `(180,120,120,20)` matches
 2400/2400 pixels at identical coordinates, versus 944/2400 before correction.
 Comparison recovers Genesis 3-bit RGB as `round(native/34)` and
-`round(engine*7/255)`; no image translation is accepted. This is a bounded terrain
-comparison awaiting independent review, not whole-frame or checkpoint PASS.
+`round(engine*7/255)`; no image translation is accepted. The root delivery agent independently reproduced this bounded terrain
+comparison from both preserved PNGs; it is accepted for this rectangle, not
+whole-frame or checkpoint PASS.
 
 The sky phase is separately history-dependent. A read-only native savestate
 probe at movie frame 237948 measured `HScroll_table+$1FC` (`$A9FC`) as
@@ -67,10 +68,10 @@ executors; an unknown id or any failed precondition/readback emits a rejected
 receipt and no image.
 
 After `mvn package`, run this PowerShell example from the checkout root to
-request the exact native start. The committed amendment is still awaiting
-fresh evidence and independent review: this invocation must reject publication
-until the observed first-visible state has been reviewed and hash-bound. It is
-not a command that currently produces accepted visual evidence.
+request the exact native start. The committed amendment now contains the
+independently reviewed native LFC-35 state. Successful publication proves this
+state contract; pixel acceptance is separately limited to the terrain rectangle
+documented above. It does not certify whole-frame cloud parity.
 
 ```powershell
 $artifactProperties = ConvertFrom-StringData (Get-Content target/openggf-artifact.properties -Raw)
@@ -135,10 +136,15 @@ hashes are preserved, but they must be reported as `SUPERSEDED`/`FAIL`, never
 `fbz-visual-evidence-amendment-proposal.json`; it requires a fresh BizHawk
 capture, exact observed RAM state, versioned replacement paths, and independent
 spec review before the frozen manifest or reference acceptance changes.
-The amendment deliberately remains `awaiting-fresh-independent-review`, so the
-capture tool rejects publication until the exact first-visible state and each
-AniPLC visible-region review are populated and hash-bound. This is the intended
-fail-closed state before fresh BizHawk recapture.
+The amendment records the fresh native start state and reviewed destination
+rectangles with explicit approval scopes. The five cadence series remain native
+candidates: their 30 frames are hash-bound, but engine placement and service-phase
+comparison are still pending. The $210 script has identical source offsets and
+must retain art through index changes; $230 is visibly placed in Act2 only. Its
+last native frame has two occluded pixels, explicitly preserved in the proposal.
+The engine cadence executor still needs these applicability and stable-art
+contracts before it can certify all five series; native region approval alone
+does not satisfy that obligation.
 
 ### Native exporter observations (2026-09-14 FBZ completion)
 

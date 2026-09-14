@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "status": "proposed-awaiting-fresh-capture-and-independent-spec-review",
-  "scope": "fbz1-start-outdoor plus the five Act 1 AniPLC cadence evidence series only",
+  "status": "native-candidates-reviewed-bounded-terrain-accepted-paired-cadence-pending",
+  "scope": "FBZ1 exact start and five AniPLC channels; $230 visible placement applies to Act2",
   "frozen_manifest": "docs/s3k-zones/fbz-visual-checkpoints.json",
   "frozen_manifest_sha256": "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
   "policy": {
@@ -81,9 +81,59 @@
     }
   },
   "accepted_first_visible_frame": {
-    "status": "awaiting-fresh-independent-review",
-    "note": "Populate exact_state only from a fresh overlay-free BizHawk capture after independent review. The frame is not assumed to be Level_frame_counter 1 and its AniPLC timers are not inferred from initialization.",
-    "exact_state": null
+    "status": "approved",
+    "exact_state": {
+      "player_x": 96,
+      "player_y": 1900,
+      "camera_x": 0,
+      "camera_y": 1804,
+      "camera_x_copy": 0,
+      "camera_y_copy": 1804,
+      "camera_min_x": 0,
+      "camera_max_x": 11872,
+      "camera_min_y": 0,
+      "camera_max_y": 2816,
+      "camera_target_min_x": 0,
+      "camera_target_max_x": 11872,
+      "camera_target_min_y": 0,
+      "camera_target_max_y": 2816,
+      "events_routine_fg": 0,
+      "events_routine_bg": 0,
+      "screen_shake_offset": 0,
+      "level_frame_counter": 35,
+      "raw_anim_counters": [
+        28,
+        1,
+        4,
+        5,
+        0,
+        2,
+        4,
+        1,
+        4,
+        5,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "title_card_complete": true,
+      "title_card_overlay_active": false,
+      "fade_active": false,
+      "fade_alpha": 0,
+      "overlays_disabled": true
+    },
+    "native_evidence": {
+      "bk2_frame": 237948,
+      "trace_frame": 34,
+      "sidecar": "${TASK_SCRATCH}/fbz-completion-20260914/native-reference/framebuffer-v1/provenance/fbz1-start-outdoor-gameplay-v2.bizhawk.json",
+      "sidecar_sha256": "20FFE1A9C8722C2F1109B5ECB6DABC40A9C5959A67799B3C458946CB922B3696",
+      "png_sha256": "EA9A56D5A7F3DE1C63D5A0A0BD4E4268FB7B73ACFCC62FF17F0102E7DDCEEA0C"
+    },
+    "note": "Root independently reviewed exact native PNG, crop and RAM/hash on 2026-09-14 and approved this external state for paired engine comparison only. Overall checkpoint acceptance remains pending.",
+    "acceptance_scope": "Exact captured state only; whole-frame pixel parity and retained cloud history remain unaccepted."
   },
   "superseded_exact_start": {
     "bk2_frame": 237914,
@@ -187,8 +237,61 @@
         "channel": 3,
         "source": "ArtUnc_AniFBZ__3",
         "destination": "$200-$207",
-        "reviewed_visible_region": null,
-        "review_status": "awaiting-fresh-independent-review"
+        "reviewed_visible_region": {
+          "x": 60,
+          "y": 157,
+          "width": 32,
+          "height": 28
+        },
+        "review_status": "approved",
+        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "native_candidate": {
+          "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
+          "frames": [
+            {
+              "bk2_frame": 245501,
+              "png_sha256": "ca7a88bd20b993937cc5aa026773877e734f6c9359eeea4b7f22a3994998a38c",
+              "vram_sha256": "59E7A5FECC1FC63B41CB18322BCF4957FFE5BDB04ECEE5F92D00605358A038DF",
+              "mapped_opaque_pixels": 552,
+              "exact_matched_pixels": 552
+            },
+            {
+              "bk2_frame": 245502,
+              "png_sha256": "fec0ce259b9186b64cbfa6d9ddb6d72ef7ea914c2e50a8a406313c5ea26f024c",
+              "vram_sha256": "59E7A5FECC1FC63B41CB18322BCF4957FFE5BDB04ECEE5F92D00605358A038DF",
+              "mapped_opaque_pixels": 552,
+              "exact_matched_pixels": 552
+            },
+            {
+              "bk2_frame": 245503,
+              "png_sha256": "2a3fe3490efcdc393dc17b0e0b6bdf40317907fd56302fbd46b3531bb249340e",
+              "vram_sha256": "2AE9C524AE9A0484334AA7A325EBF106FF6AE2A9DF07267735B8810C2876CE1D",
+              "mapped_opaque_pixels": 552,
+              "exact_matched_pixels": 552
+            },
+            {
+              "bk2_frame": 245504,
+              "png_sha256": "e0750833d2dedde6d8608488d2fe190225ecae19f2d21c461906f166e88d5925",
+              "vram_sha256": "2AE9C524AE9A0484334AA7A325EBF106FF6AE2A9DF07267735B8810C2876CE1D",
+              "mapped_opaque_pixels": 552,
+              "exact_matched_pixels": 552
+            },
+            {
+              "bk2_frame": 245505,
+              "png_sha256": "2e6709be401dee00438ec407ddbf87decc6b75882641f994cfedfd9d30f4b109",
+              "vram_sha256": "2AE9C524AE9A0484334AA7A325EBF106FF6AE2A9DF07267735B8810C2876CE1D",
+              "mapped_opaque_pixels": 552,
+              "exact_matched_pixels": 552
+            },
+            {
+              "bk2_frame": 245506,
+              "png_sha256": "25243f3e992d95a3064e2821c5aab769ae1ba90fa1b95e53cd7319e847b0314a",
+              "vram_sha256": "2AE9C524AE9A0484334AA7A325EBF106FF6AE2A9DF07267735B8810C2876CE1D",
+              "mapped_opaque_pixels": 568,
+              "exact_matched_pixels": 568
+            }
+          ]
+        }
       },
       {
         "checkpoint": "fbz1-aniplc-208",
@@ -196,8 +299,61 @@
         "channel": 4,
         "source": "ArtUnc_AniFBZ__4",
         "destination": "$208-$20F",
-        "reviewed_visible_region": null,
-        "review_status": "awaiting-fresh-independent-review"
+        "reviewed_visible_region": {
+          "x": 152,
+          "y": 140,
+          "width": 16,
+          "height": 40
+        },
+        "review_status": "approved",
+        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "native_candidate": {
+          "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
+          "frames": [
+            {
+              "bk2_frame": 244996,
+              "png_sha256": "bfa359f525302caadb205e863abd2e2ba344c9c3dd9e093e0cabd92283c136bb",
+              "vram_sha256": "DFDC05E3CEE4003B0556E3D6F6672C8D8ACB4970BDC4ED3C9AC79A1C18BB5823",
+              "mapped_opaque_pixels": 560,
+              "exact_matched_pixels": 560
+            },
+            {
+              "bk2_frame": 244997,
+              "png_sha256": "dd64bb711ea1d5c973b3c5f91b744c8057cccaf732246de606fc6d1bc16143bc",
+              "vram_sha256": "DFDC05E3CEE4003B0556E3D6F6672C8D8ACB4970BDC4ED3C9AC79A1C18BB5823",
+              "mapped_opaque_pixels": 560,
+              "exact_matched_pixels": 560
+            },
+            {
+              "bk2_frame": 244998,
+              "png_sha256": "7df1d736a34dfbe1694e6ec89477eb8fe2ea5079597422c1d18d7f5d34d04c88",
+              "vram_sha256": "342305E0A7EED0A36961D2307DE5260509B308AF0D2A6E0FBA4B3742A7C2B166",
+              "mapped_opaque_pixels": 560,
+              "exact_matched_pixels": 560
+            },
+            {
+              "bk2_frame": 244999,
+              "png_sha256": "16ab8209f69148f9ea5c1c5b9b852a3bb9f7656b79c36d5b59b99647fa143962",
+              "vram_sha256": "342305E0A7EED0A36961D2307DE5260509B308AF0D2A6E0FBA4B3742A7C2B166",
+              "mapped_opaque_pixels": 560,
+              "exact_matched_pixels": 560
+            },
+            {
+              "bk2_frame": 245000,
+              "png_sha256": "345b869d8b99f479cc051df1ff4690736f5d154e2129db0dbea399fcc6836ae0",
+              "vram_sha256": "342305E0A7EED0A36961D2307DE5260509B308AF0D2A6E0FBA4B3742A7C2B166",
+              "mapped_opaque_pixels": 560,
+              "exact_matched_pixels": 560
+            },
+            {
+              "bk2_frame": 245001,
+              "png_sha256": "200475ca798ec5a2af3a43861861805118f6c49286e07dd5d93d84f23c5ee44c",
+              "vram_sha256": "342305E0A7EED0A36961D2307DE5260509B308AF0D2A6E0FBA4B3742A7C2B166",
+              "mapped_opaque_pixels": 560,
+              "exact_matched_pixels": 560
+            }
+          ]
+        }
       },
       {
         "checkpoint": "fbz1-aniplc-210",
@@ -205,8 +361,13 @@
         "channel": 0,
         "source": "ArtUnc_AniFBZ__0",
         "destination": "$210-$22F",
-        "reviewed_visible_region": null,
-        "review_status": "awaiting-fresh-independent-review",
+        "reviewed_visible_region": {
+          "x": 16,
+          "y": 80,
+          "width": 128,
+          "height": 80
+        },
+        "review_status": "approved",
         "cadence_expectation": "stable-art-counter-cycle",
         "rom_evidence": {
           "owning_routine": "AniPLC_FBZ1 (sonic3k.asm lines 55812-55816)",
@@ -221,7 +382,55 @@
           "duration": 63,
           "native_observation": "BK2 237976 timer zero; 237977 timer63/index2; destination VRAM SHA256 remains unchanged through237981, as expected for identical source offsets."
         },
-        "required_evidence": "Visible placed destination tile region, stable region/VRAM across natural timer expiry and index advance, exact ROM source identity. Unrelated cloud motion cannot satisfy the region proof."
+        "required_evidence": "Visible placed destination tile region, stable region/VRAM across natural timer expiry and index advance, exact ROM source identity. Unrelated cloud motion cannot satisfy the region proof.",
+        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "native_candidate": {
+          "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
+          "frames": [
+            {
+              "bk2_frame": 238361,
+              "png_sha256": "2e126c27dbca963ca99d7ba45bd2ecf22275c7704e70bb6ec5b9c2debf4a9bed",
+              "vram_sha256": "90DFFDA20C53CF1D7436B26EAD8EEC63BB3973F2A7C5843B7F2CA51982D17339",
+              "mapped_opaque_pixels": 2550,
+              "exact_matched_pixels": 2550
+            },
+            {
+              "bk2_frame": 238362,
+              "png_sha256": "ea0ec9b6f8070ee5fdac641ea5778ca30c6896d35dc43ca87f471d7910036da3",
+              "vram_sha256": "90DFFDA20C53CF1D7436B26EAD8EEC63BB3973F2A7C5843B7F2CA51982D17339",
+              "mapped_opaque_pixels": 2370,
+              "exact_matched_pixels": 2370
+            },
+            {
+              "bk2_frame": 238363,
+              "png_sha256": "9f2c6ccb6805e67ff9f39215b47cb0ae75bb3ce4f26c2f6ea51242699fde9678",
+              "vram_sha256": "90DFFDA20C53CF1D7436B26EAD8EEC63BB3973F2A7C5843B7F2CA51982D17339",
+              "mapped_opaque_pixels": 2040,
+              "exact_matched_pixels": 2040
+            },
+            {
+              "bk2_frame": 238364,
+              "png_sha256": "42d62a82a15edfb9cde7773d7b9f57d40ec04ec35d497b192b81439a6c40e500",
+              "vram_sha256": "90DFFDA20C53CF1D7436B26EAD8EEC63BB3973F2A7C5843B7F2CA51982D17339",
+              "mapped_opaque_pixels": 1720,
+              "exact_matched_pixels": 1720
+            },
+            {
+              "bk2_frame": 238365,
+              "png_sha256": "0705220f9072bced630eb27dc17fc73158e3315aca9e41c0c636a6bbfea3190a",
+              "vram_sha256": "90DFFDA20C53CF1D7436B26EAD8EEC63BB3973F2A7C5843B7F2CA51982D17339",
+              "mapped_opaque_pixels": 1470,
+              "exact_matched_pixels": 1470
+            },
+            {
+              "bk2_frame": 238366,
+              "png_sha256": "a9183ae4269c4df8dec0b2863690be5e09815eee799c23f69712a18b2bed9181",
+              "vram_sha256": "90DFFDA20C53CF1D7436B26EAD8EEC63BB3973F2A7C5843B7F2CA51982D17339",
+              "mapped_opaque_pixels": 1320,
+              "exact_matched_pixels": 1320
+            }
+          ]
+        }
       },
       {
         "checkpoint": "fbz1-aniplc-230",
@@ -229,8 +438,13 @@
         "channel": 1,
         "source": "ArtUnc_AniFBZ__1",
         "destination": "$230-$237",
-        "reviewed_visible_region": null,
-        "review_status": "awaiting-fresh-independent-review",
+        "reviewed_visible_region": {
+          "x": 20,
+          "y": 55,
+          "width": 32,
+          "height": 40
+        },
+        "review_status": "approved",
         "placement_applicability": {
           "act": 2,
           "status": "approved-applicability-correction-pending-paired-pixels",
@@ -254,6 +468,55 @@
           "original_act2_foreground_layout_placements": 33,
           "candidate_world_placement": "x=$880,y=$680-$800",
           "acceptance": "Use native Act2 placement pixels with channel1 ROM source/counter identity; this does not certify the old Act1 checkpoint or modify the frozen manifest."
+        },
+        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "native_candidate": {
+          "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
+          "frames": [
+            {
+              "bk2_frame": 262703,
+              "png_sha256": "8adb610965dfdff31a7adc774827601046209e8706e565509dcfa1bb79cd9c61",
+              "vram_sha256": "34462D40BB8D64A5971F1A053C55DCA8A17421350FB9C5E530965C36E31A57AE",
+              "mapped_opaque_pixels": 1280,
+              "exact_matched_pixels": 1280
+            },
+            {
+              "bk2_frame": 262704,
+              "png_sha256": "ab78a1ec3a8eb3471c51e7caa634846cc3492653084bf4a676c6999f8d9c8af7",
+              "vram_sha256": "34462D40BB8D64A5971F1A053C55DCA8A17421350FB9C5E530965C36E31A57AE",
+              "mapped_opaque_pixels": 1280,
+              "exact_matched_pixels": 1280
+            },
+            {
+              "bk2_frame": 262705,
+              "png_sha256": "cea7993aca1b88855d3bbbb9dd6c99879943648dd806c8acbd80989d81a84458",
+              "vram_sha256": "BB82A6F3E12F1DD9604586D4CDDDCFFA399127409D92AA5AB310F64A9E356034",
+              "mapped_opaque_pixels": 1280,
+              "exact_matched_pixels": 1280
+            },
+            {
+              "bk2_frame": 262706,
+              "png_sha256": "fdd874035123eeb2e6099004a2172ea31222dab3b79768f715bac134ac841a44",
+              "vram_sha256": "BB82A6F3E12F1DD9604586D4CDDDCFFA399127409D92AA5AB310F64A9E356034",
+              "mapped_opaque_pixels": 1280,
+              "exact_matched_pixels": 1280
+            },
+            {
+              "bk2_frame": 262707,
+              "png_sha256": "96cb7ef9570a67afb46e33da6579a7a0386d829c86c99a1946724f533ac15bbf",
+              "vram_sha256": "BB82A6F3E12F1DD9604586D4CDDDCFFA399127409D92AA5AB310F64A9E356034",
+              "mapped_opaque_pixels": 1280,
+              "exact_matched_pixels": 1280
+            },
+            {
+              "bk2_frame": 262708,
+              "png_sha256": "de2d0edd9b579020f89d8b9e2a01ea892bc4fb96e298f4071d5ecf1401555e9b",
+              "vram_sha256": "BB82A6F3E12F1DD9604586D4CDDDCFFA399127409D92AA5AB310F64A9E356034",
+              "mapped_opaque_pixels": 1280,
+              "exact_matched_pixels": 1278
+            }
+          ],
+          "occlusion_limit": "Last frame matches1278/1280 mapped pixels; retain two-pixel occlusion, not100% rectangle acceptance."
         }
       },
       {
@@ -262,8 +525,61 @@
         "channel": 2,
         "source": "ArtUnc_AniFBZ__2",
         "destination": "$238-$247",
-        "reviewed_visible_region": null,
-        "review_status": "awaiting-fresh-independent-review"
+        "reviewed_visible_region": {
+          "x": 90,
+          "y": 80,
+          "width": 64,
+          "height": 64
+        },
+        "review_status": "approved",
+        "approval_scope": "Native visible-owner rectangle only. Engine placement, paired cadence and checkpoint PASS remain pending.",
+        "native_candidate": {
+          "summary_sha256": "8EC74C64FE3C71C2662C45792B171C1CFC61C4FD46B266B6B4E8BA4B173704CF",
+          "frames": [
+            {
+              "bk2_frame": 249726,
+              "png_sha256": "54439071fe5fc2bcae4dd7e5d6170b2336cee3c25330f7946fcd7c4f02b244df",
+              "vram_sha256": "34BF03F4C28C068F8606DA199645F014A9E4A698D561037E976697875381C356",
+              "mapped_opaque_pixels": 2784,
+              "exact_matched_pixels": 2784
+            },
+            {
+              "bk2_frame": 249727,
+              "png_sha256": "3438bd25344891bbda5f1a30f5704885d8eb9818f8f2acc100fed3dd964d7eb4",
+              "vram_sha256": "34BF03F4C28C068F8606DA199645F014A9E4A698D561037E976697875381C356",
+              "mapped_opaque_pixels": 2744,
+              "exact_matched_pixels": 2744
+            },
+            {
+              "bk2_frame": 249728,
+              "png_sha256": "f5b62977f278e72fd482a3adf1c4b5ec366b129b87ef7b2d790186df1458148c",
+              "vram_sha256": "F9E05967A18C154F37D306FB12468710210924D41FE404A3A92AD9CA1A81CF74",
+              "mapped_opaque_pixels": 2744,
+              "exact_matched_pixels": 2744
+            },
+            {
+              "bk2_frame": 249729,
+              "png_sha256": "f518b93bce07b12111cfaf487f829d073a218020c9f5e2b02755cb564cd1b1f6",
+              "vram_sha256": "F9E05967A18C154F37D306FB12468710210924D41FE404A3A92AD9CA1A81CF74",
+              "mapped_opaque_pixels": 2800,
+              "exact_matched_pixels": 2800
+            },
+            {
+              "bk2_frame": 249730,
+              "png_sha256": "ea7165b7d8631d3b549c355ec189b3bc23bfcad49313c93f664ea36ba2c219ab",
+              "vram_sha256": "09B10C78A8FE30ECB43BF5E50E8377157EB8D75224B9DAB2CE81692225D2CE3F",
+              "mapped_opaque_pixels": 2824,
+              "exact_matched_pixels": 2824
+            },
+            {
+              "bk2_frame": 249731,
+              "png_sha256": "5568f527c93172fe710cc7c50eee133a58197dd18fa7eb774eab0bacd5f2af98",
+              "vram_sha256": "09B10C78A8FE30ECB43BF5E50E8377157EB8D75224B9DAB2CE81692225D2CE3F",
+              "mapped_opaque_pixels": 2832,
+              "exact_matched_pixels": 2832
+            }
+          ]
+        }
       }
     ],
     "capture_rule": "Use a deterministic BizHawk savestate branch at the checkpoint's reviewed centre with the destination's animated tiles visibly present in the native crop. Capture a minimum of five title-card-free, overlay-free frames spanning a real timer expiry/frame-index advance for that channel.",
@@ -276,7 +592,8 @@
       "destination VRAM bytes SHA-256",
       "raw framebuffer and 320x224 crop SHA-256"
     ],
-    "visibility_gate": "For changing-art channels, require at least two distinct native-crop hashes plus a reviewed destination-tile region changing after the recorded queued transfer. Act1 channel0 ($210-$22F) deliberately references source offsets[0,0]: require stable destination VRAM and stable placed-art region across the counter cycle instead. Moving clouds, palette/fade/title pixels do not prove either condition. All series remain pending independent review."
+    "visibility_gate": "For changing-art channels, require at least two distinct native-crop hashes plus a reviewed destination-tile region changing after the recorded queued transfer. Act1 channel0 ($210-$22F) deliberately references source offsets[0,0]: require stable destination VRAM and stable placed-art region across the counter cycle instead. Moving clouds, palette/fade/title pixels do not prove either condition. All series remain pending independent review.",
+    "service_domain_note": "Native VRAM changes one captured frame after timer expiry/index advance. Engine AniPlcScriptState.tick applies CPU patterns and updates the atlas immediately. These domains must be named and their relative service phases measured before paired cadence acceptance; same-frame correlation must not be assumed."
   },
   "required_tooling_changes_before_recapture": [
     "The candidate scanner must not treat coordinate/RAM equality during a title card as capture-eligible visual evidence.",
@@ -296,5 +613,29 @@
       "validator supersession behavior",
       "resulting frozen manifest hash"
     ]
+  },
+  "bounded_terrain_comparison": {
+    "status": "independently-reviewed-accepted",
+    "reviewer": "root delivery agent reproduced comparison from preserved PNGs",
+    "engine_commit": "03db8cccd",
+    "engine_artifact_sha256": "FAE0C144C10AFB3DF9470E8B6DFC23FBFB0B147D3CDEBDD24434CEACF7BAA602",
+    "engine_png_sha256": "4ED9FE4829B891F4511F7B514777EBE4AF60EC4CA128C9ECF6F220781A5D77A8",
+    "native_png_sha256": "EA9A56D5A7F3DE1C63D5A0A0BD4E4268FB7B73ACFCC62FF17F0102E7DDCEEA0C",
+    "native_crop": [
+      14,
+      8,
+      320,
+      224
+    ],
+    "region": [
+      180,
+      120,
+      120,
+      20
+    ],
+    "same_coordinate_matching_pixels": 2400,
+    "total_pixels": 2400,
+    "normalization": "round(nativeRGB/34), round(engineRGB*7/255)",
+    "scope": "This rectangle only; no whole-frame or checkpoint PASS."
   }
 }
