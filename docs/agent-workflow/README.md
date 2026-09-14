@@ -82,3 +82,12 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 `TraceTriageTool`. For performance work, start from
 [`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
 than the benchmark CLIs directly — the numbers are easy to misread.
+
+## Test harness helpers
+
+- `com.openggf.tests.route`: reviewed input-program, steering, object-lifetime,
+  recent-frame and CPU-team audit helpers imported from `435ec2e68` for the
+  route-controller continuation. `TestS3kAiz1RoutePilot` is the native AIZ1
+  representative route; `TestS3kAiz1RouteRewind` checks independently reached
+  live spots. The [AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md)
+  records their evidence and remaining coverage.

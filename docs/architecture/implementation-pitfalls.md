@@ -47,6 +47,14 @@ uncaptured `final` scalar, or an object reference not captured as a rewind id fa
 fails `TestStaticStateRewindCoverageGuard` — fix it with a `RewindSnapshottable` adapter,
 not a baseline entry, unless the gap is genuinely intentional.
 
+**Route rewind probes need the whole owner state.** A recreated object can match
+its own snapshot while reading a future static counter or a reset helper timer.
+The AIZ1 route continuation found both: `Events_fg_4` needed a registered adapter,
+and `AizIntroPaletteCycler` needed `RewindStateful` timer/frame capture. Construct
+stateful helpers before schema restore, then bind services when used: object
+recreation can run before service injection. Compare resource pixels by content;
+Java identity of re-decoded `Pattern` instances is not a rendering difference.
+
 **Claimed hardware work is memoized.** `HardwareTimingJob` shares one immutable rewind
 snapshot per claimed job across checkpoints and drops it in every mutator. Unclaimed jobs
 are re-snapshotted each capture because `coordinatorPreparation` still hands out their live

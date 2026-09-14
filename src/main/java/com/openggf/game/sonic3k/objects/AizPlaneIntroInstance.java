@@ -192,7 +192,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     private int liftoffAnimIndex;
 
     /** Palette cycler for Super Sonic visual effect (routines 0x0C+). */
-    private AizIntroPaletteCycler paletteCycler;
+    private final AizIntroPaletteCycler paletteCycler = new AizIntroPaletteCycler();
 
     /** Whether this object currently owns player control lock. */
     private boolean ownsPlayerControl;
@@ -535,9 +535,7 @@ public class AizPlaneIntroInstance extends AbstractObjectInstance implements Rew
     }
 
     private AizIntroPaletteCycler paletteCycler() {
-        if (paletteCycler == null) {
-            paletteCycler = new AizIntroPaletteCycler(services());
-        }
+        paletteCycler.bindServices(services());
         return paletteCycler;
     }
 

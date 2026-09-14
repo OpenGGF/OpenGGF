@@ -6,6 +6,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **AIZ1 rewind:** capture the hollow-tree reveal counter and intro Super Sonic
+  palette timer/frame, preserving tree reveal children and palette cadence after
+  restoring gameplay. Add a native route matrix with independently reported intro,
+  cutscene, tree and act-reload replay checks.
+
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late
   ring appearance in EHZ1 after the 0.7 branch rollover. Ring placement also
