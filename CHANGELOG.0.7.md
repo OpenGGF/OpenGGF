@@ -61,7 +61,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
   route clears the elevator squeeze with an ordinary run-up and timed roll.
   Upright spikes use their animated FBZ art, while wall spikes retain the shared
-  sideways artwork; both tile banks participate in renderer refresh.
+  sideways artwork; both tile banks participate in renderer refresh. Foreground
+  and background shaders retain fragment centres while scaling, preventing a
+  one-pixel sampling shift caused by GPU division rounding.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 
