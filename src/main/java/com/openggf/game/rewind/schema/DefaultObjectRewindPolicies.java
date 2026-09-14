@@ -103,6 +103,11 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // ExplosionRewindState captures the exact configured factory references and
+            // rebinds them on recreation. TRANSIENT excludes them only from the generic
+            // codec; these construction policies are not omitted from rewind state.
+            Map.entry(new FieldKey("com.openggf.level.objects.ExplosionObjectInstance", "animalFactory"), RewindFieldPolicy.TRANSIENT),
+            Map.entry(new FieldKey("com.openggf.level.objects.ExplosionObjectInstance", "pointsFactory"), RewindFieldPolicy.TRANSIENT),
             // FBZ end-boss topology is derived from captured role/subtype words after all SST slots settle.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "arms"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzEndBossInstance", "joints"), RewindFieldPolicy.DEFERRED),

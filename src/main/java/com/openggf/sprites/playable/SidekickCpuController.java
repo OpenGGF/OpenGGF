@@ -2963,6 +2963,9 @@ public class SidekickCpuController {
     }
 
     private boolean hasReleasedLatchedSolidObject() {
+        if (sidekick.isLatchedSolidObjectReleased()) {
+            return true;
+        }
         ObjectInstance latched = sidekick.getLatchedSolidObjectInstance();
         if (latched != null) {
             return !hasLiveRidingObject(latched);
@@ -4547,13 +4550,12 @@ public class SidekickCpuController {
         if (sidekick.isOnObject()) {
             // S3K: sub_13EFC's only practical trigger is a slot freed by
             // Delete_Referenced_Sprite (id word zeroed -> mismatch -> despawn).
-            // Tracked via the latched-instance reference because S3K's
-            // latchedSolidObjectId is sticky across destruction.
+            // The live owner or captured release marker supplies this state:
+            // deleted/unloaded owners have no instance after rewind restore,
+            // while S3K's latchedSolidObjectId stays sticky across destruction.
             if (useRidingInstanceLossDespawn) {
-                ObjectInstance ridingInstance = sidekick.getLatchedSolidObjectInstance();
                 if ((sidekick.getLatchedSolidObjectId() & 0xFF) != 0
-                        && ridingInstance != null
-                        && isLatchedRideSlotFreed(ridingInstance)) {
+                        && sidekick.isLatchedSolidObjectReleased()) {
                     triggerDespawn(DespawnCause.FREED_INTERACT_SLOT);
                     return true;
                 }

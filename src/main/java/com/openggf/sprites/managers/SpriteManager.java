@@ -1719,12 +1719,18 @@ public class SpriteManager implements PlayableSstDispatcher {
 					playable.setLatchedSolidObjectInstance(null);
 					continue;
 				}
+				// Deleted owners are absent from the restored object set. Keep the
+				// captured release provenance even if their SST slot has been reused.
+				if (playable.isLatchedSolidObjectReleased()) {
+					continue;
+				}
 				ObjectInstance current = playable.getLatchedSolidObjectInstance();
-				if (isActiveObjectWithId(objectManager, current, activeObjects, objectId)) {
+				if (playable.getInteractSlotIndex() < 0
+						&& isActiveObjectWithId(objectManager, current, activeObjects, objectId)) {
 					continue;
 				}
 				ObjectInstance restored = activeObjectAtInteractSlot(objectManager, playable, activeObjects, objectId);
-				if (restored == null) {
+				if (restored == null && playable.getInteractSlotIndex() < 0) {
 					restored = nearestActiveObjectWithId(objectManager, playable, activeObjects, objectId);
 				}
 				playable.setLatchedSolidObjectInstance(restored);

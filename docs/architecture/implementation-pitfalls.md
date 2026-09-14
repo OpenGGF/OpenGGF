@@ -67,6 +67,22 @@ stateful helpers before schema restore, then bind services when used: object
 recreation can run before service injection. Compare resource pixels by content;
 Java identity of re-decoded `Pattern` instances is not a rendering difference.
 
+**Released solid contacts need captured provenance.** A CPU follower can retain
+its last contact after that owner is destroyed and its slot reused. Rewind must
+clear the future Java pointer, preserve the captured released-contact state and
+relink a live contact only through its recorded slot. A nearby same-type object
+is not the old owner. HCZ1 fan/conveyor/spring replay exposed this through the
+CPU's `releasedUnderwaterPushConsumed` flag; immediate restore alone passed,
+but the next 30 frames differed. Exercise two restore/forward-replay cycles.
+
+**Pending object initialization needs its construction policy.** A recreated
+explosion may not have run its first update yet. Capturing only its scalar timers
+loses configured animal/points factories, changing child allocation order and RNG
+on forward replay. Preserve the exact factory configuration with the initialization
+latch; obtain live services from the restored owner. HCZ1 bridge-trigger windows
+exposed this boundary while nearby approach checkpoints passed. Select the live
+event, and compare forward replay, not only immediate restoration.
+
 **Claimed hardware work is memoized.** `HardwareTimingJob` shares one immutable rewind
 snapshot per claimed job across checkpoints and drops it in every mutator. Unclaimed jobs
 are re-snapshotted each capture because `coordinatorPreparation` still hands out their live
