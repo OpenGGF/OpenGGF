@@ -12,7 +12,7 @@ import java.util.List;
  */
 public final class FbzMissileLauncherCompanionObjectInstance
     extends AbstractObjectInstance
-    implements SolidObjectProvider, RewindRecreatable {
+    implements SolidObjectProvider, RewindRecreatable, RomObjectCodePointerProvider {
   private static final int[] OFFSETS = {-0x18, 2, -8, -4, 8, 4, 0x18, -2};
   private FbzMissileLauncherObjectInstance parent;
   private int familySlot = -1, anchorX;
@@ -58,6 +58,16 @@ public final class FbzMissileLauncherCompanionObjectInstance
     // Obj_FBZMissileLauncher writes width_pixels=$20 to its solid
     // companion (sonic3k.asm:80143); Sonic_Move reads that byte for balance.
     return 0x20;
+  }
+  @Override public int romObjectCodePointerHighWord() {
+    // Companion entry loc_3C636 stays in bank $0003, including detonation.
+    return 0x0003;
+  }
+  @Override public boolean suppressesObjectEdgeBalance() {
+    // Obj_FBZMissileLauncher sets status bit 7 on this companion
+    // (sonic3k.asm:80147). Sonic_Move and Tails_Move test the signed
+    // stood-on status before checking width_pixels for edge balance.
+    return true;
   }
   public SolidObjectParams getSolidParams() {
     return new SolidObjectParams(0x2B, 8, 9);

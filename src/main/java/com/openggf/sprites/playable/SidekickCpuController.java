@@ -3951,7 +3951,7 @@ public class SidekickCpuController {
         sidekick.setFlipType(0);
         sidekick.setFlipsRemaining(0);
         sidekick.setFlipSpeed(0);
-        sidekick.setForcedAnimationId(flyAnimId);
+        publishRecoveryFlightAnimation(flyAnimId);
         sidekick.setControlLocked(true);
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         // ROM loc_13B50 (sonic3k.asm:26502-26508) writes double_jump_flag=0,
@@ -4029,7 +4029,7 @@ public class SidekickCpuController {
                 sidekick.setAir(true);
                 sidekick.setDoubleJumpFlag(1);
                 sidekick.setDoubleJumpProperty((byte) FLIGHT_FUEL);
-                sidekick.setForcedAnimationId(flyAnimId);
+                publishRecoveryFlightAnimation(flyAnimId);
                 state = State.CATCH_UP_FLIGHT;
                 return;
             }
@@ -4048,8 +4048,7 @@ public class SidekickCpuController {
             // family from live Status_Underwater rather than retaining the
             // entry-time Fly byte (sonic3k.asm:26551-26555,27646-27717).
             int recoveryAnimation = resolveRecoveryFlightAnimation();
-            sidekick.setAnimationId(recoveryAnimation);
-            sidekick.setForcedAnimationId(recoveryAnimation);
+            publishRecoveryFlightAnimation(recoveryAnimation);
         }
 
         // 3. Target = Sonic's 16-frame-delayed position. ROM
@@ -4181,6 +4180,16 @@ public class SidekickCpuController {
         // (sonic3k.asm:26646-26652).
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setObjectMappingFrameControl(false);
+    }
+
+    private void publishRecoveryFlightAnimation(int animationId) {
+        sidekick.setAnimationId(animationId);
+        // S3K Tails_Set_Flying_Animation writes anim only at its CPU call site.
+        // Later object slots can replace it (wire-cage capture or spring launch),
+        // and off-screen loc_13C50 skips the next animation write altogether.
+        // The native catch-up path already suppresses movement; its animation
+        // profile preserves this byte without a persistent forced owner.
+        sidekick.setForcedAnimationId(usesS3kCatchUpMarker() ? -1 : animationId);
     }
 
     private int resolveRecoveryFlightAnimation() {
