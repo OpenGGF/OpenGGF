@@ -86,3 +86,10 @@ accessor. No gameplay values are borrowed from trace rows.
 The corrected provider and no-render/late-art results classes passed (10 tests,
 zero skips). Host-owned checkpoint reload plus post-load regressions passed
 (22 tests, zero skips). Broad and trace results follow after execution.
+
+Packaging `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`
+passed, producing engine, SDK and SDK Javadoc jars (tests explicitly skipped).
+Matched EHZ1 replay on `ba3d9d592` versus `5e3700a04` compared 1,817 rows:
+300→194 comparison errors, unchanged 91 bootstrap errors and zero warnings/skips.
+The existing animation blip remains at 289; first runtime physics difference now
+occurs at 1154 Y rather than the missed ring at 284. See the frontier log.
