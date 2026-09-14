@@ -29,8 +29,9 @@ and carried owners; it is part of this act's completion contract.
 | Sonic solo / Sonic + Tails | `TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults` passed the ordinary cold Sonic + Tails route on the integrated runtime (six-impact boss → sign/results → Act 2 title teardown/control release); see exact source and limits below. `TestFbzNativeCharacterRoutes#everyNativeTeamCanEnterBothActsFromLevelSelectAtTheRomStart`: production level-select selection, ROM start, concrete sprite types, two idle frames | Representative full-route configuration breadth; Sonic solo full route remains open |
 | Tails solo | Same entry method with Tails radius/character assertions; checkpoint method below | Complete Tails traversal and boss/results route; prove flight-dependent geometry and event progression |
 | Knuckles solo | Same entry method with Knuckles character selection; checkpoint method below | Complete Knuckles route; independently establish any materially different geometry/event/boss progression |
+| 400-pixel Sonic + Tails | `TestFbzAct1ColdRoute#fourHundredPixelColdRouteReachesReleasedAct2`: ordinary cold route with actual camera/viewport width and the same physical boss/results/title/control-release assertions | PASS recorded below; other full-route widths and donor/team combinations remain open |
 | Width/donor/team lifecycle | `TestFbzAct1RouteHeadless#resultsOwnedReloadAndTitleLifecycleSupportsWidthsDonationsAndEveryTeamShape`: seeded boss-boundary fixture, real results/reload/title lifecycle; widths 320/352/400/512/528/640/800 × off/S1/S2 × five team shapes (105 cases), then native reset | 105-case product plus final native reset PASS in focused validation below. Not full traversal or rendered-width evidence |
-| Current standard width/team/donor axes | `TestFbzCompatibilityMatrix#configuredTeamSynchronousTransitionPreflight`, `viewportSynchronousTransitionPreflight`, `donorSynchronousTransitionPreflight` | Independent axis sweeps do not establish each act's full 15-case width × donor entry/reload/reset product or meaningful Act 1 traversal |
+| Current standard width/team/donor axes | `TestFbzCompatibilityMatrix#configuredTeamSynchronousTransitionPreflight`, `viewportSynchronousTransitionPreflight`, `donorSynchronousTransitionPreflight` | The separate 30-row entry/reload/reset product below closes that specific load-isolation obligation; independent axis sweeps alone do not prove traversal |
 
 ## Obligation map
 
@@ -228,5 +229,57 @@ not width coverage. A common chain-height gate was rejected: the first version
 required an unreachable height; the revised version cleared that chain but
 changed native timing and exposed later upper-route failures (2 failures, no
 errors/skips, 29.118 seconds Maven). The accepted native controller excludes
-that experiment. Wider, solo, S1/S2-donor and other-main-character full routes
-remain open; none are disabled or represented by a passing load-only test.
+that experiment. The subsequent 400-pixel ordinary route passes below. Other wider viewports,
+solo, S1/S2-donor and other-main-character full routes remain open; none are
+represented by a passing load-only test.
+
+
+## Ordinary 400-pixel route follow-up
+
+On `d36a68ef0` plus the width-specific controller,
+`TestFbzAct1ColdRoute#fourHundredPixelColdRouteReachesReleasedAct2` passed
+**1 test, zero failures/errors/skips**, 23.541 seconds Maven / 5.676 seconds
+class time, completing in **25,765 ordinary frames**. Command:
+`python3 tools/testing/maven_queue.py -Dmse=off -B -Pfbz-routes
+-Dtest=TestFbzAct1ColdRoute#fourHundredPixelColdRouteReachesReleasedAct2
+-Ds3k.rom.path=<absolute locked-on ROM> test`.
+The route verifies the actual 400-pixel camera/viewport, preserves the native
+Sonic + Tails setup, and reaches the same six-impact miniboss, sign/results,
+Act 2 title teardown and released P1 control as the native-width route.
+It does not establish continuous no-hurt/ring-loss, another donor or team,
+rendered pixels, or a width Cartesian product.
+
+The wider camera changes object activation timing. Its independent input
+branches use actual bent-pipe/snake contacts, all eight spinning-pole grabs
+and ordinary climbs/releases, raised magnetic-platform clearance, and the
+real rider-triggered platform descent. The two lower oscillating steps use
+actual support/height handoffs. The second wire cage needs a short jump from
+the intermediate platform: jumping directly through its upper band starts
+its native 40-update landing cooldown. The final cage-to-platform transfer
+walks off near the predicted upper arc; `sub_39F7E` advances the actual wire
+angle by four units per update. This prediction consumes live player speed,
+acceleration and angle solely to choose ordinary input.
+
+Rejected controller approaches are retained here, not in runtime: walking
+into the raised bent-pipe sides stalled; one-sided descent met the left wall;
+a full jump between cages triggered the native cooldown; jumping at the last
+cage met its low ceiling; choosing the current high arc ignored the time to
+walk off. At the rising `$1B20` platform, full ordinary charge overshot its left
+edge, while heavy braking before the curve missed its right top edge. Fewer
+ordinary charge taps (observed charge threshold `$400`, versus the original
+route's `$600`) plus live landing steering complete that transfer. All native
+320-pixel input branches remain intact. The eighteen preceding focused
+400-pixel controller checks each reported one failure and zero errors/skips;
+they were development frontiers, not partial passing routes.
+
+
+Final combined verification after merging runtime `0b91327a1` and event carry
+`20dfa3877` (worktree source `361218525` plus the cleaned controller) passed
+**2 tests, zero failures/errors/skips**, 55.889 seconds Maven / 9.424 seconds
+class time. Command: `python3 tools/testing/maven_queue.py -Dmse=off -B
+-Pfbz-routes -Dtest=TestFbzAct1ColdRoute
+-Ds3k.rom.path=<absolute locked-on ROM> test`. Native 320-pixel completion
+remains **27,051 ordinary frames**; 400-pixel completion remains **25,765**.
+This is focused route validation; parent delivery owns combined runtime and
+structural verification. The native and representative wider route are proven,
+while the other character/donor/full-route breadth gaps above remain explicit.
