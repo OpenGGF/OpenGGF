@@ -10,7 +10,7 @@ import java.util.List;
 
 /** Real after-current top button created by FBZ's final {@code Obj_EggCapsule}. */
 public final class FbzEndEggCapsuleButtonInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RomObjectCodePointerProvider, RewindRecreatable {
     private FbzEndEggCapsuleInstance parentRef;
     private boolean initialized;
     private boolean recessed;
@@ -49,6 +49,9 @@ public final class FbzEndEggCapsuleButtonInstance extends AbstractObjectInstance
         // writes while object_control is signed, including the victory pose.
         return player.isObjectControlled();
     }
+
+    // Obj_EggCapsule and its button loc_86754 remain in ROM code bank $0008.
+    @Override public int romObjectCodePointerHighWord() { return 0x0008; }
 
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 4, 6); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }

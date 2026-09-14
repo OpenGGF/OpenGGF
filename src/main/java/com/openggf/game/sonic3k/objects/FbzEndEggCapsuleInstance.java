@@ -16,7 +16,7 @@ import java.util.List;
 
 /** FBZ2's fixed-position {@code Obj_EggCapsule}, kept as its native real-SST graph. */
 public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, RomObjectCodePointerProvider, SpawnRewindRecreatable {
     private static final int[] FRAGMENT_X = {0, -0x10, 0x10, -0x18, 0x18};
     private static final int[] ANIMAL_X = {0, -8, 8, 0x10, -0x10, -0x18, 0x18, -4, 4};
 
@@ -166,6 +166,9 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
 
     // ObjDat_EggCapsule width_pixels=$20; SolidObjectFull adds $B only to d1.
     @Override public int getBalanceWidthPixels() { return 0x20; }
+
+    // Obj_EggCapsule and its button loc_86754 remain in ROM code bank $0008.
+    @Override public int romObjectCodePointerHighWord() { return 0x0008; }
 
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x2B, 0x18, 0x18); }
     @Override public int getX() { return spawn.x(); }
