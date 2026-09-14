@@ -109939,3 +109939,5 @@ Implementation `8af9eb913` integrated without conflicts at `2d74e3de5`.
 The integrated runtime/parser/SS and required S3K selection passed 140 tests,
 zero failures/errors/skips (48.936 seconds). The capture and EHZ1 structural
 frontier above are unchanged; canonical publication remains pending approval.
+
+FBZ reconciled with incoming KiS2 at `246fe229f` (destination `13bb3b165`, pre-task base `51677cdd2`): queued compiled `test -Ptrace-replay-r7` selected both strict FBZ classes plus dynamic-art lifecycle/transfer, required S3K bootstrap/loading and results queue/rewind checks. All three absolute ROM properties were set. Result 129 tests:127 focused passes,2 strict failures,0 errors/skips,1:12. Complete unchanged16/44,144,first44,230 SOZ X; independent unchanged4,152/33,712,first7,619 Hyper x_speed; zero warnings. This includes the final global physical-results-queue gate on allocation retries.
