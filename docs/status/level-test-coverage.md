@@ -134,3 +134,11 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_SPECIAL_STAGE_ARENA` | Audit pending |
 
 Initial inventory: S1: 21 slots, S2: 20 slots, S3K: 48 slots; 89 total. These are inventory counts, not coverage percentages.
+
+## KiS2 auxiliary-route continuation
+
+[Presentation and Super Knuckles matrix](../architecture/plans/2026-09-14-kis2-presentation-super.md#coverage-matrix)
+records the seven special-stage entry/rewind windows, title, ending/continue,
+results and powered-form checks. It does not certify stock S2 act routes or
+all supported viewport/donor/team combinations; those inherited obligations
+remain in LTS-07/LTS-08.

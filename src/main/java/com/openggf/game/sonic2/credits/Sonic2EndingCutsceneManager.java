@@ -373,12 +373,33 @@ public class Sonic2EndingCutsceneManager {
      *
      * @param rom the ROM to load ending art from
      */
+    public interface Presentation {
+        void applyArt(Sonic2EndingArt art) throws IOException;
+        com.openggf.sprites.art.SpriteArtSet playerArt() throws IOException;
+        List<SpriteMappingFrame> objectFrames() throws IOException;
+        int[] floatingFrames();
+        int floatingFrameDuration();
+        int[] walkingFrames();
+        int waitingFrame();
+        String playerCode();
+        Palette[] palettes();
+        Sonic2EndingArt.EndingRoutine endingRoutine();
+        Sonic2LogoFlashManager.Presentation logo();
+    }
+    private Presentation presentation;
+
+    public void setPresentation(Presentation presentation) { this.presentation = presentation; }
+
     public void initialize(Rom rom) {
-        routine = Sonic2EndingArt.determineEndingRoutine();
+        routine = presentation == null ? Sonic2EndingArt.determineEndingRoutine() : presentation.endingRoutine();
         palTiming = isPalTiming();
         endingArt = new Sonic2EndingArt();
         endingArt.loadArt(rom, routine);
         endingArt.loadPalettes(rom, routine);
+        if (presentation != null) {
+            try { presentation.applyArt(endingArt); }
+            catch (IOException e) { throw new IllegalStateException("Cannot load ending presentation", e); }
+        }
         endingArt.cacheToGpu();
 
         // ROM: Normal_palette filled with $0EEE0EEE (all white) at EndingSequence init
@@ -413,7 +434,7 @@ public class Sonic2EndingCutsceneManager {
         // Parse ROM sprite mappings for accurate cutscene rendering
         try {
             RomByteReader reader = RomByteReader.fromRom(rom);
-            objCfFrames = S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJCF_ADDR);
+            objCfFrames = presentation == null ? S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJCF_ADDR) : presentation.objectFrames();
             animalFrames = S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJ28_A_ADDR);
             tornadoFrames = S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_OBJB2_A_ADDR);
             cloudFrames = S2SpriteDataLoader.loadMappingFrames(reader, Sonic2Constants.MAP_UNC_CLOUD_ADDR);
@@ -434,6 +455,11 @@ public class Sonic2EndingCutsceneManager {
                     : Sonic2Constants.MAP_R_UNC_SONIC_ADDR;
             playerDplcFrames = Sonic2PlayerArt.parseDplcFrames(reader, playerDplcAddr);
 
+            if (presentation != null) {
+                var playerArt = presentation.playerArt();
+                playerMappingFrames = playerArt.mappingFrames();
+                playerDplcFrames = playerArt.dplcFrames();
+            }
             // Create DynamicPatternBank for DPLC-driven player art rendering
             playerSourceArt = endingArt.getPlayerPatterns();
             int bankSize = Sonic2PlayerArt.resolveBankSize(playerDplcFrames, playerMappingFrames);
@@ -782,12 +808,14 @@ public class Sonic2EndingCutsceneManager {
         // ROM: SonAni_Float2 for Sonic/Tails, SonAni_Walk for Super Sonic
         switch (routine) {
             case SONIC -> {
-                charAnimFrames = SONIC_FLOAT2_FRAMES;
-                charAnimSpeed = SONIC_FLOAT2_SPEED;
+                charAnimFrames = presentation == null ? SONIC_FLOAT2_FRAMES : presentation.floatingFrames();
+                charAnimSpeed = presentation == null ? SONIC_FLOAT2_SPEED : presentation.floatingFrameDuration();
             }
             case SUPER_SONIC -> {
-                charAnimFrames = SONIC_WALK_FRAMES;
-                charAnimSpeed = SONIC_WALK_SPEED;
+                // loc_A30A selects Walk from Ending_Routine==2, not Super_Sonic_flag.
+                // The presentation's normal rotation/appearance route keeps Float2 for either outcome.
+                charAnimFrames = presentation == null ? SONIC_WALK_FRAMES : presentation.floatingFrames();
+                charAnimSpeed = presentation == null ? SONIC_WALK_SPEED : presentation.floatingFrameDuration();
             }
             case TAILS -> {
                 charAnimFrames = TAILS_FLOAT2_FRAMES;
@@ -1029,7 +1057,7 @@ public class Sonic2EndingCutsceneManager {
 
             // The real player switches from Float2 to Wait. This direct
             // runtime decision replaces the renderer-owned reload.
-            publishNormalPlayerDecision(1);
+            publishNormalPlayerDecision(presentation == null ? 1 : presentation.waitingFrame());
 
             tornadoSubState = TornadoSubState.BIRDS_AND_HOLD;
             LOGGER.fine("Tornado arrived, entering BIRDS_AND_HOLD");
@@ -1057,8 +1085,9 @@ public class Sonic2EndingCutsceneManager {
             spawnCloudIfNeeded();
         }
 
-        // Super Sonic drifts: addi.l #$8000,x_pos; addq.w #1,y_pos
-        if (routine == Sonic2EndingArt.EndingRoutine.SUPER_SONIC) {
+        // sub_A524 dispatches loc_A55C from Ending_Routine==2. The patched
+        // normal route uses loc_A53A's fixed position even with Super_Sonic_flag set.
+        if (presentation == null && routine == Sonic2EndingArt.EndingRoutine.SUPER_SONIC) {
             if (charOnTornadoX < 0xC0) {
                 charOnTornadoX++;
             }
@@ -1079,7 +1108,7 @@ public class Sonic2EndingCutsceneManager {
             // ROM: mapping_frame set at transition (7=Sonic, 0=Super, $18=Tails)
             rotationDisplayFrame = switch (routine) {
                 case SONIC -> Sonic2CreditsData.TORNADO_FRAMES_SONIC[0];
-                case SUPER_SONIC -> Sonic2CreditsData.TORNADO_FRAMES_SUPER[0];
+                case SUPER_SONIC -> presentation == null ? Sonic2CreditsData.TORNADO_FRAMES_SUPER[0] : Sonic2CreditsData.TORNADO_FRAMES_SONIC[0];
                 case TAILS -> Sonic2CreditsData.TORNADO_FRAMES_TAILS[0];
             };
             tornadoSubState = TornadoSubState.ROTATION;
@@ -1114,7 +1143,7 @@ public class Sonic2EndingCutsceneManager {
             // Update display frame from frame table for current step (before increment)
             rotationDisplayFrame = switch (routine) {
                 case SONIC -> Sonic2CreditsData.TORNADO_FRAMES_SONIC[rotationStep];
-                case SUPER_SONIC -> Sonic2CreditsData.TORNADO_FRAMES_SUPER[rotationStep];
+                case SUPER_SONIC -> presentation == null ? Sonic2CreditsData.TORNADO_FRAMES_SUPER[rotationStep] : Sonic2CreditsData.TORNADO_FRAMES_SONIC[rotationStep];
                 case TAILS -> Sonic2CreditsData.TORNADO_FRAMES_TAILS[rotationStep];
             };
 
@@ -1486,7 +1515,7 @@ public class Sonic2EndingCutsceneManager {
                 && charOnTornadoY > -64 && charOnTornadoY < SCREEN_HEIGHT) {
             // ROM: real player object with Wait animation, positioned on tornado.
             // SonAni_Wait: $FF, 1, $FF → frame 1; TailsAni_Wait: same.
-            int waitFrame = 1;
+            int waitFrame = presentation == null ? 1 : presentation.waitingFrame();
             drawPlayerFrame(gm, waitFrame, charOnTornadoX, charOnTornadoY);
         } else if (tornadoSubState == TornadoSubState.SUPER_FINAL
                 && charOnTornadoX > -64 && charOnTornadoX < SCREEN_WIDTH
@@ -1733,7 +1762,7 @@ public class Sonic2EndingCutsceneManager {
     }
 
     private String normalPlayerOwner() {
-        return routine == Sonic2EndingArt.EndingRoutine.TAILS ? "tails" : "sonic";
+        return presentation != null ? presentation.playerCode() : routine == Sonic2EndingArt.EndingRoutine.TAILS ? "tails" : "sonic";
     }
 
     private String pilotOwner() {
@@ -2029,7 +2058,13 @@ public class Sonic2EndingCutsceneManager {
         //               $E (Tails) → Pal_AC9E 64B lines 0-1.
         try {
             com.openggf.data.Rom rom = com.openggf.game.GameServices.rom().getRom();
-            switch (routine) {
+            if (presentation != null) {
+                Palette[] replacement = presentation.palettes();
+                targetPalettes[0] = replacement[0];
+                targetPalettes[1] = replacement[1];
+                paletteFadeStartLine = 0;
+                paletteFadeEndLine = 1;
+            } else switch (routine) {
                 case SONIC -> {
                     loadPaletteLinesToTarget(rom, Sonic2Constants.PAL_ENDING_SONIC_ADDR, 64,
                             targetPalettes, 0);

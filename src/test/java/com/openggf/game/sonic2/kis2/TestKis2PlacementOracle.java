@@ -148,6 +148,44 @@ class TestKis2PlacementOracle {
         }
     }
 
+    /**
+     * Tier two: with the user-supplied lock-on dump the chip pointers resolve
+     * and CNZ uses the KiS2 layouts (BRANCH_DIFFS.md: 292 and 257 records).
+     */
+    @Test
+    void withTheLockOnDumpCasinoNightResolvesFromTheChipWithTheCatalogueCounts() {
+        RomByteReader dump = Kis2TestRoms.lockOnDumpOrNull();
+        assumeTrue(dump != null, "no user-supplied S&K + Sonic 2 lock-on dump; skipping tier two");
+        Kis2ObjectPlacement tierTwo = new Kis2ObjectPlacement(sk, s2, LockOnAddressSpace.tierTwo(sk, s2, dump));
+        int[][] expected = {{24, 292, 286}, {25, 257, 254}};
+        for (int[] row : expected) {
+            ZoneAct zoneAct = new ZoneAct(row[0] / 2, row[0] % 2);
+            assertTrue(tierTwo.isResolvable(zoneAct), "CNZ entry " + row[0] + " resolves through the chip");
+            List<ObjectSpawn> kis2 = tierTwo.load(zoneAct);
+            List<ObjectSpawn> stockSpawns = stock.load(zoneAct);
+            assertEquals(row[1], kis2.size(), "KiS2 count for entry " + row[0]);
+            assertEquals(row[2], stockSpawns.size(), "stock count for entry " + row[0]);
+            assertNotEquals(stockSpawns, kis2, "CNZ entry " + row[0] + " must differ from stock");
+        }
+        assertEquals(Kis2Constants.OBJECTS_CNZ_1, tierTwo.pointerFor(new ZoneAct(12, 0)));
+        assertEquals(Kis2Constants.OBJECTS_CNZ_2, tierTwo.pointerFor(new ZoneAct(12, 1)));
+    }
+
+    @Test
+    void theDumpsSkAndS2WindowsReproduceEveryTierOneLayout() {
+        RomByteReader dump = Kis2TestRoms.lockOnDumpOrNull();
+        assumeTrue(dump != null, "no user-supplied S&K + Sonic 2 lock-on dump; skipping tier two");
+        RomByteReader dumpSk = dump.window(Kis2Constants.SK_WINDOW_START, Kis2Constants.SK_WINDOW_END);
+        RomByteReader dumpS2 = dump.window(Kis2Constants.S2_WINDOW_START,
+                Kis2Constants.S2_WINDOW_END - Kis2Constants.S2_WINDOW_START);
+        Kis2ObjectPlacement fromDump = new Kis2ObjectPlacement(dumpSk, dumpS2,
+                LockOnAddressSpace.tierTwo(dumpSk, dumpS2, dump));
+        for (int entry : CATALOGUE.keySet()) {
+            ZoneAct zoneAct = new ZoneAct(entry / 2, entry % 2);
+            assertEquals(placement.load(zoneAct), fromDump.load(zoneAct), "entry " + entry);
+        }
+    }
+
     @Test
     void unusedZoneSlotsAreEmpty() {
         for (int entry : NULL_ENTRIES) {

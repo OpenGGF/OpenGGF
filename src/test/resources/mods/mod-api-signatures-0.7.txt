@@ -6494,6 +6494,7 @@ METHOD com.openggf.game.patch.DelegatingGameModule public <T> T getGameService(j
 METHOD com.openggf.game.patch.DelegatingGameModule public,final  com.openggf.game.GameModule base()
 METHOD com.openggf.game.patch.DelegatingGameModule public,final  java.lang.String patchId()
 METHOD com.openggf.game.patch.GamePatch public  java.util.Map<com.openggf.game.CharacterKey,com.openggf.game.CharacterDefinition> providedCharacterDefinitions()
+METHOD com.openggf.game.patch.GamePatch public  java.util.Set<com.openggf.game.patch.LogicalRom> optionalRomPrerequisites()
 METHOD com.openggf.game.patch.GamePatch public,abstract  boolean activatesFor(com.openggf.game.patch.GameplayLaunchRequest)
 METHOD com.openggf.game.patch.GamePatch public,abstract  com.openggf.game.GameModule apply(com.openggf.game.GameModule,com.openggf.game.patch.PatchContext)
 METHOD com.openggf.game.patch.GamePatch public,abstract  java.lang.String baseGameId()

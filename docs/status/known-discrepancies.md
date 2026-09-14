@@ -54,7 +54,7 @@ no discrepancy entry was added or reclassified by the cutover.
 35. [S2 Compressed-Music Load Timing Omits Sub-Frame Bus Contention](#s2-compressed-music-load-timing-omits-sub-frame-bus-contention)
 36. [S2 stopMusic Bypasses the Mailbox While a Compressed Load Blocks It](#s2-stopmusic-bypasses-the-mailbox-while-a-compressed-load-blocks-it)
 37. [Fast FM Register-Level Timing and Output](#fast-fm-register-level-timing-and-output)
-38. [Knuckles in Sonic 2 Tier One Runs From the S&K and S2 Images Alone](#knuckles-in-sonic-2-tier-one-runs-from-the-sk-and-s2-images-alone)
+38. [Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It](#knuckles-in-sonic-2-runs-tier-two-with-the-lock-on-dump-and-tier-one-without-it)
 
 ---
 
@@ -3259,18 +3259,20 @@ fade-in flag from there until the fade-in stepper's counter runs down
 
 ---
 
-## Knuckles in Sonic 2 Tier One Runs From the S&K and S2 Images Alone
+## Knuckles in Sonic 2 Runs Tier Two With the Lock-On Dump and Tier One Without It
 
-**Status:** Open (tier one, 2026-09-13). Owner: `com.openggf.game.sonic2.kis2`;
+**Status:** Open (tier two, 2026-09-14). Owner: `com.openggf.game.sonic2.kis2`;
 catalogue: [docs/kis2/BRANCH_DIFFS.md](../kis2/BRANCH_DIFFS.md).
 
 Selecting Knuckles as the Sonic 2 main character activates the built-in
 `kis2` patch, which reproduces the lock-on program from the S&K half of the
 S3K image and the Sonic 2 cart. The shipped Knuckles in Sonic 2 also runs
-code and data from a 256 KiB chip that no image on this machine holds; the
-chip's content is served only by the user-supplied S&K + Sonic 2 lock-on
-dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`), which is
-tier two. Tier one is therefore **not** full Knuckles in Sonic 2.
+code and data from a 256 KiB chip that only the user-supplied S&K + Sonic 2
+lock-on dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`)
+holds. With that dump present the patch runs **tier two** and reads the
+chip's in-level data; without it the patch runs **tier one** and this entry's
+tier-one list applies. Neither tier is the full presentation of Knuckles in
+Sonic 2 yet.
 
 ### Original Implementation
 
@@ -3285,22 +3287,38 @@ mappings.
 
 ### Our Implementation
 
-Tier one models what the two available images hold:
+Both tiers model:
 
 - Knuckles physics (`Kis2Physics.KNUCKLES`, `PhysicsModifiers.KNUCKLES`),
   the KiS2 landing form and `$9C` duck touch-box (`Kis2Rules`), glide/climb
   through the engine-shared `SecondaryAbility.GLIDE`.
 - The 16 rewritten S&K-side act layouts and the S2-cart HPZ/DEZ/SCZ layouts
-  through `LockOnAddressSpace`. **CNZ 1 and 2 use the stock S2 layouts**
-  (chip pointers `$33F06E`/`$33F74C`), with one logged warning per act.
-- Knuckles art converted through `ArtConvTable` and drawn with the S&K
-  `Pal_KnuxEndPose` line, which byte-matches S2's universal colours; the
-  chip's `Pal_BGND` cannot be compared.
-- The S&K `ArtNem_KnucklesLifeIcon` for the HUD and 1-up monitor face in
-  place of the chip's "Knuckles lives counter.nem".
+  through `LockOnAddressSpace`.
+- Knuckles art converted through `ArtConvTable` and drawn with the Knuckles
+  line 0 (the S&K `Pal_KnuxEndPose` line, byte-identical to the chip's
+  `Pal_BGND` line 0).
 
-Known deviations from the shipped lock-on game while tier one is the
-delivered scope (each cites the owning KiS2 routine in the catalogue):
+Tier two additionally reads from the chip (`Kis2ChipArt`, addresses in the
+catalogue's §Chip addresses): the CNZ 1 and 2 layouts (`Objects_CNZ_1`,
+`Objects_CNZ_2`), the Knuckles lives counter and 1-up monitor face
+(`ArtNem_Sonic_life_counter`), the grey monitor icons
+(`ArtNem_PowerupsKnucklesPatch`), the merged grey shield and invincibility
+stars (`ArtNem_Shield_and_invincible_stars`), the signpost face
+(`ArtNem_SignpostKnucklesPatch`), the continue-screen mini icon
+(`ArtNem_MiniSonic`), `Pal_BGND` line 0 itself, and the CPZ/ARZ underwater
+palettes (`Pal_CPZ_U`, `Pal_ARZ_U`). The `hud_a` lives-name piece draws on
+palette line 0 as in the branch's mapping.
+
+Tier one (no dump) instead:
+
+- **CNZ 1 and 2 use the stock S2 layouts** (chip pointers
+  `$33F06E`/`$33F74C`), with one logged warning per act.
+- Uses the S&K `ArtNem_KnucklesLifeIcon` for the HUD and 1-up monitor face
+  and keeps the stock signpost, monitor icons, shield/stars, continue icon
+  and underwater palettes.
+
+Known deviations from the shipped lock-on game in both tiers (each cites
+the owning KiS2 routine in the catalogue):
 
 - **Roster.** KiS2 forces Sonic-alone mode (`Level_SetPlayerMode`,
   `ObjPtr_Tails = ObjNull`). The launch panel selects Knuckles alone when the
@@ -3318,25 +3336,41 @@ delivered scope (each cites the owning KiS2 routine in the catalogue):
 - **Bugfix blocks without an engine seam.** `Sonic_ChgJumpDir` air-speed cap
   removal, `Obj01_CheckWallsOnGround` facing-gated push, `Sonic_TurnLeft/Right`
   angle-band skid gate, `SolidObject_ChkBounds`/`SolidObject_InsideBottom`
-  contact changes, `WindTunnel` clamps and the `$420` tunnel coordinate, and
-  `Obj7F_Action` pinning follow stock Sonic 2. `Touch_Boss` keeps the `$4D`
-  duck frame in KiS2 but the engine's single field applies `$9C` to bosses too.
+  contact changes, `WindTunnel` clamps and the `$420` tunnel coordinate,
+  `Obj7F_Action` pinning, `SpecialCNZBumpers_Act1`'s leading boundary marker
+  and `SwScrl_EHZ`'s bottom H-scroll lines follow stock Sonic 2.
+  `Touch_Boss` keeps the `$4D` duck frame in KiS2 but the engine's single
+  field applies `$9C` to bosses too.
 - **Checkpoint rings.** KiS2 `Obj79_LoadData` keeps `Ring_count` on respawn;
   the engine clears rings per stock Sonic 2.
-- **Super Knuckles, special stages, title, results, ending, continue screen,
-  signpost/monitor/shield recolours, CNZ slot pictures, lowered
-  special-stage ring requirements, changed cheat codes** are chip-resident
-  and unchanged from stock Sonic 2 (tier two).
-- Trace fixtures for KiS2 do not exist yet; `TraceReplaySessionBootstrap`
-  resolves a recorded Knuckles team through the patch so they can be added
-  once the lock-on dump is served.
+- **Presentation follow-up (2026-09-14).** Chip-backed title animation, special-stage
+  player/HUD/mappings and ring targets, normal and special-stage results text,
+  ending and continue-player presentation are implemented. The title retains
+  the existing S2 SEGA logo; attract demos, changed cheat handling, level-select
+  PLC changes, exact VDP sprite-mask limits and CNZ slot pictures remain open.
+  Ending walking cadence and the special-stage results message lifecycle retain
+  the existing S2 owner's approximations; this work does not certify trace parity.
+- **Super Knuckles.** Chip palettes, sparse colour writes (2/3/5), 16-pass
+  transform freeze, $800/$18/$C0 movement, unchanged $600/$300 jump,
+  seeded ring drain, revert and controller rewind are implemented. The shared
+  air-ability path still requires release/repress: KiS2 also accepts a newly
+  pressed second jump button while the first remains held. The ROM demo-mode
+  gate has no corresponding engine demo path. Controller eligibility and activation are
+  exercised separately from palette-cycle tests; alternative-button input is not covered.
+- **Trace coverage.** The EHZ1 KiS2 fixture exists; its current divergence is
+  tracked in [the frontier log](trace-frontier-log.md). There are no passing
+  end-to-end trace fixtures for these presentation or powered-form paths.
+
+The [completion plan and coverage matrix](../architecture/plans/2026-09-14-kis2-presentation-super.md)
+records exercised paths and inherited coverage gaps.
 
 ### Rationale
 
 Every runtime byte must come through the ROM pipeline from a user-supplied
-image; the chip is not in any image here, so tier one stops at the data the
-S&K half and S2 cart provide and records the rest instead of substituting
-disassembly data.
+image. The chip is served only by the lock-on dump, so the patch reads it
+when the dump is present and otherwise stops at the data the S&K half and
+S2 cart provide, recording the rest instead of substituting disassembly
+data.
 
 ### Verification
 

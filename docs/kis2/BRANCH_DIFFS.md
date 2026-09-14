@@ -14,7 +14,7 @@ behaviour, the branch wins.
 | Diff command | `git diff 24f8782 c336fed -- s2.asm s2.constants.asm s2.lockon.asm` |
 | Size | 77 files; `s2.asm` +4,255 lines; 388 `gameRevision=3` blocks; 412 `; KiS2 (...)` tags |
 | Lock-on address map | `s2.lockon.asm` (new): `phase $300000` for KiS2 code; S&K labels at `$000000-$1FFFFF`; S2 cart labels at `$200000-$2FFFFF` (S2 REV01 address + `$200000`) |
-| Image verified on this machine | `s3k.gen` (S&K half at `0x000000-0x1FFFFF`), `s2.gen` (REV01). No image holds the 256 KiB chip. |
+| Images verified on this machine | `s3k.gen` (S&K half at `0x000000-0x1FFFFF`), `s2.gen` (REV01), and the user-supplied S&K + Sonic 2 lock-on dump (3,407,872 bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`; S&K at `0x000000`, S2 at `0x200000`, the 256 KiB chip at `0x300000`), served as logical ROMs `KIS2` / `KIS2_CHIP`. |
 
 The lock-on program targets S2 REV01: every S2 cart label in
 `s2.lockon.asm` equals the REV01 address plus `$200000` (for example
@@ -44,8 +44,9 @@ amendment exactly.
 
 Source key: **S&K** = S&K half of the S3K image (`0x000000-0x1FFFFF`),
 **S2** = Sonic 2 cart (lock-on `$200000-$2FFFFF`, REV01 offset + `$200000`),
-**CHIP** = 256 KiB chip at `$300000-$33FFFF` (not present in any image on
-this machine). Addresses are the physical address in the named image.
+**CHIP** = 256 KiB chip at `$300000-$33FFFF` (present only in the
+user-supplied lock-on dump; see §Chip addresses). Addresses are the physical
+address in the named image; chip addresses are lock-on addresses.
 
 | Data | Owning label | Source | Address |
 |---|---|---|---|
@@ -61,17 +62,62 @@ this machine). Addresses are the physical address in the named image.
 | S2-layout Knuckles palette line | S&K `Pal_KnuxEndPose` | S&K | `0x060BEA` |
 | Ending Knuckles image | `ArtNem_EndingKnuckles` (S&K `ArtNem_KnuxEndPose`) | S&K | `0xDEA00` |
 | S3K Knuckles life icon (tier-one stand-in) | S&K `ArtNem_KnucklesLifeIcon` | S&K | `0x190E4C` |
-| Knuckles lives counter (`ArtNem_Sonic_life_counter` replacement), continue icon (`ArtNem_MiniSonic`), monitor patch (`ArtNem_PowerupsKnucklesPatch`), signpost patch (`ArtNem_SignpostKnucklesPatch`), merged shield+stars (`ArtNem_Shield_and_invincible_stars`), CNZ slot pictures (`ArtUnc_CNZSlotPicsKnucklesPatch`), special-stage Knuckles frames (`ArtNem_SpecialSonicAndTails`), title-screen art, title-card font K (`ArtUnc_FontK`) | listed under `PlrList_ResultsTails_Dup_End` "Knuckles in Sonic 2 Assets" | CHIP | unresolved |
-| `Pal_BGND` (`SonicAndTails.bin` with Knuckles colours), `Pal_CPZ_U`, `Pal_ARZ_U`, `Pal_SS`, `Pal_133EC` (title), `Pal_AC7E`/`Pal_AC9E` (ending), `Pal_KiS2_Ending`, `CyclingPal_SKTransformation`, `CyclingPal_SKRevert` | as named | CHIP | unresolved |
-| `hud_a`, `obj09`, `obj5E`, `obj6F`, `objCF`, `obj0E_*` mappings and all KiS2 code | `mappings/sprite/*` | CHIP | unresolved |
+| Knuckles lives counter (`ArtNem_Sonic_life_counter`), continue icon (`ArtNem_MiniSonic`), monitor patch (`ArtNem_PowerupsKnucklesPatch`), signpost patch (`ArtNem_SignpostKnucklesPatch`), merged shield+stars (`ArtNem_Shield_and_invincible_stars`) | listed under `PlrList_ResultsTails_Dup_End` "Knuckles in Sonic 2 Assets" | CHIP | see §Chip addresses |
+| CNZ slot pictures (`ArtUnc_CNZSlotPicsKnucklesPatch`), special-stage Knuckles frames (`ArtNem_SpecialSonicAndTails`), title-screen art, title-card font K (`ArtUnc_FontK`) | as named | CHIP | unresolved (presentation tier) |
+| `Pal_BGND` (`SonicAndTails.bin` with Knuckles colours), `Pal_CPZ_U`, `Pal_ARZ_U` | as named | CHIP | see §Chip addresses |
+| `Pal_SS`, `Pal_133EC` (title), `Pal_AC7E`/`Pal_AC9E` (ending), `Pal_KiS2_Ending`, `CyclingPal_SKTransformation`, `CyclingPal_SKRevert` | as named | CHIP | unresolved (presentation tier) |
+| `hud_a`, `obj09`, `obj5E`, `obj6F`, `objCF`, `obj0E_*` mappings and all KiS2 code | `mappings/sprite/*` | CHIP | unresolved; `hud_a` is modelled (see §Chip addresses) |
 
-**Palette verification (2026-09-13, `s3k.gen`).** `Pal_KnuxEndPose` at
-`0x060BEA` is the S2-layout Knuckles line: indices 0-1 and 6-15 equal S2's
-`Pal_SonicTails` (`0x29E2`) byte for byte, and indices 2-5 hold Knuckles'
-`$206/$20C/$080/$64E` exactly where `ArtConvTable` places S3K colours 4, 3, 5
-and 2. It therefore renders converted Knuckles art correctly with no index
-tweak. Whether the chip's `SonicAndTails.bin` is byte-identical is
-unverifiable without the chip.
+**Palette verification (2026-09-13, `s3k.gen`; 2026-09-14, lock-on dump).**
+`Pal_KnuxEndPose` at `0x060BEA` is the S2-layout Knuckles line: indices 0-1
+and 6-15 equal S2's `Pal_SonicTails` (`0x29E2`) byte for byte, and indices
+2-5 hold Knuckles' `$206/$20C/$080/$64E` exactly where `ArtConvTable` places
+S3K colours 4, 3, 5 and 2. The chip's `SonicAndTails.bin` (`Pal_BGND` line 0
+at `0x30253E`) **is byte-identical** to it (`TestKis2ChipArt`), so tier one
+and tier two draw the same line 0; tier two reads it from the chip because
+that is the data the lock-on program loads.
+
+## Chip addresses
+
+Located on the user-supplied lock-on dump on 2026-09-14 by matching each
+branch binary (`art/nemesis/*.nem`, `art/palettes/*.bin` at `c336fed`) byte
+for byte against the chip window; every hit was unique inside the chip.
+Addresses are lock-on addresses (`$300000` + chip offset); the engine
+resolves them through `LockOnAddressSpace` from the `KIS2` logical ROM.
+
+| KiS2 label | Branch file | Lock-on address | Size | Loaded by |
+|---|---|---|---|---|
+| `Objects_CNZ_1` | `level/objects/CNZ_1.bin` | `0x33F06E` | 292 records | `Off_Objects_KiS2[24]` |
+| `Objects_CNZ_2` | `level/objects/CNZ_2.bin` | `0x33F74C` | 257 records | `Off_Objects_KiS2[25]` |
+| `Pal_BGND` | `SonicAndTails.bin` + `SonicAndTails2.bin` | `0x30253E` | 64 bytes | `PalPtr_BGND` (level lines 0-1); line 1 is stock |
+| `Pal_CPZ_U` | `CPZ underwater.bin` | `0x3029BE` | 128 bytes | `PalPtr_CPZ_U` via `PalLoad_Water`; only line 0 differs from stock |
+| `Pal_ARZ_U` | `ARZ underwater.bin` | `0x302AFE` | 128 bytes | `PalPtr_ARZ_U`; only line 0 differs from stock |
+| `ArtNem_MiniSonic` | `Knuckles continue.nem` | `0x33AAF2` | 12 tiles | continue screen (`loc_10744`), `PlrList_Results` at `ArtTile_ArtNem_MiniCharacter` |
+| `ArtNem_Sonic_life_counter` | `Knuckles lives counter.nem` | `0x33AC46` | 12 tiles | `PlrList_Std1` at `ArtTile_ArtNem_life_counter` (HUD and the 1-up monitor face at monitor tile `$154`) |
+| `ArtNem_Shield_and_invincible_stars` | `Shield and invincibility stars.nem` | `0x33AD40` | 66 tiles | `PlrList_Std2` at `ArtTile_ArtNem_Shield` (`$4BE`): tiles 0-31 replace `ArtNem_Shield`, 32-65 replace `ArtNem_Invincible_stars` (`$4DE`) |
+| `ArtNem_SignpostKnucklesPatch` | `Signpost (Knuckles patch).nem` | `0x33AF4C` | 24 tiles | `PlrList_Signpost` at `ArtTile_ArtNem_Signpost+34` |
+| `ArtNem_PowerupsKnucklesPatch` | `Monitor and contents (Knuckles patch).nem` | `0x33B15E` | 8 tiles | `PlrList_Std2` at `ArtTile_ArtNem_Powerups+44` (grey shield and invincibility icons) |
+
+`Ending Knuckles Banner.bin` (`0x3085F6`, also `0x3106E8`), the title, special
+stage, results and ending assets and the Super Knuckles cycles are on the chip
+too but belong to the presentation tier; their addresses are not resolved here.
+
+**Mappings-format entries.** The branch's `hud_a.asm` diff changes one
+thing besides the 6-byte piece format: the lives-name piece (`$10E`, 4x2)
+moves from palette line 1 to line 0, so "KNUCKLES" draws with the icon's
+line. The engine models that through `Sonic2HudStaticArtFactory`'s
+icon-palette layout whenever a patch supplies the life icon
+(`TestKis2ChipArt`). `obj09` (special-stage player), `obj5E` (special-stage
+HUD, Tails pieces removed), `obj6F` (results) and `objCF` (ending helixes)
+are presentation-tier objects and stay catalogued.
+
+Engine mapping: `Kis2Constants` declares every address above; `Kis2ChipArt`
+decodes the Nemesis art and palettes through `LockOnAddressSpace.tierTwo`;
+`Kis2GameModule` supplies them as `Sonic2ArtOverlays` (life icon plus
+`SheetPatch`es mirroring the extra `plreq` entries), a
+`Sonic2WaterDataProvider` underwater-palette source and the continue-screen
+icon supplier. The chip art is already in Sonic 2's palette layout and is
+not passed through `ArtConvTable`.
 
 ## Physics constants (`Obj01`)
 
@@ -231,8 +277,8 @@ byte-identical to stock.
 | 21 | OOZ2 | `0xE1F18` | S&K | 202 | 190 |
 | 22 | MCZ1 | `0xE23DA` | S&K | 131 | 130 |
 | 23 | MCZ2 | `0xE26F2` | S&K | 152 | 148 |
-| 24 | CNZ1 | `0x33F06E` | CHIP | (292 by file size) | 286 |
-| 25 | CNZ2 | `0x33F74C` | CHIP | (257 by file size) | 254 |
+| 24 | CNZ1 | `0x33F06E` | CHIP | 292 (measured on the dump, 2026-09-14) | 286 |
+| 25 | CNZ2 | `0x33F74C` | CHIP | 257 (measured on the dump, 2026-09-14) | 254 |
 | 26 | CPZ1 | `0xE2A88` | S&K | 189 | 153 |
 | 27 | CPZ2 | `0xE2EFC` | S&K | 249 | 202 |
 | 28, 29 | DEZ1, DEZ2 | `0x2EB230`, `0x2EB254` | S2 | 5, 0 | 5, 0 |
@@ -246,9 +292,10 @@ data.
 
 Engine mapping: `LockOnAddressSpace` resolves a pointer by window
 (`[0,0x200000)` → logical S&K reader, `[0x200000,0x300000)` → S2 reader at
-`address - 0x200000`, `[0x300000,0x340000)` → chip, unavailable in tier one);
-`Kis2ObjectPlacement` reads the table through it and falls back to the stock
-S2 list for chip pointers with one logged warning.
+`address - 0x200000`, `[0x300000,0x340000)` → the chip window of the `KIS2`
+logical ROM when the dump is available, otherwise unavailable);
+`Kis2ObjectPlacement` reads the table through it and, without the chip,
+falls back to the stock S2 list for the CNZ pointers with one logged warning.
 
 ## Monitor and life-icon swaps
 
@@ -267,10 +314,11 @@ S2 list for chip pointers with one logged warning.
 - Debug lists: monitor default subtype 4 (super ring) instead of 8 (teleport);
   all per-zone debug lists blanked to `DbgObjList_Def`.
 
-**Answer to plan question 4:** all four swap assets are CHIP-resident.
-Tier one uses the S&K `ArtNem_KnucklesLifeIcon` (`0x190E4C`) converted
-through `ArtConvTable` for the HUD and the 1-up monitor face; signpost,
-continue icon and shield/stars recolours wait for tier two.
+**Answer to plan question 4:** all four swap assets are CHIP-resident
+(§Chip addresses). Tier two reads them from the dump; tier one uses the S&K
+`ArtNem_KnucklesLifeIcon` (`0x190E4C`) converted through `ArtConvTable` for
+the HUD and the 1-up monitor face and keeps the stock signpost, continue
+icon and shield/stars.
 
 ## Bugfix blocks (32, shipped KiS2 behaviour)
 
@@ -322,13 +370,46 @@ Modelled as KiS2 rules or catalogued; never `fixBugs` toggles.
 - `DebugObjectLists` blanked; `V_Int` gains a `nop`; checksum dummied out;
   padding byte `$FF`.
 
-## Deferred (tier two)
+## Deferred (presentation tier)
 
-Title screen (`Obj0E_*`, `Obj0F`, `TitleScreen*`), level select/menu
-removal, special stage (`Obj09` DPLCs, `Obj61`, `Obj63`, `SSHUD`, ring
-requirements), results (`Obj6F_Knuckles`, `EOL_Sonic` "KNUCKLES GOT"),
-ending (`EndgameCredits` banner, `Pal_KiS2_Ending`, flicky selection by
-emerald count), Super Knuckles (`PalCycle_SuperSonic`, speeds), CNZ layouts
-and slot pictures, chip palettes and mapping patches, and KiS2 trace
-fixtures (require the user-supplied S&K + Sonic 2 lock-on dump, 3,407,872
-bytes, MD5 `3E5E4B18D035775B916A06F2B3DC5031`, in BizHawk).
+Tier two (2026-09-14) delivered the in-level chip data: CNZ layouts, the
+lives counter, monitor, signpost and shield/stars patches, the continue icon,
+`Pal_BGND` line 0 and the CPZ/ARZ underwater palettes. Still catalogued:
+title screen (`Obj0E_*`, `Obj0F`, `TitleScreen*`), level select/menu
+removal, special stage (`Obj09` DPLCs, `Obj61`, `Obj63`, `SSHUD`, `obj5E`,
+ring requirements), results (`Obj6F_Knuckles`, `EOL_Sonic` "KNUCKLES GOT"),
+ending (`EndgameCredits` banner, `objCF`, `Pal_KiS2_Ending`, flicky
+selection by emerald count), Super Knuckles (`PalCycle_SuperSonic`, speeds),
+the continue screen's Knuckles player object (`ObjDB_Sonic_Init` with
+`MapUnc_Knuckles` and `AniIDKnuxAni_ShadowBox`), CNZ slot pictures
+(`SlotMachine_GetPixelRow`), and KiS2 trace fixtures (require the
+user-supplied lock-on dump in BizHawk).
+
+## Presentation and Super implementation (2026-09-14)
+
+The chip-backed providers now consume the title, special-stage/results and
+ending data catalogued above. Source addresses were verified by assembling
+`c336fed` with `gameRevision=3`, `fixBugs=0`: its chip output matches the
+user-supplied dump byte for byte. Runtime code reads only logical ROM data.
+`Kis2SpriteMappings` decodes the chip's six-byte pieces; reusing stock S2's
+eight-byte parser was rejected after the new art-boundary tests exposed it.
+
+| Owner | ROM bytes / behavior | Implementation |
+| --- | --- | --- |
+| `PalCycle_SuperSonic` | `CyclingPal_SKTransformation` $301EE0 (60 bytes), revert $301F1C (6 bytes); colours 2/3/5 | `Kis2SuperStateController` |
+| `Knuckles_TurnSuper` | $800/$18/$C0; seed `Super_Sonic_frame_count=60`; retains jump and animation set | `Kis2Physics.SUPER_KNUCKLES`, controller |
+| `EOL_Sonic`, `loc_140AC` | eleven-piece KNUCKLES GOT at $311BF6; four FontK tiles at $312096 written to VRAM $5C6 | `Kis2ResultsArt` |
+| `Obj09`, `Pal_SS` | art $33B3F0; mappings $32D410; DPLC $32D728; palette $302CBE | `Kis2SpecialStageDataLoader` |
+| `SpecialStage_RingReq_Alone`, `Obj6F` | targets $3071D2; mappings $311D22; results letters $307284 | KiS2 special-stage loader/provider |
+| `ObjDB_Sonic_Init` | Knuckles mappings and shadow-box $24, then walk; no Tails | `Kis2ContinuePresentation` |
+| `EndgameCredits`, `ObjCF` | SK art $0DEA00; chip palette $3090BC; mappings $3091E0; postcredits banner data | `Kis2EndingPresentation` |
+| `TitleScreen`, `Obj0E` | chip artwork, palettes, mappings and Knuckles/hand/emblem/banner sequence | `Kis2TitleData`, `Kis2TitleAnimation`, `Kis2TitleScreen` |
+
+`PalCycle_SuperSonic` runs once per pass. A transformation-completion pass must
+not also decrement the active-cycle timer through the shared controller's
+ring-work call; the controller explicitly keeps those two responsibilities
+separate. Sparkles remain object-owned across rewind; revert resolves the live
+objects by owning playable rather than retaining a stale recreated reference.
+
+Remaining scope and validation limits are in the linked completion plan and
+known-discrepancies entry, which supersede the earlier deferred-status prose.

@@ -31,9 +31,39 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
     private int timer, vint, sonicX, tailsX, sonicInertia, tailsInertia, count, iconFrame;
     private boolean accepted, finished, usedIconDeleted;
     private final Boolean tailsOnly;
+    /** Native player presentation overrides; the stock two-character choreography is the default. */
+    public interface PlayerPresentation {
+        com.openggf.sprites.art.SpriteArtSet loadArt() throws IOException;
+        com.openggf.sprites.playable.AbstractPlayableSprite createSprite();
+        com.openggf.level.Palette palette();
+        int waitingAnimation();
+        int departingAnimation();
+    }
+    private final PlayerPresentation playerPresentation;
+    /** Patch-supplied {@code ArtNem_MiniSonic} replacement (the continue icon), or null for stock. */
+    private final java.util.function.Supplier<Pattern[]> mainCharacterIcon;
 
-    public Sonic2ContinueScreenProvider() { tailsOnly = null; }
-    public Sonic2ContinueScreenProvider(boolean tailsOnly) { this.tailsOnly = tailsOnly; }
+    public Sonic2ContinueScreenProvider() { this((Boolean) null, null); }
+    public Sonic2ContinueScreenProvider(boolean tailsOnly) { this(tailsOnly, null); }
+    /**
+     * A continue screen whose mini icon comes from {@code mainCharacterIcon}
+     * when it yields tiles: the lock-on program binds {@code ArtNem_MiniSonic}
+     * to its own icon art, loaded at the same {@code $24} tile slot.
+     */
+    public Sonic2ContinueScreenProvider(java.util.function.Supplier<Pattern[]> mainCharacterIcon) {
+        this(null, mainCharacterIcon);
+    }
+    private Sonic2ContinueScreenProvider(Boolean tailsOnly, java.util.function.Supplier<Pattern[]> mainCharacterIcon) {
+        this(tailsOnly, mainCharacterIcon, null);
+    }
+    public Sonic2ContinueScreenProvider(java.util.function.Supplier<Pattern[]> icon, PlayerPresentation player) {
+        this(false, icon, java.util.Objects.requireNonNull(player));
+    }
+    private Sonic2ContinueScreenProvider(Boolean tailsOnly, java.util.function.Supplier<Pattern[]> mainCharacterIcon, PlayerPresentation player) {
+        this.playerPresentation = player;
+        this.tailsOnly = tailsOnly;
+        this.mainCharacterIcon = mainCharacterIcon;
+    }
     @Override public void initialize(int continues) { initialize(continues, 0); }
 
     @Override public void initialize(int continues, int vintRunCount) {
@@ -64,6 +94,7 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
             var stagePalette = new com.openggf.level.Palette();
             stagePalette.fromSegaFormat(rom.readBytes(PALETTE, 32));
             art.setPalette(3, stagePalette);
+            if (playerPresentation != null) art.setPalette(0, playerPresentation.palette());
             art.loadNemesis(rom, Sonic2Constants.ART_NEM_TITLE_CARD_ADDR, 0x80);
             Pattern[] additional = PatternDecompressor.nemesis(rom, Sonic2Constants.ART_NEM_TITLE_CARD2_ADDR);
             int destination = 0x90;
@@ -73,16 +104,22 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
                 destination += length;
             }
             art.loadNemesis(rom, ART_TAILS, 0);
-            art.loadNemesis(rom, miniTails ? ART_MINI_TAILS : ART_MINI_SONIC, 0x24);
+            Pattern[] patchIcon = mainCharacterIcon == null || miniTails ? null : mainCharacterIcon.get();
+            if (patchIcon != null && patchIcon.length > 0) {
+                art.copyPatterns(patchIcon, 0, patchIcon.length, 0x24);
+            } else {
+                art.loadNemesis(rom, miniTails ? ART_MINI_TAILS : ART_MINI_SONIC, 0x24);
+            }
             digits = PatternDecompressor.fromBytes(rom.readBytes(Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR, 640));
             art.setCountdown(10, digits);
             art.cache();
             icons = art.withTileOffset(0x24, 0x200);
             nagging = new ObjectAnimationState(CommonSpriteDataLoader.loadAnimationSet(reader, 0x7CB0, 1), 0, 2);
             var playerArt = new Sonic2PlayerArt(reader);
-            var sonicArt = playerArt.loadSonic();
-            var sonicSprite = new Sonic("sonic", (short) 0, (short) 0);
-            if (retainedSuperFlag) {
+            var sonicArt = playerPresentation == null ? playerArt.loadSonic() : playerPresentation.loadArt();
+            com.openggf.sprites.playable.AbstractPlayableSprite sonicSprite = playerPresentation == null
+                    ? new Sonic("sonic", (short) 0, (short) 0) : playerPresentation.createSprite();
+            if (retainedSuperFlag && playerPresentation == null) {
                 // fixBugs=0: ContinueScreen leaves Super_Sonic_flag set. Sonic_Animate indexes
                 // past SuperSonicAniData's 32 entries for Lying/LieDown; preserve those ROM reads.
                 // The fixed branch clears the flag, selecting the normal scripts instead.
@@ -98,8 +135,9 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
                         sonicArt.animationProfile(), animations);
                 sonicSprite.setSuperSonic(true);
             }
-            sonic = new ContinueScreenArtwork.Character(sonicArt, sonicSprite, 0x400, 0x20);
-            tails = new ContinueScreenArtwork.Character(playerArt.loadTails(),
+            sonic = new ContinueScreenArtwork.Character(sonicArt, sonicSprite, 0x400,
+                    playerPresentation == null ? 0x20 : playerPresentation.waitingAnimation());
+            if (playerPresentation == null) tails = new ContinueScreenArtwork.Character(playerArt.loadTails(),
                     new Tails("tails", (short) 0, (short) 0), 0x600, 0);
             // RunObjects once before fade. ObjDB always creates both characters, even in Tails-only mode.
             sonic.update(vint, 0);
@@ -116,10 +154,10 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
             art.setCountdown(timer / 60, digits);
             if (startPressed) {
                 accepted = true;
-                sonic.setAnimation(0x21);
+                sonic.setAnimation(playerPresentation == null ? 0x21 : playerPresentation.departingAnimation());
                 // Both ObjDB character slots submit the same sound request, as in RunObjects.
                 GameServices.audio().playSfx(Sonic2Sfx.SPINDASH_CHARGE.id);
-                GameServices.audio().playSfx(Sonic2Sfx.SPINDASH_CHARGE.id);
+                if (tails != null) GameServices.audio().playSfx(Sonic2Sfx.SPINDASH_CHARGE.id);
             }
         }
         if (accepted) {
@@ -128,8 +166,8 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
             if (tailsInertia == 0x720) tailsX += 16;
             else tailsInertia += 0x18;
             sonic.update(vint, sonicInertia);
-            tails.update(vint, tailsInertia);
-            if (tailsX >= 384) finished = true;
+            if (tails != null) tails.update(vint, tailsInertia);
+            if ((tails != null ? tailsX : sonicX) >= 384) finished = true;
         } else {
             sonic.update(vint, 0);
             nagging.update();
@@ -144,8 +182,8 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
         int offset = (Math.max(320, GameServices.graphics().getProjectionWidth()) - 320) / 2;
         art.cache();
         sonic.draw(sonicX + offset, 0x19C - 256);
-        if (accepted) tails.draw(tailsX + offset, 0x1A0 - 256);
-        else art.draw(nagging.getMappingFrame(), tailsX + offset, 0x1A0 - 256);
+        if (tails != null && accepted) tails.draw(tailsX + offset, 0x1A0 - 256);
+        else if (tails != null) art.draw(nagging.getMappingFrame(), tailsX + offset, 0x1A0 - 256);
         art.draw(0, 160 + offset, 64);
         int n = Math.min(15, Math.max(0, count - 1));
         for (int i = 0; i < n; i++) {

@@ -141,6 +141,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
     private int totalFrames = 0;
     private int slideProgress = 0;
     private boolean complete = false;
+    private Sonic2SpecialStageDataLoader presentationData;
+
     /** True once Obj6F_Init has observed an empty PLC queue. */
     private boolean plcReadinessPassed;
 
@@ -296,6 +298,7 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             Sonic2SpecialStageManager manager = services().gameService(Sonic2SpecialStageManager.class);
             if (manager != null) {
                 Sonic2SpecialStageDataLoader dataLoader = manager.getDataLoader();
+                presentationData = dataLoader;
                 if (dataLoader != null) {
                     resultsArtPatterns = dataLoader.getResultsArtPatterns();
                 }
@@ -360,6 +363,9 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
             copyPatterns(hudPatterns, hudOffset);
             LOGGER.fine("Copied " + hudPatterns.length + " HUD patterns to index " + hudOffset + " (0x" + Integer.toHexString(hudOffset) + ")");
 
+            if (presentationData != null) {
+                presentationData.patchResultsPatterns(combinedPatterns, VRAM_BASE, titleCard2Patterns);
+            }
             artLoaded = true;
             LOGGER.fine("Art loaded successfully: total " + totalSize + " pattern slots");
 
@@ -1074,7 +1080,8 @@ public class SpecialStageResultsScreenObjectInstance implements ResultsScreen {
         }
 
         Sonic2SpecialStageResultsMappings.ResultsPiece[] pieces =
-                Sonic2SpecialStageResultsMappings.getFrame(frameIndex);
+                presentationData == null ? Sonic2SpecialStageResultsMappings.getFrame(frameIndex)
+                        : presentationData.getResultsFrame(frameIndex);
 
         // Render pieces in reverse order (painter's algorithm - first piece on top)
         for (int i = pieces.length - 1; i >= 0; i--) {

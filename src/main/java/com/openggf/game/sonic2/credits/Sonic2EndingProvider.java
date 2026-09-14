@@ -66,6 +66,11 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
     private Sonic2CreditsTextRenderer textRenderer;
     private Sonic2LogoFlashManager logoFlashManager;
     private int viewportWidth = 320;
+    private Sonic2EndingCutsceneManager.Presentation presentation;
+    public Sonic2EndingProvider(Sonic2EndingCutsceneManager.Presentation presentation) {
+        this();
+        this.presentation = java.util.Objects.requireNonNull(presentation);
+    }
 
     // Internal state machine
     private InternalState state = InternalState.CUTSCENE;
@@ -75,7 +80,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
     private final FadeManager injectedFadeManager;
 
     public Sonic2EndingProvider() {
-        this(null);
+        this((FadeManager) null);
     }
 
     Sonic2EndingProvider(FadeManager fadeManager) {
@@ -111,6 +116,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
                             GameId.S2, decision.owner(), decision.mappingFrame(),
                             decision.dplcFrame(), decision.kind());
             cutsceneManager = new Sonic2EndingCutsceneManager(decisionSink);
+            cutsceneManager.setPresentation(presentation);
             cutsceneManager.setViewportWidth(viewportWidth);
             cutsceneManager.initialize(GameServices.rom().getRom());
         } catch (IOException e) {
@@ -185,6 +191,7 @@ public class Sonic2EndingProvider implements EndingProvider, NativeFadeLifecycle
             }
             case LOGO_LOADING -> {
                 logoFlashManager = new Sonic2LogoFlashManager();
+                if (presentation != null) logoFlashManager.setPresentation(presentation.logo());
                 logoFlashManager.setViewportWidth(viewportWidth);
                 logoFlashManager.initialize();
                 state = InternalState.LOGO_FLASH;

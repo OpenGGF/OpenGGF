@@ -1,0 +1,42 @@
+# Knuckles in Sonic 2, Emerald Hill Zone act 1 (lane-d, 2026-09-14).
+# Title: the first Start press skips the KiS2 title intro (accepted from ~frame 480), the second starts
+# the game; Level_frame/controls unlock 174 frames after the second press (BK2 row 714 = trace row 0).
+480 -
+1 S
+59 -
+1 S
+173 -
+# Run right onto the first hilltop, jump, glide (second A press) along the slope into the
+# quarter-pipe ramp at x=0x4C0 (glide converts to a launch), collecting the four rings at 0x45A-0x4BA.
+150 R
+1 A+R
+10 R
+150 A+R
+# Run across the bridge (Masher contact), drop into the pit at x=0x7F0.
+319 R
+20 -
+# Walk back to the log platform column (x~0x7B2) and wait for the platform's bottom phase.
+55 L
+30 -
+160 -
+# Full jump onto the log platform (period 252 frames), ride it to its top.
+27 A
+93 -
+# Jump right onto the spiked ledge (0x800), run to the up-spring at 0x8AC.
+27 A+R
+60 R
+# Hop and glide over the spring into the totem pole face at x=0x940, cling, climb up with Up.
+1 A+R
+15 R
+40 A+R
+60 U
+# Run right along the cap and down the slope to the ledge before the diagonal spring at 0xB50.
+132 R
+# Brake, tap-jump over the spring, land on the block beside the monitor at 0xBA0, hop into it.
+6 L
+1 A
+30 -
+30 R
+1 A+R
+# Keep running right.
+400 R

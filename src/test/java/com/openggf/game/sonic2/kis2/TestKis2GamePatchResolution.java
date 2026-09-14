@@ -1,6 +1,8 @@
 package com.openggf.game.sonic2.kis2;
 
 import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.data.RomByteReader;
+import com.openggf.game.PlayerCharacter;
 import com.openggf.game.GameModule;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.GameplayLaunchRequest;
@@ -16,6 +18,10 @@ import com.openggf.game.session.EngineContext;
 import com.openggf.game.session.EngineServices;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
+import com.openggf.game.sonic2.Sonic2WaterDataProvider;
+import com.openggf.game.sonic2.continuescreen.Sonic2ContinueScreenProvider;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
+import com.openggf.level.Palette;
 import com.openggf.trace.TraceMetadata;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Test;
@@ -32,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Kis2GamePatch identity, activation and module resolution with a fake context; no ROM. */
@@ -48,7 +55,78 @@ class TestKis2GamePatchResolution {
         assertEquals("s2", patch.baseGameId());
         assertEquals("Knuckles in Sonic 2", patch.displayName());
         assertEquals(Set.of(LogicalRom.SK), patch.romPrerequisites());
+        assertEquals(Set.of(LogicalRom.KIS2), patch.optionalRomPrerequisites(),
+                "the lock-on dump is optional: it selects tier two, never gates resolution");
         assertEquals(List.of("knuckles"), patch.providedMainCharacters());
+    }
+
+    @Test
+    void withoutTheLockOnDumpTheModuleRunsTierOneAndKeepsStockWaterAndContinueSeams() {
+        Sonic2GameModule base = new Sonic2GameModule();
+        PatchContext context = new PatchContext(rom -> {
+            if (rom == LogicalRom.KIS2) {
+                throw new IOException("no lock-on dump in this test");
+            }
+            return RomByteReader.fromBytes(new byte[0x200000]);
+        }, SonicConfigurationService.createStandalone(tempDir));
+
+        Kis2GameModule patched = (Kis2GameModule) patch.apply(base, context);
+
+        assertEquals(Kis2GameModule.Fidelity.TIER_ONE, patched.fidelity());
+        assertInstanceOf(Sonic2WaterDataProvider.class, patched.getWaterDataProvider());
+        assertInstanceOf(Sonic2ContinueScreenProvider.class, patched.createContinueScreenProvider());
+        assertInstanceOf(Sonic2ObjectArtProvider.class, patched.getObjectArtProvider());
+    }
+
+    @Test
+    void withALockOnImageTheModuleRunsTierTwoAndReadsUnderwaterPalettesFromTheChip() {
+        Sonic2GameModule base = new Sonic2GameModule();
+        byte[] image = new byte[0x340000];
+        // A recognisable Pal_CPZ_U line 0 on the chip: colour 1 = $0EEE.
+        image[Kis2Constants.PAL_CPZ_U + 2] = 0x0E;
+        image[Kis2Constants.PAL_CPZ_U + 3] = (byte) 0xEE;
+        PatchContext context = new PatchContext(rom -> switch (rom) {
+            case KIS2 -> RomByteReader.fromBytes(image);
+            case SK -> RomByteReader.fromBytes(image, 0, 0x200000);
+            default -> throw new IOException("unexpected " + rom);
+        }, SonicConfigurationService.createStandalone(tempDir));
+
+        Kis2GameModule patched = (Kis2GameModule) patch.apply(base, context);
+
+        assertEquals(Kis2GameModule.Fidelity.TIER_TWO, patched.fidelity());
+        Palette[] cpz = patched.getWaterDataProvider().getUnderwaterPalette(null,
+                Sonic2ZoneConstants.ROM_ZONE_CPZ, 1, PlayerCharacter.SONIC_ALONE);
+        assertEquals(4, cpz.length);
+        Palette expectedLine0 = new Palette();
+        expectedLine0.fromSegaFormat(java.util.Arrays.copyOfRange(image, Kis2Constants.PAL_CPZ_U,
+                Kis2Constants.PAL_CPZ_U + Palette.PALETTE_SIZE_IN_ROM));
+        assertTrue(cpz[0].dataEquals(expectedLine0), "chip Pal_CPZ_U line 0 is served as read");
+        assertTrue(cpz[0].getColor(1).r != 0 && cpz[0].getColor(2).r == 0, "colour 1 set, colour 2 black");
+        Palette[] arz = patched.getWaterDataProvider().getUnderwaterPalette(null,
+                Sonic2ZoneConstants.ROM_ZONE_ARZ, 0, PlayerCharacter.SONIC_ALONE);
+        assertEquals(4, arz.length);
+        assertEquals(0, arz[0].getColor(1).r, "Pal_ARZ_U is read from its own chip address");
+    }
+
+    @Test
+    void tierTwoAddressSpaceResolvesTheCasinoNightPointersIntoTheChipWindow() {
+        RomByteReader sk = RomByteReader.fromBytes(new byte[0x200000]);
+        RomByteReader s2 = RomByteReader.fromBytes(new byte[0x100000]);
+        RomByteReader image = RomByteReader.fromBytes(new byte[0x340000]);
+
+        LockOnAddressSpace tierOne = LockOnAddressSpace.tierOne(sk, s2);
+        LockOnAddressSpace tierTwo = LockOnAddressSpace.tierTwo(sk, s2, image);
+
+        assertFalse(tierOne.hasChip());
+        assertTrue(tierOne.resolve(Kis2Constants.OBJECTS_CNZ_1).isEmpty());
+        assertTrue(tierTwo.hasChip());
+        LockOnAddressSpace.Read cnz1 = tierTwo.require(Kis2Constants.OBJECTS_CNZ_1);
+        assertEquals(LockOnAddressSpace.Window.CHIP, cnz1.window());
+        assertEquals(Kis2Constants.OBJECTS_CNZ_1 - Kis2Constants.CHIP_WINDOW_START, cnz1.localAddress());
+        assertEquals(0x40000, cnz1.reader().size(), "chip window is the 256 KiB at $300000");
+        assertEquals(LockOnAddressSpace.Window.SK, tierTwo.require(Kis2Constants.OFF_OBJECTS_KIS2).window());
+        assertThrows(IllegalArgumentException.class,
+                () -> LockOnAddressSpace.tierTwo(sk, s2, RomByteReader.fromBytes(new byte[0x300000])));
     }
 
     @Test

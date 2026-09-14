@@ -39,6 +39,34 @@ public final class LockOnAddressSpace {
         return new LockOnAddressSpace(sk, s2, null);
     }
 
+    /**
+     * Tier two: the chip window of the logical {@code KIS2} image (the full
+     * 3.25 MiB lock-on address space) joins the S&amp;K and S2 readers.
+     */
+    public static LockOnAddressSpace tierTwo(RomByteReader sk, RomByteReader s2, RomByteReader kis2Image) {
+        return new LockOnAddressSpace(sk, s2, chipWindowOf(kis2Image));
+    }
+
+    /** The 256 KiB chip window of a full lock-on image. */
+    public static RomByteReader chipWindowOf(RomByteReader kis2Image) {
+        int length = Kis2Constants.CHIP_WINDOW_END - Kis2Constants.CHIP_WINDOW_START;
+        if (kis2Image.size() < Kis2Constants.CHIP_WINDOW_END) {
+            throw new IllegalArgumentException("Lock-on image too small for the chip window: 0x"
+                    + Integer.toHexString(kis2Image.size()));
+        }
+        return kis2Image.window(Kis2Constants.CHIP_WINDOW_START, length);
+    }
+
+    public boolean hasChip() {
+        return chip != null;
+    }
+
+    /** Resolves {@code address} or fails: for data the caller knows the window must hold. */
+    public Read require(long address) {
+        return resolve(address).orElseThrow(() -> new IllegalStateException("Lock-on address 0x"
+                + Long.toHexString(address) + " is in an unavailable window (" + windowOf(address) + ")"));
+    }
+
     public static Window windowOf(long address) {
         if (address >= Kis2Constants.SK_WINDOW_START && address < Kis2Constants.SK_WINDOW_END) {
             return Window.SK;

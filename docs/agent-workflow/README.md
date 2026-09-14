@@ -32,6 +32,13 @@ Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each
   [live-state route controllers](../architecture/research/2026-09-13-live-state-route-controllers.md).
   They overlap only the failure-diagnostics part of backlog item LTS-04, which stays
   pending.
+- `LevelSolidityMapProbe` (test scope, opt-in `-Dopenggf.solidity.map=<out file>` plus
+  `openggf.solidity.game/zone/act/x0/x1/y0/y1/step`) writes an ASCII map of a level's
+  foreground solidity from the engine's terrain sensors, so a BK2 route (glide targets,
+  climbable faces, monitor perches) is authored against real terrain before any capture.
+  Pair it with `tools/traces/assemble_bk2_from_input_log.py`, which packages an
+  `InputLogAuthorTool` log as the BizHawk-keyed `.bk2` the TraceChaser headless harness
+  accepts. Both come from the first Knuckles in Sonic 2 fixture (2026-09-14).
 - `FbzRouteEvidenceProbe` (test scope, opt-in `-Dmse=off -Dopenggf.fbz.evidence=true`)
   prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
   matrix rows without asserting; diff the output before and after a route-controller

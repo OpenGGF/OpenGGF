@@ -87,13 +87,16 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
     private boolean livesNameUsesIconPalette;
     /** Patch-supplied main-character life icon (HUD and 1-up monitor face), or null for stock. */
     private final java.util.function.Supplier<Pattern[]> mainCharacterLifeIcon;
+    /** Patch-supplied tile overwrites applied after the zone's PLC loads. */
+    private final List<Sonic2ArtOverlays.SheetPatch> sheetPatches;
+    private final java.util.function.UnaryOperator<ObjectSpriteSheet> resultsSheetOverlay;
 
     /**
      * Creates a new Sonic2ObjectArtProvider.
      * The art loader is lazily initialized when loadArtForZone is first called.
      */
     public Sonic2ObjectArtProvider() {
-        this((java.util.function.Supplier<Pattern[]>) null);
+        this((Sonic2ArtOverlays) null);
     }
 
     /**
@@ -104,7 +107,20 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
      * supplies that art here so no donor state is consulted.
      */
     public Sonic2ObjectArtProvider(java.util.function.Supplier<Pattern[]> mainCharacterLifeIcon) {
-        this.mainCharacterLifeIcon = mainCharacterLifeIcon;
+        this(Sonic2ArtOverlays.lifeIconOnly(mainCharacterLifeIcon));
+    }
+
+    /**
+     * Creates a provider with a patch's full overlay set: the life icon plus
+     * tile-range overwrites of registered sheets, mirroring the extra
+     * {@code plreq} entries a patched PLC list carries ({@code PlrList_Std2},
+     * {@code PlrList_Signpost}). Overlays are applied after every PLC load
+     * for the zone, so a later runtime PLC request cannot undo them.
+     */
+    public Sonic2ObjectArtProvider(Sonic2ArtOverlays overlays) {
+        this.mainCharacterLifeIcon = overlays == null ? null : overlays.mainCharacterLifeIcon();
+        this.sheetPatches = overlays == null ? List.of() : overlays.sheetPatches();
+        this.resultsSheetOverlay = overlays == null ? java.util.function.UnaryOperator.identity() : overlays.resultsSheet();
     }
 
     /**
@@ -114,6 +130,8 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
     public Sonic2ObjectArtProvider(Rom rom, RomByteReader reader) {
         this.artLoader = new Sonic2ObjectArt(rom, reader);
         this.mainCharacterLifeIcon = null;
+        this.sheetPatches = List.of();
+        this.resultsSheetOverlay = java.util.function.UnaryOperator.identity();
     }
 
     private void ensureArtLoader() throws IOException {
@@ -221,7 +239,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         registerSheet(ObjectArtKeys.GAME_OVER, artLoader.loadGameOverSheet());
 
         // === Results screen (separate namespace) ===
-        resultsSheet = artData.resultsSheet();
+        resultsSheet = java.util.Objects.requireNonNull(resultsSheetOverlay.apply(artData.resultsSheet()));
         resultsRenderer = new PatternSpriteRenderer(resultsSheet);
         sheets.put(ObjectArtKeys.RESULTS, resultsSheet);
         renderers.put(ObjectArtKeys.RESULTS, resultsRenderer);
@@ -254,6 +272,7 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         // The 1-up monitor icon shares VRAM with the life counter, so it must show
         // the same main-character face the HUD does (Tails-alone / Knuckles lock-on).
         overrideMonitorIconArtForMainCharacter();
+        applySheetPatches();
 
         LOGGER.info("Sonic2ObjectArtProvider loaded for zone " + zoneIndex +
                 " with " + rendererKeys.size() + " renderers (PLC-driven)");
@@ -509,6 +528,33 @@ public class Sonic2ObjectArtProvider implements ObjectArtProvider,
         }
         Pattern[] icon = mainCharacterLifeIcon.get();
         return icon != null && icon.length > 0 ? icon : null;
+    }
+
+    /**
+     * Applies each patch-supplied tile overwrite to the sheet that owns the
+     * destination tiles, the way a patched PLC list's extra {@code plreq}
+     * lands over art an earlier entry loaded. A patch whose sheet is not
+     * registered for this zone, or whose supplier yields nothing, is skipped.
+     */
+    private void applySheetPatches() {
+        for (Sonic2ArtOverlays.SheetPatch patch : sheetPatches) {
+            ObjectSpriteSheet sheet = sheets.get(patch.sheetKey());
+            if (sheet == null) {
+                continue;
+            }
+            Pattern[] tiles = patch.patterns().get();
+            if (tiles == null || tiles.length == 0) {
+                continue;
+            }
+            Pattern[] target = sheet.getPatterns();
+            int copied = 0;
+            for (int i = 0; i < tiles.length && patch.firstTile() + i < target.length; i++) {
+                target[patch.firstTile() + i] = tiles[i];
+                copied++;
+            }
+            LOGGER.info("Patched sheet " + patch.sheetKey() + " from tile " + patch.firstTile()
+                    + " with " + copied + " patch-supplied tiles");
+        }
     }
 
     private boolean overrideLivesArtFromPatch() {

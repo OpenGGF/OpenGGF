@@ -1,5 +1,12 @@
 # GamePatch Framework + Knuckles in Sonic 2 (Lock-On) — Design
 
+> **2026-09-14 presentation continuation.** The current implementation work and
+> validation matrix are in [the completion plan](../plans/2026-09-14-kis2-presentation-super.md).
+> It adds chip-backed title, special-stage/results, ending/continue-player and
+> Super Knuckles paths. Earlier missing/deferred status below is historical;
+> the known-discrepancies entry records remaining fidelity limits.
+
+
 > **2026-09-13 amendment (status and ROM premise).** Re-established per the 0.8
 > roadmap before scheduling implementation.
 >
@@ -53,6 +60,32 @@
 > KiS2; the engine has no 2P mode, and the patch's faithful roster default covers
 > Tails. Trace fixtures for KiS2 require the lock-on dump in BizHawk (its
 > Genesis Plus GX core loads the chip as `sk2chip.bin` firmware).
+>
+> **Implementation notes (2026-09-14, tier two).** Commit `598d8e933`
+> (`feature/ai-kis2-tier-two`) delivers the in-level half of tier two:
+>
+> - **Optional prerequisite.** `GamePatch.optionalRomPrerequisites()` (a
+>   default method; the 0.7 candidate pin was regenerated in place) lets
+>   `Kis2GamePatch` name `KIS2` without gating resolution. `Kis2GameModule`
+>   probes `PatchContext.openLogicalRom(KIS2)` once; a failure selects tier
+>   one. Rejected: a second `PatchContext` source for optional ROMs (a
+>   constructor change to a pinned type for no gain over catching the open).
+> - **Addresses.** Every chip asset was located on the dump by matching the
+>   branch binaries at `c336fed` byte for byte (all unique inside the chip)
+>   and recorded in `docs/kis2/BRANCH_DIFFS.md` §Chip addresses as lock-on
+>   addresses resolved through `LockOnAddressSpace.tierTwo`. The chip's
+>   `Pal_BGND` line 0 proved byte-identical to S&K `Pal_KnuxEndPose`, closing
+>   the catalogue's open question; tier two still reads it from the chip.
+> - **Seams.** `Sonic2ArtOverlays` (life icon plus generic `SheetPatch` tile
+>   overwrites applied after the zone's PLC loads) mirrors the patched
+>   `plreq` entries; `Sonic2WaterDataProvider.UnderwaterPaletteSource` and
+>   the `Sonic2ContinueScreenProvider` icon supplier are the other two
+>   patch-facing constructors. Shared code carries no game or zone names;
+>   the kis2 package keys the palette source on the ROM zone ids the
+>   `PalPtr_*` table serves.
+> - **Out of scope here.** Title, special stage, results, ending, Super
+>   Knuckles and the continue screen's Knuckles player object stay
+>   catalogued (`docs/status/known-discrepancies.md`).
 >
 > **Design text below is retained as approved; where it conflicts with this
 > amendment or the plan's 2026-07-10 amendment, the amendments win.**
