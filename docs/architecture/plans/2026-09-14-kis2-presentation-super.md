@@ -105,3 +105,24 @@ On the integration tree after all provider wiring:
 - Actual launcher preflight passes with Java21 and `LUA_BIN=/usr/bin/lua5.4`;
   the system default Lua is unsuitable. The combined category selection is
   full ordinary plus guards; its result is recorded after execution below.
+
+- Combined candidate `74006f23b`, run `20260914T082758Z-7ce522f0`:
+  `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 1505a4c7a --run`
+  selected all 2,536 ordinary candidate classes and structural guards. Ordinary:
+  19,926 tests, 19,912 passed, 14 skipped, zero failures/errors (447.43 seconds).
+  Guards: 665 tests, 662 passed, three failures, zero skips/errors (189 seconds).
+  All four required S3K loading/bootstrap/decoding/AIZ1 classes passed without skips.
+  Ordinary skips were opt-in diagnostics/soaks, unavailable EGL/reference capture,
+  and `TestCPZObjectBugs#testSpinTubeForcesRolling`'s unmet capture assumption;
+  no KiS2 test skipped. This ordinary pass does not certify trace/native profiles.
+- Matched guard baseline on unchanged `1505a4c7a`:
+  `mvn -Dmse=off -Pguards '-Dtest=TestBuildToolingGuard#traceChaserStaysExactOptionalAndOutsideOrdinaryBuilds,TestTraceChaserBoundaryGuard#exactGitlinkAndNonFloatingConfigurationAreTracked,TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree' test -B`.
+  All three failed with identical identities/messages and no skips. The first
+  two expect TraceChaser `4fb6d080` but the base pins `9fd957bb`; the third flags
+  `FbzRouteEvidenceProbe#printEvidence` and
+  `LevelSolidityMapProbe#writeSolidityMap` as assertion-free. These unchanged
+  failures remain open; no new failure was observed. No broad retry was used.
+- Aggregate validation consumed 20.32 minutes, including focused tests and
+  matched baseline checks. Diagnostics were inspected before acknowledgment.
+  Upstream develop remained at the pinned base, allowing a merge with the same
+  validated code tree; the final follow-up changes only this verification record.
