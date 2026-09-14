@@ -542,6 +542,53 @@ class TestFbzWireCages {
         assertSame(cage,extra.getLatchedSolidObjectInstance());assertEquals(24,extra.getInteractSlotIndex());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void movingCageEntryWritesWalkAndPreviousRun(boolean vertical) {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestSprite player = new TestSprite("sonic");
+        player.setCentreX((short) (vertical ? 0x1070 : 0x1000));
+        player.setCentreY((short) (vertical ? 0x800 : 0x826));
+        player.setAnimationId(2);
+        player.getAnimationManager().publishPreviousAnimationId(2);
+        var cage = new FbzWireCageObjectInstance(spawn(0x6F, vertical ? 0x98 : 0x10));
+        cage.setServices(new PlayersServices(player, List.of()));
+
+        cage.update(0, null);
+
+        assertTrue(cage.heldByParticipant(0));
+        assertEquals(0, player.getAnimationId());
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "both native entry routines write WORD #1 to anim/prev_anim");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void stationaryCageReleaseWritesAnimationWordWithoutAdvancingScript(boolean slow) {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        TestSprite player = new TestSprite("sonic");
+        player.setCentreX((short) (0x1000 - 0xB8));
+        player.setCentreY((short) 0x800);
+        player.setXSpeed((short) 0x400);
+        player.setGSpeed((short) 0x400);
+        var cage = new FbzWireCageStationaryObjectInstance(spawn(0x70, 1));
+        cage.setServices(new PlayersServices(player, List.of()));
+        cage.update(0, null);
+        int cageMapping = player.getMappingFrame();
+        player.getAnimationManager().publishPreviousAnimationId(0);
+        if (slow) player.setGSpeed((short) 0x200);
+        else player.setCentreX((short) (0x1000 + 0xC1));
+
+        cage.update(1, null);
+
+        assertFalse(player.isOnObject());
+        assertEquals(0, player.getAnimationId(), "move.w #1,anim clears its high byte");
+        assertEquals(1, player.getAnimationManager().captureRewindState().lastAnimationId(),
+                "the low byte writes prev_anim so the following animator restarts");
+        assertEquals(cageMapping, player.getMappingFrame(),
+                "the cage release does not execute the following animation dispatch");
+    }
+
     @Test void stationaryCageClearsRollingBeforeBothReleasePathsRestoreStandingRadii() {
         TestSprite slow=new TestSprite("sonic");slow.setCentreX((short)(0x1000-0xB8));slow.setCentreY((short)0x800);slow.setXSpeed((short)0x400);slow.setGSpeed((short)0x400);
         var cage=new FbzWireCageStationaryObjectInstance(spawn(0x70,1));cage.setServices(new PlayersServices(slow,List.of()));cage.update(0,null);slow.setRolling(true);slow.setGSpeed((short)0x200);cage.update(1,null);assertFalse(slow.getRolling());
