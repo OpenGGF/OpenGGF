@@ -128,7 +128,7 @@ mapping of assertions, configurations, production paths and defect sensitivity w
 retiring/replacing tests. Deeper-lane moves must name when that lane will run; they
 must not make coverage disappear from release evidence.
 
-Validate using the actual change's repository policy and task accounting. Compare
+Validate using the actual change's repository policy and queued Maven execution. Compare
 failures by identity and mechanism, not totals. New or worsened regressions block
 integration; unrelated baseline failures remain visible. Do not tune gameplay or
 trace tolerances to manufacture conformance. Update the act matrices and backlog

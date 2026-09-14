@@ -1,5 +1,6 @@
-"""Prevent expensive retries and late prerequisite discovery without running Maven."""
+"""Check prerequisites, invocation timeouts and unrestricted retries without Maven."""
 import io
+from contextlib import nullcontext
 import json
 from pathlib import Path
 import subprocess
@@ -39,55 +40,58 @@ class ControlTests(unittest.TestCase):
             control.preflight(Path('.'), dict(guards=False))
         self.assertEqual(1, process.call_count)
 
-    def test_broad_attempt_survives_focused_runs_and_reason_cannot_authorize_repeat(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            target = Path(tmp)
-            plan = self.plan()
-            control.check_repeat(target, plan, None)
-            control.record_attempt(target, target / 'first', plan, None)
-            focused = dict(plan, full=False)
-            control.check_repeat(target, focused, None)
-            control.record_attempt(target, target / 'focused', focused, None)
-            plan['working_tree_fingerprint'] = 'edited'
-            with self.assertRaisesRegex(ValueError, 'already attempted'):
-                control.check_repeat(target, plan, None)
-            with self.assertRaisesRegex(ValueError, 'not authorization'):
-                control.check_repeat(target, plan, 'Corrected the missing tool prerequisite')
-            receipt = json.loads((target / 'category-tests-last-broad.json').read_text())
-            self.assertIsNone(receipt['reason'])
-            self.assertLess((target / 'category-tests-last-broad.json').stat().st_size, 16384)
-
     def test_cli_prerequisite_failure_never_calls_runner(self):
-        with patch.object(runner, 'ValidationTask') as task_factory, patch.object(runner, 'preflight', side_effect=ValueError('missing tool')), patch.object(runner, 'run_plan') as run, patch('sys.stdout', new_callable=io.StringIO), patch('sys.stderr', new_callable=io.StringIO):
-            task = task_factory.return_value.__enter__.return_value
-            task.data = dict(task='test', elapsed_seconds=0)
-            task.remaining_minutes.return_value = 40
+        with patch.object(runner, 'maven_slot', return_value=nullcontext(None)), patch.object(runner, 'preflight', side_effect=ValueError('missing tool')), patch.object(runner, 'run_plan') as run, patch('sys.stdout', new_callable=io.StringIO), patch('sys.stderr', new_callable=io.StringIO):
             self.assertEqual(2, runner.main(['--category', 'all', '--run']))
         run.assert_not_called()
 
-    def test_timeout_keeps_incomplete_status_and_releases_lock_without_starting_guards(self):
+    def test_timeout_keeps_incomplete_status_without_starting_guards_and_allows_retry(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'run_logged', side_effect=TimeoutError('budget')) as process:
+            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'run_logged', side_effect=TimeoutError('timeout')) as process:
                 with self.assertRaises(TimeoutError):
                     runner.run_plan(root, self.plan())
             self.assertEqual(1, process.call_count)
-            self.assertFalse((root / 'target/category-tests.lock').exists())
             run = next((root / 'target/category-tests').iterdir())
             self.assertEqual('incomplete', json.loads((run / 'status.json').read_text())['status'])
             self.assertFalse((run / 'ordinary-tmp').exists())
-            with patch.object(runner, 'run_logged') as process:
-                with self.assertRaisesRegex(ValueError, 'already attempted'):
-                    runner.run_plan(root, self.plan())
-                process.assert_not_called()
+            summary = dict(reports=1, tests=1, failures=0, errors=0, skipped=0)
+            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process:
+                self.assertEqual(0, runner.run_plan(root, self.plan()))
+                self.assertEqual(2, process.call_count)
 
-    def test_total_budget_is_shared_between_lanes(self):
+    def test_invocation_timeout_is_shared_between_lanes(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             summary = dict(reports=1, tests=1, failures=0, errors=0, skipped=0)
             with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', side_effect=lambda _: dict(summary)), patch.object(runner, 'run_logged', return_value=0) as process, patch.object(runner.time, 'monotonic', side_effect=[0, 10, 20, 30, 40]):
                 self.assertEqual(0, runner.run_plan(root, self.plan(), max_minutes=1))
             self.assertEqual([50, 30], [c.kwargs['timeout'] for c in process.call_args_list])
+
+
+class QueueCliTests(unittest.TestCase):
+    def test_cli_replans_after_waiting_without_task_or_retry_flags(self):
+        from contextlib import contextmanager
+        events = []
+        plans = [dict(full=False, tests=['old'], guards=False),
+                 dict(full=False, tests=['new'], guards=False)]
+
+        @contextmanager
+        def slot(root):
+            events.append('acquired')
+            yield 12
+            events.append('released')
+
+        def plan(*args):
+            events.append('plan')
+            return plans.pop(0)
+
+        with patch.object(runner, 'maven_slot', slot), patch.object(runner, 'make_plan', side_effect=plan), patch.object(runner, 'preflight'), patch.object(runner, 'run_plan', return_value=7) as run, patch('sys.stdout', new_callable=io.StringIO):
+            self.assertEqual(7, runner.main(['--category', 'physics', '--run', '--max-minutes', '90']))
+        self.assertEqual(['plan', 'acquired', 'plan', 'released'], events)
+        self.assertEqual(['new'], run.call_args.args[1]['tests'])
+        self.assertEqual(90, run.call_args.args[2])
+        self.assertEqual(12, run.call_args.kwargs['queue_fd'])
 
 
 if __name__ == '__main__':

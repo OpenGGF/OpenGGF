@@ -108,3 +108,5 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 `TraceTriageTool`. For performance work, start from
 [`runbooks/runbook-jvm-benchmark.md`](runbooks/runbook-jvm-benchmark.md) rather
 than the benchmark CLIs directly — the numbers are easy to misread.
+
+Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too.

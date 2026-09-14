@@ -147,17 +147,7 @@ class CategoryPolicyTests(unittest.TestCase):
 
 
 class RunnerTests(unittest.TestCase):
-    def test_existing_lock_never_starts_maven(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            (root / 'target').mkdir()
-            (root / 'target/category-tests.lock').write_text('123')
-            with patch.object(runner, 'run_logged') as process:
-                with self.assertRaisesRegex(ValueError, 'already owns'):
-                    runner.run_plan(root, {})
-                process.assert_not_called()
-
-    def test_failed_or_empty_run_stops_and_releases_lock(self):
+    def test_failed_or_empty_run_stops_before_guards(self):
         for code in (0, 1):
             with self.subTest(code=code), tempfile.TemporaryDirectory() as tmp:
                 root = Path(tmp)
@@ -167,7 +157,6 @@ class RunnerTests(unittest.TestCase):
                     self.assertEqual(1, process.call_count)
                     self.assertIn('-Dmse=off', process.call_args.args[0])
                     self.assertTrue(any(arg.startswith('-Dsurefire.includesFile=') for arg in process.call_args.args[0]))
-                self.assertFalse((root / 'target/category-tests.lock').exists())
 
     def test_guards_use_fresh_command_and_reports_and_no_category_filter(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -239,7 +228,6 @@ class RunnerTests(unittest.TestCase):
                 with self.assertRaises(KeyboardInterrupt):
                     runner.run_plan(root, plan)
             self.assertFalse(list((root / 'target/category-tests').glob('*/ordinary-tmp')))
-            self.assertFalse((root / 'target/category-tests.lock').exists())
             self.assertEqual('other Maven output', (root / 'target/test-tmp/keep').read_text())
 
     def test_changed_tree_cannot_report_success(self):
@@ -250,7 +238,6 @@ class RunnerTests(unittest.TestCase):
             with patch.object(runner, 'tree_state', side_effect=['before', 'after']), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', return_value=summary), patch.object(runner, 'run_logged', return_value=0):
                 with self.assertRaisesRegex(ValueError, 'Working tree changed'):
                     runner.run_plan(root, plan)
-            self.assertFalse((root / 'target/category-tests.lock').exists())
 
 
 if __name__ == '__main__':

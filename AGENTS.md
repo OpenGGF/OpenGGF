@@ -29,20 +29,19 @@ workflow defaults.
 mvn -v                              # must report Java 21
 tools/testing/install-hooks.sh     # once per worktree
 python3 tools/testing/run_categories.py --list
-python3 tools/testing/run_categories.py --start-task <task-name> --base <pre-task-commit>
-python3 tools/testing/run_categories.py --base <printed-pinned-base> --run  # once per delivery unless proportionate-validation exception applies
-mvn -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
-mvn -Dmse=off package              # full ordinary suite plus packaging
-mvn -Dmse=off -Psmoke test -B         # what every branch push runs in CI
-mvn -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
+python3 tools/testing/run_categories.py --base <pre-task-commit> --run  # combined delivery selection unless proportionate validation applies
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test  # focused iteration
+python3 tools/testing/maven_queue.py -Dmse=off package              # full ordinary suite plus packaging
+python3 tools/testing/maven_queue.py -Dmse=off -Psmoke test -B         # what every branch push runs in CI
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
 ```
 
 - Surefire inherits Maven's JVM. Set `JAVA_HOME` to JDK 21 if needed.
 - Use Lua 5.4 for the TraceChaser forwarder guard; set `LUA_BIN` if needed.
 - Maven output belongs in the current worktree's `target/` directory. Do not share or
   copy build trees. The per-Surefire-fork LWJGL extraction uses
-  `target/test-tmp`. Concurrent Maven runs need separate worktrees. Keep diagnostic output bounded
-  with targeted searches and reads.
+  `target/test-tmp`. Local Maven commands use the shared queue described below. Keep
+  diagnostic output bounded with targeted searches and reads.
 - Use JUnit 5/Jupiter. `-Dmse=off` exposes full Maven logs. PowerShell quotes
   `-D...` arguments and uses `tools/testing/install-hooks.ps1`.
 - During implementation, run focused tests or `run_categories.py --category NAME --run`.
@@ -70,9 +69,8 @@ mvn -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
   public contract, build/selection-policy, timing/physics changes, or uncertain impact
   still require normal change-based validation. Record commands, results/skips, and
   coverage limits; call focused validation what it is, never a full-suite pass. Do not
-  edit the runner's selection to manufacture a narrower broad run. Task accounting and
-  retry limits still apply; CI and release gates remain unchanged. Documentation-only
-  follow-ups do not require repeating engine tests.
+  edit the runner's selection to manufacture a narrower broad run. CI and release gates
+  remain unchanged. Documentation-only follow-ups do not require repeating engine tests.
 - Before a broad run, state the selected class count, expected cost and stopping rule.
   Broad normalization measured about 24 minutes ordinary plus 10 minutes guards; do not
   present this as a short check. Finish focused fixes and documentation first. Run
@@ -80,30 +78,25 @@ mvn -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
   PowerShell in the actual launch environment. On macOS, use the known working native
   display/service permissions from the first graphics run; tool preflight does not prove
   GLFW access. Do not rediscover a documented sandbox failure with another full run.
-- **Validation belongs to the entire user-requested delivery, not each commit or plan
-  item.** One commit per item does not mean one broad run per item. Pin the pre-task
-  integration commit once. Run focused checks during implementation, then one combined
-  change-based selection covering the delivered changes unless the proportionate-validation
-  exception applies. Do not advance the base after
-  each commit or treat the next planned item as new validation scope.
-- Review the **aggregate** testing cost before launching tests. Start one shared task
-  receipt with `run_categories.py --start-task <unique-task-name> --base <pre-task-commit>`;
-  use its printed pinned base for the delivery. The default ceiling is 40 minutes total
-  across the task, including focused and baseline checks, not 40 minutes per invocation.
-  Category runs are timed automatically. Immediately account for externally run focused
-  Maven/baseline checks with `--record-minutes <elapsed> --record-kind focused|baseline`.
-  Inspect `--task-status`; report a budget/mandatory-check conflict before launching work
-  that cannot fit. A ceiling is not an allowance to spend automatically.
-- The runner permits **one broad attempt per task**, including interrupted attempts,
-  and retains accounting in shared Git metadata across worktrees and commits. The
-  10-minute no-output timeout remains; expiration means incomplete, never green.
-  `--repeat-reason` records an explanation only and cannot authorize a repeat. A new
-  plan item, commit, branch, worktree, red result or changed base cannot reset the budget.
-  Do not bypass it with raw Maven, receipt deletion, or closing/reopening the task.
-  `--finish-task` is only for delivery/cancellation. A new identity requires a genuinely
-  new user request or an explicitly user-authorized validation exception. Such exceptions
-  are for material changes after combined validation or repaired prerequisites that
-  invalidated it, not continuation through the original plan. Never self-authorize one.
+- Plan validation for the whole requested delivery, not separately for each commit.
+  Pin the pre-task integration SHA and use it for the combined change-based selection.
+  Finish focused fixes first; repeat completed checks only for changed code, repaired
+  prerequisites, failures or an unresolved risk. There is no task registration,
+  cumulative time budget, receipt, or one-attempt gate.
+- **Queue local Maven work.** Category `--run` commands queue automatically across
+  linked worktrees. For focused tests, packaging and other Maven commands, use
+  `python3 tools/testing/maven_queue.py <maven arguments>` from the intended worktree.
+  Submit the command even if another agent is testing: it waits, reports status and
+  starts automatically. Waiting requires no permission or manual lock cleanup.
+  The queue holds a slot only during execution; cancellation releases a waiting
+  request or stops its running Maven process tree. Keep the command session alive
+  while waiting. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
+  OS locks release automatically; never delete `maven-queue.lock` to force access.
+- Category runs have a configurable **per-invocation** timeout (`--max-minutes`,
+  default 40) and a 10-minute no-output timeout. Queue waiting does not count.
+  A timeout means incomplete validation; inspect the cause and rerun the necessary
+  checks when ready. The focused Maven wrapper preserves normal Maven output and
+  exit status and adds no test timeout. CI/release commands and gates are unchanged.
 - After a red broad run, fix regressions caused by the change and verify those fixes
   narrowly. Attribute disputed failures with a bounded, matched baseline/current check
   of the failing tests, not two full suites. Unattributed failures remain explicitly
@@ -123,10 +116,9 @@ mvn -Dmse=off -Pguards test -B        # separate fresh JVM for structural guards
   The next run deletes unacknowledged leftovers under the runner lock. Use
   `--keep-diagnostics` only when the user explicitly requests longer retention; opt-in
   retention is still bounded to two runs / 100 MiB and acknowledgment deletes it too.
-  Only the small overwritten broad-attempt receipt remains by default, with outcome/counts
-  and retry information, never failure payloads. Do not archive logs elsewhere to evade
+  No validation receipts are written. Do not archive logs elsewhere to evade
   cleanup. Inspect summaries instead of streaming logs into context. The runner does not
-  cache passes or enforce Git integration; its lock covers this runner only.
+  cache passes or enforce Git integration; queued Maven commands share its execution slot.
 - CI still runs `-Psmoke` on pushes and full tests plus `-Pguards` on pull requests and
   manual dispatch. Releases retain full ordinary, guard and required ROM/trace validation.
   Category runs are partial validation, never evidence that the full suite passed.
@@ -148,7 +140,7 @@ long routes. Existing level changes update affected matrix obligations and recor
 inherited gaps; a partial level is not certified by loading or test-file presence.
 The standard and [migration plan](docs/architecture/plans/2026-09-13-level-test-standardisation.md)
 define backlog work; generated coverage/prerequisite enforcement is planned, not
-already installed. Existing validation budgets and delivery policy still apply.
+already installed. Existing validation scope and delivery policy still apply.
 
 ## ROM and reference setup
 

@@ -1,8 +1,9 @@
-"""Result consumption deletes artifacts without deleting retry evidence or foreign data."""
+"""Result consumption deletes artifacts without deleting foreign data."""
 import io
 import json
 from pathlib import Path
 import tempfile
+import subprocess
 import unittest
 from unittest.mock import patch
 
@@ -12,6 +13,8 @@ import run_categories as runner
 
 class CleanupTests(unittest.TestCase):
     def make_run(self, root, index=0, keep=False):
+        if not (root / '.git').exists():
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, capture_output=True)
         run = root / 'target/category-tests' / f'20260912T12000{index}Z-00000000'
         run.mkdir(parents=True)
         (run / 'plan.json').write_text('{}')
@@ -20,7 +23,7 @@ class CleanupTests(unittest.TestCase):
             (run / 'keep-diagnostics').touch()
         return run
 
-    def test_acknowledgment_removes_entire_directory_and_preserves_receipt(self):
+    def test_acknowledgment_removes_entire_directory_and_leaves_legacy_files_alone(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             run = self.make_run(root)
@@ -30,20 +33,14 @@ class CleanupTests(unittest.TestCase):
             artifacts.acknowledge_run(root, run.name)
             self.assertFalse(run.parent.exists())
             self.assertEqual('{"status":"failed"}', receipt.read_text())
-            self.assertFalse((root / 'target/category-tests.lock').exists())
 
-    def test_active_lock_and_path_traversal_prevent_deletion(self):
+    def test_path_traversal_prevents_deletion(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             run = self.make_run(root)
             with self.assertRaises(ValueError):
                 artifacts.acknowledge_run(root, '../category-tests')
-            lock = root / 'target/category-tests.lock'
-            lock.write_text('active')
-            with self.assertRaisesRegex(ValueError, 'active'):
-                artifacts.acknowledge_run(root, run.name)
             self.assertTrue(run.exists())
-            self.assertEqual('active', lock.read_text())
 
     def test_startup_deletes_unacknowledged_and_legacy_runs_but_bounds_opt_in_retention(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -76,6 +73,7 @@ class CleanupTests(unittest.TestCase):
     def test_opt_in_keeps_success_logs_across_startup_until_acknowledged(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True, capture_output=True)
             plan = dict(full=False, tests=['Example.java'], guards=False,
                         categories=['common'], inventory_count=1)
             summary = dict(reports=1, tests=1, failures=0, errors=0, skipped=0)
@@ -100,7 +98,7 @@ class CleanupTests(unittest.TestCase):
             process.assert_not_called()
             self.assertFalse(run.exists())
 
-    def test_completed_result_is_consumable_then_deleted_without_losing_counts(self):
+    def test_completed_result_is_consumable_then_deleted_without_blocking_rerun(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             old = self.make_run(root)
@@ -115,12 +113,10 @@ class CleanupTests(unittest.TestCase):
             result = json.loads((run / 'results.json').read_text())
             self.assertEqual('optional', result[0]['skipped_cases'][0]['reason'])
             artifacts.acknowledge_run(root, run.name)
-            receipt = json.loads((root / 'target/category-tests-last-broad.json').read_text())
-            self.assertEqual('passed', receipt['status'])
-            self.assertEqual(1, receipt['results'][0]['skipped'])
-            self.assertNotIn('skipped_cases', receipt['results'][0])
-            with self.assertRaisesRegex(ValueError, 'already attempted'):
-                runner.run_plan(root, plan)
+            self.assertFalse(run.exists())
+            self.assertFalse((root / 'target/category-tests-last-broad.json').exists())
+            with patch.object(runner, 'tree_state', return_value='state'), patch.object(runner, 'rom_args', return_value=[]), patch.object(runner, 'summarize', return_value=summary), patch.object(runner, 'run_logged', return_value=0):
+                self.assertEqual(0, runner.run_plan(root, plan))
 
 
 if __name__ == '__main__':
