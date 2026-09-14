@@ -51,6 +51,9 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
     }
 
     @Override
+    public String mainPlayerDynamicArtOwner() { return "ss-knuckles"; }
+
+    @Override
     public byte[] getRingRequirementsSolo() {
         return bytes(RING_REQUIREMENTS, 28);
     }

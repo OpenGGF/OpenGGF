@@ -35,8 +35,8 @@ public final class DynamicArtLifecycleService
 
     public static final String REWIND_KEY = "dynamic-art-diagnostics";
     private static final Set<String> OWNERS = Set.of(
-            "sonic", "tails", "tails-tails",
-            "ss-sonic", "ss-tails", "ss-tails-tails");
+            "sonic", "knuckles", "tails", "tails-tails",
+            "ss-sonic", "ss-knuckles", "ss-tails", "ss-tails-tails");
     private static final Map<GameId, Map<String, ProductionArtProfile>>
             PLAYER_PROFILES = Map.of(
                     GameId.S1, Map.of(
@@ -732,12 +732,22 @@ public final class DynamicArtLifecycleService
             int mappingFrame,
             SpriteDplcFrame dplcFrame,
             DecisionKind decisionKind) {
+        return observePlayerDplc(gameId, owner, mappingFrame, dplcFrame, decisionKind, null);
+    }
+
+    public ArtUpdate observePlayerDplc(
+            GameId gameId, String owner, int mappingFrame,
+            SpriteDplcFrame dplcFrame, DecisionKind decisionKind,
+            PlayerArtTransferProfile.ConvertedBank convertedBank) {
         requireRunActive();
         Objects.requireNonNull(decisionKind, "decisionKind");
         Map<String, ProductionArtProfile> gameProfiles =
                 PLAYER_PROFILES.get(gameId);
         ProductionArtProfile profile =
-                gameProfiles != null ? gameProfiles.get(owner) : null;
+                convertedBank != null
+                        ? new ProductionArtProfile(-1, convertedBank.vramDestination(),
+                                convertedBank.ramAddress(), 0)
+                        : gameProfiles != null ? gameProfiles.get(owner) : null;
         if (profile == null) {
             return new ArtUpdate(false, -1, List.of());
         }
@@ -751,8 +761,18 @@ public final class DynamicArtLifecycleService
             return holdLevelEntryDecision(owner, mappingFrame, requests,
                     profile);
         }
-        ArtUpdate update = observeRomDplc(owner, mappingFrame, requests,
-                profile.romArtBase(), profile.vramDestination());
+        ArtUpdate update;
+        if (convertedBank != null) {
+            // Conversion copies all selected runs consecutively, then queues one DMA.
+            ArtUpdate transfer = observeRamDplc(owner, mappingFrame,
+                    contiguousStagingRequest(requests), profile.stagingRamAddress(),
+                    profile.vramDestination());
+            update = new ArtUpdate(transfer.mappingChanged(), transfer.transferId(),
+                    transfer.mappingChanged() ? requests : List.of());
+        } else {
+            update = observeRomDplc(owner, mappingFrame, requests,
+                    profile.romArtBase(), profile.vramDestination());
+        }
         if (gameId == GameId.S2 && update.submitted()) {
             pendingS2TransferIds.add(update.transferId());
         }
@@ -769,6 +789,13 @@ public final class DynamicArtLifecycleService
             String owner,
             int mappingFrame,
             SpriteDplcFrame dplcFrame) {
+        return primePlayerDplc(gameId, owner, mappingFrame, dplcFrame, null);
+    }
+
+    public ArtUpdate primePlayerDplc(
+            GameId gameId, String owner, int mappingFrame,
+            SpriteDplcFrame dplcFrame,
+            PlayerArtTransferProfile.ConvertedBank convertedBank) {
         requireRunActive();
         validateOwner(owner);
         if (mappingFrame < 0) {
@@ -778,7 +805,10 @@ public final class DynamicArtLifecycleService
         Map<String, ProductionArtProfile> gameProfiles =
                 PLAYER_PROFILES.get(gameId);
         ProductionArtProfile profile =
-                gameProfiles != null ? gameProfiles.get(owner) : null;
+                convertedBank != null
+                        ? new ProductionArtProfile(-1, convertedBank.vramDestination(),
+                                convertedBank.ramAddress(), 0)
+                        : gameProfiles != null ? gameProfiles.get(owner) : null;
         if (profile == null) {
             return new ArtUpdate(false, -1, List.of());
         }
@@ -978,6 +1008,17 @@ public final class DynamicArtLifecycleService
         return new ArtUpdate(true, transferId, checked);
     }
 
+    private static List<TileLoadRequest> contiguousStagingRequest(List<TileLoadRequest> requests) {
+        int tiles = 0;
+        for (TileLoadRequest request : requests) {
+            if (request.startTile() < 0 || request.count() <= 0) {
+                throw new IllegalArgumentException("invalid converted DPLC request");
+            }
+            tiles = Math.addExact(tiles, request.count());
+        }
+        return tiles == 0 ? List.of() : List.of(new TileLoadRequest(0, tiles));
+    }
+
     private ArtUpdate prepareS1(
             String owner,
             int mappingFrame,
@@ -1069,8 +1110,10 @@ public final class DynamicArtLifecycleService
         if (checked.isEmpty()) {
             return new ArtUpdate(true, -1, List.of());
         }
+        boolean converted = profile.romArtBase() < 0;
         heldLevelEntryPlayerArt.add(new Preparation(owner, mappingFrame,
-                toDiagnosticRequests(checked, profile.romArtBase(), -1,
+                toDiagnosticRequests(converted ? contiguousStagingRequest(checked) : checked,
+                        profile.romArtBase(), converted ? profile.stagingRamAddress() : -1,
                         profile.vramDestination())));
         // The tiles still reach the renderer, as a priming does; only the
         // ledger edge waits for the load to finish.

@@ -3361,8 +3361,10 @@ the owning KiS2 routine in the catalogue):
   second jump-button edge while another remains held. The ROM demo-mode gate
   still lacks an engine attract-demo owner. Complete powered-form route and
   gameplay rewind coverage remains open.
-- **Trace coverage.** The EHZ1 KiS2 fixture exists; its current divergence is
-  tracked in [the frontier log](trace-frontier-log.md). There are no passing
+- **Trace coverage.** The EHZ1 KiS2 fixture exists. The full all-emeralds capture
+  now has converted-art and chip SS transfer observations; all 36 segments pass
+  v5 validation, but chain gameplay still stops in EHZ1 at BK2 cursor 2003.
+  Current evidence is tracked in [the frontier log](trace-frontier-log.md). There are no passing
   end-to-end trace fixtures for these presentation or powered-form paths.
 
 The [completion plan and coverage matrix](../architecture/plans/2026-09-14-kis2-presentation-super.md)
