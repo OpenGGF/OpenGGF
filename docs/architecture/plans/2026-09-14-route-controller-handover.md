@@ -187,3 +187,12 @@ zero failures/errors/skips and identical emitted pads to its pre-cleanup
 success. HCZ investigation/checks measured 1,256.97 seconds; its receipt
 conservatively charged 1,328.16 seconds (71.19 seconds overcount, retained
 rather than rewriting shared accounting).
+
+
+Post-integration verification on `feature/ai-gameplay-capture` merge
+`5bcd104e8`: `mvn -Dmse=off
+-Dtest=TestS3kAiz1RoutePilot,TestS3kAiz1CompatibilityRoutes,TestS3kHcz1RoutePilot
+-Dopenggf.aiz1.routes=true -Dopenggf.hcz1.pilot=true test`, with all three
+existing absolute ROM paths, passed **8 cases, zero failures/errors/skips**
+in 37.576 seconds. No integration conflicts occurred. Main remains on
+`develop`; its existing dirty reference submodules and user note are preserved.
