@@ -62,7 +62,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         RESULTS,
         TITLE_CARD_WAIT,
         TITLE_CARD_WAIT2,
-        DONE
+        DONE,
+        TITLE_CARD_INIT
     }
     private static final Logger LOG = Logger.getLogger(S3kResultsScreenObjectInstance.class.getName());
 
@@ -526,6 +527,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // to Obj_LevelResultsCreate; Create polls Kos_modules_left before
         // allocating child objects and setting Events_fg_5
         // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
+        // Obj_LevelResultsCreate rechecks global Kos_modules_left on every
+        // allocation retry, including after its own three archives were claimed.
+        if (S3kRuntimeArtCoordinator.from(services()).moduleQueue().hasPendingPhysicalModules()) {
+            return false;
+        }
         if (!resultsArtClaimed) {
             rebindQueuedResultsArtAfterRestore();
             if (queuedResultsArt == null || !queuedResultsArt.isReady()) {
@@ -536,8 +542,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         }
         // A failed first AllocateObjectAfterCurrent leaves Create active for a
         // retry: nothing is published and Events_fg_5 stays clear until at least
-        // the first child exists. The art stays claimed across that retry, since
-        // the ROM's queue poll already completed (sonic3k.asm:62586-62616).
+        // the first child exists. The art stays claimed across that retry while
+        // the global queue poll still runs (sonic3k.asm:62586-62616).
         if (!createResultChildSsts()) {
             return false;
         }
@@ -980,9 +986,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 pendingAizTitleHandoff = aizAct1MinibossTitleHandoff;
                 pendingRetainedReloadTitleHandoff = retainedReloadState;
                 if (fbzCarriedTitleOwner) {
-                    initializePublishedTitleCard();
-                    titleInitializationPending = false;
-                    carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
+                    // loc_2DD06 only replaces this SST's code pointer. The
+                    // following Process_Sprites pass runs Obj_TitleCardInit.
+                    carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_INIT;
                     carriedTitleWaitTimer = 0;
                 }
             }
@@ -1052,10 +1058,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         var titleCardProvider = services().titleCardProvider();
         titleCardProvider.initializeInLevel(zone, 1);
         if (titleCardProvider instanceof Sonic3kTitleCardManager s3kTitleCard) {
-            if (act == 0 && zone == 0x04) {
+            boolean retainedSstTitleOwner = carriedTitlePhase == CarriedTitlePhase.TITLE_CARD_INIT;
+            if (retainedSstTitleOwner) {
                 s3kTitleCard.useExternalInLevelGameplayOwner();
             }
-            if (pendingPreloadedTitleHandoff) {
+            if (pendingPreloadedTitleHandoff && !retainedSstTitleOwner) {
                 int releaseDispatches = carriedPreloadedActCameraReleaseDispatches;
                 if (releaseDispatches < 0) {
                     releaseDispatches =
@@ -1069,9 +1076,9 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                             releaseDispatches);
                 }
             }
-            if (pendingAizTitleHandoff) {
+            if (pendingAizTitleHandoff && !retainedSstTitleOwner) {
                 s3kTitleCard.requestLevelGamestateResetAtInLevelDisplay();
-            } else if (pendingRetainedReloadTitleHandoff) {
+            } else if (pendingRetainedReloadTitleHandoff && !retainedSstTitleOwner) {
                 // This Obj_LevelResults survived an earlier Load_Level and now
                 // dispatches as Obj_TitleCard. The title owner resets the
                 // counters after its native create dispatches.
@@ -1173,8 +1180,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // this results object through its reload and Restore_PlayerControl still
         // belongs to the results exit itself.
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
-        boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
-        if (!hasSeamlessTransition && !lbzAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
+        // FBZ2 loc_708AA and LBZ2's retained boss own Restore_PlayerControl.
+        // Results loc_2DCF8 only clears _unkFAA8; releasing here lets the next
+        // player slot move/animate one dispatch before the boss restores it.
+        boolean retainedAct2PostBossHandoff = act == 1 && (zone == 0x04 || zone == 0x06);
+        if (!hasSeamlessTransition && !retainedAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
             for (PlayableEntity candidate : playerQuery()
                     .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
                 if (candidate instanceof AbstractPlayableSprite sprite) {
@@ -1206,8 +1216,10 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     static boolean shouldRestoreLevelCameraBoundsOnExit(int zone, int act) {
         boolean actOneInLevelTitleHandoff = act == 0
                 && (zone == 0x00 || zone == 0x01 || zone == 0x02 || zone == 0x04);
-        boolean lbzActTwoPostBossHandoff = zone == 0x06 && act == 1;
-        return !actOneInLevelTitleHandoff && !lbzActTwoPostBossHandoff;
+        // Obj_LevelResults loc_2DCF8 leaves FBZ2's arena words intact.
+        // The surviving boss's loc_708AA owns its later gradual expansion.
+        boolean actTwoPostBossHandoff = act == 1 && (zone == 0x04 || zone == 0x06);
+        return !actOneInLevelTitleHandoff && !actTwoPostBossHandoff;
     }
 
     static boolean isPreloadedNextActHandoff(int resultsAct, int currentAct) {
@@ -1225,7 +1237,18 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
 
     private void updateCarriedTitleCard() {
         switch (carriedTitlePhase) {
+            case TITLE_CARD_INIT -> {
+                initializePublishedTitleCard();
+                titleInitializationPending = false;
+                titleCardInitialized = true;
+                carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT;
+            }
             case TITLE_CARD_WAIT -> {
+                if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title
+                        && !title.isExternalInLevelWaitReady()) {
+                    title.updateExternalInLevelChildren();
+                    return;
+                }
                 // ROM mutates this same SST owner into Obj_TitleCardWait, then
                 // clears Timer/Ring_count, restores air and music, and advances
                 // it to Wait2. Visual children are managed by the shared title
@@ -1245,23 +1268,40 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
                 }
                 carriedTitleWaitTimer = 90;
                 carriedTitlePhase = CarriedTitlePhase.TITLE_CARD_WAIT2;
+                advanceExternalTitleChildren();
             }
             case TITLE_CARD_WAIT2 -> {
                 if (carriedTitleWaitTimer > 0) {
                     carriedTitleWaitTimer--;
+                    advanceExternalTitleChildren();
                     return; // Obj_TitleCardWait2 returns; child polling starts next dispatch.
                 }
-                if (services().titleCardProvider().isComplete()) {
+                var provider = services().titleCardProvider();
+                boolean childrenGone = provider instanceof Sonic3kTitleCardManager title
+                        ? title.areExternalInLevelChildrenRetired() : provider.isComplete();
+                if (childrenGone) {
+                    if (provider instanceof Sonic3kTitleCardManager title) {
+                        title.completeExternalInLevelTitle();
+                    }
                     services().gameState().setEndOfLevelFlag(true);
                     carriedTitlePhase = CarriedTitlePhase.DONE;
                     complete = true;
                     ObjectLifetimeOps.deleteNoRespawn(this);
+                } else if (provider instanceof Sonic3kTitleCardManager title) {
+                    title.startExternalInLevelChildExit();
+                    title.updateExternalInLevelChildren();
                 }
             }
             case RESULTS, DONE -> {
                 // RESULTS is handled by the ordinary results state machine;
                 // DONE is retained only for rewind-visible routine identity.
             }
+        }
+    }
+
+    private void advanceExternalTitleChildren() {
+        if (services().titleCardProvider() instanceof Sonic3kTitleCardManager title) {
+            title.updateExternalInLevelChildren();
         }
     }
 

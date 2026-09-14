@@ -78,6 +78,135 @@ class TestFbzPlaneTransition {
         assertEquals(0x2000, state.offsetY16_16());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"0,false", "1,true", "16,true", "17,false"})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void movingBackgroundTopContactRejectsExactSurface(int overlap, boolean lands) {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var controller = manager.createDynamicObject(FbzEndBossEventControlInstance::new);
+        controller.snapshotPreUpdatePosition();
+        var player = fixture.sprite();
+        player.setAir(false);
+        player.setRolling(false);
+        player.setCentreX((short) controller.getX());
+        player.setCentreY((short) (controller.getY() - 0x11 - player.getYRadius() - 4 + overlap));
+        player.setYSpeed((short) 0);
+        int beforeY = player.getCentreY();
+
+        manager.processImmediateInlineSolidCheckpoint(controller, player, java.util.List.of());
+
+        assertEquals(lands, manager.isRidingObject(player, controller));
+        assertEquals(lands, manager.hasObjectStandingBit(player, controller));
+        if (!lands) assertEquals(beforeY, player.getCentreY(),
+                "loc_533B8 calls SolidObjectTop: overlap outside [-$10,-1] performs no Y write");
+    }
+
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void landedSidekickRefreshesTheEventPlatformsNativeCodeBank() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var controller = manager.createDynamicObject(FbzEndBossEventControlInstance::new);
+        var tails = new com.openggf.sprites.playable.Tails("tails_platform", (short) 0, (short) 0);
+        tails.setCpuControlled(true);
+        var cpu = new com.openggf.sprites.playable.SidekickCpuController(tails, fixture.sprite());
+        tails.setAir(true);
+        tails.setRolling(false);
+        tails.setCentreX((short) controller.getX());
+        tails.setCentreY((short) (controller.getY() - 0x11 - tails.getYRadius() - 1));
+        tails.setYSpeed((short) 0x100);
+        controller.snapshotPreUpdatePosition();
+
+        manager.processImmediateInlineSolidCheckpoint(controller, fixture.sprite(), List.of(tails));
+        assertTrue(manager.isRidingObject(tails, controller));
+        cpu.refreshS3kInteractLatchFromCurrentRide();
+        assertEquals(5, cpu.getDiagnosticInteractId(),
+                "sub_13EFC reads the high word of loc_532E0..loc_533A4, not the prior support's bank");
+    }
+
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void freshLandingDoesNotCarryThePreviousFramesPlatformMotionAgain() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var controller = manager.createDynamicObject(FbzEndBossEventControlInstance::new);
+        var player = fixture.sprite();
+        player.setCentreX((short) 0x2E80);
+        player.setCentreY((short) 0x800);
+        for (int frame = 0; frame < 3; frame++) {
+            controller.snapshotPreUpdatePosition();
+            controller.update(frame, player);
+        }
+        assertEquals(0x31C0, controller.getPreUpdateX());
+        assertEquals(0x31C1, controller.getX(), "landing dispatch crosses the $7800 motion's pixel boundary");
+        player.setAir(false);
+        player.setRolling(false);
+        player.setCentreX((short) controller.getX());
+        player.setCentreY((short) (controller.getY() - 0x11 - player.getYRadius() - 1));
+        player.setYSpeed((short) 0);
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertTrue(manager.isRidingObject(player, controller));
+        int landingX = player.getCentreX();
+
+        controller.snapshotPreUpdatePosition();
+        controller.update(3, player);
+        assertEquals(0x31C1, controller.getX(), "next dispatch does not cross another pixel boundary");
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertEquals(landingX, player.getCentreX(),
+                "loc_533A4 loads this dispatch's old x_pos; it never reuses the landing dispatch's d4");
+
+        controller.snapshotPreUpdatePosition();
+        controller.update(4, player);
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertEquals(landingX + 1, player.getCentreX(), "later live movement still carries the standing player");
+    }
+
+    @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void bossAllocationRebasesTheSolidWithoutCarryingThePlayerTwice() throws Exception {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var services = com.openggf.game.GameServices.level();
+        var manager = services.getObjectManager();
+        var controller = manager.createDynamicObject(FbzEndBossEventControlInstance::new);
+        var events = ((com.openggf.game.sonic3k.Sonic3kLevelEventManager)
+                com.openggf.game.GameServices.module().getLevelEventProvider()).getFbzEvents();
+        var apply = FbzEndBossEventControlInstance.class.getDeclaredMethod("apply",
+                FbzEndBossEventControlInstance.NativeState.class);
+        apply.setAccessible(true);
+        apply.invoke(controller, new FbzEndBossEventControlInstance.NativeState(
+                FbzEndBossEventControlInstance.Phase.WAIT_BOSS_STAGE,
+                0x045C1800, 0x05D02000, false, false, false, false));
+        var player = fixture.sprite();
+        events.setAct2ForegroundStage(8);
+        controller.snapshotPreUpdatePosition();
+        controller.update(0, player);
+        assertEquals(0x361C, controller.getX());
+        player.setCentreX((short) 0x3300);
+        player.setCentreY((short) (controller.getY() - 0x11 - player.getYRadius() - 1));
+        player.setAir(false);
+        player.setYSpeed((short) 0);
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertTrue(manager.isRidingObject(player, controller));
+        int beforeX = player.getCentreX();
+
+        events.setAct2ForegroundStage(0x0C);
+        controller.snapshotPreUpdatePosition();
+        controller.update(1, player);
+        assertEquals(0x31C0, controller.getX());
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertEquals(beforeX, player.getCentreX(),
+                "loc_53388 sets d4=$31C0 before SolidObjectTop; loc_53134 alone translates player X");
+        assertEquals(0x690 - 0x11 - player.getYRadius(), player.getCentreY(),
+                "continued SolidObjectTop seating subtracts d3 and the live radius without the fresh-landing bias");
+        assertTrue(manager.isRidingObject(player, controller));
+        var snapshot = controller.captureRewindState();
+        controller.update(2, player);
+        assertTrue(controller.carriesRiderOnHorizontalMove(player), "ordinary d4 sampling resumes next dispatch");
+        controller.restoreRewindState(snapshot);
+        assertFalse(controller.carriesRiderOnHorizontalMove(player), "rewind retains the native zero-delta dispatch");
+    }
+
     @Test
     void controllerInitialBoundsAndSolidContractMatchNative() {
         assertEquals(0x3C, FbzEndBossEventControlInstance.nativeCameraMinY(PlayerCharacter.SONIC_ALONE));
@@ -87,8 +216,8 @@ class TestFbzPlaneTransition {
         assertTrue(controller.isTopSolidOnly());
         assertTrue(controller.isPersistent(),
                 "the native routine remains live through COMPLETE and has no unload tail");
-        assertTrue(controller.seedsNewRideCarryFromPreUpdateX(),
-                "shared SolidObjectTop must consume the pre-update d4 carry reference");
+        assertFalse(controller.seedsNewRideCarryFromPreUpdateX(),
+                "new standing state must not retain the landing frame's earlier d4");
     }
 
     @Test

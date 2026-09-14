@@ -141,6 +141,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private final int actIndex;
     private final boolean isSkipIntro;
     private final List<AniPlcScriptState> scripts;
+    private final Sonic3kAniPlcPublicationQueue aniPlcPublications = new Sonic3kAniPlcPublicationQueue();
 
     private final Pattern[] firstTreePatterns;
     private boolean firstTreeApplied;
@@ -307,6 +308,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.scripts = parsedScripts;
         }
         AniPlcParser.ensurePatternCapacity(scripts, level);
+        for (AniPlcScriptState script : scripts) {
+            // Capture original presented bytes even before the first submission.
+            aniPlcPublications.registerDestination(script.destinationTileIndex(), script.tilesPerFrame());
+        }
 
         if (zoneIndex == 0 && actIndex == 1) {
             int firstTreeEnd = Sonic3kConstants.ART_UNC_AIZ2_FIRST_TREE_DEST_TILE
@@ -805,12 +810,34 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     }
 
     void tickScript(AniPlcScriptState script) {
-        if (script.tick(level, GameServices.graphics()) && requiresObjectRendererRefresh(script)) {
-            Sonic3kPlcLoader.refreshAffectedRenderers(
-                    List.of(new Sonic3kPlcLoader.TileRange(
-                            script.destinationTileIndex(), script.tilesPerFrame())),
-                    GameServices.level());
+        // AnimateTiles_DoAniPLC changes counters now, but Add_To_DMA_Queue
+        // publishes its ROM payload only in the following VInt Process_DMA_Queue.
+        script.tickSubmission(tileId -> aniPlcPublications.submit(
+                script.destinationTileIndex(), script.copyFramePayload(tileId)));
+    }
+
+    void publishAniPlcAtVBlank() {
+        aniPlcPublications.publish(this::publishAniPlcPayload);
+    }
+
+    private void publishAniPlcPayload(int destination, byte[] payload) {
+        GraphicsManager graphics = GameServices.graphics();
+        for (int tile = 0; tile < payload.length / 32; tile++) {
+            Pattern pattern = level.getPattern(destination + tile);
+            pattern.fromSegaFormat(java.util.Arrays.copyOfRange(payload, tile * 32, (tile + 1) * 32));
+            if (graphics != null && graphics.isGlInitialized()) graphics.updatePatternTexture(pattern, destination + tile);
         }
+        Sonic3kPlcLoader.refreshAffectedRenderers(List.of(new Sonic3kPlcLoader.TileRange(
+                destination, payload.length / 32)), GameServices.level());
+    }
+
+    private byte[] presentedAniPlcPattern(int tile) {
+        Pattern pattern = level.getPattern(tile);
+        byte[] packed = new byte[32];
+        for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x += 2)
+            packed[y * 4 + x / 2] = (byte) ((pattern.getPixel(x, y) & 15) << 4
+                    | pattern.getPixel(x + 1, y) & 15);
+        return packed;
     }
 
     boolean requiresObjectRendererRefresh(AniPlcScriptState script) {
@@ -2203,7 +2230,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                     s.getTimer(), s.getFrameIndex());
         }
         // Scalar state packed into extra blob (53 bytes: 1 bool + 13 ints)
-        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(53);
+        byte[] publicationState = aniPlcPublications.capture(this::presentedAniPlcPattern);
+        java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(53 + publicationState.length);
         buf.put((byte) (firstTreeApplied ? 1 : 0));
         buf.putInt(lastHcz1WaterlineDelta);
         buf.putInt(lastHcz2SmallBgLineValue);
@@ -2218,6 +2246,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         buf.putInt(frameCounter);
         buf.putInt(lastGumballIndex);
         buf.putInt(gumballFrameCounter);
+        buf.put(publicationState);
         return new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot(
                 sc,
                 new com.openggf.game.rewind.snapshot.PatternAnimatorSnapshot.HandlerCounter[0],
@@ -2252,6 +2281,12 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             frameCounter             = buf.getInt();
             lastGumballIndex         = buf.getInt();
             gumballFrameCounter      = buf.getInt();
+            if (extra.length > 53) {
+                aniPlcPublications.restore(java.util.Arrays.copyOfRange(extra, 53, extra.length),
+                        this::publishAniPlcPayload);
+            } else {
+                aniPlcPublications.clear();
+            }
         }
     }
 }

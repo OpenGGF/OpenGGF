@@ -65,6 +65,16 @@ class TestFbzEndBossFormalCorrections {
         ObjectControlState.nativeBit7FullControl().applyTo(p2);
         ObjectControlState.nativeBit7FullControl().applyTo(extra);
         p1.setLogicalInputState(false, false, false, true, false);
+        for (var participant : List.of(p1, p2)) {
+            participant.setAir(true);
+            participant.setAnimationId(0x13);
+            participant.getAnimationManager().publishPreviousAnimationId(0x13);
+            participant.setAnimationFrameIndex(3);
+            participant.setAnimationTick(7);
+            participant.setXSpeed((short) 0x120);
+            participant.setYSpeed((short) 0x34);
+            participant.setGSpeed((short) 0x110);
+        }
 
         Camera camera = new Camera();
         camera.setX((short) 0x2F80);
@@ -102,6 +112,15 @@ class TestFbzEndBossFormalCorrections {
         assertEquals(0, p1.getLogicalInputState(), "Ctrl_1_logical is cleared before Task17 auto-run");
         assertFalse(p2.isObjectControlled(), "Restore_PlayerControl2 runs before helper allocation");
         assertFalse(extra.isObjectControlled(), "extra sidekicks receive safe control restoration only");
+        for (var participant : List.of(p1, p2)) {
+            assertFalse(participant.getAir(), "Restore_PlayerControl2 clears Status_InAir");
+            assertEquals(5, participant.getAnimationId(), "Restore_PlayerControl2 publishes Wait");
+            assertEquals(0, participant.getAnimationFrameIndex());
+            assertEquals(0, participant.getAnimationTick());
+            assertEquals(0x120, participant.getXSpeed(), "restoring control preserves motion words");
+            assertEquals(0x34, participant.getYSpeed());
+            assertEquals(0x110, participant.getGSpeed());
+        }
         assertEquals(0x1000, camera.getMaxYTarget() & 0xFFFF);
         assertEquals(0x3738, camera.getMaxXTarget() & 0xFFFF);
         assertEquals(2, manager.activeObjectsOfType(S3kIncLevelEndXGradualInstance.class).size());
@@ -111,10 +130,19 @@ class TestFbzEndBossFormalCorrections {
                         0x200,1,1,0x100,-1,true)),
                 KosinskiModuleQueue.Phase.READY_TO_START,null,List.of(),List.of()));
         boss.clearExitInputTimerForTest();
+        p1.clearLogicalInputState();
+        p1.recordFollowerHistoryForTick(); // P1's earlier SST slot already recorded this sample.
         invoke(boss,"updateExitReady");
         assertEquals(FbzEndBossInstance.Phase.EXIT_READY,boss.phase(),
                 "Kos_modules_left must not suppress the native forced-exit task");
         assertEquals(AbstractPlayableSprite.INPUT_RIGHT,p1.getLogicalInputState());
+        assertEquals(0, p1.getInputHistory(0),
+                "loc_86358 writes Ctrl_1_logical without rewriting P1's earlier history sample");
+        p1.endOfTick();
+        p1.recordFollowerHistoryForTick();
+        assertEquals(AbstractPlayableSprite.INPUT_RIGHT, p1.getInputHistory(0),
+                "the following player dispatch records the new logical word");
+        assertEquals(0, p1.getInputHistory(1));
         services.queue.clear();
         invoke(boss,"updateExitReady");
         assertEquals(FbzEndBossInstance.Phase.EXIT_READY,boss.phase());

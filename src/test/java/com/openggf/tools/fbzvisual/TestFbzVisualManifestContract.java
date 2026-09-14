@@ -16,7 +16,20 @@ class TestFbzVisualManifestContract {
 
     private static final Path MANIFEST = Path.of("docs/architecture/research/s3k-zones/fbz-visual-checkpoints.json");
     private static final String MANIFEST_SHA256 =
-            "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD";
+            "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1";
+
+    @Test
+    void controlledVisualRecipesDeclareOnlyTheReviewedOneTimeMovementGate() throws Exception {
+        var manifest = FbzVisualManifest.load(MANIFEST, MANIFEST_SHA256);
+        var driver = new FbzVisualScenarioDriver(manifest);
+        for (var plan : driver.plans().values()) {
+            boolean controlled = plan.checkpointId().equals("fbz1-boundary-5-outdoor")
+                    || plan.checkpointId().equals("fbz2-boundary-outdoor");
+            assertEquals(controlled, plan.fixtureMutation().writes().containsKey("visual_movement_control"));
+            if (controlled) assertEquals("movement-suppressed-cpu-allowed",
+                    plan.fixtureMutation().writes().get("visual_movement_control"));
+        }
+    }
 
     @Test
     void reviewedManifestHashAndBranchCoordinatesRemainFrozen() throws Exception {
@@ -64,5 +77,27 @@ class TestFbzVisualManifestContract {
         assertFalse(cadenceWrites.containsKey("aniplc_timer_0"));
         assertFalse(cadenceWrites.containsKey("aniplc_frame_0"));
         assertFalse(cadenceWrites.containsKey("level_frame_counter"));
+    }
+
+    @Test
+    void reviewedCrossingsLeaveInclusiveEqualityAnd230UsesPlacedAct2Art() throws Exception {
+        JsonNode root = new ObjectMapper().readTree(Files.readAllBytes(MANIFEST));
+        java.util.Map<String,Integer> coordinates = java.util.Map.of(
+                "fbz1-boundary-1-outdoor", 0x9C1, "fbz1-boundary-2-outdoor", 0x2BF,
+                "fbz1-boundary-3-outdoor", 0x9C1, "fbz1-boundary-4-horizontal", 0x1B01,
+                "fbz1-boundary-5-outdoor", 0x23F, "fbz1-boundary-6-outdoor", 0x641,
+                "fbz2-boundary-outdoor", 0xA41);
+        for (JsonNode checkpoint : root.path("checkpoints")) {
+            String id = checkpoint.path("id").asText();
+            if (coordinates.containsKey(id)) {
+                String axis = id.endsWith("horizontal") ? "x" : "y";
+                assertEquals(coordinates.get(id).intValue(), checkpoint.path("player").path(axis).asInt(), id);
+            }
+        }
+        var driver = new FbzVisualScenarioDriver(FbzVisualManifest.load(MANIFEST, MANIFEST_SHA256));
+        assertEquals(1, driver.plan("fbz1-aniplc-230").zeroBasedAct());
+        assertEquals(2, driver.plan("fbz1-aniplc-230").fixtureMutation().expectedPreState().get("act"));
+        assertEquals(0x920, driver.plan("fbz1-aniplc-230").fixtureMutation().writes().get("player_x"));
+        assertEquals(0x6B0, driver.plan("fbz1-aniplc-230").fixtureMutation().writes().get("player_y"));
     }
 }

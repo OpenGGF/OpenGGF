@@ -11,6 +11,38 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
 class TestFbzBossCloudDeform {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {14, 46})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void continuousShakeReadsLevelClockAndPublishesThePriorSample(int levelFrame) {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var events = ((Sonic3kLevelEventManager) com.openggf.game.GameServices.module()
+                .getLevelEventProvider()).getFbzEvents();
+        events.initializeAct2Runtime();
+        events.setScreenShakeState(true, 2, 13);
+        var level = com.openggf.game.GameServices.level();
+        level.setFrameCounter(levelFrame);
+        var camera = com.openggf.game.GameServices.camera();
+        camera.setY((short) 0x300);
+
+        events.update(1, 30); // Event-dispatch count is deliberately a different clock.
+
+        assertEquals(levelFrame, events.getScreenShakePhase(),
+                "loc_4F3FA reads Level_frame_counter & $3F");
+        assertEquals(0, events.getScreenShakeOffset(), "ScreenShakeArray2[14] and [46] are zero");
+        assertEquals(2, events.getScreenShakeLastOffset(), "ScreenEvent consumes the earlier sample");
+        assertEquals(0x302, camera.getYCopy());
+        assertEquals(0x300, camera.getY(), "shake changes the render copy, not the live camera word");
+        var runtime = com.openggf.game.GameServices.zoneRuntimeRegistry().current();
+        byte[] snapshot = runtime.captureBytes();
+        events.setScreenShakeState(false, 7, 3);
+        runtime.restoreBytes(snapshot);
+        org.junit.jupiter.api.Assertions.assertTrue(events.isScreenShakeActive());
+        assertEquals(levelFrame, events.getScreenShakePhase());
+        assertEquals(0, events.getScreenShakeOffset());
+        assertEquals(2, events.getScreenShakeLastOffset());
+    }
+
     @Test
     void cloudAddressSlotsExistBeforeTheFirstDeformationPass() {
         SwScrlFbz handler = new SwScrlFbz(() -> null);

@@ -30,10 +30,14 @@ class TestFbzMissileObjects {
     AbstractObjectInstance.resetCameraBoundsForTests();
   }
   @Test
-  void launcherCompanionExposesItsNativeBalanceWidth() {
+  void launcherCompanionExposesNativeBalanceWidthAndSuppressesEdgeBalance() {
     var companion = new FbzMissileLauncherCompanionObjectInstance(spawn(0x7F, 0x80), null);
     assertEquals(0x20, companion.getBalanceWidthPixels(),
         "native companion width_pixels differs from both parent width $10 and solid d1=$2B");
+    assertEquals(0x0003, companion.romObjectCodePointerHighWord(),
+        "loc_3C636 must refresh Tails_CPU_interact before a subsequent off-screen ride");
+    assertTrue(companion.suppressesObjectEdgeBalance(),
+        "Obj_FBZMissileLauncher sets companion status bit 7; Tails_Move bypasses balance");
   }
   @Test
   void everyLauncherSubtypeDecodesExactCadenceBurstPhaseAndCompanion() {

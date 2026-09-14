@@ -56,14 +56,40 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   exposes its original standing-balance width. Rotating platforms decode all
   native member rows and signed radii; offscreen solid push release retains its
   original animation write during death. Fresh S3K loads now run the initial
-  pattern animation pass before gameplay, as the ROM does. The Act 1 boss arms
+  pattern animation pass before gameplay, as the ROM does. S3K AniPLC art now
+  publishes at its DMA-serving VBlank after the animation counter advances;
+  rewind preserves both presented art and queued submissions. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
   preserves the native wait and score bonus before the end sign, and the ending
-  pose retains existing plunger support. Zone-owned tumble
+  pose retains existing plunger support across the seamless manager replacement. Zone-owned tumble
   presentation and snake-platform standing ownership follow the original routines. The donated Sonic 1
   route clears the elevator squeeze with an ordinary run-up and timed roll.
+  The Act 1 miniboss submits its native hardware-timed art job, allowing results
+  to reload Act 2; results allocation and the later title-owned enemy-art batch
+  retain their native dispatch boundaries. The carried title initializes on its
+  next dispatch, player control restores the native idle pose, and camera easing
+  targets follow the Act 2 coordinate rebase. Retained title children and camera
+  workers follow their original dispatch order. Chains reject hurt/dead grabs,
+  vertical cages keep their orbit separate from the player ground angle, and
+  magnetic platforms use the native ceiling and contact boundaries. Top-only
+  buttons and disappearing platforms use their native landing edges and level
+  clock; lightning attraction avoids an extra ordinary-ring sweep. Sideways
+  spikes release owned push state after their hurt callback, elevator cars
+  retain their original Tails interaction bank, and the Act 2 subboss stops
+  movement on its laser-ready wait transition. The final capsule and button keep
+  established standing contacts throughout the victory pose. Results retain boss-owned
+  controls and camera bounds, and results creation waits for the whole physical
+  KosM queue even on allocation retries. The exit door consumes collision in its own dispatch,
+  and forced exit input preserves the already-recorded follower history. Both Act 2 bosses retain their
+  physical exit-art jobs through readiness and rewind; moving-background LEFT
+  probes translate world coordinates before the sensor mirrors its tile metric.
   Upright spikes use their animated FBZ art, while wall spikes retain the shared
-  sideways artwork; both tile banks participate in renderer refresh.
+  sideways artwork; both tile banks participate in renderer refresh. Foreground
+  and background shaders retain fragment centres while scaling, preventing a
+  one-pixel sampling shift caused by GPU division rounding. Retained background
+  redraws use native strip counts, clipped windows and aligned column sources,
+  preserving untouched rows. Bent pipes retain their ROM placement flips. Stage rings retain the native
+  animation timer across level-counter resets and seamless reloads, including rewind.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 

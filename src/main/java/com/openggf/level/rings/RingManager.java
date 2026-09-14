@@ -144,7 +144,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         // Retain the self-contained update contract used by editor/headless callers.
         // The gameplay loop passes false and performs this at the native player touch point.
         if (collectStageRingsInUpdate) {
-            attractStageRings(player);
+            attractStageRings(player, frameCounter);
         }
 
         // Lightning shield ring attraction — S3K only
@@ -162,6 +162,10 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      * can carry or reposition it.
      */
     public void attractStageRings(AbstractPlayableSprite player) {
+        attractStageRings(player, levelManager != null ? levelManager.getFrameCounter() : 0);
+    }
+
+    private void attractStageRings(AbstractPlayableSprite player, int frameCounter) {
         if (player != null && !player.isCpuControlled()) {
             // Obj_Attracted_Ring can execute before later platform slots carry
             // Player 1. Capture the post-physics player-slot coordinates here
@@ -188,8 +192,14 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
             int dy = pcy - ring.y();
             int ringHalf = ringRules != null ? ringRules.ringCollisionWidth() : RING_COLLISION_HALF;
             int effectiveHalf = ATTRACT_BOX_HALF + ringHalf;
-            if (Math.abs(dx) <= effectiveHalf && Math.abs(dy) <= effectiveHalf
-                    && addAttractedRing(index, ring.x(), ring.y())) {
+            if (Math.abs(dx) <= effectiveHalf && Math.abs(dy) <= effectiveHalf) {
+                if (!addAttractedRing(index, ring.x(), ring.y())) {
+                    // Test_Ring_Collisions_AttractRing loc_EB16 rejoins
+                    // loc_EAC6 when AllocateObject fails: give this ring
+                    // directly, then continue scanning the attraction box.
+                    collectPlacedRingAtIndex(index, player, frameCounter);
+                    continue;
+                }
                 placement.markCollected(index);
                 // ROM Test_Ring_Collisions_AttractRing returns immediately after
                 // allocating one Obj_Attracted_Ring. The remaining placement
@@ -248,6 +258,13 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
      */
     public void collectStageRings(AbstractPlayableSprite player, int frameCounter) {
         if (cannotCollectRings(player)) {
+            return;
+        }
+        // Test_Ring_Collisions chooses its lightning-shield branch instead
+        // of Test_Ring_Collisions_NoAttraction (sonic3k.asm:18445-18476).
+        // A successful allocation returns immediately; a second ordinary
+        // overlap scan would collect later placement records prematurely.
+        if (lightningShieldEnabled(player) && player.getShieldType() == ShieldType.LIGHTNING) {
             return;
         }
         if (!stageRingsUseObjectTouchCollection
@@ -481,12 +498,21 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 levelManager != null ? levelManager.getObjectManager() : null);
     }
 
+    private int stageRingFrame(int frameCounter) {
+        // A provider owns retained ROM state; S1/S2 retain their existing
+        // counter-derived presentation when no such provider is installed.
+        if (levelManager != null && levelManager.getAnimatedPatternManager()
+                instanceof com.openggf.level.animation.StageRingAnimationFrameProvider provider)
+            return provider.stageRingAnimationFrame();
+        return renderer.getSpinFrameIndex(frameCounter);
+    }
+
     public void draw(int frameCounter) {
         if (renderer == null) {
             return;
         }
 
-        int spinFrameIndex = renderer.getSpinFrameIndex(frameCounter);
+        int spinFrameIndex = stageRingFrame(frameCounter);
         int activeCount = placement.activeIndexCount();
         for (int i = 0; i < activeCount; i++) {
             int index = placement.activeIndexAt(i);
@@ -554,7 +580,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer == null) {
             return;
         }
-        int spinFrameIndex = renderer.getSpinFrameIndex(frameCounter);
+        int spinFrameIndex = stageRingFrame(frameCounter);
         renderer.drawFrameIndex(spinFrameIndex, x, y);
     }
 
@@ -776,7 +802,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer == null) {
             return new PatternSpriteRenderer.FrameBounds(0, 0, 0, 0);
         }
-        return renderer.getFrameBounds(frameCounter);
+        return renderer.renderer.getFrameBoundsForIndex(stageRingFrame(frameCounter));
     }
 
     public int getSparkleStartIndex() {

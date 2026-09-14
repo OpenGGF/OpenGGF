@@ -4,7 +4,7 @@
 local source_path, output = assert(arg[1]), assert(arg[2])
 local plan = output .. "/plan.lua"
 local file = assert(io.open(plan, "w"))
-file:write([[return {manifest_sha256="D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",bk2_frame_offset=237913,cadence_series={
+file:write([[return {manifest_sha256="261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",bk2_frame_offset=237913,cadence_series={
 ["aniplc-cadence-200"]={237914},["aniplc-cadence-208"]={237914},["aniplc-cadence-210"]={237914},["aniplc-cadence-230"]={237914},["aniplc-cadence-238"]={237914}}}]])
 file:close()
 local variables = {OGGF_FBZ_VISUAL_PLAN=plan, OGGF_FBZ_VISUAL_OUTPUT=output,

@@ -16,7 +16,7 @@ import java.util.List;
 
 /** FBZ2's fixed-position {@code Obj_EggCapsule}, kept as its native real-SST graph. */
 public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, RomObjectCodePointerProvider, SpawnRewindRecreatable {
     private static final int[] FRAGMENT_X = {0, -0x10, 0x10, -0x18, 0x18};
     private static final int[] ANIMAL_X = {0, -8, 8, 0x10, -0x10, -0x18, 0x18, -4, 4};
 
@@ -135,9 +135,10 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
         tailsEndingPoseApplied = true;
         if (p2.getCpuController() != null) {
             p2.getCpuController().setController2SignedLocked(false);
-            p2.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
         }
-        else setEndingPose(p2);
+        // Check_TailsEndPose tail-calls Set_PlayerEndingPose in this object slot;
+        // only the unlocked Ctrl_2 raw copy waits for the next Tails_Control pass.
+        setEndingPose(p2);
     }
 
     private void setEndingPose(AbstractPlayableSprite sprite) {
@@ -149,6 +150,25 @@ public final class FbzEndEggCapsuleInstance extends AbstractObjectInstance
         sprite.setGSpeed((short) 0);
         sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
     }
+
+    @Override public boolean allowsObjectControlledSolidContacts() {
+        // Obj_EggCapsule / sub_86A3E still call SolidObjectFull after
+        // Set_PlayerEndingPose. Its standing branch precedes signed-control
+        // rejection; the inherited new-contact gate still rejects bit 7.
+        return true;
+    }
+
+    @Override public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        // MvSonicOnPtfm (loc_1E1CA) retains the standing bit but skips position
+        // writes while object_control is signed, including the victory pose.
+        return player.isObjectControlled();
+    }
+
+    // ObjDat_EggCapsule width_pixels=$20; SolidObjectFull adds $B only to d1.
+    @Override public int getBalanceWidthPixels() { return 0x20; }
+
+    // Obj_EggCapsule and its button loc_86754 remain in ROM code bank $0008.
+    @Override public int romObjectCodePointerHighWord() { return 0x0008; }
 
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x2B, 0x18, 0x18); }
     @Override public int getX() { return spawn.x(); }

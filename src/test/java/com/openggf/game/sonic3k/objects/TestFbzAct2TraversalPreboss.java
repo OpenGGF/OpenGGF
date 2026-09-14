@@ -1,6 +1,16 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.CheckpointState;
+import com.openggf.configuration.SonicConfiguration;
+import com.openggf.configuration.SonicConfigurationService;
+import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.game.session.SessionManager;
+import com.openggf.tests.RomTestUtils;
+import com.openggf.tests.TestEnvironment;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import java.util.EnumMap;
+
 import com.openggf.game.GameServices;
 import com.openggf.game.GroundMode;
 import com.openggf.game.sonic3k.Sonic3kGameModule;
@@ -276,9 +286,6 @@ public class TestFbzAct2TraversalPreboss {
     // from the controller, shifting once the controller climbs past $0380.
     private static final int PLANE_CONTROLLER_ORIGIN_X = 0x31C0;
     private static final int PLANE_CONTROLLER_ORIGIN_Y = 0x0690;
-    private static final int PLANE_RIDE_LOWER_OFFSET_X = -0x123;
-    private static final int PLANE_RIDE_UPPER_OFFSET_X = -0x167;
-    private static final int PLANE_RIDE_OFFSET_SWITCH_Y = 0x0380;
     // Obj_FBZEndBoss arena after the $45C rebase: walls at $2E6C/$2F84.
     private static final int END_BOSS_ARENA_LEFT_STAND_X = 0x2E74;
     private static final int END_BOSS_ARENA_RIGHT_STAND_X = 0x2F7C;
@@ -378,6 +385,84 @@ public class TestFbzAct2TraversalPreboss {
                         spawn.x(), spawn.objectId(), spawn.subtype()))
                 .toList();
         assertTrue(unresolved.isEmpty(), () -> "ordinary preboss placeholders: " + unresolved);
+    }
+
+    @ParameterizedTest(name = "ordinary plane approach: {0}/{1}")
+    @CsvSource({"sonic,off", "tails,off", "knuckles,off", "sonic,s1", "sonic,s2"})
+    void checkpointSixOrdinaryPlaneApproachReachesBossWithoutCrush(String character, String donor) {
+        var configuration = SonicConfigurationService.getInstance();
+        var previous = new EnumMap<SonicConfiguration, Object>(
+                SonicConfiguration.class);
+        for (var key : SonicConfiguration.values()) {
+            if (configuration.hasSessionOverride(key)) previous.put(key, configuration.getConfigValue(key));
+        }
+        try {
+            configuration.clearSessionOverrides();
+            configuration.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, character);
+            configuration.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !donor.equals("off"));
+            configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, donor);
+            if (!donor.equals("off")) {
+                java.io.File donorRom = donor.equals("s1")
+                        ? RomTestUtils.ensureSonic1RomAvailable()
+                        : RomTestUtils.ensureSonic2RomAvailable();
+                assertNotNull(donorRom, "required donor ROM is unavailable");
+                assertTrue(donorRom.isFile());
+                configuration.setSessionOverride(donor.equals("s1")
+                        ? SonicConfiguration.SONIC_1_ROM
+                        : SonicConfiguration.SONIC_2_ROM, donorRom.getAbsolutePath());
+            }
+            CrossGameFeatureProvider.getInstance().resetState();
+            SessionManager.clear();
+            TestEnvironment.activeGameplayMode();
+            var builder = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1);
+            if (!donor.equals("off")) builder.withCrossGameDonation(donor);
+            HeadlessTestFixture fixture = builder.build();
+            assertEquals(character, fixture.sprite().getCode());
+            assertEquals(!donor.equals("off"), CrossGameFeatureProvider.isActive());
+            assertEquals(!donor.equals("s1"), fixture.sprite().getGameRules().playerCapability().spindashEnabled());
+            assertTrue(GameServices.sprites().getSidekicks().isEmpty());
+            if (donor.equals("off")) assertSame(GameServices.module().getRules(), fixture.sprite().getGameRules());
+            else assertNotSame(GameServices.module().getRules(), fixture.sprite().getGameRules());
+            ObjectSpawn checkpoint = GameServices.level().getCurrentLevel().getObjects().stream()
+                    .filter(spawn -> spawn.objectId() == GameServices.module().getCheckpointObjectId())
+                    .filter(spawn -> (spawn.subtype() & 0x7F) == 6).findFirst().orElseThrow();
+            CheckpointState state = (CheckpointState) GameServices.level().getCheckpointState();
+            state.restoreFromSaved(checkpoint.x(), checkpoint.y(),
+                    checkpoint.x() - 0xA0, checkpoint.y() - 0x60, 6);
+            GameServices.level().respawnPlayer();
+            assertEquals(6, state.getLastCheckpointIndex());
+            assertEquals(checkpoint.x(), fixture.sprite().getCentreX() & 0xFFFF);
+            AbstractPlayableSprite originalMain = fixture.sprite();
+            ObjectManager objects = GameServices.level().getObjectManager();
+            boolean[] movingPlaneSeen = {false};
+            boolean[] spindashSeen = {false};
+            FixedInputRunner runner = new FixedInputRunner(fixture, objects, (active, old, player, manager) -> { });
+            assertTrue(runner.runArenaToExit((frame, player) -> {
+                movingPlaneSeen[0] |= GameServices.backgroundPlaneCollisionOrNull().state().active();
+                spindashSeen[0] |= player.getSpindash();
+                assertFalse(player.getDead() || player.isHurt(),
+                        () -> frame.waypointDiagnostic("checkpoint-plane-crush", player.getCentreX() & 0xFFFF));
+            }, () -> !objects.activeObjectsOfType(FbzEndBossInstance.class).isEmpty()));
+            assertTrue(movingPlaneSeen[0], "the real moving collision plane never activated");
+            assertSame(originalMain, GameServices.sprites().getMainPlayable());
+            assertEquals(fixture.camera().getMinX(), fixture.camera().getMaxX());
+            if (donor.equals("s1")) assertFalse(spindashSeen[0], "S1 acquired an unavailable capability");
+            assertFalse(fixture.sprite().getDead());
+        } finally {
+            configuration.clearSessionOverrides();
+            previous.forEach(configuration::setSessionOverride);
+            CrossGameFeatureProvider.getInstance().resetState();
+        }
+    }
+
+    /** Drive a separately prepared fixture through the real plane-to-boss handoff. */
+    public static void runOrdinaryPlaneApproach(HeadlessTestFixture fixture, Runnable afterFrame) {
+        ObjectManager objects = GameServices.level().getObjectManager();
+        FixedInputRunner runner = new FixedInputRunner(fixture, objects,
+                (active, old, player, manager) -> { });
+        assertTrue(runner.runArenaToExit((frame, player) -> afterFrame.run(),
+                () -> !objects.activeObjectsOfType(FbzEndBossInstance.class).isEmpty()));
     }
 
     public static void assertLateNativeStarpostRestartMaterializesAndExecutesLowerMagneticSection() {
@@ -5369,6 +5454,7 @@ public class TestFbzAct2TraversalPreboss {
             int lastPodY = -1;
             int chargeStep = 0;
             boolean podWasVulnerable = false;
+            var planeInputs = new PlaneApproachInputs();
             int podHits = 0;
             // Native characters need different combat approaches. Spend only
             // the act's remaining frame budget, retaining ten seconds before
@@ -5432,25 +5518,22 @@ public class TestFbzAct2TraversalPreboss {
                                 && Math.abs(player.getGSpeed()) < 0x80) {
                             hold = ARENA_EXIT_HOP_HOLD;
                             mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (grounded && x >= 0x2E30 && x < 0x2E80) {
+                            hold = ARENA_EXIT_HOP_HOLD;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
                         } else {
                             mask = AbstractPlayableSprite.INPUT_RIGHT;
                         }
                     }
                     case 2 -> {
-                        owner = "plane-ride";
+                        owner = "plane-ride-" + planeInputs.stage;
                         if (!objects.activeObjectsOfType(FbzEndBossInstance.class).isEmpty()) {
                             stage = 3;
                         } else {
                             FbzEndBossEventControlInstance carrier = objects.activeObjectsOfType(
                                     FbzEndBossEventControlInstance.class).stream().findFirst().orElse(null);
                             assertNotNull(carrier, () -> waypointDiagnostic("plane-carrier-missing", x));
-                            int carrierX = carrier.getX() & 0xFFFF;
-                            int carrierY = carrier.getY() & 0xFFFF;
-                            int targetX = carrierX + (carrierY > PLANE_RIDE_OFFSET_SWITCH_Y
-                                    ? PLANE_RIDE_LOWER_OFFSET_X : PLANE_RIDE_UPPER_OFFSET_X);
-                            int delta = targetX - x;
-                            mask = grounded ? RouteSteering.walkMask(player, targetX, 4,
-                                    Math.abs(delta) > 0x60 ? 0x600 : 0x180) : 0;
+                            mask = planeInputs.next(player, carrier);
                         }
                     }
                     case 3 -> {
@@ -5517,9 +5600,13 @@ public class TestFbzAct2TraversalPreboss {
                             hold = END_BOSS_LAUNCH_HOLD;
                             mask = direction | AbstractPlayableSprite.INPUT_JUMP;
                         } else if (!fighting) {
-                            // Wait at the west wall while the boss descends and opens.
+                            // Keep the current side while the boss descends and
+                            // opens; crossing underneath it can intersect the
+                            // ship before the first attack window.
                             chargeStep = 0;
-                            mask = RouteSteering.walkMask(player, END_BOSS_ARENA_LEFT_STAND_X, 6, 0x180);
+                            int waitWall = x < podX ? END_BOSS_ARENA_LEFT_STAND_X
+                                    : END_BOSS_ARENA_RIGHT_STAND_X;
+                            mask = RouteSteering.walkMask(player, waitWall, 6, 0x180);
                         } else {
                             boolean windowOpen = vulnerable && rising
                                     && podY >= END_BOSS_POD_WINDOW_MIN_Y
@@ -5633,6 +5720,119 @@ public class TestFbzAct2TraversalPreboss {
             }
             fail(waypointDiagnostic("arena-route-frame-limit", END_CAPSULE_X));
             return false;
+        }
+
+        private static final class PlaneApproachInputs {
+            private int stage;
+            private int lastMask;
+            private boolean upperTraversalReady;
+            private boolean upperGlidePrepared;
+
+            int next(AbstractPlayableSprite player, FbzEndBossEventControlInstance carrier) {
+                int x = player.getCentreX() & 0xFFFF;
+                int y = player.getCentreY() & 0xFFFF;
+                boolean grounded = !player.getAir();
+                int mask;
+                if (stage == 0) {
+                    // Cross the fixed floor before the rising background meets
+                    // its underside. Camping at carrierX-$123 is a native crush.
+                    int stoppingDistance = player.getXSpeed() * Math.abs(player.getXSpeed())
+                            / (2 * Math.max(1, player.getRunDecel()) * 0x100);
+                    mask = x < 0x31D0 ? AbstractPlayableSprite.INPUT_RIGHT
+                            : RouteSteering.steerMask(x + stoppingDistance, 0x321B, 3);
+                    if (x < 0x3000 && y > 0x570) {
+                        if (grounded && (lastMask & AbstractPlayableSprite.INPUT_JUMP) == 0
+                                || !grounded && player.getYSpeed() < 0) mask |= AbstractPlayableSprite.INPUT_JUMP;
+                    }
+                    if (grounded && Math.abs(x - 0x321B) <= 4 && Math.abs(player.getGSpeed()) < 0x30) stage = 1;
+                } else if (stage == 1) {
+                    if (!player.getGameRules().playerCapability().spindashEnabled()) {
+                        mask = RouteSteering.walkMask(player, 0x3240, 3, 0x180);
+                        if (grounded && y <= 0x4B0) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                            mask |= AbstractPlayableSprite.INPUT_JUMP;
+                            stage = 2;
+                        }
+                    } else if (player.getDirection() != com.openggf.physics.Direction.RIGHT) {
+                        mask = AbstractPlayableSprite.INPUT_RIGHT;
+                    } else if (!player.getCrouching() && !player.getSpindash()) {
+                        mask = AbstractPlayableSprite.INPUT_DOWN;
+                    } else if (player.getSpindash() && player.getSpindashCounter() >= 0x200) {
+                        stage = 2;
+                        mask = 0;
+                    } else {
+                        mask = AbstractPlayableSprite.INPUT_DOWN
+                                | ((lastMask & AbstractPlayableSprite.INPUT_JUMP) == 0
+                                        ? AbstractPlayableSprite.INPUT_JUMP : 0);
+                    }
+                } else if (stage == 2) {
+                    mask = !grounded && y < 0x4B0 ? AbstractPlayableSprite.INPUT_RIGHT : 0;
+                    if (!player.getGameRules().playerCapability().spindashEnabled()) {
+                        mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        if (!grounded && player.getYSpeed() < 0
+                                || grounded && y > 0x470 && (lastMask & AbstractPlayableSprite.INPUT_JUMP) == 0) {
+                            mask |= AbstractPlayableSprite.INPUT_JUMP;
+                        }
+                    }
+                    if (grounded && y <= 0x470) stage = 3;
+                } else if (stage == 3) {
+                    mask = AbstractPlayableSprite.INPUT_RIGHT;
+                    if (player.getXSpeed() < -0x800) stage = 4;
+                } else if (stage == 4) {
+                    mask = 0;
+                    if (y < 0x400) stage = 5;
+                } else if (stage == 5) {
+                    // The vertical spring launches beside the upper ledge.
+                    // Ordinary air steering must cross it before the moving
+                    // plane closes the lower corridor underneath.
+                    upperTraversalReady |= x >= 0x3058 && x <= 0x3088
+                            && player.getSpringing() && player.getYSpeed() < 0;
+                    // A donor without spindash reaches this side later, after
+                    // the rising support has passed the spring. Its ordinary
+                    // jump can instead leave that real support above the ledge.
+                    upperTraversalReady |= !player.getGameRules().playerCapability().spindashEnabled()
+                            && !grounded && x >= 0x3058 && x <= 0x3088 && y <= 0x360;
+                    if (!upperTraversalReady && x <= 0x3090) {
+                        if (grounded) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                            if ((lastMask & AbstractPlayableSprite.INPUT_JUMP) == 0) mask |= AbstractPlayableSprite.INPUT_JUMP;
+                        } else {
+                            mask = steerAirToButton(player, 0x3070)
+                                    | (player.getYSpeed() < 0 ? AbstractPlayableSprite.INPUT_JUMP : 0);
+                        }
+                    } else {
+                        mask = x < 0x32F0 ? AbstractPlayableSprite.INPUT_RIGHT
+                                : RouteSteering.walkMask(player, 0x3330, 3, 0x180);
+                        if (x < 0x3300 && y > 0x2F0
+                                && (grounded && (lastMask & AbstractPlayableSprite.INPUT_JUMP) == 0
+                                        || !grounded && player.getYSpeed() < 0
+                                                && (lastMask & AbstractPlayableSprite.INPUT_JUMP) != 0)) {
+                            mask |= AbstractPlayableSprite.INPUT_JUMP;
+                        }
+                    }
+                    if (player.getSecondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.GLIDE
+                            && !grounded && x >= 0x3180 && x < 0x31F0 && y <= 0x300) {
+                        int glide = player.getDoubleJumpFlag();
+                        if (glide >= 3) {
+                            mask = AbstractPlayableSprite.INPUT_UP;
+                        } else if (glide == 1) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (upperGlidePrepared) {
+                            mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
+                        } else if (y <= 0x2E0 && player.getYSpeed() >= -0x180) {
+                            upperGlidePrepared = true;
+                            mask = AbstractPlayableSprite.INPUT_RIGHT;
+                        }
+                    }
+                    if (grounded && x >= 0x3300 && y <= 0x2F0) stage = 6;
+                } else {
+                    int targetX = y < 0x280 ? 0x33E0 : 0x3330;
+                    mask = grounded ? RouteSteering.walkMask(player, targetX, 3, 0x180)
+                            : RouteSteering.steerMask(x, targetX, 3);
+                }
+                lastMask = mask;
+                return mask;
+            }
         }
 
         // Authored controller heuristic, evaluated afresh from live hazards.

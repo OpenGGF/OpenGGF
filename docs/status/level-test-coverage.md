@@ -5,9 +5,21 @@ the [delivery plan](../architecture/plans/2026-09-13-level-test-standardisation.
 defines the audit, pilots, reporting and migration work. This ledger starts the
 backlog; it is not a completed coverage audit.
 
-The FBZ matrices record the 2026-09-14 spike-art follow-up: both acts now have
-ROM-backed orientation, tile-bank and refresh-range checks. Full visual
-checkpoint acceptance remains open.
+The [FBZ Act 1](../architecture/validation/levels/s3k-fbz-act1.md) and
+[Act 2](../architecture/validation/levels/s3k-fbz-act2.md) matrices track the
+2026-09-14 remaining-items delivery: the native Sonic + Tails cold Act 1 route
+now reaches the real six-impact miniboss, sign/results and Act 2 title teardown
+with player control released at widths 320 and 400 (27,051 and 25,765 ordinary
+frames; final pair at `c7bb1cd94`, two passes and no skips). Thirty
+independent entry/reload/reset rows cover both acts × widths 320/400/512/640/800 ×
+native/S1/S2 donors. The actual Sandopolis load resets the timeline and passes two
+capture/restore/forward cycles. ROM-backed spike tile banks, retained-title
+initialization, scarce-slot workers and queued/presented animation-art rewind
+also have bounded executed checks. The five animation channels have independently
+reviewed opaque source-pixel evidence over six frames each. Full native checkpoint
+geometry and strict replay parity stay open. All 13 ordinary Act2 completion rows and five independent plane-approach rows pass (`af0f9facc`); eleven bounded native world afterstates are accepted, with B2/B4 SAT presentation gaps recorded separately;
+these bounded results do not certify either act. See each matrix and the dated
+completion record for commands, commit limits and unexecuted obligations.
 
 ## Work packages
 

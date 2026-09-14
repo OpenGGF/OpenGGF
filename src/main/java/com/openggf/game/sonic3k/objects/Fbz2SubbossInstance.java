@@ -70,6 +70,8 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     private boolean defeated;
     private boolean nativeDeletePending;
     private int defeatArtQueuedCount;
+    private long defeatCloudArtOrdinal = -1;
+    private long defeatPillarArtOrdinal = -1;
     private String defeatArtQueueFailure;
     private String paletteLoadFailure;
     private int releaseRawPlcAttempted;
@@ -87,6 +89,8 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     }
 
     @Override public void update(int vIntRunCount, PlayableEntity mainPlayer) {
+        defeatCloudArtOrdinal = serviceDefeatArt(defeatCloudArtOrdinal);
+        defeatPillarArtOrdinal = serviceDefeatArt(defeatPillarArtOrdinal);
         if (!initialized) { initialize(); return; }
         if (!defeated && !cameraInActivationRange()) {
             destroyRespawnableIfPastNativeCameraWindow();
@@ -107,14 +111,15 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
             }
             case ACTIVE -> {
                 if (bit(controlBits, CONTROL_LASER_READY)) {
-                    controlBits &= ~(1 << CONTROL_LASER_READY);
+                    // loc_6FEFA returns without moving and retains bit 1;
+                    // loc_6FE3A clears it when the next laser cycle starts.
                     phaseOrdinal = Phase.CYCLE_WAIT.ordinal(); timer = 0x7F;
-                } else if ((vIntRunCount & 0x1F) == 0 && mainPlayer != null) {
-                    aimAt(mainPlayer);
+                } else {
+                    if ((vIntRunCount & 0x1F) == 0 && mainPlayer != null) aimAt(mainPlayer);
+                    moveWithinCorners();
                 }
-                moveWithinCorners();
             }
-            case CYCLE_WAIT -> { if (--timer < 0) completeLaserCycle(); }
+            case CYCLE_WAIT -> { if (--timer < 0) completeLaserCycle(mainPlayer); }
             case DEFEAT_QUEUE_WAIT -> { if (--timer < 0) beginCharacterEscape(); }
             case DEFEAT_RESTORE_WAIT -> { if (--timer < 0) releaseArena(); }
             case RELEASE_CULL -> {
@@ -137,6 +142,12 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
             storedCameraMaxY = Short.toUnsignedInt(services().camera().getMaxYTarget());
             services().camera().setMinX((short) 0x2900);
             services().camera().setMaxYTarget((short) 0x5E0);
+            if (services().levelEventProvider() instanceof Sonic3kLevelEventManager manager) {
+                // loc_6FD38 writes the resize target before DynamicLevelEvents
+                // eases Camera_max_Y_pos. The next Tails slot reads that live
+                // word, so publish the eased boundary to its controller mirror.
+                manager.requestSidekickBoundsPublishAfterCameraEasing();
+            }
         }
         initialized = true;
         phaseOrdinal = Phase.WAIT_P1.ordinal();
@@ -175,10 +186,12 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     }
 
     private void startLaser(PlayableEntity mainPlayer) {
+        controlBits &= ~(1 << CONTROL_LASER_READY); // loc_6FE3A
         phaseOrdinal = Phase.ACTIVE.ordinal();
-        aimAt(mainPlayer);
         if (tryServices() != null && services().objectManager() != null)
             spawnChild(() -> new Fbz2SubbossLaserChild(this));
+        // loc_6FE3A falls through sub_6FE54 after every laser allocation attempt.
+        aimAt(mainPlayer);
     }
 
     private void aimAt(PlayableEntity mainPlayer) {
@@ -194,12 +207,12 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
         x += xVelocity >> 8;
     }
 
-    private void completeLaserCycle() {
+    private void completeLaserCycle(PlayableEntity mainPlayer) {
         cycleCounter = (byte) (cycleCounter - 1);
         if (cycleCounter < 0) { startDefeat(); return; }
         controlBits |= 1 << CONTROL_MOVE_RIGHT;
         statusBits &= ~(1 << STATUS_CHARACTER_FACE);
-        startLaser(null);
+        startLaser(mainPlayer);
     }
 
     private void startDefeat() {
@@ -210,6 +223,31 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
         phaseOrdinal = Phase.DEFEAT_QUEUE_WAIT.ordinal(); timer = 0x5F;
         applyFlashColors(FLASH_DARK);
         enqueueDefeatArt();
+    }
+
+    private long serviceDefeatArt(long ordinal) {
+        if (ordinal < 0) return ordinal;
+        var queue = com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        var handle = services().hardwareTiming().pendingHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE, ordinal)
+                .orElseThrow(() -> new IllegalStateException("FBZ2 subboss lost its submitted KosM job"));
+        if (!queue.isReady(handle)) return ordinal;
+        queue.claim(handle);
+        return -1;
+    }
+
+    private long submitDefeatArt(com.openggf.data.Rom rom, Sonic3kPlcLoader.KosmQueueEntry entry)
+            throws IOException {
+        try {
+            // loc_6FE94 is a physical Queue_Kos_Module producer. The legacy
+            // pattern-DMA journal below does not submit to that timing ledger.
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue()
+                    .queue(rom, entry.sourceAddress(), entry.destinationVramBytes() / 32).ordinal();
+        } catch (IllegalStateException unavailable) {
+            if (!"runtime-art coordination is unavailable in these object services"
+                    .equals(unavailable.getMessage())) throw unavailable;
+            return -1; // explicit lightweight object fixture without runtime coordination
+        }
     }
 
     private void enqueueDefeatArt() {
@@ -237,6 +275,9 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
                     LOG.warning("FBZ2 subboss defeat art prefix only: " + defeatArtQueueFailure);
                     break;
                 }
+                long ordinal = submitDefeatArt(rom, entry);
+                if (defeatArtQueuedCount == 0) defeatCloudArtOrdinal = ordinal;
+                else defeatPillarArtOrdinal = ordinal;
                 defeatArtQueuedCount++;
             }
         } catch (IOException failure) {
@@ -393,7 +434,7 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     }
     int hitFlashUpdatesRemaining() { return hitFlashTimer; }
     int waitWordForTest() { return timer; }
-    void completeLaserCycleForTest() { completeLaserCycle(); }
+    void completeLaserCycleForTest() { completeLaserCycle(null); }
     static int[] activationBounds() { return ACTIVATION_BOUNDS.clone(); }
     static boolean cameraInActivationRange(int cameraX, int cameraY) {
         return cameraX >= ACTIVATION_BOUNDS[2] && cameraX <= ACTIVATION_BOUNDS[3]

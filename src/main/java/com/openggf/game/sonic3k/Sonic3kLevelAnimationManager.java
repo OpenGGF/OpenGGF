@@ -19,11 +19,14 @@ import java.nio.ByteBuffer;
  */
 public final class Sonic3kLevelAnimationManager implements AnimatedPatternManager, AnimatedPaletteManager,
         RewindSnapshottable<PatternAnimatorSnapshot>, AizVineAngleProvider,
-        SeamlessTransitionAnimationClock, InitialLevelAnimationPass {
+        SeamlessTransitionAnimationClock, InitialLevelAnimationPass,
+        com.openggf.level.animation.StageRingAnimationFrameProvider {
 
     /** See {@code Sonic2LevelAnimationManager.COMBINED_EXTRA_MAGIC} for rationale. */
     private static final byte COMBINED_EXTRA_MAGIC = (byte) 0xC3;
     private static final byte COMBINED_EXTRA_WITH_GLOBALS_MAGIC = (byte) 0xC4;
+
+    private static final byte COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC = (byte) 0xC5;
 
     private final Sonic3kPatternAnimator patternAnimator;
     private final Sonic3kPaletteCycler paletteCycler;
@@ -56,6 +59,15 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
             return null;
         }
     }
+
+    void publishAniPlcAtVBlank() {
+        patternAnimator.publishAniPlcAtVBlank();
+    }
+
+    @Override
+    public int stageRingAnimationFrame() { return globalAnimationState.ringFrame(); }
+
+    void resetFreshLevelRingAnimation() { globalAnimationState.resetFreshLevelRingAnimation(); }
 
     @Override
     public void update() {
@@ -126,13 +138,15 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         byte[] innerExtra = inner.extra() != null ? inner.extra() : new byte[0];
         byte[] cyclerState = paletteCycler.captureCyclerState();
         ByteBuffer wrapped = ByteBuffer.allocate(
-                1 + 4 + innerExtra.length + 4 + cyclerState.length + 2);
-        wrapped.put(COMBINED_EXTRA_WITH_GLOBALS_MAGIC);
+                1 + 4 + innerExtra.length + 4 + cyclerState.length + 4);
+        wrapped.put(COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC);
         wrapped.putInt(innerExtra.length);
         wrapped.put(innerExtra);
         wrapped.putInt(cyclerState.length);
         wrapped.put(cyclerState);
         wrapped.putShort((short) globalAnimationState.aizVineAngleWord());
+        wrapped.put((byte) globalAnimationState.ringTimer());
+        wrapped.put((byte) globalAnimationState.ringFrame());
         return new PatternAnimatorSnapshot(inner.scriptCounters(), inner.handlerCounters(),
                 wrapped.array());
     }
@@ -145,11 +159,13 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         byte[] extra = snapshot.extra();
         if (extra == null || extra.length == 0
                 || (extra[0] != COMBINED_EXTRA_MAGIC
-                && extra[0] != COMBINED_EXTRA_WITH_GLOBALS_MAGIC)) {
+                && extra[0] != COMBINED_EXTRA_WITH_GLOBALS_MAGIC
+                && extra[0] != COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC)) {
             patternAnimator.restore(snapshot);
             return;
         }
-        boolean hasGlobalAnimationState = extra[0] == COMBINED_EXTRA_WITH_GLOBALS_MAGIC;
+        boolean hasRingClock = extra[0] == COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC;
+        boolean hasGlobalAnimationState = hasRingClock || extra[0] == COMBINED_EXTRA_WITH_GLOBALS_MAGIC;
         ByteBuffer buf = ByteBuffer.wrap(extra, 1, extra.length - 1);
         int innerSize = buf.getInt();
         if (innerSize < 0 || innerSize > buf.remaining()) {
@@ -171,6 +187,9 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         paletteCycler.restoreCyclerState(cyclerState);
         if (hasGlobalAnimationState && buf.remaining() >= 2) {
             globalAnimationState.restoreAizVineAngleWord(buf.getShort() & 0xFFFF);
+        }
+        if (hasRingClock && buf.remaining() >= 2) {
+            globalAnimationState.restoreRingAnimation(buf.get() & 0xFF, buf.get() & 0xFF);
         }
     }
 }

@@ -76,19 +76,21 @@ int sampleS1LzForegroundShimmer(int index8)
 
 void main()
 {
-    // Pixel-center aligned position in viewport space (0..ViewportWidth/Height),
+    // Fragment centres in viewport space (0..ViewportWidth/Height),
     // origin at bottom-left.
-    float viewportX = gl_FragCoord.x - ViewportOffsetX - 0.5;
-    float viewportY = gl_FragCoord.y - ViewportOffsetY - 0.5;
+    float viewportX = gl_FragCoord.x - ViewportOffsetX;
+    float viewportY = gl_FragCoord.y - ViewportOffsetY;
 
     if (viewportX < 0.0 || viewportY < 0.0 || viewportX >= ViewportWidth || viewportY >= ViewportHeight) {
         discard;
     }
 
     // Convert physical viewport pixels to logical game pixels, snapping to whole
-    // game pixels so scanline/layer sampling stays stable under integer upscaling.
+    // game pixels so scanline/layer sampling stays stable under upscaling.
+    // Keep centres through division: flooring an exact integer boundary can
+    // select the preceding row when the GPU reciprocal rounds downward.
     float pixelX = floor((viewportX * WindowWidth) / ViewportWidth);
-    float pixelYFromTop = floor(((ViewportHeight - 1.0 - viewportY) * WindowHeight) / ViewportHeight);
+    float pixelYFromTop = floor(((ViewportHeight - viewportY) * WindowHeight) / ViewportHeight);
 
     // Apply underwater shimmer distortion to horizontal position
     float shimmerDistortion = 0.0;

@@ -10,6 +10,7 @@ import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.objects.AizTransitionFloorObjectInstance;
 import com.openggf.game.sonic3k.objects.CorkFloorObjectInstance;
+import com.openggf.game.sonic3k.objects.FbzDezPlayerLauncherObjectInstance;
 import com.openggf.game.sonic3k.objects.DoorObjectInstance;
 import com.openggf.game.sonic3k.objects.Mhz1CutsceneButtonInstance;
 import com.openggf.game.sonic3k.objects.MhzCurledVineObjectInstance;
@@ -595,6 +596,36 @@ class TestSidekickCpuDespawnParity {
         // retained.
         assertEquals((short) -0x700, tails.getYSpeed());
         assertEquals((short) 0x0000, tails.getGSpeed());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void cpuDeadDispatchPreservesOneShotDeathAndLaterObjectAnimationWrites(boolean s3k) {
+        TestableSprite leader = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(s3k ? GameRules.SONIC_3K : GameRules.SONIC_2);
+        tails.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        var profile = new com.openggf.sprites.animation.ScriptedVelocityAnimationProfile()
+                .setDeathAnimId(0x18).setWalkAnimId(0).setIdleAnimId(5).setAirAnimId(0);
+        // Tails_Stand_Path reached its ground move before the later fatal
+        // background test; its captured speed must not reclaim Kill_Character's byte.
+        tails.getAnimationManager().captureGroundMovementAnimSpeed((short) 0x100);
+        tails.setMovementInputActive(true);
+
+        controller.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState());
+        assertFalse(tails.getDead(), "the CPU dispatch owns this dead fall independently of the main-player flag");
+        assertEquals(0x18, tails.getAnimationId(), "Kill_Character publishes the death byte at entry");
+        assertEquals(0x18, profile.resolveAnimationId(tails, 0, 0x30),
+                "the following animator must not derive ordinary airborne Walk during routine 6");
+        tails.setAnimationId(0);
+        tails.publishRunAsPreviousAnimation();
+        org.junit.jupiter.api.Assertions.assertNull(profile.resolveAnimationId(tails, 1, 0x30),
+                "a later native solid's animation-word store remains authoritative during dead fall");
+        assertEquals(-1, tails.getForcedAnimationId());
     }
 
     @Test
@@ -1218,6 +1249,30 @@ class TestSidekickCpuDespawnParity {
     }
 
     @Test
+    void s3kElevatorCarRelatchesItsLiveRoutineWordAfterSpikeContact() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        var controller = new SidekickCpuController(tails, sonic);
+        controller.hydrateFromRomCpuState(6, 0, 0, 0x0002, false, 0, 0);
+        var car = new com.openggf.game.sonic3k.objects.FbzElevatorObjectInstance.Car(
+                new ObjectSpawn(0x8C0, 0x795, 0xE2, 0, 0, false, 0));
+        tails.setCentreX((short) 0x8C0);
+        tails.setCentreY((short) 0x780);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0xE2, car);
+        tails.setRenderFlagOnScreen(true);
+
+        controller.update(0);
+
+        assertEquals(SidekickCpuController.State.NORMAL, controller.getState());
+        assertEquals(0x0003, controller.getDiagnosticInteractId(),
+                "sub_13EFC copies loc_3CA92 instead of keeping the former spike's bank 2");
+    }
+
+    @Test
     void s3kOnScreenWordChangeRelatchesWithoutDespawn() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
@@ -1281,6 +1336,37 @@ class TestSidekickCpuDespawnParity {
         controller.hydrateFromRomCpuState(6, 0, 40, 0x0000, false, 0, 0);
         tails.setLatchedSolidObject(0x09, new MhzCurledVineObjectInstance(
                 new ObjectSpawn(0x0668, 0x0598, 0x09, 0, 0, false, 0)));
+        tails.setOnObject(true);
+        tails.setRenderFlagOnScreen(false);
+
+        controller.update(2159);
+
+        assertEquals(SidekickCpuController.State.CATCH_UP_FLIGHT, controller.getState(),
+                "sub_13EFC compares the cleared (0x0000) latch against the stood-on object's "
+                        + "code word unconditionally, so the first off-screen landing despawns");
+        assertEquals((short) 0x7F00, tails.getCentreX(),
+                "sub_13ECA writes x_pos = $7F00 (sonic3k.asm:26800-26809)");
+    }
+
+    @Test
+    void s3kOffscreenFirstPlayerLauncherRideDespawnsAgainstClearedLatch() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(GameRules.SONIC_3K);
+        tails.setCpuControlled(true);
+        tails.setCentreX((short) 0x0668);
+        tails.setCentreY((short) 0x0598);
+        tails.setAir(false);
+        tails.setOnObject(true);
+        tails.setLatchedSolidObject(0x78, new FbzDezPlayerLauncherObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x78, 0, 0, false, 0)));
+        tails.setRenderFlagOnScreen(false);
+
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        // Latch is the cleared 0x0000 level-init default; ROM still compares it.
+        controller.hydrateFromRomCpuState(6, 0, 40, 0x0000, false, 0, 0);
+        tails.setLatchedSolidObject(0x78, new FbzDezPlayerLauncherObjectInstance(
+                new ObjectSpawn(0x0668, 0x0598, 0x78, 0, 0, false, 0)));
         tails.setOnObject(true);
         tails.setRenderFlagOnScreen(false);
 

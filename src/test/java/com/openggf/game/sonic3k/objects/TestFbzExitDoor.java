@@ -19,10 +19,38 @@ class TestFbzExitDoor {
         assertEquals(0xD7, door.getCollisionFlags());
         door.onTouchResponse(player, new TouchResponseResult(0x17, 0x10, 0x20, TouchCategory.SPECIAL), 0);
 
+        assertFalse(door.isFlying(), "Touch_Special only publishes the collision property");
+        verify(player, never()).shiftX(anyInt());
+        door.update(0, player);
         assertTrue(door.isFlying());
         assertEquals(0x800, door.xVelocity());
         verify(player).shiftX(-8);
         assertEquals(0, door.getCollisionFlags());
+        assertEquals(0x3008, door.getX(), "the recognition dispatch falls through into movement");
+        assertEquals(0x20, door.yVelocity());
+    }
+
+    @Test void earlierAutoSpinSlotSeesThePositionBeforeTheDoorKnockback() {
+        var player = new com.openggf.game.sonic1.objects.TestPlayableSprite();
+        player.setCentreX((short) 0x3660);
+        player.setCentreY((short) 0x66C);
+        ObjectServices services = mock(ObjectServices.class);
+        when(services.playerQuery()).thenReturn(new com.openggf.level.objects.ObjectPlayerQuery(
+                () -> player, java.util.List::of));
+        var spin = new AutoSpinObjectInstance(new ObjectSpawn(0x3670, 0x660, 0, 0x80, 0, false, 0));
+        spin.setServices(services);
+        var door = new FbzExitDoorInstance(new ObjectSpawn(0x3680, 0x660, 0xCE, 0, 0, false, 0));
+        door.setServices(services);
+        spin.update(0, player);
+        player.setCentreX((short) 0x3671);
+        door.onTouchResponse(player, new TouchResponseResult(0x17, 0x10, 0x20, TouchCategory.SPECIAL), 1);
+        spin.update(1, player); // native earlier SST slot observes the crossing
+        assertTrue(player.getRolling());
+        assertEquals(0x580, player.getGSpeed());
+        door.update(1, player);
+        assertEquals(0x3669, player.getCentreX());
+        assertEquals(0x671, player.getCentreY());
+        assertEquals(0x3688, door.getX());
     }
 
     @Test void lightGravityMovesAtEightPixelsThenAddsThirtyEight() {
@@ -41,7 +69,7 @@ class TestFbzExitDoor {
         door.setServices(services);
         var player = mock(AbstractPlayableSprite.class);
 
-        assertThrows(IllegalStateException.class, () -> door.onTouchResponse(
-                player, new TouchResponseResult(0x17, 0x10, 0x20, TouchCategory.SPECIAL), 0));
+        door.onTouchResponse(player, new TouchResponseResult(0x17, 0x10, 0x20, TouchCategory.SPECIAL), 0);
+        assertThrows(IllegalStateException.class, () -> door.update(0, player));
     }
 }

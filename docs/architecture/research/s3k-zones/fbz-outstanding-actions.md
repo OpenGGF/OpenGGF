@@ -1,30 +1,38 @@
 # Flying Battery Zone outstanding actions
 
-Status updated during the 2026-09-14 route push. This branch contains a
+Status updated during the 2026-09-14 remaining-items delivery. This branch contains a
 large FBZ implementation uplift, but FBZ is not yet accepted as pixel-perfect.
 The remaining work is intentionally recorded here rather than hidden behind a
 green completion claim.
 
 ## Current native trace baseline
 
-The pinned `435ec2e68` baseline reproduces 5,666 complete-run errors,
-first row 34 queue busy. The current `c84e63ab0` candidate (merged with develop
-at `38e2e75aa`) reproduces **4,501 errors**, first row
-**16,600 Tails animation 5/6**, and **5,109** in the independent recording,
-first row 116 Tails subpixel `$D000/$B800`. Both complete strict comparisons
-with zero warnings or skips. These remain red, and Act 1 completion has not
-been established. First main queue mismatch is 19,793; the first main gameplay
-physics error now reaches the one-row rebase mismatch at 22,397 (`x`
-`$0102/$2F02`, camera `$0062/$2E62`) after correcting the earlier chain death,
-boss-defeat delay and ending-pose plunger support. Aggregate field-row mismatch volume increased
-at this newly reached boundary, so it is not yet accepted as a green candidate.
-See the matched comparison and exact commands in the frontier log.
+The remaining-items delivery is pinned to develop `51677cdd2`. Its inherited
+strict baseline was 4,501 complete-run errors, first frame 16,600 Tails
+animation, and 5,109 independent-segment errors, first frame 116 Tails subpixel.
+Both recordings remain red; aggregate mismatch counts do not measure how far a
+playable route completes.
 
-Queue submissions, animation operand widths, the platform low-byte clock,
-zone-owned tumble presentation and snake standing ownership are corrected.
-See the [trace frontier log](../../../status/trace-frontier-log.md) for exact
-commands, commits and counts. Historical July near-green results are obsolete;
-ordinary route completion does not establish emulator parity.
+At `d87e42bdd`, the complete recording compares 44,144 comparison entries with **16 grouped errors / 18 field rows**, zero warnings and zero skips. All FBZ gameplay fields agree; the first remaining error is frame **44,230**, destination SOZ initialization X (`$00C0` expected, `$0000` actual). The remaining position/camera and terrain KosM submission/completion errors belong to that fresh-load boundary. Comparison entries include unmatched timing-completion rows and must not be described as raw gameplay frames.
+
+The native Level prologue waits for title readiness and the Nem queue (`loc_62CC`), then publishes `Get_LevelSizeStart` and `LoadLevelLoadBlock` (`loc_6310`). The recording driver instead retains cleared players/camera until its generic title completion. A bounded observer confirms that it is still in title EXIT during the first mismatching row. Correcting this requires the actual fresh-load/Nem-gated phase; changing a title timer or publishing on an observed row would fit the fixture. No such adjustment was made. Live SOZ load/timeline isolation is tested separately and does not establish this strict boundary's parity.
+
+The independent segment now reports 4,152 errors, first frame 7,619 main
+`x_speed`. This frontier needs an authentic progression prerequisite: native
+Sonic transforms into Hyper Sonic, but the isolated segment supplies no emerald
+progression contract. Its native trail owner and transformation routines explain
+the speed difference. Neither auxiliary comparison rows nor manifest comparison
+fields authorize loading emeralds into gameplay. Keep this explicit prerequisite
+gap separate from FBZ movement defects; do not invent a fixture-specific
+transformation or weaken the comparison.
+
+Queue ownership, launcher/CPU animation, magnetic collision and ceiling contact,
+miniboss body/prison contact, chain precision and hurt-entry rejection, vertical
+cage orbit, title dispatch and camera targets now have focused ROM-backed
+regressions. See the [trace frontier log](../../../status/trace-frontier-log.md)
+and [completion record](../../plans/2026-09-14-fbz-completion.md) for exact
+commands, commits and rejected approaches. Historical July near-green results
+are obsolete; ordinary route completion does not establish emulator parity.
 
 ## Native FBZ2 compatibility route
 
@@ -222,7 +230,7 @@ The previous demand to consume that assist exactly once was a controller
 assumption, not a ROM requirement; successful ordinary movement disproves it.
 The helper also authors ordinary bottom-column, Blaster and end-boss inputs.
 
-The final candidate's eleven exhaustive team/width/donor routes now pass, with
+The earlier 2026-09-12 candidate's eleven exhaustive team/width/donor routes passed, with
 zero failures/errors/skips (62.31 seconds). All 96 local elevator arrival delays,
 15 width/donor combinations, three independent two-cycle rewind spots and the
 expanded 105-case Act 1 lifecycle product also pass in focused execution.
@@ -231,7 +239,7 @@ These are current focused results, not a full ordinary/guard suite pass. See the
 [Act 2](../../validation/levels/s3k-fbz-act2.md) matrices for remaining full
 main-character route, presentation and rewind obligations.
 
-## September verification
+## Historical 2026-09-12 verification
 
 The full ordinary baseline on `f177bbdb7` and combined candidate in
 `.worktrees/ai-fbz-route-closure` both completed **20,217 tests, 14 failures,
@@ -254,11 +262,15 @@ complete-route, canonical trace, or visual acceptance gates.
 ## Visual and final validation
 
 [fbz-validation.md](fbz-validation.md) remains the authoritative honest record: the
-immutable native/engine checkpoint pairs and comparison sidecars are incomplete,
-so the visual gate is still FAIL. Do not commit ROM-derived screenshots under
+native/engine checkpoint matrix is incomplete, so the whole-zone visual gate
+remains open. Eleven bounded world afterstates have independent acceptance.
+Both B2 directions and B4 forward differ at retained SAT presentation despite
+matching current object/animation state; B4 reverse is accepted. Controlled
+B5/Act2 fixtures explicitly declare one-time object control and prove visuals
+only. Before/mid-redraw, whole-frame and remaining event pairs still need evidence. Do not commit ROM-derived screenshots under
 `refs/`.
 
-After trace and compatibility are green:
+Remaining native visual obligations (the ordinary compatibility routes pass; strict trace gaps above remain):
 
 1. Capture the required BizHawk references and native engine frames.
 2. Complete every named static and time-series comparison sidecar.
@@ -273,12 +285,12 @@ verified ROMs. Do not create aliases or links to match an example. Check skips
 in the completed report.
 
 ```bash
-mvn -Dmse=off -Dtest=TestFbzAct2RouteHeadless \
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzAct2RouteHeadless \
   "-Ds3k.rom.path=$S3K_ROM" test -B
-mvn -Dmse=off -Dtest=TestFbzCompatibilityMatrix \
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzCompatibilityMatrix \
   "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
   "-Ds3k.rom.path=$S3K_ROM" test -B
-mvn -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 \
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 \
   -Dsurefire.runOrder=alphabetical -Dtest=TestS3kFbzCompleteRunTraceReplay \
   "-Ds3k.rom.path=$S3K_ROM" test -B
 ```

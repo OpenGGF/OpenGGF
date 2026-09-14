@@ -10,7 +10,7 @@ import java.util.List;
 
 /** Real after-current top button created by FBZ's final {@code Obj_EggCapsule}. */
 public final class FbzEndEggCapsuleButtonInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, RewindRecreatable {
+        implements SolidObjectProvider, RomObjectCodePointerProvider, RewindRecreatable {
     private FbzEndEggCapsuleInstance parentRef;
     private boolean initialized;
     private boolean recessed;
@@ -36,6 +36,22 @@ public final class FbzEndEggCapsuleButtonInstance extends AbstractObjectInstance
         if (parentRef == null || parentRef.isDestroyed() || parentRef.isOpened()) recessed = true;
         if (parentRef == null || parentRef.isDestroyed()) ObjectLifetimeOps.expireDynamic(this);
     }
+
+    @Override public boolean allowsObjectControlledSolidContacts() {
+        // Obj_EggCapsule / sub_86A3E still call SolidObjectFull after
+        // Set_PlayerEndingPose. Its standing branch precedes signed-control
+        // rejection; the inherited new-contact gate still rejects bit 7.
+        return true;
+    }
+
+    @Override public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        // MvSonicOnPtfm (loc_1E1CA) retains the standing bit but skips position
+        // writes while object_control is signed, including the victory pose.
+        return player.isObjectControlled();
+    }
+
+    // Obj_EggCapsule and its button loc_86754 remain in ROM code bank $0008.
+    @Override public int romObjectCodePointerHighWord() { return 0x0008; }
 
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 4, 6); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }

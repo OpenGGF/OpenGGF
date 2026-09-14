@@ -4,6 +4,10 @@ Support material to help agents implement OpenGGF objects/zones/trace-fixes with
 
 ## Tools
 
+- [FBZ cadence pixel comparator](../../tools/bizhawk/compare_fbz_cadence_pixels.py) pairs native VRAM/SAT/CRAM pixels with reconstructable actual-GPU source masks, retaining occlusions and unmatched source pixels; requires Pillow.
+
+- `FbzVisualCaptureTool` also records actual tilemap GPU uniforms and hash-bound descriptor, lookup and atlas readbacks, so camera-state acceptance can be separated from shader sampling defects. See [FBZ GPU sampling evidence](../architecture/research/s3k-zones/fbz-validation.md#gpu-sampling-and-retained-background-history-2026-09-14).
+
 - [FBZ native visual exporter](../../tools/bizhawk/capture_fbz_visual_references.py) captures ROM/BK2-backed framebuffers and RAM/cadence sidecars with an isolated BizHawk 2.11 configuration; see [native validation](../architecture/research/s3k-zones/fbz-validation.md#reproducible-linux-native-capture).
 
 Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).
@@ -119,3 +123,9 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
   representative route; `TestS3kAiz1RouteRewind` checks independently reached
   live spots. The [AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md)
   records their evidence and remaining coverage.
+
+- `tools/bizhawk/capture_fbz_boundary_fixture.lua`: declared-write native FBZ boundary6 pilot; records every redraw frame with RAM/VDP bytes and bounded failure, launched by the visual host with `--fixture-state` (2026-09-14 FBZ completion).
+
+- `FbzBoundaryFixtureCaptureTool` and [boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) reproduce declared native fixture setup through production frames and compare actual retained Plane-B descriptors, uploaded palettes and framebuffers; acceptance remains independently reviewed.
+
+- [Fresh native FBZ entry](../../tools/bizhawk/capture_fbz_fresh_entry.lua), launched by the visual host with `--fresh-entry-act 1|2`, uses the complete BK2 reset opening, AIZ vine cheat and ordinary title/level-select inputs; it never writes RAM. This removes retained cloud-history residue from complete-run FBZ states.

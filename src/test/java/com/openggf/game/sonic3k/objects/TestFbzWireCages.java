@@ -404,6 +404,31 @@ class TestFbzWireCages {
         all.get(17).setCentreY((short)0xA00);cage.update(1,null);assertFalse(cage.heldByParticipant(17));assertTrue(cage.heldByParticipant(18));
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"-112,-64,-104,64,1280", "112,-64,104,64,1280",
+            "-112,64,-104,192,-1280", "112,64,104,192,-1280"})
+    void verticalEntryKeepsOrbitSideIndependentOfPlayerGroundAngle(
+            int dx, int dy, int orbitX, int groundAngle, int groundSpeed) {
+        TestSprite player = new TestSprite("sonic");
+        player.applyStandingRadii(false);
+        assertEquals(19, player.getYRadius());
+        player.setCentreX((short) (0x1000 + dx));
+        player.setCentreY((short) (0x800 + dy));
+        player.setYSpeed((short) 0x500);
+        var cage = new FbzWireCageObjectInstance(spawn(0x6F, 0x98));
+        cage.setServices(new PlayersServices(player, List.of()));
+        cage.update(0, null);
+        assertTrue(cage.heldByParticipant(0));
+        assertEquals(0x1000 + orbitX, player.getCentreX(),
+                "loc_3A126 stores orbit side in (a2); loc_3A14E writes the player's separate angle byte");
+        assertEquals(0x800 + dy, player.getCentreY());
+        assertEquals(groundAngle, player.getAngle() & 0xFF);
+        assertEquals(groundSpeed, player.getGSpeed());
+        cage.update(1, null);
+        assertEquals(0x1000 + (orbitX < 0 ? -104 : 103), player.getCentreX(),
+                "the next higher-slot child dispatch advances the same side's orbit by four");
+    }
+
     @Test void verticalCageRejectsBroadCentreAndHorizontalCageUsesLandingAndAirReleaseRules() {
         TestSprite centre=new TestSprite("sonic");centre.setCentreX((short)0x1000);centre.setCentreY((short)0x800);var vertical=new FbzWireCageObjectInstance(spawn(0x6F,0x98));vertical.setServices(new PlayersServices(centre,List.of()));vertical.update(0,null);assertFalse(vertical.heldByParticipant(0),"vertical capture is edge bands only");
         TestSprite rider=new TestSprite("sonic");rider.setCentreX((short)0x1000);rider.setCentreY((short)0x826);var horizontal=new FbzWireCageObjectInstance(spawn(0x6F,0x10));horizontal.setServices(new PlayersServices(rider,List.of()));horizontal.update(0,null);assertTrue(horizontal.heldByParticipant(0));assertTrue(rider.isOnObject());assertFalse(rider.getAir());assertEquals(0x828,rider.getCentreY());

@@ -160,6 +160,11 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        // loc_2C5BE and loc_2C62C skip both solid checks and trigger writes
+        // when the prior Render_Sprites pass left this button offscreen.
+        if (!isWithinSolidContactBounds()) {
+            return;
+        }
         // ROM: move.b #0,mapping_frame(a0) — reset to unpressed each frame
         mappingFrame = FRAME_UNPRESSED;
 
@@ -200,6 +205,24 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isSolidFor(PlayableEntity player) {
+        return isWithinSolidContactBounds();
+    }
+
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        // The render gate skips the whole solid routine, including an existing
+        // rider's position write and airborne unseat, for both button variants.
+        return !isWithinSolidContactBounds();
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // loc_2C58A writes height_pixels = 8; Render_Sprites reads it directly.
+        return 8;
+    }
+
+    @Override
     public boolean isTopSolidOnly() {
         return topSolid;
     }
@@ -213,11 +236,10 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public boolean usesInclusiveRightEdge() {
-        // SolidObjectFull's unsigned broad-X comparison rejects only values
-        // above d1*2 (bhi), so a player exactly on the right edge remains a
-        // valid zero-distance side contact. SolidObjectTop uses the same
-        // inclusive horizontal gate before its landing-only checks.
-        return true;
+        // SolidObjectFull rejects only above d1*2 (bhi), retaining the exact
+        // right edge for side contact. Subtype bit 5 calls SolidObjectTop:
+        // loc_1E42E instead rejects at or beyond d1*2 (bhs), before any lift.
+        return !topSolid;
     }
 
     // ========================================================================================

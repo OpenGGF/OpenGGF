@@ -48,11 +48,32 @@ def probe(path):
 
 def capture_plan(start_frame: int, window: int) -> str:
     channels = ("200", "208", "210", "230", "238")
-    return ('return {manifest_sha256="D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",'
+    return ('return {manifest_sha256="261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",'
             'bk2_frame_offset=237913,observation_limit_frames=' + str(window)
             + ',checkpoints={{id="fbz1-start-outdoor",bk2_frame=' + str(start_frame) + '}}'
             + ',cadence_series={' + ','.join('["aniplc-cadence-' + ch + '"]={' + str(start_frame) + '}'
                                             for ch in channels) + '}}')
+
+
+def boundary_plan(checkpoint: str) -> str:
+    """Only approved boundary setup fields; no measured native inputs."""
+    manifest = Path(__file__).resolve().parents[2] / "docs/architecture/research/s3k-zones/fbz-visual-checkpoints.json"
+    if digest(manifest) != "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1":
+        raise ValueError("Unreviewed boundary manifest")
+    data = json.loads(manifest.read_text())
+    allowed = {f"fbz1-boundary-{i}-outdoor" for i in (1,2,3,5,6)} | {"fbz1-boundary-4-horizontal", "fbz2-boundary-outdoor"}
+    if checkpoint not in allowed:
+        raise ValueError("Only reviewed boundaries supported")
+    recipe = data["setup_recipes"][checkpoint]
+    target = next(c for c in data["checkpoints"] if c["id"] == checkpoint)["player"]
+    axis = "x" if checkpoint == "fbz1-boundary-4-horizontal" else "y"
+    return ('{id=' + json.dumps(checkpoint) + ',x=' + str(recipe["centre"]["x"])
+            + ',y=' + str(recipe["centre"]["y"]) + ',region=' + str(recipe["state"].get("Events_bg_00", recipe["state"].get("Events_fg_00")))
+            + ',control=' + str(recipe.get("control", {}).get("native_object_control", 0))
+            + ',act=' + str(recipe["act"]) + ',normal=' + str(recipe["state"]["Events_routine_bg"])
+            + ',region_address=' + str(0xEED2 if recipe["act"]==1 else 0xEEC0)
+            + ',address=' + str(0xB010 if axis == "x" else 0xB014)
+            + ',forward=' + str(target[axis]) + ',reverse=' + str(recipe["centre"][axis]) + '}')
 
 
 def main():
@@ -60,6 +81,9 @@ def main():
     parser.add_argument("--probe-framebuffer", type=Path)
     parser.add_argument("--bizhawk-home", type=Path)
     parser.add_argument("--exporter", type=Path, help="explicit diagnostic Lua override; hash recorded")
+    parser.add_argument("--fresh-entry-act", type=int, choices=(1,2), help="ordinary native level-select target for fresh-entry exporter")
+    parser.add_argument("--boundary-checkpoint", help="approved Act1 boundary recipe for declared native fixture")
+    parser.add_argument("--fixture-state", type=Path, help="explicit native fixture saved state; identity recorded, never supplied to engine")
     parser.add_argument("--rom", type=Path)
     parser.add_argument("--movie", type=Path)
     parser.add_argument("--output", type=Path)
@@ -102,7 +126,14 @@ def main():
             path.mkdir(parents=True, exist_ok=True)
         entry["Path"] = str(path)
     (output / "config.ini").write_text(json.dumps(config))
-    (output / "plan.lua").write_text(capture_plan(args.start_frame, args.window))
+    plan_text = capture_plan(args.start_frame, args.window)
+    if args.boundary_checkpoint:
+        if not args.fixture_state or not args.exporter:
+            parser.error("--boundary-checkpoint requires --fixture-state and --exporter")
+        plan_text = plan_text[:-1] + ",boundary=" + boundary_plan(args.boundary_checkpoint) + "}"
+    if args.fresh_entry_act:
+        plan_text = plan_text[:-1] + ",fresh_entry_act=" + str(args.fresh_entry_act) + "}"
+    (output / "plan.lua").write_text(plan_text)
     exporter = (args.exporter or Path(__file__).with_suffix(".lua")).resolve()
     env = os.environ.copy()
     env.update({"LD_LIBRARY_PATH": f"{home}/dll:{home}:/usr/lib/x86_64-linux-gnu",
@@ -122,6 +153,11 @@ def main():
                "client_common_sha256": digest(home / "dll/BizHawk.Client.Common.dll"),
                "gpgx_archive_sha256": digest(home / "dll/gpgx.wbx.zst"),
                "acceptance": "pending-independent-pixel-and-state-review"}
+    if args.fixture_state:
+        fixture_state = args.fixture_state.resolve(strict=True)
+        env["OGGF_FBZ_FIXTURE_STATE"] = str(fixture_state)
+        receipt["fixture_state"] = str(fixture_state)
+        receipt["fixture_state_sha256"] = digest(fixture_state)
     start = time.monotonic()
     try:
         with (output / "launch.log").open("w") as log:

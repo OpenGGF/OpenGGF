@@ -106,3 +106,53 @@ otherwise invisible once ported. `Camera.java:122-124` and
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
 versions. Diagnose against a source of truth instead of twiddling knobs.
+
+**AniPLC submission is not presentation.** S3K `AnimateTiles_DoAniPLC` changes
+counters and queues immutable ROM art; `Process_DMA_Queue` publishes it during a
+later eligible VInt. Keep Level patterns, the level atlas and aliased object
+atlases on the same publication boundary. Capture both pending work and actual
+presented bytes for rewind, and register every destination before the first
+submission so an early snapshot can restore original art. A graphics-only delay
+or an empty pre-submission destination set loses observable state. The S3K
+profile's internal publication port uses the existing exactly-once physical
+token and source-proven loop phases. Follow callees: `VInt_12` fades DO drain DMA
+through `Do_ControllerPal`; `VInt_0` lag does not. VInt14 is Sega-art loading, not
+the level title-card loop, which arms VIntC. These distinctions were established
+by FBZ native/GPU paired evidence on 2026-09-14.
+
+**S3K retained plane strip counts and clipping.** `Setup_TileRowDraw` and
+`Setup_TileColumnDraw` subtract one before DBF: callers supplying `$20`/`$10`
+write 32/16 blocks, not 33/17. `Draw_PlaneVertSingleTopDown`/`BottomUp`
+first reject delayed rows outside the masked camera window through `+$F0`.
+FBZ outdoor redraw supplies zero as that window origin; a delayed `$100` row
+therefore consumes its redraw step without modifying retained cells. Preserve
+the entire retained ring in a regression, including untouched rows and rewind.
+A fixture event-flag write does not install its associated foreground layout:
+match ordinary layout-copy and camera history before comparing GPU descriptors.
+Count observed LFC advances rather than assuming each host frameadvance call
+advanced gameplay (2026-09-14 FBZ boundary6 native/engine evidence).
+
+FBZ horizontal redraw has a separate source-Y rule: `loc_5293C`/`loc_52962`
+pass zero outdoors, not the bobbed VScroll. Indoors `Setup_TileColumnDraw`
+resolves 16px blocks (`d1 >> 4`); passing raw Y77 into an 8px tile copier
+incorrectly begins at row9 instead of row8. Keep this FBZ caller rule in its
+owner, and account for the ordinary row-scroll pass separately in strip tests.
+
+
+S3K `ChangeRingFrame` owns independent bytes `$FEB2/$FEB3`, not a division of
+`Level_frame_counter`. `loc_60DE` clears them before fresh setup objects because
+they lie inside `Oscillating_table..AIZ_vine_angle`; the vine word itself is
+excluded. Seamless core-only reloads skip that clear. Keep the bytes with the
+existing S3K global animation owner and snapshot them with the combined animator.
+The internal stage-ring frame provider lets render/bounds consumers read that
+state without changing other games' animation rules. An explicit visual fixture
+LFC reset exposes this ownership difference; copying native ring bytes or fitting
+a renderer offset would conceal it (FBZ paired boundary investigation, 2026-09-14).
+
+### Late object input and follower history
+
+S3K `Sonic_RecordPos` records input in the player's dispatch before later SST objects run. A later object that writes `Ctrl_1_logical` (for example FBZ `loc_86358`) must not rewrite that tick's follower-history sample. Use the logical-input-only API at that boundary; a history rewrite makes delayed CPU input arrive one frame early even when final per-frame controller fields agree. The FBZ completion task (`d87e42bdd`) reproduces this at the actual end-boss exit owner and checks both the retained current sample and the following tick's record.
+
+### Results queue observation and allocation retries
+
+A full level frame may retire results art, run Obj_LevelResultsCreate, publish the act transition and submit new terrain art. Its post-frame global incomplete-job count cannot identify the original results batch. For a pre-Create allocation/rewind checkpoint, service the real hardware boundaries without dispatching objects, verify the exact result handles and empty physical FIFO, then dispatch the actual registered owner. Keep a separate full-loop transition check. Native Obj_LevelResultsCreate polls global Kos_modules_left on every retry, including after art has been claimed but the first child allocation failed; readiness of the three owned handles alone is insufficient. Origin: 2026-09-14 FBZ combined validation.

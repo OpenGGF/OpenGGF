@@ -13,7 +13,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZEndBossEventControl} (sonic3k.asm:109825-109909). */
 public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
     private static final int X_STEP_16_16 = 0x7800;
     private static final int Y_STEP_16_16 = 0xA000;
     private static final int X_ENDPOINT = 0x45C;
@@ -43,6 +43,7 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     private boolean screenShakeActive = true;
     private boolean bossSpawnRequested;
     private boolean rebasePending;
+    private boolean rebasingSolidThisUpdate;
     private boolean initialized;
     private boolean bossSpawnAttempted;
     private int x = 0x31C0;
@@ -136,6 +137,7 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
                 mainPlayer == null ? 0 : mainPlayer.getCentreY(), services().camera().getY(),
                 services().camera().getMinY(), S3kFbzEventWriteSupport.getAct2ForegroundStage(services()));
         apply(next);
+        rebasingSolidThisUpdate = before != Phase.COMPLETE && phase() == Phase.COMPLETE;
 
         if (before != Phase.WAIT_ARENA_LOCK && phase() == Phase.WAIT_ARENA_LOCK) {
             services().camera().setMaxY(services().camera().getMinY());
@@ -227,11 +229,29 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     private Phase phase() { return Phase.values()[phaseOrdinal]; }
     // Obj_FBZEndBossEventControl reaches SolidObjectTop on every native path,
     // including COMPLETE; it never calls out_of_range, MarkObjGone, or DeleteObject.
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_FBZEndBossEventControl and every loc_532E0..loc_533A4 state
+        // remain in bank $0005, read by Tails' sub_13EFC standing-object latch.
+        return 0x0005;
+    }
     @Override public boolean isPersistent() { return true; }
     @Override public SolidObjectParams getSolidParams() { return SOLID_PARAMS; }
     @Override public boolean isTopSolidOnly() { return true; }
+    @Override public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
+        // loc_533B8 -> loc_1E45A accepts only [-$10,-1], even for a grounded new contact.
+        return true;
+    }
+    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) {
+        // loc_53388 publishes both x_pos and d4=$31C0 on this dispatch.
+        // The later loc_53134 event translates the cohort; carrying the old
+        // platform-to-new-platform delta here would subtract the offset twice.
+        return !rebasingSolidThisUpdate;
+    }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
-    @Override public boolean seedsNewRideCarryFromPreUpdateX() { return true; }
+    // Fresh SolidObjectTop landings store the current position. loc_533A4
+    // reloads d4 before each later movement; the landing frame's delta must
+    // not be added again on the first continued ride.
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }

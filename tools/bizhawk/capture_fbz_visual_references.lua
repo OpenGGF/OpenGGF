@@ -12,7 +12,7 @@ local BK2_SHA256 = assert(os.getenv("OGGF_FBZ_BK2_SHA256"), "OGGF_FBZ_BK2_SHA256
 local HOST_RECEIPT = assert(os.getenv("OGGF_FBZ_HOST_RECEIPT"), "OGGF_FBZ_HOST_RECEIPT is required")
 
 local plan = dofile(PLAN_PATH)
-assert(plan.manifest_sha256 == "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD",
+assert(plan.manifest_sha256 == "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",
     "capture plan does not bind the frozen FBZ manifest")
 assert(plan.bk2_frame_offset == 237913, "unexpected FBZ BK2 frame offset")
 

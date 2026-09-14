@@ -152,6 +152,23 @@ class TestPlayableSpriteMovementTailsFlight {
     }
 
     @Test
+    void instantDeathReplacesHurtDispatchAndRetainsItsTimer() {
+        tails.setHurt(true);
+        tails.setInvulnerableFrames(0x78);
+
+        assertTrue(tails.applyCrushDeath());
+        assertFalse(tails.isHurt(), "Kill_Character replaces routine 4 with routine 6");
+        assertEquals(0x78, tails.getInvulnerableFrames(),
+                "Kill_Character does not write the post-hit invulnerability timer");
+
+        movement.handleMovement(false, false, false, false,
+                false, false, false, false);
+
+        assertEquals((short) -0x6C8, tails.getYSpeed(),
+                "The dead routine uses +$38 gravity even when the preceding state was hurt");
+    }
+
+    @Test
     void playerResetClearsFlight() {
         tails.getTailsFlightController().activate();
         tails.resetState();

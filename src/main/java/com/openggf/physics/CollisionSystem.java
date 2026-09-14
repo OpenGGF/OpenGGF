@@ -487,8 +487,11 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     public boolean hasFatalPostMovementBackgroundFloorOverlap(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
         requireTerrainOnlyPlan(plan, "hasFatalPostMovementBackgroundFloorOverlap");
-        var gameState = GameServices.gameStateOrNull();
-        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+        var background = GameServices.backgroundPlaneCollisionOrNull();
+        // Sonic_MdNormal / Tails_Stand_Path test the same native flag that
+        // FindFloor/FindWall consume. A zone runtime may own that state instead
+        // of the legacy GameStateManager mirror, so both paths use its provider.
+        if (sprite == null || background == null || !background.state().active()) {
             return false;
         }
 
@@ -506,8 +509,11 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     public void resolvePostMovementBackgroundWallClamp(
             FrameCollisionPlan plan, AbstractPlayableSprite sprite) {
         requireTerrainOnlyPlan(plan, "resolvePostMovementBackgroundWallClamp");
-        var gameState = GameServices.gameStateOrNull();
-        if (sprite == null || gameState == null || !gameState.isBackgroundCollisionFlag()) {
+        var background = GameServices.backgroundPlaneCollisionOrNull();
+        // Sonic_MdNormal / Tails_Stand_Path test the same native flag that
+        // FindFloor/FindWall consume. A zone runtime may own that state instead
+        // of the legacy GameStateManager mirror, so both paths use its provider.
+        if (sprite == null || background == null || !background.state().active()) {
             return;
         }
 

@@ -17,7 +17,7 @@ import java.util.Objects;
 public final class FbzVisualCaptureTool {
 
     public static final String REVIEWED_MANIFEST_SHA256 =
-            "D13D037BAF52BBD65D28096A71A54ACACB4229B8C4C560C76DCB921E90DC40DD";
+            "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1";
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -46,7 +46,7 @@ public final class FbzVisualCaptureTool {
                 arguments.requiredPath("evidence-amendment"),
                 arguments.required("evidence-amendment-sha256"));
         FbzVisualScenarioDriver.ScenarioPlan plan =
-                new FbzVisualScenarioDriver(manifest).plan(checkpoint);
+                amendment.applyCadenceCaptureIntent(new FbzVisualScenarioDriver(manifest).plan(checkpoint));
 
         Path workspace = arguments.path("workspace", Path.of("."));
         Path outputRoot = arguments.requiredPath("output-root");
@@ -114,6 +114,17 @@ public final class FbzVisualCaptureTool {
             FbzVisualGameplayAdvanceVerifier.verify(plan, pre, post, amendment);
             FbzVisualVisibilityVerifier.verifyState(post.values());
             HiddenGlCaptureSession.CapturedImages images = session.renderAndCapture();
+            provenance.put("gpu_sampling_state", session.captureGpuSamplingState());
+            Path textureDirectory = outputRoot.resolve("gpu-textures").resolve(checkpoint);
+            java.nio.file.Files.createDirectories(textureDirectory);
+            Map<String, Object> textures = new java.util.LinkedHashMap<>();
+            for (var entry : session.captureGpuTextures().entrySet()) {
+                Path texture = textureDirectory.resolve(entry.getKey());
+                java.nio.file.Files.write(texture, entry.getValue(), java.nio.file.StandardOpenOption.CREATE_NEW);
+                textures.put(entry.getKey(), Map.of("path", texture.toAbsolutePath().toString(),
+                        "sha256", FbzVisualPrebootVerifier.sha256(entry.getValue())));
+            }
+            provenance.put("gpu_textures", textures);
             EncodedImages encoded = encode(images, outputRoot, mode.nativeMode());
 
             FbzVisualCaptureReceipt receipt = FbzVisualCaptureReceipt.accepted(
@@ -124,8 +135,11 @@ public final class FbzVisualCaptureTool {
                     post.values(),
                     FbzVisualPrebootVerifier.sha256(encoded.fullPng()),
                     FbzVisualPrebootVerifier.sha256(encoded.nativeCropPng()));
-            publisher.publishAccepted(paths, encoded.fullPng(), encoded.nativeCropPng(), receipt);
             publishCadenceIfPresent(execution, plan, amendment, outputRoot, publisher, provenance);
+            if (!execution.cadenceFrames().isEmpty()) {
+                throw new IllegalStateException("Cadence candidates preserved; native presentation and visible-owner pairing pending");
+            }
+            publisher.publishAccepted(paths, encoded.fullPng(), encoded.nativeCropPng(), receipt);
             return 0;
         } catch (Exception failure) {
             provenance.put("capture_failure_type", failure.getClass().getName());
@@ -183,14 +197,23 @@ public final class FbzVisualCaptureTool {
             receipt.put("frame_before", frameBefore);
             receipt.put("timer_after", timerAfter);
             receipt.put("frame_after", frameAfter);
-            receipt.put("vram_sha256", frame.vramSha256());
+            if (!frame.vramSha256().equalsIgnoreCase((String) frame.destinationPixels().get("gpu_destination_sha256")))
+                throw new IllegalStateException("Presented CPU pattern and actual GPU atlas disagree");
+            receipt.put("destination_pixel_evidence", frame.destinationPixels());
+            receipt.put("pattern_payload_sha256", frame.vramSha256());
+            receipt.put("pattern_hash_domain", "engine-presented-level-pattern-bytes-after-production-vblank");
+            receipt.put("acceptance_status", "candidate-only-paired-native-presentation-pending");
+            receipt.put("vram_sha256", frame.vramSha256()); // legacy field; domain is explicitly CPU, not native VRAM
             receipt.put("crop_sha256", cropHash);
             receipt.put("reviewed_visible_region_changed", frame.reviewedVisibleRegionChanged());
             receipt.put("state", frame.after().values());
             publications.add(new FbzVisualCadenceCapture.FramePublication(
                     paths.png(), paths.receipt(), encoded.nativeCropPng(), receipt));
         }
-        FbzVisualCadenceVerifier.verify(evidence);
+        var contract = FbzVisualCadenceRomContract.read(
+                com.openggf.data.RomByteReader.fromRom(com.openggf.game.GameServices.rom().getRom()),
+                plan.zeroBasedAct() + 1, spec.destinationTile());
+        FbzVisualCadenceVerifier.verifyPatternDomain(evidence, contract, true);
         publisher.publishCadenceSeries(publications);
     }
 
