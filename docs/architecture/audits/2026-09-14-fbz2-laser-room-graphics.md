@@ -1,6 +1,8 @@
 # FBZ2 laser-room graphics
 
-Integration base: `5c150c85eb5bba6cbfde09dc45b52f4d1a394b64` (`develop`).
+Initial base: `5c150c85eb5bba6cbfde09dc45b52f4d1a394b64` (`develop`).
+Integration base: `8fff63a7078ba871f852978d520685c099db7803`.
+Implementation: `cd2483bf6`; reconciled candidate: `2e11a08a8`.
 Task tree: `.worktrees/fbz2-room-graphics`.
 
 ## ROM ownership
@@ -84,5 +86,39 @@ An authored approach (`67 R; 25 R+A; 35 R; 180 -`) from `$2930/$66C`
 reached the room at `$2BDD/$68C` without dying; Sonic is visible after crossing
 the approach plane switcher. This short capture does not complete the fight.
 
-Final combined validation and integration remain pending. These local checks do not certify a complete route, all character/donor
+## Combined validation
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 8fff63a7078ba871f852978d520685c099db7803 --run`
+on `2e11a08a8` selected the full ordinary inventory (2,572 classes) and guards.
+The completed 2026-09-14 run reported:
+
+- Ordinary: 20,378 tests, zero failures/errors, 18 skips; 641.51 seconds.
+- Guards: 667 tests, two failures, zero errors/skips; 176.89 seconds.
+
+The already-completed integration run on the exact destination commit
+`8fff63a70` in `.worktrees/kis2-chain-frontier`, using
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 24cdc64e6 --run`,
+reported 20,372 ordinary tests with zero failures/errors and 18 skips, plus
+667 guards with the same two failures. Both runs' `results.json` were inspected;
+failure identities/messages and skip identities/reasons matched exactly:
+
+- `TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`:
+  stale expectations for direct Maven wording and `<printed-pinned-base>` in
+  AGENTS/CLAUDE, conflicting with the existing queue guidance.
+- `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`:
+  existing `FbzRouteEvidenceProbe#printEvidence` and
+  `LevelSolidityMapProbe#writeSolidityMap` have no assertion oracle.
+
+The ordinary skips comprise opt-in diagnostics/route/soak tests, unavailable
+EGL/OpenGL checks (`TestForegroundWindowRendering`, `TestShaderPixelCentreSampling`),
+a CPZ spin-tube setup assumption, and local audio-reference/capture prerequisites.
+The five new FBZ pixel/mask cases and required S3K bootstrap/loading/AIZ checks
+executed without skips. No new or worsened failures were observed; the combined
+run is not globally green. Independent read-only code review found no significant
+issues. Consumed task-run diagnostics were acknowledged and removed.
+
+Upstream HCZ rewind, KiS2, and documentation changes merged without conflicts.
+The final follow-up changes only this evidence and the existing pitfall catalogue;
+completed engine checks are not repeated for unchanged code under repository policy.
+These local checks do not certify a complete route, all character/donor
 combinations, the final boss refresh, or whole-frame emulator parity.
