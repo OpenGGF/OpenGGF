@@ -851,3 +851,16 @@ Queued `JAVA_HOME=/usr/lib/jvm/java-21-openjdk python3 tools/testing/maven_queue
 failures/errors/skips**, in **50.168 seconds**, including both level-loading
 classes. Source base is `14d902d39` plus this follow-up in
 `.worktrees/ai-fbz-chain-art`.
+
+Actual `GameplayCaptureTool` check: queued `exec:java` with `--game s3k --zone fbz
+--act 1 --x 0x428 --y 0x8B4 --frames 80 --every 40 --stills 1,60 --no-video`
+completed in 16.102 seconds. External artifact directory:
+`<external-task-directory>/fbz-chain-art-20260914/fixed`.
+The inspected CSV keeps X=1064 and advances held Y by two pixels per frame,
+2230→2388, without hurt/death; inspected frames 1 and 60 retain the descending
+handle. This is a cold-boot gameplay rendering check, not native pixel parity.
+The fix integrated without conflicts at `0cf0f221e`; unrelated user changes remain.
+
+Integrated verification on `0cf0f221e`: queued `-Dmse=off
+-Dtest=TestFbzRailAndChainPlatforms test -B` recompiles develop and passes all
+**36 tests, zero failures/errors/skips**, in **46.789 seconds** (queue wait excluded).
