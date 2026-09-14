@@ -3366,7 +3366,9 @@ the owning KiS2 routine in the catalogue):
   end-to-end trace fixtures for these presentation or powered-form paths.
 
 The [completion plan and coverage matrix](../architecture/plans/2026-09-14-kis2-presentation-super.md)
-records exercised paths and inherited coverage gaps.
+records exercised paths and inherited coverage gaps. The
+[trace-readiness follow-up](../architecture/plans/2026-09-14-kis2-trace-readiness.md)
+records the subsequent movement, checkpoint, zone and presentation work.
 
 ### Rationale
 

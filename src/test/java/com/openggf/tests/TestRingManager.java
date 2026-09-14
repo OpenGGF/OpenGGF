@@ -969,7 +969,8 @@ public class TestRingManager {
                 ringCollisionHalfSize,
                 ringCollisionHalfSize,
                 ringRules.stageRingsUseObjectTouchCollection(),
-                ringRules.stageRingSweepUsesRawCameraWindow());
+                ringRules.stageRingSweepUsesRawCameraWindow(),
+                ringRules.checkpointRestoresSavedRings());
         return new GameRules(
                 source.playerMovement(),
                 source.playerCapability(),

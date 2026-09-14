@@ -6,6 +6,9 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.game.rules.PlayerLandingRules;
 import com.openggf.game.rules.PlayerMovementRules;
+import com.openggf.game.rules.PlayerAirMovementRules;
+import com.openggf.game.rules.PlayerGroundPoseRules;
+import com.openggf.game.rules.CrossGameRuleComposer;
 
 /**
  * Sonic 2 rules with the shipped KiS2 changes the engine already has a
@@ -43,8 +46,8 @@ public final class Kis2Rules {
                 movement.fixedAnglePosThreshold(),
                 movement.inputAlwaysCapsGroundSpeed(),
                 movement.angleDiffCardinalSnap(),
-                movement.movingCrouchThreshold(),
-                true, // Sonic_ChgJumpDir: undo acceleration when already above the cap.
+                new PlayerGroundPoseRules(movement.groundPose().movingCrouchThreshold(), true, true),
+                new PlayerAirMovementRules(true, true, false, true),
                 movement.slopeResistStartsFromRest(),
                 movement.slopeRepelChecksOnObject(),
                 movement.slopeRepelUsesS3kSlipKick(),
@@ -59,8 +62,7 @@ public final class Kis2Rules {
                 movement.slopeResistAppliesAtZeroInertia(),
                 movement.tailsRollSpeedUsesEffectiveDecelQuarter(),
                 movement.waterVelocityChangeGatedByObjectControl(),
-                movement.landingWalkWriteSkippedWhileSpindashing(),
-                true, false, true, true, true);
+                movement.landingWalkWriteSkippedWhileSpindashing());
         ObjectInteractionRules interaction = base.objectInteraction();
         ObjectInteractionRules kis2Interaction = new ObjectInteractionRules(
                 interaction.bossHitNegatesGroundSpeed(),
@@ -99,8 +101,7 @@ public final class Kis2Rules {
                 rings.ringFloorProbeRequiresRenderFlag(), rings.lostRingBoundaryChecksOnlyOnProbeCadence(),
                 rings.lostRingRenderVerticalMargin(), rings.ringCollisionWidth(), rings.ringCollisionHeight(),
                 rings.stageRingsUseObjectTouchCollection(), rings.stageRingSweepUsesRawCameraWindow(), true);
-        return new GameRules(kis2Movement, base.playerCapability(), collision, base.playerAnimation(),
-                base.camera(), checkpointRings, kis2Interaction, base.sidekickCpu(), base.powerUp(),
-                base.drowningBubble(), base.dynamicArtDmaService());
+        return CrossGameRuleComposer.withPlayerRules(base, kis2Movement, kis2Interaction,
+                collision, checkpointRings);
     }
 }

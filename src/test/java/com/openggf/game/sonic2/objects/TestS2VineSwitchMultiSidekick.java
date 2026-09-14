@@ -94,6 +94,8 @@ class TestS2VineSwitchMultiSidekick {
         TestablePlayableSprite extra = player("knuckles");
         VineSwitchObjectInstance vine = new VineSwitchObjectInstance(
                 new ObjectSpawn(0x400, 0x300, 0x7F, 1, 0, false, 0), "VineSwitch", true);
+        vine = vine.recreateForRewind(new com.openggf.level.objects.RewindRecreateContext(
+                vine.getSpawn(), null, null));
         vine.setServices(services(main, List.of(sidekick, extra)));
         vine.update(1, main);
         for (TestablePlayableSprite player : List.of(main, sidekick, extra)) {

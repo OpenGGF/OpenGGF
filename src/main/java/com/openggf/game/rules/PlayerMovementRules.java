@@ -5,8 +5,8 @@ public record PlayerMovementRules(
         boolean fixedAnglePosThreshold,
         boolean inputAlwaysCapsGroundSpeed,
         boolean angleDiffCardinalSnap,
-        short movingCrouchThreshold,
-        boolean airSuperspeedPreserved,
+        PlayerGroundPoseRules groundPose,
+        PlayerAirMovementRules air,
         boolean slopeResistStartsFromRest,
         boolean slopeRepelChecksOnObject,
         boolean slopeRepelUsesS3kSlipKick,
@@ -77,40 +77,7 @@ public record PlayerMovementRules(
          * lands has the charge animation replaced by Walk on the landing frame while
          * the ROM holds it until release — visible for as long as the charge is held.
          */
-        boolean landingWalkWriteSkippedWhileSpindashing,
-        /** Use standing touch radii outside the glide/slide/climb terrain probes. */
-        boolean glideRestoresStandingRadiiAfterCollision,
-        /** Probe below an idle wall climber (including the shipped animation-delta clobber). */
-        boolean idleWallClimbChecksFloor,
-        /** Air abilities consume a fresh A/B/C edge without requiring all buttons released. */
-        boolean airAbilityAcceptsOverlappingJumpPress,
-        /** Preserve the full inertia word across the skid angle-band probe. */
-        boolean skidThresholdPreservesLowByte,
-        /** Facing away at a single-state balance edge starts script position four. */
-        boolean balanceFacingFlipRestartsScript) {
-
-    /** Existing games retain their shipped movement forms. */
-    public PlayerMovementRules(boolean fixedAnglePosThreshold,
-            boolean inputAlwaysCapsGroundSpeed, boolean angleDiffCardinalSnap,
-            short movingCrouchThreshold, boolean airSuperspeedPreserved,
-            boolean slopeResistStartsFromRest, boolean slopeRepelChecksOnObject,
-            boolean slopeRepelUsesS3kSlipKick, PlayerLandingRules landing,
-            PlayerLevelBoundaryRules levelBoundary, boolean rollingJumpPinballGateRequiresSpindashFlag,
-            boolean rollStopsBelowMinimumSpeed, boolean rollControlledDecelUsesEffectiveDecelQuarter,
-            boolean controlLockLatchesLogicalInput, boolean hurtRoutineLatchesLogicalInput,
-            boolean waterExitBoostSkipsFastUpwardVelocity, boolean slopeResistAppliesAtZeroInertia,
-            boolean tailsRollSpeedUsesEffectiveDecelQuarter, boolean waterVelocityChangeGatedByObjectControl,
-            boolean landingWalkWriteSkippedWhileSpindashing) {
-        this(fixedAnglePosThreshold, inputAlwaysCapsGroundSpeed, angleDiffCardinalSnap,
-                movingCrouchThreshold, airSuperspeedPreserved, slopeResistStartsFromRest,
-                slopeRepelChecksOnObject, slopeRepelUsesS3kSlipKick, landing, levelBoundary,
-                rollingJumpPinballGateRequiresSpindashFlag, rollStopsBelowMinimumSpeed,
-                rollControlledDecelUsesEffectiveDecelQuarter, controlLockLatchesLogicalInput,
-                hurtRoutineLatchesLogicalInput, waterExitBoostSkipsFastUpwardVelocity,
-                slopeResistAppliesAtZeroInertia, tailsRollSpeedUsesEffectiveDecelQuarter,
-                waterVelocityChangeGatedByObjectControl, landingWalkWriteSkippedWhileSpindashing,
-                false, true, false, false, false);
-    }
+        boolean landingWalkWriteSkippedWhileSpindashing) {
 
     public boolean objectSolidHurtLandingRetainsRoutine() {
         return landing.objectSolidHurtLandingRetainsRoutine();

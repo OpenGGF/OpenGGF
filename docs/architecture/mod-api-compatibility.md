@@ -40,7 +40,9 @@ Mod API 1.x and must not be used to infer compiled-code compatibility.
 The KiS2 trace-readiness follow-up adds semantic movement and checkpoint-ring
 rules, the saved ring bank in checkpoint/load snapshots, separate boss duck-frame
 selection, and an explicit title-to-level-select action plus post-reset menu
-handoff. Existing record constructors retain their stock defaults. These are
+handoff. Movement policies now group air and ground-pose decisions separately.
+Candidate records use canonical constructors; owning factories pass stock defaults
+explicitly. These are
 changes to the unpublished candidate; version `0.7.0` remains unchanged and its
 normalized `0.7` signature pin is replaced in place.
 

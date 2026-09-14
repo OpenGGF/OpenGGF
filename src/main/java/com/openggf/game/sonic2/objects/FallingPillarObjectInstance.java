@@ -65,6 +65,8 @@ public class FallingPillarObjectInstance extends AbstractObjectInstance
 
     private static final LazyMappingHolder MAPPINGS = new LazyMappingHolder();
 
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable Obj23 grounded-squash profile; "
+            + "recreateForRewind passes this constructor configuration to the replacement instance")
     private final boolean alwaysSquashesGroundedContact;
     private boolean isChild;
     private int x;

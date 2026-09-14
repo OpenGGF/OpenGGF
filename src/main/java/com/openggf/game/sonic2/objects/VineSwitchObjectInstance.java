@@ -55,6 +55,8 @@ public class VineSwitchObjectInstance extends AbstractObjectInstance implements 
     private static final Logger LOGGER = Logger.getLogger(VineSwitchObjectInstance.class.getName());
 
     // === Object Configuration ===
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable Obj7F held-player pinning profile; "
+            + "recreateForRewind passes this constructor configuration to the replacement instance")
     private final boolean pinsHeldPlayer;
     private int switchId;  // subtype & 0x0F: Switch ID for ButtonVine_Trigger
 

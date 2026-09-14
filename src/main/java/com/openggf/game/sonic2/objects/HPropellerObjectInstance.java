@@ -151,6 +151,8 @@ public class HPropellerObjectInstance extends AbstractObjectInstance implements 
         return new HPropellerObjectInstance(ctx.spawn(), clearsAirAbility);
     }
 
+    @com.openggf.game.rewind.RewindTransient(reason = "Immutable ObjB5 air-ability release profile; "
+            + "recreateForRewind passes this constructor configuration to the replacement instance")
     private final boolean clearsAirAbility;
 
     public HPropellerObjectInstance(ObjectSpawn spawn) {

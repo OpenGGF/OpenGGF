@@ -1,6 +1,7 @@
 package com.openggf.game.sonic2.objects;
 
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.TestablePlayableSprite;
 import org.junit.jupiter.api.Test;
@@ -15,6 +16,7 @@ class TestKis2ObjectLaunchProfiles {
         for (boolean patched : new boolean[] {false, true}) {
             HPropellerObjectInstance propeller = new HPropellerObjectInstance(
                     new ObjectSpawn(0x400, 0x300, 0xB5, 0x66, 0, false, 0), patched);
+            propeller = propeller.recreateForRewind(new RewindRecreateContext(propeller.getSpawn(), null, null));
             TestablePlayableSprite player = new TestablePlayableSprite("knuckles", (short) 0, (short) 0);
             player.setCentreX((short) 0x400);
             player.setCentreY((short) 0x2D0);
@@ -36,7 +38,11 @@ class TestKis2ObjectLaunchProfiles {
         ObjectSpawn spawn = new ObjectSpawn(0x400, 0x300, 0x23, 0, 0, false, 0);
         assertFalse(new FallingPillarObjectInstance(spawn, "Pillar").createChild()
                 .groundedBottomContactAlwaysSquashes());
-        assertTrue(new FallingPillarObjectInstance(spawn, "Pillar", true).createChild()
-                .groundedBottomContactAlwaysSquashes());
+        FallingPillarObjectInstance patched = new FallingPillarObjectInstance(spawn, "Pillar", true);
+        assertTrue(patched.createChild().groundedBottomContactAlwaysSquashes());
+        FallingPillarObjectInstance recreated = patched.recreateForRewind(
+                new RewindRecreateContext(spawn, null, null));
+        assertTrue(recreated.groundedBottomContactAlwaysSquashes());
+        assertTrue(recreated.createChild().groundedBottomContactAlwaysSquashes());
     }
 }

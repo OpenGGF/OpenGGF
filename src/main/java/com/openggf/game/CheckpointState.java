@@ -72,21 +72,7 @@ public class CheckpointState implements RespawnState {
             long savedTimerFrames,
             boolean hasSavedTimer,
             int savedRings,
-            int savedRingExtraLifeFlags) {
-        public RewindState(int lastCheckpointIndex, int starPostActivationMark,
-                int savedX, int savedY, int savedCameraX, int savedCameraY,
-                boolean cameraLock, boolean usedForSpecialStage, int savedWaterLevel,
-                int savedWaterRoutine, boolean hasWaterState, int savedCameraMaxY,
-                int savedDynamicResizeRoutine, boolean hasS3kRuntimeState,
-                byte savedTopSolidBit, byte savedLrbSolidBit, boolean hasSolidBits,
-                long savedTimerFrames, boolean hasSavedTimer) {
-            this(lastCheckpointIndex, starPostActivationMark, savedX, savedY,
-                    savedCameraX, savedCameraY, cameraLock, usedForSpecialStage,
-                    savedWaterLevel, savedWaterRoutine, hasWaterState, savedCameraMaxY,
-                    savedDynamicResizeRoutine, hasS3kRuntimeState, savedTopSolidBit,
-                    savedLrbSolidBit, hasSolidBits, savedTimerFrames, hasSavedTimer, 0, 0);
-        }
-    }
+            int savedRingExtraLifeFlags) {}
 
     /**
      * Clear checkpoint state (called on level start/change).

@@ -28,7 +28,7 @@ precede the aggregate category run plus guards. At task start the old shared
 receipt was occupied by `route-green-20260914`, so no tests were run against it.
 Upstream `5e3700a04` replaced receipts with an automatic Maven queue during this
 work; it is integrated before validation and all subsequent Maven work queues. Changes to public candidate
-rules/snapshots retain compatible constructors and update normalized signatures.
+rules/snapshots use canonical constructors and update normalized signatures.
 
 Integrate into the main workspace's existing develop branch, push only develop,
 and clean the task worktrees after accounting for all changes. Preserve unrelated
@@ -55,8 +55,8 @@ Worker commits: movement `73e00e748` + input review `7894b4d31`; zone/contact
 `e6c371898`; presentation `32af6906b` + render-independent results
 `793b9e978`. Integration composes the wind profile and optional slot-art overlay
 in one provider, used in both tiers; chip-only art stays optional. Ring/boss
-rules are wired by the integration owner. Public candidate record constructors
-retain old defaults, and the mutable 0.7 pin is regenerated without publication.
+rules are wired by the integration owner. Public candidate records use canonical constructors, with stock defaults explicit
+in the owning factories; the mutable 0.7 pin is regenerated without publication.
 
 Review fixed results offsets for a failed attempt with all emeralds, and moved
 message lifecycle initialization out of rendering. Late art loading must not
@@ -70,7 +70,7 @@ backlog because forced Ending_Routine=0 makes that shared S2 branch unreachable.
 
 ## Validation record
 
-Pending focused and combined execution. Production and test sources compiled with
+Production and test sources initially compiled with
 `mvn -Dmse=off -DskipTests test-compile -B`; compilation is not a test pass.
 Tool preflight succeeds with Java 21 and `LUA_BIN=/usr/bin/lua5.4`.
 
@@ -85,7 +85,7 @@ accessor. No gameplay values are borrowed from trace rows.
 
 The corrected provider and no-render/late-art results classes passed (10 tests,
 zero skips). Host-owned checkpoint reload plus post-load regressions passed
-(22 tests, zero skips). Broad and trace results follow after execution.
+(22 tests, zero skips). The combined and trace results are recorded below.
 
 Packaging `python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`
 passed, producing engine, SDK and SDK Javadoc jars (tests explicitly skipped).
@@ -93,3 +93,39 @@ Matched EHZ1 replay on `ba3d9d592` versus `5e3700a04` compared 1,817 rows:
 300→194 comparison errors, unchanged 91 bootstrap errors and zero warnings/skips.
 The existing animation blip remains at 289; first runtime physics difference now
 occurs at 1154 Y rather than the missed ring at 284. See the frontier log.
+
+Combined selection on `6049cb65a` used
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base ae767f35167fd3774e4295ab6043aebb65a7d385 --run`
+(2,544 selected classes). Ordinary: 19,959 tests, 19,945 passed, 14 skipped,
+no failures/errors (432.55 seconds). The skips are opt-in diagnostics, soak,
+native graphics/reference audio and the existing CPZ spintube assumption; no
+KiS2 test skipped. Required S3K loading/bootstrap/decoding/AIZ checks passed.
+Guards: 665 tests, 657 passed, eight failed, no skips/errors (170.04 seconds).
+
+Four failures introduced here prompted structural corrections: immutable object
+profiles now declare constructor/recreation ownership with recreation regressions;
+movement rules are grouped into air and ground-pose records under the standard
+20-component limit; KiS2 construction uses the owned rule factory; candidate
+records expose canonical constructors without provisional compatibility shims.
+These changes preserve the tested gameplay decisions.
+
+A bounded four-method guard run on unchanged base `5e3700a04` reproduced the
+other four failures with exactly matching test identities and messages: two stale
+TraceChaser gitlink expectations, old direct-Maven documentation expectations,
+and assertion-free FBZ/solidity diagnostic probes. These upstream failures remain
+outside this delivery. Final focused guard/gameplay verification follows.
+
+Final gameplay/API regression command (through `maven_queue.py`, `-Dmse=off`,
+absolute S2/S3K ROM properties, `test -B`) selected
+`TestKis2MovementRules,TestKis2PhysicsProvider,TestKis2HeadlessBoot,TestKis2ObjectLaunchProfiles,TestS2VineSwitchMultiSidekick,TestCheckpointStateRewind,TestLevelLoadContext,TestPostLoadAssemblyBehavior,TestRingManager,TestSidekickCpuDespawnParity,TestModApiSignatureSurface,TestS3kMovingCrouch`:
+167 passed, no failures/errors/skips (22.290 seconds). Final
+`python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B`
+passed (36.373 seconds), including engine, SDK and SDK Javadoc artifacts.
+
+Final guard command used `LUA_BIN=/usr/bin/lua5.4`, `maven_queue.py -Dmse=off
+-Pguards -Dtest=TestRewindCoverageGuard,TestNoProvisionalModApiShims,TestArchitecturalSourceGuard,TestPerGameRuleArchitectureGuard test -B`:
+80 passed, no failures/errors/skips (20.656 seconds). This is focused verification
+of the post-broad corrections, not a second broad-suite pass. The four matched
+upstream guard failures and the trace divergence remain. Changed Markdown links,
+AGENTS/CLAUDE mirrors and `git diff --check` passed; consumed diagnostics were
+removed.
