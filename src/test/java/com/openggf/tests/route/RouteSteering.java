@@ -4,10 +4,23 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /**
  * Ordinary-input steering primitives for headless route controllers. Every
- * method returns a pad mask built only from the player's live state; none
- * reads route, frame or fixture identity.
+ * method returns a pad mask or a frame budget built only from the player's
+ * live state; none reads route, frame or fixture identity.
+ *
+ * <p>Inputs: the playable sprite's centre, speeds and effective acceleration
+ * tables. Origin: extracted from the FBZ2 route controller
+ * ({@code TestFbzAct2TraversalPreboss}) in commit 610464952.
  */
 public final class RouteSteering {
+    /**
+     * Frames of margin {@link #ordinaryRightCrossingBudget} adds over the
+     * modelled crossing frame: the route compares the budget against a live
+     * runway before stepping the frame it decides on, and the object's touch
+     * response runs after the movement that carries P1 across, so the
+     * modelled frame alone would be one frame optimistic on each side.
+     */
+    public static final int CROSSING_MARGIN_FRAMES = 2;
+
     private RouteSteering() { }
 
     /** Hold LEFT or RIGHT toward {@code targetX} from a centre {@code x}; neutral inside the tolerance. */
@@ -64,24 +77,26 @@ public final class RouteSteering {
      * Frames an ordinary RIGHT run needs to cover {@code distancePixels} from
      * the player's current ground speed, modelled conservatively: the current
      * speed is integrated before acceleration, an above-maximum speed is
-     * clamped, and a negative speed decelerates to rest first. Returns
-     * {@code simulationLimit} when the distance is not reached within
-     * {@code simulationLimit - 2} frames.
+     * clamped, and a negative speed decelerates to rest first. The result
+     * carries {@link #CROSSING_MARGIN_FRAMES} over the modelled crossing
+     * frame (a non-positive distance is already crossed and returns the
+     * margin alone). Returns {@code simulationLimit} when the distance is not
+     * reached within {@code simulationLimit - CROSSING_MARGIN_FRAMES} frames.
      */
     public static int ordinaryRightCrossingBudget(
             AbstractPlayableSprite player, int distancePixels, int simulationLimit) {
-        if (distancePixels <= 0) return 2;
+        if (distancePixels <= 0) return CROSSING_MARGIN_FRAMES;
         long requiredFixedDistance = (long) distancePixels << 8;
         long travelledFixed = 0;
         int acceleration = Math.max(1, player.getRunAccel() & 0xFFFF);
         int deceleration = Math.max(1, player.getRunDecel() & 0xFFFF);
         int maximum = Math.max(1, player.getMax() & 0xFFFF);
         int speed = Math.min(player.getGSpeed(), maximum);
-        int frameLimit = simulationLimit - 2;
+        int frameLimit = simulationLimit - CROSSING_MARGIN_FRAMES;
         for (int frame = 1; frame <= frameLimit; frame++) {
             travelledFixed += speed;
             if (travelledFixed >= requiredFixedDistance) {
-                return frame + 2;
+                return frame + CROSSING_MARGIN_FRAMES;
             }
             if (speed < 0) {
                 speed = Math.min(0, speed + deceleration);

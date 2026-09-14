@@ -19,12 +19,15 @@ Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote eac
 ## Test harness helpers
 
 - `src/test/java/com/openggf/tests/route/` — shared route primitives for headless
-  route controllers (LTS-04): `InputProgram` (parse and step authored pad runs),
+  route controllers: `InputProgram` (parse, derive from a BK2, and step pad runs),
   `RouteSteering` (steer, walk with a speed cap, brake distance, ordinary crossing
   budget), `ObjectLifetimeFrames` (spawn/despawn identity sets per frame),
   `RecentFrameLog` (failure diagnostics) and `SidekickAudit` (CPU team contract:
   identity, ownership, leader chain, death/respawn). Extracted from the FBZ2 native
-  route; see [live-state route controllers](../architecture/research/2026-09-13-live-state-route-controllers.md).
+  route in commit 610464952; see
+  [live-state route controllers](../architecture/research/2026-09-13-live-state-route-controllers.md).
+  They overlap only the failure-diagnostics part of backlog item LTS-04, which stays
+  pending.
 
 ## Docs
 

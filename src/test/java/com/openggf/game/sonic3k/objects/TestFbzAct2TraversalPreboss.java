@@ -8,7 +8,6 @@ import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.Sonic3kFBZEvents;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.game.sonic3k.objects.badniks.TechnoSqueekBadnikInstance;
@@ -678,13 +677,8 @@ public class TestFbzAct2TraversalPreboss {
                         });
     }
 
-    private static void stepMask(HeadlessTestFixture fixture, int mask) {
-        InputProgram.step(fixture, mask);
-    }
-
     private static List<InputRun> parseInputProgram() {
-        List<InputRun> runs = new java.util.ArrayList<>(
-                InputProgram.parse(PREBOSS_INPUT_PROGRAM));
+        List<InputRun> runs = InputProgram.parse(PREBOSS_INPUT_PROGRAM);
         // The corrected stationary-cage $42 control state keeps native forward
         // movement active.  The complete-run BK2 likewise holds right across
         // the comparable $078C-$07C5 cage-exit approach; retain that direction
@@ -985,7 +979,7 @@ public class TestFbzAct2TraversalPreboss {
                             horizontalCageEgressJumpActive = false;
                         }
                     }
-                    stepMask(fixture, mask);
+                    InputProgram.step(fixture, mask);
                     frames++;
                     recordRecentFrame(mask, player);
                     if (stopCondition.reached()) {
@@ -1472,7 +1466,7 @@ public class TestFbzAct2TraversalPreboss {
                     int playerTouchRight = playerXBefore + PLAYER_TOUCH_HALF_WIDTH;
                     if (magneticPlatformHazardPlacement == null && !player.getAir()
                             && !player.isObjectControlled() && !player.isOnObject()) {
-                        int brakingLookahead = ordinaryBrakeDistancePixels(player) + 0x10;
+                        int brakingLookahead = RouteSteering.ordinaryBrakeDistancePixels(player) + 0x10;
                         // The immutable layout position is the earliest state
                         // available before S3K Load_Sprites materializes Obj74.
                         // Its initial touch box is conservative: crossing is
@@ -1935,7 +1929,7 @@ public class TestFbzAct2TraversalPreboss {
                                     } else if (player.getAir()) {
                                         mask = (player.getYSpeed() < 0
                                                 ? AbstractPlayableSprite.INPUT_JUMP : 0)
-                                                | steerMask(player, landingX, 2);
+                                                | RouteSteering.steerMask(player, landingX, 2);
                                     } else {
                                         assertFalse(player.isOnObject(),
                                                 () -> waypointDiagnostic(
@@ -1956,7 +1950,7 @@ public class TestFbzAct2TraversalPreboss {
                                         assertTrue(player.getAir(),
                                                 () -> waypointDiagnostic(
                                                         "obj74-ride-lost-support", landingX));
-                                        mask = steerMask(player, landingX, 2);
+                                        mask = RouteSteering.steerMask(player, landingX, 2);
                                     } else {
                                         // Hops between columns happen at rest
                                         // level: the raised columns share their
@@ -1987,7 +1981,7 @@ public class TestFbzAct2TraversalPreboss {
                                             magneticPlatformRideSettled = false;
                                             mask = AbstractPlayableSprite.INPUT_RIGHT;
                                         } else {
-                                            mask = steerMask(player, target.getX(), 3);
+                                            mask = RouteSteering.steerMask(player, target.getX(), 3);
                                         }
                                     }
                                 }
@@ -2010,7 +2004,7 @@ public class TestFbzAct2TraversalPreboss {
                                                     && Math.abs(playerXBefore - target.getX()) <= 2;
                                             mask = magneticPlatformRideSettled
                                                     ? AbstractPlayableSprite.INPUT_RIGHT
-                                                    : steerMask(player, target.getX(), 2);
+                                                    : RouteSteering.steerMask(player, target.getX(), 2);
                                         } else if (playerXBefore >= target.getX()
                                                 + MAGNETIC_PLATFORM_RIDE_LAUNCH_OFFSET) {
                                             magneticPlatformRideJumpStarted = true;
@@ -2042,7 +2036,7 @@ public class TestFbzAct2TraversalPreboss {
                                         int jumpHold = player.getYSpeed() < 0
                                                 ? AbstractPlayableSprite.INPUT_JUMP : 0;
                                         mask = jumpHold | (hopping
-                                                ? steerMask(player, hop.getX()
+                                                ? RouteSteering.steerMask(player, hop.getX()
                                                         - MAGNETIC_PLATFORM_RIDE_LANDING_OFFSET, 2)
                                                 : AbstractPlayableSprite.INPUT_RIGHT);
                                     } else {
@@ -2136,7 +2130,7 @@ public class TestFbzAct2TraversalPreboss {
                                     - PLAYER_TOUCH_HALF_WIDTH - 0x08;
                             mask = player.getGSpeed() > 0
                                     ? AbstractPlayableSprite.INPUT_LEFT
-                                    : steerMask(player, safeHoldCentre, 2);
+                                    : RouteSteering.steerMask(player, safeHoldCentre, 2);
                         } else {
                             int remainingBudget = magneticPlatformCrossingBudget
                                     - magneticPlatformCrossingFrames;
@@ -2205,7 +2199,7 @@ public class TestFbzAct2TraversalPreboss {
                                     ? AbstractPlayableSprite.INPUT_LEFT : 0;
                         } else {
                             maskOwner = "obj28-recovery-terrain-hold";
-                            mask = steerMask(player,
+                            mask = RouteSteering.steerMask(player,
                                     squeezeCorridorRecoveryHoldX, 2);
                             if (mask == 0 && player.getGSpeed() == 0
                                     && recoveryStoppingEdge + 1
@@ -2341,7 +2335,7 @@ public class TestFbzAct2TraversalPreboss {
                                 squeezeCorridorStage = 7;
                                 mask = AbstractPlayableSprite.INPUT_RIGHT;
                             } else {
-                                mask = steerMask(player, stagingX - SQUEEZE_S1_RUN_UP, 2);
+                                mask = RouteSteering.steerMask(player, stagingX - SQUEEZE_S1_RUN_UP, 2);
                             }
                         } else if (!squeezeCorridorSpindashCapable && squeezeCorridorStage == 7) {
                             // Sonic_Roll needs |ground_vel| >= $80 and neither
@@ -2522,8 +2516,7 @@ public class TestFbzAct2TraversalPreboss {
                                 GameServices.sprites().getSidekicks();
                         boolean sidekickInsideShaft = regroupSidekicks.stream()
                                 .anyMatch(sidekick -> !sidekick.getDead()
-                                        && ((sidekick.getCentreX() & 0xFFFF)
-                                        == Sonic3kConstants.TAILS_CPU_DESPAWN_X
+                                        && (SidekickAudit.awaitingRespawn(sidekick)
                                         || ((sidekick.getCentreX() & 0xFFFF)
                                         <= SHAFT_REGROUP_CLEAR_X
                                         && (sidekick.getCentreY() & 0xFFFF)
@@ -2537,7 +2530,7 @@ public class TestFbzAct2TraversalPreboss {
                         } else if (player.getAir()) {
                             mask = 0;
                         } else {
-                            mask = steerMask(player, SHAFT_REGROUP_HOLD_X, 3);
+                            mask = RouteSteering.steerMask(player, SHAFT_REGROUP_HOLD_X, 3);
                         }
                     } else if (shaftFloorEastActive && !descendingDoorControllerActive) {
                         // BK2 rows 25398-25478 run RIGHT from the shaft floor
@@ -2567,12 +2560,12 @@ public class TestFbzAct2TraversalPreboss {
                             // envelope when this stage committed. Preserve the
                             // ordinary crossing input; re-entering the waiting
                             // branch would steer P1 away from the same car.
-                            mask = steerMask(playerXBefore, preEgressPlayerX, 2);
+                            mask = RouteSteering.steerMask(playerXBefore, preEgressPlayerX, 2);
                         } else if (Math.abs(playerXBefore - preAcquisitionPlayerX) > 2) {
-                            mask = steerMask(player, preAcquisitionPlayerX, 2);
+                            mask = RouteSteering.steerMask(player, preAcquisitionPlayerX, 2);
                         } else if (acquireDescendingCar) {
                             descendingDoorStage = 3;
-                            mask = steerMask(playerXBefore, preEgressPlayerX, 2);
+                            mask = RouteSteering.steerMask(playerXBefore, preEgressPlayerX, 2);
                         } else {
                             // Hold on the authored floor until the nearest live
                             // downward car enters its actual slope catch band.
@@ -2601,7 +2594,7 @@ public class TestFbzAct2TraversalPreboss {
                             // projected-steering oscillation around the button.
                             if (Math.abs(player.getGSpeed()) <= 0x80) {
                                 descendingButtonBrakeReady = true;
-                                mask = steerMask(player, buttonX, 2);
+                                mask = RouteSteering.steerMask(player, buttonX, 2);
                             } else {
                                 mask = player.getGSpeed() > 0
                                         ? AbstractPlayableSprite.INPUT_LEFT
@@ -2611,7 +2604,7 @@ public class TestFbzAct2TraversalPreboss {
                             // Brake on projected ordinary motion so the exact
                             // subtype-$22 momentary button is held, rather than
                             // merely crossed for one frame at $0200+ speed.
-                            mask = steerMask(player, buttonX, 2);
+                            mask = RouteSteering.steerMask(player, buttonX, 2);
                         } else if (descendingDoorStage == 0) {
                             // Obj_Button publishes one shared trigger bit from
                             // the whole standing mask, so a configured sidekick
@@ -2627,13 +2620,13 @@ public class TestFbzAct2TraversalPreboss {
                                         : AbstractPlayableSprite.INPUT_RIGHT;
                             } else {
                                 descendingDoorStage = 1;
-                                mask = p1HoldsButton ? 0 : steerMask(player, buttonX, 2);
+                                mask = p1HoldsButton ? 0 : RouteSteering.steerMask(player, buttonX, 2);
                             }
                         } else if (descendingDoorStage == 1 && !doorOpeningLatched) {
                             assertTrue(triggerHeld,
                                     () -> waypointDiagnostic(
                                             "descending-door-released-before-latch", buttonX));
-                            mask = exactButtonOwner ? 0 : steerMask(player, buttonX, 2);
+                            mask = exactButtonOwner ? 0 : RouteSteering.steerMask(player, buttonX, 2);
                         } else {
                             descendingDoorStage = 2;
                             // The door routine is now latched independently of
@@ -2647,7 +2640,7 @@ public class TestFbzAct2TraversalPreboss {
                         // while its top is within the real one-contact vertical
                         // envelope. This is ordinary steering driven by door,
                         // car identity and geometry for every movement profile.
-                        mask = steerMask(playerXBefore, preEgressPlayerX, 2);
+                        mask = RouteSteering.steerMask(playerXBefore, preEgressPlayerX, 2);
                     } else if (retainedCar == null && !completed
                             && (missedDescendingCarSpikeJumpActive
                             || (!player.getAir()
@@ -2695,7 +2688,7 @@ public class TestFbzAct2TraversalPreboss {
                             // geometry wait. Brake/steer relative to the exact
                             // live top-solid subtype-$20 button; no jump or
                             // injected contact asserts trigger byte 0.
-                            mask = steerMask(player, buttonX, 2);
+                            mask = RouteSteering.steerMask(player, buttonX, 2);
                         } else if (trigger0DoorStage == 0) {
                             assertTrue(withinButtonX && exactButtonFeet && exactButtonOwner,
                                     () -> waypointDiagnostic(
@@ -2761,9 +2754,9 @@ public class TestFbzAct2TraversalPreboss {
                         risingCarExitStarted = true;
                         mask = AbstractPlayableSprite.INPUT_RIGHT;
                     } else if (risingCar != null) {
-                        mask = steerMask(player, risingCarTargetX, 2);
+                        mask = RouteSteering.steerMask(player, risingCarTargetX, 2);
                     } else if (risingCarAcquisitionArmed) {
-                        mask = steerMask(player, risingCarTargetX, 2);
+                        mask = RouteSteering.steerMask(player, risingCarTargetX, 2);
                     } else if (completed && risingCarRideCompleted
                             && postLauncherRouteStage == 0 && springTowerStage < 3
                             && playerXBefore >= springTowerMinX
@@ -2785,7 +2778,7 @@ public class TestFbzAct2TraversalPreboss {
                                 springTowerStage = 1;
                                 mask = 0;
                             } else if (!player.getAir()) {
-                                mask = steerMask(player, springWaitX, 2);
+                                mask = RouteSteering.steerMask(player, springWaitX, 2);
                             } else {
                                 mask = 0;
                             }
@@ -2967,7 +2960,7 @@ public class TestFbzAct2TraversalPreboss {
                             int holdX = ballsAhead.get(0).getX() - SPIKE_BALL_HOLD_GAP;
                             mask = playerXBefore > holdX && player.getGSpeed() > 0
                                     ? AbstractPlayableSprite.INPUT_LEFT
-                                    : steerMask(player, holdX, 4);
+                                    : RouteSteering.steerMask(player, holdX, 4);
                         }
                         if (playerXBefore >= magneticCorridorExitX) {
                             postLauncherRouteStage = 10;
@@ -3048,7 +3041,7 @@ public class TestFbzAct2TraversalPreboss {
                                         mask = AbstractPlayableSprite.INPUT_RIGHT;
                                     } else {
                                         mask = player.getAir() ? 0
-                                                : steerMask(player, holdX, 2);
+                                                : RouteSteering.steerMask(player, holdX, 2);
                                     }
                                 }
                                 case 1 -> {
@@ -3322,7 +3315,7 @@ public class TestFbzAct2TraversalPreboss {
                                 trigger7DoorStage = 2;
                                 mask = 0;
                             } else if (trigger7DoorStage == 1 && player.getAir()) {
-                                mask = steerMask(player, buttonX, 2)
+                                mask = RouteSteering.steerMask(player, buttonX, 2)
                                         | (player.getYSpeed() < 0
                                         ? AbstractPlayableSprite.INPUT_JUMP : 0);
                             } else if (trigger7DoorStage == 1) {
@@ -3347,7 +3340,7 @@ public class TestFbzAct2TraversalPreboss {
                                             () -> waypointDiagnostic(
                                                     "trigger-7-landing-attempt-limit", buttonX));
                                     trigger7DoorStage = 1;
-                                    int direction = steerMask(player, buttonX, 2);
+                                    int direction = RouteSteering.steerMask(player, buttonX, 2);
                                     if (direction == 0 && playerXBefore < buttonX) {
                                         direction = AbstractPlayableSprite.INPUT_RIGHT;
                                     }
@@ -3401,7 +3394,7 @@ public class TestFbzAct2TraversalPreboss {
                                 // contact directly and brakes before the still-
                                 // solid $1718 door; no jump/contact injection is
                                 // required to assert trigger 4.
-                                mask = steerMask(player, buttonX, 2);
+                                mask = RouteSteering.steerMask(player, buttonX, 2);
                             }
                         } else if (postDoorPathSwitchReached
                                 && (linkedDoorStage > 0
@@ -3446,7 +3439,7 @@ public class TestFbzAct2TraversalPreboss {
                                             ? AbstractPlayableSprite.INPUT_LEFT
                                             : AbstractPlayableSprite.INPUT_RIGHT) : 0;
                                 } else {
-                                    mask = steerMask(player, button.getX(), 2);
+                                    mask = RouteSteering.steerMask(player, button.getX(), 2);
                                 }
                             } else {
                                 if (playerXBefore > doorRightEdge && doorClearsPlayer) {
@@ -3698,7 +3691,7 @@ public class TestFbzAct2TraversalPreboss {
                     } else {
                         // Complete-run BK2 keeps P1 at $BC4 on the $BC0 car
                         // before beginning the authored left exit at y=$09F0.
-                        mask = steerMask(player.getCentreX(), preEgressPlayerX, 2);
+                        mask = RouteSteering.steerMask(player.getCentreX(), preEgressPlayerX, 2);
                     }
                     FbzDezPlayerLauncherObjectInstance lowerLauncher =
                             objects.activeObjectsOfType(
@@ -3793,7 +3786,7 @@ public class TestFbzAct2TraversalPreboss {
                             // wall before walking off its right edge. Ordinary
                             // steering preserves native platform/solid ownership.
                             maskOwner = "descending-car-spike-wall-wait";
-                            mask = steerMask(player, descendingSupport.getX(), 2);
+                            mask = RouteSteering.steerMask(player, descendingSupport.getX(), 2);
                         }
                     }
                     if (landingGapRight != null
@@ -3860,7 +3853,7 @@ public class TestFbzAct2TraversalPreboss {
                         if (!landingGapJump && !player.getAir() && !gapPlatformMoving
                                 && Math.abs(player.getXSpeed()) < 0x20) landingGapJump = true;
                         if (gapPlatformMoving) {
-                            mask = steerMask(player, gapPlatform.getX(), 3);
+                            mask = RouteSteering.steerMask(player, gapPlatform.getX(), 3);
                         } else if (landingGapJump) {
                             mask = AbstractPlayableSprite.INPUT_RIGHT
                                     | (!player.getAir() || player.getYSpeed() < 0
@@ -3878,7 +3871,7 @@ public class TestFbzAct2TraversalPreboss {
                             int acceleration = Math.max(1, 2 * player.getRunAccel());
                             int projectedX = playerXBefore
                                     + velocity * Math.abs(velocity) / (2 * acceleration * 256);
-                            mask = steerMask(projectedX, landingGapX, 1);
+                            mask = RouteSteering.steerMask(projectedX, landingGapX, 1);
                         }
                     } else if (squeezeCorridorClearances > 0 && landingGapRight == null
                             && !magneticPlatformHazardControllerActive
@@ -4035,7 +4028,7 @@ public class TestFbzAct2TraversalPreboss {
                                         + ") handoffXSpeed=$"
                                         + Integer.toHexString(trigger7HandoffXSpeed & 0xFFFF));
                     }
-                    stepMask(fixture, mask);
+                    InputProgram.step(fixture, mask);
                     frames++;
                     recordRecentFrame(mask, player);
                     if (magneticPlatformHazardArmed) {
@@ -5222,11 +5215,6 @@ public class TestFbzAct2TraversalPreboss {
             return false;
         }
 
-        private static int walkMask(AbstractPlayableSprite player, int targetX, int tolerance,
-                                    int speedCap) {
-            return RouteSteering.walkMask(player, targetX, tolerance, speedCap);
-        }
-
         /**
          * From the subboss arena wall to the SOZ request: survive the seven
          * Obj_FBZ2Subboss laser cycles by running past the machine to the far
@@ -5319,7 +5307,7 @@ public class TestFbzAct2TraversalPreboss {
                             int targetX = carrierX + (carrierY > PLANE_RIDE_OFFSET_SWITCH_Y
                                     ? PLANE_RIDE_LOWER_OFFSET_X : PLANE_RIDE_UPPER_OFFSET_X);
                             int delta = targetX - x;
-                            mask = grounded ? walkMask(player, targetX, 4,
+                            mask = grounded ? RouteSteering.walkMask(player, targetX, 4,
                                     Math.abs(delta) > 0x60 ? 0x600 : 0x180) : 0;
                         }
                     }
@@ -5355,7 +5343,7 @@ public class TestFbzAct2TraversalPreboss {
                         } else if (!fighting) {
                             // Wait at the west wall while the boss descends and opens.
                             chargeStep = 0;
-                            mask = walkMask(player, END_BOSS_ARENA_LEFT_STAND_X, 6, 0x180);
+                            mask = RouteSteering.walkMask(player, END_BOSS_ARENA_LEFT_STAND_X, 6, 0x180);
                         } else {
                             boolean windowOpen = vulnerable && rising
                                     && podY >= END_BOSS_POD_WINDOW_MIN_Y
@@ -5368,7 +5356,7 @@ public class TestFbzAct2TraversalPreboss {
                                     ? Math.max(wallX, podX - END_BOSS_WAIT_DISTANCE)
                                     : Math.min(wallX, podX + END_BOSS_WAIT_DISTANCE);
                             if (chargeStep == 0) {
-                                mask = walkMask(player, waitX, 6, 0x300);
+                                mask = RouteSteering.walkMask(player, waitX, 6, 0x300);
                                 if (Math.abs(x - waitX) <= 6 && player.getGSpeed() == 0
                                         && (rotation || crossNow)) {
                                     chargeStep = 1;
@@ -5415,7 +5403,7 @@ public class TestFbzAct2TraversalPreboss {
                             hold = END_CAPSULE_JUMP_HOLD;
                             mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
                         } else if (capsuleLive) {
-                            mask = walkMask(player, END_CAPSULE_APPROACH_X, 4, 0x180);
+                            mask = RouteSteering.walkMask(player, END_CAPSULE_APPROACH_X, 4, 0x180);
                         }
                     }
                     case 5 -> {
@@ -5468,7 +5456,7 @@ public class TestFbzAct2TraversalPreboss {
                     || Math.abs(fixture.sprite().getXSpeed()) > 0x80) {
                 AbstractPlayableSprite before = fixture.sprite();
                 AbstractPlayableSprite player = stepCheckedFrame(
-                        steerMask(before, targetX, 2), check);
+                        RouteSteering.steerMask(before, targetX, 2), check);
                 alignmentFrames++;
                 String diagnostic = waypointDiagnostic("spike-corridor-alignment", targetX);
                 assertFalse(player.getDead() || player.isHurt(), diagnostic);
@@ -5491,7 +5479,7 @@ public class TestFbzAct2TraversalPreboss {
             while ((fixture.sprite().getCentreY() & 0xFFFF) < authoredCorridorStartY) {
                 AbstractPlayableSprite before = fixture.sprite();
                 AbstractPlayableSprite player = stepCheckedFrame(
-                        steerMask(before, targetX, 2), check);
+                        RouteSteering.steerMask(before, targetX, 2), check);
                 int playerX = player.getCentreX() & 0xFFFF;
                 String diagnostic = waypointDiagnostic("spike-corridor-phase", targetX);
                 assertFalse(player.getDead() || player.isHurt(), diagnostic);
@@ -5510,7 +5498,7 @@ public class TestFbzAct2TraversalPreboss {
             for (int i = 0; i < frameLimit; i++) {
                 AbstractPlayableSprite before = fixture.sprite();
                 AbstractPlayableSprite player = stepCheckedFrame(
-                        steerMask(before, targetX, 2), check);
+                        RouteSteering.steerMask(before, targetX, 2), check);
                 int playerX = player.getCentreX() & 0xFFFF;
                 String diagnostic = waypointDiagnostic("spike-corridor", targetX);
                 assertFalse(player.getDead() || player.isHurt(), diagnostic);
@@ -5613,7 +5601,7 @@ public class TestFbzAct2TraversalPreboss {
                         risingExitStarted = true;
                         mask = AbstractPlayableSprite.INPUT_RIGHT;
                     } else if (risingCar != null || risingAcquisitionArmed) {
-                        mask = steerMask(player, risingCarTargetX, 2);
+                        mask = RouteSteering.steerMask(player, risingCarTargetX, 2);
                     } else {
                         mask = run.mask();
                     }
@@ -5800,7 +5788,7 @@ public class TestFbzAct2TraversalPreboss {
                     if (!before.getAir() && beforeX <= 0x0930
                             && before.getGSpeed() > -0x0180) {
                         upperLoopEgressStage = 4;
-                        mask = steerMask(before, nativeStandSpotX, 2);
+                        mask = RouteSteering.steerMask(before, nativeStandSpotX, 2);
                     } else {
                         mask = AbstractPlayableSprite.INPUT_LEFT;
                     }
@@ -5823,7 +5811,7 @@ public class TestFbzAct2TraversalPreboss {
                                 () -> waypointDiagnostic(
                                         "upper-loop-jump-attempt-limit", 0x095A));
                         upperLoopEgressStage = 4;
-                        mask = steerMask(before, nativeStandSpotX, 2);
+                        mask = RouteSteering.steerMask(before, nativeStandSpotX, 2);
                     } else {
                         mask = AbstractPlayableSprite.INPUT_LEFT;
                     }
@@ -5869,7 +5857,7 @@ public class TestFbzAct2TraversalPreboss {
                                 ? AbstractPlayableSprite.INPUT_RIGHT
                                 : AbstractPlayableSprite.INPUT_LEFT;
                     } else {
-                        mask = steerMask(before, nativeStandSpotX, 2);
+                        mask = RouteSteering.steerMask(before, nativeStandSpotX, 2);
                     }
                 } else if (upperLoopLaunchCommitted && upperLoopEgressStage == 6) {
                     // Native walk-up: LEFT until $0911, then the jump.
@@ -5886,7 +5874,7 @@ public class TestFbzAct2TraversalPreboss {
                     }
                 } else {
                     int steeringTarget = stagedInsideSafeEdge ? targetX : safeMinX - 0x10;
-                    mask = steerMask(before, steeringTarget, 2);
+                    mask = RouteSteering.steerMask(before, steeringTarget, 2);
                 }
                 boolean exactUpperLoopBrake = !upperLoopLaunchCommitted
                         && spindashEnabled && upperLoopSpindashStage == 0
@@ -5945,25 +5933,12 @@ public class TestFbzAct2TraversalPreboss {
             lifetime.beginFrame(objects);
             AbstractPlayableSprite player = fixture.sprite();
             observer.observe(lifetime.active(), lifetime.previous(), player, objects);
-            stepMask(fixture, mask);
+            InputProgram.step(fixture, mask);
             frames++;
             recordRecentFrame(mask, player);
             check.afterFrame(this, player);
             lifetime.endFrame();
             return player;
-        }
-
-        private static int steerMask(int x, int targetX, int tolerance) {
-            return RouteSteering.steerMask(x, targetX, tolerance);
-        }
-
-        /** Projected-centre steering: brakes before retained inertia carries P1 past the target. */
-        private static int steerMask(AbstractPlayableSprite player, int targetX, int tolerance) {
-            return RouteSteering.steerMask(player, targetX, tolerance);
-        }
-
-        private static int ordinaryBrakeDistancePixels(AbstractPlayableSprite player) {
-            return RouteSteering.ordinaryBrakeDistancePixels(player);
         }
 
         private static void assertSqueezePosture(AbstractPlayableSprite player,
@@ -6279,8 +6254,7 @@ public class TestFbzAct2TraversalPreboss {
 
         /** Every live CPU sidekick is grounded within {@code SIDEKICK_GATHER_RANGE} of P1. */
         private static boolean sidekicksGatheredBeside(int playerX) {
-            return SidekickAudit.gatheredBeside(playerX, SIDEKICK_GATHER_RANGE,
-                    Sonic3kConstants.TAILS_CPU_DESPAWN_X);
+            return SidekickAudit.gatheredBeside(playerX, SIDEKICK_GATHER_RANGE);
         }
 
         private static boolean crossesProjectedColumn(
@@ -6519,7 +6493,7 @@ public class TestFbzAct2TraversalPreboss {
                     sidekicks.auditFrames(), sidekicks.identityOrderPreserved(),
                     sidekicks.respawnedAfterEveryDeath(), sidekicks.deaths(),
                     sidekicks.longestDeadStreak(),
-                    SidekickAudit.allAliveNow(Sonic3kConstants.TAILS_CPU_DESPAWN_X),
+                    SidekickAudit.allAliveNow(),
                     sidekicks.controllerEveryFrame(),
                     sidekicks.leaderChainEveryFrame(), sidekicks.diedDuringExcusedWindow(),
                     sidekicks.aliveAtMilestone(), sidekicks.deathEvidence());

@@ -17,7 +17,7 @@ technique has applications beyond FBZ.
 
 | Application | Feasibility | Complexity | Impact | Recommendation |
 |---|---|---|---|---|
-| Shared route primitives in test scope (LTS-04) | high | low for primitives, moderate for a stage interface | high: every future zone route | primitives first; stage interface only after a second zone |
+| Shared route primitives in test scope | high | low for primitives, moderate for a stage interface | high: every future zone route | primitives first; stage interface only after a second zone |
 | Level-test standard adoption across zones | high for ROUTE, partial for the rest | days per act, assumptions in section 4 | medium: four of eleven obligations | pilot AIZ/HCZ, spend the rest on rewind spots and short checks |
 | Rewind determinism along routes | high, machinery exists | low | medium: a stress-lane property, not the spot obligations | do, in the stress lane beside `TestRewindTorture` |
 | Route smoke in local category runs and self-hosted CI | high locally, blocked on ROMs in hosted CI | low | medium: covers configurations no replay can | local first, CI with a skip assertion |
@@ -159,8 +159,10 @@ above raw booleans. `TestFbzAct1RouteHeadless` (1,486 lines) hard-codes
 carries a private mask list; `TestS3kCnzTeleporterRouteHeadless` (561) steps
 idle frames only. About 2,900 lines of existing route tests drive input by
 hand. The standard's
-backlog item LTS-04 already names "minimal shared case/rewind helpers"; this
-is that item, not a new layer.
+backlog item LTS-04 names "minimal shared case/rewind helpers", but the
+migration plan scopes LTS-04 to configuration-case generation, rewind-spot
+support and the obligation inventory; the primitives here overlap only its
+failure-diagnostics part and do not close it.
 
 **What is generic in the FBZ class.** `InputRun`, mask constants, `stepMask`,
 the `FrameCheck`/`StopCondition`/`FrameObserver` contracts, the runner loop
@@ -461,7 +463,7 @@ hand-played segments through the existing harness.
    worktree carries an uncommitted scratch probe with a hard-coded home path
    that must never be committed, and the develop-side `fbz-route` tags need
    re-applying on merge.
-2. Extract the generic primitives (section 3, step 1) as LTS-04 and migrate
+2. Extract the generic primitives (section 3, step 1) and migrate
    the FBZ2 class onto them under the acceptance rule in section 3.
 3. Pilot a second zone from the plan's phase-2 list (AIZ or HCZ) on those
    primitives, copying rather than abstracting the stage pattern, to price
