@@ -109879,3 +109879,8 @@ Corrected focused runtime/parser/SS/CLI tests: 101 passed, zero skips. Exact
 recorder-pin guards: 13 passed, zero skips. The combined broad run's five new SS
 initialization errors were corrected narrowly; two unrelated source-guard failures
 remain matched to the unchanged base. No full-suite green or chain parity is claimed.
+
+Implementation `8af9eb913` integrated without conflicts at `2d74e3de5`.
+The integrated runtime/parser/SS and required S3K selection passed 140 tests,
+zero failures/errors/skips (48.936 seconds). The capture and EHZ1 structural
+frontier above are unchanged; canonical publication remains pending approval.

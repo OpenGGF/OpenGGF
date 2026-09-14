@@ -148,7 +148,7 @@ All Maven commands used `python3 tools/testing/maven_queue.py`, Java 21,
 `TestDynamicArtTransferTrace,TestDynamicArtLifecycleService,TestKis2GamePatchResolution,TestKis2SpecialStageDataLoader,TestKis2HeadlessBoot`
 passed 71 tests without skips after correcting a missing test import.
 
-Combined `LUA_BIN=/usr/bin/lua5.4 run_categories.py --base 51677cdd2 --run`
+Combined `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 51677cdd2 --run`
 completed 20,152 ordinary tests (two failures, five errors, 17 skips; 478 seconds)
 and 667 guard tests (four failures, no errors/skips; 173.74 seconds). The ordinary
 errors exposed a real initialization regression: controller-only special-stage
@@ -192,3 +192,16 @@ ownership before source closure, `mode=TITLE_CARD`, `loadGeneration=3`, EHZ1,
 structural stop does not identify the earliest physics mismatch; the earlier
 standalone row-156 result above belongs to its separate historical invocation.
 Canonical installation remains subject to approval of the sealed candidate.
+
+## Integrated result
+
+Implementation commit `8af9eb913` merged without conflicts into `develop` at
+`2d74e3de5`; the destination was still the pinned `51677cdd2` base. On that
+integrated commit, queued `-Dmse=off test -B` with absolute S2/S3K/KiS2 ROM paths
+and selector
+`TestDynamicArtTransferTrace,TestDynamicArtLifecycleService,TestKis2GamePatchResolution,TestKis2HeadlessBoot,TestKis2SpecialStageDataLoader,Sonic2SpecialStageComparisonStateTest,Sonic2SpecialStageSwapFlagTest,Sonic2SpecialStageTeamSetupTest,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+passed **140 tests, zero failures/errors/skips** in 48.936 seconds. The selector
+exercises both classes named `TestSonic3kLevelLoading`. Consumed Java/native
+diagnostics were removed; both original and audited captures and their sealed
+inventories remain external. The subsequent documentation-only update does not
+change engine behavior or require another engine run.
