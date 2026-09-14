@@ -55,6 +55,11 @@ public class AniPlcScriptState {
      * same level-pattern objects as the AniPLC destination.
      */
     public boolean tick(Level level, GraphicsManager graphicsManager) {
+        return tickSubmission(tileId -> applyFrame(level, graphicsManager, tileId));
+    }
+
+    /** Advances ROM counters and submits art to the caller's hardware publication owner. */
+    public boolean tickSubmission(java.util.function.IntConsumer submitSourceTile) {
         if (frameTileIds.length == 0 || artPatterns.length == 0) {
             return false;
         }
@@ -77,8 +82,20 @@ public class AniPlcScriptState {
         timer = duration & 0xFF;
 
         int tileId = frameTileIds[currentFrame];
-        applyFrame(level, graphicsManager, tileId);
+        submitSourceTile.accept(tileId);
         return true;
+    }
+
+    /** Immutable-by-copy ROM payload for a submitted source frame (packed Genesis nibbles). */
+    public byte[] copyFramePayload(int tileId) {
+        byte[] bytes = new byte[tilesPerFrame * Pattern.PATTERN_SIZE_IN_ROM];
+        for (int tile = 0; tile < tilesPerFrame; tile++) {
+            Pattern pattern = artPatterns[tileId + tile];
+            for (int y = 0; y < 8; y++) for (int x = 0; x < 8; x += 2)
+                bytes[tile * 32 + y * 4 + x / 2] = (byte) (
+                        (pattern.getPixel(x, y) & 15) << 4 | pattern.getPixel(x + 1, y) & 15);
+        }
+        return bytes;
     }
 
     public int requiredPatternCount() {

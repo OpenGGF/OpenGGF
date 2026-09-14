@@ -495,6 +495,11 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         // width_pixels=$20. The usual d1-$B reconstruction is not valid here.
         return 0x20;
     }
+    @Override public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player) {
+        // SolidObjectFull_1P consumes its standing bit on jump-off and
+        // returns before fresh side-contact classification (loc_1DC98).
+        return true;
+    }
     @Override public int getBalanceWidthPixels() { return 0x20; }
     @Override public int romObjectCodePointerHighWord() {
         // Live boss/defeat callbacks occupy bank $0006. Obj_EndSignControl

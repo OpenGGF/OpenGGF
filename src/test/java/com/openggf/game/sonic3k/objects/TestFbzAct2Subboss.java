@@ -60,6 +60,30 @@ class TestFbzAct2Subboss {
         assertEquals("ACTIVE", boss.phaseName());
     }
 
+    @Test void laserReadyStopsMovementAndRetainsItsBitUntilNextCycleStarts() {
+        Fbz2SubbossInstance boss = boss();
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getCentreX()).thenReturn((short) 0x2B40);
+        boss.update(-1, player);
+        boss.update(0, player);
+        for (int i = 1; i <= 120; i++) boss.update(i, player);
+        assertEquals("ACTIVE", boss.phaseName());
+        boss.update(121, player);
+        int x = boss.getX();
+        boss.setControlBit(Fbz2SubbossInstance.CONTROL_LASER_READY);
+        boss.update(0x40, player);
+        assertAll(
+                () -> assertEquals(x, boss.getX(), "loc_6FEFA returns without MoveSprite2"),
+                () -> assertTrue(boss.controlBit(Fbz2SubbossInstance.CONTROL_LASER_READY),
+                        "loc_6FE3A owns the clear at the next cycle"));
+        assertEquals("CYCLE_WAIT", boss.phaseName());
+        assertEquals(0x7F, boss.waitWordForTest());
+        for (int i = 0; i < 128; i++) boss.update(0x41 + i, player);
+        assertEquals("ACTIVE", boss.phaseName());
+        assertFalse(boss.controlBit(Fbz2SubbossInstance.CONTROL_LASER_READY));
+        assertEquals(x, boss.getX(), "the cycle-start callback creates the laser without moving");
+    }
+
     @Test void onlySixNonfinalCyclesMoveTheLeftAnchors() {
         Fbz2SubbossInstance boss = boss();
         Fbz2SubbossCornerChild upperLeft = Fbz2SubbossCornerChild.forTest(boss, 0);

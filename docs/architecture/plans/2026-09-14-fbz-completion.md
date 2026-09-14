@@ -516,7 +516,7 @@ base is develop `51677cdd2`; the coordinating tree is
 `feature/ai-fbz-remaining`. Separate local worktrees own the ordinary input
 controller, Tails replay frontiers, and native visual comparisons. The coordinator
 owns the ending flow and combined verification. This continuation preserves the
-frozen visual proposal and distinguishes new evidence from acceptance.
+frozen checkpoint manifest and distinguishes new evidence from acceptance.
 
 A read-only results-owner probe overturns the earlier description of frame 22397
 as an isolated coordinate-rebase difference. On the base, results remain in their
@@ -563,56 +563,110 @@ velocities and stood-on identity untouched. The retained FBZ boss now performs
 those writes. `loc_2DD06` only replaces the results SST's code pointer; the newly
 appended TITLE_CARD_INIT phase defers the art submission until its next dispatch.
 The focused title/child run passed 37 tests, zero skips, with the expected strict
-failure (3493 errors, still first20795); title queue parity then reaches26025.
+failure (3493 errors, still first 20795); title queue parity then reaches 26025.
 
 The next large main-player displacement is caused by the transition preserving
-engine-only horizontal easing targets in Act1 coordinates while rebasing the
-current bounds. During the roughly470-frame results wait, the left bound creeps
-right; the first ordinary player boundary check then clamps Sonic to$03DE. Both
+engine-only horizontal easing targets in Act 1 coordinates while rebasing the
+current bounds. During the roughly 470-frame results wait, the left bound creeps
+right; the first ordinary player boundary check then clamps Sonic to `$03DE`. Both
 horizontal targets now translate with their corresponding world bounds. The
 old transition test's raw-target-preservation expectation was incorrect; it now
-asserts translated targets while vertical targets remain unchanged. All12
-transition/rewind checks pass, zero skips (queued Maven69seconds). The complete
-replay resumes its Act2 input route and reports5508 errors, still first20795.
+asserts translated targets while vertical targets remain unchanged. All 12
+transition/rewind checks pass, zero skips (queued Maven, 69 seconds). The complete
+replay resumes its Act 2 input route and reports 5508 errors, still first 20795.
 The increased total reflects a different downstream route, not a verdict about
-the correction; main X now agrees until23035, and the next camera boundary
-frontier is23014. Native title/worker handoff is23011, while the engine's title
-provider completes23021. The remaining carried-title/worker ordering is open.
+the correction; main X now agrees until 23035, and the next camera boundary
+frontier is 23014. Native title/worker handoff is 23011, while the engine's title
+provider completes 23021. The remaining carried-title/worker ordering is open.
 Temporary title observers are removed from the committed tests.
 
-The native Act2 MAX_X and MIN_Y workers have one easing owner. The engine's
+The native Act 2 MAX_X and MIN_Y workers have one easing owner. The engine's
 ordinary camera tail was reversing their writes toward stale synthetic targets;
 a regression that includes that tail fails on the first nonzero worker step
 (expected $A1, actual $A0). Publishing each worker word with its engine target
 keeps the captured native destination independent. MAX_Y retains its actual
 native target/easing path. The FBZ request also disables the generic virtual
 preloaded camera-release tail because the retained EndSignControl SST owns
-ChangeAct2Sizes. Queued Maven `-Ptrace-replay-r7
--Dtest=TestFbzAct2CameraResizeWorker,TestFbzActTransitionHeadless,TestS3kFbzCompleteRunTraceReplay
+ChangeAct 2Sizes. Queued Maven `-Ptrace-replay-r7
+-Dtest=TestFbzAct 2CameraResizeWorker,TestFbzActTransitionHeadless,TestS3kFbzCompleteRunTraceReplay
 test` at ae39e41d7 plus these edits: 18 focused passes, one strict failure, zero
 skips, 64 seconds. Complete replay has 3482 errors, first frame 21379 Tails
 x-speed; main X agrees until 23039. The remaining title/worker dispatch and
-Act2 route differences are still open.
+Act 2 route differences are still open.
 
 The follow-up disproved the virtual-release request as the solution: native
 world-word rebasing intentionally bypasses generic carried-object callbacks for
 screen-space results, so that request never reached this owner. A bounded live
-probe still measured an eleven-dispatch overlay delay at native width320. The
+probe still measured an eleven-dispatch overlay delay at native width 320. The
 request is removed. Instead the retained title SST now owns its higher-slot
-visual children: art/create and movement-latch wait, one90-decrement parent
+visual children: art/create and movement-latch wait, one 90-decrement parent
 timer, child exit, then the next parent poll publishes LoadEnemyArt and the
 completion flag. The generic overlay does not double-dispatch these children.
 This also prevents its generic reset countdown from re-arming a second writer.
 No new rewind fields or measured delay constants are introduced. Native sources
 are Obj_TitleCardCreate/Wait/Wait2 and Obj_TitleCardElement/RedBanner.
 
-At0cf340b56 plus this candidate, queued Maven with `-Ptrace-replay-r7` and
-`-Dtest=TestSonic3kTitleCardManagerRewind,TestFbzResultsTitleAndAct2Sizes,TestFbzAct1RouteHeadless#realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch,TestS3kFbzCompleteRunTraceReplay`
-passed14 focused tests, zero skips, and completed the expected strict failure
-in66seconds. The full-registry title-init round trip passes. Native and engine
-title children settle22906, reset22908, and parent/worker handoff23011; camera
-Y moves23012 and X23014. Main X/camera now agree until23816; the one-row main
-Y difference22868 remains. Strict complete has3030errors, first22311 Tails
-prison interaction, rather than the earlier21379chain attack. The temporary
+At `0cf340b56` plus this candidate, queued Maven with `-Ptrace-replay-r7` and
+`-Dtest=TestSonic3kTitleCardManagerRewind,TestFbzResultsTitleAndAct 2Sizes,TestFbzAct1RouteHeadless#realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch,TestS3kFbzCompleteRunTraceReplay`
+passed 14 focused tests, zero skips, and completed the expected strict failure
+in 66 seconds. The full-registry title-init round trip passes. Native and engine
+title children settle at 22906, reset at 22908, and parent/worker handoff at 23011; camera
+Y moves at 23012 and X at 23014. Main X/camera now agree until 23816; the one-row main
+Y difference at 22868 remains. Strict complete has 3030 errors, first 22311 Tails
+prison interaction, rather than the earlier 21379 chain attack. The temporary
 observer is removed. Earlier requests to model the delay using overlay timing
 are rejected because the actual retained parent must own child sequencing.
+
+At `34a03881c` the next main-player divergence at 23816 is an actual vertical chain
+grab during routine 4 recoil: engine snaps `$0828/$01C0` to `$0818/$01B4` and clears both
+velocities, then drops control next update. Native loc_3A9B4 and horizontal
+loc_3AC94 reject routine>=4 and debug placement before grab writes. Both entry
+gates now do so. A two-subtype regression first failed both rows (18.925 seconds),
+then passed healthy/hurt/dead/debug cases while preserving rejected-entry
+coordinates, velocities, subpixels, ownership and absence of grab sound. Queued
+Maven `-Ptrace-replay-r7 -Dtest=TestFbzRailAndChainPlatforms,TestFbzObjectRewind,TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay`
+passed 31 focused checks, with 2 expected strict failures, zero skips, 74 seconds.
+Complete: 5063 errors, first 22389 Tails air; independent: 4152 errors, first 7619 x-speed. Main
+X now agrees until 24206. This is an entry rejection fix, not altered hurt physics.
+
+### Remaining-items vertical cage entry (6583d90b3)
+
+Native `loc_3A126` stores the orbit side in the cage object; `loc_3A14E` changes the player ground angle separately. The engine had overwritten the upper-entry orbit with `$40`, snapping both sides to the cage centre. The four-quadrant regression reproduced two upper-entry failures (4 tests, 0 skipped, 49.757 seconds). Keeping the orbit and ground angle separate passed 36 focused cage/rewind checks with 0 skips; the combined focused and strict replay command took 63 seconds.
+
+Command: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dtest=TestFbzWireCages,TestFbzObjectRewind,TestS3kFbzCompleteRunTraceReplay test` with absolute ROM properties. The strict complete replay remains red: 5,036 errors, first main-player Y error at frame 22,868 (`$05A4` expected, `$05A8` actual). Apart from this one-row handoff error, the next main-player position error is frame 26,451. Temporary callback probes showed boss slot 8 releases control before plunger slot 12 updates; the latter starts grounded at `$05A8` with the correct plunger ride. This rejects callback order as the cause; probes were removed.
+
+### Independently reviewed animation evidence
+
+Runtime `dac3f5e01` separates ROM AniPLC submission from eligible VBlank publication and captures both pending and presented art, including rewind before the first submission. Tooling `04a9e17eb` records actual GPU source masks and independently decodes native SAT/name tables; acceptance `4090860e3` follows root review of the five native/engine image pairs, geometry code, and a separate reconstruction of all 30 receipt/mask/framebuffer/source-local RGB comparisons. Every eligible native opaque source pixel is represented and equal at the matched presentation phase.
+
+This accepts only the named opaque source-local tile/local/palette/nibble comparisons. Different camera placement, transparent retained backgrounds, HUD and occluded pixels, whole-frame geometry and the other frozen checkpoints remain outside this result. Two pixels in the last Act 2 column sample are recorded as native occlusions. The frozen manifest is unchanged. The existing FBZ visual validation record owns exact artifact hashes, counts and service-phase evidence; temporary root contact sheets are diagnostic, not new references.
+
+### Retained contact state and outgoing timeline
+
+`13f877001` resolves frame 22,868 at the actual owner: replacing the placement/object manager during the seamless reload discarded the externalized SST standing/pushing bits and riding records, although the original object identities and sprite latch survived. A bounded checkpoint probe showed the first released plunger callback took a fresh landing, with continued carry only one frame later. Callback ordering and later position overwrite were rejected.
+
+The existing `ALL_LIVE_SST` survival policy now transfers only carried-object standing/pushing/riding state after the real world-coordinate offsets. It recomputes the riding baseline from the retained object's rebased position, avoiding a second application of the offset. Transient contacts, headroom caches, queues and excluded objects stay with their owning manager. Sources: `FBZ1BGE_Normal` (108794–108820), `Load_Level` (38747–38762), continued `SolidObjectFull` / `MvSonicOnPtfm` (41017–41035, 41670 onward).
+
+Queued Maven with `-Dmse=off -B -Ptrace-replay-r7 -Dsurefire.forkCount=1 -Dtest=TestFbzMinibossChildren,TestSolidObjectManager,TestFbzActTransitionHeadless,TestFbzTransitionRewind,TestS3kFbzCompleteRunTraceReplay test` and the verified absolute S3K ROM path took 64 seconds: 144 focused passes, one strict replay failure, zero skips. Complete comparison moves from 5,036 to 3,506 errors, first frame 24,250 rings (8 expected / 9 actual); main-player Y at 22,868 is exact. Both main and follower now retain their real ending contacts.
+
+Separately, `15976fff2` closes the short outgoing timeline obligation. `TestFbzSandopolisTimelineHeadless` seeds only a local `EXIT_READY` setup, then uses the real boss request, GameLoop fade and destination loader. `LEVEL_LOAD` resets history to frame zero (not the seamless current-frame boundary); seeking zero remains in SOZ without FBZ owners. All registered state passes two independent eight-frame restore/forward-replay cycles. The focused queued test passed once, zero skips, 19.091 seconds. This is local transition evidence, not another full boss/capsule route.
+
+### Button horizontal entry boundary
+
+Native `loc_2C62C` is the top-only button path, not a monitor: its `SolidObjectTop` call reaches `loc_1E42E`, which rejects the exact right edge with `bhs`. The engine incorrectly gave both button families the full-solid inclusive (`bhi`) edge. Returning the family-specific edge rule removes Sonic's premature lift at 26,451 and 28,229 and Tails's identical boundary at 24,828. The four real-contact rows (left edge, last interior right pixel, exact right edge, outside) reproduced one failure at the exact right edge: 4 tests, 0 skips, 48.842 seconds.
+
+Queued Maven `-Dmse=off -B -Ptrace-replay-r7 -Dtest=TestSonic3kButtonObjectInstance,TestFbzEnvironmentalGraphRewind,TestS3kFbzCompleteRunTraceReplay test` with the absolute S3K ROM path passes 11 focused tests, one expected strict failure, zero skips, 61 seconds. The pre-lightning-fix combined tree reports 3,916 errors, first 24,250 rings; the next Tails error is animation at 24,980 and the first main-player position disagreement is now 28,296. Increased downstream mismatch volume after the corrected contact does not invalidate its native boundary proof.
+
+### Disappearing-platform activation and first landing
+
+The next main-player route divergence belonged to `loc_3BB34`, the disappearing platform at `$0E90/$0470`, subtype `$E9`. `loc_3BB08` reads `Level_frame_counter`; the implementation instead gated activation on the object update's VInt argument. A regression separates those clocks for all nine placed subtypes and fails before the correction (one failed test, zero skips, 47.760 seconds). The object now reads the existing level service counter, retaining the established standalone-test fallback. Animation duration still advances on actual object dispatches.
+
+Correct activation exposed the independent first-landing edge: `loc_3BB6E` calls `SolidObjectTop`, whose `loc_1E45A` accepts negative overlap `[-$10,-1]`, not zero. Four real rolling-player contacts reproduce the exact-surface failure (four tests, one failure, zero skips, 19.132 seconds). The object now uses the existing explicit zero-distance rejection contract. No shared collision algorithm or fitted phase is changed.
+
+Final queued Maven `-Dmse=off -B -Ptrace-replay-r7 -Dtest=TestFbzDisappearingPlatformAndScrewDoor,TestFbzObjectRewind,TestFbzEnvironmentalGraphRewind,TestS3kFbzCompleteRunTraceReplay test` with the absolute S3K ROM path: 23 focused passes, one expected strict failure, zero skips, 66 seconds. Complete comparison has 3,194 errors, still first 24,980 Tails animation before the parallel spike/CPU fix. Main-player position and velocity now agree until frame 35,869 (ground-speed/Y-speed signs); its next position difference is 35,870. The intermediate clock-only run had 19 focused passes and 3,794 strict errors in 65 seconds, with premature landing at 28,295; that measured edge is the reason for the second correction.
+
+### Subboss laser-ready return
+
+At `a4c611423`, a bounded boss callback probe showed the engine entering the frame 35,869 touch pass one movement step ahead of the native body. `loc_6FEB2` branches to `loc_6FEFA` when laser-ready bit 1 is set: it arms the `$7F` wait and returns without `MoveSprite2`. The bit remains set until the next cycle's `loc_6FE3A`. The engine had moved on that return and cleared the bit early. Both writes now follow their owning native branches. No collision position or trace-frame special case is added.
+
+The new cycle-boundary regression reproduced both incorrect movement and early bit clearing. Queued Maven `-Dmse=off -Ptrace-replay-r7 -Dtest=TestFbzAct2Subboss,TestFbz2SubbossRewind,TestFbzBossGraphRewind,TestFbz2SubbossArtHandoff,TestS3kFbzCompleteRunTraceReplay test -B` with the verified absolute S3K ROM path passed 42 focused tests, with one expected strict failure and zero skips, in 65 seconds. Complete comparison falls from 3,157 to 3,018 errors, still first frame 28,428 Tails Y. The main-player velocity disagreement at 35,869 is removed; its next position error is frame 36,195 X (`$2AC3` expected / `$2AC4` actual). Temporary callback prints were removed.

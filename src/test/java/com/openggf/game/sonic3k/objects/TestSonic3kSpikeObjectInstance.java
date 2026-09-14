@@ -35,6 +35,70 @@ class TestSonic3kSpikeObjectInstance {
         @Override protected void createSensorLines() { }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    void sidewaysContactConsumesOnlyItsPushLatchEvenWhenDamageIsBlocked(boolean blocked) {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var player = new HurtTestTails();
+            player.setCpuControlled(true);
+            player.setRenderFlagOnScreen(true);
+            player.setCentreX((short) 0x8E6);
+            player.setCentreY((short) 0x703);
+            player.setAir(false);
+            player.setXSpeed((short) 0x78);
+            player.setGSpeed((short) 0x78);
+            if (blocked) player.setInvulnerableFrames(0x40);
+            var spikes = new Sonic3kSpikeObjectInstance(new ObjectSpawn(
+                    0x900, 0x710, Sonic3kObjectIds.SPIKES, 0x40, 0, false, 0));
+            var camera = new Camera();
+            camera.setX((short) 0x820);
+            camera.setY((short) 0x660);
+            var holder = new ObjectManager[1];
+            var services = new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return holder[0]; }
+                @Override public Camera camera() { return camera; }
+                @Override public ObjectPlayerQuery playerQuery() {
+                    return new ObjectPlayerQuery(() -> player, List::of);
+                }
+            };
+            var manager = new ObjectManager(List.of(), registryFor(spikes), 0,
+                    null, null, null, camera, services);
+            holder[0] = manager;
+            manager.reset(0x820);
+            manager.addDynamicObject(spikes);
+            manager.update(0x820, player, List.of(), 0, false, true, false);
+            manager.update(0x820, player, List.of(), 1, false, true, false);
+
+            assertEquals(!blocked, player.isHurt(), "xy=" + Integer.toHexString(player.getCentreX())
+                    + "," + Integer.toHexString(player.getCentreY()) + " inv=" + player.getInvulnerable()
+                    + " push=" + player.getPushing() + " solid=" + spikes.isWithinSolidContactBounds());
+            assertFalse(manager.hasObjectPushingBit(player),
+                    "loc_240E2 clears the object push bit after both taken and blocked damage");
+            int animation = player.getAnimationId();
+            if (!blocked) assertEquals(0x1A, animation);
+            player.setCentreX((short) 0x8E3);
+            player.setCentreY((short) 0x6FF);
+            manager.processImmediateInlineSolidCheckpoint(spikes, player, List.of());
+            assertEquals(animation, player.getAnimationId(),
+                    "the following miss cannot publish a stale push-release animation word");
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+            AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    private static final class HurtTestTails extends com.openggf.sprites.playable.Tails {
+        HurtTestTails() {
+            super("SPIKE_TAILS", (short) 0, (short) 0);
+            setGameRulesForTest(com.openggf.game.rules.GameRules.SONIC_3K);
+            setWidth(18);
+            setHeight(30);
+        }
+    }
+
     @Test
     void spikesUseSolidObjectFullInclusiveRightEdge() {
         Sonic3kSpikeObjectInstance spikes = new Sonic3kSpikeObjectInstance(

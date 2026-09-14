@@ -107,12 +107,13 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
             }
             case ACTIVE -> {
                 if (bit(controlBits, CONTROL_LASER_READY)) {
-                    controlBits &= ~(1 << CONTROL_LASER_READY);
+                    // loc_6FEFA returns without moving and retains bit 1;
+                    // loc_6FE3A clears it when the next laser cycle starts.
                     phaseOrdinal = Phase.CYCLE_WAIT.ordinal(); timer = 0x7F;
-                } else if ((vIntRunCount & 0x1F) == 0 && mainPlayer != null) {
-                    aimAt(mainPlayer);
+                } else {
+                    if ((vIntRunCount & 0x1F) == 0 && mainPlayer != null) aimAt(mainPlayer);
+                    moveWithinCorners();
                 }
-                moveWithinCorners();
             }
             case CYCLE_WAIT -> { if (--timer < 0) completeLaserCycle(); }
             case DEFEAT_QUEUE_WAIT -> { if (--timer < 0) beginCharacterEscape(); }
@@ -175,6 +176,7 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     }
 
     private void startLaser(PlayableEntity mainPlayer) {
+        controlBits &= ~(1 << CONTROL_LASER_READY); // loc_6FE3A
         phaseOrdinal = Phase.ACTIVE.ordinal();
         aimAt(mainPlayer);
         if (tryServices() != null && services().objectManager() != null)

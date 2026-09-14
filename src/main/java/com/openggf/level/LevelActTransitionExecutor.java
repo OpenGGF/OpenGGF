@@ -209,11 +209,21 @@ final class LevelActTransitionExecutor {
                         ? levelManager.objectManager.snapshotAllLiveSstObjectsForTransition()
                         : levelManager.objectManager.snapshotPersistentTransitionOccupants();
 
+        ObjectManager previousObjectManager = levelManager.objectManager;
         int postOffsetCameraX = cam.getX() + request.cameraOffsetX();
         levelManager.rebuildManagersForActTransition(cam, carriedOccupants, request,
                 postOffsetCameraX);
         levelManager.applySeamlessOffsets(request, cam);
         offsetCarriedObjectsForTransition(carriedOccupants, request);
+        if (request.objectSurvivalPolicy()
+                == SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST) {
+            // Events_fg_5 retains Object_RAM, including SolidObjectFull's
+            // per-player standing/pushing bits. These engine-owned tables must
+            // follow the surviving SSTs, not the replaced placement manager.
+            com.openggf.level.objects.ObjectTransitionContacts.inherit(
+                    levelManager.objectManager, previousObjectManager,
+                    carriedOccupants.stream().map(TransitionSstOccupant::identity).toList());
+        }
 
         levelManager.restoreCameraBoundsForCurrentLevel(cam);
         levelManager.applyPostTransitionCameraOverrides(request, cam);

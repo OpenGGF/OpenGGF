@@ -5,9 +5,14 @@ the [delivery plan](../architecture/plans/2026-09-13-level-test-standardisation.
 defines the audit, pilots, reporting and migration work. This ledger starts the
 backlog; it is not a completed coverage audit.
 
-The FBZ matrices record the 2026-09-14 spike-art follow-up: both acts now have
-ROM-backed orientation, tile-bank and refresh-range checks. Full visual
-checkpoint acceptance remains open.
+The [FBZ Act 1](../architecture/validation/levels/s3k-fbz-act1.md) and
+[Act 2](../architecture/validation/levels/s3k-fbz-act2.md) matrices track the
+2026-09-14 remaining-items delivery: ROM-backed spike tile banks, retained-title
+initialization and scarce-slot worker checks, plus queued/presented animation-art
+rewind. The five animation channels have independently reviewed opaque
+source-pixel evidence over six frames each. Full native checkpoint geometry,
+remaining route/lifecycle breadth and strict replay parity stay open; these
+bounded results do not certify either act.
 
 ## Work packages
 

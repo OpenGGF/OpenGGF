@@ -372,3 +372,133 @@ owners separately from camera position to diagnose the remaining discrepancy.
 - A checkpoint passes only when its immutable `refs/fbz` reference, engine PNG, and named comparison sidecar all exist and the sidecar records `PASS`. Missing evidence is a deterministic FAIL; required checkpoints are never downgraded to LIKELY or SKIP.
 - BizHawk/BK2 is not used by this runner. Complete-run movie capture remains the separate late Task 20 activity.
 <!-- FBZ-VALIDATION:native-pre-compat:END -->
+
+### Candidate cadence instrument and service domains
+
+The hash-bound amendment now supplies independent capture-placement intents;
+$230 boots Act2. The instrument admits production title/fade/setup, reapplies
+only the declared placement pose, and seeks timer zero by ordinary idle steps.
+Six frames include a zero-step control, natural expiry and following service
+frames. No reference physics, event or counter values initialize the engine.
+The reviewed native rectangles are not assumed to remain the engine's visible
+owner after placement: paired pixel masks still require independent checking.
+
+`FbzVisualCadenceRomContract` reads the verified ROM's per-act AniPLC declarations
+and hashes the exact source bytes per frame. The verifier separately checks
+timer/index continuity and immediate-submission versus next-VBlank publication
+domains; identical source payloads require no artificial pixel change. ROM
+`LevelLoop` waits on VBlank before `Animate_Tiles`; `AnimateTiles_DoAniPLC` changes
+counters and calls `Add_To_DMA_Queue`, while the next VInt's `Process_DMA_Queue`
+writes the VDP registers. This source chain, not an observed frame offset alone,
+defines the service-phase expectation.
+
+Candidate engine receipts name `pattern_hash_domain` explicitly as level-pattern
+bytes after animation. The legacy `vram_sha256` field is retained for readers,
+but does not describe native VRAM. A submitted-payload match is never sufficient
+for visible/presentation parity. Candidate series are preserved separately and
+the checkpoint remains rejected until paired acceptance is established. The
+main PNG is now published only after cadence validation, avoiding a misleading
+accepted main image when its cadence subsequently fails.
+
+Focused `TestFbzVisualCadenceContract,TestFbzVisualEvidenceToolingContract,TestFbzVisualGameplayAdvanceContract`
+completed 13 tests with no failures/errors/skips (50.075 seconds, including
+compilation). This proves the instrument's logical contracts, not five accepted
+paired AniPLC visual checkpoints.
+
+### S3K queued AniPLC publication correction
+
+`Sonic3kPatternAnimator` now owns immutable queued ROM payloads, dispatched by
+`Sonic3kLevelInitProfile` through the internal `QueuedPatternDmaPublication` port.
+`LevelFrameStep` reuses the existing exactly-once physical lifecycle token and
+passes its claimed semantic phase and existing explicit DMA-handler declaration.
+S3K ordinary 8, title C, pause 10-to-8, fade 12 and special 1C handlers drain; lag 0
+does not. Initial reasoning excluding fade 12 was rejected after following its
+`Do_ControllerPal` call to `Process_DMA_Queue`. No new reference input or public
+Mod API is introduced. The generic S1/S2 script tick remains immediate.
+
+Publication updates Level patterns, GPU atlas and affected object-renderer
+atlases together. Rewind includes original/presented destinations from animator
+construction, plus pending payloads. Independent review caught the empty-before-
+first-submission snapshot hole; destination preregistration and a regression now
+cover that boundary. Contiguous restored tiles are batched for renderer refresh.
+The first queue/profile/rewind run passed 29 tests (49.540 seconds); AIZ/HCZ and
+required bootstrap/loading/decoding consumers passed 77 tests (51.644 seconds);
+the pre-submission rewind correction passed 20 tests (49.891 seconds), all with
+zero skips. The phase-aware bridge passed 13 tests (50.241 seconds), including
+lag retention, legal fade/title/ordinary service and exactly-once token dispatch;
+these focused checks do not certify a broad suite or the visual matrix.
+
+The destination pixel instrument now reads actual uploaded GPU palette, lookup,
+atlas and foreground descriptors. It resolves world placement and flip bits,
+reports opaque destination pixels versus exact framebuffer matches, and retains
+occlusion counts. Upright spikes require a separate sprite owner: the ROM-backed
+`buildFbzSpikesSheet` maps level $200-$207 to sheet 8-15. The instrument uses active
+spike poses and mapping pieces with their actual sprite-atlas entries. No
+background cloud motion or CPU-only art hash can satisfy that owner comparison.
+
+
+The paired tool now records an eight-byte source-pixel mask for every opaque
+placed sample: big-endian x/y/tile words, match-bit plus flipped tile-local
+coordinate, and palette/nibble byte. The uploaded palette is recorded per frame.
+`tools/bizhawk/compare_fbz_cadence_pixels.py` independently decodes native
+VRAM/name tables/SAT/CRAM and rechecks the engine mask against its PNG. It compares
+actual normalized RGB only for common source tile/local/palette/nibble keys,
+retaining nonmatches, occlusions and unrepresented native pixels. Equal producer
+hashes alone cannot satisfy this check. The standalone synthetic test checks a
+complete source-pixel pair, corrupt framebuffer rejection and mismatched
+presentation rejection. It requires Pillow; it is not an ordinary engine test.
+
+For $208/$238, the instrument may seek the reviewed native timer-zero cursor
+(indices 3/7 respectively) by ordinary stepping for at most one complete ROM
+cycle. The amendment records this capture selection; observations record actual
+steps and ROM-derived bound. No animation or gameplay state is written to obtain
+that cursor. The other three channels use the first naturally reached zero.
+
+
+### Paired opaque-source pixels (2026-09-14; bounded independent acceptance)
+
+Artifact `18CAE3F037ECEFC6610A9BE7060A4557304FCF016447620E69AAB3F99CC9FA1A`
+produced all 30 phase-aligned frames. Every comparable native opaque pixel has
+an equal engine pixel at the same ROM tile-local/palette/nibble key; none is
+unrepresented. This is source-local appearance and service correspondence,
+not same screen coordinates or identical full rectangles.
+
+| Destination | Equal/comparable pixels, frames 0–5 | Native exclusions |
+|---|---|---|
+| $200 | 552, 552, 552, 552, 552, 568 | Transparent pixels excluded |
+| $208 | 560 each | Transparent pixels excluded |
+| $210 | 2550, 2370, 2040, 1720, 1470, 1320 | Transparent background excluded; ROM art remains static |
+| $230 (Act2) | 1280, 1280, 1280, 1280, 1280, 1278 | Final two occluded pixels excluded |
+| $238 | 2784, 2744, 2744, 2800, 2824, 2832 | Transparent background excluded |
+
+The amendment stores comparison/artifact/PNG/mask/receipt hashes and every
+frame's native and engine opaque/matched/excluded counts. External evidence is
+`${TASK_SCRATCH}/fbz-remaining-20260914/visual/cadence-paired-mask-XXX/`;
+`paired-source-pixels/comparison.json` names both source masks and PNGs. The
+capture CLI deliberately returns 5 after preserving candidates; independent
+review of the named evidence, rather than a fresh capture's existence, owns
+acceptance. The frozen manifest and unrelated checkpoint failures remain intact.
+
+Final tool checks: nine focused Java tests passed without skips (50.273s),
+including flipped source-coordinate and occlusion-mask reconstruction. Standalone
+Python pairing safety test passed (0.229s). Final package completed in 37.041s;
+five capture invocations consumed 5.528684s. Earlier cursor build failed checked
+IOException handling (31.874s), was repaired, then packaged successfully (69s).
+The exact start after runtime publication correction remained accepted with
+identical PNG SHA `4ED9FE4829B891F4511F7B514777EBE4AF60EC4CA128C9ECF6F220781A5D77A8`
+and the already reviewed 2400/2400 terrain pixels; no new whole-frame claim.
+
+
+Root independently accepted this bounded result after inspecting the five
+native/engine pairs in `root-paired-review.png`, reviewing the SAT/name-table and
+actual-GPU mask implementations, and independently reproducing all 30 receipt
+hashes, framebuffer-match flags and source-local RGB equality with a separate
+Python implementation. Implementation commits are `dac3f5e01` (publication) and
+`04a9e17eb` (capture/comparison). Acceptance covers only opaque source-local
+tile/local/palette/nibble appearance at the matching presented payload phase;
+all eligible native pixels are represented. Transparent/retained background,
+differing camera/placement/geometry, HUD/occluded pixels, whole frames and frozen
+checkpoints remain excluded. The contact sheet does not establish native route
+visual parity. The historical frozen-checkpoint matrix above therefore remains
+unchanged; these five bounded source-pixel comparisons are accepted evidence,
+not five whole-checkpoint PASS claims.

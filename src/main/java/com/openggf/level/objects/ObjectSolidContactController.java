@@ -547,6 +547,21 @@ public final class ObjectSolidContactController {
     // Engine-side push ownership for the synthetic off-screen release above.
     // Not a native predicate: it decides whether that gate is standing in for a
     // solid whose tail the ROM still runs.
+    private void clearPushAfterSignedControlRejection(PlayableEntity player,
+            ObjectInstance instance, SolidObjectProvider provider) {
+        // A dispatched native full-solid helper branches from its signed
+        // object_control gate to the ordinary no-contact push release.
+        // S3K loc_1DFFE -> loc_1E0A2 still reads this object's pushing bit;
+        // controller ownership does not suppress that tail's animation word.
+        if (!instance.isSkipSolidContactThisFrame()
+                && isSignedObjectControlNewSolidContactRejected(player, instance)
+                && clearObjectPushingBit(player, instance)) {
+            publishSolidPushReleaseAnimationWord(player, instance);
+            player.setPushing(false);
+            provider.setPlayerPushing(player, false);
+        }
+    }
+
     private boolean offscreenReleaseStillOwnsWalkRunWord(PlayableEntity player, ObjectInstance instance) {
         if (!(player instanceof AbstractPlayableSprite sprite)) {
             return false;
@@ -785,6 +800,46 @@ public final class ObjectSolidContactController {
         objectStandingBitSnapshot.clear();
         standingBitEstablishedThisFrame.clear();
         controllerAirborneReleaseSupports.clear();
+    }
+
+    void inheritRetainedSstContacts(ObjectSolidContactController previous,
+            Collection<? extends ObjectInstance> carried) {
+        Set<Object> retainedKeys = new HashSet<>();
+        Set<ObjectInstance> retainedObjects = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (ObjectInstance object : carried) {
+            retainedObjects.add(object);
+            retainedKeys.add(airUnseatLatchKeyFor(object));
+        }
+        inheritRetainedLatchBits(previous.objectStandingBitSet, objectStandingBitSet, retainedKeys);
+        inheritRetainedLatchBits(previous.objectPushingBitSet, objectPushingBitSet, retainedKeys);
+        for (var entry : previous.ridingStates.entrySet()) {
+            RidingState ride = entry.getValue();
+            if (!retainedObjects.contains(ride.object)) {
+                continue;
+            }
+            // Native continued riding takes its movement baseline from the
+            // retained object's position at its next execution. The transition
+            // coordinate scan has already rebased that position; carrying the
+            // old manager's world coordinate would apply the offset twice.
+            int x = ride.object.getX();
+            int y = ride.object.getY();
+            if (ride.pieceIndex >= 0 && ride.object instanceof MultiPieceSolidProvider multi) {
+                x = multi.getPieceX(ride.pieceIndex);
+                y = multi.getPieceY(ride.pieceIndex);
+            }
+            putRidingState(entry.getKey(), ride.object, x, y, ride.pieceIndex);
+        }
+    }
+
+    private static void inheritRetainedLatchBits(Map<PlayableEntity, Set<Object>> source,
+            Map<PlayableEntity, Set<Object>> target, Set<Object> retainedKeys) {
+        for (var entry : source.entrySet()) {
+            for (Object key : entry.getValue()) {
+                if (retainedKeys.contains(standingBitOwnerOf(key))) {
+                    target.computeIfAbsent(entry.getKey(), player -> new HashSet<>()).add(key);
+                }
+            }
+        }
     }
 
     ObjectManagerSnapshot.SolidContactState captureRewindState() {
@@ -1840,6 +1895,7 @@ public final class ObjectSolidContactController {
             return null;
         }
         if (blocksSolidContacts(player, instance)) {
+            clearPushAfterSignedControlRejection(player, instance, provider);
             return null;
         }
         if (instance.isSkipSolidContactThisFrame()) {
@@ -3086,8 +3142,11 @@ public final class ObjectSolidContactController {
             return;
         }
         SolidRoutineProfile solidProfile = provider.getSolidRoutineProfile();
-        if (blocksSolidContacts(player, instance)
-                || (instance.isSkipSolidContactThisFrame() && instance != ridingObject)) {
+        if (blocksSolidContacts(player, instance)) {
+            clearPushAfterSignedControlRejection(player, instance, provider);
+            return;
+        }
+        if (instance.isSkipSolidContactThisFrame() && instance != ridingObject) {
             return;
         }
         if (provider instanceof MultiPieceSolidProvider multiPiece) {

@@ -199,7 +199,8 @@ public final class HiddenGlCaptureSession implements AutoCloseable {
         requireBooted();
         return com.openggf.graphics.TilemapSamplingDiagnostics.readTextures(
                 GameServices.graphics().getTilemapGpuRenderer(),
-                GameServices.graphics().getPatternAtlasTextureId());
+                GameServices.graphics().getPatternAtlasTextureId(),
+                GameServices.graphics().getCombinedPaletteTextureId());
     }
 
     Map<String, Object> captureGpuSamplingState() {

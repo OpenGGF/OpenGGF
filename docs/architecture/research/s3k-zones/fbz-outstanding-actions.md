@@ -1,30 +1,43 @@
 # Flying Battery Zone outstanding actions
 
-Status updated during the 2026-09-14 route push. This branch contains a
+Status updated during the 2026-09-14 remaining-items delivery. This branch contains a
 large FBZ implementation uplift, but FBZ is not yet accepted as pixel-perfect.
 The remaining work is intentionally recorded here rather than hidden behind a
 green completion claim.
 
 ## Current native trace baseline
 
-The pinned `435ec2e68` baseline reproduces 5,666 complete-run errors,
-first row 34 queue busy. The current `c84e63ab0` candidate (merged with develop
-at `38e2e75aa`) reproduces **4,501 errors**, first row
-**16,600 Tails animation 5/6**, and **5,109** in the independent recording,
-first row 116 Tails subpixel `$D000/$B800`. Both complete strict comparisons
-with zero warnings or skips. These remain red, and Act 1 completion has not
-been established. First main queue mismatch is 19,793; the first main gameplay
-physics error now reaches the one-row rebase mismatch at 22,397 (`x`
-`$0102/$2F02`, camera `$0062/$2E62`) after correcting the earlier chain death,
-boss-defeat delay and ending-pose plunger support. Aggregate field-row mismatch volume increased
-at this newly reached boundary, so it is not yet accepted as a green candidate.
-See the matched comparison and exact commands in the frontier log.
+The remaining-items delivery is pinned to develop `51677cdd2`. Its inherited
+strict baseline was 4,501 complete-run errors, first frame 16,600 Tails
+animation, and 5,109 independent-segment errors, first frame 116 Tails subpixel.
+Both recordings remain red; aggregate mismatch counts do not measure how far a
+playable route completes.
 
-Queue submissions, animation operand widths, the platform low-byte clock,
-zone-owned tumble presentation and snake standing ownership are corrected.
-See the [trace frontier log](../../../status/trace-frontier-log.md) for exact
-commands, commits and counts. Historical July near-green results are obsolete;
-ordinary route completion does not establish emulator parity.
+At `6583d90b3`, the complete recording compares 44,152 rows with 5,036 errors,
+zero warnings and zero skips. The first error is the one-frame main-player Y
+handoff at 22,868 (`$05A4` expected, `$05A8` actual); the next main-player
+position disagreement is at 26,451. The actual results reload, retained title
+parent/child dispatch and camera-worker handoff now occur at their native
+boundaries. The earlier claim that results recovered after one bad row was
+rejected by the physical queue evidence: the baseline omitted the miniboss
+KosM parent and stalled in results.
+
+The independent segment now reports 4,152 errors, first frame 7,619 main
+`x_speed`. This frontier needs an authentic progression prerequisite: native
+Sonic transforms into Hyper Sonic, but the isolated segment supplies no emerald
+progression contract. Its native trail owner and transformation routines explain
+the speed difference. Neither auxiliary comparison rows nor manifest comparison
+fields authorize loading emeralds into gameplay. Keep this explicit prerequisite
+gap separate from FBZ movement defects; do not invent a fixture-specific
+transformation or weaken the comparison.
+
+Queue ownership, launcher/CPU animation, magnetic collision and ceiling contact,
+miniboss body/prison contact, chain precision and hurt-entry rejection, vertical
+cage orbit, title dispatch and camera targets now have focused ROM-backed
+regressions. See the [trace frontier log](../../../status/trace-frontier-log.md)
+and [completion record](../../plans/2026-09-14-fbz-completion.md) for exact
+commands, commits and rejected approaches. Historical July near-green results
+are obsolete; ordinary route completion does not establish emulator parity.
 
 ## Native FBZ2 compatibility route
 
@@ -273,12 +286,12 @@ verified ROMs. Do not create aliases or links to match an example. Check skips
 in the completed report.
 
 ```bash
-mvn -Dmse=off -Dtest=TestFbzAct2RouteHeadless \
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzAct2RouteHeadless \
   "-Ds3k.rom.path=$S3K_ROM" test -B
-mvn -Dmse=off -Dtest=TestFbzCompatibilityMatrix \
+python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzCompatibilityMatrix \
   "-Dsonic1.rom.path=$S1_ROM" "-Dsonic2.rom.path=$S2_ROM" \
   "-Ds3k.rom.path=$S3K_ROM" test -B
-mvn -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 \
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1 \
   -Dsurefire.runOrder=alphabetical -Dtest=TestS3kFbzCompleteRunTraceReplay \
   "-Ds3k.rom.path=$S3K_ROM" test -B
 ```
