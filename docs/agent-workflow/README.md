@@ -28,6 +28,10 @@ Seven `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote eac
   [live-state route controllers](../architecture/research/2026-09-13-live-state-route-controllers.md).
   They overlap only the failure-diagnostics part of backlog item LTS-04, which stays
   pending.
+- `FbzRouteEvidenceProbe` (test scope, opt-in `-Dmse=off -Dopenggf.fbz.evidence=true`)
+  prints the `RouteCompletionEvidence` line of each of the eleven FBZ2 complete-route
+  matrix rows without asserting; diff the output before and after a route-controller
+  or primitives refactor to prove byte-identical behaviour.
 
 ## Docs
 
