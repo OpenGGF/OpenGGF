@@ -11,11 +11,22 @@ import java.util.Set;
  * Two identity sets reused every frame so a route observer can tell genuine
  * absent-to-active and active-to-absent object transitions apart from objects
  * that were already live. {@link #beginFrame(ObjectManager)} fills the active
- * set; {@link #endFrame()} makes it the previous set for the next frame.
+ * set; {@link #endFrame()} makes it the previous set for the next frame. The
+ * accessors return read-only views of sets that are cleared and swapped every
+ * frame, so observers must consume them inside the frame they are handed.
+ *
+ * <p>Inputs: the live {@link ObjectManager} each frame. Re-read the manager
+ * from the level for routes that cross an act reload, since the level
+ * replaces it there.
+ *
+ * <p>Origin: extracted from the FBZ2 route controller
+ * ({@code TestFbzAct2TraversalPreboss}) in commit 610464952.
  */
 public final class ObjectLifetimeFrames {
     private Set<ObjectInstance> activeFrame = Collections.newSetFromMap(new IdentityHashMap<>());
     private Set<ObjectInstance> previousFrame = Collections.newSetFromMap(new IdentityHashMap<>());
+    private Set<ObjectInstance> activeView = Collections.unmodifiableSet(activeFrame);
+    private Set<ObjectInstance> previousView = Collections.unmodifiableSet(previousFrame);
 
     /** Seeds the previous set with the objects already live before frame one. */
     public ObjectLifetimeFrames(ObjectManager objects) {
@@ -37,13 +48,18 @@ public final class ObjectLifetimeFrames {
         Set<ObjectInstance> reusable = previousFrame;
         previousFrame = activeFrame;
         activeFrame = reusable;
+        Set<ObjectInstance> reusableView = previousView;
+        previousView = activeView;
+        activeView = reusableView;
     }
 
+    /** Read-only view of this frame's live objects; valid until {@link #endFrame()}. */
     public Set<ObjectInstance> active() {
-        return activeFrame;
+        return activeView;
     }
 
+    /** Read-only view of the previous frame's live objects; valid until {@link #endFrame()}. */
     public Set<ObjectInstance> previous() {
-        return previousFrame;
+        return previousView;
     }
 }
