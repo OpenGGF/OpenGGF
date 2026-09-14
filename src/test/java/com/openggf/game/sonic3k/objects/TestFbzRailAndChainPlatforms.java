@@ -64,6 +64,47 @@ class TestFbzRailAndChainPlatforms {
         }
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x83, 0x84, 0x88, 0xC3, 0xC7, 0xC8})
+    void horizontalGrabRegionsNeverDrawVerticalChainArt(int subtype) {
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var renders = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var level = mock(LevelManager.class);
+        when(level.getObjectRenderManager()).thenReturn(renders);
+        when(renders.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_CHAIN_LINK))
+                .thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        var chain = new FbzChainLinkObjectInstance(spawn(0x72, subtype));
+        chain.setServices(new TestObjectServices().withLevelManager(level));
+        chain.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verifyNoInteractions(renderer);
+    }
+
+    @Test void verticalHandleKeepsItsMappingAndFollowsTheDescendingPlayer() {
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var renders = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var level = mock(LevelManager.class);
+        when(level.getObjectRenderManager()).thenReturn(renders);
+        when(renders.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_CHAIN_LINK))
+                .thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        var player = new TestSprite("sonic");
+        player.setCentreX((short) 0x1000);
+        player.setCentreY((short) 0x892);
+        var services = new PlayersServices(player, List.of());
+        services.withLevelManager(level);
+        var chain = new FbzChainLinkObjectInstance(spawn(0x72, 0x1B));
+        chain.setServices(services);
+        chain.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(renderer).drawFrameIndex(0, 0x1000, 0x800, false, false);
+        chain.update(0, null);
+        for (int frame = 1; frame <= 8; frame++) chain.update(frame, null);
+        assertTrue(chain.stateForParticipant(0).grabbed());
+        assertEquals(0x8AC, player.getCentreY());
+        chain.appendRenderCommands(new java.util.ArrayList<>());
+        org.mockito.Mockito.verify(renderer).drawFrameIndex(2, 0x1000, 0x810, false, false);
+    }
+
     @Test void grabJumpUsesExactReleaseVelocityAndCooldown() {
         assertEquals(-0x380, FbzChainLinkObjectInstance.RELEASE_Y_VELOCITY);
         assertEquals(0x200, FbzChainLinkObjectInstance.RELEASE_X_VELOCITY);

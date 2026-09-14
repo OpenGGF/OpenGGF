@@ -69,7 +69,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   retain their native dispatch boundaries. The carried title initializes on its
   next dispatch, player control restores the native idle pose, and camera easing
   targets follow the Act 2 coordinate rebase. Retained title children and camera
-  workers follow their original dispatch order. Chains reject hurt/dead grabs,
+  workers follow their original dispatch order. Horizontal chain grab regions stay invisible,
+  preventing stray descending handles from appearing along the route. Chains reject hurt/dead grabs,
   vertical cages keep their orbit separate from the player ground angle, and
   magnetic platforms use the native ceiling and contact boundaries. Top-only
   buttons and disappearing platforms use their native landing edges and level
