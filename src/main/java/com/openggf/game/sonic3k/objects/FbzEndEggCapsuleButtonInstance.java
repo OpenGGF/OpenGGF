@@ -37,6 +37,19 @@ public final class FbzEndEggCapsuleButtonInstance extends AbstractObjectInstance
         if (parentRef == null || parentRef.isDestroyed()) ObjectLifetimeOps.expireDynamic(this);
     }
 
+    @Override public boolean allowsObjectControlledSolidContacts() {
+        // Obj_EggCapsule / sub_86A3E still call SolidObjectFull after
+        // Set_PlayerEndingPose. Its standing branch precedes signed-control
+        // rejection; the inherited new-contact gate still rejects bit 7.
+        return true;
+    }
+
+    @Override public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        // MvSonicOnPtfm (loc_1E1CA) retains the standing bit but skips position
+        // writes while object_control is signed, including the victory pose.
+        return player.isObjectControlled();
+    }
+
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x1B, 4, 6); }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     @Override public int getX() { return spawn.x(); }
