@@ -110079,3 +110079,14 @@ No native trace regression is attributable to the camera fix; the inherited
 trace remains red. The candidate source was restored and consumed diagnostics
 were deleted. Full-route viewport/donor evidence is recorded separately in the
 [handover](../architecture/plans/2026-09-14-route-controller-handover.md#full-route-viewportdonor-completion-follow-up).
+
+
+KiS2 return-fix integration `aa3ccf04a` on `2c7630066` completed queued
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 2c76300668aaab6a7a962782294f3f2b6f8ba67a --run`
+in `.worktrees/kis2-special-return`: 20,393 ordinary passes, 18 inspected
+baseline skips, zero ordinary failures/errors; 665 guard passes and the same
+two baseline failures, zero guard errors/skips. The earlier candidate run on
+`c85e17571` also had zero ordinary failures and those same guards. No new
+failure. The chain remains red at the frontier above. The next native lead
+is the wall-grab `x_pos -> x_sub` anchor store at row 2230, documented in the
+investigation; it is not yet implemented.
