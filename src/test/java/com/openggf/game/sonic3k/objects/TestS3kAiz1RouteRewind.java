@@ -100,9 +100,14 @@ class TestS3kAiz1RouteRewind {
 
     static void assertSnapshotsMatch(CompositeSnapshot expected, CompositeSnapshot actual,
                                              String context, int frame) {
+        assertSnapshotsMatch(expected, actual, context, frame, 90);
+    }
+
+    static void assertSnapshotsMatch(CompositeSnapshot expected, CompositeSnapshot actual,
+                                    String context, int frame, int replayFrames) {
         List<String> differences = new ArrayList<>();
         boolean divergent = new RewindDeterminismAuditor(differences::add)
-                .report(frame, frame + 90, contentSnapshot(expected), contentSnapshot(actual));
+                .report(frame, frame + replayFrames, contentSnapshot(expected), contentSnapshot(actual));
         assertFalse(divergent, () -> context + ": " + String.join("\n", differences));
     }
     /** The production diff treats Pattern as an identity value; compare all title-card pixels. */

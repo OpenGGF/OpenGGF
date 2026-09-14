@@ -269,7 +269,12 @@ A recorded pre-level prefix costs one derived offset: obtain it through
 `r` on engine frame `r - prefix`. Waiting for the live intro handoff and
 immediately resuming the first non-neutral input moved the program 42 frames
 early in the rejected pilot. Preserve the recorded neutral rows after the
-prefix; assert the live handoff without retiming the program. See the
+prefix. A later width survey established one bounded exception: the live
+Knuckles exit can finish after the first non-neutral row in an 800px viewport.
+Hold that row until `Camera.isLevelStarted()`; never discard recorded neutral
+rows or resume early. `loc_61F10` tests the preceding render flag before
+`loc_61F22` releases control, so the wider exit legitimately takes longer.
+This test-side gate leaves native timing intact. See the
 [pilot evidence](../validation/2026-09-13-aiz1-route-pilot.md). This refines the
 cost model: establish alignment before attributing a failure to a hazard.
 

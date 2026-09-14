@@ -23,6 +23,23 @@ class TestS3kAiz1CompatibilityRoutes {
     @ParameterizedTest(name = "AIZ1 Sonic+Tails width={0} donor={1}")
     @CsvSource({"400,off", "512,off", "640,off", "800,off", "320,s1", "320,s2"})
     void axisRouteCompletes(int width, String donor) throws Exception {
+        withConfiguration(width, donor, setup -> {
+            try {
+                TestS3kAiz1RoutePilot.runRoute(setup);
+                System.out.printf("AIZEVIDENCE width=%d donor=%s result=reload%n", width, donor);
+            } catch (AssertionError failure) {
+                throw new AssertionError("AIZEVIDENCE width=" + width + " donor=" + donor
+                        + " " + failure.getMessage(), failure);
+            }
+        });
+    }
+
+    @FunctionalInterface
+    interface RouteCheck {
+        void run(TestS3kAiz1RoutePilot.RouteSetup setup) throws Exception;
+    }
+
+    static void withConfiguration(int width, String donor, RouteCheck check) throws Exception {
         var saved = TraceReplaySessionBootstrap.snapshotGameplayConfig();
         var config = GameServices.configuration();
         var provider = CrossGameFeatureProvider.getInstance();
@@ -51,13 +68,7 @@ class TestS3kAiz1CompatibilityRoutes {
             if (!donor.equals("off")) {
                 assertNotSame(GameServices.module().getRules(), setup.fixture().sprite().getGameRules());
             }
-            try {
-                TestS3kAiz1RoutePilot.runRoute(setup);
-                System.out.printf("AIZEVIDENCE width=%d donor=%s result=reload%n", width, donor);
-            } catch (AssertionError failure) {
-                throw new AssertionError("AIZEVIDENCE width=" + width + " donor=" + donor
-                        + " " + failure.getMessage(), failure);
-            }
+            check.run(setup);
         } finally {
             provider.resetState();
             config.clearSessionOverrides();

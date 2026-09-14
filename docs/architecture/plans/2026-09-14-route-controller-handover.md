@@ -1,7 +1,9 @@
 # Live-state route controllers: handover (2026-09-14)
 
 > Continuation on `feature/ai-gameplay-capture`, based at `35488abb6`:
-> the [AIZ1 matrix](../validation/levels/s3k-aiz1-sonic.md) records the new
+> entry breadth now covers 15 width/donor configurations with two rewind replays,
+> and the late intro gate preserves native timing. Full 640/800/S1 routes and HCZ
+> remain open; the [AIZ1 matrix](../validation/levels/s3k-aiz1-sonic.md) records the new
 > route/rewind evidence and remaining frontiers. The history below describes
 > the original develop delivery; only its reviewed helpers, pilot and documents
 > were imported into this branch.
@@ -43,8 +45,9 @@ fully merged; they can be deleted.
   `r - prefix`; the sanctioned trace replay never ticks those rows.
   `TraceReplayBootstrap.preLevelFrameCountForTraceReplay(trace)` gives the
   count; `InputProgram.fromRecording(movie, offset + prefix, offset + end)`
-  gives the program. Gate on the engine's own event
-  (`Camera.isLevelStarted()`), never wait for a live handover to resume.
+  gives the program. Preserve recorded neutral rows. Only when the first non-neutral row arrives
+  before `Camera.isLevelStarted()` may the controller hold that row until the
+  live owner releases control; never resume early.
 
 ## Commands
 

@@ -24,7 +24,7 @@ classified unsupported merely because this matrix has not exercised it.
 | EVENT / REWIND intro and Knuckles | Independent fresh fixtures reach live intro/cutscene routines and completion; capture A, advance 90 pad inputs, restore A, replay twice | `TestS3kAiz1RouteRewind#liveSpotRestoresAndReplaysTwice`, parameter identities in execution record | Pass: INTRO_HANDOFF, KNUCKLES_WAIT, KNUCKLES_ACTIVE, INTRO_COMPLETE. Initial red run exposed missing palette-helper timer/frame; fixed through RewindStateful. |
 | CAMERA / OBJECT / REWIND hollow tree | Approach before ROM capture threshold $2C99; active camera lock $2C60; released bounds $1300..$4000; snapshot comparison includes object graph and world state | Same parameterized test, independent TREE_APPROACH / TREE_LOCK / TREE_RELEASE | Pass: TREE_APPROACH, TREE_LOCK, TREE_RELEASE. Initial red run exposed uncaptured static Events_fg_4; registered a dedicated adapter. |
 | LOAD / REWIND AIZ2 | Production seamless reload and new-timeline restore/replay; old timeline rejected under the production boundary policy | `TestS3kAiz1ReloadRewind#seamlessReloadIsolatesHistoryAndNewActReplays`, ordinary | Pass: production root at frame 5,174; backward seek clamps to AIZ2; two 30-frame replays match. The older `TestRewindAcrossActBoundary` is only a smoke check, not evidence for this edge. |
-| ENTRY / LIFE / LOAD breadth | Short width × donor lifecycle cross-product, checkpoints, death/restart, reset behavior and team ownership | Pending | Missing coverage. |
+| ENTRY / LIFE / LOAD breadth | Short width × donor lifecycle cross-product, checkpoints, death/restart, reset behavior and team ownership | `TestS3kAiz1EntryMatrix`, explicit `openggf.aiz1.entry=true` | All 15 width × donor entry cases pass; intro ownership and two 30-frame rewind replays. Checkpoints, death/restart and load breadth remain missing. |
 | ROUTE breadth | Every width and donor, supported main routes and team shapes | `TestS3kAiz1CompatibilityRoutes#axisRouteCompletes`, explicit `openggf.aiz1.routes=true` | 400px/off, 512px/off and 320px/S2 pass; 640px/off, 800px/off and 320px/S1 fail as detailed below. Other teams/main routes remain missing. |
 | OBJECT / EVENT / CAMERA local boundaries | Per-mechanic before/at/after, negative activation, authority, culling and release checks | Existing `TestS3kAiz1SkipHeadless` is a source reference, not new execution evidence | Full obligation audit pending; route completion alone does not discharge local checks. |
 | BOSS | Every relevant phase, damage, child graph, defeat and exit | Pending audit | Route is composition evidence only. |
@@ -157,3 +157,115 @@ these tests compare registered snapshots at restore/replay endpoints, not every
 intermediate frame or unregistered state. `SidekickAudit` tolerates empty-team
 suppression windows and bounds observed dead streaks; it does not prove all
 possible terminal deaths recover. Documentation links and whitespace were checked.
+
+## Route frontier continuation (base `1db888a52`)
+
+Task worktree: `.worktrees/ai-route-frontiers`, branch `bugfix/ai-route-frontiers`;
+destination remains `feature/ai-gameplay-capture`. Main workspace stays on
+`develop`. This continuation changes test controllers and evidence only.
+
+### Late intro handoff and independent breadth
+
+`Aiz1IntroProgram` preserves every recorded neutral row. When the first
+non-neutral row arrives before the live `Level_started_flag`, it supplies
+neutral input and holds that row until the owner releases it. The gate runs
+once; a later control lock cannot reapply it. Its unit checks cover both early
+and late handoffs, preserved row identity and later lock changes.
+
+The wider exit is production behavior: `CutsceneKnucklesAiz1Instance`
+routine 12 implements ROM `loc_61F10`'s preceding-render-flag test, then
+`loc_61F22` releases control (`loc_61F44` sets `Level_started_flag`). Runtime
+viewport culling was retained. The native cutscene releases at engine frame
+1,097, 640px at 1,133, and 800px at 1,146. The recorded first input would run
+at frame 1,140; only 800px needs seven neutral ticks, then accepts it at 1,147.
+The rejected earlier pilot resumed 42 frames early; that approach remains
+rejected. Neither coordinates nor recorded trace values select this gate.
+
+`TestS3kAiz1EntryMatrix` independently runs all five widths (320, 400, 512,
+640, 800) × three movement donors (off, S1, S2), always Sonic + CPU Tails.
+Each production intro must release control, admit input and preserve team
+ownership. At first input it captures registered state, advances 30 inputs,
+restores and replays the identical inputs twice. Position must advance through
+live movement. All 15 cases passed, zero skips; every 800px case held seven
+frames, every other case held zero. This is an explicit ROM-backed lane,
+`-Dopenggf.aiz1.entry=true`, independent of the long-route opt-in. It requires
+all three existing absolute ROM properties. It does not certify other teams,
+characters, checkpoint/death behavior or the unregistered state surface.
+
+### Remaining AIZ route frontiers
+
+The combined helper/native/axis check ran nine cases: six passes and the three
+known failing axes, zero errors/skips. Native reload is unchanged at 5,174;
+400px reloads at 5,181, 512px at 5,190, and native S2 donor at 5,174.
+640px and S1 still exhaust at frame 5,507 / row 5,796, respectively
+P1 `$1E34,$04DC` and `$1E4B,$04DC`. 800px now passes the first-input assertion
+and exhausts later at frame 5,507 / row 5,789, P1 `$1E4D,$04DC`. This advances
+its observed frontier; it does not complete that route.
+
+A temporary per-frame live-object survey compared native and alternate axes.
+At engine frame 1,431, 640px first differs in player vertical speed:
+`-848` versus native `-1104`. The MonkeyDude at x=6,200 has a different active
+phase (y=1,048 versus 1,040), and contact/bounce occurs two frames earlier.
+The wider activation region changes the interaction; the later spring chain
+amplifies the difference. No runtime defect is established by this survey.
+S1 first differs at frame 1,517 / input row 1,806: DOWN+JUMP starts native
+spindash but makes the S1 moveset jump. Future steering must use the live
+object geometry and movement capability, not width/donor names or fitted
+position/frame constants. No speculative recovery code was retained.
+
+### HCZ first divergence
+
+A comparison-only survey of the unchanged HCZ pilot matched player integer
+x/y, x/y speed and airborne state for rows 0–1,162. Row 1,163 is the first
+mismatch: the recording repeats row 1,162's gameplay state, with lag counter
+1 and gameplay counter still 1,163; the headless route advances to the next
+state. P1 y is 1,530 versus recorded 1,523, vy 2,000 versus 1,944. There are
+no recorded Start presses before the eventual death at row 3,477 (3,478
+executed frames). Fresh-entry player state is therefore not the first observed
+problem for these fields. This establishes an earlier hardware-cadence mismatch,
+not a water-mechanic defect or proof that cadence alone causes the later death.
+
+The pilot continues to consume only movie pad inputs. Trace lag rows were not
+used to skip gameplay, resample the input program or hydrate state. Hardware
+admission belongs to the dedicated timing contract; route control instead needs
+live hazard decisions robust to timing differences. A shared stage interface
+still lacks two successful zone controllers as evidence. Survey classes and raw
+CSV/log output are temporary and removed after documenting these findings.
+
+### Validation scope
+
+Preflight passed using `LUA_BIN=/usr/bin/lua5.4` and the actual pinned base
+`1db888a52`. The unchanged change-based runner selects the full ordinary suite
+(2,525 classes at initial inspection) plus guards because it does not classify
+the package-private test helper. Under proportionate validation this test-only
+change is checked through its unit tests, every route consumer affected by the
+edit, all axis cases, native route/rewind/reload and the independent entry matrix.
+No production algorithm, contract, timing port, build or selection policy changed.
+No broad run was launched; the normal broad cost is approximately 34 minutes.
+This remains focused validation, with long-route failures explicitly retained.
+The shared receipt was occupied at task start; final inspection found the peer
+`kis2-tier-two` active (one broad attempt already spent). It was left untouched.
+Separate task accounting continues under the user's explicit authorization.
+
+The final combined command used `mvn -Dmse=off`, all three existing absolute ROM
+properties, `-Dopenggf.aiz1.routes=true -Dopenggf.aiz1.entry=true
+-Dopenggf.hcz1.pilot=true`, and:
+
+```text
+-Dtest=TestAiz1IntroProgram,TestInputProgram,TestS3kAiz1RoutePilot,TestS3kAiz1CompatibilityRoutes,TestS3kAiz1EntryMatrix,TestS3kAiz1RouteRewind,TestS3kAiz1ReloadRewind,TestS3kHcz1RoutePilot test
+```
+
+Completed: **36 cases, 32 passes, 4 failures, no errors/skips**, 67.883 s.
+The failures are the three AIZ long-route axes and HCZ described above. The full
+640px and S1 failure messages match the initial untouched-controller check at
+`1db888a52` exactly; the 800px failure moved past intro as intended. HCZ remains
+at its previously attributed death frontier. No unrelated runtime fix was made.
+Independent static review found no blocking issue; it prompted an extension of
+the team audit through each 30-frame forward/replay window and clearer timing
+prose. A focused matrix rerun verifies that extension; unchanged route checks
+are not repeated for prose edits.
+
+The strengthened entry audit passed all 15 cases, zero skips (36.470 s).
+Pre-integration aggregate testing: **315.924 seconds (5.265 minutes)**,
+including survey setup failures, both survey runs, the pre-wiring controller
+check, integrated gate check, entry checks and final combined validation.

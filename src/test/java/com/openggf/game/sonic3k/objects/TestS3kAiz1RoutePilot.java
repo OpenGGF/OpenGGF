@@ -37,13 +37,14 @@ import static org.junit.jupiter.api.Assertions.fail;
  * setup before {@code Game_Mode} reaches Level, 289 rows on this fixture)
  * are never ticked by the engine, exactly as the sanctioned trace replay
  * treats them ({@code TraceReplayBootstrap.preLevelFrameCountForTraceReplay}),
- * so program row {@code r} plays on engine frame {@code r - preLevel}. Nothing
+ * so program row {@code r} normally plays at engine index {@code r - preLevel}.
+ * A late live intro exit inserts neutral holds before the first player input. Nothing
  * is hydrated from physics rows; the trace is read only for its metadata,
  * its pre-level prefix length and the row of its act change.
  *
  * <p>Live-state gates and assertions:
  * <ul>
- * <li>the recording's first player-driven row must fall after the engine has
+ * <li>preserve recorded neutral rows; hold the first player-driven row until the engine has
  *     set the ROM's {@code Level_started_flag} ({@code Camera.isLevelStarted},
  *     set by the Knuckles cutscene's exit handoff), which is the engine's own
  *     intro boundary rather than a proxy built from control-lock flags;</li>
@@ -156,7 +157,7 @@ class TestS3kAiz1RoutePilot {
 
     private static final class Aiz1RouteRunner {
         private final HeadlessTestFixture fixture;
-        private final InputProgram.Cursor program;
+        private final Aiz1IntroProgram program;
         private final int programFrames;
         private final int recordedReloadRow;
         private final RecentFrameLog recentLog = new RecentFrameLog(30);
@@ -171,7 +172,7 @@ class TestS3kAiz1RoutePilot {
         Aiz1RouteRunner(HeadlessTestFixture fixture, List<InputRun> program,
                         int firstRow, int recordedReloadRow) {
             this.fixture = fixture;
-            this.program = new InputProgram.Cursor(program, firstRow);
+            this.program = new Aiz1IntroProgram(program, firstRow);
             this.programFrames = InputProgram.frames(program);
             this.recordedReloadRow = recordedReloadRow;
         }
@@ -181,7 +182,7 @@ class TestS3kAiz1RoutePilot {
             while (frames < frameLimit) {
                 AbstractPlayableSprite player = fixture.sprite();
                 int row = program.row();
-                int mask = program.next();
+                int mask = program.next(GameServices.camera().isLevelStarted());
                 if (mask != 0 && !playerInputSeen) {
                     playerInputSeen = true;
                     assertTrue(GameServices.camera().isLevelStarted(),
@@ -203,10 +204,10 @@ class TestS3kAiz1RoutePilot {
                 }
             }
             AbstractPlayableSprite player = fixture.sprite();
-            System.out.printf("AIZTL end f=%d row=%d p=(%04X,%04X) act=%d reloadFrame=%d recordedReloadRow=%d lead=%d%n",
+            System.out.printf("AIZTL end f=%d row=%d p=(%04X,%04X) act=%d reloadFrame=%d recordedReloadRow=%d lead=%d introHeld=%d%n",
                     frames, program.row(), player.getCentreX() & 0xFFFF,
                     player.getCentreY() & 0xFFFF, GameServices.level().getCurrentAct(), reloadFrame,
-                    recordedReloadRow, reloadFrame < 0 ? 0 : recordedReloadRow - program.row());
+                    recordedReloadRow, reloadFrame < 0 ? 0 : recordedReloadRow - program.row(), program.heldFrames());
             assertTrue(reloadFrame >= 0, () -> "act-2 reload never observed within "
                     + frameLimit + " frames: " + diagnostic(player));
             assertTrue(sidekicks.identityOrderPreserved(), "sidekick identity/order changed");
