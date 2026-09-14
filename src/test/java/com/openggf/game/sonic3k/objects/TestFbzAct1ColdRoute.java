@@ -32,6 +32,11 @@ class TestFbzAct1ColdRoute {
         runColdRoute(320, "off", "tails");
     }
 
+    @Test
+    void fourHundredPixelColdRouteReachesReleasedAct2() throws Exception {
+        runColdRoute(400, "off", "tails");
+    }
+
     private void runColdRoute(int width, String donor, String sidekick) throws Exception {
         var graphics = GameServices.graphics();
         int viewportX = graphics.getViewportX();
@@ -95,8 +100,8 @@ class TestFbzAct1ColdRoute {
             boolean bossDefeated = false;
             boolean signSeen = false;
             boolean resultsSeen = false;
-            var outdoor = new OutdoorController();
-            var lower = new LowerGapController();
+            var outdoor = new OutdoorController(width);
+            var lower = new LowerGapController(width);
             var magnetic = new MagneticCorridorController();
             var carriers = new MagneticCarrierController();
             boolean upperMissilePassed = false;
@@ -107,6 +112,13 @@ class TestFbzAct1ColdRoute {
             boolean missileCrossing = false;
             var lateCarriers = new LateCarrierController();
             var carousel = new CarouselController();
+            var wideSnake = new WideSnakeController();
+            var widePoles = new WidePoleController();
+            var wideMagneticFloor = new WideMagneticFloorController();
+            var wideLowerWires = new WideLowerWireController();
+            boolean wideDropFinished = false;
+            boolean wideDescentFinished = false;
+            int wideDescentStage = 0;
             TestFbzAct1RouteHeadless.EncounterInputDriver bossDriver = null;
             boolean wireReached = false;
             boolean upperJump = false;
@@ -219,6 +231,9 @@ class TestFbzAct1ColdRoute {
                         }
                     }
                 }
+                if (width > 320 && snakeReached && !wideSnake.finished && !upperLeftActive) {
+                    mask = wideSnake.next(player, GameServices.level().getObjectManager());
+                }
                 upperLeftActive |= snakeReached && px < 0xA80 && py < 0x380;
                 if (upperLeftActive && !upperLeftDone) {
                     var upperTrap = GameServices.level().getObjectManager()
@@ -251,6 +266,52 @@ class TestFbzAct1ColdRoute {
                         else if (player.getAir() && player.getYSpeed() < 0
                                 && (previousMask & 16) != 0) mask |= 16;
                     }
+                }
+                if (width > 320 && upperLeftDone && !widePoles.finished) {
+                    mask = widePoles.next(player, GameServices.level().getObjectManager());
+                    if (widePoles.finished) movieRow = 8100;
+                }
+                if (width > 320 && !wideMagneticFloor.finished
+                        && (wideMagneticFloor.active || widePoles.finished && px >= 0x1030 && py >= 0x340)) {
+                    wideMagneticFloor.active = true;
+                    mask = wideMagneticFloor.next(player, GameServices.level().getObjectManager());
+                    if (wideMagneticFloor.finished) movieRow = 9000;
+                }
+                if (width > 320 && wideMagneticFloor.finished && !wideDropFinished
+                        && px >= 0x1400 && px < 0x1500 && py >= 0x500) {
+                    mask = trapLandingMask(player, 0x1460);
+                    if (player.isOnObject() && !player.getAir()
+                            && player.getLatchedSolidObjectInstance() instanceof FbzFloatingPlatformObjectInstance drop
+                            && drop.getOutOfRangeReferenceX() == 0x1460 && drop.movementMode() == 4
+                            && drop.mode4Completed()) {
+                        wideDropFinished = true;
+                        movieRow = 9750;
+                    }
+                }
+                if (width > 320 && wideDropFinished && !wideDescentFinished) {
+                    Object support = player.isOnObject() && !player.getAir()
+                            ? player.getLatchedSolidObjectInstance() : null;
+                    if (wideDescentStage == 0) {
+                        mask = trapLandingMask(player, 0x1420);
+                        if (support instanceof FbzFloatingPlatformObjectInstance step
+                                && step.getOutOfRangeReferenceX() == 0x1420 && py >= 0xA20) {
+                            wideDescentStage = 1;
+                        }
+                    } else if (wideDescentStage == 1) {
+                        mask = trapLandingMask(player, 0x1460);
+                        if (support instanceof FbzFloatingPlatformObjectInstance step
+                                && step.getOutOfRangeReferenceX() == 0x1460 && step.movementMode() == 1
+                                && py >= 0xA50) wideDescentStage = 2;
+                    } else {
+                        mask = trapLandingMask(player, py < 0xAB0 ? 0x1410 : 0x1450);
+                    }
+                    if (py >= 0xAE0 && !player.getAir()) {
+                        wideDescentFinished = true;
+                        movieRow = 10300;
+                    }
+                }
+                if (width > 320 && wideDescentFinished && !wideLowerWires.finished) {
+                    mask = wideLowerWires.next(player, GameServices.level().getObjectManager());
                 }
                 boolean onLowerGap = player.isOnObject() && !player.getAir()
                         && player.getLatchedSolidObjectInstance() instanceof FbzFloatingPlatformObjectInstance platform
@@ -416,6 +477,193 @@ class TestFbzAct1ColdRoute {
             com.openggf.game.CrossGameFeatureProvider.getInstance().resetState();
         }
     }
+    private static final class WideLowerWireController {
+        int stage;
+        int lastMask;
+        boolean finished;
+        boolean finalWalkReady;
+        int previousPlatformY;
+
+        int next(AbstractPlayableSprite player, ObjectManager objects) {
+            int x = player.getCentreX() & 0xFFFF;
+            Object support = player.isOnObject() && !player.getAir()
+                    ? player.getLatchedSolidObjectInstance() : null;
+            if (support instanceof FbzWireCageObjectInstance wire) {
+                if (wire.getX() == 0x1700 && stage == 0) stage = 1;
+                if (wire.getX() == 0x1880 && stage == 2) stage = 3;
+            }
+            if (support instanceof FbzFloatingPlatformObjectInstance platform) {
+                if (platform.getOutOfRangeReferenceX() == 0x17C0 && stage == 1) stage = 2;
+                if (platform.getOutOfRangeReferenceX() == 0x1940) finished = true;
+            }
+            int target = stage == 0 ? 0x1700 : stage == 1 ? 0x17C0 : stage == 2 ? 0x1880 : 0x1940;
+            int launch = stage == 0 ? 0x15E0 : stage == 1 ? 0x1750 : stage == 2 ? 0x17C8 : 0x18E0;
+            var landing = objects.activeObjectsOfType(FbzFloatingPlatformObjectInstance.class).stream()
+                    .filter(o -> o.getOutOfRangeReferenceX() == 0x1940).findFirst().orElse(null);
+            int departureTicks = 0;
+            int projectedX = x << 8;
+            int projectedSpeed = player.getGSpeed();
+            while (projectedX < 0x190000 && departureTicks < 100) {
+                projectedSpeed = Math.min(player.getMax(), projectedSpeed + player.getRunAccel());
+                projectedX += projectedSpeed;
+                departureTicks++;
+            }
+            // Horizontal wire rotation advances four native angle units per
+            // update. Leave near its upper arc; a low departure falls below
+            // the next platform before crossing its left collision edge.
+            int departureAngle = (player.getFlipAngle() + 4 * departureTicks) & 0xFF;
+            int departureY = 0xAC0
+                    + (com.openggf.physics.TrigLookupTable.cosHex(departureAngle) * 0x28 >> 8);
+            if (stage == 3 && landing != null && landing.getY() >= 0xAE0
+                    && landing.getY() > previousPlatformY && Math.abs(x - 0x18F0) <= 3
+                    && departureY <= 0xAA0) finalWalkReady = true;
+            if (landing != null) previousPlatformY = landing.getY();
+            int mask;
+            if (stage == 3 && !finalWalkReady) {
+                mask = trapLandingMask(player, 0x18F0);
+            } else if (stage == 3) {
+                // The final wire ends above the platform: walk off its edge
+                // during a real descending-platform phase rather than jumping
+                // into the low ceiling over this handoff.
+                mask = player.getAir() ? trapLandingMask(player, target) : 8;
+            } else if (player.getAir()) {
+                // The second cage rejects landing for forty updates after
+                // entering its upper band. A short ordinary jump from the low
+                // intermediate platform stays below that band.
+                mask = trapLandingMask(player, target) | (stage != 2 && player.getYSpeed() < 0 ? 16 : 0);
+            } else if (stage == 2 && (player.getCentreY() & 0xFFFF) < 0xAC0) {
+                mask = trapLandingMask(player, 0x17C0);
+            } else {
+                mask = 8;
+                if (x >= launch && (lastMask & 16) == 0) mask |= 16;
+            }
+            lastMask = mask;
+            return mask;
+        }
+    }
+
+    private static final class WideMagneticFloorController {
+        boolean active;
+        boolean finished;
+        boolean crossing;
+
+        int next(AbstractPlayableSprite player, ObjectManager objects) {
+            int x = player.getCentreX() & 0xFFFF;
+            int y = player.getCentreY() & 0xFFFF;
+            var platforms = objects.activeObjectsOfType(FbzMagneticPlatformObjectInstance.class).stream()
+                    .filter(o -> o.getX() >= x - 0x30 && o.getX() <= 0x12C0)
+                    .toList();
+            var runtime = GameServices.zoneRuntimeRegistry()
+                    .currentAs(com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState.class).orElseThrow();
+            // The native platforms have eight-pixel harmful half-height. Walk
+            // below their actual raised envelope, with enough active time to
+            // leave the entire authored corridor before polarity reverses.
+            boolean clear = !platforms.isEmpty() && platforms.stream()
+                    .allMatch(o -> o.getY() + 8 + 2 < y - player.getYRadius());
+            int crossingFrames = RouteSteering.ordinaryRightCrossingBudget(player, 0x1300 - x, 600);
+            if (clear && runtime.magneticPolarity()
+                    == com.openggf.game.sonic3k.events.Sonic3kFBZEvents.MagneticPolarity.ACTIVE
+                    && 0xFF - runtime.magneticTimerPhase() > crossingFrames) crossing = true;
+            if (x >= 0x1300 && !player.getAir()) finished = true;
+            return crossing ? 8 : RouteSteering.steerMask(player, 0x1070, 3);
+        }
+    }
+
+    private static final class WidePoleController {
+        // Actual pole centres/base heights, with release levels between the
+        // authored propeller planes. Release is native RIGHT/LEFT+JUMP only.
+        private static final int[][] ROUTE = {
+                {0xA08, 0x1E8, 0x1E8, 8}, {0xB08, 0x1E8, 0x168, 8},
+                {0xC88, 0x168, 0x138, 8}, {0xD88, 0x168, 0x130, 8},
+                {0xE88, 0x168, 0x130, 8}, {0xF88, 0x168, 0x0D0, 4},
+                {0xE88, 0x0E8, 0x070, 8}, {0xF88, 0x0A8, 0x070, 8}
+        };
+        int stage;
+        int lastMask;
+        boolean finished;
+
+        int next(AbstractPlayableSprite player, ObjectManager objects) {
+            int x = player.getCentreX() & 0xFFFF;
+            int y = player.getCentreY() & 0xFFFF;
+            if (stage == ROUTE.length) {
+                finished = x >= 0x11A0;
+                return 8;
+            }
+            int[] waypoint = ROUTE[stage];
+            var pole = objects.activeObjectsOfType(FbzSpinningPoleObjectInstance.class).stream()
+                    .filter(o -> o.getX() == waypoint[0] && o.getY() == waypoint[1]).findFirst().orElse(null);
+            boolean held = pole != null && player.isObjectControlled()
+                    && Math.abs(x - pole.getX()) <= 0x18
+                    && y <= pole.getY() && y >= pole.getY() - pole.poleHeight();
+            int mask;
+            if (held) {
+                if (y > waypoint[2]) mask = 1;
+                else if ((lastMask & 16) == 0) {
+                    mask = waypoint[3] | 16;
+                    stage++;
+                } else mask = 0;
+            } else {
+                mask = x < waypoint[0] ? 8 : 4;
+                if (stage == 0 && (!player.getAir() && (lastMask & 16) == 0
+                        || player.getAir() && player.getYSpeed() < 0)) mask |= 16;
+            }
+            lastMask = mask;
+            return mask;
+        }
+    }
+
+    private static final class WideSnakeController {
+        int stage;
+        int lastMask;
+        boolean finished;
+        FbzSnakePlatformObjectInstance target;
+
+        int next(AbstractPlayableSprite player, ObjectManager objects) {
+            int x = player.getCentreX() & 0xFFFF;
+            int y = player.getCentreY() & 0xFFFF;
+            Object support = player.isOnObject() && !player.getAir()
+                    ? player.getLatchedSolidObjectInstance() : null;
+            int mask;
+            if (stage == 0) {
+                mask = trapLandingMask(player, 0xC68);
+                if (support instanceof FbzSnakePlatformObjectInstance && x <= 0xC90 && (lastMask & 16) == 0) mask |= 16;
+                else if (player.getAir() && player.getYSpeed() < 0) mask |= 16;
+                if (support instanceof FbzBentPipeObjectInstance && y <= 0x400) stage = 1;
+            } else if (stage == 1) {
+                if (support instanceof FbzSnakePlatformObjectInstance actual && actual.getY() < 0x400) {
+                    target = actual;
+                    stage = 2;
+                    mask = 0;
+                } else {
+                    if (target == null) {
+                        target = objects.activeObjectsOfType(FbzSnakePlatformObjectInstance.class).stream()
+                                .filter(o -> o.getY() == 0x3C8 && o.getX() >= 0xC60 && o.getX() <= 0xCA0
+                                        && o.xVelocity() < 0).findFirst().orElse(null);
+                    }
+                    mask = target == null ? trapLandingMask(player, 0xC68)
+                            : trapLandingMask(player, target.getX())
+                                | (!player.getAir() && (lastMask & 16) == 0 || player.getYSpeed() < 0 ? 16 : 0);
+                }
+            } else if (stage == 2) {
+                mask = 0;
+                if (x <= 0xBA8 && y <= 0x3C0) {
+                    stage = 3;
+                    mask = 4 | 16;
+                }
+            } else if (stage == 3) {
+                mask = trapLandingMask(player, 0xB70) | (player.getAir() && player.getYSpeed() < 0 ? 16 : 0);
+                if (support instanceof FbzBentPipeObjectInstance && y < 0x3B0) stage = 4;
+            } else {
+                mask = 4;
+                if (!player.getAir() && x <= 0xB50 && (lastMask & 16) == 0) mask |= 16;
+                else if (player.getAir() && player.getYSpeed() < 0) mask |= 16;
+                finished = x < 0xA80 && y < 0x380;
+            }
+            lastMask = mask;
+            return mask;
+        }
+    }
+
     private static final class CarouselController {
         boolean finished;
         int stage;
@@ -673,6 +921,12 @@ class TestFbzAct1ColdRoute {
     }
 
     private static final class LowerGapController {
+        private final int routeWidth;
+
+        LowerGapController(int routeWidth) {
+            this.routeWidth = routeWidth;
+        }
+
         boolean active;
         boolean finished;
         int stage;
@@ -687,7 +941,8 @@ class TestFbzAct1ColdRoute {
                     && cage.getX() == 0x1A00) stage = 1;
             if (support instanceof FbzFloatingPlatformObjectInstance platform
                     && platform.getOutOfRangeReferenceX() == 0x1B20) stage = 2;
-            if (stage == 1 && !player.getAir() && support == null && x >= 0x1AC0) stage = 3;
+            if ((stage == 1 || routeWidth > 320 && stage == 2 && y >= 0xAE0)
+                    && !player.getAir() && support == null && x >= 0x1AC0) stage = 3;
             int mask;
             if (stage == 3) {
                 mask = RouteSteering.steerMask(player, 0x1B20, 2);
@@ -696,7 +951,10 @@ class TestFbzAct1ColdRoute {
                     else { stage = 4; mask = 2; }
                 }
             } else if (stage == 4) {
-                if (player.getSpindash() && player.getSpindashCounter() >= 0x600) {
+                // Fewer ordinary taps give the wider route enough energy for
+                // the curve without carrying P1 past the small platform top.
+                int chargeTarget = routeWidth > 320 ? 0x400 : 0x600;
+                if (player.getSpindash() && player.getSpindashCounter() >= chargeTarget) {
                     stage = 5;
                     mask = 8;
                 } else mask = 2 | ((lastMask & 16) == 0 ? 16 : 0);
@@ -705,7 +963,8 @@ class TestFbzAct1ColdRoute {
                 // input on its ceiling would brake away the climbing momentum.
                 mask = player.getAir() && y < 0xAB0 ? trapLandingMask(player, 0x1B20) : 0;
             } else if (stage == 2) {
-                mask = RouteSteering.steerMask(player, 0x1B20, 2);
+                mask = routeWidth > 320 ? trapLandingMask(player, 0x1B20)
+                        : RouteSteering.steerMask(player, 0x1B20, 2);
                 if (y <= 0x890 && support != null) finished = true;
             } else {
                 int targetX = stage == 0 ? 0x1A00 : 0x1B20;
@@ -737,6 +996,12 @@ class TestFbzAct1ColdRoute {
     }
 
     private static final class OutdoorController {
+        private final int routeWidth;
+
+        OutdoorController(int routeWidth) {
+            this.routeWidth = routeWidth;
+        }
+
         boolean active;
         boolean finished;
         FbzFloatingPlatformObjectInstance target;
@@ -802,6 +1067,10 @@ class TestFbzAct1ColdRoute {
             if (player.getAir()) {
                 mask = RouteSteering.steerMask(player, aimX, 3)
                         | (jumping && player.getYSpeed() < 0 ? 16 : 0);
+            } else if (routeWidth > 320 && support != null && departedAnchor == 0x9C0
+                    && (player.getCentreY() & 0xFFFF) > 0xA20
+                        + 3 * player.getJump() * player.getJump() / (8 * (int) player.getGravity() * 0x100)) {
+                mask = RouteSteering.steerMask(player, support.getX(), 2);
             } else if (support != null && target != null && departedAnchor >= 0xB10
                     && !canReachLanding(player, target)) {
                 // Wait on actual support for a reachable phase. A circle that

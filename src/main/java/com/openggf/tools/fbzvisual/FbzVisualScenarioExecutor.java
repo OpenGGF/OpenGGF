@@ -411,7 +411,7 @@ public final class FbzVisualScenarioExecutor {
                 GameServices.camera().getX() & 0xFFFF);
         requireEquals(port.snapshot(), "foreground_region", 4);
 
-        port.write("player_y", 0xA40);
+        port.write("player_y", 0xA41);
         advanceAct2Event();
         requireTransientStage("act2-forward", 4, observations);
         drainAct2Redraw("act2-forward", observations);
@@ -419,7 +419,7 @@ public final class FbzVisualScenarioExecutor {
         new FbzVisualFixture(port).applyVerified(new FbzVisualFixture.Mutation(
                 Map.of("events_routine_bg", 4),
                 Map.of("foreground_outdoor", true, "background_outdoor", true)));
-        port.write("player_y", 0xA40);
+        port.write("player_y", 0xA3F);
         advanceAct2Event();
         requireTransientStage("act2-reverse", 4, observations);
         drainAct2Redraw("act2-reverse", observations);
@@ -704,12 +704,12 @@ public final class FbzVisualScenarioExecutor {
                             int reverseCoordinate, int safeIndoorCoordinate) {
         private static Boundary forCheckpoint(String checkpoint) {
             return switch (checkpoint) {
-                case "fbz1-boundary-1-outdoor" -> new Boundary(Axis.Y, 0x9C0, 0x9C0, 0x9BF);
-                case "fbz1-boundary-2-outdoor" -> new Boundary(Axis.Y, 0x2C0, 0x2C0, 0x2C1);
-                case "fbz1-boundary-3-outdoor" -> new Boundary(Axis.Y, 0x9C0, 0x9C0, 0x9BF);
-                case "fbz1-boundary-4-horizontal" -> new Boundary(Axis.X, 0x1B00, 0x1B00, 0x1AFF);
-                case "fbz1-boundary-5-outdoor" -> new Boundary(Axis.Y, 0x240, 0x240, 0x241);
-                case "fbz1-boundary-6-outdoor" -> new Boundary(Axis.Y, 0x640, 0x640, 0x63F);
+                case "fbz1-boundary-1-outdoor" -> new Boundary(Axis.Y, 0x9C1, 0x9BF, 0x9BF);
+                case "fbz1-boundary-2-outdoor" -> new Boundary(Axis.Y, 0x2BF, 0x2C1, 0x2C1);
+                case "fbz1-boundary-3-outdoor" -> new Boundary(Axis.Y, 0x9C1, 0x9BF, 0x9BF);
+                case "fbz1-boundary-4-horizontal" -> new Boundary(Axis.X, 0x1B01, 0x1AFF, 0x1AFF);
+                case "fbz1-boundary-5-outdoor" -> new Boundary(Axis.Y, 0x23F, 0x241, 0x241);
+                case "fbz1-boundary-6-outdoor" -> new Boundary(Axis.Y, 0x641, 0x63F, 0x63F);
                 default -> throw new IllegalArgumentException("Not an FBZ Act 1 boundary: " + checkpoint);
             };
         }

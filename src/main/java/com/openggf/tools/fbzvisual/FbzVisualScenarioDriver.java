@@ -194,7 +194,7 @@ public final class FbzVisualScenarioDriver {
         writes.put("player_x", recipe.centreX());
         writes.put("player_y", recipe.centreY());
         writes.put("background_outdoor", rawFlag(recipe, "Events_bg_04"));
-        return new FbzVisualFixture.Mutation(Map.of("zone", 4, "act", 1), writes);
+        return new FbzVisualFixture.Mutation(Map.of("zone", 4, "act", recipe.act()), writes);
     }
 
     private static FbzVisualFixture.Mutation seamlessFixture(FbzVisualManifest.Recipe recipe) {
