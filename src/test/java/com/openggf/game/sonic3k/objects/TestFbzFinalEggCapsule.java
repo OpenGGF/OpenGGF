@@ -387,10 +387,15 @@ class TestFbzFinalEggCapsule {
         dead.set(false);
         capsule.update(70,h.player);
         assertTrue(capsule.tailsEndingPoseAppliedForTest());
-        InOrder order = inOrder(controller);
+        InOrder order = inOrder(controller, p2);
         order.verify(controller).setController2SignedLocked(true);
         order.verify(controller).setController2SignedLocked(false);
-        order.verify(controller).queueNativeEndingPoseForNextPlayerSlot();
+        order.verify(p2).setAnimationId(com.openggf.game.sonic3k.constants.Sonic3kAnimationIds.VICTORY);
+        verify(controller, never()).queueNativeEndingPoseForNextPlayerSlot();
+        verify(p2).setXSpeed((short) 0);
+        verify(p2).setYSpeed((short) 0);
+        verify(p2).setGSpeed((short) 0);
+        verify(p2, never()).setControlLocked(false);
     }
 
     @org.junit.jupiter.params.ParameterizedTest

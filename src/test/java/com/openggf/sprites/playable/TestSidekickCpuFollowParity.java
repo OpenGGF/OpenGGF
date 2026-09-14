@@ -365,6 +365,33 @@ class TestSidekickCpuFollowParity {
     }
 
     @Test
+    void immediateEndingPoseUnlockLeavesLogicalInputUntilTheNextPlayerSlot() {
+        TestableSprite sonic = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, sonic);
+        controller.forceStateForTest(SidekickCpuController.State.NORMAL, 20);
+        controller.setController2Input(AbstractPlayableSprite.INPUT_LEFT, 0);
+        controller.update(0x4CC0);
+        controller.setController2SignedLocked(true);
+        controller.setController2Input(0, 0);
+        tails.setObjectControlled(true);
+        tails.setObjectControlAllowsCpu(false);
+        tails.setAnimationId(0x13);
+        controller.setController2SignedLocked(false);
+        assertEquals(AbstractPlayableSprite.INPUT_LEFT,
+                controller.getDiagnosticGeneratedHeldInput() & AbstractPlayableSprite.INPUT_LEFT,
+                "Check_TailsEndPose does not write Ctrl_2_logical in the object slot");
+
+        controller.update(0x4CC1);
+        controller.recordDiagnosticPostPhysics();
+
+        assertEquals(0, controller.getDiagnosticGeneratedHeldInput());
+        assertEquals(0x13, tails.getAnimationId(),
+                "the next CPU pass must not delay or overwrite the object-owned pose");
+    }
+
+    @Test
     void followRightStillNudgesPositionWhenDxIsBelowThreshold() {
         TestableSprite sonic = new TestableSprite("sonic");
         TestableSprite tails = new TestableSprite("tails_p2");
