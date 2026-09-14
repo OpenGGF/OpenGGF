@@ -115,6 +115,38 @@ class TestFbzDisappearingPlatformAndScrewDoor {
     }
 
     @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void disappearingLandingKeepsSnapBeforeNonRollingRadiusReset() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var level = com.openggf.game.GameServices.level();
+        var manager = level.getObjectManager();
+        var platform = manager.createDynamicObject(() -> new FbzDisappearingPlatformObjectInstance(
+                new ObjectSpawn(0x0EF0, 0x0418, 0x79, 0xC9, 0, false, 0)));
+        var player = fixture.sprite();
+        level.setFrameCounter((-platform.phaseOffset()) & platform.phaseMask());
+        for (int i = 0; i <= 6; i++) {
+            platform.update(100 + i, player);
+        }
+        platform.snapshotPreUpdatePosition();
+        player.setRolling(false);
+        player.applyRollingRadii(false);
+        int entryRadius = player.getYRadius();
+        player.setCentreX((short) platform.getX());
+        player.setCentreY((short) (platform.getY() - 0x11 - entryRadius - 3));
+        player.setAir(true);
+        player.setYSpeed((short) 0xE0);
+
+        manager.processImmediateInlineSolidCheckpoint(platform, player, List.of());
+
+        assertTrue(manager.isRidingObject(player, platform));
+        assertFalse(player.getAir());
+        assertFalse(player.getRolling());
+        assertEquals(player.getStandYRadius(), player.getYRadius(), "Player_TouchFloor restores radii");
+        assertEquals(platform.getY() - 0x11 - entryRadius - 1, player.getCentreY(),
+                "loc_1E45A snaps with entry y_radius; non-rolling TouchFloor does not shift Y");
+    }
+
+    @Test
     void disappearingActivationReadsLevelClockRatherThanObjectVintClock() {
         var level = mock(com.openggf.level.LevelManager.class);
         for (int subtype : new int[]{0x79, 0x99, 0xB9, 0xD9, 0xF9, 0x89, 0xA9, 0xC9, 0xE9}) {
