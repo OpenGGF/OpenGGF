@@ -25,8 +25,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   data and ring targets, results lettering, ending and continue-player
   presentation, and Super Knuckles' palette cycle. Super Knuckles uses the
   lock-on movement constants and transformation timing, with rewindable
-  controller state. Inherited input, animation and presentation limits remain
-  listed in the known-discrepancies entry and `docs/kis2/BRANCH_DIFFS.md`.
+  controller state and overlapping jump-button activation. Checkpoints restore
+  their saved rings and extra-life flags; glide collision, air momentum, balance,
+  solid contacts and wind/held-object mechanics follow the lock-on branches.
+  The CNZ slot face, title level-select code, Super sound-test code and independent
+  results-message motion also use the KiS2 presentation. Remaining route and
+  hardware-rendering limits are listed in the known-discrepancies entry and
+  `docs/kis2/BRANCH_DIFFS.md`.
 
 - **HCZ1 miniboss:** retain the vertical arena lock and full rocket slowdown;
   match the body, rockets and individual exhausts to ROM sprite priorities and

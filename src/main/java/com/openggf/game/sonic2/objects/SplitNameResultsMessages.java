@@ -19,15 +19,15 @@ public final class SplitNameResultsMessages {
     public SplitNameResultsMessages(boolean gotEmerald, boolean allEmeralds) {
         this.gotEmerald = gotEmerald;
         this.allEmeralds = allEmeralds;
-        titleX = allEmeralds ? -60 : -48;
-        nameX = allEmeralds ? -164 : -120;
+        titleX = gotEmerald && allEmeralds ? -60 : -48;
+        nameX = gotEmerald && allEmeralds ? -164 : -120;
     }
 
     public void tick() {
         switch (phase) {
             case ARRIVAL -> {
                 mainX = toward(mainX, 160, 16);
-                titleX = toward(titleX, allEmeralds ? 228 : 240, 16);
+                titleX = toward(titleX, gotEmerald && allEmeralds ? 228 : 240, 16);
                 nameX = toward(nameX, allEmeralds ? 124 : 168, 16);
             }
             case LEAVE -> {

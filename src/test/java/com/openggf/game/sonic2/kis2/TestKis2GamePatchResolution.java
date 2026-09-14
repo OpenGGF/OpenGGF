@@ -38,6 +38,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -73,7 +74,8 @@ class TestKis2GamePatchResolution {
         Kis2GameModule patched = (Kis2GameModule) patch.apply(base, context);
 
         assertEquals(Kis2GameModule.Fidelity.TIER_ONE, patched.fidelity());
-        assertSame(base.getZoneFeatureProvider(), patched.getZoneFeatureProvider());
+        assertNotSame(base.getZoneFeatureProvider(), patched.getZoneFeatureProvider());
+        assertSame(patched.getZoneFeatureProvider(), patched.getZoneFeatureProvider());
         assertInstanceOf(Sonic2WaterDataProvider.class, patched.getWaterDataProvider());
         assertInstanceOf(Sonic2ContinueScreenProvider.class, patched.createContinueScreenProvider());
         assertInstanceOf(Sonic2ObjectArtProvider.class, patched.getObjectArtProvider());

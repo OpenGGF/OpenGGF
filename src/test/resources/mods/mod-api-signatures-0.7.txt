@@ -1208,6 +1208,7 @@ CONSTRUCTOR com.openggf.game.BonusStageState public  <init>(int,int,int,int,int,
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier)
 CONSTRUCTOR com.openggf.game.CharacterDefinition public  <init>(com.openggf.game.CharacterKey,java.lang.String,com.openggf.game.CharacterDefinition$PlayableFactory,com.openggf.game.CharacterDefinition$RespawnStrategyFactory,com.openggf.game.PlayerCharacter,com.openggf.sprites.playable.SecondaryAbility,boolean,com.openggf.game.CharacterDefinition$ArtSupplier,com.openggf.game.CharacterDefinition$PaletteSupplier)
 CONSTRUCTOR com.openggf.game.CheckpointState$RewindState public  <init>(int,int,int,int,int,int,boolean,boolean,int,int,boolean,int,int,boolean,byte,byte,boolean,long,boolean)
+CONSTRUCTOR com.openggf.game.CheckpointState$RewindState public  <init>(int,int,int,int,int,int,boolean,boolean,int,int,boolean,int,int,boolean,byte,byte,boolean,long,boolean,int,int)
 CONSTRUCTOR com.openggf.game.DebugOverlayProvider$ArtViewerTarget public  <init>(java.lang.String,java.lang.String,int,int)
 CONSTRUCTOR com.openggf.game.DebugOverlayProvider$ObjectDebugLabel public  <init>(int,int,java.lang.String)
 CONSTRUCTOR com.openggf.game.DebugOverlayProvider$ObjectDebugLabel public  <init>(int,int,java.lang.String,float,float,float)
@@ -1415,12 +1416,15 @@ CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,bo
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel)
 CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int)
+CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int)
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,com.openggf.game.rules.TailsTailPushDetection)
 CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[])
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,short,boolean,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,short,boolean,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PowerUpRules public  <init>(int,int,int,int,int,boolean,boolean,int,int)
 CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean)
+CONSTRUCTOR com.openggf.game.rules.RingRules public  <init>(int,int,boolean,boolean,int,int,int,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.SidekickCpuRules public  <init>(int,int,int,boolean,boolean,boolean,boolean,int,boolean,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.save.SaveManager public  <init>(java.nio.file.Path)
 CONSTRUCTOR com.openggf.game.save.SaveSlotSummary public  <init>(int,com.openggf.game.save.SaveSlotState,java.util.Map<java.lang.String,java.lang.Object>)
@@ -2478,6 +2482,7 @@ FIELD com.openggf.game.TitleScreenProvider$State public,static,final com.openggf
 FIELD com.openggf.game.TitleScreenProvider$State public,static,final com.openggf.game.TitleScreenProvider$State INTRO_TEXT_FADE_OUT
 FIELD com.openggf.game.TitleScreenProvider$State public,static,final com.openggf.game.TitleScreenProvider$State INTRO_TEXT_HOLD
 FIELD com.openggf.game.TitleScreenProvider$State public,static,final com.openggf.game.TitleScreenProvider$State SEGA_LOGO
+FIELD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction LEVEL_SELECT
 FIELD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction ONE_PLAYER
 FIELD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction OPTIONS
 FIELD com.openggf.game.TitleScreenProvider$TitleScreenAction public,static,final com.openggf.game.TitleScreenProvider$TitleScreenAction OTHER
@@ -4937,6 +4942,8 @@ METHOD com.openggf.game.CheckpointState$RewindState public  int savedCameraMaxY(
 METHOD com.openggf.game.CheckpointState$RewindState public  int savedCameraX()
 METHOD com.openggf.game.CheckpointState$RewindState public  int savedCameraY()
 METHOD com.openggf.game.CheckpointState$RewindState public  int savedDynamicResizeRoutine()
+METHOD com.openggf.game.CheckpointState$RewindState public  int savedRingExtraLifeFlags()
+METHOD com.openggf.game.CheckpointState$RewindState public  int savedRings()
 METHOD com.openggf.game.CheckpointState$RewindState public  int savedWaterLevel()
 METHOD com.openggf.game.CheckpointState$RewindState public  int savedWaterRoutine()
 METHOD com.openggf.game.CheckpointState$RewindState public  int savedX()
@@ -5400,6 +5407,8 @@ METHOD com.openggf.game.LevelLoadContext public  int getCheckpointCameraX()
 METHOD com.openggf.game.LevelLoadContext public  int getCheckpointCameraY()
 METHOD com.openggf.game.LevelLoadContext public  int getCheckpointDynamicResizeRoutine()
 METHOD com.openggf.game.LevelLoadContext public  int getCheckpointIndex()
+METHOD com.openggf.game.LevelLoadContext public  int getCheckpointRingExtraLifeFlags()
+METHOD com.openggf.game.LevelLoadContext public  int getCheckpointRings()
 METHOD com.openggf.game.LevelLoadContext public  int getCheckpointWaterLevel()
 METHOD com.openggf.game.LevelLoadContext public  int getCheckpointWaterRoutine()
 METHOD com.openggf.game.LevelLoadContext public  int getCheckpointX()
@@ -5428,6 +5437,7 @@ METHOD com.openggf.game.LevelLoadContext public  void snapshotCheckpoint(com.ope
 METHOD com.openggf.game.LevelLoadMode public,static  com.openggf.game.LevelLoadMode valueOf(java.lang.String)
 METHOD com.openggf.game.LevelLoadMode public,static  com.openggf.game.LevelLoadMode[] values()
 METHOD com.openggf.game.LevelSelectProvider public  void initializeFromTitleScreen()
+METHOD com.openggf.game.LevelSelectProvider public  void onGameplayStart()
 METHOD com.openggf.game.LevelSelectProvider public  void setViewportWidth(int)
 METHOD com.openggf.game.LevelSelectProvider public,abstract  boolean isActive()
 METHOD com.openggf.game.LevelSelectProvider public,abstract  boolean isExiting()
@@ -7339,6 +7349,7 @@ METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean animalObjec
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean animalObjectUsesRenderFlagDeleteBounds()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean bossHitHalvesBounceVelocity()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean bossHitNegatesGroundSpeed()
+METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean isBossDuckTouchBoxMappingFrame(int)
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean isDuckTouchBoxMappingFrame(int)
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean objectsExecuteAfterPlayerPhysics()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean permanentRespawnTableLatch()
@@ -7352,6 +7363,7 @@ METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean solidPushRe
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean solidPushReleaseWritesWalkRunAnimationWord()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean touchResponseUsesPreviousCollisionResponseList()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean touchResponseUsesRenderFlagYGate()
+METHOD com.openggf.game.rules.ObjectInteractionRules public  int bossDuckTouchBoxMappingFrame()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  int duckTouchBoxMappingFrame()
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.ObjectInteractionRules public,final  int hashCode()
@@ -7384,12 +7396,16 @@ METHOD com.openggf.game.rules.PlayerLandingRules public  boolean pinballLandingP
 METHOD com.openggf.game.rules.PlayerLandingRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.PlayerLandingRules public,final  int hashCode()
 METHOD com.openggf.game.rules.PlayerLandingRules public,final  java.lang.String toString()
+METHOD com.openggf.game.rules.PlayerMovementRules public  boolean airAbilityAcceptsOverlappingJumpPress()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean airSuperspeedPreserved()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean angleDiffCardinalSnap()
+METHOD com.openggf.game.rules.PlayerMovementRules public  boolean balanceFacingFlipRestartsScript()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean controlLockLatchesLogicalInput()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean fixedAnglePosThreshold()
+METHOD com.openggf.game.rules.PlayerMovementRules public  boolean glideRestoresStandingRadiiAfterCollision()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean hurtRoutineLatchesLogicalInput()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean hurtStopBottomKillUnsigned()
+METHOD com.openggf.game.rules.PlayerMovementRules public  boolean idleWallClimbChecksFloor()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean inputAlwaysCapsGroundSpeed()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean landingWalkWriteSkippedWhileSpindashing()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean levelBoundaryLockUsesScreenLockFlag()
@@ -7400,6 +7416,7 @@ METHOD com.openggf.game.rules.PlayerMovementRules public  boolean objectSolidHur
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollControlledDecelUsesEffectiveDecelQuarter()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollStopsBelowMinimumSpeed()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean rollingJumpPinballGateRequiresSpindashFlag()
+METHOD com.openggf.game.rules.PlayerMovementRules public  boolean skidThresholdPreservesLowByte()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeRepelChecksOnObject()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeRepelUsesS3kSlipKick()
 METHOD com.openggf.game.rules.PlayerMovementRules public  boolean slopeResistAppliesAtZeroInertia()
@@ -7426,6 +7443,7 @@ METHOD com.openggf.game.rules.PowerUpRules public  int waterSplashFixedSlotIndex
 METHOD com.openggf.game.rules.PowerUpRules public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.game.rules.PowerUpRules public,final  int hashCode()
 METHOD com.openggf.game.rules.PowerUpRules public,final  java.lang.String toString()
+METHOD com.openggf.game.rules.RingRules public  boolean checkpointRestoresSavedRings()
 METHOD com.openggf.game.rules.RingRules public  boolean lostRingBoundaryChecksOnlyOnProbeCadence()
 METHOD com.openggf.game.rules.RingRules public  boolean ringFloorProbeRequiresRenderFlag()
 METHOD com.openggf.game.rules.RingRules public  boolean stageRingSweepUsesRawCameraWindow()
@@ -14691,6 +14709,8 @@ RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedCameraX int
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedCameraY int
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedDynamicResizeRoutine int
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedLrbSolidBit byte
+RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedRingExtraLifeFlags int
+RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedRings int
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedTimerFrames long
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedTopSolidBit byte
 RECORD-COMPONENT com.openggf.game.CheckpointState$RewindState savedWaterLevel int
@@ -15238,6 +15258,7 @@ RECORD-COMPONENT com.openggf.game.rules.GameRules ring com.openggf.game.rules.Ri
 RECORD-COMPONENT com.openggf.game.rules.GameRules sidekickCpu com.openggf.game.rules.SidekickCpuRules
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules animalObjectPreservesObjectMoveXSubpixel boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules animalObjectUsesRenderFlagDeleteBounds boolean
+RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossDuckTouchBoxMappingFrame int
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossHitHalvesBounceVelocity boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossHitNegatesGroundSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules duckTouchBoxMappingFrame int
@@ -15272,11 +15293,15 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules landingRollClearUsesC
 RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules objectSolidHurtLandingRetainsRoutine boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules pinballLandingPreservesPinballMode boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerLandingRules pinballLandingPreservesRoll boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules airAbilityAcceptsOverlappingJumpPress boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules airSuperspeedPreserved boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules angleDiffCardinalSnap boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules balanceFacingFlipRestartsScript boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules controlLockLatchesLogicalInput boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules fixedAnglePosThreshold boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules glideRestoresStandingRadiiAfterCollision boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules hurtRoutineLatchesLogicalInput boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules idleWallClimbChecksFloor boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules inputAlwaysCapsGroundSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules landing com.openggf.game.rules.PlayerLandingRules
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules landingWalkWriteSkippedWhileSpindashing boolean
@@ -15285,6 +15310,7 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules movingCrouchThreshol
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollControlledDecelUsesEffectiveDecelQuarter boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollStopsBelowMinimumSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules rollingJumpPinballGateRequiresSpindashFlag boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules skidThresholdPreservesLowByte boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules slopeRepelChecksOnObject boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules slopeRepelUsesS3kSlipKick boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerMovementRules slopeResistAppliesAtZeroInertia boolean
@@ -15301,6 +15327,7 @@ RECORD-COMPONENT com.openggf.game.rules.PowerUpRules speedShoesTimerDecimation i
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules superStarsFixedSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules waterSplashFixedSlotIndex int
 RECORD-COMPONENT com.openggf.game.rules.PowerUpRules waterSplashUsesFixedDustObject boolean
+RECORD-COMPONENT com.openggf.game.rules.RingRules checkpointRestoresSavedRings boolean
 RECORD-COMPONENT com.openggf.game.rules.RingRules lostRingBoundaryChecksOnlyOnProbeCadence boolean
 RECORD-COMPONENT com.openggf.game.rules.RingRules lostRingRenderVerticalMargin int
 RECORD-COMPONENT com.openggf.game.rules.RingRules ringCollisionHeight int

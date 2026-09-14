@@ -4,6 +4,18 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 class TestSplitNameResultsMessages {
+    @Test void failedAttemptWithAllEmeraldsKeepsTheUnshiftedTitle() {
+        // Obj6F_Knuckles deletes on Got_Emerald=0 before applying all-seven offsets.
+        var messages = new SplitNameResultsMessages(false, true);
+        assertEquals(-48, messages.capture().titleX());
+        for (int i = 0; i < 18; i++) messages.tick();
+        assertEquals(240, messages.capture().titleX());
+        assertEquals(2, messages.lines().size());
+        assertEquals(22, messages.lines().get(1).frame());
+        messages.startSuper();
+        assertEquals(SplitNameResultsMessages.Phase.ARRIVAL, messages.capture().phase());
+    }
+
     @Test void headingsApproachFromOppositeSidesAndNameIsIndependent() {
         var messages = new SplitNameResultsMessages(true, false);
         messages.tick();

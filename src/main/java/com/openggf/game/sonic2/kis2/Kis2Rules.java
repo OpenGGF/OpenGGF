@@ -22,7 +22,7 @@ public final class Kis2Rules {
      * KiS2 {@code Touch_Rings}, {@code Check_CNZ_bumpers} and
      * {@code TouchResponse} test {@code cmpi.b #$9C,mapping_frame} (Knuckles'
      * duck frame) instead of {@code $4D}. {@code Touch_Boss} still tests
-     * {@code $4D}; the engine has one field, so bosses use {@code $9C} too.
+     * {@code $4D}; boss touch uses its separate semantic mapping-frame rule.
      */
     public static final int DUCK_TOUCH_BOX_MAPPING_FRAME = 0x9C;
 
@@ -79,7 +79,7 @@ public final class Kis2Rules {
                 interaction.solidPushReleaseWritesWalkRunAnimationWord(),
                 interaction.solidPushReleaseSkipsWalkRunWhenRolling(),
                 interaction.solidPushReleaseSkipsWalkRunWhenSpindashing(),
-                DUCK_TOUCH_BOX_MAPPING_FRAME);
+                DUCK_TOUCH_BOX_MAPPING_FRAME, 0x4D);
         CollisionRules c = base.collision();
         // Obj01_CheckWallsOnGround / loc_1A6A8: collision stops inertia either
         // way, but only a player facing into the wall acquires pushing status.
@@ -93,8 +93,14 @@ public final class Kis2Rules {
                 c.solidObjectTopBranchAlwaysLiftsOnUpwardVelocity(), c.rightWallDeepProbePreservesPenetration(),
                 false, c.solidObjectKeepsOnObjWhenJumpedOffSameFrame(),
                 c.advanceWaterLevelBeforePlayerPhysics(), c.defaultCollisionLayoutYMask(), c.layoutYMaskAppliesToAllLookups());
+        var rings = base.ring();
+        var checkpointRings = new com.openggf.game.rules.RingRules(
+                rings.ringFloorCheckMask(), rings.ringFloorCheckCounterPhase(),
+                rings.ringFloorProbeRequiresRenderFlag(), rings.lostRingBoundaryChecksOnlyOnProbeCadence(),
+                rings.lostRingRenderVerticalMargin(), rings.ringCollisionWidth(), rings.ringCollisionHeight(),
+                rings.stageRingsUseObjectTouchCollection(), rings.stageRingSweepUsesRawCameraWindow(), true);
         return new GameRules(kis2Movement, base.playerCapability(), collision, base.playerAnimation(),
-                base.camera(), base.ring(), kis2Interaction, base.sidekickCpu(), base.powerUp(),
+                base.camera(), checkpointRings, kis2Interaction, base.sidekickCpu(), base.powerUp(),
                 base.drowningBubble(), base.dynamicArtDmaService());
     }
 }

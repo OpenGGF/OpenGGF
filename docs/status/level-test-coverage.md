@@ -142,3 +142,8 @@ records the seven special-stage entry/rewind windows, title, ending/continue,
 results and powered-form checks. It does not certify stock S2 act routes or
 all supported viewport/donor/team combinations; those inherited obligations
 remain in LTS-07/LTS-08.
+
+[KiS2 trace-readiness follow-up](../architecture/plans/2026-09-14-kis2-trace-readiness.md)
+adds targeted movement/input, checkpoint/reload and results lifecycle obligations.
+It does not replace full special-stage routes or powered-form gameplay rewind
+coverage; those remain pending the chain recording and independent route checks.

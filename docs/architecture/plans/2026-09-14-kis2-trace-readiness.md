@@ -23,10 +23,11 @@ claim complete route coverage before the user records the chain movie.
 
 ## Validation and delivery
 
-One combined validation task pinned to the base; focused tests during iteration,
-then the actual aggregate category selection plus guards. At task start the shared
-runner was occupied by `route-green-20260914`; test execution is pending coordination,
-without resetting or consuming that other task's budget. Changes to public candidate
+The combined validation selection is pinned to the pre-task base; focused tests
+precede the aggregate category run plus guards. At task start the old shared
+receipt was occupied by `route-green-20260914`, so no tests were run against it.
+Upstream `5e3700a04` replaced receipts with an automatic Maven queue during this
+work; it is integrated before validation and all subsequent Maven work queues. Changes to public candidate
 rules/snapshots retain compatible constructors and update normalized signatures.
 
 Integrate into the main workspace's existing develop branch, push only develop,
@@ -38,3 +39,37 @@ user files and dirty research submodules.
 - `Obj79_SaveData` / `Obj79_LoadData` explicitly bank and reinstate saved rings
   and extra-life flags. KiS2 omits stock S2's clearing instructions. Restoring
   live pre-death rings was rejected: it is not what the ROM loads.
+
+
+## Implemented scope and residuals
+
+| Area | Delivered implementation / targeted checks | Remaining evidence or architecture |
+| --- | --- | --- |
+| Movement | superspeed, full-word skid, facing push, balance restart, temporary glide radii, idle climb branch; actual BK2 A→A+B input publication and rewind state | wall-grab geometry/displacement detach; full chain comparisons |
+| Checkpoint | saved rings and 1-up flags through reload, direct special-stage return and rewind; stock S2 and new-act clearing | complete route/death sequence recording |
+| Zone contacts | wind min/clamp, held-vine pinning, propeller clear, grounded pillar squash, boss duck distinction and solid rules | additional per-zone routes |
+| Presentation | slot face, level-select title code, Super sound-test handoff, independent results headings and completion clocks | attract owner, native debug placement/maps, exact VDP masks, perfect bonus and tally sound clocks |
+| Coverage | focused state/lifecycle/input regressions | full emerald routes, complete powered-form gameplay rewind, donor/viewport/team breadth |
+
+Worker commits: movement `73e00e748` + input review `7894b4d31`; zone/contact
+`e6c371898`; presentation `32af6906b` + render-independent results
+`793b9e978`. Integration composes the wind profile and optional slot-art overlay
+in one provider, used in both tiers; chip-only art stays optional. Ring/boss
+rules are wired by the integration owner. Public candidate record constructors
+retain old defaults, and the mutable 0.7 pin is regenerated without publication.
+
+Review fixed results offsets for a failed attempt with all emeralds, and moved
+message lifecycle initialization out of rendering. Late art loading must not
+restart timing. The ordinary result wait also retains the final DisplayOnly pass.
+Checkpoint review confirmed activation-time banks rather than live death values.
+
+The existing EHZ1 bootstrap/history divergence is not fixed by seeding from its
+rows. It needs production prelude timing evidence; the new full-game movie remains
+the next independent reference. Ending walking cadence was removed from the KiS2
+backlog because forced Ending_Routine=0 makes that shared S2 branch unreachable.
+
+## Validation record
+
+Pending focused and combined execution. Production and test sources compiled with
+`mvn -Dmse=off -DskipTests test-compile -B`; compilation is not a test pass.
+Tool preflight succeeds with Java 21 and `LUA_BIN=/usr/bin/lua5.4`.
