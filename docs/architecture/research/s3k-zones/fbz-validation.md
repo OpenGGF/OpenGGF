@@ -455,7 +455,7 @@ steps and ROM-derived bound. No animation or gameplay state is written to obtain
 that cursor. The other three channels use the first naturally reached zero.
 
 
-### Paired opaque-source pixels (2026-09-14; independent acceptance pending)
+### Paired opaque-source pixels (2026-09-14; bounded independent acceptance)
 
 Artifact `18CAE3F037ECEFC6610A9BE7060A4557304FCF016447620E69AAB3F99CC9FA1A`
 produced all 30 phase-aligned frames. Every comparable native opaque pixel has
@@ -487,3 +487,18 @@ IOException handling (31.874s), was repaired, then packaged successfully (69s).
 The exact start after runtime publication correction remained accepted with
 identical PNG SHA `4ED9FE4829B891F4511F7B514777EBE4AF60EC4CA128C9ECF6F220781A5D77A8`
 and the already reviewed 2400/2400 terrain pixels; no new whole-frame claim.
+
+
+Root independently accepted this bounded result after inspecting the five
+native/engine pairs in `root-paired-review.png`, reviewing the SAT/name-table and
+actual-GPU mask implementations, and independently reproducing all 30 receipt
+hashes, framebuffer-match flags and source-local RGB equality with a separate
+Python implementation. Implementation commits are `dac3f5e01` (publication) and
+`04a9e17eb` (capture/comparison). Acceptance covers only opaque source-local
+tile/local/palette/nibble appearance at the matching presented payload phase;
+all eligible native pixels are represented. Transparent/retained background,
+differing camera/placement/geometry, HUD/occluded pixels, whole frames and frozen
+checkpoints remain excluded. The contact sheet does not establish native route
+visual parity. The historical frozen-checkpoint matrix above therefore remains
+unchanged; these five bounded source-pixel comparisons are accepted evidence,
+not five whole-checkpoint PASS claims.
