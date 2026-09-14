@@ -3572,7 +3572,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
      */
     private void activateScheduledPlaybackForLoadedLevel() {
         PlaybackDebugManager playback = GameServices.playbackDebug();
-        if (!playback.activateScheduledLevelLoadSession()) {
+        if (!com.openggf.TraceSessionLauncher.activateScheduledPlaybackForLoadedLevel(playback)) {
             return;
         }
         spriteManager.setPlaybackInputSuppressed(true);

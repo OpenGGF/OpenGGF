@@ -60,6 +60,9 @@ final class SpecialStageTransitionSupport {
             EmeraldRewardKind rewardKind,
             int stageIndex,
             boolean succeeded) {
+        // Publish the cause before the synchronous load completes. The receipt
+        // observes production's new level identity; it supplies no trace state.
+        TraceSessionLauncher.markNextRunInteriorReturnLoad();
         if (enteredFromSanctuary(rewardKind)) {
             if (loadSanctuaryOriginLevel(levelManager)) {
                 return false;
