@@ -6,7 +6,8 @@ package com.openggf.game.sonic2.kis2;
  * <p>Every entry cites {@code docs/kis2/BRANCH_DIFFS.md}. The lock-on address
  * space places the S&amp;K cart at {@code $000000-$1FFFFF}, the Sonic 2 cart at
  * {@code $200000-$2FFFFF} and the 256 KiB chip at {@code $300000-$33FFFF}
- * ({@code s2.lockon.asm}). Tier one reads only the first two windows.
+ * ({@code s2.lockon.asm}). Tier one reads only the first two windows; tier
+ * two adds the chip through the user-supplied lock-on dump.
  */
 public final class Kis2Constants {
 
@@ -54,6 +55,63 @@ public final class Kis2Constants {
      * "Knuckles lives counter.nem" ({@code ArtNem_Sonic_life_counter} in KiS2).
      */
     public static final int ART_NEM_KNUCKLES_LIFE_ICON = 0x190E4C;
+
+    // ---- Chip window (BRANCH_DIFFS.md §Chip addresses) ----
+    // Lock-on addresses ($300000 + chip offset). Each was located on the
+    // user-supplied dump on 2026-09-14 by matching the branch's binary asset
+    // byte for byte; the KiS2 label is the s2.asm BINCLUDE that owns it.
+
+    /** {@code Objects_CNZ_1}: CNZ act 1 layout (292 records). */
+    public static final int OBJECTS_CNZ_1 = 0x33F06E;
+    /** {@code Objects_CNZ_2}: CNZ act 2 layout (257 records). */
+    public static final int OBJECTS_CNZ_2 = 0x33F74C;
+    /**
+     * {@code Pal_BGND}: {@code SonicAndTails.bin} + {@code SonicAndTails2.bin},
+     * palette lines 0-1 of every level. Line 0 carries Knuckles' colours in
+     * indices 2-5 and is byte-identical to S&amp;K {@code Pal_KnuxEndPose}
+     * ({@link #PAL_KNUCKLES_S2_LAYOUT}); line 1 is stock.
+     */
+    public static final int PAL_BGND = 0x30253E;
+    /** {@code Pal_CPZ_U}: Chemical Plant underwater palette (4 lines), line 0 recoloured for Knuckles. */
+    public static final int PAL_CPZ_U = 0x3029BE;
+    /** {@code Pal_ARZ_U}: Aquatic Ruin underwater palette (4 lines), line 0 recoloured for Knuckles. */
+    public static final int PAL_ARZ_U = 0x302AFE;
+    /** Bytes in a four-line underwater palette ({@code PalLoad_Water} copies {@code palptr ..., 0} lines 0-3). */
+    public static final int UNDERWATER_PALETTE_SIZE = 4 * 32;
+    /**
+     * {@code ArtNem_MiniSonic} in KiS2 = "Knuckles continue.nem" (12 tiles):
+     * the continue-screen and results mini icon at
+     * {@code ArtTile_ArtNem_MiniCharacter} ({@code PlrList_Results}, {@code loc_10744}).
+     */
+    public static final int ART_NEM_KNUCKLES_CONTINUE = 0x33AAF2;
+    /**
+     * {@code ArtNem_Sonic_life_counter} in KiS2 = "Knuckles lives counter.nem"
+     * (12 tiles), loaded by {@code PlrList_Std1} at {@code ArtTile_ArtNem_life_counter};
+     * also the 1-up monitor face (tile {@code $154} of the monitor sheet).
+     */
+    public static final int ART_NEM_KNUCKLES_LIFE_COUNTER = 0x33AC46;
+    /**
+     * {@code ArtNem_Shield_and_invincible_stars} (66 tiles): {@code PlrList_Std2}
+     * loads it at {@code ArtTile_ArtNem_Shield} in place of {@code ArtNem_Shield}
+     * (32 tiles) and {@code ArtNem_Invincible_stars} (34 tiles), which stock
+     * loads at {@code ArtTile_ArtNem_Invincible_stars = ArtTile_ArtNem_Shield + $20}.
+     */
+    public static final int ART_NEM_SHIELD_AND_STARS = 0x33AD40;
+    /** Tiles of the merged art that belong to the shield ({@code $4DE - $4BE}, s2.constants.asm). */
+    public static final int SHIELD_TILE_COUNT = 0x20;
+    /**
+     * {@code ArtNem_SignpostKnucklesPatch} (24 tiles): {@code PlrList_Signpost}
+     * loads it at {@code ArtTile_ArtNem_Signpost + 34} over Sonic's face.
+     */
+    public static final int ART_NEM_SIGNPOST_KNUCKLES_PATCH = 0x33AF4C;
+    public static final int SIGNPOST_KNUCKLES_PATCH_TILE = 34;
+    /**
+     * {@code ArtNem_PowerupsKnucklesPatch} (8 tiles): {@code PlrList_Std2}
+     * loads it at {@code ArtTile_ArtNem_Powerups + 44}, the grey shield and
+     * invincibility monitor icons.
+     */
+    public static final int ART_NEM_POWERUPS_KNUCKLES_PATCH = 0x33B15E;
+    public static final int POWERUPS_KNUCKLES_PATCH_TILE = 44;
 
     // ---- KiS2 SonicAniData slots (BRANCH_DIFFS.md §Animation) ----
     // The lock-on program replaces SonicAniData with the 37-entry KnucklesAni_*

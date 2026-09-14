@@ -21,6 +21,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic2.Sonic2GameModule;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
+import com.openggf.level.Pattern;
 import com.openggf.physics.GroundSensor;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.game.CanonicalAnimation;
@@ -159,12 +160,91 @@ class TestKis2HeadlessBoot {
         }
     }
 
+    /**
+     * Tier two: the catalogue-backed resolver serves {@code KIS2} from the
+     * user-supplied dump, so Casino Night loads the chip layout, line 0 is the
+     * chip's {@code Pal_BGND}, the underwater palette is the chip's
+     * {@code Pal_CPZ_U} and the level art carries the chip patches.
+     */
+    @Test
+    void withTheLockOnDumpTheBootRunsTierTwoWithChipLayoutsPalettesAndArt() throws Exception {
+        File s2File = RomTestUtils.ensureSonic2RomAvailable();
+        File s3kFile = RomTestUtils.ensureSonic3kRomAvailable();
+        var dump = Kis2TestRoms.lockOnDumpOrNull();
+        assumeTrue(s2File != null && s3kFile != null && dump != null,
+                "KiS2 tier-two boot needs the S2 and S3K ROMs and the lock-on dump");
+
+        try (Rom rom = new Rom()) {
+            assumeTrue(rom.open(s2File.getAbsolutePath()), "Configured S2 ROM must be readable");
+            SonicConfigurationService config = SonicConfigurationService.createStandalone(tempDir);
+            config.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+            config.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+            config.setConfigValue(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
+            EngineContext injected = catalogueBackedContext(config);
+            EngineServices.configure(injected);
+            injected.roms().setRom(rom);
+            assumeTrue(injected.roms().resolveLogicalRom(com.openggf.data.RomIdentity.KIS2).isPresent(),
+                    "the isolated ROM manager must see the lock-on dump");
+
+            GameplayModeContext gameplay = HeadlessGameBoot.openResolvedSessionForBoot(
+                    injected, new Sonic2GameModule());
+            GameplaySessionFactory.attachManagers(gameplay, injected);
+            injected.graphics().initHeadless();
+
+            GameModule module = SessionManager.requireCurrentGameModule();
+            assertEquals("kis2", ((DelegatingGameModule) module).patchId());
+            assertEquals(Kis2GameModule.Fidelity.TIER_TWO, ((Kis2GameModule) module).fidelity());
+
+            var team = GameplayTeamBootstrap.registerActiveTeam(module, GameServices.sprites(), config);
+            GameServices.camera().setFocusedSprite(team.mainSprite());
+            GameServices.level().loadZoneAndAct(3, 0); // Sonic2ZoneRegistry index 3 = Casino Night
+            GroundSensor.setLevelManager(GameServices.level());
+
+            Level level = GameServices.level().getCurrentLevel();
+            assertEquals(292, level.getObjects().size(), "CNZ1 uses the chip layout (BRANCH_DIFFS.md)");
+
+            var chip = new Kis2ChipArt(LockOnAddressSpace.tierTwo(
+                    LogicalRomResolver.windowSkFromCombined(Files.readAllBytes(s3kFile.toPath())),
+                    com.openggf.data.RomByteReader.fromBytes(Files.readAllBytes(s2File.toPath())), dump));
+            assertTrue(level.getPalette(0).dataEquals(chip.backgroundPaletteLine0()), "line 0 is Pal_BGND");
+            Palette[] cpz = module.getWaterDataProvider().getUnderwaterPalette(rom,
+                    com.openggf.game.sonic2.scroll.Sonic2ZoneConstants.ROM_ZONE_CPZ, 1,
+                    com.openggf.game.PlayerCharacter.KNUCKLES);
+            assertTrue(cpz[0].dataEquals(chip.chemicalPlantUnderwaterPalette()[0]), "Pal_CPZ_U from the chip");
+
+            var monitor = module.getObjectArtProvider().getSheet(com.openggf.level.objects.ObjectArtKeys.MONITOR);
+            var patch = chip.load(Kis2ChipArt.Asset.POWERUPS_PATCH);
+            for (int i = 0; i < patch.length; i++) {
+                for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
+                    for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
+                        assertEquals(patch[i].getPixel(x, y),
+                                monitor.getPatterns()[Kis2Constants.POWERUPS_KNUCKLES_PATCH_TILE + i].getPixel(x, y),
+                                "monitor patch tile " + i);
+                    }
+                }
+            }
+            assertInstanceOf(com.openggf.game.sonic2.continuescreen.Sonic2ContinueScreenProvider.class,
+                    module.createContinueScreenProvider());
+        }
+    }
+
     private static EngineContext injectedContext(SonicConfigurationService config, byte[] s3kBytes)
             throws Exception {
         EngineContext old = EngineServices.current();
         ModuleResolutionService resolver = new ModuleResolutionService(BuiltInPatches.registrations(),
                 PatchEnablement.ALL_ENABLED, new LogicalRomResolver(() -> s3kBytes), config);
         return new EngineContext(config, old.graphics(), old.audio(), isolatedRomManager(),
+                old.profiler(), old.debugOverlay(), old.playbackDebug(), old.romDetection(),
+                old.crossGameFeatures(), resolver);
+    }
+
+    /** Resolves logical ROMs through the isolated manager's catalogue, as the engine does. */
+    private static EngineContext catalogueBackedContext(SonicConfigurationService config) throws Exception {
+        EngineContext old = EngineServices.current();
+        RomManager roms = isolatedRomManager();
+        ModuleResolutionService resolver = new ModuleResolutionService(BuiltInPatches.registrations(),
+                PatchEnablement.ALL_ENABLED, LogicalRomResolver.fromRomManager(roms), config);
+        return new EngineContext(config, old.graphics(), old.audio(), roms,
                 old.profiler(), old.debugOverlay(), old.playbackDebug(), old.romDetection(),
                 old.crossGameFeatures(), resolver);
     }

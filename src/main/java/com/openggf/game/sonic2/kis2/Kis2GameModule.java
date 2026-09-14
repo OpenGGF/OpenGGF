@@ -5,30 +5,52 @@ import com.openggf.data.PlayerSpriteArtProvider;
 import com.openggf.data.Rom;
 import com.openggf.data.RomByteReader;
 import com.openggf.game.BuiltInRomDetectors;
+import com.openggf.game.ContinueScreenProvider;
 import com.openggf.game.CrossGameDonorProvider;
 import com.openggf.game.GameDataSource;
 import com.openggf.game.GameId;
 import com.openggf.game.GameModule;
 import com.openggf.game.ObjectArtProvider;
 import com.openggf.game.PhysicsProvider;
+import com.openggf.game.WaterDataProvider;
 import com.openggf.game.patch.DelegatingGameModule;
 import com.openggf.game.patch.LogicalRom;
 import com.openggf.game.patch.PatchContext;
+import com.openggf.game.sonic2.Sonic2ArtOverlays;
 import com.openggf.game.sonic2.Sonic2ObjectArtProvider;
+import com.openggf.game.sonic2.Sonic2WaterDataProvider;
+import com.openggf.game.sonic2.continuescreen.Sonic2ContinueScreenProvider;
+import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.level.Pattern;
+import com.openggf.level.objects.ObjectArtKeys;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 /**
- * Sonic 2 decorated by the Knuckles in Sonic 2 lock-on (tier one). Overrides
- * only what the lock-on program changes: physics, the game data (layouts, art,
- * palette) and the life-icon art; everything else delegates to stock S2.
+ * Sonic 2 decorated by the Knuckles in Sonic 2 lock-on. Overrides only what
+ * the lock-on program changes: physics, the game data (layouts, art, palette),
+ * the object-art overlays, the underwater palettes and the continue icon;
+ * everything else delegates to stock S2.
+ *
+ * <p>Tier one (S&amp;K half and S2 cart) is always available. Tier two opens the
+ * optional {@link LogicalRom#KIS2} image through the patch context; when the
+ * user-supplied dump is absent the module keeps tier-one behaviour exactly.
  */
 final class Kis2GameModule extends DelegatingGameModule {
 
     private static final Logger LOGGER = Logger.getLogger(Kis2GameModule.class.getName());
+
+    /** Which lock-on windows the module reads. */
+    enum Fidelity {
+        /** S&amp;K half and S2 cart only. */
+        TIER_ONE,
+        /** The full lock-on address space including the chip. */
+        TIER_TWO
+    }
 
     private final PatchContext context;
     private PhysicsProvider physicsProvider;
@@ -36,6 +58,9 @@ final class Kis2GameModule extends DelegatingGameModule {
     private RomByteReader sk;
     private PlayerSpriteArtProvider skKnucklesArt;
     private Kis2Game game;
+    private boolean kis2ImageProbed;
+    private RomByteReader kis2Image;
+    private Kis2ChipArt chipArt;
 
     Kis2GameModule(GameModule base, PatchContext context) {
         super(base, Kis2Constants.PATCH_ID);
@@ -47,7 +72,7 @@ final class Kis2GameModule extends DelegatingGameModule {
         // Run the base module's side effects (PLC service, active ROM) and
         // replace only the game data object.
         base().createGame(rom);
-        game = new Kis2Game(rom, skReader(), skKnucklesArt());
+        game = new Kis2Game(rom, skReader(), skKnucklesArt(), kis2Image().orElse(null), chipArt().orElse(null));
         return game;
     }
 
@@ -68,12 +93,77 @@ final class Kis2GameModule extends DelegatingGameModule {
     @Override
     public ObjectArtProvider getObjectArtProvider() {
         if (objectArtProvider == null) {
-            objectArtProvider = new Sonic2ObjectArtProvider(this::loadLifeIcon);
+            objectArtProvider = new Sonic2ObjectArtProvider(artOverlays());
         }
         return objectArtProvider;
     }
 
-    private Pattern[] loadLifeIcon() {
+    /**
+     * {@code PalPtr_CPZ_U} and {@code PalPtr_ARZ_U} point at the chip's
+     * recoloured underwater lines; every other zone keeps the stock data.
+     */
+    @Override
+    public WaterDataProvider getWaterDataProvider() {
+        Optional<Kis2ChipArt> chip = chipArt();
+        if (chip.isEmpty()) {
+            return base().getWaterDataProvider();
+        }
+        Kis2ChipArt art = chip.get();
+        return new Sonic2WaterDataProvider((zoneId, actId) -> {
+            if (zoneId == Sonic2ZoneConstants.ROM_ZONE_CPZ) {
+                return art.chemicalPlantUnderwaterPalette();
+            }
+            if (zoneId == Sonic2ZoneConstants.ROM_ZONE_ARZ) {
+                return art.aquaticRuinUnderwaterPalette();
+            }
+            return null;
+        });
+    }
+
+    /** {@code ArtNem_MiniSonic} is the chip's "Knuckles continue.nem" in KiS2. */
+    @Override
+    public ContinueScreenProvider createContinueScreenProvider() {
+        Optional<Kis2ChipArt> chip = chipArt();
+        if (chip.isEmpty()) {
+            return base().createContinueScreenProvider();
+        }
+        return new Sonic2ContinueScreenProvider(() -> chip.get().load(Kis2ChipArt.Asset.CONTINUE_ICON));
+    }
+
+    /** The fidelity the module resolved from the ROMs the context could open. */
+    Fidelity fidelity() {
+        return kis2Image().isPresent() ? Fidelity.TIER_TWO : Fidelity.TIER_ONE;
+    }
+
+    /**
+     * Tier two mirrors the patched PLC lists ({@code PlrList_Std1},
+     * {@code PlrList_Std2}, {@code PlrList_Signpost}); tier one keeps the
+     * S&amp;K life icon only.
+     */
+    private Sonic2ArtOverlays artOverlays() {
+        Optional<Kis2ChipArt> chip = chipArt();
+        if (chip.isEmpty()) {
+            return Sonic2ArtOverlays.lifeIconOnly(this::loadTierOneLifeIcon);
+        }
+        Kis2ChipArt art = chip.get();
+        return new Sonic2ArtOverlays(
+                () -> art.load(Kis2ChipArt.Asset.LIFE_COUNTER),
+                List.of(
+                        // PlrList_Std2: plreq ArtTile_ArtNem_Powerups+44, ArtNem_PowerupsKnucklesPatch
+                        new Sonic2ArtOverlays.SheetPatch(ObjectArtKeys.MONITOR,
+                                Kis2Constants.POWERUPS_KNUCKLES_PATCH_TILE,
+                                () -> art.load(Kis2ChipArt.Asset.POWERUPS_PATCH)),
+                        // PlrList_Std2: plreq ArtTile_ArtNem_Shield, ArtNem_Shield_and_invincible_stars
+                        new Sonic2ArtOverlays.SheetPatch(ObjectArtKeys.SHIELD, 0, art::shield),
+                        new Sonic2ArtOverlays.SheetPatch(ObjectArtKeys.INVINCIBILITY_STARS, 0,
+                                art::invincibilityStars),
+                        // PlrList_Signpost: plreq ArtTile_ArtNem_Signpost+34, ArtNem_SignpostKnucklesPatch
+                        new Sonic2ArtOverlays.SheetPatch(ObjectArtKeys.SIGNPOST,
+                                Kis2Constants.SIGNPOST_KNUCKLES_PATCH_TILE,
+                                () -> art.load(Kis2ChipArt.Asset.SIGNPOST_PATCH))));
+    }
+
+    private Pattern[] loadTierOneLifeIcon() {
         try {
             return new Kis2PlayerArt(skReader(), skKnucklesArt()).loadLifeIcon();
         } catch (IOException | RuntimeException e) {
@@ -110,5 +200,41 @@ final class Kis2GameModule extends DelegatingGameModule {
             }
         }
         return sk;
+    }
+
+    /**
+     * The optional full lock-on image. Probed once: the context throws when
+     * no user-supplied dump serves {@code KIS2}, which selects tier one.
+     */
+    private Optional<RomByteReader> kis2Image() {
+        if (!kis2ImageProbed) {
+            kis2ImageProbed = true;
+            try {
+                RomByteReader image = context.openLogicalRom(LogicalRom.KIS2);
+                if (image != null && image.size() >= Kis2Constants.CHIP_WINDOW_END) {
+                    kis2Image = image;
+                    LOGGER.info("Knuckles in Sonic 2 tier two: reading the chip through the lock-on dump");
+                } else {
+                    LOGGER.info("Knuckles in Sonic 2 tier one: the lock-on image is too small for the chip");
+                }
+            } catch (IOException | RuntimeException e) {
+                LOGGER.info("Knuckles in Sonic 2 tier one: no lock-on dump available (" + e.getMessage() + ")");
+            }
+        }
+        return Optional.ofNullable(kis2Image);
+    }
+
+    private Optional<Kis2ChipArt> chipArt() {
+        if (chipArt == null) {
+            Optional<RomByteReader> image = kis2Image();
+            if (image.isEmpty()) {
+                return Optional.empty();
+            }
+            RomByteReader dump = image.get();
+            RomByteReader s2Window = dump.window(Kis2Constants.S2_WINDOW_START,
+                    Kis2Constants.S2_WINDOW_END - Kis2Constants.S2_WINDOW_START);
+            chipArt = new Kis2ChipArt(LockOnAddressSpace.tierTwo(skReader(), s2Window, dump));
+        }
+        return Optional.of(chipArt);
     }
 }

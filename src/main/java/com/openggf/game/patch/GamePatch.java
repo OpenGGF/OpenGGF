@@ -1,6 +1,7 @@
 package com.openggf.game.patch;
 
 import com.openggf.game.GameModule;
+import com.openggf.game.ModApi;
 
 import java.util.List;
 import java.util.Map;
@@ -12,7 +13,7 @@ import java.util.Set;
  * <p>The future engine-owned {@code ModuleResolutionService} orders eligible
  * registrations by owner and applies each patch over the previous result.
  */
-@com.openggf.game.ModApi
+@ModApi
 public interface GamePatch {
 
     /** Stable namespaced patch identifier. */
@@ -25,6 +26,16 @@ public interface GamePatch {
     boolean activatesFor(GameplayLaunchRequest request);
 
     Set<LogicalRom> romPrerequisites();
+
+    /**
+     * Logical ROMs the patch reads when they are available but does not
+     * require. Resolution never gates on these; a patch opens each one through
+     * {@link PatchContext#openLogicalRom(LogicalRom)} and falls back to the
+     * behaviour its required ROMs support when the open fails.
+     */
+    default Set<LogicalRom> optionalRomPrerequisites() {
+        return Set.of();
+    }
 
     /**
      * Main-character codes contributed to launch UI; each is lowercase, nonblank,
