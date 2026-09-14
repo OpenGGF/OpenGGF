@@ -31,7 +31,11 @@ class TestObjectPlacementEncoding {
     }
 
     @Test
-    void commonParserPreservesDescendingFullXOrderInsideOnePlacementColumn() {
+    void commonParserPreservesObjectRomOrderAndSortsRingsByFullXLikeRingsMgrSortRings() {
+        // Objects keep ROM record order: the S2 object manager walks the layout
+        // as stored. Rings do not: S2 RingsMgr_SortRings bubble-sorts
+        // Ring_Positions by the full 16-bit X word (cmp.w (a2),d0 / bls), so a
+        // descending pair inside one column comes out ascending.
         byte[] objects = new byte[14];
         writeObject(objects, 0, 0x01C0, 0x0100, 1);
         writeObject(objects, 6, 0x0180, 0x0100, 2);
@@ -45,7 +49,7 @@ class TestObjectPlacementEncoding {
         writeWord(rings, 0, 0x01C0); writeWord(rings, 2, 0x0100);
         writeWord(rings, 4, 0x0180); writeWord(rings, 6, 0x0100);
         writeWord(rings, 8, 0xFFFF);
-        assertEquals(java.util.List.of(0x01C0, 0x0180),
+        assertEquals(java.util.List.of(0x0180, 0x01C0),
                 CommonPlacementParser.parseRingRecords(new RomByteReader(rings), 0)
                         .stream().map(com.openggf.level.rings.RingSpawn::x).toList());
     }
