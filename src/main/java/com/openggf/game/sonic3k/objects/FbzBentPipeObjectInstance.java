@@ -29,5 +29,13 @@ public final class FbzBentPipeObjectInstance extends AbstractObjectInstance
         // retains the exact right boundary of the expanded d1 span.
         return SolidRoutineProfile.fullSolid(false,true,false);
     }
-    @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_BENT_PIPE);if(r!=null&&r.isReady())r.drawFrameIndex(frame,spawn.x(),spawn.y(),false,false);}
+    @Override public void appendRenderCommands(List<GLCommand> commands) {
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_BENT_PIPE);
+        if (renderer != null && renderer.isReady()) {
+            // Obj_FBZBentPipe ORs bit2 into render_flags, preserving both
+            // placement flip bits. In particular FBZ1's $0CDA/$0317 pipe is mirrored.
+            renderer.drawFrameIndex(frame, spawn.x(), spawn.y(),
+                    (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
+        }
+    }
 }

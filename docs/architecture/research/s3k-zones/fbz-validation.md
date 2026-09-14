@@ -703,3 +703,44 @@ measurements and checks, not aggregate delivery validation.
 The promoted fresh-entry script also completed directly from the BK2 reset
 start without a saved-state input: `fresh-fbz1-selection-v3`, native frame 4408,
 FBZ1 LFC35, A9FC 129,024, Sonic+Tails; execution 4.271s.
+
+
+### Fresh boundary object evidence (2026-09-14 follow-up)
+
+Independent root review accepted the fresh boundary3 outdoor `forward-after-01`
+world afterstate: separate Pillow/descriptor recomputation found zero of 46,080
+world pixels, zero of 2,048 Plane-B descriptors and zero of 64 palette colours
+different. The 74 whole-frame differences remain outside the world rectangle
+(bounds x24..63, y25..215). The reviewer inspected
+`root-fresh-b3-outdoor-review.png`; this does not accept unmeasured phases.
+
+`Obj_FBZBentPipe` uses `ori.b #4,render_flags`, preserving placement flip bits.
+FBZ1 object-position entries at offsets $264/$270 have raw Y $2317/$232F and
+therefore horizontal flips. The renderer previously discarded both flips.
+`TestFbzBentPipeRendering` verifies all four orientations; the correction changes
+presentation only. Fresh native boundary2 versus `boundary2-engine-v5` removes
+1,194/1,258 mismatched world pixels from the two afterstates. Remaining counts
+are 984/966 (ring presentation), so neither complete afterstate is accepted.
+
+Boundary4's remaining 366 forward pixels are a separate presentation-boundary
+gap. `boundary4-native-player-v5` and `boundary4-engine-v5` agree on CPU Sonic
+animation/mapping/index/timer: prelude 5/188/53/1, forward 6/166/3/7, reverse
+5/186/3/1. Native VDP SAT at $F800 nevertheless presents mapping165: pieces
+at (139,76), (131,100), (139,108), with sizes $F/$0/$8 and tiles $680/$690/$691.
+These match ROM `Map_Sonic` frame165, while the engine presents CPU frame166.
+Changing animation counters or excluding Sonic would hide the actual retained
+sprite-presentation boundary. No such workaround was applied. Plane, palette
+and all 224 background scroll words match; reverse world pixels match too.
+
+The Act2 fixture now supports its actual EEC0 stage owner and normal stage4.
+The uncontrolled fresh Act2 pilot (`boundary-act2-native-fresh-v1`) fails the
+480-frame placement prerequisite: declared (4096,2623) becomes (4149,2668).
+The earlier uncontrolled boundary5 similarly moved from (8448,577) to
+(8501,620). These are retained setup failures, not accepted traversal or visual
+proof. A separately declared controlled visual setup is required before retry.
+
+Focused pipe regression: one test, zero failures/skips, 48.439s. The executable
+package completed in 50.875s; paired B2/B4 engine captures took 2.932321s.
+Native B4 player-field observation took 9.031s; the failed Act2 prerequisite
+pilot took 12.333s. Lua fixture guards pass eight scenarios and Python host
+guards pass seven tests. These costs belong to the existing FBZ task accounting.

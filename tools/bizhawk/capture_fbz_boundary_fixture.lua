@@ -1,7 +1,7 @@
 -- FBZ boundary fixture pilot, originating 2026-09-14 FBZ completion.
 -- Inputs: verified host ROM/movie, OGGF_FBZ_FIXTURE_STATE saved native state.
 -- This is explicit frozen-recipe setup, NOT a trace recorder or gameplay oracle.
--- Only the declared Act1 boundary position/event/LFC fields may be written; all
+-- Only the declared boundary position/event/LFC fields may be written; all
 -- subsequent event/redraw/VDP progress is native execution. Never copy output
 -- RAM into an engine. Camera/physics/history remain observed, not synthesized.
 local output = assert(os.getenv("OGGF_FBZ_VISUAL_OUTPUT"))
@@ -10,8 +10,12 @@ local plan = dofile(assert(os.getenv("OGGF_FBZ_VISUAL_PLAN")))
 assert(plan.manifest_sha256 == "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8")
 local boundary=plan.boundary or {id="fbz1-boundary-6-outdoor",x=0x100,y=0x63F,region=0x18,address=0xB014,forward=0x641,reverse=0x63F}
 assert(boundary.address==0xB010 or boundary.address==0xB014)
+local act=boundary.act or 1
+local normal=boundary.normal or 0
+local region_address=boundary.region_address or 0xEED2
 local allowed = {[0xB010]=true,[0xB014]=true,[0xEED2]=true,[0xEED4]=true,
                  [0xEED6]=true,[0xEEC2]=true,[0xFE04]=true}
+if act==2 then allowed[0xEED2]=nil;allowed[0xEEC0]=true end
 local log = assert(io.open(output.."/fixture.jsonl", "w"))
 local function write(address,value,phase)
  assert(allowed[address], "undeclared fixture write")
@@ -34,6 +38,11 @@ local function sample(phase,index)
  dump("VRAM",65536,stem..".vram");dump("CRAM",128,stem..".cram");dump("VSRAM",128,stem..".vsram")
  local parts={string.format('"kind":"sample","phase":"%s","index":%d,"native_frame":%d',phase,index,emu.framecount())}
  parts[#parts+1]=string.format('"player_routine":%d,"player_status":%d,"player_object_control":%d',mainmemory.read_u8(0xB005),mainmemory.read_u8(0xB02A),mainmemory.read_u8(0xB02E))
+ for name,address in pairs({player_anim=0xB020,player_previous_anim=0xB021,
+ player_mapping_frame=0xB022,player_anim_index=0xB023,player_anim_timer=0xB024}) do
+  parts[#parts+1]=string.format('"%s":%d',name,mainmemory.read_u8(address))
+ end
+ parts[#parts+1]=string.format('"outdoor_hscroll_accumulator":%u',mainmemory.read_u32_be(0xA9FC))
  for name,address in pairs(fields) do parts[#parts+1]=string.format('"%s":%d',name,mainmemory.read_u16_be(address)) end
  log:write("{"..table.concat(parts,",").."}\n");log:flush()
 end
@@ -48,7 +57,7 @@ client.invisibleemulation(false);client.speedmode(6400)
 -- Derived ordinary-input states have no movie input log; stop playback before
 -- loading them so BizHawk does not reject them as a movie timeline mismatch.
 movie.stop()
-if not savestate.load(state) or mainmemory.read_u16_be(0xFE10)~=0x0400 then
+if not savestate.load(state) or mainmemory.read_u16_be(0xFE10)~=0x0400+act-1 then
  log:write('{"kind":"failure","phase":"load","reason":"native-state-load-or-act-mismatch"}\n');log:close();client.exit();return
 end
 write(0xB010,boundary.x,"setup");write(0xB014,boundary.y,"setup")
@@ -73,8 +82,8 @@ if mainmemory.read_u16_be(0xB010)~=boundary.x or mainmemory.read_u16_be(0xB014)~
  log:write('{"kind":"failure","phase":"camera-prerequisite","reason":"player-moved-during-native-camera-setup"}\n');log:close();client.exit();return
 end
 assert(mainmemory.read_u8(0xB005)==2 and mainmemory.read_u8(0xB02E)==0,"native player is not ordinarily controlled")
-write(0xEED2,boundary.region,"setup");write(0xEED4,0,"setup");write(0xEED6,0,"setup")
-write(0xEEC2,0,"setup");write(0xFE04,0,"setup")
+write(region_address,boundary.region,"setup");write(0xEED4,0,"setup");write(0xEED6,0,"setup")
+write(0xEEC2,normal,"setup");write(0xFE04,0,"setup")
 sample("setup",0)
 local function cross(phase, coordinate)
  write(boundary.address,coordinate,phase)
@@ -82,15 +91,15 @@ local function cross(phase, coordinate)
  for i=1,40 do
   step();sample(phase,i)
   local routine=mainmemory.read_u16_be(0xEEC2)
-  if routine~=0 then entered=true end
-  if entered and routine==0 then return true end
+  if routine~=normal then entered=true end
+  if entered and routine==normal then return true end
  end
  log:write('{"kind":"failure","phase":"'..phase..'","reason":"redraw-did-not-settle-within-40-native-frames"}\n');log:flush()
  return false
 end
 local forward = cross("forward",boundary.forward)
 step();sample("forward-after",1)
-write(0xEEC2,0,"reverse-setup")
+write(0xEEC2,normal,"reverse-setup")
 write(0xEED4,0xFF00,"reverse-setup");write(0xEED6,0xFF00,"reverse-setup")
 local reverse = cross("reverse",boundary.reverse)
 step();sample("after",1)
