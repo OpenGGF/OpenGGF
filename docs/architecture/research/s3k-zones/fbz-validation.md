@@ -822,3 +822,19 @@ visual attribution of B2 to stage rings was wrong. Native SAT pieces15..18
 use attributes$246B, size$A, x183/153/123/93 and y172: these are FBZ snake-platform
 segments (`ArtTile_FBZMisc+$F2`), not rings. That presentation gap remains open.
 The unchanged B4 CPU/SAT mapping disagreement remains open too.
+
+
+A bounded read-only native object-table probe resolves B2's remaining owner.
+`boundary2-native-objects-v1` reproduces both earlier native PNG hashes exactly
+and records current RAM alongside actual VDP SAT (6.574s). Forward CPU slots
+$B456/$B65C/$B6A6/$B6F0 have x3235/3205/3175/3145, y791, mapping0. With camera
+3039/607 and ROM mapping offset−12, current sprite lefts are184/154/124/94;
+VDP SAT entries15–18 instead contain183/153/123/93, y172, attributes$246B and
+size$A. Reverse current lefts205/175/145/115 similarly precede presented
+204/174/144/114, y170. Engine geometry uses the current positions. Native
+`Obj_FBZSnakePlatformMove` calls `MoveSprite2` before rendering and the $140
+velocity accounts for this one-pixel presentation boundary. Thus B2 and B4
+both expose retained sprite-table presentation; no local snake movement,
+coordinate offset, animation adjustment or image-dependent exclusion was added.
+
+Object-table observation SHA-256: forward `3B5A4E4F2DECBDFE51C729A38E922780833776805CB67C6714AA89E9ECEA9E0A`; reverse `8B3D3D274FB9A15C09B6554EBB00B705511119ACAD9BDBCA48683CA90D111DD6`.
