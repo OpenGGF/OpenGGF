@@ -48,6 +48,21 @@ public class TestSonic3kPlcArtRegistry {
     private static final Set<String> HARDCODED_MAPPING_BUILDERS = Set.of();
 
     @Test
+    public void modZoneIndicesOutsideTheRomTablePlanOnlySharedArt() {
+        // The bundled sample mod zone declares zoneIndex 64 / levelIndex 1024
+        // (src/test/resources/mods/sample-flappy-src/.../level.json). Planning
+        // art for it must not construct a stock resource profile, whose
+        // constructor rejects acts outside 0..1.
+        Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(64, 1024);
+        Sonic3kPlcArtRegistry.ZoneArtPlan aiz = Sonic3kPlcArtRegistry.getPlan(0, 0);
+        assertTrue(plan.standaloneArt().size() <= aiz.standaloneArt().size());
+        assertTrue(plan.levelArt().size() <= aiz.levelArt().size());
+        assertTrue(Sonic3kLevelResourceProfile.isHpzSanctuary(0x16, 1));
+        assertTrue(Sonic3kLevelResourceProfile.isHpzSanctuary(0x17, 1));
+        assertTrue(!Sonic3kLevelResourceProfile.isHpzSanctuary(64, 1024));
+    }
+
+    @Test
     public void poweredFormEffectsUseExactRomBackedMappingContracts() {
         Sonic3kPlcArtRegistry.StandaloneArtEntry stars =
                 Sonic3kPlcArtRegistry.poweredFormArtEntry(
