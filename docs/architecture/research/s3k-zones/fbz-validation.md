@@ -720,7 +720,9 @@ therefore horizontal flips. The renderer previously discarded both flips.
 `TestFbzBentPipeRendering` verifies all four orientations; the correction changes
 presentation only. Fresh native boundary2 versus `boundary2-engine-v5` removes
 1,194/1,258 mismatched world pixels from the two afterstates. Remaining counts
-are 984/966 (ring presentation), so neither complete afterstate is accepted.
+are 984/966, so neither complete afterstate is accepted. Subsequent SAT decoding
+identifies these as snake-platform segment pixels, correcting the initial
+visual attribution to stage rings.
 
 Boundary4's remaining 366 forward pixels are a separate presentation-boundary
 gap. `boundary4-native-player-v5` and `boundary4-engine-v5` agree on CPU Sonic
@@ -787,3 +789,36 @@ in the 38.410s package build. A corrected duplicate diagnostic insertion caused
 the preceding compile failure (31.301s); no test ran in that failed build.
 Native B5/Act2 invocations took 10.230s/6.374s; engine captures took
 1.674171s/1.499333s. These remain part of the same FBZ validation accounting.
+
+
+### Retained stage-ring clock (2026-09-14)
+
+The stage-ring difference in B1 exposes independent ROM state: instructions at
+$77D2 decrement byte $FEB2; expiry reloads7 and increments $FEB3 modulo4.
+`ChangeRingFrame` runs after the ordinary object/event loop. The existing
+`Sonic3kGlobalAnimationState` already owns this dispatch for the adjacent vine
+word, so it now also owns the ring timer/frame. The combined animator snapshot
+stores both bytes; S3K ring rendering/bounds read an internal semantic provider.
+S1/S2 retain their existing counter-derived selection. `loc_60DE` clears these
+bytes before fresh setup objects while excluding `AIZ_vine_angle`; the fresh
+profile performs that reset, and seamless core-only replacements retain them.
+No native output or fitted clock offset feeds the engine.
+
+The initial focused selection passed65 tests/zero skips in50.528s, including
+actual combined-animator restore/forward replay twice, real FBZ1→2 animator
+replacement, byte expiry/wrap, vine ownership, AniPLC VBlank lifecycle and
+required S3K bootstrap gates. The subsequent actual repeated fresh-load test
+and shared RingManager suite passed38 tests/zero skips in38.365s including
+packaging. Fresh B1/B2 engine captures took1.350260s/1.265708s; artifact SHA-256
+`C1899FB7C1A22E1C1D9F6EFE60AED044C77D877E068A73B23D7290B462864625`.
+
+`boundary1-engine-ring-v1` versus `boundary1-native-fresh-v4` now has zero world,
+Plane-B and palette differences in both afterstates; each whole frame retains
+74 outside-world differences. Independent root review reproduced both pairs
+and viewed `root-b1-ring-review.png`, accepting only these bounded world
+afterstates, not whole-frame parity.
+`boundary2-engine-ring-v1` still has984/966 world differences, proving the earlier
+visual attribution of B2 to stage rings was wrong. Native SAT pieces15..18
+use attributes$246B, size$A, x183/153/123/93 and y172: these are FBZ snake-platform
+segments (`ArtTile_FBZMisc+$F2`), not rings. That presentation gap remains open.
+The unchanged B4 CPU/SAT mapping disagreement remains open too.

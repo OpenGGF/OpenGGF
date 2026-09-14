@@ -83,7 +83,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and background shaders retain fragment centres while scaling, preventing a
   one-pixel sampling shift caused by GPU division rounding. Retained background
   redraws use native strip counts, clipped windows and aligned column sources,
-  preserving untouched rows. Bent pipes retain their ROM placement flips.
+  preserving untouched rows. Bent pipes retain their ROM placement flips. Stage rings retain the native
+  animation timer across level-counter resets and seamless reloads, including rewind.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 

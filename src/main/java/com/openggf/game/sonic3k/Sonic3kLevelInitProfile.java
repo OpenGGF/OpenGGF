@@ -137,7 +137,13 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
     private InitStep requestInitialProcessSpritesStep(LevelLoadContext ctx) {
         return new InitStep("RequestInitialProcessSprites",
                 "S3K: arm post-load Load_Sprites then Process_Sprites setup",
-                () -> ctx.requestInitialProcessSpritesFromProfile(initialProcessSpritesLifecycle()));
+                () -> {
+                    // Fresh Level loc_60DE clears ring timer/frame before the
+                    // first Process_Sprites; core-only seamless loads skip this step.
+                    if (GameServices.level().getAnimatedPatternManager() instanceof Sonic3kLevelAnimationManager animator)
+                        animator.resetFreshLevelRingAnimation();
+                    ctx.requestInitialProcessSpritesFromProfile(initialProcessSpritesLifecycle());
+                });
     }
 
     /** S3K sidekick: -32px X, +4px Y (ROM: {@code player_pos - $20}, {@code player_pos + 4}). */

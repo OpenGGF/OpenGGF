@@ -498,12 +498,21 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
                 levelManager != null ? levelManager.getObjectManager() : null);
     }
 
+    private int stageRingFrame(int frameCounter) {
+        // A provider owns retained ROM state; S1/S2 retain their existing
+        // counter-derived presentation when no such provider is installed.
+        if (levelManager != null && levelManager.getAnimatedPatternManager()
+                instanceof com.openggf.level.animation.StageRingAnimationFrameProvider provider)
+            return provider.stageRingAnimationFrame();
+        return renderer.getSpinFrameIndex(frameCounter);
+    }
+
     public void draw(int frameCounter) {
         if (renderer == null) {
             return;
         }
 
-        int spinFrameIndex = renderer.getSpinFrameIndex(frameCounter);
+        int spinFrameIndex = stageRingFrame(frameCounter);
         int activeCount = placement.activeIndexCount();
         for (int i = 0; i < activeCount; i++) {
             int index = placement.activeIndexAt(i);
@@ -571,7 +580,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer == null) {
             return;
         }
-        int spinFrameIndex = renderer.getSpinFrameIndex(frameCounter);
+        int spinFrameIndex = stageRingFrame(frameCounter);
         renderer.drawFrameIndex(spinFrameIndex, x, y);
     }
 
@@ -793,7 +802,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         if (renderer == null) {
             return new PatternSpriteRenderer.FrameBounds(0, 0, 0, 0);
         }
-        return renderer.getFrameBounds(frameCounter);
+        return renderer.renderer.getFrameBoundsForIndex(stageRingFrame(frameCounter));
     }
 
     public int getSparkleStartIndex() {

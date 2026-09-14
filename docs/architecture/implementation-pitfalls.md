@@ -137,3 +137,14 @@ pass zero outdoors, not the bobbed VScroll. Indoors `Setup_TileColumnDraw`
 resolves 16px blocks (`d1 >> 4`); passing raw Y77 into an 8px tile copier
 incorrectly begins at row9 instead of row8. Keep this FBZ caller rule in its
 owner, and account for the ordinary row-scroll pass separately in strip tests.
+
+
+S3K `ChangeRingFrame` owns independent bytes `$FEB2/$FEB3`, not a division of
+`Level_frame_counter`. `loc_60DE` clears them before fresh setup objects because
+they lie inside `Oscillating_table..AIZ_vine_angle`; the vine word itself is
+excluded. Seamless core-only reloads skip that clear. Keep the bytes with the
+existing S3K global animation owner and snapshot them with the combined animator.
+The internal stage-ring frame provider lets render/bounds consumers read that
+state without changing other games' animation rules. An explicit visual fixture
+LFC reset exposes this ownership difference; copying native ring bytes or fitting
+a renderer offset would conceal it (FBZ paired boundary investigation, 2026-09-14).
