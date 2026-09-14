@@ -109798,3 +109798,11 @@ stationary defeat drop, preserving ordinary active-phase movement. Merely allowi
 controlled solid evaluation was insufficient because the new-contact rejection
 still ran before the generic retained-ride branch; that rejected attempt did not
 move the trace. No shared collision algorithm or trace state was changed.
+
+The final independent confirmation on `38e2e75aa` used queued Maven,
+`-Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestS3kSonicTailsFbzSegmentTraceReplay surefire:test` with verified absolute
+ROM properties. It completed in 12.384 seconds: **5,109 errors / zero warnings /
+33,712 rows**, first row 116 Tails subpixel `$D000/$B800`, one failed JUnit test,
+zero errors/skips. Upstream reconciliation introduced no Java changes after
+`c84e63ab0`; both strict recordings remain red at the documented frontiers.

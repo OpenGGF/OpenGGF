@@ -343,3 +343,92 @@ of new controlled contacts. Complete replay reaches the next main physics fronti
 at row 22,397, a one-row world-coordinate rebase difference; the overall trace
 remains red. The detailed counts and rejected two-hook attempt are in the frontier
 log. The paired native start/cadence and full Act 1 route acceptance remain open.
+
+### Combined validation and final strict confirmation
+
+`38e2e75aa` cleanly merges develop `5e3700a04`, including the automatic Maven
+queue. That upstream change modifies the Python runner and its guidance, not
+Java, POM or test selection policy. The user-authorized separate FBZ accounting
+still retains its original base, 80-minute aggregate ceiling and one combined
+attempt. Queue wait is recorded separately from execution. One obsolete wrapper
+was cancelled while waiting (514.146 seconds, no Maven launch); its replacement
+acquired the queue and completed without spending that wait as validation time.
+
+The final independent strict command on `38e2e75aa`, queued Maven with
+`-Dmse=off -B -Ptrace-replay-r7
+-Dtest=TestS3kSonicTailsFbzSegmentTraceReplay surefire:test` and verified absolute
+ROM properties, took 12.384 seconds: one failed test, no errors/skips,
+**5,109 comparison errors, zero warnings, 33,712 rows**, first row 116 Tails
+subpixel `$D000/$B800`. Together with the complete recording on `c84e63ab0`'s
+source, the final strict pair remains red; this is not zone certification.
+
+The one combined invocation used the unmodified runner's selection/execution
+inside its automatic queue, with original base
+`435ec2e68c398bcc17af78e69f3e92b637bec90a`, two ordinary workers, all guards,
+and an 11.305-minute execution cap. Java 21, Lua 5.4 and PowerShell preflight
+passed. Run `20260914T095245Z-c0c6fbd8` completed against clean `38e2e75aa`:
+
+- Ordinary: 2,538 candidate classes, 2,539 reports, **20,098 tests; 20,082
+  passed, one failure, one error, 14 skips**, 254.59 seconds.
+- Guards: **667 tests; 663 passed, four failures, no errors/skips**,
+  172.63 seconds. Whole wrapper execution cost 427.410 seconds.
+- Skips were opt-in audio/rewind/performance/capture probes, unavailable EGL
+  or local native audio references, the opt-in AIZ1 pilot, and the unchanged
+  CPZ spin-tube capture assumption. No missing-ROM skip occurred.
+
+The two ordinary failures were test contracts exposed by this delivery:
+`TestFbzBossGraphRewind#act1MinibossFullNativeGraphRoundTripsAndReplaysDeterministically`
+threw `Kosinski module queue is unavailable` because its graph-only stub had
+not explicitly omitted the new ROM art service. The harness now returns null,
+as the existing ROM-less miniboss rewind harness does; all graph assertions stay.
+`TestSidekickCpuControllerLevelStart#levelBoundaryKillPreservesRomOnObjectBitOnEntryFrame`
+expected a forced Death owner (`24`) instead of `-1`. S2 `KillCharacter` writes
+the animation once and `Obj02_Dead` does not repeat it; the test now matches that
+contract. Neither correction changes runtime behavior.
+
+Three guard failures match the recorded KiS2/destination baseline exactly:
+`TestBuildToolingGuard#traceChaserStaysExactOptionalAndOutsideOrdinaryBuilds`
+and `TestTraceChaserBoundaryGuard#exactGitlinkAndNonFloatingConfigurationAreTracked`
+expect gitlink `4fb6d080` while the base pins `9fd957bb`;
+`TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree` flags
+the unchanged `FbzRouteEvidenceProbe#printEvidence` and
+`LevelSolidityMapProbe#writeSolidityMap`. The fourth,
+`TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`,
+still requires five exact direct-Maven/task-receipt strings removed by upstream's
+queue guidance. Its matched destination check and the two focused test corrections
+are recorded below. Consumed combined diagnostics were acknowledged and deleted;
+no broad retry is used.
+
+The matched guard command on unchanged main-workspace develop `5e3700a04`,
+queued Maven `-Dmse=off -B -Pguards
+-Dtest=TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap
+test`, failed its one test with exactly the same five missing strings, no
+errors/skips (18.595 seconds). Both guidance files and the guard source are
+byte-identical to the candidate. This fourth failure is attributed to upstream;
+it is not repaired as unrelated FBZ work.
+
+The post-broad focused command, queued Maven `-Dmse=off -B
+-Dtest=TestFbzBossGraphRewind,TestSidekickCpuControllerLevelStart,TestSidekickCpuDespawnParity
+test`, passed **80 tests, zero failures/errors/skips** in 19.246 seconds:
+three whole-graph rewind checks, sixteen level-start checks and 61 despawn
+checks. The candidate's runtime tree is unchanged from the combined run;
+only the two test contracts and this evidence changed afterward. This closes
+the delivery's new ordinary failures without claiming that the red broad run
+was green. Aggregate execution is **4,556.966 seconds / 75.949 minutes** of
+the agreed 80-minute ceiling, one broad attempt. Queue waits are excluded.
+
+Task cleanup audit: the clean timing branch's first five source/test changes
+are represented by `157011549` → `ef13df370`, `5b7b60a70` → `e8307ddc2`,
+`a083220ff` → `9fa8fc0a0`, `0597da5a1` → `8eb04d603`, and
+`54d9ff443` → `c31bdbd7a`. Later timing commits are exact cherry-picks;
+subsequent candidate differences are the reviewed setup/boss/route additions
+and upstream integration. The clean older route-test tip `87d564454` is already
+an ancestor of develop. These task branches contain no unknown uncommitted work.
+The requested durable S1 video and native visual candidates remain outside the
+repository under `$FBZ_CAPTURE_ROOT/fbz-completion-20260914/`.
+
+Integration uses develop without switching the main workspace branch. The
+validated runtime tree and the focused test corrections are the delivery
+candidate; full Act 1 route proof, strict trace parity and accepted paired visual
+evidence remain outstanding. Push and cleanup outcomes are reported with the
+integrated commit, rather than being inferred from this local validation.

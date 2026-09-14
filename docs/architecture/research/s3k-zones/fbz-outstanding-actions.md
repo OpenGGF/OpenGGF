@@ -8,8 +8,8 @@ green completion claim.
 ## Current native trace baseline
 
 The pinned `435ec2e68` baseline reproduces 5,666 complete-run errors,
-first row 34 queue busy. The current `190cbd408` candidate plus production
-setup and normal-arm/chain corrections reproduces **4,501 errors**, first row
+first row 34 queue busy. The current `c84e63ab0` candidate (merged with develop
+at `38e2e75aa`) reproduces **4,501 errors**, first row
 **16,600 Tails animation 5/6**, and **5,109** in the independent recording,
 first row 116 Tails subpixel `$D000/$B800`. Both complete strict comparisons
 with zero warnings or skips. These remain red, and Act 1 completion has not
