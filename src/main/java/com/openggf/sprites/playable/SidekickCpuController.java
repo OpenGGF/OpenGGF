@@ -51,9 +51,6 @@ public class SidekickCpuController {
     private static final int JUMP_DISTANCE_TRIGGER = 64;
     private static final int JUMP_HEIGHT_THRESHOLD = 32;
     private static final int PUSH_STATUS_GRACE_FRAMES = 16;
-    private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE =
-            PUSH_STATUS_GRACE_FRAMES - 4;
-    private static final int LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE = 7;
     private static final int RIDING_OBJECT_PUSH_BRIDGE_MIN_GRACE =
             PUSH_STATUS_GRACE_FRAMES - 2;
     private static final int OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE = 4;
@@ -2295,9 +2292,6 @@ public class SidekickCpuController {
                         && Math.abs(sidekick.getGSpeed()) >= LOCAL_BELOW_TARGET_REBOUND_NUDGE_MIN_GSPEED
                         && dy >= 0
                         && localBelowTargetFacingIntoFollowSide;
-        boolean localBelowTargetBridgeWindow =
-                normalPushingGraceFrames >= LOCAL_BELOW_TARGET_PUSH_BRIDGE_MIN_GRACE
-                        && normalPushingGraceFrames <= LOCAL_BELOW_TARGET_PUSH_BRIDGE_MAX_GRACE;
         // The local push-grace nudge suppression is an object-order bridge: it
         // exists for zones where solid-object processing clears Tails' push bit a
         // frame early/late relative to ROM's CPU slot, so the engine must not run
@@ -2376,23 +2370,9 @@ public class SidekickCpuController {
             // immediately (sonic3k.asm:26696-26729,28330-28401).
             suppressNextAirbornePushFollowSteering = false;
         }
-        // Engine-side push grace only skips follow steering when it models a
-        // ROM-visible current push bit at Tails' CPU slot. Object-order grace
-        // covers provider-approved SolidObjectFull timing; the local
-        // below-target bridge covers the same side-contact continuity only in
-        // the fresh local push window, while Tails is still facing into the
-        // delayed follow side. Once that early continuity window is gone, or
-        // the facing bit flips away from the contact, ROM current Status_Push
-        // is clear and Ctrl_2 falls through FollowLeft/FollowRight
-        // (sonic3k.asm:26702-26729).
-        boolean localBelowTargetGrace =
-                localGracePushBypass
-                        && !supportGraceKeepsFollowSteering
-                        && !freshBelowTargetReboundGrace
-                        && localBelowTargetBridgeWindow
-                        && !delayedInputIntoFollowSide
-                        && dy >= 0
-                        && localBelowTargetFacingIntoFollowSide;
+        // loc_13DD0 tests the current Status_Push bit, not elapsed time since
+        // an earlier push. A cleared bit must reach follow steering even when
+        // the delayed target remains locally below the player.
         boolean objectOrderGrace = localGracePushBypass
                 && normalPushingGraceFrames >= OBJECT_ORDER_PUSH_BRIDGE_MIN_GRACE
                 && objectOrderFollowSteeringContext
@@ -2409,12 +2389,10 @@ public class SidekickCpuController {
                         && sidekickRules.sidekickFollowNudgeBlockedByObjectControlBit0()
                         && sidekick.isObjectControlSuppressesMovement();
         boolean skipFollowSteering = currentPushBypass
-                || localBelowTargetGrace
                 || ridingObjectPushGrace
                 || interactObjectPushGrace
                 || (objectOrderGrace && !supportGraceKeepsFollowSteering);
         String followBranch = currentPushBypass ? "current_push_bypass"
-                : localBelowTargetGrace ? "grace_push_bypass"
                 : ridingObjectPushGrace ? "riding_push_grace"
                 : interactObjectPushGrace ? "interact_push_grace"
                 : (objectOrderGrace && !supportGraceKeepsFollowSteering) ? "grace_push_bypass"
