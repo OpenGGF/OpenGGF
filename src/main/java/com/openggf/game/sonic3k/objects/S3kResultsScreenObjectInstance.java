@@ -527,6 +527,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // to Obj_LevelResultsCreate; Create polls Kos_modules_left before
         // allocating child objects and setting Events_fg_5
         // (docs/skdisasm/sonic3k.asm:62512-62584, 62586-62616).
+        // Obj_LevelResultsCreate rechecks global Kos_modules_left on every
+        // allocation retry, including after its own three archives were claimed.
+        if (S3kRuntimeArtCoordinator.from(services()).moduleQueue().hasPendingPhysicalModules()) {
+            return false;
+        }
         if (!resultsArtClaimed) {
             rebindQueuedResultsArtAfterRestore();
             if (queuedResultsArt == null || !queuedResultsArt.isReady()) {
@@ -537,8 +542,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         }
         // A failed first AllocateObjectAfterCurrent leaves Create active for a
         // retry: nothing is published and Events_fg_5 stays clear until at least
-        // the first child exists. The art stays claimed across that retry, since
-        // the ROM's queue poll already completed (sonic3k.asm:62586-62616).
+        // the first child exists. The art stays claimed across that retry while
+        // the global queue poll still runs (sonic3k.asm:62586-62616).
         if (!createResultChildSsts()) {
             return false;
         }

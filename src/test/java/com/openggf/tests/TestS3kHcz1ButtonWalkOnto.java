@@ -142,6 +142,10 @@ public class TestS3kHcz1ButtonWalkOnto {
         sprite.setGSpeed((short) 0);
         sprite.setAir(false);
         sprite.setOnObject(false);
+        // The setup teleport also moves the viewport. Obj_Button loc_2C62C
+        // skips SolidObjectTop offscreen; the earlier spike-safe setup camera
+        // must not remain above the button during this exact-height check.
+        camera.updatePosition(true);
 
         Sonic3kLevelTriggerManager.reset();
     }

@@ -2,6 +2,10 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
+import com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator;
+import com.openggf.game.timing.HardwareServiceBoundary;
+import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.tests.HardwareBoundaryPump;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -58,15 +62,11 @@ class TestS3kResultsKosQueueAndChildren {
                 queue.queuedArchives().stream()
                         .map(KosinskiModuleQueue.ArchiveState::destinationVramBytes).toList());
 
-        // Publication is gated on HardwareWorkKind.KOS_MODULE_QUEUE, which is the
-        // engine's Kos_modules_left: S3kKosModuleQueue enforces the ROM's four-deep
-        // FIFO over that one kind, and every S3K KosM consumer shares it. The
-        // gameplay-scoped KosinskiModuleQueue above is a separate owner used only by
-        // the PLC loader and FBZ, so its pending archive is deliberately not part of
-        // this gate (see the KosM ownership section of the merge status doc).
+        // Observe publication itself: the same full frame may create the
+        // children and reload Act2, submitting a different terrain KosM batch.
+        // A post-frame global count cannot identify still-pending results art.
         int guard = 0;
-        while (com.openggf.game.GameServices.hardwareTiming()
-                .incompleteCount(com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE) > 0) {
+        while (resultChildren().isEmpty()) {
             assertEquals(0, GameServices.level().getCurrentAct(),
                     "Obj_LevelResultsCreate may not publish while its own KosM loads are pending");
             assertTrue(resultChildren().isEmpty());
@@ -76,8 +76,9 @@ class TestS3kResultsKosQueueAndChildren {
             assertTrue(++guard < 64, "results KosM work must complete");
         }
         assertTrue(queue.isIdle());
+        assertTrue(root.hasLoadedResultsArt(),
+                "publication requires claiming all three completed results archives");
 
-        fixture.stepFrame(false, false, false, false, false);
         assertEquals(1, GameServices.level().getCurrentAct(),
                 "Events_fg_5 publication must occur only after the real child allocation pass");
         List<S3kResultsElementObjectInstance> children = resultChildren();
@@ -111,8 +112,8 @@ class TestS3kResultsKosQueueAndChildren {
         awaitResultsArt(fixture, root);
         assertTrue(fixture.gameplayMode().getKosinskiModuleQueue().isIdle());
 
-        // Fill immediately before Obj_LevelResultsCreate executes. Ordinary
-        // placement objects may retire while the KosM jobs complete.
+        // Exercise this single owner's allocation boundary. A whole level
+        // frame could retire other SSTs or consume slots before Create runs.
         List<SlotFiller> fillers = new ArrayList<>();
         while (true) {
             SlotFiller filler = ObjectConstructionContext.construct(TestEnvironment.objectServices(),
@@ -123,7 +124,7 @@ class TestS3kResultsKosQueueAndChildren {
             }
             fillers.add(filler);
         }
-        fixture.stepFrame(false, false, false, false, false);
+        root.update(GameServices.level().getObjectManager().getVblaCounter(), fixture.sprite());
         assertEquals(0, GameServices.level().getCurrentAct());
         assertTrue(resultChildren().isEmpty());
         assertFalse(((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
@@ -133,9 +134,11 @@ class TestS3kResultsKosQueueAndChildren {
                 .sorted(Comparator.comparingInt(AbstractObjectInstance::getSlotIndex).reversed())
                 .limit(12)
                 .forEach(manager::removeDynamicObject);
-        fixture.stepFrame(false, false, false, false, false);
+        root.update(GameServices.level().getObjectManager().getVblaCounter(), fixture.sprite());
 
-        assertEquals(1, GameServices.level().getCurrentAct());
+        assertTrue(actTransitionPublished());
+        assertEquals(0, GameServices.level().getCurrentAct(),
+                "the isolated Create dispatch precedes ScreenEvents' reload");
         assertEquals(12, resultChildren().size());
     }
 
@@ -154,10 +157,11 @@ class TestS3kResultsKosQueueAndChildren {
                 .sorted(Comparator.comparingInt(AbstractObjectInstance::getSlotIndex).reversed())
                 .limit(availablePrefixSlots)
                 .forEach(manager::removeDynamicObject);
-        fixture.stepFrame(false, false, false, false, false);
+        root.update(GameServices.level().getObjectManager().getVblaCounter(), fixture.sprite());
 
-        assertEquals(1, GameServices.level().getCurrentAct(),
-                "a failure after the initial allocation still advances/publishes");
+        assertTrue(actTransitionPublished(),
+                "a failure after the initial allocation still publishes Events_fg_5");
+        assertEquals(0, GameServices.level().getCurrentAct());
         List<S3kResultsElementObjectInstance> prefix = resultChildren();
         assertEquals(availablePrefixSlots, prefix.size());
         assertEquals(12, root.nativeChildrenRemaining(),
@@ -178,7 +182,7 @@ class TestS3kResultsKosQueueAndChildren {
                 () -> new S3kResultsScreenObjectInstance(PlayerCharacter.TAILS_ALONE, 1));
         manager.addDynamicObject(root);
         awaitResultsArt(fixture, root);
-        fixture.stepFrame(false, false, false, false, false);
+        root.update(1, fixture.sprite());
         List<S3kResultsElementObjectInstance> capturedChildren = resultChildren();
         assertEquals(12, capturedChildren.size());
         List<Integer> capturedSlots = capturedChildren.stream()
@@ -187,7 +191,7 @@ class TestS3kResultsKosQueueAndChildren {
         KosinskiModuleQueue queue = fixture.gameplayMode().getKosinskiModuleQueue();
         assertTrue(queue.enqueue(GameServices.rom().getRom(),
                 Sonic3kConstants.ART_KOSM_SS_RESULTS_ADDR, 0x4000));
-        fixture.stepFrame(false, false, false, false, false);
+        queue.processNativeFrame();
         assertEquals(KosinskiModuleQueue.Phase.DECOMPRESSION_IN_PROGRESS, queue.phase());
         KosinskiModuleQueue.Snapshot capturedQueue = queue.capture();
         CompositeSnapshot snapshot = fixture.gameplayMode().getRewindRegistry().capture();
@@ -218,18 +222,81 @@ class TestS3kResultsKosQueueAndChildren {
         }
     }
 
-    /** Stops at completed art, before the next Obj_LevelResultsCreate dispatch. */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void completedResultsArtStillWaitsForAnUnrelatedPhysicalModule(boolean retryAfterClaim)
+            throws Exception {
+        HeadlessTestFixture fixture = fixture();
+        S3kResultsScreenObjectInstance root = createResults();
+        GameServices.level().getObjectManager().addDynamicObject(root);
+        awaitResultsArt(fixture, root);
+
+        if (retryAfterClaim) {
+            ObjectManager manager = GameServices.level().getObjectManager();
+            List<SlotFiller> fillers = fillEveryDynamicSlot(manager);
+            root.update(1, fixture.sprite());
+            assertTrue(root.hasLoadedResultsArt());
+            assertTrue(resultChildren().isEmpty(), "full SST keeps Create active after its art claim");
+            fillers.stream().sorted(Comparator.comparingInt(AbstractObjectInstance::getSlotIndex).reversed())
+                    .limit(12).forEach(manager::removeDynamicObject);
+        }
+        var moduleQueue = S3kRuntimeArtCoordinator.current().moduleQueue();
+        var other = moduleQueue.queue(GameServices.rom().getRom(),
+                Sonic3kConstants.ART_KOSM_SS_RESULTS_ADDR, 0x200);
+        assertTrue(moduleQueue.hasPendingPhysicalModules());
+        assertFalse(moduleQueue.isReady(other));
+        root.update(1, fixture.sprite());
+        assertTrue(resultChildren().isEmpty(),
+                "Obj_LevelResultsCreate polls global Kos_modules_left, not only its own handles");
+        assertEquals(retryAfterClaim, root.hasLoadedResultsArt(),
+                "the global gate preserves an earlier claim while blocking every Create retry");
+        assertEquals(0, GameServices.level().getCurrentAct());
+
+        int guard = 0;
+        while (!moduleQueue.isReady(other)) {
+            serviceArtBoundary(fixture);
+            assertTrue(++guard < 256, "the unrelated physical archive must retire");
+        }
+        assertFalse(moduleQueue.hasPendingPhysicalModules());
+        root.update(2, fixture.sprite());
+        assertTrue(root.hasLoadedResultsArt());
+        assertEquals(12, resultChildren().size());
+        assertTrue(actTransitionPublished());
+        assertEquals(0, GameServices.level().getCurrentAct());
+    }
+
+    private static boolean actTransitionPublished() {
+        return ((Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider())
+                .getFbzEvents().isEventsFg5();
+    }
+
+    /** Stops at completed art without dispatching Create or a later level reload. */
     private static void awaitResultsArt(HeadlessTestFixture fixture,
                                         S3kResultsScreenObjectInstance root) {
         root.update(GameServices.level().getObjectManager().getVblaCounter(), fixture.sprite());
+        var timing = GameServices.hardwareTiming();
+        var submitted = timing.pendingHandles().stream()
+                .filter(handle -> handle.kind() == HardwareWorkKind.KOS_MODULE_QUEUE).toList();
+        assertEquals(3, submitted.size(), "the fixture submits the three actual results archives");
         int guard = 0;
-        while (GameServices.hardwareTiming().incompleteCount(
-                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE) > 0) {
-            assertTrue(resultChildren().isEmpty(), "pending art must not publish result children");
-            fixture.stepFrame(false, false, false, false, false);
-            assertTrue(++guard < 64, "results KosM work must complete");
+        while (submitted.stream().anyMatch(handle -> !timing.isReady(handle))) {
+            assertTrue(resultChildren().isEmpty(), "service-only work cannot dispatch Create");
+            assertEquals(0, root.activeResultsFrames());
+            serviceArtBoundary(fixture);
+            assertTrue(++guard < 256, "results KosM work must complete");
         }
+        assertFalse(S3kRuntimeArtCoordinator.current().moduleQueue().hasPendingPhysicalModules(),
+                "native Kos_modules_left must be empty at the pre-Create checkpoint");
         assertTrue(resultChildren().isEmpty(), "child allocation belongs to the next dispatch");
+    }
+
+    private static void serviceArtBoundary(HeadlessTestFixture fixture) {
+        // Same physical services as LevelLoop, deliberately without the object
+        // dispatch. This is the pre-Create fixture boundary, not a gameplay tick.
+        HardwareBoundaryPump.service(HardwareServiceBoundary.VINT_SERVICE);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.POST_OBJECTS);
+        HardwareBoundaryPump.service(HardwareServiceBoundary.PRE_MAIN_LOOP);
+        fixture.gameplayMode().getKosinskiModuleQueue().processNativeFrame();
     }
 
     private static HeadlessTestFixture fixture() {

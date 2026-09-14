@@ -76,7 +76,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   retain their original Tails interaction bank, and the Act 2 subboss stops
   movement on its laser-ready wait transition. The final capsule and button keep
   established standing contacts throughout the victory pose. Results retain boss-owned
-  controls and camera bounds; the exit door consumes collision in its own dispatch,
+  controls and camera bounds, and results creation waits for the whole physical
+  KosM queue even on allocation retries. The exit door consumes collision in its own dispatch,
   and forced exit input preserves the already-recorded follower history. Both Act 2 bosses retain their
   physical exit-art jobs through readiness and rewind; moving-background LEFT
   probes translate world coordinates before the sensor mirrors its tile metric.
