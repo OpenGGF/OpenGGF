@@ -21,9 +21,9 @@ import java.util.List;
 /** Transient {@code ChildObjDat_703EC} laser, {@code loc_70192-loc_702E4}. */
 final class Fbz2SubbossLaserChild extends AbstractFbz2SubbossChild
         implements TouchResponseProvider, RewindRecreatable, RomWorldPositionedObject {
-    private enum Phase { CHARGE, BEAM, RETRACT, WAIT_DELETE, DELETE_PENDING }
+    private enum Phase { CHARGE, BEAM, RETRACT, WAIT_DELETE, DELETE_PENDING, SETUP }
 
-    private int phaseOrdinal;
+    private int phaseOrdinal = Phase.SETUP.ordinal();
     /** ROM animation byte {@code anim_frame_timer}. */
     private int animTimer;
     /** ROM animation byte {@code anim_frame}. */
@@ -60,6 +60,8 @@ final class Fbz2SubbossLaserChild extends AbstractFbz2SubbossChild
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         switch (Phase.values()[phaseOrdinal]) {
+            // loc_70192 installs the charging routine and returns without animation.
+            case SETUP -> phaseOrdinal = Phase.CHARGE.ordinal();
             case CHARGE -> updateCharge();
             case BEAM -> updateBeam();
             case RETRACT -> updateRetract();

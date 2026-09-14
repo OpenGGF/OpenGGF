@@ -69,7 +69,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   targets follow the Act 2 coordinate rebase. Retained title children and camera
   workers follow their original dispatch order. Chains reject hurt/dead grabs,
   vertical cages keep their orbit separate from the player ground angle, and
-  magnetic platforms use the native ceiling and contact boundaries.
+  magnetic platforms use the native ceiling and contact boundaries. Top-only
+  buttons and disappearing platforms use their native landing edges and level
+  clock; lightning attraction avoids an extra ordinary-ring sweep. Sideways
+  spikes release owned push state after their hurt callback, elevator cars
+  retain their original Tails interaction bank, and the Act 2 subboss stops
+  movement on its laser-ready wait transition.
   Upright spikes use their animated FBZ art, while wall spikes retain the shared
   sideways artwork; both tile banks participate in renderer refresh. Foreground
   and background shaders retain fragment centres while scaling, preventing a
