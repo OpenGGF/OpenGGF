@@ -1,5 +1,12 @@
 # FBZ Act 2 coverage matrix
 
+**Known donor challenge — leave unchanged (user decision, 2026-09-14):** the
+right-to-left early `$0DC0` elevator crossing with S1 Sonic is feasible but
+requires a demanding run-up and roll. The tested faster approach has a five-frame
+safe arrival window (~0.083 seconds at 60 Hz). See the
+[retained challenge and decision](../../research/s3k-zones/fbz-outstanding-actions.md#known-s1-donor-challenge-early-act-2-elevator-leave-unchanged).
+
+
 Hanging-handle presentation follow-up (2026-09-14): horizontal `$72` grab regions
 must not submit vertical chain art (`Obj_FBZChainLink` → `loc_3AA5A`).
 `TestFbzRailAndChainPlatforms` covers all six used horizontal subtypes and

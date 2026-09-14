@@ -1050,3 +1050,22 @@ inspected. Inputs, CSVs, PNGs and videos are in external task directory
 
 This updates local feasibility evidence only. No engine change, native-parity
 claim, other-width/character guarantee or new full-suite claim is made.
+
+### User decision: retain the five-frame S1 donor challenge
+
+On 2026-09-14 the user explicitly requested documentation of this investigation
+and its difficulty, with **no behavior changes for now**. The faster 106-frame
+Left run-up from `$0F10,$07EC` in the 96-delay sweep on `323e1d2ba` safely clears
+at initial neutral delays **2–6 inclusive: five frames**, approximately 0.083
+seconds at 60 Hz. The 100-frame approach from the same start safely clears at
+2–3 only. Both release Left before holding Down. This five-frame measurement
+belongs to that 320-pixel, S1 donor, cold local setup; the later `$0F12` adjustment
+was a separate bounded comparison matching integer entry coordinates and car
+phase, not a repeat of the full timing sweep.
+
+Record this as a known player-facing donation challenge. A precisely scripted
+pass proves feasibility, not comfortable playability. Leave physics, car timing,
+collision and assists unchanged; revisit only on user request. The decision is
+linked prominently from the FBZ outstanding-actions record and Act 2 matrix.
+This follow-up changes documentation only; local links and whitespace were
+checked, with no reason to repeat engine tests.

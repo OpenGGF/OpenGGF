@@ -5,6 +5,27 @@ large FBZ implementation uplift, but FBZ is not yet accepted as pixel-perfect.
 The remaining work is intentionally recorded here rather than hidden behind a
 green completion claim.
 
+## Known S1 donor challenge: early Act 2 elevator (leave unchanged)
+
+Investigated with the user on 2026-09-14: passing the descending elevator at
+`$0DC0,$07B0` **right-to-left** with donated Sonic 1 Sonic is possible, but remains
+a difficult run-up and roll maneuver. The reported nearby player position is
+centre `$0E0E,$07EC` (approximately top-left 3588,2009).
+
+The tested faster approach has a **five-frame safe arrival window**, about
+**0.083 seconds at 60 Hz**, versus two frames for the slower approach. More speed
+helps, but a scripted success does not make this a forgiving route for a player.
+The five-frame result belongs to a specific local setup and input sequence;
+it is not a universal limit on every possible strategy.
+
+**User decision: leave the behavior unchanged for now.** Retain this as a known
+S1 donation challenge, not a resolved usability issue or a request to adjust
+physics, elevator timing, collision, or donation assists. Revisit only if the
+user requests it. Successful, blocked, and crushed gameplay videos and the
+matched-phase speed comparison are recorded in the
+[FBZ completion investigation](../../plans/2026-09-14-fbz-completion.md#reverse-crossing-speed-compared-at-the-same-observed-elevator-phase).
+The [Act 2 matrix](../../validation/levels/s3k-fbz-act2.md) retains the coverage limits.
+
 ## Current native trace baseline
 
 The remaining-items delivery is pinned to develop `51677cdd2`. Its inherited
