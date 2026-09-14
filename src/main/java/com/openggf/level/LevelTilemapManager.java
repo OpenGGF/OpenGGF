@@ -281,6 +281,13 @@ public class LevelTilemapManager {
             backgroundTilemapDirty = true;
             bgWindowShiftCandidate = false;
         }
+        if (requiresFullWidthBgTilemap && backgroundTilemapData != null
+                && backgroundTilemapWidthTiles * Pattern.PATTERN_WIDTH < getLayerLevelWidthPx((byte) 1)) {
+            // A retained VDP snapshot restores only 64 columns. It cannot serve
+            // a runtime that samples the full world map, even if that mode was
+            // already active before restore and its boolean did not change.
+            resetBgIncrementalShiftBaseline();
+        }
         if (!backgroundTilemapDirty && backgroundTilemapData != null) {
             lastRequiresFullWidthBgTilemap = requiresFullWidthBgTilemap;
             lastBackgroundWrap = backgroundWrap;

@@ -27,6 +27,10 @@ class TestFbzBossPlaneRenderMode {
         AdvancedRenderFrameState frame = builder.build();
 
         assertTrue(frame.reversePlaneAssignment());
+        assertTrue(frame.enablePerLineForegroundScroll(),
+                "PlainDeformation_Flipped puts the moving BG's X in the Plane A scroll word");
+        assertTrue(state.requiresFullWidthBgTilemap(),
+                "DrawBGAsYouMove must expose terrain beyond the ordinary indoor 512px window");
         assertTrue(frame.hasForegroundVScrollOverride());
         assertTrue(frame.hasBackgroundVScrollOverride());
         assertEquals((short) 0x135, frame.foregroundVScrollOverride());
@@ -37,6 +41,8 @@ class TestFbzBossPlaneRenderMode {
         mode.contribute(null, builder);
         frame = builder.build();
         assertFalse(frame.reversePlaneAssignment());
+        assertFalse(frame.enablePerLineForegroundScroll());
+        assertFalse(state.requiresFullWidthBgTilemap());
         assertFalse(frame.hasForegroundVScrollOverride());
         assertFalse(frame.hasBackgroundVScrollOverride());
     }
