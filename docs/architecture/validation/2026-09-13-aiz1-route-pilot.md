@@ -4,73 +4,92 @@ Second-zone pilot of the live-state route-controller technique
 ([design](../research/2026-09-13-live-state-route-controllers.md)), on the
 shared `com.openggf.tests.route` primitives. Branch
 `feature/ai-aiz1-route-pilot`; test `TestS3kAiz1RoutePilot`
-(opt-in, `-Dopenggf.aiz1.pilot=true`). Native Sonic+Tails, 320px, engine at
-develop `923f14188`.
+(opt-in). Native Sonic+Tails, 320px, engine at develop `923f14188`.
+
+Run it as (the repository's default Maven silent extension swallows CLI
+properties without `-Dmse=off`):
+
+```bash
+mvn -Dmse=off -Dopenggf.aiz1.pilot=true "-Dtest=TestS3kAiz1RoutePilot" \
+  "-Ds3k.rom.path=/abs/path/s3k.gen" test
+```
+
+## Result (pilot commit after the 2026-09-13 review; supersedes `1dceb0fd4`)
+
+**AIZ act 1 completes to the act-2 reload on the recorded program alone, with
+no per-hazard gates.** The program is the fixture's own BK2 rows from the
+first level frame to the recorded act change, derived at test time by
+`InputProgram.fromRecording` (no hand transcription); the only live gates
+are the engine's own intro boundary and the reload itself.
+
+| Measure | Value |
+|---|---|
+| Recorder pre-level prefix (`preLevelFrameCountForTraceReplay`) | 289 rows |
+| Engine `Level_started_flag` set (Knuckles cutscene exit handoff) | frame 1097 = row 1386 |
+| Recording's first player-driven row | 1428 |
+| Recorded act-2 reload row (`zone_act_state` actual_act=1) | 5496 |
+| Engine act-2 reload | frame 5174 = row 5463 (33-row lead) |
+| Wall time | ~3 s |
+
+The 33-row lead is the difference between the engine's live load-time
+simulation and the recorded lag frames over one act; the test reports it
+and does not assert on it.
 
 ## What the pilot proves
 
-- **The primitives generalise off FBZ.** `InputProgram`, `RouteSteering`,
-  `ObjectLifetimeFrames` and `RecentFrameLog` drove an AIZ1 controller with no
-  change; only the authored program string and the stage logic are
-  zone-specific. This was the pilot's primary question and the answer is yes.
-- **A live gate can own an S3K event boundary.** The intro handover is gated
-  on live state, not a frame count: hold neutral until object control has been
-  seen and then released, and the Knuckles-cutscene pad lock
-  (`isControlLocked`, `getMoveLockTimer`) has cleared. `isObjectControlled`
-  alone is insufficient because the cutscene keeps the pad locked after object
-  control ends.
-- **The intro-length discrepancy is real and measurable.** The engine session
-  starts with P1 at `$0040/$0420` already spawned; the `aiz1_to_hcz_fullrun`
-  fixture's rows 0-288 are the plane fly-in before the player object exists.
-  The engine intro is ~289 frames shorter, so the authored program is
-  289 frames ahead of every global-timer object for the rest of the act.
+- **The primitives generalise off FBZ.** `InputProgram` (now with a BK2
+  encoder and a row cursor), `RecentFrameLog` and `SidekickAudit` drove the
+  AIZ1 controller unchanged.
+- **A live gate can own an S3K event boundary.** The intro handover is
+  asserted against `Camera.isLevelStarted()`, the engine's model of the ROM's
+  `Level_started_flag` (cleared at intro bootstrap, set by
+  `CutsceneKnucklesAiz1Instance.completeIntroExitHandoff`), rather than a
+  proxy assembled from control-lock flags.
+- **Row-to-frame alignment is the whole intro problem.** The sanctioned trace
+  replay never ticks the engine for the recorder's 289 pre-level rows
+  (`TraceReplayBootstrap.phaseForReplay` returns `VBLANK_ONLY` for them), so
+  engine frame 0 is recorded row 289. A route program taken from such a
+  fixture must skip those rows and then play row `r` on frame `r - 289`;
+  nothing else needs to wait.
 
-## The cost finding
+## Rejected: per-hazard ledge gating (`1dceb0fd4`), killed by measurement
 
-AIZ1's opening after the intro is a dense, essentially unbroken chain of
-global-oscillator and spring hazards, unlike FBZ2 act 2 where long stretches
-were plain running that the authored program covered for free. Between the
-first ledge and the giant ride vine (fixture rows ~2090-2662, ~570 frames)
-the player rides, in order:
+The first pilot commit waited for a live handover (object control seen and
+released, pad lock cleared) and then resumed the program at the recording's
+first player-driven run (row 1428) immediately, on engine frame 1097. That is
+42 frames earlier than the recording's own timing (row 1428 is frame 1139
+after the prefix), so every global-oscillator object from the `$1870`
+`Obj_FloatingPlatform` onward was met 42 frames out of phase. The commit
+answered that with `LEDGE_CLIMB`/`LEDGE_RUNUP`/`LEDGE_JUMP`/`LEDGE_RUN_OFF`
+stages and a fitted `$460` drop-speed regulator, and its validation record
+concluded that AIZ1 was "a dense, essentially unbroken chain" of
+phase-dependent hazards needing a gate each and an engine accessor for the
+vine. The cross-review of that commit (ten findings, nine confirmed) also
+found the stages themselves defective: a cached `ObjectManager` that the
+act-2 reload replaces, a loop exit that misattributed failures, a jump latch
+set without confirming take-off, no recovery in the climb stage, and an
+opt-in command that the silent extension swallows.
 
-1. `$1870` `Obj_FloatingPlatform` (global oscillator phase),
-2. an `obj $13` spring, back left to
-3. an `obj $10` floating platform, onto
-4. an `obj $08` spring bounced twice to build rightward speed,
-5. an `obj $0F` floating platform ridden right, then
-6. the `$1DE0` `Obj_AIZGiantRideVine`, grabbed by falling onto its
-   swing-phased handle.
+Kill evidence (scratch probes on `923f14188`, not committed):
 
-Each is phase-dependent, so each needs its own gate; a missed phase on any one
-shifts arrival at the next, and the divergence compounds. The pilot gated (1)
-with a climb/hop/run-off stage that regulates the drop speed to ~`$460` so the
-arc clears the `$1930` wall onto the following spring — that stage works — but
-(2)-(5) then arrive off-phase and the vine grab (6) is missed.
+- The sanctioned trace-replay boot with the recorded drive reaches the
+  reload at row 5496, as the passing AIZ trace chain implies.
+- The pilot's plain fixture boot with live timing, driving the BK2 masks
+  from row 289 with no gates at all, reaches the reload at row 5462 and
+  tracks the recording within about 16 px for the whole act (first >4 px
+  divergence at row 719, inside the auto-run intro).
 
-Two consequences for the technique's cost model:
-
-- On a hazard-dense act the "authored program + sparse live gates" hybrid
-  degenerates to "one gate per hazard". The per-hazard authoring cost, which
-  the [design](../research/2026-09-13-live-state-route-controllers.md) §4 named
-  as the real cost, dominates here with no cheap stretches to amortise it.
-  Roughly two and a half hours of authoring bought the intro gate plus one
-  hazard gate; AIZ1 to the act-2 reload has on the order of a dozen more.
-- **The vine needs engine state the pilot cannot see.** Grabbing
-  `Obj_AIZGiantRideVine` requires the live world position of its swinging
-  handle (driven by the global `AIZ_vine_angle`), which no public accessor
-  exposes; `AizVineHandleLogic` and the handle are package-private. Gating it
-  would mean adding a production accessor to satisfy a test — an
-  architecture/scope decision that belongs to the owner, not a pilot branch.
+The hazard-chain conclusion, the vine-accessor request and the per-hazard
+cost model in the previous version of this record were artefacts of the
+42-frame early resume and are withdrawn. No production accessor is needed.
 
 ## Recommendation
 
-- Keep the pilot as a checkpoint; do not chase AIZ1 to completion on this
-  branch. Completing it is multi-day route authoring (a dozen-plus dense gates
-  plus the miniboss and fire transition) and at least one production accessor.
-- Revisit the plan's pilot ranking with this datum: HCZ act 1, the other
-  phase-2 S3K pilot, has water rather than a spring/vine chain, and would price
-  a different hazard family. GHZ act 3 (no water, no sidekick, one boss) would
-  cheaply confirm the primitives hold under S1 physics, which the design flags
-  as unverified.
-- If AIZ1 completion is funded, expose the vine handle position and grab state
-  through `AizZoneRuntimeState` as a first, separately-reviewed step.
+- Promote the pilot from opt-in into the AIZ per-act matrix as the native
+  320 Sonic+Tails row, then add width and donor rows; those are where live
+  gates are expected to earn their keep, as in FBZ2.
+- Record the row-to-frame rule in the design's cost model: a fixture with a
+  recorded pre-level prefix costs one derived offset, not a gate.
+- Keep the 33-row live-versus-recorded lead as a datum for the benchmark
+  application (section 7 of the design); it is the size of the load-time
+  difference the mask-log replay would have to absorb.

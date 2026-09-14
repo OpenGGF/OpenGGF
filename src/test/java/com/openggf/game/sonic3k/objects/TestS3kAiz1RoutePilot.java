@@ -1,304 +1,209 @@
 package com.openggf.game.sonic3k.objects;
 
-import com.openggf.configuration.SonicConfiguration;
-import com.openggf.configuration.SonicConfigurationService;
-import com.openggf.configuration.WidescreenAspect;
-import com.openggf.game.CrossGameFeatureProvider;
+import com.openggf.debug.playback.Bk2Movie;
+import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
-import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
-import com.openggf.level.objects.ObjectManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.HeadlessTestFixture;
-import com.openggf.tests.TestEnvironment;
 import com.openggf.tests.route.InputProgram;
 import com.openggf.tests.route.InputRun;
-import com.openggf.tests.route.ObjectLifetimeFrames;
 import com.openggf.tests.route.RecentFrameLog;
-import com.openggf.tests.route.RouteSteering;
+import com.openggf.tests.route.SidekickAudit;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
+import com.openggf.trace.TraceData;
+import com.openggf.trace.TraceEvent;
+import com.openggf.trace.TraceReplayBootstrap;
+import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
-import static com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_JUMP;
-import static com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_LEFT;
-import static com.openggf.sprites.playable.AbstractPlayableSprite.INPUT_RIGHT;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * AIZ act 1 route pilot on the shared route primitives (second-zone pilot of
  * the technique in docs/architecture/research/2026-09-13-live-state-route-controllers.md).
- * The authored fallback is the {@code aiz1_to_hcz_fullrun} fixture's act-1
- * pad program (rows 0-5495); live-state stages take over wherever the
- * engine's object phase differs from the recording.
  *
- * <p>Measured so far (2026-09-13, native Sonic+Tails, 320px):
+ * <p>The fallback program is derived from the {@code aiz1_to_hcz_fullrun}
+ * fixture's own BK2: the act-1 P1 pad rows from the first level frame to the
+ * recorded act-2 reload. The recorder's leading rows (the SEGA/title/level
+ * setup before {@code Game_Mode} reaches Level, 289 rows on this fixture)
+ * are never ticked by the engine, exactly as the sanctioned trace replay
+ * treats them ({@code TraceReplayBootstrap.preLevelFrameCountForTraceReplay}),
+ * so program row {@code r} plays on engine frame {@code r - preLevel}. Nothing
+ * is hydrated from physics rows; the trace is read only for its metadata,
+ * its pre-level prefix length and the row of its act change.
+ *
+ * <p>Live-state gates and assertions:
  * <ul>
- * <li>The engine's intro is 289 frames shorter than the fixture: rows 0-288
- *     are the plane flight before the player object exists, while the
- *     session starts with P1 at $0040/$0420 under object control. Every
- *     global-oscillator object is therefore met in another phase, and the
- *     Knuckles cutscene keeps the pad locked after object control ends
- *     ({@code isControlLocked}), so the handover waits for both.</li>
- * <li>With the intro gate, the program tracks the recording to within four
- *     frames until the $1870 Obj_FloatingPlatform, whose oscillator phase
- *     decides whether P1 leaves the $02BC ledge at its end ($1848) or from
- *     the platform's edge ($1890). The LEDGE stages climb to the ledge,
- *     build speed with one short RIGHT hop, and regulate the run-off to
- *     about $460 when the platform is level so the arc clears the $1930
- *     wall onto the $1948 spring.</li>
- * <li>Next unowned hazard: the $1DE0 Obj_AIZ giant ride vine (rows
- *     2662-3058), also oscillator-phased; the program alone drops P1 into
- *     the $04B0 lower area beneath it. Vines, collapsing bridges, the
- *     miniboss and the fire transition remain to be gated.</li>
+ * <li>the recording's first player-driven row must fall after the engine has
+ *     set the ROM's {@code Level_started_flag} ({@code Camera.isLevelStarted},
+ *     set by the Knuckles cutscene's exit handoff), which is the engine's own
+ *     intro boundary rather than a proxy built from control-lock flags;</li>
+ * <li>P1 must not die on any stepped frame;</li>
+ * <li>the act-2 reload ({@code LevelManager.getCurrentAct() == 1}) must be
+ *     observed within the program's length plus {@link #RELOAD_SLACK_FRAMES};
+ *     the run stops on that frame, before the level replaces its object
+ *     manager;</li>
+ * <li>the CPU sidekick team keeps identity, controller ownership and leader
+ *     chain every frame and respawns after any death.</li>
  * </ul>
- * Opt-in while the route is incomplete: run with
- * {@code -Dopenggf.aiz1.pilot=true}.
+ * The engine runs under its live load-time simulation, not the recorded lag
+ * frames, so it reaches the reload a few dozen rows before the recording;
+ * the measured lead is reported, not asserted.
+ *
+ * <p>Opt-in until the level-test matrix adopts it; the repository's default
+ * Maven silent extension swallows CLI properties, so run it as
+ * {@code mvn -Dmse=off -Dopenggf.aiz1.pilot=true -Dtest=TestS3kAiz1RoutePilot
+ * -Ds3k.rom.path=... test}.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 @EnabledIfSystemProperty(named = "openggf.aiz1.pilot", matches = "true")
 class TestS3kAiz1RoutePilot {
 
-    /** "frames:hexMask" runs, fixture rows 0-5495 (148 runs). */
-    private static final String ACT1_INPUT_PROGRAM =
-            "161:0,8:4,32:0,10:10,1217:0,252:8,2:0,22:4,5:0,10:10,12:18,3:10,7:0,12:8,14:0,4:4,7:0,5:8,"
-            + "9:0,13:2,6:12,5:2,7:12,4:2,4:12,13:2,25:0,34:8,2:0,25:4,10:14,31:4,4:0,27:8,17:0,14:4,48:0"
-            + ",43:4,18:0,5:8,20:0,6:4,25:14,20:4,8:0,20:8,11:0,57:8,157:0,43:8,3:A,16:2,9:0,8:8,12:18,16"
-            + ":8,6:0,13:4,4:0,3:8,10:18,4:8,13:0,8:4,29:0,22:8,62:0,53:8,6:18,103:8,5:18,87:8,4:18,26:8,"
-            + "26:0,9:2,7:12,3:2,83:0,1:8,5:18,86:8,7:18,27:8,17:0,9:8,17:18,7:8,55:0,4:8,5:18,19:0,14:8,"
-            + "6:0,20:4,3:0,10:8,24:0,57:8,4:0,24:4,12:14,16:4,15:0,20:8,44:0,6:8,36:0,31:8,18:0,10:4,5:0"
-            + ",39:8,4:0,23:4,8:0,43:8,17:18,214:8,68:0,554:8,9:0,58:4,32:0,18:8,116:0,11:8,9:0,5:8,17:18"
-            + ",22:8,17:0,8:8,8:0,23:8,8:18,12:8,22:0,9:8,9:18,24:8,31:0,32:8,2:0,42:4,10:0,31:8,143:0";
-
-    /** Program run that starts at fixture row 1428, the first player-driven input. */
-    private static final int PROGRAM_RUN_AFTER_INTRO = 5;
-    /** Program run that starts at fixture row 2314, neutral after the ledge run-off. */
-    private static final int PROGRAM_RUN_AFTER_LEDGE = 48;
-    private static final int LEDGE_PLATFORM_SPAWN_X = 0x1870;
-    private static final int LEDGE_MIN_X = 0x1780;
-    private static final int LEDGE_MAX_X = 0x1850;
-    private static final int LEDGE_STAND_Y = 0x02BC;
-    private static final int LEDGE_RUNUP_X = 0x17D0;
-    private static final int LEDGE_RUNUP_GROUND_FRAMES = 20;
-    private static final int LEDGE_JUMP_HOLD = 6;
-    private static final int LEDGE_RUN_OFF_X = 0x1848;
-    private static final int LEDGE_PLATFORM_DROP_SPEED = 0x0460;
-    private static final int FRAME_LIMIT = 9000;
+    private static final Path FIXTURE_DIRECTORY =
+            Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun");
+    /**
+     * Frames the engine may take beyond the recorded act-1 length to reach the
+     * reload. A bound on the live-versus-recorded load-time difference over
+     * one act, not a fitted value: the measured difference on this fixture is
+     * a lead of a few dozen rows, and a lag of this size would mean the
+     * program had desynchronised.
+     */
+    private static final int RELOAD_SLACK_FRAMES = 300;
+    /** Longest dead streak the CPU respawn contract tolerates, as in the FBZ2 route. */
+    private static final int SIDEKICK_RESPAWN_LIMIT = 0x100;
 
     @Test
-    void act1RouteReachesTheAct2Reload() {
-        configureNativeSonicTails();
+    void act1RouteReachesTheAct2Reload() throws IOException {
+        TraceData trace = TraceData.load(FIXTURE_DIRECTORY);
+        Bk2Movie movie = new Bk2MovieLoader().load(findBk2(FIXTURE_DIRECTORY));
+        int preLevelRows = TraceReplayBootstrap.preLevelFrameCountForTraceReplay(trace);
+        int recordedReloadRow = recordedAct2Row(trace);
+        int offset = trace.metadata().bk2FrameOffset();
+        List<InputRun> program = InputProgram.fromRecording(
+                movie, offset + preLevelRows, offset + recordedReloadRow);
+
+        TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 0)
                 .build();
-        Aiz1RouteRunner runner = new Aiz1RouteRunner(fixture, InputProgram.parse(ACT1_INPUT_PROGRAM));
+        Aiz1RouteRunner runner = new Aiz1RouteRunner(fixture, program, preLevelRows, recordedReloadRow);
         runner.run();
     }
 
-    private static void configureNativeSonicTails() {
-        SonicConfigurationService configuration = SonicConfigurationService.getInstance();
-        CrossGameFeatureProvider.getInstance().resetState();
-        configuration.clearSessionOverrides();
-        configuration.setConfigValue(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-        configuration.setConfigValue(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
-        configuration.setConfigValue(SonicConfiguration.S3K_SKIP_INTROS, false);
-        configuration.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
-                WidescreenAspect.NATIVE_4_3.name());
-        configuration.resolveDisplayAspect();
-        configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
-        configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, "off");
-        SessionManager.clear();
-        TestEnvironment.activeGameplayMode();
+    private static Path findBk2(Path directory) throws IOException {
+        try (var files = Files.list(directory)) {
+            return files.filter(path -> path.toString().endsWith(".bk2")).findFirst()
+                    .orElseThrow(() -> new IOException("no .bk2 in " + directory));
+        }
     }
 
-    private enum Stage { INTRO, PROGRAM, LEDGE_CLIMB, LEDGE_RUNUP, LEDGE_JUMP, LEDGE_RUN_OFF }
+    /** First recorded row on which the ROM reports act 2 in Level mode. */
+    private static int recordedAct2Row(TraceData trace) {
+        for (int row = 0; row < trace.frameCount(); row++) {
+            for (TraceEvent event : trace.getEventsForFrame(row)) {
+                if (event instanceof TraceEvent.ZoneActState state
+                        && state.actualAct() != null && state.actualAct() == 1
+                        && state.gameMode() != null && state.gameMode() == 12) {
+                    return row;
+                }
+            }
+        }
+        throw new IllegalStateException("fixture never reports act 2");
+    }
 
     private static final class Aiz1RouteRunner {
         private final HeadlessTestFixture fixture;
-        private final ObjectManager objects;
-        private final List<InputRun> program;
-        private final ObjectLifetimeFrames lifetime;
+        private final InputProgram.Cursor program;
+        private final int programFrames;
+        private final int recordedReloadRow;
         private final RecentFrameLog recentLog = new RecentFrameLog(30);
+        private final SidekickAudit sidekicks = new SidekickAudit(SIDEKICK_RESPAWN_LIMIT);
         private int frames;
-        private int runIndex;
-        private int runFrame;
-        private Stage stage = Stage.INTRO;
-        private boolean introControlSeen;
-        private int hold;
-        private boolean ledgeDone;
-        private boolean ledgeJumped;
+        private boolean playerInputSeen;
         private int reloadFrame = -1;
-        private String lastState = "";
+        private int lastAct = -1;
+        private boolean lastControlled;
+        private boolean lastLevelStarted;
 
-        Aiz1RouteRunner(HeadlessTestFixture fixture, List<InputRun> program) {
+        Aiz1RouteRunner(HeadlessTestFixture fixture, List<InputRun> program,
+                        int firstRow, int recordedReloadRow) {
             this.fixture = fixture;
-            this.objects = GameServices.level().getObjectManager();
-            this.program = program;
-            this.lifetime = new ObjectLifetimeFrames(objects);
+            this.program = new InputProgram.Cursor(program, firstRow);
+            this.programFrames = InputProgram.frames(program);
+            this.recordedReloadRow = recordedReloadRow;
         }
 
         void run() {
-            while (frames < FRAME_LIMIT) {
-                lifetime.beginFrame(objects);
+            int frameLimit = programFrames + RELOAD_SLACK_FRAMES;
+            while (frames < frameLimit) {
                 AbstractPlayableSprite player = fixture.sprite();
-                int x = player.getCentreX() & 0xFFFF;
-                int y = player.getCentreY() & 0xFFFF;
-                int act = GameServices.level().getCurrentAct();
-                if (act == 1 && reloadFrame < 0) reloadFrame = frames;
-                int mask = decide(player, x, y);
-                log(player, x, y, act, mask);
-                assertFalse(player.getDead(), () -> "P1 died: " + diagnostic(player));
+                int row = program.row();
+                int mask = program.next();
+                if (mask != 0 && !playerInputSeen) {
+                    playerInputSeen = true;
+                    assertTrue(GameServices.camera().isLevelStarted(),
+                            () -> "the recording's first player input (row " + row
+                                    + ") precedes the engine's Level_started_flag: " + diagnostic(player));
+                }
                 InputProgram.step(fixture, mask);
-                recentLog.record(frames, mask, player);
                 frames++;
-                lifetime.endFrame();
-                if (stage == Stage.PROGRAM && runIndex >= program.size()) break;
-                if (reloadFrame >= 0 && frames - reloadFrame > 300) break;
+                recentLog.record(frames, mask, player);
+                sidekicks.observe(player, false, false, GameServices.camera().getX() & 0xFFFF);
+                int act = GameServices.level().getCurrentAct();
+                log(player, act, mask);
+                if (player.getDead()) {
+                    fail("P1 died: " + diagnostic(player));
+                }
+                if (act == 1) {
+                    reloadFrame = frames;
+                    break;
+                }
             }
             AbstractPlayableSprite player = fixture.sprite();
-            System.out.printf("AIZTL end f=%d stage=%s run=%d p=(%04X,%04X) act=%d reloadFrame=%d%n",
-                    frames, stage, runIndex, player.getCentreX() & 0xFFFF,
-                    player.getCentreY() & 0xFFFF, GameServices.level().getCurrentAct(), reloadFrame);
-            assertTrue(reloadFrame >= 0, () -> "act-2 reload never observed: " + diagnostic(player));
+            System.out.printf("AIZTL end f=%d row=%d p=(%04X,%04X) act=%d reloadFrame=%d recordedReloadRow=%d lead=%d%n",
+                    frames, program.row(), player.getCentreX() & 0xFFFF,
+                    player.getCentreY() & 0xFFFF, GameServices.level().getCurrentAct(), reloadFrame,
+                    recordedReloadRow, reloadFrame < 0 ? 0 : recordedReloadRow - program.row());
+            assertTrue(reloadFrame >= 0, () -> "act-2 reload never observed within "
+                    + frameLimit + " frames: " + diagnostic(player));
+            assertTrue(sidekicks.identityOrderPreserved(), "sidekick identity/order changed");
+            assertTrue(sidekicks.controllerEveryFrame(), "a sidekick lost CPU-controller ownership");
+            assertTrue(sidekicks.leaderChainEveryFrame(), "the sidekick leader chain diverged");
+            assertTrue(sidekicks.respawnedAfterEveryDeath(),
+                    () -> "a sidekick stayed dead beyond the respawn window: " + sidekicks.deathEvidence());
         }
 
-        private int decide(AbstractPlayableSprite player, int x, int y) {
-            boolean grounded = !player.getAir();
-            Object latch = player.getLatchedSolidObjectInstance();
-            boolean onLedgePlatform = player.isOnObject()
-                    && latch instanceof FloatingPlatformObjectInstance platform
-                    && platform.getSpawn().x() == LEDGE_PLATFORM_SPAWN_X;
-            switch (stage) {
-                case INTRO -> {
-                    // Obj_AIZ intro: P1 is object-controlled through the plane
-                    // run-in and the Knuckles punch; hand over on the first
-                    // grounded, uncontrolled, unhurt frame after that control.
-                    // The Knuckles cutscene keeps the pad locked
-                    // (Ctrl_1_locked) after object control ends, so the
-                    // handover also waits for the lock and move-lock timer.
-                    introControlSeen |= player.isObjectControlled();
-                    if (introControlSeen && !player.isObjectControlled() && grounded
-                            && !player.isHurt() && !player.isControlLocked()
-                            && player.getMoveLockTimer() == 0) {
-                        stage = Stage.PROGRAM;
-                        runIndex = PROGRAM_RUN_AFTER_INTRO;
-                        runFrame = 0;
-                    }
-                    return 0;
-                }
-                case PROGRAM -> {
-                    if (!ledgeDone && onLedgePlatform && y <= 0x0320) {
-                        // The $1870 Obj_FloatingPlatform rides the global
-                        // oscillator, so the recording's phase never holds;
-                        // climb to the fixed $02BC ledge and build the
-                        // run-off speed there instead.
-                        stage = Stage.LEDGE_CLIMB;
-                        hold = 25;
-                        return INPUT_LEFT | INPUT_JUMP;
-                    }
-                    return programMask();
-                }
-                case LEDGE_CLIMB -> {
-                    if (grounded && y <= LEDGE_STAND_Y + 4 && x >= LEDGE_MIN_X && x <= LEDGE_MAX_X) {
-                        stage = Stage.LEDGE_RUNUP;
-                        return RouteSteering.walkMask(player, LEDGE_RUNUP_X, 8, 0x0200);
-                    }
-                    if (hold > 0) { hold--; return INPUT_LEFT | INPUT_JUMP; }
-                    return INPUT_LEFT;
-                }
-                case LEDGE_RUNUP -> {
-                    int walk = RouteSteering.walkMask(player, LEDGE_RUNUP_X, 8, 0x0200);
-                    if (walk == 0 && grounded && Math.abs(player.getGSpeed()) <= 0x40) {
-                        stage = Stage.LEDGE_JUMP;
-                        hold = LEDGE_RUNUP_GROUND_FRAMES;
-                        return INPUT_RIGHT;
-                    }
-                    return walk;
-                }
-                case LEDGE_JUMP -> {
-                    // Ground run-up, then one short hop with RIGHT held
-                    // through the arc: air acceleration builds the ~$600 the
-                    // recording carried off the ledge at row 2314, which is
-                    // what clears the $1930 wall onto the $1948 spring. A
-                    // full-height jump instead clears the wall onto the
-                    // upper path, so the hold is short.
-                    if (hold > 0) { hold--; return INPUT_RIGHT; }
-                    if (!ledgeJumped && grounded) {
-                        ledgeJumped = true;
-                        hold = -LEDGE_JUMP_HOLD;
-                        return INPUT_RIGHT | INPUT_JUMP;
-                    }
-                    if (hold < 0) { hold++; return INPUT_RIGHT | INPUT_JUMP; }
-                    if (!grounded) return INPUT_RIGHT;
-                    stage = Stage.LEDGE_RUN_OFF;
-                    return INPUT_RIGHT;
-                }
-                case LEDGE_RUN_OFF -> {
-                    if (!grounded && x >= LEDGE_RUN_OFF_X - 8) {
-                        ledgeDone = true;
-                        stage = Stage.PROGRAM;
-                        runIndex = PROGRAM_RUN_AFTER_LEDGE;
-                        runFrame = 0;
-                        return 0;
-                    }
-                    if (onLedgePlatform) {
-                        // The oscillating platform is level with the ledge in
-                        // this phase, so the drop starts from its right edge
-                        // ($18B0) instead of the ledge end ($1848): a $98 px
-                        // fall of $C1 onto the $1948 spring needs about $3A0,
-                        // not the recording's $600.
-                        int g = player.getGSpeed();
-                        if (g > LEDGE_PLATFORM_DROP_SPEED + 0x20) return INPUT_LEFT;
-                        if (g < LEDGE_PLATFORM_DROP_SPEED - 0x20) return INPUT_RIGHT;
-                        return 0;
-                    }
-                    return INPUT_RIGHT;
-                }
-                default -> throw new IllegalStateException(stage.name());
+        private void log(AbstractPlayableSprite player, int act, int mask) {
+            boolean controlled = player.isObjectControlled();
+            boolean levelStarted = GameServices.camera().isLevelStarted();
+            boolean changed = act != lastAct || controlled != lastControlled || levelStarted != lastLevelStarted;
+            if (frames % 500 == 0 || changed) {
+                System.out.printf("AIZTL f=%d row=%d act=%d ctrl=%s started=%s mask=%02X p=(%04X,%04X) v=(%04X,%04X)%n",
+                        frames, program.row(), act, controlled, levelStarted, mask,
+                        player.getCentreX() & 0xFFFF, player.getCentreY() & 0xFFFF,
+                        player.getXSpeed() & 0xFFFF, player.getYSpeed() & 0xFFFF);
+                lastAct = act;
+                lastControlled = controlled;
+                lastLevelStarted = levelStarted;
             }
-        }
-
-        private int programMask() {
-            if (runIndex >= program.size()) return 0;
-            InputRun run = program.get(runIndex);
-            int mask = run.mask();
-            runFrame++;
-            if (runFrame >= run.frames()) {
-                runIndex++;
-                runFrame = 0;
-            }
-            return mask;
-        }
-
-        private void log(AbstractPlayableSprite player, int x, int y, int act, int mask) {
-            String state = stage + " act=" + act + " ctrl=" + player.isObjectControlled()
-                    + " air=" + player.getAir() + " hurt=" + player.isHurt();
-            if (frames % 100 == 0 || !state.equals(lastState)) {
-                System.out.printf("AIZTL f=%d %s run=%d mask=%02X p=(%04X,%04X) v=(%04X,%04X) g=%04X rings=%d %s%n",
-                        frames, stage, runIndex, mask, x, y, player.getXSpeed() & 0xFFFF,
-                        player.getYSpeed() & 0xFFFF, player.getGSpeed() & 0xFFFF,
-                        GameServices.level().getLevelGamestate().getRings(), nearby(x, y));
-                lastState = state;
-            }
-        }
-
-        private String nearby(int px, int py) {
-            return objects.getActiveObjects().stream()
-                    .filter(o -> o.getSpawn() != null && !o.isDestroyed())
-                    .filter(o -> Math.abs(o.getX() - px) <= 0xA0 && Math.abs(o.getY() - py) <= 0xA0)
-                    .map(o -> o.getClass().getSimpleName().replace("ObjectInstance", "").replace("Instance", "")
-                            + "@" + Integer.toHexString(o.getX()) + "," + Integer.toHexString(o.getY()))
-                    .toList().toString();
         }
 
         private String diagnostic(AbstractPlayableSprite player) {
-            return "frame=" + frames + " stage=" + stage + " run=" + runIndex
+            return "frame=" + frames + " row=" + program.row()
+                    + " programExhausted=" + program.exhausted()
                     + " player=($" + Integer.toHexString(player.getCentreX() & 0xFFFF)
                     + ",$" + Integer.toHexString(player.getCentreY() & 0xFFFF) + ")"
+                    + " air=" + player.getAir() + " hurt=" + player.isHurt()
+                    + " act=" + GameServices.level().getCurrentAct()
                     + " recent=" + recentLog;
         }
     }
