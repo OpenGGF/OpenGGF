@@ -823,3 +823,31 @@ Merge `f037a121828f0c67e7a11c7a4908d50d71fed7ea` integrates FBZ into develop on 
 Completed run `20260914T154521Z-b6acd940`: **20,299 ordinary tests: 20,281 passed, 18 skipped, zero failures/errors**, 512.95 seconds. The same 18 opt-in/reference/default-graphics skips listed above were inspected; no required game ROM was missing. Guards: **667 tests: 665 passed, two failures, zero errors/skips**, 173.30 seconds. Both remaining failures match the pinned baseline by exact test identity and diagnostic: `TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap` and `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`. The incoming KiS2 recorder-pin fixes remove the other two inherited failures. All 28 ordinary failures from the first broad run are absent from the integrated run. This is a full ordinary-suite pass with two pre-existing guard failures, not an all-gates-green claim.
 
 Packaging completed successfully with queued `JAVA_HOME=/usr/lib/jvm/java-21-openjdk python3 tools/testing/maven_queue.py -Dmse=off -DskipTests package -B` in **37.021 seconds**. The separately integrated KiS2 fixture publication (`5d54b85d5`, verification prose `4b7e31cc5`) adds trace payloads and test/documentation changes after the FBZ suite; it does not change production source. Its focused verification is recorded by that delivery. No engine tests were repeated for this final evidence-only update.
+
+### Reported stray hanging handles (2026-09-14)
+
+User screenshots on `14d902d39` show extra descending handles away from real
+vertical chains. `Obj_FBZChainLink` routes negative subtypes straight to
+`loc_3AA5A`, without initializing mappings/art; that routine ends in
+`Delete_Sprite_If_Not_In_Range`, not `Sprite_OnScreen_Test`. The old shared render
+method nevertheless drew the vertical mapping at every horizontal region's
+range-shifted Y. Rendering now exits for horizontal mode. Vertical mapping,
+ROM-backed art, movement, input, and rewind state are unchanged. No tile-offset,
+physics, or capture-specific workaround was introduced.
+
+The six used horizontal subtype regressions fail before the fix (six failures,
+zero errors/skips; queued Maven 48.166 seconds including cold compilation).
+The positive vertical regression checks frame zero, the first 16 pixels of
+live descent, the player's held position, and mapping frame two. The category
+plan against pinned `14d902d3900104108b3f550d6f8d4841deddabc3` selects 2,107 classes
+plus guards. This is disproportionate for one object's suppressed draw call:
+focused object interaction/rewind checks, the four mandatory S3K gates, and a
+real gameplay capture exercise the affected behavior. This delivery uses the
+repository's proportionate-validation exception, not a new full-suite claim.
+
+Queued `JAVA_HOME=/usr/lib/jvm/java-21-openjdk python3 tools/testing/maven_queue.py
+-Dmse=off -Dtest=TestFbzRailAndChainPlatforms,TestFbzObjectRewind,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+-Ds3k.rom.path=<verified absolute locked-on ROM> test -B` passes **97 tests, zero
+failures/errors/skips**, in **50.168 seconds**, including both level-loading
+classes. Source base is `14d902d39` plus this follow-up in
+`.worktrees/ai-fbz-chain-art`.

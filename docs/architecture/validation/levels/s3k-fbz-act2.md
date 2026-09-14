@@ -1,5 +1,12 @@
 # FBZ Act 2 coverage matrix
 
+Hanging-handle presentation follow-up (2026-09-14): horizontal `$72` grab regions
+must not submit vertical chain art (`Obj_FBZChainLink` → `loc_3AA5A`).
+`TestFbzRailAndChainPlatforms` covers all six used horizontal subtypes and
+retains a positive vertical descent/mapping check. This local render-only change
+preserves the existing interaction/rewind obligations and inherited visual gaps;
+execution evidence is in the [completion record](../../plans/2026-09-14-fbz-completion.md).
+
 Spike-art follow-up (2026-09-14): the ROM-backed
 `TestSonic3kObjectArtProvider#fbzSpikeOrientationsUseTheirNativeTileBanksInBothActs`
 passes all eight mapping frames in both acts, including piece dimensions/flips,

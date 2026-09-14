@@ -126,5 +126,16 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
         return out.toString();
     }
     @Override public int getPriorityBucket(){return 1;}
-    @Override public void appendRenderCommands(List<GLCommand> commands){PatternSpriteRenderer r=getRenderer(Sonic3kObjectArtKeys.FBZ_CHAIN_LINK);if(r!=null&&r.isReady())r.drawFrameIndex(Math.min(14,(currentLength>>4)+(currentLength==0?0:1)),spawn.x(),spawn.y()+currentLength,false,false);}
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands) {
+        // Obj_FBZChainLink branches directly to loc_3AA5A for negative
+        // subtypes: invisible horizontal grab regions neither initialize
+        // mappings nor call Sprite_OnScreen_Test. The chain is level art there.
+        if (horizontalMode) return;
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.FBZ_CHAIN_LINK);
+        if (renderer != null && renderer.isReady()) {
+            renderer.drawFrameIndex(Math.min(14, (currentLength >> 4) + (currentLength == 0 ? 0 : 1)),
+                    spawn.x(), spawn.y() + currentLength, false, false);
+        }
+    }
 }
