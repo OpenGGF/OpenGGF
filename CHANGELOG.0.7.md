@@ -74,7 +74,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   clock; lightning attraction avoids an extra ordinary-ring sweep. Sideways
   spikes release owned push state after their hurt callback, elevator cars
   retain their original Tails interaction bank, and the Act 2 subboss stops
-  movement on its laser-ready wait transition.
+  movement on its laser-ready wait transition. Both Act 2 bosses retain their
+  physical exit-art jobs through readiness and rewind; moving-background LEFT
+  probes translate world coordinates before the sensor mirrors its tile metric.
   Upright spikes use their animated FBZ art, while wall spikes retain the shared
   sideways artwork; both tile banks participate in renderer refresh. Foreground
   and background shaders retain fragment centres while scaling, preventing a
