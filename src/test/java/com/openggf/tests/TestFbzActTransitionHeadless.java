@@ -762,8 +762,9 @@ class TestFbzActTransitionHeadless {
         assertEquals(0x00A0, camera.getMaxX() & 0xFFFF);
         assertEquals(0x0540, camera.getMinY() & 0xFFFF);
         assertEquals(0x0540, camera.getMaxY() & 0xFFFF);
-        assertEquals(0x2D10, camera.getMinXTarget() & 0xFFFF);
-        assertEquals(0x2FB0, camera.getMaxXTarget() & 0xFFFF);
+        assertEquals(0xFF10, camera.getMinXTarget() & 0xFFFF,
+                "the engine horizontal easing target shares the rebased world coordinate system");
+        assertEquals(0x01B0, camera.getMaxXTarget() & 0xFFFF);
         assertEquals(0x0520, camera.getMinYTarget() & 0xFFFF);
         assertEquals(0x0560, camera.getMaxYTarget() & 0xFFFF);
         assertTrue(level.isTransitionRingInitializationPendingForRewind(),

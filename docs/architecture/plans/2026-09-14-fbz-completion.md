@@ -555,3 +555,41 @@ skips. Strict complete errors move 4501 → 4361 → 4353 → 4323; all runs cov
 row 22868, where the next title publication/control-release boundary differs.
 The temporary read-only observer has been removed. These are focused results,
 not full-suite or strict-replay passes.
+
+The combined launcher/Tails and ending tree initially reports 3502 errors, first
+20795 Tails landing. `Restore_PlayerControl2` also writes Wait to both animation
+bytes, clears the animation clocks and Status_InAir, and leaves controller locks,
+velocities and stood-on identity untouched. The retained FBZ boss now performs
+those writes. `loc_2DD06` only replaces the results SST's code pointer; the newly
+appended TITLE_CARD_INIT phase defers the art submission until its next dispatch.
+The focused title/child run passed 37 tests, zero skips, with the expected strict
+failure (3493 errors, still first20795); title queue parity then reaches26025.
+
+The next large main-player displacement is caused by the transition preserving
+engine-only horizontal easing targets in Act1 coordinates while rebasing the
+current bounds. During the roughly470-frame results wait, the left bound creeps
+right; the first ordinary player boundary check then clamps Sonic to$03DE. Both
+horizontal targets now translate with their corresponding world bounds. The
+old transition test's raw-target-preservation expectation was incorrect; it now
+asserts translated targets while vertical targets remain unchanged. All12
+transition/rewind checks pass, zero skips (queued Maven69seconds). The complete
+replay resumes its Act2 input route and reports5508 errors, still first20795.
+The increased total reflects a different downstream route, not a verdict about
+the correction; main X now agrees until23035, and the next camera boundary
+frontier is23014. Native title/worker handoff is23011, while the engine's title
+provider completes23021. The remaining carried-title/worker ordering is open.
+Temporary title observers are removed from the committed tests.
+
+The native Act2 MAX_X and MIN_Y workers have one easing owner. The engine's
+ordinary camera tail was reversing their writes toward stale synthetic targets;
+a regression that includes that tail fails on the first nonzero worker step
+(expected $A1, actual $A0). Publishing each worker word with its engine target
+keeps the captured native destination independent. MAX_Y retains its actual
+native target/easing path. The FBZ request also disables the generic virtual
+preloaded camera-release tail because the retained EndSignControl SST owns
+ChangeAct2Sizes. Queued Maven `-Ptrace-replay-r7
+-Dtest=TestFbzAct2CameraResizeWorker,TestFbzActTransitionHeadless,TestS3kFbzCompleteRunTraceReplay
+test` at ae39e41d7 plus these edits: 18 focused passes, one strict failure, zero
+skips, 64 seconds. Complete replay has 3482 errors, first frame 21379 Tails
+x-speed; main X agrees until 23039. The remaining title/worker dispatch and
+Act2 route differences are still open.

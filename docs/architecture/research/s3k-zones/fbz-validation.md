@@ -11,6 +11,52 @@ an aggregate report generator is separate tooling work; passing those Java tests
 does not certify the historical 32 evidence groups below. A FAIL means required
 evidence is absent or a named comparison failed; it is not a gameplay waiver.
 
+## GPU sampling and retained background history (2026-09-14)
+
+The remaining-visual worktree based on `51677cdd2` isolated two different causes.
+Actual GPU uniform and descriptor/lookup/atlas readback proved foreground camera
+and VScroll `$070C` were correct. The old shader subtracted `0.5` before scaling
+and flooring: on Radeon RX 9070 XT/radeonsi ACO, reciprocal rounding sampled the
+previous row at 223 of 224 native rows (also 223 of 448 double-size rows).
+Keeping fragment centres through the conversion fixes both foreground and
+background shaders without changing camera, viewport offsets or ROM assets.
+`TestShaderPixelCentreSampling` exercises both actual shaders at 320x224,
+640x448, 960x672 and fractional 528x370 viewports, including offset boundaries.
+The focused native-display command
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true -Dtest=TestShaderPixelCentreSampling,TestForegroundWindowRendering,TestTilemapGpuRendererPerLineSampling test`
+completed 4 tests, no failures/errors/skips (19.020 seconds). Packaging with
+`-DskipTests package` took 38.210 seconds and is not another test pass.
+
+The corrected paired start artifact SHA-256 is
+`FAE0C144C10AFB3DF9470E8B6DFC23FBFB0B147D3CDEBDD24434CEACF7BAA602`.
+Its state acceptance completed in 1.066284 seconds at LFC 35. Preserved external
+artifacts are under `fbz-remaining-20260914/visual/start-centre-corrected` in the
+shared task scratch directory. The PNG SHA-256 is
+`4ED9FE4829B891F4511F7B514777EBE4AF60EC4CA128C9ECF6F220781A5D77A8`.
+Against native crop `(14,8,320,224)`, terrain `(180,120,120,20)` matches
+2400/2400 pixels at identical coordinates, versus 944/2400 before correction.
+Comparison recovers Genesis 3-bit RGB as `round(native/34)` and
+`round(engine*7/255)`; no image translation is accepted. The root delivery agent independently reproduced this bounded terrain
+comparison from both preserved PNGs; it is accepted for this rectangle, not
+whole-frame or checkpoint PASS.
+
+The sky phase is separately history-dependent. A read-only native savestate
+probe at movie frame 237948 measured `HScroll_table+$1FC` (`$A9FC`) as
+`$440A3CB0`; fresh engine LFC 35 reads `$0001DC00` and advances to `$0001EA00`.
+ROM `Level`/`Clear_DisplayData` do not clear this scratch table, and
+`FBZ1_BackgroundInit` calls `FBZ_Deform` without clearing its tail. Outdoor
+`FBZ_Deform` reads that retained long and increments it by `$E00`. The complete
+movie's preceding-zone history differs from a cold level load. Matching camera,
+LFC and animation bytes therefore never established matching cloud history.
+No native RAM value was injected into gameplay. The exact-start state receipt
+remains state acceptance only; global cloud/pixel parity remains unaccepted.
+
+`FbzVisualCaptureTool` now preserves actual last-draw tilemap uniforms and
+hash-bound descriptor, lookup and atlas GPU bytes under its explicit output
+root. Readback restores GL texture binding and pack alignment; these internal
+provenance helpers add no Mod API signatures. The durable GPU regression replaces
+the temporary arithmetic probe. The frozen manifest remains unchanged.
+
 ## Deterministic engine GL capture
 
 `FbzVisualCaptureTool` boots the requested FBZ act in a hidden real OpenGL
@@ -22,10 +68,10 @@ executors; an unknown id or any failed precondition/readback emits a rejected
 receipt and no image.
 
 After `mvn package`, run this PowerShell example from the checkout root to
-request the exact native start. The committed amendment is still awaiting
-fresh evidence and independent review: this invocation must reject publication
-until the observed first-visible state has been reviewed and hash-bound. It is
-not a command that currently produces accepted visual evidence.
+request the exact native start. The committed amendment now contains the
+independently reviewed native LFC-35 state. Successful publication proves this
+state contract; pixel acceptance is separately limited to the terrain rectangle
+documented above. It does not certify whole-frame cloud parity.
 
 ```powershell
 $artifactProperties = ConvertFrom-StringData (Get-Content target/openggf-artifact.properties -Raw)
@@ -90,10 +136,15 @@ hashes are preserved, but they must be reported as `SUPERSEDED`/`FAIL`, never
 `fbz-visual-evidence-amendment-proposal.json`; it requires a fresh BizHawk
 capture, exact observed RAM state, versioned replacement paths, and independent
 spec review before the frozen manifest or reference acceptance changes.
-The amendment deliberately remains `awaiting-fresh-independent-review`, so the
-capture tool rejects publication until the exact first-visible state and each
-AniPLC visible-region review are populated and hash-bound. This is the intended
-fail-closed state before fresh BizHawk recapture.
+The amendment records the fresh native start state and reviewed destination
+rectangles with explicit approval scopes. The five cadence series remain native
+candidates: their 30 frames are hash-bound, but engine placement and service-phase
+comparison are still pending. The $210 script has identical source offsets and
+must retain art through index changes; $230 is visibly placed in Act2 only. Its
+last native frame has two occluded pixels, explicitly preserved in the proposal.
+The engine cadence executor still needs these applicability and stable-art
+contracts before it can certify all five series; native region approval alone
+does not satisfy that obligation.
 
 ### Native exporter observations (2026-09-14 FBZ completion)
 

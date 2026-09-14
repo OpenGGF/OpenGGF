@@ -672,6 +672,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                 // FBZ1BGE_Normal reloads terrain/solids only. LoadEnemyArt is
                 // owned by the later in-level title's teardown, not Load_Level.
                 .runtimeArtAdmissionPolicy(com.openggf.game.RuntimeArtAdmissionPolicy.TITLE_OWNER)
+                // The real retained EndSignControl SST owns Change_Act2Sizes;
+                // no virtual preloaded-camera release tail may delay that owner.
+                .inLevelTitleCardPreloadedActCameraReleaseDispatches(0)
                 .preserveMusic(true)
                 .preserveLevelGamestate(true)
                 .preserveEndOfLevelState(true)
@@ -682,8 +685,8 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
                 .postTransitionMaxX((int) cam.getMaxX() + ACT_TRANSITION_WORLD_OFFSET_X)
                 .postTransitionMinY((int) cam.getMinY())
                 .postTransitionMaxY((int) cam.getMaxY())
-                .postTransitionMinXTarget((int) cam.getMinXTarget())
-                .postTransitionMaxXTarget((int) cam.getMaxXTarget())
+                .postTransitionMinXTarget((int) cam.getMinXTarget() + ACT_TRANSITION_WORLD_OFFSET_X)
+                .postTransitionMaxXTarget((int) cam.getMaxXTarget() + ACT_TRANSITION_WORLD_OFFSET_X)
                 .postTransitionMinYTarget((int) cam.getMinYTarget())
                 .postTransitionMaxYTarget((int) cam.getMaxYTarget())
                 .objectSurvivalPolicy(

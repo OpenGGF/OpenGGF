@@ -660,6 +660,60 @@ class TestFbzAct1RouteHeadless {
     }
 
     @Test
+    void realBossSignWaitsForGroundAndAllocatesResultsInEarlierFreeSlot() throws Exception {
+        HeadlessTestFixture fixture = routeBoundaryFixture();
+        ObjectManager objects = GameServices.level().getObjectManager();
+        FbzMinibossInstance boss = awaitPlacedBoss(fixture, objects, 240);
+        reachPlungerByInput(fixture, objects, boss);
+        driveBossRoute(fixture, objects, boss);
+        assertEquals(6, boss.scriptedImpactCount());
+        assertEquals(0, boss.remainingHits());
+        await(fixture, 64, boss::hasConvertedToEndSign,
+                "real defeated boss must become its native sign controller");
+        S3kSignpostInstance sign = awaitObject(fixture, objects, S3kSignpostInstance.class, 180);
+        await(fixture, 600, sign::isLanded, "real sign did not reach its post-land wait");
+        await(fixture, 80, () -> intField(sign, "postLandTimer") <= 8
+                        && intField(sign, "postLandTimer") >= 0 && !fixture.sprite().getAir(),
+                "grounded P1 did not reach the last sign countdown updates");
+
+        int lowerSlot = objects.firstFreeDynamicSlot();
+        assertTrue(lowerSlot >= ObjectSlotLayout.SONIC_3K.firstDynamicSlot()
+                        && lowerSlot < boss.getSlotIndex(),
+                "the real defeated family must leave an earlier free slot: free="
+                        + lowerSlot + ", boss=" + boss.getSlotIndex());
+        objects.reserveAllButNFreeSlots(0);
+        objects.releaseDynamicSlot(lowerSlot);
+        assertEquals(lowerSlot, objects.firstFreeDynamicSlot());
+
+        // Ordinary jump crosses the sign's routine-6 boundary while airborne;
+        // neither player state nor the sign/results routine is seeded here.
+        fixture.stepFrame(false, false, false, false, true);
+        assertTrue(fixture.sprite().getAir(), "ordinary jump did not leave the arena floor");
+        for (int frame = 0; frame < 12; frame++) {
+            fixture.stepFrame(false, false, false, false, true);
+            assertTrue(fixture.sprite().getAir());
+            assertTrue(objects.activeObjectsOfType(S3kResultsScreenObjectInstance.class).isEmpty(),
+                    "Obj_EndSignResults must wait for real P1 ground contact");
+        }
+        assertTrue(booleanField(sign, "resultsWaitedForPlayerLanding"));
+        S3kResultsScreenObjectInstance results = awaitObject(
+                fixture, objects, S3kResultsScreenObjectInstance.class, 120);
+        assertEquals(lowerSlot, results.getSlotIndex(),
+                "AllocateObject must use the earlier hole instead of an after-sign slot");
+        Field dispatchClock = com.openggf.level.objects.AbstractResultsScreen.class
+                .getDeclaredField("frameCounter");
+        dispatchClock.setAccessible(true);
+        assertEquals(0, dispatchClock.getInt(results),
+                "the earlier slot has already passed in this Process_Sprites walk");
+        assertTrue(booleanField(results, "resultsArtLoadPending"));
+        fixture.stepFrame(false, false, false, false, false);
+        assertTrue(dispatchClock.getInt(results) > 0,
+                "results must first execute on the next Process_Sprites dispatch");
+        assertFalse(booleanField(results, "resultsArtLoadPending"),
+                "the first results dispatch must initialize its production art load");
+    }
+
+    @Test
     void placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5() throws Exception {
         HeadlessTestFixture fixture = routeBoundaryFixture();
         var owningSession = fixture.gameplayMode();
