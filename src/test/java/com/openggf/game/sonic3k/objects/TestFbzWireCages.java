@@ -422,6 +422,10 @@ class TestFbzWireCages {
         rider.setYSpeed((short)0x500);
         rider.setGSpeed((short)-0x4DD);
         rider.setAir(true);
+        rider.setJumping(true);
+        rider.setFlipAngle(0x78);
+        rider.setFlipType(0x80);
+        rider.setFlipsRemaining(3);
         var horizontal=new FbzWireCageObjectInstance(spawn(0x6F,0x20));
         horizontal.setServices(new PlayersServices(rider,List.of()));
 
@@ -432,6 +436,10 @@ class TestFbzWireCages {
         assertFalse(rider.getAir());
         assertEquals(0,rider.getYSpeed());
         assertEquals(-0x600,rider.getGSpeed());
+        assertFalse(rider.isJumping());
+        assertEquals(0,rider.getFlipAngle());
+        assertEquals(0,rider.getFlipsRemaining());
+        assertEquals(0x80,rider.getFlipType(), "cage entry reapplies its tumble type after TouchFloor");
     }
 
     @Test void horizontalCageLandingAppliesNativeRollingRadiusDelta() {
