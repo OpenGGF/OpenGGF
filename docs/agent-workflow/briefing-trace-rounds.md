@@ -80,6 +80,12 @@ centres through scaling and test the real shaders at fractional as well as integ
 viewports. A complete-run native background can also retain scratch RAM history
 that a cold level boot never had; do not copy reference RAM into gameplay to fit it.
 
+KiS2 chain investigation (2026-09-14): preparing a recorded roster does not
+install its built-in patch. Verify the resolved session module at the first
+production pass before attributing mass physics/art differences. Standalone
+and chain harnesses must share the recorded-team module resolution; a correct
+character name in metadata is not evidence of the active runtime owner.
+
 | Rule | Signature | What it looks like |
 |---|---|---|
 | 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |

@@ -58,6 +58,7 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     private RomByteReader sk;
     private PlayerSpriteArtProvider skKnucklesArt;
     private Kis2Game game;
+    private com.openggf.game.sonic2.resources.Sonic2PlcService chipPlcService;
     private boolean kis2ImageProbed;
     private RomByteReader kis2Image;
     private Kis2ChipArt chipArt;
@@ -86,6 +87,10 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
         // Run the base module's side effects (PLC service, active ROM) and
         // replace only the game data object.
         base().createGame(rom);
+        chipPlcService = kis2Image().map(image ->
+                new com.openggf.game.sonic2.resources.Sonic2PlcService(
+                        Rom.fromReader(image, "KiS2 lock-on PLC address space"),
+                        Kis2Constants.ART_LOAD_CUES)).orElse(null);
         game = new Kis2Game(rom, skReader(), skKnucklesArt(), kis2Image().orElse(null), chipArt().orElse(null));
         return game;
     }
@@ -187,7 +192,29 @@ final class Kis2GameModule extends DelegatingGameModule implements com.openggf.g
     }
 
     @Override
+    public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+        var adapters = new java.util.ArrayList<com.openggf.game.rewind.RewindSnapshottable<?>>();
+        for (var adapter : base().rewindAdapters()) {
+            adapters.add(chipPlcService != null
+                    && adapter instanceof com.openggf.game.sonic2.resources.Sonic2PlcService
+                    ? chipPlcService : adapter);
+        }
+        return List.copyOf(adapters);
+    }
+
+    @Override
+    public void resetModuleScopedState() {
+        super.resetModuleScopedState();
+        chipPlcService = null;
+    }
+
+    @Override
     public <T> T getGameService(Class<T> type) {
+        if (chipPlcService != null
+                && (type == com.openggf.game.sonic2.resources.Sonic2PlcService.class
+                    || type == com.openggf.game.resources.PlcLifecycleService.class)) {
+            return type.cast(chipPlcService);
+        }
         if (kis2Image().isPresent()) {
             var provider = (Kis2SpecialStageProvider) getSpecialStageProvider();
             if (type == com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager.class)

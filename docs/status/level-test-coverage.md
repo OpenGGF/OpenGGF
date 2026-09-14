@@ -165,7 +165,11 @@ remain in LTS-07/LTS-08.
 [KiS2 trace-readiness follow-up](../architecture/plans/2026-09-14-kis2-trace-readiness.md)
 adds targeted movement/input, checkpoint/reload and results lifecycle obligations.
 It does not replace full special-stage routes or powered-form gameplay rewind
-coverage; those remain pending the chain recording and independent route checks.
+coverage; those still require independent route checks. The full chain recording
+is now published. The [first frontier round](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
+exercises the initial EHZ1 route and first special-stage return, plus independent
+chip PLC capture/restore/forward replay. It does not certify full-act gameplay
+rewind or viewport/donor/team breadth; the return title-card boundary remains open.
 
 FBZ integration verification (`f037a1218`, 2026-09-14): the full ordinary selection passes 20,281 tests with18 inspected skips and no failures/errors. Two structural-guard failures are unchanged from the baseline. This validates the implemented matrix obligations; the explicit strict replay prerequisite/SOZ entry and native SAT presentation gaps remain open. See the [completion record](../architecture/plans/2026-09-14-fbz-completion.md) for exact commands and limits.
 

@@ -109965,3 +109965,31 @@ Integrated into `develop` at `5d54b85d5` without conflicts. Repeating the same
 focused command on the integrated tree produced the identical 41 passes and
 one EHZ1 cursor-2003 chain failure, zero errors/skips. All 110 integrated files
 again matched the approved stored/logical hashes.
+
+## 2026-09-14 — KiS2 patch launch, chip PLC queue and first glide frontier
+
+Pinned base `31a9a6bce`, `.worktrees/kis2-chain-frontier`. Chain launch now
+resolves the recorded team through the same patch-aware session helper as
+standalone replay. Solo teams keep the native title-card object prelude.
+The tier-two PLC lifecycle and rewind service read the chip's `ArtLoadCues`
+table at $33A3FC with physical source addresses. Shared Knuckles glide logic
+checks wall fit, preserves transformed floor angles and retains the glide
+animation register when entering the slide mapping frame.
+
+Queued command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestGlideWallGrabTerrain,TestPlayableSpriteMovement,TestKis2Ehz1TraceReplay,TestKis2CompleteEmeraldRunChain
+test -B`, with absolute verified S2, S3K and KiS2 ROM properties. Geometry and
+movement: 180 tests pass. KiS2 launch regression passes. Standalone EHZ1 remains
+red: 179 errors, zero warnings (baseline 194); 91 initial history errors in each.
+Full chain remains red, now at **BK2 cursor 9366**, in `TITLE_CARD` after the
+first special-stage interior. Initial EHZ1 completes **3,180 rows**, 92 errors,
+zero warnings: 91 player-history bootstrap differences and one `rings`
+mismatch at row **2462**, expected 43, actual 53. No position/velocity, PLC or
+dynamic-art differences remain in this first segment. Zero skipped tests.
+
+The original chain's 17,024 errors covered only 1,260 rows before its cursor-2003
+stop, so these are different-depth totals. Special-stage interiors retain their
+existing uncompared-gameplay policy; entering/returning does not certify SS
+physics parity. All published fixture bytes remain unchanged.
+
+[ROM evidence, rejected probe approach and validation record](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).

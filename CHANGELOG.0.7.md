@@ -31,7 +31,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The CNZ slot face, title level-select code, Super sound-test code and independent
   results-message motion also use the KiS2 presentation. Dynamic-art lifecycle
   observations model the combined converted-RAM transfer and chip special-stage
-  DPLCs, including pending transfers across loads and rewind. Remaining route and
+  DPLCs, including pending transfers across loads and rewind. The chip supplies
+  its own PLC table and queue workloads. Solo replay retains the title-card object
+  prelude; glide wall grabs check terrain fit, and floor contact preserves flipped
+  tile angles and the slide animation register. Remaining route and
   hardware-rendering limits are listed in the known-discrepancies entry and
   `docs/kis2/BRANCH_DIFFS.md`.
 
