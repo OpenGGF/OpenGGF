@@ -3,8 +3,8 @@
 > Continuation on `feature/ai-gameplay-capture`, based at `35488abb6`:
 > entry breadth now covers 15 width/donor configurations with two rewind replays,
 > the late intro gate preserves native timing, and the opposing spring chain
-> now has an independent negative-control/rewind obligation. Full 640/800/S1 routes and HCZ
-> remain open; the [AIZ1 matrix](../validation/levels/s3k-aiz1-sonic.md) records the new
+> now has an independent negative-control/rewind obligation. All seven AIZ route axes
+> reach the AIZ2 reload; HCZ continuation is in progress; the [AIZ1 matrix](../validation/levels/s3k-aiz1-sonic.md) records the new
 > route/rewind evidence and remaining frontiers. The history below describes
 > the original develop delivery; only its reviewed helpers, pilot and documents
 > were imported into this branch.

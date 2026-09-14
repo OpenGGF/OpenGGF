@@ -25,8 +25,8 @@ classified unsupported merely because this matrix has not exercised it.
 | CAMERA / OBJECT / REWIND hollow tree | Approach before ROM capture threshold $2C99; active camera lock $2C60; released bounds $1300..$4000; snapshot comparison includes object graph and world state | Same parameterized test, independent TREE_APPROACH / TREE_LOCK / TREE_RELEASE | Pass: TREE_APPROACH, TREE_LOCK, TREE_RELEASE. Initial red run exposed uncaptured static Events_fg_4; registered a dedicated adapter. |
 | LOAD / REWIND AIZ2 | Production seamless reload and new-timeline restore/replay; old timeline rejected under the production boundary policy | `TestS3kAiz1ReloadRewind#seamlessReloadIsolatesHistoryAndNewActReplays`, ordinary | Pass: production root at frame 5,174; backward seek clamps to AIZ2; two 30-frame replays match. The older `TestRewindAcrossActBoundary` is only a smoke check, not evidence for this edge. |
 | ENTRY / LIFE / LOAD breadth | Short width × donor lifecycle cross-product, checkpoints, death/restart, reset behavior and team ownership | `TestS3kAiz1EntryMatrix`, explicit `openggf.aiz1.entry=true` | All 15 width × donor entry cases pass; intro ownership and two 30-frame rewind replays. Checkpoints, death/restart and load breadth remain missing. |
-| ROUTE breadth | Every width and donor, supported main routes and team shapes | `TestS3kAiz1CompatibilityRoutes#axisRouteCompletes`, explicit `openggf.aiz1.routes=true` | 400px/off, 512px/off and 320px/S2 pass; 640px/off, 800px/off and 320px/S1 fail as detailed below. Other teams/main routes remain missing. |
-| OBJECT / REWIND opposing spring chain | Live two-spring approach, RIGHT-only rejection, spring-aware crossing, two whole-state replays | `TestS3kAiz1SpringRecovery`, explicit `openggf.aiz1.recovery=true` | 640/off, 800/off and 320/S1; see spring-chain continuation below. Full-route join remains unresolved. |
+| ROUTE breadth | Every width and donor, supported main routes and team shapes | `TestS3kAiz1CompatibilityRoutes#axisRouteCompletes`, explicit `openggf.aiz1.routes=true` | All seven axis routes reach the AIZ2 reload alive; see the green-route continuation below. Full width × donor route cross-product and other teams/main routes remain missing. |
+| OBJECT / REWIND opposing spring chain | Live two-spring approach, RIGHT-only rejection, spring-aware crossing, two whole-state replays | `TestS3kAiz1SpringRecovery`, explicit `openggf.aiz1.recovery=true` | 640/off, 800/off and 320/S1; see spring-chain continuation below. Full routes now complete; the independent negative-control/rewind obligation remains. |
 | OBJECT / EVENT / CAMERA local boundaries | Per-mechanic before/at/after, negative activation, authority, culling and release checks | Existing `TestS3kAiz1SkipHeadless` is a source reference, not new execution evidence | Full obligation audit pending; route completion alone does not discharge local checks. |
 | BOSS | Every relevant phase, damage, child graph, defeat and exit | Pending audit | Route is composition evidence only. |
 | PRESENT / ORACLE | Native pixels/audio and independent ROM timing comparison | Separate trace/native lanes | Unrun by this delivery; snapshot equality is not rendering certification. |
@@ -373,3 +373,70 @@ existing absolute ROM properties and `test`: **3 passed, zero failures/errors/sk
 endpoint; each replay matched twice. Final aggregate testing: **548.798 seconds
 (9.147 minutes)**, separately accounted. This is focused local evidence,
 not a full-suite pass or complete-route delivery. No production source changed.
+
+
+## Green-route continuation (2026-09-14)
+
+Task `route-green-20260914`, pinned base `f1843f54a1`, development tree
+`.worktrees/ai-route-green`. This continuation changes private test controllers
+and evidence only; production physics, objects and timing remain unchanged.
+
+`Aiz1RouteContinuation` preserves recorded input until exhaustion or a grounded
+DOWN+JUMP request that the live moveset cannot execute as spindash. It reads live
+springs, platform geometry, control ownership, velocity and capabilities and
+returns ordinary pad masks. No width/donor names, trace physics rows, forced
+positions or fitted engine-frame gates select behavior.
+
+- The wide routes clear opposing horizontal springs with jump edges, release
+  movement-suppressing vine ownership with a fresh jump, and preserve the
+  hollow tree's movement-active ride. A generic object-controlled jump gate
+  was rejected because it ejects the player from the tree.
+- A rollback on the lower uphill loop requests a boost. The controller returns
+  to flat ground, turns right, crouches and charges using the live spindash
+  table. Charging at an arbitrary wall or while facing left was rejected.
+- A moveset without spindash climbs two live vertical springs, aims at the
+  upper spring's left half, lands on the moving platform, and uses the upper
+  ledge to continue right. Centring the upper spring missed the platform;
+  walking straight off the platform returned to the impassable lower loop.
+  The last latched solid owner is sticky: a later terrain landing must not be
+  described as a new platform contact merely because that reference remains.
+- Once the live FireBreath cutscene has locked its ROM arena, the continuation
+  brakes near its centre until the production fire transition reloads AIZ2.
+  Holding RIGHT instead caused ringless deaths against the right-hand body.
+
+The maintained route checks, with their existing per-frame no-P1-death and CPU
+identity/controller/leader/dead-streak audit, passed **7 cases, 0 skips**:
+
+| Axis | Reload engine frame | Recording continuation |
+| --- | ---: | --- |
+| 320/off | 5,174 | Unused; native test explicitly requires this |
+| 400/off | 5,181 | Unused |
+| 512/off | 5,190 | Unused |
+| 640/off | 7,434 | After program exhaustion |
+| 800/off | 7,471 | After program exhaustion; seven intro hold frames |
+| 320/S1 | 4,306 | At the unavailable spindash request |
+| 320/S2 | 5,174 | Unused |
+
+Command: `mvn -Dmse=off
+-Dtest=TestS3kAiz1RoutePilot,TestS3kAiz1CompatibilityRoutes
+-Dopenggf.aiz1.routes=true` with the existing absolute S1/S2/S3K ROM properties,
+then `test`. Measured wall time: 33.525 seconds. Recorded-row lead is meaningful
+only for uninterrupted playback; a cursor parked during live continuation is
+not evidence of an engine timing lead. Review added a native-only assertion
+that recovery never takes over, so an accidental native regression cannot be
+hidden by the new fallback.
+
+The runner plan selects 2,524 ordinary classes plus all guards for the new
+unclassified private helper. The proportionate-validation exception applies:
+there are no runtime/shared-helper/public-contract changes, and the route,
+entry, rewind and local recovery consumers exercise the affected paths directly.
+This is focused route validation, not a full ordinary/guard or trace-parity pass.
+The existing full-level coverage gaps in the obligation table remain open.
+
+After the native safeguard was added, `mvn -Dmse=off
+-Dtest=TestS3kAiz1RoutePilot,TestS3kAiz1EntryMatrix,TestS3kAiz1RouteRewind,TestS3kAiz1ReloadRewind,TestS3kAiz1SpringRecovery,TestAiz1IntroProgram,TestInputProgram
+-Dopenggf.aiz1.entry=true -Dopenggf.aiz1.recovery=true` with the same ROM properties
+and `test` passed **32 cases, zero failures/errors/skips**, in 58.696 seconds.
+This includes native recording preservation, 15 entry configurations, seven
+independent rewind windows, reload timeline isolation, three opposing-spring
+negative-control/replay cases and both input helpers.
