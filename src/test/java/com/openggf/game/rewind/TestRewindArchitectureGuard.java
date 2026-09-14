@@ -35,6 +35,12 @@ class TestRewindArchitectureGuard {
     private static final Map<String, Integer> OBJECT_REWIND_OVERRIDE_BASELINE = Map.ofEntries(
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#captureRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#restoreRewindState", 2),
+            // Explosion construction factories cannot be derived from placement or services.
+            // The typed extra preserves their exact configuration and all explosion scalars;
+            // context-aware overrides retain generic capture for subtype state. Focused
+            // recreation tests cover custom child order, once-only effects and S1 subtype state.
+            Map.entry("src/main/java/com/openggf/level/objects/ExplosionObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/level/objects/ExplosionObjectInstance.java#restoreRewindState", 1),
             // Shared badnik base keeps the no-arg compatibility overrides and
             // adds context-aware overloads so default badnik compact sidecars can
             // resolve captured player/object references through the restore table.
