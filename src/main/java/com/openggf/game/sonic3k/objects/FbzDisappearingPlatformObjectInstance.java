@@ -27,7 +27,12 @@ public final class FbzDisappearingPlatformObjectInstance
   }
   public void update(int vIntRunCount, PlayableEntity p) {
     if (state == 0) {
-      if (((vIntRunCount + offset) & mask) != 0) {
+      // loc_3BB08 reads Level_frame_counter, not the V_int_run_count
+      // delivered to object updates. Fade/lag history can separate those clocks.
+      ObjectServices objectServices = tryServices();
+      int levelFrameCounter = objectServices != null && objectServices.levelManager() != null
+          ? objectServices.levelManager().getFrameCounter() : vIntRunCount;
+      if (((levelFrameCounter + offset) & mask) != 0) {
         coarseCull(spawn.x());
         return;
       }
@@ -86,6 +91,12 @@ public final class FbzDisappearingPlatformObjectInstance
     return new SolidObjectParams(0x1B, 0x11, 0x11);
   }
   public boolean isSolidFor(PlayableEntity p) { return frame == 0; }
+  @Override
+  public boolean rejectsZeroDistanceTopSolidLanding(PlayableEntity player) {
+    // loc_3BB6E calls SolidObjectTop: loc_1E45A accepts d0 in [-$10,-1],
+    // rejecting zero before the first position or riding-state write.
+    return true;
+  }
   public SolidRoutineProfile getSolidRoutineProfile() {
     return SolidRoutineProfile.topSolid(false);
   }

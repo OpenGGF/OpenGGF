@@ -516,7 +516,7 @@ base is develop `51677cdd2`; the coordinating tree is
 `feature/ai-fbz-remaining`. Separate local worktrees own the ordinary input
 controller, Tails replay frontiers, and native visual comparisons. The coordinator
 owns the ending flow and combined verification. This continuation preserves the
-frozen visual proposal and distinguishes new evidence from acceptance.
+frozen checkpoint manifest and distinguishes new evidence from acceptance.
 
 A read-only results-owner probe overturns the earlier description of frame 22397
 as an isolated coordinate-rebase difference. On the base, results remain in their
@@ -656,3 +656,11 @@ Separately, `15976fff2` closes the short outgoing timeline obligation. `TestFbzS
 Native `loc_2C62C` is the top-only button path, not a monitor: its `SolidObjectTop` call reaches `loc_1E42E`, which rejects the exact right edge with `bhs`. The engine incorrectly gave both button families the full-solid inclusive (`bhi`) edge. Returning the family-specific edge rule removes Sonic's premature lift at 26,451 and 28,229 and Tails's identical boundary at 24,828. The four real-contact rows (left edge, last interior right pixel, exact right edge, outside) reproduced one failure at the exact right edge: 4 tests, 0 skips, 48.842 seconds.
 
 Queued Maven `-Dmse=off -B -Ptrace-replay-r7 -Dtest=TestSonic3kButtonObjectInstance,TestFbzEnvironmentalGraphRewind,TestS3kFbzCompleteRunTraceReplay test` with the absolute S3K ROM path passes 11 focused tests, one expected strict failure, zero skips, 61 seconds. The pre-lightning-fix combined tree reports 3,916 errors, first 24,250 rings; the next Tails error is animation at 24,980 and the first main-player position disagreement is now 28,296. Increased downstream mismatch volume after the corrected contact does not invalidate its native boundary proof.
+
+### Disappearing-platform activation and first landing
+
+The next main-player route divergence belonged to `loc_3BB34`, the disappearing platform at `$0E90/$0470`, subtype `$E9`. `loc_3BB08` reads `Level_frame_counter`; the implementation instead gated activation on the object update's VInt argument. A regression separates those clocks for all nine placed subtypes and fails before the correction (one failed test, zero skips, 47.760 seconds). The object now reads the existing level service counter, retaining the established standalone-test fallback. Animation duration still advances on actual object dispatches.
+
+Correct activation exposed the independent first-landing edge: `loc_3BB6E` calls `SolidObjectTop`, whose `loc_1E45A` accepts negative overlap `[-$10,-1]`, not zero. Four real rolling-player contacts reproduce the exact-surface failure (four tests, one failure, zero skips, 19.132 seconds). The object now uses the existing explicit zero-distance rejection contract. No shared collision algorithm or fitted phase is changed.
+
+Final queued Maven `-Dmse=off -B -Ptrace-replay-r7 -Dtest=TestFbzDisappearingPlatformAndScrewDoor,TestFbzObjectRewind,TestFbzEnvironmentalGraphRewind,TestS3kFbzCompleteRunTraceReplay test` with the absolute S3K ROM path: 23 focused passes, one expected strict failure, zero skips, 66 seconds. Complete comparison has 3,194 errors, still first 24,980 Tails animation before the parallel spike/CPU fix. Main-player position and velocity now agree until frame 35,869 (ground-speed/Y-speed signs); its next position difference is 35,870. The intermediate clock-only run had 19 focused passes and 3,794 strict errors in 65 seconds, with premature landing at 28,295; that measured edge is the reason for the second correction.
