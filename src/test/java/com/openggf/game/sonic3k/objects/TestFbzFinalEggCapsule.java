@@ -454,6 +454,37 @@ class TestFbzFinalEggCapsule {
         assertEquals(newcomerY, newcomer.getCentreY());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void landedSidekickRefreshesCapsuleBodyAndButtonCodeBank(boolean onButton) {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var capsule = manager.createDynamicObject(() -> new FbzEndEggCapsuleInstance(0x307C, 0x660));
+        AbstractObjectInstance support = onButton
+                ? manager.createDynamicObject(() -> new FbzEndEggCapsuleButtonInstance(
+                        new ObjectSpawn(0x307C, 0x63C, 0, 0, 0, false, 0), capsule))
+                : capsule;
+        var tails = new com.openggf.sprites.playable.Tails("tails_capsule", (short) 0, (short) 0);
+        tails.setCpuControlled(true);
+        var cpu = new SidekickCpuController(tails, fixture.sprite());
+        fixture.camera().setX((short) 0x2F80);
+        fixture.camera().setY((short) 0x600);
+        AbstractObjectInstance.updateCameraBounds(0x2F80, 0x600, 0x30C0, 0x6E0, 0);
+        tails.setAir(true);
+        tails.setCentreX((short) support.getX());
+        tails.setCentreY((short) (support.getY() - (onButton ? 4 : 0x18) - tails.getYRadius() + 2));
+        tails.setYSpeed((short) 0x100);
+        support.snapshotPreUpdatePosition();
+
+        manager.processImmediateInlineSolidCheckpoint(support, fixture.sprite(), List.of(tails));
+
+        assertTrue(manager.isRidingObject(tails, support));
+        cpu.refreshS3kInteractLatchFromCurrentRide();
+        assertEquals(8, cpu.getDiagnosticInteractId(),
+                "sub_13EFC reads Obj_EggCapsule / loc_86754's native code-pointer high word");
+    }
+
     @Test void capsuleDoesNotConsumeResultsOwnedExitFlags() {
         Harness h = harness();
         FbzEndEggCapsuleInstance capsule = h.addCapsule(40);
