@@ -13,7 +13,7 @@ import java.util.List;
 
 /** Locked-on {@code Obj_FBZEndBossEventControl} (sonic3k.asm:109825-109909). */
 public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
     private static final int X_STEP_16_16 = 0x7800;
     private static final int Y_STEP_16_16 = 0xA000;
     private static final int X_ENDPOINT = 0x45C;
@@ -227,6 +227,12 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
     private Phase phase() { return Phase.values()[phaseOrdinal]; }
     // Obj_FBZEndBossEventControl reaches SolidObjectTop on every native path,
     // including COMPLETE; it never calls out_of_range, MarkObjGone, or DeleteObject.
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_FBZEndBossEventControl and every loc_532E0..loc_533A4 state
+        // remain in bank $0005, read by Tails' sub_13EFC standing-object latch.
+        return 0x0005;
+    }
     @Override public boolean isPersistent() { return true; }
     @Override public SolidObjectParams getSolidParams() { return SOLID_PARAMS; }
     @Override public boolean isTopSolidOnly() { return true; }

@@ -103,6 +103,29 @@ class TestFbzPlaneTransition {
     }
 
     @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void landedSidekickRefreshesTheEventPlatformsNativeCodeBank() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var controller = manager.createDynamicObject(FbzEndBossEventControlInstance::new);
+        var tails = new com.openggf.sprites.playable.Tails("tails_platform", (short) 0, (short) 0);
+        tails.setCpuControlled(true);
+        var cpu = new com.openggf.sprites.playable.SidekickCpuController(tails, fixture.sprite());
+        tails.setAir(true);
+        tails.setRolling(false);
+        tails.setCentreX((short) controller.getX());
+        tails.setCentreY((short) (controller.getY() - 0x11 - tails.getYRadius() - 1));
+        tails.setYSpeed((short) 0x100);
+        controller.snapshotPreUpdatePosition();
+
+        manager.processImmediateInlineSolidCheckpoint(controller, fixture.sprite(), List.of(tails));
+        assertTrue(manager.isRidingObject(tails, controller));
+        cpu.refreshS3kInteractLatchFromCurrentRide();
+        assertEquals(5, cpu.getDiagnosticInteractId(),
+                "sub_13EFC reads the high word of loc_532E0..loc_533A4, not the prior support's bank");
+    }
+
+    @Test
     void controllerInitialBoundsAndSolidContractMatchNative() {
         assertEquals(0x3C, FbzEndBossEventControlInstance.nativeCameraMinY(PlayerCharacter.SONIC_ALONE));
         assertEquals(0x40, FbzEndBossEventControlInstance.nativeCameraMinY(PlayerCharacter.TAILS_ALONE));
