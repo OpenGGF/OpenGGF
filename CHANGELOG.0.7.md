@@ -21,8 +21,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   1-up monitor face, the grey shield, invincibility stars and monitor icons,
   the signpost face, the continue-screen icon, the chip's own line-0 palette
   and the recoloured Chemical Plant and Aquatic Ruin underwater palettes.
-  Title screen, special stage, results, ending and Super Knuckles remain
-  stock; see the known-discrepancies entry and `docs/kis2/BRANCH_DIFFS.md`.
+  The chip also supplies the Knuckles title intro, special-stage character/HUD
+  data and ring targets, results lettering, ending and continue-player
+  presentation, and Super Knuckles' palette cycle. Super Knuckles uses the
+  lock-on movement constants and transformation timing, with rewindable
+  controller state. Inherited input, animation and presentation limits remain
+  listed in the known-discrepancies entry and `docs/kis2/BRANCH_DIFFS.md`.
 
 - **HCZ1 miniboss:** retain the vertical arena lock and full rocket slowdown;
   match the body, rockets and individual exhausts to ROM sprite priorities and

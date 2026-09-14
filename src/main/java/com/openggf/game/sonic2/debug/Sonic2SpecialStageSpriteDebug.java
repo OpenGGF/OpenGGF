@@ -73,6 +73,14 @@ public class Sonic2SpecialStageSpriteDebug implements SpecialStageDebugProvider 
     private static final int RAW_TILES_PER_PAGE = RAW_TILE_COLUMNS * RAW_TILE_ROWS;
     private static final int RAW_TILE_SPACING = 10;
 
+    private java.util.function.IntFunction<Sonic2SpecialStageSpriteMappings.SpriteFrame> mainPlayerMappings =
+            Sonic2SpecialStageSpriteMappings::getSonicFrame;
+
+    /** Uses the same loaded character mappings as the live stage renderer. */
+    public void setMainPlayerMappings(java.util.function.IntFunction<Sonic2SpecialStageSpriteMappings.SpriteFrame> mappings) {
+        mainPlayerMappings = java.util.Objects.requireNonNull(mappings);
+    }
+
     private int playerPatternBase;
     private int hudPatternBase;
     private int hudPatternCount;
@@ -248,7 +256,7 @@ public class Sonic2SpecialStageSpriteDebug implements SpecialStageDebugProvider 
 
     private void renderSonicFrame(int frameIndex, int centerX, int centerY, boolean flipX) {
         GraphicsManager graphicsManager = graphicsManager();
-        Sonic2SpecialStageSpriteMappings.SpriteFrame frame = Sonic2SpecialStageSpriteMappings.getSonicFrame(frameIndex);
+        Sonic2SpecialStageSpriteMappings.SpriteFrame frame = mainPlayerMappings.apply(frameIndex);
 
         for (Sonic2SpecialStageSpriteMappings.SpritePiece piece : frame.pieces) {
             int pieceX = flipX ? -piece.xOffset - (piece.widthTiles * TILE_SIZE) : piece.xOffset;

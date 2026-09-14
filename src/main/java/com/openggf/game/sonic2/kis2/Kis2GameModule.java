@@ -61,6 +61,9 @@ final class Kis2GameModule extends DelegatingGameModule {
     private boolean kis2ImageProbed;
     private RomByteReader kis2Image;
     private Kis2ChipArt chipArt;
+    private Kis2SpecialStageProvider specialStageProvider;
+    private Kis2TitleScreen titleScreen;
+    private com.openggf.game.DebugModeProvider debugModeProvider;
 
     Kis2GameModule(GameModule base, PatchContext context) {
         super(base, Kis2Constants.PATCH_ID);
@@ -98,6 +101,65 @@ final class Kis2GameModule extends DelegatingGameModule {
         return objectArtProvider;
     }
 
+    @Override
+    public com.openggf.game.TitleScreenProvider getTitleScreenProvider() {
+        if (kis2Image().isEmpty()) return base().getTitleScreenProvider();
+        if (titleScreen == null) titleScreen = new Kis2TitleScreen(lockOnAddressSpace());
+        return titleScreen;
+    }
+
+    @Override
+    public com.openggf.game.EndingProvider getEndingProvider() {
+        if (kis2Image().isEmpty()) return base().getEndingProvider();
+        return new com.openggf.game.sonic2.credits.Sonic2EndingProvider(
+                new Kis2EndingPresentation(lockOnAddressSpace(), new Kis2PlayerArt(skReader(), skKnucklesArt())));
+    }
+
+    private LockOnAddressSpace lockOnAddressSpace() {
+        RomByteReader dump = kis2Image().orElseThrow();
+        return LockOnAddressSpace.tierTwo(skReader(), dump.window(Kis2Constants.S2_WINDOW_START,
+                Kis2Constants.S2_WINDOW_END - Kis2Constants.S2_WINDOW_START), dump);
+    }
+
+    @Override
+    public com.openggf.game.SpecialStageProvider getSpecialStageProvider() {
+        if (kis2Image().isEmpty()) return base().getSpecialStageProvider();
+        if (specialStageProvider == null) specialStageProvider = new Kis2SpecialStageProvider(lockOnAddressSpace());
+        return specialStageProvider;
+    }
+
+    @Override
+    public com.openggf.game.DebugModeProvider getDebugModeProvider() {
+        if (kis2Image().isEmpty()) return base().getDebugModeProvider();
+        if (debugModeProvider == null) {
+            var manager = ((Kis2SpecialStageProvider) getSpecialStageProvider()).getManager();
+            debugModeProvider = new com.openggf.game.sonic2.debug.Sonic2DebugModeProvider(
+                    manager, manager.getDebugSprites());
+        }
+        return debugModeProvider;
+    }
+
+    @Override
+    public <T> T getGameService(Class<T> type) {
+        if (kis2Image().isPresent()) {
+            var provider = (Kis2SpecialStageProvider) getSpecialStageProvider();
+            if (type == com.openggf.game.sonic2.specialstage.Sonic2SpecialStageManager.class)
+                return type.cast(provider.getManager());
+            if (type == com.openggf.game.sonic2.debug.Sonic2SpecialStageSpriteDebug.class)
+                return type.cast(provider.getManager().getDebugSprites());
+        }
+        return base().getGameService(type);
+    }
+
+    @Override
+    public com.openggf.sprites.playable.SuperStateController createSuperStateController(
+            com.openggf.sprites.playable.AbstractPlayableSprite player) {
+        if ("knuckles".equalsIgnoreCase(player.getCode())) {
+            return kis2Image().map(image -> new Kis2SuperStateController(player, image)).orElse(null);
+        }
+        return base().createSuperStateController(player);
+    }
+
     /**
      * {@code PalPtr_CPZ_U} and {@code PalPtr_ARZ_U} point at the chip's
      * recoloured underwater lines; every other zone keeps the stock data.
@@ -127,7 +189,8 @@ final class Kis2GameModule extends DelegatingGameModule {
         if (chip.isEmpty()) {
             return base().createContinueScreenProvider();
         }
-        return new Sonic2ContinueScreenProvider(() -> chip.get().load(Kis2ChipArt.Asset.CONTINUE_ICON));
+        return new Sonic2ContinueScreenProvider(() -> chip.get().load(Kis2ChipArt.Asset.CONTINUE_ICON),
+                new Kis2ContinuePresentation(new Kis2PlayerArt(skReader(), skKnucklesArt())));
     }
 
     /** The fidelity the module resolved from the ROMs the context could open. */
@@ -160,7 +223,8 @@ final class Kis2GameModule extends DelegatingGameModule {
                         // PlrList_Signpost: plreq ArtTile_ArtNem_Signpost+34, ArtNem_SignpostKnucklesPatch
                         new Sonic2ArtOverlays.SheetPatch(ObjectArtKeys.SIGNPOST,
                                 Kis2Constants.SIGNPOST_KNUCKLES_PATCH_TILE,
-                                () -> art.load(Kis2ChipArt.Asset.SIGNPOST_PATCH))));
+                                () -> art.load(Kis2ChipArt.Asset.SIGNPOST_PATCH))),
+                new Kis2ResultsArt(kis2Image().orElseThrow())::apply);
     }
 
     private Pattern[] loadTierOneLifeIcon() {

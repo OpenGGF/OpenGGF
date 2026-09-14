@@ -3343,20 +3343,26 @@ the owning KiS2 routine in the catalogue):
   field applies `$9C` to bosses too.
 - **Checkpoint rings.** KiS2 `Obj79_LoadData` keeps `Ring_count` on respawn;
   the engine clears rings per stock Sonic 2.
-- **Presentation tier (chip data not yet read):** the title screen
-  (`Obj0E_*`, `TitleScreen*`, `Pal_133EC`, `ArtUnc_FontK`), the special
-  stage (`Obj09` DPLCs, `obj5E` HUD, `Obj61`, `Obj63`, `Pal_SS`, lowered
-  `SpecialStage_RingReq_Alone` requirements), the results screen
-  (`Obj6F_Knuckles`, "KNUCKLES GOT"), the ending (`EndgameCredits` banner,
-  `objCF`, `Pal_KiS2_Ending`), Super Knuckles (`CyclingPal_SKTransformation`,
-  `CyclingPal_SKRevert`, `$800/$18/$C0` speeds), the continue screen's
-  Knuckles player object (`ObjDB_Sonic_Init` uses `MapUnc_Knuckles` and
-  `AniIDKnuxAni_ShadowBox`; only the mini icon is patched), CNZ slot
-  pictures (`ArtUnc_CNZSlotPicsKnucklesPatch`), level-select PLC changes and
-  the changed cheat codes remain stock Sonic 2.
-- Trace fixtures for KiS2 do not exist yet; `TraceReplaySessionBootstrap`
-  resolves a recorded Knuckles team through the patch so they can be added
-  now that the lock-on dump is served.
+- **Presentation follow-up (2026-09-14).** Chip-backed title animation, special-stage
+  player/HUD/mappings and ring targets, normal and special-stage results text,
+  ending and continue-player presentation are implemented. The title retains
+  the existing S2 SEGA logo; attract demos, changed cheat handling, level-select
+  PLC changes, exact VDP sprite-mask limits and CNZ slot pictures remain open.
+  Ending walking cadence and the special-stage results message lifecycle retain
+  the existing S2 owner's approximations; this work does not certify trace parity.
+- **Super Knuckles.** Chip palettes, sparse colour writes (2/3/5), 16-pass
+  transform freeze, $800/$18/$C0 movement, unchanged $600/$300 jump,
+  seeded ring drain, revert and controller rewind are implemented. The shared
+  air-ability path still requires release/repress: KiS2 also accepts a newly
+  pressed second jump button while the first remains held. The ROM demo-mode
+  gate has no corresponding engine demo path. Controller eligibility and activation are
+  exercised separately from palette-cycle tests; alternative-button input is not covered.
+- **Trace coverage.** The EHZ1 KiS2 fixture exists; its current divergence is
+  tracked in [the frontier log](trace-frontier-log.md). There are no passing
+  end-to-end trace fixtures for these presentation or powered-form paths.
+
+The [completion plan and coverage matrix](../architecture/plans/2026-09-14-kis2-presentation-super.md)
+records exercised paths and inherited coverage gaps.
 
 ### Rationale
 

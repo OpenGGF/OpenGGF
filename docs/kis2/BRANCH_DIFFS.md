@@ -384,3 +384,32 @@ the continue screen's Knuckles player object (`ObjDB_Sonic_Init` with
 `MapUnc_Knuckles` and `AniIDKnuxAni_ShadowBox`), CNZ slot pictures
 (`SlotMachine_GetPixelRow`), and KiS2 trace fixtures (require the
 user-supplied lock-on dump in BizHawk).
+
+## Presentation and Super implementation (2026-09-14)
+
+The chip-backed providers now consume the title, special-stage/results and
+ending data catalogued above. Source addresses were verified by assembling
+`c336fed` with `gameRevision=3`, `fixBugs=0`: its chip output matches the
+user-supplied dump byte for byte. Runtime code reads only logical ROM data.
+`Kis2SpriteMappings` decodes the chip's six-byte pieces; reusing stock S2's
+eight-byte parser was rejected after the new art-boundary tests exposed it.
+
+| Owner | ROM bytes / behavior | Implementation |
+| --- | --- | --- |
+| `PalCycle_SuperSonic` | `CyclingPal_SKTransformation` $301EE0 (60 bytes), revert $301F1C (6 bytes); colours 2/3/5 | `Kis2SuperStateController` |
+| `Knuckles_TurnSuper` | $800/$18/$C0; seed `Super_Sonic_frame_count=60`; retains jump and animation set | `Kis2Physics.SUPER_KNUCKLES`, controller |
+| `EOL_Sonic`, `loc_140AC` | eleven-piece KNUCKLES GOT at $311BF6; four FontK tiles at $312096 written to VRAM $5C6 | `Kis2ResultsArt` |
+| `Obj09`, `Pal_SS` | art $33B3F0; mappings $32D410; DPLC $32D728; palette $302CBE | `Kis2SpecialStageDataLoader` |
+| `SpecialStage_RingReq_Alone`, `Obj6F` | targets $3071D2; mappings $311D22; results letters $307284 | KiS2 special-stage loader/provider |
+| `ObjDB_Sonic_Init` | Knuckles mappings and shadow-box $24, then walk; no Tails | `Kis2ContinuePresentation` |
+| `EndgameCredits`, `ObjCF` | SK art $0DEA00; chip palette $3090BC; mappings $3091E0; postcredits banner data | `Kis2EndingPresentation` |
+| `TitleScreen`, `Obj0E` | chip artwork, palettes, mappings and Knuckles/hand/emblem/banner sequence | `Kis2TitleData`, `Kis2TitleAnimation`, `Kis2TitleScreen` |
+
+`PalCycle_SuperSonic` runs once per pass. A transformation-completion pass must
+not also decrement the active-cycle timer through the shared controller's
+ring-work call; the controller explicitly keeps those two responsibilities
+separate. Sparkles remain object-owned across rewind; revert resolves the live
+objects by owning playable rather than retaining a stale recreated reference.
+
+Remaining scope and validation limits are in the linked completion plan and
+known-discrepancies entry, which supersede the earlier deferred-status prose.

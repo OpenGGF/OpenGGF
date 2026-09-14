@@ -21,7 +21,12 @@ import java.util.function.Supplier;
  *                              ({@code ArtNem_Sonic_life_counter} replacement)
  * @param sheetPatches          tile-range overwrites applied to registered sheets
  */
-public record Sonic2ArtOverlays(Supplier<Pattern[]> mainCharacterLifeIcon, List<SheetPatch> sheetPatches) {
+public record Sonic2ArtOverlays(Supplier<Pattern[]> mainCharacterLifeIcon, List<SheetPatch> sheetPatches,
+        java.util.function.UnaryOperator<com.openggf.level.objects.ObjectSpriteSheet> resultsSheet) {
+
+    public Sonic2ArtOverlays(Supplier<Pattern[]> mainCharacterLifeIcon, List<SheetPatch> sheetPatches) {
+        this(mainCharacterLifeIcon, sheetPatches, java.util.function.UnaryOperator.identity());
+    }
 
     /** Overwrite {@code sheetKey}'s tiles from {@code firstTile} with the supplied patterns. */
     public record SheetPatch(String sheetKey, int firstTile, Supplier<Pattern[]> patterns) {
@@ -36,6 +41,7 @@ public record Sonic2ArtOverlays(Supplier<Pattern[]> mainCharacterLifeIcon, List<
 
     public Sonic2ArtOverlays {
         sheetPatches = sheetPatches == null ? List.of() : List.copyOf(sheetPatches);
+        resultsSheet = resultsSheet == null ? java.util.function.UnaryOperator.identity() : resultsSheet;
     }
 
     /** Only the life icon (tier-one lock-on art, cross-game stand-ins). */

@@ -254,6 +254,17 @@ public class Sonic2EndingArt {
                 + " pilot=" + patternCount(pilotPatterns));
     }
 
+    /** ROM-backed character presentation overrides after shared S2 art is loaded. */
+    public void replaceCharacterArt(Pattern[] character, com.openggf.sprites.art.SpriteArtSet player) {
+        characterPatterns = character;
+        playerPatterns = player.artTiles();
+        playerArtTile = player.basePatternIndex();
+    }
+
+    public void replacePalettes(Palette[] palettes) {
+        endingPalettes = palettes.clone();
+    }
+
     /**
      * Loads ending palettes from ROM for the given routine.
      * <p>
