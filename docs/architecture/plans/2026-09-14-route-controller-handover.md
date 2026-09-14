@@ -118,3 +118,44 @@ report rather than running 34 minutes.
   from physics rows, and neither should a successor.
 - The route controllers assert milestones from live objects and never key on
   width, donor or frame index; keep it that way when adding rows.
+
+
+## CI blockers found during green-route delivery
+
+The pre-task feature head `f1843f54a1` had a red push run
+[34822783943](https://github.com/OpenGGF/OpenGGF/actions/runs/34822783943):
+18,661 tests, two failures, zero errors, 2,738 skips. These failures predate the
+new route controllers:
+
+- `TestObjectPlacementEncoding.commonParserPreservesDescendingFullXOrderInsideOnePlacementColumn`
+  expected descending ring X order, contrary to `RingsMgr_SortRings` and the
+  already-correct parser. Develop's focused correction `49fb9d942` was imported
+  as `cecebd2b8`, preserving the separate ROM object-order assertion.
+- `TestModApiReleasePolicy.destinationPropertyIsOptionalButMustAgreeWhenPresent`
+  received `feature/ai-gameplay-capture` from the push workflow. The optional
+  property accepts release integration destinations, not feature refs. The push
+  command now adds it only for `master`, `develop` and `next`; descriptor checks,
+  canonical destination agreement, PR validation and Maven test selection remain
+  intact. No policy descriptor or API pin changed.
+
+Focused verification: `mvn -Dmse=off
+-Dtest=TestObjectPlacementEncoding,Sonic2RingPlacementTest,TestRingViewportWindow,TestModApiReleasePolicy
+-DmodApi.destinationBranch=develop test` with existing absolute ROM properties:
+**34 cases, zero failures/errors/skips**, 19.554 seconds. The actual push script
+also passed `bash -n` and six stub-Maven argument scenarios (three integration
+branches, feature, bugfix and a literal shell-looking feature name). A requested
+Python YAML parse was unavailable because PyYAML is not installed; the shell
+block was extracted from the workflow directly for these checks.
+
+Validation remains proportionate: the added CI change repairs the optional
+branch-context argument only, without changing build commands, test selection,
+release rules or production behavior. The existing remote run supplies the
+pre-change failure identities; a new push must still pass its normal CI gate.
+
+
+Review also identified the existing structural assertion requiring the old push
+argument. `TestBuildToolingGuard` now recognises only the CI push step's explicit
+canonical-branch dispatch; PR and release destination requirements remain intact.
+`mvn -Dmse=off -Pguards -Dtest=TestBuildToolingGuard test` passed all **118 cases,
+zero failures/errors/skips**, in 51.789 seconds in a fresh guard JVM. This is the
+build-tooling guard class, not the full structural-guard suite.
