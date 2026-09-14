@@ -502,3 +502,49 @@ checkpoints remain excluded. The contact sheet does not establish native route
 visual parity. The historical frozen-checkpoint matrix above therefore remains
 unchanged; these five bounded source-pixel comparisons are accepted evidence,
 not five whole-checkpoint PASS claims.
+
+### Frozen boundary equality pilot (2026-09-14 remaining work)
+
+`capture_fbz_boundary_fixture.lua` is an explicit native setup instrument. It
+allowlists only boundary6's declared player position, event words, and LFC;
+subsequent physics, camera, event checks, redraw and VBlank remain native.
+It never supplies captured RAM to the engine. The Python host's
+`--fixture-state` records the native saved-state path and SHA-256.
+
+Official BizHawk2.11, the verified locked-on ROM and saved state
+`route-samples-v1/sample-237948.State` reproduced **FAIL** for the frozen
+boundary6 recipe in both directions. At the specified stationary player
+`x=$100,y=$640`, `Events_routine_bg` alternates `$08/$04` and the outdoor flag
+alternates `$FF00/$0000` for all 40 observed frames per direction. It never
+reaches the required normal-stage capture boundary. Evidence is external:
+`fbz-remaining-20260914/visual/boundary6-native-pilot-v2/fixture.jsonl`,
+`forward-01..40` and `reverse-01..40` PNG/VRAM/CRAM/VSRAM files, plus `host.json`.
+The completed capture took 3.420 seconds; an earlier forward-only failure left
+Lua open until the 15-second host timeout (15.027 seconds). That attempt is not
+reported as a successful capture.
+
+`FBZ1_BGChange6` admits indoor→outdoor at `y >= $640`; `loc_52CB2` admits
+outdoor→indoor at `y <= $640`. Both active redraw handlers call
+`FBZ1_CheckBGChange` again, and `loc_52CD8` resets the delayed row count on every
+flip. Source inspection establishes the same equality overlap for all six
+Act1 boundaries and the Act2 `$A40` boundary; only boundary6 has this fresh
+native execution evidence. The pending followup in
+`fbz-visual-manifest-amendment-proposal.json` gives exact safe-side changes
+and separately corrects `$230` visible-art applicability to Act2. The frozen
+manifest is unchanged pending independent review.
+
+This pilot also exposes limits of the current engine boundary instrument:
+its logical redraw loop calls `updateAct1Frame` directly and renders only after
+the loop, so it cannot establish per-frame VBlank or changing plane-column
+presentation. The native camera eased from `$070C` toward `$05E0` after the
+setup position write; it was not forced to match engine camera state. No
+paired palette, plane-column or visible-geometry PASS is claimed. A reviewed
+recipe correction and actual production-frame engine sampling are prerequisites
+for that comparison. The existing 30 source-local AniPLC pixel results remain
+bounded evidence, not frozen checkpoint acceptance.
+
+Instrument check (no ROM/emulator required):
+`lua tools/bizhawk/test_fbz_boundary_fixture.lua tools/bizhawk/capture_fbz_boundary_fixture.lua`
+passed 2 scenarios: bounded alternating failure and completion, with the exact
+12 declared writes and neutral input. Lua syntax and Python host compilation
+also passed; no Maven or engine capture was run for this failed native pilot.

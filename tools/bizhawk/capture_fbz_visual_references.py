@@ -60,6 +60,7 @@ def main():
     parser.add_argument("--probe-framebuffer", type=Path)
     parser.add_argument("--bizhawk-home", type=Path)
     parser.add_argument("--exporter", type=Path, help="explicit diagnostic Lua override; hash recorded")
+    parser.add_argument("--fixture-state", type=Path, help="explicit native fixture saved state; identity recorded, never supplied to engine")
     parser.add_argument("--rom", type=Path)
     parser.add_argument("--movie", type=Path)
     parser.add_argument("--output", type=Path)
@@ -122,6 +123,11 @@ def main():
                "client_common_sha256": digest(home / "dll/BizHawk.Client.Common.dll"),
                "gpgx_archive_sha256": digest(home / "dll/gpgx.wbx.zst"),
                "acceptance": "pending-independent-pixel-and-state-review"}
+    if args.fixture_state:
+        fixture_state = args.fixture_state.resolve(strict=True)
+        env["OGGF_FBZ_FIXTURE_STATE"] = str(fixture_state)
+        receipt["fixture_state"] = str(fixture_state)
+        receipt["fixture_state_sha256"] = digest(fixture_state)
     start = time.monotonic()
     try:
         with (output / "launch.log").open("w") as log:

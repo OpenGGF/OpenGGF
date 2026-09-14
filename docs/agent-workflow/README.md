@@ -123,3 +123,5 @@ Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven
   representative route; `TestS3kAiz1RouteRewind` checks independently reached
   live spots. The [AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md)
   records their evidence and remaining coverage.
+
+- `tools/bizhawk/capture_fbz_boundary_fixture.lua`: declared-write native FBZ boundary6 pilot; records every redraw frame with RAM/VDP bytes and bounded failure, launched by the visual host with `--fixture-state` (2026-09-14 FBZ completion).
