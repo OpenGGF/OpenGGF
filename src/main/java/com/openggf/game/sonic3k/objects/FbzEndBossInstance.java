@@ -465,7 +465,10 @@ public final class FbzEndBossInstance extends AbstractBossInstance
                     | (input == ForcedExitInput.RIGHT ? 0 : AbstractPlayableSprite.INPUT_JUMP);
             boolean jumpPress = input == ForcedExitInput.A_RIGHT;
             main.setForcedInputMask(mask);
-            main.writeLogicalInputAndCurrentFollowerHistory(mask, jumpPress);
+            // loc_86358 runs after Sonic_RecordPos in the player SST slot.
+            // Publish the next logical word without rewriting that earlier sample.
+            main.setLogicalInputState(false, false, false, true,
+                    input != ForcedExitInput.RIGHT, jumpPress);
         }
     }
 
