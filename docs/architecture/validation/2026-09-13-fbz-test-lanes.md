@@ -28,7 +28,7 @@ remain unchanged; they are already focused scenarios.
 Focused checks verify the 26 extracted cases, ordinary selection, exhaustive
 selection and build-policy guard. One final change-based broad run validates the
 POM/selection change against the pinned base. Expected combined cost about eight
-minutes; allow eighteen minutes, bounded by the shared task receipt. Inspect exact
+minutes; allow eighteen minutes of execution time, excluding queue waiting. Inspect exact
 failures and skips, including the known native representative failure; moving
 failed routes into an explicit lane is not a gameplay fix.
 

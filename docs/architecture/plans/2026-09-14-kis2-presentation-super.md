@@ -27,12 +27,12 @@ remain owned by integration to avoid competing changes.
 
 ## Validation
 
-One shared task receipt `kis2-presentation-super-completion`, pinned to the base
-above; 40-minute aggregate test budget. Workers perform bounded focused checks
-and record elapsed time. Inspect the combined category plan and preflight before
-the one permitted broad attempt; timing/public-contract changes require normal
-change-based validation. Attribute failures with bounded matched checks, never
-by broad retries. Use real ROM paths and inspect skips. Exercise screen lifecycle,
+Use the pinned base above and queue local Maven commands through
+`tools/testing/maven_queue.py`; category runs queue automatically. Workers perform
+bounded focused checks. Inspect the combined category plan and preflight;
+timing/public-contract changes require normal change-based validation. Attribute
+failures with bounded matched checks and rerun checks when fixes require it.
+Use real ROM paths and inspect skips. Exercise screen lifecycle,
 chip and fallback paths, transform/revert, and capture/restore where state changes.
 
 ## Delivery

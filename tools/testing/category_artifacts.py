@@ -72,9 +72,11 @@ def stop_process_tree(process):
             pass
 
 
-def run_logged(command, cwd, log_path, temporary=None, timeout=None, idle_timeout=None):
+def run_logged(command, cwd, log_path, temporary=None, timeout=None, idle_timeout=None, queue_fd=None):
+    from maven_queue import inherited_slot
+
     if timeout is not None and timeout <= 0:
-        raise TimeoutError('Validation time budget exhausted before launch')
+        raise TimeoutError('Invocation timeout exhausted before launch')
     log = RollingLog(log_path)
     environment = None if temporary is None else {
         **os.environ, **{name: str(temporary) for name in ('TMPDIR', 'TMP', 'TEMP')}}
@@ -82,7 +84,8 @@ def run_logged(command, cwd, log_path, temporary=None, timeout=None, idle_timeou
         with subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT,
                               env=environment,
-                              start_new_session=(os.name == 'posix')) as process:
+                              start_new_session=(os.name == 'posix'),
+                              **inherited_slot(queue_fd)) as process:
             started = last_output = time.monotonic()
             done = threading.Event()
             expired = []
@@ -91,7 +94,7 @@ def run_logged(command, cwd, log_path, temporary=None, timeout=None, idle_timeou
                 while not done.wait(0.1):
                     now = time.monotonic()
                     if timeout is not None and now - started >= timeout:
-                        expired.append('total validation time budget')
+                        expired.append('invocation timeout')
                     elif idle_timeout is not None and now - last_output >= idle_timeout:
                         expired.append('no-output timeout')
                     if expired:
@@ -183,16 +186,10 @@ def acknowledge_run(root, run_id):
     """Delete only the named runner-owned result, serialized with Maven execution."""
     if not RUN_NAME.fullmatch(run_id):
         raise ValueError('Use the exact run ID, not a path, with --acknowledge')
+    from maven_queue import maven_slot
+
     target = root / 'target'
-    target.mkdir(exist_ok=True)
-    lock = target / 'category-tests.lock'
-    try:
-        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    except FileExistsError:
-        raise ValueError('Category runner is active or has a stale lock; do not clean up until its processes have exited')
-    try:
-        with os.fdopen(fd, 'w') as stream:
-            stream.write(str(os.getpid()) + '\n')
+    with maven_slot(root):
         base = target / 'category-tests'
         directory = base / run_id
         if base.is_symlink() or directory.is_symlink():
@@ -205,5 +202,3 @@ def acknowledge_run(root, run_id):
         shutil.rmtree(directory)
         if not any(base.iterdir()):
             base.rmdir()
-    finally:
-        lock.unlink()
