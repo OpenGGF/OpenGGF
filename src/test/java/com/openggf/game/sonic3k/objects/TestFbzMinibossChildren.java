@@ -204,6 +204,70 @@ class TestFbzMinibossChildren {
     }
 
     @Test
+    void sidekickEndingPoseKeepsPrisonRideAndReleasesEarlierPlungerPush() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var camera = new com.openggf.camera.Camera();
+            camera.setX((short) 0x2E20);
+            camera.setY((short) 0x540);
+            var main = new PlungerContactPlayer();
+            var tails = new PrisonContactTails();
+            main.setCentreX((short) 0x2E30);
+            tails.setCentreX((short) 0x2E30);
+            var query = new ObjectPlayerQuery(() -> main, () -> List.of(tails));
+            var services = new TestObjectServices() {
+                @Override public com.openggf.camera.Camera camera() { return camera; }
+                @Override public ObjectPlayerQuery playerQuery() { return query; }
+            };
+            var manager = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                    0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            manager.reset(0x2E20);
+            var boss = boss(services);
+            var defeated = FbzMinibossInstance.class.getDeclaredField("defeated");
+            defeated.setAccessible(true);
+            defeated.setBoolean(boss, true);
+            var plunger = manager.createDynamicObject(() -> new FbzMinibossPlungerChild(boss));
+            var prison = manager.createDynamicObject(() -> new FbzMinibossPrisonChild(boss));
+            manager.update(0x2E20, main, List.of(tails), 0, false, true, false);
+            tails.setCentreX((short) (prison.getX() - 0x1B));
+            tails.setCentreY((short) (prison.getY() - 0x20 - tails.getYRadius() + 1));
+            tails.setAir(true);
+            tails.setYSpeed((short) 0x100);
+            manager.processImmediateInlineSolidCheckpoint(prison, tails, List.of());
+            assertTrue(manager.isRidingObject(tails, prison));
+            tails.setXSpeed((short) 0xC);
+            tails.setGSpeed((short) 0xC);
+            manager.update(0x2E20, main, List.of(tails), 1, false, true, false);
+            assertTrue(manager.hasObjectPushingBit(tails));
+            assertTrue(manager.isRidingObject(tails, prison));
+            int heldY = tails.getCentreY();
+
+            S3kSignpostInstance.applySidekickEndingPose(tails);
+            manager.update(0x2E20, main, List.of(tails), 2, false, true, false);
+            assertFalse(manager.hasObjectPushingBit(tails), "plunger loc_1E0A2 still consumes its P2 push bit");
+            assertEquals(0, tails.getAnimationId(), "the push-release animation word follows ending pose publication");
+            assertTrue(manager.hasObjectStandingBit(tails, prison));
+            assertTrue(manager.isRidingObject(tails, prison));
+            assertTrue(tails.isOnObject());
+            assertFalse(tails.getAir());
+            assertEquals(heldY, tails.getCentreY(), "signed MvSonicOnPtfm preserves position while retaining support");
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+            com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    private static final class PrisonContactTails extends com.openggf.sprites.playable.Tails {
+        private PrisonContactTails() {
+            super("FBZ_PRISON_TAILS", (short) 0, (short) 0);
+            setGameRulesForTest(com.openggf.game.rules.GameRules.SONIC_3K);
+            setWidth(18);
+            setHeight(30);
+        }
+    }
+
+    @Test
     void endingPoseRetainsExistingPlungerSupportButCannotCreateANewContact() throws Exception {
         com.openggf.tests.TestEnvironment.configureGameModuleFixture(
                 com.openggf.tests.rules.SonicGame.SONIC_3K);
