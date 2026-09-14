@@ -219,6 +219,51 @@ class TestFbzMinibossChildren {
         }
     }
 
+    @ParameterizedTest
+    @CsvSource({"-32,true", "27,true", "31,true", "32,false"})
+    void bodyLandingReadsNativeWidthRatherThanCollisionPadding(int offsetX, boolean lands) {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var camera = new com.openggf.camera.Camera();
+            camera.setX((short) 0x2E20);
+            camera.setY((short) 0x0540);
+            com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(
+                    0x2E20, 0x0540, 0x2F60, 0x0620, 0);
+            var player = new PlungerContactPlayer();
+            var services = new TestObjectServices().withCamera(camera);
+            var manager = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                    0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            manager.reset(0x2E20);
+            var body = manager.createDynamicObject(() -> boss(services));
+            // Exercise an established boss slot after its first render cycle,
+            // as the ordinary ObjectManager frame-start snapshot does.
+            body.snapshotPreUpdatePosition();
+            player.setRolling(true);
+            player.applyRollingRadii(false);
+            player.setCentreX((short) (body.getX() + offsetX));
+            player.setCentreY((short) (body.getY() - 0x20 - player.getYRadius() - 4));
+            player.setAir(true);
+            player.setYSpeed((short) 0x338);
+
+            manager.processImmediateInlineSolidCheckpoint(body, player, List.of());
+
+            assertEquals(lands, manager.isRidingObject(player, body));
+            assertEquals(lands, manager.hasObjectStandingBit(player, body));
+            assertEquals(!lands, player.getAir());
+            assertEquals(0x20, body.getBalanceWidthPixels());
+            assertEquals(0x0006, body.romObjectCodePointerHighWord());
+            if (lands) {
+                assertFalse(player.getRolling());
+                assertEquals(0, player.getYSpeed());
+            }
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+            com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
     private static final class PlungerContactPlayer extends com.openggf.sprites.playable.Sonic {
         private PlungerContactPlayer() {
             super("FBZ_PLUNGER_CONTACT", (short) 0, (short) 0);

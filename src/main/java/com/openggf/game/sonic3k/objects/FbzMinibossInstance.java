@@ -20,6 +20,7 @@ import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.level.objects.RomWorldPositionedObject;
+import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -29,7 +30,8 @@ import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 
 /** Locked-on S3KL object {@code $AA}, {@code Obj_FBZMiniboss}. */
 public final class FbzMinibossInstance extends AbstractObjectInstance
-        implements SolidObjectProvider, SpawnRewindRecreatable, RomWorldPositionedObject {
+        implements SolidObjectProvider, SpawnRewindRecreatable, RomWorldPositionedObject,
+        RomObjectCodePointerProvider {
     private static final int[] ACTIVATION_BOUNDS = {0x240, 0x600, 0x2D20, 0x2F20};
     private static final int[] LOCK_BOUNDS = {0x540, 0x540, 0x2E20, 0x2EA0};
     private static final String[] INITIAL_ROLES = {
@@ -480,6 +482,17 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public SolidObjectParams getSolidParams() { return SOLID_PARAMS; }
+    @Override public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) {
+        // sub_6F786 passes d1=$23, but loc_1E154 re-reads ObjDat_FBZMiniboss's
+        // width_pixels=$20. The usual d1-$B reconstruction is not valid here.
+        return 0x20;
+    }
+    @Override public int getBalanceWidthPixels() { return 0x20; }
+    @Override public int romObjectCodePointerHighWord() {
+        // Live boss/defeat callbacks occupy bank $0006. Obj_EndSignControl
+        // replaces the SST code with its bank-$0008 wait/start callbacks.
+        return bossSlotConverted ? 0x0008 : 0x0006;
+    }
     @Override public boolean usesInclusiveRightEdge() { return true; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !bossSlotConverted; }
     @Override public boolean skipsCpuSidekickWhenRenderFlagOffScreen() { return true; }
