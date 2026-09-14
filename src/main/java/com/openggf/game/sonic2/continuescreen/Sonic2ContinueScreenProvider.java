@@ -31,9 +31,23 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
     private int timer, vint, sonicX, tailsX, sonicInertia, tailsInertia, count, iconFrame;
     private boolean accepted, finished, usedIconDeleted;
     private final Boolean tailsOnly;
+    /** Patch-supplied {@code ArtNem_MiniSonic} replacement (the continue icon), or null for stock. */
+    private final java.util.function.Supplier<Pattern[]> mainCharacterIcon;
 
-    public Sonic2ContinueScreenProvider() { tailsOnly = null; }
-    public Sonic2ContinueScreenProvider(boolean tailsOnly) { this.tailsOnly = tailsOnly; }
+    public Sonic2ContinueScreenProvider() { this(null, null); }
+    public Sonic2ContinueScreenProvider(boolean tailsOnly) { this(tailsOnly, null); }
+    /**
+     * A continue screen whose mini icon comes from {@code mainCharacterIcon}
+     * when it yields tiles: the lock-on program binds {@code ArtNem_MiniSonic}
+     * to its own icon art, loaded at the same {@code $24} tile slot.
+     */
+    public Sonic2ContinueScreenProvider(java.util.function.Supplier<Pattern[]> mainCharacterIcon) {
+        this(null, mainCharacterIcon);
+    }
+    private Sonic2ContinueScreenProvider(Boolean tailsOnly, java.util.function.Supplier<Pattern[]> mainCharacterIcon) {
+        this.tailsOnly = tailsOnly;
+        this.mainCharacterIcon = mainCharacterIcon;
+    }
     @Override public void initialize(int continues) { initialize(continues, 0); }
 
     @Override public void initialize(int continues, int vintRunCount) {
@@ -73,7 +87,12 @@ public final class Sonic2ContinueScreenProvider implements ContinueScreenProvide
                 destination += length;
             }
             art.loadNemesis(rom, ART_TAILS, 0);
-            art.loadNemesis(rom, miniTails ? ART_MINI_TAILS : ART_MINI_SONIC, 0x24);
+            Pattern[] patchIcon = mainCharacterIcon == null || miniTails ? null : mainCharacterIcon.get();
+            if (patchIcon != null && patchIcon.length > 0) {
+                art.copyPatterns(patchIcon, 0, patchIcon.length, 0x24);
+            } else {
+                art.loadNemesis(rom, miniTails ? ART_MINI_TAILS : ART_MINI_SONIC, 0x24);
+            }
             digits = PatternDecompressor.fromBytes(rom.readBytes(Sonic2Constants.ART_UNC_HUD_NUMBERS_ADDR, 640));
             art.setCountdown(10, digits);
             art.cache();

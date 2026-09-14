@@ -15,8 +15,11 @@ import java.util.Set;
  * ({@code docs/kis2/BRANCH_DIFFS.md}). Activates when Knuckles is the
  * requested main character for Sonic 2.
  *
- * <p>Tier one requires only the logical S&amp;K ROM. Chip-resident assets
- * (title, special stage, ending banner, CNZ layouts) are tier two.
+ * <p>Tier one requires only the logical S&amp;K ROM. Tier two additionally
+ * reads the 256 KiB chip through the {@link LogicalRom#KIS2} lock-on address
+ * space when the user-supplied S&amp;K + Sonic 2 dump is available: CNZ
+ * layouts, the chip-resident art patches and the chip palettes. Without the
+ * dump the patch runs tier one unchanged.
  */
 public final class Kis2GamePatch implements GamePatch {
 
@@ -45,6 +48,12 @@ public final class Kis2GamePatch implements GamePatch {
     @Override
     public Set<LogicalRom> romPrerequisites() {
         return Set.of(LogicalRom.SK);
+    }
+
+    /** The lock-on dump is optional: it upgrades the patch from tier one to tier two. */
+    @Override
+    public Set<LogicalRom> optionalRomPrerequisites() {
+        return Set.of(LogicalRom.KIS2);
     }
 
     @Override
