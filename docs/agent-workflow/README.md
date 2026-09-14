@@ -108,3 +108,12 @@ Run `AgentWorkflowTool` for a preflight, read the matching runbook, scaffold wit
 than the benchmark CLIs directly — the numbers are easy to misread.
 
 Local Maven commands: [`tools/testing/maven_queue.py`](../../tools/testing/maven_queue.py) waits automatically for a shared execution slot across linked worktrees; category runs use it too.
+
+## Test harness helpers
+
+- `com.openggf.tests.route`: reviewed input-program, steering, object-lifetime,
+  recent-frame and CPU-team audit helpers imported from `435ec2e68` for the
+  route-controller continuation. `TestS3kAiz1RoutePilot` is the native AIZ1
+  representative route; `TestS3kAiz1RouteRewind` checks independently reached
+  live spots. The [AIZ1 matrix](../architecture/validation/levels/s3k-aiz1-sonic.md)
+  records their evidence and remaining coverage.

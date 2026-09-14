@@ -44,6 +44,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the `$0B68` screw door, its `$0BC0` elevator and the rest never appeared and
   Act 2 could not be completed on those viewports.
 
+- **AIZ1 rewind:** capture the hollow-tree reveal counter and intro Super Sonic
+  palette timer/frame, preserving tree reveal children and palette cadence after
+  restoring gameplay. Add a native route matrix with independently reported intro,
+  cutscene, tree and act-reload replay checks. Route controllers complete the
+  viewport and movement-donor axes using ordinary inputs and live object gates.
+
 - **Ring visibility:** restore full-X sorting of expanded ring placements so a
   nearer ring cannot be hidden behind a farther off-screen record, fixing late
   ring appearance in EHZ1 after the 0.7 branch rollover. Ring placement also

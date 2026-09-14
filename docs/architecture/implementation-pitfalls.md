@@ -59,6 +59,14 @@ can have independent buckets even when attached to the same rocket. Compare nati
 pixels against ROM table-driven composition, rather than testing a numeric
 "front" flag against the same assumption used by the implementation.
 
+**Route rewind probes need the whole owner state.** A recreated object can match
+its own snapshot while reading a future static counter or a reset helper timer.
+The AIZ1 route continuation found both: `Events_fg_4` needed a registered adapter,
+and `AizIntroPaletteCycler` needed `RewindStateful` timer/frame capture. Construct
+stateful helpers before schema restore, then bind services when used: object
+recreation can run before service injection. Compare resource pixels by content;
+Java identity of re-decoded `Pattern` instances is not a rendering difference.
+
 **Claimed hardware work is memoized.** `HardwareTimingJob` shares one immutable rewind
 snapshot per claimed job across checkpoints and drops it in every mutator. Unclaimed jobs
 are re-snapshotted each capture because `coordinatorPreparation` still hands out their live
@@ -69,6 +77,13 @@ without first removing that alias.
 `Camera.updatePosition(true)` *after* the level load, and prefer
 `@ExtendWith(SingletonResetExtension.class)` over manual teardown. Set
 `startup.legalDisclaimer=false` in tests that boot the full `Engine`.
+
+**Underwater route liveness.** `getDead() == false` does not exclude the drowning
+pre-death phase. `applyDrownDeath()` locks controls and zeroes velocity before the
+delayed dead flag; no-death route assertions must also reject `isDrowningDeath()`.
+The HCZ route continuation initially mistook the resulting latched logical input
+on a conveyor for an input-publication defect. Inspect the first capture and air
+state before that deadline, not only the later stalled state.
 
 **`FixBugs` / `fixBugs` assembly paths.** All three disassemblies are built with the
 bug-fix conditional OFF — `FixBugs = 0` (`s1disasm/sonic.asm:20`,

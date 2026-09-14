@@ -1,5 +1,9 @@
 # AIZ act 1 route-controller pilot: measured result
 
+Historical pilot record. The continuation promotes the native row into ordinary
+validation; current commands, rewind evidence and open axis frontiers are in the
+[AIZ1 matrix](levels/s3k-aiz1-sonic.md).
+
 Second-zone pilot of the live-state route-controller technique
 ([design](../research/2026-09-13-live-state-route-controllers.md)), on the
 shared `com.openggf.tests.route` primitives. Branch

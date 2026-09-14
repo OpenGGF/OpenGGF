@@ -17,7 +17,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.api.Tag;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
@@ -37,13 +38,14 @@ import static org.junit.jupiter.api.Assertions.fail;
  * setup before {@code Game_Mode} reaches Level, 289 rows on this fixture)
  * are never ticked by the engine, exactly as the sanctioned trace replay
  * treats them ({@code TraceReplayBootstrap.preLevelFrameCountForTraceReplay}),
- * so program row {@code r} plays on engine frame {@code r - preLevel}. Nothing
+ * so program row {@code r} normally plays at engine index {@code r - preLevel}.
+ * A late live intro exit inserts neutral holds before the first player input. Nothing
  * is hydrated from physics rows; the trace is read only for its metadata,
  * its pre-level prefix length and the row of its act change.
  *
  * <p>Live-state gates and assertions:
  * <ul>
- * <li>the recording's first player-driven row must fall after the engine has
+ * <li>preserve recorded neutral rows; hold the first player-driven row until the engine has
  *     set the ROM's {@code Level_started_flag} ({@code Camera.isLevelStarted},
  *     set by the Knuckles cutscene's exit handoff), which is the engine's own
  *     intro boundary rather than a proxy built from control-lock flags;</li>
@@ -57,32 +59,62 @@ import static org.junit.jupiter.api.Assertions.fail;
  * </ul>
  * The engine runs under its live load-time simulation, not the recorded lag
  * frames, so it reaches the reload a few dozen rows before the recording;
- * the measured lead is reported, not asserted.
+ * the measured lead is reported only for uninterrupted playback, not asserted.
+ * Compatibility routes may continue with live object steering when recording
+ * playback ends or asks for an unavailable ability. The native representative
+ * explicitly asserts that this continuation remains unused.
  *
- * <p>Opt-in until the level-test matrix adopts it; the repository's default
- * Maven silent extension swallows CLI properties, so run it as
- * {@code mvn -Dmse=off -Dopenggf.aiz1.pilot=true -Dtest=TestS3kAiz1RoutePilot
- * -Ds3k.rom.path=... test}.
+ * <p>The native 320px Sonic+Tails representative row of the AIZ1 matrix.
+ * Run with {@code mvn -Dmse=off -Dtest=TestS3kAiz1RoutePilot
+ * -Ds3k.rom.path=... test}; no opt-in property is needed.
  */
 @RequiresRom(SonicGame.SONIC_3K)
-@EnabledIfSystemProperty(named = "openggf.aiz1.pilot", matches = "true")
+@Tag("slow-suite")
 class TestS3kAiz1RoutePilot {
 
     private static final Path FIXTURE_DIRECTORY =
             Path.of("src/test/resources/traces/s3k/aiz1_to_hcz_fullrun");
     /**
      * Frames the engine may take beyond the recorded act-1 length to reach the
-     * reload. A bound on the live-versus-recorded load-time difference over
-     * one act, not a fitted value: the measured difference on this fixture is
-     * a lead of a few dozen rows, and a lag of this size would mean the
-     * program had desynchronised.
+     * reload. An 80-second simulation watchdog allows authored backtracking,
+     * spring ascent and the full FireBreath cutscene after recording handoff.
+     * It never selects input or changes gameplay; exhaustion remains a failure.
      */
-    private static final int RELOAD_SLACK_FRAMES = 300;
+    private static final int RELOAD_SLACK_FRAMES = 4800;
     /** Longest dead streak the CPU respawn contract tolerates, as in the FBZ2 route. */
     private static final int SIDEKICK_RESPAWN_LIMIT = 0x100;
 
     @Test
     void act1RouteReachesTheAct2Reload() throws IOException {
+        var savedConfig = TraceReplaySessionBootstrap.snapshotGameplayConfig();
+        try {
+            RouteSetup setup = prepareRoute();
+            RouteResult result = runRoute(setup);
+            assertFalse(result.continuationUsed(), "native recording unexpectedly needed route recovery");
+        } finally {
+            TraceReplaySessionBootstrap.restoreGameplayConfig(savedConfig);
+        }
+    }
+
+    /** Shares only the recorded input recipe; each caller creates a fresh gameplay fixture. */
+    static RouteSetup prepareRoute() throws IOException {
+        RouteSetup setup = prepareRoute(() -> { });
+        org.junit.jupiter.api.Assertions.assertEquals(320, setup.fixture().camera().getWidth());
+        return setup;
+    }
+
+    @FunctionalInterface
+    interface Configuration { void apply() throws IOException; }
+
+    static RouteResult runRoute(RouteSetup setup) {
+        var runner = new Aiz1RouteRunner(setup.fixture(), setup.program(), setup.preLevelRows(), setup.recordedReloadRow());
+        runner.run();
+        return new RouteResult(runner.frames, runner.continuation.used());
+    }
+
+    record RouteResult(int frames, boolean continuationUsed) { }
+
+    static RouteSetup prepareRoute(Configuration configuration) throws IOException {
         TraceData trace = TraceData.load(FIXTURE_DIRECTORY);
         Bk2Movie movie = new Bk2MovieLoader().load(findBk2(FIXTURE_DIRECTORY));
         int preLevelRows = TraceReplayBootstrap.preLevelFrameCountForTraceReplay(trace);
@@ -90,14 +122,25 @@ class TestS3kAiz1RoutePilot {
         int offset = trace.metadata().bk2FrameOffset();
         List<InputRun> program = InputProgram.fromRecording(
                 movie, offset + preLevelRows, offset + recordedReloadRow);
-
         TraceReplaySessionBootstrap.prepareConfiguration(trace, trace.metadata());
+        configuration.apply();
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_AIZ, 0)
+                .withCrossGameDonation(GameServices.configuration().getBoolean(
+                        com.openggf.configuration.SonicConfiguration.CROSS_GAME_FEATURES_ENABLED)
+                        ? GameServices.configuration().getString(
+                                com.openggf.configuration.SonicConfiguration.CROSS_GAME_SOURCE) : null)
                 .build();
-        Aiz1RouteRunner runner = new Aiz1RouteRunner(fixture, program, preLevelRows, recordedReloadRow);
-        runner.run();
+        org.junit.jupiter.api.Assertions.assertInstanceOf(
+                com.openggf.sprites.playable.Sonic.class, fixture.sprite());
+        org.junit.jupiter.api.Assertions.assertEquals(1, GameServices.sprites().getSidekicks().size());
+        org.junit.jupiter.api.Assertions.assertInstanceOf(com.openggf.sprites.playable.Tails.class,
+                GameServices.sprites().getSidekicks().getFirst());
+        return new RouteSetup(fixture, program, preLevelRows, recordedReloadRow);
     }
+
+    record RouteSetup(HeadlessTestFixture fixture, List<InputRun> program,
+                      int preLevelRows, int recordedReloadRow) { }
 
     private static Path findBk2(Path directory) throws IOException {
         try (var files = Files.list(directory)) {
@@ -122,9 +165,10 @@ class TestS3kAiz1RoutePilot {
 
     private static final class Aiz1RouteRunner {
         private final HeadlessTestFixture fixture;
-        private final InputProgram.Cursor program;
+        private final Aiz1IntroProgram program;
         private final int programFrames;
         private final int recordedReloadRow;
+        private final Aiz1RouteContinuation continuation = new Aiz1RouteContinuation();
         private final RecentFrameLog recentLog = new RecentFrameLog(30);
         private final SidekickAudit sidekicks = new SidekickAudit(SIDEKICK_RESPAWN_LIMIT);
         private int frames;
@@ -137,7 +181,7 @@ class TestS3kAiz1RoutePilot {
         Aiz1RouteRunner(HeadlessTestFixture fixture, List<InputRun> program,
                         int firstRow, int recordedReloadRow) {
             this.fixture = fixture;
-            this.program = new InputProgram.Cursor(program, firstRow);
+            this.program = new Aiz1IntroProgram(program, firstRow);
             this.programFrames = InputProgram.frames(program);
             this.recordedReloadRow = recordedReloadRow;
         }
@@ -147,7 +191,7 @@ class TestS3kAiz1RoutePilot {
             while (frames < frameLimit) {
                 AbstractPlayableSprite player = fixture.sprite();
                 int row = program.row();
-                int mask = program.next();
+                int mask = continuation.next(player, program);
                 if (mask != 0 && !playerInputSeen) {
                     playerInputSeen = true;
                     assertTrue(GameServices.camera().isLevelStarted(),
@@ -169,10 +213,11 @@ class TestS3kAiz1RoutePilot {
                 }
             }
             AbstractPlayableSprite player = fixture.sprite();
-            System.out.printf("AIZTL end f=%d row=%d p=(%04X,%04X) act=%d reloadFrame=%d recordedReloadRow=%d lead=%d%n",
+            System.out.printf("AIZTL end f=%d row=%d p=(%04X,%04X) act=%d reloadFrame=%d recordedReloadRow=%d recordedLead=%s introHeld=%d %s%n",
                     frames, program.row(), player.getCentreX() & 0xFFFF,
                     player.getCentreY() & 0xFFFF, GameServices.level().getCurrentAct(), reloadFrame,
-                    recordedReloadRow, reloadFrame < 0 ? 0 : recordedReloadRow - program.row());
+                    recordedReloadRow, continuation.used() || reloadFrame < 0 ? "n/a" : Integer.toString(recordedReloadRow - program.row()),
+                    program.heldFrames(), continuation.diagnostic());
             assertTrue(reloadFrame >= 0, () -> "act-2 reload never observed within "
                     + frameLimit + " frames: " + diagnostic(player));
             assertTrue(sidekicks.identityOrderPreserved(), "sidekick identity/order changed");
@@ -199,6 +244,7 @@ class TestS3kAiz1RoutePilot {
 
         private String diagnostic(AbstractPlayableSprite player) {
             return "frame=" + frames + " row=" + program.row()
+                    + " " + continuation.diagnostic()
                     + " programExhausted=" + program.exhausted()
                     + " player=($" + Integer.toHexString(player.getCentreX() & 0xFFFF)
                     + ",$" + Integer.toHexString(player.getCentreY() & 0xFFFF) + ")"
