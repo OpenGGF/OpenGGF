@@ -110034,3 +110034,25 @@ two exact baseline failures, zero guard errors/skips**. Those failures are
 and `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`.
 The new runtime-access guard and corrected upstream rewind audit pass. No new
 failure remains; the KiS2 chain itself remains red at the recorded return frontier.
+
+
+### 2026-09-14 — KiS2 first two special-stage returns
+
+Candidate `.worktrees/kis2-special-return`, base `9aada6ce6`; queued Maven
+`-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestTitleCardManagerNativeExitTiming,TestTitleCardObjectExecution,TestKis2CompleteEmeraldRunChain test`
+with absolute S1/S2/S3K/KiS2 ROM properties. No skips. The locked title loop
+now releases immediately after its 26th object pass, and the existing load
+receipt wrapper observes synchronous special-stage returns. The former
+cursor-9366 overrun is gone. Segment 0 retains 92 errors (91 bootstrap); the
+first returned EHZ1 segment completes 1,316 rows with one ring error at row
+826 (95 expected, 85 actual), zero warnings. Both SS art ledgers are clean;
+both return gaps still have a first art edge 39 movie frames early.
+
+New stop: `seg3_ehz1` row 2522 / BK2 cursor 19304, dynamic-art publication
+serial unchanged after production. Its partial report has 1,524 errors,
+zero bootstrap errors/warnings; first physics mismatch row 2230 `x_sub`
+(expected $21F5, actual $F800). The earlier movement divergence is the next
+causal target. SS gameplay remains uncompared; this is not a full-chain pass.
+See [the investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
+for the intermediate missing-receipt failure and validation follow-up.
