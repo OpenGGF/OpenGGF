@@ -1,13 +1,15 @@
 -- FBZ boundary fixture pilot, originating 2026-09-14 FBZ completion.
 -- Inputs: verified host ROM/movie, OGGF_FBZ_FIXTURE_STATE saved native state.
 -- This is explicit frozen-recipe setup, NOT a trace recorder or gameplay oracle.
--- Only the declared boundary-6 position/event/LFC fields may be written; all
+-- Only the declared Act1 boundary position/event/LFC fields may be written; all
 -- subsequent event/redraw/VDP progress is native execution. Never copy output
 -- RAM into an engine. Camera/physics/history remain observed, not synthesized.
 local output = assert(os.getenv("OGGF_FBZ_VISUAL_OUTPUT"))
 local state = assert(os.getenv("OGGF_FBZ_FIXTURE_STATE"))
 local plan = dofile(assert(os.getenv("OGGF_FBZ_VISUAL_PLAN")))
 assert(plan.manifest_sha256 == "BAE29DD285FF8D43166589164E31E1163F4196FCC1EA8DE8E2A5B90817AF7FC8")
+local boundary=plan.boundary or {id="fbz1-boundary-6-outdoor",x=0x100,y=0x63F,region=0x18,address=0xB014,forward=0x641,reverse=0x63F}
+assert(boundary.address==0xB010 or boundary.address==0xB014)
 local allowed = {[0xB010]=true,[0xB014]=true,[0xEED2]=true,[0xEED4]=true,
                  [0xEED6]=true,[0xEEC2]=true,[0xFE04]=true}
 local log = assert(io.open(output.."/fixture.jsonl", "w"))
@@ -43,25 +45,39 @@ local function step()
  emu.frameadvance()
 end
 client.invisibleemulation(false);client.speedmode(6400)
-assert(savestate.load(state));assert(mainmemory.read_u16_be(0xFE10)==0x0400)
+-- Derived ordinary-input states have no movie input log; stop playback before
+-- loading them so BizHawk does not reject them as a movie timeline mismatch.
 movie.stop()
-write(0xB010,0x100,"setup");write(0xB014,0x63F,"setup")
+if not savestate.load(state) or mainmemory.read_u16_be(0xFE10)~=0x0400 then
+ log:write('{"kind":"failure","phase":"load","reason":"native-state-load-or-act-mismatch"}\n');log:close();client.exit();return
+end
+write(0xB010,boundary.x,"setup");write(0xB014,boundary.y,"setup")
 -- Observe native tracker convergence before installing event/LFC recipe. No
 -- camera, status, control, velocity, or position rewrites during this wait.
 local initial_lfc=mainmemory.read_u16_be(0xFE04)
 local camera_steps=0
-while (mainmemory.read_u16_be(0xFE04)-initial_lfc)%65536<80 do
- camera_steps=camera_steps+1;assert(camera_steps<=120,"native setup gameplay clock stalled")
+-- Native standing tracker centres the player at screen160/96. Observe it;
+-- distant recipes need more than boundary6's minimum80 gameplay advances.
+while (mainmemory.read_u16_be(0xFE04)-initial_lfc)%65536<80
+ or mainmemory.read_u16_be(0xEE78)~=boundary.x-160
+ or mainmemory.read_u16_be(0xEE7C)~=boundary.y-96 do
+ camera_steps=camera_steps+1
+ if camera_steps>480 then
+  sample("camera-prerequisite",0)
+  log:write('{"kind":"failure","phase":"camera-prerequisite","reason":"native-tracker-did-not-centre-within-480-physical-frames"}\n');log:close();client.exit();return
+ end
  step();sample("camera-wait",camera_steps)
 end
 sample("camera-prerequisite",0)
-assert(mainmemory.read_u16_be(0xB010)==0x100 and mainmemory.read_u16_be(0xB014)==0x63F,"player moved during native camera setup")
+if mainmemory.read_u16_be(0xB010)~=boundary.x or mainmemory.read_u16_be(0xB014)~=boundary.y then
+ log:write('{"kind":"failure","phase":"camera-prerequisite","reason":"player-moved-during-native-camera-setup"}\n');log:close();client.exit();return
+end
 assert(mainmemory.read_u8(0xB005)==2 and mainmemory.read_u8(0xB02E)==0,"native player is not ordinarily controlled")
-write(0xEED2,0x18,"setup");write(0xEED4,0,"setup");write(0xEED6,0,"setup")
+write(0xEED2,boundary.region,"setup");write(0xEED4,0,"setup");write(0xEED6,0,"setup")
 write(0xEEC2,0,"setup");write(0xFE04,0,"setup")
 sample("setup",0)
 local function cross(phase, coordinate)
- write(0xB014,coordinate,phase)
+ write(boundary.address,coordinate,phase)
  local entered=false
  for i=1,40 do
   step();sample(phase,i)
@@ -72,11 +88,11 @@ local function cross(phase, coordinate)
  log:write('{"kind":"failure","phase":"'..phase..'","reason":"redraw-did-not-settle-within-40-native-frames"}\n');log:flush()
  return false
 end
-local forward = cross("forward",0x641)
+local forward = cross("forward",boundary.forward)
 step();sample("forward-after",1)
 write(0xEEC2,0,"reverse-setup")
 write(0xEED4,0xFF00,"reverse-setup");write(0xEED6,0xFF00,"reverse-setup")
-local reverse = cross("reverse",0x63F)
+local reverse = cross("reverse",boundary.reverse)
 step();sample("after",1)
 log:write('{"kind":"verdict","status":"unaccepted","camera_setup":"native-tracker-observed-not-forced","acceptance":"requires-paired-review"}\n')
 log:close();client.exit()

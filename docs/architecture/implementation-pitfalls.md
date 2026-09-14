@@ -131,3 +131,9 @@ A fixture event-flag write does not install its associated foreground layout:
 match ordinary layout-copy and camera history before comparing GPU descriptors.
 Count observed LFC advances rather than assuming each host frameadvance call
 advanced gameplay (2026-09-14 FBZ boundary6 native/engine evidence).
+
+FBZ horizontal redraw has a separate source-Y rule: `loc_5293C`/`loc_52962`
+pass zero outdoors, not the bobbed VScroll. Indoors `Setup_TileColumnDraw`
+resolves 16px blocks (`d1 >> 4`); passing raw Y77 into an 8px tile copier
+incorrectly begins at row9 instead of row8. Keep this FBZ caller rule in its
+owner, and account for the ordinary row-scroll pass separately in strip tests.

@@ -618,3 +618,88 @@ Final package completed in 19.676s. Lua fixture tests passed both scenarios;
 Python descriptor tests passed both cases, and an independent exhaustive
 65,536-word packed-descriptor roundtrip passed. This is focused validation;
 aggregate delivery checks belong to the parent task.
+
+
+### Remaining boundary pilots and fresh native entry (2026-09-14)
+
+The boundary tools accept `--boundary-checkpoint` (native host) and an optional
+checkpoint positional argument (engine). Coordinates, axis and event region
+come from the approved hash-bound manifest. Act1's camera prelude now observes
+at least 80 gameplay advances **and** native standing tracker centring at
+player minus 160/96, bounded at 480. Distant recipes need more than boundary6's
+80 frames: boundaries1–4 converge at LFC146/235/290/317 from LFC35 in both
+runtimes. Holding an offscreen camera after 80 frames was rejected. Boundary5
+fails its initial stationary-position prerequisite: its first native frame
+sets airborne status, then terrain resolution moves `$2100/$241` to
+`$2135/$26C` by LFC115. No repeated position or control writes stabilize it.
+
+Root independently viewed native/engine boundary1 and3 indoor `after-01`
+frames and reproduced zero differences for the defined 46,080-pixel gameplay
+rectangle, 2,048 Plane-B descriptors and 64 palette entries. This bounded
+acceptance uses `boundary1/3-native-v2`, `boundary1/3-engine-v2`, and their
+`comparison-v2.json` files under the external visual task directory. Boundary1
+still has 1,090 whole-frame differences, including bottom ring-animation pixels
+outside the rectangle; these are **not all HUD**. Boundary3 has 384 outside-region
+HUD differences. Other phases and whole checkpoint claims remain open.
+
+Boundary4 exposed another source-backed column defect. Native
+`FBZ1BGE_ChangeLeftRight`/`ChangeRightLeft` supplies d1=0 outdoors and
+`Camera_Y_pos_BG_copy` indoors; `Setup_TileColumnDraw` aligns this to16px blocks.
+The engine had passed bobbed outdoor Y and unaligned indoor Y. This explained
+exactly bad retained rows0/1 outdoors and row8 indoors. The FBZ surface now
+uses zero outdoors and `sy & $FFF0` indoors. A full-ring ROM-derived regression
+covers both source modes and two restore/replay cycles, with the normal row
+owner established separately. Both focused tests passed without skips, 18.591s;
+the first test setup missed that normal-row owner (one failure, 48.161s), and
+was corrected. Package 20.252s; actual GPU recapture 1.537088s. The new
+`boundary4-engine-v3` against `boundary4-native-v2` has zero retained-plane
+and palette differences in both afterstates. Its indoor gameplay rectangle
+is exact; its outdoor 366 differing pixels are confined to the player region
+`x135..186,y77..107`, so an earlier cloud attribution is rejected.
+
+Outdoor boundaries1–3 initially retained all 224 different BG HScroll words
+at native VRAM `$F000`, with identical FG words, camera, palette and plane.
+The per-band differences were identical across recipes, matching the known
+`HScroll_table+$1FC` history residue. The replacement prerequisite is an
+actual fresh native entry, not writing that accumulator. The complete BK2
+starts with A9FC zero and reaches an AIZ vine at frame 3517 (control 3, anim$14).
+Ordinary Left×3, Right×3, Up×3 invokes
+`AIZRideVineHandle_CheckButtonSequence`, setting the legitimate level-select
+flag. Pause then A returns through `Pause_Game` to the title. Title menu 2
+opens level select; `LS_Level_Order` indices 14/15 load FBZ1/2. The title cheat
+routine is dummied with RTS in the locked-on ROM, so a title Up/Down cheat was
+not used. Start additionally waits for `Reserved_object_3` at `$B094`
+(`loc_41D4`); the selection object alone can accept navigation earlier.
+`capture_fbz_fresh_entry.lua` preserves the entire input/state sequence and
+fresh LFC35 state/PNG, without RAM writes or a modified ROM.
+
+Fresh Act1 evidence `fresh-fbz-selection-v2/fbz1-lfc35.State` SHA-256
+`889AE0AAF575E26255A0E12792AC75E14328BF7C1BDD17ABE1BB7FC4FAA86728`
+reaches LFC35 with A9FC 129,024 (36×$E00), rather than complete-run residue.
+Fresh Act2 `fresh-fbz2-selection-v2` reaches native frame 4416/LFC35 with
+A9FC zero and Sonic+Tails option 0. Loading a derived state while a BK2 is
+playing is rejected by BizHawk when it has no movie input log: the fixture
+now stops playback before loading, and fails/returns cleanly if load fails.
+The first such rejected fresh B1 load consumed 20.184s; no fixture writes ran.
+
+Fresh boundary comparisons (`boundary1..4-native-fresh-v4`, existing engine
+v2 for1–3/v3 for4) remove the large cloud discrepancy. Boundary3 has zero
+gameplay/plane/palette differences in **both** afterstates (74 whole-frame
+pixels remain outside the rectangle). Boundary1 outdoor has 9 differences at
+ring tips on y207, indoor zero; boundary2 retains 2,178/2,224 gameplay differences
+around its visible object assembly; boundary4 retains 366/zero gameplay
+pixels, with exact plane/palette both ways. These fresh measurements await
+independent phase-specific acceptance; no mask is narrowed to manufacture PASS.
+
+Implementation iteration costs: generalized-tool packages 67s and52.742s;
+initial native1–5 pilots 19.799s; centred native1–4 repeats 28.853s; engine1–4
+captures 5.764571s; fresh native1–4 captures 26.695s. Fresh vine discovery 3.921s,
+first title-not-ready attempt 1.967s, successful Act1 selection 2.067s;
+Act2 menu-ready-only rejection 1.917s, corrected banner-ready selection 2.319s.
+Standalone Lua fixture guards cover six vertical/horizontal success/failure
+scenarios; the Python host guard has seven passing tests. These are focused
+measurements and checks, not aggregate delivery validation.
+
+The promoted fresh-entry script also completed directly from the BK2 reset
+start without a saved-state input: `fresh-fbz1-selection-v3`, native frame 4408,
+FBZ1 LFC35, A9FC 129,024, Sonic+Tails; execution 4.271s.
