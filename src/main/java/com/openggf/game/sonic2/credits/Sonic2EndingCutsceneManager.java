@@ -812,8 +812,10 @@ public class Sonic2EndingCutsceneManager {
                 charAnimSpeed = presentation == null ? SONIC_FLOAT2_SPEED : presentation.floatingFrameDuration();
             }
             case SUPER_SONIC -> {
-                charAnimFrames = presentation == null ? SONIC_WALK_FRAMES : presentation.walkingFrames();
-                charAnimSpeed = SONIC_WALK_SPEED;
+                // loc_A30A selects Walk from Ending_Routine==2, not Super_Sonic_flag.
+                // The presentation's normal rotation/appearance route keeps Float2 for either outcome.
+                charAnimFrames = presentation == null ? SONIC_WALK_FRAMES : presentation.floatingFrames();
+                charAnimSpeed = presentation == null ? SONIC_WALK_SPEED : presentation.floatingFrameDuration();
             }
             case TAILS -> {
                 charAnimFrames = TAILS_FLOAT2_FRAMES;
@@ -1083,8 +1085,9 @@ public class Sonic2EndingCutsceneManager {
             spawnCloudIfNeeded();
         }
 
-        // Super Sonic drifts: addi.l #$8000,x_pos; addq.w #1,y_pos
-        if (routine == Sonic2EndingArt.EndingRoutine.SUPER_SONIC) {
+        // sub_A524 dispatches loc_A55C from Ending_Routine==2. The patched
+        // normal route uses loc_A53A's fixed position even with Super_Sonic_flag set.
+        if (presentation == null && routine == Sonic2EndingArt.EndingRoutine.SUPER_SONIC) {
             if (charOnTornadoX < 0xC0) {
                 charOnTornadoX++;
             }

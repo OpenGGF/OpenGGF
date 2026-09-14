@@ -60,7 +60,30 @@ class TestKis2EndingContinue {
             var manager = new com.openggf.game.sonic2.credits.Sonic2EndingCutsceneManager();
             manager.setPresentation(presentation);
             manager.initialize(TestEnvironment.currentRom());
-            for (int i = 0; i < 6000 && !manager.isDone(); i++) manager.update();
+            int holdTicks = 0;
+            int holdX = 0, holdY = 0;
+            boolean sawFloat = false;
+            for (int i = 0; i < 6000 && !manager.isDone(); i++) {
+                manager.update();
+                if ("CHARACTER_APPEAR".equals(field(manager, "state").toString())) {
+                    int mapping = (int) field(manager, "lastPlayerDplcFrame");
+                    assertTrue(java.util.Arrays.stream(presentation.floatingFrames()).anyMatch(frame -> frame == mapping),
+                            "loc_A30A uses forced Ending_Routine=0 Float2 for both emerald outcomes");
+                    sawFloat = true;
+                }
+                Object substate = field(manager, "tornadoSubState");
+                if (substate != null && "BIRDS_AND_HOLD".equals(substate.toString())) {
+                    int x = (int) field(manager, "charOnTornadoX");
+                    int y = (int) field(manager, "charOnTornadoY");
+                    if (holdTicks++ == 0) { holdX = x; holdY = y; }
+                    assertEquals(holdX, x, "loc_A53A keeps Knuckles on the Tornado even with all emeralds");
+                    assertEquals(holdY, y);
+                    // loc_A4B6 resets prev_anim each tick: intentionally stay on Wait's first frame.
+                    assertEquals(0x56, (int) field(manager, "lastPlayerDplcFrame"));
+                }
+            }
+            assertTrue(sawFloat);
+            assertTrue(holdTicks > 500, "Exercise the long hold beyond the ordinary idle script's first pose");
             assertTrue(manager.isDone(), "Cutscene must reach credits for emerald outcome " + allEmeralds);
         }
     }
@@ -85,5 +108,10 @@ class TestKis2EndingContinue {
         }
         assertEquals(4, art.getEndingPalettes().length);
         assertNotNull(logo.bannerPalette());
+    }
+    private static Object field(Object object, String name) throws ReflectiveOperationException {
+        var field = object.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(object);
     }
 }

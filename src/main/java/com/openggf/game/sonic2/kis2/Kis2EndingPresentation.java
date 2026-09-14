@@ -65,6 +65,9 @@ public final class Kis2EndingPresentation implements Sonic2EndingCutsceneManager
     @Override public int[] floatingFrames() { return new int[]{0xC0,0xC1,0xC2,0xC3,0xC4,0xC5,0xC6,0xC7,0xC8,0xC9}; }
     @Override public int floatingFrameDuration() { return 6; }
     @Override public int[] walkingFrames() { return new int[]{7,8,1,2,3,4,5,6}; }
+    // loc_A4B6 calls sub_A524/loc_A53A every hold frame. It resets prev_anim
+    // to Walk while selecting Wait, so Sonic_Animate repeatedly starts at $56;
+    // the long idle script must NOT advance during the plane hold (fixBugs=0).
     @Override public int waitingFrame() { return 0x56; }
     @Override public String playerCode() { return "knuckles"; }
     @Override public com.openggf.game.sonic2.credits.Sonic2LogoFlashManager.Presentation logo() {
