@@ -1175,8 +1175,11 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // this results object through its reload and Restore_PlayerControl still
         // belongs to the results exit itself.
         boolean hasSeamlessTransition = (act == 0) && (zone == 0x01 || zone == 0x02);
-        boolean lbzAct2PostBossHandoff = zone == 0x06 && act == 1;
-        if (!hasSeamlessTransition && !lbzAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
+        // FBZ2 loc_708AA and LBZ2's retained boss own Restore_PlayerControl.
+        // Results loc_2DCF8 only clears _unkFAA8; releasing here lets the next
+        // player slot move/animate one dispatch before the boss restores it.
+        boolean retainedAct2PostBossHandoff = act == 1 && (zone == 0x04 || zone == 0x06);
+        if (!hasSeamlessTransition && !retainedAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
             for (PlayableEntity candidate : playerQuery()
                     .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
                 if (candidate instanceof AbstractPlayableSprite sprite) {

@@ -84,11 +84,24 @@ class TestFbzResultsTitleAndAct2Sizes {
     }
 
     @Test
-    void actTwoResultsExitPreservesTheLiveBossArenaBounds() {
+    void actTwoResultsExitPreservesTheLiveBossArenaBounds() throws Exception {
         RecordingServices services = new RecordingServices();
         S3kResultsScreenObjectInstance results = ObjectConstructionContext.construct(services,
                 () -> new S3kResultsScreenObjectInstance(PlayerCharacter.SONIC_AND_TAILS, 1));
         results.setServices(services);
+        var p1 = new com.openggf.game.sonic1.objects.TestPlayableSprite();
+        var p2 = new com.openggf.game.sonic1.objects.TestPlayableSprite();
+        for (var player : List.of(p1, p2)) {
+            com.openggf.sprites.playable.ObjectControlState.nativeBit7FullControl().applyTo(player);
+            player.setControlLocked(true);
+            player.setAnimationId(0x13);
+            player.setAnimationFrameIndex(3);
+            player.setAnimationTick(7);
+        }
+        services.sidekicks = List.of(p2);
+        var playerRef = S3kResultsScreenObjectInstance.class.getDeclaredField("playerRef");
+        playerRef.setAccessible(true);
+        playerRef.set(results, p1);
         services.camera.setMinX((short) 0x2FDC);
         services.camera.setMaxX((short) 0x2FDC);
         services.camera.setMinY((short) 0x060C);
@@ -96,6 +109,13 @@ class TestFbzResultsTitleAndAct2Sizes {
 
         results.onExitReady();
 
+        for (var player : List.of(p1, p2)) {
+            assertTrue(player.isObjectControlled(), "loc_2DCF8 leaves control to the surviving boss's next slot");
+            assertTrue(player.isControlLocked());
+            assertEquals(0x13, player.getAnimationId());
+            assertEquals(3, player.getAnimationFrameIndex());
+            assertEquals(7, player.getAnimationTick());
+        }
         assertEquals(0x2FDC, services.camera.getMinX());
         assertEquals(0x2FDC, services.camera.getMaxX());
         assertEquals(0x060C, services.camera.getMinY());
@@ -108,6 +128,10 @@ class TestFbzResultsTitleAndAct2Sizes {
     }
 
     private static final class RecordingServices extends TestObjectServices {
+        private List<? extends com.openggf.game.PlayableEntity> sidekicks = List.of();
+        @Override public com.openggf.level.objects.ObjectPlayerQuery playerQuery() {
+            return new com.openggf.level.objects.ObjectPlayerQuery(() -> null, () -> sidekicks);
+        }
         private final GameStateManager gameState = mock(GameStateManager.class);
         private final RecordingTitleCard titleCard = new RecordingTitleCard();
         private final Camera camera = new Camera();
