@@ -94,7 +94,8 @@ The first completed focused verification passed all ten native rewind spots,
 the production reload and native route, plus nine candidate API signature checks:
 21 cases, no failures/errors/skips. Separately, all 30 entry/reset matrix cases
 passed. These are observed focused results before the subsequent route-controller
-breadth refinements; final combined verification is recorded in the handover.
+breadth refinements; final combined verification is recorded in the
+[handover](../../plans/2026-09-14-route-controller-handover.md#integrated-develop-verification).
 
 Wider viewports change activation timing. Temporary controller experiments showed
 that preserving momentum between early water hazards and attacking the paired
