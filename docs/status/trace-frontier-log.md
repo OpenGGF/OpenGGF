@@ -109576,3 +109576,55 @@ above, completes all 29,302 frames: 2 tests / 1 failure / zero errors or skips.
 All 4,571 comparison errors, first frame 9,482 `air`, have the identical normalized
 fingerprint recorded in the audit and pinned baseline. No frontier movement;
 the inherited trace failure remains open.
+
+## 2026-09-14 — First Knuckles in Sonic 2 fixture: `kis2/ehz1` recorded, replay red at the prelude and at frame 284
+
+- Worktree `.worktrees/ai-kis2-trace-fixture`, branch `feature/ai-kis2-trace-fixture`
+  off develop `d193630d0`. Fixture `src/test/resources/traces/kis2/ehz1/`
+  (`kis2-ehz1.bk2`, 2532 input rows, `bk2_frame_offset` 714, 1817 trace rows,
+  `main_character` knuckles, `rom_checksum` the dump's file SHA-1
+  `6CD0537A3AEE0E012BB86D5837DDFF9342595004`, notes naming logical ROM KIS2).
+  The route runs EHZ1 from the title: hilltop glide into the x=0x4C0 ramp
+  (four rings), the pit log platform, a glide over the up-spring into the
+  x=0x940 totem face, a climb with Up, and the ring monitor at (0xBA0,0x293)
+  broken at trace frame 1446 (twelve rings). The physics rows prove the player
+  is Knuckles: jump y velocity −0x600 (Sonic 2 Sonic is −0x680), glide
+  animation 0x20, cling/climb mapping frames 0xB7/0xBD–0xBF.
+- Recording command (TraceChaser at `4fb6d0802` plus the local submodule commit
+  `9fd957b` "feat(headless): record Knuckles in Sonic 2 through the S2
+  recorder", patch kept in the task directory; not pushed):
+  `run.sh --mode trace --rom <abs>/kis2.gen --movie <abs>/kis2-ehz1.bk2 --output <task dir>`
+  through the vendored `docs/BizHawk-2.11-linux-x64` as `BIZHAWK_HOME`. The
+  harness identifies the lock-on image by SHA-1 and routes it to plain S2 trace
+  mode; there is no native load audit for the chip-resident program, so the
+  metadata has no `load_queue_state_per_frame`.
+- Replay command: `mvn -Dmse=off -Dsonic2.rom.path=<abs>/s2.gen -Ds3k.rom.path=<abs>/s3k.gen -Dtest=TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay test`
+  at the uncommitted candidate over `d193630d0`.
+- First attempt: the recorded team did not activate the `kis2` patch because
+  `SharedLevel.load` re-detects the root module from the ROM after the replay
+  bootstrap resolved it; the engine replayed Sonic (jump −0x680 at frame 150,
+  241 errors). `AbstractTraceReplayTest` now resolves the recorded team again
+  after the shared-level load (stock recordings are unchanged), and the KiS2
+  test fails fast unless the current module is the `kis2` patch and the main
+  sprite is Knuckles.
+- Result with the patch active: 1 test, 1 failure. 91 bootstrap errors and 300
+  comparison errors over 1817 rows. First bootstrap error frame 0
+  `player_history.pos` (expected 0x0068 slot 0x19, actual 0x003F) with every
+  `player_history.x`/`y` entry 0x0060/0x0290 recorded against 0x0040 in the
+  engine: the KiS2 pre-level prelude fills the position record differently
+  from the Sonic 2 model the engine seeds. First comparison error frame 284
+  `rings` (expected 1, actual 0: a ring the gliding ROM player collects at
+  x≈0x45A that the engine misses); first physics divergence frame 579
+  `x_speed` (expected 0x066C, actual 0x0600, running down the hill before the
+  pit) with the cascade from there. Frames 0–283 match on every physics field,
+  including the −0x600 jump, the glide and the ramp launch.
+- `TestS2Ehz1TraceReplay` is red before and after this change with the same
+  first error (frame 6 `dynamic_art.outstanding_transfer_ids`, 16388 errors,
+  see the 2026-09 entries above); the re-resolution is a no-op for it.
+- Rejected route approaches, kept so the next author does not repeat them:
+  the ledge monitor at (0x3C0,0x236) sits on a one-way platform 72 px above the
+  hilltop, unreachable by a full jump and ungrabbable; the pit's left side is
+  an open tunnel, not a wall; the pit's right wall carries downward spikes at
+  0x800–0x840 and hurts any jump from the pit floor at x ≥ 0x7F1; a post-spring
+  hop cannot glide. The pit log platform oscillates with a 252-frame period
+  (surface 0x25C–0x2DC, bottom at trace frame 1153 mod 252).
