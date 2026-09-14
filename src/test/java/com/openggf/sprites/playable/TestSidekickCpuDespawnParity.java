@@ -598,6 +598,36 @@ class TestSidekickCpuDespawnParity {
         assertEquals((short) 0x0000, tails.getGSpeed());
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void cpuDeadDispatchPreservesOneShotDeathAndLaterObjectAnimationWrites(boolean s3k) {
+        TestableSprite leader = new TestableSprite("sonic");
+        TestableSprite tails = new TestableSprite("tails_p2");
+        tails.useGameRules(s3k ? GameRules.SONIC_3K : GameRules.SONIC_2);
+        tails.setCpuControlled(true);
+        SidekickCpuController controller = new SidekickCpuController(tails, leader);
+        controller.setInitialState(SidekickCpuController.State.NORMAL);
+        var profile = new com.openggf.sprites.animation.ScriptedVelocityAnimationProfile()
+                .setDeathAnimId(0x18).setWalkAnimId(0).setIdleAnimId(5).setAirAnimId(0);
+        // Tails_Stand_Path reached its ground move before the later fatal
+        // background test; its captured speed must not reclaim Kill_Character's byte.
+        tails.getAnimationManager().captureGroundMovementAnimSpeed((short) 0x100);
+        tails.setMovementInputActive(true);
+
+        controller.despawn(SidekickCpuController.DespawnCause.LEVEL_BOUNDARY);
+
+        assertEquals(SidekickCpuController.State.DEAD_FALLING, controller.getState());
+        assertFalse(tails.getDead(), "the CPU dispatch owns this dead fall independently of the main-player flag");
+        assertEquals(0x18, tails.getAnimationId(), "Kill_Character publishes the death byte at entry");
+        assertEquals(0x18, profile.resolveAnimationId(tails, 0, 0x30),
+                "the following animator must not derive ordinary airborne Walk during routine 6");
+        tails.setAnimationId(0);
+        tails.publishRunAsPreviousAnimation();
+        org.junit.jupiter.api.Assertions.assertNull(profile.resolveAnimationId(tails, 1, 0x30),
+                "a later native solid's animation-word store remains authoritative during dead fall");
+        assertEquals(-1, tails.getForcedAnimationId());
+    }
+
     @Test
     void s3kSonicSidekickLevelBoundaryKillUsesDeathAnimation() {
         TestableSprite leader = new TestableSprite("tails");
