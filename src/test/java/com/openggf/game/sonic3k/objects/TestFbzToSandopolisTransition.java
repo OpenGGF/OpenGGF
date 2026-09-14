@@ -30,7 +30,7 @@ class TestFbzToSandopolisTransition {
                 FbzEndBossInstance.forcedExitInput(true, 0));
     }
 
-    @Test void exitReadyWritesFollowerHistoryAndRequestsSstTransitionAtUnsigned720() {
+    @Test void exitReadyWritesLogicalInputAndRequestsSstTransitionAtUnsigned720() {
         AbstractPlayableSprite main = mock(AbstractPlayableSprite.class);
         Camera camera = mock(Camera.class);
         ObjectServices services = mock(ObjectServices.class);
@@ -44,7 +44,8 @@ class TestFbzToSandopolisTransition {
 
         boss.updateExitReadyForTest();
         verify(main).setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT);
-        verify(main).writeLogicalInputAndCurrentFollowerHistory(AbstractPlayableSprite.INPUT_RIGHT, false);
+        verify(main).setLogicalInputState(false, false, false, true, false, false);
+        verify(main, never()).writeLogicalInputAndCurrentFollowerHistory(anyInt(), anyBoolean());
         verify(services, never()).requestZoneAndAct(anyInt(), anyInt(), anyBoolean());
 
         boss.updateExitReadyForTest();
@@ -102,11 +103,11 @@ class TestFbzToSandopolisTransition {
                 new ObjectSpawn(0, 0, FbzEndBossInstance.OBJECT_ID, 0, 0, false, 0));
         boss.setServices(services);
         boss.clearExitInputTimerForTest();
-        int mask = AbstractPlayableSprite.INPUT_RIGHT | AbstractPlayableSprite.INPUT_JUMP;
 
         boss.updateExitReadyForTest();
-        verify(main).writeLogicalInputAndCurrentFollowerHistory(mask, true);
+        verify(main).setLogicalInputState(false, false, false, true, true, true);
         boss.updateExitReadyForTest();
-        verify(main).writeLogicalInputAndCurrentFollowerHistory(mask, false);
+        verify(main).setLogicalInputState(false, false, false, true, true, false);
+        verify(main, never()).writeLogicalInputAndCurrentFollowerHistory(anyInt(), anyBoolean());
     }
 }
