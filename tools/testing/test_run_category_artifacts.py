@@ -96,7 +96,7 @@ class ArtifactRetentionTests(unittest.TestCase):
             root = Path(tmp)
             command = [sys.executable, '-u', '-c',
                        'import time\nwhile True: print("busy"); time.sleep(.02)']
-            with self.assertRaisesRegex(TimeoutError, 'total validation time budget'):
+            with self.assertRaisesRegex(TimeoutError, 'invocation timeout'):
                 artifacts.run_logged(command, root, root / 'ordinary.log', timeout=.3)
             self.assertIn('busy', (root / 'ordinary.log').read_text())
 
@@ -120,7 +120,7 @@ class ArtifactRetentionTests(unittest.TestCase):
             time.sleep(1)
             self.assertFalse(marker.exists(), 'test grandchild survived the runner timeout')
 
-    def test_expired_budget_does_not_launch_process(self):
+    def test_expired_timeout_does_not_launch_process(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             with self.assertRaisesRegex(TimeoutError, 'before launch'):
