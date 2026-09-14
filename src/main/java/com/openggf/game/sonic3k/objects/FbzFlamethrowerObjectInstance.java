@@ -58,8 +58,9 @@ public final class FbzFlamethrowerObjectInstance extends AbstractObjectInstance
         // loc_3CD4C/loc_3CDD0 read the low byte at
         // (Level_frame_counter+1).w. ObjectManager's update clock is not that
         // byte and can be phase-shifted relative to the gameplay counter.
+        // LevelFrameStep has already advanced this counter before objects.
         return objectServices != null && objectServices.levelManager() != null
-                ? objectServices.levelManager().getFrameCounter() + 1
+                ? objectServices.levelManager().getFrameCounter()
                 : fallbackFrameCounter;
     }
 

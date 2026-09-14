@@ -99,7 +99,7 @@ class TestFbzMissileObjects {
   void launcherArmingReadsRomVisibleLevelFrameCounterInsteadOfObjectVblankClock() {
     ObjectManager manager = mock(ObjectManager.class);
     LevelManager levelManager = mock(LevelManager.class);
-    when(levelManager.getFrameCounter()).thenReturn(0xFE, 0xFF);
+    when(levelManager.getFrameCounter()).thenReturn(0x12FF, 0x1300);
     var services = new RecordingServices(manager).withLevelManager(levelManager);
     var launcher = new FbzMissileLauncherObjectInstance(spawn(0x7F, 0));
     launcher.setServices(services);
