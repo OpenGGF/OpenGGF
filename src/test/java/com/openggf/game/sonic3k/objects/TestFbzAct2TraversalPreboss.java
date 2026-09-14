@@ -456,6 +456,15 @@ public class TestFbzAct2TraversalPreboss {
         }
     }
 
+    /** Drive a separately prepared fixture through the real plane-to-boss handoff. */
+    public static void runOrdinaryPlaneApproach(HeadlessTestFixture fixture, Runnable afterFrame) {
+        ObjectManager objects = GameServices.level().getObjectManager();
+        FixedInputRunner runner = new FixedInputRunner(fixture, objects,
+                (active, old, player, manager) -> { });
+        assertTrue(runner.runArenaToExit((frame, player) -> afterFrame.run(),
+                () -> !objects.activeObjectsOfType(FbzEndBossInstance.class).isEmpty()));
+    }
+
     public static void assertLateNativeStarpostRestartMaterializesAndExecutesLowerMagneticSection() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 1)

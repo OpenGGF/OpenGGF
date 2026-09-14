@@ -67,16 +67,7 @@ class TestFbzCompatibilityMatrix {
     private static final int PLANE_TRIGGER_X = 0x2E80;
     private static final int BOSS_CAMERA_MAX_X = 0x32B8;
     private static final int BOSS_REBASED_CAMERA_X = BOSS_CAMERA_MAX_X - 0x45C;
-    private static final List<InputRun> STARPOST_6_TO_BOSS = List.of(
-            new InputRun(600, 0x00),
-            new InputRun(300, 0x08),
-            new InputRun(20, 0x18),
-            new InputRun(300, 0x08),
-            new InputRun(800, 0x00),
-            new InputRun(60, 0x08),
-            new InputRun(2140, 0x00),
-            new InputRun(20, 0x18),
-            new InputRun(100, 0x08));
+
 
     @ParameterizedTest(name = "multi-sidekick synchronous transition preflight: {0}")
     @MethodSource("teamCases")
@@ -639,27 +630,25 @@ class TestFbzCompatibilityMatrix {
     private static RouteSliceEvidence runStarpost6ToBoss(HeadlessTestFixture fixture) {
         restartAtCheckpoint6(fixture);
 
-        boolean controllerObserved = false;
-        boolean pillarObserved = false;
-        boolean waitingBelowWorldTrigger = false;
-        boolean triggerAtOrBeyondWorldThreshold = false;
-        boolean arenaWorldBoundaryObserved = false;
-        boolean exactArenaWorldLockObserved = false;
-        boolean spindashObserved = false;
-        FbzEndBossInstance boss = null;
         ObjectManager objects = GameServices.level().getObjectManager();
-        int frames = 0;
-        int triggerFrame = -1;
-        int stage8Frame = -1;
-        int stage12Frame = -1;
-        int maxPlayerX = 0;
-        int maxPlayerY = 0;
+        class SliceObservation {
+            boolean controllerObserved = false;
+            boolean pillarObserved = false;
+            boolean waitingBelowWorldTrigger = false;
+            boolean triggerAtOrBeyondWorldThreshold = false;
+            boolean arenaWorldBoundaryObserved = false;
+            boolean exactArenaWorldLockObserved = false;
+            boolean spindashObserved = false;
+            FbzEndBossInstance boss = null;
+            int frames = 0;
+            int triggerFrame = -1;
+            int stage8Frame = -1;
+            int stage12Frame = -1;
+            int maxPlayerX = 0;
+            int maxPlayerY = 0;
 
-        outer:
-        for (InputRun run : STARPOST_6_TO_BOSS) {
-            for (int frame = 0; frame < run.frames(); frame++) {
+            void afterFrame() {
                 frames++;
-                stepMask(fixture, run.mask());
                 int playerX = fixture.sprite().getCentreX() & 0xFFFF;
                 int playerY = fixture.sprite().getCentreY() & 0xFFFF;
                 maxPlayerX = Math.max(maxPlayerX, playerX);
@@ -694,19 +683,17 @@ class TestFbzCompatibilityMatrix {
                 List<FbzEndBossInstance> bosses = objects.activeObjectsOfType(FbzEndBossInstance.class);
                 if (!bosses.isEmpty()) {
                     boss = bosses.getFirst();
-                    break outer;
-                }
-                if (fixture.sprite().getDead()) {
-                    break outer;
                 }
             }
         }
+        SliceObservation observation = new SliceObservation();
+        TestFbzAct2TraversalPreboss.runOrdinaryPlaneApproach(fixture, observation::afterFrame);
         FbzZoneRuntimeState runtime = assertInstanceOf(
                 FbzZoneRuntimeState.class, GameServices.zoneRuntimeRegistry().current());
-        return new RouteSliceEvidence(controllerObserved, pillarObserved,
-                waitingBelowWorldTrigger, triggerAtOrBeyondWorldThreshold,
-                arenaWorldBoundaryObserved, exactArenaWorldLockObserved,
-                spindashObserved, boss, frames,
+        return new RouteSliceEvidence(observation.controllerObserved, observation.pillarObserved,
+                observation.waitingBelowWorldTrigger, observation.triggerAtOrBeyondWorldThreshold,
+                observation.arenaWorldBoundaryObserved, observation.exactArenaWorldLockObserved,
+                observation.spindashObserved, observation.boss, observation.frames,
                 fixture.sprite().getCentreX() & 0xFFFF,
                 fixture.sprite().getCentreY() & 0xFFFF,
                 fixture.camera().getX() & 0xFFFF,
@@ -715,7 +702,7 @@ class TestFbzCompatibilityMatrix {
                 fixture.camera().getMaxX() & 0xFFFF,
                 runtime.act2ForegroundStage(),
                 objects.occupiedDynamicSlotIds().size(),
-                triggerFrame, stage8Frame, stage12Frame, maxPlayerX, maxPlayerY,
+                observation.triggerFrame, observation.stage8Frame, observation.stage12Frame, observation.maxPlayerX, observation.maxPlayerY,
                 objects.activeObjectsOfType(FbzEndBossEventControlInstance.class).stream()
                         .findFirst().map(FbzEndBossEventControlInstance::getX).orElse(-1),
                 objects.activeObjectsOfType(FbzEndBossEventControlInstance.class).stream()
@@ -822,7 +809,6 @@ class TestFbzCompatibilityMatrix {
                 Arguments.of("s2", s2Rom == null ? null : s2Rom.toPath()));
     }
 
-    private record InputRun(int frames, int mask) { }
 
     private record RouteSliceEvidence(
             boolean controllerObserved,
