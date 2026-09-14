@@ -12,7 +12,62 @@ import org.mockito.MockedStatic;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+@org.junit.jupiter.api.parallel.Isolated
 class TestFbzMagneticObjects {
+    @Test
+    void movingPlatformClearsRolledPushAtCurrentRadiusLowerBoundary() throws Exception {
+        com.openggf.tests.TestEnvironment.configureGameModuleFixture(
+                com.openggf.tests.rules.SonicGame.SONIC_3K);
+        try {
+            var camera = new com.openggf.camera.Camera();
+            camera.setX((short) 0xF20);
+            camera.setY((short) 0x680);
+            com.openggf.level.objects.AbstractObjectInstance.updateCameraBounds(0xF20, 0x680, 0x1060, 0x760, 0);
+            var services = new com.openggf.level.objects.TestObjectServices().withCamera(camera);
+            var manager = new com.openggf.level.objects.ObjectManager(java.util.List.of(),
+                    new Sonic3kObjectRegistry(), 0, null, null,
+                    com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            manager.reset(0xF20);
+            var platform = manager.createDynamicObject(() ->
+                    new FbzMagneticPlatformObjectInstance(spawn(0x74, 0x0F)));
+            platform.snapshotPreUpdatePosition();
+            setField(platform, "chainAllocationAttempted", true);
+            var player = new MagneticContactPlayer();
+            player.setRolling(true);
+            player.applyRollingRadii(false);
+            player.setCentreX((short) (platform.getX() - 0x23));
+            player.setCentreY((short) (platform.getY() + player.getYRadius() - 6));
+            player.setXSpeed((short) 0x100);
+            player.setGSpeed((short) 0x100);
+            manager.processImmediateInlineSolidCheckpoint(platform, player, java.util.List.of());
+            assertTrue(player.getPushing());
+            assertTrue(manager.hasObjectPushingBit(player));
+
+            setField(platform, "yVelocity", -0x100);
+            try (MockedStatic<ObjectTerrainUtils> terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
+                terrain.when(() -> ObjectTerrainUtils.checkFloorDist(0x1000, 0x6FF, 0x0F))
+                        .thenReturn(TerrainCheckResult.noCollision());
+                platform.update(1, player);
+            }
+            manager.processImmediateInlineSolidCheckpoint(platform, player, java.util.List.of());
+            assertFalse(player.getPushing(), "loc_1DE8C rejects the exact live-radius lower boundary");
+            assertFalse(manager.hasObjectPushingBit(player), "loc_1E0A2 clears the same moving object's bit");
+        } finally {
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.game.GameModuleRegistry.reset();
+            com.openggf.level.objects.AbstractObjectInstance.resetCameraBoundsForTests();
+        }
+    }
+
+    private static final class MagneticContactPlayer extends com.openggf.sprites.playable.Sonic {
+        private MagneticContactPlayer() {
+            super("FBZ_MAGNETIC_CONTACT", (short) 0, (short) 0);
+            setGameRulesForTest(com.openggf.game.rules.GameRules.SONIC_3K);
+            setWidth(20);
+            setHeight(38);
+        }
+    }
+
     @Test
     void ceilingContactWaitsWithoutDriftingFractionOrVelocity() throws Exception {
         var events = new Sonic3kFBZEvents();
@@ -28,7 +83,7 @@ class TestFbzMagneticObjects {
         setField(platform, "yFixed", 0x0700A000);
         setField(platform, "yVelocity", -0x80);
         try (MockedStatic<ObjectTerrainUtils> terrain = org.mockito.Mockito.mockStatic(ObjectTerrainUtils.class)) {
-            terrain.when(() -> ObjectTerrainUtils.checkCeilingDist(0x1000, 0x700, 0x0F))
+            terrain.when(() -> ObjectTerrainUtils.checkNativeUpwardCeilingDist(0x1000, 0x700, 0x0F))
                     .thenReturn(new TerrainCheckResult(-1, (byte) 0, 1));
             platform.update(0, null);
             assertEquals(0x701, platform.getY());
@@ -135,13 +190,13 @@ class TestFbzMagneticObjects {
                     "loc_3B3EC must wait without a second falling-floor probe");
 
             setField(platform, "rising", true);
-            terrain.when(() -> ObjectTerrainUtils.checkCeilingDist(
+            terrain.when(() -> ObjectTerrainUtils.checkNativeUpwardCeilingDist(
                             org.mockito.ArgumentMatchers.eq(0x1000),
                             org.mockito.ArgumentMatchers.anyInt(),
                             org.mockito.ArgumentMatchers.eq(0x10)))
                     .thenReturn(TerrainCheckResult.noCollision());
             platform.update(2, null);
-            terrain.verify(() -> ObjectTerrainUtils.checkCeilingDist(
+            terrain.verify(() -> ObjectTerrainUtils.checkNativeUpwardCeilingDist(
                     org.mockito.ArgumentMatchers.eq(0x1000),
                     org.mockito.ArgumentMatchers.anyInt(),
                     org.mockito.ArgumentMatchers.eq(0x10)));
@@ -174,7 +229,7 @@ class TestFbzMagneticObjects {
             platform.update(1, null);
 
             events.setMagneticState(Sonic3kFBZEvents.MagneticPolarity.INACTIVE, 2);
-            terrain.when(() -> ObjectTerrainUtils.checkCeilingDist(
+            terrain.when(() -> ObjectTerrainUtils.checkNativeUpwardCeilingDist(
                             org.mockito.ArgumentMatchers.eq(0x1000),
                             org.mockito.ArgumentMatchers.anyInt(),
                             org.mockito.ArgumentMatchers.eq(0x10)))

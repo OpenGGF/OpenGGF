@@ -267,8 +267,9 @@ class TestFbzMinibossChildren {
     }
 
     @ParameterizedTest
-    @CsvSource({"-32,true", "27,true", "31,true", "32,false"})
-    void bodyLandingReadsNativeWidthRatherThanCollisionPadding(int offsetX, boolean lands) {
+    @CsvSource({"-32,true,false", "27,true,false", "31,true,false", "32,false,false",
+            "-32,true,true", "27,true,true", "31,true,true", "32,false,true"})
+    void bodyLandingReadsNativeWidthRatherThanCollisionPadding(int offsetX, boolean lands, boolean prison) {
         com.openggf.tests.TestEnvironment.configureGameModuleFixture(
                 com.openggf.tests.rules.SonicGame.SONIC_3K);
         try {
@@ -282,7 +283,9 @@ class TestFbzMinibossChildren {
             var manager = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
                     0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
             manager.reset(0x2E20);
-            var body = manager.createDynamicObject(() -> boss(services));
+            com.openggf.level.objects.AbstractObjectInstance body = prison
+                    ? manager.createDynamicObject(() -> new FbzMinibossPrisonChild(boss(services)))
+                    : manager.createDynamicObject(() -> boss(services));
             // Exercise an established boss slot after its first render cycle,
             // as the ordinary ObjectManager frame-start snapshot does.
             body.snapshotPreUpdatePosition();
@@ -299,10 +302,30 @@ class TestFbzMinibossChildren {
             assertEquals(lands, manager.hasObjectStandingBit(player, body));
             assertEquals(!lands, player.getAir());
             assertEquals(0x20, body.getBalanceWidthPixels());
-            assertEquals(0x0006, body.romObjectCodePointerHighWord());
+            assertEquals(0x0006, ((com.openggf.level.objects.RomObjectCodePointerProvider) body).romObjectCodePointerHighWord());
             if (lands) {
                 assertFalse(player.getRolling());
                 assertEquals(0, player.getYSpeed());
+                // A later CPU jump consumes an established standing bit, not
+                // the same-frame landing preservation path.
+                manager.updateSolidContacts(player);
+                player.setRolling(true);
+                player.applyRollingRadii(false);
+                player.setCentreX((short) (body.getX() - 0x1B));
+                player.setCentreY((short) (body.getY() - 0x20 - player.getYRadius() + 5));
+                int jumpX = player.getCentreX();
+                int jumpY = player.getCentreY();
+                manager.clearRidingObjectForJump(player);
+                player.setAir(true);
+                player.setOnObject(false);
+                player.setXSpeed((short) 0xC);
+                player.setYSpeed((short) -0x680);
+                manager.processImmediateInlineSolidCheckpoint(body, player, List.of());
+                assertEquals(jumpX, player.getCentreX(), "the stale standing bit prevents a fresh side push");
+                assertEquals(jumpY, player.getCentreY());
+                assertEquals(0xC, player.getXSpeed());
+                assertEquals(-0x680, player.getYSpeed());
+                assertFalse(manager.hasObjectStandingBit(player, body));
             }
         } finally {
             com.openggf.game.session.SessionManager.clear();
