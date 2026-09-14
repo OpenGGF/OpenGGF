@@ -616,3 +616,15 @@ Y difference22868 remains. Strict complete has3030errors, first22311 Tails
 prison interaction, rather than the earlier21379chain attack. The temporary
 observer is removed. Earlier requests to model the delay using overlay timing
 are rejected because the actual retained parent must own child sequencing.
+
+At34a03881c the next main-player divergence23816 is an actual vertical chain
+grab during routine4 recoil: engine snaps0828/01C0 to0818/01B4 and clears both
+velocities, then drops control next update. Native loc_3A9B4 and horizontal
+loc_3AC94 reject routine>=4 and debug placement before grab writes. Both entry
+gates now do so. A two-subtype regression first failed both rows (18.925seconds),
+then passed healthy/hurt/dead/debug cases while preserving rejected-entry
+coordinates, velocities, subpixels, ownership and absence of grab sound. Queued
+Maven `-Ptrace-replay-r7 -Dtest=TestFbzRailAndChainPlatforms,TestFbzObjectRewind,TestS3kFbzCompleteRunTraceReplay,TestS3kSonicTailsFbzSegmentTraceReplay`
+passed31 focused checks, with2 expected strict failures, zero skips,74seconds.
+Complete5063errors first22389Tailsair; independent4152first7619x-speed. Main
+X now agrees until24206. This is an entry rejection fix, not altered hurt physics.

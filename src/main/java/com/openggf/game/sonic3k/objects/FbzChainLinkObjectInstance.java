@@ -37,6 +37,11 @@ public final class FbzChainLinkObjectInstance extends AbstractObjectInstance imp
     private void updateParticipant(AbstractPlayableSprite p,int i){
         if(participants.flag(i,0)&&invalidHeldState(p)){releaseInvalid(p,i);return;}
         if(!participants.flag(i,0)){
+            // loc_3A9B4 (vertical) and loc_3AC94 (horizontal) reject native
+            // routine >= 4 and Debug_placement_mode before any grab writes.
+            // A hurt player must keep the recoil trajectory, not grab for one
+            // update and then be released by the held-state invalidation path.
+            if (p.isHurt() || p.getDead() || p.isDebugMode()) return;
             int objectY=spawn.y()+(horizontalMode?0:currentLength);int dx=(short)(p.getCentreX()-spawn.x()),dy=(short)(p.getCentreY()-objectY);
             boolean contact=horizontalMode?dx>=-rangePixels&&dx<rangePixels&&dy>=0&&dy<0x18:
                     dx>=-0x10&&dx<0x10&&dy>=0x90&&dy<0xA8;
