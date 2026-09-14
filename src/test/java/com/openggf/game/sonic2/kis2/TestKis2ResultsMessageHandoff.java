@@ -31,7 +31,8 @@ class TestKis2ResultsMessageHandoff {
                 return type == Sonic2SpecialStageManager.class ? type.cast(manager)
                         : GameServices.module().getGameService(type);
             }
-        }.withGameModule(GameServices.module()).withGameState(new GameStateManager());
+        }.withGameModule(GameServices.module()).withGameState(new GameStateManager())
+                .withRom(rom).withRomManager(GameServices.rom());
         return new SpecialStageResultsScreenObjectInstance(1,0,gotEmerald,6,emeralds,services);
     }
 
