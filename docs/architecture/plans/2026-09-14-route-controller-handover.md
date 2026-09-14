@@ -685,3 +685,62 @@ combined result; earlier isolated S1 probe frame counts therefore differ.
 Final controller review found no gameplay-state writes, weakened assertions,
 new shared ownership or teardown defect. The five admission rewind checks cross
 the changed gate. Broad/integrated verification and delivery remain pending.
+
+### Integration and validation authorization
+
+Implementation commit `a8549acbc` was reconciled with updated develop in
+`1d9905226`. Only the append-only trace-frontier log conflicted; both the incoming
+KiS2 evidence and HCZ evidence were retained. Code merged without conflicts.
+Integration into the main develop workspace produced `2c7630066`; the isolated
+task tree has identical committed content (`git diff HEAD 2c7630066` is empty).
+Unrelated main-workspace changes and dirty reference submodules were preserved.
+
+The combined plan selects 2,573 ordinary classes plus all guards, with a 40-minute
+execution limit and 10-minute no-output timeout. Java 21, Lua 5.4 and PowerShell
+preflight passed. The main-workspace command was canceled while still queued,
+before Maven started, after an independent FBZ delivery began editing runtime
+files there. No broad-suite result was produced.
+
+Moving that required run to the identical isolated tree was rejected by automatic
+approval review. Current checked-in guidance from `b06618d70` explicitly removes
+the old one-attempt/receipt gate, but the reviewer treats the older user-supplied
+AGENTS text in this conversation as authoritative. Re-review with the policy
+commit and the zero-execution cancellation evidence was also rejected. No raw
+Maven workaround or policy/lock change was attempted. An explicit user validation
+exception is required before the broad run can proceed. Integration remains local;
+push, final verification and worktree cleanup are pending. The completed focused
+results above are not a substitute claim of a completed broad delivery check.
+
+
+The user subsequently authorized continuing past the supplied limits. The queued
+combined run completed on `1d9905226`, whose tree equals integrated `2c7630066`:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 24cdc64e6697b7624e669abea2f37a35abed94b2 --preflight
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 24cdc64e6697b7624e669abea2f37a35abed94b2 --run
+```
+
+Run `20260914T200510Z-42dcc6a4` completed all 2,573 ordinary classes:
+**20,408 tests, 20,390 passes, zero failures/errors, 18 skips**, 713.41 seconds.
+All 15 full HCZ routes and all 15 route rewind cases passed without skips
+(73.71 and 53.83 seconds respectively). Guards completed **667 tests, 665 passes,
+two inherited failures, zero errors/skips**, 169.46 seconds. Overall exit was 1.
+The failures remain `TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+(stale direct-Maven prose expectations) and
+`TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`
+(`FbzRouteEvidenceProbe#printEvidence` and `LevelSolidityMapProbe#writeSolidityMap`).
+Their messages match the recorded matched baseline; relevant documentation,
+scanned test tree, POM, hooks and tooling are unchanged from `9aada6ce6`.
+
+All 18 skips were inspected: 14 explicit opt-in benchmark/diagnostic/route checks,
+two unavailable graphics contexts, the existing CPZ spin-tube premise, and the
+missing local deterministic S1 audio reference. No HCZ case skipped. The ordinary
+suite is green; guards and native trace parity retain the documented baseline
+failures. Results were consumed and acknowledgment requested.
+
+While validation ran, develop incorporated KiS2 return/title-card work in
+`aa3ccf04a`. Its independent combined run also had zero ordinary failures and the
+same two guard failures. Its new loop-tail hook is implemented only by the S2
+title card, but its shared load-receipt call warrants bounded combined HCZ reload
+and title-card verification after reconciliation. A second full suite is not
+needed to repeat both completed broad runs.
