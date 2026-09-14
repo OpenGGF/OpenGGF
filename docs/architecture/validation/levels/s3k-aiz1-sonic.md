@@ -363,3 +363,13 @@ including every exploratory and failed run. The shared receipt now belongs to
 `kis2-presentation-super-completion` and was left untouched. Local links and
 whitespace checks passed. Temporary probe code and raw logs are removed after
 the compact findings are recorded here.
+
+Integrated **`c160508fa`** into `feature/ai-gameplay-capture` by fast-forward,
+without conflicts. Post-integration `mvn -Dmse=off
+-Dtest=TestS3kAiz1SpringRecovery -Dopenggf.aiz1.recovery=true` with all three
+existing absolute ROM properties and `test`: **3 passed, zero failures/errors/skips**,
+26.571 s. The whole chain was crossed 83/88/88 frames after capture for
+640/off, 800/off and 320/S1 respectively, and remained crossed at the 300-frame
+endpoint; each replay matched twice. Final aggregate testing: **548.798 seconds
+(9.147 minutes)**, separately accounted. This is focused local evidence,
+not a full-suite pass or complete-route delivery. No production source changed.
