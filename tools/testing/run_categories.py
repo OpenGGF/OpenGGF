@@ -7,7 +7,6 @@ from collections import Counter
 from datetime import datetime, timezone
 import hashlib
 import json
-import os
 from pathlib import Path
 import re
 import shutil
@@ -19,9 +18,8 @@ import uuid
 import xml.etree.ElementTree as ET
 
 from category_artifacts import compact_run, prune_runs, run_logged, acknowledge_run
-from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, check_repeat, record_attempt, record_outcome, is_broad
-
-from category_task import ValidationTask
+from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, is_broad
+from maven_queue import maven_slot, handle_termination
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
@@ -213,26 +211,18 @@ def tree_state(root):
     return digest.hexdigest()
 
 
-def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, repeat_reason=None, keep_diagnostics=False, task_managed=False):
+def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, keep_diagnostics=False, queue_fd=None):
+    """Execute a plan while the CLI holds the shared Maven slot."""
     workers = plan.get('workers', 1)
     if workers not in (1, 2):
         raise ValueError('Ordinary workers must be 1 or 2')
     target = root / 'target'
     target.mkdir(exist_ok=True)
-    lock = target / 'category-tests.lock'
-    try:
-        fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-    except FileExistsError:
-        raise ValueError(f'Category runner already owns {lock}; inspect its PID before removing a stale lock')
     run = None
     status = 'incomplete'
     results = []
     try:
-        with os.fdopen(fd, 'w') as stream:
-            stream.write(str(os.getpid()) + '\n')
         base = target / 'category-tests'
-        if not task_managed:
-            check_repeat(target, plan, repeat_reason)
         prune_runs(base)
         run = base / (datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ') + '-' + uuid.uuid4().hex[:8])
         run.mkdir(parents=True)
@@ -245,11 +235,9 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, repeat_reason=None, keep_d
         initial_state = tree_state(root)
         plan['working_tree_fingerprint'] = initial_state
         plan['max_minutes'] = max_minutes
-        plan['repeat_reason'] = repeat_reason
         (run / 'plan.json').write_text(json.dumps(plan, indent=2) + '\n')
         includes = run / 'includes.txt'
         includes.write_text('\n'.join(plan['tests']) + '\n')
-        record_attempt(target, run, plan, repeat_reason)
         deadline = time.monotonic() + max_minutes * 60
         results = []
         failed = False
@@ -273,7 +261,7 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, repeat_reason=None, keep_d
             try:
                 lane_started = time.monotonic()
                 exit_code = run_logged(command, root, run / f'{lane}.log', temporary,
-                                       timeout=deadline - lane_started, idle_timeout=IDLE_SECONDS)
+                                       timeout=deadline - lane_started, idle_timeout=IDLE_SECONDS, queue_fd=queue_fd)
             except TimeoutError as error:
                 summary = summarize(reports)
                 summary.update(lane=lane, workers=1 if lane == 'guards' else workers, status='incomplete', reason=str(error),
@@ -302,18 +290,14 @@ def run_plan(root, plan, max_minutes=DEFAULT_MINUTES, repeat_reason=None, keep_d
               'a category pass is not full-suite certification.')
         return int(failed)
     finally:
-        try:
-            if run is not None:
-                (run / 'status.json').write_text(json.dumps({'status': status}) + '\n')
-                record_outcome(target, run, status, results)
-                compact_run(run, failed=(status != 'passed' or keep_diagnostics))
-                # Current results remain only until consumed. The next launch removes
-                # abandoned results; explicit opt-in retention is separately bounded.
-                prune_runs(run.parent, active=None if keep_diagnostics else run)
-                print(f'After inspecting results, delete diagnostics: python3 tools/testing/run_categories.py '
-                      f'--acknowledge {run.name}', flush=True)
-        finally:
-            lock.unlink()
+        if run is not None:
+            (run / 'status.json').write_text(json.dumps({'status': status}) + '\n')
+            compact_run(run, failed=(status != 'passed' or keep_diagnostics))
+            # Current results remain only until consumed. The next launch removes
+            # abandoned results; explicit opt-in retention is separately bounded.
+            prune_runs(run.parent, active=None if keep_diagnostics else run)
+            print(f'After inspecting results, delete diagnostics: python3 tools/testing/run_categories.py '
+                  f'--acknowledge {run.name}', flush=True)
 
 
 def main(argv=None):
@@ -326,13 +310,7 @@ def main(argv=None):
                         help='ordinary JVM workers (default: 1); guards always use one worker')
     parser.add_argument('--run', action='store_true', help='execute the plan; otherwise print JSON only')
     parser.add_argument('--preflight', action='store_true', help='check Java and guard tools without running tests')
-    parser.add_argument('--max-minutes', type=float, default=DEFAULT_MINUTES, help='total Maven budget across lanes (default: 40 minutes)')
-    parser.add_argument('--repeat-reason', help='explanation only; never authorizes another broad task run')
-    parser.add_argument('--start-task', metavar='NAME', help='start one delivery budget, pinned with --base')
-    parser.add_argument('--finish-task', action='store_true', help='close a delivered/canceled task, never to reset its budget')
-    parser.add_argument('--task-status', action='store_true', help='show shared cumulative validation accounting')
-    parser.add_argument('--record-minutes', type=float, help='account for focused/raw Maven or baseline time outside this runner')
-    parser.add_argument('--record-kind', choices=('focused', 'baseline'), help='kind of externally measured test time')
+    parser.add_argument('--max-minutes', type=float, default=DEFAULT_MINUTES, help='per-invocation Maven timeout across lanes, excluding queue wait (default: 40 minutes)')
     parser.add_argument('--acknowledge', metavar='RUN_ID', help='delete inspected results without running tests')
     parser.add_argument('--keep-diagnostics', action='store_true', help='explicitly retain bounded diagnostics across runs until acknowledged')
     parser.add_argument('--json', action='store_true', help='print the complete dry-run plan, including every class')
@@ -340,34 +318,11 @@ def main(argv=None):
     try:
         if not math.isfinite(args.max_minutes) or args.max_minutes <= 0:
             parser.error('--max-minutes must be a positive finite number')
-        if args.repeat_reason is not None and not 10 <= len(args.repeat_reason.strip()) <= 2000:
-            parser.error('--repeat-reason must explain the reason in 10–2000 characters')
-        task_actions = [bool(args.start_task), args.finish_task, args.task_status, args.record_minutes is not None]
-        if any(task_actions):
-            if (sum(task_actions) != 1 or args.run or args.preflight or args.category or args.guards
-                    or args.list or args.json or args.keep_diagnostics or args.repeat_reason or args.acknowledge or args.workers != 1
-                    or (args.base and not args.start_task)):
-                parser.error('task accounting actions must be used separately from validation')
-            if bool(args.record_kind) != (args.record_minutes is not None):
-                parser.error('--record-minutes requires --record-kind, and vice versa')
-            with ValidationTask(ROOT) as task:
-                if args.start_task:
-                    if not args.base:
-                        parser.error('--start-task requires the pre-task --base')
-                    task.start(args.start_task, git(ROOT, 'rev-parse', args.base + '^{commit}'), args.max_minutes)
-                elif args.finish_task:
-                    task.finish()
-                elif args.record_minutes is not None:
-                    task.record(args.record_minutes, args.record_kind)
-                print(json.dumps(task.data, indent=2))
-            return 0
-        if args.record_kind:
-            parser.error('--record-kind requires --record-minutes')
         if args.acknowledge:
-            if args.run or args.preflight or args.base or args.category or args.guards or args.list or args.json or args.keep_diagnostics or args.repeat_reason or args.workers != 1:
+            if args.run or args.preflight or args.base or args.category or args.guards or args.list or args.json or args.keep_diagnostics or args.workers != 1:
                 parser.error('--acknowledge must be used alone')
             acknowledge_run(ROOT, args.acknowledge)
-            print('Diagnostics deleted; broad-attempt receipt preserved.')
+            print('Diagnostics deleted.')
             return 0
         if args.keep_diagnostics and not args.run:
             parser.error('--keep-diagnostics requires --run')
@@ -386,8 +341,8 @@ def main(argv=None):
             if is_broad(plan):
                 print('BROAD selection: allow tens of minutes; the September normalization run '
                       'took ~24 minutes ordinary + ~10 minutes guards. This is context, not an ETA.', flush=True)
-            print(f'Invocation ceiling: {args.max_minutes:g} minutes, further limited by remaining task time; '
-                  '10 minutes without output. Timeout means incomplete; no automatic retry.', flush=True)
+            print(f'Invocation timeout: {args.max_minutes:g} minutes, excluding queue wait; '
+                  '10 minutes without output. Timeout means incomplete.', flush=True)
             if sys.platform == 'darwin':
                 print('Native tests need macOS display/service access. Launch in the known working '
                       'native environment; tool preflight does not prove GLFW access.', flush=True)
@@ -395,14 +350,12 @@ def main(argv=None):
                 preflight(ROOT, plan)
                 print('Tool prerequisites passed; no tests executed.')
                 return 0
-            with ValidationTask(ROOT) as task:
-                task.check(plan)
-                print(f"Task {task.data['task']}: {task.data['elapsed_seconds'] / 60:.2f} minutes used; "
-                      f"{task.remaining_minutes():.2f} minutes remain across this delivery.", flush=True)
+            # Re-plan after waiting: edits or integration may have changed this tree.
+            # The timeout starts inside run_plan, after the slot is acquired.
+            with maven_slot(ROOT) as fd:
+                plan = make_plan(ROOT, data, args.base, args.category, args.guards, args.workers)
                 preflight(ROOT, plan)
-                with task.measure(plan, args.max_minutes) as remaining:
-                    return run_plan(ROOT, plan, remaining, args.repeat_reason, args.keep_diagnostics,
-                                    task_managed=True)
+                return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics, queue_fd=fd)
         display = plan if args.json else {
             **{k: v for k, v in plan.items() if k not in ('tests', 'reasons')},
             'selected_classes': len(plan['tests']), 'reasons': plan['reasons'][:50],
@@ -418,4 +371,5 @@ def main(argv=None):
 
 
 if __name__ == '__main__':
-    sys.exit(main())
+    with handle_termination():
+        sys.exit(main())

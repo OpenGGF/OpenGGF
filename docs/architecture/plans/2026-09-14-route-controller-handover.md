@@ -100,9 +100,9 @@ report rather than running 34 minutes.
 
 - Worktree-isolated sessions cannot run `git -C`, heredocs or `$(...)` around
   git; write scripts under `target/` and call them by absolute path.
-- Task receipts live in shared Git metadata: a peer session's
-  `--finish-task` can finish yours (it happened once this session); start a
-  new identity and record the minutes already spent.
+- The shared-receipt interference recorded above was removed by the Maven queue
+  cleanup. Submit category runs or `tools/testing/maven_queue.py` commands; they
+  wait automatically, without task identities or manual time accounting.
 - Trace data is comparison-only. The pilot reads the trace for metadata, the
   pre-level count and the act-change row; it never hydrates engine state
   from physics rows, and neither should a successor.

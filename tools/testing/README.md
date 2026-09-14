@@ -78,8 +78,7 @@ replay fixtures or the domain skill's required checks. A category run is never a
 Use `--workers 2` to opt into the `test-concurrent` Maven profile for the ordinary lane.
 The default is one reused JVM; the opt-in uses two reused JVMs, each with a 3 GiB maximum
 heap and serial JUnit execution. Allow memory for both heaps, Maven and native allocations.
-Guards keep their separate single-worker invocation. Selection, task accounting and retry
-limits are unchanged; compare matched runs before choosing two workers on a new machine.
+Guards keep their separate single-worker invocation. Selection is unchanged; compare matched runs before choosing two workers on a new machine.
 This distributes test classes between JVMs, so one long class cannot use both workers.
 
 The ordinary FBZ matrix keeps one full native route plus independent compatibility
@@ -114,56 +113,56 @@ first graphics launch, especially after a documented sandbox failure.
 
 Full selections and selections of at least 500 candidate classes print a cost warning.
 The September normalization run measured about 24 minutes ordinary and 10 minutes guards;
-this is historical context, not a prediction. `--max-minutes` defaults to **40 minutes total
-across Maven lanes**, not 40 minutes each. There is also a **10-minute no-output timeout**.
-Both terminate the Maven process tree and report incomplete validation. Compilation consumes
-the same budget. Tool probes have separate 20-second limits. A timeout never authorizes
-silently increasing the budget or restarting the suite.
+this is historical context, not a prediction. Category `--max-minutes` defaults to
+**40 minutes per invocation across Maven lanes**, including compilation, and can be
+adjusted for the intended checks. There is also a **10-minute no-output timeout**.
+Both terminate the Maven process tree and report incomplete validation. Queue waiting
+is excluded. Tool probes have separate 20-second limits.
 
-Validation is budgeted for the **whole user-requested delivery**, independently of
-commit boundaries. Start it once, before implementation, and use the printed immutable
-base through the entire delivery:
+Plan the combined checks against the pre-task integration SHA, finish focused fixes first,
+and inspect failures before deciding what needs another run. No task registration,
+receipts, cumulative budget, retry authorization or manual timing records are required.
+Repeated checks should have a reason, such as changed code or repaired prerequisites;
+there is no hard attempt limit. Partial or interrupted coverage never certifies a pass.
+
+### Queued Maven execution
+
+Category `--run` commands automatically wait for a shared Maven slot across all linked
+worktrees. For focused tests or any other Maven invocation, run this from the intended
+worktree (PowerShell accepts the same Python command):
 
 ```bash
-python3 tools/testing/run_categories.py --start-task 20260912-example --base <pre-task-commit>
-python3 tools/testing/run_categories.py --task-status
-# Focused category invocations are timed automatically:
-python3 tools/testing/run_categories.py --category physics --run
-# After a directly launched focused Maven or matched baseline check, record its elapsed time:
-python3 tools/testing/run_categories.py --record-minutes 1.5 --record-kind focused
-python3 tools/testing/run_categories.py --record-minutes 0.5 --record-kind baseline
-# Once implementation is complete, run ONE combined change-based selection:
-python3 tools/testing/run_categories.py --base <pinned-start-commit> --run
-# Only on delivery or cancellation:
-python3 tools/testing/run_categories.py --finish-task
+python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestCollisionLogic" test
+python3 tools/testing/maven_queue.py -Dmse=off package
 ```
 
-The task receipt and exclusive lock live under the repository's **shared Git directory**,
-`openggf-validation/task.json` and `task.lock`, so linked worktrees use the same accounting.
-One active task is supported per repository. Commits, worktrees, changed bases and
-`--repeat-reason` cannot grant another broad attempt. The receipt stores only identity,
-pinned base, cumulative elapsed seconds, externally recorded focused/baseline time and
-attempt/outcome counts; it is not a pass cache. The previous worktree-local broad receipt
-remains a small outcome summary and does not authorize execution.
+Submit checks when ready, even while another agent is testing. Leave the command session
+running: it prints a waiting notice every 30 seconds and starts automatically when it
+acquires the slot. The queue serializes whole invocations; category ordinary/guard lanes
+stay together. There is no background service, task owner or approval step. The OS chooses
+among waiting processes; strict FIFO ordering is not promised. Different clones have
+separate queues. Each command still uses its own worktree and `target/` directory.
 
-The default task ceiling is **40 minutes including focused and baseline checks**.
-`--max-minutes` may choose a smaller task budget at creation; it cannot create a budget
-above 40 minutes. During execution it is an invocation ceiling, further reduced by the
-remaining task time. Compilation and interrupted runs count. A first failed/interrupted
-broad attempt still consumes the one-broad allowance. Plan the aggregate cost before
-launching; report mandatory coverage that cannot fit instead of starting an unaffordable
-run. Use focused checks after the combined selection for task-caused regressions and
-bounded matched attribution; keep unrelated failures explicit. Never restart the full
-suite merely because another planned item or commit is ready.
+The wrapper forwards Maven arguments without shell interpolation, streams normal output,
+and returns Maven's exit status. It adds no timeout to a focused/raw Maven command.
+Ctrl-C or SIGTERM cancels a waiting request or stops the running Maven process tree before
+releasing the slot. Category runs retain their timeouts and diagnostic summaries. Category
+selection is recomputed after waiting so it describes the tree actually being tested.
+Avoid editing that worktree during execution; the category runner rejects changed trees.
 
-`--repeat-reason` is explanation only: there is no self-service broad-repeat or task-budget
-override. Finishing/restarting a task to evade the limit is prohibited. A new task identity
-requires a new user request or an explicitly user-authorized exception for material changes
-made after combined validation, or corrected prerequisites that invalidated it. Red results
-and continuing the original plan do not qualify. The CLI cannot authenticate user intent
-or observe raw Maven launched elsewhere; agents must record that elapsed time and must not
-use raw commands, receipt edits/deletion or fabricated task identities as bypasses.
-CI/release gates remain unchanged; incomplete or partial coverage never certifies a pass.
+The shared Git directory contains `maven-queue.lock`, an OS-managed execution lock. Its
+presence is **not** evidence of an active run, and it must never be deleted to force access:
+that could create two independent locks. Normal exits and handled cancellation release
+it automatically; dead waiting processes leave no queue entries. On POSIX the Maven child
+inherits the lock descriptor as protection against a killed Python parent. After a forced
+kill, especially on Windows, check for surviving Maven/JVM processes before further work.
+This is local coordination, not a sandbox against arbitrary commands.
+
+Direct `mvn` and older runner versions do not participate in the queue. Use the wrapper
+for local Maven builds/tests, and allow any already-running older invocation to finish
+before adopting it. Existing `openggf-validation/task.json`, `task.lock` and
+`target/category-tests-last-broad.json` files are ignored, not migrated or deleted;
+they do not authorize or block new runs. CI and release commands/gates are unchanged.
 
 Changes confined to the Python runner/tests and this prose guidance use the Python safety
 suite below plus actual tool preflight. Changes to selection policy, POM, Java, workflows
@@ -180,9 +179,7 @@ python3 tools/testing/run_categories.py --acknowledge <run-id>
 ```
 
 This deletes the **entire run directory**, including summaries, plans and commands, without
-running Maven. It takes the same lock as validation and refuses cleanup while a runner
-owns that lock. Only exact runner IDs are accepted, never paths or symlinked directories.
-Acknowledgment leaves both the task accounting and broad-attempt receipt intact.
+running Maven. It waits for the same execution slot as validation before cleanup. Only exact runner IDs are accepted, never paths or symlinked directories.
 A repeated acknowledgment is harmless. Agents must acknowledge consumed results before
 delivery; there is no background process that can detect when a human has read a file.
 
@@ -200,22 +197,14 @@ delivery; there is no background process that can detect when a human has read a
   data are still removed; this flag retains bounded logs and JSON, not complete build output.
 - Each invocation uses its own `openggf.test.tmpdir` and `TMPDIR`/`TMP`/`TEMP`, deleted after
   Maven's process tree exits, including on handled interruption. After a force-killed runner,
-  confirm its processes exited before removing a stale lock. The next launch removes leftovers.
+  confirm its processes exited. The next launch removes leftovers.
 
-The only persistent default artifact is the single overwritten
-`target/category-tests-last-broad.json` receipt (normally under 16 KiB). It keeps the tested
-revision/fingerprint, retry reason, status and lane counts, not logs, skip reasons or failure
-payloads. Acknowledgment preserves it, so deleting diagnostics cannot bypass retry controls.
-The temporary storage needed by an active test is not limited by the retention budget.
-Build caches, ROMs, unrelated target folders and other worktrees are not pruned. Do not copy
-local logs into another archive to evade cleanup. Dedicated release/partition evidence uses
-its existing explicit evidence workflow below.
+No validation receipt or pass cache is written. The temporary storage needed by an active
+test is not limited by the retention limit. Build caches, ROMs, unrelated target folders
+and other worktrees are not pruned. Do not copy local logs into another archive to evade
+cleanup. Dedicated release/partition evidence uses its existing explicit workflow below.
 
-`target/category-tests.lock` prevents two category runners in one worktree. Raw Maven bypasses
-this lock: never start it concurrently in that worktree. Do not retry a run while its predecessor
-is still active.
-
-The selector and retention tests run in the CI smoke job. Run them locally after changes:
+The selector, queue and retention tests run in the CI smoke job. Run them locally after changes:
 
 ```bash
 python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'

@@ -1,5 +1,4 @@
-"""Small, bounded controls for expensive local validation (not a pass cache)."""
-import json
+"""Prerequisite checks and per-invocation timeouts for local validation."""
 import os
 import re
 import subprocess
@@ -32,48 +31,3 @@ def preflight(root, plan):
 
 def is_broad(plan):
     return plan['full'] or len(plan['tests']) >= BROAD_CLASSES
-
-
-def check_repeat(target, plan, reason):
-    """A single receipt survives log rotation and focused runs, never certifies a pass."""
-    if not is_broad(plan):
-        return
-    receipt = target / 'category-tests-last-broad.json'
-    if receipt.exists():
-        if receipt.stat().st_size > 16384:
-            raise ValueError(f'Invalid oversized validation receipt: {receipt}')
-        previous = json.loads(receipt.read_text())
-        if not isinstance(previous, dict) or not isinstance(previous.get('run'), str):
-            raise ValueError(f'Invalid validation receipt: {receipt}')
-        raise ValueError(
-            f"Broad validation already attempted in this worktree ({previous['run']}). "
-            'Inspect its outcome; use focused checks for fixes/attribution. '
-            '--repeat-reason is documentation, not authorization. No tests were run.')
-
-
-def record_attempt(target, run, plan, reason):
-    if is_broad(plan):
-        receipt = target / 'category-tests-last-broad.json'
-        temporary = receipt.with_suffix('.tmp')
-        temporary.write_text(json.dumps({
-            'run': str(run), 'head': plan.get('head'), 'base': plan.get('base'),
-            'fingerprint': plan['working_tree_fingerprint'], 'reason': reason,
-        }, indent=2) + '\n')
-        temporary.replace(receipt)
-
-
-def record_outcome(target, run, status, results):
-    """Keep counts only in the existing broad-attempt receipt, never failure payloads."""
-    receipt = target / 'category-tests-last-broad.json'
-    if not receipt.exists():
-        return
-    previous = json.loads(receipt.read_text())
-    if previous.get('run') != str(run):
-        return
-    previous['status'] = status
-    previous['results'] = [{key: summary[key] for key in
-                           ('lane', 'tests', 'failures', 'errors', 'skipped', 'exit_code')
-                           if key in summary} for summary in results]
-    temporary = receipt.with_suffix('.tmp')
-    temporary.write_text(json.dumps(previous, indent=2) + '\n')
-    temporary.replace(receipt)
