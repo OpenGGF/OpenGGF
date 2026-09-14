@@ -29,6 +29,15 @@ class TestFbzAct1ColdRoute {
 
     @Test
     void sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults() throws Exception {
+        runColdRoute(320, "off", "tails");
+    }
+
+    private void runColdRoute(int width, String donor, String sidekick) throws Exception {
+        var graphics = GameServices.graphics();
+        int viewportX = graphics.getViewportX();
+        int viewportY = graphics.getViewportY();
+        int viewportWidth = graphics.getViewportWidth();
+        int viewportHeight = graphics.getViewportHeight();
         var configuration = SonicConfigurationService.getInstance();
         Map<SonicConfiguration, Object> previous = new EnumMap<>(SonicConfiguration.class);
         for (var key : SonicConfiguration.values()) {
@@ -37,16 +46,45 @@ class TestFbzAct1ColdRoute {
         try {
             configuration.clearSessionOverrides();
             configuration.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
-            configuration.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
-            configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, false);
-            configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, "off");
-            configuration.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, 320);
-            var fixture = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0)
-                    .withFreshLevelStartLifecycle().build();
-            var player = fixture.sprite();
+            configuration.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, sidekick);
+            configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED, !donor.equals("off"));
+            configuration.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE, donor);
+            configuration.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,
+                    com.openggf.configuration.WidescreenAspect.NATIVE_4_3.name());
+            configuration.resolveDisplayAspect();
+            configuration.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+            var builder = HeadlessTestFixture.builder().withZoneAndAct(Sonic3kZoneIds.ZONE_FBZ, 0)
+                    .withFreshLevelStartLifecycle();
+            if (!donor.equals("off")) {
+                var donorRom = com.openggf.tests.RomTestUtils.ensureSonic2RomAvailable();
+                assertNotNull(donorRom, "the explicit S2 donor route requires its ROM");
+                assertTrue(donorRom.isFile());
+                configuration.setSessionOverride(SonicConfiguration.SONIC_2_ROM, donorRom.getAbsolutePath());
+                builder.withCrossGameDonation(donor);
+            }
+            com.openggf.game.CrossGameFeatureProvider.getInstance().resetState();
+            com.openggf.game.session.SessionManager.clear();
+            com.openggf.tests.TestEnvironment.activeGameplayMode();
+            var fixture = builder.build();
+            graphics.setViewport(0, 0, width, 224);
+            assertEquals(width, fixture.camera().getWidth() & 0xFFFF);
+            assertEquals(width, graphics.getViewportWidth());
+            assertEquals(!donor.equals("off"), com.openggf.game.CrossGameFeatureProvider.isActive());
+            if (!donor.equals("off")) {
+                assertEquals(donor, com.openggf.game.CrossGameFeatureProvider.getInstance().getDonorGameId());
+                assertNotSame(GameServices.module().getRules(), fixture.sprite().getGameRules());
+            }
+            var player = assertInstanceOf(com.openggf.sprites.playable.Sonic.class, fixture.sprite());
+            assertFalse(player.isCpuControlled());
+            if (!sidekick.isEmpty()) {
+                var follower = assertInstanceOf(com.openggf.sprites.playable.Tails.class,
+                        GameServices.sprites().getSidekicks().getFirst());
+                assertTrue(follower.isCpuControlled());
+                assertSame(player, follower.getCpuController().getLeader());
+            }
             assertEquals(0x60, player.getCentreX() & 0xFFFF);
             assertEquals(0x76C, player.getCentreY() & 0xFFFF);
-            assertEquals(1, GameServices.sprites().getSidekicks().size());
+            assertEquals(sidekick.isEmpty() ? 0 : 1, GameServices.sprites().getSidekicks().size());
             // Consumption executes the production one-shot object/animation
             // setup callback; it does not merely discard the lifecycle token.
             assertTrue(GameServices.level().consumePendingInitialProcessSpritesPass());
@@ -348,7 +386,8 @@ class TestFbzAct1ColdRoute {
                 history.addLast(state);
                 if (history.size() > 45) history.removeFirst();
                 assertFalse(player.getDead(), () -> "cold route died " + history
-                        + " controller=" + outdoor
+                        + " controller=" + outdoor + "; magnetic=" + magnetic
+                        + "; carriers=" + carriers + "; late=" + lateCarriers + "; carousel=" + carousel
                         + " nearby=" + objects.getActiveObjects().stream()
                         .filter(o -> o.getSpawn() != null)
                         .filter(o -> Math.abs(o.getX() - player.getCentreX()) < 0x180)
@@ -362,7 +401,8 @@ class TestFbzAct1ColdRoute {
                             && GameServices.module().getTitleCardProvider().isComplete()) {
                         assertFalse(player.isControlLocked());
                         assertFalse(player.isObjectControlled());
-                        System.out.printf("FBZ1 cold Sonic+Tails completed with released Act2 control after %d ordinary frames%n", frame + 1);
+                        System.out.printf("FBZ1 cold %dpx donor=%s sidekick=%s completed with released Act2 control after %d ordinary frames%n",
+                                width, donor, sidekick, frame + 1);
                         return;
                     }
                 }
@@ -371,6 +411,9 @@ class TestFbzAct1ColdRoute {
         } finally {
             configuration.clearSessionOverrides();
             previous.forEach(configuration::setSessionOverride);
+            configuration.resolveDisplayAspect();
+            graphics.setViewport(viewportX, viewportY, viewportWidth, viewportHeight);
+            com.openggf.game.CrossGameFeatureProvider.getInstance().resetState();
         }
     }
     private static final class CarouselController {
@@ -517,16 +560,23 @@ class TestFbzAct1ColdRoute {
                     mask = trapLandingMask(player, 0x252A);
                     finished = target.displacement() >= target.maximumRise() - 2;
                 } else if (player.getAir()) {
-                    mask = trapLandingMask(player, 0x252A) | (player.getYSpeed() < 0 ? 16 : 0);
+                    mask = trapLandingMask(player, 0x2540) | (player.getYSpeed() < 0 ? 16 : 0);
                 } else {
-                    mask = 8 | ((lastMask & 16) == 0 ? 16 : 0);
+                    var runtime = GameServices.zoneRuntimeRegistry()
+                            .currentAs(com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState.class).orElseThrow();
+                    boolean low = target != null && target.getY() >= 0x540;
+                    boolean phase = runtime.magneticPolarity()
+                            == com.openggf.game.sonic3k.events.Sonic3kFBZEvents.MagneticPolarity.INACTIVE
+                            && runtime.magneticTimerPhase() < 0x90;
+                    mask = low && phase ? 8 | (x >= 0x24A8 && (lastMask & 16) == 0 ? 16 : 0)
+                            : RouteSteering.steerMask(player, 0x2490, 3);
                 }
             } else if (stage >= 2) {
                 if (riding && target.displacement() >= target.maximumRise() - 2) {
                     mask = 8 | ((lastMask & 16) == 0 ? 16 : 0);
                     stage = 3;
                 } else if (stage == 3) {
-                    mask = trapLandingMask(player, 0x24C0)
+                    mask = trapLandingMask(player, 0x2490)
                             | (player.getAir() && player.getYSpeed() < 0 ? 16 : 0);
                     if (!player.getAir() && x >= 0x2490 && y < 0x580) {
                         stage = 4;

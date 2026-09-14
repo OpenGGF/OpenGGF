@@ -896,10 +896,13 @@ class TestFbzAct1RouteHeadless {
                     "Apparent_act remains Act 1 until the carried title owner reaches loc_2DD06");
             assertSame(owningSession, SessionManager.getCurrentGameplayMode(),
                     "FBZ ScreenEvents reloads Level state inside the existing gameplay session");
-            assertEquals(0x0022, fixture.camera().getMinX() & 0xFFFF,
-                    "the publication frame must include the native +2 gradual-lock event tail");
-            assertEquals(0x00A2, fixture.camera().getMaxX() & 0xFFFF,
-                    "the paired right bound must advance in the same production frame");
+            // FBZ1BGE_Normal subtracts $2E00 from both current X bounds,
+            // then branches straight to FBZ1BGE_GoDeform. It does not run a
+            // gradual-lock update in the newly selected act on this dispatch.
+            assertEquals(0x0020, fixture.camera().getMinX() & 0xFFFF,
+                    "publication must preserve the native subtraction-only left bound");
+            assertEquals(0x00A0, fixture.camera().getMaxX() & 0xFFFF,
+                    "publication must preserve the native subtraction-only right bound");
             assertEquals(0x0540, fixture.camera().getMinY() & 0xFFFF);
             assertEquals(0x0540, fixture.camera().getMaxY() & 0xFFFF);
             var publicationParallax = GameServices.parallax();

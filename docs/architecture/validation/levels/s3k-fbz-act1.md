@@ -26,7 +26,7 @@ and carried owners; it is part of this act's completion contract.
 
 | Route | Concrete existing contract and setup | Remaining obligation |
 | --- | --- | --- |
-| Sonic solo / Sonic + Tails | `TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults` passed the ordinary cold Sonic + Tails route once (six-impact boss → sign/results → Act 2 title teardown/control release); see exact source and limits below. `TestFbzNativeCharacterRoutes#everyNativeTeamCanEnterBothActsFromLevelSelectAtTheRomStart`: production level-select selection, ROM start, concrete sprite types, two idle frames | Final integrated repeat and representative configuration breadth; Sonic solo full route remains open |
+| Sonic solo / Sonic + Tails | `TestFbzAct1ColdRoute#sonicAndTailsReachAct2FromColdAct1ThroughRealBossAndResults` passed the ordinary cold Sonic + Tails route on the integrated runtime (six-impact boss → sign/results → Act 2 title teardown/control release); see exact source and limits below. `TestFbzNativeCharacterRoutes#everyNativeTeamCanEnterBothActsFromLevelSelectAtTheRomStart`: production level-select selection, ROM start, concrete sprite types, two idle frames | Representative full-route configuration breadth; Sonic solo full route remains open |
 | Tails solo | Same entry method with Tails radius/character assertions; checkpoint method below | Complete Tails traversal and boss/results route; prove flight-dependent geometry and event progression |
 | Knuckles solo | Same entry method with Knuckles character selection; checkpoint method below | Complete Knuckles route; independently establish any materially different geometry/event/boss progression |
 | Width/donor/team lifecycle | `TestFbzAct1RouteHeadless#resultsOwnedReloadAndTitleLifecycleSupportsWidthsDonationsAndEveryTeamShape`: seeded boss-boundary fixture, real results/reload/title lifecycle; widths 320/352/400/512/528/640/800 × off/S1/S2 × five team shapes (105 cases), then native reset | 105-case product plus final native reset PASS in focused validation below. Not full traversal or rendered-width evidence |
@@ -113,9 +113,9 @@ seconds class time. It activates checkpoints 4 and 5, reaches the real miniboss,
 observes all six scripted impacts and defeat, the falling sign and results, and
 waits for actual Act 2 title teardown and released P1 control. The live boss
 driver leaves during normal-attack alignment so later, accelerating fans cannot
-catch P1 on the plunger. No runtime values were changed. This is an initial
-ordinary cold-route pass, pending the latest integrated runtime and representative
-configuration checks; it does not certify Tails-main or Knuckles-main traversal.
+catch P1 on the plunger. No runtime values were changed. The final integrated native repeat also passes (details below). Representative
+configuration traversal is still open; this does not certify Tails-main or
+Knuckles-main traversal.
 
 Focused queued command: `python3 tools/testing/maven_queue.py -Dmse=off -B
 -Pfbz-routes -Dtest=TestFbzAct1ColdRoute -Ds3k.rom.path=<absolute locked-on ROM>
@@ -193,3 +193,40 @@ contact leakage. Command: `python3 tools/testing/maven_queue.py -Dmse=off
 -Dsonic2.rom.path=<absolute S2 ROM> test`. This is entry
 and reset breadth, not full traversal, other-main-character coverage, death or
 checkpoint restoration, or pixel acceptance.
+
+
+### Integrated ordinary-route evidence and rejected breadth experiments
+
+On `4d9bcf459` (including `74b91937d`, `1e8e86743`, and `c45a977ce`) plus
+the final controller, the native 320-pixel Sonic + Tails cold route passed:
+**1 test, zero failures/errors/skips**, 23.530 seconds Maven / 5.788 seconds
+class time, **27,051 ordinary frames** through actual Act 2 control release.
+The queued command was the cold-route command above. Configuration checks
+verify actual camera and viewport width, concrete Sonic/Tails CPU ownership,
+and donation state; session overrides and viewport are restored. A live
+low-platform gate, safe-floor run-up and centre landing replace the third
+magnetic carrier's previously phase-sensitive jump from rest.
+
+The seven short encounter/ending cases separately passed on the preceding
+`74b91937d` integration plus corrected assertions: **7 tests, zero
+failures/errors/skips**, 6.437 seconds Maven / 5.730 seconds class time. Command:
+`python3 tools/testing/maven_queue.py -Dmse=off -B
+-Dtest=TestFbzAct1RouteHeadless#realConvertedEndSignControllerAllocatesExactWorkerPrefixAndRunsFirstTwoUpdates+realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch+realBossSignWaitsForGroundAndAllocatesResultsInEarlierFreeSlot+placedBossAutomaticallyReachesSignLandingResultsCompletionAndEventsFg5
+-Ds3k.rom.path=<absolute locked-on ROM> surefire:test`. The earlier combined
+`-Pfbz-routes` invocation executed only the tagged cold test; it did **not**
+execute these untagged short methods. The one short failure was the obsolete
+publication-frame `+2` bound expectation: `FBZ1BGE_Normal` subtracts `$2E00`
+from both current X bounds then branches directly to `FBZ1BGE_GoDeform`. The
+correct `$20/$A0` bounds retain the rest of the actual publication/owner checks.
+
+A four-case breadth assessment passed native Sonic + Tails but failed the
+400-pixel camera setup (stale session), Sonic solo traversal near `$0CA5/$08AC`
+at frame 25,362, and S2-donor traversal near `$09CD/$0A45` at frame 3,033
+(4 tests, 3 failures, no errors/skips, 28.314 seconds Maven). Fixing width
+setup exposed a real 400-pixel controller frontier at the early `$0A78` chain,
+not width coverage. A common chain-height gate was rejected: the first version
+required an unreachable height; the revised version cleared that chain but
+changed native timing and exposed later upper-route failures (2 failures, no
+errors/skips, 29.118 seconds Maven). The accepted native controller excludes
+that experiment. Wider, solo, S1/S2-donor and other-main-character full routes
+remain open; none are disabled or represented by a passing load-only test.
