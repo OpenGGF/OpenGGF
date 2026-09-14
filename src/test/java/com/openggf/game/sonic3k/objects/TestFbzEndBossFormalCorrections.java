@@ -65,6 +65,16 @@ class TestFbzEndBossFormalCorrections {
         ObjectControlState.nativeBit7FullControl().applyTo(p2);
         ObjectControlState.nativeBit7FullControl().applyTo(extra);
         p1.setLogicalInputState(false, false, false, true, false);
+        for (var participant : List.of(p1, p2)) {
+            participant.setAir(true);
+            participant.setAnimationId(0x13);
+            participant.getAnimationManager().publishPreviousAnimationId(0x13);
+            participant.setAnimationFrameIndex(3);
+            participant.setAnimationTick(7);
+            participant.setXSpeed((short) 0x120);
+            participant.setYSpeed((short) 0x34);
+            participant.setGSpeed((short) 0x110);
+        }
 
         Camera camera = new Camera();
         camera.setX((short) 0x2F80);
@@ -102,6 +112,15 @@ class TestFbzEndBossFormalCorrections {
         assertEquals(0, p1.getLogicalInputState(), "Ctrl_1_logical is cleared before Task17 auto-run");
         assertFalse(p2.isObjectControlled(), "Restore_PlayerControl2 runs before helper allocation");
         assertFalse(extra.isObjectControlled(), "extra sidekicks receive safe control restoration only");
+        for (var participant : List.of(p1, p2)) {
+            assertFalse(participant.getAir(), "Restore_PlayerControl2 clears Status_InAir");
+            assertEquals(5, participant.getAnimationId(), "Restore_PlayerControl2 publishes Wait");
+            assertEquals(0, participant.getAnimationFrameIndex());
+            assertEquals(0, participant.getAnimationTick());
+            assertEquals(0x120, participant.getXSpeed(), "restoring control preserves motion words");
+            assertEquals(0x34, participant.getYSpeed());
+            assertEquals(0x110, participant.getGSpeed());
+        }
         assertEquals(0x1000, camera.getMaxYTarget() & 0xFFFF);
         assertEquals(0x3738, camera.getMaxXTarget() & 0xFFFF);
         assertEquals(2, manager.activeObjectsOfType(S3kIncLevelEndXGradualInstance.class).size());
