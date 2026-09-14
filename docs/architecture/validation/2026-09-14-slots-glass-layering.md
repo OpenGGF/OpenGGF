@@ -79,3 +79,11 @@ existing priority override through an internal coordinator policy, with no
 physics, timing, renderer algorithm or Mod API change. Both players, repeated
 overrides, the other bonus types, object-owned priority and real GPU overlap
 are covered directly. This is focused validation, not a full-suite pass.
+
+Implementation `a6c4a6a6c` merged as `663589371`, preserving intervening FBZ
+documentation without source conflicts. The identical focused command on that
+integrated commit passed all 372 tests, zero failures/errors/skips (54.885 s).
+The integrated Sonic/320 PNG is byte-identical to the inspected worktree result;
+all five native overlap checks passed again. Captures are under the same task
+root's `integrated` directory. No engine tests were repeated for this prose-only
+record of the completed integration check.
