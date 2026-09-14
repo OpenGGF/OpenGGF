@@ -42,22 +42,26 @@ final class FbzAct2CameraResizeWorker extends AbstractObjectInstance
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         var camera = services().camera();
+        // The stored ROM destination is this worker's captured target. Max-X
+        // and min-Y have no second native 2px easing owner: keep the engine's
+        // generic easing targets at the word this worker actually published.
+        // Max-Y retains Camera_target_max_Y_pos and its separate native easing.
         switch (boundary) {
             case MAX_X -> {
                 accumulator += 0x4000;
                 int next = ((camera.getMaxX() & 0xFFFF) + (short) (accumulator >>> 16)) & 0xFFFF;
                 if (Integer.compareUnsigned(next, target) >= 0) {
-                    camera.setMaxXCurrent((short) target);
+                    camera.setMaxX((short) target);
                     ObjectLifetimeOps.deleteNoRespawn(this);
-                } else camera.setMaxXCurrent((short) next);
+                } else camera.setMaxX((short) next);
             }
             case MIN_Y -> {
                 accumulator += 0x4000;
                 int next = ((camera.getMinY() & 0xFFFF) - (short) (accumulator >>> 16)) & 0xFFFF;
                 if ((short) next <= (short) target) {
-                    camera.setMinYCurrent((short) target);
+                    camera.setMinY((short) target);
                     ObjectLifetimeOps.deleteNoRespawn(this);
-                } else camera.setMinYCurrent((short) next);
+                } else camera.setMinY((short) next);
             }
             case MAX_Y -> {
                 accumulator += 0x8000;
