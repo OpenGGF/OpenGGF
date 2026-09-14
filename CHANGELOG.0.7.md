@@ -6,6 +6,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K slots bonus:** keep the player behind the central capsule glass during
+  gameplay; the shared bonus loop no longer overrides the slot player's priority.
+
 - **Knuckles in Sonic 2:** selecting Knuckles as the Sonic 2 main
   character now activates a built-in game patch implemented from the s2disasm
   `knuckles-in-sonic-2` branch instead of S3K donation: KiS2 physics (`$600`

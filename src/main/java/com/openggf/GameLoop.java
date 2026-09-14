@@ -2056,9 +2056,8 @@ public class GameLoop {
                 });
                 playbackDebugManager.onCurrentGameplayTickExecuted();
 
-                // ROM lines 127411-127412: player art_tile priority bit stays HIGH throughout
-                // the bonus stage. Must be set AFTER the sprite update (which runs inside
-                // LevelFrameStep.execute) because setAir(false) on hurt-landing clears it.
+                // Restore priority only for stages using the ordinary bonus-player
+                // policy. This must follow physics because hurt-landing can clear it.
                 forcePlayerHighPriorityInBonusStage();
 
                 // Notify coordinator of frame tick
@@ -2675,12 +2674,16 @@ public class GameLoop {
     }
 
     /**
-     * Forces all player sprites to VDP high priority during bonus stage.
-     * ROM lines 127411-127412: bset #7 on BOTH Player_1 AND Player_2 art_tile.
+     * Forces ordinary bonus player sprites to VDP high priority, unless the
+     * coordinator owns player priority through its presentation policy.
      * This only restores the tile-priority bit; it does not rewrite the player's
      * display bucket, which remains governed by the normal priority model.
      */
     private void forcePlayerHighPriorityInBonusStage() {
+        if (activeBonusStageProvider instanceof BonusStagePlayerPriorityPolicy policy
+                && !policy.shouldForcePlayerHighPriority()) {
+            return;
+        }
         boolean changed = false;
         for (var sprite : spriteManager.getAllSprites()) {
             if (sprite instanceof AbstractPlayableSprite playable) {
