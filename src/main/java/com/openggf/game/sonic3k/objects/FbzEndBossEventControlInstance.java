@@ -241,7 +241,9 @@ public final class FbzEndBossEventControlInstance extends AbstractObjectInstance
         return true;
     }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
-    @Override public boolean seedsNewRideCarryFromPreUpdateX() { return true; }
+    // Fresh SolidObjectTop landings store the current position. loc_533A4
+    // reloads d4 before each later movement; the landing frame's delta must
+    // not be added again on the first continued ride.
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }

@@ -126,6 +126,43 @@ class TestFbzPlaneTransition {
     }
 
     @Test
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void freshLandingDoesNotCarryThePreviousFramesPlatformMotionAgain() {
+        var fixture = com.openggf.tests.HeadlessTestFixture.builder().withZoneAndAct(4, 1).build();
+        var manager = com.openggf.game.GameServices.level().getObjectManager();
+        var controller = manager.createDynamicObject(FbzEndBossEventControlInstance::new);
+        var player = fixture.sprite();
+        player.setCentreX((short) 0x2E80);
+        player.setCentreY((short) 0x800);
+        for (int frame = 0; frame < 3; frame++) {
+            controller.snapshotPreUpdatePosition();
+            controller.update(frame, player);
+        }
+        assertEquals(0x31C0, controller.getPreUpdateX());
+        assertEquals(0x31C1, controller.getX(), "landing dispatch crosses the $7800 motion's pixel boundary");
+        player.setAir(false);
+        player.setRolling(false);
+        player.setCentreX((short) controller.getX());
+        player.setCentreY((short) (controller.getY() - 0x11 - player.getYRadius() - 1));
+        player.setYSpeed((short) 0);
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertTrue(manager.isRidingObject(player, controller));
+        int landingX = player.getCentreX();
+
+        controller.snapshotPreUpdatePosition();
+        controller.update(3, player);
+        assertEquals(0x31C1, controller.getX(), "next dispatch does not cross another pixel boundary");
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertEquals(landingX, player.getCentreX(),
+                "loc_533A4 loads this dispatch's old x_pos; it never reuses the landing dispatch's d4");
+
+        controller.snapshotPreUpdatePosition();
+        controller.update(4, player);
+        manager.processImmediateInlineSolidCheckpoint(controller, player, List.of());
+        assertEquals(landingX + 1, player.getCentreX(), "later live movement still carries the standing player");
+    }
+
+    @Test
     void controllerInitialBoundsAndSolidContractMatchNative() {
         assertEquals(0x3C, FbzEndBossEventControlInstance.nativeCameraMinY(PlayerCharacter.SONIC_ALONE));
         assertEquals(0x40, FbzEndBossEventControlInstance.nativeCameraMinY(PlayerCharacter.TAILS_ALONE));
@@ -134,8 +171,8 @@ class TestFbzPlaneTransition {
         assertTrue(controller.isTopSolidOnly());
         assertTrue(controller.isPersistent(),
                 "the native routine remains live through COMPLETE and has no unload tail");
-        assertTrue(controller.seedsNewRideCarryFromPreUpdateX(),
-                "shared SolidObjectTop must consume the pre-update d4 carry reference");
+        assertFalse(controller.seedsNewRideCarryFromPreUpdateX(),
+                "new standing state must not retain the landing frame's earlier d4");
     }
 
     @Test
