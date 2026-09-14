@@ -45,7 +45,7 @@ See [Act 1](s3k-fbz-act1.md) for shared transition and visual-tooling evidence.
 | CHECKPOINT / DEATH | `TestFbzCheckpointRoutes#everyNativeTeamDeathReloadsAtEverySupportedCheckpoint`: Act 2 posts 1–6 × four native teams, saved authored checkpoint followed by production death/respawn; inventory checks exact ROM placements | Physical checkpoint activation, required donor/width lifecycle breadth and repeated restart/timeline spots not established by this saved-state setup |
 | REWIND: bosses | `TestFbzBossGraphRewind#act2LaserSubbossGraphRoundTripsAndReplaysDeterministically`, `bossCloudExitAndCapsuleGraphsRoundTripAndReplayDeterministically`; `TestFbzEndBossRewind#restoredGraphForwardReplayMatchesUninterruptedReplay`; `TestFbz2SubbossRewind#forcedReconstructionAtRawBeamCallbackPreservesOneShotRumbleAndExplosionAllocation` | Map before creation, active attacks, hit/phase, killing hit and cleanup individually, including all relevant player/control and child identities |
 | REWIND: world/events | `TestFbzEventRewindRoundTrip#act2ActiveLayoutAndBackgroundRedrawWordsRoundTripThroughRuntimeOwner`; `TestFbzAct2RomRuntimeLifecycle#activeRedrawRestoresExactRetainedPlaneAndProgressThroughProductionReconcile` | Require before/active/after reversal, camera locks/release and collision-plane reconciliation; field roundtrip alone is not every forward-replay boundary |
-| REWIND: interactions/load | `TestFbzSqueezeOrdinaryRoll#productionRegistryRestoresAndReplaysTheLocalCrossing` now passes before-entry, active-car and after-exit spots with two replay cycles; shared object/environment graph tests and `TestFbzActTransitionHeadless#realLiveRewindCannotCrossResultsReloadButCanSeekInsideAct2Segment` | Map held/riding/release spots for each distinct carrier/control owner. Establish final SOZ timeline policy and fresh destination capture/restore; do not assume it matches Act 1 reload |
+| REWIND: interactions/load | `TestFbzSqueezeOrdinaryRoll#productionRegistryRestoresAndReplaysTheLocalCrossing` now passes before-entry, active-car and after-exit spots with two replay cycles; shared object/environment graph tests and `TestFbzActTransitionHeadless#realLiveRewindCannotCrossResultsReloadButCanSeekInsideAct2Segment` | `TestFbzSandopolisTimelineHeadless#productionExitResetsTimelineAndFreshDestinationRestoresAndReplaysTwice` passes the seeded local EXIT_READY → real boss request → GameLoop fade/load boundary: fresh LEVEL_LOAD resets frame zero, excludes outgoing FBZ history, and fresh SOZ registered state passes two restore/eight-frame replay cycles. This is native-width Sonic solo lifecycle evidence; held/riding/release and donor/width breadth remain open |
 | PRESENT | `TestFbzBossPlaneRenderMode`, `TestFbzBossCloudDeform`, `TestFbzEndBossAudioAndPlc`, `TestFbz2SubbossArtHandoff`, `TestFbzPlcArtHandoffs` | Missing accepted native/engine checkpoint pairs and named comparisons: outdoor boundary, subboss, carrier/reversal, end boss, exit/capsule and time series. Compatibility capture remains rejected |
 | ORACLE / ROUTE | `TestS3kFbzCompleteRunTraceReplay`, ROM disassembly-owned branch/clock contracts and complete compatibility route helper | Trace parity remains red; the completion record supersedes the inherited 5,666-error baseline with measured frontier advances. Do not reuse historical July near-green results or call route-controller progress parity |
 
@@ -81,3 +81,17 @@ exhaustive routes. Keep independently runnable local checks outside that lane.
 The standard requires current passed obligations, configuration breadth and rewind
 spot evidence; source inventory, historical reports and fixture presence do not
 certify Act 2. Visual tooling/prerequisite limits are recorded in the Act 1 matrix.
+
+
+Outgoing timeline follow-up (2026-09-14, `4090860e3` plus the standalone test):
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzSandopolisTimelineHeadless -Ds3k.rom.path=/absolute/path/to/s3k.gen test`
+passed one test with zero failures/errors/skips in 19.091 seconds (test body
+0.728 seconds). The fixture seeds only the local end-boss EXIT_READY setup and
+camera threshold; the production object update publishes the real transition
+request, and GameLoop consumes it through fade and `loadZoneAndAct`. This is
+`LEVEL_LOAD` frame-zero reset, not the Act 1 seamless reset-at-current-frame
+policy. After seeking the new floor, SOZ remains loaded and the outgoing boss
+cannot return. The fresh destination's complete registered snapshots compare
+through two restore/eight-frame forward cycles, excluding only existing
+nonsemantic CoW epoch/render-bucket dirtiness/peak-slot telemetry. No SOZ route,
+visual, donor/width or full FBZ boss/capsule completion claim is added.
