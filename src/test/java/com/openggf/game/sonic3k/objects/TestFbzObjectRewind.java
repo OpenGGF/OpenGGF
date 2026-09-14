@@ -109,6 +109,30 @@ class TestFbzObjectRewind {
     }
 
     @Test
+    void pendingExitDoorCollisionRestoresBeforeItsOwnMovementDispatch() {
+        Harness harness = Harness.create();
+        ObjectManager manager = harness.manager();
+        FbzExitDoorInstance door = manager.createDynamicObject(() -> new FbzExitDoorInstance(
+                spawn(0x1080, 0x700, Sonic3kObjectIds.FBZ_EXIT_DOOR, 0)));
+        door.onTouchResponse(harness.player(),
+                new TouchResponseResult(0, 8, 0x20, TouchCategory.SPECIAL), 0);
+        assertFalse(door.isFlying());
+        assertEquals(1, door.getCollisionProperty());
+        CompositeSnapshot pending = harness.rewind().capture();
+        manager.update(0x0F00, harness.player(), List.of(), 0);
+        assertTrue(door.isFlying());
+        assertEquals(0x1088, door.getX());
+        CompositeSnapshot forward = harness.rewind().capture();
+        harness.rewind().restore(pending);
+        FbzExitDoorInstance restored = live(manager, FbzExitDoorInstance.class).getFirst();
+        assertFalse(restored.isFlying());
+        assertEquals(1, restored.getCollisionProperty());
+        assertSnapshotEquals(pending, harness.rewind().capture(), "pending door restore");
+        manager.update(0x0F00, harness.player(), List.of(), 0);
+        assertSnapshotEquals(forward, harness.rewind().capture(), "pending door forward replay");
+    }
+
+    @Test
     void pendingActTransitionRoundTripsAcrossLevelEventAndZoneRuntimeOwners() {
         Sonic3kLevelEventManager levelEvents = new Sonic3kLevelEventManager();
         levelEvents.initLevel(Sonic3kZoneIds.ZONE_FBZ, 0);
