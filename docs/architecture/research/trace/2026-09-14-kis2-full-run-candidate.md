@@ -231,3 +231,8 @@ Focused publication checks: 42 tests, 41 passed, one unchanged chain failure,
 zero errors/skips. Canonical replay validated all 36 segments before the same
 EHZ1 TITLE_CARD ownership stop at BK2 cursor 2003. Exact command and failure
 are recorded in the [frontier log](../../../status/trace-frontier-log.md).
+
+Integrated into `develop` at `5d54b85d5` without conflicts. Repeating the same
+focused command on the integrated tree produced the identical 41 passes and
+one EHZ1 cursor-2003 chain failure, zero errors/skips. All 110 integrated files
+again matched the approved stored/logical hashes.

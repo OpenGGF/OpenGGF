@@ -109960,3 +109960,8 @@ segment 0 again lost production ownership before source closure in TITLE_CARD,
 load generation 3, EHZ1, **BK2 cursor 2003**. This structural stop is not a
 measurement of the earliest physics mismatch. Publication does not certify
 end-to-end parity. The default chain manifest is now required, not skip-optional.
+
+Integrated into `develop` at `5d54b85d5` without conflicts. Repeating the same
+focused command on the integrated tree produced the identical 41 passes and
+one EHZ1 cursor-2003 chain failure, zero errors/skips. All 110 integrated files
+again matched the approved stored/logical hashes.
