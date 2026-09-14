@@ -106,3 +106,16 @@ otherwise invisible once ported. `Camera.java:122-124` and
 reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For the PSG
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
 versions. Diagnose against a source of truth instead of twiddling knobs.
+
+**AniPLC submission is not presentation.** S3K `AnimateTiles_DoAniPLC` changes
+counters and queues immutable ROM art; `Process_DMA_Queue` publishes it during a
+later eligible VInt. Keep Level patterns, the level atlas and aliased object
+atlases on the same publication boundary. Capture both pending work and actual
+presented bytes for rewind, and register every destination before the first
+submission so an early snapshot can restore original art. A graphics-only delay
+or an empty pre-submission destination set loses observable state. The S3K
+profile's internal publication port uses the existing exactly-once physical
+token and source-proven loop phases. Follow callees: `VInt_12` fades DO drain DMA
+through `Do_ControllerPal`; `VInt_0` lag does not. VInt14 is Sega-art loading, not
+the level title-card loop, which arms VIntC. These distinctions were established
+by FBZ native/GPU paired evidence on 2026-09-14.
