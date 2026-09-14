@@ -23,6 +23,9 @@ import com.openggf.level.objects.RomWorldPositionedObject;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
+import java.io.IOException;
+import java.util.logging.Logger;
+import com.openggf.game.sonic3k.Sonic3kPlcLoader;
 
 /** Locked-on S3KL object {@code $AA}, {@code Obj_FBZMiniboss}. */
 public final class FbzMinibossInstance extends AbstractObjectInstance
@@ -321,6 +324,24 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
         }
     }
 
+    private void enqueueMinibossArt() {
+        try {
+            if (services().kosinskiModuleQueue() == null) return;
+            var rom = services().rom();
+            if (rom == null) return;
+            Sonic3kPlcLoader.bindRuntimePatternDmaTarget(services().kosinskiModuleQueue(), services());
+            // loc_6EEA8 explicitly queues ArtKosM_FBZMiniboss at ArtTile_FBZMiniboss=$52E.
+            // Renderer registration above only prepares the decoded sheet, not this ROM job.
+            if (!services().kosinskiModuleQueue().enqueue(rom,
+                    Sonic3kConstants.ART_KOSM_FBZ_MINIBOSS_ADDR, 0x52E * 32)) {
+                Logger.getLogger(FbzMinibossInstance.class.getName()).warning("FBZ miniboss KosM queue is full");
+            }
+        } catch (IOException failure) {
+            Logger.getLogger(FbzMinibossInstance.class.getName()).log(
+                    java.util.logging.Level.WARNING, "Could not enqueue FBZ miniboss art", failure);
+        }
+    }
+
     private void loadArtAndPalette() {
         if (tryServices() == null) return;
         if (services().renderManager() != null
@@ -328,6 +349,7 @@ public final class FbzMinibossInstance extends AbstractObjectInstance
             provider.ensureStandaloneArtLoaded(Sonic3kObjectArtKeys.FBZ_MINIBOSS);
             provider.ensureBossExplosionArtLoaded();
         }
+        enqueueMinibossArt();
         try {
             byte[] palette = services().rom().readBytes(Sonic3kConstants.PAL_FBZ_MINIBOSS_ADDR, 32);
             S3kPaletteWriteSupport.applyLine(services().paletteOwnershipRegistryOrNull(), services().currentLevel(),

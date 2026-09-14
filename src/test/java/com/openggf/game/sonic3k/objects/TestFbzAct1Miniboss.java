@@ -17,6 +17,22 @@ import static org.mockito.Mockito.mock;
 /** Locked-on oracle for Obj_FBZMiniboss (sonic3k.asm:146766-148026). */
 class TestFbzAct1Miniboss {
     @Test
+    void initializationSubmitsTheNativeMinibossArchiveExactlyOnce() throws Exception {
+        var queue=mock(com.openggf.level.resources.KosinskiModuleQueue.class);
+        var rom=mock(com.openggf.data.Rom.class);
+        org.mockito.Mockito.when(queue.enqueue(rom,0x1652B4,0xA5C0)).thenReturn(true);
+        var services=new TestObjectServices() {
+            @Override public com.openggf.level.resources.KosinskiModuleQueue kosinskiModuleQueue(){return queue;}
+            @Override public com.openggf.data.Rom rom(){return rom;}
+        };
+        var boss=new FbzMinibossInstance(new ObjectSpawn(0x2E20,0x540,0xAA,0,0,false,0));
+        boss.setServices(services);
+        boss.update(0,null);
+        boss.update(1,null);
+        org.mockito.Mockito.verify(queue).enqueue(rom,0x1652B4,0xA5C0);
+    }
+
+    @Test
     void objectOwnedGateAndWaitDurationsMatchTheRom() {
         assertArrayEquals(new int[] {0x240, 0x600, 0x2D20, 0x2F20},
                 FbzMinibossInstance.activationBounds());
