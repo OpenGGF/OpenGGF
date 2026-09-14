@@ -115,7 +115,7 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
                     moveWithinCorners();
                 }
             }
-            case CYCLE_WAIT -> { if (--timer < 0) completeLaserCycle(); }
+            case CYCLE_WAIT -> { if (--timer < 0) completeLaserCycle(mainPlayer); }
             case DEFEAT_QUEUE_WAIT -> { if (--timer < 0) beginCharacterEscape(); }
             case DEFEAT_RESTORE_WAIT -> { if (--timer < 0) releaseArena(); }
             case RELEASE_CULL -> {
@@ -178,9 +178,10 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     private void startLaser(PlayableEntity mainPlayer) {
         controlBits &= ~(1 << CONTROL_LASER_READY); // loc_6FE3A
         phaseOrdinal = Phase.ACTIVE.ordinal();
-        aimAt(mainPlayer);
         if (tryServices() != null && services().objectManager() != null)
             spawnChild(() -> new Fbz2SubbossLaserChild(this));
+        // loc_6FE3A falls through sub_6FE54 after every laser allocation attempt.
+        aimAt(mainPlayer);
     }
 
     private void aimAt(PlayableEntity mainPlayer) {
@@ -196,12 +197,12 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
         x += xVelocity >> 8;
     }
 
-    private void completeLaserCycle() {
+    private void completeLaserCycle(PlayableEntity mainPlayer) {
         cycleCounter = (byte) (cycleCounter - 1);
         if (cycleCounter < 0) { startDefeat(); return; }
         controlBits |= 1 << CONTROL_MOVE_RIGHT;
         statusBits &= ~(1 << STATUS_CHARACTER_FACE);
-        startLaser(null);
+        startLaser(mainPlayer);
     }
 
     private void startDefeat() {
@@ -395,7 +396,7 @@ public final class Fbz2SubbossInstance extends AbstractObjectInstance
     }
     int hitFlashUpdatesRemaining() { return hitFlashTimer; }
     int waitWordForTest() { return timer; }
-    void completeLaserCycleForTest() { completeLaserCycle(); }
+    void completeLaserCycleForTest() { completeLaserCycle(null); }
     static int[] activationBounds() { return ACTIVATION_BOUNDS.clone(); }
     static boolean cameraInActivationRange(int cameraX, int cameraY) {
         return cameraX >= ACTIVATION_BOUNDS[2] && cameraX <= ACTIVATION_BOUNDS[3]

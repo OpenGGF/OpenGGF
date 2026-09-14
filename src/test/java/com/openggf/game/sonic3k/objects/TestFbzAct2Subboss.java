@@ -84,6 +84,28 @@ class TestFbzAct2Subboss {
         assertEquals(x, boss.getX(), "the cycle-start callback creates the laser without moving");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {-1, 0, 1})
+    void nextLaserCycleAimsAtCurrentPlayerBeforePeriodicAim(int side) {
+        Fbz2SubbossInstance boss = boss();
+        PlayableEntity player = mock(PlayableEntity.class);
+        when(player.getCentreX()).thenReturn((short) (boss.getX() + (side > 0 ? -1 : 1)));
+        boss.update(-1, player);
+        boss.update(0, player);
+        for (int i = 1; i <= 120; i++) boss.update(i, player);
+        assertEquals("ACTIVE", boss.phaseName());
+        boss.setControlBit(Fbz2SubbossInstance.CONTROL_LASER_READY);
+        boss.update(121, player);
+        int x = boss.getX();
+        when(player.getCentreX()).thenReturn((short) (x + side));
+        for (int i = 0; i < 128; i++) boss.update(122 + i, player);
+        assertEquals("ACTIVE", boss.phaseName());
+        assertEquals(x, boss.getX(), "loc_6FE3A aims without moving");
+        boss.update(250, player); // not the periodic VInt-low-five-bits aim
+        assertEquals(x + (side > 0 ? 1 : -1), boss.getX(),
+                "loc_6FE28 falls through sub_6FE54 and uses current P1, including equality");
+    }
+
     @Test void onlySixNonfinalCyclesMoveTheLeftAnchors() {
         Fbz2SubbossInstance boss = boss();
         Fbz2SubbossCornerChild upperLeft = Fbz2SubbossCornerChild.forTest(boss, 0);
@@ -176,6 +198,8 @@ class TestFbzAct2Subboss {
         Fbz2SubbossInstance root = boss();
         Fbz2SubbossLaserChild laser = new Fbz2SubbossLaserChild(root);
 
+        laser.update(0, null);
+        assertEquals(5, laser.frameForTest(), "loc_70192 is a setup-only dispatch");
         laser.update(1, null);
         assertEquals(0xA, laser.frameForTest());
         for (int call = 2; call <= 206; call++) laser.update(call, null);
