@@ -3332,8 +3332,9 @@ the owning KiS2 routine in the catalogue):
   standing radii for later touch checks. Its idle climb omits the S3K floor-below
   detach probe. Near-edge/inside-bottom solid contacts use the existing matching
   rules; multi-sprite boss touch keeps $4D while normal duck touch uses $9C.
-  Wall-grab geometry and displacement detachment still inherit the shared glide
-  owner's approximations; these need route evidence, not a blanket parity claim.
+  Wall grabs now test both wall ends and the ROM ledge-fit range; glide floor
+  angles include tile flips, and sliding retains the animation register. Wall-grab
+  suppression/displacement detachment and complete rewind route coverage remain open.
 - **Zone mechanics.** Wind tunnels use the $420 first-tunnel minimum, clamp Up
   movement and clear roll-jump/glide state. Held vines pin the player each pass;
   propeller launch clears the same state; grounded falling-pillar contact can
@@ -3363,7 +3364,11 @@ the owning KiS2 routine in the catalogue):
   gameplay rewind coverage remains open.
 - **Trace coverage.** The EHZ1 KiS2 fixture exists. The published 36-segment all-emeralds chain fixture
   has converted-art and chip SS transfer observations; all 36 segments pass
-  v5 validation, but chain gameplay still stops in EHZ1 at BK2 cursor 2003.
+  v5 validation. The corrected patch launch and chip PLC queue let the first
+  3,180-row EHZ1 segment complete with 91 history-bootstrap differences and one
+  monitor ring-reward timing difference. The chain now stops at BK2 cursor 9366
+  in the return title card after the first special stage. SS interiors do not
+  compare gameplay, so this does not establish special-stage physics parity.
   Current evidence is tracked in [the frontier log](trace-frontier-log.md). There are no passing
   end-to-end trace fixtures for these presentation or powered-form paths.
 

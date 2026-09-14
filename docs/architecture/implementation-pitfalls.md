@@ -53,11 +53,17 @@ collection retain stale objects after recreation. Use object scalar capture and
 identity relinking for those children. Exercise remove/recreate/restore with the
 real manager, including any optional defeat controller that advances child cleanup.
 
-**ROM sprite priority is SAT order.** Lower priority buckets and earlier object
+**ROM sprite priority buckets are SAT order.** Lower priority buckets and earlier object
 slots appear in front; painter rendering reverses both orders. Folded boss parts
 can have independent buckets even when attached to the same rocket. Compare native
 pixels against ROM table-driven composition, rather than testing a numeric
 "front" flag against the same assumption used by the implementation.
+The separate `art_tile` high bit controls sprite-versus-tile priority. Native
+child creation copies that bit; `SetUp_ObjAttributes3` can change the SAT bucket
+without clearing it. FBZ2's laser-room children need both properties preserved.
+Reversed tile planes also retain the VDP order B-low, A-low, B-high, A-high,
+and both planes' opaque high pixels contribute to the sprite-occlusion mask.
+See the [FBZ2 graphics audit](audits/2026-09-14-fbz2-laser-room-graphics.md).
 
 **Route rewind probes need the whole owner state.** A recreated object can match
 its own snapshot while reading a future static counter or a reset helper timer.

@@ -109966,6 +109966,75 @@ focused command on the integrated tree produced the identical 41 passes and
 one EHZ1 cursor-2003 chain failure, zero errors/skips. All 110 integrated files
 again matched the approved stored/logical hashes.
 
+## 2026-09-14 — KiS2 patch launch, chip PLC queue and first glide frontier
+
+Pinned base `31a9a6bce`, `.worktrees/kis2-chain-frontier`. Chain launch now
+resolves the recorded team through the same patch-aware session helper as
+standalone replay. Solo teams keep the native title-card object prelude.
+The tier-two PLC lifecycle and rewind service read the chip's `ArtLoadCues`
+table at $33A3FC with physical source addresses. Shared Knuckles glide logic
+checks wall fit, preserves transformed floor angles and retains the glide
+animation register when entering the slide mapping frame.
+
+Queued command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestGlideWallGrabTerrain,TestPlayableSpriteMovement,TestKis2Ehz1TraceReplay,TestKis2CompleteEmeraldRunChain
+test -B`, with absolute verified S2, S3K and KiS2 ROM properties. Geometry and
+movement: 180 tests pass. KiS2 launch regression passes. Standalone EHZ1 remains
+red: 179 errors, zero warnings (baseline 194); 91 initial history errors in each.
+Full chain remains red, now at **BK2 cursor 9366**, in `TITLE_CARD` after the
+first special-stage interior. Initial EHZ1 completes **3,180 rows**, 92 errors,
+zero warnings: 91 player-history bootstrap differences and one `rings`
+mismatch at row **2462**, expected 43, actual 53. No position/velocity, PLC or
+dynamic-art differences remain in this first segment. Zero skipped tests.
+
+The original chain's 17,024 errors covered only 1,260 rows before its cursor-2003
+stop, so these are different-depth totals. Special-stage interiors retain their
+existing uncompared-gameplay policy; entering/returning does not certify SS
+physics parity. All published fixture bytes remain unchanged.
+
+[ROM evidence, rejected probe approach and validation record](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+Reconciled implementation `e8e088432` with develop `6897a6048` at `c2bc3af5d`.
+Queued `-Dtest=TestKis2CompleteEmeraldRunChain` repeats the same 92-error initial
+segment and cursor-9366 stop, one launch pass/one chain failure, zero skips.
+The bounded return diagnostic observes `EXIT_BACKGROUND`, card frame 86,
+state timer 9, leave pass 26, and an empty PLC queue. Investigate the final
+player/object pass and release handoff; this is not unfinished PLC work.
+
+Matched S2/S3K trace command on updated base `6897a6048` and reconciled KiS2
+runtime: queued `-Dtest=TestS3kKnucklesSuperEmeraldRunChain,TestS2Ehz1TraceReplay`
+(with the four required S3K loading/bootstrap/decoding/AIZ class names added on
+the current tree). Stock S2 remains 16,388 errors, zero warnings, first row 6
+`dynamic_art.outstanding_transfer_ids`, expected [2], actual []. S3K remains
+blocked at segment 0's giant ring: 12,679 base errors versus 12,616 current,
+zero warnings, same first row 446 `y_speed`, expected -$0448, actual $0448.
+No new test failure identity or earlier frontier; this does not certify the
+rest of either route. The required S3K checks pass 58 tests. All comparisons
+and required checks executed with zero skips.
+
+The independent short KiS2 EHZ1 report's first post-bootstrap difference is row
+289 `player_animation_id` ($00 vs $20); first position mismatch is row 1159
+`x` ($0938 vs $0940). This separate recording remains red despite the canonical
+first segment's matching positions and velocities.
+
+Combined validation on `73f07afd1`, base `8ce626087`, completed 20,372 ordinary
+tests: 20,353 passed, one inherited rewind-audit pin failure, zero errors and
+18 inspected baseline skips. The runner stopped before guards because this log
+and the evidence note were edited during the run; runtime/test/build inputs did
+not change. This is an incomplete combined run. Upstream's test-only audit
+correction `24cdc64e6` was then reconciled at `382d54d6b` without conflicts.
+
+Integrated runtime/accessor correction at `8fff63a70` on destination `24cdc64e6`.
+The pinned integration commit's queued post-integration command
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 24cdc64e6 --run`
+completed both lanes (`20260914T183031Z-9c8a025d`): **20,354 ordinary passes,
+18 inspected baseline skips, zero ordinary failures/errors**; **665 guard passes,
+two exact baseline failures, zero guard errors/skips**. Those failures are
+`TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+and `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`.
+The new runtime-access guard and corrected upstream rewind audit pass. No new
+failure remains; the KiS2 chain itself remains red at the recorded return frontier.
+
 ## 2026-09-14 — HCZ1 viewport arena framing; matched native replay unchanged
 
 Task base `24cdc64e6697b7624e669abea2f37a35abed94b2`, matched arms in

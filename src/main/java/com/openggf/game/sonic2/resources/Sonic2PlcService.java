@@ -23,14 +23,25 @@ public final class Sonic2PlcService
     private static final int SAFE_QUEUE_CAPACITY = 15;
 
     private final Rom rom;
+    private final int tableAddress;
     private final NemesisPlcServiceQueue queue;
 
     public Sonic2PlcService(Rom rom) {
-        this(rom, new NemesisPlcServiceQueue());
+        this(rom, Sonic2Constants.ART_LOAD_CUES_ADDR);
+    }
+
+    /** Uses the active ROM variant's PLC table and address space. */
+    public Sonic2PlcService(Rom rom, int tableAddress) {
+        this(rom, tableAddress, new NemesisPlcServiceQueue());
     }
 
     Sonic2PlcService(Rom rom, NemesisPlcServiceQueue queue) {
+        this(rom, Sonic2Constants.ART_LOAD_CUES_ADDR, queue);
+    }
+
+    private Sonic2PlcService(Rom rom, int tableAddress, NemesisPlcServiceQueue queue) {
         this.rom = Objects.requireNonNull(rom, "rom");
+        this.tableAddress = tableAddress;
         this.queue = Objects.requireNonNull(queue, "queue");
     }
 
@@ -188,7 +199,7 @@ public final class Sonic2PlcService
 
     private Submission readSubmission(int plcId) throws IOException {
         validatePlcId(plcId);
-        PlcDefinition definition = PlcParser.parse(rom, Sonic2Constants.ART_LOAD_CUES_ADDR, plcId);
+        PlcDefinition definition = PlcParser.parse(rom, tableAddress, plcId);
         return new Submission(definition, NemesisPlcPatternCounts.derive(rom, definition));
     }
 

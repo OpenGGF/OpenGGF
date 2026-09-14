@@ -50,6 +50,11 @@ public final class FbzZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public int zoneIndex() { return Sonic3kZoneIds.ZONE_FBZ; }
     @Override public int actIndex() { return actIndex; }
     @Override public boolean usesPersistentBackgroundVdpPlane() { return actIndex == 0; }
+    @Override public boolean requiresFullWidthBgTilemap() {
+        // FBZ2BGE_BossEvent's DrawBGAsYouMove reads the moving terrain beyond
+        // the ordinary indoor/outdoor 512px strip and draws it on Plane A.
+        return events.getPlaneAssignmentMode() == Sonic3kFBZEvents.PlaneAssignmentMode.REVERSED;
+    }
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return events.getDynamicResizeRoutine(); }
     @Override public boolean isActTransitionFlagActive() { return events.isEventsFg5(); }

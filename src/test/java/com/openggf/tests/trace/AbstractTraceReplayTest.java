@@ -300,31 +300,6 @@ public abstract class AbstractTraceReplayTest {
                 });
     }
 
-    /**
-     * Resolves the recorded team through the engine's built-in patches with
-     * the deterministic policy and reopens the session on the patched module
-     * when one activates. Stock recordings resolve to the root module and
-     * leave the fixture's session untouched.
-     */
-    private static void reopenSessionForRecordedTeam(TraceMetadata meta) throws IOException {
-        var worldSession = com.openggf.game.session.SessionManager.getCurrentWorldSession();
-        if (worldSession == null) {
-            return;
-        }
-        com.openggf.game.GameModule root = worldSession.rootGameModule();
-        com.openggf.game.session.EngineContext services =
-                com.openggf.game.session.EngineServices.current();
-        com.openggf.game.GameModule resolved =
-                TraceReplaySessionBootstrap.resolveReplayModule(services, root, meta);
-        if (resolved == worldSession.resolvedGameModule()) {
-            return;
-        }
-        var reopened = com.openggf.game.session.SessionManager.openGameplaySession(root, resolved,
-                com.openggf.game.StockGameDataSources.pinned(services.roms().getRom(), root), null);
-        com.openggf.game.session.GameplaySessionFactory.attachManagers(reopened, services);
-        com.openggf.game.GameModuleRegistry.setCurrent(resolved);
-    }
-
     @Test
     public void replayMatchesTrace() throws Exception {
         // 0. Skip if trace directory or required files are missing
@@ -360,7 +335,7 @@ public abstract class AbstractTraceReplayTest {
         // 3. Validate test configuration matches metadata
         validateMetadata(meta);
         TraceReplaySessionBootstrap.prepareConfiguration(trace, meta);
-        reopenSessionForRecordedTeam(meta);
+        TraceReplayTestSession.reopenForRecordedTeam(meta);
 
         // 4. Load level and create fixture
         SharedLevel sharedLevel = requiresFreshLevelLoad
@@ -373,7 +348,7 @@ public abstract class AbstractTraceReplayTest {
             // recorded team activates (Knuckles in Sonic 2) owns the level the
             // fixture reloads; stock recordings resolve to the root module and
             // leave the session untouched.
-            reopenSessionForRecordedTeam(meta);
+            TraceReplayTestSession.reopenForRecordedTeam(meta);
         }
         // Hoisted so the finally block can always regenerate the report, even when
         // the run short-circuits via fail() (e.g. input-alignment) before the
