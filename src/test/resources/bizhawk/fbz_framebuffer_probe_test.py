@@ -36,9 +36,10 @@ class FramebufferProbeTest(unittest.TestCase):
 
     def test_boundary_plan_uses_reviewed_coordinate_axis_and_rejects_other_recipes(self):
         self.assertIn("address=45072,forward=6913,reverse=6911", probe.boundary_plan("fbz1-boundary-4-horizontal"))
-        self.assertIn("region=4,address=45076,forward=2497,reverse=2495", probe.boundary_plan("fbz1-boundary-1-outdoor"))
+        self.assertIn("address=45076,forward=2497,reverse=2495", probe.boundary_plan("fbz1-boundary-1-outdoor"))
+        self.assertIn("act=2,normal=4,region_address=61120", probe.boundary_plan("fbz2-boundary-outdoor"))
         with self.assertRaises(ValueError):
-            probe.boundary_plan("fbz2-boundary-outdoor")
+            probe.boundary_plan("fbz2-exit")
 
     def test_unknown_dimensions_reject(self):
         self.assertIsNone(probe.framebuffer_content((640, 448), lambda x, y: x+y))
