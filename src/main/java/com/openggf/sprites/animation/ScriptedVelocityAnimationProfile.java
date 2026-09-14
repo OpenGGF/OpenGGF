@@ -5,6 +5,7 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.managers.PlayableSpriteAnimation;
 import com.openggf.sprites.playable.SecondaryAbility;
+import com.openggf.sprites.playable.SidekickCpuController;
 
 /**
  * Chooses animation script IDs based on simple movement state.
@@ -263,7 +264,13 @@ public class ScriptedVelocityAnimationProfile implements SpriteAnimationProfile 
         if (sprite.isDrowningDeath() && drownAnimId >= 0) {
             return drownAnimId;
         }
-        if (sprite.getDead() && deathAnimId >= 0) {
+        SidekickCpuController cpu = sprite.getCpuController();
+        boolean cpuDeadDispatch = sprite.isCpuControlled() && cpu != null
+                && cpu.getState() == SidekickCpuController.State.DEAD_FALLING;
+        if ((sprite.getDead() || cpuDeadDispatch) && deathAnimId >= 0) {
+            // CPU dead fall owns routine 6 without setting the main-player dead
+            // flag. Its previous ground-move snapshot cannot overwrite the
+            // later Kill_Character byte (S3K loc_14760; S2 Obj02_Dead).
             // Kill_Character writes Death once; the dead routine only moves and
             // animates. A later SolidObject_TestClearPush word remains authoritative,
             // just as for Hurt below (S3K loc_1E0A2; retail FixBugs=0).
