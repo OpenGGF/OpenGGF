@@ -73,3 +73,16 @@ backlog because forced Ending_Routine=0 makes that shared S2 branch unreachable.
 Pending focused and combined execution. Production and test sources compiled with
 `mvn -Dmse=off -DskipTests test-compile -B`; compilation is not a test pass.
 Tool preflight succeeds with Java 21 and `LUA_BIN=/usr/bin/lua5.4`.
+
+
+The first focused run selected 444 tests: 441 passed, two failed and one errored,
+with no skips. Review corrected the legacy collision-equality expectation and
+injected the missing ROM services into the late-art fixture. The checkpoint
+regression exposed an actual load-order hazard: player rules are still bootstrap
+rules before the first runtime rebind. Ring restoration now reads the resolved
+host module's rule; KiS2 overrides the delegating module's otherwise-stock rule
+accessor. No gameplay values are borrowed from trace rows.
+
+The corrected provider and no-render/late-art results classes passed (10 tests,
+zero skips). Host-owned checkpoint reload plus post-load regressions passed
+(22 tests, zero skips). Broad and trace results follow after execution.

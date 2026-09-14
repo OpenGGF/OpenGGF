@@ -106,6 +106,11 @@ final class Kis2GameModule extends DelegatingGameModule {
     }
 
     @Override
+    public com.openggf.game.rules.GameRules getRules() {
+        return Kis2Rules.RULES;
+    }
+
+    @Override
     public com.openggf.level.objects.ObjectRegistry createObjectRegistry() {
         if (objectRegistry == null) objectRegistry = new com.openggf.game.sonic2.objects.Sonic2ObjectRegistry(
                 new com.openggf.game.sonic2.Sonic2ObjectBehaviorProfile(true, true, true));

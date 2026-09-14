@@ -2971,7 +2971,7 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // The semantic rule keeps the KiS2 saved bank through a death reload;
         // stock games retain their zero-ring start.
         boolean restoreCheckpointRings = ctx.hasCheckpoint()
-                && playable.getGameRules().ring().checkpointRestoresSavedRings();
+                && activeGameModule().getRules().ring().checkpointRestoresSavedRings();
         playable.setRingCount(restoreCheckpointRings ? ctx.getCheckpointRings() : 0);
         if (levelGamestate != null) {
             levelGamestate.setRingExtraLifeFlags(
