@@ -155,17 +155,19 @@ class TestFbzRailAndChainPlatforms {
                 "loc_3A616 loads $44(a0) before jumping to loc_1B666; current x_pos is not the cull key");
     }
 
-    @Test void mode3ReadsRomVisibleLevelFrameCounterInsteadOfObjectVblankClock() {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0x0050, 0x1250, 0xFF50})
+    void mode3ReadsLowByteOfCurrentLevelCounterInsteadOfIncrementingIt(int levelCounter) {
         LevelManager levelManager=mock(LevelManager.class);
-        when(levelManager.getFrameCounter()).thenReturn(0x50);
+        when(levelManager.getFrameCounter()).thenReturn(levelCounter);
         var platform=new FbzFloatingPlatformObjectInstance(spawn(0x71,0x30));
         platform.setServices(new TestObjectServices().withLevelManager(levelManager));
 
         platform.update(0x91,null);
 
-        int romVisibleCounter=0x51;
+        int romVisibleCounter=0x50;
         assertEquals(0x1000+(com.openggf.physics.TrigLookupTable.sinHex(romVisibleCounter)>>2),platform.getX(),
-                "loc_3A664 reads (Level_frame_counter+1).w, not ObjectManager's free-running VBla clock");
+                "loc_3A664 reads the low-byte address, not counter+1 or the object VBlank clock");
         assertEquals(0x800+(com.openggf.physics.TrigLookupTable.cosHex(romVisibleCounter)>>2),platform.getY());
     }
 
