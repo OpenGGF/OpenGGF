@@ -160,6 +160,11 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
 
     @Override
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
+        // loc_2C5BE and loc_2C62C skip both solid checks and trigger writes
+        // when the prior Render_Sprites pass left this button offscreen.
+        if (!isWithinSolidContactBounds()) {
+            return;
+        }
         // ROM: move.b #0,mapping_frame(a0) — reset to unpressed each frame
         mappingFrame = FRAME_UNPRESSED;
 
@@ -197,6 +202,24 @@ public class Sonic3kButtonObjectInstance extends AbstractObjectInstance
     @Override
     public SolidObjectParams getSolidParams() {
         return topSolid ? SOLID_PARAMS_TOP : SOLID_PARAMS_FULL;
+    }
+
+    @Override
+    public boolean isSolidFor(PlayableEntity player) {
+        return isWithinSolidContactBounds();
+    }
+
+    @Override
+    public boolean suppressSlopeSampleThisFrame(PlayableEntity player) {
+        // The render gate skips the whole solid routine, including an existing
+        // rider's position write and airborne unseat, for both button variants.
+        return !isWithinSolidContactBounds();
+    }
+
+    @Override
+    public int getOnScreenHalfHeight() {
+        // loc_2C58A writes height_pixels = 8; Render_Sprites reads it directly.
+        return 8;
     }
 
     @Override
