@@ -5,6 +5,8 @@
 > It adds chip-backed title, special-stage/results, ending/continue-player and
 > Super Knuckles paths. Earlier missing/deferred status below is historical;
 > the known-discrepancies entry records remaining fidelity limits.
+> The [full-run trace follow-up](../research/trace/2026-09-14-kis2-full-run-candidate.md)
+> records the converted-art transfer prerequisite and the all-emeralds capture.
 
 
 > **2026-09-13 amendment (status and ROM premise).** Re-established per the 0.8

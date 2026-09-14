@@ -109850,3 +109850,32 @@ zero errors/skips. Upstream reconciliation introduced no Java changes after
 - [Capture and prerequisite evidence](../architecture/research/trace/2026-09-14-kis2-full-run-candidate.md).
   Candidate remains outside canonical fixtures; KiS2 converted-art DMA needs
   explicit native and engine lifecycle support before valid chain publication.
+
+
+## 2026-09-14 — KiS2 full-run art-transfer prerequisite
+
+Worktree `feature/ai-kis2-full-run` (`d94ac94c2` plus prerequisite changes,
+base `51677cdd2`), TraceChaser `e0a2443` pushed on `main`. The native observer
+validates converted normal art as one RAM DMA, chip SS DPLCs, accepted tail-call
+closure and gap ledgers; Java models those production transfers and validates
+owner-specific callbacks. No trace state hydrates gameplay.
+
+The sealed all-emeralds capture has 36 segments, 248,042 rows and 79 art gap edges.
+Whole-file comparison preserves every original physics row and existing aux event.
+[Capture inventory, hashes, ROM evidence and validation](../architecture/research/trace/2026-09-14-kis2-full-run-candidate.md)
+record the exact candidate and baseline failures.
+
+Command: `python3 tools/testing/maven_queue.py -Dmse=off
+-Dtest=TestKis2CompleteEmeraldRunChain
+-Dopenggf.trace.kis2.run.dir=$KIS2_CAPTURE_ROOT/full-run-art-audited
+-Dkis2.rom.path=<absolute lock-on dump> test -B`, with verified absolute S2/S3K
+properties. Result: one failure, zero skips. All segments and gap ledgers pass
+v5 validation; replay now reaches gameplay and stops in segment 0 when production
+enters `TITLE_CARD` before source closure, `loadGeneration=3`, EHZ1, **BK2 cursor
+2003**. This is the first reported structural stop, not a claim about the first
+physics mismatch. The missing dynamic-art capability is no longer the frontier.
+
+Corrected focused runtime/parser/SS/CLI tests: 101 passed, zero skips. Exact
+recorder-pin guards: 13 passed, zero skips. The combined broad run's five new SS
+initialization errors were corrected narrowly; two unrelated source-guard failures
+remain matched to the unchanged base. No full-suite green or chain parity is claimed.

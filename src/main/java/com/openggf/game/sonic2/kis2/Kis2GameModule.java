@@ -40,7 +40,7 @@ import java.util.logging.Logger;
  * optional {@link LogicalRom#KIS2} image through the patch context; when the
  * user-supplied dump is absent the module keeps tier-one behaviour exactly.
  */
-final class Kis2GameModule extends DelegatingGameModule {
+final class Kis2GameModule extends DelegatingGameModule implements com.openggf.game.resources.PlayerArtTransferProfile {
 
     private static final Logger LOGGER = Logger.getLogger(Kis2GameModule.class.getName());
 
@@ -72,6 +72,13 @@ final class Kis2GameModule extends DelegatingGameModule {
     Kis2GameModule(GameModule base, PatchContext context) {
         super(base, Kis2Constants.PATCH_ID);
         this.context = context;
+    }
+
+    @Override
+    public ConvertedBank convertedPlayerArtBank(String owner) {
+        // KiS2 LoadSonicDynPLC_Part2 ($31741A) converts the selected S&K runs
+        // into RAM, then its $317538 tail jump queues one contiguous DMA.
+        return "knuckles".equals(owner) ? new ConvertedBank(0xFFF100, 0xF000) : null;
     }
 
     @Override

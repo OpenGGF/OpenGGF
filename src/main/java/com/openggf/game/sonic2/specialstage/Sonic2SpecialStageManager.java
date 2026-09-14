@@ -1121,11 +1121,11 @@ public class Sonic2SpecialStageManager {
     private void primeDynamicArtDedupBaselines() {
         DynamicArtLifecycleService lifecycle =
                 GameServices.dynamicArtLifecycleOrNull();
-        if (lifecycle == null || !lifecycle.isRunActive()) {
+        if (lifecycle == null || !lifecycle.isRunActive() || dataLoader == null) {
             return;
         }
         if (sonicPlayer != null) {
-            lifecycle.primeDplcDedupBaseline("ss-sonic", 1);
+            lifecycle.primeDplcDedupBaseline(dataLoader.mainPlayerDynamicArtOwner(), 1);
         }
         if (tailsPlayer != null) {
             lifecycle.primeDplcDedupBaseline("ss-tails", 1);
@@ -2105,7 +2105,7 @@ public class Sonic2SpecialStageManager {
         // skip the same passes.
         if (sonicPlayer != null && sonicPlayer.dplcLoadRuns()) {
             publishSpecialStageOwner(
-                    lifecycle, "ss-sonic", sonicPlayer.getMappingFrame(),
+                    lifecycle, dataLoader.mainPlayerDynamicArtOwner(), sonicPlayer.getMappingFrame(),
                     dplcRequests(plans.sonic(), sonicPlayer.getMappingFrame()),
                     0x5CA0);
         }

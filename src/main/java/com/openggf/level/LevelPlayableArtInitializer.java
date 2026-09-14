@@ -751,7 +751,9 @@ final class LevelPlayableArtInitializer {
             return null;
         }
         String normalizedOwner = owner.toLowerCase(java.util.Locale.ROOT);
-        boolean supportedOwner = "sonic".equals(normalizedOwner)
+        var convertedBank = module instanceof com.openggf.game.resources.PlayerArtTransferProfile profile
+                ? profile.convertedPlayerArtBank(normalizedOwner) : null;
+        boolean supportedOwner = convertedBank != null || "sonic".equals(normalizedOwner)
                 || "tails".equals(normalizedOwner)
                 || "tails-tails".equals(normalizedOwner);
         if (!supportedOwner || !module.getRules().dynamicArtDmaService()
@@ -759,7 +761,7 @@ final class LevelPlayableArtInitializer {
             return null;
         }
         return new DynamicArtDecisionOwner(
-                lifecycle, module.getGameId(), normalizedOwner, renderer);
+                lifecycle, module.getGameId(), normalizedOwner, renderer, convertedBank);
     }
 
     private static int checkedBankEnd(int cursor, int bankSize) {

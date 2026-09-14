@@ -43,6 +43,8 @@ class TestKis2SpecialStageDataLoader {
         var art = loader.getPlayerArtPatterns();
         var stockArt = stock.getPlayerArtPatterns();
         var plans = loader.getPlayerDplcPlans();
+        assertEquals("ss-knuckles", loader.mainPlayerDynamicArtOwner());
+        assertEquals("ss-sonic", stock.mainPlayerDynamicArtOwner());
         assertEquals(18, plans.sonic().size());
         assertEquals(stock.getPlayerDplcPlans().tails(), plans.tails());
         assertEquals(stock.getPlayerDplcPlans().tailsTails(), plans.tailsTails());
@@ -56,6 +58,39 @@ class TestKis2SpecialStageDataLoader {
             }
             for (var request : plans.sonic().get(frame).requests()) {
                 assertTrue(request.startTile() + request.count() <= art.length - stockArt.length);
+            }
+        }
+    }
+
+    @Test
+    void everySpecialStageDescriptorUsesNativeTileOffsetsRatherThanStockEncoding() throws Exception {
+        var dump = Kis2TestRoms.lockOnDumpOrNull();
+        var lifecycle = new com.openggf.game.resources.DynamicArtLifecycleService();
+        lifecycle.beginRun();
+        lifecycle.openComparisonSegment();
+        var plans = loader.getPlayerDplcPlans().sonic();
+        for (int frame = 0; frame < plans.size(); frame++) {
+            lifecycle.observeRamDplc(com.openggf.game.GameId.S2,
+                    loader.mainPlayerDynamicArtOwner(), frame, plans.get(frame).requests(),
+                    0xFF0000, 0x5CA0);
+            var edges = lifecycle.publishRow(frame, false).edges();
+            int cue = Kis2SpecialStageDataLoader.PLAYER_DPLC
+                    + dump.readU16BE(Kis2SpecialStageDataLoader.PLAYER_DPLC + frame * 2);
+            int count = dump.readU16BE(cue);
+            if (count == 0) {
+                assertTrue(edges.isEmpty());
+                continue;
+            }
+            var requests = edges.getFirst().requests();
+            assertEquals(count, requests.size());
+            int destination = 0x5CA0;
+            for (int i = 0; i < count; i++) {
+                int word = dump.readU16BE(cue + 2 + i * 2);
+                int bytes = ((word >>> 12) + 1) * 32;
+                assertEquals(0xFF0000 + ((word & 0xFFF) << 5), requests.get(i).ramSourceAddress());
+                assertEquals(destination, requests.get(i).vramDestination());
+                assertEquals(bytes, requests.get(i).byteLength());
+                destination += bytes;
             }
         }
     }

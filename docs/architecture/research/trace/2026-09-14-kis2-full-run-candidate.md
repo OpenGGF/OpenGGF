@@ -37,7 +37,7 @@ S2 terminal-pass rules remain valid. Four focused KiS2 tests passed, including
 wrong-ROM rejection, both loop observations and restored checkpoint rings.
 CLI rejects unsupported audit/profile requests; stock S2 defaults are retained.
 
-## Frontier and prerequisite
+## Initial frontier and prerequisite
 
 Queued Maven on develop `ad68609e9`, `-Dmse=off -Dtest=TestKis2Ehz1TraceReplay`
 with `-Dopenggf.trace.candidate.dir=<capture-root>/first-segment` and verified
@@ -78,8 +78,117 @@ observer inputs. A matched run of the stock S2 run tests on recorder base
 expectation failure. Other native failures remain individually unattributed.
 The four focused KiS2 tests pass; recorder repository/history policy scans pass.
 
-The new art-transfer prerequisite is a producer/consumer implementation task,
-not a fixture flag change. The user has been asked whether to take it on now or
-retain this candidate for a separate follow-up. Source work is preserved locally
-in the TraceChaser and OpenGGF `feature/ai-kis2-full-run` worktrees. No submodule
-pointer change, canonical fixture installation, integration or push is claimed.
+## Art-transfer prerequisite implementation
+
+The user authorized the prerequisite after the initial capture exposed the
+missing capability. Normal art now publishes one `knuckles` RAM request from
+`$FFF100` to `$F000`, whose length is the sum of the selected DPLC tile runs.
+The native observer verifies every converted byte against the ROM art and
+256-byte conversion table, verifies the accepted queue request, and closes
+its tail-called decision at `$3011B4`. Suppressed, empty and queue-full decisions
+do not invent a transfer. Completion is observed at `$3011B6`.
+
+Special stages use owner `ss-knuckles`, standard tile indices shifted by five,
+and the shared decision return `$32CD38`. Java validates these callback sites
+per owner, retaining stock-game callback restrictions. The v5 schema and timing
+input contract are unchanged. Production receives an immutable art profile from
+the active module; original ROM DPLC requests still select rendered tiles while
+the lifecycle records the aggregate transfer. Existing snapshots preserve the
+ledger, deduplication and held-load state. No observed transfer creates engine
+work or hydrates gameplay state.
+
+Independent read-only ROM/code review found no concrete defect in these paths.
+Native focused verification passed 10 KiS2 tests, 21 stock S2 observer tests and
+nine dynamic-art state tests, with no skips. These are focused results, not a
+native full-suite pass. The previous broad validation limits above remain.
+
+The full-run Java test accepts `-Dkis2.rom.path=<absolute lock-on dump>` through
+the production ROM catalogue, so isolated worktrees use the actual chip. The
+new capture is kept separately at `$KIS2_CAPTURE_ROOT/full-run-art-audited`;
+the original unaudited candidate remains intact for comparison.
+
+## Sealed audited capture
+
+TraceChaser implementation: `e0a2443e086ca657a49227c5467eeecd06e40ece`,
+merged and pushed to its `main`. The capture used the reviewed observer with
+its corrected ROM-art bounds; the subsequent owner/profile rejection check
+only strengthens validation and does not change emitted observations. Every
+captured edge's owner and callback was independently checked against that
+final restriction.
+
+`full-run-art-audited/` contains 110 files, 23,905,326 stored bytes, 36 segments,
+and 248,042 rows. Inventory `art-candidate-inventory.json` SHA-256:
+`e9a3d82132e65a485ff14b61de5a517bf43846061d02a710949c7c8ea50f3c9b`.
+Whole-file comparisons establish identical physics rows, existing aux events,
+and non-art manifest fields against the initial candidate. Metadata changes are
+limited to `aux_schema_extras` and explanatory `notes`; added aux events are
+`dynamic_art_transfer_state` and level `load_queue_state`.
+
+The audit contains 126,390 normal Knuckles and 18,626 SS Knuckles segment edges,
+plus 79 run-gap edges. The last gap records one accepted pending transfer at
+movie frame 253,736, where the recorded level route ends; no later completion is
+invented. All normal requests use the converted RAM bank and remain within its
+`$500`-byte capacity. Source BK2 and all payload stored/logical hashes are sealed.
+This is a candidate, not a claim of gameplay parity or canonical publication.
+
+Additional native `test.sh --no-gates --jobs 1` at `e0a2443` completed with
+734 passes, 57 failures and 35 skips. All 57 failures were reproduced by bounded,
+matched failing-family checks on unchanged `9fd957b`, comparing test identities
+and failure messages (normalizing temporary-directory identifiers). These cover
+stale source/fixture paths, audio-observer prerequisites, Lua vector assumptions,
+and existing special-stage observer expectations. The skipped ROM-dependent CLI
+cases and omitted gate tier are not passing coverage.
+
+## Consumer verification and next frontier
+
+Java verification used `feature/ai-kis2-full-run` at `d94ac94c2` plus the
+prerequisite working changes, pinned against integration base `51677cdd2`.
+All Maven commands used `python3 tools/testing/maven_queue.py`, Java 21,
+`-Dmse=off`, and verified absolute ROM paths. Initial focused selection
+`TestDynamicArtTransferTrace,TestDynamicArtLifecycleService,TestKis2GamePatchResolution,TestKis2SpecialStageDataLoader,TestKis2HeadlessBoot`
+passed 71 tests without skips after correcting a missing test import.
+
+Combined `LUA_BIN=/usr/bin/lua5.4 run_categories.py --base 51677cdd2 --run`
+completed 20,152 ordinary tests (two failures, five errors, 17 skips; 478 seconds)
+and 667 guard tests (four failures, no errors/skips; 173.74 seconds). The ordinary
+errors exposed a real initialization regression: controller-only special-stage
+setup has no art loader. Priming now requires the loader, matching the existing
+publication path; no substitute owner is invented. The three affected classes
+were `Sonic2SpecialStageComparisonStateTest`, `Sonic2SpecialStageSwapFlagTest`,
+and `Sonic2SpecialStageTeamSetupTest`.
+
+The corrected focused run added those three classes and both audio CLI classes
+to the initial selection: **101 tests passed, no failures/errors/skips**. The
+recorder gitlink and its two exact-pin guards were updated together to `e0a2443`;
+`-Pguards -Dtest=TestTraceChaserBoundaryGuard,TestBuildToolingGuard#traceChaserStaysExactOptionalAndOutsideOrdinaryBuilds`
+passed all 13 tests with no skips. These are narrow corrections after the broad
+run, not a second broad green result.
+
+Four unrelated failures were matched by identity and exact failure message on
+an isolated unchanged `51677cdd2` checkout (four tests, four failures, no skips):
+
+- `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`:
+  stale assertions still require the pre-queue Maven guidance.
+- `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`:
+  existing `FbzRouteEvidenceProbe#printEvidence` and
+  `LevelSolidityMapProbe#writeSolidityMap` have no recognized assertion.
+- `TestCompleteRunAudioCli.freshJvmBootstrapsTheS1ProfileButItsUnavailableDispatcherEmitsNoStandardOutput`:
+  inherited `JAVA_TOOL_OPTIONS` output precedes its expected stderr prefix.
+- `TestS1GameplayAudioTimelineCli.shellUsesAbsoluteBootstrapToolsAndRejectsInjectedEnvironmentBeforePathLookup`:
+  the shell rejects the same ambient `JAVA_TOOL_OPTIONS` as designed.
+
+The two CLI classes pass without that ambient variable, as verified in the
+101-test correction run. The two unrelated source guards remain baseline failures.
+Broad skips include explicitly opt-in measurements/routes, unavailable surfaceless
+EGL, an existing CPZ spin-tube assumption, and unrequested audio-reference captures.
+
+Queued `-Dtest=TestKis2CompleteEmeraldRunChain
+-Dopenggf.trace.kis2.run.dir=$KIS2_CAPTURE_ROOT/full-run-art-audited
+-Dkis2.rom.path=<absolute lock-on dump>` with absolute S2/S3K properties validated
+**all 36 segment payloads and the entire dynamic-art gap ledger**, then entered
+production gameplay. One test failed, zero skipped: segment 0 lost production
+ownership before source closure, `mode=TITLE_CARD`, `loadGeneration=3`, EHZ1,
+**BK2 cursor 2003**. This removes the former missing-capability blocker. The
+structural stop does not identify the earliest physics mismatch; the earlier
+standalone row-156 result above belongs to its separate historical invocation.
+Canonical installation remains subject to approval of the sealed candidate.
