@@ -3,12 +3,11 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.WidescreenAspect;
 import com.openggf.game.CrossGameFeatureProvider;
-import java.nio.file.Files;
-
 import com.openggf.debug.playback.Bk2MovieLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.badniks.BlastoidBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.TurboSpikerBadnikInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.tests.HeadlessTestFixture;
 import com.openggf.tests.route.InputProgram;
@@ -19,6 +18,7 @@ import com.openggf.trace.TraceEvent;
 import com.openggf.trace.TraceReplayBootstrap;
 import com.openggf.trace.replay.TraceReplaySessionBootstrap;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
@@ -44,6 +44,7 @@ final class Hcz1Route {
     final ObjectSpawn liftButton;
     final ObjectSpawn finalCurve;
     final ObjectSpawn runupStart;
+    final boolean runBetweenWaterHazards;
     long padHash = 1;
     int frames = 0;
     boolean recovery = false;
@@ -53,6 +54,7 @@ final class Hcz1Route {
     int dashPhase = 0;
     boolean lowerTrack = false;
     boolean bossJumpHeld = false;
+    boolean previousEngineVisible = true;
     boolean bossDefeated = false;
     boolean waterSeen = false;
     int previousMask;
@@ -94,6 +96,10 @@ final class Hcz1Route {
     }
 
     private Hcz1Route(int width, String donor) throws Exception {
+        // Authored pad approaches: intermediate viewports use the running corridor;
+        // native and wider views retain the jumping approach. Both navigate live
+        // placements and submit ordinary input; neither changes runtime state.
+        runBetweenWaterHazards = width == 400 || width == 512;
         Path directory = Path.of("src/test/resources/traces/s3k/hcz_completerun");
         TraceData trace = TraceData.load(directory);
         assertNotNull(trace.metadata().sourceBk2(), "HCZ fixture must name its shared movie");
@@ -160,6 +166,11 @@ final class Hcz1Route {
             if (stage == Stage.SECOND_BRIDGE && live.getCentreY() >= (secondBridge.y() + 240)) {
                 stage = Stage.LOWER_TUNNEL;
             }
+            if (runBetweenWaterHazards && stage == Stage.FIRST_FAN && live.isInWater()
+                    && live.getCentreX() > entryFan.x() + 64
+                    && live.getCentreX() < firstShield.x() - 64
+                    && Math.abs(live.getXSpeed()) >= 128
+                    && !(jumpHeld && live.getAir() && live.getYSpeed() < 0)) mask = 8;
             // Descend through the two Blastoid-triggered bridges after collecting air protection.
             if (stage == Stage.FIRST_BRIDGE) {
                 int jump = live.getCentreX() > (firstBridge.x() + 40) ? (mask & 16) : 0;
@@ -185,7 +196,7 @@ final class Hcz1Route {
                         | (live.getCentreX() < lowerShield.x() + 33 ? (mask & 16) : 0);
             }
             if (stage == Stage.UPPER_BRIDGE) {
-                mask = steer(live.getCentreX(), upperBridge.x(), 8)
+                mask = steer(live.getCentreX() + live.getXSpeed() / 16, upperBridge.x(), 8)
                         | (live.getCentreX() > upperBridge.x() + 64 ? (mask & 16) : 0);
             }
             if (stage == Stage.LOWER_BRIDGE) {
@@ -222,10 +233,11 @@ final class Hcz1Route {
                     && live.getCentreY() < (finalCurve.y() - 16)) {
                 stage = Stage.CURVE_RUNUP;
             }
-            if (stage == Stage.CURVE_RUNUP && live.getCentreX() < runupStart.x()) {
+            if (stage == Stage.CURVE_RUNUP && live.getCentreX() < runupStart.x()
+                    - (live.getGameRules().playerCapability().spindashEnabled() ? 0 : 192)) {
                 stage = Stage.CURVE_BRAKE;
             }
-            // The final curve needs a flat-ground, capability-backed spindash run-up.
+            // Start the final curve from flat ground; charge only when the capability supports it.
             if (stage == Stage.CURVE_RUNUP) {
                 mask = 4;
             }
@@ -244,6 +256,7 @@ final class Hcz1Route {
                 if (dashPhase == 0 && !live.isInWater() && !live.getAir() && angle >= 192 && angle <= 224
                         && live.getGSpeed() < 0) {
                     dashPhase = 1;
+                    lowerTrack = false;
                 }
                 if (dashPhase == 1 && !lowerTrack) {
                     mask = 2;
@@ -252,6 +265,10 @@ final class Hcz1Route {
                 if (dashPhase == 1 && lowerTrack && !live.getAir() && (angle == 0 || angle >= 240)
                         && live.getGSpeed() >= 0 && live.getGSpeed() < 256 && live.getDirection().name().equals("RIGHT")) {
                     dashPhase = 2;
+                }
+                if (dashPhase == 2 && !capability.spindashEnabled()) {
+                    dashPhase = 0;
+                    mask = 8;
                 }
                 if (dashPhase == 2) {
                     if (live.getSpindash() && (live.getSpindashCounter() & 65535)
@@ -270,7 +287,22 @@ final class Hcz1Route {
                     mask |= 16;
                 }
             }
-            if (stage == Stage.UPPER_BRIDGE || stage == Stage.LOWER_BRIDGE) {
+            // Wide S1 approaches arrive airborne without an attack pose. Land to
+            // the Blastoid's left, then jump at it before visiting the ring monitor.
+            if (stage == Stage.LOWER_TUNNEL && !live.getGameRules().playerCapability().spindashEnabled()
+                    && fixture.camera().getWidth() >= 640 && live.getCentreX() >= upperBridge.x() - 256) {
+                var upperEnemy = GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .filter(object -> object instanceof BlastoidBadnikInstance
+                                && object.getX() == upperBridge.x())
+                        .findFirst().orElse(null);
+                if (upperEnemy != null && Math.abs(upperEnemy.getY() - live.getCentreY()) < 256) {
+                    int target = live.getRolling() ? upperEnemy.getX() : upperEnemy.getX() - 64;
+                    mask = steer(live.getCentreX() + live.getXSpeed() / 8, target, 8);
+                    if ((!live.getAir() && !jumpHeld) || jumpHeld && live.getYSpeed() < 0) mask |= 16;
+                }
+            }
+            if (stage == Stage.FIRST_BRIDGE || stage == Stage.SECOND_BRIDGE
+                    || stage == Stage.UPPER_BRIDGE || stage == Stage.LOWER_BRIDGE) {
                 int enemyX = switch (stage) {
                     case FIRST_BRIDGE -> firstBridge.x();
                     case SECOND_BRIDGE -> secondBridge.x();
@@ -279,11 +311,27 @@ final class Hcz1Route {
                 };
                 boolean enemyPresent = GameServices.level().getObjectManager().getActiveObjects().stream()
                         .anyMatch(o -> o instanceof BlastoidBadnikInstance && Math.abs(o.getX() - enemyX) < 8);
-                if (enemyPresent && (stage != Stage.LOWER_BRIDGE || live.isInWater()
-                        && Math.abs(live.getCentreX() - enemyX) < 96) && ((!live.getAir()
-                                && !jumpHeld) || stage != Stage.LOWER_BRIDGE && jumpHeld && live.getYSpeed() < 0)) {
+                if (stage == Stage.LOWER_BRIDGE && enemyPresent && !live.getAir()
+                        && live.getCentreX() < enemyX && enemyX - live.getCentreX() < 96
+                        && live.getGSpeed() >= 448) {
+                    mask = 2;
+                }
+                if (enemyPresent && stage != Stage.LOWER_BRIDGE && ((!live.getAir()
+                                && !jumpHeld) || jumpHeld && live.getYSpeed() < 0)) {
                     mask |= 16;
                 }
+            }
+            if (stage == Stage.LOWER_TUNNEL && !live.getGameRules().playerCapability().spindashEnabled()
+                    && !live.getAir() && !jumpHeld) {
+                boolean spikerAhead = GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .anyMatch(object -> object instanceof TurboSpikerBadnikInstance
+                                && object.getX() > live.getCentreX() && object.getX() - live.getCentreX() < 96
+                                && Math.abs(object.getY() - live.getCentreY()) < 64);
+                if (spikerAhead) mask |= 16;
+            }
+            if (stage == Stage.SPRING_ASCENT) {
+                mask = steer(live.getCentreX() + live.getXSpeed() / 16, finalCurve.x() + 32, 8)
+                        | (mask & 16);
             }
             if (stage == Stage.FAN_BUTTON) {
                 mask = 8;
@@ -297,21 +345,27 @@ final class Hcz1Route {
         if (boss != null) {
             bossDefeated |= boss.getState().defeated && boss.getState().hitCount == 0;
         }
-        if (stage == Stage.FINAL_CURVE && boss != null) {
-            // Wait for production arena ownership, then jump beside the descending core.
-            // HczMinibossInstance exposes an engine hazard 36px below an open core:
-            // stay 48px sideways until the player is above it, then steer inward.
-            mask = 2;
-            if (boss.getState().routine >= 4) {
-                int target = live.getCentreY() < boss.getY() ? boss.getX() : boss.getX() + (live.getCentreX() < boss.getX() ? -48 : 48);
-                int projected = live.getCentreX() + live.getXSpeed() / 16;
-                mask = steer(projected, target, 6);
-                if ((!live.getAir() && !bossJumpHeld && boss.getY() > live.getCentreY() - 144) || bossJumpHeld
-                        && live.getYSpeed() < 0) {
-                    mask |= 16;
-                }
-                bossJumpHeld = (mask & 16) != 0;
+        if (stage == Stage.FINAL_CURVE && boss != null && boss.getState().routine >= 4) {
+            // Approach the core directly while its lower engine hazard is absent.
+            // With the engine exposed, stay to the side until above the core.
+            var regions = boss.getMultiTouchRegions();
+            boolean engineVisible = regions != null && java.util.Arrays.stream(regions)
+                    .anyMatch(region -> region.y() > boss.getY());
+            // The engine flickers on alternating V-ints. A single absent region
+            // does not mean it has retracted; observe both sides of that cadence.
+            boolean engineRetracted = !engineVisible && !previousEngineVisible;
+            previousEngineVisible = engineVisible;
+            boolean directApproach = !live.getGameRules().playerCapability().spindashEnabled()
+                    && engineRetracted;
+            int target = directApproach || live.getCentreY() < boss.getY() ? boss.getX()
+                    : boss.getX() + (live.getCentreX() < boss.getX() ? -48 : 48);
+            int projected = live.getCentreX() + live.getXSpeed() / 16;
+            mask = steer(projected, target, 6);
+            if ((!live.getAir() && !bossJumpHeld && boss.getY() > live.getCentreY() - 144)
+                    || bossJumpHeld && live.getYSpeed() < 0) {
+                mask |= 16;
             }
+            bossJumpHeld = (mask & 16) != 0;
         }
         return mask;
     }
@@ -329,7 +383,7 @@ final class Hcz1Route {
         recent.record(frames, mask, player);
         waterSeen |= player.isInWater();
         audit.observe(player, false, false, fixture.camera().getX() & 0xFFFF);
-        assertFalse(player.getDead() || player.isDrowningDeath(), "HCZ1 P1 died at frame=" + frames + " openingRow=" + input.row()
+        assertFalse(player.getDead() || player.isDrowningDeath(), "HCZ1 P1 died stage=" + stage + " at frame=" + frames + " openingRow=" + input.row()
                 + " waterSeen=" + waterSeen + " recent=" + recent);
         previousMask = mask;
         return mask;

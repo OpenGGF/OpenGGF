@@ -1779,5 +1779,13 @@ priority/activation, falling rocket debris, whirlpool slowdown, bubble animation
 and depth, and defeat-handoff bubble deletion. Bubble links and the optional
 explosion controller now survive rewind through that cleanup boundary. See the
 [ROM audit and coverage limits](architecture/audits/2026-09-13-hcz1-miniboss-parity.md).
+The viewport follow-up converts the initial camera-range and horizontal-lock
+observations to native framing, retaining the ROM's world-bound writes. At 640px
+and 800px, comparing the render origin directly required the player to cross the
+arena terrain wall before the lock could trigger. Threshold regressions cover all
+five supported widths; ordinary-input 800px off/S2 routes now reach the six-hit
+defeat and production reload. See the
+[route handover](architecture/plans/2026-09-14-route-controller-handover.md#full-route-viewportdonor-completion-follow-up)
+for the combined matrix and validation state.
 Full encounter slot-pressure, transient graph, level rendering and character/donor
 route certification remain open; these local corrections do not close those gaps.

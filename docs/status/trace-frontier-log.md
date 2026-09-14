@@ -109965,3 +109965,26 @@ Integrated into `develop` at `5d54b85d5` without conflicts. Repeating the same
 focused command on the integrated tree produced the identical 41 passes and
 one EHZ1 cursor-2003 chain failure, zero errors/skips. All 110 integrated files
 again matched the approved stored/logical hashes.
+
+## 2026-09-14 — HCZ1 viewport arena framing; matched native replay unchanged
+
+Task base `24cdc64e6697b7624e669abea2f37a35abed94b2`, matched arms in
+`.worktrees/ai-hcz-wide-arena`. The candidate changes only HCZ miniboss camera
+observations to native framing; the baseline arm restores that one source file
+from the pinned base. Both use:
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments
+-Dsurefire.forkCount=1 -Dsurefire.runOrder=alphabetical
+-Dtest=TestS3kHczZoneSliceTraceReplay -Ds3k.rom.path=<absolute existing S3K ROM> test`.
+
+Both complete 29,302 compared frames: **2 tests, 1 failure, no errors/skips**;
+4,699 divergences (3,973 physics, 726 animation), zero bootstrap errors/warnings.
+First physics error is frame 9,482 `air` (expected 1, actual 0); first animation
+error is frame 9,486 `player_animation_id` (expected `0000`, actual `0005`).
+All normalized report records match byte-for-byte, SHA-256
+`92bab98520aefb2caf2c32c342b4593b0a3eb1246047ded02f7a9cff3732c98b`.
+Candidate Maven time: 33.583 seconds; baseline: 1:04 (queue waiting excluded).
+The earlier 4,571-error historical count does not describe this updated base.
+No native trace regression is attributable to the camera fix; the inherited
+trace remains red. The candidate source was restored and consumed diagnostics
+were deleted. Full-route viewport/donor evidence is recorded separately in the
+[handover](../architecture/plans/2026-09-14-route-controller-handover.md#full-route-viewportdonor-completion-follow-up).
