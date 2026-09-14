@@ -596,18 +596,6 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
     }
 
     @Override
-    public void renderAfterBackground(Camera camera, int frameCounter) {
-        var levelManager = GameServices.levelOrNull();
-        if (levelManager != null
-                && levelManager.getCurrentZone() == Sonic3kZoneIds.ZONE_SLOT_MACHINE
-                && GameServices.currentOrBootstrapGameModule().getBonusStageProvider()
-                instanceof Sonic3kBonusStageCoordinator coordinator
-                && coordinator.activeSlotRuntime() != null) {
-            coordinator.activeSlotRuntime().ensureForegroundGlassPriority();
-        }
-    }
-
-    @Override
     public void registerSpecialRenderEffects(SpecialRenderEffectRegistry registry, int zoneIndex, int actIndex) {
         if (zoneIndex == Sonic3kZoneIds.ZONE_AIZ) {
             registry.register(aizTransitionRenderFeature);
