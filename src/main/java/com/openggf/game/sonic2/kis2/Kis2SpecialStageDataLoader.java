@@ -186,6 +186,20 @@ public final class Kis2SpecialStageDataLoader extends Sonic2SpecialStageDataLoad
         return pieces.toArray(ResultsPiece[]::new);
     }
 
+    @Override
+    public com.openggf.game.sonic2.objects.SplitNameResultsMessages createResultsMessages(
+            boolean gotEmerald, boolean allEmeralds) {
+        return new com.openggf.game.sonic2.objects.SplitNameResultsMessages(gotEmerald, allEmeralds);
+    }
+
+    @Override
+    public ResultsPiece[] getResultsObjectFrame(int frame) {
+        if (frame < 0 || frame >= 30) return new ResultsPiece[0];
+        List<ResultsPiece> pieces = new ArrayList<>();
+        readResultsFrame(frame, 0, pieces);
+        return pieces.toArray(ResultsPiece[]::new);
+    }
+
     private void readResultsFrame(int frame, int xOffset, List<ResultsPiece> pieces) {
         LockOnAddressSpace.Read read = addressSpace.require(0x311D22); // Obj6F_MapUnc_14ED0
         RomByteReader reader = read.reader();

@@ -57,13 +57,22 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
     private static final String CNZ_SLOTS_SHADER_PATH = "shaders/shader_cnz_slots.glsl";
 
     private final Sonic2WindTunnelProfile windTunnelProfile;
+    private final CNZSlotMachineRenderer.ArtPresentation slotArtPresentation;
 
-    public Sonic2ZoneFeatureProvider() {
-        this(Sonic2WindTunnelProfile.STOCK);
-    }
+    public Sonic2ZoneFeatureProvider() { this(Sonic2WindTunnelProfile.STOCK, null); }
 
     public Sonic2ZoneFeatureProvider(Sonic2WindTunnelProfile windTunnelProfile) {
+        this(windTunnelProfile, null);
+    }
+
+    public Sonic2ZoneFeatureProvider(CNZSlotMachineRenderer.ArtPresentation slotArtPresentation) {
+        this(Sonic2WindTunnelProfile.STOCK, slotArtPresentation);
+    }
+
+    public Sonic2ZoneFeatureProvider(Sonic2WindTunnelProfile windTunnelProfile,
+            CNZSlotMachineRenderer.ArtPresentation slotArtPresentation) {
         this.windTunnelProfile = java.util.Objects.requireNonNull(windTunnelProfile);
+        this.slotArtPresentation = slotArtPresentation;
     }
 
     private CNZBumperManager cnzBumperManager;
@@ -165,7 +174,7 @@ public class Sonic2ZoneFeatureProvider implements ZoneFeatureProvider {
 
         // Initialize the visual renderer (owned by this provider, not GraphicsManager)
         if (cnzSlotMachineRenderer == null) {
-            cnzSlotMachineRenderer = new CNZSlotMachineRenderer();
+            cnzSlotMachineRenderer = new CNZSlotMachineRenderer(slotArtPresentation);
         }
         GraphicsManager graphicsManager = GameServices.graphics();
         if (!graphicsManager.isHeadlessMode()) {

@@ -108,6 +108,9 @@ public interface LevelSelectProvider {
      * playing from the title screen) and performs no fade transition.
      * <p>Default implementation delegates to {@link #initialize()}.
      */
+    /** Applies menu-earned launch state after the gameplay session has been initialized. */
+    default void onGameplayStart() { }
+
     default void initializeFromTitleScreen() {
         initialize();
     }

@@ -63,6 +63,8 @@ final class Kis2GameModule extends DelegatingGameModule {
     private Kis2ChipArt chipArt;
     private Kis2SpecialStageProvider specialStageProvider;
     private Kis2TitleScreen titleScreen;
+    private Kis2LevelSelect levelSelect;
+    private com.openggf.game.sonic2.Sonic2ZoneFeatureProvider zoneFeatureProvider;
     private com.openggf.game.DebugModeProvider debugModeProvider;
 
     Kis2GameModule(GameModule base, PatchContext context) {
@@ -99,6 +101,23 @@ final class Kis2GameModule extends DelegatingGameModule {
             objectArtProvider = new Sonic2ObjectArtProvider(artOverlays());
         }
         return objectArtProvider;
+    }
+
+    @Override
+    public com.openggf.game.ZoneFeatureProvider getZoneFeatureProvider() {
+        if (kis2Image().isEmpty()) return base().getZoneFeatureProvider();
+        if (zoneFeatureProvider == null) {
+            zoneFeatureProvider = new com.openggf.game.sonic2.Sonic2ZoneFeatureProvider(
+                    new Kis2SlotArt(kis2Image().orElseThrow()));
+        }
+        return zoneFeatureProvider;
+    }
+
+    @Override
+    public com.openggf.game.LevelSelectProvider getLevelSelectProvider() {
+        if (kis2Image().isEmpty()) return base().getLevelSelectProvider();
+        if (levelSelect == null) levelSelect = new Kis2LevelSelect();
+        return levelSelect;
     }
 
     @Override

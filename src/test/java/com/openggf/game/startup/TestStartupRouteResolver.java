@@ -14,6 +14,13 @@ class TestStartupRouteResolver {
     private final StartupRouteResolver resolver = new StartupRouteResolver();
 
     @Test
+    void explicitLevelSelectRequestOverridesDonatedDataSelectWithoutStartupOption() {
+        assertEquals(TitleActionRoute.LEVEL_SELECT, resolver.resolveTitleAction(
+                hostModule(GameId.S2), new DataSelectPresentationResolution(true, GameId.S3K),
+                true, false, TitleScreenAction.LEVEL_SELECT));
+    }
+
+    @Test
     void onePlayerRoutesToDataSelectOnlyWhenPresentationResolvesToS3k() {
         TitleActionRoute s3kRoute = resolver.resolveTitleAction(
                 hostModule(GameId.S2),
