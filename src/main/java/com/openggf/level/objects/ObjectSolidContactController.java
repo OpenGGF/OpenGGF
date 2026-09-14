@@ -802,6 +802,46 @@ public final class ObjectSolidContactController {
         controllerAirborneReleaseSupports.clear();
     }
 
+    void inheritRetainedSstContacts(ObjectSolidContactController previous,
+            Collection<? extends ObjectInstance> carried) {
+        Set<Object> retainedKeys = new HashSet<>();
+        Set<ObjectInstance> retainedObjects = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (ObjectInstance object : carried) {
+            retainedObjects.add(object);
+            retainedKeys.add(airUnseatLatchKeyFor(object));
+        }
+        inheritRetainedLatchBits(previous.objectStandingBitSet, objectStandingBitSet, retainedKeys);
+        inheritRetainedLatchBits(previous.objectPushingBitSet, objectPushingBitSet, retainedKeys);
+        for (var entry : previous.ridingStates.entrySet()) {
+            RidingState ride = entry.getValue();
+            if (!retainedObjects.contains(ride.object)) {
+                continue;
+            }
+            // Native continued riding takes its movement baseline from the
+            // retained object's position at its next execution. The transition
+            // coordinate scan has already rebased that position; carrying the
+            // old manager's world coordinate would apply the offset twice.
+            int x = ride.object.getX();
+            int y = ride.object.getY();
+            if (ride.pieceIndex >= 0 && ride.object instanceof MultiPieceSolidProvider multi) {
+                x = multi.getPieceX(ride.pieceIndex);
+                y = multi.getPieceY(ride.pieceIndex);
+            }
+            putRidingState(entry.getKey(), ride.object, x, y, ride.pieceIndex);
+        }
+    }
+
+    private static void inheritRetainedLatchBits(Map<PlayableEntity, Set<Object>> source,
+            Map<PlayableEntity, Set<Object>> target, Set<Object> retainedKeys) {
+        for (var entry : source.entrySet()) {
+            for (Object key : entry.getValue()) {
+                if (retainedKeys.contains(standingBitOwnerOf(key))) {
+                    target.computeIfAbsent(entry.getKey(), player -> new HashSet<>()).add(key);
+                }
+            }
+        }
+    }
+
     ObjectManagerSnapshot.SolidContactState captureRewindState() {
         List<ObjectManagerSnapshot.SolidContactRidingEntry> entries = new ArrayList<>();
         for (var entry : ridingStates.entrySet()) {

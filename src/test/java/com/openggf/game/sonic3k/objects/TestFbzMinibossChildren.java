@@ -242,6 +242,16 @@ class TestFbzMinibossChildren {
             assertTrue(manager.isRidingObject(tails, prison));
             int heldY = tails.getCentreY();
 
+            var replacement = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                    0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+            replacement.reset(0x2E20);
+            replacement.addDynamicObject(plunger);
+            replacement.addDynamicObject(prison);
+            com.openggf.level.objects.ObjectTransitionContacts.inherit(replacement, manager, List.of(plunger, prison));
+            assertTrue(replacement.hasObjectPushingBit(tails));
+            assertTrue(replacement.isRidingObject(tails, prison));
+            manager = replacement;
+
             S3kSignpostInstance.applySidekickEndingPose(tails);
             manager.update(0x2E20, main, List.of(tails), 2, false, true, false);
             assertFalse(manager.hasObjectPushingBit(tails), "plunger loc_1E0A2 still consumes its P2 push bit");
@@ -267,8 +277,9 @@ class TestFbzMinibossChildren {
         }
     }
 
-    @Test
-    void endingPoseRetainsExistingPlungerSupportButCannotCreateANewContact() throws Exception {
+    @ParameterizedTest
+    @CsvSource({"false", "true"})
+    void endingPoseRetainsExistingPlungerSupportButCannotCreateANewContact(boolean reload) throws Exception {
         com.openggf.tests.TestEnvironment.configureGameModuleFixture(
                 com.openggf.tests.rules.SonicGame.SONIC_3K);
         try {
@@ -313,6 +324,27 @@ class TestFbzMinibossChildren {
             assertTrue(player.isOnObject());
             assertFalse(player.getAir());
             assertEquals(standingY, player.getCentreY());
+
+            if (reload) {
+                var replacement = new com.openggf.level.objects.ObjectManager(List.of(), new Sonic3kObjectRegistry(),
+                        0, null, null, com.openggf.graphics.GraphicsManager.getInstance(), camera, services);
+                replacement.reset(0);
+                holder[0] = replacement;
+                replacement.addDynamicObject(plunger);
+                plunger.offsetNativePositionWordsPreserveSubpixel(-0x2E00, 0x20);
+                player.setCentreXPreserveSubpixel((short) (player.getCentreX() - 0x2E00));
+                player.setCentreYPreserveSubpixel((short) (player.getCentreY() + 0x20));
+                com.openggf.level.objects.ObjectTransitionContacts.inherit(replacement, manager, List.of(plunger));
+                assertTrue(replacement.isRidingObject(player, plunger));
+                assertTrue(replacement.hasObjectStandingBit(player, plunger));
+                int rebasedX = player.getCentreX();
+                com.openggf.sprites.playable.ObjectControlState.none().applyTo(player);
+                replacement.processImmediateInlineSolidCheckpoint(plunger, player, List.of());
+                assertEquals(rebasedX, player.getCentreX(), "the old world's ride baseline must not apply its offset twice");
+                assertEquals(plunger.getY() - 0xD - player.getYRadius(), player.getCentreY(),
+                        "the first released checkpoint must take continued riding, not a fresh top landing");
+                manager = replacement;
+            }
 
             var newcomer = new PlungerContactPlayer();
             newcomer.setCentreX((short) plunger.getX());

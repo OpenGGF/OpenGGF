@@ -4459,6 +4459,10 @@ public class ObjectManager {
         return owned.toLongArray();
     }
 
+    void inheritRetainedSstContacts(ObjectManager previous, List<ObjectInstance> carried) {
+        solidContacts.inheritRetainedSstContacts(previous.solidContacts, carried);
+    }
+
     /** Retains rewind identities when a transition carries the exact live SST occupants. */
     public void inheritTransitionObjectIdentities(ObjectManager previous,
                                                    List<ObjectInstance> carriedObjects) {
