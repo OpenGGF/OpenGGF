@@ -57,6 +57,34 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
             resetScrollTracking();
             bgX = (short) cameraX >> 1;
             vscrollFactorBG = (short) ((short) cameraY >> 1);
+            var state = com.openggf.game.GameServices.hasRuntime()
+                    ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                            com.openggf.game.GameServices.zoneRuntimeRegistry()).orElse(null) : null;
+            if (state != null && state.actIndex() == 1) {
+                var events = state.events();
+                if (events.backgroundRoutine() == 0x24 || events.backgroundRoutine() == 0x28) {
+                    bgX = (short) (cameraX + 0x1240 - events.bossX());
+                    vscrollFactorBG = (short) (cameraY + 0x488 - events.bossY());
+                    for (int line = 0; line < 224; line++) {
+                        int worldY = vscrollFactorBG + line;
+                        int row = worldY < 0x440 ? 0 : Math.min(12, 1 + ((worldY - 0x440) >> 4));
+                        short fg = (short) -cameraX;
+                        short bg = (short) -(bgX + events.bossWall().rowOffset(row));
+                        buffer[line] = ((fg & 0xFFFF) << 16) | (bg & 0xFFFF);
+                        trackOffset(fg, bg);
+                    }
+                    return;
+                } else if (events.backgroundRoutine() >= 0x2C) {
+                    bgX = (short) (((short) cameraX >> 1) + 0x200);
+                    if (events.savedBackgroundX() != 0) bgX = events.savedBackgroundX();
+                } else if (events.backgroundRoutine() == 0x14 || events.backgroundRoutine() == 0x18) {
+                    bgX = (short) (cameraX - 0x1930);
+                    vscrollFactorBG = (short) (cameraY + 0x2E0 + events.sandHeight());
+                } else if (events.backgroundRoutine() == 0x1C && events.savedBackgroundX() != 0) {
+                    bgX = events.savedBackgroundX();
+                    vscrollFactorBG = (short) events.savedBackgroundY();
+                }
+            }
             short fg = (short) -cameraX;
             short bg = (short) -bgX;
             java.util.Arrays.fill(buffer, 0, 224, ((fg & 0xFFFF) << 16) | (bg & 0xFFFF));

@@ -94,6 +94,8 @@ public final class SozLightingState {
         return bank == 6 ? bank : bank + oldFrame;
     }
 
+    public void resumeTorch() { torchTimer = 0; }
+
     public int darknessLevel() { return darknessLevel; }
     public int masterTimer() { return masterTimer; }
     public int fadeRemaining() { return fadeRemaining; }

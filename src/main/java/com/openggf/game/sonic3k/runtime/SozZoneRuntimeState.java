@@ -31,6 +31,7 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
                 : com.openggf.physics.BackgroundPlaneCollisionProvider.State.INACTIVE;
     }
     public SozEventState events() { return events; }
+    public void requestEndBossDefeat() { sandCorkBackgroundFlag = 0x55; }
     public void requestMinibossDoorClose() { events.doorSignal(-1); }
     public void requestMinibossShake(int duration) { events.screenShakeFlag(duration); }
     public void requestMinibossPostResultsAlignmentComplete() { sandCorkBackgroundFlag = 0x55; }

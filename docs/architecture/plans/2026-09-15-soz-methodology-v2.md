@@ -1575,3 +1575,77 @@ tests after integration, zero failures/errors/skips,55.590 seconds at20:45:35BST
 The76 selected structural checks passed on the same source. Diff whitespace and
 CI push policy passed. This closes the normal SOZ1 foreground-render connection;
 it does not certify the inherited arena/event presentation gaps.
+
+
+## Full SOZ completion campaign
+
+User-authorized goal begins at `1a63f57015a8012e6a34b2fe4f07cc0d52f91056`.
+Complete both acts' remaining ROM-backed objects, events, bosses, transitions and
+presentation, then the per-act/character route and rewind obligations. Loading
+or short positioned captures do not close the goal. Preserve inherited gaps until
+implemented and verified. Integrate verified batches into `develop`; keep task
+branches local and follow the existing delivery policy.
+
+Work allocation: parent owns the shared SOZ runtime/event/light/palette/scroll
+contracts and integration; independent worktrees implement swinging platforms and
+rappel wires, the three badnik families, and local sand/path mechanisms. Boss and
+Hyudoro work follows the relevant shared contracts. Maintain source-derived
+thresholds and production ownership; no trace-state hydration or fixture-specific
+progression shortcuts.
+
+All existing and new media stays under the existing external SOZ task root
+(`soz-v2-20260915`), preserving previously shared links. An external capture index
+tracks sources. At the end, concatenate the task's clips into a chronological
+highlights compilation, normalizing video dimensions without distorting pixels,
+and keep the originals beside it. Earlier broken attempts remain labelled as
+work-in-progress evidence, not certified gameplay. Native references and positioned
+setups must remain distinguishable from ordinary engine routes in captions.
+
+Campaign status: active. Remaining acceptance is the full matrix above, including
+both boss exits, Act1→Act2 and Act2→next-zone handoffs, supported character routes,
+lifecycle/breadth tests, and final compilation. Do not mark complete from a count
+of registered objects or merged commits.
+
+### Shared Act 2 lighting prerequisite
+
+Local implementation `5056db010` owns the native palette/torch counters in
+`SozLightingState`, captured through `SozZoneRuntimeState`. It preserves signed
+word/byte expiry, pre-increment sand/torch reads, forced sand writes on fade steps,
+mid-fade switch reversal, and the boss timer hold without repeatedly restarting
+brightening. Both palette and animation upload ROM bytes; no reference rows supply
+runtime state. Normal Act 2 scroll now uses `sub_566D2`'s signed half-camera words.
+
+Source audit correction: `sub_55EFC` is called by the seamless transition, not cold
+Act 2 initialization. The unused reset code before `AnPal_SOZ2` is not its prologue.
+Cold counters start at zero and the first palette tick advances darkness to one;
+seamless entry seeds darkness5, step4 and timer1799. The earlier pilot agrees with
+the cold path. The catalogue also incorrectly described palette selection as
+`step & 6`; that mask belongs to torch selection, while palette selection uses the
+52-byte slice offset. Both prose errors are corrected.
+
+Focused validation at `5056db010`: queued Maven `-Dmse=off
+-Dtest=TestSozLightingState,TestSozRuntimeState,TestS3kSozPatternAnimation
+-Ds3k.rom.path="$S3K_ROM" test -B`: 15 tests, zero failures/errors/skips (50.146s).
+Coverage includes all seven torch frames, exact ROM palette destination bytes,
+cold/seamless initial state, timer/fade edges and capture/restore forward replay.
+This is prerequisite validation; switch/ghost/event wiring and complete routes
+remain pending. Initial production test stopped before the final dark bank;
+extending it through 3700 ticks supplied that missing test coverage.
+
+### Act 2 boss background and terrain replay prerequisite
+
+The event owner now queues the ROM boss/secondary terrain and art, binds queued
+job identities across rewind, runs the thirteen-row wall deformation and its eight
+solid rows, and restores the secondary background after collapse. Native delayed
+redraw helpers consume two columns/rows per dispatch, including same-call
+fallthrough on sand exit. Sand special events stop on player death and the moving
+sand pass performs the native standing-object release check.
+
+Focused queued Maven validation on the completion branch:
+`-Dtest=TestSozBossWallState,TestSozScreenEvents,TestRewindSnapshotDiffTerrain,TestRewindSnapshotDiffDynamicIdentity`
+with explicit `-Ds3k.rom.path="$S3K_ROM"`: 12 tests passed, no failures/errors/skips
+(49.807s). This covers wall stage timing, queued ROM bytes, solid graph recreation,
+and full snapshot forward replay; it does not certify a complete boss route.
+The first arena replay exposed descriptor-identity comparison in the rewind diff:
+new equal terrain objects were reported as changed. Comparison now checks saved
+terrain contents and still rejects changed collision indices and frame state.

@@ -2323,7 +2323,17 @@ public final class Sonic3kPlcArtRegistry {
                     Sonic3kConstants.ART_KOSM_SOZ_MINIBOSS_SAND_ADDR, CompressionType.KOSINSKI_MODULED,
                     0, Sonic3kConstants.MAP_SOZ_MINIBOSS_DUST_ADDR, 2, -1));
         }
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SWINGING_PLATFORM,
+                Sonic3kConstants.MAP_SOZ_SWINGING_PLATFORM_ADDR, 1, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RAPEL_WIRE,
+                Sonic3kConstants.MAP_SOZ_RAPEL_WIRE_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x48, 2, null));
         // Doors, push switches and pushable rocks share SOZMisc+$8C, palette 2.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SPAWNING_SAND_BLOCKS,
+                0x04043A, 0x3C0, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RISING_SAND_WALL,
+                0x040D10, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x69, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SAND_CORK,
+                0x041EAE, 0x3AF + 0xE, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_DOOR,
                 Sonic3kConstants.MAP_SOZ_DOOR_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x8C, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_PUSH_SWITCH,

@@ -1,12 +1,17 @@
 package com.openggf.game.sonic3k;
 
 public final class Sonic3kObjectArtKeys {
+    public static final String SOZ_SPAWNING_SAND_BLOCKS = "soz_spawning_sand_blocks";
+    public static final String SOZ_RISING_SAND_WALL = "soz_rising_sand_wall";
+    public static final String SOZ_SAND_CORK = "soz_sand_cork";
     public static final String SOZ_DOOR = "soz_door";
     public static final String SOZ_PUSH_SWITCH = "soz_push_switch";
     public static final String SOZ_FLOATING_PILLAR = "soz_floating_pillar";
     public static final String SOZ_SOLID_SPRITES = "soz_solid_sprites";
     public static final String SOZ_PUSHABLE_ROCK = "soz_pushable_rock";
     public static final String SOZ_BREAKABLE_SAND_ROCK = "soz_breakable_sand_rock";
+    public static final String SOZ_SWINGING_PLATFORM = "soz_swinging_platform";
+    public static final String SOZ_RAPEL_WIRE = "soz_rapel_wire";
     public static final String SOZ_SPRING_VINE = "soz_spring_vine";
 
     public static final String MONITOR = "monitor";

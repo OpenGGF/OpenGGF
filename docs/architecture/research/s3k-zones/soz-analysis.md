@@ -429,8 +429,8 @@ follow the custom handler's control flow before registering scripts.
 - **Darkness level:** `SOZ_darkness_level`, byte, range 0-5
 - When the timer expires and the level is still below 5, the level increments by 1
 - Only even-numbered levels start a fade pulse: `Palette_cycle_counters+$00 = 2` and `Palette_cycle_counters+$08 = 0`
-- `Palette_cycle_counters+$06` is the active step counter. `sub_55EFC` seeds it to 4; `AnPal_SOZ2` increments it while darkening and decrements it while brightening, then masks it with `& 6` to pick the 26-color slice from `AnPal_PalSOZ2_Light`
-- Darkness level 0 = full brightness, 5 = terminal darkness used after the Act 1 -> Act 2 transition and while the boss arena is darkened back down
+- `Palette_cycle_counters+$06` is the active step counter. `sub_55EFC` seeds it to 4; `AnPal_SOZ2` increments it while darkening and decrements it while brightening, uses `+$02` as the 26-color slice offset into `AnPal_PalSOZ2_Light`. Only the torch owner masks the step counter with `& 6`
+- Darkness level 0 = full brightness, 5 = terminal darkness used after the Act 1 -> Act 2 transition. Boss entry reverses the current fade and holds the timer; it does not first darken the room
 
 #### Channel 0: Darkness palette transition
 
@@ -454,7 +454,7 @@ follow the custom handler's control flow before registering scripts.
 | 3 | $88A,$668,$646,$424,$224,$202,$000,$444,$222,$200,$040 | $8CE,$888,$666,$446,$222,$022,$022,$EEE,$468,$224,$002,$26A,$6EE,$48C,$26C |
 | 4 | $C46,$824,$804,$402,$202,$200,$000,$422,$402,$200,$040 | $6AE,$664,$422,$402,$200,$000,$000,$EEE,$466,$224,$000,$046,$6EE,$48C,$26A |
 
-**Note:** Level 0 is the initial `AnPal_PalSOZ2_Light` entry. `AnPal_PalSOZ2_Light_2` (line 4330) starts at level 0's line-4 data. The total table spans from the initial bright colors through 5 darkness steps.
+**Note:** Level 0 is the initial `AnPal_PalSOZ2_Light` entry. `AnPal_PalSOZ2_Light_2` (line 4330) starts at level 0's line-4 data. The table contains five brightness slices (steps 0–4), totaling 260 bytes.
 
 #### Channel 1: Sand shimmer (darkness-aware)
 
@@ -589,7 +589,7 @@ This is SOZ's signature mechanic. The system is not a one-shot fade; it is a two
 6. `Palette_cycle_counters+$08`: per-step fade timer (4-frame period)
 
 **Flow:**
-1. `sub_55EFC` seeds Act 2 with the dark baseline, sets `SOZ_darkness_level=5`, copies the darkest palette slice into `Normal_palette_line_3/4` and `Target_palette_line_3/4`, sets `Palette_cycle_counter1=(30*60)-1`, and initializes `Palette_cycle_counters+$06=4`, `+$02=$D0`, `+$00=0`
+1. During the seamless Act 1 → 2 transition only, `sub_55EFC` seeds Act 2 with the dark baseline, sets `SOZ_darkness_level=5`, copies the darkest palette slice into `Normal_palette_line_3/4` and `Target_palette_line_3/4`, sets `Palette_cycle_counter1=(30*60)-1`, and initializes `Palette_cycle_counters+$06=4`, `+$02=$D0`, `+$00=0`
 2. Every 900 frames, `AnPal_SOZ2` increments `SOZ_darkness_level` if it is still below 5
 3. Only even-numbered levels start a fade pulse: `Palette_cycle_counters+$00=2` and `Palette_cycle_counters+$08=0`
 4. Each fade tick (every 4 frames) advances or rewinds the table slice by $34 bytes and copies 26 colors from `AnPal_PalSOZ2_Light` into palette lines 3 and 4
@@ -602,7 +602,7 @@ This is SOZ's signature mechanic. The system is not a one-shot fade; it is a two
 - Level 2: first fade pulse
 - Level 3: steady dim state
 - Level 4: second fade pulse
-- Level 5: terminal darkness used by the Act 2 intro and the boss arena before the fight is lit back up
+- Level 5: terminal darkness used by seamless Act 2 entry; cold level-select entry starts with zeroed counters
 
 **Interaction with ghosts:** `Hyudoro_ctr` checks `SOZ_darkness_level`; ghosts only spawn when the level is above 0, and the max ghost count increases with darkness. Ghosts only deal damage when `SOZ_darkness_level > 0`.
 
@@ -722,5 +722,8 @@ scroll words alone does not enable their consumption by the tile renderer.
 registered for Act 1, targeting zero-based palette2 colors12–15; its prior
 destination prose above has been corrected. See the [execution record](../../plans/2026-09-15-soz-methodology-v2.md#normal-act-1-desert-presentation-implementation)
 for measured native fields, regression results and unmatched pixel boundaries.
-Act 1 arena/transition presentation, Act 2's event-selected backgrounds and
-darkness-coupled torch animation are still open.
+Act 1 arena/transition presentation and Act 2's event-selected backgrounds remain open.
+The completion campaign implements Act 2 normal half-speed scrolling, shared
+`AnPal_SOZ2` fade/sand clocks and `AnimateTiles_SOZ2` torch banks. Cold entry
+starts with zeroed counters; only `sub_55EFC` initializes seamless entry at
+darkness5/step4. Switch and boss event wiring are separate remaining obligations.

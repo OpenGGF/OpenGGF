@@ -429,9 +429,35 @@ public final class RewindSnapshotDiff {
         // Epoch is a restore-side copy-on-write generation counter. Multiple
         // seeks can legitimately advance it beyond the original forward run
         // while the level content remains identical.
-        return Arrays.equals(la.blocks(), lb.blocks())
-            && Arrays.equals(la.chunks(), lb.chunks())
-            && Arrays.equals(la.mapData(), lb.mapData());
+        return equalTerrain(la.blocks(), lb.blocks())
+            && equalTerrain(la.chunks(), lb.chunks())
+            && Arrays.equals(la.mapData(), lb.mapData())
+            && la.frameCounter() == lb.frameCounter()
+            && la.hasLevelHudState() == lb.hasLevelHudState()
+            && la.levelRings() == lb.levelRings()
+            && la.levelRingExtraLifeFlags() == lb.levelRingExtraLifeFlags()
+            && la.levelTimerFrames() == lb.levelTimerFrames()
+            && la.levelTimerPaused() == lb.levelTimerPaused()
+            && la.respawnRequested() == lb.respawnRequested()
+            && Objects.equals(la.checkpointState(), lb.checkpointState())
+            && la.transitionRingInitializationPending() == lb.transitionRingInitializationPending()
+            && la.pendingInitialProcessSpritesLifecycle() == lb.pendingInitialProcessSpritesLifecycle();
+    }
+
+    private static boolean equalTerrain(Object[] a, Object[] b) {
+        if (a == b) return true;
+        if (a == null || b == null || a.length != b.length) return false;
+        for (int i = 0; i < a.length; i++) {
+            if (a[i] == b[i]) continue;
+            // Mutation replay replaces descriptor objects under copy-on-write. Identity
+            // differs legitimately; every ROM descriptor and collision index must agree.
+            if (a[i] instanceof com.openggf.level.Chunk ca && b[i] instanceof com.openggf.level.Chunk cb) {
+                if (!Arrays.equals(ca.saveState(), cb.saveState())) return false;
+            } else if (a[i] instanceof com.openggf.level.Block ba && b[i] instanceof com.openggf.level.Block bb) {
+                if (!Arrays.equals(ba.saveState(), bb.saveState())) return false;
+            } else return false;
+        }
+        return true;
     }
 
     /**
