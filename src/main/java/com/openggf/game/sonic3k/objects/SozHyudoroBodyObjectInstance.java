@@ -12,6 +12,7 @@ import com.openggf.sprites.playable.*;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
+import java.util.ArrayList;
 
 /** Hyudoro_body, its nine routines and away animation ($8F11E..$8F37A). */
 public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
@@ -19,6 +20,7 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     private static final int ANIM_BASE=0x8F682;
     private static final int[] APPEAR={0x8F682,0x8F695,0x8F6AA};
     private SozHyudoroControllerObjectInstance controller;
+    private final List<AbstractPlayableSprite> pendingContacts = new ArrayList<>();
     private int xFixed,yFixed,xVelocity,yVelocity,maxVelocity,acceleration;
     private int routine,darkness,frame,animationAddress,animationIndex,animationTimer,attackTimer,collisionProperty;
     private boolean initialized,worldPosition,facingLeft,directionDown,fading;
@@ -64,14 +66,31 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
         renderOnScreen=isWithinRenderSpriteBounds(0x10,0x14);
         if(!previousVisible){deleteGhost();return;}
         if(dark==0){fade();return;}
-        if(collisionProperty!=0){
-            int property=collisionProperty;collisionProperty=0;
-            var target=(property&2)==0?services().playerQuery().mainPlayerOrNull():services().playerQuery().nativeP2OrNull();
-            if(target instanceof AbstractPlayableSprite p){
-                if(attacking(p)){fade();return;}
-                if(!p.getInvulnerable())p.applyHurtOrDeath(getX(),DamageCause.NORMAL,p.getRingCount()>0);
-            }
+        resolvePendingContacts();
+    }
+    private void resolvePendingContacts() {
+        int property = collisionProperty;
+        collisionProperty = 0;
+        var main = services().playerQuery().mainPlayerOrNull();
+        var second = services().playerQuery().nativeP2OrNull();
+        // Check_PlayerCollision/word_85890 chooses P2 when both native bits
+        // are set. Additional engine slots retain their actual player identity
+        // instead of being collapsed onto that native P2 bit.
+        var nativeTarget = (property & 2) == 0 ? main : second;
+        var contacts = List.copyOf(pendingContacts);
+        pendingContacts.clear();
+        if (property != 0 && nativeTarget instanceof AbstractPlayableSprite player
+                && resolveContact(player)) return;
+        for (var player : contacts) {
+            if (player != main && player != second && resolveContact(player)) return;
         }
+    }
+    private boolean resolveContact(AbstractPlayableSprite player) {
+        if (attacking(player)) { fade(); return true; }
+        if (!player.getInvulnerable()) {
+            player.applyHurtOrDeath(getX(), DamageCause.NORMAL, player.getRingCount() > 0);
+        }
+        return false;
     }
     private void initialize(){
         initialized=true;routine=2;darkness=controller.darkness();
@@ -114,7 +133,9 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     }
     @Override public void onTouchResponse(PlayableEntity p,TouchResponseResult result,int vIntRunCount){
         if(getCollisionFlags()==0)return;
-        collisionProperty=(collisionProperty+(p==services().playerQuery().mainPlayerOrNull()?1:2))&255;
+        if (p == services().playerQuery().mainPlayerOrNull()) collisionProperty=(collisionProperty+1)&255;
+        else if (p == services().playerQuery().nativeP2OrNull()) collisionProperty=(collisionProperty+2)&255;
+        if (p instanceof AbstractPlayableSprite player && !pendingContacts.contains(player)) pendingContacts.add(player);
     }
     @Override public int getCollisionFlags(){return !fading&&routine==16?0xD7:0;}
     @Override public int getCollisionProperty(){return collisionProperty;}

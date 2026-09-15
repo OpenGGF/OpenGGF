@@ -107,6 +107,7 @@ final class DefaultObjectRewindPolicies {
             // Capture their identities explicitly so both schema restore and the
             // coverage audit agree; constructors deliberately recreate null links.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance", "controller"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance", "pendingContacts"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroCapsuleObjectInstance$Button", "parentRef"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozMinibossChild", "owner"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozMinibossChild$Explosions", "owner"), RewindFieldPolicy.CAPTURED),

@@ -125,6 +125,61 @@ class TestSozLightGhostCompatibility {
         before=f.gameplayMode().getRewindRegistry().capture();f.stepFrame(false,false,false,false,false);replay(f,before,false,"capsule escaped-ghost graph");assertFalse(p.getDead());
     }
     private static <T>T find(Class<T>type){return GameServices.level().getObjectManager().getActiveObjects().stream().filter(type::isInstance).map(type::cast).findFirst().orElseThrow();}
+    static Stream<int[]> contactGroups() {
+        return Stream.of(new int[]{0}, new int[]{1}, new int[]{0,1}, new int[]{2}, new int[]{3}, new int[]{2,3});
+    }
+    @ParameterizedTest @MethodSource("contactGroups")
+    void attackingGhostRetainsActualContactPlayersAcrossGraphRecreation(int[] contacting) {
+        var f=boot(new Scenario("sonic",800,"off","tails,knuckles,sonic"),0x140,0x3AC);
+        for(int i=0;i<200;i++)f.stepFrame(false,false,false,false,false);
+        ((CheckpointState)GameServices.level().getCheckpointState()).saveCheckpoint(1,0x140,0x3AC,false);
+        S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow().lighting().initializeSeamlessDarkness();
+        SozHyudoroBodyObjectInstance ghost=null;
+        for(int i=0;i<320 && ghost==null;i++) {
+            f.stepFrame(false,false,false,false,false);
+            ghost=GameServices.level().getObjectManager().getActiveObjects().stream()
+                    .filter(SozHyudoroBodyObjectInstance.class::isInstance)
+                    .map(SozHyudoroBodyObjectInstance.class::cast).filter(o->o.getCollisionFlags()==0xD7)
+                    .findFirst().orElse(null);
+        }
+        assertNotNull(ghost,"production ghost enters its world attack");
+        var players=new ArrayList<com.openggf.sprites.playable.AbstractPlayableSprite>();
+        players.add(f.sprite());players.addAll(GameServices.sprites().getSidekicks());
+        assertEquals(4,players.size());
+        for(var player:players) {
+            player.setRingCount(10);player.setDead(false);player.setHurt(false);
+            player.setInvulnerableFrames(0);player.setInvincibleFrames(0);player.setAnimationId(0);
+            player.setDoubleJumpFlag(0);
+            NativePositionOps.writeXPosResetSubpixel(player,ghost.getX()+100);
+            NativePositionOps.writeYPosResetSubpixel(player,ghost.getY());
+        }
+        var objects=GameServices.level().getObjectManager();
+        for(int index:contacting) {
+            var player=players.get(index);
+            NativePositionOps.writeXPosResetSubpixel(player,ghost.getX());
+            NativePositionOps.writeYPosResetSubpixel(player,ghost.getY());
+        }
+        objects.snapshotTouchResponseState();
+        for(int index:contacting)objects.runTouchResponsesForPlayer(players.get(index),
+                GameServices.level().getFrameCounter(),false);
+        var registry=f.gameplayMode().getRewindRegistry();
+        var pending=registry.capture();
+        objects.update(f.camera().getX(),f.sprite(),GameServices.sprites().getSidekicks(),0,false);
+        var after=registry.capture();
+        for(int index=0;index<players.size();index++) {
+            boolean expected=false;
+            for(int contact:contacting)if(contact==index)expected=true;
+            if(contacting.length==2 && contacting[0]==0 && index==0)expected=false;
+            assertEquals(expected,players.get(index).isHurt(),"actual collider "+index);
+        }
+        objects.reset(f.camera().getX());
+        assertTrue(objects.getActiveObjects().stream().noneMatch(SozHyudoroBodyObjectInstance.class::isInstance));
+        registry.restore(pending);
+        assertNotSame(ghost,find(SozHyudoroBodyObjectInstance.class),"ghost graph recreated");
+        same(pending,registry.capture(),"pending player references relinked");
+        objects.update(f.camera().getX(),f.sprite(),GameServices.sprites().getSidekicks(),0,false);
+        same(after,registry.capture(),"actual player contact after graph recreation");
+    }
     private static void replay(HeadlessTestFixture f,CompositeSnapshot before,boolean jump,String label){
         var r=f.gameplayMode().getRewindRegistry();var after=r.capture();r.restore(before);same(before,r.capture(),label+" restore");
         f.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0,0,0,false,""));f.stepFrame(false,false,false,false,jump);same(after,r.capture(),label+" forward");
