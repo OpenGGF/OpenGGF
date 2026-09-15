@@ -100,7 +100,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
         }
         loop = boot.boot(romPath, zone, act);
         LevelManager level = GameServices.level();
-        level.consumeTitleCardRequest();
+        // Omit only presentation. The native title owner must still retire its
+        // children/admission lease and publish any title-owned level objects.
+        level.skipPendingInitialTitleCardPresentation();
         if (loop.getCurrentGameMode() != GameMode.LEVEL) {
             throw new IllegalStateException("capture did not boot into LEVEL mode: " + loop.getCurrentGameMode());
         }
