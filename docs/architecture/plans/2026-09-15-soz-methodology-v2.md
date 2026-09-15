@@ -735,3 +735,12 @@ Focused verification before integration:
 - `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestNativeReferenceCaptureTool,TestFbzVisualExporterGuard,TestFbzVisualEvidenceToolingContract' test -B`: 7 JUnit tests, zero failures/errors/skips, 50.763 seconds, completed 16:40:06 BST. This includes the host Python suite and existing Lua exporter contract.
 - Java 21/Lua 5.4/PowerShell preflight, Python compile, diff whitespace and changed guide-link checks passed.
 - Independent read-only review found no actionable correctness or compatibility issues.
+
+Implementation `2b6e4629b` integrated cleanly into `develop` as `da6d5810489574a93eb311f8681e4aa65dfd25ff`,
+preserving intervening FBZ chain-art and Tails validation changes. The same focused
+JUnit command on that integrated commit passed all 7 tests without failures,
+errors or skips (18.529 seconds, 16:42:15 BST). The eight Lua boundary scenarios
+and push-policy audit also passed. A native compatibility-command smoke capture
+at `$TASK_DIR/legacy-host-1` used the old `OGGF_FBZ_*` variables and fresh-entry
+flag: exit 0, no failures, 1.266 seconds; its CSV and PNG match the common-command
+capture byte for byte. No engine gameplay or full-suite result is inferred.
