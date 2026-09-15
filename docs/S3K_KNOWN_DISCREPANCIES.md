@@ -38,6 +38,7 @@ No S3K discrepancy was added or reclassified by the cutover.
 21. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
 22. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
 23. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
+24. [SOZ Pushable Rock: Door Coupling](#soz-pushable-rock-door-coupling)
 
 ---
 
@@ -1801,3 +1802,15 @@ a display when no slot is available, rather than emulating writes through an
 invalid allocation result. Normal successful allocation retains one later-slot
 display child with eight pieces. Allocation-failure RAM corruption is outside
 the spring-vine parity claim; this does not certify whole-act slot-pressure behavior.
+
+
+## SOZ Pushable Rock: Door Coupling
+
+**Location:** `SozPushableRockObjectInstance`, native `Obj_SOZPushableRock` (`$40546`).
+
+The ordinary push/fall/track/stop behavior is implemented. For subtype bit 7,
+the ROM also stores the rock slot in `_unkF7C4` and uses `loc_405D6`; SOZDoor's
+`sub_41AA8` reads that link. The Act 2 rock at `($4770,$5B5)`, subtype `$87`,
+uses this coupling. The missing SOZDoor implementation and its global rock link
+remain open. Low-five-bit track selection alone does not certify that door
+interaction. See the SOZ act matrices and methodology-v2 execution plan.

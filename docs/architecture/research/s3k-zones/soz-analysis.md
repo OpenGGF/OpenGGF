@@ -684,3 +684,16 @@ The parent itself animates five mapping frames (`$4182E`); it does not spawn
 fragments. Rolling is sampled before SolidObjectFull and the post-call standing
 mask includes retained offscreen P2 bits. See the placed inventory and act matrices
 for the distinction between bindings, positioned behavior checks and cold routes.
+
+
+### Pushable-rock implementation note (2026-09-15)
+
+SKL `$3E` uses `Obj_SOZPushableRock` at `$40546` and mapping `$40776`.
+`SOZRockRideInfo` at `$1E3FD8` supplies alternating Y/X targets through ROM pointers.
+The new production binding preserves pre-solid player pushing status, native
+P1-before-P2 priority, signed word push timer, trailing-edge floor probe, strict
+Y overshoot and retained horizontal velocity across later falls. The initial
+zero-X-velocity fall must not carry the preceding push. Subtype `$87`'s global
+SOZDoor link remains coupled to the missing door implementation; ordinary rock
+mechanics alone do not certify that interaction. Evidence is in the
+[v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md).

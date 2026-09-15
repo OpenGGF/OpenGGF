@@ -2644,6 +2644,59 @@ public class TestSolidObjectManager {
         }
     }
 
+    @Test
+    void sozPushToFallDoesNotCarryThePreviousPushButTrackMotionCarries() throws Exception {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        var rock = new com.openggf.game.sonic3k.objects.SozPushableRockObjectInstance(
+                new ObjectSpawn(100,100,0x3E,9,0,false,0));
+        var manager = buildManager(rock);
+        var rider = new TestPlayableSprite((short)0,(short)0);
+        var pusher = new TestPlayableSprite((short)0,(short)0);
+        for(var player:List.of(rider,pusher)) {
+            player.useGameRules(GameRules.SONIC_3K);
+            player.setWidth(20); player.setHeight(38); player.setAir(false);
+        }
+        rider.setCentreX((short)100); rider.setCentreY((short)67);
+        pusher.setCentreX((short)74); pusher.setCentreY((short)92);
+        pusher.setPushing(true); pusher.setXSpeed((short)0x100);
+        manager.forceRidingObjectForBootstrap(rider,rock);
+        var rom=org.mockito.Mockito.mock(com.openggf.data.Rom.class);
+        org.mockito.Mockito.when(rom.read32BitAddr(org.mockito.ArgumentMatchers.anyLong())).thenReturn(0x100);
+        org.mockito.Mockito.when(rom.read16BitAddr(0x100L)).thenReturn(105);
+        org.mockito.Mockito.when(rom.read16BitAddr(0x102L)).thenReturn(103);
+        org.mockito.Mockito.when(rom.read16BitAddr(0x104L)).thenReturn(0xFFFF);
+        var context=org.mockito.Mockito.mock(com.openggf.game.solid.ObjectSolidExecutionContext.class);
+        org.mockito.Mockito.when(context.resolveSolidNowAll()).thenAnswer(i -> {
+            manager.processImmediateInlineSolidCheckpoint(rock,rider,List.of(pusher));
+            return new com.openggf.game.solid.SolidCheckpointBatch(rock,Map.of());
+        });
+        var level=org.mockito.Mockito.mock(com.openggf.level.LevelManager.class);
+        org.mockito.Mockito.when(level.getFrameCounter()).thenReturn(1);
+        rock.setServices(new StubObjectServices() {
+            @Override public com.openggf.data.Rom rom() { return rom; }
+            @Override public com.openggf.level.LevelManager levelManager() { return level; }
+            @Override public com.openggf.game.solid.ObjectSolidExecutionContext solidExecution() { return context; }
+        }.withPlayerQuery(new ObjectPlayerQuery(() -> rider, () -> List.of(pusher))));
+        try (var terrain=mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(() -> ObjectTerrainUtils.checkFloorDist(org.mockito.ArgumentMatchers.any(),
+                    org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.anyBoolean(),
+                    org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt()))
+                    .thenReturn(new TerrainCheckResult(15,(byte)0,0));
+            rock.snapshotPreUpdatePosition(); rock.update(0,rider);
+            assertEquals(101,rock.getX()); assertEquals(100,rider.getCentreX());
+            assertTrue(manager.isRidingObject(rider,rock));
+            rock.snapshotPreUpdatePosition(); rock.update(1,rider);
+            assertEquals(101,rock.getX()); assertEquals(100,rider.getCentreX(),
+                    "initial FALL d4 is current X; previous PUSH must not carry the standing rider");
+            for(int frame=2;frame<30 && rock.getX()==101;frame++) {
+                rock.snapshotPreUpdatePosition(); rock.update(frame,rider);
+            }
+            assertEquals(102,rock.getX()); assertEquals(101,rider.getCentreX(),
+                    "first horizontal track pass carries by exactly its own one-pixel motion");
+            assertTrue(manager.isRidingObject(rider,rock));
+        }
+    }
+
     private ObjectManager buildManager(ObjectInstance instance) {
         ObjectRegistry registry = new ObjectRegistry() {
             @Override

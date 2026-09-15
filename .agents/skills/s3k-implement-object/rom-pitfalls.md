@@ -4697,3 +4697,39 @@ flip, palette, and priority fields. Test both the resolved attributes and the
 actual level-pattern identity; a correct-looking tile index alone does not catch
 the priority carry. This applies across S1/S2/S3K mapping consumers that use the
 same word-addition path.
+
+
+## Post-solid movement is not the next checkpoint's carry delta
+
+SOZ pushable rock (`Obj_SOZPushableRock`, `$40546`; `loc_405D8`) pushes itself
+one pixel after SolidObjectFull, then saves its current X immediately before the
+next falling MoveSprite. A controller record still holding the last checkpoint's
+X includes that old push, whereas native d4 excludes it. Initial X velocity is
+zero: suppress horizontal carry on that fall and refresh the checkpoint baseline.
+Later track falls retain their nonzero horizontal velocity and must carry riders.
+Verify a rider plus a separate side pusher across the transition; testing only a
+walking pusher misses the stale carry. See `TestSolidObjectManager`'s SOZ push-to-fall
+regression and the 2026-09-15 SOZ methodology-v2 execution plan.
+
+
+## Object floor probes do not inherit the focused player's path bits
+
+`ObjCheckFloorDist2` sets d5 to `$C` before `FindFloor`; a SOZ pushable rock
+therefore probes the primary solidity path even while the focused player uses
+another path. Pass that native bit selection explicitly to `ObjectTerrainUtils`.
+The shared `FindFloor` still honors `Background_collision_flag`, so preserve the
+injected background-collision provider independently. Do not equate foreground vs
+background planes with primary vs secondary solidity paths. Covered by
+`TestSozPushableRock` with the service's focused-player path set secondary.
+
+
+## SOZ1's entry lock requires a jump, not an idle delay
+
+`Obj_LevelIntro_PlayerFallIntoGround` ($41FF4) owns P1/P2 controls during the
+fall into sand. `loc_420A6` holds both locks and waits for a newly pressed A/B/C;
+`loc_4213C` clears the locks and deletes the intro actor after emergence. An
+LFC35 save can advance indefinitely while controls remain locked. Clearing a
+lock byte once does not bypass an actor which writes it every frame. For a
+native positioned probe, first finish the intro through its ordinary jump,
+then normalize the explicitly declared player setup. The reusable
+`tools/bizhawk/capture_soz_pushable_rock.lua` records that entry handshake.
