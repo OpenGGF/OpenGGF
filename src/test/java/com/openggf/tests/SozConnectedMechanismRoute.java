@@ -25,6 +25,14 @@ final class SozConnectedMechanismRoute {
     private int finalSwitchChargedFrame = -1;
     SozConnectedMechanismRoute(Scene scene) { this.scene = scene; }
 
+    static void assertRoster(Scene scene) {
+        org.junit.jupiter.api.Assertions.assertInstanceOf(com.openggf.sprites.playable.Sonic.class, GameServices.camera().getFocusedSprite());
+        var followers = GameServices.sprites().getRegisteredSidekicks();
+        org.junit.jupiter.api.Assertions.assertEquals(scene == Scene.LOWER ? 0 : 1, followers.size());
+        if (scene != Scene.LOWER)
+            org.junit.jupiter.api.Assertions.assertEquals("tails", GameServices.sprites().getSidekickCharacterName(followers.getFirst()));
+    }
+
     Bk2FrameInput input(int frame, AbstractPlayableSprite player) {
         boolean left = false, right = false, jump = false;
         int x = player.getCentreX(), y = player.getCentreY() & 0x7FF;
