@@ -913,3 +913,139 @@ passed the 123 separate structural guards; no structural code changed during
 integration. Push-policy validation also passed. Full SOZ routes, all-character
 breadth, native trajectory/pixel certification and the subtype `$87` door link
 remain open; this delivery covers the bounded rock family and recorded spots.
+
+## Two-family continuation: loop fall-through and static solids
+
+Requested batch: two further SOZ tasks before the next delivery report. Task
+worktree `feature/ai-soz-route-controllers`; actual initial base
+`d92fea6f15ba0f90f9df15aab2d8c19763ded87f`. The sprite-publication audit merged
+between the preceding SOZ delivery and worktree creation; it is documentation-only
+and retained unchanged. Previous SOZ CI run `34993361968` completed successfully.
+
+Source owners: `Obj_SOZLoopFallthrough` (`$4044A`, `sub_40474`, `loc_40508`) and
+`Obj_SOZSolidSprites` (`$41F44`, `loc_41F90`, `loc_41FAC`). See the placed inventory
+for exact widths, signedness, ownership and release contracts. The two SKL factory
+slots preserve HCZWaterWall/CNZGiantWheel in S3KL. The profile now reports both
+implemented meanings. Runtime mappings remain ROM-backed: `$41FC8`, two frames,
+three/two 4×2 pieces, terrain base 1 and palette 2. No shared physics, scheduler,
+public API or loading algorithm changed.
+
+The change selector on the actual base proposes 2,605 ordinary classes plus
+structural guards because central constants/art/profile files trigger its full
+fallback. The scope is two bounded actors and their registrations, with direct
+production and branch-edge coverage and no unresolved cross-cutting code change.
+Use proportionate focused validation plus separate relevant structural guards;
+this is not a full-suite pass. Preflight passed with `LUA_BIN=/usr/bin/lua5.4`
+(Java 21 and PowerShell also present); default Lua was rejected before tests.
+
+Implementation/test setup corrections preserved as evidence:
+
+- First compilation used a nonexistent `NativePositionOps.addYPos16_16`. The
+  actor now computes native Y locally and writes through the existing preserving
+  helper plus fraction setter; no new shared API was needed.
+- First behavioral run: 22 tests, five failures, zero errors/skips. One ROM art
+  assertion read the instruction rather than its immediate word (correct `$41F4E`).
+  Two Sonic capture snapshots preceded native shield registration; three neutral
+  initialization passes before positioning remove that unrelated restore hazard.
+  Two Act 2 solid approaches from 85 pixels above encountered neighboring terrain.
+- Final positioned landing recipe starts two pixels above the intended surface,
+  after initialization. Act 2 pillar moved from the covered `($A90,$628)` to the
+  upper pillar `($18F0,$218)`; the ledge remains `($A82,$608)`. Act 1 uses
+  `($2190,$118)` and `($2198,$138)`, approaching the latter's exposed right side.
+  These checks deliberately do not claim ordinary route reachability.
+- The next run passed all 22 actor/production/inventory checks. Only the expected
+  rewind inventory count failed: observed 1,017 total / 797 passed / 220 graph
+  covered, no failure buckets. Updated the baseline after that observation.
+- First combined run: 253 tests, one failure, zero errors/skips. An older profile
+  test assumed CNZ `$49` could never be implemented in SKL. Replace that exclusion
+  with explicit checks of both owner names and shared implementation membership.
+
+Independent source review found no confirmed correctness defect. Its suggestions
+added actual camera-width assertion to the loop spots and real-manager side and
+underside tests for both solid shapes. Rendering readiness is checked separately.
+Local loop tests cover acquisition-return, unsigned region edges, signed speed,
+existing ownership/routine gates, literal radii, fixed-point fractions, equality
+release, bit-7-masked extent and independent follower state through recreation.
+Production spots restore and replay the whole registered world twice at landing,
+loop acquisition, held movement and release. Cold routes, maximum/duplicate team
+breadth, all donor/width combinations and matched native trajectories remain open.
+
+Native corroboration used the common host with the existing SOZ2 LFC35 state
+`$TASK_DIR/pilot-4/fbz2-lfc35.State` (SHA-256
+`A7CF91BB8EE8EE93D3B51E4E3C0271F549FCDE12D7BB93916E9331364F963074`), same verified
+ROM/BK2 and empty plan as above, and a one-off `$TASK_DIR/native-loop.lua` exporter.
+This is a positioned diagnostic, not a controller-only acquisition oracle: nearby
+native owners also execute. The accepted run is `$TASK_DIR/native-loop-3`:
+exit 0, no host failures, 1.817 seconds, exporter SHA-256
+`FC502F55B3259178FEE63CAAE4046170A2757364BEE24364EF12824CAFE5F0DE`.
+It contains 34 contiguous LFC335–368 observations at X2896, owner SST45870.
+`object_control=$81` and Status_OnObj remain through Y839; the next sample Y859
+clears both, crossing the source threshold Y848. Held velocity rises by `$38`
+per pass. The initial observed velocity is `$D00`, so this is not a matched
+engine/native entry-velocity or full-trajectory comparison. Release PNG inspected.
+
+Two rejected probe setups are explicit: `native-loop-1` gave the camera/loader
+only 30 passes and never observed the target owner; `native-loop-2` repeatedly
+positioned inside the capture region and rewrote player control while the owner
+retained its held bit. Both failed the required `released.json` output. Final
+setup holds P1 above the capture region for 300 passes to allow streaming, then
+writes the target position/motion once and observes neutral input. The writes
+are to P1 position, speed, ground speed, status, control and animation only.
+No native observations enter engine state.
+
+Engine rendering: queued `GameplayCaptureTool --game s3k --zone soz --act 1
+--x 0x2190 --y 0xEB --width 320 --main sonic --sidekick tails --frames 120
+--stills 10,60 --out-dir "$TASK_DIR/engine-solid-sprites-1"`, via `exec:java`.
+120 PNGs, state CSV and MP4, exit 0, 16.950 seconds. All rows show stable support
+at centre `(8592,236)`, no death/hurt. CSV read before inspecting frame 60:
+Sonic and the mapped pillar are visible at native width. Existing background/
+palette differences remain outside this local art check. Inherited Discord
+worker shutdown warning did not prevent output or process completion.
+
+The 123 selected structural guards passed with zero failures/errors/skips,
+61 seconds, completed 17:32:54 BST. Subsequent source edit only corrected the
+loop owner's address comment to verified `$4044A`; the held routine is `$4045E`.
+The combined 255-test run passed all but the new side/underside spot: the
+hand-built actor had not survived its first display pass and retained the native
+first-frame solid gate. The fixture now supplies camera bounds and the preceding
+position snapshot, matching production's already-passing landing lifecycle.
+
+The isolated side/underside test now passes (17.639 seconds, 17:40:56 BST).
+Its first underside point was outside the shared native box because it omitted
+SolidObjectFull's four-pixel vertical bias; moving the probe inside that box
+exercised the intended bottom branch. This changed test geometry only.
+
+Before final checks the worktree advanced cleanly to updated destination
+`0c38edf5d433e3a5670be2b594f7362fe7d7d4b1`, preserving upstream S1 SMPS physical
+compatibility and S2 title-star timing fixes. No conflicts. Updated-base preflight
+passed; the unchanged scope decision applies to its 2,606-class selector.
+
+Combined focused delivery command:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSozLoopFallthrough,TestSozSolidSprites,TestSozRouteControllersProduction,TestSozObjectInventory,TestSolidObjectManager,TestRemainingRewindTailInventory,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestSonic3kObjectProfile,TestSonic3kObjectProfileRegistryGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$S3K_ROM" "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+Separate structural command (completed above):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestObjectUpdateClockTerminologyGuard' test -B
+```
+
+Updated-base candidate result: **255 tests passed, zero failures/errors/skips**,
+54.556 seconds, completed 17:42:48 BST. This includes all 11 production cases,
+both-shape side/underside checks, explicit donor capability and camera-width
+assertions, object/art/profile guards, unchanged S3K loading gates and the verified
+1,017/797/220 rewind inventory. Changed documentation links, AGENTS mirror and
+whitespace checks passed. No category-run diagnostics were created. These are
+focused checks, not full-suite or full-zone certification.
+
+Implementation `8aa71f8f6` integrated without conflict as
+`0973cba4ec4258017df2aedcd232e3b422c9f95c`. The same combined focused command
+passed on that actual `develop` commit: **255 tests, zero failures/errors/skips**,
+51.979 seconds, completed 17:45:22 BST. No implementation changes occurred during
+integration; the separate 123 structural checks remain applicable. The native
+probe and engine image are bounded corroboration/visual checks as described above.

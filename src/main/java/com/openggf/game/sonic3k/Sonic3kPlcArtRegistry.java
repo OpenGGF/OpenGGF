@@ -2316,6 +2316,8 @@ public final class Sonic3kPlcArtRegistry {
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
         // Obj_SOZPushableRock at $40546 points to $40776, ArtTile_SOZMisc+$8C/palette 2.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SOLID_SPRITES,
+                Sonic3kConstants.MAP_SOZ_SOLID_SPRITES_ADDR, 1, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_PUSHABLE_ROCK,
                 Sonic3kConstants.MAP_SOZ_PUSHABLE_ROCK_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x8C, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_BREAKABLE_SAND_ROCK,

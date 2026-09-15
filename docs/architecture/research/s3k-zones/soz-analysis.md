@@ -697,3 +697,10 @@ zero-X-velocity fall must not carry the preceding push. Subtype `$87`'s global
 SOZDoor link remains coupled to the missing door implementation; ordinary rock
 mechanics alone do not certify that interaction. Evidence is in the
 [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md).
+
+### V2 loop exits and static solids (2026-09-15)
+
+The `$3B` and `$49` placed families now have source-derived implementations.
+See the [inventory](soz-object-inventory.md#loop-exits-and-solid-terrain-sprites)
+for the exact control/solid contracts and remaining placeholder counts. These
+positioned interactions extend local coverage; complete act traversal remains open.
