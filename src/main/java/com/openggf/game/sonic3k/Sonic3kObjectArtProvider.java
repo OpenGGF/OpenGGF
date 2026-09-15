@@ -319,15 +319,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
 
     private Pattern[] loadUncompressedPatterns(Rom rom, int addr, int size) throws IOException {
         byte[] data = rom.readBytes(addr, size);
-        int count = data.length / Pattern.PATTERN_SIZE_IN_ROM;
-        Pattern[] patterns = new Pattern[count];
-        for (int i = 0; i < count; i++) {
-            patterns[i] = new Pattern();
-            byte[] tile = Arrays.copyOfRange(data, i * Pattern.PATTERN_SIZE_IN_ROM,
-                    (i + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-            patterns[i].fromSegaFormat(tile);
-        }
-        return patterns;
+        return PatternDecompressor.fromBytes(data);
     }
 
 

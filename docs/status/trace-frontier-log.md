@@ -110277,6 +110277,20 @@ Elapsed ordinary/guards: 729.31/172.20 seconds. No new or worsened failure;
 this is an ordinary-suite pass with inherited red guards, not all gates green.
 
 
+Integrated as `316788395` and verified on the identical frozen task tree.
+The same category command completes 20,488 ordinary tests with zero failures/errors,
+18 skips; 668 guards retain exactly the incoming base's three failures (the two
+above plus quicksand rewind-annotation triage). Upstream's inventory correction
+passes. All failure messages and skip reasons were matched, not just totals.
+The queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestKis2CompleteEmeraldRunChain` command with absolute KiS2/S2 ROM properties
+completes two tests, one expected chain failure, no errors/skips (27.176 s).
+All 15 normalized reports match the clean candidate: segment 7 zero-error,
+segment 9 first error row 200 Y, segment 11 first error row 212 Y speed, stop
+at cursor 48,882. Diagnostics acknowledged and deleted. Commands and full counts
+are recorded in the linked investigation.
+
+
 ### 2026-09-15 — Moving-camera scroll publication preserves complete FBZ replay
 
 On `bugfix/ai-s3k-presentation-camera`, based on `316788395`, the shared S3K

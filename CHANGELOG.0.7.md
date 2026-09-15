@@ -220,7 +220,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **Maintenance:** share save decoding, fallback drawing, screen texture creation,
   tool WAV output, S2 participant-list handling, indexed palette validation and
   collision-profile construction. Audio configuration binding reuses frozen
-  settings while retaining session handler ownership. Public API and ROM behavior
+  settings while retaining session handler ownership. Donated preview caches share
+  file validation, image scaling and publication; raw art decoding, S1 voice
+  normalization, scroll uploads and audio reference input checks each reuse their
+  existing behavior. Public API and ROM behavior
   remain unchanged.
 
 - **Unpublished Mod API candidate:** mod loading, creator tooling, characters,

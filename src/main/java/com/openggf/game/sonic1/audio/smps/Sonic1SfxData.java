@@ -1,5 +1,7 @@
 package com.openggf.game.sonic1.audio.smps;
 
+import com.openggf.audio.smps.FmVoiceOperatorOrder;
+
 import com.openggf.audio.smps.AbstractSmpsData;
 import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.smps.ZeroAddressFmVoiceProvider;
@@ -95,11 +97,7 @@ public class Sonic1SfxData extends AbstractSmpsData
         }
         byte[] voice = Arrays.copyOfRange(
                 zeroAddressVoiceBank, offset, offset + 25);
-        for (int group = 1; group < 25; group += 4) {
-            byte middle = voice[group + 1];
-            voice[group + 1] = voice[group + 2];
-            voice[group + 2] = middle;
-        }
+        FmVoiceOperatorOrder.swapMiddleOperatorsInPlace(voice);
         return voice;
     }
 
@@ -189,17 +187,9 @@ public class Sonic1SfxData extends AbstractSmpsData
             return null;
         }
 
-        // S1 voice bytes per 4-byte group are in order Op4,Op3,Op2,Op1 (InsMode=DEFAULT).
-        // The S1 sequencer profile consumes normalized order: Op4,Op2,Op3,Op1.
-        // Convert by swapping the middle two bytes in each group.
         byte[] voice = new byte[stride];
         System.arraycopy(data, offset, voice, 0, stride);
-
-        for (int g = 1; g < 25; g += 4) {
-            byte tmp = voice[g + 1];
-            voice[g + 1] = voice[g + 2];
-            voice[g + 2] = tmp;
-        }
+        FmVoiceOperatorOrder.swapMiddleOperatorsInPlace(voice);
         return voice;
     }
 

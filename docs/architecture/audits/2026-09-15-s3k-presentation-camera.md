@@ -74,3 +74,10 @@ The queued domain run used `-Dmse=off -Ptrace-replay-r7
 with all three absolute ROM properties. It passed **61 tests, no failures/errors/
 skips**, in 36.804 seconds. The full FBZ strict replay passed (16.42 seconds),
 so this presentation correction preserves that gameplay frontier.
+
+Implementation `ca44ebed2` reconciles develop `b8d0ae91b`. The only conflict
+was adjacent evidence appended to the trace frontier log; both records are
+preserved in their original sections. Incoming scroll-upload helper extraction
+keeps the same normalization/upload semantics and adds native upload coverage.
+Broad validation uses this reconciled tree and destination SHA; the original
+task scope remains pinned to `316788395`.
