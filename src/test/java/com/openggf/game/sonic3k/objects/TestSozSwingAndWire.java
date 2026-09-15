@@ -52,7 +52,6 @@ class TestSozSwingAndWire {
         assertArrayEquals(new byte[]{0x23,0x7C,0,4,(byte)0xB1,(byte)0xD0},rom.readBytes(0x4AA5E,6));
         assertEquals(3,S3kSpriteDataLoader.loadMappingFrames(RomByteReader.fromRom(rom),0x416C6,3).size());
         assertEquals(39,S3kSpriteDataLoader.loadMappingFrames(RomByteReader.fromRom(rom),0x4B1D0,39).size());
-        assertEquals(0,rom.readByte(0x38));
     }
     @ParameterizedTest @ValueSource(ints={4,5,6,0x13,0x14,0x15,0x16,0x17})
     void everyPlacedPlatformSubtypeUsesItsLengthAndStandingTrigger(int subtype) {
@@ -110,7 +109,15 @@ class TestSozSwingAndWire {
         }
         assertEquals(8,value(w,"routine"));assertEquals(2,value(w,"mode"));
         if((subtype&0xF0)!=0 && (subtype&15)%2!=0) assertNotEquals(originalX,w.getX());
-        step(w);assertEquals(9,value(w,"routine"),"shipped unused $46 pointer selects retract");
+        int finalLength=value(w,"length");
+        int firstTail=value(w,"tailAngle");
+        for(int i=0;i<128;i++) {
+            step(w);
+            assertEquals(8,value(w,"routine"),"loc_4AC98 retains final swing through parent3/$46");
+            assertEquals(finalLength,value(w,"length"));
+            assertTrue(w.isPlayerHeld(player));
+        }
+        assertEquals(firstTail,value(w,"tailAngle"),"byte angle completes one full cycle");
         press(true);step(w);press(false);
         assertFalse(w.isPlayerHeld(player));assertFalse(player.isObjectControlled());assertTrue(player.getAir());
         assertTrue(player.isJumping());assertTrue(player.getRolling());assertEquals(2,player.getAnimationId());

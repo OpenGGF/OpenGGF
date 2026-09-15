@@ -83,10 +83,10 @@ public final class SozRapelWireObjectInstance extends AbstractObjectInstance imp
                 if(extra!=0) { extra--; length=(length+1)&0xFFFF; angle=(angle+2)&255; }
             }
             case FINAL_SWING -> {
-                // Shipped loc_4AC98 reads the untouched $46 pointer, not parent3.
-                // A freshly cleared SST has $46=0; ROM byte $38 is zero. Preserve
-                // that original bug: select retract, then finish this angle update.
-                routine=RETRACT;
+                // loc_4AC98: $46 is parent3, initialized to the endpoint SST.
+                // Keep swinging while its P1 capture byte is set; after release,
+                // select retract but finish this pass's angle update first.
+                if(!held) routine=RETRACT;
                 tailAngle=(tailAngle+2)&255;
                 if(tailAngle>=0xFC || tailAngle<0x86) angle=tailAngle;
             }
