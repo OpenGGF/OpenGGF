@@ -141,10 +141,15 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 loadLbzCycles(reader, list, actIndex);
                 break;
 
-            case 0x08: // AnPal_SOZ1; Act 2 needs the coupled darkness owner.
+            case 0x08: // AnPal_SOZ1 / AnPal_SOZ2 shared light and sand counters.
                 if (actIndex == 0) {
                     list.add(new Soz1Cycle(reader.slice(Sonic3kConstants.ANPAL_SOZ1_ADDR,
                             Sonic3kConstants.ANPAL_SOZ1_SIZE)));
+                } else {
+                    list.add(new Soz2Cycle(reader.slice(Sonic3kConstants.ANPAL_SOZ1_ADDR,
+                                    Sonic3kConstants.ANPAL_SOZ2_SAND_SIZE),
+                            reader.slice(Sonic3kConstants.ANPAL_SOZ2_LIGHT_ADDR,
+                                    Sonic3kConstants.ANPAL_SOZ2_LIGHT_SIZE)));
                 }
                 break;
 
@@ -1115,6 +1120,40 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                     S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
                     2, 12, slice(tableData, source, 8));
             cacheFallbackPaletteTexture(registry, gm, level, 2);
+        }
+    }
+
+    /** AnPal_SOZ2: the runtime also exposes these counters to switches and torches. */
+    private static class Soz2Cycle extends PaletteCycle {
+        private final byte[] sandData;
+        private final byte[] lightData;
+
+        Soz2Cycle(byte[] sandData, byte[] lightData) {
+            this.sandData = sandData;
+            this.lightData = lightData;
+        }
+
+        @Override void tick(Level level, PaletteOwnershipRegistry registry) {
+            if (!GameServices.hasRuntime()) return;
+            var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+            if (state == null || state.actIndex() != 1) return;
+            var update = state.lighting().tickPalette();
+            GraphicsManager gm = GameServices.graphics();
+            if (update.lightOffset() >= 0) {
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                        S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        2, 1, slice(lightData, update.lightOffset(), 22));
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                        S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        3, 1, slice(lightData, update.lightOffset() + 22, 30));
+                cacheFallbackPaletteTexture(registry, gm, level, 3);
+            }
+            if (update.sandOffset() >= 0) {
+                S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                        S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        2, 12, slice(sandData, update.sandOffset(), 8));
+                cacheFallbackPaletteTexture(registry, gm, level, 2);
+            }
         }
     }
 
