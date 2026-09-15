@@ -30,7 +30,7 @@ are deferred. First-pass retained gates remain closed.
   implementation-only reader changes without a candidate API-pin change. No public
   signature changes justify pin regeneration; fixing the coarse hook would expand
   this small extraction into unrelated API-policy work. Original code restored.
-- [ ] Review, focused and combined verification, integrate, push, clean up.
+- [x] Review, focused and combined verification, integrate, push, clean up.
 
 ## Verification
 
@@ -188,5 +188,11 @@ unchanged integrated tree:
 No trace frontier was moved or selected; no standalone trace sweep was used to
 claim gameplay coverage. Existing discrepancy, API/version, configuration and
 skill documentation remain unchanged. The develop maintenance entry and engine
-map describe the final owners. Push, diagnostic acknowledgment and task-worktree
-cleanup are the remaining delivery steps.
+map describe the final owners.
+
+Delivery completed: develop was pushed through `535ef0958` after policy and
+release-tree checks. The clean, fully merged task worktree and local branch were
+removed, and worktree metadata pruned. Consumed category and matched-baseline
+diagnostics were deleted. Original dirty disassemblies and untracked user files
+remain untouched. This documentation-only closure is pushed as the final follow-up;
+unchanged engine checks are not repeated.
