@@ -1,6 +1,8 @@
 package com.openggf.game.rules;
 
-@com.openggf.game.ModApi
+import com.openggf.game.ModApi;
+
+@ModApi
 public record ObjectInteractionRules(
         boolean bossHitNegatesGroundSpeed,
         boolean bossHitHalvesBounceVelocity,
@@ -19,7 +21,8 @@ public record ObjectInteractionRules(
         boolean solidPushReleaseSkipsWalkRunWhenRolling,
         boolean solidPushReleaseSkipsWalkRunWhenSpindashing,
         int duckTouchBoxMappingFrame,
-        int bossDuckTouchBoxMappingFrame) {
+        int bossDuckTouchBoxMappingFrame,
+        boolean bossHitEndsActiveGlide) {
 
     public boolean isBossDuckTouchBoxMappingFrame(int mappingFrame) {
         return bossDuckTouchBoxMappingFrame != NO_DUCK_TOUCH_BOX

@@ -1416,10 +1416,10 @@ CONSTRUCTOR com.openggf.game.rules.CollisionRules public  <init>(com.openggf.gam
 CONSTRUCTOR com.openggf.game.rules.DrowningBubbleRules public  <init>(int,int,boolean,int)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules)
 CONSTRUCTOR com.openggf.game.rules.GameRules public  <init>(com.openggf.game.rules.PlayerMovementRules,com.openggf.game.rules.PlayerCapabilityRules,com.openggf.game.rules.CollisionRules,com.openggf.game.rules.PlayerAnimationRules,com.openggf.game.rules.CameraRules,com.openggf.game.rules.RingRules,com.openggf.game.rules.ObjectInteractionRules,com.openggf.game.rules.SidekickCpuRules,com.openggf.game.rules.PowerUpRules,com.openggf.game.rules.DrowningBubbleRules,com.openggf.game.rules.DynamicArtDmaServiceModel)
-CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int)
+CONSTRUCTOR com.openggf.game.rules.ObjectInteractionRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAirMovementRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerAnimationRules public  <init>(boolean,boolean,boolean,boolean,boolean,boolean,com.openggf.game.rules.TailsTailPushDetection)
-CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[])
+CONSTRUCTOR com.openggf.game.rules.PlayerCapabilityRules public  <init>(boolean,short[],boolean,boolean,boolean,boolean,boolean,short[],boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerGroundPoseRules public  <init>(short,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerLandingRules public  <init>(boolean,boolean,boolean,boolean)
 CONSTRUCTOR com.openggf.game.rules.PlayerMovementRules public  <init>(boolean,boolean,boolean,com.openggf.game.rules.PlayerGroundPoseRules,com.openggf.game.rules.PlayerAirMovementRules,boolean,boolean,boolean,com.openggf.game.rules.PlayerLandingRules,com.openggf.game.rules.PlayerLevelBoundaryRules,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean)
@@ -7347,6 +7347,7 @@ METHOD com.openggf.game.rules.GameRules public,final  int hashCode()
 METHOD com.openggf.game.rules.GameRules public,final  java.lang.String toString()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean animalObjectPreservesObjectMoveXSubpixel()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean animalObjectUsesRenderFlagDeleteBounds()
+METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean bossHitEndsActiveGlide()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean bossHitHalvesBounceVelocity()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean bossHitNegatesGroundSpeed()
 METHOD com.openggf.game.rules.ObjectInteractionRules public  boolean isBossDuckTouchBoxMappingFrame(int)
@@ -7387,6 +7388,7 @@ METHOD com.openggf.game.rules.PlayerAnimationRules public,final  int hashCode()
 METHOD com.openggf.game.rules.PlayerAnimationRules public,final  java.lang.String toString()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  boolean elementalShieldsEnabled()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  boolean equals(java.lang.Object)
+METHOD com.openggf.game.rules.PlayerCapabilityRules public  boolean glideAttacksEnabled()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  boolean instaShieldEnabled()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  boolean jumpRepressClearsRollJumpBeforeAbility()
 METHOD com.openggf.game.rules.PlayerCapabilityRules public  boolean lightningShieldEnabled()
@@ -15269,6 +15271,7 @@ RECORD-COMPONENT com.openggf.game.rules.GameRules sidekickCpu com.openggf.game.r
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules animalObjectPreservesObjectMoveXSubpixel boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules animalObjectUsesRenderFlagDeleteBounds boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossDuckTouchBoxMappingFrame int
+RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossHitEndsActiveGlide boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossHitHalvesBounceVelocity boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules bossHitNegatesGroundSpeed boolean
 RECORD-COMPONENT com.openggf.game.rules.ObjectInteractionRules duckTouchBoxMappingFrame int
@@ -15296,6 +15299,7 @@ RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules singleFacingBalance
 RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules tailsTailPushDetection com.openggf.game.rules.TailsTailPushDetection
 RECORD-COMPONENT com.openggf.game.rules.PlayerAnimationRules walkRunDelayLatchesRenderOrientation boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules elementalShieldsEnabled boolean
+RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules glideAttacksEnabled boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules instaShieldEnabled boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules jumpRepressClearsRollJumpBeforeAbility boolean
 RECORD-COMPONENT com.openggf.game.rules.PlayerCapabilityRules lightningShieldEnabled boolean

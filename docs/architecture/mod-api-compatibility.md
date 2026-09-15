@@ -196,3 +196,9 @@ The root release-policy descriptor is the sole current Mod API version authority
 The maintained
 creator workflow and format documentation begins at
 [`docs/modding/index.md`](../modding/index.md).
+
+The KiS2 touch continuation adds explicit `glideAttacksEnabled` player capability
+and `bossHitEndsActiveGlide` interaction components to the unpublished 0.7
+candidate. Rule producers pass both values explicitly. No older constructor
+overload is retained; the current candidate signature pin is regenerated in
+place and the descriptor/runtime version remains 0.7.0.

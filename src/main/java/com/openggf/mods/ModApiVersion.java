@@ -8,7 +8,7 @@ import java.util.Objects;
 public final class ModApiVersion {
     /**
      * Current unpublished compiled-mod API candidate, including the 0.7
-     * widescreen presentation, KiS2 movement/checkpoint/menu handoff contracts,
+     * widescreen presentation, KiS2 movement/touch/checkpoint/menu handoff contracts,
      * and deferred SMPS header construction.
      */
     public static final SemanticVersion CURRENT = SemanticVersion.parse("0.7.0");

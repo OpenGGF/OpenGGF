@@ -3382,8 +3382,13 @@ the owning KiS2 routine in the catalogue):
   ROM's glide/previous-animation writes. `seg7_ehz2` (segment 11) first differs
   at row 1590, X `$220A` versus `$2206`, with 1,889 comparison errors. The chain
   crosses the sixth special-stage entry/return and reaches `seg8_ehz2`
-  (segment 13), first differing at row 957 (X speed -$0448 versus -$0200).
-  It loses source ownership to a title card at BK2 cursor 58,451. The first
+  (segment 13). Independent glide/slide attack admission and the active-glide
+  boss-hit exit now let all 3,222 rows complete: 1,068 remaining errors, first
+  at row 1963's dynamic-art edge. The chain advances into `seg9_cpz1`
+  (segment 14) and compares all 5,574 rows, with 57,715 errors beginning at
+  row 1112 (Y $01CA versus $01B5); the following level-load boundary is not
+  observed (LEVEL mode, BK2 cursor 65,856). This is 7,405 movie frames beyond
+  the previous ownership stop at 58,451. The first
   three special-stage return gaps still publish art 39 movie frames early;
   the next three returns publish 37/38/38 frames early, with additional art
   ledger differences propagated from gameplay. All six exercised SS interior

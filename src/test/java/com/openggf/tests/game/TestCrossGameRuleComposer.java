@@ -91,6 +91,22 @@ class TestCrossGameRuleComposer {
     }
 
     @Test
+    void nativeGlideAttackSurvivesADonorWithoutKnuckles() {
+        GameRules hybrid = CrossGameRuleComposer.compose(
+                com.openggf.game.sonic2.kis2.Kis2Rules.RULES,
+                GameRules.SONIC_2, new Sonic2GameModule().getDonorCapabilities());
+        assertTrue(hybrid.playerCapability().glideAttacksEnabled());
+        assertEquals(false, hybrid.playerCapability().elementalShieldsEnabled());
+    }
+
+    @Test
+    void knucklesDonorSuppliesGlideAttack() {
+        GameRules hybrid = CrossGameRuleComposer.compose(GameRules.SONIC_2,
+                GameRules.SONIC_3K, new Sonic3kGameModule().getDonorCapabilities());
+        assertTrue(hybrid.playerCapability().glideAttacksEnabled());
+    }
+
+    @Test
     void nullDonorCapabilitiesReturnHostRulesInstance() {
         GameRules host = GameRules.SONIC_2;
         GameRules donor = GameRules.SONIC_3K;

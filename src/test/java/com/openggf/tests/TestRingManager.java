@@ -1040,7 +1040,7 @@ public class TestRingManager {
                 capability.tailsFlightEnabled(),
                 capability.jumpRepressClearsRollJumpBeforeAbility(),
                 enabled,
-                capability.superSpindashSpeedTable());
+                capability.superSpindashSpeedTable(), capability.glideAttacksEnabled());
         return new GameRules(
                 base.playerMovement(),
                 playerCapability,

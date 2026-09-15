@@ -175,6 +175,26 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
         return 0xC0 | (getCollisionSizeIndex() & 0x3F); // Category BOSS (0xC0)
     }
 
+    /** Native multi-sprite boss-hit paths reflect velocity without leaving an active ability. */
+    protected com.openggf.level.objects.TouchAttackBouncePolicy getAttackBouncePolicy() {
+        return com.openggf.level.objects.TouchAttackBouncePolicy.STANDARD_ENEMY_KILL;
+    }
+
+    @Override
+    public com.openggf.level.objects.TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(getMultiTouchRegions() != null);
+    }
+
+    @Override
+    public com.openggf.level.objects.TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        var base = com.openggf.level.objects.TouchResponseProfile.fromProvider(this, multiRegionSource);
+        return new com.openggf.level.objects.TouchResponseProfile(
+                base.categoryDecodeMode(), base.continuousCallbacks(), base.requiresRenderFlagForTouch(),
+                base.multiRegionSource(), base.shieldDeflectCapability(), base.shieldReactionFlags(),
+                base.enablesPostSpecialTouchAirborneSideVelocityPreservation(), getAttackBouncePolicy(),
+                base.actorContextPolicy(), base.stopAfterFirstOverlapPolicy());
+    }
+
     public int getCollisionProperty() {
         return state.hitCount; // Return hit count for ROM accuracy
     }

@@ -881,7 +881,7 @@ final class ObjectTouchResponseController {
                     // byte (incl. 0xFF/-1 always-bounce) negates both velocities.
                     if ((hpBeforeHit & 0xFF) != 0) {
                         // S3K boss-hit path also negates ground_vel; S1 also halves.
-                        applyBossBounce(sidekick);
+                        applyBossBounce(sidekick, profile);
                     } else if (!wasAlreadyDestroyed) {
                         // Touch_EnemyNormal bounce: fires when this player's pass kills
                         // the instance. Objects that handle their own bounce (like Crawl
@@ -905,7 +905,7 @@ final class ObjectTouchResponseController {
                         objectCallbacks.run(instance,
                                 () -> attackable.onPlayerAttack(sidekick, result));
                     }
-                    applyBossBounce(sidekick);
+                    applyBossBounce(sidekick, profile);
                 } else {
                     applySidekickHurt(sidekick, instance, result);
                 }
@@ -1114,7 +1114,7 @@ final class ObjectTouchResponseController {
                     // 0xFF always-bounce value, treated as nonzero by all 3 ROMs.
                     if ((hpBeforeHit & 0xFF) != 0) {
                         // S3K boss-hit path also negates ground_vel; S1 also halves.
-                        applyBossBounce(player);
+                        applyBossBounce(player, profile);
                     } else if (!wasAlreadyDestroyed) {
                         // Touch_KillEnemy: position-based bounce only when onPlayerAttack
                         // destroyed the instance. Objects like Crawl that handle their own
@@ -1138,7 +1138,7 @@ final class ObjectTouchResponseController {
                         objectCallbacks.run(instance,
                                 () -> attackable.onPlayerAttack(player, result));
                     }
-                    applyBossBounce(player);
+                    applyBossBounce(player, profile);
                 } else {
                     applyHurt(player, instance, result);
                 }
@@ -1158,8 +1158,16 @@ final class ObjectTouchResponseController {
         }
 
         PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull(player);
-        if (capabilityRules != null && capabilityRules.elementalShieldsEnabled()) {
-            return isS3kAbilityAttack(player, target);
+        if (capabilityRules != null) {
+            // KiS2 Touch_Enemy and S3K Touch_EnemyNormal accept glide/slide.
+            // Elemental-shield availability does not own this character attack.
+            if (player instanceof Knuckles && capabilityRules.glideAttacksEnabled()) {
+                int flag = player.getDoubleJumpFlag();
+                return flag == 1 || flag == 3;
+            }
+            if (capabilityRules.elementalShieldsEnabled()) {
+                return isS3kAbilityAttack(player, target);
+            }
         }
 
         return false;
@@ -1180,10 +1188,6 @@ final class ObjectTouchResponseController {
     }
 
     private boolean isS3kAbilityAttack(PlayableEntity player, ObjectInstance target) {
-        if (player instanceof Knuckles) {
-            int flag = player.getDoubleJumpFlag();
-            return flag == 1 || flag == 3;
-        }
         if (player instanceof Tails tails) {
             return player.getDoubleJumpFlag() != 0
                     && !tails.isInWater()
@@ -1230,7 +1234,7 @@ final class ObjectTouchResponseController {
      * S3K additionally negates ground velocity ({@code bossHitNegatesGroundSpeed}).
      * Does not set air flag - ROM only modifies velocities here.
      */
-    private void applyBossBounce(PlayableEntity player) {
+    private void applyBossBounce(PlayableEntity player, TouchResponseProfile profile) {
         int negX = -player.getXSpeed();
         int negY = -player.getYSpeed();
         ObjectInteractionRules rules = objectInteractionRulesOrNull(player);
@@ -1243,6 +1247,22 @@ final class ObjectTouchResponseController {
         player.setYSpeed((short) negY);
         if (rules != null && rules.bossHitNegatesGroundSpeed()) {
             player.setGSpeed((short) -player.getGSpeed());
+        }
+        if (rules != null && rules.bossHitEndsActiveGlide()
+                && (profile == null || profile.attackBouncePolicy() != TouchAttackBouncePolicy.BOSS_REFLECT)
+                && player instanceof AbstractPlayableSprite sprite
+                && sprite.getDoubleJumpFlag() == 1) {
+            // KiS2 gameRevision=3 Touch_Enemy_Part2: only the ordinary
+            // collision_property rebound exits active glide; the multi-sprite
+            // boss_hitcount2 branch returns before these writes. Sliding stays active.
+            sprite.setDoubleJumpFlag(2);
+            sprite.setAnimationId(0x21);
+            sprite.setForcedAnimationId(0x21);
+            sprite.setObjectMappingFrameControl(false);
+            // ROM clears x_flip, then sets it when the reflected x_vel is >= 0.
+            sprite.setDirection((short) negX < 0
+                    ? com.openggf.physics.Direction.RIGHT : com.openggf.physics.Direction.LEFT);
+            sprite.restoreDefaultRadii();
         }
     }
 
