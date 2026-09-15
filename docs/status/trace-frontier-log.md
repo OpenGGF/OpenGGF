@@ -110205,3 +110205,13 @@ mapping $07 versus $56. Investigate that earlier load/title-card publication
 before treating the EHZ2 cascade as an independent queue bug. EHZ1 segments 4/6
 remain zero-error, and prior ring/return-art gaps remain open. Full evidence and
 integration follow-up are in the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+
+Act-load classification implementation `c53b27aca` integrated as `94a41febd`,
+retaining upstream FBZ fresh-load/publication work without conflicts. The same
+focused command on the integrated tree completes 56 tests: 53 passes, the same
+three red chains, zero errors/skips; all normalized candidate/integrated chain
+reports match. All 35 selected authority guards pass. Further read-only evidence
+identifies the EHZ2 row-50 work as the same standard-water/animal PLCs that the
+ROM submits at row 52 in each EHZ1/EHZ2 entry. Investigate act-entry/title-card
+pass ordering; this is not evidence of missing chip PLC assets.

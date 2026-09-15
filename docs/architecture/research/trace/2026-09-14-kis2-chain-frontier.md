@@ -513,3 +513,35 @@ non-load paths, tracker consumption, coordinator policy, matched affected chains
 and authority guards directly cover its consumers. This is focused validation,
 not a new full-suite pass. The prior integrated full run at `5fed74d42` remains
 historical evidence; the task base differs from it only in documentation.
+
+
+Read-only follow-up while integration validation queued: native queue snapshots
+for all four EHZ1 entries and the first EHZ2 entry first become busy at row 52,
+with 68 patterns remaining and the same four queued fingerprints. The EHZ2
+engine's first mismatch at row 50 has exactly those fingerprints. This narrows
+the next lead to an early submission/pass boundary rather than absent chip PLC
+data. `TitleCardManager.advanceZoneNamePieceTail` owns the delayed zone-name
+exit and `queueExitPlcs`; inspect its first production pass across an act load
+and the earlier gap publication before altering queue service or adding delays.
+The owning native routine is KiS2 `Obj34_WaitAndGoAway` /
+`Obj34_LoadStandardWaterAndAnimalArt` (s2.asm:28927-28960).
+
+The chip ROM confirms that fingerprint match: PLC 2 begins with the 68-pattern
+explosion at $27B592 -> VRAM $B480, followed by $27393C (14 patterns) and
+$27AEE2 (10); PLC 50 contributes $27F0A2 (20) and $27EF60 (16). The latter four
+produce the four observed queued fingerprints through QueueDiagnosticSnapshot's
+OQDF encoding. These are the existing standard-water and EHZ animal submissions
+from the title-card tail, not a newly required KiS2 decoder or table.
+
+
+Implementation `c53b27aca` integrated without conflicts as
+`94a41febdde969bb862e2b3c1e142d60fcdb7429`, retaining upstream FBZ fresh-load and
+sprite-publication work (`562e35e37`). The shared LevelManager edits occupy
+different paths; all upstream code and both frontier-log entries were retained.
+The exact integrated tree reran the same focused load/coordinator/chain command:
+56 tests, 53 passes, the same three red chains, zero errors/skips, 1:14 Maven
+time. Every normalized chain report is identical to the candidate. The same
+35 trace authority guards pass with zero failures/errors/skips (22.448 seconds).
+No new or worsened result was observed. This remains focused validation under
+the documented exception; no new full-suite result is claimed. Final follow-up
+changes only this evidence record and the frontier log.
