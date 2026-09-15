@@ -75,7 +75,7 @@ speculative framework. Update the results below as the work proceeds.
   by HeadlessTestFixture/TestEnvironment/ROM conditions. Retain general manager,
   audio snapshot, physics/boss/zone/stage, network and transaction boundaries unless
   a specific redundant obligation is demonstrated. No universal new harness.
-- [ ] **14. Delivery.** Review combined changes; inspect category plan and preflight;
+- [x] **14. Delivery.** Review combined changes; inspect category plan and preflight;
   run selected ordinary/guard tests plus domain checks. Attribute new failures with
   matched baseline tests. Integrate into develop without switching main's branch,
   verify integration as required, push only develop, inspect/remove accounted-for
@@ -279,4 +279,9 @@ guards. No MAVEN_OPTS was injected and no tracked files changed during the run.
 - Integrated Java/tools/POM match the reviewed task tree exactly. Domain trace
   comparisons and native texture checks remain applicable to unchanged code.
 
-Push and task-worktree cleanup are the remaining delivery steps.
+Delivery completed: develop was pushed through `e895a062c` after policy and
+release-tree checks passed. The clean task worktree was removed, its fully merged
+local branch deleted, and stale worktree metadata pruned. Consumed category and
+matched-baseline diagnostics were deleted. Original dirty disassemblies and
+untracked user files remain untouched. This documentation-only closure is pushed
+as a follow-up; unchanged engine tests are not repeated.
