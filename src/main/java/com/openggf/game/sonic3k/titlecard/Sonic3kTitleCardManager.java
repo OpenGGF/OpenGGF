@@ -458,6 +458,9 @@ public class Sonic3kTitleCardManager
 
     @Override
     public void completeOmittedPresentationFreshLevelRuntimeArtHandoff() {
+        // The omitted presentation still has a native title owner. Its teardown
+        // callback is the same loc_2D86E handoff as the visible owner's EXIT tail.
+        publishTitleOwnerRetirement();
         publishFreshLevelRuntimeArtHandoffIfNeeded();
     }
 
@@ -1354,6 +1357,9 @@ public class Sonic3kTitleCardManager
             throw new IllegalStateException(
                     "title owner is missing its runtime-art admission lease");
         }
+        // Native loc_2D86E allocates Hyudoro before LoadEnemyArt. The consumed
+        // gate above keeps this publication once per title owner, including rewind.
+        publishTitleOwnerRetirement();
         RuntimeArtAdmissionLease lease = provider.rebindRuntimeArtAdmission(
                 runtimeArtAdmissionLeaseId,
                 RuntimeArtAdmissionOwnerKind.TITLE_OWNER);
@@ -1371,6 +1377,14 @@ public class Sonic3kTitleCardManager
             // their own completion-owned handoff timing.
             S3kTransitionWriteSupport.preparePreloadedActTitleCardRuntimeArtAdmission(
                     GameServices.module().getLevelEventProvider());
+        }
+    }
+
+    private void publishTitleOwnerRetirement() {
+        // $44(a0) suppresses this allocation for bonus/special title owners.
+        if (!bonusMode && GameServices.module().getLevelEventProvider()
+                instanceof com.openggf.game.sonic3k.Sonic3kLevelEventManager events) {
+            events.onTitleCardOwnerRetired();
         }
     }
 
