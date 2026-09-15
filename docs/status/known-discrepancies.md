@@ -3373,8 +3373,11 @@ the owning KiS2 routine in the catalogue):
   after its final locked object pass, and synchronous reloads publish their
   production load receipt. Native wall anchoring and ledge timing let
   `seg3_ehz1` and `seg4_ehz1` complete all compared rows with zero errors. The
-  chain now stops because the EHZ1 level-advance boundary after `seg4_ehz1`
-  is not observed. All three exercised return gaps still publish their first
+  results-driven act advance now publishes its semantic load cause, so the chain
+  reaches EHZ2 (`seg5_ehz2`). Its first mismatch is row 50 PLC queue busy
+  (ROM false, engine true); the next starpost-special boundary is not reached.
+  The act-change gap also has excess/mistimed art edges. All three exercised
+  special-stage return gaps still publish their first
   dynamic-art edge 39 movie frames early. The first
   returned EHZ1 segment completes with one ring-count difference. SS interiors do not
   compare gameplay, so this does not establish special-stage physics parity.
