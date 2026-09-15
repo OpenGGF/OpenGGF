@@ -1414,3 +1414,10 @@ Selected structural validation completed at 20:06:52 BST in58.388 seconds:
 `-Pguards -Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestObjectUpdateClockTerminologyGuard`,
 123 tests, zero failures/errors/skips. Post-integration verification uses the union
 of the two ordinary selections above, so the final tree is checked once together.
+
+Delivery: source `ce016a0fc`, clean merge into `develop` at `58d4c4965` on the
+unchanged base `2843b6574`. Combined post-integration selection (union above)
+completed at 20:10:19 BST in55.728 seconds: **309 tests, zero failures, errors or
+skips**. All eight prior provider-routing errors are resolved; selected structural
+checks passed as recorded above. Documentation link/whitespace checks and CI
+push policy passed. No full-suite, complete-act or matched-pixel claim is made.
