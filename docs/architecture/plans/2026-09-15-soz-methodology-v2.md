@@ -1,6 +1,6 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15. Status: placed inventory, native pilot and quicksand slice integrated;
+Date: 2026-09-15. Status: placed inventory, native pilot, quicksand and spring-vine slices integrated;
 full routes and native certification remain open.
 
 ## Objective and authority
@@ -515,3 +515,26 @@ The corrected candidate command
 passed all four tests, zero failures/errors/skips, in 19.266s. The two unrelated
 build-guidance/probe failures remain baseline failures; they are not a green
 structural-guard claim. Broad diagnostics were inspected and scheduled for deletion.
+
+### Spring-vine integration result
+
+The latest presentation changes from `2f3797ceb` merged cleanly; release notes,
+coverage rows and pitfall entries retain both tasks' content. Main develop
+integrated the vine slice as `b247c5fad143e24ae84949b27e5b9159e2f13c45` without
+switching branches or changing unrelated local files.
+
+The same combined change-based command and original base above ran after
+integration, selecting 2,595 ordinary classes plus 84 guard classes. Ordinary:
+20,521 tests, zero failures/errors, the same 19 skip identities, 772.52s.
+Guards: 668 tests, two failures, zero errors/skips, 176.05s. Both remaining
+failures match the baseline identities and messages exactly: obsolete direct-Maven
+prose and the two pre-existing assertion-free probes listed above. The quicksand
+rewind annotation guard now passes. No new or worsened failure remains in this
+validation; the structural suite as a whole is not green.
+
+All 17 vine placements now bind to the implementation. The first Act 1 vine has
+cold-route launch and registered-state replay coverage across four representative
+configurations. Act 2 reachability, full-act progression, remaining objects/events,
+bosses and complete native trajectory/pixel certification remain open. The short
+engine capture is rendering evidence only. No SOZ BK2 full-level completion claim
+is made by this slice.
