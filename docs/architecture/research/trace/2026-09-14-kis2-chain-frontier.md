@@ -686,4 +686,43 @@ simplification delivery, was 20,466 ordinary tests with zero failures/errors,
 regression. Skips are opt-in benchmarks/soaks/routes/captures, unavailable EGL/GL
 probes, local audio references and the existing CPZ spin-tube prerequisite;
 no stock-ROM test is skipped for a missing dump. The tree stayed frozen through
-both lanes. Inspection is complete and diagnostic acknowledgment was requested.
+both lanes. Inspection and diagnostic acknowledgment are complete; the run directory was deleted.
+
+
+### Integrated verification (2026-09-15)
+
+`316788395` merges the KiS2 fixes into develop. Incoming Sandopolis quicksand,
+its corrected rewind inventory (`7fae85a69`), and resource-aware Maven admission
+through `f5e847931` are preserved. The changelog and measurement catalogue merged
+without conflicts. The isolated task tree was fast-forwarded to that exact
+integration commit and frozen for verification.
+
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base 59d5b8881 --run`
+completed run `20260915T105538Z-081bddaa`: all 2,588 ordinary reports,
+20,488 tests, zero failures/errors and 18 skips in 750.76 seconds; 84 guard
+reports, 668 tests, three failures, no errors/skips in 174.06 seconds. All three
+class/method identities and full assertion messages exactly match the incoming
+`6cd8ec188` full baseline: the two guards above plus
+`TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage`
+for two quicksand `@RewindTransient` annotations. That baseline's ordinary
+inventory-count failure is corrected by the upstream inventory follow-up and
+passes here. All 18 skip identities and reasons match the baseline, with no
+missing-ROM skips. No new or worsened failure is observed. This is an
+ordinary-suite pass with inherited red guards, not a green full delivery gate.
+
+The integrated replay command was:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  -Dsurefire.forkCount=1 -Dtest=TestKis2CompleteEmeraldRunChain \
+  "-Dkis2.rom.path=$KIS2_ROM" "-Dsonic2.rom.path=$S2_ROM" test
+```
+
+It completed two tests, one expected chain failure, zero errors/skips in
+27.176 seconds. All 15 normalized KiS2 report hashes exactly match the clean
+candidate: segment 7 is zero-error for 3,561 rows; the chain reaches segment 11
+and misses its sixth special-stage entry at cursor 48,882. The gain remains
+16,611 movie frames beyond the previous cursor 32,271 boundary. Next investigate
+segment 9 row 200's wall-climb disagreement before the later segment 11 collision
+cascade. Special-stage interiors remain art-only comparisons. The inspected
+post-integration diagnostic directory was acknowledged and deleted.
