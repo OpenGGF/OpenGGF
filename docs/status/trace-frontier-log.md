@@ -110302,3 +110302,16 @@ skips in 36.804 seconds. Complete FBZ replay passes in 16.42 seconds: no first
 error frame/field. This does not close the separate Hyper prerequisite frontier.
 The [MHZ camera audit](../architecture/audits/2026-09-15-s3k-presentation-camera.md)
 records the baseline failure and moving-camera visual evidence.
+
+
+Moving-camera delivery verification: implementation `ca44ebed2` and oracle
+correction `d254f5a27` integrate as `2f3797ceb`; later SOZ integration
+`b247c5fad` preserves the presentation code. Queued
+`-Dmse=off -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kMovingCameraPresentation,TestFbzBossPlanePixels
+-Ds3k.rom.path=<absolute verified S3K ROM> test -B` passes all seven tests,
+zero failures/errors/skips (1:04 including compilation). Complete FBZ strict
+replay passes in 16.15 seconds; no first error frame/field. The combined develop
+ordinary suite passes 20,521 tests with 19 inspected skips; two exact inherited
+guard failures remain. Full evidence and the camera-phase oracle correction
+are in the linked MHZ audit.
