@@ -172,7 +172,9 @@ Retain the matching horizontal/vertical scroll buffers, camera origin and plane
 routing; use them for both visible terrain and its high-priority sprite mask.
 Do not rebase old sprites onto the live camera to hide the mismatch. Stationary
 FBZ boundary captures missed this regression: add a moving-camera check in a
-second zone. See the [MHZ follow-up](audits/2026-09-15-s3k-presentation-camera.md).
+second zone. Pixel oracles must sample the CPU scroll before the VBlank they
+describe; reading the next loop after rendering compares different generations.
+See the [MHZ follow-up](audits/2026-09-15-s3k-presentation-camera.md).
 
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and

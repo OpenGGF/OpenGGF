@@ -81,3 +81,61 @@ preserved in their original sections. Incoming scroll-upload helper extraction
 keeps the same normalization/upload semantics and adds native upload coverage.
 Broad validation uses this reconciled tree and destination SHA; the original
 task scope remains pinned to `316788395`.
+
+## Combined validation and oracle correction
+
+Frozen candidate `e5545618a`, destination `b8d0ae91b`, ran
+`JAVA_HOME=<JDK21> LUA_BIN=lua5.4 python3 tools/testing/run_categories.py
+--base b8d0ae91b --run --max-minutes 40` after preflight. Run
+`20260915T113615Z-3a54079d` completed all **2,593 ordinary reports / 20,502
+tests**: four failures, zero errors, 19 skips, 762.19 seconds. Separate guards
+completed **668 tests**, three failures, zero errors/skips, 182.24 seconds.
+
+The four ordinary failures were `TestFbzBossPlanePixels` at 320/352/400/528
+pixels. Its oracle read current CPU plane offsets after stepping, while the
+renderer correctly displayed the preceding published generation. At the initial
+assertion it compared 7,787–12,953 opaque ROM pixels against the wrong scroll
+phase. The oracle now samples the independent ROM coordinate formula before
+VBlank, checks both sides of the injected-offset publication, and checks a
+partial zone-state restore after its regenerated CPU table is published. No
+pixel, priority-mask or minimum-coverage assertion was weakened; production
+code did not change to accommodate the old oracle.
+
+Queued `EGL_PLATFORM=surfaceless ... maven_queue.py -Dmse=off
+-Dtest=TestFbzBossPlanePixels,TestS3kMovingCameraPresentation,TestScrollBufferUploadNative,TestForegroundWindowRendering,TestShaderPixelCentreSampling
+-Dopenggf.scrollNative=true -Ds3k.rom.path=<absolute verified S3K ROM> test -B`
+completed **nine tests: seven passes, no failures/errors, two skips**, 21.971
+seconds. All five viewport pixel/mask cases, MHZ movement and the native texture
+upload check passed. The two EGL checks still report unavailable surfaceless
+EGL / OpenGL 4.1; the GLFW gameplay/pixel tests executed. Do not describe this
+as every native graphics check passing.
+
+The three guard failures exactly match a queued, pinned `b8d0ae91b` baseline
+run of `-Dmse=off -Pguards
+-Dtest=TestRewindArchitectureGuard,TestBuildToolingGuard,TestNoAssertionFreeDiagnostics test -B`:
+123 tests, three failures, no errors/skips, 1:22. Exact assertion-message hashes:
+
+- `TestRewindArchitectureGuard#objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage`:
+  `96ad1822f4061ffc1a43327b1eade2fec2ebb7a98e25ca8337d7e0c8e53ad73b`
+  (two existing SOZ quicksand transient annotations).
+- `TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`:
+  `2f565ac8f586df1370bc4f480e93b052ec2597eea74f212331c12be281d8bf10`
+  (obsolete direct-Maven guidance expectations).
+- `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`:
+  `1a70b0fb0ca5bb0da30909d99b02b32ffb851e942c07857d57399f660dca5021`
+  (the existing FBZ route and solidity probes).
+
+All 19 ordinary skip identities/reasons were inspected: opt-in route, soak,
+benchmark and native checks; the two EGL limitations; the inherited CPZ
+spin-tube assumption; and local audio-reference/capture prerequisites. No
+stock-ROM prerequisite was missing. Consumed diagnostics are acknowledged and
+deleted; only counts, identities and message hashes are retained.
+
+The reviewed comparison is `mhz-camera-comparison-reviewed.mp4`: source frames
+40–145 at half speed, 1280×480, 332 frames at 60 fps (5.533 seconds), with one
+second at each endpoint. This selects visible running/camera movement and omits
+the initial concealed entry and subsequent stationary room event. Original
+300-frame captures and equal CSVs remain the source evidence.
+
+Integration and post-integration validation follow; the first broad run is
+recorded as red, with its four oracle failures corrected narrowly.
