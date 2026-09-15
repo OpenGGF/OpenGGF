@@ -895,3 +895,26 @@ Validation of source `f56bd4f5c`, reconciled with develop in `a24aa6609`:
 
 Consumed category diagnostics were inspected and acknowledged. Integration
 verification remains pending; existing trace discrepancies are not waived.
+
+Post-integration full verification at `c8138d304` completed in run
+`20260915T150532Z-b329b910`, using the same queued change-based command with
+actual destination base `342f01cb4dadb5e1ed771270d90f759923825807`:
+**20,543 ordinary tests, zero failures/errors, 19 skips** (744.16 s), then
+**668 guard tests, the same two inherited failures, zero errors/skips**
+(182.25 s). All skipped-case records and both guard failure identities and
+messages exactly match the matched development/base runs. The upstream profile
+correction removes the sole ordinary failure. Documentation checks resolve
+156 local link targets and `git diff --check` is clean. This is a passing full
+ordinary suite with known red guards, not an all-green build.
+
+Final canonical replay at integrated `c8138d304` used
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1 -Dtest=TestKis2CompleteEmeraldRunChain` with absolute
+KiS2/S2 ROM properties and `test`: two tests, one expected chain assertion,
+zero errors/skips, 28.542 s including rebuild. All **17** canonical report
+payloads match the candidate by SHA-256 of sorted-key JSON. Segment 9 stays
+clean, segment 11 retains 1,889 errors starting row 1590, and segment 13
+retains the row-957 X-speed mismatch and ownership stop at cursor **58,451**.
+The measured gain is preserved after integration. Consumed category diagnostics
+were acknowledged and removed; one-off native probes were removed after their
+evidence was recorded here.
