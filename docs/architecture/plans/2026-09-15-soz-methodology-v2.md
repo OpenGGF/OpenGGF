@@ -1738,3 +1738,21 @@ The explicit mapping corruption guard, intro and sidekick state checks pass
 (6tests,0skips,53.335s). Ordinary-input cold capture reaches death at3988; it
 is retained as an unsuccessful route attempt. The missing terrain sand-slide
 owner found at trace1419 is the next concrete traversal fix.
+
+### Reload and team follow-up
+
+`37260aa17` verifies actual boss-to-LRZ load consumption, destination title/fade
+retirement, released controls and outgoing rewind timeline reset. Checkpoint
+coverage now expands its six native cases to90 actual configurations: both acts,
+Sonic/Tails/Knuckles,320/400/512/640/800 widths, and off/S1/S2 donors. Each walks
+into a placed starpost, recreates/replays activation and performs production
+death/reload, asserting actual width, donor and player capability. Queued
+`TestSozCheckpointReloadProduction` with all three absolute ROM properties:
+90passed,0skips (21.253s). This covers one post per act, not all placements.
+
+The capture session now uses the native omitted-title boundary after later
+loads as well as boot. Its repeated SOZ2 load creates a new ghost controller;
+S1/S2 startup consumers and sprite visibility also pass (4tests,0skips,52.697s).
+`28aabd127` preserves the actual third/fourth ghost contact identities through
+recreation, retaining native P1/P2 priority. Six contact cases and60existing
+regressions passed,0skips.

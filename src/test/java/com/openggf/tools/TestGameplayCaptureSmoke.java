@@ -99,6 +99,13 @@ class TestGameplayCaptureSmoke {
                     .anyMatch(com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance.class::isInstance),
                     "the title-created controller must execute its real checkpoint-gated ghost behavior");
             assertTrue(session.render().width() > 0);
+            var previousObjects = level.getObjectManager();
+            level.loadZoneAndAct(8, 1);
+            org.junit.jupiter.api.Assertions.assertNotSame(previousObjects, level.getObjectManager());
+            for (int i = 0; i < 200; i++) session.step(null);
+            assertEquals(1, level.getObjectManager().getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance.class::isInstance).count(),
+                    "a later load must retire its title owner and create its own controller too");
         }
     }
 

@@ -105,3 +105,9 @@ and production death/reload for all three native leaders at one post per act
 (six cases, zero skips). The final boss GameLoop test consumes the native exit,
 loads LRZ1, finishes the destination title/fade, releases controls and verifies
 that the outgoing rewind timeline was reset (one case, zero skips).
+
+Checkpoint breadth now covers both acts × three native leaders × five widths
+(320/400/512/640/800) × donors off/S1/S2:90physical activation, full-state
+recreation/replay and death/reload cases passed, no skips (21.253s). Actual
+width/donor/capability is asserted before interaction and after reload. Other
+checkpoint placements and mixed/max-team reset breadth remain open.

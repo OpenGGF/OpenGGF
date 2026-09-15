@@ -150,3 +150,9 @@ followers, with real switch holds, ghost behavior and capsule opening.57cases
 passed across corrected invocations; this is selected breadth, not a complete
 Cartesian product. Final boss breadth asserts seven actual viewport widths and
 follower counts;68latest boss tests passed with no skips.
+
+Checkpoint breadth now covers both acts × three native leaders × five widths
+(320/400/512/640/800) × donors off/S1/S2:90physical activation, full-state
+recreation/replay and death/reload cases passed, no skips (21.253s). Actual
+width/donor/capability is asserted before interaction and after reload. Other
+checkpoint placements and mixed/max-team reset breadth remain open.

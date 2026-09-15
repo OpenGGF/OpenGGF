@@ -11,23 +11,51 @@ import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import com.openggf.configuration.WidescreenAspect;
+import com.openggf.game.CrossGameFeatureProvider;
+import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Physical SOZ starpost activation followed by the production death/reload loop. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozCheckpointReloadProduction {
     @AfterEach void reset(){SonicConfigurationService.getInstance().clearSessionOverrides();SessionManager.clear();}
-    @ParameterizedTest @CsvSource({"0,1,0x1A30,0x428,sonic", "0,1,0x1A30,0x428,tails", "0,1,0x1A30,0x428,knuckles",
-            "1,2,0x860,0x5C8,sonic", "1,2,0x860,0x5C8,tails", "1,2,0x860,0x5C8,knuckles"})
-    void touchCheckpointThenDeathReloadsItsNativePosition(int act,int index,int x,int y,String character){
+    static Stream<Arguments> scenarios() {
+        var rows = new java.util.ArrayList<Arguments>();
+        for (int act : new int[]{0, 1}) for (String character : new String[]{"sonic", "tails", "knuckles"})
+            for (int width : new int[]{320, 400, 512, 640, 800}) for (String donor : new String[]{"off", "s1", "s2"})
+                rows.add(Arguments.of(act, act == 0 ? 1 : 2, act == 0 ? 0x1A30 : 0x860,
+                        act == 0 ? 0x428 : 0x5C8, character, width, donor));
+        return rows.stream();
+    }
+    @ParameterizedTest @MethodSource("scenarios")
+    void touchCheckpointThenDeathReloadsItsNativePosition(int act,int index,int x,int y,String character,
+            int width,String donor){
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,character);
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"");
         config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED,false);
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,WidescreenAspect.NATIVE_4_3.name());
+        config.resolveDisplayAspect();config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,width);
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,!donor.equals("off"));
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,donor);
+        if (!donor.equals("off")) {
+            var rom = donor.equals("s1") ? RomTestUtils.ensureSonic1RomAvailable() : RomTestUtils.ensureSonic2RomAvailable();
+            assertNotNull(rom,"required donor ROM");
+            config.setSessionOverride(donor.equals("s1") ? SonicConfiguration.SONIC_1_ROM : SonicConfiguration.SONIC_2_ROM,rom.getAbsolutePath());
+        }
+        CrossGameFeatureProvider.getInstance().resetState();
         SessionManager.clear();TestEnvironment.activeGameplayMode();
-        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
-                .startPosition((short)(x-24),(short)(y+4)).startPositionIsCentre().withFreshLevelStartLifecycle().build();
+        var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
+                .startPosition((short)(x-24),(short)(y+4)).startPositionIsCentre().withFreshLevelStartLifecycle();
+        if(!donor.equals("off"))builder.withCrossGameDonation(donor);
+        var f=builder.build();
+        assertEquals(width,f.camera().getWidth()&65535);
+        assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
+        if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
+        assertEquals(!donor.equals("s1"),f.sprite().getGameRules().playerCapability().spindashEnabled());
         var manager=GameServices.level().getObjectManager();var p=f.sprite();
         assertFalse(GameServices.level().getCheckpointState().isActive());
         for(int i=0;i<60&&!GameServices.level().getCheckpointState().isActive();i++) {
@@ -53,7 +81,10 @@ class TestSozCheckpointReloadProduction {
                     assertEquals(index,GameServices.level().getCheckpointState().getLastCheckpointIndex());
                     assertEquals(x,GameServices.camera().getFocusedSprite().getCentreX()&65535);
                     assertEquals(y,GameServices.camera().getFocusedSprite().getCentreY()&65535);
-                    assertFalse(GameServices.camera().getFocusedSprite().getDead());break;
+                    assertFalse(GameServices.camera().getFocusedSprite().getDead());
+                    assertEquals(width,GameServices.camera().getWidth()&65535);
+                    assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
+                    break;
                 }
             }
             assertTrue(reloaded,"native death countdown must reach GameLoop reload");
