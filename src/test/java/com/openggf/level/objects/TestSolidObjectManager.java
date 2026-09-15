@@ -2645,6 +2645,31 @@ public class TestSolidObjectManager {
     }
 
     @Test
+    void sozStaticSolidsResolveSidesAndUndersidesForBothShapes() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        for(int subtype:new int[]{0,1}) {
+            var object=new com.openggf.game.sonic3k.objects.SozSolidSpritesObjectInstance(
+                    new ObjectSpawn(100,100,0x49,subtype,0,false,0));
+            var manager=buildManager(object);
+            AbstractObjectInstance.updateCameraBounds(0,0,320,224,0);
+            // Native SolidObject_cont needs the prior display pass's bit 7.
+            object.snapshotPreUpdatePosition();
+            var player=new TestPlayableSprite((short)0,(short)0);
+            player.useGameRules(GameRules.SONIC_3K); player.setWidth(20); player.setHeight(38);
+            player.setCentreX((short)(100-(subtype==0 ? 27 : 43)+1)); player.setCentreY((short)100);
+            player.setAir(false); player.setXSpeed((short)0x100);
+            manager.processImmediateInlineSolidCheckpoint(object,player,List.of());
+            assertTrue(player.getPushing(),"subtype="+subtype+" x="+player.getCentreX()+" y="+player.getCentreY()+" vx="+player.getXSpeed()); assertEquals(0,player.getXSpeed());
+            assertEquals(100-(subtype==0 ? 27 : 43),player.getCentreX());
+            player.setCentreX((short)100);
+            player.setCentreY((short)(100+(subtype==0 ? 24 : 8)+player.getYRadius()-6));
+            player.setAir(true); player.setYSpeed((short)-0x100);
+            manager.processImmediateInlineSolidCheckpoint(object,player,List.of());
+            assertEquals(0,player.getYSpeed()); assertTrue(player.getAir()); assertFalse(player.isOnObject());
+        }
+    }
+
+    @Test
     void sozPushToFallDoesNotCarryThePreviousPushButTrackMotionCarries() throws Exception {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
         var rock = new com.openggf.game.sonic3k.objects.SozPushableRockObjectInstance(

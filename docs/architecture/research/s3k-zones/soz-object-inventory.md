@@ -120,7 +120,7 @@ inventory obligation before implementing each family.
 | `$39` | `$15` | `Obj_SOZSpawningSandBlocks` | 2 | 0 | placeholder |
 | `$3A` | `$09` | `Obj_SOZPathSwap` | 2 | 2 | placeholder |
 | `$3A` | `$11` | `Obj_SOZPathSwap` | 8 | 6 | placeholder |
-| `$3B` | `$21` | `Obj_SOZLoopFallthrough` | 0 | 3 | placeholder |
+| `$3B` | `$21` | `Obj_SOZLoopFallthrough` | 0 | 3 | `SozLoopFallthroughObjectInstance` |
 | `$3E` | `$00` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
 | `$3E` | `$01` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
 | `$3E` | `$02` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
@@ -201,8 +201,8 @@ inventory obligation before implementing each family.
 | `$48` | `$42` | `Obj_SOZRapelWire` | 1 | 0 | placeholder |
 | `$48` | `$46` | `Obj_SOZRapelWire` | 0 | 1 | placeholder |
 | `$48` | `$81` | `Obj_SOZRapelWire` | 2 | 0 | placeholder |
-| `$49` | `$00` | `Obj_SOZSolidSprites` | 8 | 6 | placeholder |
-| `$49` | `$01` | `Obj_SOZSolidSprites` | 8 | 8 | placeholder |
+| `$49` | `$00` | `Obj_SOZSolidSprites` | 8 | 6 | `SozSolidSpritesObjectInstance` |
+| `$49` | `$01` | `Obj_SOZSolidSprites` | 8 | 8 | `SozSolidSpritesObjectInstance` |
 | `$6B` | `$00` | `Obj_InvisibleHurtBlockVertical` | 7 | 5 | shared concrete |
 | `$6B` | `$01` | `Obj_InvisibleHurtBlockVertical` | 1 | 3 | shared concrete |
 | `$6B` | `$02` | `Obj_InvisibleHurtBlockVertical` | 1 | 0 | shared concrete |
@@ -328,3 +328,18 @@ above 14 starts the track. The `$87` SOZDoor coupling remains unimplemented with
 that door family. Remaining placeholder placements: **178 Act 1 / 180 Act 2**.
 See the [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) for
 source evidence, rejected carry behavior and production validation.
+
+## Loop exits and solid terrain sprites
+
+SKL `$3B` captures players inside a 32×32 unsigned-word region at signed Y speed
+at least `$800`, excluding hurt/dead, existing support and object control. Capture
+writes the literal rolling body and `$81` object control; movement begins next
+pass. Old signed velocities integrate into 16.16 positions before signed-word
+`y - ((subtype & $7F) << 4) >= originY` releases ownership. Three Act 2 placements
+use subtype `$21` (528 pixels). No art, children or sound are involved.
+
+SKL `$49` has 30 placements across both acts. Zero subtype selects the 32×48
+pillar; every nonzero byte selects the 64×16 ledge. Both call full solid collision
+before coarse-X culling. Mapping `$41FC8` uses three/two pieces and terrain tile
+base 1, palette 2; no standalone art or child allocation. Remaining placeholders:
+**162 Act 1 / 163 Act 2**. Binding coverage remains distinct from cold reachability.

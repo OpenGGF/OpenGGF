@@ -18,8 +18,8 @@ class TestSozObjectInventory {
     @Test void romPlacementsAndRemainingFactoryGapsMatchInventory() throws Exception {
         try (var rom=new Rom()) {
             assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
-            verify(rom,0x1F4866,3600,599,"72f954524c0d68b213be273d6b5317621c60c1a4aab8949ffc2cc72482dc66db",178);
-            verify(rom,0x1F5676,2946,490,"3cca36d2d4db8db480f36c67fafa46833f4f7a63ff1cab6d6835d2380bb225c0",180);
+            verify(rom,0x1F4866,3600,599,"72f954524c0d68b213be273d6b5317621c60c1a4aab8949ffc2cc72482dc66db",162);
+            verify(rom,0x1F5676,2946,490,"3cca36d2d4db8db480f36c67fafa46833f4f7a63ff1cab6d6835d2380bb225c0",163);
         }
     }
     @Test void vineMappingPointerAndSinglePieceMatchTheRom() throws Exception {
@@ -62,6 +62,18 @@ class TestSozObjectInventory {
                 assertEquals(2,piece.widthTiles()); assertEquals(3,piece.heightTiles());
                 assertEquals(0x25,piece.tileIndex());
             }
+        }
+    }
+    @Test void solidSpriteMappingAndArtWordMatchRom() throws Exception {
+        try (var rom=new Rom()) {
+            assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+            assertArrayEquals(new byte[]{0x21,0x7C,0,4,0x1F,(byte)0xC8},rom.readBytes(0x41F44,6));
+            assertEquals(0x4001,rom.read16BitAddr(0x41F4E));
+            var frames=com.openggf.game.sonic3k.S3kSpriteDataLoader.loadMappingFrames(
+                    RomByteReader.fromRom(rom),0x41FC8,2);
+            assertEquals(3,frames.get(0).pieces().size()); assertEquals(2,frames.get(1).pieces().size());
+            assertEquals(8,frames.get(1).pieces().get(0).tileIndex());
+            assertEquals(16,frames.get(1).pieces().get(1).tileIndex());
         }
     }
     private void verify(Rom rom,int address,int size,int count,String sha,int missing) throws Exception {
