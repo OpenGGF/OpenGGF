@@ -433,7 +433,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
     @Override
     public void updateAfterObjectExecution(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         if (player == null || player.getDead()
-                || (zoneIndex != Sonic3kZoneIds.ZONE_HCZ && zoneIndex != Sonic3kZoneIds.ZONE_ICZ)) {
+                || (zoneIndex != Sonic3kZoneIds.ZONE_HCZ && zoneIndex != Sonic3kZoneIds.ZONE_ICZ
+                    && zoneIndex != Sonic3kZoneIds.ZONE_SOZ)) {
             return;
         }
         var levelManager = GameServices.levelOrNull();
@@ -446,6 +447,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
                 if (events != null) {
                     events.updateSlideTerrainAfterPlayablePhysics(act, player);
                 }
+            } else if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ) {
+                var events = mgr.getSozEvents();
+                if (events != null) events.updateSlideTerrainAfterPlayablePhysics(player);
             } else {
                 var events = mgr.getIczEvents();
                 if (events != null) {
