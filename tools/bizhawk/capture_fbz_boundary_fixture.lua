@@ -1,13 +1,13 @@
 -- FBZ boundary fixture pilot, originating 2026-09-14 FBZ completion.
--- Inputs: verified host ROM/movie, OGGF_FBZ_FIXTURE_STATE saved native state.
+-- Inputs: verified host ROM/movie, OGGF_NATIVE_FIXTURE_STATE saved native state.
 -- This is explicit frozen-recipe setup, NOT a trace recorder or gameplay oracle.
 -- Only declared position/event/LFC fields and the optional one-time control
 -- byte may be written; all
 -- subsequent event/redraw/VDP progress is native execution. Never copy output
 -- RAM into an engine. Camera/physics/history remain observed, not synthesized.
-local output = assert(os.getenv("OGGF_FBZ_VISUAL_OUTPUT"))
-local state = assert(os.getenv("OGGF_FBZ_FIXTURE_STATE"))
-local plan = dofile(assert(os.getenv("OGGF_FBZ_VISUAL_PLAN")))
+local output = assert(os.getenv("OGGF_NATIVE_OUTPUT"))
+local state = assert(os.getenv("OGGF_NATIVE_FIXTURE_STATE"))
+local plan = dofile(assert(os.getenv("OGGF_NATIVE_PLAN")))
 assert(plan.manifest_sha256 == "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1")
 local boundary=plan.boundary or {id="fbz1-boundary-6-outdoor",x=0x100,y=0x63F,region=0x18,address=0xB014,forward=0x641,reverse=0x63F}
 assert(boundary.address==0xB010 or boundary.address==0xB014)

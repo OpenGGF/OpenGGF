@@ -7,8 +7,8 @@ local file = assert(io.open(plan, "w"))
 file:write([[return {manifest_sha256="261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",bk2_frame_offset=237913,cadence_series={
 ["aniplc-cadence-200"]={237914},["aniplc-cadence-208"]={237914},["aniplc-cadence-210"]={237914},["aniplc-cadence-230"]={237914},["aniplc-cadence-238"]={237914}}}]])
 file:close()
-local variables = {OGGF_FBZ_VISUAL_PLAN=plan, OGGF_FBZ_VISUAL_OUTPUT=output,
- OGGF_FBZ_ROM_SHA1="CFBF98C36C776677290A872547AC47C53D2761D6", OGGF_FBZ_BK2_SHA256="stub", OGGF_FBZ_HOST_RECEIPT="stub"}
+local variables = {OGGF_NATIVE_PLAN=plan, OGGF_NATIVE_OUTPUT=output,
+ OGGF_NATIVE_ROM_SHA1="CFBF98C36C776677290A872547AC47C53D2761D6", OGGF_NATIVE_BK2_SHA256="stub", OGGF_NATIVE_HOST_RECEIPT="stub"}
 local getenv = os.getenv
 os.getenv = function(name) return variables[name] or getenv(name) end
 local config, captures = {}, 0
@@ -67,7 +67,7 @@ assert(not pcall(api.hash,spec), "hash failure swallowed")
 assert(domain=="Main RAM", "failed hash changed domain")
 -- A valid host content observation is paired with this emulator frame, not
 -- promoted to a fabricated live VDP bit. Same-frame reads share its PNG hash.
-variables.OGGF_FBZ_FRAMEBUFFER_PROBE = "/stub/probe.py"
+variables.OGGF_NATIVE_FRAMEBUFFER_PROBE = "/stub/probe.py"
 local frame, probes, reply = 237948, 0, "PASS " .. string.rep("B",64) .. " 172 7 223"
 emu.framecount=function() return frame end
 io.popen=function(command)

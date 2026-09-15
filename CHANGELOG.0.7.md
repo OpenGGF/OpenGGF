@@ -243,7 +243,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   per-frame state CSV and an MP4. `InputLogAuthorTool` compiles a short controller
   script into that input log and proves it loads through `Bk2MovieLoader`, which now
   also reads a bare `Input Log.txt`. Skills `gameplay-capture` and
-  `bk2-input-authoring` document the workflow.
+  `bk2-input-authoring` document the workflow. Native BizHawk reference capture
+  uses a shared host with explicit zone plans, input hashes and failed-export
+  detection; existing FBZ commands remain compatible.
 - **Existing feature foundations:** retain editor, racing, prepared-loading,
   audio-core, and mod regression coverage while stock campaigns mature.
 
