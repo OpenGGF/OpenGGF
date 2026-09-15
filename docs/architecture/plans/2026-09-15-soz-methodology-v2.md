@@ -1509,3 +1509,61 @@ No full-suite or whole-act pixel certification is claimed. Diff whitespace
 and CI push policy checks passed. Direct comparison of wide frame60's exposed
 sky rectangle `(500..527,50..159)` counts1760 black pixels before the fix and
 zero after it; the corrected capture is outside the repository.
+
+
+## Foreground heat-shimmer rendering connection
+
+Follow-up based on `f93e4cee50573f30b7c7ec4ac1d8bd67d4fd8a91`, in
+`.worktrees/soz-foreground-haze` on `bugfix/ai-soz-foreground-haze`.
+The user's AIZ2 comparison exposed another presentation boundary: `SwScrlSoz`
+computed both halves of `H_scroll_buffer`, but only the background half reached
+per-line rendering. SOZ1 had no advanced render mode enabling the foreground
+path. Earlier claims of complete foreground/background shimmer were too broad.
+
+`loc_55DF2` calls `MakeFGDeformArray` using the shared
+`AIZ2_SOZ1_LRZ3_FGDeformDelta` table, then applies independently phased background
+shimmer. Register SOZ1's foreground heat-haze mode through the existing zone
+provider/controller, as AIZ2 does. Its zone/act gate excludes SOZ2; it carries no
+mutable state and is restored through the existing controller snapshot. The
+shared renderer, wave arithmetic, palette, sprites and physics are unchanged.
+Arena/background-event owners remain open under the existing obligations.
+
+The registration regression failed before the change (SOZ1 expected enabled,
+actual disabled). It also checks restored registration and rejection of SOZ2/HCZ
+contexts. The GPU regression follows ordinary jump/right entry, freezes the
+observation boundary, and compares an opaque wall's rows with the same scene
+rendered with the mode disabled. Expected displacement comes from ROM bytes,
+not fitted screenshots. It then restores the mode and compares the whole frame.
+Both320 and528 viewports are covered; existing all-width seam tests remain.
+
+The change selector falls back to2613 ordinary classes for the provider file.
+Proportionate validation is appropriate for this zone/act registration: no
+shared algorithm or contract changes; focused mode, GPU, restoration and S3K
+consumer checks exercise the affected behavior directly. Java21/Lua5.4/PowerShell
+preflight passed with `LUA_BIN=/usr/bin/lua5.4`. This is not a full-suite claim.
+Focused command (explicit S3K and S1 ROM properties):
+`python3 tools/testing/maven_queue.py -Dmse=off -Dopenggf.test.gl.native=true
+-Dtest=TestS3kAdvancedRenderModeRegistration,TestSozBackgroundCapture,TestS3kSozPatternAnimation,TestAdvancedRenderMode*,TestSpecialRenderEffectRewindSnapshot,TestLevelRendererBackgroundViewport,TestShaderPixelCentreSampling,TestSozAct1QuicksandRoute,TestSozAct1SpringVineRoute,TestSozMechanismsProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+test -B`:119 tests, no failures/errors/skips,24.296 seconds at20:41:43BST.
+The first GPU rectangle extended across a transparent sloped edge at native-width
+pixel `(250,78)`, where a whole-composite shift incorrectly moves the background
+as well. Restricting the assertion to the opaque wall above that edge fixes the
+oracle; no engine behavior or wave constants were changed to accommodate it.
+
+Capture repeats the existing `desert-input.txt` at width528 for240 frames, output
+`engine-desert-foreground-haze-528` under the external task root. It completed in
+18.374 seconds at20:42:06BST, with only the inherited Discord shutdown warning.
+The complete state CSV is byte-identical to `engine-desert-fixed-528`. Inspected
+frame150 at camera `(324,1551)`, player `(567,1639)`: foreground stonework and
+sandfall rows now have the subtle native one-pixel distortion. The previous
+purple-art and right-edge fixes remain visible. The GPU comparison checks actual
+row displacement, beyond what can be inferred from a single still.
+
+Independent read-only review found no correctness issue. Coverage is one ordinary
+scene, all32 wave entries within its sampled rows, at two widths; mode restoration
+is not a replacement for the production route rewind checks also run above.
+Transparent-edge/native trajectory and event-selected arena certification remain
+inherited gaps. Selected guards (`python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+-Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard test -B`) passed76
+tests with no failures/errors/skips in20.476 seconds at20:42:31BST.
+Integration result follows below.

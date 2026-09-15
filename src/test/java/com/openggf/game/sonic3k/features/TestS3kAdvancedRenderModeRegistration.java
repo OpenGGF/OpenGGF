@@ -66,6 +66,27 @@ class TestS3kAdvancedRenderModeRegistration {
     }
 
     @Test
+    void sozAct1HazeSurvivesRestoreAndDoesNotLeakIntoOtherActs() {
+        var provider = new Sonic3kZoneFeatureProvider();
+        var controller = new AdvancedRenderModeController();
+        provider.registerAdvancedRenderModes(controller, Sonic3kZoneIds.ZONE_SOZ, 0);
+        var snapshot = controller.capture();
+        controller.clear();
+        controller.restore(snapshot);
+        for (int zone : new int[]{Sonic3kZoneIds.ZONE_SOZ, Sonic3kZoneIds.ZONE_HCZ}) {
+            for (int act : new int[]{0, 1}) {
+                var state = controller.resolve(new AdvancedRenderModeContext(
+                        GameServices.camera(), 0, GameServices.level(), zone, act, 0));
+                assertEquals(zone == Sonic3kZoneIds.ZONE_SOZ && act == 0,
+                        state.enableForegroundHeatHaze(), "zone=" + zone + " act=" + act);
+            }
+        }
+        controller.clear();
+        provider.registerAdvancedRenderModes(controller, Sonic3kZoneIds.ZONE_SOZ, 1);
+        assertTrue(controller.isEmpty(), "SOZ2 has no desert foreground haze mode");
+    }
+
+    @Test
     void slotsAdvancedModeEnablesPerLineForegroundScroll() {
         Sonic3kZoneFeatureProvider provider = new Sonic3kZoneFeatureProvider();
         AdvancedRenderModeController controller = new AdvancedRenderModeController();
