@@ -684,3 +684,9 @@ Follow-up focused command (worktree based on `d3cd963a4`):
 test -B` passed 23 tests, zero failures/errors/skips, 49.714s. The replacement
 profile test positively checks each implemented owner; it does not weaken the
 remaining CNZ-only assertions.
+
+Follow-up commit `67366458d` integrated without conflicts as `79e20e6bb`.
+On that develop commit, `python3 tools/testing/maven_queue.py -Dmse=off
+'-Dtest=TestSonic3kObjectProfile,TestSonic3kObjectProfileRegistryGuard' test -B`
+passed all eight tests, zero failures/errors/skips, 19.173s. The integrated tracked
+tree matches the tested worktree; unrelated local files are preserved.
