@@ -21,6 +21,7 @@ import com.openggf.game.save.SaveManager;
 import com.openggf.game.save.SaveSlotState;
 import com.openggf.game.save.SaveSlotSummary;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.save.SavePayloadReader;
 import com.openggf.game.sonic1.dataselect.S1DataSelectImageCacheManager;
 import com.openggf.game.sonic1.dataselect.S1SelectedSlotPreviewLoader;
 import com.openggf.game.sonic2.dataselect.S2DataSelectImageCacheManager;
@@ -824,7 +825,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         if (summary == null || summary.state() == SaveSlotState.EMPTY) {
             return sessionController.teamForRow(slotIndex + 1);
         }
-        return teamFromPayload(summary.payload());
+        return SavePayloadReader.readTeam(summary.payload());
     }
 
     private int resolveSlotObjectMappingFrame(SelectedTeam team) {
@@ -905,7 +906,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
             return 0;
         }
         SelectedTeam team;
-        team = teamFromPayload(summary.payload());
+        team = SavePayloadReader.readTeam(summary.payload());
         return team == null ? 0 : headerStyleIndexFor(team);
     }
 
@@ -915,7 +916,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
     }
 
     private int resolveFinishCardMappingFrame(Map<String, Object> payload) {
-        SelectedTeam team = teamFromPayload(payload);
+        SelectedTeam team = SavePayloadReader.readTeam(payload);
         if (headerStyleIndexFor(team) > 1) {
             return 0x23;
         }
@@ -982,21 +983,7 @@ public class S3kDataSelectPresentation extends AbstractDataSelectProvider {
         if (summary == null || !summary.hasRecoverablePayload()) {
             return 0;
         }
-        return readInt(summary.payload(), key, 0);
-    }
-
-    private static SelectedTeam teamFromPayload(Map<String, Object> payload) {
-        String main = String.valueOf(payload.getOrDefault("mainCharacter", "sonic"));
-        Object sidekicksRaw = payload.get("sidekicks");
-        List<String> sidekicks = sidekicksRaw instanceof List<?>
-                ? ((List<?>) sidekicksRaw).stream().map(String::valueOf).toList()
-                : List.of();
-        return new SelectedTeam(main, sidekicks);
-    }
-
-    private static int readInt(Map<String, Object> payload, String key, int fallback) {
-        Object value = payload.get(key);
-        return value instanceof Number number ? number.intValue() : fallback;
+        return SavePayloadReader.readInt(summary.payload(), key, 0);
     }
 
     static S3kDataSelectAssetSource createDefaultAssets() {

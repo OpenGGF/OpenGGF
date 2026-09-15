@@ -144,12 +144,7 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
 
         List<PlayableEntity> participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
-        if (!participants.contains(player)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(player);
-            withUpdatePlayer.addAll(participants);
-            participants = withUpdatePlayer;
-        }
+        participants = Sonic2PlayerParticipants.prependIfAbsent(participants, player);
 
         for (PlayableEntity participant : participants) {
             processPlayer((AbstractPlayableSprite) participant, vIntRunCount);

@@ -207,14 +207,7 @@ public final class ModLevel extends AbstractLevel {
 
     private void decodeSolidProfiles(byte[] heights, byte[] widths, byte[] angles) {
         solidTileCount = angles.length;
-        solidTiles = new SolidTile[solidTileCount];
-        for (int i = 0; i < solidTileCount; i++) {
-            solidTiles[i] = new SolidTile(i,
-                    Arrays.copyOfRange(heights, i * SolidTile.TILE_SIZE_IN_ROM,
-                            (i + 1) * SolidTile.TILE_SIZE_IN_ROM),
-                    Arrays.copyOfRange(widths, i * SolidTile.TILE_SIZE_IN_ROM,
-                            (i + 1) * SolidTile.TILE_SIZE_IN_ROM), angles[i]);
-        }
+        solidTiles = SolidProfileDecoder.decode(heights, widths, angles);
     }
 
     private void decodeLayerMaps(int width, int height, byte[] foreground, byte[] background) {

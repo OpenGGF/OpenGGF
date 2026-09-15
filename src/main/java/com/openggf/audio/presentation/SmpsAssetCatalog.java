@@ -7,6 +7,7 @@ import com.openggf.audio.smps.DacData;
 import com.openggf.audio.smps.SmpsCoordFlagHandlerOwner;
 import com.openggf.audio.smps.SmpsProgramView;
 import com.openggf.audio.smps.SmpsSequencerConfig;
+import com.openggf.audio.smps.SmpsConfigBinding;
 import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.smps.SmpsLoadReadiness;
 
@@ -472,18 +473,12 @@ final class SmpsAssetCatalog {
             String gameId,
             SmpsSequencerConfig source,
             SmpsCoordFlagHandlerOwner handlers) {
-        SmpsSequencerConfig.Builder copy = copyBuilder(source);
-        if (source.getCoordFlagHandler() != null) {
-            copy.coordFlagHandler(handlers.handlerFor(gameId));
-        } else {
-            copy.coordFlagHandler(null);
-        }
-        return copy.build();
+        return SmpsConfigBinding.bind(source, () -> source.getCoordFlagHandler() != null
+                ? handlers.handlerFor(gameId) : null);
     }
 
-    static SmpsSequencerConfig copyConfigWithoutHandler(
-            SmpsSequencerConfig source) {
-        return copyBuilder(source).coordFlagHandler(null).build();
+    static SmpsSequencerConfig copyConfigWithoutHandler(SmpsSequencerConfig source) {
+        return SmpsConfigBinding.bind(source, () -> null);
     }
 
     static SmpsSequencerConfig bindLegacyConfig(
@@ -491,82 +486,7 @@ final class SmpsAssetCatalog {
             SmpsSequencerConfig source,
             boolean handlerRequired,
             SmpsCoordFlagHandlerOwner handlers) {
-        SmpsSequencerConfig.Builder copy = copyBuilder(source);
-        copy.coordFlagHandler(handlerRequired
-                ? handlers.handlerFor(gameId) : null);
-        return copy.build();
-    }
-
-    private static SmpsSequencerConfig.Builder copyBuilder(
-            SmpsSequencerConfig source) {
-        Objects.requireNonNull(source, "source");
-        return new SmpsSequencerConfig.Builder()
-                .speedUpTempos(source.getSpeedUpTempos())
-                .tempoModBase(source.getTempoModBase())
-                .fmChannelOrder(source.getFmChannelOrder())
-                .psgChannelOrder(source.getPsgChannelOrder())
-                .tempoMode(source.getTempoMode())
-                .palUpdateMode(source.getPalUpdateMode())
-                .coordFlagParamOverrides(
-                        source.getCoordFlagParamOverrides())
-                .applyModOnNote(source.isApplyModOnNote())
-                .halveModSteps(source.isHalveModSteps())
-                .extraTrkEndFlags(Set.copyOf(
-                        source.getExtraTrkEndFlags()))
-                .relativePointers(source.isRelativePointers())
-                .tempoOnFirstTick(source.isTempoOnFirstTick())
-                .resetTempoOnMusicLoad(source.isResetTempoOnMusicLoad())
-                .direct68kDriver(source.isDirect68kDriver())
-                .advancePsgEnvelopeOnRest(source.isAdvancePsgEnvelopeOnRest())
-                .writeFmPanOnNote(source.isWriteFmPanOnNote())
-                .fmSfxTakeoverMode(source.getFmSfxTakeoverMode())
-                .psgSfxTakeoverMode(source.getPsgSfxTakeoverMode())
-                .psg3SfxAdmissionWriteMode(
-                        source.getPsg3SfxAdmissionWriteMode())
-                .sfxChannelOwnershipMode(
-                        source.getSfxChannelOwnershipMode())
-                .fmSfxReleaseMode(source.getFmSfxReleaseMode())
-                .psgSfxReleaseMode(source.getPsgSfxReleaseMode())
-                .sfxTrackWalkMode(source.getSfxTrackWalkMode())
-                .fmVolumeVoiceBankMode(source.getFmVolumeVoiceBankMode())
-                .fmVoiceWriteProfile(source.getFmVoiceWriteProfile())
-                .volMode(source.getVolMode())
-                .psgEnvCmd80(source.getPsgEnvCmd80())
-                .noteOnPrevent(source.getNoteOnPrevent())
-                .delayFreq(source.getDelayFreq())
-                .modAlgo(source.getModAlgo())
-                .noteGoingFreqSend(source.getNoteGoingFreqSend())
-                .psgNoteGoingOrder(source.getPsgNoteGoingOrder())
-                .psgEnvRestCmd(source.getPsgEnvRestCmd())
-                .stepModulationAtRest(source.isStepModulationAtRest())
-                .noteResetAliasesModulationState(
-                        source.isNoteResetAliasesModulationState())
-                .fmNoteGoingReturnsAtRest(source.isFmNoteGoingReturnsAtRest())
-                .fadeOutHalt(source.getFadeOutHalt())
-                .fadeDelayCadence(source.getFadeDelayCadence())
-                .tempoWaitPrecedesRequest(source.isTempoWaitPrecedesRequest())
-                .psgSilenceShape(source.getPsgSilenceShape())
-                .psgVolumeTail(source.getPsgVolumeTail())
-                .fadeInRestore(source.getFadeInRestore())
-                .driverOwnedFadeDelay(source.isDriverOwnedFadeDelay())
-                .dacNoteKeysOffFm6AndRestoresFm3(
-                        source.isDacNoteKeysOffFm6AndRestoresFm3())
-                .enableDacOnSequencerStart(
-                        source.isEnableDacOnSequencerStart())
-                .psgFrequencyHighByteNibbleSwap(
-                        source.isPsgFrequencyHighByteNibbleSwap())
-                .specialSfxPsg3SilenceMode(
-                        source.getSpecialSfxPsg3SilenceMode())
-                .sfxWalkPrecedesRequest(source.isSfxWalkPrecedesRequest())
-                .sfxAdmissionKeyOffAndClearsSsgEg(
-                        source.isSfxAdmissionKeyOffAndClearsSsgEg())
-                .psgSfxAdmissionSilencesNoise(source.isPsgSfxAdmissionSilencesNoise())
-                .trackEndFlagOwnsTheStop(source.isTrackEndFlagOwnsTheStop())
-                .noteFillTail(source.getNoteFillTail())
-                .fadeOutDelay(source.getFadeOutDelay())
-                .fadeOutSteps(source.getFadeOutSteps())
-                .fadeInSteps(source.getFadeInSteps())
-                .fadeInDelay(source.getFadeInDelay());
+        return SmpsConfigBinding.bind(source, () -> handlerRequired ? handlers.handlerFor(gameId) : null);
     }
 
     private static FrozenSmpsData freeze(AbstractSmpsData source) {

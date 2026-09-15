@@ -7,10 +7,9 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.TexturedQuadRenderer;
-import org.lwjgl.system.MemoryUtil;
+import com.openggf.graphics.SolidColorTexture;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -18,20 +17,10 @@ import java.util.function.ToIntFunction;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.GL_BLEND;
-import static org.lwjgl.opengl.GL11.GL_NEAREST;
 import static org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA;
-import static org.lwjgl.opengl.GL11.GL_RGBA;
 import static org.lwjgl.opengl.GL11.GL_SRC_ALPHA;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_MAG_FILTER;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_MIN_FILTER;
-import static org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE;
-import static org.lwjgl.opengl.GL11.glBindTexture;
 import static org.lwjgl.opengl.GL11.glBlendFunc;
 import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL11.glGenTextures;
-import static org.lwjgl.opengl.GL11.glTexImage2D;
-import static org.lwjgl.opengl.GL11.glTexParameteri;
 
 /**
  * Boot screen shown on a native build when enabled code-bearing mods cannot load.
@@ -77,7 +66,7 @@ public final class NativeModNoticeScreen {
             wrappedNoticeLines = wrapLines(noticeLines,
                     line -> font.measureWidth(line, BODY_SCALE),
                     BODY_MAX_WIDTH, MAX_RENDERED_LINES);
-            solidWhiteTextureId = createSolidWhiteTexture();
+            solidWhiteTextureId = SolidColorTexture.createWhite();
             fadeManager.startFadeFromBlack(null);
             LOGGER.info("Native mod notice screen initialized");
         } catch (IOException e) {
@@ -105,7 +94,6 @@ public final class NativeModNoticeScreen {
 
     int pageCount() { return Math.max(1, (wrappedNoticeLines.size() + MAX_RENDERED_LINES - 1) / MAX_RENDERED_LINES); }
     int currentPage() { return page; }
-
 
     public boolean isDismissed() {
         return dismissed;
@@ -226,16 +214,4 @@ public final class NativeModNoticeScreen {
         }
     }
 
-    private static int createSolidWhiteTexture() {
-        ByteBuffer pixel = MemoryUtil.memAlloc(4);
-        pixel.put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).flip();
-        int texId = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, texId);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        MemoryUtil.memFree(pixel);
-        return texId;
-    }
 }

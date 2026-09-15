@@ -20,11 +20,6 @@ import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
 import com.openggf.version.AppVersion;
 
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -155,8 +150,8 @@ public final class FmSfxRenderTool {
                 physicalWrites ? new PhysicalChipCapture(physicalCapacity) : null);
         Render fmOnly = render(data, dac, config, rate, maxFrames, music, true);
 
-        writeWav(out.resolve(stem + "-mix.wav"), mix.samples, rate);
-        writeWav(out.resolve(stem + "-fm.wav"), fmOnly.samples, rate);
+        StereoPcmWavWriter.write(out.resolve(stem + "-mix.wav"), mix.samples, rate);
+        StereoPcmWavWriter.write(out.resolve(stem + "-fm.wav"), fmOnly.samples, rate);
         try (PrintWriter log = new PrintWriter(Files.newBufferedWriter(out.resolve(stem + "-ym-writes.txt")))) {
             log.printf(Locale.ROOT, "# game=%s %s=%02X rate=%.6f frames=%d complete=%s%n",
                     game, music ? "music" : "sfx", id, rate, mix.frames, mix.complete);
@@ -336,17 +331,4 @@ public final class FmSfxRenderTool {
         };
     }
 
-    private static void writeWav(Path path, short[] interleaved, double rate) throws IOException {
-        AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
-                (float) rate, 16, 2, 4, (float) rate, false);
-        byte[] bytes = new byte[interleaved.length * 2];
-        for (int i = 0; i < interleaved.length; i++) {
-            bytes[i * 2] = (byte) interleaved[i];
-            bytes[i * 2 + 1] = (byte) (interleaved[i] >> 8);
-        }
-        try (AudioInputStream stream = new AudioInputStream(new ByteArrayInputStream(bytes), format,
-                interleaved.length / 2)) {
-            AudioSystem.write(stream, AudioFileFormat.Type.WAVE, path.toFile());
-        }
-    }
 }

@@ -543,3 +543,22 @@ touch-profile construction. Public adapter records retain their declared methods
 components and identities. Compatibility mapping preserves provider getter order;
 the level-owned `FORCE_ENEMY` decode branch stays local because the canonical
 enum has no equivalent.
+
+## Shared support operations
+
+`SavePayloadReader` owns permissive data-select payload decoding; Engine's
+caller-supplied team fallback remains separate. `SolidWireCommands` appends SOLID
+fallback geometry; `DebugRenderContext` retains alpha-blended overlay commands.
+`SolidColorTexture` creates independent white textures whose callers own disposal.
+`StereoPcmWavWriter` serves the FM/PSG render tools.
+
+S2's package-private `Sonic2PlayerParticipants` owns prepend-if-absent plumbing;
+objects retain queries, policies and null/type gates. `IndexedPaletteUsage` shares
+reachable-art traversal while each mod validator owns domain validation and fault
+attribution. `SolidProfileDecoder` constructs copied profiles from height, width
+and angle arrays without adding validation.
+
+`SmpsSequencerConfig` keeps frozen settings in private shared storage. Internal
+`SmpsConfigBinding` snapshots end flags before lazily resolving the session handler;
+no caller enumerates every configuration field when rebinding. The copy-coverage
+guard checks public accessors independently of this representation.
