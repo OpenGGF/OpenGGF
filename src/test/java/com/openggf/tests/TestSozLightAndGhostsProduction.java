@@ -112,6 +112,8 @@ class TestSozLightAndGhostsProduction {
     private static <T>T find(Class<T>type){return GameServices.level().getObjectManager().getActiveObjects().stream().filter(type::isInstance).map(type::cast).findFirst().orElseThrow();}
     private static void replay(HeadlessTestFixture fixture,CompositeSnapshot before,boolean jump,String label) {
         var registry=fixture.gameplayMode().getRewindRegistry();var after=registry.capture();
+        // Exercise identity relinking, not only the in-place object fast path.
+        GameServices.level().getObjectManager().setRewindInPlaceRestoreEnabledForTest(false);
         registry.restore(before);same(before,registry.capture(),label+" restore");
         fixture.runner().primeInputState(new com.openggf.debug.playback.Bk2FrameInput(0,0,0,false,""));
         fixture.stepFrame(false,false,false,false,jump);same(after,registry.capture(),label+" forward replay");
