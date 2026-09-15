@@ -4,7 +4,10 @@ import java.nio.ByteBuffer;
 
 /** Native SOZ screen-event RAM; one captured owner shared with arena objects and scroll. */
 public final class SozEventState {
-    static final int SNAPSHOT_BYTES = 22 * Integer.BYTES;
+    static final int SNAPSHOT_BYTES = 22 * Integer.BYTES + SozBossWallState.SNAPSHOT_BYTES + 2 * Long.BYTES;
+    private long blockJobOrdinal = -1;
+    private long artJobOrdinal = -1;
+    private final SozBossWallState bossWall = new SozBossWallState();
     private boolean initialized;
     private int foregroundRoutine;
     private int backgroundRoutine;
@@ -28,6 +31,11 @@ public final class SozEventState {
     private boolean backgroundCollision;
     private boolean seamlessEntry;
 
+    public long blockJobOrdinal() { return blockJobOrdinal; }
+    public void blockJobOrdinal(long value) { blockJobOrdinal = value; }
+    public long artJobOrdinal() { return artJobOrdinal; }
+    public void artJobOrdinal(long value) { artJobOrdinal = value; }
+    public SozBossWallState bossWall() { return bossWall; }
     public boolean initialized() { return initialized; }
     public void initialized(boolean value) { initialized = value; }
     public int foregroundRoutine() { return foregroundRoutine; }
@@ -82,6 +90,8 @@ public final class SozEventState {
                 .putInt(fadePasses).putInt(fadeDelay).putInt(bossWallTimer).putInt(bossWallRoutine)
                 .putInt(bossWallHitY).putInt(bossX).putInt(bossY).putInt(bossArtPhase)
                 .putInt(backgroundCollision ? 1 : 0).putInt(seamlessEntry ? 1 : 0);
+        bossWall.capture(buffer);
+        buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal);
     }
 
     void restore(ByteBuffer buffer) {
@@ -107,5 +117,9 @@ public final class SozEventState {
         bossArtPhase = buffer.getInt();
         backgroundCollision = buffer.getInt() != 0;
         seamlessEntry = buffer.getInt() != 0;
+        bossWall.restore(buffer);
+        blockJobOrdinal = buffer.getLong();
+        artJobOrdinal = buffer.getLong();
+        if (!initialized) { blockJobOrdinal = -1; artJobOrdinal = -1; }
     }
 }

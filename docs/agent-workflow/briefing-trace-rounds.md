@@ -71,6 +71,13 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ completion (2026-09-15): the capture CLI's `--act` is one-based, while
+`GameplayCaptureSession.boot` takes a zero-based act. Assert the loaded act and
+its art before trusting a positioned capture. A wrong-act boss setup can render
+plausible terrain with missing boss sprites. Full rewind comparisons must compare
+terrain descriptor contents, not newly reconstructed Java object identities;
+retain checks for changed collision data and frame state.
+
 KiS2 act-entry investigation (2026-09-15): a correct title-card release row does
 not prove the following gap row is held. Setup-only admission can return before
 the one-shot source-loop flag is consumed, leaving one destination gameplay
