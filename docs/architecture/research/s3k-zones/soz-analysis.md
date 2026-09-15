@@ -545,6 +545,29 @@ SOZ does NOT use the engine's water subsystem (`DynamicWaterHeight` / `WaterTran
 - **$80 (waterfall):** Sand pours downward
 - **$C0 (deep):** Deep quicksand with faster sinking
 
+### Grounded layout sand slides (`sub_730C`)
+
+`sub_714E` dispatches SOZ to `sub_730C` after object execution, for both native
+playable slots and both acts. This terrain handler is separate from object `$38`.
+It samples the foreground 128-pixel layout chunk at `(x_pos, y_pos+$14)` and searches
+the 17 ROM IDs at `$74AC`: `$0F,$13,$14,$15,$16,$17,$35,$6C,$6D,$76,$77,$7E,$7F,$85,$8A,$8C,$90`.
+The corresponding signed target/mode pairs at `$74BD` select speeds ±8 or ±6,
+left/right half-chunk admission, or ±8 from `top_solid_bit` (`$C` selects negative).
+`loc_7398` changes ground velocity by `$40`, tests the previous signed high byte,
+and damps opposing entry velocity (halves it for ±6, clears it for ±8).
+
+`loc_7402` writes animation `$19`, adds the old Y radius minus `$0E` to Y,
+sets radii `(7,$0E)`, clears roll/roll-jump, and sets secondary-status bit 7.
+The quiet skid sound is gated by `V_int_run_count & $0F == 0`. Airborne/on-object
+or nonmatching terrain exits at `loc_734A`: clear slide, set movement lock 5;
+only grounded exits restore default radii and animation 0, with no Y adjustment.
+The runtime uses the existing post-object per-playable feature seam and captured
+player fields; ROM table bytes are immutable assets, not runtime state.
+
+This missing owner explained the ordinary SOZ1 trace's first physical divergence
+at frame 1419 (Y +5, ground velocity +$40, animation `$19`); those observations
+identify the source branch and are not inputs or constants in gameplay code.
+
 ### Screen Shake
 Present in both acts:
 - **Act 1:** `Screen_shake_flag` set to $FF by SOZ1_BackgroundEvent stage 0 when boss arena triggers. `sub_55D94` manages shake accumulation -- `_unkEE9C` rises from -8 toward $280 at ~0.75 per frame (3 out of every 4 frames). `ShakeScreen_Setup` called in the background event loop. Shake stops when `_unkEE9C >= $280`.
