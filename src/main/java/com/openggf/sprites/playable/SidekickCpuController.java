@@ -1111,6 +1111,16 @@ public class SidekickCpuController {
             return;
         }
 
+        if (preservesAssembledSpawnState()) {
+            // The game-owned routine-zero branch skips placement, kinematic,
+            // and object-control writes. Initial Process_Sprites already owns
+            // player placement and history; this branch only enters normal CPU
+            // follow and clears its flight timer, without same-tick steering.
+            state = State.NORMAL;
+            flightTimer = 0;
+            return;
+        }
+
         boolean establishedFollowerEntry = isEstablishedFollowerEntry();
         if (establishedFollowerEntry) {
             // ROM only runs SpawnLevelMainSprites' Tails placement / kinematic
@@ -1153,6 +1163,18 @@ public class SidekickCpuController {
         }
 
         updateNormal();
+    }
+
+    private boolean preservesAssembledSpawnState() {
+        GameModule module = sidekick.currentGameModule();
+        LevelManager level = sidekick.currentLevelManager();
+        if (module == null || level == null) return false;
+        var policy = module.getGameService(
+                com.openggf.game.internal.SidekickCpuInitializationPolicy.class);
+        if (policy == null) return false;
+        var checkpoint = level.getCheckpointState();
+        return policy.preservesSpawnState(level.getCurrentZone(), level.getCurrentAct(),
+                checkpoint == null ? 0 : checkpoint.getStarPostActivationMark());
     }
 
     private void initializeLevelStartSidekickPlacement() {
