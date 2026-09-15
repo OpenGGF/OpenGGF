@@ -70,7 +70,7 @@ No arithmetic or bounds policy was repaired as part of the extraction.
 Preview extraction retains typed local manifests and the second disk read;
 wrapper tests replace the manifest from the hash supplier to protect that order.
 Whole-generation transactionality and asynchronous ownership were not changed.
-The final implementation removes 128 production Java lines overall, including
+The final implementation removes 126 production Java lines overall, including
 four new internal helpers. The reduction is smaller than discovery estimates:
 explicit adapters preserve caller policies without a callback-heavy framework.
 
@@ -154,3 +154,39 @@ passed 29 tests, zero failures/errors/skips (53.083 seconds). Combined authority
 and architecture recheck before the final relocation had 54 tests, one failure;
 that failure was the now-corrected downward dependency. Consumed first broad-run
 diagnostics were acknowledged and deleted. No raw reports are archived.
+
+## Final integrated verification
+
+Merged task commits `48ab5ea1e` and `e907ec580` into develop `42df8150c` without
+conflicts, producing `7480ef0dec89305a2b358ac0dd03e33bb20882f1`. Incoming Maven
+resource/cleanup work, SOZ inventory correction, and KiS2 native act-entry/gap fixes
+were preserved. Every task-owned source/test file matches the reviewed task tree;
+the two incoming runtime files remain byte-identical to the destination base.
+Final production reduction: 126 lines, including four new internal helpers.
+
+With Java 21/Lua 5.4/PowerShell preflight passed, the completed command was:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 6cd8ec1881fcab438705ec4fd736804dd6630a50 --run
+```
+
+Run `20260915T111543Z-4ab732b3` at `7480ef0de` completed all selected classes on an
+unchanged integrated tree:
+
+- Ordinary: 2,592 reports, 20,499 tests, zero failures/errors, 19 skips; 756.41 seconds.
+  The SOZ inventory correction passes. All skip identities/reasons were inspected:
+  they match the preceding run's documented limitations, including the opt-in
+  native scroll check already passed separately. No stock ROM was missing.
+- Guards: 84 reports, 668 tests, three failures, zero errors/skips; 180.65 seconds.
+  Exact class/method identities and entire assertion messages match the baseline
+  three documented above. Both task-caused guard issues are corrected. The combined
+  command exits 1 for inherited guard failures; this is not an all-gates-green claim.
+- The original 277-test focused run included successful native texture checks;
+  GPU code did not change afterward. Final ordinary coverage exercises the relocated
+  FM helper and restored original playable-sheet implementation.
+
+No trace frontier was moved or selected; no standalone trace sweep was used to
+claim gameplay coverage. Existing discrepancy, API/version, configuration and
+skill documentation remain unchanged. The develop maintenance entry and engine
+map describe the final owners. Push, diagnostic acknowledgment and task-worktree
+cleanup are the remaining delivery steps.
