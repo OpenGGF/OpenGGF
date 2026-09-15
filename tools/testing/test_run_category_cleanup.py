@@ -1,5 +1,6 @@
 """Result consumption deletes artifacts without deleting foreign data."""
 import io
+import os
 import json
 from pathlib import Path
 import tempfile
@@ -33,6 +34,16 @@ class CleanupTests(unittest.TestCase):
             artifacts.acknowledge_run(root, run.name)
             self.assertFalse(run.parent.exists())
             self.assertEqual('{"status":"failed"}', receipt.read_text())
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX auto admission')
+    def test_acknowledgment_never_requires_cpu_or_memory_admission(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run = self.make_run(root)
+            with patch.dict(os.environ, {'OPENGGF_MAVEN_QUEUE': 'auto'}), \
+                    patch('maven_resources.snapshot', side_effect=AssertionError('cleanup probed resources')):
+                artifacts.acknowledge_run(root, run.name)
+            self.assertFalse(run.exists())
 
     def test_path_traversal_prevents_deletion(self):
         with tempfile.TemporaryDirectory() as tmp:

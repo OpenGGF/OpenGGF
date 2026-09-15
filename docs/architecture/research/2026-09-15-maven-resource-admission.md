@@ -181,3 +181,10 @@ Its independent Sandopolis work (`7fae85a69`, with verification recorded by
 Those four upstream files do not overlap this task and are preserved at integration.
 The measurements above remain tied to `6cd8ec188`; they are not re-labelled as a
 measurement of the corrected inventory commit.
+
+
+Final integration review caught an admission edge case: `--acknowledge` also uses the
+slot context but performs only metadata deletion. It retains exclusive queue locking
+without CPU/RAM admission, so housekeeping cannot be held up solely by low free
+resources. A regression test first failed with `cleanup probed resources`, then passed
+with explicit exclusive acquisition. This does not bypass active legacy Maven runs.

@@ -189,7 +189,8 @@ def acknowledge_run(root, run_id):
     from maven_queue import maven_slot
 
     target = root / 'target'
-    with maven_slot(root):
+    # Metadata deletion needs exclusion, not a JVM resource reservation.
+    with maven_slot(root, exclusive=True):
         base = target / 'category-tests'
         directory = base / run_id
         if base.is_symlink() or directory.is_symlink():

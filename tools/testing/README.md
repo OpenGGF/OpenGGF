@@ -225,6 +225,9 @@ and acknowledge category diagnostics after consuming them.
 
 ### Automatic storage cleanup
 
+Acknowledgment retains exclusive queue locking but does not require CPU or memory
+headroom: it deletes metadata and never launches Maven.
+
 Diagnostics are temporary, not a run history. After inspecting `results.json` (including
 skip reasons and failures) and any relevant log tail, acknowledge consumption:
 
