@@ -110289,3 +110289,16 @@ All 15 normalized reports match the clean candidate: segment 7 zero-error,
 segment 9 first error row 200 Y, segment 11 first error row 212 Y speed, stop
 at cursor 48,882. Diagnostics acknowledged and deleted. Commands and full counts
 are recorded in the linked investigation.
+
+
+### 2026-09-15 — Moving-camera scroll publication preserves complete FBZ replay
+
+On `bugfix/ai-s3k-presentation-camera`, based on `316788395`, the shared S3K
+presentation correction pairs terrain scroll with retained SAT geometry.
+Queued `-Dmse=off -Ptrace-replay-r7
+-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestFbzRetainedPlaneNativeRows,TestS3kFbzCompleteRunTraceReplay test -B`
+with explicit absolute S1/S2/S3K ROM paths passes 61 tests, zero failures/errors/
+skips in 36.804 seconds. Complete FBZ replay passes in 16.42 seconds: no first
+error frame/field. This does not close the separate Hyper prerequisite frontier.
+The [MHZ camera audit](../architecture/audits/2026-09-15-s3k-presentation-camera.md)
+records the baseline failure and moving-camera visual evidence.
