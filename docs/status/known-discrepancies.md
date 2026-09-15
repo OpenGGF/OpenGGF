@@ -3376,14 +3376,18 @@ the owning KiS2 routine in the catalogue):
   results-driven act advance retains its locked title card and retires the
   source-loop admission flag before destination gameplay. `seg5_ehz2` now
   completes all 3,561 rows with zero errors, including its act-entry art gap.
-  The chain passes two more special-stage interiors and reaches `seg7_ehz2`
-  (segment 11). The next causal discrepancy is `seg6_ehz2` row 200: the ROM
-  retains glide animation `$20`/mapping `$B8`, while the engine climbs with
-  `$21`/`$CA` one pixel higher. That segment still reaches its special stage.
-  `seg7_ehz2` first differs at row 212 (vertical speed sign) and misses the next
-  starpost-special boundary. The first three special-stage return gaps still
-  publish art 39 movie frames early; the newly exercised returns also have
-  timing/ledger differences. The first
+  Native signed-width wall contact and the live solidity path make `seg6_ehz2`
+  (segment 9) zero-error across all 1,177 rows. Coconuts now retains its native
+  init-only pass; wall jumps preserve the center and restart animation from the
+  ROM's glide/previous-animation writes. `seg7_ehz2` (segment 11) first differs
+  at row 1590, X `$220A` versus `$2206`, with 1,889 comparison errors. The chain
+  crosses the sixth special-stage entry/return and reaches `seg8_ehz2`
+  (segment 13), first differing at row 957 (X speed -$0448 versus -$0200).
+  It loses source ownership to a title card at BK2 cursor 58,451. The first
+  three special-stage return gaps still publish art 39 movie frames early;
+  the next three returns publish 37/38/38 frames early, with additional art
+  ledger differences propagated from gameplay. All six exercised SS interior
+  art ledgers have zero errors. The first
   returned EHZ1 segment completes with one ring-count difference. SS interiors do not
   compare gameplay, so this does not establish special-stage physics parity.
   Current evidence is tracked in [the frontier log](trace-frontier-log.md). There are no passing

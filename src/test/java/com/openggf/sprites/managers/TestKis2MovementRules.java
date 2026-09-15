@@ -108,15 +108,15 @@ class TestKis2MovementRules {
         player.setXSpeed((short) 0x400);
         player.setYSpeed((short) -1);
         player.restoreDefaultRadii();
-        try (var terrain = mockStatic(ObjectTerrainUtils.class)) {
-            terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(0x10A, 0x200))
+        try (var terrain = mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+            terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(player, true))
                     .thenAnswer(call -> {
                         assertEquals(10, player.getXRadius());
                         assertEquals(10, player.getYRadius());
                         return null;
                     });
             invoke("doGlideCollision");
-            terrain.verify(() -> ObjectTerrainUtils.checkRightWallDist(0x10A, 0x200));
+            terrain.verify(() -> com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(player, true));
         }
         assertEquals(9, player.getXRadius());
         assertEquals(19, player.getYRadius());
@@ -124,7 +124,7 @@ class TestKis2MovementRules {
         assertEquals(0x200, player.getCentreY());
         rules(GameRules.SONIC_3K);
         player.applyCustomRadii(10, 10);
-        try (var terrain = mockStatic(ObjectTerrainUtils.class)) { invoke("doGlideCollision"); }
+        try (var terrain = mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) { invoke("doGlideCollision"); }
         assertEquals(10, player.getYRadius(), "S3K retains glide radii during touch response");
     }
 
@@ -425,13 +425,182 @@ class TestKis2MovementRules {
                 prepareLedge(Direction.RIGHT);
                 player.applyCustomRadii(10, 10);
                 input(up, !up, false, false, false, false);
-                try (var terrain = mockStatic(ObjectTerrainUtils.class)) { invoke("updateWallClimb"); }
+                try (var terrain = mockStatic(ObjectTerrainUtils.class);
+                     var wall = mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                    wall.when(() -> com.openggf.physics.GlideWallGrabTerrain.distanceFromWall(
+                            eq(player), anyInt(), anyBoolean()))
+                            .thenReturn(new TerrainCheckResult(0, (byte) 0, 1));
+                    invoke("updateWallClimb");
+                }
                 assertEquals(0x200 + (up ? -1 : 1), player.getCentreY());
                 assertEquals(0x100, player.getCentreX());
                 assertEquals(0x100, player.getXSubpixelRaw());
                 assertEquals(0x5678, player.getYSubpixelRaw());
             }
         }
+    }
+
+    @Test
+    void descendingClimbKeepsContactWithSignedWidthInTheExtensionTile() throws Exception {
+        for (boolean right : new boolean[]{true, false}) {
+            prepareLedge(right ? Direction.RIGHT : Direction.LEFT);
+            int centreX = right ? 0x105 : 0x11B;
+            int extensionTileX = right ? 0x110 : 0x100;
+            player.setCentreX((short) centreX);
+            player.setSubpixelRaw(centreX, 0x5678);
+            input(false, true, false, false, false, false);
+            var level = mock(LevelManager.class);
+            var desc = new com.openggf.level.ChunkDesc(0x3001);
+            byte[] widths = new byte[16];
+            java.util.Arrays.fill(widths, (byte) (right ? -16 : 16));
+            var tile = new com.openggf.level.SolidTile(1, new byte[16], widths, (byte) 0);
+            when(level.getChunkDescAt(anyByte(), anyInt(), anyInt())).thenAnswer(call ->
+                    ((int) call.getArgument(1) & ~15) == extensionTileX ? desc : null);
+            when(level.getChunkDescAt(anyByte(), anyInt(), anyInt(), anyBoolean())).thenAnswer(call ->
+                    ((int) call.getArgument(1) & ~15) == extensionTileX ? desc : null);
+            when(level.getSolidTileForChunkDesc(eq(desc), anyInt())).thenReturn(tile);
+            when(level.getSolidTileForChunkDesc(eq(desc), anyInt(), anyBoolean())).thenReturn(tile);
+            com.openggf.physics.GroundSensor.setLevelManager(level);
+            try (var terrain = mockStatic(ObjectTerrainUtils.class, CALLS_REAL_METHODS)) {
+                terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                        .thenAnswer(call -> ObjectTerrainUtils.checkRightWallDist(level,
+                                call.getArgument(0), call.getArgument(1)));
+                terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                        .thenAnswer(call -> ObjectTerrainUtils.checkLeftWallDist(level,
+                                call.getArgument(0), call.getArgument(1)));
+                terrain.when(() -> ObjectTerrainUtils.checkFloorDist(anyInt(), anyInt()))
+                        .thenReturn(TerrainCheckResult.noCollision());
+                invoke("updateWallClimb");
+                // FindWall2's signed-width path returns -16; the extension adds 16.
+                // Exact contact retains climbing, including the left pre-mirror -1.
+                assertEquals(4, player.getDoubleJumpFlag());
+                assertEquals(0x201, player.getCentreY());
+                assertEquals(centreX, player.getCentreX());
+                assertEquals(centreX, player.getXSubpixelRaw());
+                assertEquals(0x5678, player.getYSubpixelRaw());
+            } finally {
+                com.openggf.physics.GroundSensor.setLevelManager(null);
+            }
+        }
+    }
+
+    @Test
+    void glideGrabsSignedWidthWallAndPreservesNativePositionWords() throws Exception {
+        for (int solidBit : new int[]{13, 15}) {
+            for (boolean right : new boolean[]{true, false}) {
+                prepareLedge(right ? Direction.RIGHT : Direction.LEFT);
+                player.setLrbSolidBit((byte) solidBit);
+                player.setTopSolidBit((byte) (solidBit - 1));
+                int centreX = right ? 0x10A : 0x115;
+                int wallTileX = right ? 0x110 : 0x100;
+                int alignedX = right ? 0x105 : 0x11B;
+                player.setCentreX((short) centreX);
+                player.setSubpixelRaw(0x1234, 0x5678);
+                player.setDoubleJumpFlag(1);
+                player.setXSpeed((short) (right ? 0x400 : -0x400));
+                player.setYSpeed((short) 0x100);
+                player.setGSpeed((short) 0x400);
+                var level = mock(LevelManager.class);
+                var desc = new com.openggf.level.ChunkDesc((3 << (solidBit - 1)) | 1);
+                byte[] widths = new byte[16];
+                java.util.Arrays.fill(widths, (byte) (right ? -16 : 16));
+                var tile = new com.openggf.level.SolidTile(1, new byte[16], widths, (byte) 0);
+                when(level.getChunkDescAt(anyByte(), anyInt(), anyInt())).thenAnswer(call ->
+                        ((int) call.getArgument(1) & ~15) == wallTileX ? desc : null);
+                when(level.getChunkDescAt(anyByte(), anyInt(), anyInt(), anyBoolean())).thenAnswer(call ->
+                        ((int) call.getArgument(1) & ~15) == wallTileX ? desc : null);
+                when(level.getSolidTileForChunkDesc(eq(desc), anyInt())).thenReturn(tile);
+                when(level.getSolidTileForChunkDesc(eq(desc), anyInt(), anyBoolean())).thenReturn(tile);
+                com.openggf.physics.GroundSensor.setLevelManager(level);
+                try (var terrain = mockStatic(ObjectTerrainUtils.class, CALLS_REAL_METHODS)) {
+                    terrain.when(() -> ObjectTerrainUtils.checkRightWallDist(anyInt(), anyInt()))
+                            .thenAnswer(call -> ObjectTerrainUtils.checkRightWallDist(level,
+                                    call.getArgument(0), call.getArgument(1)));
+                    terrain.when(() -> ObjectTerrainUtils.checkLeftWallDist(anyInt(), anyInt()))
+                            .thenAnswer(call -> ObjectTerrainUtils.checkLeftWallDist(level,
+                                    call.getArgument(0), call.getArgument(1)));
+                    terrain.when(() -> ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle(anyInt(), anyInt()))
+                            .thenReturn(TerrainCheckResult.noCollision());
+                    invoke("doGlideCollision");
+                    assertEquals(4, player.getDoubleJumpFlag());
+                    assertEquals(alignedX, player.getCentreX());
+                    assertEquals(alignedX, player.getXSubpixelRaw(), "BeginClimb stores the wall anchor in x_sub");
+                    assertEquals(0x200, player.getCentreY());
+                    assertEquals(0x5678, player.getYSubpixelRaw());
+                    assertEquals(0, player.getXSpeed());
+                    assertEquals(0, player.getYSpeed());
+                    assertEquals(0xB7, player.getMappingFrame());
+                } finally {
+                    com.openggf.physics.GroundSensor.setLevelManager(null);
+                }
+            }
+        }
+    }
+
+    @Test
+    void wallReleasePublishesTheNativeFallCursorWithoutRestarting() throws Exception {
+        prepareLedge(Direction.RIGHT);
+        var animation = player.getAnimationManager();
+        animation.publishPreviousAnimationId(0x20);
+        invoke("letGoOfWall");
+        assertEquals(2, player.getDoubleJumpFlag());
+        assertEquals(0x21, player.getAnimationId());
+        assertEquals(0x21, player.getForcedAnimationId());
+        assertEquals(0x21, animation.captureRewindState().lastAnimationId());
+        assertEquals(0xCB, player.getMappingFrame());
+        assertEquals(7, player.getAnimationTick());
+        assertEquals(1, player.getAnimationFrameIndex());
+        assertFalse(player.isObjectMappingFrameControl());
+    }
+
+    @Test
+    void wallJumpChangesShapeWithoutMovingEitherNativePositionWord() throws Exception {
+        player.setAnimationProfile(new ScriptedVelocityAnimationProfile().setRollAnimId(2));
+        for (GameRules gameRules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(gameRules);
+            for (Direction facing : new Direction[]{Direction.RIGHT, Direction.LEFT}) {
+                player.setRolling(false);
+                prepareLedge(facing);
+                input(false, false, false, false, true, true);
+                try (var terrain = mockStatic(ObjectTerrainUtils.class)) { invoke("updateWallClimb"); }
+                assertEquals(0x100, player.getCentreX());
+                assertEquals(0x200, player.getCentreY());
+                assertEquals(0x100, player.getXSubpixelRaw());
+                assertEquals(0x5678, player.getYSubpixelRaw());
+                assertEquals(facing == Direction.RIGHT ? -0x400 : 0x400, player.getXSpeed());
+                assertEquals(-0x380, player.getYSpeed());
+                assertEquals(7, player.getXRadius());
+                assertEquals(14, player.getYRadius());
+                assertEquals(0, player.getDoubleJumpFlag());
+                assertTrue(player.getRolling());
+                assertEquals(2, player.getAnimationId());
+            }
+        }
+    }
+
+    @Test
+    void glidePublishesPreviousAnimationSoWallJumpRestartsRollScript() throws Exception {
+        player.setAnimationProfile(new ScriptedVelocityAnimationProfile().setRollAnimId(2));
+        var scripts = new com.openggf.sprites.animation.SpriteAnimationSet();
+        scripts.addScript(2, new com.openggf.sprites.animation.SpriteAnimationScript(7,
+                java.util.List.of(0x9A, 0x96), com.openggf.sprites.animation.SpriteAnimationEndAction.LOOP, 0));
+        player.setAnimationSet(scripts);
+        var animation = player.getAnimationManager();
+        animation.publishPreviousAnimationId(2);
+        player.setAnimationId(2);
+        player.setAnimationTick(6);
+        player.setAnimationFrameIndex(1);
+        invoke("setGlideAnimation");
+        assertEquals(0x20, player.getAnimationId());
+        assertEquals(0x20, animation.captureRewindState().lastAnimationId());
+        assertEquals(0x20, player.getAnimationTick());
+        assertEquals(0, player.getAnimationFrameIndex());
+        prepareLedge(Direction.RIGHT);
+        input(false, false, false, false, true, true);
+        try (var terrain = mockStatic(ObjectTerrainUtils.class)) { invoke("updateWallClimb"); }
+        animation.update(0);
+        assertEquals(0x9A, player.getMappingFrame(), "Native anim/prev_anim change restarts the roll on the jump pass");
+        assertEquals(2, animation.captureRewindState().lastAnimationId());
     }
 
     private void prepareLedge(Direction facing) {

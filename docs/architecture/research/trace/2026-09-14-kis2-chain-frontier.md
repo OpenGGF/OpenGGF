@@ -726,3 +726,172 @@ and misses its sixth special-stage entry at cursor 48,882. The gain remains
 segment 9 row 200's wall-climb disagreement before the later segment 11 collision
 cascade. Special-stage interiors remain art-only comparisons. The inspected
 post-integration diagnostic directory was acknowledged and deleted.
+
+
+### Wall-contact continuation (2026-09-15, base `b8d0ae91b`)
+
+The next user-requested delivery starts in `.worktrees/kis2-wall-frontier`,
+branch `bugfix/ai-kis2-wall-frontier`, at updated develop `b8d0ae91b`.
+A read-only baseline replay reproduces all 15 normalized KiS2 reports from
+`316788395`: segment 9 first disagrees at row 200 (Y `$0376` / `$0375`),
+and the chain stops at segment 11's cursor 48,882 special-stage boundary.
+The updated base's complete ordinary/guard verification is recorded at
+`7480ef0de` in the second-pass simplification plan (the later commits are prose).
+
+Down is held at the first wall disagreement. Immediately before it, Knuckles
+is at `$1475,$0375`, double-jump flag 4 and mapping `$B8`. The lower wall probe
+is `$147F,$0380`: `ObjectTerrainUtils` returns its no-collision sentinel 32767,
+while the existing player `GroundSensor` returns native distance zero. The
+legacy result sends the engine to flag 2 / falling frame `$CA`; the ROM retains
+the wall and takes its next one-pixel downward step. This is an incorrect
+detach, not an animation-table error or an upward ceiling collision.
+
+KiS2 `GetDistanceFromWall` (s2.asm:38821) and S3K's identically named routine
+load the live `lrb_solid_bit`, use the X radius, and subtract one before the
+left radius/mirror entry. Their `FindWall` extension path must process signed
+widths. A small synthetic terrain regression places a negative-width tile in
+the extension: `FindWall2` returns -16 and the caller adds 16, retaining exact
+contact. The previous helper discards negative extension widths. The focused
+regression fails on the old owner with expected climb flag 4, actual 2.
+The combined numeric probe/regression command completed three tests, two
+failures (that regression plus the existing chain), zero errors/skips in
+30.810 seconds. No physics, aux, timing or manifest data was edited.
+
+The candidate routes only climbing wall contact through the existing native
+player sensor, using a small `GlideWallGrabTerrain` adapter. It preserves finite
+empty-tile distances and the left pre-mirror offset. Ceiling/floor branches are
+not changed by this candidate. The regression now also covers left-facing
+contact and checks integer movement plus both fractional words. The initial
+candidate passed 49 focused movement/sensor tests and reduced segment 9 from
+6,140 to 2,186 errors, exposing the next difference at row 360's wall release.
+
+`Knuckles_LetGoOfWall` in both ROMs writes animation and previous animation
+$2121, mapping $CB, duration 7 and frame index 1. The engine restarted at $CA.
+The release now publishes that native cursor; failed initial grabs retain their
+separate `Knuckles_BeginClimb.fail` behavior. Its focused regression failed on
+the old cursor and passes with the change. The resulting 18 movement tests pass
+and segment 9 now compares all **1,177 rows with zero errors**. Segment 7 also
+remains zero. The chain still stops at cursor 48,882 pending the collision fix.
+
+A read-only native GPGX replay of the original BK2 confirms segment 11's first
+bounce is two rows early in Java: at row 212 native Y speed is $0528 while
+Java has already negated it. The native Coconuts at X $1A57 is climbing at Y
+$0399; Java is throwing at Y $0391. Native completed movie frame 46,837 leaves
+its idle timer at zero with Knuckles at X $19F7 (distance $60); frame 46,838
+sees X $19F9 and starts throwing. Java expires that timer one pass earlier and
+starts climbing before the player enters range.
+
+`Obj9D_Init` calls `LoadSubObject`, writes timer $10, then returns without
+executing `Obj9D_Idle`. The engine constructor initialized the fields but its
+first update ran Idle immediately. An explicit initializing state preserves
+that return and is captured by the existing rewind state ordinal, without
+changing the snapshot record. Two focused regressions reproduced the old
+behavior: first-pass timer 15 rather than 16, and no throw when entering range
+on idle expiry. Native probing only read RAM after movie-driven advances;
+no fixture values or gameplay hydration were used. Candidate validation follows.
+
+The Coconuts fix passes 28 focused movement/object/rewind tests. A subsequent
+chain replay confirms the native object Y/timer and the row-214 bounce, moving
+segment 11's first physics difference from row 212 to row 240. That next row
+missed a wall grab: at `$1A7A,$0364`, native player `FindWall` returns -5 while
+`ObjectTerrainUtils` returns 32767. The live LRB bit is 15; the object helper
+checks bit 13. Its signed-width state machine also differs, independently
+reproduced with synthetic geometry. Glide wall checks now use the existing
+player sensor with `CheckLeft/RightWallDist`'s fixed ten-pixel offsets, distinct
+from climbing's radius and left-minus-one entry. Native word corrections retain
+fractional position. The regression covers both directions and both solidity
+paths; it fails on the old contact path with glide flag 1 rather than climb 4.
+The corrected 19-test movement selection passes; the 3 wall-alignment and 29
+sensor tests also pass. A temporary diagnostic initially failed to compile
+because `scanWorld` is package-private; reflection fixed the diagnostic without
+changing production visibility. All temporary Java logging was removed.
+
+Clean queued chain replay with `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestKis2CompleteEmeraldRunChain` (verified KiS2/S2 ROM properties) completes
+two tests, one existing chain assertion, zero errors/skips in 49.102 seconds
+including rebuild. Segment 9 remains zero-error; segment 11 improves from
+28,200 to 21,101 errors with its first physics difference now row 398, Y
+`$0314` expected versus `$030F` actual. The boundary is still cursor 48,882.
+
+Row 398 jumps away from the wall. Both KiS2 and S3K `.notMoving` write rolling
+radii 7/14, rolling status, animation 2 and velocities, with no position write.
+The engine's visual-box shrink in `setRolling` moves its center by five pixels.
+The wall jump now preserves both native centers around that representation
+change. The focused regression reproduced expected Y 512 versus actual 507
+before the correction, with both games and both wall-facing directions covered.
+
+Wall-jump position correction passes all 20 movement regressions; all 177 shared
+movement tests also pass. A test initially lacked the roll animation profile,
+which was supplied explicitly rather than changing production behavior to suit
+that fixture. Clean chain replay completes two tests with one chain assertion,
+zero errors/skips in 27.708 seconds. It now crosses the sixth special-stage
+entry and return and reaches segment 13 (`seg8_ehz2`) at **BK2 cursor 58,451**:
+**9,569 frames beyond cursor 48,882**. Segment 9 remains clean; segment 11 has
+2,094 errors beginning row 398's animation/art publication; the newly reached
+segment 13 first differs at row 957, X speed -$0448 versus -$0200, then loses
+production ownership to a title card at cursor 58,451. Its partial report has
+7,203 errors. The sixth SS art ledger is clean; its return retains a 38-frame
+early submission plus propagated art ordinal/fingerprint differences.
+
+The residual wall-jump animation error starts because `setGlideAnimation` only
+forced the selected animation; the manager's native previous-animation value
+remained 2 from the preceding roll. On the jump, animation 2 therefore failed
+to restart and retained climb mapping $B9 instead of $9A. Both
+`Knuckles_DoGlidingAnimation` and the S3K equivalent explicitly write anim/prev
+$2020, duration $20 and frame index zero. The owner now publishes those writes.
+The focused regression first reproduced expected animation $20 versus actual 2;
+it also exercises the subsequent ordinary script restart on the wall-jump pass.
+
+
+Final focused selection `TestKis2MovementRules,TestPlayableSpriteMovement,
+TestPlayableSpriteAnimation,TestCoconutsInitialization` passes all **248 tests**,
+zero failures/errors/skips, 41.065 seconds including rebuild. The clean four-class
+trace control command in the frontier log completes five tests with four known
+red trace assertions, zero errors/skips, 39.194 seconds. Segment 11 now reaches
+row **1590** before its first non-camera difference (X $220A/$2206), down to
+**1,889 errors**. The wall-jump animation/art cascade at row 398 is removed.
+The structural frontier remains segment 13 at cursor **58,451**, a measured
+**9,569-frame gain**; its row-957 X-speed difference is the next investigation.
+Short KiS2 remains at 93 errors (91 bootstrap), stock S2 at 16,388, and S3K
+Knuckles at 12,616, with their prior first mismatches. Broad validation and
+integration are pending; these findings do not certify a complete chain.
+
+Matched baseline controls ran on develop's integrated sand-rock source
+`8cb81eb29` (the subsequent `d3cd963a4` is documentation only): all four
+normalized independent KiS2/S2/S3K reports exactly match this candidate,
+including complete error payloads. The command selects the three control
+classes above without the KiS2 full chain: three known red assertions,
+zero errors/skips, 60 seconds including rebuild. The updated base now includes
+SOZ vine/sand-rock and S3K retained-camera presentation work. Required full
+baseline/development/integration verification is being completed through the
+Maven queue; no additional control regression is observed.
+
+Validation of source `f56bd4f5c`, reconciled with develop in `a24aa6609`:
+
+- Updated-base full ordinary run `20260915T131945Z-ef899b66` at
+  `d3cd963a4`: 20,535 tests, one failure, zero errors, 19 skips (704.89 s).
+  The runner stopped before guards because upstream changed the main tree
+  during validation. Separate queued guards completed: 668 tests, two failures,
+  zero errors/skips. This is a completed ordinary run plus separate guards,
+  not an uninterrupted two-lane baseline.
+- Development run `20260915T133130Z-e45f325e` at `a24aa6609`,
+  `LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base
+  d3cd963a4d14a8a5bfd0bac1967a983906966b4f --run`: 20,542 ordinary tests,
+  one failure, zero errors, 19 skips (757.74 s); 668 guard tests, two failures,
+  zero errors/skips (184.38 s). Every failure identity and message, and every
+  skipped-case record, matches the baseline. Seven additional tests pass.
+- The ordinary failure was
+  `TestSonic3kObjectProfile.cnzPlacedActorsAreMarkedImplementedForS3klLevelsOnly`:
+  its old CNZ-only assertion rejected the newly implemented SKL object $44.
+  Upstream corrected this test in `79e20e6bb`; merge `60f232249` includes it
+  and develop `342f01cb4`. Queued focused `-Dtest=TestSonic3kObjectProfile test`
+  passes all six tests with zero failures/errors/skips (18.002 s).
+- Both inherited guard failures are unrelated to this change:
+  `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+  still demands guidance replaced by Maven queues, and
+  `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`
+  flags `FbzRouteEvidenceProbe.printEvidence` and
+  `LevelSolidityMapProbe.writeSolidityMap`. Neither is repaired here.
+
+Consumed category diagnostics were inspected and acknowledged. Integration
+verification remains pending; existing trace discrepancies are not waived.

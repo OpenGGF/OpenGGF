@@ -23,6 +23,15 @@ detaches on displacement. Preserve the ROM's alias and instruction width;
 keeping a separate top-left anchor or restoring a supposed fraction changes
 both gameplay and replay after rewind.
 
+**Player wall probes.** Object terrain helpers are not interchangeable with the
+player's native wall scan. KiS2/S3K climbing uses the live LRB solidity bit,
+signed-width extension tiles and a left-side pre-mirror offset; gliding uses
+fixed ten-pixel probes. Keep the owning routine's geometry and copy reusable
+sensor results before another scan. Shape setters can also move native centres,
+and writing the ROM animation word changes both current and previous animation.
+The [KiS2 wall investigation](research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b)
+records independent geometry, position-word and animation-restart regressions.
+
 **Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
 object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
 the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can

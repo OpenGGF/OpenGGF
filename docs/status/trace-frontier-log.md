@@ -110315,3 +110315,40 @@ replay passes in 16.15 seconds; no first error frame/field. The combined develop
 ordinary suite passes 20,521 tests with 19 inspected skips; two exact inherited
 guard failures remain. Full evidence and the camera-phase oracle correction
 are in the linked MHZ audit.
+
+
+## 2026-09-15 — KiS2 signed-width walls, Coconuts init and wall jumps
+
+Task `.worktrees/kis2-wall-frontier`, branch `bugfix/ai-kis2-wall-frontier`,
+base `b8d0ae91b`. Native wall probes now use the live LRB solidity bit and
+signed-width player sensor; wall releases/glides publish their native animation
+registers; wall jumps preserve native position during the visual shape change.
+Coconuts retains its init-only object pass before idle timer/range decisions,
+including rewind. No recorded physics, aux, timing or manifest bytes changed.
+
+Queued command: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1
+-Dtest=TestKis2CompleteEmeraldRunChain,TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kKnucklesSuperEmeraldRunChain test`
+with existing absolute `kis2.rom.path`, `sonic2.rom.path`, `s3k.rom.path`.
+Five tests, four pre-existing red trace assertions, zero errors/skips; 39.194
+seconds. Focused movement/animation/Coconuts validation: 248 tests pass,
+zero errors/skips; additional sensor/wall-alignment and live object rewind
+checks pass. These are focused checks, not broad delivery validation.
+
+- Segment 9 (`seg6_ehz2`): **6,140 → 0 errors**, all 1,177 rows compared.
+- Segment 11 (`seg7_ehz2`): **28,200 → 1,889 errors**; first non-camera
+  difference moves from row 212 Y-speed sign to row 1590 X `$220A`/`$2206`.
+- Chain crosses the sixth special stage and reaches segment 13 (`seg8_ehz2`),
+  **cursor 48,882 → 58,451 (+9,569 movie frames)**. Its partial report has
+  7,203 errors, first row 957 X speed -$0448/-$0200; a title card takes source
+  ownership before closure at cursor 58,451. This is the next causal frontier.
+- Segments 4, 6, 7 and 9 remain clean. Segment 0 retains 91 bootstrap plus
+  one ring timing error; segment 2 retains its one ring timing error.
+- All six SS interior art ledgers are clean; SS gameplay remains uncompared.
+  Return art submissions remain 39/39/39/37/38/38 frames early, with later
+  gameplay art differences propagating through the ledger.
+- Independent short KiS2 remains 93 errors (91 bootstrap), first post-bootstrap
+  row 289 animation; stock S2 remains 16,388 errors, first row 6 transfer IDs;
+  S3K Knuckles remains 12,616 errors, first physics row 446 Y-speed sign.
+
+See the [native evidence and rejected paths](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b).
