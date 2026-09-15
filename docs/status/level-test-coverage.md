@@ -177,7 +177,12 @@ coverage; those still require independent route checks. The full chain recording
 is now published. The [first frontier round](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
 exercises the initial EHZ1 route and first special-stage return, plus independent
 chip PLC capture/restore/forward replay. It does not certify full-act gameplay
-rewind or viewport/donor/team breadth; the return title-card boundary remains open.
+rewind or viewport/donor/team breadth. The wall-contact continuation now exercises
+signed-width wall retention and glide grabs on both sides and both solidity paths,
+KiS2/S3K wall-jump position preservation, and Coconuts init/idle capture, restore
+and forward replay. The chain has crossed the sixth special-stage entry and return;
+its remaining animation/art and later EHZ2 frontier are recorded in that investigation.
+These checks do not certify full-act or special-stage gameplay rewind.
 
 FBZ integration verification (`f037a1218`, 2026-09-14): the full ordinary selection passes 20,281 tests with18 inspected skips and no failures/errors. Two structural-guard failures are unchanged from the baseline. This validates the implemented matrix obligations; the explicit strict replay prerequisite/SOZ entry and native SAT presentation gaps remain open. See the [completion record](../architecture/plans/2026-09-14-fbz-completion.md) for exact commands and limits.
 

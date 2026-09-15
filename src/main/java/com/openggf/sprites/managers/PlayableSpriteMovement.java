@@ -2266,8 +2266,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.setYSpeed((short) -0x380);
 			sprite.setAir(true);
 			sprite.setJumping(true);
+			// KiS2/S3K .notMoving writes only rolling radii/status, not x_pos/y_pos.
+			// Keep native centers when the engine's visual box shrinks into a ball.
+			int jumpX = sprite.getCentreX();
+			int jumpY = sprite.getCentreY();
 			sprite.setRolling(true);
-			sprite.applyRollingRadii(true);
+			sprite.applyRollingRadii(false);
+			NativePositionOps.writeXPosPreserveSubpixel(sprite, jumpX);
+			NativePositionOps.writeYPosPreserveSubpixel(sprite, jumpY);
 			audioManager.playSfx(GameSound.JUMP);
 			return;
 		}
@@ -2295,12 +2301,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 	/** Probes wall distance at a given Y position in the facing direction. */
 	private com.openggf.physics.TerrainCheckResult getWallDistance(int probeY, boolean facingRight) {
-		int probeX = facingRight
-				? sprite.getCentreX() + sprite.getXRadius()
-				: sprite.getCentreX() - sprite.getXRadius();
-		return facingRight
-				? ObjectTerrainUtils.checkRightWallDist(probeX, probeY)
-				: ObjectTerrainUtils.checkLeftWallDist(probeX, probeY);
+		// KiS2/S3K GetDistanceFromWall uses the player FindWall path, including
+		// signed-width extension/regression and the live lrb_solid_bit.
+		return com.openggf.physics.GlideWallGrabTerrain.distanceFromWall(sprite, probeY, facingRight);
 	}
 
 	/** ROM: Knuckles_LetGoOfWall (sonic3k.asm:31449-31461) — drop off bottom of wall. */
@@ -2309,6 +2312,13 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		sprite.restoreDefaultRadii();
 		sprite.setObjectMappingFrameControl(false);
 		sprite.setForcedAnimationId(0x21);  // GLIDE_DROP
+		// KiS2/S3K Knuckles_LetGoOfWall writes anim and prev_anim together,
+		// then resumes at the second falling frame instead of restarting at CA.
+		sprite.setAnimationId(0x21);
+		sprite.getAnimationManager().publishPreviousAnimationId(0x21);
+		sprite.setMappingFrame(0xCB);
+		sprite.setAnimationTick(7);
+		sprite.setAnimationFrameIndex(1);
 	}
 
 	/** Transition from wall climb to standing on ground (reached floor while climbing down). */
@@ -2426,23 +2436,25 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		int xRad = sprite.getXRadius();
 		int yRad = sprite.getYRadius();
 
+		// Knuckles_DoLevelCollision2 uses player FindWall with the live LRB bit,
+		// including secondary solidity and signed widths. Corrections are word writes.
 		// Check wall in movement direction
 		// Save the movement direction BEFORE zeroing velocity (needed by glideHitWall)
 		int xVel = sprite.getXSpeed();
 		boolean movingRight = xVel >= 0;
 
 		if (xVel > 0) {
-			var result = ObjectTerrainUtils.checkRightWallDist(cx + xRad, cy);
+			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, true);
 			if (result != null && result.distance() < 0) {
-				sprite.setX((short) (sprite.getX() + result.distance()));
+				NativePositionOps.addXPosPreserveSubpixel(sprite, result.distance());
 				sprite.setXSpeed((short) 0);
 				glideHitWall(movingRight);
 				return;
 			}
 		} else if (xVel < 0) {
-			var result = ObjectTerrainUtils.checkLeftWallDist(cx - xRad, cy);
+			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, false);
 			if (result != null && result.distance() < 0) {
-				sprite.setX((short) (sprite.getX() - result.distance()));
+				NativePositionOps.addXPosPreserveSubpixel(sprite, -result.distance());
 				sprite.setXSpeed((short) 0);
 				glideHitWall(movingRight);
 				return;
@@ -2463,15 +2475,15 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Check opposite wall too (ROM checks both walls in some quadrants)
 		if (xVel <= 0) {
-			var result = ObjectTerrainUtils.checkRightWallDist(cx + xRad, cy);
+			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, true);
 			if (result != null && result.distance() < 0) {
-				sprite.setX((short) (sprite.getX() + result.distance()));
+				NativePositionOps.addXPosPreserveSubpixel(sprite, result.distance());
 			}
 		}
 		if (xVel >= 0) {
-			var result = ObjectTerrainUtils.checkLeftWallDist(cx - xRad, cy);
+			var result = com.openggf.physics.GlideWallGrabTerrain.glideWallDistance(sprite, false);
 			if (result != null && result.distance() < 0) {
-				sprite.setX((short) (sprite.getX() - result.distance()));
+				NativePositionOps.addXPosPreserveSubpixel(sprite, -result.distance());
 			}
 		}
 	}
@@ -2536,7 +2548,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// is insufficient: the failure branch keeps inertia/Y speed and falls.
 		if (!com.openggf.physics.GlideWallGrabTerrain.align(sprite, wasMovingRight,
 				sprite.currentGameState().isReverseGravityActive())) {
-			letGoOfWall();
+			// Knuckles_BeginClimb.fail only selects the falling animation;
+			// it does not execute Knuckles_LetGoOfWall's explicit cursor writes.
+			sprite.setDoubleJumpFlag(2);
+			sprite.restoreDefaultRadii();
+			sprite.setObjectMappingFrameControl(false);
+			sprite.setForcedAnimationId(0x21);
 			sprite.setAir(true);
 			return;
 		}
@@ -2590,15 +2607,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * observes.
 	 */
 	private void setGlideAnimation() {
-		// ROM sonic3k.asm:31563. Word write also sets prev_anim(a0), which this
-		// engine does not model as a separate field. Must go through
-		// setForcedAnimationId, not setAnimationId directly: PlayableSpriteAnimation
-		// .update() recomputes animationId from the scripted velocity resolver every
-		// frame BEFORE consulting isObjectMappingFrameControl(), so a plain
-		// setAnimationId() here is stomped back to the resolver's idea (0) on the
-		// very next animation-manager pass. forcedAnimationId is the established
-		// override channel (see enterFallFromGlide()/clearGlideAnimationState()).
+		// Knuckles_DoGlidingAnimation / S3K's equivalent writes anim and prev_anim
+		// together, plus the script cursor, before publishing its direct mapping.
+		// Retain the forced ID so the velocity resolver preserves that native write.
 		sprite.setForcedAnimationId(0x20);
+		sprite.setAnimationId(0x20);
+		sprite.getAnimationManager().publishPreviousAnimationId(0x20);
+		sprite.setAnimationTick(0x20);
+		sprite.setAnimationFrameIndex(0);
 		// Enable direct mapping frame control (bypasses animation manager)
 		sprite.setObjectMappingFrameControl(true);
 		sprite.setPushing(false);

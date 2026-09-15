@@ -44,7 +44,8 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
     private enum State {
         IDLE,
         CLIMBING,
-        THROWING
+        THROWING,
+        INITIALIZING
     }
 
     private enum ThrowState {
@@ -67,7 +68,7 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
         this.climbTableIndex = 0;
         this.attackTimer = 0;
         this.yVelocity = 0;
-        this.state = State.IDLE;
+        this.state = State.INITIALIZING;
         this.throwState = ThrowState.HAND_RAISED;
     }
 
@@ -82,7 +83,7 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
      * <p>Field mapping:
      * <ul>
      *   <li>{@code routine ($24)} → {@link State}
-     *       (0/2 → IDLE, 4 → CLIMBING, 6 → THROWING).</li>
+     *       (0 → INITIALIZING, 2 → IDLE, 4 → CLIMBING, 6 → THROWING).</li>
      *   <li>{@code routine_secondary ($25)} → {@link ThrowState}
      *       (0 → HAND_RAISED, non-zero → HAND_LOWERED).</li>
      *   <li>{@code Obj9D_timer ($2A, byte)} → {@link #timer}.</li>
@@ -103,9 +104,10 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
 
         int routine = snapshot.routine() & 0xFF;
         this.state = switch (routine) {
+            case 0x00 -> State.INITIALIZING;
             case 0x04 -> State.CLIMBING;
             case 0x06 -> State.THROWING;
-            default -> State.IDLE;   // 0x00 (Init) and 0x02 (Idle) both land here
+            default -> State.IDLE;
         };
 
         this.throwState = (snapshot.routineSecondary() & 0xFF) == 0
@@ -126,6 +128,13 @@ public class CoconutsBadnikInstance extends AbstractBadnikInstance implements Re
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         currentX = spawn.x();
         switch (state) {
+            case INITIALIZING -> {
+                // S2/KiS2 Obj9D_Init calls LoadSubObject, writes the idle timer,
+                // then returns. Running Idle here advances the climb/throw decision
+                // one object pass early. The state enum also preserves this pass in rewind.
+                timer = IDLE_TIMER_INIT;
+                state = State.IDLE;
+            }
             case IDLE -> updateIdle(player);
             case CLIMBING -> updateClimbing();
             case THROWING -> updateThrowing();

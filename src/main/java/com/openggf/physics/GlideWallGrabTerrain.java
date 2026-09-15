@@ -23,6 +23,30 @@ public final class GlideWallGrabTerrain {
         return true;
     }
 
+    /** KiS2/S3K GetDistanceFromWall, using FindWall's signed-width state machine. */
+    public static TerrainCheckResult distanceFromWall(AbstractPlayableSprite sprite,
+                                                       int probeY, boolean facingRight) {
+        // GetDistanceFromWall subtracts one before the left radius/mirror entry.
+        int xOffset = facingRight ? sprite.getXRadius() : -sprite.getXRadius() - 1;
+        return scanWall(sprite, facingRight, xOffset, probeY - sprite.getCentreY());
+    }
+
+    /** CheckLeft/RightWallDist use a fixed ten-pixel offset, without the climb's left subtraction. */
+    public static TerrainCheckResult glideWallDistance(AbstractPlayableSprite sprite, boolean facingRight) {
+        return scanWall(sprite, facingRight, facingRight ? 10 : -10, 0);
+    }
+
+    private static TerrainCheckResult scanWall(AbstractPlayableSprite sprite, boolean facingRight,
+                                               int xOffset, int yOffset) {
+        GroundSensor sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
+        SensorResult result = sensor.scanWorld(facingRight ? Direction.RIGHT : Direction.LEFT,
+                (short) xOffset, (short) yOffset, (short) 0, (short) 0, sprite.getLrbSolidBit());
+        // Copy immediately: GroundSensor owns a reusable result. Empty extensions
+        // retain the native finite distance; signed widths can return exact contact.
+        return result == null ? TerrainCheckResult.noCollision()
+                : new TerrainCheckResult(result.distance(), result.angle(), result.tileId());
+    }
+
     @FunctionalInterface
     interface Probe { int distance(Direction direction, int x, int y); }
     record Alignment(int x, int y) { }

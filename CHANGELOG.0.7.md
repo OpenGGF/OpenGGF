@@ -39,7 +39,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   prelude; glide wall grabs check terrain fit, and floor contact preserves flipped
   tile angles and the slide animation register. Wall grabs use the native
   position-word anchor and detach on displacement or object carry; ledge climbs
-  retain the ROM animation holds and fractional position words. Special-stage return title cards
+  retain the ROM animation holds and fractional position words. Native signed-width
+  wall probes retain the live solidity path, wall jumps preserve the center while
+  changing shape, and glide/release animation cursors follow the ROM register
+  writes. Coconuts retains its separate initialization pass before idle decisions. Special-stage return title cards
   release control after their final locked object pass without an extra wait.
   Continuous replay retains the locked title-card sequence across results-driven
   act changes and starts destination gameplay only after the transition gap.
