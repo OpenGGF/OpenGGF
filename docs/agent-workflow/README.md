@@ -2,6 +2,10 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+Zone delivery: [methodology v2](../architecture/designs/2026-09-15-zone-methodology-v2.md)
+retains FBZ's route slices and adds early short native comparisons and compatibility
+checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-15-soz-methodology-v2.md).
+
 ## Tools
 
 - [FBZ cadence pixel comparator](../../tools/bizhawk/compare_fbz_cadence_pixels.py) pairs native VRAM/SAT/CRAM pixels with reconstructable actual-GPU source masks, retaining occlusions and unmatched source pixels; requires Pillow.
