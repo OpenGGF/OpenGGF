@@ -4151,6 +4151,11 @@ public class SidekickCpuController {
             }
             sidekick.setAir(true);
             sidekick.setDirection(Direction.RIGHT);
+            // S3K loc_13D34 and S2 loc_1BC68 copy the live leader's
+            // collision plane and art priority when recovery returns control.
+            sidekick.setTopSolidBit(leader.getTopSolidBit());
+            sidekick.setLrbSolidBit(leader.getLrbSolidBit());
+            sidekick.setHighPriority(leader.isHighPriority());
             // ROM loc_1384A (sonic3k.asm:26213): while object_control bit 0 is
             // set (FLIGHT_AUTO_RECOVERY keeps it high), double_jump_flag is
             // cleared every frame by the dispatcher. On the NORMAL transition

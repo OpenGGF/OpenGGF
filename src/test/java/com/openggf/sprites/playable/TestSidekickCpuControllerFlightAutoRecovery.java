@@ -71,6 +71,34 @@ class TestSidekickCpuControllerFlightAutoRecovery {
     }
 
     @Test
+    void normalHandoffCopiesLiveLeaderCollisionPlaneAndArtPriority() {
+        for (var rules : new GameRules[]{GameRules.SONIC_2, GameRules.SONIC_3K}) {
+            for (boolean secondary : new boolean[]{true, false}) {
+                var sonic = sonicAt(0x1000, 0x400);
+                sonic.useGameRules(rules);
+                var tails = new TestableSprite("tails_p2");
+                tails.useGameRules(rules);
+                tails.setCpuControlled(true);
+                tails.setCentreX((short) 0x1000);
+                tails.setCentreY((short) 0x400);
+                sonic.setTopSolidBit((byte) (secondary ? 0xE : 0xC));
+                sonic.setLrbSolidBit((byte) (secondary ? 0xF : 0xD));
+                sonic.setHighPriority(secondary);
+                tails.setTopSolidBit((byte) (secondary ? 0xC : 0xE));
+                tails.setLrbSolidBit((byte) (secondary ? 0xD : 0xF));
+                tails.setHighPriority(!secondary);
+                var cpu = new SidekickCpuController(tails, sonic);
+                cpu.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
+                cpu.update(1);
+                assertEquals(SidekickCpuController.State.NORMAL, cpu.getState());
+                assertEquals(sonic.getTopSolidBit(), tails.getTopSolidBit());
+                assertEquals(sonic.getLrbSolidBit(), tails.getLrbSolidBit());
+                assertEquals(sonic.isHighPriority(), tails.isHighPriority());
+            }
+        }
+    }
+
+    @Test
     void flightSteersXByDistanceOver16ClampedTo0xC() {
         TestableSprite sonic = sonicAt(0x1000, 0x0400);
         TestableSprite tails = new TestableSprite("tails_p2");

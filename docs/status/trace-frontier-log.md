@@ -110499,3 +110499,33 @@ animation2. That production intro, not trace-state seeding, is the next target.
   route, while the exact matching prefix extends through3479. CPU boundary death
   uses DEAD_FALLING while generic dead=false; quicksand acquisition must still
   reject native routine6 before its ascending+$68 force.
+
+- Candidate727087017, same standalone emerald-run replay:2892errors,
+  0warnings,0bootstrap errors,17646frames,25.450s. First mismatch4868
+  `player_animation_id` (1Fvs02) is `Sonic_Transform`, after52rings; physics
+  matched through4868 and all compared fields through4867. Metadata provides
+  no prior-campaign emerald progression, while the recording requests a
+  transformation. No emeralds were supplied from comparison rows or inferred
+  from the fixture name. This segment remains red at its progression boundary.
+- Selected existing `soz_completerun` (59507rows, BK2offset282195) as an
+  independent ordinary-input frontier. Its recorded Sonic animation never
+  enters1F. Added `TestS3kSozCompleteRunTraceReplay` without row trims or
+  changed tolerances; queued full recording comparison is pending.
+
+- Independent `soz_completerun` on727087017 plus new harness:9763errors,
+  0warnings,0skips,39.673s. First reported error34 is direct Kos queue busy
+  timing (truevsfalse); those queue comparisons remain enabled. First player
+  state error2312 is Tails y-speed0038vs0000/air1vs0 after flight recovery.
+  Native loc_13D34 (S2 loc_1BC68 tail) copies live leader collision bits and
+  art priority at handoff; engine omitted those copies. First main-player
+  position difference is6242 Y0A90vs0A91. Investigating the handoff first;
+  no queue comparison or later rows were removed.
+
+- Recovery collision/art handoff regression failed before the fix (expected
+  top bit14, actual12), then all18 `TestSidekickCpuControllerFlightAutoRecovery`
+  tests passed,0skips,52.981s in `soz-completion` on727087017 plus the fix.
+  Both S2/S3K and both collision-plane directions are covered. The same queued
+  independent trace command after the fix still reports9763errors,0warnings,
+  0skips,59336compared frames,39.192s, with unchanged first queue34 and
+  Tails2312/main-player6242 frontiers. The missing copy is a proven source
+  discrepancy, but this experiment rejects it as the cause of this frontier.
