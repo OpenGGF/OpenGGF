@@ -71,6 +71,12 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ roster correction (2026-09-16): the capture CLI normalizes `none`, but direct
+`GameplayCaptureSession.Settings` requires a blank sidekick name for solo play.
+An unknown name can resolve to fallback Sonic and still produce plausible video.
+Assert live leader and follower identities in both the test and capture driver;
+requested configuration is not evidence of the roster actually running.
+
 SOZ completion (2026-09-15): the capture CLI's `--act` is one-based, while
 `GameplayCaptureSession.boot` takes a zero-based act. Assert the loaded act and
 its art before trusting a positioned capture. A wrong-act boss setup can render

@@ -4122,6 +4122,9 @@ public final class ObjectSolidContactController {
 
         Integer directTopLimit = topSolidOnly && !riding
                 ? slopedAdapter.provider().getDirectTopLandingOverlapLimit() : null;
+        // S3K loc_1E45A: BHI rejects a positive surface-minus-feet result;
+        // CMP.W #-$10 / BLO also rejects zero. Only overlaps 1..16 land.
+        if (directTopLimit != null) minRelY = 1;
         int verticalLimit = directTopLimit != null ? directTopLimit : maxTop * 2;
         if (relY < minRelY || relY >= verticalLimit) {
             return null;

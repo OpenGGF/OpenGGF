@@ -1890,3 +1890,23 @@ production/capture checks pass again with zero skips. Definitive captures use
 `completion-connected-mechanisms/verified-rosters`; prior attempts are retained
 and labelled. Five switchB passage trials remain unproved, with no established
 runtime defect. The source-driven rock track and switch decay were not altered.
+
+`9fc8974f8` adds an ordinary-controller final-boss route from the positioned
+`$51C0/$620` approach through eight hits, capsule, results, forced walk and Lava
+Reef. After initial setup it does not write player position, velocity, boss HP
+or phase. Continuous snapshots and forced graph recreation exposed an exit
+helper retaining a deleted boss. Native `loc_77A6E` has no parent pointer; the
+helper now reads the captured `_unkFAB8` fall signal and follows independently.
+The worker reports72focused checks,63final checks and the58-test required S3K
+quartet passing without skips. The actual-solo native-width capture contains
+3050gameplay frames and reaches Lava Reef at2869. This remains a positioned
+boss-to-destination route; connected cold Act2 validation is separate.
+
+The proposed retained-plane Act1 arena redraw implementation was rejected after
+42 image pairs at cameraY`$960`, widths320/528/800, static and moving camera,
+showed zero changed pixels despite8,170–10,775changed tilemap bytes. The
+foreground occludes those partial writes. Seamless loading fades palettes before
+its redraw. All prototype source and tests were removed; diagnostic images remain
+in `completion-arena-redraw/native-bounds-pixel-comparison` in the unified capture
+folder. This corrects the earlier visible-defect assumption and does not certify
+native pixel identity. Act2 redraw visibility is being measured independently.

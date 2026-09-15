@@ -389,6 +389,16 @@ and detect changed words. A live occupant without a code-pointer provider is
 unknown, not an empty slot. Rewind tests need a recycled slot whose old contact
 is absent after reconstruction, not just restoration of an unchanged owner.
 
+### Oscillation table offsets include a native control word
+
+`OscillationManager.getByte/getWord` address data after the native two-byte
+control word. Subtract2 from `Oscillating_table+$NN` references before selecting
+an engine offset. SOZ `loc_402CC/loc_402EE` read native`+$16`, hence engine`$14`.
+Reading engine`$16` selected velocity instead of position: negative velocity's
+high byte displaced sand-block spawners by roughly255pixels and changed their
+zero-position release gate. Distinguish position and velocity in routine tests;
+reset-state tests where both high bytes are zero cannot catch this error.
+
 ### Independently allocated exit helpers must not retain the retiring boss
 
 SOZ `loc_77A6E` is allocated without a parent pointer. It waits on `_unkFAB8`
@@ -399,12 +409,11 @@ exposed an unregistered reference between root deletion and destination load;
 continuous snapshots cover this interval even when selected hit/escape rewind
 spots all pass.
 
-### Oscillation table offsets include a native control word
+### Unsigned negative-window comparisons can exclude zero
 
-`OscillationManager.getByte/getWord` address data after the native two-byte
-control word. Subtract2 from `Oscillating_table+$NN` references before selecting
-an engine offset. SOZ `loc_402CC/loc_402EE` read native`+$16`, hence engine`$14`.
-Reading engine`$16` selected velocity instead of position: negative velocity's
-high byte displaced sand-block spawners by roughly255pixels and changed their
-zero-position release gate. Distinguish position and velocity in routine tests;
-reset-state tests where both high bytes are zero cannot catch this error.
+S3K `loc_1E45A` first uses `BHI` after subtracting the player's feet from the
+surface, then `CMP.W #-$10 / BLO`. Taken together these admit native values
+`$FFF0..$FFFF`, corresponding to positive overlap1..16; zero is rejected by the
+second comparison. Treating this as an inclusive0..16 range made the SOZ spring
+vine capture a rolling player one frame early. Test both zero and the negative
+window edge rather than deriving a signed interval from either branch alone.
