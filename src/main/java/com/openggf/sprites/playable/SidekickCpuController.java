@@ -675,6 +675,25 @@ public class SidekickCpuController {
     }
 
     private Integer currentS3kInteractWord() {
+        int slot = sidekick.getInteractSlotIndex();
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        if (slot >= 0 && levelManager != null && levelManager.getObjectManager() != null) {
+            // sub_13EFC dereferences interact(a0) on every comparison/refresh.
+            // The old Java owner may have unloaded and its SST may now contain
+            // a different object with the same code-pointer high word.
+            for (ObjectInstance occupant : levelManager.getObjectManager().getActiveObjects()) {
+                if (occupant instanceof com.openggf.level.objects.AbstractObjectInstance object
+                        && callObject(occupant, object::getSlotIndex) == slot
+                        && !callObject(occupant, occupant::isDestroyed)) {
+                    return occupant instanceof RomObjectCodePointerProvider provider
+                            ? callObject(occupant, provider::romObjectCodePointerHighWord) & 0xFFFF
+                            : null; // A live provider-less SST is unknown, never a freed slot.
+                }
+            }
+            return 0; // Delete_Referenced_Sprite clears word zero of an empty SST.
+        }
+        // Synthetic/isolated contacts without a managed SST retain their existing
+        // owner projection. Production assigned slots always take the live read above.
         ObjectInstance instance = sidekick.getLatchedSolidObjectInstance();
         if (instance == null || isLatchedRideSlotFreed(instance)) {
             return null;
@@ -4531,15 +4550,12 @@ public class SidekickCpuController {
      * {@code -1}) maps back to ROM's zeroed object id, so the compare sees the
      * same id change ROM sees after {@code DeleteObject} clears the slot.
      *
-     * <p>S3K's {@code sub_13EFC} (docs/skdisasm/sonic3k.asm:26816-26833) compares
-     * the routine-pointer high word, which is identical for virtually all
-     * gameplay objects, so its only practical despawn trigger is a slot freed by
-     * {@code Delete_Referenced_Sprite} (id word → 0, sonic3k.asm:36116-36124).
-     * That stays modelled by the riding-instance-loss path, gated by
-     * {@link ObjectInteractionRules#sidekickDespawnUsesRidingInstanceLoss()} (S3K
-     * true). The S2 slot-id-mismatch path is gated by
-     * {@link ObjectInteractionRules#sidekickDespawnUsesObjectIdMismatch()} (S2 true,
-     * S3K false), so the two games never both fire.
+     * <p>S3K {@code sub_13EFC} (sonic3k.asm:26816-26843) instead compares
+     * the live slot's code-pointer high word with {@code Tails_CPU_interact}.
+     * Same-word replacements survive; changed words and a newly emptied slot
+     * can despawn. The released-instance fallback is retained only for contacts
+     * without a resolvable managed SST. Unknown live providers are not treated
+     * as empty slots. S2 continues to use its byte-id comparison independently.
      */
     private boolean checkDespawn() {
         boolean onScreen = sidekick.hasRenderFlagOnScreenState()
@@ -4597,12 +4613,16 @@ public class SidekickCpuController {
         }
 
         if (sidekick.isOnObject()) {
-            // S3K: sub_13EFC's only practical trigger is a slot freed by
-            // Delete_Referenced_Sprite (id word zeroed -> mismatch -> despawn).
-            // The live owner or captured release marker supplies this state:
-            // deleted/unloaded owners have no instance after rewind restore,
-            // while S3K's latchedSolidObjectId stays sticky across destruction.
-            if (useRidingInstanceLossDespawn) {
+            // S3K sub_13EFC compares live code words, including zero after
+            // Delete_Referenced_Sprite and changed words after slot reuse.
+            // Use the captured release marker only when no live SST word can
+            // be resolved (legacy/synthetic contacts). A recycled occupied slot
+            // is not freed merely because the old Java owner was released.
+            LevelManager contactLevel = sidekick.currentLevelManagerIfAvailable();
+            boolean managedSlotReadable = sidekick.getInteractSlotIndex() >= 0
+                    && contactLevel != null && contactLevel.getObjectManager() != null;
+            if (useRidingInstanceLossDespawn && !managedSlotReadable
+                    && currentS3kInteractWord() == null && rawLiveSlotId < 0) {
                 if ((sidekick.getLatchedSolidObjectId() & 0xFF) != 0
                         && sidekick.isLatchedSolidObjectReleased()) {
                     triggerDespawn(DespawnCause.FREED_INTERACT_SLOT);
@@ -4642,7 +4662,8 @@ public class SidekickCpuController {
                 Integer currentWord = currentS3kInteractWord();
                 if (currentWord != null
                         && (currentWord & 0xFFFF) != (diagnosticS3kInteractWord & 0xFFFF)) {
-                    triggerDespawn(DespawnCause.OBJECT_ID_MISMATCH);
+                    triggerDespawn(currentWord == 0 ? DespawnCause.FREED_INTERACT_SLOT
+                            : DespawnCause.OBJECT_ID_MISMATCH);
                     return true;
                 }
             }

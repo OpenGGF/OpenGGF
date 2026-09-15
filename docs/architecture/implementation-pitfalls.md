@@ -377,3 +377,24 @@ and the pre-movement desynchronization recovery grounds Tails on the first
 normal frame, skipping gravity. The independent SOZ recording exposed this at
 recovery handoff; the resulting missed Tails Sandworm kill later changed Sonic's
 rebound, so Sonic's first position mismatch was a downstream symptom.
+
+### Native interaction pointers follow recycled SST slots
+
+S3K `sub_13EFC` compares the saved code-pointer high word with the current word
+at the player's `interact` slot, then refreshes that word while on an object.
+A released Java contact does not imply that the native slot is empty: allocation
+may already have installed another object there. Read the live slot occupant;
+compare zero only for an actually empty slot. Preserve same-word replacements
+and detect changed words. A live occupant without a code-pointer provider is
+unknown, not an empty slot. Rewind tests need a recycled slot whose old contact
+is absent after reconstruction, not just restoration of an unchanged owner.
+
+### Independently allocated exit helpers must not retain the retiring boss
+
+SOZ `loc_77A6E` is allocated without a parent pointer. It waits on `_unkFAB8`
+bit 0, set at `loc_779C0`, then `loc_77A98` follows Player 1 independently
+until level clear. Model that captured signal rather than reading the boss's
+escape phase through a retained reference. The controller-only end-boss route
+exposed an unregistered reference between root deletion and destination load;
+continuous snapshots cover this interval even when selected hit/escape rewind
+spots all pass.

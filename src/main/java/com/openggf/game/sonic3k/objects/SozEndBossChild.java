@@ -28,7 +28,8 @@ public final class SozEndBossChild extends AbstractObjectInstance
 
     SozEndBossChild(SozEndBossInstance boss, SozEndBossChild parent, int role) {
         this(new ObjectSpawn(boss.getX(),boss.getY(),0x98,role,0,false,0));
-        this.boss=boss;this.parent=parent;
+        // loc_77A6E is allocated independently and never receives a parent pointer.
+        this.boss=role==17?null:boss;this.parent=parent;
         if(parent!=null){x=parent.x;y=parent.y;}
         // CreateChild1_Normal publishes signed byte offsets at allocation;
         // CreateChild6/8 copy the parent position without an offset.
@@ -52,10 +53,10 @@ public final class SozEndBossChild extends AbstractObjectInstance
                     || ((y-services().camera().getY()+0x80)&0xFFFF)>0x200)setDestroyed(true);
             return;
         }
+        if(role==17){followFallingPlayer();return;}
         if(boss==null){setDestroyed(true);return;}
         if(!initialized){initialized=true;if(initialize(leader))return;}
         switch(role) {
-            case 17 -> followFallingPlayer();
             case UPPER,LOWER,REAR -> shell(vInt);
             case OVERLAY -> {visible=true;if(boss.defeated()||x<0x5180)setDestroyed(true);}
             case FRONT -> {follow();visible=true;if(boss.dismantling())startFlicker();}
@@ -207,7 +208,8 @@ public final class SozEndBossChild extends AbstractObjectInstance
     }
     /** loc_77A6E/77A98 is an independently allocated owner, later than the root. */
     private void followFallingPlayer(){
-        if(!boss.fallingIntoNextZone())return;
+        if(phase==0&&!((com.openggf.game.sonic3k.runtime.SozZoneRuntimeState)
+                services().zoneRuntimeState()).events().endBossFallStarted())return;
         var main=services().playerQuery().mainPlayerOrNull();if(main==null)return;
         for(var other:services().playerQuery().sidekicks())if(other instanceof AbstractPlayableSprite sprite){
             if(phase==0){sprite.setHighPriority(false);sprite.setObjectControlled(true);
