@@ -1258,3 +1258,7 @@ Worktree validation completed at 19:37:20 BST: 77 tests, zero failures/errors/sk
 19:37:40 BST. All 500 CSV state rows equal `engine-mechanisms-1`; inspected
 still150 shows the body covering the track instead of being covered by it.
 The capture's inherited Discord shutdown warning did not prevent completion.
+
+Correction source `d5c8e463e` merged cleanly as `a2cac9c1e`. The same focused
+command passed on integrated `develop` at 19:39:08 BST: 77 tests, zero failures,
+errors or skips (53.426 seconds). Push policy and release-tree audit passed.
