@@ -2315,6 +2315,10 @@ public final class Sonic3kPlcArtRegistry {
     private static void addSozEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SWINGING_PLATFORM,
+                Sonic3kConstants.MAP_SOZ_SWINGING_PLATFORM_ADDR, 1, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RAPEL_WIRE,
+                Sonic3kConstants.MAP_SOZ_RAPEL_WIRE_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x48, 2, null));
         // Doors, push switches and pushable rocks share SOZMisc+$8C, palette 2.
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SPAWNING_SAND_BLOCKS,
                 0x04043A, 0x3C0, 2, null));
