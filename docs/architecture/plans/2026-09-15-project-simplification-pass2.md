@@ -244,3 +244,24 @@ results are recorded below when complete.
   and full failure message), no errors/skips. The main branch advanced during
   validation with independent KiS2 wall/Coconuts fixes; those changes are preserved.
   Candidate diagnostics were inspected and acknowledged.
+
+
+### Tails follow-up integration
+
+Fix commit `1055d9cc3` merged without conflicts into develop at `5557d4e48`,
+preserving the destination's independent KiS2 changes (`c8138d304`).
+Post-integration command:
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base c8138d30467dab6a5c9fcbb904aeaa8082195e6a --category rewind --run`.
+The main workspace's preserved untracked notes expanded selection to all
+2,598 classes. Full ordinary suite: 20,547 tests, zero failures/errors,
+19 skips, 767.79 seconds. The skips match the candidate categories plus two
+opt-in Sonic 1 audio captures; no Tails regression was skipped.
+
+Concurrent merge `a27e86f68` added only KiS2 validation prose during the run.
+The runner correctly stopped before guards on the changed-worktree check;
+comparison with `5557d4e48` confirmed identical engine/test sources. The
+ordinary lane completed successfully, but the combined invocation was
+incomplete. Completed its guard obligation separately at `a27e86f68` with
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -q`:
+668 tests, the same two baseline failures documented above, no errors/skips.
+No ordinary tests were repeated for that documentation-only merge.
