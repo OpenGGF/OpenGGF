@@ -38,6 +38,7 @@ import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
+import com.openggf.sprites.render.ShieldPatternBanks;
 import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.util.PatternDecompressor;
@@ -120,6 +121,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     // Shield DPLC-driven renderers and art sets
     private final Map<String, PlayerSpriteRenderer> dplcRenderers = new HashMap<>();
     private final Map<String, SpriteArtSet> shieldArtSets = new HashMap<>();
+    private final ShieldPatternBanks shieldPatternBanks = new ShieldPatternBanks();
 
     // HUD pattern caches
     private Pattern[] hudDigitPatterns;
@@ -170,6 +172,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
         rendererOrder.clear();
         dplcRenderers.clear();
         shieldArtSets.clear();
+        shieldPatternBanks.clear();
         levelArtTileRanges.clear();
         runtimePublishedLevelArtKeys.clear();
 
@@ -995,6 +998,13 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     /** Returns the DPLC-driven renderer for a shield type, or null. */
     public PlayerSpriteRenderer getShieldDplcRenderer(String key) {
         return dplcRenderers.get(key);
+    }
+
+    /** Mutable shield playback belongs to its player, across shield object recreation. */
+    public PlayerSpriteRenderer getShieldDplcRenderer(String key,
+            com.openggf.sprites.playable.AbstractPlayableSprite owner) {
+        return shieldPatternBanks.renderer(owner, shieldArtSets.get(key),
+                !com.openggf.game.CrossGameFeatureProvider.isActive());
     }
 
     /** Returns the art set for a shield type, or null. */

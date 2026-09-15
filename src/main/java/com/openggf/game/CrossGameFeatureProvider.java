@@ -66,6 +66,8 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     private GameRules hybridRules;
     private RenderContext donorRenderContext;
     private PlayerSpriteRenderer instaShieldRenderer;
+    private final com.openggf.sprites.render.ShieldPatternBanks instaShieldBanks =
+            new com.openggf.sprites.render.ShieldPatternBanks();
     private SpriteArtSet instaShieldArtSet;
     private DonorCapabilities donorCapabilities;
     private boolean active;
@@ -103,6 +105,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
      * @throws IOException if the donor ROM cannot be opened
      */
     public void initialize(String donorGameCode) throws IOException {
+        instaShieldBanks.clear();
         this.donorGameId = GameId.fromCode(donorGameCode);
 
         // Same-game guard: disable donation when donor == host
@@ -430,6 +433,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
         hybridRules = null;
         donorRenderContext = null;
         instaShieldRenderer = null;
+        instaShieldBanks.clear();
         instaShieldArtSet = null;
         donorCapabilities = null;
         active = false;
@@ -467,6 +471,12 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
 
     public PlayerSpriteRenderer getInstaShieldRenderer() {
         return instaShieldRenderer;
+    }
+
+    PlayerSpriteRenderer getOwnedInstaShieldRenderer(AbstractPlayableSprite owner) {
+        PlayerSpriteRenderer renderer = instaShieldBanks.renderer(owner, instaShieldArtSet, false);
+        if (renderer != null) renderer.setRenderContext(donorRenderContext);
+        return renderer;
     }
 
     public SpriteArtSet getInstaShieldArtSet() {

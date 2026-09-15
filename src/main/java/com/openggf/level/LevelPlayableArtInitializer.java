@@ -134,7 +134,8 @@ final class LevelPlayableArtInitializer {
                 }
                 PreparedTailArt tail = loadTailsTailArt(allPlayables.get(i), allPlayableArt.get(i));
                 Integer tailBase = null;
-                if (tail != null && validArt(tail.art()) && tailCount++ > 0) {
+                if (tail != null && validArt(tail.art())
+                        && (tailCount++ > 0 || requiresDonorTailBank(tail.separate()))) {
                     tailBase = LevelManager.SIDEKICK_PATTERN_BASE + cursor;
                     cursor = checkedBankEnd(cursor, tail.art().bankSize());
                 }
@@ -585,6 +586,18 @@ final class LevelPlayableArtInitializer {
         }
     }
 
+    private static boolean requiresDonorTailBank(boolean separateTailArt) {
+        return CrossGameFeatureProvider.isActive() && !separateTailArt;
+    }
+
+    private static int sharedTailSourceBase(SpriteArtSet artSet, GameModule host) {
+        // Native S2 Obj05 uses its fixed tail address. A donor has no claim on the
+        // host's native VRAM layout (S1/S3K return -1 here); retain the source base
+        // only until both initialization paths reserve an independent virtual bank.
+        return CrossGameFeatureProvider.isActive()
+                ? artSet.basePatternIndex() : host.getTailsTailVramBase();
+    }
+
     private void initTailsTailsLegacy(AbstractPlayableSprite playable, SpriteArtSet artSet) {
         if (!(playable instanceof Tails)) {
             playable.setTailsTailsController(null);
@@ -614,10 +627,10 @@ final class LevelPlayableArtInitializer {
         } else {
             tailsArt = new SpriteArtSet(
                     artSet.artTiles(), artSet.mappingFrames(), artSet.dplcFrames(),
-                    artSet.paletteIndex(), gameModule.getTailsTailVramBase(), artSet.frameDelay(),
+                    artSet.paletteIndex(), sharedTailSourceBase(artSet, gameModule), artSet.frameDelay(),
                     artSet.bankSize(), null, null);
         }
-        if (legacyTailsTailBankCount > 0) {
+        if (legacyTailsTailBankCount > 0 || requiresDonorTailBank(isS3k)) {
             tailsArt = shiftToBank(tailsArt, reserveSidekickPatternBank(tailsArt.bankSize()));
         }
         legacyTailsTailBankCount++;
@@ -710,7 +723,7 @@ final class LevelPlayableArtInitializer {
                     artSet.mappingFrames(),
                     artSet.dplcFrames(),
                     artSet.paletteIndex(),
-                    gameModule.getTailsTailVramBase(),
+                    sharedTailSourceBase(artSet, gameModule),
                     artSet.frameDelay(),
                     artSet.bankSize(),
                     null,

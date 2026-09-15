@@ -1,12 +1,13 @@
 # Sprite-publication bank audit — 2026-09-15
 
-## Scope and result
+## Initial inspection scope and result
 
 Bounded inspection following the S3K main-player Tails regression introduced
 by `7653029ab` and fixed by `1055d9cc3`. Source inventory was inspected at
 `6e6740a07ab9b38627026b8cf1ad536ece059551`. This is a bank/caller and
 reachability audit, not a complete audit of that commit's loading/timing
-changes, a visual certification, or an implementation pass.
+changes, a visual certification, or an implementation pass. The authorized follow-up
+implementation and its separate evidence are recorded below.
 
 The unused-capacity fix addresses the demonstrated Tails corruption. A host/donor address mismatch and three
 additional concrete allocation/reuse risks merit targeted reproduction.
@@ -59,11 +60,11 @@ In a native S2 host, the separate tail renderer reuses the Tails art set at
 `07B0`, overlapping body-bank capacity. Donating this art into S3K exposes
 a separate host/donor address-selection problem described below; it would be
 incorrect to assume that configuration actually receives `07B0`.
-A dedicated S2-donor pixel regression is still missing. The existing
+At inspection time, a dedicated S2-donor pixel regression was still missing. The existing
 Tails reproduction covers native S3K art, main/sidekick relocation, and direct
 and deferred sprite-table collection, not the whole donor matrix.
 
-## Prioritized follow-up work
+## Initial prioritized follow-up work
 
 ### 1. S2-style Tails in an S3K host — high priority
 
@@ -162,7 +163,7 @@ sync; test divergence only if the production lifecycle permits it.
   Other mutable object-art paths are not comprehensively certified by this
   player-bank inspection.
 
-## Recommended next scope and verification limits
+## Initial recommended scope and verification limits
 
 First reproduce the S2-Tails-in-S3K host/donor address mismatch, then add one
 ROM-backed rendering test for staggered two-Sonic insta-shields and one for a
@@ -177,3 +178,188 @@ and no broad engine suite or gameplay capture was run for this inspection.
 Validation comprised source/caller inspection, stock-ROM loader measurements,
 the Hyper-trail disassembly check, and documentation syntax/link checks.
 The temporary inventory probe is regenerable in minutes and is not retained.
+
+## Authorized follow-up implementation
+
+The follow-up starts at `d92fea6f15ba0f90f9df15aab2d8c19763ded87f`.
+Three independent Astra investigations reproduced the high-priority risks.
+These are additional allocation defects; the tests do not attribute their
+introduction to `7653029ab`.
+
+### Donated shared Tails art
+
+`971d46f49` (investigation commit `7d58869c7`) relocates the first shared-art
+donor tail as well as duplicates, through the existing level allocator. Both
+legacy and prepared initialization reserve the complete 28-tile donor bank.
+Native S2 keeps its `$7B0` tail address. No donor API change is needed.
+
+On unchanged baseline production code, all eight combinations of S1/S3K host
+contracts, main/sidekick and legacy/prepared initialization reproduced base
+`-1`. The fixed focused run passed 24 tests with no skips:
+`TestDonorTailsTailBanks,TestLevelPlayableArtInitializerModArt,TestTailsRendering`,
+using `maven_queue.py -Dmse=off` and the absolute `sonic2.rom.path`.
+The donor regression uses real S2 ROM art and mocked host contracts; it compares
+139 body frames against directional-roll/spindash tail art, in both draw orders
+and direct/deferred collection. It is not a live donor-zone gameplay capture.
+
+### Powered Sonic owners
+
+`56fdcb50c` (investigation commit `2c0204756`) reserves a private powered bank
+when the owner's normal renderer already occupies the virtual player range.
+It reserves the full 33-tile Super capacity rather than reusing the 29-tile
+normal allocation. Native main-player `$680` and the ROM's current-art Hyper
+trail remain unchanged. Allocation is lazy and reused across transformations;
+revert and rewind retain the appropriate renderer and donor render context.
+
+Both new Sonic/Knuckles-main cases failed bank ownership on unchanged baseline
+production code. The fixed focused run passed 22 tests with no skips:
+`TestSonic3kPoweredPatternBanks,TestSonic3kSuperStateRewind`, using
+`maven_queue.py -Dmse=off` and the absolute `s3k.rom.path`. It exercises supported
+activation, two powered owners, isolated ROM pattern versions, both draw orders,
+direct/deferred collection, revert and same-controller rewind. Controller
+recreation on a level reload was inspected, not reproduced in this test.
+Independent review found no blocking issue.
+
+### Independent shield owners
+
+`0a4184643` (investigation commit `c054e66d8`) makes shield renderers and
+mutable banks owned per player, while shield types
+for the same player retain their native mutual exclusion. The first non-CPU
+owner keeps `$79C` only while donor art is inactive; other owners reserve
+36 tiles each in the bounded
+`TRANSIENT_EFFECTS + $1000..$2000` subrange. This avoids sparks/splash at the
+range start and snowboard art at `+$2000`/`+$4000`. Capacity is checked against
+loaded art, and exhaustion fails explicitly.
+
+A provider-owned effects subrange was chosen instead of the existing player
+allocator: shield constructors can load before playable-art initialization,
+which resets that allocator, and playable-art refresh can reset it without
+reloading the object provider. Provider reload clears shield ownership;
+persistent objects rebind their renderers while keeping animation cursors.
+Donor teardown and initialization also clear ownership. Ordinary respawn keeps
+the same player identity. Native and donor shield selection is exclusive in
+the current production paths: native S3K art wins when available; donor
+insta-shields are the fallback. No creator API signature changes are needed.
+
+The unchanged baseline failed all four direct/deferred and forward/reverse
+render-order cases when two Sonic insta-shields were staggered by three updates:
+frames 3 and 0 require different ROM pixels in shared tiles `$7A0`/`$7A1`.
+An initial four-update stagger passed because its **used** slots were disjoint;
+it was rejected as an inadequate reproduction. Tests also cover main fire plus
+CPU insta-shield (supported fixed/auxiliary slot ownership), same-owner visual
+suppression, donor fallback, rewind recreation, provider source reload and
+bounded allocation. These are headless ROM-pixel tests, not a gameplay video.
+
+The focused run passed 35 tests with zero skips, including existing shield
+lifecycle, priority, lightning and rewind cases, the renderer corruption guard,
+and the mandated PLC art-registry mapping check. The final narrow run added the
+bounds/reset regression and confirmed the API pins: 30 tests passed, zero skips
+(`TestShieldPublicationBanks`, `TestShieldAnimationArtLifecycle`,
+`TestModApiPinPolicy`, `TestModApiSignatureSurface`), using queued Maven with
+`-Dmse=off` and the absolute `s3k.rom.path`.
+
+During combined review, the remaining native shield address was also found to
+overlap S2 donor main-player art. S2's donor has no shield factory, so ordinary
+`giveShield(FIRE)` falls back through `DefaultPowerUpSpawner` to the native S3K
+factory. A real-ROM regression exercised that path with the shield created
+before the body renderer. An initial largest-mapping comparison failed all eight S2 Sonic/Tails cases
+in both draw orders and direct/deferred publication (`$79C`/`$79E` for Sonic,
+`$7A5` for Tails), while four S1 Sonic cases passed. However, the largest Sonic
+mapping was frame `$92`, potentially Super art; that result was rejected as
+proof of normal Sonic/shield coexistence. The reproduction was narrowed to
+ordinary walking frame `$0F`. The matched baseline on exact `c054e66d8`
+production ran 12 cases with zero skips: only the four S2 Tails cases failed
+(`$7A0` body-first, `$7A1` shield-first, direct and deferred); the eight sampled
+S1/S2 Sonic cases passed. Donated Tails art therefore requires excluding the
+native shield-bank claim, including donation activated after an
+owner first bound native art. Existing virtual banks need not move back until
+provider reset. This extends the same ownership fix rather than changing
+shield rewards or donor gameplay capabilities.
+
+Follow-up `993fd712a` (investigation commit `2a4503c97`) implements donor-safe allocation. The fixed ordinary-walk
+matrix passed all 12 cases without skips. The same production code passed the
+43-test shield/lifecycle/API matrix; a strengthened late-activation test also
+passed independently, comparing retained ROM pixels and cursor state before
+and after rebinding, same-owner fire sharing, and retention after donation is
+disabled. These checks used queued Maven with all three absolute stock-ROM
+paths; the matched method was
+`TestShieldPublicationBanks#nativeElementalShieldKeepsDonatedMainBodyPixels`.
+
+### LBZ spark/splash overlap: no runtime change
+
+The fixed-address overlap remains a source-level risk, but a bounded entry
+check did not establish incompatible simultaneous use. Ground launch clears
+`jumping` and uses the spring animation. `PlayableSpriteMovement.doJumpHeight`
+only admits the lightning double jump inside the `isJumping()` branch.
+A temporary ROM-backed LBZ1 headless test gave Sonic a lightning shield before
+the normal title-card handoff, let the intro release him, then alternated two
+held/two released jump updates throughout the splash. The splash completed
+without a `LightningSpark` object: one test passed, zero skips, on unchanged
+production code at `d92fea6f1`. Command: queued Maven with `-Dmse=off`,
+`-Dtest=TestS3kLbz1GroundLaunchIntroHeadless#lightningAbilityCannotStartDuringGroundLaunchSplash`
+and the absolute `s3k.rom.path`.
+
+This does not certify every entry/team/restore configuration. No artificial
+spark spawn was used to label the overlap a gameplay bug, and neither splash
+addresses nor object timing were changed. The regenerable temporary test and
+log were removed. Reopen this finding if a supported overlapping lifetime is
+observed; shared splash cursor divergence also remains unestablished.
+
+### Combined validation record
+
+The first combined run on `d48f0df6d` selected all 2,606 ordinary classes plus
+guards. It was deliberately interrupted (exit 130, incomplete) when the donor
+body/shield collision was found; it is not a suite pass. Its diagnostics were
+inspected and acknowledged. The worktree then reconciled incoming Sandopolis
+changes from `d9de72b7a` without conflicts, following the earlier S1 audio/S2
+title-screen merge from `0c38edf5d`.
+
+A matched pre-integration check on `develop` at `d9de72b7a` reproduced the two
+existing guard failures, with zero skips:
+
+- `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`:
+  five obsolete required guidance strings (separate worktrees for concurrent
+  Maven; direct focused Maven, guards and package commands; the printed-pinned-base
+  category-runner example).
+- `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`:
+  `FbzRouteEvidenceProbe#printEvidence` and `LevelSolidityMapProbe#writeSolidityMap`.
+
+Command: `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off
+-Pguards -Dtest=TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap,TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree test -B`.
+The consumed temporary log was removed. These failures are outside this fix.
+
+The completed candidate run on `ec5a08697` used
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base d92fea6f15ba0f90f9df15aab2d8c19763ded87f --run`.
+Preflight passed. Ordinary: 2,609 reports / 20,631 tests, zero failures/errors,
+19 skips, 768.73 seconds. Guards: 668 tests, four failures, zero errors/skips,
+173.26 seconds. Results were inspected and acknowledged.
+
+One guard failure was introduced here:
+`TestArchitecturalSourceGuard.crossGameFeatureProviderDoesNotNameConcreteSonicDonors`.
+The rendering-only `ShieldPatternBanks` helper was initially placed in the S3K
+package despite being consumed by the shared donor provider. Moving it to
+`com.openggf.sprites.render` restores the dependency boundary without changing
+its allocation behavior. The completed ordinary run remains evidence for that
+behavior; the package correction is checked narrowly before integration.
+
+The other newly noticed guard failure is also pre-existing:
+`TestTraceChaserBoundaryGuard.onlyReviewedForwardersRemainAtMigratedRoots`.
+Its exact subprocess, `python3 tools/testing/tracechaser_cutover_guard.py`,
+exits 1 on both `d9de72b7a` and `ec5a08697` with the sole message
+`deleted implementation remains tracked: tools/bizhawk/README.md`.
+The README, inventory, Python script and Java guard are identical at original
+base `d92fea6f1`, main `d9de72b7a` and candidate `ec5a08697`. Commit `2b6e4629b`
+reintroduced that README while the inventory still marks it deleted. Checkout
+root discovery is correct. Thus there are **three baseline guard failures**;
+only the helper dependency violation belongs to this fix.
+
+The 19 ordinary skips include opt-in benchmarks/soaks, AIZ route matrices,
+native graphics/captures, unavailable EGL/OpenGL checks, local audio-reference
+requirements and the existing CPZ spin-tube assumption. No new bank regression
+or mandatory S3K smoke class was skipped. No framebuffer capture or trace replay
+was run for these allocation fixes; ROM pixels are compared headlessly.
+
+The package correction passed 31 focused tests, zero failures/errors/skips:
+queued Maven with `-Dmse=off`, all three absolute ROM paths and
+`-Dtest=TestShieldPublicationBanks,TestShieldAnimationArtLifecycle,TestArchitecturalSourceGuard#crossGameFeatureProviderDoesNotNameConcreteSonicDonors`.
+No allocation or animation algorithm changed in this correction.

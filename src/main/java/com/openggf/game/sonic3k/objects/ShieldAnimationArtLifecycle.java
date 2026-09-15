@@ -48,15 +48,11 @@ final class ShieldAnimationArtLifecycle
             invalidateDplcCache();
             artRefreshPending = false;
         }
-        if (dplcRenderer != null && animationSet != null) {
-            return;
-        }
-
         Art art = artSupplier.get();
         if (art == null) {
             return;
         }
-        if (dplcRenderer == null && art.renderer() != null) {
+        if (art.renderer() != null && dplcRenderer != art.renderer()) {
             dplcRenderer = art.renderer();
             if (dplcRenderer != boundRenderer) {
                 dplcRenderer.invalidateDplcCache();
