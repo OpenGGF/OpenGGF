@@ -24,14 +24,24 @@ public final class ShieldPatternBanks {
     private boolean nativeBankClaimed;
 
     public PlayerSpriteRenderer renderer(AbstractPlayableSprite owner, SpriteArtSet art) {
+        return renderer(owner, art, true);
+    }
+
+    /** Donated body art may occupy ArtTile_Shield, so its shield must use virtual space. */
+    public PlayerSpriteRenderer renderer(AbstractPlayableSprite owner, SpriteArtSet art, boolean allowNativeBank) {
         if (art == null || owner == null) return null;
         if (art.bankSize() < 0 || art.bankSize() > OWNER_CAPACITY) {
             throw new IllegalArgumentException("Shield art exceeds owner bank capacity: " + art.bankSize());
         }
         OwnerBank bank = owners.get(owner);
+        // Donation can be enabled after initial level boot but before playable-art
+        // refresh. Rebind an existing native owner before publishing donated art.
+        if (bank != null && !allowNativeBank && bank.base == art.basePatternIndex()) {
+            bank = null;
+        }
         if (bank == null) {
             int base;
-            if (!nativeBankClaimed && !owner.isCpuControlled()) {
+            if (allowNativeBank && !nativeBankClaimed && !owner.isCpuControlled()) {
                 nativeBankClaimed = true;
                 base = art.basePatternIndex();
             } else {

@@ -1002,7 +1002,8 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
     /** Mutable shield playback belongs to its player, across shield object recreation. */
     public PlayerSpriteRenderer getShieldDplcRenderer(String key,
             com.openggf.sprites.playable.AbstractPlayableSprite owner) {
-        return shieldPatternBanks.renderer(owner, shieldArtSets.get(key));
+        return shieldPatternBanks.renderer(owner, shieldArtSets.get(key),
+                !com.openggf.game.CrossGameFeatureProvider.isActive());
     }
 
     /** Returns the art set for a shield type, or null. */

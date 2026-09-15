@@ -474,7 +474,7 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     }
 
     PlayerSpriteRenderer getOwnedInstaShieldRenderer(AbstractPlayableSprite owner) {
-        PlayerSpriteRenderer renderer = instaShieldBanks.renderer(owner, instaShieldArtSet);
+        PlayerSpriteRenderer renderer = instaShieldBanks.renderer(owner, instaShieldArtSet, false);
         if (renderer != null) renderer.setRenderContext(donorRenderContext);
         return renderer;
     }

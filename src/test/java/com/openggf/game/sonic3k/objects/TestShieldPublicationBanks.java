@@ -165,6 +165,101 @@ class TestShieldPublicationBanks {
         assertThrows(IllegalArgumentException.class, () -> banks.renderer(main, oversized));
     }
 
+    @Test void enablingDonationRelocatesAnAlreadyBoundNativeShieldOnlyOnce() throws Exception {
+        Sonic main = new Sonic("sonic", (short) 60, (short) 60);
+        var shield = create(main);
+        shield.triggerAttack();
+        for (int i = 0; i < 3; i++) shield.update(i, main);
+        var before = publish(shield, null, false);
+        var cursor = lifecycle(shield).captureRewindStateValue();
+        var nativeRenderer = lifecycle(shield).renderer();
+        assertEquals(0x079C, nativeRenderer.patternBankBase());
+        var donor = com.openggf.game.CrossGameFeatureProvider.getInstance();
+        try {
+            setField(donor, "active", true);
+            var after = publish(shield, null, false);
+            var donated = lifecycle(shield).renderer();
+            assertNotSame(nativeRenderer, donated);
+            assertEquals(0x49000, donated.patternBankBase());
+            assertEquals(cursor, lifecycle(shield).captureRewindStateValue());
+            assertFalse(before.patternVersions().isEmpty());
+            before.patternVersions().forEach((id, pixels) -> assertEquals(pixels,
+                    after.patternVersions().get(id - 0x079C + 0x49000)));
+            assertEquals(0x49000, provider.getShieldDplcRenderer(
+                    com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FIRE_SHIELD, main).patternBankBase());
+            assertEquals(after, publish(shield, null, false));
+            assertSame(donated, lifecycle(shield).renderer());
+            setField(donor, "active", false);
+            assertEquals(after, publish(shield, null, false));
+            assertSame(donated, lifecycle(shield).renderer(), "retain safe allocation until provider reset");
+        } finally {
+            donor.close();
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"s1,sonic,false,false", "s1,sonic,false,true", "s1,sonic,true,false", "s1,sonic,true,true", "s2,sonic,false,false", "s2,sonic,false,true", "s2,sonic,true,false", "s2,sonic,true,true", "s2,tails,false,false", "s2,tails,false,true", "s2,tails,true,false", "s2,tails,true,true"})
+    void nativeElementalShieldKeepsDonatedMainBodyPixels(String game, String character,
+                                                        boolean reverse, boolean sat) throws Exception {
+        String property = game.equals("s1") ? "sonic1.rom.path" : "sonic2.rom.path";
+        String path = System.getProperty(property);
+        org.junit.jupiter.api.Assumptions.assumeTrue(path != null && java.nio.file.Files.isRegularFile(java.nio.file.Path.of(path)),
+                "Donor ROM unavailable: " + property);
+        try (var rom = new com.openggf.data.Rom()) {
+            rom.open(path);
+            var reader = com.openggf.data.RomByteReader.fromRom(rom);
+            var art = game.equals("s1") ? new com.openggf.game.sonic1.Sonic1PlayerArt(reader).loadSonic()
+                    : character.equals("tails") ? new com.openggf.game.sonic2.Sonic2PlayerArt(reader).loadTails()
+                    : new com.openggf.game.sonic2.Sonic2PlayerArt(reader).loadSonic();
+            var donor = com.openggf.game.CrossGameFeatureProvider.getInstance();
+            GameModule donorModule = game.equals("s1") ? new com.openggf.game.sonic1.Sonic1GameModule()
+                    : new com.openggf.game.sonic2.Sonic2GameModule();
+            setField(donor, "donorProvider", donorModule.getCrossGameDonorProvider());
+            setField(donor, "active", true);
+            assertNull(donor.getDonorShieldFactory(), "S1/S2 donation falls back to host elemental shield factory");
+            GameModule host = mock(GameModule.class);
+            when(host.getObjectArtProvider()).thenReturn(provider);
+            when(host.getShieldFactory()).thenReturn(new com.openggf.game.sonic3k.Sonic3kGameModule().getShieldFactory());
+            services = new StubObjectServices() {
+                @Override public GameModule gameModule() { return host; }
+                @Override public com.openggf.game.CrossGameFeatureProvider crossGameFeatures() { return donor; }
+            };
+            var spawner = new com.openggf.level.objects.DefaultPowerUpSpawner(null);
+            setField(spawner, "cachedServices", services);
+            com.openggf.sprites.playable.AbstractPlayableSprite main = character.equals("tails")
+                    ? new com.openggf.sprites.playable.Tails("tails", (short) 60, (short) 60)
+                    : new Sonic("sonic", (short) 60, (short) 60);
+            main.setPowerUpSpawner(spawner);
+            // Monitor reward routes through giveShield and the real host factory.
+            // Bind shield before body art to cover initialization ordering.
+            main.giveShield(com.openggf.game.ShieldType.FIRE);
+            var fire = assertInstanceOf(FireShieldObjectInstance.class, main.getShieldObject());
+            fire.setServices(services);
+            fire.update(0, main);
+            var body = new com.openggf.sprites.render.PlayerSpriteRenderer(art, graphics);
+            main.setSpriteRenderer(body);
+            // Ordinary walking: SonAni_Walk / TailsAni_Walk, not maximum-capacity
+            // mappings that may belong to Super Sonic and exclude shield coexistence.
+            final int frame = 0x0F;
+            Runnable drawBody = () -> body.drawFrame(frame, 60, 60, false, false);
+            Runnable drawShield = () -> fire.appendRenderCommands(new ArrayList<>());
+            var expectedBody = SpritePresentationRenderer.prepare(graphics, 0, 0, drawBody);
+            var expectedShield = SpritePresentationRenderer.prepare(graphics, 0, 0, drawShield);
+            assertFalse(expectedBody.patternVersions().isEmpty());
+            assertFalse(expectedShield.patternVersions().isEmpty());
+            var combined = SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
+                if (sat) graphics.beginSpriteSatCollection();
+                if (reverse) { drawShield.run(); drawBody.run(); }
+                else { drawBody.run(); drawShield.run(); }
+                if (sat) graphics.endSpriteSatCollectionAndReplay();
+            });
+            assertPixels(expectedBody, combined);
+            assertPixels(expectedShield, combined);
+        } finally {
+            com.openggf.game.CrossGameFeatureProvider.getInstance().close();
+        }
+    }
+
     private void configureDonor() throws Exception {
         var ctor = com.openggf.game.CrossGameFeatureProvider.class.getDeclaredConstructor();
         ctor.setAccessible(true);
