@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+KiS2 act-entry investigation (2026-09-15): a correct title-card release row does
+not prove the following gap row is held. Setup-only admission can return before
+the one-shot source-loop flag is consumed, leaving one destination gameplay
+pass to execute before comparison starts. Sample the release, subsequent gap
+rows and first compared row together; an extra pass can remain invisible until
+a later moving-platform ride. Retire source-loop admission inside the title
+loop's own admission path. See the [KiS2 frontier investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
 FBZ miniboss capture (2026-09-15): `GameplayCaptureTool --x/--y` reinitializes
 level events and executes a setup object update. That can select a different
 background state from a native position-only teleport and enqueue a one-time
