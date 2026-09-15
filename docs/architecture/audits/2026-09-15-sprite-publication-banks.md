@@ -363,3 +363,29 @@ The package correction passed 31 focused tests, zero failures/errors/skips:
 queued Maven with `-Dmse=off`, all three absolute ROM paths and
 `-Dtest=TestShieldPublicationBanks,TestShieldAnimationArtLifecycle,TestArchitecturalSourceGuard#crossGameFeatureProviderDoesNotNameConcreteSonicDonors`.
 No allocation or animation algorithm changed in this correction.
+
+### Integration verification
+
+Merged into `develop` as `e949e124c` after a fetch/fast-forward check; the
+tracked tree exactly matched corrected candidate `973b552ad`. Existing dirty
+submodules and untracked user files were preserved. Main-workspace preflight
+passed. The post-integration command was the same combined category command
+against pinned base `d92fea6f15ba0f90f9df15aab2d8c19763ded87f`, selecting all
+2,609 classes plus guards.
+
+The integrated ordinary phase completed with 20,631 tests, zero failures/errors
+and the same 19 skips (779.35 seconds). Individual reports confirmed all new
+regressions ran: donor tails 9, powered owners 2, shield ownership 27, zero skips.
+The mandatory S3K classes also passed without skips: `TestS3kAiz1SkipHeadless`
+8, `TestSonic3kLevelLoading` 34, `TestSonic3kBootstrapResolver` 6 and
+`TestSonic3kDecodingUtils` 3. These are ordinary/headless checks, not certification
+of the separate trace, native graphics or optional route matrices.
+
+The integrated guard phase completed with 668 tests, three failures, zero
+errors/skips (175.58 seconds). All three test identities and failure messages
+match the established baseline: obsolete build-documentation strings,
+TraceChaser's README deletion inventory and the two assertion-free diagnostics.
+The full architecture guard passed all 72 checks. No new or worsened failure
+remains from this change. The completed run stayed at `e949e124c`; this subsequent
+verification-record edit changes documentation only. Results and all skip
+reasons were inspected before delivery.
