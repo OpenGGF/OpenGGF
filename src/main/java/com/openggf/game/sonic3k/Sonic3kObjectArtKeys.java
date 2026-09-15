@@ -1,6 +1,8 @@
 package com.openggf.game.sonic3k;
 
 public final class Sonic3kObjectArtKeys {
+    public static final String SOZ_END_BOSS = "soz_end_boss";
+    public static final String SOZ_END_BOSS_BODY = "soz_end_boss_body";
     public static final String SOZ_SPAWNING_SAND_BLOCKS = "soz_spawning_sand_blocks";
     public static final String SOZ_RISING_SAND_WALL = "soz_rising_sand_wall";
     public static final String SOZ_SAND_CORK = "soz_sand_cork";
