@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 
 /** SOZ1 normal desert: sub_55D56 + loc_55DF2 / ApplyFGandBGDeformation.
- * Arena redraw/sand modes and Act 2 event-selected backgrounds remain open.
+ * Act 2 normally uses sub_566D2; event-selected sand and arena modes are separate.
  */
 public final class SwScrlSoz extends SwScrlS3kDefault {
     private final short[] shimmer = new short[32];
@@ -45,15 +45,22 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
     @Override public void init(int actId, int cameraX, int cameraY) {
         desert = actId == 0;
         if (desert) ensureTablesLoaded();
-        bgX = desertBackgroundX(cameraX);
-        vscrollFactorBG = (short) ((short) cameraY >> 4);
+        bgX = desert ? desertBackgroundX(cameraX) : (short) cameraX >> 1;
+        vscrollFactorBG = (short) ((short) cameraY >> (desert ? 4 : 1));
     }
 
     @Override public void update(int[] buffer, int cameraX, int cameraY,
                                  int levelFrameCounter, int actId) {
         desert = actId == 0;
         if (!desert) {
-            super.update(buffer, cameraX, cameraY, levelFrameCounter, actId);
+            // sub_566D2 + PlainDeformation: shift camera words before negation.
+            resetScrollTracking();
+            bgX = (short) cameraX >> 1;
+            vscrollFactorBG = (short) ((short) cameraY >> 1);
+            short fg = (short) -cameraX;
+            short bg = (short) -bgX;
+            java.util.Arrays.fill(buffer, 0, 224, ((fg & 0xFFFF) << 16) | (bg & 0xFFFF));
+            trackOffset(fg, bg);
             return;
         }
         ensureTablesLoaded();
@@ -80,5 +87,5 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
         }
     }
 
-    @Override public int getBgCameraX() { return desert ? bgX : Integer.MIN_VALUE; }
+    @Override public int getBgCameraX() { return bgX; }
 }

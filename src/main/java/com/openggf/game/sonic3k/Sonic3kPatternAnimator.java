@@ -189,6 +189,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private byte[] lbzWaterlineScrollData;
     private final byte[] soz1BgData;
     private final byte[] soz1Bg2Data;
+    private final byte[] soz2BgData;
     private final byte[] pachinkoScratch;
     private final byte[] pachinkoLowSource;
     private final byte[] pachinkoHighSource;
@@ -280,6 +281,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.iczArt5Data = null;
             this.soz1BgData = null;
             this.soz1Bg2Data = null;
+            this.soz2BgData = null;
             this.pachinkoScratch = null;
             this.pachinkoLowSource = null;
             this.pachinkoHighSource = null;
@@ -561,6 +563,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.soz1Bg2Data = null;
         }
 
+        this.soz2BgData = zoneIndex == 0x08 && actIndex == 1
+                ? loadRawBytes(reader, Sonic3kConstants.ART_UNC_ANI_SOZ2_BG_ADDR,
+                        Sonic3kConstants.ART_UNC_ANI_SOZ2_BG_SIZE) : null;
+
         if (zoneIndex == 0x14) {
             byte[] lowSource = loadKosinskiBytes(reader,
                     Sonic3kConstants.ART_KOS_PACHINKO_BG1_ADDR,
@@ -742,6 +748,16 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 && hcz2Art2Data != null
                 && hcz2Art3Data != null
                 && hcz2Art4Data != null;
+    }
+
+    boolean shouldRunSoz2CustomChannels() { return soz2BgData != null; }
+
+    void updateSoz2TorchesForGraph() {
+        if (!GameServices.hasRuntime()) return;
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (state == null || state.actIndex() != 1) return;
+        int frame = state.lighting().tickTorch();
+        if (frame >= 0) applyRawPatternSliceToLevel(soz2BgData, frame * 0xC0, 0xC0, 0x330);
     }
 
     boolean shouldRunSoz1CustomChannels() {
@@ -2099,8 +2115,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             graph.install(S3kAnimatedTileChannels.buildHczChannels(this, scripts, actIndex));
             return;
         }
-        if (zoneIndex == 0x08 && actIndex == 0) {
-            graph.install(S3kAnimatedTileChannels.buildSozChannels(this));
+        if (zoneIndex == 0x08) {
+            graph.install(S3kAnimatedTileChannels.buildSozChannels(this, actIndex));
             return;
         }
         if (zoneIndex == 0x03) {
