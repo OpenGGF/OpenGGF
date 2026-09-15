@@ -1,6 +1,6 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15. Status: initial inventory/native pilot and first quicksand implementation in progress;
+Date: 2026-09-15. Status: placed inventory, native pilot and quicksand slice integrated;
 full routes and native certification remain open.
 
 ## Objective and authority
@@ -86,8 +86,9 @@ disproves that distinction. `No_Resize` is not evidence that SOZ has no events.
 
 ## Execution record and next action
 
-Next action is the inventory and native pilot above, followed by the first missing
-Act 1 route slice. Keep commands, RED/GREEN results, review findings, resolved
+The placed inventory, native pilot and quicksand family are delivered at the
+bounded scope recorded below. The next Act 1 dependency is the spring vine;
+full dynamic/art/audio inventory and later route slices remain open. Keep commands, RED/GREEN results, review findings, resolved
 catalogue contradictions, amendments and rejected approaches in this plan as work
 proceeds. Reuse the existing SOZ analysis for verified ROM findings and the act
 matrices for acceptance evidence. No new receipt or log format is required.
@@ -328,3 +329,25 @@ and the guidance/probe text they inspect are unchanged by that upstream work.
 Selection against this actual destination still chooses the full ordinary suite
 solely because the one-ID discovery-profile edit is unclassified; the bounded
 validation rationale above continues to apply to the complete SOZ diff.
+
+### Integrated result
+
+Merged into develop as `4bd85d687`. The final main-workspace command below passed
+**90 tests, zero failures/errors/skips**, in 50.120s. Concurrent commits `6fbe2c276`
+and `2860359ba` changed only the simplification task's documentation; the tested
+engine tree is the SOZ integration tree. This result does not adopt that other
+task's broad-suite result as evidence for SOZ.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSozQuicksand,TestSozObjectInventory,TestSozAct1QuicksandRoute,TestSonic3kObjectProfileRegistryGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestFbzSandopolisTimelineHeadless,TestHCZCGZFanObjectInstance,TestS3kHczCgzFanGraphRewind,TestSolidProfileDecoder' \
+  "-Ds3k.rom.path=${SOZ_REPO}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${SOZ_REPO}/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+For the next vine contract, `sub_4093E` launches an already-supported player when
+its directional side marker crosses local X `$3C` inside `[0,$60)`. Its flipped
+correction uses `NOT.W` on `$18` (`$FFE7`, -25), not negation (-24). Launch velocities
+are `-$EF0` on X/Y, with X negated for horizontal flip. `sub_40A08` deforms the
+collision profile and eight child Y coordinates from the same values in that
+object pass. Preserve that coupling when implementing the next family.
