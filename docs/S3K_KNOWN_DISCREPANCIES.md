@@ -1827,7 +1827,9 @@ execution record.
 ## SOZ Background Event Modes and Torch Animation
 
 Normal Act 1 desert parallax, heat shimmer, scroll-driven animated-art extent
-and sand palette cycling are implemented with bounded checks. Act 1's arena
+and sand palette cycling are implemented with bounded checks. Unused LRZ scripts
+are excluded so static desert art remains intact; the background repeat period
+is preserved in widescreen. Act 1's arena
 background replacement/rising sand and seamless transition are not yet owned;
 the animator retains the existing camera-lock phase-zero compatibility bridge.
 Act 2 still uses generic scroll fallback and lacks its custom darkness-coupled

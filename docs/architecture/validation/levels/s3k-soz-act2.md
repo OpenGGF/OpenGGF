@@ -96,3 +96,9 @@ Push-switch visual follow-up: the fixed frame-0 track is painted before the
 frame-1 moving body, matching native main-before-child SAT precedence. The
 connected-mechanism capture is repeated at the same entry/input for overlap QA;
 this local correction does not close the inherited whole-act visual gaps.
+
+
+Animation ownership follow-up: both SOZ custom routines return without executing
+`AniPLC_LRZ1`, despite its table pointer. `TestS3kSozPatternAnimation` now checks
+that Act2's static `$350..$357` tiles survive48 update/VBlank passes. The unused
+list is excluded; this does not implement the still-open custom torch animation.

@@ -40,8 +40,8 @@ public class TestS3kSozPatternAnimation {
         List<String> channelIds = GameServices.animatedTileChannelGraph().channels().stream()
                 .map(AnimatedTileChannel::channelId)
                 .toList();
-        assertTrue(channelIds.contains("s3k.soz.script.0"),
-                "Expected shared SOZ/LRZ AniPLC script channel in graph but found " + channelIds);
+        assertTrue(channelIds.stream().noneMatch(id -> id.startsWith("s3k.soz.script.")),
+                "SOZ custom routines return without executing the unused LRZ list: " + channelIds);
         assertTrue(channelIds.contains("s3k.soz1.scroll"),
                 "Expected SOZ1 scroll channel in graph but found " + channelIds);
 
@@ -77,6 +77,28 @@ public class TestS3kSozPatternAnimation {
         }
 
         throw new AssertionError("Expected SOZ1 scroll-driven animated tile to change for at least one phase shift");
+    }
+
+    @Test
+    public void bothActsPreserveStaticDesertArtAcrossLavaReefScriptCycles() {
+        for (int act : new int[]{0, 1}) {
+            var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, act).build();
+            fixture.camera().setFrozen(true);
+            var level = GameServices.level().getCurrentLevel();
+            var animator = resolvePatternAnimator();
+            // AniPLC_LRZ1 targets $350-$357, but AnimateTiles_SOZ1/2 never
+            // branch to AnimateTiles_DoAniPLC. Preserve the level-loaded art.
+            byte[] initial = snapshotTiles(level, 0x350, 0x351, 0x352, 0x353,
+                    0x354, 0x355, 0x356, 0x357);
+            for (int frame = 0; frame < 48; frame++) {
+                animator.update();
+                animator.publishAniPlcAtVBlank();
+                org.junit.jupiter.api.Assertions.assertArrayEquals(initial,
+                        snapshotTiles(level, 0x350, 0x351, 0x352, 0x353,
+                                0x354, 0x355, 0x356, 0x357),
+                        "act=" + act + " animation pass=" + frame);
+            }
+        }
     }
 
     @Test

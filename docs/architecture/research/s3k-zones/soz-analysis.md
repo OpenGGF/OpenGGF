@@ -8,7 +8,7 @@
 - **Acts:** 1 (desert exterior) and 2 (pyramid interior with seamless transition from Act 1)
 - **Water:** No (quicksand objects only, not the water subsystem)
 - **Palette Cycling:** Yes (1 channel Act 1; Act 2 uses a 900-frame darkness timer plus 4-frame fade steps driven by `SOZ_darkness_level` and `Palette_cycle_counters`)
-- **Animated Tiles:** Yes (1 custom handler Act 1 -- parallax-driven BG tile cycling; 1 custom handler Act 2 -- darkness-aware torch animation; SOZ still shares `AniPLC_LRZ1` in the generic animation slot)
+- **Animated Tiles:** Yes (1 custom handler Act 1 -- parallax-driven BG tile cycling; 1 custom handler Act 2 -- darkness-aware torch animation; the table names `AniPLC_LRZ1`, but neither SOZ handler executes it)
 - **Character Branching:** Minimal -- Knuckles uses different start locations; ghost capsule behavior branches on character. No chunk adjustments or separate resize paths.
 - **Dynamic Resize:** `No_Resize` in `LevelResizeArray` -- all camera boundary management and event logic is handled through `SOZ1_BackgroundEvent` / `SOZ2_BackgroundEvent` instead of the standard `Dynamic_resize_routine`.
 - **Extended Y Wrap (Act 2):** Act 2 uses `Screen_Y_wrap_value=$7FF`, `Camera_Y_pos_mask=$7F0`, `Layout_row_index_mask=$3C` for double-height level layout (2048px Y wrap vs standard 1024px).
@@ -374,15 +374,16 @@ $1268, $1260, $1260, $125C, $1254, $1248, $1248, $1248
 
 **Confidence:** HIGH
 
-### AniPLC Scripts (shared with LRZ1)
+### Unused AniPLC pointer (LRZ1)
 
-SOZ does not define its own zone-specific AniPLC routine here. In the `Offs_AniFunc` table, both SOZ entries point at `AniPLC_LRZ1` (`sonic3k.asm` lines 53869 and 53871), and the same shared script is also used by LRZ1.
-
-`AniPLC_LRZ1` is a plain `zoneanimstart` block with two declarations:
-- `ArtUnc_AniLRZ1_0` -> VRAM tile `$354`
-- `ArtUnc_AniLRZ1_1` -> VRAM tile `$350`
-
-That makes it a shared art-loading dependency for the SOZ/LRZ1 animation slot, not a SOZ-specific animation system. The visible SOZ-specific animated behavior still comes from `AnimateTiles_SOZ1` and `AnimateTiles_SOZ2`.
+`Offs_AniPLC` names `AniPLC_LRZ1` for both SOZ acts. This is **not an
+executed dependency**: `Animate_Tiles` loads its address into A2, then jumps
+through `Offs_AniFunc`. Both `AnimateTiles_SOZ1` and `AnimateTiles_SOZ2` return
+without calling `AnimateTiles_DoAniPLC`. The list's two four-tile transfers
+(`ArtUnc_AniLRZ1_0` to `$354`, `ArtUnc_AniLRZ1_1` to `$350`) belong to Lava Reef.
+Running them in Sandopolis replaces static desert art with purple flame shapes.
+The previous catalogue incorrectly inferred execution from the pointer alone;
+follow the custom handler's control flow before registering scripts.
 
 **Confidence:** HIGH
 

@@ -1400,7 +1400,8 @@ produced `engine-desert-1` at width320 (600frames,20.152 seconds) and
 with the inherited Discord shutdown warning only. CSV preceded image inspection:
 standard frame300 player `(692,1660)`, camera `(533,1564)`, no hurt/death;
 wide frame150 camera `(324,1551)`, player `(567,1639)`, no hurt/death. Desert
-bands and art are visible; no seam observed in the inspected wide scene.
+bands and art are visible. The initial inspection missed purple flame tiles and
+an edge seam subsequently reported by the user; the correction is recorded below.
 The initial wide640 capture request was rejected before rendering because the
 tool supports preset widths; 528 replaced it without changing engine behavior.
 
@@ -1421,3 +1422,78 @@ completed at 20:10:19 BST in55.728 seconds: **309 tests, zero failures, errors o
 skips**. All eight prior provider-routing errors are resolved; selected structural
 checks passed as recorded above. Documentation link/whitespace checks and CI
 push policy passed. No full-suite, complete-act or matched-pixel claim is made.
+
+
+## Desert visual artifact correction
+
+Follow-up to `ce016a0fc` / `392dd73ed`, in `.worktrees/soz-background-fix` on
+`bugfix/ai-soz-background`, based on `392dd73edf439e976005fe142d4c4c9a2ffe9bf9`.
+The user identified purple flames and a right-edge seam in the desert capture.
+
+- **Static art ownership:** both SOZ custom animation routines return directly,
+  despite the `Offs_AniPLC` pointer naming `AniPLC_LRZ1`. Remove that unexecuted
+  list from SOZ loading/registration; preserve real LRZ registration. The wrong
+  list writes eight static SOZ tiles at `$350..$357`. A regression that only
+  called `animator.update()` initially missed the mutation because writes publish
+  at VBlank; adding the publication boundary reproduces the overwrite on pass6
+  (first pixel expected4, actual5). Both acts must preserve this range through
+  two full script cycles. The custom SOZ1 `$330..$341` transfers remain active.
+- **Repeat period:** `LevelRenderer` expanded the background FBO width from its
+  512-pixel plane period to `max(viewport, period)`. That same width reaches the
+  compositor's modulo, so width528 repeated a duplicate16-pixel strip before
+  wrapping. Render the existing plane period. Paths that apply horizontal scroll
+  in the tile pass already select viewport width and retain that behavior.
+  The production GL capture regression reproduced expected512 / actual528.
+- The earlier scroll-word/native-state arithmetic checks were valid but did not
+  check GPU art ownership or the compositor's repeat width. Corrected the
+  catalogue's false shared-AniPLC dependency; numerical scroll parity is not
+  native pixel certification.
+
+Validation uses the repository's proportionate scope exception. The selector
+falls back to all2613 ordinary classes because these files are shared/unclassified.
+The actual changes remove one zone's unused registrations and pass the existing
+background period through unchanged; no shader math, physics, timing, public
+contract or cache lifetime changes. Direct GPU checks cover every supported
+viewport, and existing graphics/per-line tests cover the shared consumers.
+The full fallback would include unrelated audio/network/mod suites; focused
+verification below is not a full-suite pass. Tool preflight passed with Java21,
+`LUA_BIN=/usr/bin/lua5.4` and PowerShell (the default `lua` was the wrong version).
+
+Commands use `python3 tools/testing/maven_queue.py -Dmse=off`, explicit
+`-Ds3k.rom.path="$S3K_ROM"`, and S1 ROM where applicable:
+
+- Animation/render/route selection:
+  `-Dopenggf.test.gl.native=true
+  -Dtest=TestS3k*PatternAnimation,TestS3k*PaletteCycling,com.openggf.game.sonic3k.scroll.*Test,TestAnimatedTileChannelGraph*,com.openggf.graphics.*Test,TestLevelRenderer*,TestBackgroundScroll,TestParallaxRewindSnapshot,TestSozBackgroundCapture,TestGameplayCaptureSmoke,TestSozAct1QuicksandRoute,TestSozAct1SpringVineRoute,TestSozMechanismsProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils test -B`:
+  355 tests, zero failures/errors,10 skips,28.900 seconds at20:26:59BST.
+  The skips are eight opt-in visual baselines and two opt-in background diagnostics.
+- Graphics prefix classes require `com.openggf.graphics.Test*` as well as the
+  suffix pattern above. With `TestShaderPixelCentreSampling` explicitly selected
+  and native GL enabled:205 tests, zero failures/errors,2 skips,19.065 seconds
+  at20:28:27BST. Skips are property-gated scroll-upload and slot-window native
+  diagnostics. The shader pixel-centre test executed successfully; its earlier
+  isolated default-context attempt had skipped.
+- Structural selection:
+  `-Pguards -Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestObjectUpdateClockTerminologyGuard test -B`:
+  123 tests, zero failures/errors/skips,58.610 seconds at20:29:26BST.
+- Added a direct pixel regression after review: ordinary20 right+jump then41
+  right frames exposes the sky at camera `(96,1270)`. The right-edge rectangle
+  must contain sky pixels, not the previous black strip. Separate period checks
+  cover320/352/400/528/800. Initial art priming and all event-selected backgrounds
+  are not independently native-pixel-certified by this test.
+
+Captures repeat the earlier `desert-input.txt` command, with output
+`engine-desert-fixed-528` (240 frames) and `engine-desert-fixed-320` (600 frames).
+Both complete successfully; inherited Discord shutdown warning remains.
+The complete before/after state CSVs are byte-identical for each width.
+At wide frame60 the previous black strip at the far right and the purple shapes
+below the horizon are gone; frame150 and native-width frame300 also show intact
+sand art. Compared against the existing native desert reference for appearance,
+not an aligned native pixel trajectory. The route still stalls later atX692.
+
+Independent read-only review found no production defect. It noted missing pixel
+assertions (added above), post-boot-only static-art sampling, and no new tests for
+all event-specific per-line overrides. Source inspection confirms those overrides
+still select viewport width; their broader native certification remains open.
+The final pixel/viewport selection passed6 tests with no failures/errors/skips
+at20:30:48BST (19.304 seconds). Post-integration result is recorded below.
