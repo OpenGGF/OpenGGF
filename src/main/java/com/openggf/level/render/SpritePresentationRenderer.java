@@ -24,13 +24,31 @@ public final class SpritePresentationRenderer {
         if (!SpritePresentation.isPreparing(graphics)) return;
         Map<Integer, PatternVersion> versions = new HashMap<>();
         for (int index = 0; index < patterns.length; index++) {
-            long[] words = new long[4];
-            for (int i = 0; i < 64; i++) {
-                words[i / 16] |= (long) (patterns[index].getPixel(i % 8, i / 8) & 15) << ((i % 16) * 4);
-            }
-            versions.put(base + index, new PatternVersion(words[0], words[1], words[2], words[3]));
+            versions.put(base + index, version(patterns[index]));
         }
         SpritePresentation.bindPatternVersions(graphics, versions);
+    }
+
+    /** Publish only this mapping's slots: unused bank capacity may overlap another sprite's bank. */
+    public static void bindPatternBank(GraphicsManager graphics, int base, Pattern[] patterns,
+                                       SpriteMappingFrame frame) {
+        if (!SpritePresentation.isPreparing(graphics)) return;
+        Map<Integer, PatternVersion> versions = new HashMap<>();
+        for (SpriteMappingPiece piece : frame.pieces()) {
+            int end = Math.min(patterns.length, piece.tileIndex() + piece.widthTiles() * piece.heightTiles());
+            for (int index = Math.max(0, piece.tileIndex()); index < end; index++) {
+                versions.put(base + index, version(patterns[index]));
+            }
+        }
+        SpritePresentation.bindPatternVersions(graphics, versions);
+    }
+
+    private static PatternVersion version(Pattern pattern) {
+        long[] words = new long[4];
+        for (int i = 0; i < 64; i++) {
+            words[i / 16] |= (long) (pattern.getPixel(i % 8, i / 8) & 15) << ((i % 16) * 4);
+        }
+        return new PatternVersion(words[0], words[1], words[2], words[3]);
     }
 
     public static Pattern pattern(PatternVersion version) {

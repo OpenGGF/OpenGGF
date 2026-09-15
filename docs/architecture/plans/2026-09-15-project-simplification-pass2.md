@@ -196,3 +196,51 @@ removed, and worktree metadata pruned. Consumed category and matched-baseline
 diagnostics were deleted. Original dirty disassemblies and untracked user files
 remain untouched. This documentation-only closure is pushed as the final follow-up;
 unchanged engine checks are not repeated.
+
+
+## Follow-up: S3K main-player Tails tail corruption
+
+The reported feet-in-place-of-tails symptom reproduced at `342f01cb4` with
+stock S3K ROM art. `AniTails00` frame 7 loads 18 body tiles at `$6A0`;
+`AniTails02` frame `$96` replaces only 16. `Obj_Tails_Tail` / `Tails_Tail_Load_PLC`
+use `$6B0`. The body renderer retains stale foot pixels in slots 16–17.
+Whole-bank publication introduced by `7653029ab` (subsequently moved to the
+level renderer by `892292047`) overwrote the tail's published pattern versions
+with those unused body slots. Sidekick body banks are relocated and avoid the
+collision. Neither simplification pass introduced that copy.
+
+Fix: publish only pattern slots referenced by the current mapping, and keep
+frame-bounds queries free of publication writes. ROM addresses, DPLC requests,
+animation timing, and gameplay state remain unchanged. Reallocating banks or
+changing ROM constants was rejected: the constants match the disassembly and
+the stale unused-slot publication is the demonstrated cause.
+
+The ROM-backed regression primes walking frame 7, renders tail frame 5 then
+body roll frame `$96`, and compares the tail's actual published pixels. It
+failed before the fix at tile 1712 (`$6B0`); coverage also exercises sidekick
+bank relocation and deferred sprite-table collection. Validation and delivery
+results are recorded below when complete.
+
+### Tails follow-up verification
+
+- Focused queued Maven run: `-Dtest=TestSpritePresentation,TestTailsRendering,TestTailsTailsDirectionalAnimation,TestTailsTailsFlightSelection,TestSpriteManagerMainTailsTailsDispatch,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils` with all three absolute stock ROM properties: exit 0. After expanding the regression, `-Dtest=TestSpritePresentation` with the absolute S3K ROM property also exited 0 (all four role/collection combinations ran).
+- Java 21 / Lua 5.4 / PowerShell preflight passed. Candidate change-based run:
+  `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 342f01cb4dadb5e1ed771270d90f759923825807 --category rewind --run`.
+  Selected 2,202/2,597 classes; ordinary: 16,437 tests, zero failures/errors,
+  17 skips, 548.83 seconds. Guards: 668 tests, two failures, no errors/skips,
+  173.35 seconds. This is category validation, not a full-suite or native-rendering pass.
+- Skips: opt-in benchmarks, probes, soak/route matrices and native graphics;
+  two unavailable GL contexts; existing CPZ spin-tube assumption. The ROM-backed
+  Tails tests were not skipped. The regression checks the published pixel data
+  directly; no separate gameplay capture or trace sweep was run.
+- Guard failures: `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+  (five obsolete required guidance strings) and
+  `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`
+  (`FbzRouteEvidenceProbe#printEvidence`, `LevelSolidityMapProbe#writeSolidityMap`).
+
+- Matched destination-baseline check at `c8138d304`:
+  `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestRewindArchitectureGuard,TestBuildToolingGuard,TestNoAssertionFreeDiagnostics test -q`:
+  123 tests, exactly the same two failures (programmatically compared by identity
+  and full failure message), no errors/skips. The main branch advanced during
+  validation with independent KiS2 wall/Coconuts fixes; those changes are preserved.
+  Candidate diagnostics were inspected and acknowledged.

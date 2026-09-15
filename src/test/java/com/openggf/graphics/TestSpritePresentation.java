@@ -119,6 +119,37 @@ class TestSpritePresentation {
         assertEquals(before, after, "unreferenced animation history cannot change the displayed frame");
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"false, false", "false, true", "true, false", "true, true"})
+    @com.openggf.tests.rules.RequiresRom(com.openggf.tests.rules.SonicGame.SONIC_3K)
+    void tailsRollingTailKeepsItsRomArtAfterWalking(boolean sidekick, boolean sat) throws Exception {
+        var loader = new com.openggf.game.sonic3k.Sonic3kPlayerArt(
+                com.openggf.data.RomByteReader.fromRom(com.openggf.tests.TestEnvironment.currentRom()));
+        var bodyArt = loader.loadTails();
+        if (sidekick) {
+            bodyArt = new com.openggf.sprites.art.SpriteArtSet(bodyArt.artTiles(), bodyArt.mappingFrames(),
+                    bodyArt.dplcFrames(), bodyArt.paletteIndex(), 0x10000, bodyArt.frameDelay(),
+                    bodyArt.bankSize(), bodyArt.animationProfile(), bodyArt.animationSet());
+        }
+        var tailArt = loader.loadTailsTail();
+        var body = new com.openggf.sprites.render.PlayerSpriteRenderer(bodyArt, graphics);
+        var tail = new com.openggf.sprites.render.PlayerSpriteRenderer(tailArt, graphics);
+        // AniTails00 frame 7 fills 18 slots, including feet at offsets 16..17.
+        // AniTails02 frame $96 uses only 16; Obj_Tails_Tail frame 5 uses $6B0.
+        body.drawFrame(7, 0, 0, false, false);
+        var expected = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0,
+                () -> tail.drawFrame(5, 0, 0, false, false));
+        var combined = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 0, 0, () -> {
+            if (sat) graphics.beginSpriteSatCollection();
+            tail.drawFrame(5, 0, 0, false, false);
+            body.drawFrame(0x96, 0, 0, false, false);
+            if (sat) graphics.endSpriteSatCollectionAndReplay();
+        });
+        assertFalse(expected.patternVersions().isEmpty());
+        expected.patternVersions().forEach((id, pixels) -> assertEquals(pixels,
+                combined.patternVersions().get(id), "tail ROM pixels at tile " + id));
+    }
+
     @Test void primitiveGeometryIsRetainedWithoutKeepingAnExecutableCommand() {
         var frame = com.openggf.level.render.SpritePresentationRenderer.prepare(graphics, 100, 200, () -> {
             graphics.registerCommand(new GLCommand(GLCommand.CommandType.RECTI,
