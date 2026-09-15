@@ -265,3 +265,15 @@ incomplete. Completed its guard obligation separately at `a27e86f68` with
 `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -q`:
 668 tests, the same two baseline failures documented above, no errors/skips.
 No ordinary tests were repeated for that documentation-only merge.
+
+
+Final concurrent integration: `7b43ddffb` added a localized FBZ descending-chain
+art-word resolver before the verification-record merge. Review confirmed that
+it does not alter player art or the shared presentation implementation. At
+pushed head `a98c67c07`, the focused queued Maven selection above, expanded
+with `TestFbzChainLinkArtWord` and all three absolute ROM properties, exited 0.
+This exercises both corrections together, including all four mandatory S3K
+checks. The full ordinary result above belongs to `5557d4e48`'s engine sources;
+this final check is focused validation of the additional integration, not a
+second full-suite claim. Both category run directories were inspected and
+acknowledged.
