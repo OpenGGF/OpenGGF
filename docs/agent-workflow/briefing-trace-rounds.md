@@ -80,6 +80,16 @@ natural camera movement restored the expected sky and boss palette; both
 engines then landed Sonic on the plunger on frame 622. See the
 [miniboss comparison](../architecture/audits/2026-09-15-fbz1-miniboss-visual.md).
 
+FBZ fresh-load capture investigation (2026-09-14): a passing strict replay does
+not certify a separate capture driver. The GL capture initially retained the
+host title request and never left the start, while still producing an encoded
+video. Use the same production omitted-presentation boundary, iteration
+admission and native start-counter handling as replay; verify selected live
+trajectory fields before interpreting a clip. Explicit row windows must count
+elapsed VBlanks, including held loading rows, and a recording audio lease must
+survive the producer rebuild at a fresh level load. Review the actual frames,
+not only encoder success or requested row count.
+
 Slots glass investigation (2026-09-14): a runtime-only priority assertion does
 not cover the real bonus loop's post-physics overrides. Enter the bonus stage
 through `GameLoop`, reacquire the focused sprite after the coordinator replaces

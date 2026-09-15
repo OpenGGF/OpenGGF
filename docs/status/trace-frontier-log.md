@@ -110120,6 +110120,58 @@ S2 row 6 transfer IDs `[2]`/`[]` and S3K row 446 Y speed -$0448/+$0448.
 See the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
 for native evidence, rejected assumptions, and broad validation follow-up.
 
+### 2026-09-14 — FBZ complete recording closes at fresh SOZ initialization
+
+Pinned base `6897a604895a4822e85b766859624a95c42bd4b6`, uncommitted source in
+`.worktrees/ai-fbz-native-loading`. Queued command:
+`test -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSonic3kTitleCardKosQueue,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute S3K ROM>`.
+Completed 11 tests, all passing, zero skips, Maven 1:04. Strict recording:
+**44,134 comparison entries; zero errors/warnings; no first-error frame or
+field**. Matched pristine-base check: 16 grouped errors / 44,144 entries,
+first 44,230 main X (`$00C0` expected, `$0000` actual), zero warnings/skips.
+The count change removes unmatched timing-completion entries, not fixture rows.
+
+Production now honors the ROM's fresh-title Nemesis workload, explicit title
+loop preparation despite a held gameplay counter, initialization-only loop
+tail, and terrain parents' late-producer boundary. No trace data hydrates
+production state. The independent Hyper recording remains a separate authentic
+progression prerequisite gap (last measured 4,152 errors, first 7,619 main
+`x_speed`); it was not rerun by this command. Broad validation and integration
+are outstanding. See the dated FBZ completion plan for rejected iterations.
+
+
+### 2026-09-14 — FBZ background-origin follow-up and Hyper prerequisite
+
+Same pinned base `6897a604895a4822e85b766859624a95c42bd4b6`, uncommitted
+`.worktrees/ai-fbz-native-loading`. Queued `test -Dmse=off -Ptrace-replay-r7
+-Dsurefire.forkCount=1
+-Dtest=TestFbzAct1LayoutMutations,TestFbzEventsAct1,TestFbzFramePhaseOrdering,TestFbzTransitionRewind,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute ROM>`: 30 passes, zero failures/errors/skips,
+35.316 seconds Maven. Complete strict FBZ remains passing, no first error.
+
+Separate queued `test -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain
+-Ds3k.rom.path=<verified absolute ROM>`: prefix passes, chain fails, zero
+errors/skips, Maven 1:25. First reported boundary failure is
+`uncompared-interior physical walk exceeded destination 8817`; the run never
+reaches FBZ offset 302654. No new matched baseline was run and no emerald
+state was injected. Independent Hyper acceptance remains open.
+
+### 2026-09-15 — FBZ retained sprite/HUD publication preserves the strict frontier
+
+Uncommitted `.worktrees/ai-fbz-native-loading`, reconciled onto destination
+`dedd18877` (original task pin `6897a6048`). Queued `-Dmse=off
+-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSpritePresentation,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestHudRenderManager,TestS3kFbzCompleteRunTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+-Ds3k.rom.path=<verified absolute ROM> test exec:java`, followed by the B1
+fixture capture, passes 97 tests, zero failures/errors/skips, Maven 1:10.
+The complete strict replay still passes (17.270 s body), no first error.
+All fourteen settled boundary afterstates match after the separate SAT and HUD
+numeric publications. Intermediate redraws and independent Hyper progression
+remain open; broad validation/integration are not yet claimed.
+
 
 Wall/ledge implementation `f9e17bcc7` integrated without conflicts as
 `5fed74d42`, retaining upstream FBZ miniboss changes. Candidate and integrated
@@ -110129,3 +110181,54 @@ tests, zero failures/errors and the same 18 baseline skips. Both ran 667 guards
 with the two identical baseline failures (stale build guidance; existing
 assertion-free FBZ/solidity probes), zero errors/skips. The integrated KiS2
 runtime matches the focused replay candidate; no new failure was observed.
+
+
+## 2026-09-15 — KiS2 EHZ1 act advance is observed; EHZ2 frontier exposed
+
+Base `2b2bf8e28`, `.worktrees/kis2-act-transition`. The EHZ1 transition did load
+EHZ2, with an empty PLC queue, but published `ORDINARY` instead of
+`LEVEL_ADVANCE`. The common results-driven load owner now uses the existing cause
+classification wrapper; gameplay and fixture data are unchanged.
+
+Queued `-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1` selection:
+`TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestKis2CompleteEmeraldRunChain,TestS1CompleteEmeraldRunChain,TestS2CompleteEmeraldRunChain`,
+with existing absolute S1/S2/KiS2 ROM paths: 56 tests, 53 passes, three red chains,
+no errors/skips. Matched S1/S2 normalized reports are identical before/after.
+All 35 selected hardware-timing/trace-invariant guards pass. Validation is focused
+under the bounded observation-change exception, not a full-suite pass.
+
+KiS2 reaches segment 7 (`seg5_ehz2`): all 3,561 rows compared, 13,978 errors,
+zero warnings/bootstrap errors; first mismatch row 50 PLC busy false/true. The
+chain stops on its missing starpost-special exit. The preceding act-change gap
+already differs: ten art edges versus two, first edge 28,558 versus 28,683 and
+mapping $07 versus $56. Investigate that earlier load/title-card publication
+before treating the EHZ2 cascade as an independent queue bug. EHZ1 segments 4/6
+remain zero-error, and prior ring/return-art gaps remain open. Full evidence and
+integration follow-up are in the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).
+
+
+Act-load classification implementation `c53b27aca` integrated as `94a41febd`,
+retaining upstream FBZ fresh-load/publication work without conflicts. The same
+focused command on the integrated tree completes 56 tests: 53 passes, the same
+three red chains, zero errors/skips; all normalized candidate/integrated chain
+reports match. All 35 selected authority guards pass. Further read-only evidence
+identifies the EHZ2 row-50 work as the same standard-water/animal PLCs that the
+ROM submits at row 52 in each EHZ1/EHZ2 entry. Investigate act-entry/title-card
+pass ordering; this is not evidence of missing chip PLC assets.
+
+
+### 2026-09-15 — FBZ retained presentation delivered, strict replay remains closed
+
+Presentation source `892292047`, integration `562e35e37`, final runtime
+`94a41febd` (incoming observation-only act-load classification). Isolated
+`.worktrees/ai-fbz-native-loading` queued `-Dmse=off -Ptrace-replay-r7
+-Dtest=TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestS3kFbzCompleteRunTraceReplay test`
+with absolute S1/S2/S3K ROM paths passed 53 cases, zero failures/errors/skips,
+Maven 37.660 s. Complete FBZ strict replay passes (18.260 s body), no first
+error. Post-integration ordinary checks completed 20,449 cases with zero
+failures/errors and 18 inspected skips; isolated guards retain exactly two
+baseline failures. The concurrent-main fingerprint stop and bounded incoming
+merge validation are recorded in the
+[completion plan](../architecture/plans/2026-09-14-fbz-completion.md#post-integration-validation-and-delivery).
+Fourteen settled native boundary pairs match; intermediate redraws, independent
+Hyper progression and the S1 full-act route remain open.

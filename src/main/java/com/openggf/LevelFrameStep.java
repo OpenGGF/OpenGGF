@@ -11,6 +11,7 @@ import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelSpritePresentation;
 import com.openggf.level.LevelPaletteBridgeAccess;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -66,6 +67,7 @@ public final class LevelFrameStep {
             return new FrameAdmission(LevelFrameResult.PAUSED);
         }
         if (levelManager.consumePendingInitialProcessSpritesPass()) {
+            LevelSpritePresentation.prepare(levelManager, context.spriteManager());
             return new FrameAdmission(LevelFrameResult.SETUP_ONLY);
         }
         return new FrameAdmission(LevelFrameResult.GAMEPLAY_FRAME);
@@ -208,6 +210,12 @@ public final class LevelFrameStep {
         dispatchGameVBlank(context, frame);
         serviceBoundary(context, HardwareServiceBoundary.VINT_SERVICE);
         objectScan.run();
+        if (phase == PlcLifecyclePhase.LEVEL_TITLE_CARD) {
+            // Special stages own a separate scene/table; never scan the parked
+            // level's renderers as a side effect of their hardware-only loop.
+            LevelSpritePresentation.prepare(
+                    context.levelManager(), context.spriteManager());
+        }
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
         context.runtimeArtCoordinator().finishHeldLoopTailClosure();
@@ -240,6 +248,7 @@ public final class LevelFrameStep {
         // 7889-7906). executeWithPause reaches this body only after its pause
         // gate, so a paused first frame retains the one-shot authority.
         if (levelManager.consumePendingInitialProcessSpritesPass()) {
+            LevelSpritePresentation.prepare(levelManager, context.spriteManager());
             return LevelFrameResult.SETUP_ONLY;
         }
 
@@ -537,6 +546,7 @@ public final class LevelFrameStep {
             if (spriteManager != null) {
                 spriteManager.refreshPlayableRenderFlags(camera);
             }
+            LevelSpritePresentation.prepare(levelManager, spriteManager);
             return LevelFrameResult.GAMEPLAY_FRAME;
         }
 
@@ -578,6 +588,10 @@ public final class LevelFrameStep {
         if (spriteManager != null) {
             spriteManager.refreshPlayableRenderFlags(camera);
         }
+        // ROM Render_Sprites is the final ordinary LevelLoop producer (after
+        // ChangeRingFrame). Its CPU table is consumed by the following VBlank,
+        // independently of whether this host iteration will draw a framebuffer.
+        LevelSpritePresentation.prepare(levelManager, spriteManager);
         levelManager.clearSidekickRomVisibleReloadFrameCounterBridge();
         return LevelFrameResult.GAMEPLAY_FRAME;
     }
@@ -603,6 +617,10 @@ public final class LevelFrameStep {
             var module = context.gameModule();
             var profile = module != null ? module.getLevelInitProfile() : null;
             if (profile != null) {
+                if (profile instanceof com.openggf.game.internal.SpriteTablePublication) {
+                    LevelSpritePresentation.publish(
+                            context.levelManager(), frame.ownerPhase());
+                }
                 profile.serviceLevelLoadVBlank();
                 if (profile instanceof com.openggf.game.internal.QueuedPatternDmaPublication publication) {
                     publication.serviceQueuedPatternDma(frame.ownerPhase(), frame.hasExplicitDmaQueueService());

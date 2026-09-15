@@ -23,7 +23,8 @@ import com.openggf.game.GameServices;
  * </ul>
  */
 public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
-        implements com.openggf.game.internal.QueuedPatternDmaPublication {
+        implements com.openggf.game.internal.QueuedPatternDmaPublication,
+        com.openggf.game.internal.SpriteTablePublication {
     private static final int[] HPZ_RETURN_CAMERA_X = {
             0x15A0, 0x1540, 0x1600, 0x1500, 0x1640, 0x14B0, 0x1690
     };
@@ -31,6 +32,33 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
 
     public Sonic3kLevelInitProfile(Sonic3kLevelEventManager levelEventManager) {
         this.levelEventManager = levelEventManager;
+    }
+
+    @Override
+    public boolean publishesSpriteTable(com.openggf.game.resources.PlcLifecyclePhase phase) {
+        // Shipped single-player VInt8/C/10 and Do_ControllerPal upload Sprite_table.
+        // VInt0's single-player lag branch deliberately leaves VDP SAT untouched.
+        // Special-stage tables and competition page flipping have separate scene owners.
+        return phase != null && switch (phase) {
+            case ORDINARY_LEVEL, CREDITS_DEMO, LEVEL_TITLE_CARD, NORMAL_PAUSE,
+                    PALETTE_FADE, CREDITS_DEMO_FADE -> true;
+            default -> false;
+        };
+    }
+
+    @Override
+    public boolean updatesHudCounters(com.openggf.game.resources.PlcLifecyclePhase phase) {
+        // VInt8/10 -> Do_Updates -> UpdateHUD. VIntC and fade handlers upload
+        // the SAT but do not rewrite the numeric HUD tiles.
+        return phase == com.openggf.game.resources.PlcLifecyclePhase.ORDINARY_LEVEL
+                || phase == com.openggf.game.resources.PlcLifecyclePhase.CREDITS_DEMO
+                || phase == com.openggf.game.resources.PlcLifecyclePhase.NORMAL_PAUSE;
+    }
+
+    @Override
+    public boolean advancesHudTimer(com.openggf.game.resources.PlcLifecyclePhase phase) {
+        return updatesHudCounters(phase)
+                && phase != com.openggf.game.resources.PlcLifecyclePhase.NORMAL_PAUSE;
     }
 
     @Override

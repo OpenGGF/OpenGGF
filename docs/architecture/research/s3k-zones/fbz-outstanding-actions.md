@@ -5,6 +5,19 @@ large FBZ implementation uplift, but FBZ is not yet accepted as pixel-perfect.
 The remaining work is intentionally recorded here rather than hidden behind a
 green completion claim.
 
+Current cold-route status: all nine established native/S2 cases pass together
+on the reconciled uncommitted candidate. The latest combined route check passes
+those nine plus all thirteen Act 2 routes; its sole failure is the S1 case below
+(23 cases, zero errors/skips, Maven 2:26).
+The new S1 full-act case remains blocked at the Act 1 lower curved-wall
+transfer after ordinary run/jump attempts. An identical fixture produces the
+same complete failure diagnostic on the pinned unchanged base and candidate:
+this is an existing route/controller gap, not a current production regression.
+It does not prove S1 cannot pass. Retained sprite/HUD publication now closes all
+fourteen settled boundary comparisons. Intermediate visual samples, Hyper
+progression remain open. The retained presentation fix is integrated; final
+validation is recorded in the completion plan.
+
 ## Known S1 donor challenge: early Act 2 elevator (leave unchanged)
 
 Investigated with the user on 2026-09-14: passing the descending elevator at
@@ -31,12 +44,18 @@ The [Act 2 matrix](../../validation/levels/s3k-fbz-act2.md) retains the coverage
 The remaining-items delivery is pinned to develop `51677cdd2`. Its inherited
 strict baseline was 4,501 complete-run errors, first frame 16,600 Tails
 animation, and 5,109 independent-segment errors, first frame 116 Tails subpixel.
-Both recordings remain red; aggregate mismatch counts do not measure how far a
-playable route completes.
+That historical baseline is superseded for the complete recording below;
+aggregate mismatch counts do not measure how far a playable route completes.
 
-At `d87e42bdd`, the complete recording compares 44,144 comparison entries with **16 grouped errors / 18 field rows**, zero warnings and zero skips. All FBZ gameplay fields agree; the first remaining error is frame **44,230**, destination SOZ initialization X (`$00C0` expected, `$0000` actual). The remaining position/camera and terrain KosM submission/completion errors belong to that fresh-load boundary. Comparison entries include unmatched timing-completion rows and must not be described as raw gameplay frames.
-
-The native Level prologue waits for title readiness and the Nem queue (`loc_62CC`), then publishes `Get_LevelSizeStart` and `LoadLevelLoadBlock` (`loc_6310`). The recording driver instead retains cleared players/camera until its generic title completion. A bounded observer confirms that it is still in title EXIT during the first mismatching row. Correcting this requires the actual fresh-load/Nem-gated phase; changing a title timer or publishing on an observed row would fit the fixture. No such adjustment was made. Live SOZ load/timeline isolation is tested separately and does not establish this strict boundary's parity.
+The current `ai-fbz-native-loading` candidate on pinned base `6897a6048`
+passes the complete strict recording: **44,134 comparison entries, zero errors,
+warnings or skips**, including fresh SOZ initialization. The queued title-queue
+and complete-trace command passes 11 tests. The previous 16 grouped errors,
+first frame 44,230 destination X, are closed by ROM-backed Nemesis title
+loading, explicit title-loop preparation and the terrain late-producer boundary.
+This is an uncommitted focused result; combined validation and integration
+remain outstanding. Comparison entries include timing-completion accounting
+and are not raw gameplay frames.
 
 The independent segment now reports 4,152 errors, first frame 7,619 main
 `x_speed`. This frontier needs an authentic progression prerequisite: native
@@ -284,14 +303,20 @@ complete-route, canonical trace, or visual acceptance gates.
 
 [fbz-validation.md](fbz-validation.md) remains the authoritative honest record: the
 native/engine checkpoint matrix is incomplete, so the whole-zone visual gate
-remains open. Eleven bounded world afterstates have independent acceptance.
-Both B2 directions and B4 forward differ at retained SAT presentation despite
-matching current object/animation state; B4 reverse is accepted. Controlled
-B5/Act2 fixtures explicitly declare one-time object control and prove visuals
-only. Before/mid-redraw, whole-frame and remaining event pairs still need evidence. Do not commit ROM-derived screenshots under
-`refs/`.
+remains open. All fourteen settled afterstates now match the whole 320×224
+frame, all 2,048 Plane-B descriptors and 64 palette entries after retained
+sprite publication and separate VBlank HUD-counter updates. Both B2 directions
+and B4 forward are closed, and the previous eleven matches remain green.
+Controlled B5/Act2 fixtures still explicitly declare one-time object control
+and prove visuals only. Before/mid-redraw and remaining event pairs remain
+open: B4 forward-08/16 retain 29/59 intermediate pixels, and the first B2 frame
+retains a background/palette publication difference. The current evidence is
+`boundary-all-sprite-publication-review-v2.json` and the reviewed
+`boundary2-sprite-publication-fixed-comparison-v2.mp4` in the external task
+capture directory. Do not commit ROM-derived screenshots under `refs/`.
 
-Remaining native visual obligations (the ordinary compatibility routes pass; strict trace gaps above remain):
+Remaining native visual obligations (bounded compatibility and the complete
+recording pass; the independent Hyper prerequisite remains open):
 
 1. Capture the required BizHawk references and native engine frames.
 2. Complete every named static and time-series comparison sidecar.
@@ -315,3 +340,58 @@ python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 -Dsurefire.fork
   -Dsurefire.runOrder=alphabetical -Dtest=TestS3kFbzCompleteRunTraceReplay \
   "-Ds3k.rom.path=$S3K_ROM" test -B
 ```
+
+
+### Latest candidate follow-up (2026-09-14)
+
+The complete strict recording remains passing after the rounded background
+origin correction: 30 combined focused tests, zero failures/errors/skips.
+The independent progression prefix passes, but its chain still stops at
+`uncompared-interior physical walk exceeded destination 8817` before FBZ.
+That two-test prerequisite invocation has one pass and one failure, zero
+errors/skips; it supplies no independent Hyper FBZ acceptance.
+
+The [Act 1 matrix](../../validation/levels/s3k-fbz-act1.md) records five current
+cold-route passes and four controller frontiers. Knuckles, 512/640/800px and
+S1 full Act 1 remain open. Ordered B1 intermediate frames still differ despite
+matching settled whole frames. GPU provenance now includes actual Plane-B
+texture bytes; a taller world-cache sampling issue is under investigation.
+See the [completion plan](../../plans/2026-09-14-fbz-completion.md) for commands,
+measurements and rejected interpretations. All these changes remain
+uncommitted; combined validation and integration have not run.
+
+
+Current cold-route follow-up: seven of the nine established cases have passing
+evidence. The latest combined run had six passes/three failures (zero skips,
+49.885 seconds Maven); the focused carrier run-up check adds 512px in 21,568
+ordinary frames (four passes/two failures across six selected cases, zero
+skips, 36.658 seconds Maven). Knuckles clears the late carriers and fails the
+upper carousel; 800px clears the upper snake and fails the missile/pole
+sequence. Both remain controller work, with no demonstrated engine defect.
+S1 full Act 1, the retained-SAT and ordered-redraw work, and the independent
+Hyper progression prerequisite remain open.
+
+
+The next focused run (`routes-upper-carousel-runup`) adds an **800px native
+Sonic/Tails pass in 23,163 ordinary frames**. Six selected cases: five passes,
+one Knuckles failure, zero errors/skips, Maven 38.861 seconds. Eight of the
+nine established cases now have passing evidence; the most recent combined
+nine-case run is still the earlier six-pass/three-failure result. Knuckles'
+upper carousel remains open, independently of the absent S1 full-act route.
+
+
+**Established cold-route controller matrix closed on the candidate:** the
+combined `routes-nine-final` invocation passes all nine cases, zero failures,
+errors/skips, Maven 52.101 seconds (32.83 seconds test body). Native Knuckles
+solo completes in 22,162 ordinary frames. This supersedes the earlier partial
+combined results. An explicit S1 donor case is now being measured separately;
+this does not close retained-SAT/intermediate visuals, Hyper progression,
+rewind breadth, or integration validation.
+
+
+S1 full Act 1 is now an explicit measured gap, rather than an absent test.
+The final ordinary-input fixture fails identically on pinned production base
+`6897a6048` and the current candidate: one failure each, zero errors/skips,
+Maven 24.108/23.359 seconds. The full failure text and final movement history
+match exactly. See the [matched attribution](../../plans/2026-09-14-fbz-completion.md#matched-attribution-of-the-s1-route-gap).
+Neither the transfer's impossibility nor a gameplay regression is established.

@@ -122,6 +122,7 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
     private Pattern[] combinedPatterns;
     private List<SpriteMappingFrame> mappingFrames;
     private boolean artLoaded;
+    @com.openggf.game.rewind.RewindTransient(reason = "Derived renderer cache rebuilt from claimed ROM art after restore")
     private boolean artCached;
     private boolean resultsArtLoadPending;
     private boolean initialResultsArtLoadDispatchDeferred;

@@ -11,6 +11,26 @@ an aggregate report generator is separate tooling work; passing those Java tests
 does not certify the historical 32 evidence groups below. A FAIL means required
 evidence is absent or a named comparison failed; it is not a gameplay waiver.
 
+## Current bounded whole-frame acceptance (2026-09-14 candidate)
+
+On pinned base `6897a6048` plus uncommitted `ai-fbz-native-loading` changes,
+**11 of the 14 established boundary afterstates now match the entire 320×224
+frame**, with zero retained Plane-B and palette differences: B1 both ways,
+B3 both ways, B4 reverse, B5 both ways, B6 both ways and Act 2 both ways.
+B5/Act 2 retain their declared one-time control prerequisite. B6 now uses the
+same fresh native entry as the other Act 1 fixtures, eliminating inherited
+score/lives differences without editing gameplay state to match screenshots.
+Root recomputed the measurements and inspected the native/engine frame pairs.
+
+The three remaining afterstates are B2 forward/reverse (984/966 world pixels)
+and B4 forward (366), retaining the separately identified SAT presentation gap.
+Before/mid-redraw samples and other frozen event checkpoints remain incomplete;
+this is not whole-zone visual certification. Evidence under the external
+`fbz-native-loading-20260914` task directory: `boundary-hud-clock-comparison.json`,
+`boundary6-fresh-hud-clock-comparison.json`, and `boundary-whole-frame-review.json`.
+The dated [completion plan](../../plans/2026-09-14-fbz-completion.md) records
+source ownership, commands, focused validation and rejected measurements.
+
 ## GPU sampling and retained background history (2026-09-14)
 
 The remaining-visual worktree based on `51677cdd2` isolated two different causes.
@@ -817,7 +837,7 @@ Plane-B and palette differences in both afterstates; each whole frame retains
 74 outside-world differences. Independent root review reproduced both pairs
 and viewed `root-b1-ring-review.png`, accepting only these bounded world
 afterstates, not whole-frame parity.
-`boundary2-engine-ring-v1` still has984/966 world differences, proving the earlier
+`boundary2-engine-ring-v1` still has 984/966 world differences, proving the earlier
 visual attribution of B2 to stage rings was wrong. Native SAT pieces15..18
 use attributes$246B, size$A, x183/153/123/93 and y172: these are FBZ snake-platform
 segments (`ArtTile_FBZMisc+$F2`), not rings. That presentation gap remains open.
@@ -840,3 +860,120 @@ coordinate offset, animation adjustment or image-dependent exclusion was added.
 Object-table observation SHA-256: forward `3B5A4E4F2DECBDFE51C729A38E922780833776805CB67C6714AA89E9ECEA9E0A`; reverse `8B3D3D274FB9A15C09B6554EBB00B705511119ACAD9BDBCA48683CA90D111DD6`.
 
 Root independently accepted the B4 reverse afterstate as well: `boundary4-native-fresh-v4/after-01` against `boundary4-engine-v3/after-01`. Recomputed differences are zero in the declared 320×144 world rectangle, zero Plane-B words and zero palette entries; 381 whole-frame pixels differ outside that rectangle. Root viewed `root-b4-reverse-review.png`. This brings the accepted bounded afterstates to eleven. B4 forward and both B2 directions retain the SAT presentation gaps above; no whole-frame or whole-zone visual parity is claimed.
+
+
+### B1 whole-frame HUD correction (2026-09-14 follow-up)
+
+In `.worktrees/ai-fbz-native-loading`, based on `6897a6048`, the fresh
+`boundary1-engine-hud-v1` capture matches `boundary1-native-fresh-v4` in both
+settled afterstates across the **entire 320×224 frame**: zero pixels, zero
+Plane-B descriptors and zero palette entries differ under the existing
+canonical channel comparison. No actor exclusion, translation or new pixel
+rule was introduced. The two engine PNG SHA-256 values are
+`FF8DB986A8AA1A72485FFEFBCBAA3A349465C74C280D177F248398102B734262` and
+`A24D0EB53966B939F86D6BBA350620AD01A0086A88FB34F75F0C1FA5E8ECE026`.
+Comparison receipt SHA-256:
+`99971340ADBF2825C0FB4E8A0B75EAE46C30E99C95E894DEF3B87D9D5A99B6FA`.
+Root inspected the forward framebuffer and recomputed both comparisons.
+
+The previous 74 differences were 50 pixels in TIME's dedicated I glyph and
+24 life-count pixels using the wrong palette. `Map_HUD` selects contiguous
+TIME tiles `$10..$17`; `HUD_Lives` writes into the line-1 name piece. The
+implementation preserves the generic S1/S2 defaults and gives S3K these own
+mapping/palette choices. The custom-zone bridge also reserves digit color 12
+on line 1, using canonical `Pal_AIZ` word `$0EAA`. Its ROM-art contract check
+and actual Flappy integration are covered by the focused checks below.
+
+Queued `compile exec:java -Dexec.mainClass=com.openggf.tools.fbzvisual.FbzBoundaryFixtureCaptureTool`
+with the verified ROM, reviewed manifest and `fbz1-boundary-1-outdoor` took
+1.880 seconds. `compare_fbz_boundary_fixture.py` produced the receipt above.
+The external `fbz-native-loading-20260914/boundary1-redraw-comparison.mp4`
+shows original ordered forward samples with a one-second setup hold and a
+one-second final hold (137 frames at 60 Hz, no audio). Its SHA-256 is
+`DE5E2D3EF493A93F02B0EC291B4DA63B2B308EA72F90BED49626B617BB1FF202`.
+The intermediate redraw images still disagree and are **not accepted**.
+This closes B1's two settled whole-frame obligations, not all visual coverage.
+
+Focused `test` of HUD factories/renderers, custom-zone palette bridge,
+required S3K loading/bootstrap gates, PLC driver parity and frame-window parser
+ran111 tests in53.183 seconds:110 passed, one synthetic custom-zone fixture
+used an impossible line-1 digit color7. Correcting that fixture retained its
+null-override icon-fallback assertion and checked real digit color12 on line1.
+The subsequent `-Dtest=TestS3kCustomZonePaletteBridge,TestSampleFlappyIntegration`
+run passed22 tests, zero skips, in20.438 seconds. These are focused results;
+combined delivery validation and integration remain pending.
+
+
+### Physical Plane-B sampling follow-up (2026-09-14 candidate)
+
+After the CPU rounded-origin correction, actual GPU readback exposed an
+unconverted64x192 source cache behind native64x32 event-owned row writes.
+The candidate now adopts the physical ring when row writes take ownership.
+42 focused row/event/rewind/strict-recording tests pass, zero failures/errors/
+skips; broad verification and integration remain pending.
+
+`boundary1-engine-physical-ring-v1` against `boundary1-native-fresh-v4` retains
+zero whole-frame, palette and ring differences in both settled afterstates.
+At reverse-08, world differences fall from11,015 to0, with2 whole-frame pixels
+remaining; reverse-16 remains0 whole-frame pixels. Forward-08 still differs
+by14 world pixels, forward-16 by1,021, and the first reverse frame by29,197.
+These measurements do not close the entire ordered-redraw or SAT obligation.
+The updated `boundary1-reverse-physical-ring-comparison.mp4` has native left,
+engine right and one-second intro/tail holds; first/middle/final frames were
+inspected. Exact commands, checksums and evidence names are in the dated
+[completion plan](../../plans/2026-09-14-fbz-completion.md).
+
+
+### CPU sprite preparation versus VDP publication (2026-09-15)
+
+The new read-only native SAT snapshots establish the publication relationship
+across B2 and B4: **552 consecutive emulator-frame pairs, zero mismatches**
+between the previous CPU table and current VDP table, comparing all 640 bytes.
+Duplicate samples are excluded explicitly; neither capture has a sample gap.
+459 current CPU tables differ from the simultaneously displayed table. The
+new afterstate PNGs exactly match the earlier references, preserving existing
+pixel results (B2 984/966 and B4 366/0 whole-frame mismatches).
+See the [commands, hashes and limitations](../../plans/2026-09-14-fbz-completion.md#native-sprite-table-publication-measured-2026-09-15).
+This confirms native publication ownership; the engine presentation fix and
+whole-zone visual acceptance remain open.
+
+### Retained presentation verified (2026-09-15 candidate)
+
+The reconciled candidate at destination `dedd18877` now prepares sprites at
+`Render_Sprites`, publishes at the owning VBlank, and retains both tables for
+rewind. HUD numbers have their separate `UpdateHUD` publication; virtual player
+DPLC banks retain immutable art versions. **All fourteen settled afterstates
+match:** B1–B6 and the controlled Act 2 boundary, both directions, with zero
+whole-frame pixels, Plane-B descriptors or palette entries differing. Root
+reviewed both seven-row native/engine contact sheets.
+
+Final receipt `boundary-all-sprite-publication-review-v2.json`, SHA-256
+`b8e7df1ee299f069a562493f6e295d19765cb2b78c0d5ae2bb46b4d13c7153a9`.
+Reviewed video `boundary2-sprite-publication-fixed-comparison-v2.mp4`, SHA-256
+`eb9ac2f33fb4b03ab12f3b0fedc689271c2513c98f197b169e6a72d860a298eb`,
+137 frames at 60 Hz, 1280×488, one-second intro/tail holds, no audio.
+Its JSON receipt hashes every ordered input frame. Artifacts remain in the
+external task directory named in the completion plan.
+
+Final focused test-plus-B1-capture invocation passed **97 tests**, no failures,
+errors or skips, Maven 1:10; this includes the actual full-registry restore and
+forward-replay comparison, HUD rollover/pause, required S3K loading/AIZ checks,
+and the full strict FBZ recording (17.270 s test body). The earlier dedicated
+SAT/mapping checks also passed. All six other v2 captures exited successfully.
+
+These settled pairs do not certify intermediate redraws or the whole zone.
+B4 forward-08/16 retain 29/59 differing pixels around the floor strip and HUD
+background; the first B2 frame retains its background/palette publication
+mismatch. Controlled B5/Act2 prerequisites and other missing recipes remain
+explicit. Combined delivery validation and integration are still pending here.
+
+
+Final integration: presentation source `892292047` merged as `562e35e37`.
+The post-integration ordinary lane completed 20,449 tests with zero failures /
+errors and 18 inspected skips. Concurrent receipt-classification integration
+changed the runner fingerprint before guards; isolated full guards at
+`94a41febd` completed 667 cases with only the two exact inherited failures.
+The final focused incoming-merge/complete-FBZ replay check passed 53 tests,
+no skips. See [commands, provenance and limits](../../plans/2026-09-14-fbz-completion.md#post-integration-validation-and-delivery).
+All 36 fresh B2 v3 PNGs match reviewed v2 pixels; the existing video remains
+representative. Intermediate redraw and whole-zone coverage limits above remain.

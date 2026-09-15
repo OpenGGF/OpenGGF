@@ -174,3 +174,31 @@ records the normal-approach Robotnik/control-panel lifetime regression, cloud
 coordinate/frame corrections, placement flips, and magnetic-chain end fitting.
 All 46 focused checks passed; the same Wayland approach visibly restores the
 room displays. Full moving-event, donor/team, and rewind route gaps remain.
+
+### Established boundary whole-frame follow-up (2026-09-14 candidate)
+
+Both existing controlled native/engine Act 2 outdoor-boundary afterstates now
+match the entire320×224 frame, all2048 Plane-B descriptors and64 palette entries.
+Root recomputed and viewed both pairs using `boundary-act2-engine-hud-clock-v1`
+and the existing `boundary-act2-native-controlled-v1` reference. The candidate
+uses the physical64×32 retained plane and the native HUD warning clock. Its
+one-time control prerequisite remains explicit; these two samples do not prove
+uncontrolled traversal, intermediate redraws or the remaining visual recipes.
+See the [native validation ledger](../../research/s3k-zones/fbz-validation.md)
+and [completion plan](../../plans/2026-09-14-fbz-completion.md) for verification
+and the still-uncommitted delivery state. The parked S1 reverse elevator
+challenge is unchanged.
+
+Retained presentation follow-up (2026-09-15 candidate on `dedd18877`): all
+thirteen complete Act 2 character/donor/viewport routes pass again, zero skips,
+with the new prepared/published sprite and VBlank-counter buffers. Both existing
+controlled boundary afterstates still match the full frame, palette and retained
+plane. This adds no new uncontrolled visual recipe or elevator assist. The
+parked right-to-left S1 challenge remains unchanged. Commands and the separately
+matched S1 Act 1 gap are recorded in the completion plan.
+
+Retained-presentation follow-up (2026-09-15): broad validation exposed unused
+player DPLC tails in BEFORE_ENTRY rewind state. The frame now retains only
+referenced art; all 114 ordinary-roll phase/donor/width/rewind cases pass in
+the final 158-case focused run, no skips. The parked early right-to-left
+challenge remains unchanged. Post-integration broad verification is pending.

@@ -196,6 +196,21 @@ class TestTraceCaptureUnifiedAudio {
      * fast-forward frame with more than one simulation step.
      */
     @Test
+    void toolRecordingLeaseFollowsFreshLevelAudioReset() {
+        audio.setBackend(headlessBackend());
+        try (LiveCaptureAudioHandle lease = audio.beginLiveCaptureAudio(FPS)) {
+            var frames = new TraceCaptureTool.HeadlessOuterAudioFrames(lease::drainPresentationFrame);
+            short[] pcm = new short[16384];
+            frames.presentOuterFrame();
+            assertEquals(FRAME_SAMPLES, frames.drainCaptured(pcm));
+            audio.resetState();
+            frames.presentOuterFrame();
+            assertEquals(FRAME_SAMPLES, frames.drainCaptured(pcm));
+            assertEquals(2L * FRAME_SAMPLES, lease.totalStereoFrames());
+        }
+    }
+
+    @Test
     void toolFastForwardDrainsOrDiscardsEveryPresentedPacketWithoutBacklog() {
         audio.setBackend(headlessBackend());
         audio.beginCaptureMode(SAMPLE_RATE, FPS);
@@ -306,8 +321,7 @@ class TestTraceCaptureUnifiedAudio {
         assertEquals(1, count(driveClip, "audioFrames.presentOuterFrame()"),
                 "one presentation per outer frame the clip treats as presented,"
                         + " inside or outside the capture window");
-        String presentedFrames = blockAfter(driveClip,
-                "if (shouldPresentOuterFrame(outcome, phase)) {");
+        String presentedFrames = blockAfter(driveClip, "if (presentRow) {");
         assertEquals(1, count(presentedFrames, "audioFrames.presentOuterFrame()"),
                 "the presentation belongs to the presented-frame branch, not to"
                         + " the per-simulation-step body");

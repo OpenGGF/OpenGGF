@@ -238,7 +238,9 @@ stock objects whose factories depend on a real ROM zone. Namespaced mod objects 
 the reliable path for custom gameplay.
 
 S3K supplies the selected character palette on line 0 and reserves only the cells
-actually used by the lives HUD. The creator owns every other declared sparse cell.
+actually used by the lives HUD. Line 1 reserves colors 1, 5, 12, 14 and 15;
+this includes the life-count digits within the name piece. The creator owns every
+other declared sparse cell.
 Claims that overlap host-owned line 0 or a live HUD cell fail registration instead
 of creating a frame-order-dependent palette conflict. The custom-zone runtime is
 otherwise deliberately empty: flat scroll and no stock animated tiles, PLC loads,

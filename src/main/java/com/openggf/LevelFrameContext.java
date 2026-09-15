@@ -14,6 +14,7 @@ import com.openggf.game.timing.HardwareTimingService;
 import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.timer.TimerManager;
 import com.openggf.level.resources.KosinskiModuleQueue;
+import com.openggf.level.LevelManager;
 
 import java.util.Objects;
 
@@ -28,7 +29,8 @@ public record LevelFrameContext(GameModule gameModule,
                                 KosinskiModuleQueue kosinskiModuleQueue,
                                 HardwareTimingService hardwareTiming,
                                 HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver,
-                                RuntimeArtCoordinator runtimeArtCoordinator) {
+                                RuntimeArtCoordinator runtimeArtCoordinator,
+                                LevelManager levelManager) {
 
     public LevelFrameContext {
         Objects.requireNonNull(gameModule, "gameModule");
@@ -42,6 +44,24 @@ public record LevelFrameContext(GameModule gameModule,
         runtimeArtCoordinator = runtimeArtCoordinator != null
                 ? runtimeArtCoordinator
                 : RuntimeArtCoordinator.NONE;
+    }
+
+    public LevelFrameContext(
+            GameModule gameModule,
+            GameRules gameRules,
+            LevelEventProvider levelEventProvider,
+            BonusStageProvider bonusStageProvider,
+            SpriteManager spriteManager,
+            GameStateManager gameStateManager,
+            TimerManager timerManager,
+            PaletteOwnershipRegistry paletteOwnershipRegistry,
+            KosinskiModuleQueue kosinskiModuleQueue,
+            HardwareTimingService hardwareTiming,
+            HardwareTimingBoundaryObserver hardwareTimingBoundaryObserver,
+            RuntimeArtCoordinator runtimeArtCoordinator) {
+        this(gameModule, gameRules, levelEventProvider, bonusStageProvider, spriteManager,
+                gameStateManager, timerManager, paletteOwnershipRegistry, kosinskiModuleQueue,
+                hardwareTiming, hardwareTimingBoundaryObserver, runtimeArtCoordinator, null);
     }
 
     public LevelFrameContext(
@@ -76,6 +96,7 @@ public record LevelFrameContext(GameModule gameModule,
                 context.getKosinskiModuleQueue(),
                 context.hardwareTiming(),
                 context.hardwareTimingBoundaryObserver(),
-                context.runtimeArtCoordinator());
+                context.runtimeArtCoordinator(),
+                context.getLevelManager());
     }
 }

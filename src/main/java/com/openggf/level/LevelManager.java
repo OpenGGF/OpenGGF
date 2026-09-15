@@ -1030,7 +1030,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         initializeZoneFeatureProvider(zoneFeatureProvider);
     }
 
+    LevelRenderer spritePresentationRenderer() { return levelRenderer; }
+
     void resetZoneScopedRegistriesForLevelLoad() {
+        levelRenderer.spriteTables.reset();
         LevelZoneScopedRegistryResetter.reset();
     }
 
@@ -1705,6 +1708,16 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             hudRenderManager = new HudRenderManager(graphicsManager, camera, gameState);
             HudProfileAccess.install(hudRenderManager, activeHudProfile);
             hudRenderManager.setHudPalettes(provider.getHudTextPaletteLine(), provider.getHudFlashPaletteLine());
+            var warningCycle = gameModule.getGameService(com.openggf.game.internal.HudWarningPolicyProvider.class);
+            if (warningCycle != null) {
+                HudProfileAccess.installWarningPolicy(hudRenderManager, warningCycle, this::getFrameCounter);
+            }
+            var livesNumberPalette = gameModule.getGameService(
+                    com.openggf.game.internal.HudLivesNumberPaletteProvider.class);
+            if (livesNumberPalette != null) {
+                HudPaletteBridgeAccess.setLivesNumberPaletteLine(
+                        hudRenderManager, livesNumberPalette.paletteLine());
+            }
             if (activeModZoneRuntimeContribution != null) {
                 activeCustomZonePaletteBridge = gameModule.createCustomZonePaletteBridge(
                         activeModZoneRuntimeContribution, level, provider);
@@ -3649,7 +3662,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
         checkpointCoordinator.clear();
-        loadCurrentLevel();
+        // Results objects call this owner directly from their fade callback.
+        // Classify the completed native act advance before the synchronous load
+        // publishes its receipt; this observes the load without changing it.
+        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(this::loadCurrentLevel);
     }
 
     /**

@@ -41,6 +41,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   position-word anchor and detach on displacement or object carry; ledge climbs
   retain the ROM animation holds and fractional position words. Special-stage return title cards
   release control after their final locked object pass without an extra wait.
+  Continuous replay now follows results-driven act changes.
   Remaining route and
   hardware-rendering limits are listed in the known-discrepancies entry and
   `docs/kis2/BRANCH_DIFFS.md`.
@@ -69,7 +70,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   original animation write during death. Fresh S3K loads now run the initial
   pattern animation pass before gameplay, as the ROM does. S3K AniPLC art now
   publishes at its DMA-serving VBlank after the animation counter advances;
-  rewind preserves both presented art and queued submissions. The Act 1 boss arms
+  rewind preserves both presented art and queued submissions. Gameplay sprite geometry and
+  HUD labels retain the prepared table until its publishing VBlank, including
+  skipped drawing, camera changes and rewind. Numeric HUD tiles follow their own
+  VBlank updates, and mutable player art stays paired with the prepared mapping. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
   preserves the native wait and score bonus before the end sign, and the ending
   pose retains existing plunger support across the seamless manager replacement. Zone-owned tumble
@@ -99,7 +103,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   established standing contacts throughout the victory pose. Results retain boss-owned
   controls and camera bounds, and results creation waits for the whole physical
   KosM queue even on allocation retries. The exit door consumes collision in its own dispatch,
-  and forced exit input preserves the already-recorded follower history. Both Act 2 bosses retain their
+  and forced exit input preserves the already-recorded follower history.
+  Fresh SOZ initialization follows the ROM's Nemesis title-loading gate and
+  terrain submission boundary, closing the complete FBZ strict recording. Event-owned
+  background row writes retain the physical 64×32 plane, so intermediate redraws
+  and rewind use the same vertical wrap. HUD warning labels use the native level
+  clock independently of the elapsed timer. Both Act 2 bosses retain their
   physical exit-art jobs through readiness and rewind; moving-background LEFT
   probes translate world coordinates before the sensor mirrors its tile metric.
   The Act 1 miniboss uses the native spring-plunger artwork, neutral waiting
@@ -108,9 +117,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   sideways artwork; both tile banks participate in renderer refresh. Foreground
   and background shaders retain fragment centres while scaling, preventing a
   one-pixel sampling shift caused by GPU division rounding. Retained background
-  redraws use native strip counts, clipped windows and aligned column sources,
-  preserving untouched rows. Bent pipes retain their ROM placement flips. Stage rings retain the native
+  redraws use native strip counts, clipped windows, aligned column sources and
+  reset scroll origins when changing modes, preserving untouched rows.
+  Bent pipes retain their ROM placement flips. Stage rings retain the native
   animation timer across level-counter resets and seamless reloads, including rewind.
+  S3K's TIME label uses its dedicated ROM glyph, and life-count digits use the
+  palette of their containing HUD piece, including custom-zone ownership.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 

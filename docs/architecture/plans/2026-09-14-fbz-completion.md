@@ -1069,3 +1069,897 @@ collision and assists unchanged; revisit only on user request. The decision is
 linked prominently from the FBZ outstanding-actions record and Act 2 matrix.
 This follow-up changes documentation only; local links and whitespace were
 checked, with no reason to repeat engine tests.
+
+
+### Fresh title/Nemesis loading gate follow-up
+
+The follow-up is pinned to `6897a604895a4822e85b766859624a95c42bd4b6`.
+The unchanged `.worktrees/ai-fbz-parity-closure` baseline ran queued
+`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestS3kFbzCompleteRunTraceReplay -Ds3k.rom.path=<verified absolute S3K ROM> test`:
+one strict failure, zero skips, 16 grouped errors / 44,144 comparison entries,
+first row 44,230 X (`$00C0/$0000`), zero warnings. Maven completed in 1:05;
+the replay class took 16.08 seconds. Queue waiting is excluded from those times.
+
+ROM inspection separates the title's `$48` ready flag from its later child
+retirement. `Obj_TitleCardWait` consumes the preceding children's `$34`
+movement flag before clearing `$48`; `loc_62CC` additionally waits for
+`Nem_decomp_queue`. `Get_LevelSizeStart` and `LoadLevelLoadBlock` then publish
+the destination state and terrain parents. The carried owner's timer is not
+overwritten with `$16` until `loc_64DC`, after terrain loading.
+
+SOZ1's ROM primary PLC `$2A` has 203- and 9-pattern entries. The Sonic PLC `$01`
+adds 12, 60, 38 and 28 patterns. `VInt_A_C` calls the six-pattern
+`Process_Nem_Queue`, so the six separate descriptors need 34+2+2+10+7+5 = 60
+serviced VBlanks. Preparation cannot consume patterns, and unused budget from a
+completed head cannot spill into the next descriptor. The native cleared-player
+row is 44,169; initialization appears at 44,230, consistent with one preparation
+boundary and those 60 services. These values come from ROM headers and owning
+routines, not a fitted title duration. A normal S3K lag handler services none.
+
+Implementation and focused validation are in progress in
+`.worktrees/ai-fbz-native-loading`; no candidate pass or delivery is claimed here.
+The independent Hyper recording is segment 46, starting at BK2 offset 302,654.
+Its BK2 contains no standalone SaveRAM member; importing observed emerald flags
+would not establish a production progression prerequisite.
+
+
+The first candidate did not move the strict frontier: the queue unit tests
+passed, but the complete recording still reported the same 16 groups. A
+read-only title observer showed a non-null runtime service with all six
+Nemesis descriptors left unprepared throughout most of the title wait. The
+held-gameplay-counter classifier was deferring the title loop's own preparation.
+This rejects both a missing-service explanation and adjusting the ROM workload
+or title timer. The revised candidate lets the explicit production
+`LEVEL_TITLE_CARD` owner establish its completed loop tail; a genuine `LAG`
+owner retains the existing deferral. Validation of that revision is pending.
+
+Act 1 solo-route expansion initially exposed movie-timing assumptions in the
+opening chain descent and first wire-to-curve exit. The replacement pilot uses
+ordinary inputs gated on actual chain travel and support acquisition; no
+movement or collision behavior is changed. One subsequent invocation omitted
+`-Pfbz-routes` and selected zero tests despite Maven reporting success. It is
+not validation evidence; the corrected profile invocation is queued.
+
+
+A bounded reread of existing B1 evidence (`boundary1-native-fresh-v4` versus
+`boundary1-engine-ring-v1`) confirms that settled parity does not cover the
+redraw interval. The unchanged comparator reports world/Plane-B/palette
+mismatches of 27,788/256/8 at `forward-01`, 14/512/0 at `forward-08`,
+29,197/384/8 at `reverse-01`, and 11,015/384/0 at `reverse-08`.
+Both afterstates remain 0/0/0 in the declared world rectangle, with 74
+whole-frame differences each. The initial native forward sample retains event
+routine 0 at level counter 1; the next native sample reaches routine 8 with
+that counter still held, whereas engine `forward-01` already has routine 8.
+These are existing-artifact measurements, not a rerun of the current candidate
+and not permission to shift samples to improve pixel agreement. Before/mid
+presentation ownership remains open alongside retained SAT publication.
+
+
+The 74 settled B1 whole-frame differences split into 50 TIME-label pixels
+(x24–31, y25–35) and 24 life-count digit pixels (x58–63, y209–215).
+`Map_HUD` selects contiguous TIME tiles `$10..$17`; the shared factory had
+reused the RINGS I (`$0A/$0B`) instead of TIME's `$12/$13`. S3K now owns that
+mapping in its static-art factory. `HUD_Lives` writes `PlayerLifeIcon+9/+11`
+inside the `$210E` second lives piece, which uses line 1; the engine had drawn
+standalone digits with the icon's line 0. The candidate supplies a separate
+engine-only numeric palette policy and applies the same ownership to custom
+zone palette claims. Existing S1/S2 defaults remain unchanged. Focused HUD,
+custom-zone and S3K loading checks are queued; these source corrections are
+not yet a fresh pixel-parity result.
+
+
+### Fresh SOZ loading closure and bounded HUD acceptance
+
+At base `6897a6048` plus the uncommitted `ai-fbz-native-loading` candidate,
+queued `test -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSonic3kTitleCardKosQueue,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute ROM>` completed in 1:04: **11 tests pass,
+zero failures, errors or skips**. The complete recording reports **44,134
+comparison entries, zero errors and warnings**, with no divergence. The
+pristine pinned baseline reported 16 grouped errors over 44,144 entries,
+first 44,230 SOZ initialization X. The entry count falls because unmatched
+timing-completion rows disappear; neither count is a raw frame total.
+
+The intermediate explicit-title-loop revision reduced 16 errors to eight.
+Representing the initialization-only title loop tail reduced eight to four;
+it prepares Nem work without advancing the title owner's next routine.
+The remaining four errors were direct terrain children submitted too early.
+`loc_62CC` already serviced the module queue before `LoadLevelLoadBlock`
+publishes terrain parents; the existing late-producer boundary now applies
+also to the fresh title handoff, admitting the first direct child on the next
+`loc_7870` loop. No workload, comparison row, or timer was fitted. Temporary
+fresh-title observer prints were removed. The strengthened late-producer
+assertion and capture admission/audio tests subsequently pass **23/23**, zero
+skips (50.320 seconds); this is focused validation, not a broad suite.
+
+Fresh B1 captures close both settled whole-frame HUD differences: **zero
+whole-frame/world pixels, Plane-B cells and palette colors** at forward and
+reverse afterstates. The [visual record](../research/s3k-zones/fbz-validation.md)
+records exact receipts and the chronological comparison video. Before/mid
+redraw and retained SAT presentation remain open.
+
+Act 1 route pilots remain under development. The two established team routes
+(320/400) pass the latest five-case run; all three new solo cases fail.
+Sonic/Knuckles stall outside the first horizontal chain's grab span; Tails
+reaches the upper factory before dying. An initial assumption that the native
+intermediate position was an egg-prison button was rejected: placement
+`$0570,$08F0` is Blaster (`$A8`), and that observed position alone does not
+prove a supported landing. Steering at a presumed ledge also failed. The
+next pilot crosses toward the actual horizontal chain span and observes real
+support. These are test-input changes, not engine physics corrections.
+
+
+### Capturing the fresh-load boundary exposes tool drift
+
+The first explicit-window video contained only 40 frames for rows 44,109–44,280:
+the existing capture admission discarded held title/loading frames. Including
+elapsed VBlank rows produces 169 frames (three selected rows advance no VBlank),
+but visual review rejected that second video too: the GL boot retained the
+host's initial title request and never entered gameplay. Queue fingerprints
+confirmed it was waiting on title art while the recording expected enemy art.
+
+The capture now selects `skipPendingInitialTitleCardPresentation`, already used
+by live replay and benchmarking, before installing the readiness schedule.
+It also uses the shared replay start-counter overload and existing iteration
+admission markers, and runs the native complete-run handoff post-row effects.
+Queued `compile exec:java -Dexec.mainClass=com.openggf.tools.TraceCaptureTool
+-Dexec.args="--trace src/test/resources/traces/s3k/fbz_completerun --verify
+0,1000,16600,30000,44109,44230,44280"` completes in 1:29. All seven selected
+live positions, camera X and ring counts match the recording, including
+SOZ `$00C0,$0400`, camera `$0020`, rings `$82`; the hardware run closes cleanly.
+This selected trajectory check is not a second strict whole-trace comparison.
+
+The subsequent video reached SOZ but failed its audio drain: the compatibility
+offline lease ends when the producer rebuilds. The CLI now uses the existing
+manager-owned recording lease, whose clock survives that reset; no audio engine
+behavior was changed. The scene pass also renders active title and fade overlays.
+Queued capture cadence, audio reset/rebind, manifest and presentation-isolation
+checks pass **23 tests, zero failures/errors/skips**, 50.184 seconds. A final
+video render is pending review. Rejected videos are workflow output, not
+accepted evidence, and will be removed after the final artifact is verified.
+
+
+The final capture completes with 169 elapsed-VBlank frames and synchronized
+48 kHz stereo audio (mean −27.4 dBFS, peak −12.0 dBFS). Four reviewed source
+frames show the FBZ exit then black loading; the fixture ends before a visible
+SOZ entrance. This is an illustrative capture, **not native visual acceptance**.
+External `fbz-native-loading-20260914/fbz-exit-soz-loading.mp4` adds exactly
+60-frame holds before and after: 289 frames at 60 Hz, 640×448, 4.816667 seconds
+for both video and audio. SHA-256
+`545D8E86D7C3ED982323F663FCC054D4D9F6EA87673049084DE08CEEE718A28D`.
+The adjacent `soz-transition-video-receipt.json` records limits and hashes;
+rejected video outputs have been deleted. The successful queued render took
+1:21. It used the same production state trajectory as the verified capture path.
+
+
+The solo pilots now clear the opening chains, upper factory and central drop.
+The early chain stall was outside the horizontal grab span, not a physics
+barrier. Knuckles uses actual glide/wall-climb input at the pipe exit. The
+central drop must be approached before falling below its top; steering only
+after player Y reached `$500` missed it and landed on the lower button.
+At the lower curved-wall handoff, a read-only observer rejects the assumption
+that the roll missed the upper platform: all pilots reach its top, but the
+controller retained its roll-exit state and slid off. The revised input pilot
+switches to ground braking on that actual upper landing. Full solo routes
+remain unaccepted until their boss/results/Act2 assertions pass; no engine
+movement or collision changes were made for these pilots.
+
+
+### Retained sprite presentation: owning boundary confirmed, implementation open
+
+A source reread confirms the distinction behind B2/B4. Native `LevelLoop`
+sets V-int routine 8 and waits for VSync before `Process_Sprites`; its
+`Render_Sprites` call occurs near the end of the subsequent loop.
+`VInt_8_Cont` uploads `Sprite_table` to VRAM `$F800` before that object work.
+Thus live object RAM and the currently displayed VRAM SAT can represent
+different completed publication boundaries without either being corrupt.
+
+The engine's `LevelRenderer.renderSpriteObjectPass` builds from live playable
+and object state. `ObjectManager.drawUnifiedBucketWithPriority` invokes
+`appendRenderCommands` during rendering, while a headless simulation step does
+not render. The existing `GraphicsManager` SAT collector is transient, used
+for sprite-mask ordering inside one draw; it is not a retained VBlank buffer.
+A correct fix needs production-owned prepared/published presentation state,
+recreation/rewind coverage and a defined relationship to camera/scroll/palette
+publication. Reusing pooled `PatternRenderCommand` objects or drawing one
+object at its previous position would not establish that contract. No such
+local shift, mapping delay, or rendering-time gameplay restore was introduced.
+Both B2 directions and B4 forward remain open, as does the before/mid-redraw
+ownership question; settled B1 whole-frame acceptance does not close them.
+
+
+Queued native-solo route check after the carrier intermediate-landing correction:
+`test -Dmse=off -Pfbz-routes -Dsurefire.forkCount=1
+-Dtest=TestFbzAct1ColdRoute#nativeSoloColdRouteReachesReleasedAct2
+-Ds3k.rom.path=<verified absolute ROM>` runs all three parameter rows (10.10
+seconds test body). **Sonic and Tails pass** the complete cold Act 1 route,
+including boss defeat, sign, results and released Act 2 control, in 21,419 and
+22,961 ordinary input frames respectively. Knuckles remains red at the first
+rotating platform assembly; no row is skipped. These successes do not certify
+donor/viewport breadth or the independent visual obligations.
+
+
+### Ordered B1 redraw publication audit
+
+The current `boundary1-engine-hud-v1` samples were compared to
+`boundary1-native-fresh-v4` in their original order, with no sample shift.
+The external `boundary1-ordered-redraw-measurements.json` records all 32
+paired intermediate samples, including native/engine clocks, event stages,
+PNG hashes, descriptor and palette differences. It is explicitly unaccepted.
+
+Forward sample 1 has native LFC1/stage0 versus engine LFC1/stage8; native
+sample 2 still has LFC1, while the engine advances to LFC2. That direction
+therefore has an additional native held loop to account for. Reverse samples
+have matching LFC18–33 and stage4 (then stage0), yet native Plane B first
+changes rows16/17 in sample2 while the engine changes them in sample1.
+The two-row strip then advances one sample ahead in the engine throughout
+the redraw. Engine sample1 also changes rows0–3 without corresponding
+native writes. Samples2–8 retain 11,015 world-pixel differences; sample16
+has zero visible world differences but still 128 differing offscreen
+descriptors. The following settled afterstate matches the whole frame.
+
+This rejects treating matching CPU event clocks or visible pixels alone as
+proof of retained-plane publication. `StagedBackgroundPlaneRedrawController`
+currently writes `LevelManager.copyBackgroundTileRowFromWorldToVdpPlane`
+during events; native `Setup_TileRowDraw` prepares `Plane_buffer`, and
+`VInt_8_Cont` calls `VInt_DrawLevel` to publish its buffered tile writes at
+the later VBlank (these are CPU port writes, separate from SAT DMA).
+Any correction must model prepared versus published rows and the normal
+background-row producer, retain both across rewind, and audit scroll and
+palette publication alongside the pending SAT work. Delaying an FBZ counter
+or shifting comparison images would not establish that contract.
+
+The independently inspected `boundary1-reverse-redraw-comparison.mp4`
+shows native left/current engine right, 16 ordered samples at 60 Hz plus
+60-frame intro and tail holds (136 frames, 2.266667 seconds, no audio).
+SHA-256: `f77a9822d25376db36dd104351e8800f86765562b846a2ba72c684109c3360f7`. The final displayed `reverse-16` image has zero
+whole-frame pixel differences, although its offscreen descriptors still
+differ as recorded above; the following afterstate closes those too.
+
+
+### B1 extra-row producer correction (focused validation complete)
+
+ROM `FBZ_BGChangeGoIn/Out` (`loc_52CD8`) and horizontal `loc_52C42`
+call `FBZ_Deform` followed by `Reset_TileOffsetPositionEff` before entering
+the staged redraw and normal `Draw_TileRow` tail. That reset publishes the
+new rounded background Y. The engine changed the redraw anchor but retained
+the previous mode's normal-row origin, explaining its additional rows0–3
+at the first reverse sample. The candidate now resets that origin at the
+same mode-change boundary. Act 2 `loc_5327E` has the same reset, so both
+acts are corrected and covered by ordinary indoor/outdoor reversal tests. Removing normal row drawing during staged redraw
+is rejected: `FBZ1BGE_GoDeform` explicitly calls it in every staged tail.
+
+The same source audit found that `Draw_TileRow` tests the low byte of the
+word scroll delta (`TST.B d2`), then conditionally negates the word before
+masking `$30`. The helper now preserves that byte-sign branch instead of
+using the word sign and absolute magnitude. Regression cases cover both
+large deltas whose byte and word signs disagree, alongside the existing
+ordinary up/down and double-row cases.
+
+Queued `test -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestFbzAct1LayoutMutations,TestFbzEventsAct1,TestFbzFramePhaseOrdering,TestFbzTransitionRewind,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute ROM>` completed 30 tests, zero failures,
+errors or skips, Maven 35.316 seconds. The complete strict recording remains
+passing. The subsequent `boundary1-engine-scroll-reset-v1` capture succeeded.
+Its 36 PNGs are byte-identical to the prior HUD-corrected capture, so both
+existing videos remain visually representative. CPU Plane-B differences
+fell from 256 to zero cells at forward-01 and from 384 to 128 at reverse-01;
+reverse-08 still differs by 11,015 world pixels. This fixes the extra producer,
+not the visible intermediate-frame discrepancy. A subsequent actual GPU
+readback (`boundary1-engine-gpu-v1`, Maven 33.779 seconds) shows an uploaded
+49,152-byte background texture whose first 8,192 bytes match the CPU ring.
+The taller world cache and its sampling require investigation before treating
+CPU ring comparisons as proof of the rendered Plane B.
+This correction does not implement deferred VBlank publication or retained
+SAT presentation; those separate obligations remain open.
+
+
+### Current authentic progression prerequisite and cold routes
+
+On the same pinned base and uncommitted candidate, queued
+`test -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain
+-Ds3k.rom.path=<verified absolute ROM>` completed two tests: prefix passes,
+chain fails, zero errors/skips, Maven 1:25. The failure is
+`uncompared-interior physical walk exceeded destination 8817`, well before
+FBZ offset 302654. This is consistent with the historical prerequisite stop,
+but no new matched baseline attribution was performed. No emerald hydration
+or standalone Hyper bootstrap has been introduced.
+
+The latest nine-case `-Pfbz-routes -Dtest=TestFbzAct1ColdRoute` run completed
+five passes and four failures, zero errors/skips (Maven 43.334 seconds).
+Native Sonic solo (20,909 frames), Tails solo (22,448), S2 Sonic solo (20,909),
+native 320px Sonic/Tails (27,563), and 400px Sonic/Tails (26,188) reach released
+Act 2 control through the real boss and results. Knuckles now clears all
+three early rotating-platform gaps after replacing ordinary air braking
+with glide release; his frontier is the late magnetic carriers near $2AEC.
+512/800px still miss the first outdoor platform transfer; 640px stalls at
+that platform sequence. These are controller frontiers, not established
+engine defects. S1 full Act 1 remains unimplemented. An invocation without
+`-Pfbz-routes` selected zero tests and supplies no validation evidence.
+
+
+### Retained physical Plane-B cache correction
+
+Actual GPU readback isolated a second error: event-owned 64x32 Plane-B row
+writes updated only the first 32 rows of a retained 64x192 source-world cache.
+The renderer could sample untouched source rows using the unwrapped background
+Y. Rewind restoration already reduced this cache to 64x32, so forward and
+restored rendering did not share the same representation. On first physical
+plane write the candidate now retains exactly the existing 64x32 cells and
+uses their native vertical wrap. This changes shared retained-plane storage,
+not FBZ camera or scroll values.
+
+A regression with the observed 192-row backing shape failed (expected32,
+actual192); the corrected candidate passes 42 focused tests with zero failures,
+errors/skips, Maven1:04. Command: queued `test -Dmse=off -Ptrace-replay-r7
+-Dsurefire.forkCount=1
+-Dtest=TestLevelTilemapManagerRewindReset,TestFbzRetainedPlaneNativeRows,TestFbzAct1LayoutMutations,TestFbzEventsAct1,TestFbzFramePhaseOrdering,TestFbzTransitionRewind,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute ROM>`. The complete strict FBZ recording still
+passes. The first synthetic fixture had only32 rows and passed before the fix;
+it was corrected to reproduce the actual taller-cache prerequisite.
+
+Fresh `boundary1-engine-physical-ring-v1` capture succeeds (Maven1.464 seconds).
+Every sampled GPU background is now8,192 bytes. At reverse-08, world differences
+fall from11,015 to0; only2 whole-frame pixels remain different. Both settled
+samples retain0 whole-frame differences. Forward-08 remains14 world pixels,
+forward-16 remains1,021; reverse-01 remains29,197. Thus first-frame publication,
+forward staged drawing and retained SAT remain separate open obligations.
+`boundary1-physical-ring-comparison.json` records all34 ordered paired samples.
+
+Updated video `boundary1-reverse-physical-ring-comparison.mp4` uses native left,
+engine right,16 chronological frames at60Hz plus60-frame intro/tail holds:
+136 frames,1280x488,2.266667 seconds,no audio. SHA-256
+`ee1f20fad5aceb96cdea9fa6993783e9cecd8fe7cc1f193af30bf853e48661ae`.
+First/middle/final contact-sheet frames were inspected. It supersedes the
+pre-fix video for current reverse redraw presentation, not for full acceptance.
+
+
+The other six established boundary recipes were recaptured after the physical
+ring fix, all six capture invocations succeeding. Their twelve afterstates
+retain zero palette/ring differences and the prior world outcomes: B2forward/
+reverse984/966 pixels, B4forward366, all other measured world afterstates0.
+B3forward and reverse are now also0 whole-frame pixels; root inspected both
+paired frames and their empty difference images. B4reverse/B5/Act2 retain307
+whole-frame differences, B6 retains311. The307-pixel difference is exactly
+RINGS at x16..54,y41..51: the native label is hidden while the engine shows it.
+Source inspection finds Render_HUD tests Level_frame_counter bit3; the engine
+uses LevelTimer.totalFrames, a different clock after timer pause or a fixture
+LFC reset. A provider-owned S3K HUD warning-clock correction is in progress.
+
+Latest wider-route check with anticipatory braking now clears the first outdoor
+transfer at512 and800px. 512px reaches the late magnetic carriers; 640/800px
+stall at the upper lift approach. Three cases fail, zero errors/skips,
+Maven32.600 seconds. The failed jump departure evidence (512: x$093E,y$0A68,
+vx$04F8 toward$09C0;800: x$0923,y$0A57,vx$0306) shows excess horizontal carry,
+not insufficient jump height. Checking surface clearance remains a valid
+predictor constraint but did not change those outcomes; anticipatory braking
+removed the overshoot. Knuckles' latest separate run acquired the late chain
+and reached the second carrier before failing; no engine physics were changed.
+
+
+### Native HUD warning clock
+
+S3K now supplies internal HUD warning eligibility and phase rules through
+`HudWarningPolicyProvider`: level-clock bit 3 selects the warning mapping,
+and elapsed minute 9 selects TIME eligibility. `LevelManager` supplies its
+existing level counter to the renderer; no new mutable clock or rewind state
+is introduced. Other modules retain their existing fallback. The initial
+clock-only implementation passed 46 checks but inspection found that
+`LevelTimer.shouldFlash()` already includes timer phase, so simply replacing
+the second phase check would still suppress valid TIME warning frames.
+The final provider separates eligibility from phase and tests actual label
+rendering with opposed timer/level phases and a 0→8→0 clock restore.
+
+Queued `test -Dmse=off
+-Dtest=TestHudRenderManager,TestHudStaticArtLivesFrameMappings,TestS3kCustomZonePaletteBridge,TestSonic3kLivesHudPaletteOverride
+-Ds3k.rom.path=<verified absolute ROM>` completed 46 passes, zero failures,
+errors/skips, Maven 48.778 seconds. All seven fresh boundary capture invocations succeeded.
+Their afterstates close the RINGS label discrepancy. This does not implement retained SAT publication.
+
+
+B6's remaining 311 pixels were score/lives inherited from its earlier native
+saved state, not a runtime HUD error. A new native capture uses the same
+`fresh-fbz-selection-v2/fbz1-lfc35.State` as the other Act 1 references
+(SHA-256 `889AE0AAF575E26255A0E12792AC75E14328BF7C1BDD17ABE1BB7FC4FAA86728`).
+Command: `python3 tools/bizhawk/capture_fbz_visual_references.py
+--bizhawk-home <official BizHawk 2.11 directory>
+--exporter tools/bizhawk/capture_fbz_boundary_fixture.lua
+--boundary-checkpoint fbz1-boundary-6-outdoor --fixture-state <fresh entry>
+--rom <verified locked-on ROM> --movie <s3k-complete-sonic-tails.bk2>
+--output <external>/boundary6-native-fresh-v1 --timeout 20`.
+Native exit 0, 3.869 seconds, no timeout. No score, lives or gameplay comparison
+values were injected. Both fresh B6 afterstates have zero whole-frame/world,
+Plane-B and palette differences; root inspected both pairs.
+
+Root accepts eleven bounded whole-frame afterstates: B1/B3/B5/B6/Act2 in both
+directions and B4 reverse. `boundary-whole-frame-review.json` links hashed
+measurements and their explicit fixture limitations. B2 both directions and
+B4 forward retain 984/966/366 world pixels respectively. The ordered first/mid
+redraw and other event recipes remain open; no whole-zone certification is made.
+
+
+### Shared-consumer check and current route frontier
+
+Queued `test -Dmse=off -Dsurefire.forkCount=1
+-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestFbzAct1RomRuntimeLifecycle,TestFbzVisualEvidenceToolingContract
+-Ds3k.rom.path=<verified absolute ROM>` completed65 tests:64 passes, one failure,
+zero errors/skips, Maven19.638 seconds. The failing lifecycle assertion required
+the obsolete taller-than32-row world-cache shape after event initialization.
+It now requires64×32 plus native32-row wrap; its existing ROM palette, physical
+row overwrite and rewind checks remain. A focused recheck of that class passes
+all3 cases, zero errors/skips, Maven17.848 seconds. The other64 checks were not
+repeated on unchanged code. This is focused coverage, not a broad-suite pass.
+
+The upper-lift departure gate lets640px reach the miniboss; it arrived at
+frame31,993 and hit the35,400-frame route limit after three impacts. Two arms
+and all ten links remain present, in patrol/follow states, with live timers and
+rootBits1. This rejects missing allocation and a frozen boss. Predicting the
+upper snake's constant-velocity landing point subsequently completes640px in
+26,689 frames. The three-case focused run has one pass/two failures, zero
+errors/skips, Maven34.244 seconds. The512px row preserves its earlier input
+strategy because the new phase shifted it into a screw-door approach stall;
+800px still misses the upper snake. These are route-controller frontiers,
+not justification to change physics or extend the native time limit.
+
+The final HUD-clock video is `boundary1-reverse-hud-clock-comparison.mp4`,
+SHA-256 `d4a4fd7e6a7f7f6507350e7b4af5cdeac2c20e85b8aae2b548839da1d45ae94a`.
+It replaces the earlier video for the current build:136 frames at60Hz,
+1280×488,2.266667 seconds, no audio,60-frame intro/tail holds. Root inspected
+first/middle/final frames. Ordered measurements remain explicit: reverse-08
+has0 world/2 whole-frame differences; reverse-16 and both settled samples have
+0 whole-frame differences. First-frame and forward-redraw gaps remain.
+
+
+### Cold-route carrier run-up and remaining input frontiers
+
+On the uncommitted `feature/ai-fbz-native-loading` candidate based on
+`6897a604895a4822e85b766859624a95c42bd4b6`, the completed
+`routes-transfer-geometry-and-pole-wait` check ran nine cases: six passes,
+three failures, zero errors/skips, Maven 49.885 seconds. Knuckles now clears
+the late chain and second magnetic carrier, but misses the upper carousel.
+512px misses the first carrier-to-chain jump; 800px reaches the upper pole
+and collides with a wall missile. These are input-controller failures, not
+established runtime discrepancies.
+
+The carrier starts the player near $2AD4,$077D; the horizontal chain is at
+$2B40,$0750 with $30 range. Walking underneath cannot enter its catch band.
+A short jump from the carrier centre falls short horizontally. Taking a
+12-pixel run-up on the actual carrier before that same short jump closes
+the 512px route: released Act 2 control after **21,568 ordinary frames**.
+The queued focused command was `test -Dmse=off -Pfbz-routes
+-Dsurefire.forkCount=1
+-Dtest=TestFbzAct1ColdRoute#widerNativeColdRoutesReachReleasedAct2+nativeSoloColdRouteReachesReleasedAct2
+-Ds3k.rom.path=<verified absolute ROM>` via `tools/testing/maven_queue.py`.
+It completed six cases: four passes, two failures, zero errors/skips,
+Maven 36.658 seconds. Sonic/Tails solo remain 20,909/22,448 frames;
+640px remains 26,689. The earlier 320/400px team and S2 solo passes are
+unchanged paths, not rerun evidence from this focused invocation.
+
+The first Knuckles upper-carousel departure is $2CE2,$06CF toward a member
+at $2C82,$06AB; later failure coordinates had obscured this by overwriting
+the departure diagnostic. The controller now retains the first departure.
+For 800px, flags for two previously passed missiles were not a safe climb
+window: another missile could reach the upper lane during the ascent.
+Waiting per lane still failed because the player initially catches the pole
+at $01C1, already inside the lower lane. The next focused check exercises
+ordinary descent below that lane and Knuckles' ordinary glide toward the
+upper carousel. No runtime physics or parked Act 2 elevator changes are made.
+
+
+The completed per-lane descent/glide check (`routes-carousel-glide-pole-descent`)
+ran six cases: four passes/two failures, zero errors/skips, Maven 38.446 seconds.
+800px passed the missile corridor and reached the late carrier. Reusing the
+proven short-hop run-up there subsequently completes **800px in 23,163 frames**.
+`routes-upper-carousel-runup` selected the same six cases: five passes/one
+failure, zero errors/skips, Maven 38.861 seconds. Only Knuckles fails.
+Its revised departure was $2CC8,$06C6 toward $2CDA,$065F: the chosen member
+had already risen above the useful intercept. The next approach first moves
+onto the floating platform's left side, then waits for the lower part of the
+upper rotor arc. The glide alone and the premature run-up were insufficient;
+no gameplay changes are justified by those controller attempts.
+
+
+Knuckles' left-edge waiting position closes the final established route:
+22,162 ordinary frames to released Act 2 control. The three native solo cases
+pass together, zero errors/skips, Maven 28.449 seconds. The combined final
+nine-case controller check (`routes-nine-final`) then passes **all nine**,
+zero failures/errors/skips, 32.83 seconds test body, Maven 52.101 seconds.
+Command: queued `test -Dmse=off -Pfbz-routes -Dsurefire.forkCount=1
+-Dtest=TestFbzAct1ColdRoute -Ds3k.rom.path=<verified absolute ROM>
+-Dsonic2.rom.path=<verified absolute ROM>`.
+
+| Route | Ordinary frames to released Act 2 control |
+|---|---:|
+| Native Sonic solo, 320px | 20,909 |
+| Native Tails solo, 320px | 22,448 |
+| Native Knuckles solo, 320px | 22,162 |
+| S2 Sonic solo, 320px | 20,909 |
+| Native Sonic/Tails, 320px | 27,563 |
+| Native Sonic/Tails, 400px | 26,188 |
+| Native Sonic/Tails, 512px | 21,568 |
+| Native Sonic/Tails, 640px | 26,689 |
+| Native Sonic/Tails, 800px | 23,163 |
+
+This is focused route evidence on the uncommitted candidate, not integrated
+or whole-zone validation. The test subsequently adds an explicit S1 donor
+case with its actual ROM and a per-frame assertion against acquiring
+spindash; its frontier is measured separately. The parked early Act 2
+right-to-left elevator remains unchanged.
+
+
+### Explicit S1 full-act donor frontier
+
+The new S1 route uses `ensureSonic1RomAvailable`, sets the actual donor ROM,
+asserts the installed capability profile has no spindash, and checks every
+ordinary frame against acquiring that ability. The donor-focused invocation
+`test -Dmse=off -Pfbz-routes -Dsurefire.forkCount=1
+-Dtest=TestFbzAct1ColdRoute#sonic1DonorColdRouteReachesReleasedAct2+sonic2DonorColdRouteReachesReleasedAct2`
+with absolute S3K/S1/S2 ROM properties completes two cases: S2 passes, S1 fails,
+zero errors/skips, Maven 26.612 seconds. S1 reaches the lower curve but the
+shared controller remains in charge stage 4 through the 35,400-frame limit.
+This demonstrates an unavailable input strategy, not a gameplay impossibility.
+
+An ordinary floor run-up toward the same curve initially targeted $1A00 from
+$1B20. The player leaves support near $1A60,$0AEE and falls; that runway is not
+continuous floor. The donor-pair recheck has one pass/one failure, zero errors/
+skips, Maven 22.968 seconds. The subsequent S1-only check keeps the run-up
+inside the observed support edge at $1AA0 and delays the roll until $1B60.
+No support, velocity or object phase is injected and no engine physics changes.
+
+
+The supported-floor roll check fails at stage 5 (one failure, zero errors/
+skips, Maven 23.160 seconds). Measured samples show $042C ground speed at
+$1B68,$0AF1, falling to zero near $1BE8,$0AB9; it rolls back to the floor.
+The first diagnostic-only invocation collected but did not print its data
+(one failure, Maven 23.052 seconds); the corrected reporter reproduced it
+(one failure, Maven 23.100 seconds). No new gameplay result is inferred from
+that reporting repair.
+
+An upright slope jump reaches roughly $0A52 but meets the floating platform's
+right edge, $1B4B, while descending. It fails the full-route limit (one failure,
+zero errors/skips, Maven 23.289 seconds). Ordinary retries after safe floor
+landings also fail (23.134 seconds). Later air braking does not close the gap
+(23.276 seconds). The matched velocity/platform diagnostic (23.328 seconds)
+shows the mode-4 platform near $0A63: its offset top is about $0A4A, above the
+jump's feet. This rejects treating the miss as timing alone. A shallower
+slope take-off with the longer supported runway starts with positive X speed
+and peaks near $0A5D, farther from the platform; it also fails (23.344 seconds).
+All these S1-only checks have one failure, zero errors/skips. They are input
+strategy investigations, not proof that donated S1 cannot pass or reasons to
+change shipped-ROM physics. The next check keeps running farther up the wall
+before an ordinary jump back toward the platform.
+
+
+The farther-wall take-off also fails (one failure, zero errors/skips,
+Maven 23.333 seconds). Preserving floor arrival momentum while requesting a
+higher take-off never reaches that height (23.191 seconds); preserving the
+preceding wire approach also fails (23.286 seconds). Returning to the earlier
+slope intercept with that carried approach still meets the platform side
+(22.863 seconds). These bounded attempts do not establish impossibility.
+Temporary 100-frame motion dumps were removed after recording the useful
+geometry above; the ordinary-input controller and S1 capability assertions remain.
+
+### Matched attribution of the S1 route gap
+
+The identical final route fixture was run on unchanged production base
+`6897a604895a4822e85b766859624a95c42bd4b6` in `ai-fbz-parity-closure`, then
+on the uncommitted `ai-fbz-native-loading` candidate. Only the two test files
+needed to run the same controller/diagnostics were copied into the baseline;
+no production source or build output was copied. The baseline worktree was
+clean beforehand and both temporary test copies were restored afterward.
+
+Command in each tree: queued `test -Dmse=off -Pfbz-routes
+-Dsurefire.forkCount=1
+-Dtest=TestFbzAct1ColdRoute#sonic1DonorColdRouteReachesReleasedAct2
+-Ds3k.rom.path=<verified absolute ROM> -Dsonic1.rom.path=<verified absolute ROM>`.
+Both complete one test with **one failure, zero errors/skips**. Baseline Maven
+24.108 seconds; candidate 23.359 seconds. The entire failure diagnostic,
+including route progress and the final 45 ordinary-frame movement samples,
+is byte-for-byte identical (SHA-256
+`d708c59e0e4945d986e6531978ffeeea0c8be8297209b6b1628865bbce03d9fc`).
+Matched-test fixture SHA-256 (before the subsequent comment-only clarification):
+`e714d8c8f90463062f08e00d515e7234015672db87c566822d8ad878a5a9e31f`.
+
+This attributes the S1 lower-curve frontier to an existing route/controller
+gap rather than a regression in the current production changes. It does not
+prove the transfer impossible or certify S1 full-act traversal. The nine
+established native/S2 routes retain their combined passing evidence; the
+new S1 case remains red and must be reported separately. No gameplay assist,
+physics change, or change to the parked Act 2 elevator was introduced.
+
+
+### Native sprite-table publication measured (2026-09-15)
+
+The boundary exporter now reads the complete $280-byte CPU `Sprite_table`
+($FFF800) alongside its existing full VRAM dump. `Render_Sprites` builds that
+RAM table; `VInt_8_Cont` uploads it to VRAM $F800. This is observation only:
+the fixture write whitelist and controller input are unchanged. The existing
+boundary comparator's optional `--sprite-publication` analysis compares all
+640 bytes on consecutive emulator frames, counts duplicates/gaps explicitly,
+and retains current-CPU differences as a separate measurement. It never
+selects an actor, shifts an image, or supplies engine gameplay state.
+
+Independent fresh-state captures of `fbz1-boundary-2-outdoor` and
+`fbz1-boundary-4-horizontal` use the existing locked-on ROM/BK2 and reviewed
+`fbz1-lfc35.State` prerequisite. Both native invocations exit 0, without timeout
+(6.624 and 8.076 seconds). An initial unrecognized `-2-indoor` checkpoint name
+was rejected before launching the emulator; the reviewed `-2-outdoor` identifier
+was then used. Exporter SHA-256:
+`6114C8362966D69D7EF21A2F4C0133049A66856FB1CBAD217C71FBB14A5BE154`.
+
+| Native capture | Samples | Consecutive frame pairs | Duplicate samples | Gaps | Previous CPU → current VDP mismatching pairs | Current CPU ≠ current VDP samples |
+|---|---:|---:|---:|---:|---:|---:|
+| B2 | 238 | 235 | 2 | 0 | 0 | 211 |
+| B4 | 320 | 317 | 2 | 0 | 0 | 248 |
+
+All **552** consecutive pairs have byte-for-byte equality between the previous
+CPU table and the currently displayed VDP table. Both final PNGs in each new
+capture are byte-for-byte identical to the corresponding earlier references,
+so the observation did not perturb the fixture. Engine whole-frame differences
+remain B2 forward/reverse 984/966 pixels and B4 forward/reverse 366/0 pixels.
+Native and engine LFC, current mapping and current player coordinates agree
+at the compared afterstates; current object-state agreement does not establish
+displayed-SAT agreement.
+
+Receipts under the external `fbz-native-loading-20260914` task root:
+`boundary2-sat-publication-review.json`, SHA-256
+`67fe27b76f262f45985c87afea792ef1a4afb1b1ee38b013aab6bdf8b4713d82`;
+`boundary4-sat-publication-review.json`, SHA-256
+`9d1a721d6ba8ac4987b280a410373f157ff9b2c8487d8403b727e282514738c7`.
+
+Validation: `python3 -m unittest discover -s tools/bizhawk
+-p test_compare_fbz_boundary_fixture.py` passes five tests, including duplicate/
+gap exclusion, positive mismatch reporting and missing/truncated-table rejection.
+`lua5.4 tools/bizhawk/test_fbz_boundary_fixture.lua
+tools/bizhawk/capture_fbz_boundary_fixture.lua` passes eight fixture scenarios;
+exporter syntax loading also passes. An initial guard invocation omitted its
+required source argument and was corrected; it did not run fixture scenarios.
+These tool checks are not engine validation. Retained production sprite
+publication, HUD participation, skipped-render behavior, art identity and rewind
+remain to be implemented together; no engine frame delay was added here.
+
+
+Video evidence: `boundary2-sprite-publication-comparison.mp4` in the external
+task root, SHA-256 `c1a498b14dd838b802efd1142ed7a55b4c6bbffe7ecf4ff01b8a1326b136c3d2`. Native left/current engine right; 17 ordered
+forward samples plus exactly 60-frame intro and trailing holds, 137 frames at
+60 Hz, 1280×488, 2.283333 seconds, no audio. First/middle/final frames were
+visually inspected and ffprobe confirmed encoding dimensions, cadence and
+frame count. The video shows the unresolved sprite, HUD and intermediate
+background publication differences; it is not a fixed-build demonstration.
+The source PNG hashes and review are retained in
+`boundary2-sprite-publication-video-receipt.json`. The complete Python FBZ
+comparator check (`-p 'test_compare_fbz_*.py'`) passes six tests; the Lua
+fixture guard still passes eight scenarios.
+
+### Retained sprite presentation implementation (2026-09-15, verification in progress)
+
+The native SAT observations above justify two distinct immutable tables. The
+candidate now prepares logical tiles, source-layer membership, priority and
+screen coordinates at the production `Render_Sprites` loop-tail slot. The S3K
+initialization profile identifies the VBlank handlers that publish the pending
+table; ordinary single-player lag retains the displayed table. Initial setup,
+locked object scans and transition-owned object loops also prepare their tables.
+The level renderer draws the published table, including HUD, rather than
+re-reading current objects. Filtered captures retain player/object/ring/HUD
+selection. Non-S3K profiles keep their existing rendering behavior.
+
+Both tables participate in the level rewind registry and clear at level-load
+registry reset. Table entries contain no pooled command, mutable descriptor,
+object pointer, atlas UV or GPU texture identity. Procedural primitive geometry
+is copied into immutable descriptions. Player DPLC banks need special care:
+their virtual tile addresses are stable but their contents are mutable staging
+buffers. The prepared frame retains immutable versions of these ROM-derived
+patterns so later animation writes cannot combine old mappings with new art.
+Stable object/level art addresses continue resolving through the ROM art cache.
+No trace row supplies any presentation or gameplay value.
+
+The first queued focused command selected `TestSpritePresentation`,
+`TestLevelSpritePresentation`, `TestGraphicsManagerSpriteSatReplay`,
+`TestSatReplayBatching`, `TestSpriteSatMaskPostProcessor`, and
+`TestHudRenderManager`: 44 tests passed, no failures/errors/skips, Maven 48.754 s.
+That result predates the additional primitive/art-generation and production
+lifecycle checks and is not final verification. A fresh Boundary 2 capture and
+expanded lifecycle/AIZ/loading checks are queued behind the shared Maven run.
+Native pixel closure, rewind integration, strict trace revalidation and combined
+delivery validation remain required; this section does not claim acceptance.
+
+Upstream reconciliation: fetched and fast-forward-pulled main `develop`
+(already current at `dedd18877`). The isolated task branch was fast-forwarded
+from `6897a6048` to that commit while its edits were preserved in a named stash.
+Two append conflicts in the Act 2 matrix and frontier log were resolved by
+retaining both records. Source merges preserve upstream's FBZ reversed-plane
+priority/room display changes, the full-width restore safeguard, and the shared
+`TraceSessionLauncher` activation call. The original task pin remains recorded;
+`dedd18877` is the current destination used for reconciled verification.
+
+The two earlier capture/lifecycle requests were cancelled while still waiting
+for the shared slot (exit 130; no Maven execution or test result). They were
+replaced by one queued test-plus-capture invocation on the reconciled source.
+The preservation stash is retained until all its changes are accounted for at
+delivery; it is not an alternative implementation branch.
+
+Reconciled focused result: 108 tests passed, no failures/errors/skips, followed
+by a successful Boundary 2 capture (queued `test exec:java`, Maven 52.872 s).
+Boundary 2 forward/reverse afterstates changed from 984/966 differing pixels
+to zero. A separate queued strict/phase/rewind/mapping check passed all eight
+tests, no skips, and captured Boundary 4 (Maven 36.328 s); its forward/reverse
+afterstates are both zero, previously 366/0. The complete trace test passed
+its full production replay again (16.850 s test body).
+
+All seven boundary captures were repeated. Thirteen of fourteen afterstates
+match all pixels, descriptors and palette entries. Boundary 1 reverse exposed
+21 TIME-digit pixels at a second rollover. Retaining its numeric glyph choice
+with the SAT was incorrect: ROM `UpdateHUD` in VInt8/10 increments `Timer` and
+rewrites numeric VRAM, independently of retained `Render_HUD` mapping geometry.
+The correction captures counters at their VBlank boundary and retains them on
+lag/fade/title handlers that do not call `UpdateHUD`. Since the existing engine
+level-state owner advances later in the loop, the presentation projects that
+same native timer increment without mutating or double-ticking gameplay state.
+New tests cover rollover, pause, transient-state cleanup and counter rewind.
+Final captures and tests for that correction are pending at this point.
+
+
+### Final retained-presentation evidence (2026-09-15)
+
+The corrected HUD publication passed 97 focused tests with zero failures,
+errors or skips (queued Maven, 1:10), including production registry restore /
+forward replay and the complete strict FBZ recording (17.270 s test body).
+All fourteen settled native/engine pairs now match pixels, Plane-B descriptors
+and palette entries. The reviewed v2 receipt and video hashes are recorded in
+[FBZ validation](../research/s3k-zones/fbz-validation.md#retained-presentation-verified-2026-09-15-candidate).
+Intermediate B4 forward-08/16 retain 29/59 differing pixels; B2's initial
+background/palette publication is also unresolved. These are bounded settled
+comparisons, not whole-zone certification.
+
+The full Act 1/2 route invocation completed 23 cases: 22 passed, one expected
+S1 Act 1 failure, no errors or skips, Maven 2:26. All nine established Act 1
+completion frames remain unchanged and all thirteen Act 2 cases pass. The
+S1 failure and its 45-frame history match pristine destination `dedd18877`
+byte-for-byte (SHA-256 including the assertion prefix:
+`6debd12b641016961b1cfeb29253355cce8a30a396b1e6b0c650df3b6246e96d`).
+The matched baseline invocation ran one case with one failure, no skips,
+Maven 54.053 s. No elevator timing or donor assistance was changed.
+
+Before broad validation, develop advanced to `5fed74d42`. The task branch
+was fast-forwarded with edits preserved; two prose append conflicts in the
+measurement hazards and frontier log retain both records. This incorporates
+the independent FBZ miniboss art and KiS2 wall/ledge fixes. No source conflict
+occurred. Broad validation uses this updated destination; the original task
+pin remains `6897a604895a4822e85b766859624a95c42bd4b6`.
+
+### Combined validation baseline (2026-09-15)
+
+Candidate runtime is committed as `7653029ab`. While FBZ waited in the shared
+queue, the KiS2 integration completed full validation of destination
+`5fed74d42` in `.worktrees/kis2-wall-anchor`, run
+`20260915T080304Z-b7baef67`, using
+`run_categories.py --base dedd18877da190e65aeb74970929e2f2b4ece6c3 --run`.
+Its results were read directly before the owning session acknowledged them:
+2,574 ordinary classes, 20,421 tests, zero failures/errors, 18 inspected skips,
+716.1 seconds; 667 guards, two failures, no errors/skips, 170.25 seconds.
+No required game-ROM test was skipped. Skips were the opt-in benchmark/soak,
+route, allocation and native-render diagnostics; unavailable default EGL/GL
+checks; the existing CPZ spin-tube assumption; and local audio-reference captures.
+
+The exact inherited guard identities and SHA-256 of their message strings are:
+- `TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`:
+  `2f565ac8f586df1370bc4f480e93b052ec2597eea74f212331c12be281d8bf10`;
+  its expectations still require superseded direct-Maven guidance.
+- `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`:
+  `1a70b0fb0ca5bb0da30909d99b02b32ffb851e942c07857d57399f660dca5021`;
+  it identifies unchanged `FbzRouteEvidenceProbe#printEvidence` and
+  `LevelSolidityMapProbe#writeSolidityMap`.
+
+FBZ's combined run `20260915T081751Z-11d26faf` uses
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 python3
+ tools/testing/run_categories.py --base 5fed74d42 --run --max-minutes 40`.
+Actual preflight passed. Selection is all 2,579 ordinary classes plus guards,
+with one worker and the announced 40-minute execution / ten-minute no-output
+stops; shared-queue waiting does not consume execution time. Outcome follows.
+
+The ordinary lane completed 20,448 tests: two failures, no errors, 18 skips
+matching the inspected baseline, 759.55 seconds. The runner then stopped before
+guards because this baseline write-up changed its working-tree fingerprint.
+This was my sequencing error: even a prose-only append must wait until all
+lanes finish. No completed ordinary result is called an all-lanes pass.
+
+Both failures reproduced narrowly in four cases (two failures, no errors/skips,
+20.125 seconds). `TestFbzSqueezeOrdinaryRoll`'s BEFORE_ENTRY forward replay
+found differences only in published pattern slots 1935–1939. A temporary
+probe intersected those IDs with the table's tiles: none was referenced.
+The presentation snapshot now retains immutable versions only for referenced
+tiles; unused DPLC tail history remains outside the displayed frame. The
+probe was removed and a direct regression protects this distinction.
+
+`TestFbzAct1RouteHeadless#realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch`
+found the results object's derived `artCached` flag reset while rebuilding
+claimed ROM art after restore. The flag now uses the existing `RewindTransient`
+contract: the rebuilt renderer recaches as needed, while `artLoaded` and all
+results gameplay/timing state remain captured. The existing full-registry
+assertions remain unchanged. Focused regression and guard outcomes follow.
+
+The corrections passed 144 tests, no failures/errors/skips, Maven 1:07:
+all 114 `TestFbzSqueezeOrdinaryRoll` cases, the failed real-boss title-init
+rewind method, all 17 `TestS3kResultsKosQueueAndChildren` cases, nine immutable
+presentation cases and both presentation lifecycle/registry classes. Queued
+Maven used explicit existing S1/S2/S3K ROM paths and those named tests; an
+additional requested `TestSonic3kResultsScreenObjectInstance` pattern matched
+no class and supplies no coverage. The broad diagnostics were inspected and
+acknowledged through the runner. The ordinary lane's two regressions are
+resolved narrowly; guards and post-integration validation remain required.
+
+The outstanding full guard invocation (`maven_queue.py -Dmse=off -Pguards
+test -B`) completed 667 cases, four failures, no errors/skips, 2:51. Two
+message hashes match the baseline above exactly. The new failures were
+`TestArchitecturalSourceGuard#levelFrameStepDoesNotUseAmbientGameServices`
+and `TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers`.
+The correction injects the level owner through `LevelFrameContext.from`,
+keeps descriptor/ROM-pattern conversion in `level.render.SpritePresentationRenderer`,
+and lets the low-level immutable buffer receive decoded attributes through
+its producer-owned decoder. SAT capture reuses the existing tile emitter.
+No guard baseline, Mod API signature or gameplay timing rule was changed.
+
+The context correction first passed 29 phase/rewind/strict-replay checks,
+no skips, Maven 1:09. Both complete affected architecture guard classes then
+passed all 101 cases, no failures/errors/skips, Maven 58.564 s. Final queued
+`-Ptrace-replay-r7` validation passed 158 tests with no skips (Maven 54.200 s):
+the 114 squeeze cases, title-init rewind, results children, immutable frame
+and registry cases, all three SAT replay/masking classes, and the complete
+strict FBZ trace (15.530 s body). It then successfully ran
+`FbzBoundaryFixtureCaptureTool ROM OUTPUT MANIFEST fbz1-boundary-2-outdoor`.
+All 36 PNGs in `boundary2-engine-sprite-publication-v3` match v2 pixel-for-pixel,
+including intermediate frames and both settled directions. The reviewed v2
+video remains an exact visual representation of this final candidate.
+
+The task also reconciles documentation-only develop commits through
+`2b2bf8e28`; the sole frontier-log append conflict retained both histories.
+Post-integration combined validation is still required before delivery.
+
+
+### Post-integration validation and delivery
+
+The final presentation source `892292047` integrated into develop as
+`562e35e37995af918ec533402eacbc6816e0071a`, destination `2b2bf8e28`.
+Main remained on develop; all three dirty disassembly submodules, both BizHawk
+archives and the user's notes were preserved. The CI push-policy validator and
+release-tree audit passed (10,052 entries). Source/tooling matched the validated
+candidate exactly after the merge.
+
+Post-integration command: `JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
+--base 2b2bf8e2818f424106a9494523bdf8fae53f082b --run --max-minutes 40`.
+Actual preflight passed. Run `20260915T084902Z-fb607e45` completed all 2,579
+ordinary classes: **20,449 tests, zero failures/errors, 18 skips**, 778.32 s.
+The skips match the previously inspected baseline identities/reasons, with no
+missing required ROM. Both earlier ordinary regressions are absent, including
+all 114 squeeze cases. Results were inspected and acknowledged.
+
+A concurrent delivery integrated `94a41febd` during the ordinary lane. The
+runner correctly stopped before guards on the changed-tree fingerprint; its
+overall command was incomplete, not green. Compilation preceded that incoming
+change. The only runtime delta wraps the existing synchronous act load in
+`TraceSessionLauncher.runLevelAdvanceLoad`, labeling its receipt without
+changing the load itself. It was inspected and included in the isolated task
+worktree before remaining checks. Proportionate follow-up covers this bounded
+observation-only delta through real load/reload/non-load paths, receipt tracking,
+playback coordination and the complete FBZ recording; no repeated full ordinary
+suite is claimed for the new commit.
+
+At pinned `94a41febd`, isolated queued `-Dmse=off -Pguards test -B` completed
+**667 cases, two failures, no errors/skips**, Maven 3:22. Both identities and
+message hashes match the exact baseline recorded above. The ambient-service
+and graphics-layer regressions are absent. The subsequent queued
+`-Dmse=off -Ptrace-replay-r7` selection
+`TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestS3kFbzCompleteRunTraceReplay`
+with explicit S1/S2/S3K ROM paths passed **53 tests, no skips**, Maven 37.660 s.
+The complete FBZ trace passed (18.260 s body), no first error. Documentation-only
+follow-up `072ddec8a` was then included; its runtime/tooling diff is empty.
+
+This is completed ordinary-lane evidence plus full guards and the justified
+focused incoming-merge check, with two inherited guard failures. It is not an
+all-gates-green or whole-zone visual certificate. Intermediate redraw samples,
+independent Hyper progression and the inherited S1 full-act route remain open.
+The early Act 2 right-to-left elevator challenge remains untouched. The reviewed
+v2 comparison video still matches the final source's fresh v3 capture exactly.

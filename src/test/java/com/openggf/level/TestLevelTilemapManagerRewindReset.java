@@ -297,6 +297,31 @@ public class TestLevelTilemapManagerRewindReset {
     }
 
     @Test
+    public void eventOwnedPlaneUsesPhysicalRingDimensionsBeforeAndAfterRewind() throws Exception {
+        ZoneFeatureProvider zfp = new StubZoneFeatures(true, false, true);
+        LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);
+        manager.setCurrentBgPeriodWidth(PERIOD_PX);
+        manager.ensureBackgroundTilemapData(blockLookup, zfp, 0, null, false);
+        // A world cache may be wider/taller than the VDP plane. Native row
+        // writes own only its physical 64x32 cells, including vertical wrap.
+        byte[] worldCache = java.util.Arrays.copyOf(manager.getBackgroundTilemapData(), 64 * 192 * 4);
+        Field data = LevelTilemapManager.class.getDeclaredField("backgroundTilemapData");
+        data.setAccessible(true);
+        data.set(manager, worldCache);
+        Field height = LevelTilemapManager.class.getDeclaredField("backgroundTilemapHeightTiles");
+        height.setAccessible(true);
+        height.setInt(manager, 192);
+        manager.setRetainedBackgroundTileDescriptorAtTilemapCell(7, 9, 0x6A5);
+        assertEquals(64, manager.getBackgroundTilemapWidthTiles());
+        assertEquals(32, manager.getBackgroundTilemapHeightTiles());
+        assertEquals(32, manager.getBackgroundVdpWrapHeightTiles());
+        byte[] expected = manager.captureRetainedBackgroundVdpRing();
+        assertArrayEquals(expected, manager.getBackgroundTilemapData());
+        manager.restoreRetainedBackgroundTilemapData(expected);
+        assertArrayEquals(expected, manager.getBackgroundTilemapData());
+    }
+
+    @Test
     public void rewindResetPreservesAnExactlyReconciledAuthoritativeBackgroundPlane() throws Exception {
         ZoneFeatureProvider zfp = new StubZoneFeatures(true, false, true);
         LevelTilemapManager manager = new LevelTilemapManager(geometry, graphicsManager, null);

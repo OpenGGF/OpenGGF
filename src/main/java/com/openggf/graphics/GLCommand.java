@@ -200,6 +200,24 @@ public class GLCommand implements GLCommandable {
 	public float getAlpha() { return alpha; }
 	public CommandType getCommandType() { return glCmdCommandType; }
 
+	/** Immutable CPU description for diagnostic/procedural sprite primitives. */
+	record PresentationPrimitive(CommandType type, int method, BlendType blend,
+			float red, float green, float blue, float alpha, int x1, int y1, int x2, int y2)
+			implements SpritePresentation.Geometry {
+		public GLCommand command(int cameraX, int cameraY) {
+			return new GLCommand(type, method, blend, red, green, blue, alpha,
+					x1 + cameraX, y1 + cameraY, x2 + cameraX, y2 + cameraY);
+		}
+	}
+
+	PresentationPrimitive preparePrimitive(int cameraX, int cameraY) {
+		if (glCmdCommandType != CommandType.RECTI && glCmdCommandType != CommandType.VERTEX2I)
+			throw new IllegalStateException("Non-primitive GL command in CPU sprite preparation: " + glCmdCommandType);
+		return new PresentationPrimitive(glCmdCommandType, drawMethod, blendMode,
+				colour1, colour2, colour3, alpha, x1 - cameraX, screenHeightPixels - y1 - cameraY,
+				x2 - cameraX, screenHeightPixels - y2 - cameraY);
+	}
+
 	private static void ensureBuffers() {
 		if (vaoId == 0) {
 			vaoId = glGenVertexArrays();
