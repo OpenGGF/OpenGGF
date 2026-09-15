@@ -4666,3 +4666,13 @@ reject a valid Tails or rolling landing. Test odd X, both flips and radii 19,
 is invisible and its later-slot child draws eight pieces. Do not infer drawing
 from a culling helper's name or add a ninth parent piece. Preserve the child's
 own coarse-X deletion check.
+
+## Fresh contact is not always the native object standing bit
+
+SOZ sand rock (`loc_41760`, 2026-09-15) reads the object's standing mask after
+SolidObjectFull. Offscreen P2 can bypass fresh contact while retaining the prior
+standing bit. When the ROM branches on that latch, query the explicit object's
+standing bit after the checkpoint; `standingNow()` alone is insufficient, and
+player OnObj may belong to a different object. Test a retained offscreen rider
+with a no-contact checkpoint. This also matters when one rolling rider breaks a
+shared platform and every standing rider must be released.

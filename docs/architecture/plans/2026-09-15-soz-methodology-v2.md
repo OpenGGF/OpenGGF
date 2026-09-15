@@ -86,8 +86,8 @@ disproves that distinction. `No_Resize` is not evidence that SOZ has no events.
 
 ## Execution record and next action
 
-The placed inventory, native pilot and quicksand family are delivered at the
-bounded scope recorded below. The next Act 1 dependency is the spring vine;
+The placed inventory, native pilot, quicksand and spring-vine families are delivered
+at the bounded scope recorded below. The current continuation is the breakable sand rock;
 full dynamic/art/audio inventory and later route slices remain open. Keep commands, RED/GREEN results, review findings, resolved
 catalogue contradictions, amendments and rejected approaches in this plan as work
 proceeds. Reuse the existing SOZ analysis for verified ROM findings and the act
@@ -538,3 +538,89 @@ configurations. Act 2 reachability, full-act progression, remaining objects/even
 bosses and complete native trajectory/pixel certification remain open. The short
 engine capture is rendering evidence only. No SOZ BK2 full-level completion claim
 is made by this slice.
+
+### Breakable sand-rock continuation
+
+Base `77f6ee81dcc62637785e3f65136dcc9d0efdd466`; isolated
+`.worktrees/soz-sand-rock`, branch `feature/ai-soz-sand-rock`. SKL `$44` has
+17 Act 1 and 13 Act 2 placements, all subtype zero. First spots are
+`($260,$5B0)` and `($1C0,$3B0)`. S3KL `$44` remains the CNZ trap door.
+
+`Obj_SOZBreakableSandRock` at `$41702` points to mapping `$4182E`, five
+frames of two pieces, with art base `ArtTile_SOZMisc+$10`, palette 2. Both
+pointer bytes and mapping shape are checked against ROM. `loc_4172E` saves
+player animation before SolidObjectFull can reset a rolling landing. A rolling
+standing rider breaks the rock; all standing riders are released, but only
+those with saved animation 2 receive `-$300` Y velocity, rolling radii 7/14 and
+animation 2. These radius writes preserve the player's centre. The breakup
+falls through on the triggering pass, advances every six passes and moves X to
+`$7F00` on pass 25, where ordinary coarse-X culling removes it.
+
+Source review found a distinction between a fresh contact and the native standing
+latch: offscreen P2 may retain its standing bit while SolidObjectFull returns no
+contact. The candidate reads the owner-specific `hasObjectStandingBit` after its
+manual checkpoint, including for the trigger. A retained-latch/no-contact unit
+regression covers this; no fallback to a player's unrelated OnObj flag is used.
+
+The existing cold Right plus 20-of-70 jump sequence did not break the first rock
+in any of four configurations over 1,800 passes. The vine launched at local
+frame264 (`x676,y1690,vx=vy=-3824`); five passes later the player hit the ceiling
+at `x603,y1619` and Y velocity became zero. The existing native pilot does the
+same at native frames4580–4585 (`x679,y1690` to `x605,y1619,vy0`). This rules out
+changing the vine launch to make that route pass. The failed input is not route
+coverage. Short explicitly positioned production spots now exercise the placed
+rock independently; cold reachability remains open.
+
+The previous push's [CI 34970270333](https://github.com/OpenGGF/OpenGGF/actions/runs/34970270333)
+completed 19,127 smoke tests with zero failures, one error and 2,831 skips.
+`TestLevelManagerEndProgression.advanceToNextLevelUsesConfiguredSuccessorRedirect`
+reached a real S2 load with null ROM because its obsolete no-argument load stub
+was bypassed by the native title-card path introduced in `36479a2fc` (already in
+the pre-vine base). The test now stubs the actual public load boundary and
+asserts the title-card flags as well as successor selection. No production
+progression behavior changed. A first compile exposed missing test imports;
+after correction, seven rock unit tests and all eight progression tests passed.
+
+The first ROM-focused run executed 92 tests: 88 passed, including all existing
+vine routes, ROM mapping/art crawler, renderer guard, registry profile and actual
+rewind inventory (1,014 total / 794 passing / 220 graph-covered). Its four
+failures were the unsuccessful cold rock approach above; no skips/errors.
+The replacement `TestSozSandRockProduction` passed all five positioned production
+spots (zero failures/errors/skips, 19.280s build): both acts; Act 1 additionally
+640px, S1 donor, and two followers. Each restores all registered state and replays
+twice at breakup, phase 6 and phase 24/removal. The failed cold-route experiment
+was removed; its evidence above remains an explicit reachability gap.
+
+The positioned `GameplayCaptureTool` capture under external task directory
+`$TASK_DIR/engine-rock-1` uses
+where `$TASK_DIR` is the external `soz-v2-20260915` capture directory. It uses
+Act 1, Sonic/Tails, centre `($260,$58C)` and input `45 -; 1 C; 80 -`.
+CSV inspected before images: frame 82 rebounds at Y velocity `-768`; frame 40
+shows the intact rock and frame 100 the flattened breakup mapping. This is
+engine rendering evidence, not a matched native pixel comparison.
+
+Required S3K regressions passed 58 tests, zero failures/errors/skips, 20.340s:
+`python3 tools/testing/maven_queue.py -Dmse=off
+'-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
+'-Ds3k.rom.path=$REPO_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen'
+test -B` from this worktree.
+
+The change-based plan against the pinned base selects all 2,597 ordinary classes
+plus guards because of shared registration/constants/profile paths. Proportionate
+validation applies: the production behavior is confined to this object, its ROM
+art/zone bindings, and unchanged shared contact/rewind APIs; the progression repair
+changes only a test stub. Focused production, ROM art, inventory, rewind, bootstrap
+and structural checks exercise these consumers directly. No shared collision,
+physics or load algorithm changed. This is focused validation, not a full-suite
+pass. `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+77f6ee81dcc62637785e3f65136dcc9d0efdd466 --preflight` passed Java 21, Lua 5.4 and
+PowerShell checks. CI smoke remains mandatory.
+
+
+Focused structural checks passed 123 tests, zero failures/errors/skips, 58.493s
+in a fresh JVM:
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+'-Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestObjectUpdateClockTerminologyGuard'
+test -B`. Mirrored pitfall files are identical; `git diff --check` passes.
+The final source review found no remaining material issues after the standing-latch
+correction. Develop remained at the pinned base when refreshed for integration.
