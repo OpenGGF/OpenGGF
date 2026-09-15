@@ -33,6 +33,7 @@ import com.openggf.physics.TrigLookupTable;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.level.objects.SkidDustObjectInstance;
+import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.SidekickCpuController;
 import com.openggf.sprites.playable.SuperStateController;
@@ -2114,6 +2115,16 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Animation cycles through frames 0xB7-0xBC every 4 frames of movement.
 	 */
 	private void updateWallClimb() {
+		// Knuckles_Climbing_Wall / Knuckles_Wall_Climb reuse x_sub as
+		// the grab's native X word. A displaced or carried player detaches;
+		// the ROM never snaps him back to the old wall position.
+		if ((sprite.getCentreX() & 0xFFFF) != sprite.getXSubpixelRaw() || sprite.isOnObject()) {
+			letGoOfWall();
+			return;
+		}
+		sprite.setGSpeed((short) 0);
+		sprite.setXSpeed((short) 0);
+		sprite.setYSpeed((short) 0);
 		// KiS2 Knuckles_Climbing_Wall temporarily uses 10/10 for terrain,
 		// then publishes 19/9 for object/ring touch checks after movement.
 		if (glideUsesTemporaryCollisionRadii()) sprite.applyCustomRadii(10, 10);
@@ -2127,9 +2138,6 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	}
 
 	private void updateWallClimbWithCollisionRadii() {
-		// Maintain X position against wall
-		sprite.setX(sprite.getWallClimbX());
-
 		int climbAnimDelta = 0;  // +1 = forward (climbing up), -1 = backward (climbing down)
 
 		if (inputUp) {
@@ -2152,9 +2160,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 						sprite.getCentreX(), sprite.getCentreY(), sprite.getYRadius());
 				if (ceilResult != null && ceilResult.distance() < 0) {
 					// Bumping ceiling — push out
-					sprite.setY((short) (sprite.getY() - ceilResult.distance()));
+					NativePositionOps.addYPosPreserveSubpixel(sprite, -ceilResult.distance());
 				} else {
-					sprite.setY((short) (sprite.getY() - 1));
+					NativePositionOps.addYPosPreserveSubpixel(sprite, -1);
 				}
 				climbAnimDelta = 1;
 			}
@@ -2175,11 +2183,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 					sprite.getCentreX(), sprite.getCentreY() + sprite.getYRadius());
 			if (floorResult != null && floorResult.distance() <= 0) {
 				// Reached floor
-				sprite.setY((short) (sprite.getY() + floorResult.distance()));
+				NativePositionOps.addYPosPreserveSubpixel(sprite, floorResult.distance());
 				exitWallClimbToGround();
 				return;
 			}
-			sprite.setY((short) (sprite.getY() + 1));
+			NativePositionOps.addYPosPreserveSubpixel(sprite, 1);
 			climbAnimDelta = -1;
 		}
 
@@ -2320,8 +2328,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	/** ROM: Knuckles_ClimbUp (sonic3k.asm:31437-31446) — initiate ledge climb. */
 	private void enterLedgeClimb() {
 		sprite.setDoubleJumpFlag(5);
-		sprite.setDoubleJumpProperty((byte) 0);
-		doLedgeClimbAnimation();
+		if (sprite.getMappingFrame() != 0xBD) {
+			sprite.setDoubleJumpProperty((byte) 0);
+			doLedgeClimbAnimation();
+		}
 	}
 
 	/** ROM: Knuckles_ClimbLedge_Frames (sonic3k.asm:31503-31509) */
@@ -2353,9 +2363,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (sprite.getDirection() == Direction.LEFT) {
 			xDelta = -xDelta;
 		}
-		sprite.setX((short) (sprite.getX() + xDelta));
-		sprite.setY((short) (sprite.getY() + entry[2]));
-
+		// The table applies word additions, preserving both low words (including
+		// the wall anchor still occupying x_sub). S3K reverses the Y delta in
+		// reverse gravity; KiS2 never enables that global mode.
+		NativePositionOps.addXPosPreserveSubpixel(sprite, xDelta);
+		int yDelta = sprite.currentGameState().isReverseGravityActive() ? -entry[2] : entry[2];
+		NativePositionOps.addYPosPreserveSubpixel(sprite, yDelta);
+		sprite.setAnimationTick(entry[3]);
+		sprite.setAnimationFrameIndex(0);
 		sprite.setDoubleJumpProperty((byte) (sprite.getDoubleJumpProperty() + 4));
 	}
 
@@ -2364,12 +2379,24 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	 * Called each frame while in state 5 — advances the ledge climb animation.
 	 */
 	private void updateLedgeClimb() {
-		int index = (sprite.getDoubleJumpProperty() & 0xFF) / 4;
-		if (index >= LEDGE_CLIMB_FRAMES.length) {
-			exitWallClimbToGround();
-			return;
-		}
+		// Knuckles_Climbing_Onto_Ledge / Knuckles_Climb_Ledge test the
+		// animation timer before moving. Animate decrements it later in the slot.
+		if (sprite.getAnimationTick() != 0) return;
 		doLedgeClimbAnimation();
+		if ((sprite.getDoubleJumpProperty() & 0xFF) == LEDGE_CLIMB_FRAMES.length * 4) {
+			// The final table entry grounds in the same pass. The native left-facing
+			// finish subtracts one pixel before Knux_TouchFloor and anim=Wait.
+			if (sprite.getDirection() == Direction.LEFT) {
+				NativePositionOps.addXPosPreserveSubpixel(sprite, -1);
+			}
+			exitWallClimbToGround();
+			sprite.setPushing(false);
+			sprite.setRollingJump(false);
+			sprite.setFlipAngle(0);
+			sprite.setFlipType(0);
+			sprite.setFlipsRemaining(0);
+			sprite.setAnimationId(5);
+		}
 	}
 
 	/**
@@ -2535,9 +2562,12 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Record wall X position
 		sprite.setWallClimbX(sprite.getX());
+		// Knuckles_BeginClimb stores x_pos into x_sub (s2.asm:38314);
+		// S3K Knuckles_Gliding_HitWall uses the same x_pos+2 alias.
+		sprite.setSubpixelRaw(sprite.getCentreX() & 0xFFFF, sprite.getYSubpixelRaw());
 
 		// Wall climb animation — mapping frame 0xB7
-		sprite.setForcedAnimationId(-1);  // Let object mapping frame control take over
+		// The native grab changes mapping_frame, leaving anim(a0) intact.
 		sprite.setObjectMappingFrameControl(true);
 		sprite.setMappingFrame(0xB7);
 	}

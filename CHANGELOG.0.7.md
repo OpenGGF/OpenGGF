@@ -37,7 +37,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   DPLCs, including pending transfers across loads and rewind. The chip supplies
   its own PLC table and queue workloads. Solo replay retains the title-card object
   prelude; glide wall grabs check terrain fit, and floor contact preserves flipped
-  tile angles and the slide animation register. Special-stage return title cards
+  tile angles and the slide animation register. Wall grabs use the native
+  position-word anchor and detach on displacement or object carry; ledge climbs
+  retain the ROM animation holds and fractional position words. Special-stage return title cards
   release control after their final locked object pass without an extra wait.
   Remaining route and
   hardware-rendering limits are listed in the known-discrepancies entry and
