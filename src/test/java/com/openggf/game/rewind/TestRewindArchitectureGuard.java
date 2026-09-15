@@ -160,7 +160,11 @@ class TestRewindArchitectureGuard {
             // Focused graph tests cover recreation and relinking.
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/ARZRotPformsObjectInstance.java#@RewindTransient", 5),
             Map.entry("src/main/java/com/openggf/game/sonic2/objects/EggPrisonObjectInstance.java#@RewindTransient", 4),
-            Map.entry("src/main/java/com/openggf/game/sonic2/objects/bosses/Sonic2OOZBossInstance.java#@RewindTransient", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic2/objects/bosses/Sonic2OOZBossInstance.java#@RewindTransient", 1),
+            // SOZ quicksand halfExtent/variant are immutable subtype decodes.
+            // Spawn recreation reconstructs both; cooldown/ownership remains captured
+            // by the participant table and cold-route rewind checks.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SozQuicksandObjectInstance.java#@RewindTransient", 2)
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(

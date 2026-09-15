@@ -476,3 +476,42 @@ All 97 tests passed, zero failures/errors/skips, in 22.449s on the candidate
 based on `316788395`. This includes all incoming-radius boundary cases and
 all four cold-route rewind configurations after the shared resolver adjustment.
 Read-only source review found no further issue. Broad validation remains pending.
+
+### Combined vine validation
+
+Implementation commit `bbc983d57` merged updated develop `b8d0ae91b` cleanly
+as `8e09d509d`; the release-note merge preserved both changes. The upstream
+support-helper cleanup did not modify the shared collision files.
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 316788395c81dd447e5a87d9f5b1d90b8efa528a --run`
+selected all 2,594 ordinary classes plus guards. On `8e09d509d`, ordinary
+completed 20,518 tests, zero failures/errors, 19 skips in 770.67s. Skips were
+opt-in diagnostics/routes/native checks, unavailable EGL/OpenGL checks, local
+reference captures, and `TestCPZObjectBugs.testSpinTubeForcesRolling`'s unmet
+capture assumption. No SOZ checks skipped; separate trace/native profiles are
+not included in this ordinary-suite result.
+
+Guards completed 668 tests with three failures, zero errors/skips in 173.73s:
+`TestRewindArchitectureGuard.objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage`
+reported quicksand's two constructor-derived annotations;
+`TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+expected obsolete direct-Maven prose; and
+`TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`
+reported `FbzRouteEvidenceProbe#printEvidence` and
+`LevelSolidityMapProbe#writeSolidityMap`. A bounded matched-base run is pending.
+
+The quicksand annotations belong to the earlier SOZ slice: `halfExtent` and
+`variant` are immutable spawn-subtype decodes rebuilt by spawn recreation.
+Explicit triage now records those two fields in the architecture guard;
+mutable participant ownership/cooldown remains captured. This changes neither
+runtime behavior nor the guard's general prohibition. Its focused check is pending.
+
+Matched baseline command on main develop `2f3797ceb`:
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestRewindArchitectureGuard,TestBuildToolingGuard,TestNoAssertionFreeDiagnostics' test -B`
+completed 123 tests, the same three failure identities/messages, zero errors/skips
+in 84s. The relevant guards and root guidance are unchanged from `b8d0ae91b`.
+The corrected candidate command
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestRewindArchitectureGuard' test -B`
+passed all four tests, zero failures/errors/skips, in 19.266s. The two unrelated
+build-guidance/probe failures remain baseline failures; they are not a green
+structural-guard claim. Broad diagnostics were inspected and scheduled for deletion.
