@@ -1224,3 +1224,13 @@ Final affected-behavior recheck completed at 19:24:38 BST in 23.525 seconds:
 20 tests, zero failures/errors/skips, with both explicit ROM paths above.
 This verifies the final lifecycle helper edit, connected route/rewind cases and
 corrected inventory pin before integration.
+
+Delivery: source commit `6c8dad550`, integrated cleanly into `develop` as
+`23a51f28e` on base `3808306ad`. The identical 20-class combined command above
+completed on the integrated main workspace at 19:27:26 BST in 56.344 seconds:
+**305 tests, zero failures, errors or skips**. This includes the corrected
+inventory pin and final lifetime-helper calls. The selected structural checks
+passed as recorded above; no full-suite or complete-act certification is implied.
+CI push policy and release-tree audit passed before delivery. No trace frontier
+changed. The full special-rock puzzle approach and inherited act-matrix gaps
+remain open.
