@@ -316,3 +316,15 @@ and SOZ restore/replay; it does not prove the outgoing boss route. Changed Markd
 links, whitespace and the AGENTS/CLAUDE mirror were checked. The commit resource
 policy initially rejected machine-local documentation paths; portable command
 variables fixed that issue without weakening the policy.
+
+### Final upstream reconciliation
+
+Develop advanced to `1cfe9ef82` with the shared-support/configuration refactor
+before SOZ integration. It merged without conflicts. The relevant S3K solid-profile
+change extracts the same `Arrays.copyOfRange` loop into `SolidProfileDecoder`;
+quicksand's existing support API is unchanged. The final focused integration check
+also includes `TestSolidProfileDecoder`. The two inherited failing guard owners
+and the guidance/probe text they inspect are unchanged by that upstream work.
+Selection against this actual destination still chooses the full ordinary suite
+solely because the one-ID discovery-profile edit is unclassified; the bounded
+validation rationale above continues to apply to the complete SOZ diff.
