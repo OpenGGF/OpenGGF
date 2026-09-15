@@ -10,6 +10,9 @@ public final class Sonic3kObjectArtKeys {
     public static final String SOZ_SOLID_SPRITES = "soz_solid_sprites";
     public static final String SOZ_PUSHABLE_ROCK = "soz_pushable_rock";
     public static final String SOZ_BREAKABLE_SAND_ROCK = "soz_breakable_sand_rock";
+    public static final String SOZ_LIGHT_SWITCH = "soz_light_switch";
+    public static final String SOZ_GHOSTS = "soz_ghosts";
+    public static final String SOZ_GHOST_CAPSULE = "soz_ghost_capsule";
     public static final String SOZ_SWINGING_PLATFORM = "soz_swinging_platform";
     public static final String SOZ_RAPEL_WIRE = "soz_rapel_wire";
     public static final String SOZ_SPRING_VINE = "soz_spring_vine";
@@ -354,6 +357,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String SKORP = "soz_skorp";
     public static final String SANDWORM = "soz_sandworm";
     public static final String ROCKN = "soz_rockn";
+    public static final String SOZ_MINIBOSS = "soz_miniboss";
+    public static final String SOZ_MINIBOSS_DUST = "soz_miniboss_dust";
 
     // LRZ badniks
     public static final String FIREWORM = "lrz_fireworm";

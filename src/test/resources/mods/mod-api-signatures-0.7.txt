@@ -1585,7 +1585,7 @@ CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$PlayerRewindExtra 
 CONSTRUCTOR com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra public  <init>(com.openggf.sprites.playable.SidekickCpuController$State,int,int,int,int,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,int,int,boolean,boolean,int,int,int,int,int,boolean,boolean,boolean,int,int,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,boolean,int,int,int,boolean,boolean,com.openggf.sprites.playable.SidekickCpuController$NormalStepDiagnostics,short,short,boolean,boolean,int,boolean,int,boolean,short,short,int,int,int,boolean,boolean)
 CONSTRUCTOR com.openggf.level.objects.PersistentRespawnState public  <init>(long[],long[])
 CONSTRUCTOR com.openggf.level.objects.PersistentRespawnState public  <init>(long[],long[],long[])
-CONSTRUCTOR com.openggf.level.objects.PersistentRespawnState public  <init>(long[],long[],long[],long[])
+CONSTRUCTOR com.openggf.level.objects.PersistentRespawnState public  <init>(long[],long[],long[],long[],byte[])
 CONSTRUCTOR com.openggf.level.objects.PlaneSwitcherConfig public  <init>(byte,byte,byte,byte)
 CONSTRUCTOR com.openggf.level.objects.PlatformBobHelper public  <init>()
 CONSTRUCTOR com.openggf.level.objects.PlatformBobHelper public  <init>(int,int,int)
@@ -9793,6 +9793,7 @@ METHOD com.openggf.level.objects.ObjectManager public  boolean objectLoopReached
 METHOD com.openggf.level.objects.ObjectManager public  boolean preallocatesLostRingOwnerSlot()
 METHOD com.openggf.level.objects.ObjectManager public  boolean reserveDynamicSlot(int)
 METHOD com.openggf.level.objects.ObjectManager public  boolean reservedSlotWaitsForNextObjectPass(int)
+METHOD com.openggf.level.objects.ObjectManager public  boolean transferPlacementOwnership(com.openggf.level.objects.ObjectInstance,com.openggf.level.objects.ObjectInstance)
 METHOD com.openggf.level.objects.ObjectManager public  boolean usesCounterBasedRespawn()
 METHOD com.openggf.level.objects.ObjectManager public  boolean usesTwoAxisCursorPlacement()
 METHOD com.openggf.level.objects.ObjectManager public  com.openggf.game.rewind.RewindSnapshottable<com.openggf.game.rewind.snapshot.ObjectManagerSnapshot> rewindSnapshottable()
@@ -10529,6 +10530,7 @@ METHOD com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra 
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra public,final  boolean equals(java.lang.Object)
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra public,final  int hashCode()
 METHOD com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra public,final  java.lang.String toString()
+METHOD com.openggf.level.objects.PersistentRespawnState public  byte[] objectStateBits()
 METHOD com.openggf.level.objects.PersistentRespawnState public  com.openggf.level.objects.PersistentRespawnState withRingStatusBits(long[])
 METHOD com.openggf.level.objects.PersistentRespawnState public  long[] destroyedInWindowBits()
 METHOD com.openggf.level.objects.PersistentRespawnState public  long[] rememberedBits()
@@ -15931,6 +15933,7 @@ RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRe
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra suppressNextAirbornePushFollowSteering boolean
 RECORD-COMPONENT com.openggf.level.objects.PerObjectRewindSnapshot$SidekickCpuRewindExtra suppressNextLevelEventNormalMovement boolean
 RECORD-COMPONENT com.openggf.level.objects.PersistentRespawnState destroyedInWindowBits long[]
+RECORD-COMPONENT com.openggf.level.objects.PersistentRespawnState objectStateBits byte[]
 RECORD-COMPONENT com.openggf.level.objects.PersistentRespawnState rememberedBits long[]
 RECORD-COMPONENT com.openggf.level.objects.PersistentRespawnState ringStatusBits long[]
 RECORD-COMPONENT com.openggf.level.objects.PersistentRespawnState stayActiveBits long[]

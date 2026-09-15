@@ -69,6 +69,12 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
         }
     }
     // Touch_Special ignores size $19. Ground attacks are checked by sub_8EEF4.
+    @Override protected void onRemovedFromObjectManager() {
+        var manager = services().objectManager();
+        if (manager != null) for (var object : manager.getActiveObjects()) {
+            if (object instanceof Shell shell && shell.owner == this) shell.owner = null;
+        }
+    }
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return true; }
     @Override public int getCollisionFlags() { return routine == 4 ? 0xD9 : 0; }
     @Override public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) { }
@@ -95,6 +101,13 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
             } else if (routine == 4) { if (--timer < 0) { routine = 6; timer = 7; } }
             else if (routine == 6) { currentY -= 2; if (--timer < 0) { routine = 8; owner.shellRaised = true; } }
             else { currentX = owner.getX(); currentY = owner.getY() - (owner.mappingFrame == 0 ? 24 : 23); }
+        }
+        @Override protected void onRemovedFromObjectManager() {
+            // Child_Draw_Sprite retires its dependent display on the next pass.
+            var manager = services().objectManager();
+            if (manager != null) for (var object : manager.getActiveObjects()) {
+                if (object instanceof Legs legs && legs.owner == this) legs.owner = null;
+            }
         }
         @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x23, 0x10, 0x11); }
         @Override public boolean isSolidFor(PlayableEntity player) { return !isDestroyed(); }

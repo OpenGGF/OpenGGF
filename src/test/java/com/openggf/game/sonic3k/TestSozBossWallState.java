@@ -66,4 +66,18 @@ class TestSozBossWallState {
         assertEquals(0, wall.rowOffset(0));
         for (int row = 1; row <= 12; row++) assertEquals(-256, wall.rowOffset(row));
     }
+    @org.junit.jupiter.api.Test
+    void wallBounceUsesSideContactRatherThanStandingBits() {
+        var wall = new com.openggf.game.sonic3k.objects.SozBossWallObjectInstance(
+                new com.openggf.level.objects.ObjectSpawn(0, 0, 0, 0, 0, false, 0));
+        var player = org.mockito.Mockito.mock(com.openggf.sprites.playable.AbstractPlayableSprite.class);
+        wall.onSolidContact(player, new com.openggf.level.objects.SolidContact(
+                true, false, false, true, false), 0);
+        org.mockito.Mockito.verify(player, org.mockito.Mockito.never()).setXSpeed(org.mockito.ArgumentMatchers.anyShort());
+        wall.onSolidContact(player, new com.openggf.level.objects.SolidContact(
+                false, true, false, false, false), 0);
+        org.mockito.Mockito.verify(player).setXSpeed((short) -0x300);
+        org.mockito.Mockito.verify(player).setYSpeed((short) -0x300);
+    }
+
 }

@@ -453,8 +453,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * {@link PersistentRespawnState}.
      */
     PersistentRespawnState capturePersistentRespawn() {
+        // The kept ROM table includes object-owned low bits, not just its load latch.
+        byte[] lowerBits = new byte[twoAxisCursorPlacement ? spawns.size() : 0];
+        for (int i = 0; i < lowerBits.length; i++) lowerBits[i] = (byte) (objState[i] & 0x7F);
         return new PersistentRespawnState(remembered.toLongArray(), stayActive.toLongArray(),
-                destroyedInWindow.toLongArray());
+                destroyedInWindow.toLongArray(), new long[0], lowerBits);
     }
 
     /**
@@ -478,6 +481,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // the table wipe at :37429-37438), so a bit 7 left set by
         // Delete_Current_Sprite must survive the return.
         destroyedInWindow.or(BitSet.valueOf(state.destroyedInWindowBits()));
+        if (twoAxisCursorPlacement) {
+            byte[] lowerBits = state.objectStateBits();
+            for (int i = 0; i < Math.min(lowerBits.length, spawns.size()); i++) {
+                objState[i] |= lowerBits[i] & 0x7F;
+            }
+        }
     }
 
     int restoreRewindState(

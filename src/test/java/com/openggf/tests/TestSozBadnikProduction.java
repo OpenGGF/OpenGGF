@@ -25,7 +25,9 @@ class TestSozBadnikProduction {
         "0,0xE50,0xF0,RocknBadnikInstance,400,knuckles,none,off",
         "1,0x180,0x674,SkorpBadnikInstance,528,sonic,'tails,knuckles',off",
         "0,0xA30,0xBDC,SandwormBadnikInstance,800,sonic,tails,s1",
-        "1,0x550,0x3DC,SandwormBadnikInstance,320,sonic,tails,s2"})
+        "1,0x550,0x3DC,SandwormBadnikInstance,320,sonic,tails,s2",
+        "0,0x330,0x5D4,SkorpBadnikInstance,512,knuckles,none,off",
+        "1,0x550,0x3DC,SandwormBadnikInstance,640,tails,sonic,off"})
     void placedFamilyBindsAndReplaysThroughChildLifecycle(int act,int x,int y,String family,int width,String character,String followers,String donor) {
         var config=SonicConfigurationService.getInstance();
         var saved=new EnumMap<SonicConfiguration,Object>(SonicConfiguration.class);
@@ -66,6 +68,40 @@ class TestSozBadnikProduction {
             config.resolveDisplayAspect();SessionManager.clear();TestEnvironment.activeGameplayMode();
         }
     }
+    @ParameterizedTest
+    @CsvSource({"SkorpBadnikInstance,0x350,0x5D4", "SandwormBadnikInstance,0xA50,0xBDC",
+            "RocknBadnikInstance,0xE60,0xF0"})
+    void managerRetirementDetachesChildrenBeforeTheirNextDispatch(String family,int x,int y) {
+        var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,0)
+                .startPosition((short)x,(short)y).startPositionIsCentre()
+                .withFreshLevelStartLifecycle().build();
+        var manager=GameServices.level().getObjectManager();
+        var spawn=new ObjectSpawn(x,y,0x94,0xFE,0,false,0);
+        AbstractObjectInstance owner=switch(family) {
+            case "SkorpBadnikInstance" -> new SkorpBadnikInstance(spawn);
+            case "SandwormBadnikInstance" -> new SandwormBadnikInstance(spawn);
+            default -> new RocknBadnikInstance(spawn);
+        };
+        manager.addDynamicObject(owner);
+        for(int i=0;i<30;i++) fixture.stepFrame(false,false,false,false,false);
+        final int slot=owner.getSlotIndex();
+        var registry=fixture.gameplayMode().getRewindRegistry();
+        var before=registry.capture();
+        // Retire between object passes, as post-object touch conversion can do.
+        manager.removeDynamicObject(owner);
+        manager.validateRewindReferenceClosure();
+        fixture.stepFrame(false,false,false,false,false);
+        var after=registry.capture();
+        registry.restore(before);
+        owner=manager.getActiveObjects().stream().filter(AbstractObjectInstance.class::isInstance)
+                .map(AbstractObjectInstance.class::cast).filter(o -> o.getSlotIndex()==slot)
+                .findFirst().orElseThrow();
+        manager.removeDynamicObject(owner);
+        manager.validateRewindReferenceClosure();
+        fixture.stepFrame(false,false,false,false,false);
+        same(after,registry.capture(),family+" retirement forward replay");
+    }
+
     private static void same(CompositeSnapshot expected,CompositeSnapshot actual,String label) {
         assertEquals(expected.entries().keySet(),actual.entries().keySet(),label);
         for(String key:expected.entries().keySet()) {

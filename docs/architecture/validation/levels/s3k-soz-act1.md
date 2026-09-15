@@ -71,3 +71,22 @@ invisible hurt blocks placed directly above those pillars. It is retained as a r
 in the execution record, not used to weaken collision or pillar behavior.
 Other pillar phases, hazard geometry, all-character/donor/viewport rides and
 native-matched trajectories remain inherited coverage gaps.
+
+## Completion campaign integration
+
+The integrated first object batches (`2cd537cf4`, `9b9738d9c`, `6728de471`)
+cover swinging platforms/wires, sand blocks/path swaps/rising walls/corks, and
+Skorp/Sandworm/Rockn. Their short production checks include whole-registry
+recreation and forward replay; reached subtypes are exercised by focused tests.
+These replace the earlier placeholder classification, not the open cold-route
+or native-matched trajectory obligations.
+
+`47fc96483` preserves lower object-state bits across kept bonus/special-stage
+returns, including layout entries above255. Tests distinguish a kept return
+from a normal reset and preserve ring state alongside mechanism state.
+
+`9c27e46a2` adds the dynamically created Egg Golem and its native positional
+sink defeat, results owner and post-results alignment. Thirteen focused cases
+passed with no skips; two subsequent production/capture assertions also passed.
+The current awakening film is a positioned, camera-pinned scenario. Natural
+arena admission, victory and seamless transition remain pending.

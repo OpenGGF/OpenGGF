@@ -102,3 +102,28 @@ Animation ownership follow-up: both SOZ custom routines return without executing
 `AniPLC_LRZ1`, despite its table pointer. `TestS3kSozPatternAnimation` now checks
 that Act2's static `$350..$357` tiles survive48 update/VBlank passes. The unused
 list is excluded; this does not implement the still-open custom torch animation.
+
+## Completion campaign integration
+
+The integrated first object batches (`2cd537cf4`, `9b9738d9c`, `6728de471`)
+cover swinging platforms/wires, sand blocks/path swaps/rising walls/corks, and
+Skorp/Sandworm/Rockn. Their short production checks include whole-registry
+recreation and forward replay; reached subtypes are exercised by focused tests.
+These replace the earlier placeholder classification, not the open cold-route
+or native-matched trajectory obligations.
+
+`47fc96483` preserves lower object-state bits across kept bonus/special-stage
+returns, including layout entries above255. Tests distinguish a kept return
+from a normal reset and preserve ring state alongside mechanism state.
+
+`6f10f848e` adds light-switch hold/release, Hyudoro controller/body, both art
+triggers, the capsule/button/escape graph and boss-area mask. Eleven focused
+unit cases and five production cases passed across targeted invocations, with
+no skips; mapping sanity also passed. Switch and capsule films are local
+scenarios. The attempted ordinary capsule approach stalled near `($B1C,$234)`;
+the positioned opening capture therefore does not certify that approach.
+
+`9a26b6f9e` adds the boss wall's coupled thirteen deformation rows/eight solids,
+queued terrain/art and background restoration. Five screen-event checks plus
+wall-state and comparator checks pass with no skips (12 total). Integrated
+combat, complete-route traversal and all matrix breadth are still pending.
