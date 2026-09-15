@@ -10,6 +10,8 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
     private final PlayerCharacter playerCharacter;
     // Native _unkF7C4 points to an SST slot, not a durable rock identity.
     private int pushableRockSlot = -1;
+    private int sandCorkForegroundFlag;
+    private int sandCorkBackgroundFlag;
 
     public SozZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -22,8 +24,33 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public boolean isActTransitionFlagActive() { return false; }
     public int pushableRockSlot() { return pushableRockSlot; }
     public void publishPushableRockSlot(int slot) { pushableRockSlot = slot; }
-    @Override public byte[] captureBytes() { return ByteBuffer.allocate(4).putInt(pushableRockSlot).array(); }
-    @Override public void restoreBytes(byte[] bytes) { pushableRockSlot = ByteBuffer.wrap(bytes).getInt(); }
+    /** Obj_SOZSandCork/sub_41D5C: high subtype bit chooses Events_fg_4, else fg_5. */
+    public void requestSandCorkRelease(boolean alternate) {
+        if (alternate) sandCorkForegroundFlag = 0xFFFF;
+        else sandCorkBackgroundFlag = 0xFFFF;
+    }
+    public int sandCorkForegroundFlag() { return sandCorkForegroundFlag; }
+    public int sandCorkBackgroundFlag() { return sandCorkBackgroundFlag; }
+    public int consumeSandCorkForegroundFlag() {
+        int result = sandCorkForegroundFlag;
+        sandCorkForegroundFlag = 0;
+        return result;
+    }
+    public int consumeSandCorkBackgroundFlag() {
+        int result = sandCorkBackgroundFlag;
+        sandCorkBackgroundFlag = 0;
+        return result;
+    }
+    @Override public byte[] captureBytes() {
+        return ByteBuffer.allocate(12).putInt(pushableRockSlot)
+                .putInt(sandCorkForegroundFlag).putInt(sandCorkBackgroundFlag).array();
+    }
+    @Override public void restoreBytes(byte[] bytes) {
+        var buffer = ByteBuffer.wrap(bytes);
+        pushableRockSlot = buffer.getInt();
+        sandCorkForegroundFlag = buffer.remaining() >= 4 ? buffer.getInt() : 0;
+        sandCorkBackgroundFlag = buffer.remaining() >= 4 ? buffer.getInt() : 0;
+    }
 
     /** Same Level_trigger_array bytes as ordinary buttons; no shadow signal store. */
     public static int trigger(int index) {
