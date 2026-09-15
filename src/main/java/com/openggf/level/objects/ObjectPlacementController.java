@@ -162,7 +162,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private int bwdCounter;
     // ROM: v_objstate[2..255] — per-counter-slot state.
     // Bit 7: set = object loaded or permanently destroyed.
-    private final int[] objState = new int[256];
+    private int[] objState = new int[256];
     // Maps active spawn (identity) → counter value assigned during load.
     // Used to clear objState bit when the object is normally unloaded.
     private final IdentityHashMap<ObjectSpawn, Integer> spawnToCounter = new IdentityHashMap<>();
@@ -197,6 +197,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     void setTwoAxisCursorPlacement(boolean twoAxisCursorPlacement) {
         this.twoAxisCursorPlacement = twoAxisCursorPlacement;
+        if (twoAxisCursorPlacement && objState.length < spawns.size()) {
+            objState = Arrays.copyOf(objState, spawns.size());
+        }
     }
 
     void setWindowingStrategy(ObjectWindowingStrategy strategy) {
@@ -1489,6 +1492,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     boolean isCounterStateBitSet(ObjectSpawn spawn, int bit) {
+        // Two-axis placement owns one respawn byte per layout entry, not an
+        // S1 rolling counter. Lower bits survive ordinary culling and rewind.
+        if (twoAxisCursorPlacement && bit >= 0 && bit < 7) {
+            int index = getSpawnIndex(spawn);
+            return index >= 0 && (objState[index] & (1 << bit)) != 0;
+        }
         Integer counter = spawnToCounter.get(spawn);
         if (counter == null || bit < 0 || bit > 7) {
             return false;
@@ -1497,6 +1506,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     void setCounterStateBit(ObjectSpawn spawn, int bit) {
+        if (twoAxisCursorPlacement && bit >= 0 && bit < 7) {
+            int index = getSpawnIndex(spawn);
+            if (index >= 0) objState[index] |= 1 << bit;
+            return;
+        }
         Integer counter = spawnToCounter.get(spawn);
         if (counter != null && bit >= 0 && bit <= 7) {
             objState[counter] |= 1 << bit;
