@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 /** Native SOZ screen-event RAM; one captured owner shared with arena objects and scroll. */
 public final class SozEventState {
-    static final int SNAPSHOT_BYTES = 22 * Integer.BYTES + SozBossWallState.SNAPSHOT_BYTES + 2 * Long.BYTES;
+    static final int SNAPSHOT_BYTES = 23 * Integer.BYTES + SozBossWallState.SNAPSHOT_BYTES + 2 * Long.BYTES;
     private long blockJobOrdinal = -1;
     private long artJobOrdinal = -1;
     private final SozBossWallState bossWall = new SozBossWallState();
@@ -30,6 +30,7 @@ public final class SozEventState {
     private int bossArtPhase;
     private boolean backgroundCollision;
     private boolean seamlessEntry;
+    private boolean endBossFallStarted;
 
     public long blockJobOrdinal() { return blockJobOrdinal; }
     public void blockJobOrdinal(long value) { blockJobOrdinal = value; }
@@ -82,6 +83,10 @@ public final class SozEventState {
     public boolean seamlessEntry() { return seamlessEntry; }
     public void seamlessEntry(boolean value) { seamlessEntry = value; }
 
+    /** Native _unkFAB8 bit0, set by loc_779C0 and read by loc_77A6E. */
+    public boolean endBossFallStarted() { return endBossFallStarted; }
+    public void endBossFallStarted(boolean value) { endBossFallStarted = value; }
+
     void capture(ByteBuffer buffer) {
         buffer.putInt(initialized ? 1 : 0).putInt(foregroundRoutine).putInt(backgroundRoutine)
                 .putInt(specialRoutine).putInt(sandPosition).putInt(redrawRemaining)
@@ -91,7 +96,7 @@ public final class SozEventState {
                 .putInt(bossWallHitY).putInt(bossX).putInt(bossY).putInt(bossArtPhase)
                 .putInt(backgroundCollision ? 1 : 0).putInt(seamlessEntry ? 1 : 0);
         bossWall.capture(buffer);
-        buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal);
+        buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal).putInt(endBossFallStarted ? 1 : 0);
     }
 
     void restore(ByteBuffer buffer) {
@@ -120,6 +125,7 @@ public final class SozEventState {
         bossWall.restore(buffer);
         blockJobOrdinal = buffer.getLong();
         artJobOrdinal = buffer.getLong();
+        endBossFallStarted = buffer.getInt() != 0;
         if (!initialized) { blockJobOrdinal = -1; artJobOrdinal = -1; }
     }
 }

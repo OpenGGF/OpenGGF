@@ -172,7 +172,7 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         p.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT|(jump?AbstractPlayableSprite.INPUT_JUMP:0));
         p.setLogicalInputState(false,false,false,true,jump,p.getPushing());}
     private void exitMove(PlayableEntity entity){if(!(entity instanceof AbstractPlayableSprite p))return;move();
-        if(!knuckles()&&getX()>=0x54C0){xVelocity=0;yVelocity=0;timer=0x7F;escapePhase=8;services().camera().requestFastVerticalScroll();}
+        if(!knuckles()&&getX()>=0x54C0){xVelocity=0;yVelocity=0;timer=0x7F;escapePhase=8;runtime().events().endBossFallStarted(true);services().camera().requestFastVerticalScroll();}
         NativePositionOps.writeXPosPreserveSubpixel(p,!knuckles()&&escapePhase==8?0x54C0:getX());NativePositionOps.writeYPosPreserveSubpixel(p,getY());
         if(knuckles()&&getX()>=0x5560)nextZone();}
     private void exitFall(PlayableEntity entity){if(!(entity instanceof AbstractPlayableSprite p))return;yVelocity=Math.min(yVelocity,0x1000);move();yVelocity+=0x38;

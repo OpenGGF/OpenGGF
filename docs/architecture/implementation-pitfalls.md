@@ -398,3 +398,13 @@ Reading engine`$16` selected velocity instead of position: negative velocity's
 high byte displaced sand-block spawners by roughly255pixels and changed their
 zero-position release gate. Distinguish position and velocity in routine tests;
 reset-state tests where both high bytes are zero cannot catch this error.
+
+### Independently allocated exit helpers must not retain the retiring boss
+
+SOZ `loc_77A6E` is allocated without a parent pointer. It waits on `_unkFAB8`
+bit 0, set at `loc_779C0`, then `loc_77A98` follows Player 1 independently
+until level clear. Model that captured signal rather than reading the boss's
+escape phase through a retained reference. The controller-only end-boss route
+exposed an unregistered reference between root deletion and destination load;
+continuous snapshots cover this interval even when selected hit/escape rewind
+spots all pass.

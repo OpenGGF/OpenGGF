@@ -160,11 +160,32 @@ class TestSozEndBoss {
         player.setCentreX((short)0x5468);player.setCentreY((short)0x6E0);player.setXSpeed((short)0x600);
         boss.update(0,player);assertEquals(7,integer(boss,"escapePhase"));assertEquals(!knuckles,player.isObjectControlled());
         for(int i=0;i<60&&integer(boss,"escapePhase")==7&&!boss.isDestroyed();i++)boss.update(i,player);
+        assertEquals(!knuckles,state.events().endBossFallStarted());
         if(!knuckles){assertEquals(8,integer(boss,"escapePhase"));assertEquals(-1,requestedZone);
             for(int i=0;i<127;i++)boss.update(i,player);assertEquals(-1,requestedZone);
             var before=boss.captureRewindState();boss.update(127,player);assertTrue(boss.isDestroyed());
             boss.restoreRewindState(before);boss.update(127,player);assertTrue(boss.isDestroyed());}
         assertEquals(9,requestedZone);assertEquals(0,requestedAct);assertTrue(deactivateRequested);
+    }
+    @Test void independentExitFollowerUsesCapturedFallSignalAfterBossRetires() {
+        var tails=new TestablePlayableSprite("tails",(short)0,(short)0);
+        services.withPlayerQuery(new ObjectPlayerQuery(()->player,()->List.of(tails)));
+        var boss=root();
+        var follower=manager.createDynamicObject(()->new SozEndBossChild(boss,null,17));
+        assertNull(get(follower,"boss"));
+        byte[] waiting=state.captureBytes();
+        follower.update(0,player);assertEquals(0,integer(follower,"phase"));
+        state.events().endBossFallStarted(true);
+        byte[] falling=state.captureBytes();state.restoreBytes(waiting);
+        assertFalse(state.events().endBossFallStarted());state.restoreBytes(falling);
+        manager.removeDynamicObject(boss);
+        follower.update(1,player);
+        assertEquals(player.getCentreX(),tails.getCentreX());
+        assertEquals(player.getCentreY()-32,tails.getCentreY());
+        assertTrue(tails.isObjectControlled());assertEquals(0x1A,tails.getAnimationId());
+        var rewind=new RewindRegistry();rewind.register(manager.rewindSnapshottable());
+        var before=rewind.capture();manager.setRewindInPlaceRestoreEnabledForTest(false);
+        rewind.restore(before);assertTrue(RewindSnapshotDiff.diffKey("object-manager",before.get("object-manager"),rewind.capture().get("object-manager")).isEmpty());
     }
     @ParameterizedTest @ValueSource(ints={0,1,2})
     void beamPrefixStopsOnFailureWithoutRetry(int count){
