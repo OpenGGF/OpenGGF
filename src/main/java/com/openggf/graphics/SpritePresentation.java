@@ -74,7 +74,15 @@ public final class SpritePresentation {
         graphics.spritePresentationBuilder = builder;
         try {
             producer.run();
-            return new Frame(builder.tiles, builder.primitives, builder.patternVersions);
+            // This is the displayed sprite table's art, not a snapshot of every
+            // staging-bank slot. Unreferenced DPLC tails retain arbitrary older
+            // animation data and cannot affect this frame's presentation.
+            Map<Integer, PatternVersion> referencedPatterns = new HashMap<>();
+            for (Tile tile : builder.tiles) {
+                PatternVersion version = builder.patternVersions.get(tile.patternId());
+                if (version != null) referencedPatterns.put(tile.patternId(), version);
+            }
+            return new Frame(builder.tiles, builder.primitives, referencedPatterns);
         } finally {
             graphics.spritePresentationBuilder = null;
             graphics.cancelSpritePresentationCollection();

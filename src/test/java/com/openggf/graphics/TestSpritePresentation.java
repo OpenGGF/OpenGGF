@@ -91,14 +91,32 @@ class TestSpritePresentation {
     @Test void mutableDplcBanksCannotChangeAnAlreadyPreparedPresentation() {
         var pattern = new com.openggf.level.Pattern();
         pattern.setPixel(2, 3, (byte) 7);
-        var frame = SpritePresentation.prepare(graphics, 0, 0, () ->
-                SpritePresentation.bindPatternBank(graphics, 9000, new com.openggf.level.Pattern[]{pattern}));
+        var frame = SpritePresentation.prepare(graphics, 0, 0, () -> {
+            SpritePresentation.bindPatternBank(graphics, 9000, new com.openggf.level.Pattern[]{pattern});
+            graphics.renderPatternWithId(9000, new PatternDesc(), 0, 0);
+        });
         pattern.setPixel(2, 3, (byte) 12);
         assertEquals(7, frame.patternVersions().get(9000).pattern().getPixel(2, 3));
-        var second = SpritePresentation.prepare(graphics, 0, 0, () ->
-                SpritePresentation.bindPatternBank(graphics, 9000, new com.openggf.level.Pattern[]{pattern}));
+        var second = SpritePresentation.prepare(graphics, 0, 0, () -> {
+            SpritePresentation.bindPatternBank(graphics, 9000, new com.openggf.level.Pattern[]{pattern});
+            graphics.renderPatternWithId(9000, new PatternDesc(), 0, 0);
+        });
         assertEquals(12, second.patternVersions().get(9000).pattern().getPixel(2, 3));
         assertNotEquals(frame.patternVersions(), second.patternVersions());
+    }
+
+    @Test void unusedDplcTailDoesNotBecomeDisplayedOrRewindState() {
+        var used = new com.openggf.level.Pattern();
+        var unused = new com.openggf.level.Pattern();
+        Runnable produce = () -> {
+            SpritePresentation.bindPatternBank(graphics, 9000, new com.openggf.level.Pattern[]{used, unused});
+            graphics.renderPatternWithId(9000, new PatternDesc(), 0, 0);
+        };
+        var before = SpritePresentation.prepare(graphics, 0, 0, produce);
+        unused.setPixel(0, 0, (byte) 12);
+        var after = SpritePresentation.prepare(graphics, 0, 0, produce);
+        assertEquals(java.util.Set.of(9000), before.patternVersions().keySet());
+        assertEquals(before, after, "unreferenced animation history cannot change the displayed frame");
     }
 
     @Test void primitiveGeometryIsRetainedWithoutKeepingAnExecutableCommand() {

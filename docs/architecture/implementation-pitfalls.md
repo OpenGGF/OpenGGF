@@ -239,3 +239,13 @@ warning policy and the already rewind-owned level clock. Do not add a fitted
 phase offset or a second counter. Test label rendering with deliberately
 opposed timer and level phases, including a restored earlier level counter.
 Origin: 2026-09-14 FBZ paired whole-frame investigation (307 RINGS pixels).
+
+
+FBZ retained presentation (2026-09-15): a frame owns only the mutable DPLC
+patterns referenced by its displayed tiles. Capturing an entire staging bank
+also captures unused tails from older animations; an eight-frame S1 rewind
+exposed five differing unused slots despite identical displayed art. Keep
+referenced versions immutable and leave unrelated bank history out of the frame.
+Results-screen renderer cache flags are likewise derived: rebuilding claimed
+ROM art clears the cache, so such flags use `RewindTransient` while gameplay
+readiness and timing stay captured.

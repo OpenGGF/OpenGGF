@@ -1828,3 +1828,64 @@ measurement hazards and frontier log retain both records. This incorporates
 the independent FBZ miniboss art and KiS2 wall/ledge fixes. No source conflict
 occurred. Broad validation uses this updated destination; the original task
 pin remains `6897a604895a4822e85b766859624a95c42bd4b6`.
+
+### Combined validation baseline (2026-09-15)
+
+Candidate runtime is committed as `7653029ab`. While FBZ waited in the shared
+queue, the KiS2 integration completed full validation of destination
+`5fed74d42` in `.worktrees/kis2-wall-anchor`, run
+`20260915T080304Z-b7baef67`, using
+`run_categories.py --base dedd18877da190e65aeb74970929e2f2b4ece6c3 --run`.
+Its results were read directly before the owning session acknowledged them:
+2,574 ordinary classes, 20,421 tests, zero failures/errors, 18 inspected skips,
+716.1 seconds; 667 guards, two failures, no errors/skips, 170.25 seconds.
+No required game-ROM test was skipped. Skips were the opt-in benchmark/soak,
+route, allocation and native-render diagnostics; unavailable default EGL/GL
+checks; the existing CPZ spin-tube assumption; and local audio-reference captures.
+
+The exact inherited guard identities and SHA-256 of their message strings are:
+- `TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`:
+  `2f565ac8f586df1370bc4f480e93b052ec2597eea74f212331c12be281d8bf10`;
+  its expectations still require superseded direct-Maven guidance.
+- `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`:
+  `1a70b0fb0ca5bb0da30909d99b02b32ffb851e942c07857d57399f660dca5021`;
+  it identifies unchanged `FbzRouteEvidenceProbe#printEvidence` and
+  `LevelSolidityMapProbe#writeSolidityMap`.
+
+FBZ's combined run `20260915T081751Z-11d26faf` uses
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk LUA_BIN=/usr/bin/lua5.4 python3
+ tools/testing/run_categories.py --base 5fed74d42 --run --max-minutes 40`.
+Actual preflight passed. Selection is all 2,579 ordinary classes plus guards,
+with one worker and the announced 40-minute execution / ten-minute no-output
+stops; shared-queue waiting does not consume execution time. Outcome follows.
+
+The ordinary lane completed 20,448 tests: two failures, no errors, 18 skips
+matching the inspected baseline, 759.55 seconds. The runner then stopped before
+guards because this baseline write-up changed its working-tree fingerprint.
+This was my sequencing error: even a prose-only append must wait until all
+lanes finish. No completed ordinary result is called an all-lanes pass.
+
+Both failures reproduced narrowly in four cases (two failures, no errors/skips,
+20.125 seconds). `TestFbzSqueezeOrdinaryRoll`'s BEFORE_ENTRY forward replay
+found differences only in published pattern slots 1935–1939. A temporary
+probe intersected those IDs with the table's tiles: none was referenced.
+The presentation snapshot now retains immutable versions only for referenced
+tiles; unused DPLC tail history remains outside the displayed frame. The
+probe was removed and a direct regression protects this distinction.
+
+`TestFbzAct1RouteHeadless#realBossTitleInitRewindsBeforeAndAfterItsFirstDispatch`
+found the results object's derived `artCached` flag reset while rebuilding
+claimed ROM art after restore. The flag now uses the existing `RewindTransient`
+contract: the rebuilt renderer recaches as needed, while `artLoaded` and all
+results gameplay/timing state remain captured. The existing full-registry
+assertions remain unchanged. Focused regression and guard outcomes follow.
+
+The corrections passed 144 tests, no failures/errors/skips, Maven 1:07:
+all 114 `TestFbzSqueezeOrdinaryRoll` cases, the failed real-boss title-init
+rewind method, all 17 `TestS3kResultsKosQueueAndChildren` cases, nine immutable
+presentation cases and both presentation lifecycle/registry classes. Queued
+Maven used explicit existing S1/S2/S3K ROM paths and those named tests; an
+additional requested `TestSonic3kResultsScreenObjectInstance` pattern matched
+no class and supplies no coverage. The broad diagnostics were inspected and
+acknowledged through the runner. The ordinary lane's two regressions are
+resolved narrowly; guards and post-integration validation remain required.
