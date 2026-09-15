@@ -96,7 +96,7 @@ public class TestSonic3kObjectProfile {
 
         int[] implementedCnzIds = {
                 0x41, 0x42, 0x43, 0x45, 0x46, 0x47, 0x48,
-                0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E,
+                0x4A, 0x4B, 0x4C, 0x4D, 0x4E,
                 0x82, 0x83, 0x88, 0x89,
                 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
         };
@@ -116,6 +116,16 @@ public class TestSonic3kObjectProfile {
                         "CNZ object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");
             }
         }
+    }
+
+    @Test
+    public void newSozSlotsReportBothImplementedOwners() {
+        var registry=new Sonic3kObjectRegistry();
+        assertEquals("SOZLoopFallthrough",registry.getPrimaryName(0x3B,S3kZoneSet.SKL));
+        assertEquals("SOZSolidSprites",registry.getPrimaryName(0x49,S3kZoneSet.SKL));
+        assertEquals("HCZWaterWall",registry.getPrimaryName(0x3B,S3kZoneSet.S3KL));
+        assertEquals("CNZGiantWheel",registry.getPrimaryName(0x49,S3kZoneSet.S3KL));
+        assertTrue(Sonic3kObjectProfile.SHARED_IMPLEMENTED_IDS.containsAll(java.util.List.of(0x3B,0x49)));
     }
 
     @Test

@@ -220,3 +220,11 @@ SOZ pushable-rock continuation (2026-09-15): the [Act 1 matrix](../architecture/
 and [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md) track positioned
 push/fall/ride/stop spots and transition rewind checks. Cold approach, all-character
 breadth, offscreen rider carry and the subtype `$87` door coupling remain open.
+
+SOZ route-controller continuation (2026-09-15): loop fall-through `$3B` and static
+solid sprites `$49` replace 33 placements. `TestSozRouteControllersProduction`
+adds positioned whole-registry rewind spots at both solid shapes in both acts,
+and Act 2 loop capture/held/release for all three main characters. See the
+[Act 1](../architecture/validation/levels/s3k-soz-act1.md) and
+[Act 2](../architecture/validation/levels/s3k-soz-act2.md) matrices for remaining
+cold-route, configuration-breadth and native-comparison obligations.

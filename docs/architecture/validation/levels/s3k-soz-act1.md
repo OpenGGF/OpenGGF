@@ -38,3 +38,18 @@ Physical activation, every native team's death/reload and repeated reset are ope
 See the execution plan for exact command, commit, configurations, results/skips
 and external native capture directory. Pending tests are not passing evidence.
 The unit and short-route checks do not satisfy the remaining full act matrix.
+
+## Loop-exit and solid-sprite continuation
+
+`TestSozRouteControllersProduction` exercises positioned landings on both `$49`
+shapes in both acts, with whole-registry restoration and forward replay twice at
+landing. Representative width 640, S1 donor and mixed followers supplement native
+320 checks. Static dimensions are viewport-independent; no donor movement branch
+exists in either new owner. Full width/donor/team and cold-route coverage remain open.
+
+Act 2's first `$3B` loop exit has independent positioned capture, held movement and
+release checks for Sonic, Tails and Knuckles, plus Sonic at width 640. The captured
+player bypasses ordinary movement using the existing native full-control contract.
+Local tests cover speed/bounds/routine gates, literal radii, fixed-point fractions,
+release equality, subtype bit 7 masking and independent participant restoration.
+No full route or matched native trajectory/pixel certification is implied.
