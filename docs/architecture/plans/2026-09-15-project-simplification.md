@@ -75,7 +75,7 @@ speculative framework. Update the results below as the work proceeds.
   by HeadlessTestFixture/TestEnvironment/ROM conditions. Retain general manager,
   audio snapshot, physics/boss/zone/stage, network and transaction boundaries unless
   a specific redundant obligation is demonstrated. No universal new harness.
-- [ ] **14. Delivery.** Review combined changes; inspect category plan and preflight;
+- [x] **14. Delivery.** Review combined changes; inspect category plan and preflight;
   run selected ordinary/guard tests plus domain checks. Attribute new failures with
   matched baseline tests. Integrate into develop without switching main's branch,
   verify integration as required, push only develop, inspect/remove accounted-for
@@ -252,6 +252,45 @@ diff. The final production reduction is measured after this reversion.
 - Incoming develop commits `072ddec8a` and `59d5b8881` are documentation-only,
   disjoint from this task; preserve both during integration.
 
-Required final step: run the combined ordinary/guard selection on integrated
-`develop` with no injected MAVEN_OPTS and no worktree edits during validation,
-compare remaining failures with the identities above, then push and clean up.
+### Integrated verification
+
+Task commit `6b95c6305` was merged cleanly into develop as `1cfe9ef82`,
+preserving both incoming documentation commits. The final production Java diff
+removes 346 lines overall. No public Mod API signature or gameplay timing rule
+was changed.
+
+At `1cfe9ef82`, with Java 21 and Lua 5.4, the completed command was:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 94a41febdde969bb862e2b3c1e142d60fcdb7429 --run
+```
+
+Run `20260915T094329Z-da339c14` selected the full ordinary suite and fresh-JVM
+guards. No MAVEN_OPTS was injected and no tracked files changed during the run.
+
+- Ordinary: 2,585 reports, 20,466 tests, zero failures/errors, 18 skips;
+  765.49 seconds. All skip identities/reasons were inspected: the opt-in,
+  graphics, local-reference and CPZ limitations described above remain; no stock
+  ROM was missing.
+- Guards: 84 reports, 668 tests, two failures, zero errors/skips; 175.57 seconds.
+  Both class/test identities and complete assertion messages exactly match the
+  baseline failures documented above. The combined command exits 1 for those
+  inherited failures; this is not a claim that every verification gate is green.
+- Integrated Java/tools/POM match the reviewed task tree exactly. Domain trace
+  comparisons and native texture checks remain applicable to unchanged code.
+
+Delivery completed: develop was pushed through `e895a062c` after policy and
+release-tree checks passed. The clean task worktree was removed, its fully merged
+local branch deleted, and stale worktree metadata pruned. Consumed category and
+matched-baseline diagnostics were deleted. Original dirty disassemblies and
+untracked user files remain untouched. This documentation-only closure is pushed
+as a follow-up; unchanged engine tests are not repeated.
+
+Concurrent delivery note: SOZ merge `4bd85d687` arrived after this task's completed
+broad run, between the verification-record and closure commits. It was preserved
+and included in the develop push through `6fbe2c276`. Its six Java paths are
+disjoint from this simplification diff. The full ordinary/guard measurements above
+apply to `1cfe9ef82`, not to the later SOZ code; SOZ's bounded validation and
+upstream reconciliation are recorded in
+[its work plan](2026-09-15-soz-methodology-v2.md). No simplification source changed
+after the measured run.

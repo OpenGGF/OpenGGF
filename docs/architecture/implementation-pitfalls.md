@@ -48,6 +48,17 @@ base for a new category. Range table in
 **S1 silently ignores solid-bit setters.** `setTopSolidBit()` / `setLrbSolidBit()` no-op
 under `CollisionModel.UNIFIED`, so springs and plane switchers are automatic no-ops for S1.
 
+**Non-solid ownership must survive inline cleanup.** Setting `Status_OnObj`
+without `SolidObject` needs an ownership signal recognized by inline cleanup.
+For controllers without an existing live latch, use
+`ObjectManager.markObjectSupportThisFrame` on acquisition and held passes.
+Do not report support after native release or during a recapture cooldown.
+SOZ quicksand (`sub_3FD4E` and its variant owners; initial implementation
+`86d800e53`) passed direct object tests while the ordinary route lost the flag at
+frame end. Use the existing support contract rather than inventing a solid ride
+or setting object-control bits the ROM never wrote. Test the production frame
+boundary and restore/forward replay, not only calls to `update`.
+
 **Rewind coverage is guarded.** A new spawnable object without a recreate path, an
 uncaptured `final` scalar, or an object reference not captured as a rewind id fails
 `TestRewindCoverageGuard`. A global static manager consumed across frames but unregistered
