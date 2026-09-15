@@ -288,7 +288,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   common tests and structural guards retained, broad fallback for shared changes,
   and bounded diagnostics and automatic temporary-file cleanup. Tool prerequisites
   are checked before testing; category runs and a focused Maven wrapper wait automatically
-  for a shared execution slot across worktrees. No task registration, validation receipts,
+  for shared execution slots across worktrees. Linux admission can overlap two runs when
+  conservative memory/CPU reservations fit, while keeping each worktree exclusive and
+  preserving a serial override. An optional profiler measures process-tree RSS and CPU
+  for ordinary/guard runs. No task registration, validation receipts,
   cumulative budgets or retry gates are needed. Per-invocation category timeouts exclude
   queue waiting. Full CI and release validation remain unchanged.
 

@@ -19,7 +19,7 @@ import xml.etree.ElementTree as ET
 
 from category_artifacts import compact_run, prune_runs, run_logged, acknowledge_run
 from category_control import DEFAULT_MINUTES, IDLE_SECONDS, preflight, is_broad
-from maven_queue import maven_slot, handle_termination
+from maven_queue import maven_slot, handle_termination, needs_exclusive
 
 ROOT = Path(__file__).resolve().parents[2]
 TEST_ROOT = Path('src/test/java')
@@ -352,7 +352,7 @@ def main(argv=None):
                 return 0
             # Re-plan after waiting: edits or integration may have changed this tree.
             # The timeout starts inside run_plan, after the slot is acquired.
-            with maven_slot(ROOT) as fd:
+            with maven_slot(ROOT, exclusive=args.workers > 1 or needs_exclusive([])) as fd:
                 plan = make_plan(ROOT, data, args.base, args.category, args.guards, args.workers)
                 preflight(ROOT, plan)
                 return run_plan(ROOT, plan, args.max_minutes, args.keep_diagnostics, queue_fd=fd)

@@ -1439,6 +1439,14 @@ measurement failures of exactly the kind this document keeps cataloguing:
 - a contended suite that dies partway reports **fewer** failures than the baseline, which reads
   as improvement.
 
+The [2026-09-15 queue profiling](../architecture/research/2026-09-15-maven-resource-admission.md)
+measures the whole Maven descendant tree, not just the largest test JVM. Average CPU
+hides short startup/compilation bursts; instantaneous free memory before two JVMs grow
+is not evidence that both peaks fit. Reserve headroom atomically before admission,
+keep one worktree exclusive, and do not apply a single-worker measurement to custom
+heaps or multi-fork profiles. Sampled RSS includes shared pages, while sampled CPU can
+miss short-lived children; record those limits with the numbers.
+
 **Two to three concurrent suite-running rounds is the honest ceiling on a machine like this.**
 Beyond that you are not parallelising, you are queueing with extra steps, and degrading the one
 thing every round depends on.
