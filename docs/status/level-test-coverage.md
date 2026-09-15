@@ -231,3 +231,11 @@ and Act 2 loop capture/held/release for all three main characters. See the
 [Act 1](../architecture/validation/levels/s3k-soz-act1.md) and
 [Act 2](../architecture/validation/levels/s3k-soz-act2.md) matrices for remaining
 cold-route, configuration-breadth and native-comparison obligations.
+
+SOZ connected-mechanism continuation (2026-09-15): the act matrices now bind
+floating pillars `$42`, analog push switches `$45`, doors `$46`, and special-rock
+slot coupling. Short production spots exercise a connected Act 2 puzzle and
+moving-pillar rides with whole-registry rewind. Representative character, width,
+team and S1-donor cases supplement local timing/contact/mapping tests. See the
+[execution record](../architecture/plans/2026-09-15-soz-methodology-v2.md) for
+observed validation and remaining gaps; full act completion is still open.

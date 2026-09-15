@@ -2315,7 +2315,13 @@ public final class Sonic3kPlcArtRegistry {
     private static void addSozEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
-        // Obj_SOZPushableRock at $40546 points to $40776, ArtTile_SOZMisc+$8C/palette 2.
+        // Doors, push switches and pushable rocks share SOZMisc+$8C, palette 2.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_DOOR,
+                Sonic3kConstants.MAP_SOZ_DOOR_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x8C, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_PUSH_SWITCH,
+                Sonic3kConstants.MAP_SOZ_PUSH_SWITCH_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x8C, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_FLOATING_PILLAR,
+                Sonic3kConstants.MAP_SOZ_FLOATING_PILLAR_ADDR, 1, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SOLID_SPRITES,
                 Sonic3kConstants.MAP_SOZ_SOLID_SPRITES_ADDR, 1, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_PUSHABLE_ROCK,

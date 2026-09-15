@@ -513,7 +513,7 @@ The same reset is performed during:
 | 66 | `Obj_SOZFloatingPillar` | Floating sand pillar | Solid platform. Art tile $001, palette 2. |
 | 67 | `Obj_SOZSwingingPlatform` | Swinging platform | Pendulum-motion solid platform. |
 | 68 | `Obj_SOZBreakableSandRock` | Breakable sand rock | Destroyed by spin attack. |
-| 69 | `Obj_SOZPushSwitch` | Push switch | Floor-mounted switch activated by player weight. |
+| 69 | `Obj_SOZPushSwitch` | Push switch | Horizontal analog push switch; four eligible passes per displacement pixel, shared trigger byte and retained offscreen decay. |
 | 70 | `Obj_SOZDoor` | Door | Activated by switches. |
 | 71 | `Obj_SOZSandCork` | Sand cork | Blocks sand flow; can be removed. |
 | 72 | `Obj_SOZRapelWire` | Rappel wire | Swing wire with multiple chain segments. Player grabs and swings. |
@@ -694,7 +694,7 @@ The new production binding preserves pre-solid player pushing status, native
 P1-before-P2 priority, signed word push timer, trailing-edge floor probe, strict
 Y overshoot and retained horizontal velocity across later falls. The initial
 zero-X-velocity fall must not carry the preceding push. Subtype `$87`'s global
-SOZDoor link remains coupled to the missing door implementation; ordinary rock
+SOZPushSwitch link was deferred at that delivery (implemented in the connected-mechanism continuation); ordinary rock
 mechanics alone do not certify that interaction. Evidence is in the
 [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md).
 

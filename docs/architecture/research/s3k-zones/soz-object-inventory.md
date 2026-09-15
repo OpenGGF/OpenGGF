@@ -324,8 +324,8 @@ Pushable-rock continuation: all seven Act 1 and three Act 2 `$3E` placements
 bind to `SozPushableRockObjectInstance`. The low five subtype bits select the
 ROM-backed alternating Y/X track. Saved player pushing status and object-owned
 push bits control one-pixel movement every five eligible passes; floor distance
-above 14 starts the track. The `$87` SOZDoor coupling remains unimplemented with
-that door family. Remaining placeholder placements: **178 Act 1 / 180 Act 2**.
+above 14 starts the track. At that delivery, the `$87` push-switch coupling remained open; the
+connected-mechanism continuation below supplies that consumer. Remaining placeholder placements: **178 Act 1 / 180 Act 2**.
 See the [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) for
 source evidence, rejected carry behavior and production validation.
 
@@ -343,3 +343,33 @@ pillar; every nonzero byte selects the 64×16 ledge. Both call full solid collis
 before coarse-X culling. Mapping `$41FC8` uses three/two pieces and terrain tile
 base 1, palette 2; no standalone art or child allocation. Remaining placeholders:
 **162 Act 1 / 163 Act 2**. Binding coverage remains distinct from cold reachability.
+
+## Connected switch, door and floating-pillar mechanics
+
+SKL `$42` has 55 Act 1 and 41 Act 2 placements. `Obj_SOZFloatingPillar`
+(`$41176`) reads ROM shape bytes at `$4116A`; frames 0/1/2 are ordinary,
+upper-spiked and lower-spiked. Movement modes 0–6 are static or three oscillator
+amplitudes along X/Y, with status bit 0 reversing displacement. Full solid
+collision uses the pre-movement X for rider carry. Spiked faces use new native
+contact flags and `sub_24280`, including its normal damage sound for this owner.
+
+SKL `$45` has 19 Act 2 placements. It is a **horizontal push switch**, not a
+weight button: four eligible pushes move its body and player one pixel, charging
+an existing `Level_trigger_array` byte to 128. The fixed base is a same-SST child
+sprite. Release decays once per ten eligible passes, or every pass when subtype
+bits `$70` are nonzero. Offscreen charged owners release their placement, run an
+additional decay immediately and remain invisible until exhausted or replaced.
+Subtype bit 7 enables `sub_41AA8` rock contact through the last published native
+rock slot (`_unkF7C4`); a reused slot or changed rock routine invalidates the link.
+
+SKL `$46` has 20 Act 2 placements. Each door approaches its trigger byte by one
+pixel per pass. The subtype high nibble selects horizontal versus vertical;
+status bit 0 selects sign. Initial displacement reads the current trigger.
+Horizontal doors capture collision X after movement and therefore do not carry
+riders horizontally. Mapping frames are 7/5 pieces at `$41C72`; switch mapping
+`$41B56` is 2/1 pieces. Both use `SOZMisc+$8C`, palette 2. Pillar mapping
+`$412E0` is 16/20/20 pieces using terrain base 1, palette 2.
+
+These three factories replace 135 further placed placeholders, leaving
+**107 Act 1 / 83 Act 2**. The CNZ owners at these numeric IDs remain distinct.
+See the execution plan and act matrices for actual validation and inherited gaps.

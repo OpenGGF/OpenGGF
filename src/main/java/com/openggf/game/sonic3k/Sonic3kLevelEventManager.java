@@ -40,6 +40,7 @@ import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.MgzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.S3kZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 import com.openggf.game.sonic3k.sidekick.Sonic3kSidekickFollowContext;
 import com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager;
 import com.openggf.game.zone.ZoneRuntimeRegistry;
@@ -469,6 +470,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new IczZoneRuntimeState(act, playerCharacter, iczEvents));
         } else if (zone == Sonic3kZoneIds.ZONE_MHZ && mhzEvents != null) {
             registry.install(new MhzZoneRuntimeState(act, playerCharacter, mhzEvents));
+        } else if (zone == Sonic3kZoneIds.ZONE_SOZ) {
+            registry.install(new SozZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
         } else {
@@ -1444,6 +1447,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             case Sonic3kZoneIds.ZONE_MHZ ->
                     state instanceof MhzZoneRuntimeState mhzState && mhzState.isBackedBy(mhzEvents);
             case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState;
+            case Sonic3kZoneIds.ZONE_SOZ -> state instanceof SozZoneRuntimeState;
             default -> false;
         };
     }

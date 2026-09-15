@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k;
 
 public final class Sonic3kObjectArtKeys {
+    public static final String SOZ_DOOR = "soz_door";
+    public static final String SOZ_PUSH_SWITCH = "soz_push_switch";
+    public static final String SOZ_FLOATING_PILLAR = "soz_floating_pillar";
     public static final String SOZ_SOLID_SPRITES = "soz_solid_sprites";
     public static final String SOZ_PUSHABLE_ROCK = "soz_pushable_rock";
     public static final String SOZ_BREAKABLE_SAND_ROCK = "soz_breakable_sand_rock";

@@ -53,3 +53,18 @@ player bypasses ordinary movement using the existing native full-control contrac
 Local tests cover speed/bounds/routine gates, literal radii, fixed-point fractions,
 release equality, subtype bit 7 masking and independent participant restoration.
 No full route or matched native trajectory/pixel certification is implied.
+
+## Floating-pillar continuation
+
+All 55 placed `$42` pillars use the ROM shape table and three native oscillator
+amplitudes along either axis. `TestSozPillarAndRockSwitch` binds movement/flip,
+spiked contact faces, invulnerability, stale airborne riders and reconstruction.
+`TestSozMechanismsProduction` adds a positioned vertical ride at `($8E0,$670)`
+with whole-registry restore and forward replay at landing and carried movement.
+See the execution plan for measured results; this is not cold-route certification.
+
+The rejected `($5A0,$660)` and `($1380,$560)` landing setups overlap the
+invisible hurt blocks placed directly above those pillars. It is retained as a rejected setup
+in the execution record, not used to weaken collision or pillar behavior.
+Other pillar phases, hazard geometry, all-character/donor/viewport rides and
+native-matched trajectories remain inherited coverage gaps.

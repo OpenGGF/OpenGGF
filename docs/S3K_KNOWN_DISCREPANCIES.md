@@ -1808,9 +1808,17 @@ the spring-vine parity claim; this does not certify whole-act slot-pressure beha
 
 **Location:** `SozPushableRockObjectInstance`, native `Obj_SOZPushableRock` (`$40546`).
 
-The ordinary push/fall/track/stop behavior is implemented. For subtype bit 7,
-the ROM also stores the rock slot in `_unkF7C4` and uses `loc_405D6`; SOZDoor's
-`sub_41AA8` reads that link. The Act 2 rock at `($4770,$5B5)`, subtype `$87`,
-uses this coupling. The missing SOZDoor implementation and its global rock link
-remain open. Low-five-bit track selection alone does not certify that door
-interaction. See the SOZ act matrices and methodology-v2 execution plan.
+The ordinary push/fall/track/stop behavior and subtype-bit-7 switch coupling are
+implemented. The rock publishes `_unkF7C4`; `SOZPushSwitch.sub_41AA8` checks that
+slot's current routine, charges the shared trigger and separates the rock from
+the switch. Doors consume the trigger byte. Local contact and slot-reuse checks
+cover the positive coupling; production rewind covers publication and invalidation
+when the rock enters its fall routine.
+
+**Remaining gap:** full positive puzzle reachability at the Act 2 rock
+`($4770,$5B5)`, subtype `$87`, is unverified. From the current fresh positioned
+entry, pushing right starts the authored `$5EC → $47F0 → $FFFF` track before
+reaching switch `($4830,$5B0)`. The required preceding world/route state has not
+been established. Do not claim completion of this puzzle from unit contact tests
+or the separate passing channel-8 switch/door route. See the act matrix and v2
+execution record.
