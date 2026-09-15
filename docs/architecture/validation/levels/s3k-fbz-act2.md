@@ -167,3 +167,10 @@ Matched-phase follow-up (`323e1d2ba`): actual car Ys 1985/2081, controller timer
 six frames longer before releasing Left and pressing Down. Real synchronized
 videos reproduce both on frame 207. This improves the demonstrated strategy;
 it remains local feasibility evidence with the existing matrix limits.
+
+
+Object graphics follow-up: the [laser-room audit](../../audits/2026-09-14-fbz2-laser-room-graphics.md#local-object-follow-up-2026-09-15)
+records the normal-approach Robotnik/control-panel lifetime regression, cloud
+coordinate/frame corrections, placement flips, and magnetic-chain end fitting.
+All 46 focused checks passed; the same Wayland approach visibly restores the
+room displays. Full moving-event, donor/team, and rewind route gaps remain.

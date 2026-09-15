@@ -112,6 +112,8 @@ public final class FbzDisappearingPlatformObjectInstance
     PatternSpriteRenderer r =
         getRenderer(Sonic3kObjectArtKeys.FBZ_DISAPPEARING_PLATFORM);
     if (r != null && r.isReady())
-      r.drawFrameIndex(frame, spawn.x(), spawn.y(), false, false);
+      // Obj_FBZDisappearingPlatform preserves the placement's render flip bits.
+      r.drawFrameIndex(frame, spawn.x(), spawn.y(),
+          (spawn.renderFlags() & 1) != 0, (spawn.renderFlags() & 2) != 0);
   }
 }

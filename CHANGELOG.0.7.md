@@ -81,7 +81,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   workers follow their original dispatch order. Horizontal chain grab regions stay invisible,
   preventing stray descending handles from appearing along the route. Chains reject hurt/dead grabs,
   vertical cages keep their orbit separate from the player ground angle, and
-  magnetic platforms use the native ceiling and contact boundaries. Top-only
+  magnetic platforms use the native ceiling and contact boundaries. Their chains
+  retain the fixed end fitting without drawing an extra platform. Disappearing
+  platforms and screw doors preserve placement flips, including the door end. Top-only
   buttons and disappearing platforms use their native landing edges and level
   clock; lightning attraction avoids an extra ordinary-ring sweep. Sideways
   spikes release owned push state after their hurt callback, elevator cars
@@ -89,7 +91,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   movement on its laser-ready wait transition. Its beam, walls, and machine retain
   the ROM's high sprite priority, and the room-exit plane swap uses each plane's
   own horizontal scroll and terrain source, preserves rear-plane high priority,
-  and rebuilds the full terrain cache after rewind. The final capsule and button keep
+  and rebuilds the full terrain cache after rewind. Robotnik and the control panel
+  remain loaded during the room approach; moving-terrain clouds use the correct
+  screen coordinates and mapping frames. The final capsule and button keep
   established standing contacts throughout the victory pose. Results retain boss-owned
   controls and camera bounds, and results creation waits for the whole physical
   KosM queue even on allocation retries. The exit door consumes collision in its own dispatch,

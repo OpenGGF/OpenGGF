@@ -24,6 +24,8 @@ class TestFbzAct2Subboss {
         for (var child : children) {
             assertTrue(child.isHighPriority(), child.getClass().getSimpleName()
                     + " must draw above high-priority terrain, as art_tile bit 15 requires");
+            assertTrue(child.usesCustomOutOfRangeCheck(), "attached children own their native lifetime");
+            assertFalse(child.isCustomOutOfRange(0x2900), "room displays must survive the camera approach");
         }
         assertEquals(1, children.getFirst().getPriorityBucket());
         assertEquals(5, children.get(4).getPriorityBucket());

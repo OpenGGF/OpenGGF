@@ -122,3 +122,40 @@ The final follow-up changes only this evidence and the existing pitfall catalogu
 completed engine checks are not repeated for unchanged code under repository policy.
 These local checks do not certify a complete route, all character/donor
 combinations, the final boss refresh, or whole-frame emulator parity.
+
+
+## Local object follow-up (2026-09-15)
+
+Normal approach reproduced missing Robotnik/control-panel objects, despite ready
+art and high priority. They were already absent on the room's first active frame.
+`loc_6FFFA` and `loc_70068` draw attached children without a generic distance unload;
+the shared child shell now opts out of that check and retains each child's own
+escape/deletion rules. Repeating the identical 308-frame approach on Wayland
+retained machine slot 20 and character slot 21 and visibly restored both.
+The barrier's alternate-frame drawing remains native behavior.
+
+`FBZ2_CloudDeform` supplies VDP coordinates with the $80 origin bias. Cloud
+rendering now removes that bias, uses native $2C/$0C visibility radii, and translates
+native frames 1–3 to the filtered cloud sheet's indices 0–2. Cloud unit checks
+exercise coordinate and frame translation; the complete moving-terrain event
+has not been visually certified by this follow-up.
+
+Related local reports corrected placement flips for disappearing platforms and
+screw doors, and the magnetic chain helper's fixed end. `Obj_FBZMagneticPlatform`
+sets sub2 to frame 3 at original platform Y+$C; its own Y-$70 is only the fixed
+multi-sprite culling anchor, with height $80. Drawing frame 0 there created an
+extra platform. The moving links still follow `sub_3B488`.
+
+Validation: queued Maven `-Dmse=off
+-Dtest=TestFbzAct2Subboss,TestFbzBossCloudIdentity,TestFbzMagneticObjects,TestFbzDisappearingPlatformAndScrewDoor
+-Ds3k.rom.path=<absolute verified ROM path> test` completed on 2026-09-14
+at 21:05 BST: 46 tests, zero failures/errors/skips. The same compiled classes
+passed the repeated Wayland approach diagnostic. Launch used `WAYLAND_DISPLAY=wayland-0`,
+`XDG_RUNTIME_DIR=/run/user/1000`, and no DISPLAY, with captures outside the repo.
+
+The combined selection inspected against destination `a9060373f` selected 2,574
+classes, including unrelated local files. Proportionate validation applies:
+these changes affect only the named objects' rendering and child lifetime;
+no shared algorithm, physics, build policy, or public contract changed. The
+focused checks and matched production approach cover the reported failures;
+this is not a full-suite or whole-act certification.

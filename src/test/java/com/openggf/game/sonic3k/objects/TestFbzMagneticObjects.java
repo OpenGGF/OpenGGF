@@ -15,6 +15,40 @@ import static org.junit.jupiter.api.Assertions.*;
 @org.junit.jupiter.api.parallel.Isolated
 class TestFbzMagneticObjects {
     @Test
+    void chainRendersFixedEndAndMovingLinksWithoutAnExtraPlatform() throws Exception {
+        var platform = new FbzMagneticPlatformObjectInstance(spawn(0x74, 0x0F));
+        var chain = new FbzMagneticPlatformChainObjectInstance(
+                new ObjectSpawn(0x1000, 0x690, 0x74, 0x0F, 0, false, 0), platform);
+        var renderer = org.mockito.Mockito.mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        var renders = org.mockito.Mockito.mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var services = org.mockito.Mockito.mock(ObjectServices.class);
+        org.mockito.Mockito.when(services.renderManager()).thenReturn(renders);
+        org.mockito.Mockito.when(renders.getRenderer(
+                com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_MAGNETIC_PLATFORM)).thenReturn(renderer);
+        org.mockito.Mockito.when(renderer.isReady()).thenReturn(true);
+        chain.setServices(services);
+
+        chain.appendRenderCommands(java.util.List.of());
+        org.mockito.Mockito.verify(renderer).drawFrameIndex(3, 0x1000, 0x70C, false, false);
+        org.mockito.Mockito.verify(renderer, org.mockito.Mockito.never()).drawFrameIndex(
+                org.mockito.ArgumentMatchers.eq(0), org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyBoolean(),
+                org.mockito.ArgumentMatchers.anyBoolean());
+        org.mockito.Mockito.verifyNoMoreInteractions(org.mockito.Mockito.ignoreStubs(renderer));
+
+        org.mockito.Mockito.clearInvocations(renderer);
+        setField(platform, "y", 0x6D8); // $28 pixels of rise: two links, final link shortened.
+        chain.appendRenderCommands(java.util.List.of());
+        var order = org.mockito.Mockito.inOrder(org.mockito.Mockito.ignoreStubs(renderer));
+        order.verify(renderer).drawFrameIndex(3, 0x1000, 0x70C, false, false);
+        order.verify(renderer).drawFrameIndex(2, 0x1000, 0x6F0, false, false);
+        order.verify(renderer).drawFrameIndex(1, 0x1000, 0x710, false, false);
+        order.verifyNoMoreInteractions();
+        assertEquals(0x690, chain.getY(), "multi-sprite culling anchor stays fixed while links move");
+        assertEquals(0x80, chain.getOnScreenHalfHeight());
+    }
+
+    @Test
     void movingPlatformClearsRolledPushAtCurrentRadiusLowerBoundary() throws Exception {
         com.openggf.tests.TestEnvironment.configureGameModuleFixture(
                 com.openggf.tests.rules.SonicGame.SONIC_3K);
