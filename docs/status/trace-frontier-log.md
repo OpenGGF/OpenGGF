@@ -110215,3 +110215,20 @@ reports match. All 35 selected authority guards pass. Further read-only evidence
 identifies the EHZ2 row-50 work as the same standard-water/animal PLCs that the
 ROM submits at row 52 in each EHZ1/EHZ2 entry. Investigate act-entry/title-card
 pass ordering; this is not evidence of missing chip PLC assets.
+
+
+### 2026-09-15 — FBZ retained presentation delivered, strict replay remains closed
+
+Presentation source `892292047`, integration `562e35e37`, final runtime
+`94a41febd` (incoming observation-only act-load classification). Isolated
+`.worktrees/ai-fbz-native-loading` queued `-Dmse=off -Ptrace-replay-r7
+-Dtest=TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestS3kFbzCompleteRunTraceReplay test`
+with absolute S1/S2/S3K ROM paths passed 53 cases, zero failures/errors/skips,
+Maven 37.660 s. Complete FBZ strict replay passes (18.260 s body), no first
+error. Post-integration ordinary checks completed 20,449 cases with zero
+failures/errors and 18 inspected skips; isolated guards retain exactly two
+baseline failures. The concurrent-main fingerprint stop and bounded incoming
+merge validation are recorded in the
+[completion plan](../architecture/plans/2026-09-14-fbz-completion.md#post-integration-validation-and-delivery).
+Fourteen settled native boundary pairs match; intermediate redraws, independent
+Hyper progression and the S1 full-act route remain open.

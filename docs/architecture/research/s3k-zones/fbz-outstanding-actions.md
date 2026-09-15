@@ -15,7 +15,8 @@ same complete failure diagnostic on the pinned unchanged base and candidate:
 this is an existing route/controller gap, not a current production regression.
 It does not prove S1 cannot pass. Retained sprite/HUD publication now closes all
 fourteen settled boundary comparisons. Intermediate visual samples, Hyper
-progression and integration remain open.
+progression remain open. The retained presentation fix is integrated; final
+validation is recorded in the completion plan.
 
 ## Known S1 donor challenge: early Act 2 elevator (leave unchanged)
 

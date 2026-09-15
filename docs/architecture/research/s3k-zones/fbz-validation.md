@@ -966,3 +966,14 @@ B4 forward-08/16 retain 29/59 differing pixels around the floor strip and HUD
 background; the first B2 frame retains its background/palette publication
 mismatch. Controlled B5/Act2 prerequisites and other missing recipes remain
 explicit. Combined delivery validation and integration are still pending here.
+
+
+Final integration: presentation source `892292047` merged as `562e35e37`.
+The post-integration ordinary lane completed 20,449 tests with zero failures /
+errors and 18 inspected skips. Concurrent receipt-classification integration
+changed the runner fingerprint before guards; isolated full guards at
+`94a41febd` completed 667 cases with only the two exact inherited failures.
+The final focused incoming-merge/complete-FBZ replay check passed 53 tests,
+no skips. See [commands, provenance and limits](../../plans/2026-09-14-fbz-completion.md#post-integration-validation-and-delivery).
+All 36 fresh B2 v3 PNGs match reviewed v2 pixels; the existing video remains
+representative. Intermediate redraw and whole-zone coverage limits above remain.

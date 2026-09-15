@@ -1916,3 +1916,50 @@ video remains an exact visual representation of this final candidate.
 The task also reconciles documentation-only develop commits through
 `2b2bf8e28`; the sole frontier-log append conflict retained both histories.
 Post-integration combined validation is still required before delivery.
+
+
+### Post-integration validation and delivery
+
+The final presentation source `892292047` integrated into develop as
+`562e35e37995af918ec533402eacbc6816e0071a`, destination `2b2bf8e28`.
+Main remained on develop; all three dirty disassembly submodules, both BizHawk
+archives and the user's notes were preserved. The CI push-policy validator and
+release-tree audit passed (10,052 entries). Source/tooling matched the validated
+candidate exactly after the merge.
+
+Post-integration command: `JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
+--base 2b2bf8e2818f424106a9494523bdf8fae53f082b --run --max-minutes 40`.
+Actual preflight passed. Run `20260915T084902Z-fb607e45` completed all 2,579
+ordinary classes: **20,449 tests, zero failures/errors, 18 skips**, 778.32 s.
+The skips match the previously inspected baseline identities/reasons, with no
+missing required ROM. Both earlier ordinary regressions are absent, including
+all 114 squeeze cases. Results were inspected and acknowledged.
+
+A concurrent delivery integrated `94a41febd` during the ordinary lane. The
+runner correctly stopped before guards on the changed-tree fingerprint; its
+overall command was incomplete, not green. Compilation preceded that incoming
+change. The only runtime delta wraps the existing synchronous act load in
+`TraceSessionLauncher.runLevelAdvanceLoad`, labeling its receipt without
+changing the load itself. It was inspected and included in the isolated task
+worktree before remaining checks. Proportionate follow-up covers this bounded
+observation-only delta through real load/reload/non-load paths, receipt tracking,
+playback coordination and the complete FBZ recording; no repeated full ordinary
+suite is claimed for the new commit.
+
+At pinned `94a41febd`, isolated queued `-Dmse=off -Pguards test -B` completed
+**667 cases, two failures, no errors/skips**, Maven 3:22. Both identities and
+message hashes match the exact baseline recorded above. The ambient-service
+and graphics-layer regressions are absent. The subsequent queued
+`-Dmse=off -Ptrace-replay-r7` selection
+`TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestS3kFbzCompleteRunTraceReplay`
+with explicit S1/S2/S3K ROM paths passed **53 tests, no skips**, Maven 37.660 s.
+The complete FBZ trace passed (18.260 s body), no first error. Documentation-only
+follow-up `072ddec8a` was then included; its runtime/tooling diff is empty.
+
+This is completed ordinary-lane evidence plus full guards and the justified
+focused incoming-merge check, with two inherited guard failures. It is not an
+all-gates-green or whole-zone visual certificate. Intermediate redraw samples,
+independent Hyper progression and the inherited S1 full-act route remain open.
+The early Act 2 right-to-left elevator challenge remains untouched. The reviewed
+v2 comparison video still matches the final source's fresh v3 capture exactly.
