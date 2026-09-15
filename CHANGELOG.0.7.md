@@ -198,7 +198,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and FBZ work, LBZ Big Arm, Super Emerald sanctuary/progression, and powered
   effects. Sandopolis now implements its four quicksand variants, including
   per-player capture, jump release, sand-slide movement and rewindable cooldowns,
-  plus spring vines with shared tension, deforming surfaces and directional launches,
+  plus spring vines with shared tension, deforming surfaces, native landing boundaries and directional launches,
   sand rocks that break under rolling landings and release their riders,
   pushable rocks that fall onto their authored tracks, loop fall-through
   controllers, both static solid platform shapes, moving and spiked pillars,
@@ -211,7 +211,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The cold sand intro, Egg Golem arena and seamless
   Act 2 entry use native event owners. Act 2 couples light switches, ghosts,
   torches and palette fades, and implements the final boss, collapsing wall,
-  capsule/results and Lava Reef exit request. Mechanism state survives kept
+  capsule/results and the Lava Reef transition. The independent exit follower
+  survives boss retirement and rewind. Mechanism state survives kept
   stage returns, and object graphs—including promoted collapsing platforms—reconstruct
   across rewind using stable object and player identities. Live rewind preserves
   the host audio clock across repeated death/reloads. Sonic 2 and S3K companions

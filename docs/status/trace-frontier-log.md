@@ -110567,3 +110567,30 @@ animation2. That production intro, not trace-state seeding, is the next target.
   1failure/0skips,18.440s. Queued `-Dtest=TestSozSandMechanisms,TestSozSandMechanismsProduction`
   with explicit S3K ROM after fix:20passed,0skips,55.420s. Full trace movement
   remains to be measured; no gameplay state was supplied from comparison rows.
+
+- `37170aaad`, measured at integrated `a66e14bf5` in `soz-completion`:
+  `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7
+  -Dtest=TestS3kSozCompleteRunTraceReplay
+  "-Ds3k.rom.path=$SOZ_ROM"
+  test -B` (`SOZ_ROM` is the discovered absolute main-workspace S3K ROM path)
+  completes in1:13,1failed test/0skips,59336compared frames,
+  10506errors (9388physics/1118animation),0warnings/bootstrap errors. Queue34
+  remains first overall; Tails mapping5977 remains and first Tails physics moves
+  to9046. P1/camera kinematics match through19410; ring count differs at13343
+  (3expected/4actual). First P1 movement mismatch19411 is a spring-vine landing
+  at`$3498/$9C0`: expected y`$9AD`,actual`$9B0`, y-speed`$14E`versus0.
+  This is a longer exact movement prefix, not a passing full trace. The ordinary
+  capture driver has a separately measured trajectory and cannot inherit this
+  hardware-timed replay's matching prefix; its cold route remains independently
+  controlled and validated.
+
+- Spring-vine19411 source diagnosis: `loc_1E45A` rejects exact zero overlap
+  through its unsigned `CMP.W #-$10 / BLO`, admitting only1..16. The optional
+  direct-top classifier admitted0. The expanded production-solid regression
+  fails before the fix at overlap0 (1failure/0skips,51.698s). The corrected
+  classifier is exercised at overlaps-1/0/1/15/16/17, three radii and grounded/
+  airborne entry. Queued `-Dmse=off
+  -Dtest=TestSolidObjectManager,TestSozSpringVine,TestSozAct1SpringVineRoute`
+  with the absolute S3K ROM passes99tests,0skips,54.927s. Generic slope
+  classification and continued riding are unchanged. The full trace after this
+  correction remains to be measured.

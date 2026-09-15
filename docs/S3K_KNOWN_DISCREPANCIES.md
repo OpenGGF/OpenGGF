@@ -1832,12 +1832,16 @@ native event phase instead of camera-lock heuristics. Act2 implements its normal
 sand-room, boss and post-boss scroll modes; torches and palette fades share the
 captured light state, including boss inhibition and release.
 
-**Remaining presentation gap:** native redraw helpers update two VDP rows per
-pass. Event timing follows that cadence, but the general renderer rebuilds the
-selected source window as a whole. Exact partially rewritten Plane-A/Plane-B
-pixels during the arena/seamless redraw require retained planes across the load
-boundary. Normal desert and final temple/ghost scenes have inspected captures;
-full native pixel certification remains open.
+**Redraw fidelity limits:** the renderer rebuilds the selected source window as
+whole native row/column redraws advance. The earlier claim of a visible Act1
+arena/seamless defect was not supported by measurement. At native camera Y
+`$960`, 42 phased-versus-whole image pairs across widths320/528/800 and static
+or moving cameras were identical, despite different underlying tilemap bytes:
+the foreground hides the partial arena redraw. The seamless redraw occurs
+behind the palette fade. The unused retained-plane prototype was discarded.
+Act2 sand-exit/post-boss redraw visibility is still under investigation; full
+native pixel certification remains open. These engine A/B checks establish
+visibility in those scenarios, not pixel identity with native hardware.
 
 **Native low-level limits:** failed spring-vine allocation can write foreign SST
 bytes (above). Cork quiet-skid polling and the boss charge's failed-allocation

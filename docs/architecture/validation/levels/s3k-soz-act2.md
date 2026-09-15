@@ -222,7 +222,7 @@ capture; the same8checks pass with zero skips. The three other scenarios assert
 Sonic+Tails. Definitive movies are under `verified-rosters`; the initial
 `aligned-complete-route` lower capture remains a labelled fallback-team attempt. Other characters/configurations and
 cold reachability remain open. Root inspected external
-`completion-connected-mechanisms/aligned-complete-route/lower/frames/03060.png`:
+`completion-connected-mechanisms/verified-rosters/lower/frames/03060.png`:
 Sonic is alive beyond the exit, with the temple floor correctly drawn. All four
 scenario movies and their input/state records remain beside the originals.
 
@@ -233,3 +233,23 @@ or track defects were not established, so no geometry or timing was altered.
 `switch-passage-probe1` through`5` preserve the attempted input/state records.
 Positive rock/switch coupling is implemented but its connected puzzle route
 remains unverified; direct player charging alone does not prove it optional.
+
+## Controller-driven final boss and outgoing transition
+
+`9fc8974f8` adds `TestSozEndBossInputRoute` and the matching
+`TestSozEndBossVictoryCapture`, sharing `SozEndBossVictoryRoute`. From the
+positioned `$51C0/$620` approach with99rings, ordinary controller input reaches
+the placed boss, delivers eight hits and proceeds through capsule, results,
+forced walk and Lava Reef. No position, velocity, boss HP or phase writes occur
+after setup. This is actual Sonic solo, native320, donor off; both harnesses
+assert the live roster. It does not establish cold-route reachability.
+
+Forced object recreation and forward replay cover the shell, every hit, capsule,
+results and exit walk. Continuous capture snapshots additionally caught the
+independent exit helper retaining the retired boss. The helper now follows the
+captured native global fall signal. The worker's final63-test route/boss/capture
+selection and required58-test S3K quartet passed without skips. In the3050-frame
+capture, hits occur at257/318/586/634/883/925/1144/1270 and Lava Reef loads at2869.
+Root inspected frame03048: Sonic and the destination cavern are visible.
+The complete movie and input/state records are in
+`completion-endboss-victory/native-320` in the unified external capture folder.

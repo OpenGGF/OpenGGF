@@ -408,3 +408,12 @@ escape phase through a retained reference. The controller-only end-boss route
 exposed an unregistered reference between root deletion and destination load;
 continuous snapshots cover this interval even when selected hit/escape rewind
 spots all pass.
+
+### Unsigned negative-window comparisons can exclude zero
+
+S3K `loc_1E45A` first uses `BHI` after subtracting the player's feet from the
+surface, then `CMP.W #-$10 / BLO`. Taken together these admit native values
+`$FFF0..$FFFF`, corresponding to positive overlap1..16; zero is rejected by the
+second comparison. Treating this as an inclusive0..16 range made the SOZ spring
+vine capture a rolling player one frame early. Test both zero and the negative
+window edge rather than deriving a signed interval from either branch alone.

@@ -11,9 +11,9 @@ public interface SlopedSolidProvider extends SolidObjectProvider {
 
     /**
      * Optional direct top-helper window: accept raw feet-relative overlap in
-     * [0, limit), independent of player height or full-solid bottom classification.
+     * [1, limit), independent of player height or full-solid bottom classification.
      * Null retains the existing solid classifier. S3K SolidObjCheckSloped reaches
-     * loc_1E45A's inclusive 16-pixel window (exclusive limit 17).
+     * loc_1E45A's positive 1..16-pixel window (exclusive limit 17).
      */
     default Integer getDirectTopLandingOverlapLimit() { return null; }
 

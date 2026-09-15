@@ -144,7 +144,7 @@ public final class SozSpringVineObjectInstance extends AbstractObjectInstance
     @Override public byte[] getSlopeData() { return surface.clone(); }
     @Override public int getSlopeBaseline() { return 0; }
     @Override public int getSlopeSampleShift() { return 0; }
-    // loc_1E45A cmpi.w #-$10 / blo admits overlap 16 as well as 0..15.
+    // loc_1E45A cmpi.w #-$10 / blo admits overlaps 1..16, but rejects zero.
     @Override public Integer getDirectTopLandingOverlapLimit() { return 0x11; }
     @Override public boolean isSlopeFlipped() { return flipped(); }
     @Override public void onSolidContact(PlayableEntity player, SolidContact contact, int frame) {
