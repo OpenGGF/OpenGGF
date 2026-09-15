@@ -53,6 +53,18 @@ public final class ObjectGuardSourceScanner {
         return result;
     }
 
+    /** Optional source tree, ordered by portable path for deterministic diagnostics. */
+    public static List<Path> sortedJavaSources(Path root) throws IOException {
+        if (!Files.exists(root)) {
+            return List.of();
+        }
+        try (Stream<Path> stream = Files.walk(root)) {
+            return stream.filter(path -> path.toString().endsWith(".java"))
+                    .sorted(java.util.Comparator.comparing(path -> path.toString().replace('\\', '/')))
+                    .toList();
+        }
+    }
+
     public static String className(Path srcMain, Path sourceFile) {
         return srcMain.relativize(sourceFile).toString()
                 .replace('\\', '/').replace(".java", "").replace('/', '.');

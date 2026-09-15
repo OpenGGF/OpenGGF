@@ -13,6 +13,7 @@ import com.openggf.game.launch.LaunchProfileStore;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.TexturedQuadRenderer;
+import com.openggf.graphics.SolidColorTexture;
 import com.openggf.game.recording.UserRecordingCatalog;
 import com.openggf.game.recording.menu.UserRecordingMenu;
 import com.openggf.game.recording.menu.UserRecordingMenuState;
@@ -29,11 +30,8 @@ import com.openggf.trace.catalog.TraceCatalog;
 import com.openggf.trace.catalog.TraceEntry;
 import com.openggf.version.AppVersion;
 
-import org.lwjgl.system.MemoryUtil;
-
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -314,7 +312,7 @@ public class MasterTitleScreen {
             bgTextureId = PngTextureLoader.loadTexture("titlescreen/bg.png");
 
             // Create 1x1 solid white texture for overlays
-            solidWhiteTextureId = createSolidWhiteTexture();
+            solidWhiteTextureId = SolidColorTexture.createWhite();
 
             // Load title text
             titleTextId = PngTextureLoader.loadTexture("titlescreen/titletext.png");
@@ -354,22 +352,6 @@ public class MasterTitleScreen {
             LOGGER.severe("Failed to initialize master title screen: " + e.getMessage());
             throw new RuntimeException("Failed to initialize master title screen", e);
         }
-    }
-
-    /**
-     * Creates a 1x1 opaque white texture for use as a solid-color overlay base.
-     */
-    private static int createSolidWhiteTexture() {
-        ByteBuffer pixel = MemoryUtil.memAlloc(4);
-        pixel.put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).flip();
-        int texId = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, texId);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        MemoryUtil.memFree(pixel);
-        return texId;
     }
 
     /**
@@ -1552,7 +1534,6 @@ public class MasterTitleScreen {
         }
         return tryOpenUserRecordingMenuForSelectedGame();
     }
-
 
     /**
      * Opens the Time Attack menu, seeded with the currently highlighted game

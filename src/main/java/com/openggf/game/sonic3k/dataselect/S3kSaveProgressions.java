@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.dataselect;
 
 import com.openggf.game.dataselect.DataSelectDestination;
 import com.openggf.game.save.SelectedTeam;
+import com.openggf.game.save.SavePayloadReader;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 
 import java.util.ArrayList;
@@ -18,11 +19,11 @@ final class S3kSaveProgressions {
         if (raw instanceof Number number) {
             return number.intValue();
         }
-        int zone = readInt(payload, "zone", Sonic3kZoneIds.ZONE_AIZ);
-        int act = readInt(payload, "act", 0);
+        int zone = SavePayloadReader.readInt(payload, "zone", Sonic3kZoneIds.ZONE_AIZ);
+        int act = SavePayloadReader.readInt(payload, "act", 0);
         boolean clear = Boolean.TRUE.equals(payload.get("clear"));
         List<Integer> superEmeralds = readEmeraldList(payload, "superEmeralds");
-        SelectedTeam team = selectedTeamFromPayload(payload);
+        SelectedTeam team = SavePayloadReader.readTeam(payload);
         return progressCodeForState(zone, act, team, clear, superEmeralds);
     }
 
@@ -81,7 +82,7 @@ final class S3kSaveProgressions {
             return List.of();
         }
 
-        SelectedTeam team = selectedTeamFromPayload(payload);
+        SelectedTeam team = SavePayloadReader.readTeam(payload);
         int terminalIndex = terminalClearMarkerIndex(payload);
         if (terminalIndex <= 0) {
             return List.of();
@@ -97,7 +98,7 @@ final class S3kSaveProgressions {
         if (!Boolean.TRUE.equals(payload.get("clear"))) {
             return -1;
         }
-        SelectedTeam team = selectedTeamFromPayload(payload);
+        SelectedTeam team = SavePayloadReader.readTeam(payload);
         int clearState = Math.max(0, clearStateForPayload(payload));
         return Math.max(0, maxSelectableIndex(team, clearState));
     }
@@ -139,20 +140,6 @@ final class S3kSaveProgressions {
 
     private static boolean isKnuckles(SelectedTeam team) {
         return team != null && "knuckles".equalsIgnoreCase(team.mainCharacter());
-    }
-
-    private static SelectedTeam selectedTeamFromPayload(Map<String, Object> payload) {
-        String main = String.valueOf(payload.getOrDefault("mainCharacter", "sonic"));
-        Object sidekicksRaw = payload.get("sidekicks");
-        List<String> sidekicks = sidekicksRaw instanceof List<?>
-                ? ((List<?>) sidekicksRaw).stream().map(String::valueOf).toList()
-                : List.of();
-        return new SelectedTeam(main, sidekicks);
-    }
-
-    private static int readInt(Map<String, Object> payload, String key, int fallback) {
-        Object value = payload.get(key);
-        return value instanceof Number number ? number.intValue() : fallback;
     }
 
     private static List<Integer> readEmeraldList(Map<String, Object> payload, String key) {

@@ -315,167 +315,183 @@ public final class SmpsSequencerConfig {
     /** Default PSG channel order: PSG1(0x80), PSG2(0xA0), PSG3(0xC0). Same for S1, S2, and S3K. */
     public static final int[] DEFAULT_PSG_CHANNEL_ORDER = { 0x80, 0xA0, 0xC0 };
 
-    private final Map<Integer, Integer> speedUpTempos;
-    private final int tempoModBase;
-    private final int[] fmChannelOrder;
-    private final int[] psgChannelOrder;
-    private final TempoMode tempoMode;
-    private final Map<Integer, Integer> coordFlagParamOverrides;
-    private final boolean applyModOnNote;
-    private final boolean halveModSteps;
+    private final Settings settings;
     private final Set<Integer> extraTrkEndFlags;
-    private final PalUpdateMode palUpdateMode;
-    private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
-    private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
-    private final boolean resetTempoOnMusicLoad;
-    private final boolean direct68kDriver;
-    private final boolean advancePsgEnvelopeOnRest;
-    private final boolean writeFmPanOnNote;
-    private final boolean dacNoteKeysOffFm6AndRestoresFm3;
-    private final boolean enableDacOnSequencerStart;
-    private final boolean psgFrequencyHighByteNibbleSwap;
-    private final FmSfxTakeoverMode fmSfxTakeoverMode;
-    private final PsgSfxTakeoverMode psgSfxTakeoverMode;
-    private final Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode;
-    private final SpecialSfxPsg3SilenceMode specialSfxPsg3SilenceMode;
-    private final SfxChannelOwnershipMode sfxChannelOwnershipMode;
-    private final FmSfxReleaseMode fmSfxReleaseMode;
-    private final PsgSfxReleaseMode psgSfxReleaseMode;
-    private final SfxTrackWalkMode sfxTrackWalkMode;
-    private final FmVolumeVoiceBankMode fmVolumeVoiceBankMode;
-    private final FmVoiceWriteProfile fmVoiceWriteProfile;
-
-    // --- S3K-specific config fields ---
-    private final VolMode volMode;
-    private final PsgEnvCmd80 psgEnvCmd80;
-    private final NoteOnPrevent noteOnPrevent;
-    private final DelayFreq delayFreq;
     private final CoordFlagHandler coordFlagHandler;
-    private final ModAlgo modAlgo;
-    private final NoteGoingFreqSend noteGoingFreqSend;
-    private final PsgNoteGoingOrder psgNoteGoingOrder;
-    private final PsgEnvRestCmd psgEnvRestCmd;
-    private final boolean stepModulationAtRest;
-    private final boolean noteResetAliasesModulationState;
-    private final boolean fmNoteGoingReturnsAtRest;
-    private final FadeOutHalt fadeOutHalt;
-    private final FadeInRestore fadeInRestore;
-    private final boolean driverOwnedFadeDelay;
-    private final FadeDelayCadence fadeDelayCadence;
-    private final boolean tempoWaitPrecedesRequest;
-    private final PsgSilenceShape psgSilenceShape;
-    private final PsgVolumeTail psgVolumeTail;
-    private final boolean sfxWalkPrecedesRequest;
-    private final boolean sfxAdmissionKeyOffAndClearsSsgEg;
-    private final boolean psgSfxAdmissionSilencesNoise;
-    private final boolean trackEndFlagOwnsTheStop;
-    private final NoteFillTail noteFillTail;
-    private final int fadeOutDelay;
-    private final int fadeOutSteps;
-    private final int fadeInSteps;
-    private final int fadeInDelay;
 
-    /**
-     * Private constructor used by the Builder. All fields are set here.
-     */
     private SmpsSequencerConfig(Builder b) {
-        this.speedUpTempos = Collections.unmodifiableMap(new HashMap<>(b.speedUpTempos));
-        this.tempoModBase = b.tempoModBase;
-        this.fmChannelOrder = Arrays.copyOf(b.fmChannelOrder, b.fmChannelOrder.length);
-        this.psgChannelOrder = Arrays.copyOf(b.psgChannelOrder, b.psgChannelOrder.length);
-        this.tempoMode = b.tempoMode;
-        this.coordFlagParamOverrides = (b.coordFlagParamOverrides != null)
-                ? Collections.unmodifiableMap(new HashMap<>(b.coordFlagParamOverrides))
-                : Collections.emptyMap();
-        this.applyModOnNote = b.applyModOnNote;
-        this.halveModSteps = b.halveModSteps;
+        settings = new Settings(b);
+        coordFlagHandler = b.coordFlagHandler;
         this.extraTrkEndFlags = (b.extraTrkEndFlags != null)
                 ? Collections.unmodifiableSet(b.extraTrkEndFlags)
                 : Collections.emptySet();
-        this.palUpdateMode = b.palUpdateMode;
-        this.relativePointers = b.relativePointers;
-        this.tempoOnFirstTick = b.tempoOnFirstTick;
-        this.resetTempoOnMusicLoad = b.resetTempoOnMusicLoad;
-        this.direct68kDriver = b.direct68kDriver;
-        this.advancePsgEnvelopeOnRest = b.advancePsgEnvelopeOnRest;
-        this.writeFmPanOnNote = b.writeFmPanOnNote;
-        this.dacNoteKeysOffFm6AndRestoresFm3 = b.dacNoteKeysOffFm6AndRestoresFm3;
-        this.enableDacOnSequencerStart = b.enableDacOnSequencerStart;
-        this.psgFrequencyHighByteNibbleSwap = b.psgFrequencyHighByteNibbleSwap;
-        this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
-        this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
-        this.psg3SfxAdmissionWriteMode = b.psg3SfxAdmissionWriteMode;
-        this.specialSfxPsg3SilenceMode = b.specialSfxPsg3SilenceMode;
-        this.sfxChannelOwnershipMode = b.sfxChannelOwnershipMode;
-        this.fmSfxReleaseMode = b.fmSfxReleaseMode;
-        this.psgSfxReleaseMode = b.psgSfxReleaseMode;
-        this.sfxTrackWalkMode = b.sfxTrackWalkMode;
-        this.fmVolumeVoiceBankMode = b.fmVolumeVoiceBankMode;
-        this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
-        this.volMode = b.volMode;
-        this.psgEnvCmd80 = b.psgEnvCmd80;
-        this.noteOnPrevent = b.noteOnPrevent;
-        this.delayFreq = b.delayFreq;
-        this.coordFlagHandler = b.coordFlagHandler;
-        this.modAlgo = b.modAlgo;
-        this.noteGoingFreqSend = b.noteGoingFreqSend;
-        this.psgNoteGoingOrder = b.psgNoteGoingOrder;
-        this.psgEnvRestCmd = b.psgEnvRestCmd;
-        this.stepModulationAtRest = b.stepModulationAtRest;
-        this.noteResetAliasesModulationState = b.noteResetAliasesModulationState;
-        this.fmNoteGoingReturnsAtRest = b.fmNoteGoingReturnsAtRest;
-        this.fadeOutHalt = b.fadeOutHalt;
-        this.fadeInRestore = b.fadeInRestore;
-        this.driverOwnedFadeDelay = b.driverOwnedFadeDelay;
-        this.fadeDelayCadence = b.fadeDelayCadence;
-        this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
-        this.psgSilenceShape = b.psgSilenceShape;
-        this.psgVolumeTail = b.psgVolumeTail;
-        this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
-        this.sfxAdmissionKeyOffAndClearsSsgEg = b.sfxAdmissionKeyOffAndClearsSsgEg;
-        this.psgSfxAdmissionSilencesNoise = b.psgSfxAdmissionSilencesNoise;
-        this.trackEndFlagOwnsTheStop = b.trackEndFlagOwnsTheStop;
-        this.noteFillTail = b.noteFillTail;
-        this.fadeOutDelay = b.fadeOutDelay;
-        this.fadeOutSteps = b.fadeOutSteps;
-        this.fadeInSteps = b.fadeInSteps;
-        this.fadeInDelay = b.fadeInDelay;
+    }
+
+    // The presentation catalog binds a session-owned handler to settings that
+    // were frozen by the builder. End flags retain their historical separate
+    // freeze boundary: Builder exposes a read-only view, catalog binding takes
+    // a snapshot. Keep this constructor package-private, outside the Mod API.
+    SmpsSequencerConfig(SmpsSequencerConfig source, java.util.function.Supplier<CoordFlagHandler> handler) {
+        settings = source.settings;
+        extraTrkEndFlags = Set.copyOf(source.extraTrkEndFlags);
+        coordFlagHandler = handler.get();
+    }
+
+    /** Immutable settings shared by configurations with different session handlers. */
+    private static final class Settings {
+        private final Map<Integer, Integer> speedUpTempos;
+        private final int tempoModBase;
+        private final int[] fmChannelOrder;
+        private final int[] psgChannelOrder;
+        private final TempoMode tempoMode;
+        private final Map<Integer, Integer> coordFlagParamOverrides;
+        private final boolean applyModOnNote;
+        private final boolean halveModSteps;
+        private final PalUpdateMode palUpdateMode;
+        private final boolean relativePointers; // S1: true (68k PC-relative), S2: false (Z80 absolute)
+        private final boolean tempoOnFirstTick; // S1: true (DOTEMPO), S2: false (PlayMusic)
+        private final boolean resetTempoOnMusicLoad;
+        private final boolean direct68kDriver;
+        private final boolean advancePsgEnvelopeOnRest;
+        private final boolean writeFmPanOnNote;
+        private final boolean dacNoteKeysOffFm6AndRestoresFm3;
+        private final boolean enableDacOnSequencerStart;
+        private final boolean psgFrequencyHighByteNibbleSwap;
+        private final FmSfxTakeoverMode fmSfxTakeoverMode;
+        private final PsgSfxTakeoverMode psgSfxTakeoverMode;
+        private final Psg3SfxAdmissionWriteMode psg3SfxAdmissionWriteMode;
+        private final SpecialSfxPsg3SilenceMode specialSfxPsg3SilenceMode;
+        private final SfxChannelOwnershipMode sfxChannelOwnershipMode;
+        private final FmSfxReleaseMode fmSfxReleaseMode;
+        private final PsgSfxReleaseMode psgSfxReleaseMode;
+        private final SfxTrackWalkMode sfxTrackWalkMode;
+        private final FmVolumeVoiceBankMode fmVolumeVoiceBankMode;
+        private final FmVoiceWriteProfile fmVoiceWriteProfile;
+
+        // --- S3K-specific config fields ---
+        private final VolMode volMode;
+        private final PsgEnvCmd80 psgEnvCmd80;
+        private final NoteOnPrevent noteOnPrevent;
+        private final DelayFreq delayFreq;
+        private final ModAlgo modAlgo;
+        private final NoteGoingFreqSend noteGoingFreqSend;
+        private final PsgNoteGoingOrder psgNoteGoingOrder;
+        private final PsgEnvRestCmd psgEnvRestCmd;
+        private final boolean stepModulationAtRest;
+        private final boolean noteResetAliasesModulationState;
+        private final boolean fmNoteGoingReturnsAtRest;
+        private final FadeOutHalt fadeOutHalt;
+        private final FadeInRestore fadeInRestore;
+        private final boolean driverOwnedFadeDelay;
+        private final FadeDelayCadence fadeDelayCadence;
+        private final boolean tempoWaitPrecedesRequest;
+        private final PsgSilenceShape psgSilenceShape;
+        private final PsgVolumeTail psgVolumeTail;
+        private final boolean sfxWalkPrecedesRequest;
+        private final boolean sfxAdmissionKeyOffAndClearsSsgEg;
+        private final boolean psgSfxAdmissionSilencesNoise;
+        private final boolean trackEndFlagOwnsTheStop;
+        private final NoteFillTail noteFillTail;
+        private final int fadeOutDelay;
+        private final int fadeOutSteps;
+        private final int fadeInSteps;
+        private final int fadeInDelay;
+
+        private Settings(Builder b) {
+            this.speedUpTempos = Collections.unmodifiableMap(new HashMap<>(b.speedUpTempos));
+            this.tempoModBase = b.tempoModBase;
+            this.fmChannelOrder = Arrays.copyOf(b.fmChannelOrder, b.fmChannelOrder.length);
+            this.psgChannelOrder = Arrays.copyOf(b.psgChannelOrder, b.psgChannelOrder.length);
+            this.tempoMode = b.tempoMode;
+            this.coordFlagParamOverrides = (b.coordFlagParamOverrides != null)
+                    ? Collections.unmodifiableMap(new HashMap<>(b.coordFlagParamOverrides))
+                    : Collections.emptyMap();
+            this.applyModOnNote = b.applyModOnNote;
+            this.halveModSteps = b.halveModSteps;
+            this.palUpdateMode = b.palUpdateMode;
+            this.relativePointers = b.relativePointers;
+            this.tempoOnFirstTick = b.tempoOnFirstTick;
+            this.resetTempoOnMusicLoad = b.resetTempoOnMusicLoad;
+            this.direct68kDriver = b.direct68kDriver;
+            this.advancePsgEnvelopeOnRest = b.advancePsgEnvelopeOnRest;
+            this.writeFmPanOnNote = b.writeFmPanOnNote;
+            this.dacNoteKeysOffFm6AndRestoresFm3 = b.dacNoteKeysOffFm6AndRestoresFm3;
+            this.enableDacOnSequencerStart = b.enableDacOnSequencerStart;
+            this.psgFrequencyHighByteNibbleSwap = b.psgFrequencyHighByteNibbleSwap;
+            this.fmSfxTakeoverMode = b.fmSfxTakeoverMode;
+            this.psgSfxTakeoverMode = b.psgSfxTakeoverMode;
+            this.psg3SfxAdmissionWriteMode = b.psg3SfxAdmissionWriteMode;
+            this.specialSfxPsg3SilenceMode = b.specialSfxPsg3SilenceMode;
+            this.sfxChannelOwnershipMode = b.sfxChannelOwnershipMode;
+            this.fmSfxReleaseMode = b.fmSfxReleaseMode;
+            this.psgSfxReleaseMode = b.psgSfxReleaseMode;
+            this.sfxTrackWalkMode = b.sfxTrackWalkMode;
+            this.fmVolumeVoiceBankMode = b.fmVolumeVoiceBankMode;
+            this.fmVoiceWriteProfile = b.fmVoiceWriteProfile;
+            this.volMode = b.volMode;
+            this.psgEnvCmd80 = b.psgEnvCmd80;
+            this.noteOnPrevent = b.noteOnPrevent;
+            this.delayFreq = b.delayFreq;
+            this.modAlgo = b.modAlgo;
+            this.noteGoingFreqSend = b.noteGoingFreqSend;
+            this.psgNoteGoingOrder = b.psgNoteGoingOrder;
+            this.psgEnvRestCmd = b.psgEnvRestCmd;
+            this.stepModulationAtRest = b.stepModulationAtRest;
+            this.noteResetAliasesModulationState = b.noteResetAliasesModulationState;
+            this.fmNoteGoingReturnsAtRest = b.fmNoteGoingReturnsAtRest;
+            this.fadeOutHalt = b.fadeOutHalt;
+            this.fadeInRestore = b.fadeInRestore;
+            this.driverOwnedFadeDelay = b.driverOwnedFadeDelay;
+            this.fadeDelayCadence = b.fadeDelayCadence;
+            this.tempoWaitPrecedesRequest = b.tempoWaitPrecedesRequest;
+            this.psgSilenceShape = b.psgSilenceShape;
+            this.psgVolumeTail = b.psgVolumeTail;
+            this.sfxWalkPrecedesRequest = b.sfxWalkPrecedesRequest;
+            this.sfxAdmissionKeyOffAndClearsSsgEg = b.sfxAdmissionKeyOffAndClearsSsgEg;
+            this.psgSfxAdmissionSilencesNoise = b.psgSfxAdmissionSilencesNoise;
+            this.trackEndFlagOwnsTheStop = b.trackEndFlagOwnsTheStop;
+            this.noteFillTail = b.noteFillTail;
+            this.fadeOutDelay = b.fadeOutDelay;
+            this.fadeOutSteps = b.fadeOutSteps;
+            this.fadeInSteps = b.fadeInSteps;
+            this.fadeInDelay = b.fadeInDelay;
+        }
     }
 
     public Map<Integer, Integer> getSpeedUpTempos() {
-        return speedUpTempos;
+        return settings.speedUpTempos;
     }
 
     public int getTempoModBase() {
-        return tempoModBase;
+        return settings.tempoModBase;
     }
 
     public int[] getFmChannelOrder() {
-        return Arrays.copyOf(fmChannelOrder, fmChannelOrder.length);
+        return Arrays.copyOf(settings.fmChannelOrder, settings.fmChannelOrder.length);
     }
 
     public int[] getPsgChannelOrder() {
-        return Arrays.copyOf(psgChannelOrder, psgChannelOrder.length);
+        return Arrays.copyOf(settings.psgChannelOrder, settings.psgChannelOrder.length);
     }
 
     int fmChannelCount() {
-        return fmChannelOrder.length;
+        return settings.fmChannelOrder.length;
     }
 
     int fmChannelAt(int index) {
-        return fmChannelOrder[index];
+        return settings.fmChannelOrder[index];
     }
 
     int psgChannelCount() {
-        return psgChannelOrder.length;
+        return settings.psgChannelOrder.length;
     }
 
     int psgChannelAt(int index) {
-        return psgChannelOrder[index];
+        return settings.psgChannelOrder[index];
     }
 
     public TempoMode getTempoMode() {
-        return tempoMode;
+        return settings.tempoMode;
     }
 
     /**
@@ -484,7 +500,7 @@ public final class SmpsSequencerConfig {
      * Only flags that differ from the default S2 table need to be present.
      */
     public Map<Integer, Integer> getCoordFlagParamOverrides() {
-        return coordFlagParamOverrides;
+        return settings.coordFlagParamOverrides;
     }
 
     /**
@@ -492,7 +508,7 @@ public final class SmpsSequencerConfig {
      * S2 (ModAlgo 68k_a): true. S1 (ModAlgo 68k): false.
      */
     public boolean isApplyModOnNote() {
-        return applyModOnNote;
+        return settings.applyModOnNote;
     }
 
     /**
@@ -500,7 +516,7 @@ public final class SmpsSequencerConfig {
      * Both the S1 68k and S2 Z80 drivers shift the raw count once.
      */
     public boolean isHalveModSteps() {
-        return halveModSteps;
+        return settings.halveModSteps;
     }
 
     /**
@@ -512,7 +528,7 @@ public final class SmpsSequencerConfig {
     }
 
     public PalUpdateMode getPalUpdateMode() {
-        return palUpdateMode;
+        return settings.palUpdateMode;
     }
 
     /**
@@ -521,22 +537,22 @@ public final class SmpsSequencerConfig {
      * S2 (Z80): false — pointer value is absolute Z80 address, resolved via relocate().
      */
     public boolean isRelativePointers() {
-        return relativePointers;
+        return settings.relativePointers;
     }
 
     /** Whether playback follows the direct 68k chip-write/update contract. */
     public boolean isDirect68kDriver() {
-        return direct68kDriver;
+        return settings.direct68kDriver;
     }
 
     /** Whether a newly parsed PSG rest still consumes the first envelope byte. */
     public boolean isAdvancePsgEnvelopeOnRest() {
-        return advancePsgEnvelopeOnRest;
+        return settings.advancePsgEnvelopeOnRest;
     }
 
     /** Whether FM note preparation repeats the track's current pan register. */
     public boolean isWriteFmPanOnNote() {
-        return writeFmPanOnNote;
+        return settings.writeFmPanOnNote;
     }
 
     /**
@@ -544,7 +560,7 @@ public final class SmpsSequencerConfig {
      * restores FM3 to normal mode, as the S3K Z80 driver's DAC track does.
      */
     public boolean isDacNoteKeysOffFm6AndRestoresFm3() {
-        return dacNoteKeysOffFm6AndRestoresFm3;
+        return settings.dacNoteKeysOffFm6AndRestoresFm3;
     }
 
     /**
@@ -552,7 +568,7 @@ public final class SmpsSequencerConfig {
      * The Z80 drivers do not: their DAC transport owns that register.
      */
     public boolean isEnableDacOnSequencerStart() {
-        return enableDacOnSequencerStart;
+        return settings.enableDacOnSequencerStart;
     }
 
     /**
@@ -560,47 +576,47 @@ public final class SmpsSequencerConfig {
      * of {@code (low & 0F0h) | high} rather than a six-bit-masked shift.
      */
     public boolean isPsgFrequencyHighByteNibbleSwap() {
-        return psgFrequencyHighByteNibbleSwap;
+        return settings.psgFrequencyHighByteNibbleSwap;
     }
 
     public FmSfxTakeoverMode getFmSfxTakeoverMode() {
-        return fmSfxTakeoverMode;
+        return settings.fmSfxTakeoverMode;
     }
 
     public PsgSfxTakeoverMode getPsgSfxTakeoverMode() {
-        return psgSfxTakeoverMode;
+        return settings.psgSfxTakeoverMode;
     }
 
     public SpecialSfxPsg3SilenceMode getSpecialSfxPsg3SilenceMode() {
-        return specialSfxPsg3SilenceMode;
+        return settings.specialSfxPsg3SilenceMode;
     }
 
     public Psg3SfxAdmissionWriteMode getPsg3SfxAdmissionWriteMode() {
-        return psg3SfxAdmissionWriteMode;
+        return settings.psg3SfxAdmissionWriteMode;
     }
 
     public SfxChannelOwnershipMode getSfxChannelOwnershipMode() {
-        return sfxChannelOwnershipMode;
+        return settings.sfxChannelOwnershipMode;
     }
 
     public FmSfxReleaseMode getFmSfxReleaseMode() {
-        return fmSfxReleaseMode;
+        return settings.fmSfxReleaseMode;
     }
 
     public PsgSfxReleaseMode getPsgSfxReleaseMode() {
-        return psgSfxReleaseMode;
+        return settings.psgSfxReleaseMode;
     }
 
     public SfxTrackWalkMode getSfxTrackWalkMode() {
-        return sfxTrackWalkMode;
+        return settings.sfxTrackWalkMode;
     }
 
     public FmVolumeVoiceBankMode getFmVolumeVoiceBankMode() {
-        return fmVolumeVoiceBankMode;
+        return settings.fmVolumeVoiceBankMode;
     }
 
     public FmVoiceWriteProfile getFmVoiceWriteProfile() {
-        return fmVoiceWriteProfile;
+        return settings.fmVoiceWriteProfile;
     }
 
     /**
@@ -609,31 +625,31 @@ public final class SmpsSequencerConfig {
      * S2 (PlayMusic): false — first frame calls tick() directly, bypassing tempo.
      */
     public boolean isTempoOnFirstTick() {
-        return tempoOnFirstTick;
+        return settings.tempoOnFirstTick;
     }
 
     public boolean isResetTempoOnMusicLoad() {
-        return resetTempoOnMusicLoad;
+        return settings.resetTempoOnMusicLoad;
     }
 
     /** Volume mode: ALGO (S1/S2) or BIT7 (S3K). */
     public VolMode getVolMode() {
-        return volMode;
+        return settings.volMode;
     }
 
     /** PSG envelope 0x80 command behavior: HOLD (S1/S2) or RESET (S3K). */
     public PsgEnvCmd80 getPsgEnvCmd80() {
-        return psgEnvCmd80;
+        return settings.psgEnvCmd80;
     }
 
     /** Note-on prevention mode: REST (S1/S2) or HOLD (S3K). */
     public NoteOnPrevent getNoteOnPrevent() {
-        return noteOnPrevent;
+        return settings.noteOnPrevent;
     }
 
     /** Delay frequency behavior: RESET (S1/S2) or KEEP (S3K). */
     public DelayFreq getDelayFreq() {
-        return delayFreq;
+        return settings.delayFreq;
     }
 
     /** Game-specific coordination flag handler, or null for default S2 handling. */
@@ -643,14 +659,14 @@ public final class SmpsSequencerConfig {
 
     /** Modulation stepping algorithm: MOD_68K (S1/S2) or MOD_Z80 (S3K). */
     public ModAlgo getModAlgo() {
-        return modAlgo;
+        return settings.modAlgo;
     }
 
     /**
      * Note-going frequency send: MODULATION_ONLY (S1/S2) or EVERY_PASS (S3K).
      */
     public NoteGoingFreqSend getNoteGoingFreqSend() {
-        return noteGoingFreqSend;
+        return settings.noteGoingFreqSend;
     }
 
     /**
@@ -658,12 +674,12 @@ public final class SmpsSequencerConfig {
      * FREQUENCY_THEN_VOLUME (S3K).
      */
     public PsgNoteGoingOrder getPsgNoteGoingOrder() {
-        return psgNoteGoingOrder;
+        return settings.psgNoteGoingOrder;
     }
 
     /** PSG envelope rest commands: NONE (S1/S2) or Z80_81_AND_83 (S3K). */
     public PsgEnvRestCmd getPsgEnvRestCmd() {
-        return psgEnvRestCmd;
+        return settings.psgEnvRestCmd;
     }
 
     /**
@@ -676,7 +692,7 @@ public final class SmpsSequencerConfig {
      * modulation is active, so both keep stepping while the track rests.
      */
     public boolean isStepModulationAtRest() {
-        return stepModulationAtRest;
+        return settings.stepModulationAtRest;
     }
 
     /**
@@ -692,7 +708,7 @@ public final class SmpsSequencerConfig {
      * an intended effect, and S1 and S2 have different track layouts.
      */
     public boolean isNoteResetAliasesModulationState() {
-        return noteResetAliasesModulationState;
+        return settings.noteResetAliasesModulationState;
     }
 
     /**
@@ -706,7 +722,7 @@ public final class SmpsSequencerConfig {
      * sending its frequency and stepping its modulation.
      */
     public boolean isFmNoteGoingReturnsAtRest() {
-        return fmNoteGoingReturnsAtRest;
+        return settings.fmNoteGoingReturnsAtRest;
     }
 
     /**
@@ -722,7 +738,7 @@ public final class SmpsSequencerConfig {
      * the queue is filled, and do accumulate on the load service.
      */
     public boolean isTempoWaitPrecedesRequest() {
-        return tempoWaitPrecedesRequest;
+        return settings.tempoWaitPrecedesRequest;
     }
 
     /** How the fade's inter-step delay counter is tested. */
@@ -745,7 +761,7 @@ public final class SmpsSequencerConfig {
 
     /** Fade delay cadence: TEST_THEN_DECREMENT (S1/S2) or DECREMENT_THEN_TEST (S3K). */
     public FadeDelayCadence getFadeDelayCadence() {
-        return fadeDelayCadence;
+        return settings.fadeDelayCadence;
     }
 
     /**
@@ -757,7 +773,7 @@ public final class SmpsSequencerConfig {
      * and its first update belongs to the next one.
      */
     public boolean isSfxWalkPrecedesRequest() {
-        return sfxWalkPrecedesRequest;
+        return settings.sfxWalkPrecedesRequest;
     }
 
     /**
@@ -773,12 +789,12 @@ public final class SmpsSequencerConfig {
      * skips the call.
      */
     public boolean isSfxAdmissionKeyOffAndClearsSsgEg() {
-        return sfxAdmissionKeyOffAndClearsSsgEg;
+        return settings.sfxAdmissionKeyOffAndClearsSsgEg;
     }
 
     /** Whether each declared PSG SFX header unconditionally silences noise at admission. */
     public boolean isPsgSfxAdmissionSilencesNoise() {
-        return psgSfxAdmissionSilencesNoise;
+        return settings.psgSfxAdmissionSilencesNoise;
     }
 
     /**
@@ -792,7 +808,7 @@ public final class SmpsSequencerConfig {
      * 207, so their track-end paths are unaudited rather than known-equal.
      */
     public boolean isTrackEndFlagOwnsTheStop() {
-        return trackEndFlagOwnsTheStop;
+        return settings.trackEndFlagOwnsTheStop;
     }
 
     /** How a single PSG track's silence is written. */
@@ -819,7 +835,7 @@ public final class SmpsSequencerConfig {
 
     /** PSG silence shape: SOUNDING_CHANNEL_ONLY (S1/S2) or TONE_THEN_NOISE (S3K). */
     public PsgSilenceShape getPsgSilenceShape() {
-        return psgSilenceShape;
+        return settings.psgSilenceShape;
     }
 
     /** When a sounding PSG track resends its attenuation byte. */
@@ -848,7 +864,7 @@ public final class SmpsSequencerConfig {
 
     /** PSG volume tail: NOTE_AND_ENVELOPE_ONLY (S1/S2) or EVERY_NOTE_GOING_PASS (S3K). */
     public PsgVolumeTail getPsgVolumeTail() {
-        return psgVolumeTail;
+        return settings.psgVolumeTail;
     }
 
     /** Which tracks a music fade-out request halts outright. */
@@ -872,7 +888,7 @@ public final class SmpsSequencerConfig {
 
     /** Fade-out halt scope: DAC_ONLY (S1/S2) or DAC_AND_PSG (S3K). */
     public FadeOutHalt getFadeOutHalt() {
-        return fadeOutHalt;
+        return settings.fadeOutHalt;
     }
 
     /**
@@ -921,37 +937,37 @@ public final class SmpsSequencerConfig {
      * shape.
      */
     public boolean isDriverOwnedFadeDelay() {
-        return driverOwnedFadeDelay;
+        return settings.driverOwnedFadeDelay;
     }
 
     /** Restore-fade track handling: REST_TRACKS (S1/S2) or OVERRIDE_PSG (S3K). */
     public FadeInRestore getFadeInRestore() {
-        return fadeInRestore;
+        return settings.fadeInRestore;
     }
 
     /** Note-fill expiry tail: LEGACY (S1/S2) or S3K_SPLIT (S3K). */
     public NoteFillTail getNoteFillTail() {
-        return noteFillTail;
+        return settings.noteFillTail;
     }
 
     /** Fade-out inter-step delay in frames. S1/S2: 3, S3K: 6. */
     public int getFadeOutDelay() {
-        return fadeOutDelay;
+        return settings.fadeOutDelay;
     }
 
     /** Fade-out total step count. S1/S2: 0x28, S3K: 0x28. */
     public int getFadeOutSteps() {
-        return fadeOutSteps;
+        return settings.fadeOutSteps;
     }
 
     /** Fade-in total step count. S1/S2: 0x28, S3K: 0x40. */
     public int getFadeInSteps() {
-        return fadeInSteps;
+        return settings.fadeInSteps;
     }
 
     /** Fade-in inter-step delay in frames. S1/S2: 2, S3K: 2. */
     public int getFadeInDelay() {
-        return fadeInDelay;
+        return settings.fadeInDelay;
     }
 
     // -----------------------------------------------------------------------

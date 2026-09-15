@@ -6,6 +6,7 @@ import com.openggf.audio.GameSound;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.SolidWireCommands;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -205,22 +206,11 @@ public class BombPrizeObjectInstance extends AbstractObjectInstance implements S
         int top = y - halfSize;
         int bottom = y + halfSize;
 
-        appendLine(commands, left, top, right, top, r, g, b);
-        appendLine(commands, right, top, right, bottom, r, g, b);
-        appendLine(commands, right, bottom, left, bottom, r, g, b);
-        appendLine(commands, left, bottom, left, top, r, g, b);
+        SolidWireCommands.rectangle(commands, left, top, right, bottom, r, g, b);
 
         // Draw X to indicate danger
-        appendLine(commands, left, top, right, bottom, r, g, b);
-        appendLine(commands, right, top, left, bottom, r, g, b);
-    }
-
-    private void appendLine(List<GLCommand> commands, int x1, int y1, int x2, int y2,
-                            float r, float g, float b) {
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID,
-                r, g, b, x1, y1, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID,
-                r, g, b, x2, y2, 0, 0));
+        SolidWireCommands.line(commands, left, top, right, bottom, r, g, b);
+        SolidWireCommands.line(commands, right, top, left, bottom, r, g, b);
     }
 
     @Override

@@ -19,7 +19,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -499,15 +498,7 @@ class TestTraceReplayInvariantGuard {
     }
 
     private static List<Path> javaSources(Path root) throws IOException {
-        if (!Files.exists(root)) {
-            return List.of();
-        }
-        try (Stream<Path> stream = Files.walk(root)) {
-            return stream
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .sorted(Comparator.comparing(TestTraceReplayInvariantGuard::normalize))
-                    .toList();
-        }
+        return ObjectGuardSourceScanner.sortedJavaSources(root);
     }
 
     private static String normalize(Path path) {

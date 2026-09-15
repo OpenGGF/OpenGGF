@@ -5,6 +5,7 @@ import com.openggf.game.GameServices;
 import com.openggf.game.sonic3k.constants.S3kZoneSet;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.level.SolidProfileDecoder;
 import com.openggf.level.*;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.resources.LevelResourcePlan;
@@ -612,14 +613,7 @@ public class Sonic3kLevel extends AbstractLevel {
 
     private void decodeSolidProfiles(byte[] heights, byte[] widths, byte[] angles) {
         solidTileCount = angles.length;
-        solidTiles = new SolidTile[solidTileCount];
-        for (int i = 0; i < solidTileCount; i++) {
-            solidTiles[i] = new SolidTile(i,
-                    Arrays.copyOfRange(heights, i * SolidTile.TILE_SIZE_IN_ROM,
-                            (i + 1) * SolidTile.TILE_SIZE_IN_ROM),
-                    Arrays.copyOfRange(widths, i * SolidTile.TILE_SIZE_IN_ROM,
-                            (i + 1) * SolidTile.TILE_SIZE_IN_ROM), angles[i]);
-        }
+        solidTiles = SolidProfileDecoder.decode(heights, widths, angles);
     }
 
     /**

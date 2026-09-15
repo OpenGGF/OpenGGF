@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.openggf.audio.smps.SmpsSequencerConfig;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -17,12 +16,10 @@ import org.junit.jupiter.api.Test;
 /**
  * Every sequencer-config setting must survive the presentation layer's copy.
  *
- * <p>{@code SmpsAssetCatalog.copyBuilder} rebuilds a {@link
- * SmpsSequencerConfig} field by field, and everything played through
- * {@code AudioManager} goes through it. A setting missing from that copy is not
- * an error and does not fail anything: the rebuilt config silently falls back
- * to the builder default, so the per-game config is ignored on the only path
- * that reaches a player.
+ * <p>The presentation catalog binds a session handler to a configuration's
+ * settings. Every setting exposed by the builder must survive that operation;
+ * validate through public accessors so the guard is independent of the private
+ * settings representation.
  *
  * <p>This guard exists because that happened. The S3K collapse effect's volume
  * tail is carried by {@code psgVolumeTail}; the setting was declared on the S3K
@@ -36,13 +33,13 @@ import org.junit.jupiter.api.Test;
  * read the same field back. Settings whose type has no mechanical "different
  * value" are listed in {@link #UNCOPYABLE_BY_REFLECTION} rather than skipped
  * quietly, so adding a field of a new shape forces a decision here instead of
- * slipping through. Their copies are written out explicitly in
- * {@code copyBuilder} and are visible in review.
+ * slipping through. Collection and handler contracts are exercised explicitly in
+ * {@code TestSmpsAssetCatalog}.
  */
 class TestSmpsSequencerConfigCopyCoverageGuard {
     /**
-     * Settings this guard cannot vary mechanically, each covered by an explicit
-     * line in {@code copyBuilder}.
+     * Settings this guard cannot vary mechanically; collection and handler
+     * behavior is covered by {@code TestSmpsAssetCatalog}.
      *
      * <p>{@code coordFlagHandler} is different in kind: {@code
      * copyConfigWithoutHandler} drops it deliberately and {@code
@@ -71,7 +68,7 @@ class TestSmpsSequencerConfigCopyCoverageGuard {
                 continue;
             }
             String name = setter.getName();
-            Field field = fieldNamed(name);
+            Method field = accessorNamed(name);
             if (field == null) {
                 unvaried.add(name);
                 continue;
@@ -108,11 +105,11 @@ class TestSmpsSequencerConfigCopyCoverageGuard {
                 "these sequencer-config settings are lost when the presentation"
                 + " layer copies the config, so every sound played through"
                 + " AudioManager ignores them and silently uses the builder"
-                + " default. Add each to SmpsAssetCatalog.copyBuilder");
+                + " default. Preserve each setting through SmpsConfigBinding");
         assertEquals(UNCOPYABLE_BY_REFLECTION, unvaried,
                 "the set of settings this guard cannot vary mechanically has"
-                + " changed. A new one must either be given a copy line in"
-                + " SmpsAssetCatalog.copyBuilder and listed here, or made"
+                + " changed. A new one must either have explicit coverage in"
+                + " TestSmpsAssetCatalog and be listed here, or made"
                 + " round-trippable so the guard covers it");
         int roundTripped = checked;
         assertTrue(roundTripped >= 30, () ->
@@ -141,21 +138,23 @@ class TestSmpsSequencerConfigCopyCoverageGuard {
         return null;
     }
 
-    private Field fieldNamed(String name) {
-        try {
-            Field field = SmpsSequencerConfig.class.getDeclaredField(name);
-            field.setAccessible(true);
-            return field;
-        } catch (NoSuchFieldException absent) {
-            return null;
+    private Method accessorNamed(String name) {
+        String suffix = Character.toUpperCase(name.charAt(0)) + name.substring(1);
+        for (String prefix : List.of("get", "is")) {
+            try {
+                return SmpsSequencerConfig.class.getMethod(prefix + suffix);
+            } catch (NoSuchMethodException absent) {
+                // Boolean properties use isX; other properties use getX.
+            }
         }
+        return null;
     }
 
-    private Object read(Field field, SmpsSequencerConfig config) {
+    private Object read(Method accessor, SmpsSequencerConfig config) {
         try {
-            return field.get(config);
-        } catch (IllegalAccessException denied) {
-            throw new AssertionError("cannot read " + field.getName(), denied);
+            return accessor.invoke(config);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError("cannot read " + accessor.getName(), failure);
         }
     }
 }
