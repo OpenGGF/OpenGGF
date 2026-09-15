@@ -20,10 +20,13 @@ class TestSozConnectedMechanismCapture {
     void capture(SozConnectedMechanismRoute.Scene scene) throws Exception {
         var out = Path.of(System.getProperty("soz.connected.capture"), scene.name().toLowerCase());
         Files.createDirectories(out.resolve("frames"));
-        var settings = new GameplayCaptureSession.Settings(400, "sonic", "tails", "off", null, scene.x, scene.y);
+        var settings = new GameplayCaptureSession.Settings(400, "sonic",
+                scene == SozConnectedMechanismRoute.Scene.LOWER ? "none" : "tails", "off", null, scene.x, scene.y);
         try (var session = new GameplayCaptureSession(settings);
              var csv = Files.newBufferedWriter(out.resolve("state.csv"))) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, 1, settings);
+            // Finish native setup before the first recorded controller input.
+            GameServices.level().consumePendingInitialProcessSpritesPass();
             session.player().setRingCount(99);
             csv.write(GameplayCaptureSession.stateHeader() + ",bg,sand,collision");
             csv.newLine();
@@ -38,6 +41,8 @@ class TestSozConnectedMechanismCapture {
                 if (frame % 4 == 0) ScreenshotCapture.savePNG(session.render(),
                         out.resolve("frames").resolve(String.format("%05d.png", frame)));
                 assertFalse(session.player().getDead(), scene + " at frame " + frame);
+                if (scene == SozConnectedMechanismRoute.Scene.LOWER && frame > 1000
+                        && events.backgroundRoutine() == 0x20) break;
             }
         }
     }
