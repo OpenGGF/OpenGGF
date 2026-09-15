@@ -10,6 +10,7 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
     private final PlayerCharacter playerCharacter;
     // Native _unkF7C4 points to an SST slot, not a durable rock identity.
     private int pushableRockSlot = -1;
+    private final SozEventState events = new SozEventState();
     private final SozLightingState lighting = new SozLightingState();
     private int sandCorkForegroundFlag;
     private int sandCorkBackgroundFlag;
@@ -23,6 +24,16 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return 0; }
     @Override public boolean isActTransitionFlagActive() { return false; }
+    @Override public com.openggf.physics.BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
+        return events.backgroundCollision()
+                ? new com.openggf.physics.BackgroundPlaneCollisionProvider.State(true, 0x1930,
+                        (short) -(0x2E0 + events.sandHeight()))
+                : com.openggf.physics.BackgroundPlaneCollisionProvider.State.INACTIVE;
+    }
+    public SozEventState events() { return events; }
+    public void requestMinibossDoorClose() { events.doorSignal(-1); }
+    public void requestMinibossShake(int duration) { events.screenShakeFlag(duration); }
+    public void requestMinibossPostResultsAlignmentComplete() { sandCorkBackgroundFlag = 0x55; }
     public SozLightingState lighting() { return lighting; }
     public int pushableRockSlot() { return pushableRockSlot; }
     public void publishPushableRockSlot(int slot) { pushableRockSlot = slot; }
@@ -44,9 +55,10 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
         return result;
     }
     @Override public byte[] captureBytes() {
-        var buffer = ByteBuffer.allocate(12 + SozLightingState.SNAPSHOT_BYTES);
+        var buffer = ByteBuffer.allocate(12 + SozLightingState.SNAPSHOT_BYTES + SozEventState.SNAPSHOT_BYTES);
         buffer.putInt(pushableRockSlot).putInt(sandCorkForegroundFlag).putInt(sandCorkBackgroundFlag);
         lighting.capture(buffer);
+        events.capture(buffer);
         return buffer.array();
     }
     @Override public void restoreBytes(byte[] bytes) {
@@ -56,6 +68,8 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
         sandCorkBackgroundFlag = buffer.remaining() >= 4 ? buffer.getInt() : 0;
         lighting.restore(buffer.remaining() >= SozLightingState.SNAPSHOT_BYTES ? buffer
                 : ByteBuffer.allocate(SozLightingState.SNAPSHOT_BYTES));
+        events.restore(buffer.remaining() >= SozEventState.SNAPSHOT_BYTES ? buffer
+                : ByteBuffer.allocate(SozEventState.SNAPSHOT_BYTES));
     }
 
     /** Same Level_trigger_array bytes as ordinary buttons; no shadow signal store. */
