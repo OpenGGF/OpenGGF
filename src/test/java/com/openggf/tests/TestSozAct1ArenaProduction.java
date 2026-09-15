@@ -66,12 +66,15 @@ class TestSozAct1ArenaProduction {
         assertTrue(transferred,"real executor reloads Act2");assertTrue(dark,"loc55EFC initializes darkness only for seamless entry");
         assertEquals(8,state().events().foregroundRoutine());assertEquals(0x10,state().events().backgroundRoutine());
         assertFalse(state().events().seamlessEntry());assertFalse(fixture.sprite().isControlLocked());
+        assertEquals((short)-0x100,fixture.camera().getMinYTarget());
+        assertEquals(0x800,fixture.camera().getMaxYTarget());
         var registry=fixture.gameplayMode().getRewindRegistry();var before=registry.capture();step();var after=registry.capture();registry.restore(before);same(before,registry.capture());step();same(after,registry.capture());
     }
     @Test void cameraThresholdAndTwoRowRedrawKeepNativeDispatchBoundaries(){
         var driver=new com.openggf.game.sonic3k.events.Sonic3kSOZEvents();var events=state().events();events.initialized(true);
         fixture.camera().setY((short)0x95F);fixture.camera().setX((short)0x4310);driver.update(0,0);
         assertEquals(0,state().sandCorkBackgroundFlag());
+        assertEquals(0x960,fixture.camera().getMaxYTarget());
         fixture.camera().setY((short)0x960);fixture.camera().setX((short)0x430F);driver.update(0,1);assertEquals(0,state().sandCorkBackgroundFlag());
         fixture.camera().setX((short)0x4310);driver.update(0,2);assertEquals(0xFFFF,state().sandCorkBackgroundFlag());assertEquals(0,events.backgroundRoutine());
         driver.update(0,3);assertEquals(4,events.backgroundRoutine());assertEquals(13,events.redrawRemaining());

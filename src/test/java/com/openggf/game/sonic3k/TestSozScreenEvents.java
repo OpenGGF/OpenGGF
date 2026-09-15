@@ -47,7 +47,14 @@ class TestSozScreenEvents {
         assertTrue(state.events().artJobOrdinal() >= 0);
         var registry = fixture.gameplayMode().getRewindRegistry();
         var before = registry.capture();
-        for (int frame = 0; frame < 20; frame++) fixture.stepFrame(false, false, false, false, false);
+        int serviceFrames = 0;
+        // The placed final boss also submits ROM art; wait for the real queue
+        // completion instead of assuming an otherwise-empty 20-frame schedule.
+        while ((state.events().artJobOrdinal() >= 0 || state.events().blockJobOrdinal() >= 0)
+                && serviceFrames < 240) {
+            fixture.stepFrame(false, false, false, false, false);
+            serviceFrames++;
+        }
         assertEquals(-1, state.events().artJobOrdinal());
         assertEquals(-1, state.events().blockJobOrdinal());
         byte[] art = new com.openggf.level.resources.ResourceLoader(GameServices.rom().getRom())
@@ -60,7 +67,7 @@ class TestSozScreenEvents {
         }
         var after = registry.capture();
         registry.restore(before);
-        for (int frame = 0; frame < 20; frame++) fixture.stepFrame(false, false, false, false, false);
+        for (int frame = 0; frame < serviceFrames; frame++) fixture.stepFrame(false, false, false, false, false);
         var replay = registry.capture();
         for (String key : after.entries().keySet()) {
             var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, after.get(key), replay.get(key));

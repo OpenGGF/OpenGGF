@@ -31,6 +31,12 @@ class TestSozFallingIntro {
         assertTrue(buried);
         var before=registry.capture();
         fixture.stepFrame(false,false,false,false,true);
+        assertEquals(0,main.getLogicalInputState());
+        for(var sidekick:GameServices.sprites().getSidekicks()) {
+            assertEquals(0,sidekick.getLogicalInputState());
+            assertEquals(0,sidekick.getCpuController().getDiagnosticGeneratedHeldInput());
+            assertEquals(0,sidekick.getCpuController().getDiagnosticGeneratedPressedInput());
+        }
         for(int i=0;i<20;i++)fixture.stepFrame(false,false,false,false,false);
         var after=registry.capture();
         assertFalse(main.isControlLocked());

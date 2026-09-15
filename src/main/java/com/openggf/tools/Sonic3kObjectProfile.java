@@ -85,6 +85,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x34, // StarPost
             0x35, // AIZForegroundPlant
             0x41, // CNZBalloon / SOZLightSwitch
+            0x98, // Poindexter / SOZEndBoss
             0x97, // MegaChopper / SOZMiniboss
             0xAA, // FBZMiniboss / Hyudoro
             0xAB, // FBZ2Subboss / SOZHyudoroArtTrigger
@@ -194,7 +195,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x91, // AIZMiniboss
             0x92, // AIZEndBoss
             0x93, // Jawz
-            0x98, // Poindexter
             0x99, // HCZMiniboss
             0x9A, // HCZEndBoss
             0x9B, // BubblesBadnik
@@ -342,7 +342,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x95, // Buggernaut
             0x96, // TurboSpiker
             0x97, // MegaChopper
-            0x98, // Poindexter
             0x9B, // BubblesBadnik
             0x9C, // Spiker
             0x9D, // Mantis

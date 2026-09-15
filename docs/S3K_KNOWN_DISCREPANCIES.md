@@ -1826,14 +1826,25 @@ execution record.
 
 ## SOZ Background Event Modes and Torch Animation
 
-Normal Act 1 desert parallax, heat shimmer, scroll-driven animated-art extent
-and sand palette cycling are implemented with bounded checks. Unused LRZ scripts
-are excluded so static desert art remains intact; the background repeat period
-is preserved in widescreen. Act 1's arena
-background replacement/rising sand and seamless transition are not yet owned;
-the animator retains the existing camera-lock phase-zero compatibility bridge.
-Act 2 still uses generic scroll fallback and lacks its custom darkness-coupled
-torch animation and event-selected background modes. These require the actual
-zone-event/palette state rather than camera-position heuristics or a bright-only
-animation loop. Full native pixel certification also remains open. See the
-[SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md#explicit-presentation-work-and-revised-next-batch).
+Normal desert parallax/heat shimmer and animated art, Act1 arena replacement,
+rising sand and seamless Act2 events are implemented. The animator reads the
+native event phase instead of camera-lock heuristics. Act2 implements its normal,
+sand-room, boss and post-boss scroll modes; torches and palette fades share the
+captured light state, including boss inhibition and release.
+
+**Remaining presentation gap:** native redraw helpers update two VDP rows per
+pass. Event timing follows that cadence, but the general renderer rebuilds the
+selected source window as a whole. Exact partially rewritten Plane-A/Plane-B
+pixels during the arena/seamless redraw require retained planes across the load
+boundary. Normal desert and final temple/ghost scenes have inspected captures;
+full native pixel certification remains open.
+
+**Native low-level limits:** failed spring-vine allocation can write foreign SST
+bytes (above). Cork quiet-skid polling and the boss charge's failed-allocation
+terminal poll can also read bytes belonging to an arbitrary foreign object.
+Known SOZ terminal states are represented, but no arbitrary SST-byte service is
+invented to reproduce unrelated memory contents. Final-boss PLC6D art loads from
+the ROM; exact later Nemesis FIFO service timing remains a shared service gap.
+
+See the [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act
+matrices for current route, rewind and compatibility evidence.

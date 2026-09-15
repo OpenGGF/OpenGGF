@@ -205,7 +205,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and connected push switches and doors, including special-rock activation and correct body-over-track layering.
   Sandopolis Act 1 now has layered desert parallax, foreground and background heat shimmer, scroll-driven
   background art and cycling sand colors, with preserved static desert tiles
-  and consistent background wrapping in widescreen.
+  and consistent background wrapping in widescreen. Both acts also implement
+  swinging platforms, rappel wires, sand blocks, rising walls and corks, and
+  Skorp, Sandworm and Rockn. The cold sand intro, Egg Golem arena and seamless
+  Act 2 entry use native event owners. Act 2 couples light switches, ghosts,
+  torches and palette fades, and implements the final boss, collapsing wall,
+  capsule/results and Lava Reef exit request. Mechanism state survives kept
+  stage returns, and object graphs reconstruct across rewind. Full-route and
+  transient VDP redraw limits remain documented in the per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. MHZ end-boss debris

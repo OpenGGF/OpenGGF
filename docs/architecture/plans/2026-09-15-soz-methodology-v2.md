@@ -1696,3 +1696,45 @@ state, since session overrides survive the per-test reset and contaminated the
 next cold-entry test. Two cold/skip and full-state emergence replay tests pass
 with no skips (queued `TestSozFallingIntro`, 48.432s). Ordinary trace still exposes
 an extra initial integration and companion cadence; this is not trace parity.
+
+### Boss, title and transition integration
+
+- `382eee7fc`: final boss and child graph, real eight-hit combat, wall handshake,
+  capsule/results, escape and native LRZ request. Corrected production breadth
+  asserts actual320/352/400/512/528/640/800 widths and follower counts:68tests,
+  zero skips. An earlier width/team setup was invalid and is not breadth evidence.
+  Shared capsule results support now captures/relinks its participant owners.
+- `1919562e6`: Act1 arena admission, controller/door, rising sand and seamless
+  Act2 load/title/fades.22focused tests passed, zero skips (21.593s). Natural
+  admission from a positioned approach appears in the26.667s arena film; this
+  is not a cold full-act victory. Temple rendering needed source-window selection,
+  raw layout columns and background-high replay above foreground-low. Correct
+  CPU art alone did not prove the displayed image. Merge64b7e4be9 retained
+  both acts' independent art registrations and palette/window runtime methods.
+- `0176523e6`: capture startup now retires the omitted title through its native
+  owner, permitting Hyudoro initialization. Raw title-request consumption had
+  hidden ghosts from otherwise plausible positioned captures. Four capture
+  regressions and four ghost lifecycle checks passed, zero skips.
+- `a203872dc`: explicit captured graph-reference policies and forced recreation
+  in production rewind helpers.58guard/production checks plus24strengthened
+  out-of-place checks passed, zero skips.
+- `04cbcd574`: source `loc_13AB4→loc_13B18` preserves assembled sidekick state
+  instead of clearing object control in CPU INIT. A game-owned semantic service
+  selects the branch; shared CPU code does not name a zone.169focused consumers
+  and58required S3K loading/bootstrap regressions passed, zero skips.
+
+Remaining visual limit: event redraw counters follow native two-row cadence,
+while the renderer presents the new selected source window as a whole. Exact
+partial Plane-A/Plane-B contents across seamless load need retained-plane
+ownership and cross-load reconciliation, not a fitted delay. No such renderer
+migration is included in this slice. Ordinary-route and final combined delivery
+checks remain distinct from the above focused evidence.
+
+The merged art/event check completed30tests:29passed and one assumed an empty
+20-frame art queue. The final boss adds legitimate ROM work; the test now awaits
+the real completion token with a bounded240-frame limit and replays the observed
+number of steps. Six screen checks plus five arena checks pass after that fix.
+The explicit mapping corruption guard, intro and sidekick state checks pass
+(6tests,0skips,53.335s). Ordinary-input cold capture reaches death at3988; it
+is retained as an unsuccessful route attempt. The missing terrain sand-slide
+owner found at trace1419 is the next concrete traversal fix.
