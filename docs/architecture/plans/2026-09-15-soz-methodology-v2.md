@@ -650,3 +650,43 @@ Result on integrated `8cb81eb29`: 20 tests passed, zero failures/errors/skips,
 the inherited full-guard failures recorded in the spring-vine section were not
 rerun or claimed resolved. Documentation checks found 95 valid local link targets,
 identical skill mirrors and no whitespace errors.
+
+
+### CI profile-expectation follow-up
+
+[CI 34974147324](https://github.com/OpenGGF/OpenGGF/actions/runs/34974147324)
+on pushed `d3cd963a4` ran 19,137 smoke tests: one failure, zero errors, 2,833
+skips (6m11s). The obsolete progression stub failure is resolved. The new failure
+is `TestSonic3kObjectProfile.cnzPlacedActorsAreMarkedImplementedForS3klLevelsOnly`:
+its old array required `$44` to remain absent from SKL. The registry/profile guard
+passed locally, but that separate expectation test was missed by focused selection.
+This is a missed test update caused by the new shared `$44` classification.
+
+Follow-up base `d3cd963a4`, isolated `.worktrees/soz-rock-profile`, branch
+`bugfix/ai-soz-rock-profile`: remove `$44` from the CNZ-only assertions and add
+explicit coverage of both pointer-table owner names and both acts' implemented
+profiles for CNZ and SOZ. No production behavior changes. Focused validation covers
+`TestSonic3kObjectProfile`, `TestSonic3kObjectProfileRegistryGuard`,
+`TestSozBreakableSandRock` and `TestLevelManagerEndProgression`. The existing CI
+failure supplies the failing case; no broad rerun is needed to verify a test-only
+expectation update. CI smoke still runs on the replacement push.
+
+The follow-up change-based plan selects 300 common/tooling classes plus guards.
+This test-only correction uses the proportionate-validation exception and the four
+focused classes above; the implementation's completed ROM/rewind/structural checks
+remain unchanged. CI individually confirmed seven rock unit tests and eight
+progression tests passing, while `TestSozSandRockProduction` was skipped because
+CI has no ROM; its five positioned configurations executed locally.
+
+Follow-up focused command (worktree based on `d3cd963a4`):
+`python3 tools/testing/maven_queue.py -Dmse=off
+'-Dtest=TestSonic3kObjectProfile,TestSonic3kObjectProfileRegistryGuard,TestSozBreakableSandRock,TestLevelManagerEndProgression'
+test -B` passed 23 tests, zero failures/errors/skips, 49.714s. The replacement
+profile test positively checks each implemented owner; it does not weaken the
+remaining CNZ-only assertions.
+
+Follow-up commit `67366458d` integrated without conflicts as `79e20e6bb`.
+On that develop commit, `python3 tools/testing/maven_queue.py -Dmse=off
+'-Dtest=TestSonic3kObjectProfile,TestSonic3kObjectProfileRegistryGuard' test -B`
+passed all eight tests, zero failures/errors/skips, 19.173s. The integrated tracked
+tree matches the tested worktree; unrelated local files are preserved.
