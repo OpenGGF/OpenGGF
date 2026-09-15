@@ -27,6 +27,9 @@ public final class RewindController {
     private int gameplayCheckpointInterval;
     private final AudioManager audioManager;
     private final AudioKeyframeStore audioKeyframes;
+    // GameLoop owns a monotonic audio clock across title/fade/load ticks. Its
+    // externally recorded gameplay frames have a separate, resettable origin.
+    private final java.util.NavigableMap<Integer, Long> audioTimelineFrames = new java.util.TreeMap<>();
     private final SectionProfiler profiler;
 
     private int currentFrame;
@@ -131,6 +134,7 @@ public final class RewindController {
         keyframes.put(currentFrame, registry.capture());
         if (audioKeyframes != null) {
             audioKeyframes.clear();
+            audioTimelineFrames.clear();
             captureAudioKeyframe(currentFrame);
         }
     }
@@ -151,6 +155,7 @@ public final class RewindController {
         keyframes.put(0, registry.capture());
         if (audioKeyframes != null) {
             audioKeyframes.clear();
+            audioTimelineFrames.clear();
             captureAudioKeyframe(0);
         }
     }
@@ -171,6 +176,7 @@ public final class RewindController {
             return;
         }
         currentFrame++;
+        observeAudioTimelineFrame(currentFrame);
         if (currentFrame % gameplayCheckpointInterval == 0) {
             keyframes.put(currentFrame, registry.capture());
         }
@@ -192,7 +198,10 @@ public final class RewindController {
         }
         commitDeferredAudioRestore();
         currentFrame++;
-        beginAudioFrame(currentFrame);
+        // Observe the completed host tick. Setting its audio clock to the
+        // shorter rewind counter here made fade/load callbacks append behind
+        // already-recorded commands before the host began its next tick.
+        observeAudioTimelineFrame(currentFrame);
         segmentCache.invalidate();
         if (currentFrame % gameplayCheckpointInterval == 0) {
             keyframes.put(currentFrame, registry.capture());
@@ -274,6 +283,7 @@ public final class RewindController {
         keyframes.discardBefore(retainedKeyframe);
         if (audioKeyframes != null) {
             audioKeyframes.discardBeforeRetainingFloor(retainedKeyframe);
+            audioTimelineFrames.headMap(retainedKeyframe, false).clear();
             AudioLogicalSnapshot earliestAudio = audioKeyframes.earliestSnapshot();
             if (earliestAudio != null) {
                 audioManager.pruneAudioCommandsBefore(earliestAudio.commandEntryCount());
@@ -557,27 +567,42 @@ public final class RewindController {
 
     private void beginAudioFrame(int frame) {
         if (audioManager != null) {
-            audioManager.beginCommandTimelineFrame(frame);
+            audioManager.beginCommandTimelineFrame(audioTimelineFrame(frame));
         }
     }
 
     private void discardAudioAfter(int frame) {
         if (audioManager != null) {
-            audioManager.discardAudioCommandsAfter(frame);
+            audioManager.discardAudioCommandsAfter(audioTimelineFrame(frame));
             audioKeyframes.discardAfter(frame);
+            audioTimelineFrames.tailMap(frame, false).clear();
         }
     }
 
     private void captureAudioKeyframe(int frame) {
         if (audioKeyframes != null) {
+            observeAudioTimelineFrame(frame);
             audioKeyframes.capture(frame, audioManager);
         }
     }
 
     private void restoreAudioLogicalState(int frame) {
         if (audioKeyframes != null) {
-            audioKeyframes.replayToLogicalState(audioManager, frame);
+            audioKeyframes.replayToLogicalState(audioManager, frame, audioTimelineFrame(frame));
         }
+    }
+
+    private void observeAudioTimelineFrame(int frame) {
+        if (audioManager != null) {
+            audioTimelineFrames.put(frame, audioManager.commandTimeline().currentFrame());
+        }
+    }
+
+    private long audioTimelineFrame(int frame) {
+        var floor = audioTimelineFrames.floorEntry(frame);
+        // A not-yet-recorded internal step advances one audio frame from its
+        // predecessor. Restores/external frames use their exact observed clock.
+        return floor == null ? frame : floor.getValue() + (frame - floor.getKey());
     }
 
     private void primeStepperAtFrame(int frame) {

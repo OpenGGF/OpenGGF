@@ -9,34 +9,34 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 
 | Route/dimension | Obligation | Current evidence / gap |
 | --- | --- | --- |
-| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Full route open; short quicksand checks tracked below |
-| Tails solo | Same, including native character branches and flight interactions | Unassessed |
-| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Unassessed; no unsupported classification |
-| Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Local quicksand participant test only; production breadth open. Resolve current maximum from production team contract |
-| Widths 320/400/512/640/800 | Actual camera/render widths; entry/reset × every supported donor; sensitive interactions and rewind | Representative Act 1 quicksand test only; full per-act breadth open |
-| Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Representative Act 1 S1 quicksand test only; remaining per-act breadth open |
+| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Native-character checkpoint coverage and positioned mechanisms/boss boundaries implemented; Act 1 has short cold quicksand/vine routes. Connected cold completion remains open |
+| Tails solo | Same, including native character branches and flight interactions | Every authored post activates/reloads; selected traversal and boss branches covered. Full flight-sensitive route and victory remain open |
+| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Every authored post activates/reloads; local native character branches and selected mechanisms covered. Full distinct route/progression remains open |
+| Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Selected mechanisms and three-player terrain restore/replay covered; repeated checkpoint team reset evidence below. No finite follower maximum is declared by the production team contract; full multi-owner interaction breadth remains open |
+| Widths 320/400/512/640/800 | Actual camera/render widths; entry/reset × every supported donor; sensitive interactions and rewind | Representative checkpoint covers all five actual widths × three leaders × off/S1/S2 in this act. Selected sensitive interactions also cover widths; this is not full traversal/render coverage at every width |
+| Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Representative checkpoint covers each donor × five widths × three leaders, asserting movement capability and reload state. Full donor interaction/boss/route product remains open |
 
 Decoded checkpoint placements: `$02` at `($0860,$05C8)`, `$03` at `($13F0,$0428)`, `$04` at `($1F00,$0108)`, `$05` at `($3280,$01A8)`, `$06` at `($4EC0,$04A8)`.
 `TestSozCheckpointReloadProduction` now physically activates post2 at `($860,$5C8)`,
 recreates/restores the activation state, then exercises production death/reload
-for Sonic, Tails and Knuckles. All other posts now have native-character activation/reload checks; repeated-reset breadth remains open.
+for Sonic, Tails and Knuckles. All five posts have native-character activation/reload checks. The representative post also covers the complete five-width × three-donor × three-leader product; other posts use native 320 configurations.
 
 ## Behavioral obligations
 
 | Boundary | Implementation / test binding | Reachability | Rewind | Native behavior | Pixels |
 | --- | --- | --- | --- | --- | --- |
-| PARALLAX / BACKGROUND MODES | `SwScrlSoz` normal half-scroll, rising rooms, boss wall and saved background modes implemented | Entry pyramid, outdoor section, sand rise and boss mode boundaries open | Each mode/vertical-wrap transition and forward replay open | `sub_566D2`, `sub_566E8`, `sub_56706`, `SOZ2_BGDrawArray` | Standard/wide scroll bands, seams and native sequence comparison open |
-| ANIMATED TORCH TILES / PALETTE | Custom torch DMA and captured master/fade/sand clocks implemented, including boss hold/release | Light pull across darkening/brightening cadence open | Timer/frame/fade, art restore, boss inhibition and reload open | `AnimateTiles_SOZ2`: old-byte frame sequence 0/1/2, eight-pass period, six-tile DMA; pinned intensity branch | Torch pixels must agree with palette at adjacent steps; GPU visibility open |
-| ENTRY / LOAD / RESET | ROM loading and event/scroll owners implemented; cold sand intro in Act1 and title-owned ghosts in Act2 | Full entry product open | Load timeline/reset isolation open | Unmatched | Unmatched |
+| PARALLAX / BACKGROUND MODES | `SwScrlSoz` normal half-scroll, rising rooms, boss wall and saved background modes | `TestSozScreenEvents` exercises room/boss modes and native position gates; connected route open | Sand collision offset, ROM layout mutation and boss-wall solid recreation tested; full connected wrap/exit replay open | `sub_566D2`, `sub_566E8`, `sub_56706`, `SOZ2_BGDrawArray` source checks | Standard/wide matched native sequence comparison open |
+| ANIMATED TORCH TILES / PALETTE | Custom torch DMA and captured master/fade/sand clocks implemented, including boss hold/release | `TestSozLightGhostCompatibility` covers actual light hold/release and ghost/fade behavior | Palette/torch clocks and art state covered by focused lighting/animation and production replay; full cadence movie open | `AnimateTiles_SOZ2`: old-byte frame sequence 0/1/2, eight-pass period, six-tile DMA; pinned intensity branch | Torch pixels must agree with palette at adjacent steps; GPU visibility open |
+| ENTRY / LOAD / RESET | ROM loading and event/scroll owners implemented; cold sand intro in Act1 and title-owned ghosts in Act2 | Fresh/seamless entry and title-owned ghosts tested; full incoming cold route open | Act1→Act2 destination replay, all checkpoints and selected repeated team reloads covered; repeated seamless-transition cycles open | Unmatched | Unmatched |
 | Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Local slide cooldown reconstruction; full registered-state before/contact/release spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
 | Sand-rock rolling landing / breakup / removal | `SozBreakableSandRockObjectInstance`; saved animation and owner standing latch | `TestSozSandRockProduction`: positioned first-rock spot; cold reachability open | All registered state restored and replayed twice at break, phase 6 and phase 24 removal | Source-derived; mixed-rider and offscreen retained-latch unit checks; native trajectory unmatched | ROM mapping/art checks pass; Act 1 shares the inspected mapping; Act 2 visual comparison open |
 | Pushable rock / edge fall / track ride / stop | `SozPushableRockObjectInstance`; ROM track and native push priority | `TestSozPushableRockProduction`: first-rock positioned push, board/brake and complete ride at 320; cold reachability open | All registered state restored/replayed twice at push, initial fall, horizontal start and terminal; boarding also covered | Source-reviewed and real rider carry tested; native trajectory open; subtype `$87` coupling is covered by the connected-mechanism continuation | ROM mapping/art checks pass; shared Act 1 display inspected; Act 2 pixel comparison open |
-| Other traversal objects / badniks | All599 Act1/490 Act2 placed records bind to concrete factories; local production graphs covered | Open | Before/contact/held/release and creation/deletion open | Unmatched | Unmatched |
-| CHECKPOINT / DEATH | Five authored checkpoint records; physical activation and production death/reload at one post for all three native leaders | Open | Respawn/reset isolation open | Unmatched | Unmatched |
-| WORLD / CAMERA / EVENTS | Captured `SozEventState`/lighting/wall owners and mutation pipeline implemented | Open | Before/active/after sand rise, camera lock, terrain/palette changes open | Unmatched | Unmatched |
-| BOSS / EXIT | Endboss eight-hit combat, wall reconstruction, capsule/results and native LRZ request implemented | Open | Before spawn/attack/hit/defeat/cleanup open | Unmatched | Unmatched |
-| Darkness / switch / ghosts / torches | Native pilot plus engine switch/capsule/ghost and coupled palette/torch owners implemented | Native ordinary-input Tails switch pull observed; engine route open | Before/at fade steps, grab/pull/release and capsule/checkpoint ghost state open | 900-frame darkness and four-frame palette cadence observed; independent P2 switch ownership proven | Native PNGs inspected; engine comparison open |
-| Vertical wrap / rising sand | Catalogue identifies extended wrap and special-event collision | Open | Cross-wrap and moving collision replay open | Unmatched | Unmatched |
+| Other traversal objects / badniks | All 599 Act1/490 Act2 placed records bind to concrete factories; family production tests listed below | Positioned family reachability; connected cold routes remain open | Short graph/contact/creation/deletion restore/replay, including forced recreation; complete per-placement/participant product open | Source-backed branches; matched native sequences remain open | Local ROM-art captures; full pixel comparison open |
+| CHECKPOINT / DEATH | `TestSozCheckpointReloadProduction`: all five authored posts × three native leaders; representative post also covers five widths and three donors | Physical activation from positioned approaches; cold route between posts open | Activation recreated/replayed, production death/reload; selected repeated mixed/duplicate-team reset checks below | Source checkpoint placement/respawn assertions; matched native death movie open | Native pixel comparison open |
+| WORLD / CAMERA / EVENTS | Captured `SozEventState`/lighting/wall owners and mutation pipeline | Positioned cork/room/wall and boss stimuli exercised | `TestSozScreenEvents` covers cork layout, fractional sand collision and eight-solid wall graph; connected full-route sequence open | ROM tables and native event thresholds checked; matched sequence open | Local captures; whole-route comparison open |
+| BOSS / EXIT | Endboss eight-hit combat, wall reconstruction, capsule/results and LRZ load implemented | `TestSozEndBossProduction`: positioned combat and real-player hits through results, escape and GameLoop LRZ load; cold approach open | Graph/charge and killing-hit/results/post-results replay; outgoing timeline reset and LRZ title/control readiness verified. Repeated exits and donor combat breadth open | Native source graph/combat/escape; matched native trajectory open | Seven actual widths exercised; sparse boss stills, not matched continuous native combat film |
+| Darkness / switch / ghosts / torches | Native pilot plus engine switch/capsule/ghost and coupled palette/torch owners implemented | Native ordinary-input Tails pull plus positioned engine switch/capsule/ghost behavior in 19 configurations; connected cold route open | Hold/release, capsule opening and actual multi-player ghost contacts recreated/replayed; complete lighting journey open | 900-frame darkness and four-frame palette cadence observed; independent P2 switch ownership proven | Native PNGs inspected; engine comparison open |
+| Vertical wrap / rising sand | Runtime extended wrap and fractional rising-sand collision implemented | Source-gated positioned room/sand tests; connected cork→wrap→loop-exit route open | Fractional collision offset, terrain mutation and wrapped slide lookup recreated/replayed; connected cross-wrap movement open | Source-derived arithmetic; native sequence match open | Matched sequence open |
 
 ## Spring-vine continuation
 
@@ -154,11 +154,41 @@ follower counts;68latest boss tests passed with no skips.
 Checkpoint breadth now covers both acts × three native leaders × five widths
 (320/400/512/640/800) × donors off/S1/S2:90physical activation, full-state
 recreation/replay and death/reload cases passed, no skips (21.253s). Actual
-width/donor/capability is asserted before interaction and after reload. All remaining checkpoint placements have24additional native-character cases
-(19.432s,0skips). Mixed/max-team reset breadth remains open.
+width and donor activation are asserted before interaction and after reload;
+donor identity and movement capability are asserted before interaction. All remaining checkpoint placements have24additional native-character cases
+(19.432s,0skips). Repeated mixed/duplicate-team checks are recorded below; a finite maximum roster is not specified by production.
 
 `1bd8dfcb5` implements the separate layout-driven `sub_730C` sand slide,
 including speed, facing, radii, animation, exit lock and per-act row mask.
 Twenty-seven focused ROM/shared-provider/production checks pass with zero skips,
 including both acts, wrapped coordinates, three actual players and recreation.
-This closes an inventory omission; ordinary route replay is being re-evaluated.
+`36af09e67` moves the handler after camera scrolling and screen events; both-act production frame-order and full-state replay checks pass. Ordinary route replay is still being re-evaluated.
+
+## Repeated team checkpoint resets and remaining limits
+
+`TestSozTeamCheckpointResetProduction` physically activates the representative
+post with Sonic plus `tails,knuckles`, and with Sonic plus
+`tails,tails,knuckles,sonic,knuckles,sonic`. Both acts run two consecutive
+GameLoop death/reloads in the same session (four cases, eight reloads). The
+checks assert independent duplicate sprites, the exact live CPU leader chain,
+new object/runtime owners, retirement of a deliberately stale rock-slot pointer,
+outgoing live-rewind timeline reset, and native title/fade control release.
+These are native-donor, 320-pixel cases with Sonic leading; they do not close
+all-character/donor/viewport team reset coverage.
+
+There is no finite maximum follower count in `ActiveGameplayTeamResolver`,
+`GameplayTeamBootstrap` or `SelectedTeam`; the seven-player case is a bounded
+stress roster, not proof of a maximum-supported boundary.
+
+This check exposed an audio-clock lifecycle bug with live rewind enabled:
+external recording moved the host command clock back to the smaller rewind
+frame number, so death-fade completion could append load audio out of order.
+The correction retains logical-to-audio frame coordinates for seek/truncation,
+including pruning and reroots, without suppressing the timeline invariant.
+The shared controller/audio regression selection passed 75 tests with zero skips
+(including these four production cases); this is focused validation, not a full suite.
+
+Remaining obligations include connected cold victory routes, matched native
+trajectories/pixels, repeated seamless/next-zone transitions, every checkpoint's
+full width/donor/team product, and coupled mechanism ownership across those
+routes. Selected configuration and local graph tests are not full-act certification.

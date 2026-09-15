@@ -31,6 +31,59 @@ class TestRewindControllerAudioSuppression {
     }
 
     @Test
+    void externalHostClockSurvivesSeekBranchResetAndInternalSteps() {
+        audio.beginCommandTimelineFrame(100);
+        audio.resetRingSound();
+        RewindController controller = new RewindController(new RewindRegistry(),
+                new InMemoryKeyframeStore(), new FakeInputSource(20), in -> {
+                    audio.playSfx(com.openggf.audio.GameSound.RING);
+                    return com.openggf.LevelFrameResult.GAMEPLAY_FRAME;
+                }, 5, audio);
+        controller.step();
+        assertEquals(101,audio.commandTimeline().currentFrame());
+        assertEquals(false,audio.captureLogicalSnapshot().ringLeft());
+        audio.beginGameplayAudioFrame(120);audio.resetRingSound();controller.recordExternalStep();
+        assertEquals(120,audio.commandTimeline().currentFrame(),"external recording must not rewrite the host clock");
+        audio.resetRingSound(); // The same out-of-tick callback as level-load InitAudio.
+        audio.beginGameplayAudioFrame(150);audio.playSfx(com.openggf.audio.GameSound.RING);controller.recordExternalStep();
+        controller.seekTo(2);
+        assertEquals(120,audio.commandTimeline().currentFrame());
+        assertTrue(audio.captureLogicalSnapshot().ringLeft(),"seek must include frame 120 reset but exclude frame 150 ring");
+        assertTrue(audio.commandTimeline().entries().stream().allMatch(entry->entry.frame()<=120));
+        controller.step();
+        assertEquals(121,audio.commandTimeline().currentFrame(),"internal branch continues from the selected host coordinate");
+        assertEquals(false,audio.captureLogicalSnapshot().ringLeft());
+        audio.beginGameplayAudioFrame(170);audio.resetRingSound();controller.recordExternalStep();
+        controller.resetToFrameZero();
+        assertEquals(0,controller.currentFrame());assertEquals(170,audio.commandTimeline().currentFrame());
+        controller.step();assertEquals(171,audio.commandTimeline().currentFrame());
+        assertEquals(false,audio.captureLogicalSnapshot().ringLeft());
+        controller.seekTo(0);assertEquals(170,audio.commandTimeline().currentFrame());
+        assertTrue(audio.captureLogicalSnapshot().ringLeft(),"new frame-zero audio base is the loaded level's state");
+    }
+
+    @Test
+    void pruningExternalClockMapRetainsCommandsBetweenAudioCheckpoints() throws Exception {
+        audio.beginCommandTimelineFrame(1000);
+        RewindController controller = new RewindController(new RewindRegistry(),
+                new InMemoryKeyframeStore(), new FakeInputSource(200), in ->
+                    com.openggf.LevelFrameResult.GAMEPLAY_FRAME,60,audio);
+        controller.setGameplayCheckpointInterval(10);
+        for(int frame=1;frame<=130;frame++) {
+            audio.beginGameplayAudioFrame(1000+frame*3);
+            if(frame==65)audio.playSfx(com.openggf.audio.GameSound.RING);
+            if(frame==80)audio.resetRingSound();
+            controller.recordExternalStep();
+        }
+        assertEquals(70,controller.pruneHistoryToRetainFrames(60));
+        var field=RewindController.class.getDeclaredField("audioTimelineFrames");field.setAccessible(true);
+        assertEquals(61,((java.util.Map<?,?>)field.get(controller)).size(),"coordinate map is pruned with gameplay history");
+        controller.seekTo(70);
+        assertEquals(1210,audio.commandTimeline().currentFrame());
+        assertEquals(false,audio.captureLogicalSnapshot().ringLeft(),"logical keyframe lookup and audio cutoff use their own clocks");
+    }
+
+    @Test
     void pruningBetweenAudioCheckpointsPreservesInterveningCommandForSeek() {
         RewindController controller = new RewindController(new RewindRegistry(),
                 new InMemoryKeyframeStore(), new FakeInputSource(200), in -> {

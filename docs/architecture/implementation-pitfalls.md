@@ -160,6 +160,16 @@ reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
 versions. Diagnose against a source of truth instead of twiddling knobs.
 
+**External audio clocks are not rewind frame numbers.** GameLoop's audio clock
+continues through title/fade intervals while live rewind records gameplay only
+and resets its origin on level loads. `recordExternalStep` must observe the
+completed host clock, not overwrite it with the shorter rewind counter: a fade
+completion can issue `InitAudio` commands before the next host tick and violate
+timeline ordering. Keep the recorded coordinate mapping for seek/truncation,
+prune it with history, and reroot it at load boundaries. Test internal/external
+step changes, branching, and consecutive death reloads with live rewind enabled.
+Origin: SOZ mixed/duplicate-team checkpoint validation, 2026-09-15.
+
 **AniPLC submission is not presentation.** S3K `AnimateTiles_DoAniPLC` changes
 counters and queues immutable ROM art; `Process_DMA_Queue` publishes it during a
 later eligible VInt. Keep Level patterns, the level atlas and aliased object
