@@ -110257,3 +110257,12 @@ stage. Segment 11 has 28,200 errors, first row 212 Y speed `$0528`/`-$0528`,
 and misses the next entry. EHZ1 and the existing return-art timing differences
 remain open. See the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
 for intermediate candidates, exact boundaries and final validation follow-up.
+
+
+Implementation `36479a2fc` reconciles updated develop without conflicts as
+`d31238136`. Probe-free KiS2/S1/S2 chain and load checks complete 43 tests:
+40 passes, three red chains, no errors/skips (1:12). Every KiS2 report matches
+the measured candidate, and every stock S1/S2 report matches the pre-task
+baseline. Separate `-Ptrace-replay-r7` FBZ/AIZ/loading/bootstrap/decoder checks
+pass all 59 tests, no errors/skips (37.194 s); full FBZ replay remains green.
+Combined ordinary/guard validation follows on the frozen reconciled tree.

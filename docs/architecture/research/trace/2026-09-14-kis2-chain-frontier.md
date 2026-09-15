@@ -628,3 +628,40 @@ Measured frontier:
   art-only interior rows. EHZ1 segment results remain unchanged. The first
   three return-art gaps remain 39 movie frames early; fourth/fifth returns
   are 37/38 early, and the segment-9 cascade also leaves ledger differences.
+
+
+Source fix `36479a2fc` reconciles current develop `1cfe9ef82` without conflicts
+as `d31238136`; the incoming support/configuration refactor is retained. The
+probe-free focused command on that merged tree was (ROM variables denote the
+verified absolute paths to the existing root dumps):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  -Dsurefire.forkCount=1 \
+  '-Dtest=TestLevelAdvanceLoadReceipt,TestGameLoopFreezeContractWiring,TestLevelIterationAdmissionController,TestLevelEntryPathsHeadless,TestLevelManagerEndProgression,TestKis2CompleteEmeraldRunChain,TestS1CompleteEmeraldRunChain,TestS2CompleteEmeraldRunChain' \
+  "-Dkis2.rom.path=$KIS2_ROM" \
+  "-Dsonic2.rom.path=$S2_ROM" \
+  "-Dsonic1.rom.path=$S1_ROM" test
+```
+
+Result: 43 tests, 40 passes and three red chains, no errors/skips, 1:12 Maven
+time. All 15 parsed KiS2 reports match the probe candidate exactly. All 16 stock
+S1/S2 reports match the retained pre-task baseline reports exactly, including
+fields, values, spans and bootstrap/verification groups. S1 still stops at
+segment 12 `mz2_3` (giant-ring boundary), S2 at its second special-stage art
+comparison. These are unchanged red controls, not parity claims.
+
+Separate shared-admission S3K coverage:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 \
+  -Dsurefire.forkCount=1 \
+  '-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$S3K_ROM" test
+```
+
+All 59 tests pass, no errors/skips (37.194 seconds); complete FBZ replay passes
+in 16.80 seconds. The change-based plan against pre-task `59d5b8881` selects all
+2,585 ordinary classes and guards because the admission owner is shared.
+Normal combined validation is required; the earlier observation-only receipt
+fix's proportionate-validation exception is not used for this timing change.
