@@ -1042,3 +1042,10 @@ assertions, object/art/profile guards, unchanged S3K loading gates and the verif
 1,017/797/220 rewind inventory. Changed documentation links, AGENTS mirror and
 whitespace checks passed. No category-run diagnostics were created. These are
 focused checks, not full-suite or full-zone certification.
+
+Implementation `8aa71f8f6` integrated without conflict as
+`0973cba4ec4258017df2aedcd232e3b422c9f95c`. The same combined focused command
+passed on that actual `develop` commit: **255 tests, zero failures/errors/skips**,
+51.979 seconds, completed 17:45:22 BST. No implementation changes occurred during
+integration; the separate 123 structural checks remain applicable. The native
+probe and engine image are bounded corroboration/visual checks as described above.
