@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -124,7 +125,7 @@ public class TestS3kSozPatternAnimation {
     }
 
     @Test
-    public void soz1BossArenaCompatibilityBridgeForcesPhaseZero() {
+    public void soz1NativeArenaRoutineForcesPhaseZero() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(0x08, 0)
                 .build();
@@ -134,6 +135,7 @@ public class TestS3kSozPatternAnimation {
         camera.setX((short) 0x4380);
         camera.setY((short) 0x0960);
 
+        assertFalse(com.openggf.game.GameServices.level().getZoneFeatureProvider().bgWrapsHorizontally(), "Normal desert retains its multi-band plane");
         Sonic3kPatternAnimator animator = resolvePatternAnimator();
         assertNotEquals(0, animator.computeSoz1Phase(),
                 "Sanity check: SOZ1 phase should not already be zero before the boss lock bridge is active");
@@ -141,8 +143,12 @@ public class TestS3kSozPatternAnimation {
         camera.setMinX((short) 0x4180);
         camera.setMinY((short) 0x0960);
 
-        assertEquals(0, animator.computeSoz1Phase(),
-                "Expected SOZ1 boss-arena compatibility bridge to force the custom phase back to zero");
+        assertNotEquals(0, animator.computeSoz1Phase(), "Camera bounds alone do not own animation phase");
+        com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                com.openggf.game.GameServices.zoneRuntimeRegistry()).orElseThrow().events().backgroundRoutine(4);
+        assertEquals(0, animator.computeSoz1Phase(), "Native arena background words are equal");
+        assertTrue(com.openggf.game.GameServices.level().getZoneFeatureProvider().bgWrapsHorizontally());
+        assertTrue(com.openggf.game.GameServices.level().getZoneFeatureProvider().useLinearBackgroundLayoutOverflow(8));
     }
 
     @Test

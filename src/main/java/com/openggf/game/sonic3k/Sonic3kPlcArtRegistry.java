@@ -2316,6 +2316,7 @@ public final class Sonic3kPlcArtRegistry {
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
         if (actIndex == 0) {
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_ACT1_END_DOOR,0x5611E,0x29,2,null));
             standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SOZ_MINIBOSS,
                     Sonic3kConstants.ART_KOSM_SOZ_MINIBOSS_ADDR, CompressionType.KOSINSKI_MODULED,
                     0, Sonic3kConstants.MAP_SOZ_MINIBOSS_ADDR, 1, -1));

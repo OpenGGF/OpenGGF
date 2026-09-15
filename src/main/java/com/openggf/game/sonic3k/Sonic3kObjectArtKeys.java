@@ -354,6 +354,7 @@ public final class Sonic3kObjectArtKeys {
     public static final String SKORP = "soz_skorp";
     public static final String SANDWORM = "soz_sandworm";
     public static final String ROCKN = "soz_rockn";
+    public static final String SOZ_ACT1_END_DOOR = "soz_act1_end_door";
     public static final String SOZ_MINIBOSS = "soz_miniboss";
     public static final String SOZ_MINIBOSS_DUST = "soz_miniboss_dust";
 
