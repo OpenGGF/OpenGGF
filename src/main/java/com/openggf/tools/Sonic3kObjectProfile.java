@@ -84,6 +84,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x35, // AIZForegroundPlant
+            0x3B, // HCZWaterWall / SOZLoopFallthrough
+            0x49, // CNZGiantWheel / SOZSolidSprites
             0x38, // HCZCGZFan / SOZQuicksand
             0x44, // CNZTrapDoor / SOZBreakableSandRock
             0x3E, // HCZConveyorBelt / SOZPushableRock
@@ -140,7 +142,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x37, // HCZWaterRush
             0x39, // HCZLargeFan
             0x3A, // HCZHandLauncher
-            0x3B, // HCZWaterWall
             0x40, // HCZBlock
             0x41, // CNZBalloon
             0x42, // CNZCannon
@@ -149,7 +150,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x46, // CNZHoverFan
             0x47, // CNZCylinder
             0x48, // CNZVacuumTube
-            0x49, // CNZGiantWheel
             0x4C, // CNZSpiralTube
             0x4D, // CNZBarberPoleSprite
             0x4E, // CNZWireCage

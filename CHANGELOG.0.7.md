@@ -195,7 +195,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   per-player capture, jump release, sand-slide movement and rewindable cooldowns,
   plus spring vines with shared tension, deforming surfaces and directional launches,
   sand rocks that break under rolling landings and release their riders,
-  and pushable rocks that fall onto their authored tracks.
+  pushable rocks that fall onto their authored tracks, loop fall-through
+  controllers, and both static solid platform shapes.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. MHZ end-boss debris
