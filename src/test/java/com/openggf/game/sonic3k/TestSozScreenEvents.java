@@ -12,6 +12,41 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozScreenEvents {
+    @Test void bossArenaQueuesRomResourcesAndRecreatesItsEightWallSolids() throws Exception {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 1)
+                .startPosition((short) 0x5100, (short) 0x650).startPositionIsCentre()
+                .withFreshLevelStartLifecycle().build();
+        fixture.camera().setY((short) 0x600);
+        fixture.camera().setFrozen(true);
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        fixture.stepFrame(false, false, false, false, false);
+        assertEquals(0x24, state.events().backgroundRoutine());
+        assertEquals(8, GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.SozBossWallObjectInstance.class::isInstance).count());
+        assertTrue(state.events().artJobOrdinal() >= 0);
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        for (int frame = 0; frame < 20; frame++) fixture.stepFrame(false, false, false, false, false);
+        assertEquals(-1, state.events().artJobOrdinal());
+        assertEquals(-1, state.events().blockJobOrdinal());
+        byte[] art = new com.openggf.level.resources.ResourceLoader(GameServices.rom().getRom())
+                .loadSingle(com.openggf.level.resources.LoadOp.kosinskiMBase(0x1B0860));
+        var tile = GameServices.level().getCurrentLevel().getPattern(0x315);
+        for (int pixel = 0; pixel < 64; pixel++) {
+            int packed = art[pixel / 2] & 255;
+            assertEquals((pixel % 2 == 0 ? packed >> 4 : packed) & 15,
+                    tile.getPixel(pixel % 8, pixel / 8));
+        }
+        var after = registry.capture();
+        registry.restore(before);
+        for (int frame = 0; frame < 20; frame++) fixture.stepFrame(false, false, false, false, false);
+        var replay = registry.capture();
+        for (String key : after.entries().keySet()) {
+            var differences = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, after.get(key), replay.get(key));
+            assertTrue(differences.isEmpty(), differences.toString());
+        }
+    }
+
     @Test void foregroundCorkCopiesStoredRomLayoutAndRewindsThroughProductionLoop() {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 1)
                 .withFreshLevelStartLifecycle().build();
@@ -93,7 +128,10 @@ class TestSozScreenEvents {
         assertEquals(0x1C, state.events().backgroundRoutine());
         assertFalse(state.backgroundPlaneCollisionStateOrNull().active());
         assertEquals(0, state.events().specialRoutine());
-        for (int i = 0; i < 32; i++) events.update(1, 5 + i);
+        assertEquals(29, state.events().redrawRemaining());
+        for (int i = 0; i < 14; i++) events.update(1, 5 + i);
+        assertEquals(0x1C, state.events().backgroundRoutine());
+        events.update(1, 19);
         assertEquals(0x20, state.events().backgroundRoutine());
     }
 
