@@ -1,6 +1,6 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15. Status: placed inventory, native pilot, quicksand and spring-vine slices integrated;
+Date: 2026-09-15. Status: placed inventory, native pilot, quicksand, spring-vine and sand-rock slices integrated;
 full routes and native certification remain open.
 
 ## Objective and authority
@@ -86,9 +86,10 @@ disproves that distinction. `No_Resize` is not evidence that SOZ has no events.
 
 ## Execution record and next action
 
-The placed inventory, native pilot, quicksand and spring-vine families are delivered
-at the bounded scope recorded below. The current continuation is the breakable sand rock;
-full dynamic/art/audio inventory and later route slices remain open. Keep commands, RED/GREEN results, review findings, resolved
+The placed inventory, native pilot, quicksand, spring-vine and sand-rock families are delivered
+at the bounded scope recorded below. Cold rock reachability, full dynamic/art/audio
+inventory and later route slices remain open. Keep commands, RED/GREEN results,
+review findings, resolved
 catalogue contradictions, amendments and rejected approaches in this plan as work
 proceeds. Reuse the existing SOZ analysis for verified ROM findings and the act
 matrices for acceptance evidence. No new receipt or log format is required.
@@ -592,7 +593,7 @@ twice at breakup, phase 6 and phase 24/removal. The failed cold-route experiment
 was removed; its evidence above remains an explicit reachability gap.
 
 The positioned `GameplayCaptureTool` capture under external task directory
-`$TASK_DIR/engine-rock-1` uses
+`$TASK_DIR/engine-rock-1`,
 where `$TASK_DIR` is the external `soz-v2-20260915` capture directory. It uses
 Act 1, Sonic/Tails, centre `($260,$58C)` and input `45 -; 1 C; 80 -`.
 CSV inspected before images: frame 82 rebounds at Y velocity `-768`; frame 40
@@ -602,7 +603,7 @@ engine rendering evidence, not a matched native pixel comparison.
 Required S3K regressions passed 58 tests, zero failures/errors/skips, 20.340s:
 `python3 tools/testing/maven_queue.py -Dmse=off
 '-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils'
-'-Ds3k.rom.path=$REPO_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen'
+"-Ds3k.rom.path=$REPO_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
 test -B` from this worktree.
 
 The change-based plan against the pinned base selects all 2,597 ordinary classes
@@ -624,3 +625,28 @@ in a fresh JVM:
 test -B`. Mirrored pitfall files are identical; `git diff --check` passes.
 The final source review found no remaining material issues after the standing-latch
 correction. Develop remained at the pinned base when refreshed for integration.
+
+
+### Sand-rock integration
+
+Implementation `9c7d33b55` merged without conflicts into develop as
+`8cb81eb29843108a86165ce87d1c3ab73d4d8b4a`. The integrated tracked tree matches
+the verified development tree exactly. Unrelated main-workspace files and dirty
+disassembly references were preserved. All 30 sand-rock placements now bind to
+the implementation, leaving 185/183 unimplemented placements in Acts 1/2.
+Full routes and native certification remain open.
+
+Post-integration focused verification uses:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSozBreakableSandRock,TestSozSandRockProduction,TestLevelManagerEndProgression' \
+  "-Ds3k.rom.path=$REPO_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=$REPO_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen" test -B
+```
+
+Result on integrated `8cb81eb29`: 20 tests passed, zero failures/errors/skips,
+19.420s. All five ROM-backed spots executed. Focused validation remains bounded;
+the inherited full-guard failures recorded in the spring-vine section were not
+rerun or claimed resolved. Documentation checks found 95 valid local link targets,
+identical skill mirrors and no whitespace errors.
