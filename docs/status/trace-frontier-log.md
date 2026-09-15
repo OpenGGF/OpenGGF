@@ -110232,3 +110232,46 @@ merge validation are recorded in the
 [completion plan](../architecture/plans/2026-09-14-fbz-completion.md#post-integration-validation-and-delivery).
 Fourteen settled native boundary pairs match; intermediate redraws, independent
 Hyper progression and the S1 full-act route remain open.
+
+
+### 2026-09-15 — KiS2 EHZ2 entry clears; chain reaches segment 11
+
+Base `59d5b8881`, `.worktrees/kis2-ehz2-frontier`. Direct results advances now
+retain the locked title-card owner in headless play. Title-card admission also
+retires the transition gap's source-loop flag on setup-only rows, preventing
+one extra destination gameplay pass. Both regressions failed before their fixes.
+No title duration, chip PLC data, fixture or gameplay state was fitted to the run.
+
+Queued `-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestLevelAdvanceLoadReceipt,TestGameLoopFreezeContractWiring,TestLevelIterationAdmissionController,TestKis2CompleteEmeraldRunChain`
+with absolute KiS2/S2 ROM paths: 15 tests, 14 passes, one red chain, zero
+errors/skips. Segment 7 `seg5_ehz2` improves from 13,978 errors (first row 50
+queue busy) to zero across all 3,561 rows; its act-entry art gap matches too.
+The chain crosses two more interiors (12,871 zero-error art ledger rows;
+interior physics remains uncompared) and stops at segment 11 `seg7_ehz2`,
+expected starpost-special boundary cursor 48882 instead of 32271.
+
+Newly reached segment 9 has 6,140 errors, first row 200 Y `$0376`/`$0375`,
+with glide `$20`/`$B8` versus climb `$21`/`$CA`. It still reaches its special
+stage. Segment 11 has 28,200 errors, first row 212 Y speed `$0528`/`-$0528`,
+and misses the next entry. EHZ1 and the existing return-art timing differences
+remain open. See the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
+for intermediate candidates, exact boundaries and final validation follow-up.
+
+
+Implementation `36479a2fc` reconciles updated develop without conflicts as
+`d31238136`. Probe-free KiS2/S1/S2 chain and load checks complete 43 tests:
+40 passes, three red chains, no errors/skips (1:12). Every KiS2 report matches
+the measured candidate, and every stock S1/S2 report matches the pre-task
+baseline. Separate `-Ptrace-replay-r7` FBZ/AIZ/loading/bootstrap/decoder checks
+pass all 59 tests, no errors/skips (37.194 s); full FBZ replay remains green.
+Combined ordinary/guard validation follows on the frozen reconciled tree.
+
+
+Candidate `0d0965c8b` completed the full change-based selection against
+`59d5b8881`: 20,467 ordinary tests, zero failures/errors, 18 inspected skips;
+668 guards with exactly the two inherited direct-Maven/diagnostic failures,
+matching baseline class/test identities and full messages. Command:
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base 59d5b8881 --run`.
+Elapsed ordinary/guards: 729.31/172.20 seconds. No new or worsened failure;
+this is an ordinary-suite pass with inherited red guards, not all gates green.

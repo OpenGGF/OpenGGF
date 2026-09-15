@@ -3662,10 +3662,12 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
         checkpointCoordinator.clear();
-        // Results objects call this owner directly from their fade callback.
-        // Classify the completed native act advance before the synchronous load
-        // publishes its receipt; this observes the load without changing it.
-        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(this::loadCurrentLevel);
+        // Results sets Level_Inactive_flag after selecting Current_ZoneAndAct
+        // (KiS2 s2.asm:loc_1429C), so Level_MainLoop re-enters Level: and its
+        // locked title-card loop. Retain that owner in headless play too; the
+        // generic host load omits it and starts the gameplay exit tail early.
+        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(
+                () -> loadCurrentLevel(true, LevelLoadMode.FULL, true, true));
     }
 
     /**

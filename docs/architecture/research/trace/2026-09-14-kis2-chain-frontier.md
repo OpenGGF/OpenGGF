@@ -545,3 +545,145 @@ time. Every normalized chain report is identical to the candidate. The same
 No new or worsened result was observed. This remains focused validation under
 the documented exception; no new full-suite result is claimed. Final follow-up
 changes only this evidence record and the frontier log.
+
+
+### 2026-09-15: retain the results-driven act-entry title owner
+
+Continuation base `59d5b8881`, worktree `.worktrees/kis2-ehz2-frontier`.
+The matched baseline still stops at segment 7 `seg5_ehz2`: 13,978 errors,
+first row 50 `queue.s2_nemesis_plc.busy`, with the expected starpost-special
+exit unobserved. A temporary read-only title snapshot probe locates the two
+extra tail dispatches at movie cursors 28558 and 28571. The headless direct
+results advance omits the locked card, arms its 45-pass tail inside the load,
+and reaches destination row 0 with only 43 waiting passes left. Cold entry
+and the three special-stage returns start row 0 with all 45 passes intact.
+
+`advanceToNextLevel` calls the generic headless `loadCurrentLevel` path. That
+path deliberately omits presentation for standalone host loads; unlike death
+restarts and explicit zone transitions, this direct results caller did not
+request retention of the native title owner. KiS2 `loc_1429C` writes the next
+`Current_ZoneAndAct`, clears checkpoints and sets `Level_Inactive_flag`
+(s2.asm:29338-29343). `Level_MainLoop` then branches back to `Level:`
+(:5420), including its locked title-card and leave loops. The fix requests
+that existing owner through the per-load headless-presentation flag. It does
+not alter title-card duration, PLC service, chip tables or fixture data.
+
+The regression extends `TestLevelAdvanceLoadReceipt` to require one title-card
+request after a direct results advance and none after a subsequent unrelated
+standalone headless reload. Before the fix, queued Maven
+`-Dmse=off -Dtest=TestLevelAdvanceLoadReceipt` with the absolute S2 REV01 ROM
+path ran two tests: one expected failure on the missing title-card request,
+no errors/skips (46.298 seconds including initial compilation). The matched
+KiS2 chain baseline ran two tests: launch verification passed and the known
+chain failed, no errors/skips (27.356 seconds). Tool preflight passes with
+`LUA_BIN=lua5.4`; the unqualified system Lua fails the version check before
+any tests run.
+
+
+Retaining the title card alone passes the load regression but still permits one
+extra gameplay pass: the card releases at cursor 28706, and cursor 28707 consumes
+the gap's still-armed source-loop flag. The resulting segment has 30,376 errors,
+first queue mismatch row 51; first movement mismatch row 1030 is a one-pixel X
+shift while riding an ARZ platform, with identical velocities and fractions.
+This intermediate candidate is not the delivered behavior.
+
+The source-loop flag was consumed only after admission in `GameLoop`, but a
+locked or releasing title-card iteration returns `SETUP_ONLY` before reaching
+that code. `LevelIterationAdmissionController` now consumes the flag when the
+current loop is TITLE_CARD: that loop already belongs to the destination load
+and cannot leave a source gameplay pass for its successor. A new caller-level
+regression covers both locked and releasing setup-only title rows. Before the
+fix it fails with the source pass incorrectly admitted; queued focused Maven
+ran one test, one expected failure, no errors/skips (18.524 seconds).
+
+With both fixes, the tail holds at 45 through cursors 28707/28708 and first
+advances on destination row 0, cursor 28709. The combined focused command
+`python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1
+-Dtest=TestLevelAdvanceLoadReceipt,TestGameLoopFreezeContractWiring,TestLevelIterationAdmissionController,TestKis2CompleteEmeraldRunChain`
+with absolute KiS2/S2 ROM properties ran 15 tests: 14 passes and the now-later
+red chain, no errors/skips (56.791 seconds). The temporary probes were then
+removed from both the comparator and KiS2 test before final validation.
+
+Measured frontier:
+
+- Segment 7 `seg5_ehz2`: all 3,561 physics/animation/art/queue rows compare with
+  zero errors; its EHZ1-to-EHZ2 dynamic-art gap also matches. The previous
+  13,978-error segment and unobserved fourth-special-stage entry are cleared.
+- Newly reached special-stage interiors 8 and 10 compare 6,662 and 6,209 art
+  ledger rows with zero errors. Interior gameplay/physics remains uncompared.
+- Segment 9 `seg6_ehz2`: all 1,177 rows complete, 6,140 errors (5,570 physics/aux,
+  570 animation), first row 200 Y expected `$0376`, actual `$0375`. At that
+  wall contact the ROM retains animation `$20`/mapping `$B8`; the engine uses
+  `$21`/`$CA`. Both have X `$1475`, X fraction `$1475`, Y fraction `$A800`,
+  zero velocities and 60 rings. This segment still reaches the fifth special
+  stage. Investigate this earlier disagreement before the later frontier.
+- Segment 11 `seg7_ehz2`: all 2,215 rows complete, 28,200 errors (25,788
+  physics/aux, 2,412 animation); first row 212 Y speed expected `$0528`, actual
+  `-$0528`. Position/fractions and roll animation match there, with an animal
+  near the player. The sixth-starpost-special boundary at movie cursor 48882
+  is not observed. No local collision fix is claimed by this delivery.
+- The stopping boundary moves from 32271 to 48882, 16,611 movie frames farther.
+  There are 3,392 additional compared gameplay rows and 12,871 additional
+  art-only interior rows. EHZ1 segment results remain unchanged. The first
+  three return-art gaps remain 39 movie frames early; fourth/fifth returns
+  are 37/38 early, and the segment-9 cascade also leaves ledger differences.
+
+
+Source fix `36479a2fc` reconciles current develop `1cfe9ef82` without conflicts
+as `d31238136`; the incoming support/configuration refactor is retained. The
+probe-free focused command on that merged tree was (ROM variables denote the
+verified absolute paths to the existing root dumps):
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay \
+  -Dsurefire.forkCount=1 \
+  '-Dtest=TestLevelAdvanceLoadReceipt,TestGameLoopFreezeContractWiring,TestLevelIterationAdmissionController,TestLevelEntryPathsHeadless,TestLevelManagerEndProgression,TestKis2CompleteEmeraldRunChain,TestS1CompleteEmeraldRunChain,TestS2CompleteEmeraldRunChain' \
+  "-Dkis2.rom.path=$KIS2_ROM" \
+  "-Dsonic2.rom.path=$S2_ROM" \
+  "-Dsonic1.rom.path=$S1_ROM" test
+```
+
+Result: 43 tests, 40 passes and three red chains, no errors/skips, 1:12 Maven
+time. All 15 parsed KiS2 reports match the probe candidate exactly. All 16 stock
+S1/S2 reports match the retained pre-task baseline reports exactly, including
+fields, values, spans and bootstrap/verification groups. S1 still stops at
+segment 12 `mz2_3` (giant-ring boundary), S2 at its second special-stage art
+comparison. These are unchanged red controls, not parity claims.
+
+Separate shared-admission S3K coverage:
+
+```sh
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7 \
+  -Dsurefire.forkCount=1 \
+  '-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$S3K_ROM" test
+```
+
+All 59 tests pass, no errors/skips (37.194 seconds); complete FBZ replay passes
+in 16.80 seconds. The change-based plan against pre-task `59d5b8881` selects all
+2,585 ordinary classes and guards because the admission owner is shared.
+Normal combined validation is required; the earlier observation-only receipt
+fix's proportionate-validation exception is not used for this timing change.
+
+
+Combined candidate validation at `0d0965c8b` completed with
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base 59d5b8881 --run`
+(run `20260915T100304Z-dabf6019`). Ordinary: 2,585 reports, 20,467 tests, zero
+failures/errors, 18 inspected skips (729.31 seconds). Guards: 84 reports, 668
+tests, two failures, zero errors/skips (172.20 seconds). The two class/method
+identities and complete assertion messages exactly match the retained baseline:
+`TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+expects superseded direct-Maven guidance, and
+`TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree` flags
+existing `FbzRouteEvidenceProbe#printEvidence` and
+`LevelSolidityMapProbe#writeSolidityMap`. No new or worsened failure is observed;
+the combined command remains red for those inherited guards.
+
+The current-base full result at `1cfe9ef82`, recorded by the concurrent
+simplification delivery, was 20,466 ordinary tests with zero failures/errors,
+18 skips and the same 668 guards/two failures. The candidate adds one passing
+regression. Skips are opt-in benchmarks/soaks/routes/captures, unavailable EGL/GL
+probes, local audio references and the existing CPZ spin-tube prerequisite;
+no stock-ROM test is skipped for a missing dump. The tree stayed frozen through
+both lanes. Inspection is complete and diagnostic acknowledgment was requested.

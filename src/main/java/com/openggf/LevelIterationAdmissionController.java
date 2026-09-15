@@ -53,6 +53,12 @@ final class LevelIterationAdmissionController {
             Runnable activateRepresentedHardwareTiming,
             Runnable deactivateHardwareTimingGap) {
         if (mode == GameMode.TITLE_CARD) {
+            // Level's locked title loop already belongs to the destination
+            // load (S2 Level_TtlCard / Level_StartGame). It cannot leave a
+            // source-main-loop pass for the next LEVEL row. Consume the gap
+            // latch here because setup-only title iterations return before
+            // GameLoop reaches its ordinary gap-body admission check.
+            TraceSessionLauncher.runGapRowContinuesSourceLevelMainLoop(mode, true);
             deactivateHardwareTimingGap.run();
             if (!updateTitleCard.getAsBoolean()) {
                 return LevelFrameResult.SETUP_ONLY;

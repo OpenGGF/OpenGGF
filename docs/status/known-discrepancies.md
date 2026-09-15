@@ -3373,12 +3373,17 @@ the owning KiS2 routine in the catalogue):
   after its final locked object pass, and synchronous reloads publish their
   production load receipt. Native wall anchoring and ledge timing let
   `seg3_ehz1` and `seg4_ehz1` complete all compared rows with zero errors. The
-  results-driven act advance now publishes its semantic load cause, so the chain
-  reaches EHZ2 (`seg5_ehz2`). Its first mismatch is row 50 PLC queue busy
-  (ROM false, engine true); the next starpost-special boundary is not reached.
-  The act-change gap also has excess/mistimed art edges. All three exercised
-  special-stage return gaps still publish their first
-  dynamic-art edge 39 movie frames early. The first
+  results-driven act advance retains its locked title card and retires the
+  source-loop admission flag before destination gameplay. `seg5_ehz2` now
+  completes all 3,561 rows with zero errors, including its act-entry art gap.
+  The chain passes two more special-stage interiors and reaches `seg7_ehz2`
+  (segment 11). The next causal discrepancy is `seg6_ehz2` row 200: the ROM
+  retains glide animation `$20`/mapping `$B8`, while the engine climbs with
+  `$21`/`$CA` one pixel higher. That segment still reaches its special stage.
+  `seg7_ehz2` first differs at row 212 (vertical speed sign) and misses the next
+  starpost-special boundary. The first three special-stage return gaps still
+  publish art 39 movie frames early; the newly exercised returns also have
+  timing/ledger differences. The first
   returned EHZ1 segment completes with one ring-count difference. SS interiors do not
   compare gameplay, so this does not establish special-stage physics parity.
   Current evidence is tracked in [the frontier log](trace-frontier-log.md). There are no passing

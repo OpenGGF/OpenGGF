@@ -29,7 +29,13 @@ class TestLevelAdvanceLoadReceipt {
         assertEquals(0, receipt.identity().progressionZone());
         assertEquals(1, receipt.identity().act());
 
+        assertTrue(level.consumeTitleCardRequest(),
+                "Results re-enters Level's locked title-card loop even headless");
+        assertFalse(level.consumeTitleCardRequest(), "The title owner is handed off once");
+
         level.loadCurrentLevel();
+        assertFalse(level.isTitleCardRequested(),
+                "An unrelated standalone headless load still omits presentation");
         var ordinary = tracker.latest().orElseThrow();
         assertEquals(RunLevelLoadCause.ORDINARY, ordinary.cause());
         assertEquals(generation + 2, ordinary.identity().loadGeneration());
