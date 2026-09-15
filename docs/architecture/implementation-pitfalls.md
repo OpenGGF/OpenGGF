@@ -332,3 +332,15 @@ register it at that boundary instead of adding a zone check to the shared shader
 For a pixel-displacement oracle, compare opaque foreground regions: shifting a
 composite through a transparent edge also shifts the independently scrolled BG
 and gives a false failure. The SOZ methodology-v2 plan records this correction.
+
+
+### Resolve raw object offsets through the constants table
+
+The SOZ rappel wire final swing reads `$46(a0)` in `loc_4AC98`, while its
+initializer writes `parent3(a0)`. `sonic3k.constants.asm` defines `parent3 = $46`:
+these are the same initialized endpoint reference. An earlier implementation
+misread the numeric spelling as an unused pointer and forced immediate
+retraction, then encoded that mistake as a unit expectation. Check aliases in
+the owning constants table before claiming a shipped bug; follow both the
+writer and reader. Test sustained behavior and release, not only arrival at a
+routine. The SOZ methodology-v2 plan records the correction.

@@ -1786,3 +1786,29 @@ afterward. Combined production validation currently fails forced-recreation
 standing history: placed bridge index40 TOP entry disappears on restore.
 That real identity gap is under investigation;27selected tests are not reported
 as a passing set (one production failure,0skips,53.525s).
+
+
+### Rappel wire final-swing alias correction
+
+The next ordinary SOZ1 frontier at frame2648 showed expected handle X `$D00`
+versus `$CF4`, with expected player frame `$91` versus `$90`. Source audit found
+that the original implementation (`c746aa1af`) had misidentified `$46` as an
+untouched pointer. `sonic3k.constants.asm:46` defines `parent3 = $46`; the wire
+initializer writes the seventeenth endpoint there, and `loc_4AC98` tests its P1
+capture byte. The claimed shipped-ROM bug was an implementation error. Final
+swing now continues while P1 is held, selecting retract after release and still
+performing the current pass's angle update. All eight placed subtype checks now
+hold through a complete 128-pass angle cycle before releasing, rather than
+asserting the erroneous immediate retraction. The irrelevant ROM-byte `$38`
+assertion was removed. Research/inventory/discrepancy prose contained no other
+claim of an unused `$46` wire pointer; the source comment and test were the
+stale claims. The alias-verification lesson is in implementation pitfalls.
+
+Validation on parent base `306d7fe0f` plus this correction: queued
+`TestSozSwingAndWire,TestSozSwingAndWireProduction` with the absolute locked-on
+ROM property ran27tests,0skips in52.179s. All23unit cases passed, including eight
+complete final-swing cycles. Three production cases passed; the existing wire
+ratchet activation recreation case failed because solid-execution standing
+history lost the promoted bridge entry (ListN versus List12). This matches the
+parent's already-reproduced failure above, before final-swing entry; no assertion
+was weakened. The parent owns the identity correction and combined trace replay.
