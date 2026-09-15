@@ -41,6 +41,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   position-word anchor and detach on displacement or object carry; ledge climbs
   retain the ROM animation holds and fractional position words. Special-stage return title cards
   release control after their final locked object pass without an extra wait.
+  Continuous replay now follows results-driven act changes.
   Remaining route and
   hardware-rendering limits are listed in the known-discrepancies entry and
   `docs/kis2/BRANCH_DIFFS.md`.

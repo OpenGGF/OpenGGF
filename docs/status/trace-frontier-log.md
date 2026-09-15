@@ -110181,3 +110181,27 @@ tests, zero failures/errors and the same 18 baseline skips. Both ran 667 guards
 with the two identical baseline failures (stale build guidance; existing
 assertion-free FBZ/solidity probes), zero errors/skips. The integrated KiS2
 runtime matches the focused replay candidate; no new failure was observed.
+
+
+## 2026-09-15 — KiS2 EHZ1 act advance is observed; EHZ2 frontier exposed
+
+Base `2b2bf8e28`, `.worktrees/kis2-act-transition`. The EHZ1 transition did load
+EHZ2, with an empty PLC queue, but published `ORDINARY` instead of
+`LEVEL_ADVANCE`. The common results-driven load owner now uses the existing cause
+classification wrapper; gameplay and fixture data are unchanged.
+
+Queued `-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1` selection:
+`TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestKis2CompleteEmeraldRunChain,TestS1CompleteEmeraldRunChain,TestS2CompleteEmeraldRunChain`,
+with existing absolute S1/S2/KiS2 ROM paths: 56 tests, 53 passes, three red chains,
+no errors/skips. Matched S1/S2 normalized reports are identical before/after.
+All 35 selected hardware-timing/trace-invariant guards pass. Validation is focused
+under the bounded observation-change exception, not a full-suite pass.
+
+KiS2 reaches segment 7 (`seg5_ehz2`): all 3,561 rows compared, 13,978 errors,
+zero warnings/bootstrap errors; first mismatch row 50 PLC busy false/true. The
+chain stops on its missing starpost-special exit. The preceding act-change gap
+already differs: ten art edges versus two, first edge 28,558 versus 28,683 and
+mapping $07 versus $56. Investigate that earlier load/title-card publication
+before treating the EHZ2 cascade as an independent queue bug. EHZ1 segments 4/6
+remain zero-error, and prior ring/return-art gaps remain open. Full evidence and
+integration follow-up are in the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md).

@@ -3662,7 +3662,10 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         writeApparentAct(currentAct);
         // Clear checkpoint when advancing
         checkpointCoordinator.clear();
-        loadCurrentLevel();
+        // Results objects call this owner directly from their fade callback.
+        // Classify the completed native act advance before the synchronous load
+        // publishes its receipt; this observes the load without changing it.
+        com.openggf.TraceSessionLauncher.runLevelAdvanceLoad(this::loadCurrentLevel);
     }
 
     /**

@@ -454,3 +454,62 @@ guard failures, not an entirely green suite. Matched focused replay evidence
 remains valid for the unchanged KiS2/S2/S3K movement and animation code; the
 chain remains red at the missing level-advance boundary. Results were inspected
 and submitted for runner acknowledgement before cleanup.
+
+
+## 2026-09-15 — results-driven act-load classification
+
+Base `2b2bf8e2818f424106a9494523bdf8fae53f082b`, tree
+`.worktrees/kis2-act-transition`. A temporary boundary probe disproved the PLC
+stall hypothesis for the EHZ1 exit: at cursor 28,659 the engine had a new EHZ2
+level (zone 0, act 1), no results/signpost objects, no active fade, and an empty
+PLC queue. The completed-load receipt was generation 6 with cause `ORDINARY`.
+`BoundaryProbe.matchesArmedSignal` correctly requires `LEVEL_ADVANCE`, so it
+rejected the successful load. The probe was removed after attribution.
+
+`DefaultObjectServices.advanceToNextLevel` invokes `LevelManager` directly from
+the results fade callback. The level manager now wraps only its actual successor
+load in the existing `TraceSessionLauncher.runLevelAdvanceLoad` classification
+helper. Time-attack menu and terminal credits branches return before it. The
+load, queue service, timers, gameplay values and fixture are unchanged. Native
+`Obj3A/loc_14270` -> `loc_1429C` chooses the successor and raises
+`Level_Inactive_flag`; this change identifies that production action rather than
+substituting a transition from trace data. No API or snapshot changes.
+
+New `TestLevelAdvanceLoadReceipt` initially ran two tests with one expected
+failure (`LEVEL_ADVANCE` versus `ORDINARY`), no errors/skips, 18.696 seconds.
+It exercises a real EHZ1-to-EHZ2 load, confirms that the classification is consumed
+once before an ordinary reload, and checks that time-attack menu return does not
+classify a later unrelated load. Existing terminal-progression tests remain in
+the focused selection.
+
+Candidate command: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1
+-Dtest=TestLevelAdvanceLoadReceipt,TestSpecialStageReturnLoadReceipt,TestLevelManagerEndProgression,TestLevelEntryPathsHeadless,TestRunLevelLoadTracker,TestTraceRunPlaybackCoordinator,TestKis2CompleteEmeraldRunChain,TestS1CompleteEmeraldRunChain,TestS2CompleteEmeraldRunChain test`
+with existing absolute S1/S2/KiS2 ROM paths. Result: 56 tests, 53 passes, three
+red chains, no errors/skips, 1:14 Maven time. The S1/S2 controls were also measured
+on unchanged runtime before the fix (two red chains, zero errors/skips,
+33.444 seconds); every normalized control report matches exactly afterward.
+S1 still stops at segment 12's missing giant-ring boundary (196,213 errors,
+first row 0 dynamic-art edges); S2 still stops on segment 3 special-stage art
+(17,071 errors), with segment 2 retaining 21,638 errors, first row 6 art edges.
+
+KiS2 now completes comparison of EHZ2 segment 7 (`seg5_ehz2`, 3,561 rows), with
+13,978 errors (13,437 physics/aux, 541 animation), no warnings/bootstrap errors.
+The first mismatch is row 50 `queue.s2_nemesis_plc.busy`, expected false/actual
+true; the engine reports prepared work with 68 patterns remaining and four
+queued fingerprints. It misses this segment's starpost-special exit. The newly
+exercised act-change gap has ten art edges versus two, with first mapping $07
+versus $56 and first edge at movie 28,558 versus 28,683. This earlier gap evidence
+must be investigated before attributing the later queue/physics cascade to a
+local EHZ2 object. Earlier EHZ1 reports and the three 39-frame return-art gaps
+remain unchanged; SS interior physics remains uncompared.
+
+Queued `-Dmse=off -Pguards
+-Dtest=TestHardwareTimingAuthorityGuard,TestTraceReplayInvariantGuard test` passed
+35 tests, no failures/errors/skips, 22.729 seconds. The change-based plan selects
+all 2,575 ordinary classes because LevelManager is shared. Proportionate
+validation applies to this observation-only classification: real load/reload and
+non-load paths, tracker consumption, coordinator policy, matched affected chains
+and authority guards directly cover its consumers. This is focused validation,
+not a new full-suite pass. The prior integrated full run at `5fed74d42` remains
+historical evidence; the task base differs from it only in documentation.
