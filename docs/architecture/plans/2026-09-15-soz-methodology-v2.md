@@ -904,3 +904,12 @@ asserts the current riding relation, not the sticky “ever boarded” flag. All
 five production configurations passed again with that assertion (48.772 seconds,
 17:05:31 BST, zero failures/errors/skips). Updated-base preflight, mirror equality,
 Lua syntax, changed-link and whitespace checks passed.
+
+Implementation `58555c17a` integrated cleanly as
+`c646e19fdd392ba83702e9449ea7ffd4eed783e0`. The combined focused command above
+passed on that actual `develop` commit: 248 tests, zero failures/errors/skips,
+53.555 seconds, completed 17:09:21 BST. The updated-base candidate had already
+passed the 123 separate structural guards; no structural code changed during
+integration. Push-policy validation also passed. Full SOZ routes, all-character
+breadth, native trajectory/pixel certification and the subtype `$87` door link
+remain open; this delivery covers the bounded rock family and recorded spots.
