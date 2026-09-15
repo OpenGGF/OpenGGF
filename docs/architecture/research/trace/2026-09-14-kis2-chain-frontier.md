@@ -961,8 +961,8 @@ report payload hashes exactly match the preceding delivered control reports.
 
 The two new rule fields are part of the unpublished 0.7.0 Mod API candidate.
 Existing record call sites pass explicit values; no provisional compatibility
-constructors are retained. Candidate signature regeneration and combined
-validation are pending.
+constructors are retained. Candidate signature regeneration is complete;
+combined validation is recorded below.
 
 The native multi-sprite flag cannot be inferred from engine touch-region count.
 The six `boss_hitcount2` initializers are Obj52 HTZ (67478), Obj89 ARZ (68122),

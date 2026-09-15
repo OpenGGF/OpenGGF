@@ -1232,7 +1232,8 @@ final class ObjectTouchResponseController {
      * negates THEN halves both via {@code asr.w} ({@code neg / neg / asr / asr}),
      * gated by {@code bossHitHalvesBounceVelocity}.
      * S3K additionally negates ground velocity ({@code bossHitNegatesGroundSpeed}).
-     * Does not set air flag - ROM only modifies velocities here.
+     * KiS2 ordinary boss hits also leave active glide; multi-sprite hits retain it.
+     * None of these paths sets the air flag.
      */
     private void applyBossBounce(PlayableEntity player, TouchResponseProfile profile) {
         int negX = -player.getXSpeed();

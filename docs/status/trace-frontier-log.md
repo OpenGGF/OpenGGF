@@ -110383,7 +110383,7 @@ errors/skips, 46.725 s. All four independent control payloads match the prior
 delivered controls exactly. Segment 13 now completes 3,222 rows with 1,068
 errors, first row 1963 `dynamic_art.edges` [622]/[]. Segment 14 (`seg9_cpz1`)
 completes all 5,574 rows with 57,715 errors, first row 1112 Y $01CA/$01B5; its
-following `level_advance` boundary is not observed. Compared movie coverage
-reaches at least row 65,733, 7,282 beyond the former 58,451 stop. No fixture
-payloads changed. Final combined validation is pending. See the
+following `level_advance` boundary is not observed. The final focused replay
+reports mode LEVEL at BK2 cursor **65,856**, **7,405 movie frames** beyond the
+former 58,451 stop. No fixture payloads changed. Final combined validation is pending. See the
 [causal evidence](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#glide-attack-continuation-2026-09-15-base-d92fea6f1).
