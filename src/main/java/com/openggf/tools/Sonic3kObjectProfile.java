@@ -84,6 +84,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x35, // AIZForegroundPlant
+            0x38, // HCZCGZFan / SOZQuicksand
             0x3C, // Door
             0x3D, // RetractingSpring
             0x51, // FloatingPlatform
@@ -134,7 +135,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x32, // AIZDrawBridge
             0x36, // HCZBreakableBar
             0x37, // HCZWaterRush
-            0x38, // HCZCGZFan
             0x39, // HCZLargeFan
             0x3A, // HCZHandLauncher
             0x3B, // HCZWaterWall

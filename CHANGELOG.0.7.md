@@ -181,7 +181,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   a wider screen while preserving native-width collection boundaries.
 - **S3K campaign work:** the promoted development baseline includes further MHZ
   and FBZ work, LBZ Big Arm, Super Emerald sanctuary/progression, and powered
-  effects. Giant-ring sanctuary entry uses the same emerald ceremony, palette,
+  effects. Sandopolis now implements its four quicksand variants, including
+  per-player capture, jump release, sand-slide movement and rewindable cooldowns.
+  Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. MHZ end-boss debris
   retains the ROM trajectory when the boss faces left, and Madmole’s submerged
