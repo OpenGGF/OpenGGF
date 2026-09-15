@@ -19,7 +19,7 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 Decoded checkpoint placements: `$02` at `($0860,$05C8)`, `$03` at `($13F0,$0428)`, `$04` at `($1F00,$0108)`, `$05` at `($3280,$01A8)`, `$06` at `($4EC0,$04A8)`.
 `TestSozCheckpointReloadProduction` now physically activates post2 at `($860,$5C8)`,
 recreates/restores the activation state, then exercises production death/reload
-for Sonic, Tails and Knuckles. Other posts and repeated-reset breadth remain open.
+for Sonic, Tails and Knuckles. All other posts now have native-character activation/reload checks; repeated-reset breadth remains open.
 
 ## Behavioral obligations
 
@@ -154,5 +154,11 @@ follower counts;68latest boss tests passed with no skips.
 Checkpoint breadth now covers both acts × three native leaders × five widths
 (320/400/512/640/800) × donors off/S1/S2:90physical activation, full-state
 recreation/replay and death/reload cases passed, no skips (21.253s). Actual
-width/donor/capability is asserted before interaction and after reload. Other
-checkpoint placements and mixed/max-team reset breadth remain open.
+width/donor/capability is asserted before interaction and after reload. All remaining checkpoint placements have24additional native-character cases
+(19.432s,0skips). Mixed/max-team reset breadth remains open.
+
+`1bd8dfcb5` implements the separate layout-driven `sub_730C` sand slide,
+including speed, facing, radii, animation, exit lock and per-act row mask.
+Twenty-seven focused ROM/shared-provider/production checks pass with zero skips,
+including both acts, wrapped coordinates, three actual players and recreation.
+This closes an inventory omission; ordinary route replay is being re-evaluated.

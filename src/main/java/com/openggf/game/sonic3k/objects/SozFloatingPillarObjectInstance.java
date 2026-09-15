@@ -68,6 +68,9 @@ public final class SozFloatingPillarObjectInstance extends AbstractObjectInstanc
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(width+11,height,height+1); }
+    // SolidObject_cont loc_1E042 branches on x_vel < 0, so zero velocity
+    // still clears ground_vel on left-side penetration (including wall running).
+    @Override public boolean zeroXSpeedStopsOnLeftSideContact() { return true; }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }
     // SolidObjectFull_1P loc_1DC98 consumes an airborne stale standing bit
     // at this object's own checkpoint and returns without a new contact.

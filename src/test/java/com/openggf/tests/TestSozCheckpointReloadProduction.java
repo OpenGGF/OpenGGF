@@ -30,6 +30,18 @@ class TestSozCheckpointReloadProduction {
                         act == 0 ? 0x428 : 0x5C8, character, width, donor));
         return rows.stream();
     }
+    static Stream<Arguments> remainingPosts() {
+        int[][] posts={{0,2,0x1780,0x708},{0,3,0x2760,0x228},{0,4,0x2C60,0x628},{0,5,0x3F00,0x6E8},
+                {1,3,0x13F0,0x428},{1,4,0x1F00,0x108},{1,5,0x3280,0x1A8},{1,6,0x4EC0,0x4A8}};
+        var rows=new java.util.ArrayList<Arguments>();
+        for(var post:posts)for(String character:new String[]{"sonic","tails","knuckles"})
+            rows.add(Arguments.of(post[0],post[1],post[2],post[3],character));
+        return rows.stream();
+    }
+    @ParameterizedTest @MethodSource("remainingPosts")
+    void otherPlacedPostsActivateAndReload(int act,int index,int x,int y,String character) {
+        touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,320,"off");
+    }
     @ParameterizedTest @MethodSource("scenarios")
     void touchCheckpointThenDeathReloadsItsNativePosition(int act,int index,int x,int y,String character,
             int width,String donor){

@@ -1,10 +1,10 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15. Status: quicksand, vines, rocks, loop exits, static solids,
-floating pillars, push switches and doors integrated at the bounded scopes below.
-Normal Act 1 parallax, heat shimmer, animated background art and sand palette
-cycling are implemented with bounded checks; later presentation modes remain open;
-full routes, event systems, bosses and native certification remain open.
+Date: 2026-09-15. Status: both acts' placed factories, bosses, coupled lighting,
+scroll/animation, arena and transition owners are implemented at the bounded
+scopes below. Cold-route verification is active; terrain-driven sand sliding is implemented and
+wrapped background collision is the current source-backed traversal follow-up.
+Full native/pixel certification remains open, including partial VDP redraws.
 
 ## Objective and authority
 
@@ -24,7 +24,8 @@ adds score/ring coverage to the roadmap and is preserved.
 ## First execution slice: inventory and native pilot
 
 1. Inspect production zone, event, object, scroll, palette, animation, PLC and
-   transition registrations, existing tests and current discrepancy/frontier
+   transition registrations, player spawn/CPU and terrain-driven player hooks,
+   existing tests and current discrepancy/frontier
    records. Decode both acts' actual placements, including used subtypes and
    reachable children. Separate absent factories from implemented route gaps.
 2. Reverify source labels and branches in the existing analysis with the S3K
@@ -52,7 +53,7 @@ representative compatibility, rewind/replay and review of the coupled boundary.
 
 | Slice | Scope and owning reference leads | Early independent check and principal risk |
 | --- | --- | --- |
-| 1. Act 1 entry and desert traversal | `SOZ1_ScreenEvent`, `SOZ1_BackgroundEvent`, `AnPal_SOZ1`, `AnimateTiles_SOZ1`; placed quicksand variants, rocks, vines, platforms and badniks | Camera-driven background/animation at entry; quicksand approach, sink and escape in adjacent phases. Verify movement donor feasibility and actual production object bindings |
+| 1. Act 1 entry and desert traversal | `loc_695A`, `sub_730C`, `SOZ1_ScreenEvent`, `SOZ1_BackgroundEvent`, `AnPal_SOZ1`, `AnimateTiles_SOZ1`; placed quicksand variants, rocks, vines, platforms and badniks | Camera-driven background/animation at entry; quicksand approach, sink and escape in adjacent phases. Verify movement donor feasibility and actual production object bindings |
 | 2. Act 1 arena and miniboss | `sub_55E96`, `sub_55D94`, `Obj_SOZMiniboss`; sand rise, delayed redraw/art handoff, door children | Trigger before/at/after lock, art readiness and spawn order; ordinary boss interaction through defeat and door opening; failed child allocation and rewind |
 | 3. Seamless Act 2 entry | `SOZ1_BackgroundEvent`, `sub_55EFC`, `SOZ2_ScreenInit`, `SOZ2_BackgroundEvent` | Paired-player door admission versus solo/extra followers; fade, queue readiness, reload, wrap setup, title lifecycle and control release. Compare the entire short transition, not just its destination |
 | 4. Act 2 darkness and traversal | `AnPal_SOZ2`, `AnimateTiles_SOZ2`, `Obj_SOZLightSwitch`, Hyudoro/capsule routines; doors, switches, wires, sand corks | Light switch immediately before/at/after a darkness step and during brightening; ghost release/character/checkpoint conditions, torch/palette agreement and held-player ownership |
@@ -78,9 +79,9 @@ implementation findings, not fixes delivered by this documentation correction.
 | Route slice | Required presentation delivery | Acceptance boundaries / current gap |
 | --- | --- | --- |
 | 1: normal Act 1 desert | Dedicated `sub_55D56` parallax, seven fractional X tiers, Y/16, `word_560DC` bands; `loc_55DF2` FG/BG heat shimmer; `AnimateTiles_SOZ1` and `AnPal_SOZ1` | ROM-backed tables; all 224 lines; independent FG/BG wave phases; all 32 art phases and split transfers; same-camera/update-order behavior; GPU-visible tiles `$330..$341`, reverse movement and rewind. Normal-desert owners and focused checks now implemented (record below); full native pixels and wider phase coverage remain open |
-| 2: Act 1 arena | `sub_55DB6` / `sub_55E4C`, sand offset and shake, custom background blocks/art | Before/after arena switch, delayed redraw, shimmer and animation phase-zero handoff; event owner still open |
-| 3: Act 2 entry | Initial pyramid background, wrap setup, secondary art, palette fade and torch initialization | Queue readiness, fresh versus seamless entry, control release and reset/restore; still open |
-| 4: normal Act 2 traversal | Event-selected background framing, `sub_566D2` half-speed outdoor parallax where selected; `AnimateTiles_SOZ2` torches tied to the live palette fade accumulator | Three timer frames per animated intensity, pinned dark state, eight-pass cadence; correct six-tile DMA extent; brightening/darkening and rewind. Do not apply outdoor scrolling to every Act 2 state; owners remain open |
+| 2: Act 1 arena | `sub_55DB6` / `sub_55E4C`, sand offset and shake, custom background blocks/art | Before/after arena switch, delayed redraw, shimmer and animation phase-zero handoff; event owner and final arena rendering implemented; partial VDP row presentation open |
+| 3: Act 2 entry | Initial pyramid background, wrap setup, secondary art, palette fade and torch initialization | Queue readiness, fresh versus seamless entry, control release and reset/restore implemented; full cold victory route open |
+| 4: normal Act 2 traversal | Event-selected background framing, `sub_566D2` half-speed outdoor parallax where selected; `AnimateTiles_SOZ2` torches tied to the live palette fade accumulator | Three timer frames per animated intensity, pinned dark state, eight-pass cadence; correct six-tile DMA extent; brightening/darkening and rewind. Do not apply outdoor scrolling to every Act 2 state; coupled owners implemented; full route/pixel comparison open |
 | 5: sand and pyramid changes | `sub_566E8`, moving sand, background/collision changes, vertical wrap | Both sides of trigger/wrap, players/camera/objects/rendering together, art retention and restored state; open |
 | 6: boss and exit | `sub_56706`, `SOZ2_BGDrawArray`, wall reconstruction, animation inhibition and restored secondary art | Arena mode bands, darkness reset, repeated inhibition writes, defeat/exit restoration and rewind; open |
 
@@ -1526,7 +1527,7 @@ shimmer. Register SOZ1's foreground heat-haze mode through the existing zone
 provider/controller, as AIZ2 does. Its zone/act gate excludes SOZ2; it carries no
 mutable state and is restored through the existing controller snapshot. The
 shared renderer, wave arithmetic, palette, sprites and physics are unchanged.
-Arena/background-event owners remain open under the existing obligations.
+Arena/background-event coupled owners implemented; full route/pixel comparison open under the existing obligations.
 
 The registration regression failed before the change (SOZ1 expected enabled,
 actual disabled). It also checks restored registration and rejection of SOZ2/HCZ
@@ -1756,3 +1757,18 @@ S1/S2 startup consumers and sprite visibility also pass (4tests,0skips,52.697s).
 `28aabd127` preserves the actual third/fourth ghost contact identities through
 recreation, retaining native P1/P2 priority. Six contact cases and60existing
 regressions passed,0skips.
+
+All ten placed checkpoints now have physical activation and production
+death/reload evidence for Sonic, Tails and Knuckles:24additional native cases
+passed without skips (19.432s), complementing the90configuration matrix.
+The methodology now explicitly inventories player spawn, CPU and layout-driven
+hooks outside object/event tables after discovery of `sub_730C`. Its27focused
+ROM/shared-seam/production cases passed,0skips, in `1bd8dfcb5`.
+
+Pillar side contact now follows `SolidObject_cont` / `loc_1E042`: zero horizontal
+velocity still clears ground velocity on left penetration, while the right
+branch preserves it. The real solid-contact regression failed before the
+override (expected0, actual1421), then all5pillar tests passed without skips
+(17.635s). The isolated spike test now supplies its camera dependency explicitly;
+its earlier failure was missing test session state, not spike behavior. The
+connected special-rock fixture remains under separate route investigation.
