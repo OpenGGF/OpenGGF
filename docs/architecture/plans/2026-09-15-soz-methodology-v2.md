@@ -351,3 +351,27 @@ correction uses `NOT.W` on `$18` (`$FFE7`, -25), not negation (-24). Launch velo
 are `-$EF0` on X/Y, with X negated for horizontal flip. `sub_40A08` deforms the
 collision profile and eight child Y coordinates from the same values in that
 object pass. Preserve that coupling when implementing the next family.
+
+### CI inventory follow-up
+
+Push `6cd8ec188` smoke run
+[34956007086](https://github.com/OpenGGF/OpenGGF/actions/runs/34956007086) completed
+19,096 tests with one failure, zero errors and 2,827 skips. The failure is ours:
+`TestRemainingRewindTailInventory.remainingRoundTripTailMatchesInventory` still
+expected 1,010 total / 790 passing object classes. Its actual sweep found 1,011 /
+791, unchanged 220 graph-covered and zero no-codec entries; no remaining-tail
+bucket grew. The new quicksand class passed its sweep and all 15 unit checks.
+
+The follow-up updates the expected totals and the accompanying resource summary
+(which was already one class older), retaining all zero-tail assertions. It adds
+this ordinary-suite inventory check to the existing implementation pitfalls so
+future proportionate object validation includes it. No engine behavior or failure
+allowance changes. The bounded follow-up is based on `6cd8ec188` in
+`.worktrees/soz-rewind-inventory`, branch `bugfix/ai-soz-rewind-inventory`.
+
+The follow-up runner plan selects all 2,588 classes because the inventory text
+resource is unclassified. The actual executable change is two expected counts,
+with no runtime changes or altered failure categories. Focused verification uses
+`python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestRemainingRewindTailInventory,TestSozQuicksand' test`:
+16 tests passed, zero failures/errors/skips, in 49.241s including a fresh compile.
+The inventory test runs the real sweep across all 1,011 concrete object classes.

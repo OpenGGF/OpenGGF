@@ -118,7 +118,8 @@ class TestRemainingRewindTailInventory {
         // Sonic 2 Obj11 bridge segment has focused graph coverage.
         // The three game-over card implementations from develop pass the isolated sweep.
         // MHZ1's independent defeat-explosion controller also passes the isolated sweep.
-        return new TailInventory(1010, 790, 220, 0, buckets);
+        // SOZ quicksand passes the isolated sweep; no remaining-tail category grows.
+        return new TailInventory(1011, 791, 220, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
