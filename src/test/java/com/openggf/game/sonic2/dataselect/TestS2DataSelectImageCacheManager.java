@@ -174,6 +174,40 @@ class TestS2DataSelectImageCacheManager {
         assertFalse(Files.exists(cacheRoot.resolve("manifest.json")));
     }
 
+    @Test
+    void loadingRereadsManifestAfterValidation() throws Exception {
+        writeManifest("sha-valid", writeZoneSet());
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        S2DataSelectImageCacheManager manager = new S2DataSelectImageCacheManager(
+                tempDir, config, () -> {
+                    calls.incrementAndGet();
+                    try {
+                        writeManifest("sha-valid", Map.of());
+                    } catch (IOException e) {
+                        throw new java.io.UncheckedIOException(e);
+                    }
+                    return "sha-valid";
+                }, mapper);
+        assertTrue(manager.loadCachedPreviews().isEmpty());
+        assertEquals(1, calls.get());
+    }
+
+    @Test
+    void invalidManifestAndVersionsDoNotReadRomHash() throws Exception {
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        S2DataSelectImageCacheManager manager = new S2DataSelectImageCacheManager(
+                tempDir, config, () -> { calls.incrementAndGet(); return "sha"; }, mapper);
+        Files.writeString(tempDir.resolve("manifest.json"), "{broken");
+        assertFalse(manager.cacheValid());
+        mapper.writeValue(tempDir.resolve("manifest.json").toFile(), new S2DataSelectImageManifest(
+                "old", S2DataSelectImageCacheManager.GENERATOR_FORMAT_VERSION, "sha", "time", null));
+        assertFalse(manager.cacheValid());
+        mapper.writeValue(tempDir.resolve("manifest.json").toFile(), new S2DataSelectImageManifest(
+                AppVersion.get(), -1, "sha", "time", null));
+        assertFalse(manager.cacheValid());
+        assertEquals(0, calls.get());
+    }
+
     private void writeManifest(String romSha256, Map<String, String> zones) throws IOException {
         S2DataSelectImageManifest manifest = new S2DataSelectImageManifest(
                 AppVersion.get(),

@@ -1,5 +1,9 @@
 package com.openggf.tools.audio.completerun;
 
+import static com.openggf.tools.audio.completerun.CompleteRunAudioFiles.file;
+import static com.openggf.tools.audio.completerun.CompleteRunAudioFiles.directory;
+import static com.openggf.tools.audio.completerun.CompleteRunAudioFiles.absolute;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -173,22 +177,6 @@ public final class TraceChaserAudioProcess {
         return interrupted;
     }
 
-    private static Path directory(Path value, String label) {
-        Path path = absolute(value, label);
-        if (!canonical(path) || !Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
-            throw new IllegalArgumentException(label + " must be an ordinary non-symlink directory");
-        }
-        return path;
-    }
-
-    private static Path file(Path value, String label) {
-        Path path = absolute(value, label);
-        if (!canonical(path) || !Files.isRegularFile(path, LinkOption.NOFOLLOW_LINKS)) {
-            throw new IllegalArgumentException(label + " must be an ordinary non-symlink file");
-        }
-        return path;
-    }
-
     private static Path absoluteNew(Path value, String label) {
         Path path = absolute(value, label);
         if (Files.exists(path, LinkOption.NOFOLLOW_LINKS)) {
@@ -198,19 +186,6 @@ public final class TraceChaserAudioProcess {
             throw new IllegalArgumentException(label + " parent does not exist");
         }
         return path;
-    }
-
-    private static Path absolute(Path value, String label) {
-        Objects.requireNonNull(value, label);
-        if (!value.isAbsolute() || !value.equals(value.normalize())) {
-            throw new IllegalArgumentException(label + " must be an absolute normalized path");
-        }
-        return value;
-    }
-
-    private static boolean canonical(Path path) {
-        try { return path.equals(path.toRealPath()); }
-        catch (IOException missing) { return false; }
     }
 
     private static final class BoundedStderr implements Runnable {

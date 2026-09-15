@@ -326,15 +326,7 @@ public class Sonic2ObjectArt {
         if (result.length % Pattern.PATTERN_SIZE_IN_ROM != 0) {
             throw new IOException("Inconsistent uncompressed art tile data");
         }
-        int patternCount = result.length / Pattern.PATTERN_SIZE_IN_ROM;
-        Pattern[] patterns = new Pattern[patternCount];
-        for (int i = 0; i < patternCount; i++) {
-            patterns[i] = new Pattern();
-            byte[] subArray = Arrays.copyOfRange(result, i * Pattern.PATTERN_SIZE_IN_ROM,
-                    (i + 1) * Pattern.PATTERN_SIZE_IN_ROM);
-            patterns[i].fromSegaFormat(subArray);
-        }
-        return patterns;
+        return PatternDecompressor.fromBytes(result);
     }
 
     /**
