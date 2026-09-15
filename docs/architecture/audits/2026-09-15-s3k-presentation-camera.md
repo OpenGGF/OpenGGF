@@ -1,5 +1,9 @@
 # S3K retained presentation and moving-camera alignment
 
+Status: **rendering fix integrated and validated on develop**. Latest combined
+ordinary checks and the complete FBZ strict replay pass; two unrelated baseline
+guard failures remain. Final evidence follows the investigation chronology.
+
 ## Report and cause
 
 The user observed MHZ objects trailing the camera after the FBZ sprite-table
@@ -139,3 +143,56 @@ the initial concealed entry and subsequent stationary room event. Original
 
 Integration and post-integration validation follow; the first broad run is
 recorded as red, with its four oracle failures corrected narrowly.
+
+## Post-integration result
+
+Oracle correction `d254f5a27` was integrated with implementation `ca44ebed2`
+as develop `2f3797ceb`. On an isolated checkout of that exact integration
+commit, the same full selection against `b8d0ae91b` completed as run
+`20260915T121019Z-472218ca`:
+
+- Ordinary: **2,593 reports / 20,502 tests, zero failures/errors, 19 skips**,
+  731.51 seconds. All five FBZ plane-pixel cases pass inside the full suite.
+- Guards: **668 tests, three failures, zero errors/skips**, 182.12 seconds.
+  Exact failure identities/message hashes match the measured baseline above.
+- Every ordinary skip identity and reason exactly matches the preceding run.
+  This is a complete ordinary-suite pass with inherited red guards, not an
+  all-gates-green claim.
+
+The separate SOZ delivery subsequently integrated `b247c5fad`. It preserves all
+presentation-fix source and test bytes. Its new sloped-contact policies default
+to the existing behavior and are opted into by the new SOZ vine. It also triages
+the already documented quicksand annotations, removing that inherited guard
+failure. The latest FBZ strict/MHZ/FBZ-pixel check and the SOZ delivery's combined
+integration validation completed as recorded below; no duplicate broad run was
+scheduled for unchanged presentation code.
+
+### Latest combined develop verification
+
+The SOZ delivery's post-integration run was observed directly from its completed
+`results.json` on main develop `b247c5fad143e24ae84949b27e5b9159e2f13c45`:
+`20260915T122230Z-7d070c87`, change-based command against the original
+`316788395` base. This includes both tasks' integrated source.
+
+- **2,595 ordinary reports / 20,521 tests: zero failures/errors, 19 skips**,
+  772.52 seconds.
+- **668 guards: two failures, zero errors/skips**, 176.05 seconds. The remaining
+  direct-Maven-guidance and assertion-free-probe failures exactly match the
+  baseline identities/message hashes above. Quicksand triage now passes.
+- All 19 ordinary skip identities/reasons exactly match this task's inspected
+  runs. Native EGL limitations remain as documented; executed GLFW pixel and
+  gameplay checks are not skips.
+
+On this task's isolated tree fast-forwarded to `b247c5fad`, queued
+`-Dmse=off -Ptrace-replay-r7
+-Dtest=TestS3kFbzCompleteRunTraceReplay,TestS3kMovingCameraPresentation,TestFbzBossPlanePixels
+-Ds3k.rom.path=<absolute verified S3K ROM> test -B` passed **all seven tests,
+zero failures/errors/skips**, in 1:04 including recompilation. The complete FBZ
+strict replay passed in 16.15 seconds, followed by all five viewport pixel/mask
+cases. Both task-owned category diagnostic directories were acknowledged and
+deleted after inspecting results; the SOZ owner handles its shared run's cleanup.
+
+Implementation and oracle commits are `ca44ebed2` and `d254f5a27`, integrated
+as `2f3797ceb`; the latest combined source is `b247c5fad`. All incoming support
+and SOZ changes were preserved. Neither the parked S1 elevator challenge nor
+any gameplay physics was tuned by this rendering fix.
