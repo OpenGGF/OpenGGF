@@ -110529,3 +110529,23 @@ animation2. That production intro, not trace-state seeding, is the next target.
   0skips,59336compared frames,39.192s, with unchanged first queue34 and
   Tails2312/main-player6242 frontiers. The missing copy is a proven source
   discrepancy, but this experiment rejects it as the cause of this frontier.
+
+- `b52f3f52d` in `soz-sand-mechanisms`, integrated into `soz-completion`:
+  the recovery2312 mismatch came from stale engine grounding support, not
+  terrain. The pre-fix production regression failed on retained support.
+  Queued `-Dmse=off -Dtest=TestSozRecoverySupportProduction,TestSidekickCpuControllerFlightAutoRecovery,TestObjectSolidContactController,TestSolidObjectManager test -B`
+  with the absolute main-workspace S3K ROM:107tests,0skips,52.842s.
+  Final `-Dtest=TestSozRecoverySupportProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+  with the same queued Maven/ROM flags:59tests,0skips,20.650s.
+  Recovery clears engine support and common status flags while preserving
+  native interaction/object-standing bytes; forced recreation/replay passes.
+- Same independent full-trace command (`-Ptrace-replay-r7
+  -Dtest=TestS3kSozCompleteRunTraceReplay`, absolute S3K ROM), clean candidate
+  source:59336compared rows,13159errors (10326physics,2833animation),0warnings,
+  0skips. First overall error remains queue34. All player fields match through
+  5669; first Tails error5670 is premature despawn (native133A/AD2 CPU6,
+  engine7F00/0 CPU2), and first P1 error is y-speed7291, formerly6241.
+  Total errors increase because the downstream trajectory changes; this is
+  prefix improvement, not an overall green run. Final trace elapsed time was
+  not retained and is not inferred from earlier invocations. No rows or queue
+  comparisons were removed. Investigating the next source-owned boundary.

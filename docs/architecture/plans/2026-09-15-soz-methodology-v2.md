@@ -1861,3 +1861,32 @@ The earlier emerald recording reaches transformation4868 without supplied
 prior-campaign progression. Exact commands, compared counts and limits are in
 [the frontier log](../../status/trace-frontier-log.md). Neither recording's
 comparison rows supply gameplay state; queue checks and later rows remain intact.
+
+Connected lower-room escape validation lands in`aa90938e9`: ordinary input now
+connects cork, switch8, placed swing, switch9 and native exit/redraw20. Six graph
+milestones force recreation and forward replay. Production and capture boot
+boundaries are aligned before the first input; eight combined checks pass with
+zero skips. Earlier attempts were defeated by route timing, and an initial
+fixture/capture mismatch came from the pending initial Process_Sprites pass and
+follower setup. No gameplay behavior was changed to make the route succeed.
+The Act2 matrix records exact configuration and remaining breadth limits.
+
+`b52f3f52d` resolves the measured recovery2312 mismatch. The CPU handoff itself
+matched position and native control, but `handleMovementDispatch` promoted stale
+engine platform support to grounded state before gravity. Recovery status resets
+now clear the engine riding cache and common roll/push/on-object flags while
+preserving radii, native interaction slot and object-owned standing bits. A real
+manager regression failed before the fix;107recovery/solid checks and59final
+S3K checks pass without skips, including forced graph recreation/replay. The
+independent trace remains red but all player fields now match through5669;
+first main-player divergence moves6241→7291. Raw errors increase9763→13159 as
+the subsequent trajectory changes; the longer exact prefix is the measured gain.
+The next Tails frontier5670 is premature despawn. Queue34 remains separate.
+
+`496f44d99` corrects the lower escape's requested solo roster: `none` was an
+unknown character alias and produced fallback Sonic. Blank is the real solo
+setting. Both harnesses now assert actual leader/follower identities; all8
+production/capture checks pass again with zero skips. Definitive captures use
+`completion-connected-mechanisms/verified-rosters`; prior attempts are retained
+and labelled. Five switchB passage trials remain unproved, with no established
+runtime defect. The source-driven rock track and switch decay were not altered.

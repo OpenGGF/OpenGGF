@@ -215,7 +215,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   stage returns, and object graphs—including promoted collapsing platforms—reconstruct
   across rewind using stable object and player identities. Live rewind preserves
   the host audio clock across repeated death/reloads. Sonic 2 and S3K companions
-  copy the leader's collision plane and art priority when flight recovery ends.
+  copy the leader's collision plane and art priority when flight recovery ends,
+  and release stale engine platform support while retaining native interaction state.
   Full-route and
   transient VDP redraw limits remain documented in the per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,

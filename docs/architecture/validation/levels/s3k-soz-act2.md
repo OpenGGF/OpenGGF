@@ -201,3 +201,35 @@ this act, without seeded boss/defeat/transition state. It restores/replays eight
 outgoing graph edges and the incoming Act2 graph, and verifies restored palette
 lines after control release. This is a native-donor 320-pixel incoming route;
 full cold-zone and repeated seamless transition products remain open.
+
+## Connected lower rising-sand escape
+
+`aa90938e9` extends the positioned lower-room route through cork activation,
+trigger8 and its door, the placed swinging platform at`($2800,$130)`, trigger9
+and door`($29C0,$D2)`, then the native exit gate and completed background redraw.
+The same ordinary controller sequence drives production checks and the capture;
+both consume the pending initial Process_Sprites pass before input. The setup
+wait supplies neutral input while the native background initializer is at0.
+No trigger, sand height, collision plane or exit state is written by the route.
+
+Whole-graph forced recreation and replay cover activation, both switches,
+platform boarding, collision release and redraw20. The final combined selection
+`TestSozConnectedMechanismsProduction,TestSozConnectedMechanismCapture` passes
+8tests,0failures/errors/skips. The initial lower-room run is Sonic plus fallback Sonic,width400,donoroff:
+its attempted `none` follower identifier resolved to Sonic. `496f44d99` corrects
+the solo setting to blank and asserts the actual live roster in production and
+capture; the same8checks pass with zero skips. The three other scenarios assert
+Sonic+Tails. Definitive movies are under `verified-rosters`; the initial
+`aligned-complete-route` lower capture remains a labelled fallback-team attempt. Other characters/configurations and
+cold reachability remain open. Root inspected external
+`completion-connected-mechanisms/aligned-complete-route/lower/frames/03060.png`:
+Sonic is alive beyond the exit, with the temple floor correctly drawn. All four
+scenario movies and their input/state records remain beside the originals.
+
+Five additional ordinary-input trials of the late switchB passage did not prove
+crossing: the subtype9B charge decays before the attempted door crossing, while
+low ceilings constrain acceleration and the final jump. Source-owned collision
+or track defects were not established, so no geometry or timing was altered.
+`switch-passage-probe1` through`5` preserve the attempted input/state records.
+Positive rock/switch coupling is implemented but its connected puzzle route
+remains unverified; direct player charging alone does not prove it optional.
