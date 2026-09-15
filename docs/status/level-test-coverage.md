@@ -197,3 +197,7 @@ windows; extended phase coverage and whole-route guarantees remain open.
 FBZ early reverse squeeze speed comparison: the Act 2 matrix now records
 a matched car-phase/entry-position pair where about 9.4% more roll-entry speed
 changes a crush into a safe crossing, reproduced by synchronized gameplay videos.
+
+FBZ Act 1 miniboss presentation (2026-09-15): the [Act 1 matrix](../architecture/validation/levels/s3k-fbz-act1.md)
+records the paired opened-boss setup and local plunger/face/priority corrections.
+Full-act and complete-route visual certification remains open.

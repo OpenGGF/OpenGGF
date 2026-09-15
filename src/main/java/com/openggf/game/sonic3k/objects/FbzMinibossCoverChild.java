@@ -82,6 +82,8 @@ final class FbzMinibossCoverChild extends AbstractObjectInstance
         yFixed = (y << 8) | (yFixed & 0xFF);
     }
     @Override public int getPriorityBucket() { return 2; }
+    // CreateChild1_Normal copies the root art_tile; SetUp_ObjAttributes3 retains it.
+    @Override public boolean isHighPriority() { return true; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.FBZ_MINIBOSS);
         if (r != null && r.isReady()) r.drawFrameIndex(coverIndex + 1, x, y, false, false);
