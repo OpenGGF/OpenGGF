@@ -118,6 +118,8 @@ class TestCrossGameFeatureProviderRefactor {
         GameRules base = GameRules.SONIC_2;
 
         assertHybridPreservesBaseExceptDonatedCapabilities(base, hybrid);
+        assertTrue(hybrid.playerCapability().glideAttacksEnabled(),
+                "The S3K donor advertises Knuckles glide attacks");
         assertEquals(base.collision().sidekickPushBypassUsesGraceStatus(), hybrid.collision().sidekickPushBypassUsesGraceStatus());
         assertEquals(base.collision().sidekickClearsStalePushVelocityBeforeGroundMove(),
                 hybrid.collision().sidekickClearsStalePushVelocityBeforeGroundMove());
@@ -258,7 +260,8 @@ class TestCrossGameFeatureProviderRefactor {
                 "spindashSpeedTable",
                 "elementalShieldsEnabled",
                 "instaShieldEnabled",
-                "lightningShieldEnabled");
+                "lightningShieldEnabled",
+                "glideAttacksEnabled");
         for (RecordComponent component : GameRules.class.getRecordComponents()) {
             if ("playerCapability".equals(component.getName())) {
                 continue;

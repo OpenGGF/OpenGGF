@@ -19,15 +19,23 @@ public final class CrossGameRuleComposer {
      */
     public static GameRules withPlayerRules(GameRules base, PlayerMovementRules playerMovement,
             ObjectInteractionRules objectInteraction, CollisionRules collision, RingRules ring) {
+        return withPlayerRules(base, playerMovement, objectInteraction, collision, ring,
+                base == null ? null : base.playerCapability());
+    }
+
+    public static GameRules withPlayerRules(GameRules base, PlayerMovementRules playerMovement,
+            ObjectInteractionRules objectInteraction, CollisionRules collision, RingRules ring,
+            PlayerCapabilityRules playerCapability) {
         if (base == null) {
             throw new IllegalArgumentException("Base GameRules are required");
         }
-        if (playerMovement == null || objectInteraction == null || collision == null || ring == null) {
+        if (playerMovement == null || objectInteraction == null || collision == null
+                || ring == null || playerCapability == null) {
             throw new IllegalArgumentException("Replacement rules are required");
         }
         return new GameRules(
                 playerMovement,
-                base.playerCapability(),
+                playerCapability,
                 collision,
                 base.playerAnimation(),
                 base.camera(),
@@ -63,7 +71,10 @@ public final class CrossGameRuleComposer {
                 donorCapabilities.hasTailsFlight(),
                 hostCapability.jumpRepressClearsRollJumpBeforeAbility(),
                 donorCapabilities.hasElementalShields(),
-                hostCapability.superSpindashSpeedTable());
+                hostCapability.superSpindashSpeedTable(),
+                hostCapability.glideAttacksEnabled()
+                        || (donorCapability.glideAttacksEnabled()
+                        && donorCapabilities.getPlayableCharacters().contains(com.openggf.game.PlayerCharacter.KNUCKLES)));
 
         return new GameRules(
                 host.playerMovement(),

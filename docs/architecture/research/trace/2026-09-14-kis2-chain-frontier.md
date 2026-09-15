@@ -918,3 +918,123 @@ retains the row-957 X-speed mismatch and ownership stop at cursor **58,451**.
 The measured gain is preserved after integration. Consumed category diagnostics
 were acknowledged and removed; one-off native probes were removed after their
 evidence was recorded here.
+
+## Glide attack continuation (2026-09-15, base `d92fea6f1`)
+
+The previous segment-13 row-957 X-speed mismatch was a hurt response, not
+a fitted rebound speed. A temporary read-only `setXSpeed` stack probe observed
+X $29AF/Y $0439, velocity $0448 -> $FE00 through `applyHurt` and the BOSS
+touch path. The fixture changes to slide mapping $CC on that same pass; native
+`Touch_Enemy` (`docs/kis2disasm/s2.asm:88742-88760`, `gameRevision=3`) accepts
+`double_jump_flag` 1 and 3. The engine admitted these states only when elemental
+shields were enabled. The probe was removed; no fixture data changed.
+
+`PlayerCapabilityRules.glideAttacksEnabled` now owns that admission, separately
+from elemental shields. KiS2 enables it; native and donated Knuckles capabilities
+are composed explicitly. The initial regression failed because flag 1 did not
+attack, then all 63 touch tests passed. The first replay candidate completed
+segment 13 and reached CPZ1, but segment 13 still had 8,740 errors beginning
+row 1367 Y $03F4/$03F5.
+
+The next causal difference was the missing `Touch_Enemy_Part2` glide exit
+(`s2.asm:88790-88807`): after velocity negation, flag 1 becomes 2, animation
+becomes $21, facing is selected from the reflected X velocity, and standing
+radii are restored. Flag 3 remains sliding. The multi-sprite `boss_hitcount2`
+branch returns before these writes. `ObjectInteractionRules.bossHitEndsActiveGlide`
+selects this KiS2 response; stock games retain their behavior. A regression first
+failed on the missing flag-2 write. Tests cover both horizontal directions,
+non-attacking states, retained sliding, S3K active glide, and the multi-sprite
+exception. No new gameplay state is introduced: existing sprite fields already
+participate in rewind.
+
+The combined control command used queued Maven, `-Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1`, the canonical KiS2 chain, short KiS2 EHZ1, stock S2 EHZ1,
+S3K Knuckles chain, `TestTouchResponseManager` and `TestCrossGameRuleComposer`,
+with absolute KiS2/S2/S3K ROM properties. It completed 83 tests, four known red
+trace assertions, zero errors/skips, in 46.725 s. Segment 13 completes all 3,222
+rows with 1,068 remaining errors, first at row 1963 `dynamic_art.edges` [622]/[].
+Segment 14 CPZ1 completes 5,574 compared rows with 57,715 errors, first row 1112
+Y $01CA/$01B5, then fails to observe its following level-load boundary. The
+minimum compared movie frontier is row 65,733 (offset 60,160 + 5,574 rows),
+7,282 rows beyond the former stop at 58,451. All four independent control
+report payload hashes exactly match the preceding delivered control reports.
+
+The two new rule fields are part of the unpublished 0.7.0 Mod API candidate.
+Existing record call sites pass explicit values; no provisional compatibility
+constructors are retained. Candidate signature regeneration is complete;
+combined validation is recorded below.
+
+The native multi-sprite flag cannot be inferred from engine touch-region count.
+The six `boss_hitcount2` initializers are Obj52 HTZ (67478), Obj89 ARZ (68122),
+Obj57 MCZ (69101), Obj51 CNZ (69775), Obj54 MTZ (70510), and Obj55 OOZ (71542).
+They now advertise the existing `BOSS_REFLECT` policy explicitly; both single-
+and multi-region profile calls retain it. A test exercises velocity-only
+reflection with both region shapes. Do not infer this from an older Mecha Sonic
+comment: ObjAF_Init (80858) writes `collision_property`, and its subobject data
+does not set the multi-sprite flag. No Mecha behavior was changed.
+
+Final focused replay on the original base confirms the CPZ1 exit-window stop
+at **BK2 cursor 65,856**, versus 58,451 before this continuation: **7,405 movie
+frames further**. Its ordinary companion selection initially exposed an
+over-broad new negative-test setup: the test enabled insta-shield while asserting
+that no attack was possible. It now disables that separate attack capability
+to isolate elemental-shield versus glide admission; production insta-shield
+behavior is unchanged. All selected HTZ/MCZ/CNZ contact tests passed.
+
+Updated-base validation used fixed worktree `.worktrees/kis2-speed-baseline`
+at `d9de72b7a314bdd6e4157eb4db2ef638e2669d96`, including subsequent Sandopolis
+controllers, S1 physical-audio policy and S2 title-star timing. Command
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --category all --run`,
+run `20260915T165535Z-bdc9f02c`: 2,606 ordinary reports, **20,593 tests, zero
+failures/errors, 19 skips** (757.78 s); 84 guard reports, **668 tests, three
+failures, zero errors/skips** (177.09 s). Baseline failures are:
+
+- `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`: the same five obsolete direct-Maven guidance requirements.
+- `TestTraceChaserBoundaryGuard.onlyReviewedForwardersRemainAtMigratedRoots`: `deleted implementation remains tracked: tools/bizhawk/README.md`, expected 0/actual 1.
+- `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`: `FbzRouteEvidenceProbe.printEvidence` and `LevelSolidityMapProbe.writeSolidityMap`.
+
+The 120-test API/touch selection passed all behavioral, signature, no-shim,
+Javadoc, SDK-packaging and maintained-sample checks. Its one policy error was
+a comment rejected by the descriptor's exact `key=value` parser; the comment
+was removed, preserving the descriptor unchanged. The corrected four-test pin
+policy check is recorded separately after completion.
+
+The corrected queued `-Dtest=TestModApiPinPolicy test` run passes all four tests,
+zero failures/errors/skips, 18.369 s. The candidate signature pin changes only
+the two canonical constructors and their two new record components/accessors.
+
+Source commit `4a4ecb7ae` was reconciled with updated `develop` `d9de72b7a`
+in `298913b39` without conflicts; `e66138058` records the exact cursor and
+clarifies the source comment. The reconciled four-class queued trace command
+completed five tests with four known trace assertions, zero errors/skips,
+70 seconds. All 22 normalized JSON report payload hashes exactly match the
+pre-merge candidate, including the four independent controls and cursor 65,856.
+
+Development validation at `e66138058`, command `LUA_BIN=lua5.4 python3
+tools/testing/run_categories.py --base d9de72b7a314bdd6e4157eb4db2ef638e2669d96
+--run`, run `20260915T173243Z-cc147878`: 20,607 ordinary tests, two failures,
+zero errors, 19 skips (745.05 s); 668 guard tests, the exact three baseline
+failures, zero errors/skips (178.01 s). All skip identities and reasons match
+the baseline. The new failures were existing rule expectations:
+`TestCrossGameFeatureProviderRefactor.hybridRulesPreserveBaseBoundaryAndSidekickFlags`
+expected the newly donated glide flag to remain false, and
+`TestKis2PhysicsProvider.rulesRetainSonic2DefaultsOutsideShippedLockOnChanges`
+required the entire stock capability record by identity. They now explicitly
+assert the ROM-backed glide capability and boss exit while retaining checks
+for every unrelated capability value. No production behavior changed in this
+correction. Development diagnostics were inspected and queued for acknowledgment;
+focused correction and integrated validation follow below.
+
+The corrected two-class selection passes **18 tests, zero failures/errors/skips**,
+49.665 s, queued `-Dmse=off
+-Dtest=TestCrossGameFeatureProviderRefactor,TestKis2PhysicsProvider test`.
+Commit `5c62649f4` contains only those assertion corrections and this record;
+`5f6da8185` reconciles incoming sprite-bank ownership work from `develop`
+`e949e124c` without conflicts. The owning task's completed baseline run
+`20260915T174807Z-47ae729d` was read before its owner removed diagnostics:
+20,631 ordinary tests, zero failures/errors, 19 skips (779.35 s); 668 guards,
+the same three failures and zero errors/skips (175.58 s). Failure identities,
+types and messages, and all skip records, match the earlier baseline exactly.
+Its command was `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
+--base d92fea6f15ba0f90f9df15aab2d8c19763ded87f --run` in the main workspace.
+Our development diagnostics acknowledgment has completed.

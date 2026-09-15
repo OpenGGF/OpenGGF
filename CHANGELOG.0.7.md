@@ -31,6 +31,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   controller state and overlapping jump-button activation. Checkpoints restore
   their saved rings and extra-life flags; glide collision, air momentum, balance,
   solid contacts and wind/held-object mechanics follow the lock-on branches.
+  Glide and slide attacks work without elemental shields; active boss-hit
+  glides enter the native falling state while sliding attacks retain their slide.
   The CNZ slot face, title level-select code, Super sound-test code and independent
   results-message motion also use the KiS2 presentation. Dynamic-art lifecycle
   observations model the combined converted-RAM transfer and chip special-stage

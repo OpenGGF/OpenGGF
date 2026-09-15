@@ -66,7 +66,8 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    null
+                    null,
+                    false
             ),
             new CollisionRules(
                     CollisionModel.UNIFIED,
@@ -138,7 +139,8 @@ public record GameRules(
                     false,
                     false,
                     0x39, // duckTouchBoxMappingFrame: S1 fr_Duck ($39)
-                    0x39 // bossDuckTouchBoxMappingFrame
+                    0x39, // bossDuckTouchBoxMappingFrame
+                    false
             ),
             new SidekickCpuRules(
                     16,
@@ -216,7 +218,8 @@ public record GameRules(
                     false,
                     false,
                     false,
-                    new short[]{0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00}
+                    new short[]{0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00},
+                    false
             ),
             new CollisionRules(
                     CollisionModel.DUAL_PATH,
@@ -295,7 +298,8 @@ public record GameRules(
                     true,
                     false,
                     0x4D, // duckTouchBoxMappingFrame: S2 SonAni_Duck second frame ($4D)
-                    0x4D // bossDuckTouchBoxMappingFrame
+                    0x4D, // bossDuckTouchBoxMappingFrame
+                    false
             ),
             new SidekickCpuRules(
                     16,
@@ -373,7 +377,8 @@ public record GameRules(
                     true,
                     true,
                     true,
-                    new short[]{0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00}
+                    new short[]{0x0B00, 0x0B80, 0x0C00, 0x0C80, 0x0D00, 0x0D80, 0x0E00, 0x0E80, 0x0F00},
+                    true
             ),
             new CollisionRules(
                     CollisionModel.DUAL_PATH,
@@ -446,7 +451,8 @@ public record GameRules(
                     true,
                     true,
                     ObjectInteractionRules.NO_DUCK_TOUCH_BOX, // S3K removed the duck touch-box shrink
-                    ObjectInteractionRules.NO_DUCK_TOUCH_BOX // bossDuckTouchBoxMappingFrame
+                    ObjectInteractionRules.NO_DUCK_TOUCH_BOX, // bossDuckTouchBoxMappingFrame
+                    false
             ),
             new SidekickCpuRules(
                     48,

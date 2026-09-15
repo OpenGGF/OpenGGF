@@ -110363,3 +110363,27 @@ completed two tests, one known chain assertion, zero errors/skips. All 17
 canonical reports exactly match the candidate: segment 13, cursor **58,451**,
 first error row **957 `x_speed` -$0448/-$0200**, 7,203 partial-report errors.
 No fixture payload was changed.
+
+### 2026-09-15 — KiS2 glide attacks reach the CPZ1 exit window
+
+Worktree `.worktrees/kis2-speed-frontier`, base `d92fea6f1`. Queued canonical
+`TestKis2CompleteEmeraldRunChain` baseline (`-Dmse=off -Ptrace-replay
+-Dsurefire.forkCount=1`, absolute KiS2/S2 ROM properties) reproduced segment 13
+row 957 `x_speed` -$0448/-$0200 and the source-ownership stop at cursor 58,451.
+A read-only setter stack probe identified hurt knockback: glide/slide attack
+admission was incorrectly gated by elemental-shield availability. The shipped
+KiS2 `Touch_Enemy` admits flags 1/3; `Touch_Enemy_Part2` additionally exits flag-1
+gliding on an ordinary boss rebound, but preserves sliding and skips that exit
+in its multi-sprite branch. Both responses now have semantic rules.
+
+The combined command adds `TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay,
+TestS3kKnucklesSuperEmeraldRunChain,TestTouchResponseManager,TestCrossGameRuleComposer`
+and the absolute S3K ROM property: 83 tests, four known trace assertions, zero
+errors/skips, 46.725 s. All four independent control payloads match the prior
+delivered controls exactly. Segment 13 now completes 3,222 rows with 1,068
+errors, first row 1963 `dynamic_art.edges` [622]/[]. Segment 14 (`seg9_cpz1`)
+completes all 5,574 rows with 57,715 errors, first row 1112 Y $01CA/$01B5; its
+following `level_advance` boundary is not observed. The final focused replay
+reports mode LEVEL at BK2 cursor **65,856**, **7,405 movie frames** beyond the
+former 58,451 stop. No fixture payloads changed. Final combined validation is pending. See the
+[causal evidence](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#glide-attack-continuation-2026-09-15-base-d92fea6f1).

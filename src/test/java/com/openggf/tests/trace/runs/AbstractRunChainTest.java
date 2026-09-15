@@ -1881,7 +1881,8 @@ abstract class AbstractRunChainTest {
                                 + ") semantic level-load boundary ("
                                 + exit.entryKind()
                                 + ") was never observed within the boundary window for "
-                                + runDir);
+                                + runDir + " (mode=" + loop.getCurrentGameMode()
+                                + ", BK2 cursor=" + playback.getCursorFrame() + ")");
                 closeHeadlessPayloadOrThrow();
                 activeComparator = null;
                 dynamicArtGapJournal.gapOpened(seg.segment().dir());

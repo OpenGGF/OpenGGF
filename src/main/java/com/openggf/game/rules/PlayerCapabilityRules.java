@@ -1,8 +1,10 @@
 package com.openggf.game.rules;
 
+import com.openggf.game.ModApi;
+
 import java.util.Arrays;
 
-@com.openggf.game.ModApi
+@ModApi
 public record PlayerCapabilityRules(
         boolean spindashEnabled,
         short[] spindashSpeedTable,
@@ -11,7 +13,8 @@ public record PlayerCapabilityRules(
         boolean tailsFlightEnabled,
         boolean jumpRepressClearsRollJumpBeforeAbility,
         boolean lightningShieldEnabled,
-        short[] superSpindashSpeedTable) {
+        short[] superSpindashSpeedTable,
+        boolean glideAttacksEnabled) {
 
     public PlayerCapabilityRules {
         spindashSpeedTable = copy(spindashSpeedTable);
@@ -42,6 +45,7 @@ public record PlayerCapabilityRules(
                 && tailsFlightEnabled == other.tailsFlightEnabled
                 && jumpRepressClearsRollJumpBeforeAbility == other.jumpRepressClearsRollJumpBeforeAbility
                 && lightningShieldEnabled == other.lightningShieldEnabled
+                && glideAttacksEnabled == other.glideAttacksEnabled
                 && Arrays.equals(spindashSpeedTable, other.spindashSpeedTable)
                 && Arrays.equals(superSpindashSpeedTable, other.superSpindashSpeedTable);
     }
@@ -55,6 +59,7 @@ public record PlayerCapabilityRules(
         result = 31 * result + Boolean.hashCode(tailsFlightEnabled);
         result = 31 * result + Boolean.hashCode(jumpRepressClearsRollJumpBeforeAbility);
         result = 31 * result + Boolean.hashCode(lightningShieldEnabled);
+        result = 31 * result + Boolean.hashCode(glideAttacksEnabled);
         result = 31 * result + Arrays.hashCode(superSpindashSpeedTable);
         return result;
     }
@@ -69,6 +74,7 @@ public record PlayerCapabilityRules(
                 + ", tailsFlightEnabled=" + tailsFlightEnabled
                 + ", jumpRepressClearsRollJumpBeforeAbility=" + jumpRepressClearsRollJumpBeforeAbility
                 + ", lightningShieldEnabled=" + lightningShieldEnabled
+                + ", glideAttacksEnabled=" + glideAttacksEnabled
                 + ", superSpindashSpeedTable=" + Arrays.toString(superSpindashSpeedTable)
                 + "]";
     }

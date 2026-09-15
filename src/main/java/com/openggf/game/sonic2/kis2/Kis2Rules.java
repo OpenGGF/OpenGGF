@@ -81,7 +81,7 @@ public final class Kis2Rules {
                 interaction.solidPushReleaseWritesWalkRunAnimationWord(),
                 interaction.solidPushReleaseSkipsWalkRunWhenRolling(),
                 interaction.solidPushReleaseSkipsWalkRunWhenSpindashing(),
-                DUCK_TOUCH_BOX_MAPPING_FRAME, 0x4D);
+                DUCK_TOUCH_BOX_MAPPING_FRAME, 0x4D, true);
         CollisionRules c = base.collision();
         // Obj01_CheckWallsOnGround / loc_1A6A8: collision stops inertia either
         // way, but only a player facing into the wall acquires pushing status.
@@ -101,7 +101,15 @@ public final class Kis2Rules {
                 rings.ringFloorProbeRequiresRenderFlag(), rings.lostRingBoundaryChecksOnlyOnProbeCadence(),
                 rings.lostRingRenderVerticalMargin(), rings.ringCollisionWidth(), rings.ringCollisionHeight(),
                 rings.stageRingsUseObjectTouchCollection(), rings.stageRingSweepUsesRawCameraWindow(), true);
+        var capability = base.playerCapability();
+        // gameRevision=3 Touch_Enemy accepts double_jump_flag 1 and 3,
+        // independently of the elemental shields absent from KiS2.
+        var kis2Capability = new com.openggf.game.rules.PlayerCapabilityRules(
+                capability.spindashEnabled(), capability.spindashSpeedTable(),
+                capability.elementalShieldsEnabled(), capability.instaShieldEnabled(),
+                capability.tailsFlightEnabled(), capability.jumpRepressClearsRollJumpBeforeAbility(),
+                capability.lightningShieldEnabled(), capability.superSpindashSpeedTable(), true);
         return CrossGameRuleComposer.withPlayerRules(base, kis2Movement, kis2Interaction,
-                collision, checkpointRings);
+                collision, checkpointRings, kis2Capability);
     }
 }

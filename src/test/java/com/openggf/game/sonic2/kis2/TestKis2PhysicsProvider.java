@@ -5,6 +5,7 @@ import com.openggf.game.PhysicsProfile;
 import com.openggf.game.rules.GameRules;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
@@ -106,7 +107,22 @@ class TestKis2PhysicsProvider {
         assertEquals(stockCollision.layoutYMaskAppliesToAllLookups(), collision.layoutYMaskAppliesToAllLookups());
         // The remaining rule families retain stock S2 behavior.
         assertSame(GameRules.SONIC_2.playerAnimation(), rules.playerAnimation());
-        assertSame(GameRules.SONIC_2.playerCapability(), rules.playerCapability());
+        var stockCapability = GameRules.SONIC_2.playerCapability();
+        var capability = rules.playerCapability();
+        // KiS2 Touch_Enemy admits Knuckles glide/slide independently of shields.
+        assertTrue(capability.glideAttacksEnabled());
+        assertFalse(stockCapability.glideAttacksEnabled());
+        assertEquals(stockCapability.spindashEnabled(), capability.spindashEnabled());
+        assertArrayEquals(stockCapability.spindashSpeedTable(), capability.spindashSpeedTable());
+        assertEquals(stockCapability.elementalShieldsEnabled(), capability.elementalShieldsEnabled());
+        assertEquals(stockCapability.instaShieldEnabled(), capability.instaShieldEnabled());
+        assertEquals(stockCapability.tailsFlightEnabled(), capability.tailsFlightEnabled());
+        assertEquals(stockCapability.jumpRepressClearsRollJumpBeforeAbility(),
+                capability.jumpRepressClearsRollJumpBeforeAbility());
+        assertEquals(stockCapability.lightningShieldEnabled(), capability.lightningShieldEnabled());
+        assertArrayEquals(stockCapability.superSpindashSpeedTable(), capability.superSpindashSpeedTable());
+        assertTrue(rules.objectInteraction().bossHitEndsActiveGlide());
+        assertFalse(GameRules.SONIC_2.objectInteraction().bossHitEndsActiveGlide());
         assertSame(GameRules.SONIC_2.sidekickCpu(), rules.sidekickCpu());
         assertSame(GameRules.SONIC_2.powerUp(), rules.powerUp());
         var stockRings = GameRules.SONIC_2.ring();
