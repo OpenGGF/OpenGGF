@@ -84,6 +84,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x35, // AIZForegroundPlant
+            0x41, // CNZBalloon / SOZLightSwitch
+            0x97, // MegaChopper / SOZMiniboss
+            0xAA, // FBZMiniboss / Hyudoro
+            0xAB, // FBZ2Subboss / SOZHyudoroArtTrigger
+            0xAC, // FBZEndBoss / SOZHyudoroCapsule
             0x39, // HCZLargeFan / SOZSpawningSandBlocks
             0x3A, // HCZHandLauncher / SOZPathSwap
             0x40, // HCZBlock / SOZRisingSandWall
@@ -152,7 +157,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x32, // AIZDrawBridge
             0x36, // HCZBreakableBar
             0x37, // HCZWaterRush
-            0x41, // CNZBalloon
             0x4C, // CNZSpiralTube
             0x4D, // CNZBarberPoleSprite
             0x4E, // CNZWireCage
@@ -190,7 +194,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x91, // AIZMiniboss
             0x92, // AIZEndBoss
             0x93, // Jawz
-            0x97, // MegaChopper
             0x98, // Poindexter
             0x99, // HCZMiniboss
             0x9A, // HCZEndBoss
@@ -206,9 +209,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0xA5, // Batbot
             0xA6, // CNZMiniboss
             0xA7, // CNZEndBoss
-            0xAA, // FBZMiniboss
-            0xAB, // FBZ2Subboss
-            0xAC, // FBZEndBoss
             0xAD, // Penguinator
             0xAE, // StarPointer
             0xAF, // ICZCrushingColumn
@@ -277,7 +277,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
 
     // SKL-only implementations (zones 7-13: MHZ through DDZ), on top of SHARED.
     private static final Set<Integer> SKL_ONLY_IDS = Set.of(
-            0x14 // Updraft
+            0x14, // Updraft
+            0x8B // SpriteMask
     );
 
     // MHZ-only implementations from SKL ids gated on ZONE_MHZ.

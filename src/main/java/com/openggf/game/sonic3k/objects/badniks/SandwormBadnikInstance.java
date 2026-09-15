@@ -55,6 +55,14 @@ public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance impl
             if (spawnChild(() -> new SandEffect(getSpawn(), true, index, facingLeft)) == null) break;
         }
     }
+    @Override protected void onRemovedFromObjectManager() {
+        // Child_DrawTouch_Sprite_FlickerMove uses the root's retirement to
+        // enter debris; the child keeps its own position/velocity, not its owner.
+        var manager = services().objectManager();
+        if (manager != null) for (var object : manager.getActiveObjects()) {
+            if (object instanceof Segment segment && segment.owner == this) segment.owner = null;
+        }
+    }
     @Override public int getCollisionFlags() { return routine == 4 ? 0x0B : 0; }
     @Override public int getOnScreenHalfWidth() { return 8; }
     @Override public int getOnScreenHalfHeight() { return 12; }
@@ -83,6 +91,7 @@ public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance impl
             if (owner == null || owner.isDestroyed()) {
                 // Child_DrawTouch_Sprite_FlickerMove / Set_IndexedVelocity(d0=0).
                 debris = true;
+                owner = null;
                 xVelocity = new int[]{-0x100,0x100,-0x200,0x200,-0x300}[index];
                 yVelocity = index < 2 ? -0x100 : -0x200;
                 if (!facingLeft) xVelocity = -xVelocity;

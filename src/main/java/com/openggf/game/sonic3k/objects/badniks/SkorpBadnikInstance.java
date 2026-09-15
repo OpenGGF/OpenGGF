@@ -55,6 +55,18 @@ public final class SkorpBadnikInstance extends AbstractS3kBadnikInstance impleme
             if (timer < 0) reverse();
         } else reverse();
     }
+    @Override protected void onRemovedFromObjectManager() {
+        // loc_8E744 tests the root's retired status before drawing each tail.
+        // A converted/deleted SST is no longer a Java owner: retain each tail
+        // until its own next dispatch, but never retain the retired identity.
+        var manager = services().objectManager();
+        if (manager != null) for (var object : manager.getActiveObjects()) {
+            if (object instanceof Tail tail && tail.owner == this) {
+                tail.owner = null;
+                tail.previous = null;
+            }
+        }
+    }
     private void reverse() { xVelocity = -xVelocity; facingLeft = !facingLeft; timer = patrolPeriod; }
     @Override public int getCollisionFlags() { return routine == 0 ? 0 : 6; }
     @Override public int getOnScreenHalfWidth() { return 0x10; }
@@ -130,6 +142,9 @@ public final class SkorpBadnikInstance extends AbstractS3kBadnikInstance impleme
             xVelocity = (short)(((Math.abs(dx) * scale) >>> 16) * 16 * Integer.signum(dx));
             yVelocity = (short)(((Math.abs(dy) * scale) >>> 16) * 16 * Integer.signum(dy));
         }
+        // loc_8E76C only draws; the root retirement check owns tail lifetime.
+        @Override public boolean usesCustomOutOfRangeCheck() { return true; }
+        @Override public boolean isCustomOutOfRange(int cameraX) { return false; }
         @Override public int getOnScreenHalfWidth() { return 0x10; }
         @Override public int getOnScreenHalfHeight() { return 0x14; }
         @Override public int getCollisionFlags() { return isDestroyed() || index != 5 ? 0 : 0x87; }

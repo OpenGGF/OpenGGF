@@ -1667,3 +1667,19 @@ Focused queued Maven: `TestPersistentRespawnDestroyLatchRoundTrip`,
 (47.387s). SDK/Javadoc/sample packaging and API hook-policy checks: 29 passed,
 no failures/errors/skips (26.672s). Full route and combined delivery checks remain
 pending.
+
+### Retirement and source-entry audit
+
+Ordinary replay exposed Skorp tails retaining a retired root. Retirement hooks
+now detach references while children retain their own next-dispatch deletion or
+debris behavior; the same boundary is covered for Sandworm/Rockn. Three direct
+retirement/replay cases pass;26 other focused badnik, viewport/donor, inventory
+and art checks passed. The wall contact audit also corrected d6 bits16/17:
+`SolidObject_cont` publishes side contact there, not standing. Three wall checks
+pass. See the frontier log for the still-red ordinary replay and its next owner.
+
+The SOZ1 falling-into-sand intro was missing from the original catalogue. Native
+`SpawnLevelMainSprites` loc695A initializes animation2/airborne and creates
+`Obj_LevelIntro_PlayerFallIntoGround` at42000. This must join the entry acceptance
+slice, including locked fall, sand splash, jump-pressed release, companion state
+and rewind; plain cold loading is not sufficient.

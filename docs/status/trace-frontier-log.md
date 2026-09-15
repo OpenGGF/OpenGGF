@@ -110393,3 +110393,34 @@ passes 20,645 ordinary tests with 19 baseline skips; 668 guards retain the exact
 three baseline failures (build guidance, migrated README, assertion-free probes).
 No new or worsened failure remains. See the
 [causal evidence](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#glide-attack-continuation-2026-09-15-base-d92fea6f1).
+
+
+### 2026-09-15 — SOZ completion ordinary-route ownership check
+
+At `6f10f848e` in `.worktrees/soz-completion`, queued Maven
+`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsSozSegmentTraceReplay -Ds3k.rom.path="$S3K_ROM" test -B`
+completed with one test error, zero skips (51.135s). It aborted at trace index1814,
+ROM frame1814, `FULL_LEVEL_FRAME`: `SkorpBadnikInstance.Tail.owner` retained a
+Skorp no longer registered in the rewind identity table. This is an ownership
+failure, not a completed parity measurement; no aggregate mismatch count is
+claimed. The short family tests had not included this retirement boundary.
+
+
+Follow-up on the same completion branch repairs Skorp retirement and equivalent
+Sandworm/Rockn child references. The three direct retirement/replay checks pass;
+the remaining26 badnik/breadth/inventory/art checks passed in the preceding run.
+The initial test attempted a full snapshot between object removal and collision
+list retirement; that is not a valid completed-frame boundary. It now validates
+reference closure immediately and captures the composite after the next frame.
+
+Queued Maven `-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSozBossWallState,TestS3kSonicTailsSozSegmentTraceReplay` with explicit ROM
+completed in55.206s: wall checks3 passed, trace failed without a closure exception.
+Report:17646 compared frames,4299 error spans,0 warnings,0 bootstrap errors;
+first frame0 `tails_y_speed` expected0038/actual0000, with leader gravity and
+animation mismatches at the same boundary. Eight advertised aux schemas are
+unverified, so this is physics/animation coverage only. Source inspection found
+an omitted SOZ1 entry owner: `SpawnLevelMainSprites` loc695A creates
+`Obj_LevelIntro_PlayerFallIntoGround` and initializes both players airborne with
+animation2. That production intro, not trace-state seeding, is the next target.
