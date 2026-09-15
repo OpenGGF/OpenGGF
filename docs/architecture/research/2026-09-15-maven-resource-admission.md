@@ -174,3 +174,10 @@ These checks establish the admission mechanism and preserve observed baseline
 failures. They do not certify two concurrent full suites, cold builds, alternate
 profiles or graphics availability. Temporary samples, XML and logs are consumed
 and removed; the category run is acknowledged through the runner.
+
+During delivery, `develop` advanced to `d04e591c2274fccc574220e90a95bb43ad5d97f4`.
+Its independent Sandopolis work (`7fae85a69`, with verification recorded by
+`7c40112af`/`d04e591c2`) corrects the rewind inventory count and annotates its method.
+Those four upstream files do not overlap this task and are preserved at integration.
+The measurements above remain tied to `6cd8ec188`; they are not re-labelled as a
+measurement of the corrected inventory commit.
