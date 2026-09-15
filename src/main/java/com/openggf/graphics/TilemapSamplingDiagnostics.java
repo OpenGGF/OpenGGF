@@ -23,6 +23,7 @@ public final class TilemapSamplingDiagnostics {
     public static Map<String, byte[]> readTextures(TilemapGpuRenderer renderer, int atlasTexture, int paletteTexture) {
         return Map.of(
                 "foreground.rgba", readTexture(GL_TEXTURE_2D, renderer.foregroundTextureForDiagnostics(), GL_RGBA, 4),
+                "background.rgba", readTexture(GL_TEXTURE_2D, renderer.backgroundTextureForDiagnostics(), GL_RGBA, 4),
                 "lookup.rgba", readTexture(GL_TEXTURE_1D, renderer.lookupTextureForDiagnostics(), GL_RGBA, 4),
                 "atlas.indexed", readTexture(GL_TEXTURE_2D, atlasTexture, GL_RED, 1),
                 "palette.rgba", readTexture(GL_TEXTURE_2D, paletteTexture, GL_RGBA, 4));

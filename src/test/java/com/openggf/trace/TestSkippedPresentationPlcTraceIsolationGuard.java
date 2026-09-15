@@ -39,6 +39,12 @@ class TestSkippedPresentationPlcTraceIsolationGuard {
         assertFalse(driver.contains("Sonic1PlcService"));
         assertFalse(driver.contains("Sonic2PlcService"));
 
+        String capture = Files.readString(Path.of(
+                "src/main/java/com/openggf/tools/TraceCaptureTool.java"));
+        assertTrue(capture.contains("skipPendingInitialTitleCardPresentation()"),
+                "GL capture must use the same omitted-presentation transition");
+        assertFalse(capture.contains("completeInitialPresentationPlcs("));
+
         String bootstrap = Files.readString(Path.of(
                 "src/main/java/com/openggf/trace/replay/TraceReplaySessionBootstrap.java"));
         assertFalse(bootstrap.contains("completeInitialPresentationPlcs("));

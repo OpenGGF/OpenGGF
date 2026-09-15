@@ -38,7 +38,7 @@ class TestSonic3kLivesHudPaletteOverride {
 
         byte[] canonicalLine = GameServices.rom().getRom().readBytes(
                 Sonic3kConstants.PAL_AIZ_ADDR, Palette.PALETTE_SIZE_IN_ROM);
-        for (int color : new int[]{1, 5, 14, 15}) {
+        for (int color : new int[]{1, 5, 12, 14, 15}) {
             int expected = (Byte.toUnsignedInt(canonicalLine[color * 2]) << 8)
                     | Byte.toUnsignedInt(canonicalLine[color * 2 + 1]);
             assertEquals(expected, PaletteWriteSupport.segaWordFromColor(palettes[1].getColor(color)),
@@ -65,7 +65,7 @@ class TestSonic3kLivesHudPaletteOverride {
         for (Pattern pattern : provider.getHudLivesNumbers()) {
             for (int y = 0; y < Pattern.PATTERN_HEIGHT; y++) {
                 for (int x = 0; x < Pattern.PATTERN_WIDTH; x++) {
-                    used[provider.getHudFlashPaletteLine()][Byte.toUnsignedInt(pattern.getPixel(x, y))] = true;
+                    used[1][Byte.toUnsignedInt(pattern.getPixel(x, y))] = true;
                 }
             }
         }

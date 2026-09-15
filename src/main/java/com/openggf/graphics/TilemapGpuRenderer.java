@@ -37,6 +37,7 @@ public class TilemapGpuRenderer {
     private final TilemapTexture backgroundTexture = new TilemapTexture();
     private final TilemapTexture foregroundTexture = new TilemapTexture();
     int foregroundTextureForDiagnostics() { return foregroundTexture.getTextureId(); }
+    int backgroundTextureForDiagnostics() { return backgroundTexture.getTextureId(); }
     int lookupTextureForDiagnostics() { return patternLookup.getTextureId(); }
 
     private final TilemapTexture foregroundWindowTexture = new TilemapTexture();

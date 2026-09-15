@@ -35,6 +35,30 @@ import static org.mockito.Mockito.when;
 public class TestHudRenderManager {
 
     @Test
+    void vblankCountersShowTheTimerIncrementBeforeTheRetainedSatWithoutUpdatingGameplay() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
+        when(fixture.levelState().getTimerFrames()).thenReturn(59L);
+        HudProfileAccess.drawVBlankCounters(fixture.hud(), fixture.levelState(), null, true);
+        assertTrue(fixture.draws().contains(new Draw(202, 80, 24)), "UpdateHUD must display 0:01 at the rollover VBlank");
+        verify(fixture.levelState(), never()).update();
+        fixture.draws().clear();
+        fixture.hud().draw(fixture.levelState(), null);
+        assertTrue(fixture.draws().contains(new Draw(200, 80, 24)), "VBlank projection must not leak into ordinary HUD drawing");
+    }
+
+    @Test
+    void pausedVblankCountersAndStoppedLevelTimerDoNotProjectAnotherTick() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
+        when(fixture.levelState().getTimerFrames()).thenReturn(59L);
+        HudProfileAccess.drawVBlankCounters(fixture.hud(), fixture.levelState(), null, false);
+        assertTrue(fixture.draws().contains(new Draw(200, 80, 24)));
+        fixture.draws().clear();
+        when(fixture.levelState().isTimerPaused()).thenReturn(true);
+        HudProfileAccess.drawVBlankCounters(fixture.hud(), fixture.levelState(), null, true);
+        assertTrue(fixture.draws().contains(new Draw(200, 80, 24)));
+    }
+
+    @Test
     void annotatedRendererDoesNotPublishProfileMutationMethod() {
         assertThrows(NoSuchMethodException.class,
                 () -> HudRenderManager.class.getMethod("setProfile", HudProfile.class));
@@ -90,6 +114,18 @@ public class TestHudRenderManager {
 
         assertTrue(fixture.draws().contains(new Draw(229, 56, 208)));
         assertFalse(fixture.draws().contains(new Draw(224, 56, 208)));
+    }
+
+    @Test
+    void lifeCountCanUseItsContainingHudPiecePaletteIndependentlyOfTheIcon() {
+        HudFixture fixture = hudFixture(0, "0:00", 0, 3, false, false);
+        fixture.hud().setHudPalettes(1, 0);
+        HudPaletteBridgeAccess.setLivesNumberPaletteLine(fixture.hud(), 1);
+        fixture.hud().draw(fixture.levelState(), null);
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(223),
+                argThat(desc -> desc.getPaletteIndex() == 1), eq(56), eq(208));
+        verify(fixture.graphicsManager()).renderPatternWithId(eq(0x28026),
+                argThat(desc -> desc.getPaletteIndex() == 0), eq(16), eq(200));
     }
 
     @Test
@@ -648,6 +684,35 @@ public class TestHudRenderManager {
 
         verify(graphicsManager).renderPatternWithId(eq(0x28021), any(), eq(16), eq(40));
         verify(graphicsManager, never()).renderPatternWithId(eq(100), any(), eq(16), eq(40));
+    }
+
+    @Test
+    void suppliedWarningClockOverridesPausedTimerAndTracksRewind() {
+        HudFixture fixture = hudFixture(0, "9:10", 0, 3, false, false);
+        when(fixture.levelState().getElapsedSeconds()).thenReturn(550);
+        var clock = new java.util.concurrent.atomic.AtomicInteger(0);
+        var policy = new com.openggf.game.sonic3k.Sonic3kGameModule()
+                .getGameService(com.openggf.game.internal.HudWarningPolicyProvider.class);
+        HudProfileAccess.installWarningPolicy(fixture.hud(), policy, clock::get);
+        for (int frame : new int[]{0, 8, 0}) {
+            clock.set(frame);
+            fixture.draws().clear();
+            fixture.hud().draw(fixture.levelState(), null);
+            assertTrue(fixture.draws().contains(new Draw(frame == 8 ? 0x28024 : 0x28025, 16, 40)));
+            assertTrue(fixture.draws().contains(new Draw(frame == 8 ? 0x28022 : 0x28023, 16, 24)));
+        }
+    }
+
+    @Test
+    void sonic3kWarningProviderUsesLevelClockBitThreeAndMinuteNine() {
+        var provider = new com.openggf.game.sonic3k.Sonic3kGameModule()
+                .getGameService(com.openggf.game.internal.HudWarningPolicyProvider.class);
+        for (int frame : new int[]{0, 7, 16, 0xFFFF0000}) assertTrue(provider.isFlashFrame(frame));
+        for (int frame : new int[]{8, 15, 24, 0xFFFF}) assertFalse(provider.isFlashFrame(frame));
+        assertFalse(provider.isTimerWarning(539));
+        assertTrue(provider.isTimerWarning(540));
+        assertTrue(provider.isTimerWarning(599));
+        assertFalse(provider.isTimerWarning(600));
     }
 
     private static HudFixture hudFixture(int score, String time, int rings, int lives,

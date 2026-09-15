@@ -57,6 +57,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
     private boolean lastFrameRanGameplay = true;
     private boolean pendingSeamlessBoundaryCompletion;
     private boolean normalTitleCardActive;
+    private boolean freshLevelInitialBoundaryPublished;
     private boolean freshLevelLoadedThisIteration;
     private boolean freshLevelTransitionLoopObserved;
     private TraceHardwareTimingBoundaryObserver hardwareTimingReplayObserver;
@@ -420,6 +421,7 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
             provider.initialize(titleCardZone, titleCardAct);
         }
         normalTitleCardActive = true;
+        freshLevelInitialBoundaryPublished = false;
         applyInLevelTitleCardControlLock(true);
     }
 
@@ -453,8 +455,15 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                     context, lifecycleFrame, PlcLifecyclePhase.LAG);
         }
 
-        if (provider.shouldCompleteFreshLevelTransitionBoundary()) {
+        if (!freshLevelInitialBoundaryPublished
+                && (provider instanceof com.openggf.game.internal.FreshLevelTitleBoundaryPublication boundary
+                        ? boundary.shouldPublishFreshLevelTransitionInitialBoundary()
+                        : provider.shouldCompleteFreshLevelTransitionBoundary())) {
             levelManager.publishFreshLevelTransitionInitialBoundary();
+            freshLevelInitialBoundaryPublished = true;
+        }
+        if (provider.shouldCompleteFreshLevelTransitionBoundary()) {
+            provider.completeFreshLevelRuntimeArtHandoff();
             normalTitleCardActive = false;
             applyInLevelTitleCardControlLock(false);
         }
@@ -654,9 +663,19 @@ public final class RecordingFrameDriver implements DynamicArtSegmentWindow {
                 // Suppressed trace rows still represent a VBlank while the
                 // fresh-level title owner is locked. Run its hardware-timed
                 // object dispatch here; the row that installed the owner is
-                // left to the generic closure above so its first dispatch
+                // handled below as initialization-only, so its next routine
                 // starts on the following VBlank, matching Obj_TitleCardInit.
                 stepNormalTitleCard(previousDriverSnapshot, lifecycleFrame);
+                return mask;
+            }
+            if (normalTitleCardActive) {
+                // initializeFreshLevelTransition represented Obj_TitleCardInit.
+                // That first loc_62CC iteration still reaches the queue loop
+                // tail, including Process_Nem_Queue_Init, without dispatching
+                // the new title owner's next routine a second time.
+                LevelFrameStep.executeHardwareTimedObjectScan(context, lifecycleFrame,
+                        PlcLifecyclePhase.LEVEL_TITLE_CARD, () -> { });
+                levelManager.advanceTitleCardVblankOnly();
                 return mask;
             }
         }

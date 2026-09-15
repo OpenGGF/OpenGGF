@@ -477,6 +477,14 @@ public final class PlcFrameLifecycleCoordinator implements NativeFadeLifecycle {
                 return false;
             }
             owner = phase;
+            // A production-owned title loop advances without the gameplay
+            // counter. S3K Level/loc_62CC rearms VInt_A_C and reaches
+            // Process_Nem_Queue_Init on each such iteration. The replay's
+            // held-gameplay-counter hint cannot turn that loop into a lag
+            // closure; genuine lag keeps its separate LAG owner.
+            if (phase == PlcLifecyclePhase.LEVEL_TITLE_CARD) {
+                representedIterationDefersLoopTailPreparation = false;
+            }
             if (service != null) {
                 service.serviceVBlank(phase);
             }

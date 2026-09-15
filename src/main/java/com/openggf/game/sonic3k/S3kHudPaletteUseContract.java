@@ -2,13 +2,13 @@ package com.openggf.game.sonic3k;
 
 /**
  * ROM-independent palette-cell contract for the fixed S3K lives HUD art.
- * Line 0 covers the icon's first piece and lives digits; line 1 covers the
- * icon's second piece.
+ * Line 0 covers the icon's first piece; line 1 covers the
+ * icon's second piece, including the life-count digits written into it.
  */
 final class S3kHudPaletteUseContract {
     private static final int[] RESERVED_COLOR_MASKS = {
             0xBC1E, // line 0: 1, 2, 3, 4, 10, 11, 12, 13, 15
-            0xC022, // line 1: 1, 5, 14, 15
+            0xD022, // line 1: 1, 5, 12, 14, 15
             0,
             0
     };
@@ -18,7 +18,7 @@ final class S3kHudPaletteUseContract {
      */
     private static final int[] LINE_ONE_SEGA_WORDS = {
             -1, 0x0EEE, -1, -1, -1, 0x00EE, -1, -1,
-            -1, -1, -1, -1, -1, -1, 0x0ECC, 0x0044
+            -1, -1, -1, -1, 0x0EAA, -1, 0x0ECC, 0x0044
     };
 
     private S3kHudPaletteUseContract() {

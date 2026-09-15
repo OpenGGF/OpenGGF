@@ -172,39 +172,55 @@ class TestSonic3kTitleCardKosQueue {
     }
 
     @Test
-    void freshLevelOwnerPublishesParentBeforeDeferringFirstDirectChild()
-            throws Exception {
+    void freshLevelTerrainWaitsForTitleAndNemesisButNotChildExit() throws Exception {
         Object previousGame = getLevelManagerGame();
         setLevelManagerGame(new Sonic3k(rom));
+        var previousPlc = GameServices.module().getGameService(
+                com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService.class);
+        var plc = new com.openggf.game.sonic3k.Sonic3kLevelTitlePlcService(rom);
+        setField(GameServices.module(), "levelTitlePlcService", plc);
         try {
             setPendingFreshLevelTransitionBoundary(true);
             installCachedTitleArt();
-            setField(manager, "lastLoadedZone", 6);
             manager.requestFreshLevelRuntimeArtHandoff(
-                    LevelData.S3K_LAUNCH_BASE_1.getLevelIndex());
-            manager.initializeFreshLevelTransition(6, 0);
-            setField(manager, "freshLevelTitleOwnerReplacedAtAssembly", true);
+                    LevelData.S3K_ANGEL_ISLAND_1.getLevelIndex());
+            manager.initializeFreshLevelTransition(0, 0);
             setField(manager, "state", Sonic3kTitleCardState.DISPLAY);
-            setField(manager, "stateTimer", 21);
-
+            setField(manager, "freshLevelChildMovementObserved", true);
+            var movementBoundary = manager.capture();
             manager.update();
+            assertFalse(manager.capture().freshLevelTitleReady(),
+                    "the first parent poll only clears the preceding movement flag");
+            manager.update();
+            assertTrue(manager.capture().freshLevelTitleReady());
+            assertFalse(manager.shouldPublishFreshLevelTransitionInitialBoundary(),
+                    "title readiness alone cannot bypass the Nemesis FIFO");
+            assertTrue(moduleHandles().isEmpty());
 
-            assertEquals(Sonic3kTitleCardState.EXIT, manager.capture().state());
-            assertTrue(manager.shouldCompleteFreshLevelTransitionBoundary(),
-                    "the cleared child slots let the retained owner retire with its wait");
+            manager.restore(movementBoundary);
+            assertFalse(manager.capture().freshLevelTitleReady());
+            for (int i = 0; i < 1000 && plc.isBusy(); i++) {
+                plc.prepareAfterLoop(com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD);
+                plc.serviceVBlank(com.openggf.game.resources.PlcLifecyclePhase.LEVEL_TITLE_CARD);
+            }
+            assertFalse(plc.isBusy());
+            manager.update();
+            assertTrue(moduleHandles().isEmpty());
+            manager.update();
+            assertEquals(Sonic3kTitleCardState.DISPLAY, manager.capture().state());
+            assertTrue(manager.shouldPublishFreshLevelTransitionInitialBoundary());
+            assertFalse(manager.shouldCompleteFreshLevelTransitionBoundary(),
+                    "LoadLevelLoadBlock must drain before ordinary gameplay begins");
             assertEquals(2, moduleHandles().size());
-            assertFalse(directQueue().decompressionsPending());
-
+            manager.update();
+            assertEquals(2, moduleHandles().size(), "terrain submission is one-shot");
             service(HardwareServiceBoundary.POST_OBJECTS);
             service(HardwareServiceBoundary.PRE_MAIN_LOOP);
-            S3kRuntimeArtCoordinator.current().finishHeldLoopTailClosure();
-            assertFalse(directQueue().decompressionsPending(),
-                    "the owner row publishes only the KosM parent");
-
-            service(HardwareServiceBoundary.POST_OBJECTS);
-            assertTrue(directQueue().decompressionsPending(),
-                    "the following loop publishes the first direct child");
+            assertTrue(directQueue().capture().entries().isEmpty(),
+                    "terrain parents queued after loc_62CC's module pass cannot expose a direct child in that pass");
         } finally {
+            plc.resetForMissingSnapshot();
+            setField(GameServices.module(), "levelTitlePlcService", previousPlc);
             setPendingFreshLevelTransitionBoundary(false);
             setLevelManagerGame(previousGame);
         }

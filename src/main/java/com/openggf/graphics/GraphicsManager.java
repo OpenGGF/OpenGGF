@@ -184,6 +184,7 @@ public class GraphicsManager {
 	 * This enables testing game logic without requiring an OpenGL context.
 	 */
 	private boolean headlessMode = false;
+	SpritePresentation.Builder spritePresentationBuilder;
 
 	/**
 	 * When true, the batch renderer will use the underwater palette texture
@@ -215,6 +216,22 @@ public class GraphicsManager {
 	private boolean waterEnabled = false;
 
 	public void registerCommand(GLCommandable command) {
+		if (spritePresentationBuilder != null) {
+			try {
+				SpritePresentation.Geometry geometry;
+				if (command instanceof GLCommand primitive) {
+					geometry = primitive.preparePrimitive(spritePresentationBuilder.cameraX, spritePresentationBuilder.cameraY);
+				} else if (command instanceof GLCommandGroup group) {
+					geometry = group.prepareGroup(spritePresentationBuilder.cameraX, spritePresentationBuilder.cameraY);
+				} else {
+					throw new IllegalStateException("GPU command submitted during CPU sprite preparation: "
+							+ command.getClass().getName());
+				}
+				spritePresentationBuilder.primitives.add(new SpritePresentation.Primitive(
+						spritePresentationBuilder.tiles.size(), spritePresentationBuilder.layer, geometry));
+			} finally { command.discard(); }
+			return;
+		}
 		if (commandCaptureTarget != null) {
 			commandCaptureTarget.add(command);
 			return;
@@ -285,6 +302,10 @@ public class GraphicsManager {
 	}
 
 	public void renderPatternWithIdScaled(int patternId, PatternDesc desc, float x, float y, float width, float height) {
+		if (spritePresentationBuilder != null) {
+			spritePresentationBuilder.add(this, patternId, desc, x, y, width, height);
+			return;
+		}
 		if (headlessMode) {
 			return;
 		}
@@ -501,6 +522,7 @@ public class GraphicsManager {
 	 * Uses shake-adjusted camera positions so sprites shake in sync with FG tiles.
 	 */
 	public void flush() {
+		if (spritePresentationBuilder != null) return;
 		Camera cam = getCamera();
 		flushWithCamera(cam.getXWithShake(), cam.getYWithShake(), cam.getWidth(), cam.getHeight());
 	}
@@ -820,9 +842,6 @@ public class GraphicsManager {
 	 * This allows using pattern IDs beyond the 11-bit limit of PatternDesc.
 	 */
 	public void renderPatternWithId(int patternId, PatternDesc desc, int x, int y) {
-		if (headlessMode) {
-			return;
-		}
 
 		// Vertical wrap Y adjustment (emulates VDP modular sprite Y coordinates).
 		// When enabled, wraps the world Y to the nearest equivalent position within
@@ -836,6 +855,12 @@ public class GraphicsManager {
 			}
 			y = verticalWrapCameraY + diff;
 		}
+
+		if (spritePresentationBuilder != null) {
+			spritePresentationBuilder.add(this, patternId, desc, x, y, 8, 8);
+			return;
+		}
+		if (headlessMode) return;
 
 		ensurePatternAtlas();
 		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
@@ -984,6 +1009,7 @@ public class GraphicsManager {
 	 * Begin a new pattern batch. Call before rendering patterns for a frame/layer.
 	 */
 	public void beginPatternBatch() {
+		if (spritePresentationBuilder != null) return;
 		if (headlessMode) {
 			return;
 		}
@@ -1006,6 +1032,7 @@ public class GraphicsManager {
 	 * submitted. This queues the batch command for execution in the proper order.
 	 */
 	public void flushPatternBatch() {
+		if (spritePresentationBuilder != null) return;
 		if (headlessMode) {
 			return;
 		}
@@ -1912,6 +1939,14 @@ public class GraphicsManager {
 		return currentSpriteTileOcclusionPaletteMask;
 	}
 
+	void cancelSpritePresentationCollection() {
+		spriteSatCollectionActive = false;
+		spriteMaskRequested = false;
+		spriteSatEntries.clear();
+		currentSpriteSatDebugSource = null;
+		currentSpriteSatBucket = RenderPriority.MIN;
+	}
+
 	public void beginSpriteSatCollection() {
 		spriteSatCollectionActive = true;
 		spriteMaskRequested = false;
@@ -1938,7 +1973,7 @@ public class GraphicsManager {
 				widthTiles, heightTiles, 0, rawTileWordLow11, 0,
 				false, false, false, currentSpriteHighPriority,
 				SpriteMaskReplayRole.NORMAL, 0, widthTiles, 0, heightTiles,
-				currentSpriteSatDebugSource));
+				spritePresentationBuilder == null ? currentSpriteSatDebugSource : spritePresentationBuilder.layer.name()));
 	}
 
 	public void setCurrentSpriteSatDebugSource(String debugSource) {
@@ -1953,9 +1988,11 @@ public class GraphicsManager {
 		if (!spriteSatCollectionActive || piece == null) {
 			return;
 		}
-		SpritePieceRenderer.PreparedPiece taggedPiece = currentSpriteSatDebugSource == null
+		String presentationSource = spritePresentationBuilder == null ? currentSpriteSatDebugSource
+				: spritePresentationBuilder.layer.name();
+		SpritePieceRenderer.PreparedPiece taggedPiece = presentationSource == null
 				? piece
-				: piece.withDebugSource(currentSpriteSatDebugSource);
+				: piece.withDebugSource(presentationSource);
 		spriteSatEntries.add(SpriteSatEntry.fromPreparedPiece(taggedPiece, currentSpriteSatBucket));
 	}
 
@@ -1980,6 +2017,19 @@ public class GraphicsManager {
 
 		try {
 			if (processedEntries.isEmpty()) {
+				return;
+			}
+
+			if (spritePresentationBuilder != null) {
+				for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+					for (SpriteSatEntry entry : processedEntries) {
+						if (entry.priorityBucket() != bucket) continue;
+						if (entry.debugSource() != null)
+							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.debugSource());
+						setCurrentSpriteHighPriority(entry.globalHighPriority());
+						appendBatchedReplayCommands(entry, -1);
+					}
+				}
 				return;
 			}
 
@@ -2059,6 +2109,12 @@ public class GraphicsManager {
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
 		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
+					// CPU preparation uses this same tile decoder before any atlas lookup.
+					if (spritePresentationBuilder != null) {
+						prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+						renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
+						return;
+					}
 					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
 					if (atlasEntry == null) {
 						return;
@@ -2281,6 +2337,7 @@ public class GraphicsManager {
 	 * have been removed for OpenGL 4.1 core profile compatibility.
 	 */
 	public void enqueueDebugLineState() {
+		if (spritePresentationBuilder != null) return;
 		ShaderProgram debugShader = getDebugShaderProgram();
 		int programId = debugShader != null ? debugShader.getProgramId() : 0;
 		registerCommand(new GLCommand(GLCommand.CommandType.USE_PROGRAM, programId));
@@ -2293,6 +2350,7 @@ public class GraphicsManager {
 	 * Texturing is now controlled entirely through shaders.
 	 */
 	public void enqueueDefaultShaderState() {
+		if (spritePresentationBuilder != null) return;
 		ShaderProgram shader = getShaderProgram();
 		if (shader != null) {
 			int programId = shader.getProgramId();

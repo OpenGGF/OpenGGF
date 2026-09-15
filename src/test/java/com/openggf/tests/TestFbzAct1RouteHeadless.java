@@ -1524,7 +1524,7 @@ class TestFbzAct1RouteHeadless {
         }
     }
 
-    private static String encounterState(
+    static String encounterState(
             HeadlessTestFixture fixture, ObjectManager objects, FbzMinibossInstance boss) {
         StringBuilder state = new StringBuilder()
                 .append("impacts=").append(boss.scriptedImpactCount())
@@ -1542,6 +1542,13 @@ class TestFbzAct1RouteHeadless {
                     .append("[state=").append(intField(arm, "stateOrdinal"))
                     .append(",bits=0x").append(Integer.toHexString(intField(arm, "controlBits")))
                     .append(",timer=").append(intField(arm, "timer")).append(']');
+        }
+        for (FbzMinibossChainLink link : objects.activeObjectsOfType(FbzMinibossChainLink.class)) {
+            state.append(" link").append(intField(link, "side")).append('/').append(link.linkIndex())
+                    .append("[state=").append(intField(link, "stateOrdinal"))
+                    .append(",bits=0x").append(Integer.toHexString(intField(link, "controlBits")))
+                    .append(",angle=").append(intField(link, "angle"))
+                    .append(",step=").append(intField(link, "angleStep")).append(']');
         }
         return state.toString();
     }
