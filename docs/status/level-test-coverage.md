@@ -201,3 +201,11 @@ changes a crush into a safe crossing, reproduced by synchronized gameplay videos
 FBZ Act 1 miniboss presentation (2026-09-15): the [Act 1 matrix](../architecture/validation/levels/s3k-fbz-act1.md)
 records the paired opened-boss setup and local plunger/face/priority corrections.
 Full-act and complete-route visual certification remains open.
+
+SOZ sand-rock continuation (2026-09-15): `TestSozSandRockProduction` adds short
+positioned break/removal and twice-replayed registered rewind spots for both
+acts, with Act 1 representative 320/640 widths, S1 donor and extra follower.
+These are independent of the failed cold approach; see the
+[Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) and
+[Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md). Full route,
+all-character, checkpoint and native/pixel certification obligations remain open.

@@ -119,7 +119,7 @@ class TestRemainingRewindTailInventory {
         // The three game-over card implementations from develop pass the isolated sweep.
         // MHZ1's independent defeat-explosion controller also passes the isolated sweep.
         // SOZ quicksand passes the isolated sweep; no remaining-tail category grows.
-        return new TailInventory(1013, 793, 220, 0, buckets);
+        return new TailInventory(1014, 794, 220, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

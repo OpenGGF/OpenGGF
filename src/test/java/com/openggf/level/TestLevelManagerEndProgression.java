@@ -10,6 +10,8 @@ import com.openggf.debug.PerformanceProfiler;
 import com.openggf.debug.playback.PlaybackDebugManager;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameModule;
+import com.openggf.game.LevelLoadMode;
+import com.openggf.game.LevelLoadContext;
 import com.openggf.game.GameStateManager;
 import com.openggf.game.RomDetectionService;
 import com.openggf.game.ZoneProgressionPlan;
@@ -85,7 +87,12 @@ class TestLevelManagerEndProgression {
         LevelManager levelManager = spy(new LevelManager(mock(Camera.class), mock(SpriteManager.class),
                 mock(ParallaxManager.class), mock(CollisionSystem.class), mock(WaterSystem.class),
                 new GameStateManager(), engineContext(), worldSession));
-        doNothing().when(levelManager).loadCurrentLevel();
+        // Act advance retains native title-card ownership through a private overload.
+        // Stub the public load boundary actually reached, so this topology test
+        // cannot silently depend on a locally installed ROM.
+        doNothing().when(levelManager).loadLevel(org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.eq(LevelLoadMode.FULL),
+                org.mockito.ArgumentMatchers.any(LevelLoadContext.class));
         for (int zone = 0; zone < 12; zone++) {
             levelManager.levels.add(List.of(LevelData.DEATH_EGG));
         }
@@ -97,6 +104,11 @@ class TestLevelManagerEndProgression {
 
         levelManager.advanceToNextLevel();
 
+        var context = org.mockito.ArgumentCaptor.forClass(LevelLoadContext.class);
+        verify(levelManager).loadLevel(org.mockito.ArgumentMatchers.eq(LevelData.DEATH_EGG.levelIndex()),
+                org.mockito.ArgumentMatchers.eq(LevelLoadMode.FULL), context.capture());
+        assertTrue(context.getValue().isShowTitleCard());
+        assertTrue(context.getValue().isTitleCardRequiredInHeadlessMode());
         assertEquals(11, worldSession.getCurrentZone());
         assertEquals(0, worldSession.getCurrentAct());
         assertFalse(levelManager.consumeCreditsRequest());

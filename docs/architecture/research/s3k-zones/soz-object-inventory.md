@@ -159,7 +159,7 @@ inventory obligation before implementing each family.
 | `$43` | `$15` | `Obj_SOZSwingingPlatform` | 2 | 1 | placeholder |
 | `$43` | `$16` | `Obj_SOZSwingingPlatform` | 0 | 2 | placeholder |
 | `$43` | `$17` | `Obj_SOZSwingingPlatform` | 1 | 0 | placeholder |
-| `$44` | `$00` | `Obj_SOZBreakableSandRock` | 17 | 13 | placeholder |
+| `$44` | `$00` | `Obj_SOZBreakableSandRock` | 17 | 13 | `SozBreakableSandRockObjectInstance` |
 | `$45` | `$01` | `Obj_SOZPushSwitch` | 0 | 2 | placeholder |
 | `$45` | `$02` | `Obj_SOZPushSwitch` | 0 | 1 | placeholder |
 | `$45` | `$03` | `Obj_SOZPushSwitch` | 0 | 2 | placeholder |
@@ -308,3 +308,14 @@ The native controller/child each use coarse-X lifetime checks.
 
 First ordinary Act 1 target: `($298,$698)`. Other Act 1/2 placements and complete
 routes retain the act matrices' outstanding reachability/rewind/pixel obligations.
+
+## Breakable sand rocks
+
+All 30 `$44` placements bind to the ROM-backed five-frame sand rock. Mapping
+`$4182E`, art `SOZMisc+$10`, palette2; native owner `$41702`. Save roll animation
+before solid collision, then read the object's standing latch. Breakup releases
+all standing riders and rebounds only those that were rolling. No debris child
+allocation occurs: five mapping frames shrink the rock before coarse-X deletion.
+Remaining placeholder placements after this family: **185 Act 1 / 183 Act 2**.
+The unsuccessful cold approach and positioned production coverage are tracked in
+the execution plan; binding counts do not certify route reachability.

@@ -676,3 +676,11 @@ This allows the pyramid interior to extend vertically beyond the normal 1024px l
 - **Darkness palette system:** The bidirectional fade with variable-length table indexing (`$34` bytes per step, driven by `Palette_cycle_counters+$06` which can go negative during brightening) requires careful counter management. Confidence: MEDIUM.
 - **Extended Y wrap:** Non-standard `Screen_Y_wrap_value=$7FF` may expose edge cases in tile drawing routines that assume $3FF. Confidence: MEDIUM.
 - **Rising sand special event:** Uses `Special_events_routine=$10` to hook into the global `SpecialEvents` system, creating per-frame BG collision with `Background_collision_flag` and camera Y offset. Interactions with normal collision system need testing. Confidence: LOW-MEDIUM.
+
+### Breakable sand-rock implementation note (2026-09-15)
+
+SKL `$44`, `Obj_SOZBreakableSandRock` `$41702`, is implemented for both acts.
+The parent itself animates five mapping frames (`$4182E`); it does not spawn
+fragments. Rolling is sampled before SolidObjectFull and the post-call standing
+mask includes retained offscreen P2 bits. See the placed inventory and act matrices
+for the distinction between bindings, positioned behavior checks and cold routes.

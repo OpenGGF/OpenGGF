@@ -18,8 +18,8 @@ class TestSozObjectInventory {
     @Test void romPlacementsAndRemainingFactoryGapsMatchInventory() throws Exception {
         try (var rom=new Rom()) {
             assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
-            verify(rom,0x1F4866,3600,599,"72f954524c0d68b213be273d6b5317621c60c1a4aab8949ffc2cc72482dc66db",202);
-            verify(rom,0x1F5676,2946,490,"3cca36d2d4db8db480f36c67fafa46833f4f7a63ff1cab6d6835d2380bb225c0",196);
+            verify(rom,0x1F4866,3600,599,"72f954524c0d68b213be273d6b5317621c60c1a4aab8949ffc2cc72482dc66db",185);
+            verify(rom,0x1F5676,2946,490,"3cca36d2d4db8db480f36c67fafa46833f4f7a63ff1cab6d6835d2380bb225c0",183);
         }
     }
     @Test void vineMappingPointerAndSinglePieceMatchTheRom() throws Exception {
@@ -32,6 +32,19 @@ class TestSozObjectInventory {
             var piece=frames.getFirst().pieces().getFirst();
             assertEquals(2,piece.widthTiles()); assertEquals(2,piece.heightTiles());
             assertEquals(0,piece.tileIndex()); assertEquals(-8,piece.xOffset()); assertEquals(-8,piece.yOffset());
+        }
+    }
+    @Test void sandRockMappingPointerAndBreakupFramesMatchTheRom() throws Exception {
+        try (var rom=new Rom()) {
+            assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+            assertArrayEquals(new byte[]{0x21,0x7C,0,4,0x18,0x2E},rom.readBytes(0x41702,6));
+            var frames=com.openggf.game.sonic3k.S3kSpriteDataLoader.loadMappingFrames(
+                    RomByteReader.fromRom(rom),0x4182E,5);
+            assertEquals(5,frames.size());
+            for(var frame:frames) assertEquals(2,frame.pieces().size());
+            assertEquals(3,frames.getFirst().pieces().getFirst().widthTiles());
+            assertEquals(4,frames.getFirst().pieces().getFirst().heightTiles());
+            assertEquals(0x33,frames.getLast().pieces().getFirst().tileIndex());
         }
     }
     private void verify(Rom rom,int address,int size,int count,String sha,int missing) throws Exception {
