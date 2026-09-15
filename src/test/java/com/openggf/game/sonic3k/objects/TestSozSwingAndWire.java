@@ -128,6 +128,14 @@ class TestSozSwingAndWire {
         step(w);
         assertEquals(0x92,player.getMappingFrame(),"loc_4B04A selects the held frame next pass");
     }
+    @Test void horizontalFlipClearsAirButPreservesHigherStatusBits() {
+        var w=wire(0x42);step(w);for(int i=0;i<73;i++)step(w);
+        player.setAir(true);player.setRolling(true);player.setOnObject(true);
+        press(true);step(w);press(false);
+        assertEquals(3,value(w,"mode"));
+        assertFalse(player.getAir(),"loc_4B0DE masks status with FC before writing facing");
+        assertTrue(player.getRolling());assertTrue(player.isOnObject());
+    }
     @Test void playerTwoCanGrabButCannotStartTheMainPlayerRatchet() {
         var p2=new TestablePlayableSprite("tails",(short)0,(short)0);
         p2.setCentreX((short)0x400);p2.setCentreY((short)0x344);player.setCentreX((short)0);

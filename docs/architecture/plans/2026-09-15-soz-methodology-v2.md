@@ -1779,3 +1779,10 @@ positive wire capture. The real contact test reproduced the missing positive
 landing while the bit7 negative case passed. The semantic provider override
 then passed all14bridge regressions (0skips,52.811s); no zone-name physics
 branch or recorded state was introduced.
+
+Wire flip `loc_4B0DE` also clears status bit1 via AND FC; the focused
+regression reproduced preserved-air before the fix and all23unit cases pass
+afterward. Combined production validation currently fails forced-recreation
+standing history: placed bridge index40 TOP entry disappears on restore.
+That real identity gap is under investigation;27selected tests are not reported
+as a passing set (one production failure,0skips,53.525s).

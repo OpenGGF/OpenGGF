@@ -110482,3 +110482,10 @@ animation2. That production intro, not trace-state seeding, is the next target.
   The earlier frame1419 camera and1547 companion ground-speed differences
   are absent. Source-backed capture-frame and positive-control contact fixes
   are under focused verification; this remains a failing trace.
+
+- Candidateb6b4e37d1 (wire capture24556719d plus bridge91db399e5), same
+  queued replay command and ROM:2834errors,0warnings,0bootstrap errors,
+  17646frames,57.721s. First error is now2396 `camera_y` (09A1vs099B),
+  accompanied by `air`0vs1/status05vs07. Earlier wire capture/bridge admission
+  differences are absent. `loc_4B0DE` masks status withFC on horizontal flip;
+  the missing air-bit clear is the next focused correction.

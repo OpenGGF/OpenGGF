@@ -249,6 +249,8 @@ public final class SozRapelWireObjectInstance extends AbstractObjectInstance imp
                 default -> FLIP[((owner.flipAngle+4)&255)>>4];
             };
             if(owner.mode==3) { boolean flip=FACING[((owner.flipAngle+4)&255)>>4]!=0;
+                // loc_4B0DE masks status/render_flags with FC, then writes facing.
+                p.setAir(false);
                 p.setDirection(flip?Direction.LEFT:Direction.RIGHT);p.setRenderFlips(flip,false); }
             p.setMappingFrame(f);
         }
