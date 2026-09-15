@@ -4,12 +4,13 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.sonic3k.Sonic3kLevelTriggerManager;
 import java.nio.ByteBuffer;
 
-/** SOZ object coupling; other Sandopolis event owners are still unimplemented. */
+/** Shared Sandopolis object, lighting and event state. */
 public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
     // Native _unkF7C4 points to an SST slot, not a durable rock identity.
     private int pushableRockSlot = -1;
+    private final SozLightingState lighting = new SozLightingState();
     private int sandCorkForegroundFlag;
     private int sandCorkBackgroundFlag;
 
@@ -22,6 +23,7 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
     @Override public PlayerCharacter playerCharacter() { return playerCharacter; }
     @Override public int getDynamicResizeRoutine() { return 0; }
     @Override public boolean isActTransitionFlagActive() { return false; }
+    public SozLightingState lighting() { return lighting; }
     public int pushableRockSlot() { return pushableRockSlot; }
     public void publishPushableRockSlot(int slot) { pushableRockSlot = slot; }
     /** Obj_SOZSandCork/sub_41D5C: high subtype bit chooses Events_fg_4, else fg_5. */
@@ -42,14 +44,18 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
         return result;
     }
     @Override public byte[] captureBytes() {
-        return ByteBuffer.allocate(12).putInt(pushableRockSlot)
-                .putInt(sandCorkForegroundFlag).putInt(sandCorkBackgroundFlag).array();
+        var buffer = ByteBuffer.allocate(12 + SozLightingState.SNAPSHOT_BYTES);
+        buffer.putInt(pushableRockSlot).putInt(sandCorkForegroundFlag).putInt(sandCorkBackgroundFlag);
+        lighting.capture(buffer);
+        return buffer.array();
     }
     @Override public void restoreBytes(byte[] bytes) {
         var buffer = ByteBuffer.wrap(bytes);
         pushableRockSlot = buffer.getInt();
         sandCorkForegroundFlag = buffer.remaining() >= 4 ? buffer.getInt() : 0;
         sandCorkBackgroundFlag = buffer.remaining() >= 4 ? buffer.getInt() : 0;
+        lighting.restore(buffer.remaining() >= SozLightingState.SNAPSHOT_BYTES ? buffer
+                : ByteBuffer.allocate(SozLightingState.SNAPSHOT_BYTES));
     }
 
     /** Same Level_trigger_array bytes as ordinary buttons; no shadow signal store. */
