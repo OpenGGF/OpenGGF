@@ -1,5 +1,12 @@
 # FBZ Act 2 coverage matrix
 
+Moving-camera presentation follow-up (2026-09-15): the
+[MHZ regression audit](../../audits/2026-09-15-s3k-presentation-camera.md)
+tracks the shared retained-SAT/scroll correction. Earlier stationary FBZ
+comparison pairs do not cover camera-relative terrain/object alignment;
+moving-camera validation supplements these obligations without closing the
+remaining act/character/viewport visual matrix.
+
 Laser-room graphics follow-up (2026-09-14): the subboss child family retains
 native high sprite priority. The reversed-plane renderer reads the moving
 background and stationary foreground from their independent ROM coordinates.

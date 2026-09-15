@@ -164,6 +164,16 @@ through `Do_ControllerPal`; `VInt_0` lag does not. VInt14 is Sega-art loading, n
 the level title-card loop, which arms VIntC. These distinctions were established
 by FBZ native/GPU paired evidence on 2026-09-14.
 
+**Retained SAT requires retained scroll.** S3K `VInt` writes `V_scroll_value`
+to VSRAM and `VInt_8_Cont` uploads `H_scroll_buffer` alongside the prepared
+sprite table. Retaining screen-relative sprites while sampling terrain with the
+next CPU camera makes stationary world objects slide by one camera delta.
+Retain the matching horizontal/vertical scroll buffers, camera origin and plane
+routing; use them for both visible terrain and its high-priority sprite mask.
+Do not rebase old sprites onto the live camera to hide the mismatch. Stationary
+FBZ boundary captures missed this regression: add a moving-camera check in a
+second zone. See the [MHZ follow-up](audits/2026-09-15-s3k-presentation-camera.md).
+
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
 later `Render_Sprites` builds the next table. An emulator-frame screenshot can

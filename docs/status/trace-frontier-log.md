@@ -110275,3 +110275,16 @@ matching baseline class/test identities and full messages. Command:
 `LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base 59d5b8881 --run`.
 Elapsed ordinary/guards: 729.31/172.20 seconds. No new or worsened failure;
 this is an ordinary-suite pass with inherited red guards, not all gates green.
+
+
+### 2026-09-15 — Moving-camera scroll publication preserves complete FBZ replay
+
+On `bugfix/ai-s3k-presentation-camera`, based on `316788395`, the shared S3K
+presentation correction pairs terrain scroll with retained SAT geometry.
+Queued `-Dmse=off -Ptrace-replay-r7
+-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestFbzRetainedPlaneNativeRows,TestS3kFbzCompleteRunTraceReplay test -B`
+with explicit absolute S1/S2/S3K ROM paths passes 61 tests, zero failures/errors/
+skips in 36.804 seconds. Complete FBZ replay passes in 16.42 seconds: no first
+error frame/field. This does not close the separate Hyper prerequisite frontier.
+The [MHZ camera audit](../architecture/audits/2026-09-15-s3k-presentation-camera.md)
+records the baseline failure and moving-camera visual evidence.
