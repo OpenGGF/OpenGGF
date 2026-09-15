@@ -276,3 +276,14 @@ referenced versions immutable and leave unrelated bank history out of the frame.
 Results-screen renderer cache flags are likewise derived: rebuilding claimed
 ROM art clears the cache, so such flags use `RewindTransient` while gameplay
 readiness and timing stay captured.
+
+### S3K full-resolution top-sloped surfaces
+
+`SolidObjectTopSloped` uses `SolidObjCheckSloped` / `SolidObjSloped`, sampling one
+height byte per horizontal pixel. The similarly named `...Sloped2` helper uses
+two pixels per sample. Keep table resolution explicit for both new landings and
+continued rides, including odd X positions and horizontal flips. SOZ spring vine
+(`Obj_SOZSpringVine`, `$40786`) also reaches `loc_1E45A`, whose unsigned `blo` test
+admits a 16-pixel overlap; test 15/16/17 rather than assuming an exclusive 16.
+Its controller's `Delete_Sprite_If_Not_In_Range` tail does not draw: the separate
+`Sprite_OnScreen_Test` child owns the eight visible pieces and its own X cull.

@@ -389,3 +389,129 @@ Follow-up commits `c2812dc11` and `1050440ca` merged into develop as
 passed one test, zero failures/errors/skips, in 19.353s. This is the focused
 post-integration inventory check; the engine checks above remain applicable
 because the follow-up changes no production code.
+
+### Spring-vine continuation
+
+Base `316788395c81dd447e5a87d9f5b1d90b8efa528a`, isolated worktree
+`.worktrees/soz-spring-vine`, branch `feature/ai-soz-spring-vine`. The previous
+inventory correction's replacement CI [34959073568](https://github.com/OpenGGF/OpenGGF/actions/runs/34959073568)
+completed successfully. This continuation targets SKL `$3F`: 12 Act 1 and five
+Act 2 placements, starting with the Act 1 vine at `($298,$698)` immediately after
+the first quicksand strip. HCZ's S3KL conveyor-spike binding remains separate.
+
+Source contract: `Obj_SOZSpringVine` at `$40786` points to mapping `$40B0C`
+(one 2×2-tile piece, tile zero, offsets -8/-8) in `ArtTile_SOZMisc`, palette 2.
+The controller is invisible: `Delete_Sprite_If_Not_In_Range` does not draw.
+One later-slot `loc_40872` display object owns eight pieces and independent
+coarse-X culling. Shared tension processes P2 before P1; extra followers receive
+independent P2 state, with P1 retaining final pivot ownership. `sub_40A08` returns
+without changing slope or child heights at pivot zero. Rebound entries +/-1
+are live oscillation values; only zero ends the sequence.
+
+The existing sloped2 resolver assumes two pixels per byte. Native
+`SolidObjectTopSloped` / `SolidObjSloped` instead sample every pixel. The candidate
+adds explicit table resolution with the old default retained, plus a top-contact
+direct top-helper window for `loc_1E45A`'s inclusive 16-pixel edge. This
+window bypasses the full-solid bottom classifier: overlap 16 is valid even for
+Tails-sized or rolling collision radii. The nullable default retains existing
+providers' behavior, and an explicit helper selection applies across donors.
+No game/zone-name condition
+is added to shared collision code. Source review rejected drawing a ninth parent
+piece and identified the inclusive landing edge for regression coverage.
+
+Native source corroboration uses `${SOZ_CAPTURE_ROOT}/native-vine.lua` and
+`${SOZ_CAPTURE_ROOT}/vine-1`, with the same verified ROM/BK2 and visual host above,
+`--fresh-entry-act 1`. From native LFC35 it holds Right and C for the first 20 of
+each 70 frames, for 600 frames. The exporter observes `$40852`, `$40AA8` and
+`$409BA` without RAM writes. It exits zero in 6.024s; exporter SHA-256
+`497AC95EE6C52DB050A9A608A78EB6623B48C940E13C8635C0CE6DA1EE003706`.
+All 473 after-deformation observations match the candidate's source-derived
+96-byte slope arithmetic and eight child heights, including loading and rebound.
+P1 reaches the launch routine at native frame 4580 and P2 at 4587. A native frame
+was visually inspected. This is arithmetic/native evidence, not a matched engine
+trajectory or engine pixel certification.
+
+Focused unit, collision, ROM art/inventory and cold-route rewind checks are in
+progress. The shared collision contract requires normal broad validation;
+preflight passed Java 21, Lua 5.4 and PowerShell, with no tests run by preflight.
+
+Focused run (52.801s) executed 242 checks with zero errors/skips: 240 passed,
+including all four new cold-vine routes with full registered-state restore/replay,
+the four existing quicksand routes, ten vine unit checks, ROM mapping/inventory,
+art crawler/renderer corruption checks, registry discovery and required S3K
+bootstrap/loading/AIZ checks. The two failures were an expected inventory delta
+(actual 1,013 total / 793 passing / 220 graph-covered / zero no-codec; neither
+new class grows a failure bucket) and the new landing-boundary harness. The
+inventory correction subsequently passed its actual sweep. The boundary harness
+had omitted `snapshotPreUpdatePosition`, leaving `solidContactFirstFrame` true;
+its pure geometry query passed while both global and inline drivers correctly
+skipped the uninitialized object. Explicit S3K player rules alone did not address
+that lifecycle omission. The corrected harness is being checked narrowly.
+
+Allocation limitation: if the display slot cannot be allocated, the candidate
+keeps the controller without a display. It does not reproduce native writes
+through a failed allocation pointer; slot-exhaustion RAM corruption is outside
+this slice's parity claim.
+
+The 245-frame engine capture (`engine-vine-1`, `vine-input.txt`: 35 neutral,
+then three 20-frame Right+C / 50-frame Right blocks) completed in 17.737s.
+Its CSV stays in LEVEL mode, reaches X571 and contains no vine launch. Frame140
+shows the eight-piece vine but the player has not reached it. This capture used
+the build before the radius-independent landing-window adjustment; it is render
+inspection only. The new boundary test's subsequent snap assertion incorrectly
+read the radius after ResetOnFloor restored standing radii; its expected snap
+now uses the incoming radius, as `loc_1E45A` does. These harness corrections do
+not substitute for the queued corrected run.
+
+Corrected focused command:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSolidObjectManager,TestSozSpringVine,TestSozAct1SpringVineRoute' \
+  "-Ds3k.rom.path=${SOZ_REPO}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${SOZ_REPO}/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+All 97 tests passed, zero failures/errors/skips, in 22.449s on the candidate
+based on `316788395`. This includes all incoming-radius boundary cases and
+all four cold-route rewind configurations after the shared resolver adjustment.
+Read-only source review found no further issue. Broad validation remains pending.
+
+### Combined vine validation
+
+Implementation commit `bbc983d57` merged updated develop `b8d0ae91b` cleanly
+as `8e09d509d`; the release-note merge preserved both changes. The upstream
+support-helper cleanup did not modify the shared collision files.
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 316788395c81dd447e5a87d9f5b1d90b8efa528a --run`
+selected all 2,594 ordinary classes plus guards. On `8e09d509d`, ordinary
+completed 20,518 tests, zero failures/errors, 19 skips in 770.67s. Skips were
+opt-in diagnostics/routes/native checks, unavailable EGL/OpenGL checks, local
+reference captures, and `TestCPZObjectBugs.testSpinTubeForcesRolling`'s unmet
+capture assumption. No SOZ checks skipped; separate trace/native profiles are
+not included in this ordinary-suite result.
+
+Guards completed 668 tests with three failures, zero errors/skips in 173.73s:
+`TestRewindArchitectureGuard.objectRewindAnnotationsDoNotGrowWithoutExplicitBaselineTriage`
+reported quicksand's two constructor-derived annotations;
+`TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+expected obsolete direct-Maven prose; and
+`TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`
+reported `FbzRouteEvidenceProbe#printEvidence` and
+`LevelSolidityMapProbe#writeSolidityMap`. A bounded matched-base run is pending.
+
+The quicksand annotations belong to the earlier SOZ slice: `halfExtent` and
+`variant` are immutable spawn-subtype decodes rebuilt by spawn recreation.
+Explicit triage now records those two fields in the architecture guard;
+mutable participant ownership/cooldown remains captured. This changes neither
+runtime behavior nor the guard's general prohibition. Its focused check is pending.
+
+Matched baseline command on main develop `2f3797ceb`:
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestRewindArchitectureGuard,TestBuildToolingGuard,TestNoAssertionFreeDiagnostics' test -B`
+completed 123 tests, the same three failure identities/messages, zero errors/skips
+in 84s. The relevant guards and root guidance are unchanged from `b8d0ae91b`.
+The corrected candidate command
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestRewindArchitectureGuard' test -B`
+passed all four tests, zero failures/errors/skips, in 19.266s. The two unrelated
+build-guidance/probe failures remain baseline failures; they are not a green
+structural-guard claim. Broad diagnostics were inspected and scheduled for deletion.

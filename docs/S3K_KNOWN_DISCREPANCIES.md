@@ -37,6 +37,7 @@ No S3K discrepancy was added or reclassified by the cutover.
 20. [Super Emerald Special Stage Results: Sanctuary Reveal Replaced by an Immediate Exit](#super-emerald-special-stage-results-sanctuary-reveal-replaced-by-an-immediate-exit)
 21. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
 22. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
+23. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
 
 ---
 
@@ -1789,3 +1790,14 @@ defeat and production reload. See the
 for the combined matrix and validation state.
 Full encounter slot-pressure, transient graph, level rendering and character/donor
 route certification remain open; these local corrections do not close those gaps.
+
+## SOZ Spring Vine: Failed Display Allocation
+
+**Location:** `SozSpringVineObjectInstance`, native `Obj_SOZSpringVine` (`$40786`).
+
+The native initialization does not guard all subsequent child writes after a
+failed display-object allocation. OpenGGF leaves the controller active without
+a display when no slot is available, rather than emulating writes through an
+invalid allocation result. Normal successful allocation retains one later-slot
+display child with eight pieces. Allocation-failure RAM corruption is outside
+the spring-vine parity claim; this does not certify whole-act slot-pressure behavior.

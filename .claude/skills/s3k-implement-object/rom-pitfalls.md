@@ -4650,3 +4650,19 @@ callback clears arm bit 3 before root bit 2. Advancing patrol during that
 wait, clearing the wrong owner, or publishing readiness early can compensate
 for each other while producing a wrong attack. Regress the whole hold/recycle
 handoff as well as individual angle boundaries.
+
+## Full-resolution sloped helpers and radius-independent landing windows
+
+SOZ spring-vine bring-up (2026-09-15): `SolidObjectTopSloped` /
+`SolidObjSloped` / `SolidObjCheckSloped` sample one byte per pixel; their
+`Sloped2` counterparts shift X by one. Preserve the particular helper's sample
+resolution and `NOT.W` flip. An even-X-only test can hide a wrong shift.
+`loc_1E45A` accepts feet overlap 0 through 16 inclusive, independently of player
+radius. Routing that overlap through a full-solid top/bottom classifier can
+reject a valid Tails or rolling landing. Test odd X, both flips and radii 19,
+15 and 14 at overlaps 15/16/17. Existing providers keep their helper selection.
+
+`Delete_Sprite_If_Not_In_Range` returns without drawing: the SOZ vine parent
+is invisible and its later-slot child draws eight pieces. Do not infer drawing
+from a culling helper's name or add a ninth parent piece. Preserve the child's
+own coarse-X deletion check.
