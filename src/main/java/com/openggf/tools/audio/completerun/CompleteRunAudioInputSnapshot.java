@@ -1,5 +1,8 @@
 package com.openggf.tools.audio.completerun;
 
+import static com.openggf.tools.audio.completerun.CompleteRunAudioFiles.absolute;
+import static com.openggf.tools.audio.completerun.CompleteRunAudioFiles.requireDigest;
+
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.CompleteRunFixture;
 import com.openggf.tools.audio.completerun.CompleteRunAudioTrace.ProducerKind;
 import java.io.IOException;
@@ -14,11 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -268,14 +267,6 @@ final class CompleteRunAudioInputSnapshot implements AutoCloseable {
         }
     }
 
-    private static Path absolute(Path value, String label) {
-        Objects.requireNonNull(value, label);
-        if (!value.isAbsolute() || !value.equals(value.normalize())) {
-            throw new IllegalArgumentException(label + " must be an absolute normalized path");
-        }
-        return value;
-    }
-
     private static long linkCount(Path path) throws IOException {
         Object links = Files.getAttribute(path, "unix:nlink", LinkOption.NOFOLLOW_LINKS);
         return ((Number) links).longValue();
@@ -287,23 +278,6 @@ final class CompleteRunAudioInputSnapshot implements AutoCloseable {
 
     private static void setPermissions(Path path, Set<PosixFilePermission> permissions) throws IOException {
         Files.setPosixFilePermissions(path, permissions);
-    }
-
-    private static void requireDigest(Path path, String algorithm, String expected, String label)
-            throws IOException {
-        try {
-            MessageDigest digest = MessageDigest.getInstance(algorithm);
-            try (var input = Files.newInputStream(path)) {
-                byte[] buffer = new byte[8192];
-                int count;
-                while ((count = input.read(buffer)) >= 0) digest.update(buffer, 0, count);
-            }
-            if (!expected.equals(HexFormat.of().formatHex(digest.digest()))) {
-                throw new IllegalArgumentException(label + " identity does not match the fixed profile");
-            }
-        } catch (NoSuchAlgorithmException impossible) {
-            throw new AssertionError(impossible);
-        }
     }
 
     private static void publish(Path staged, Path target, OwnedTemporaryDirectory publicationStage,
