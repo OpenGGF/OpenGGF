@@ -66,8 +66,8 @@ public class CrossGameFeatureProvider implements PlayerSpriteArtProvider, Spinda
     private GameRules hybridRules;
     private RenderContext donorRenderContext;
     private PlayerSpriteRenderer instaShieldRenderer;
-    private final com.openggf.game.sonic3k.ShieldPatternBanks instaShieldBanks =
-            new com.openggf.game.sonic3k.ShieldPatternBanks();
+    private final com.openggf.sprites.render.ShieldPatternBanks instaShieldBanks =
+            new com.openggf.sprites.render.ShieldPatternBanks();
     private SpriteArtSet instaShieldArtSet;
     private DonorCapabilities donorCapabilities;
     private boolean active;

@@ -137,7 +137,7 @@ class TestShieldPublicationBanks {
     }
 
     @Test void ownerBanksRemainBoundedAndResetWithProviderArt() {
-        var banks = new com.openggf.game.sonic3k.ShieldPatternBanks();
+        var banks = new com.openggf.sprites.render.ShieldPatternBanks();
         var art = provider.getShieldArtSet(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.INSTA_SHIELD);
         Sonic main = new Sonic("sonic", (short) 0, (short) 0);
         Sonic cpu = new Sonic("cpu", (short) 0, (short) 0);

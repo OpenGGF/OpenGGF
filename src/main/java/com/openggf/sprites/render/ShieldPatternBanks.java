@@ -1,9 +1,8 @@
-package com.openggf.game.sonic3k;
+package com.openggf.sprites.render;
 
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
-import com.openggf.sprites.render.PlayerSpriteRenderer;
 
 import java.util.IdentityHashMap;
 import java.util.Map;

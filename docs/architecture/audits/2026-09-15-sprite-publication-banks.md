@@ -60,11 +60,11 @@ In a native S2 host, the separate tail renderer reuses the Tails art set at
 `07B0`, overlapping body-bank capacity. Donating this art into S3K exposes
 a separate host/donor address-selection problem described below; it would be
 incorrect to assume that configuration actually receives `07B0`.
-A dedicated S2-donor pixel regression is still missing. The existing
+At inspection time, a dedicated S2-donor pixel regression was still missing. The existing
 Tails reproduction covers native S3K art, main/sidekick relocation, and direct
 and deferred sprite-table collection, not the whole donor matrix.
 
-## Prioritized follow-up work
+## Initial prioritized follow-up work
 
 ### 1. S2-style Tails in an S3K host — high priority
 
@@ -163,7 +163,7 @@ sync; test divergence only if the production lifecycle permits it.
   Other mutable object-art paths are not comprehensively certified by this
   player-bank inspection.
 
-## Recommended next scope and verification limits
+## Initial recommended scope and verification limits
 
 First reproduce the S2-Tails-in-S3K host/donor address mismatch, then add one
 ROM-backed rendering test for staggered two-Sonic insta-shields and one for a
@@ -276,7 +276,7 @@ owner first bound native art. Existing virtual banks need not move back until
 provider reset. This extends the same ownership fix rather than changing
 shield rewards or donor gameplay capabilities.
 
-Follow-up `2a4503c97` implements donor-safe allocation. The fixed ordinary-walk
+Follow-up `993fd712a` (investigation commit `2a4503c97`) implements donor-safe allocation. The fixed ordinary-walk
 matrix passed all 12 cases without skips. The same production code passed the
 43-test shield/lifecycle/API matrix; a strengthened late-activation test also
 passed independently, comparing retained ROM pixels and cursor state before
@@ -327,3 +327,39 @@ existing guard failures, with zero skips:
 Command: `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off
 -Pguards -Dtest=TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap,TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree test -B`.
 The consumed temporary log was removed. These failures are outside this fix.
+
+The completed candidate run on `ec5a08697` used
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base d92fea6f15ba0f90f9df15aab2d8c19763ded87f --run`.
+Preflight passed. Ordinary: 2,609 reports / 20,631 tests, zero failures/errors,
+19 skips, 768.73 seconds. Guards: 668 tests, four failures, zero errors/skips,
+173.26 seconds. Results were inspected and acknowledged.
+
+One guard failure was introduced here:
+`TestArchitecturalSourceGuard.crossGameFeatureProviderDoesNotNameConcreteSonicDonors`.
+The rendering-only `ShieldPatternBanks` helper was initially placed in the S3K
+package despite being consumed by the shared donor provider. Moving it to
+`com.openggf.sprites.render` restores the dependency boundary without changing
+its allocation behavior. The completed ordinary run remains evidence for that
+behavior; the package correction is checked narrowly before integration.
+
+The other newly noticed guard failure is also pre-existing:
+`TestTraceChaserBoundaryGuard.onlyReviewedForwardersRemainAtMigratedRoots`.
+Its exact subprocess, `python3 tools/testing/tracechaser_cutover_guard.py`,
+exits 1 on both `d9de72b7a` and `ec5a08697` with the sole message
+`deleted implementation remains tracked: tools/bizhawk/README.md`.
+The README, inventory, Python script and Java guard are identical at original
+base `d92fea6f1`, main `d9de72b7a` and candidate `ec5a08697`. Commit `2b6e4629b`
+reintroduced that README while the inventory still marks it deleted. Checkout
+root discovery is correct. Thus there are **three baseline guard failures**;
+only the helper dependency violation belongs to this fix.
+
+The 19 ordinary skips include opt-in benchmarks/soaks, AIZ route matrices,
+native graphics/captures, unavailable EGL/OpenGL checks, local audio-reference
+requirements and the existing CPZ spin-tube assumption. No new bank regression
+or mandatory S3K smoke class was skipped. No framebuffer capture or trace replay
+was run for these allocation fixes; ROM pixels are compared headlessly.
+
+The package correction passed 31 focused tests, zero failures/errors/skips:
+queued Maven with `-Dmse=off`, all three absolute ROM paths and
+`-Dtest=TestShieldPublicationBanks,TestShieldAnimationArtLifecycle,TestArchitecturalSourceGuard#crossGameFeatureProviderDoesNotNameConcreteSonicDonors`.
+No allocation or animation algorithm changed in this correction.

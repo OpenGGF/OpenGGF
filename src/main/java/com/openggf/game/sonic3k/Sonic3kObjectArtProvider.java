@@ -38,6 +38,7 @@ import com.openggf.sprites.animation.SpriteAnimationScript;
 import com.openggf.sprites.animation.SpriteAnimationSet;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
+import com.openggf.sprites.render.ShieldPatternBanks;
 import com.openggf.data.compression.KosinskiReader;
 import com.openggf.data.compression.NemesisReader;
 import com.openggf.util.PatternDecompressor;
