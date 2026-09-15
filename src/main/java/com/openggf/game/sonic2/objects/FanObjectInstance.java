@@ -16,7 +16,6 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.List;
-import java.util.ArrayList;
 
 /**
  * OOZ Fan (Object 0x3F).
@@ -106,11 +105,8 @@ public class FanObjectInstance extends AbstractObjectInstance implements RewindR
             // Blowing phase (objoff_32 == 0): push players, fast animation
             List<PlayableEntity> participants = services().playerQuery().playersFor(
                     ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
-            if (player != null && !participants.contains(player)) {
-                ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-                withUpdatePlayer.add(player);
-                withUpdatePlayer.addAll(participants);
-                participants = withUpdatePlayer;
+            if (player != null) {
+                participants = Sonic2PlayerParticipants.prependIfAbsent(participants, player);
             }
             for (PlayableEntity participant : participants) {
                 AbstractPlayableSprite playable = (AbstractPlayableSprite) participant;

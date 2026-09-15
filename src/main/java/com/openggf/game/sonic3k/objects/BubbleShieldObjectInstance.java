@@ -8,6 +8,7 @@ import com.openggf.level.objects.ShieldObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.SolidWireCommands;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.render.PlayerSpriteRenderer;
@@ -71,7 +72,7 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
         int cy = player.getCentreY();
         boolean expanded = (getSequenceIndex() % 2) == 0;
         int half = expanded ? 18 : 14;
-        appendWireDiamond(commands, cx, cy, half, 0.2f, 0.4f, 1.0f);
+        SolidWireCommands.diamond(commands, cx, cy, half, 0.2f, 0.4f, 1.0f);
     }
 
     /** Sets the current animation and resets playback state. */
@@ -95,22 +96,6 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
         return new ShieldAnimationArtLifecycle.Art(
                 artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.BUBBLE_SHIELD),
                 artSet != null ? artSet.animationSet() : null);
-    }
-
-    private void appendWireDiamond(List<GLCommand> commands,
-            int cx, int cy, int half, float r, float g, float b) {
-        int top = cy - half;
-        int bottom = cy + half;
-        int left = cx - half;
-        int right = cx + half;
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, top, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, right, cy, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, right, cy, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, bottom, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, bottom, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, left, cy, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, left, cy, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, top, 0, 0));
     }
 
     private Sonic3kObjectArtProvider getS3kArtProvider() {

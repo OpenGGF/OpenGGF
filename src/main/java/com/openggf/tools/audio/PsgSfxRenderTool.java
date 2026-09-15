@@ -18,11 +18,6 @@ import com.openggf.game.sonic2.audio.smps.Sonic2SmpsLoader;
 import com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig;
 import com.openggf.game.sonic3k.audio.smps.Sonic3kSmpsLoader;
 
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Files;
@@ -126,8 +121,8 @@ public final class PsgSfxRenderTool {
         Render mix = render(sfx, dac, config, rate, maxFrames, false);
         Render psgOnly = render(sfx, dac, config, rate, maxFrames, true);
 
-        writeWav(out.resolve(stem + "-mix.wav"), mix.samples, rate);
-        writeWav(out.resolve(stem + "-psg.wav"), psgOnly.samples, rate);
+        StereoPcmWavWriter.write(out.resolve(stem + "-mix.wav"), mix.samples, rate);
+        StereoPcmWavWriter.write(out.resolve(stem + "-psg.wav"), psgOnly.samples, rate);
         try (PrintWriter log = new PrintWriter(Files.newBufferedWriter(out.resolve(stem + "-psg-writes.txt")))) {
             log.printf(Locale.ROOT, "# game=%s sfx=%02X rate=%.3f frames=%d%n", game, sfxId, rate, mix.frames);
             for (Write w : mix.writes) {
@@ -188,17 +183,4 @@ public final class PsgSfxRenderTool {
         }
     }
 
-    private static void writeWav(Path path, short[] interleaved, double rate) throws IOException {
-        AudioFormat format = new AudioFormat(AudioFormat.Encoding.PCM_SIGNED,
-                (float) rate, 16, 2, 4, (float) rate, false);
-        byte[] bytes = new byte[interleaved.length * 2];
-        for (int i = 0; i < interleaved.length; i++) {
-            bytes[i * 2] = (byte) interleaved[i];
-            bytes[i * 2 + 1] = (byte) (interleaved[i] >> 8);
-        }
-        try (AudioInputStream stream = new AudioInputStream(new ByteArrayInputStream(bytes), format,
-                interleaved.length / 2)) {
-            AudioSystem.write(stream, AudioFileFormat.Type.WAVE, path.toFile());
-        }
-    }
 }

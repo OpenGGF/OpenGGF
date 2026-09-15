@@ -25,7 +25,6 @@ import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.util.LazyMappingHolder;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -645,13 +644,7 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
 
     private List<PlayableEntity> proximityParticipants(AbstractPlayableSprite updatePlayer) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(PROXIMITY_PARTICIPANTS);
-        if (updatePlayer == null || participants.contains(updatePlayer)) {
-            return participants;
-        }
-        ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-        withUpdatePlayer.add(updatePlayer);
-        withUpdatePlayer.addAll(participants);
-        return withUpdatePlayer;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     /**

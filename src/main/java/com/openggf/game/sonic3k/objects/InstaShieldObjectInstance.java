@@ -9,6 +9,7 @@ import com.openggf.level.objects.ShieldObjectInstance;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.Sonic3kObjectArtProvider;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.SolidWireCommands;
 import com.openggf.sprites.art.SpriteArtSet;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -119,23 +120,7 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
         // Wireframe fallback
         int cx = player.getCentreX();
         int cy = player.getCentreY();
-        appendWireDiamond(commands, cx, cy, 18, 1.0f, 1.0f, 1.0f);
-    }
-
-    private void appendWireDiamond(List<GLCommand> commands,
-            int cx, int cy, int half, float r, float g, float b) {
-        int top = cy - half;
-        int bottom = cy + half;
-        int left = cx - half;
-        int right = cx + half;
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, top, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, right, cy, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, right, cy, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, bottom, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, bottom, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, left, cy, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, left, cy, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID, r, g, b, cx, top, 0, 0));
+        SolidWireCommands.diamond(commands, cx, cy, 18, 1.0f, 1.0f, 1.0f);
     }
 
     private Sonic3kObjectArtProvider getS3kArtProvider() {

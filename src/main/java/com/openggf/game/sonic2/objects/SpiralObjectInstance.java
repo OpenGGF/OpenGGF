@@ -15,7 +15,6 @@ import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -116,11 +115,8 @@ public class SpiralObjectInstance extends AbstractObjectInstance implements Post
     public void update(int vIntRunCount, PlayableEntity playerEntity) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(
                 ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);
-        if (playerEntity instanceof AbstractPlayableSprite player && !participants.contains(player)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(player);
-            withUpdatePlayer.addAll(participants);
-            participants = withUpdatePlayer;
+        if (playerEntity instanceof AbstractPlayableSprite player) {
+            participants = Sonic2PlayerParticipants.prependIfAbsent(participants, player);
         }
         for (PlayableEntity participant : participants) {
             if (participant instanceof AbstractPlayableSprite player) {
