@@ -110352,3 +110352,14 @@ checks pass. These are focused checks, not broad delivery validation.
   S3K Knuckles remains 12,616 errors, first physics row 446 Y-speed sign.
 
 See the [native evidence and rejected paths](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b).
+
+Integration verification (`c8138d304`, 2026-09-15): queued change-based full
+selection against `342f01cb4` completed 20,543 ordinary tests with zero
+failures/errors and 19 baseline-identical skips; 668 guards retain the two
+exact baseline failures (obsolete direct-Maven guidance and assertion-free
+FBZ/solidity probes). Final queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestKis2CompleteEmeraldRunChain` with absolute KiS2/S2 ROM properties
+completed two tests, one known chain assertion, zero errors/skips. All 17
+canonical reports exactly match the candidate: segment 13, cursor **58,451**,
+first error row **957 `x_speed` -$0448/-$0200**, 7,203 partial-report errors.
+No fixture payload was changed.
