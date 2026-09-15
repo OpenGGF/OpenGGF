@@ -225,7 +225,8 @@ Independent review found no blocking issue.
 `0a4184643` (investigation commit `c054e66d8`) makes shield renderers and
 mutable banks owned per player, while shield types
 for the same player retain their native mutual exclusion. The first non-CPU
-owner keeps `$79C`; additional owners reserve 36 tiles each in the bounded
+owner keeps `$79C` only while donor art is inactive; other owners reserve
+36 tiles each in the bounded
 `TRANSIENT_EFFECTS + $1000..$2000` subrange. This avoids sparks/splash at the
 range start and snowboard art at `+$2000`/`+$4000`. Capacity is checked against
 loaded art, and exhaustion fails explicitly.
@@ -257,6 +258,33 @@ bounds/reset regression and confirmed the API pins: 30 tests passed, zero skips
 `TestModApiPinPolicy`, `TestModApiSignatureSurface`), using queued Maven with
 `-Dmse=off` and the absolute `s3k.rom.path`.
 
+During combined review, the remaining native shield address was also found to
+overlap S2 donor main-player art. S2's donor has no shield factory, so ordinary
+`giveShield(FIRE)` falls back through `DefaultPowerUpSpawner` to the native S3K
+factory. A real-ROM regression exercised that path with the shield created
+before the body renderer. An initial largest-mapping comparison failed all eight S2 Sonic/Tails cases
+in both draw orders and direct/deferred publication (`$79C`/`$79E` for Sonic,
+`$7A5` for Tails), while four S1 Sonic cases passed. However, the largest Sonic
+mapping was frame `$92`, potentially Super art; that result was rejected as
+proof of normal Sonic/shield coexistence. The reproduction was narrowed to
+ordinary walking frame `$0F`. The matched baseline on exact `c054e66d8`
+production ran 12 cases with zero skips: only the four S2 Tails cases failed
+(`$7A0` body-first, `$7A1` shield-first, direct and deferred); the eight sampled
+S1/S2 Sonic cases passed. Donated Tails art therefore requires excluding the
+native shield-bank claim, including donation activated after an
+owner first bound native art. Existing virtual banks need not move back until
+provider reset. This extends the same ownership fix rather than changing
+shield rewards or donor gameplay capabilities.
+
+Follow-up `2a4503c97` implements donor-safe allocation. The fixed ordinary-walk
+matrix passed all 12 cases without skips. The same production code passed the
+43-test shield/lifecycle/API matrix; a strengthened late-activation test also
+passed independently, comparing retained ROM pixels and cursor state before
+and after rebinding, same-owner fire sharing, and retention after donation is
+disabled. These checks used queued Maven with all three absolute stock-ROM
+paths; the matched method was
+`TestShieldPublicationBanks#nativeElementalShieldKeepsDonatedMainBodyPixels`.
+
 ### LBZ spark/splash overlap: no runtime change
 
 The fixed-address overlap remains a source-level risk, but a bounded entry
@@ -276,3 +304,26 @@ spark spawn was used to label the overlap a gameplay bug, and neither splash
 addresses nor object timing were changed. The regenerable temporary test and
 log were removed. Reopen this finding if a supported overlapping lifetime is
 observed; shared splash cursor divergence also remains unestablished.
+
+### Combined validation record
+
+The first combined run on `d48f0df6d` selected all 2,606 ordinary classes plus
+guards. It was deliberately interrupted (exit 130, incomplete) when the donor
+body/shield collision was found; it is not a suite pass. Its diagnostics were
+inspected and acknowledged. The worktree then reconciled incoming Sandopolis
+changes from `d9de72b7a` without conflicts, following the earlier S1 audio/S2
+title-screen merge from `0c38edf5d`.
+
+A matched pre-integration check on `develop` at `d9de72b7a` reproduced the two
+existing guard failures, with zero skips:
+
+- `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`:
+  five obsolete required guidance strings (separate worktrees for concurrent
+  Maven; direct focused Maven, guards and package commands; the printed-pinned-base
+  category-runner example).
+- `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`:
+  `FbzRouteEvidenceProbe#printEvidence` and `LevelSolidityMapProbe#writeSolidityMap`.
+
+Command: `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off
+-Pguards -Dtest=TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap,TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree test -B`.
+The consumed temporary log was removed. These failures are outside this fix.
