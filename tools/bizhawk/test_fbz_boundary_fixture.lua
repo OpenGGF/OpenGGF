@@ -17,7 +17,7 @@ for _, settles in ipairs({false,true}) do
  io.open=function()return output end
  os.getenv=function(name) return name=="OGGF_FBZ_VISUAL_OUTPUT" and "output" or "input" end
  dofile=function()return {manifest_sha256="261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",boundary=boundary}end
- mainmemory={read_u32_be=function()return 0 end,read_u8=function(a)return a==0xB005 and 2 or (ram[a] or 0) end,write_u8=function(a,v)assert(a==0xB02E and v==1);byteWrites=byteWrites+1;ram[a]=v end,read_u16_be=function(a)return ram[a] or 0 end,write_u16_be=function(a,v)
+ mainmemory={read_bytes_as_array=function(a,n) assert(a==0xF800 and n==0x280);local t={};for i=1,n do t[i]=0 end;return t end,read_u32_be=function()return 0 end,read_u8=function(a)return a==0xB005 and 2 or (ram[a] or 0) end,write_u8=function(a,v)assert(a==0xB02E and v==1);byteWrites=byteWrites+1;ram[a]=v end,read_u16_be=function(a)return ram[a] or 0 end,write_u16_be=function(a,v)
   assert(({[0xB010]=true,[0xB014]=true,[0xEED2]=true,[0xEEC0]=true,[0xEED4]=true,[0xEED6]=true,[0xEEC2]=true,[0xFE04]=true})[a])
   ram[a]=v;writes=writes+1;if a==boundary.address then phaseSteps=0 end
  end}

@@ -519,6 +519,9 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         backgroundRedrawProgress = 0;
         backgroundRedrawRowCount = 0x0F;
         backgroundRedrawVerticalAnchor = effectiveBackgroundY() & 0xFF0;
+        // FBZ2_CheckBGChange/loc_5327E resets effective tile offsets after
+        // deformation, just like the Act 1 mode-change tail.
+        lastRoundedBackgroundY = backgroundRedrawVerticalAnchor;
         submitAct1PaletteOwnership();
     }
 
@@ -792,6 +795,10 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
         backgroundRedrawRowCount = direction == RedrawDirection.TOP_DOWN
                 || direction == RedrawDirection.BOTTOM_UP ? 0x0F : 0x1F;
         backgroundRedrawVerticalAnchor = effectiveBackgroundY() & 0xFF0;
+        // FBZ_BGChangeGoIn/Out and horizontal loc_52C42 call
+        // Reset_TileOffsetPositionEff after FBZ_Deform. The normal row tail
+        // must not interpret the mode's new scroll origin as camera travel.
+        lastRoundedBackgroundY = backgroundRedrawVerticalAnchor;
         submitAct1PaletteOwnership();
     }
 
@@ -862,9 +869,12 @@ public final class Sonic3kFBZEvents extends Sonic3kZoneEvents {
     /** Exact Draw_TileRow position selection, including the ROM's optional second 16px update. */
     public static int[] normalDrawRowPositions(int oldRounded, int newRounded) {
         int signedDelta = (short) (oldRounded - newRounded);
-        int position = signedDelta < 0 ? oldRounded + 0xF0 : newRounded;
+        // Draw_TileRow branches on TST.B d2 after SUB.W, including for
+        // large wrapped differences whose byte and word signs disagree.
+        boolean negativeByte = (byte) signedDelta < 0;
+        int position = negativeByte ? oldRounded + 0xF0 : newRounded;
         position &= 0xFF0;
-        int maskedDistance = Math.abs(signedDelta) & 0x30;
+        int maskedDistance = (negativeByte ? -signedDelta : signedDelta) & 0x30;
         return maskedDistance == 0x10
                 ? new int[]{position}
                 : new int[]{position, (position + 0x10) & 0xFF0};

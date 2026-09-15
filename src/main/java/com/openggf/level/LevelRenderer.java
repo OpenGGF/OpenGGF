@@ -24,6 +24,7 @@ import com.openggf.game.render.SpecialRenderEffectStage;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GLCommandable;
 import com.openggf.graphics.GraphicsManager;
+import com.openggf.graphics.SpritePresentation;
 import com.openggf.graphics.PatternRenderCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.TilePriorityFBO;
@@ -873,8 +874,47 @@ public final class LevelRenderer {
         return currentAdvancedRenderFrameState;
     }
 
+    final LevelSpritePresentation.Tables spriteTables = new LevelSpritePresentation.Tables();
+    private boolean preparingSpritePresentation;
+
+    void prepareSpritePresentation(SpriteManager sprites) {
+        if (lm.graphicsManager == null || lm.camera == null) return;
+        preparingSpritePresentation = true;
+        try {
+            spriteTables.prepare(SpritePresentation.prepare(lm.graphicsManager,
+                    lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
+                        renderSpriteObjectPass(sprites, false);
+                        if (lm.hudRenderManager != null && !lm.isHudSuppressed()) {
+                            SpritePresentation.layer(lm.graphicsManager,
+                                    SpritePresentation.Layer.HUD);
+                            prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
+                            lm.hudRenderManager.draw(lm.levelGamestate, lm.camera.getFocusedSprite());
+                        }
+                    }));
+        } finally {
+            preparingSpritePresentation = false;
+        }
+    }
+
+    void publishHudCounters(boolean advanceTimer) {
+        if (lm.hudRenderManager == null || lm.graphicsManager == null || lm.camera == null || lm.isHudSuppressed()) return;
+        spriteTables.publishCounters(SpritePresentation.prepare(lm.graphicsManager,
+                lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
+                    SpritePresentation.layer(lm.graphicsManager, SpritePresentation.Layer.HUD);
+                    prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
+                    com.openggf.level.objects.HudProfileAccess.drawVBlankCounters(lm.hudRenderManager,
+                            lm.levelGamestate, lm.camera.getFocusedSprite(), advanceTimer);
+                }));
+    }
+
+    private void drawPublishedSprites(java.util.function.Predicate<SpritePresentation.Layer> visible) {
+        SpritePresentation.draw(lm.graphicsManager, spriteTables.published(),
+                lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible);
+    }
+
     /** Resets per-frame derived state (used when the level is unloaded). */
     void resetState() {
+        spriteTables.reset();
         frameCommandPool.cancelOutstanding();
         currentShimmerStyle = 0;
         currentAdvancedRenderFrameState = AdvancedRenderFrameState.disabled();
@@ -1118,11 +1158,21 @@ public final class LevelRenderer {
         }
 
         profiler.beginSection("render.hud");
-        if (options.includeHud() && lm.hudRenderManager != null && !lm.isHudSuppressed()
+        if (options.includeHud() && lm.hudRenderManager != null
+                && (LevelSpritePresentation.enabled(lm) || !lm.isHudSuppressed())
                 && (TraceGhostHook.active() == null || currentTraceVisibility.showGameHud())) {
-            AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
-            prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
-            lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
+            if (LevelSpritePresentation.enabled(lm)) {
+                drawPublishedSprites(layer -> layer == SpritePresentation.Layer.HUD);
+                if (spriteTables.published().tiles().stream().anyMatch(tile -> tile.layer().isHud())) {
+                    SpritePresentation.draw(lm.graphicsManager, spriteTables.counters(),
+                            camera.getXWithShake(), camera.getYWithShake(),
+                            layer -> layer == SpritePresentation.Layer.HUD_COUNTERS);
+                }
+            } else {
+                AbstractPlayableSprite focusedPlayer = camera.getFocusedSprite();
+                prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
+                lm.hudRenderManager.draw(lm.levelGamestate, focusedPlayer);
+            }
         }
         profiler.endSection("render.hud");
 
@@ -1399,6 +1449,28 @@ public final class LevelRenderer {
      * sprites/objects visible while the level tiles remain hidden.
      */
     public void renderSpriteObjectPass(SpriteManager spriteManager, boolean includeWaterSurface) {
+        if (!preparingSpritePresentation && LevelSpritePresentation.enabled(lm)) {
+            drawPublishedSprites(layer -> !layer.isHud());
+        } else {
+            prepareOrDrawLiveSprites(spriteManager);
+        }
+        if (preparingSpritePresentation) return;
+        GraphicsManager graphicsManager = lm.graphicsManager;
+        ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
+
+        if (includeWaterSurface) {
+            graphicsManager.registerCommand(disableShimmerCommand);
+        }
+        if (zoneFeatureProvider != null) {
+            zoneFeatureProvider.render(lm.camera, lm.frameCounter);
+        }
+        dispatchSpecialRenderEffects(SpecialRenderEffectStage.AFTER_SPRITES, lm.frameCounter);
+
+        // Revert to default shader for any following HUD/debug/screen-space rendering.
+        graphicsManager.registerCommand(disableWaterShaderCommand);
+    }
+
+    private void prepareOrDrawLiveSprites(SpriteManager spriteManager) {
         // Render ALL sprites in unified bucket order (7→0)
         // Sprite-to-sprite ordering is by bucket number regardless of isHighPriority
         // The sprite priority shader composites sprites with tile priority awareness
@@ -1442,9 +1514,11 @@ public final class LevelRenderer {
             for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
                 graphicsManager.setCurrentSpriteSatBucket(bucket);
                 if (objectManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
                     objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
                 if (spriteManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
                     spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
                 }
                 drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
@@ -1457,18 +1531,22 @@ public final class LevelRenderer {
                     // the same priority buckets. Draw objects first so lower-slot player
                     // sprites remain on top within a shared bucket.
                     if (objectManager != null) {
+                        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
                         objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                     }
                     if (spriteManager != null) {
+                        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
                         spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
                     }
                     drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
                 } else {
                     if (spriteManager != null) {
+                        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
                         spriteManager.drawPreparedUnifiedBucketWithPriority(
                                 bucket, graphicsManager, ghostLayerHook);
                     }
                     if (objectManager != null) {
+                        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
                         objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                     }
                     drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
@@ -1479,16 +1557,6 @@ public final class LevelRenderer {
         graphicsManager.setUseSpritePriorityShader(false);
         profiler.endSection("render.sprites");
 
-        if (includeWaterSurface) {
-            graphicsManager.registerCommand(disableShimmerCommand);
-        }
-        if (zoneFeatureProvider != null) {
-            zoneFeatureProvider.render(lm.camera, lm.frameCounter);
-        }
-        dispatchSpecialRenderEffects(SpecialRenderEffectStage.AFTER_SPRITES, lm.frameCounter);
-
-        // Revert to default shader for any following HUD/debug/screen-space rendering.
-        graphicsManager.registerCommand(disableWaterShaderCommand);
     }
 
     private void renderGhostsForLayer(int bucket, boolean highPriority) {
@@ -1520,28 +1588,39 @@ public final class LevelRenderer {
         ZoneFeatureProvider zoneFeatureProvider = lm.zoneFeatureProvider;
         profiler.beginSection("render.sprites");
 
-        if (objectManager != null && options.includeObjectSprites()) {
-            objectManager.refreshRenderBucketsIfChanged();
-        }
-
-        graphicsManager.setUseSpritePriorityShader(true);
-        graphicsManager.setCurrentSpriteHighPriority(false);
-        graphicsManager.beginPatternBatch();
-
-        if (spriteManager != null && options.includePlayerSprites()) {
-            spriteManager.prepareRenderBucketsForPass();
-        }
-
-        for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-            if (spriteManager != null && options.includePlayerSprites()) {
-                spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
-            }
+        if (LevelSpritePresentation.enabled(lm)) {
+            drawPublishedSprites(layer -> switch (layer) {
+                case PLAYER -> options.includePlayerSprites();
+                case OBJECT -> options.includeObjectSprites();
+                case RINGS -> options.includeRings();
+                case HUD, HUD_COUNTERS -> false;
+            });
+        } else {
             if (objectManager != null && options.includeObjectSprites()) {
-                objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
+                objectManager.refreshRenderBucketsIfChanged();
             }
-            drawStageRingsForBucket(ringManager, graphicsManager, bucket, options.includeRings());
-        }
 
+            graphicsManager.setUseSpritePriorityShader(true);
+            graphicsManager.setCurrentSpriteHighPriority(false);
+            graphicsManager.beginPatternBatch();
+
+            if (spriteManager != null && options.includePlayerSprites()) {
+                spriteManager.prepareRenderBucketsForPass();
+            }
+
+            for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
+                if (spriteManager != null && options.includePlayerSprites()) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
+                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+                }
+                if (objectManager != null && options.includeObjectSprites()) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
+                }
+                drawStageRingsForBucket(ringManager, graphicsManager, bucket, options.includeRings());
+            }
+
+        }
         graphicsManager.flushPatternBatch();
         graphicsManager.setUseSpritePriorityShader(false);
         profiler.endSection("render.sprites");
@@ -1563,6 +1642,7 @@ public final class LevelRenderer {
             return;
         }
 
+        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.RINGS);
         Camera camera = lm.camera;
         boolean verticalWrapEnabled = camera != null && camera.isVerticalWrapEnabled();
         if (verticalWrapEnabled) {

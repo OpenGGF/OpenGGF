@@ -138,6 +138,7 @@ public class Sonic3kGameModule implements GameModule {
     private ObjectRegistry objectRegistry;
     private final Sonic3kBonusStageCoordinator bonusStageCoordinator = new Sonic3kBonusStageCoordinator();
     private Sonic3k activeGame;
+    private Sonic3kLevelTitlePlcService levelTitlePlcService;
 
     @Override
     public String getIdentifier() {
@@ -153,9 +154,11 @@ public class Sonic3kGameModule implements GameModule {
     public Game createGame(Rom rom) {
         try {
             activeGame = new Sonic3k(rom, globalAnimationState);
+            levelTitlePlcService = new Sonic3kLevelTitlePlcService(rom);
             return activeGame;
         } catch (java.io.IOException e) {
             activeGame = null;
+            levelTitlePlcService = null;
             LOGGER.severe("Failed to create S3K game: " + e.getMessage());
             return null;
         }
@@ -472,17 +475,39 @@ public class Sonic3kGameModule implements GameModule {
     public void resetModuleScopedState() {
         AizIntroArtLoader.reset();
         AizIntroTerrainSwap.reset();
+        if (levelTitlePlcService != null) levelTitlePlcService.resetForMissingSnapshot();
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.HudWarningPolicyProvider.class) {
+            // Render_HUD / loc_DB68 tests bit 3 of Level_frame_counter,
+            // independently of Timer_frame and Update_HUD_timer.
+            return (T) new com.openggf.game.internal.HudWarningPolicyProvider() {
+                @Override public boolean isFlashFrame(int frame) { return (frame & 8) == 0; }
+                @Override public boolean isTimerWarning(int seconds) { return seconds / 60 == 9; }
+            };
+        }
+        if (type == com.openggf.game.internal.HudLivesNumberPaletteProvider.class) {
+            // HUD_Lives writes PlayerLifeIcon+9/+11, inside Map_HUD's
+            // second lives piece ($210E), which selects palette line 1.
+            return (T) (com.openggf.game.internal.HudLivesNumberPaletteProvider) () -> 1;
+        }
+        if (type == Sonic3kLevelTitlePlcService.class
+                || type == com.openggf.game.resources.PlcLifecycleService.class)
+            return (T) levelTitlePlcService;
         if (type == Sonic3kLevelEventManager.class) return (T) levelEventManager;
         if (type == Sonic3kTitleCardManager.class) return (T) titleCardManager;
         if (type == Sonic3kZoneRegistry.class) return (T) zoneRegistry;
         if (type == com.openggf.game.sonic3k.specialstage.Sonic3kSpecialStageManager.class)
             return (T) specialStageManager;
         return null;
+    }
+
+    @Override
+    public List<com.openggf.game.rewind.RewindSnapshottable<?>> rewindAdapters() {
+        return levelTitlePlcService == null ? List.of() : List.of(levelTitlePlcService);
     }
 
     @Override

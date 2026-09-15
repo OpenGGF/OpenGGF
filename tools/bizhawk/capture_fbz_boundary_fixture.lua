@@ -39,6 +39,12 @@ local function sample(phase,index)
  local stem=output.."/"..phase.."-"..string.format("%02d",index)
  client.screenshot(stem..".png")
  dump("VRAM",65536,stem..".vram");dump("CRAM",128,stem..".cram");dump("VSRAM",128,stem..".vsram")
+ -- Render_Sprites builds RAM Sprite_table at $FFF800; VInt_8_Cont
+ -- uploads its $280 bytes to VRAM $F800. Observe both publication sides.
+ local prepared=mainmemory.read_bytes_as_array(0xF800,0x280)
+ local bytes={};for i=1,#prepared do bytes[i]=string.char(prepared[i]) end
+ local sat=assert(io.open(stem.."-prepared-sat.bin","wb"))
+ sat:write(table.concat(bytes));sat:close()
  local parts={string.format('"kind":"sample","phase":"%s","index":%d,"native_frame":%d',phase,index,emu.framecount())}
  parts[#parts+1]=string.format('"player_routine":%d,"player_status":%d,"player_object_control":%d',mainmemory.read_u8(0xB005),mainmemory.read_u8(0xB02A),mainmemory.read_u8(0xB02E))
  for name,address in pairs({player_anim=0xB020,player_previous_anim=0xB021,

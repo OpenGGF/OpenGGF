@@ -69,13 +69,68 @@ def measure(native, engine, name):
               'foreground_vscroll','background_vscroll','level_frame_counter','sidekicks')}}
 
 
+def sprite_publication(native):
+    """Observe $FFF800 CPU preparation versus $F800 VDP publication.
+
+    Only consecutive emulator frames are compared. Duplicate samples (fixture
+    writes without execution) and gaps are counted, never treated as a delay.
+    Entire $280-byte tables are compared; no player/active-entry selection.
+    """
+    rows = []
+    prior = None
+    duplicate_samples = gaps = 0
+    for line in (native / 'fixture.jsonl').read_text().splitlines():
+        state = json.loads(line)
+        if state.get('kind') != 'sample':
+            continue
+        name = f"{state['phase']}-{state['index']:02d}"
+        prepared_path = native / (name + '-prepared-sat.bin')
+        vram_path = native / (name + '.vram')
+        prepared = prepared_path.read_bytes()
+        vram = vram_path.read_bytes()
+        if len(prepared) != 0x280 or len(vram) != 0x10000:
+            raise ValueError('Expected complete CPU SAT and VRAM readbacks')
+        displayed = vram[0xF800:0xFA80]
+        frame = state['native_frame']
+        row = {'sample': name, 'native_frame': frame,
+               'prepared_sha256': sha(prepared_path), 'vram_sha256': sha(vram_path),
+               'current_cpu_mismatched_bytes': sum(a != b for a, b in zip(prepared, displayed))}
+        if prior is not None:
+            delta = frame - prior[0]
+            if delta < 0:
+                raise ValueError('Native sample frames must not move backwards')
+            if delta == 1:
+                row['previous_cpu_mismatched_bytes'] = sum(a != b for a, b in zip(prior[1], displayed))
+            elif delta == 0:
+                duplicate_samples += 1
+            else:
+                gaps += 1
+        rows.append(row)
+        prior = frame, prepared
+    if not rows:
+        raise ValueError('No native sample observations')
+    comparisons = [r for r in rows if 'previous_cpu_mismatched_bytes' in r]
+    if not comparisons:
+        raise ValueError('No consecutive native frames to compare')
+    return {'status': 'native-publication-measurement-not-engine-acceptance',
+            'table_bytes': 0x280, 'sample_count': len(rows),
+            'consecutive_pairs': len(comparisons), 'duplicate_samples': duplicate_samples,
+            'sample_gaps': gaps,
+            'previous_cpu_mismatch_pairs': sum(r['previous_cpu_mismatched_bytes'] != 0 for r in comparisons),
+            'current_cpu_mismatch_samples': sum(r['current_cpu_mismatched_bytes'] != 0 for r in rows),
+            'samples': rows}
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('native',type=Path);p.add_argument('engine',type=Path);p.add_argument('output',type=Path)
+    p.add_argument('--sprite-publication', action='store_true', help='compare native CPU and VDP SAT boundaries')
     a=p.parse_args()
     result={'status':'measurements-only-independent-review-required',
             'pixel_rule':'native channel/34 versus round(engine channel*7/255), same coordinates; no translation',
             'samples':[measure(a.native,a.engine,name) for name in ('forward-after-01','after-01')]}
+    if a.sprite_publication:
+        result['native_sprite_publication'] = sprite_publication(a.native)
     with a.output.open('x') as f:json.dump(result,f,indent=2)
     print(json.dumps(result))
 

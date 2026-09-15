@@ -122,12 +122,44 @@ class TestFbzAct1LayoutMutations {
         assertEquals(List.of("row:0:2784:224", "finish"), surface.ops);
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1})
+    void backgroundModeChangeResetsNormalRowScrollBeforeItsDrawTail(int act) {
+        Sonic3kFBZEvents events = new Sonic3kFBZEvents();
+        events.init(act);
+        if (act == 0) events.initializeAct1Background(0x180);
+        else events.initializeAct2Background(0);
+        events.setForegroundLayoutRegion(4);
+        assertEquals(0, events.getLastRoundedBackgroundY());
+
+        if (act == 0) events.updateAct1BackgroundEvent(0x500, 0x9D0, false);
+        else events.updateAct2BackgroundEvent(0x1000, 0xA41, false);
+
+        assertTrue(events.isBackgroundOutdoor());
+        assertEquals(0x10, events.getLastRoundedBackgroundY(),
+                "both acts reset effective tile offsets before the normal row draw tail");
+        assertEquals(1, events.getBackgroundRedrawProgress(),
+                "the staged strip still executes in the change's own event tail");
+
+        if (act == 0) events.updateAct1BackgroundEvent(0x500, 0x900, false);
+        else events.updateAct2BackgroundEvent(0x1000, 0xA3F, false);
+        assertFalse(events.isBackgroundOutdoor());
+        assertEquals(0, events.getLastRoundedBackgroundY());
+    }
+
     @Test
     void normalDrawTileRowMatchesRomDirectionAndDoubleUpdate() {
         assertArrayEquals(new int[]{0x100}, Sonic3kFBZEvents.normalDrawRowPositions(0x10, 0x20));
         assertArrayEquals(new int[]{0x10}, Sonic3kFBZEvents.normalDrawRowPositions(0x20, 0x10));
         assertArrayEquals(new int[]{0x10, 0x20}, Sonic3kFBZEvents.normalDrawRowPositions(0x30, 0x10));
         assertArrayEquals(new int[]{0x100, 0x110}, Sonic3kFBZEvents.normalDrawRowPositions(0x10, 0x30));
+    }
+
+    @Test
+    void normalDrawTileRowTestsTheLowByteOfTheScrollDelta() {
+        // Draw_TileRow uses TST.B d2, not the sign of the full SUB.W result.
+        assertArrayEquals(new int[]{0x200}, Sonic3kFBZEvents.normalDrawRowPositions(0x10, 0x200));
+        assertArrayEquals(new int[]{0x2F0}, Sonic3kFBZEvents.normalDrawRowPositions(0x200, 0x10));
     }
 
     private static final class RecordingSurface implements LevelMutationSurface {

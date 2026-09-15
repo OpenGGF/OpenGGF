@@ -149,6 +149,26 @@ through `Do_ControllerPal`; `VInt_0` lag does not. VInt14 is Sega-art loading, n
 the level title-card loop, which arms VIntC. These distinctions were established
 by FBZ native/GPU paired evidence on 2026-09-14.
 
+**CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
+`Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
+later `Render_Sprites` builds the next table. An emulator-frame screenshot can
+therefore show retained positions/mappings while the same sample's object RAM
+has advanced. Compare native RAM and VRAM table ownership before changing
+motion or animation. The engine's transient sprite-mask collector is not a
+VBlank presentation buffer, and pooled GL commands cannot stand in for durable
+rewindable presentation state (FBZ B2/B4 investigation, 2026-09-14).
+Mutable virtual DPLC banks need an art-generation binding as well as a mapping:
+retaining their numeric cache addresses alone can pair the previous mapping
+with tiles overwritten by the next animation update. Preserve immutable
+ROM-derived bank contents with the prepared presentation; stable art addresses
+continue through the normal cache. Prepare even when host drawing is skipped,
+and restore both prepared and displayed tables across rewind. HUD numeric
+art is a separate publication: S3K `VInt8/10 -> Do_Updates -> UpdateHUD`
+rewrites digits and advances the timer while the SAT still describes the
+previous `Render_HUD` geometry. Buffering the digit choice with that geometry
+adds a one-frame second-rollover error (21 pixels in FBZ B1 reverse). Lag,
+fade and title-card handlers do not run the same numeric update.
+
 **S3K retained plane strip counts and clipping.** `Setup_TileRowDraw` and
 `Setup_TileColumnDraw` subtract one before DBF: callers supplying `$20`/`$10`
 write 32/16 blocks, not 33/17. `Draw_PlaneVertSingleTopDown`/`BottomUp`
@@ -166,6 +186,16 @@ pass zero outdoors, not the bobbed VScroll. Indoors `Setup_TileColumnDraw`
 resolves 16px blocks (`d1 >> 4`); passing raw Y77 into an 8px tile copier
 incorrectly begins at row9 instead of row8. Keep this FBZ caller rule in its
 owner, and account for the ordinary row-scroll pass separately in strip tests.
+
+A background-mode change must also reproduce `Reset_TileOffsetPositionEff`
+when its ROM caller uses it. FBZ's vertical and horizontal changes in both
+acts reset the rounded Y after deformation and before the normal row tail;
+retaining the old mode's origin queues spurious rows even when the staged
+redraw counter is correct. `Draw_TileRow` tests the **low byte** of its word
+scroll delta and conditionally negates the word before masking `$30`; using
+the word sign or an unconditional absolute value differs for large deltas.
+These producer rules are separate from `VInt_DrawLevel` publishing the buffered
+writes at VBlank (2026-09-14 B1 ordered-redraw investigation).
 
 
 S3K `ChangeRingFrame` owns independent bytes `$FEB2/$FEB3`, not a division of
@@ -185,3 +215,27 @@ S3K `Sonic_RecordPos` records input in the player's dispatch before later SST ob
 ### Results queue observation and allocation retries
 
 A full level frame may retire results art, run Obj_LevelResultsCreate, publish the act transition and submit new terrain art. Its post-frame global incomplete-job count cannot identify the original results batch. For a pre-Create allocation/rewind checkpoint, service the real hardware boundaries without dispatching objects, verify the exact result handles and empty physical FIFO, then dispatch the actual registered owner. Keep a separate full-loop transition check. Native Obj_LevelResultsCreate polls global Kos_modules_left on every retry, including after art has been claimed but the first child allocation failed; readiness of the three owned handles alone is insufficient. Origin: 2026-09-14 FBZ combined validation.
+
+
+### Physical retained planes and source-cache dimensions
+
+An event-owned VDP Plane B is64x32 cells even when its source-world cache is
+taller. Native row writes into the first32 cache rows do not update the later
+world rows; rendering with that taller height can sample untouched art while
+a CPU ring comparison looks correct. Convert to the physical retained image
+when the event takes ownership and preserve the same representation through
+rewind. Read back the actual GPU texture as well as the CPU ring. Origin:
+2026-09-14 FBZ completion; the192-row cache regression and ordered reverse
+redraw capture isolate this from the separate VBlank publication issue.
+
+
+### HUD warning phase is not elapsed time
+
+S3K `Render_HUD` / `loc_DB68` selects warning mappings using bit 3 of
+`Level_frame_counter`; timer warning eligibility separately tests whether
+`Timer_minute` is 9. `LevelTimer.totalFrames` can diverge after loading, paused
+timers or explicit visual-fixture clock resets. Use the module's internal HUD
+warning policy and the already rewind-owned level clock. Do not add a fitted
+phase offset or a second counter. Test label rendering with deliberately
+opposed timer and level phases, including a restored earlier level counter.
+Origin: 2026-09-14 FBZ paired whole-frame investigation (307 RINGS pixels).

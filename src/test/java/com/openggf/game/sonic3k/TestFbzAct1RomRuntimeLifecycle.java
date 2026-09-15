@@ -94,8 +94,10 @@ class TestFbzAct1RomRuntimeLifecycle {
         java.lang.reflect.Field tilemapsField = LevelManager.class.getDeclaredField("tilemapManager");
         tilemapsField.setAccessible(true);
         LevelTilemapManager tilemaps = (LevelTilemapManager) tilemapsField.get(levels);
-        assertTrue(tilemaps.getBackgroundTilemapHeightTiles() > 32,
-                "real FBZ1 world cache must be taller than the retained VDP ring");
+        assertEquals(64, tilemaps.getBackgroundTilemapWidthTiles());
+        assertEquals(32, tilemaps.getBackgroundTilemapHeightTiles(),
+                "native event initialization must replace the source-world cache with the physical VDP ring");
+        assertEquals(32, tilemaps.getBackgroundVdpWrapHeightTiles());
 
         byte[] expectedPatch = GameServices.rom().getRom().readBytes(0x52DD0, 16);
         for (int i = 0; i < 8; i++) {

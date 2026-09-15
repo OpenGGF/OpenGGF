@@ -682,6 +682,28 @@ class TestPlcFrameLifecycleCoordinator {
                 "the lag closure runs the held iteration's RunPLC");
     }
 
+    @Test
+    void titleLoopReachesPreparationDespiteHeldGameplayCounterHint() {
+        List<String> events = new ArrayList<>();
+        PlcFrameLifecycleCoordinator coordinator =
+                new PlcFrameLifecycleCoordinator(recording(events));
+        for (int iteration = 0; iteration < 2; iteration++) {
+            coordinator.markRepresentedIterationDefersLoopTailPreparation();
+            coordinator.runLogicalIteration(() -> { }, frame -> {
+                frame.claim(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+                frame.prepareAfterLoop(PlcLifecyclePhase.LEVEL_TITLE_CARD);
+                return null;
+            });
+        }
+        coordinator.runLogicalIteration(() -> { }, frame -> {
+            frame.claim(PlcLifecyclePhase.LAG);
+            return null;
+        });
+        assertEquals(List.of("service:LEVEL_TITLE_CARD", "prepare:LEVEL_TITLE_CARD",
+                "service:LEVEL_TITLE_CARD", "prepare:LEVEL_TITLE_CARD", "service:LAG"),
+                events, "completed title loops leave no delayed preparation on a later lag row");
+    }
+
     /** A stall spanning several lag rows keeps the tail until the loop resumes. */
     @Test
     void aTailHeldAcrossConsecutiveLagRowsRunsOnTheLastOfThem() {
@@ -757,7 +779,8 @@ class TestPlcFrameLifecycleCoordinator {
             @Override
             public boolean hasPreparationBoundary(PlcLifecyclePhase phase) {
                 return phase == PlcLifecyclePhase.PALETTE_FADE
-                        || phase == PlcLifecyclePhase.ORDINARY_LEVEL;
+                        || phase == PlcLifecyclePhase.ORDINARY_LEVEL
+                        || phase == PlcLifecyclePhase.LEVEL_TITLE_CARD;
             }
 
             @Override

@@ -72,12 +72,7 @@ public interface TitleCardProvider {
         return false;
     }
 
-    /**
-     * Returns whether a fresh level-transition boundary may release its
-     * destination state. Games whose native title owner keeps the loaded
-     * player slots held through the visible exit can defer this beyond the
-     * ordinary control-release point.
-     */
+    /** The fresh-loading resource wait is complete and level setup may finish. */
     default boolean shouldCompleteFreshLevelTransitionBoundary() {
         return shouldReleaseControl();
     }

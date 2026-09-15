@@ -11,6 +11,17 @@ public final class HudProfileAccess {
         Objects.requireNonNull(hud, "hud").installProfile(profile);
     }
 
+    public static void installWarningPolicy(HudRenderManager hud,
+            com.openggf.game.internal.HudWarningPolicyProvider policy, java.util.function.IntSupplier clock) {
+        Objects.requireNonNull(hud, "hud").setWarningPolicy(
+                Objects.requireNonNull(policy, "policy"), Objects.requireNonNull(clock, "clock"));
+    }
+
+    public static void drawVBlankCounters(HudRenderManager hud, com.openggf.game.LevelState state,
+            com.openggf.game.PlayableEntity player, boolean advanceTimer) {
+        Objects.requireNonNull(hud, "hud").drawForCounterPublication(state, player, advanceTimer);
+    }
+
     public static HudProfile current(HudRenderManager hud) {
         return Objects.requireNonNull(hud, "hud").currentProfile();
     }

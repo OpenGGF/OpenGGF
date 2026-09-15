@@ -1499,6 +1499,17 @@ public class LevelTilemapManager {
 
     /** Writes one cell into an event-owned retained Plane-B image without invalidating it for rebuild. */
     public boolean setRetainedBackgroundTileDescriptorAtTilemapCell(int tileX, int tileY, int descriptor) {
+        if (backgroundTilemapData != null
+                && backgroundTilemapWidthTiles >= 64 && backgroundTilemapHeightTiles >= 32
+                && (backgroundTilemapWidthTiles != 64 || backgroundTilemapHeightTiles != 32)) {
+            // Event-owned writes address the physical VDP Plane B, not the
+            // source world cache. Keeping taller cache rows lets VScroll sample
+            // untouched source art instead of wrapping the retained 32 rows.
+            backgroundTilemapData = captureRetainedBackgroundVdpRing();
+            backgroundTilemapWidthTiles = 64;
+            backgroundTilemapHeightTiles = 32;
+            recomputeBgVdpWrapHeight();
+        }
         if (backgroundTilemapData == null
                 || tileX < 0 || tileY < 0
                 || tileX >= backgroundTilemapWidthTiles || tileY >= backgroundTilemapHeightTiles) return false;

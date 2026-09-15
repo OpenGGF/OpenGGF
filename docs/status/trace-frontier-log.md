@@ -110119,3 +110119,55 @@ reports are identical: 16,388 and 12,616 errors respectively; first errors remai
 S2 row 6 transfer IDs `[2]`/`[]` and S3K row 446 Y speed -$0448/+$0448.
 See the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
 for native evidence, rejected assumptions, and broad validation follow-up.
+
+### 2026-09-14 — FBZ complete recording closes at fresh SOZ initialization
+
+Pinned base `6897a604895a4822e85b766859624a95c42bd4b6`, uncommitted source in
+`.worktrees/ai-fbz-native-loading`. Queued command:
+`test -Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSonic3kTitleCardKosQueue,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute S3K ROM>`.
+Completed 11 tests, all passing, zero skips, Maven 1:04. Strict recording:
+**44,134 comparison entries; zero errors/warnings; no first-error frame or
+field**. Matched pristine-base check: 16 grouped errors / 44,144 entries,
+first 44,230 main X (`$00C0` expected, `$0000` actual), zero warnings/skips.
+The count change removes unmatched timing-completion entries, not fixture rows.
+
+Production now honors the ROM's fresh-title Nemesis workload, explicit title
+loop preparation despite a held gameplay counter, initialization-only loop
+tail, and terrain parents' late-producer boundary. No trace data hydrates
+production state. The independent Hyper recording remains a separate authentic
+progression prerequisite gap (last measured 4,152 errors, first 7,619 main
+`x_speed`); it was not rerun by this command. Broad validation and integration
+are outstanding. See the dated FBZ completion plan for rejected iterations.
+
+
+### 2026-09-14 — FBZ background-origin follow-up and Hyper prerequisite
+
+Same pinned base `6897a604895a4822e85b766859624a95c42bd4b6`, uncommitted
+`.worktrees/ai-fbz-native-loading`. Queued `test -Dmse=off -Ptrace-replay-r7
+-Dsurefire.forkCount=1
+-Dtest=TestFbzAct1LayoutMutations,TestFbzEventsAct1,TestFbzFramePhaseOrdering,TestFbzTransitionRewind,TestS3kFbzCompleteRunTraceReplay
+-Ds3k.rom.path=<verified absolute ROM>`: 30 passes, zero failures/errors/skips,
+35.316 seconds Maven. Complete strict FBZ remains passing, no first error.
+
+Separate queued `test -Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsCompleteEmeraldRunPrefix,TestS3kSonicTailsCompleteEmeraldRunChain
+-Ds3k.rom.path=<verified absolute ROM>`: prefix passes, chain fails, zero
+errors/skips, Maven 1:25. First reported boundary failure is
+`uncompared-interior physical walk exceeded destination 8817`; the run never
+reaches FBZ offset 302654. No new matched baseline was run and no emerald
+state was injected. Independent Hyper acceptance remains open.
+
+### 2026-09-15 — FBZ retained sprite/HUD publication preserves the strict frontier
+
+Uncommitted `.worktrees/ai-fbz-native-loading`, reconciled onto destination
+`dedd18877` (original task pin `6897a6048`). Queued `-Dmse=off
+-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSpritePresentation,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestHudRenderManager,TestS3kFbzCompleteRunTraceReplay,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils
+-Ds3k.rom.path=<verified absolute ROM> test exec:java`, followed by the B1
+fixture capture, passes 97 tests, zero failures/errors/skips, Maven 1:10.
+The complete strict replay still passes (17.270 s body), no first error.
+All fourteen settled boundary afterstates match after the separate SAT and HUD
+numeric publications. Intermediate redraws and independent Hyper progression
+remain open; broad validation/integration are not yet claimed.

@@ -847,6 +847,7 @@ public final class GameplayModeContext implements ModeContext {
         }
         levelEventExtraRewindKeys.clear();
         rewindRegistry.register(levelManager.levelRewindSnapshottable());
+        com.openggf.level.LevelSpritePresentation.register(levelManager, rewindRegistry);
         LevelLostRingSpawnRewindAccess.register(levelManager, rewindRegistry);
         RewindSnapshottable<?> transitionAdapter =
                 levelManager.levelTransitionRewindSnapshottable();

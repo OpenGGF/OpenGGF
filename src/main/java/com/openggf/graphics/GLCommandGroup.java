@@ -26,6 +26,19 @@ public class GLCommandGroup implements GLCommandable {
 		this.commands = List.copyOf(commands);
 	}
 
+	record PresentationGroup(int method, List<GLCommand.PresentationPrimitive> vertices)
+			implements SpritePresentation.Geometry {
+		PresentationGroup { vertices = List.copyOf(vertices); }
+		public GLCommandable command(int cameraX, int cameraY) {
+			return new GLCommandGroup(method, vertices.stream().map(vertex -> vertex.command(cameraX, cameraY)).toList());
+		}
+	}
+
+	PresentationGroup prepareGroup(int cameraX, int cameraY) {
+		return new PresentationGroup(drawMethod, commands.stream()
+				.map(command -> command.preparePrimitive(cameraX, cameraY)).toList());
+	}
+
 	public void execute(int cameraX, int cameraY, int cameraWidth, int cameraHeight) {
 		if (commands.isEmpty()) {
 			return;
