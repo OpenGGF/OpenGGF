@@ -50,7 +50,7 @@ class TestSozConnectedMechanismsProduction {
     @EnumSource(SozConnectedMechanismRoute.Scene.class)
     void corkCarryWrapAndPlacedSwitchUseTheProductionGraph(SozConnectedMechanismRoute.Scene scene) {
         if (scene == SozConnectedMechanismRoute.Scene.LOWER)
-            SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "none");
+            SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         TestEnvironment.activeGameplayMode();
         var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1)
                 .startPosition((short) scene.x, (short) scene.y).startPositionIsCentre()
@@ -58,6 +58,7 @@ class TestSozConnectedMechanismsProduction {
         // Finish native setup before the first recorded controller input.
         GameServices.level().consumePendingInitialProcessSpritesPass();
         fixture.sprite().setRingCount(99);
+        SozConnectedMechanismRoute.assertRoster(scene);
         fixture.sprite().refreshPersistentInstaShieldRegistration();
         var route = new SozConnectedMechanismRoute(scene);
         var registry = fixture.gameplayMode().getRewindRegistry();

@@ -21,13 +21,14 @@ class TestSozConnectedMechanismCapture {
         var out = Path.of(System.getProperty("soz.connected.capture"), scene.name().toLowerCase());
         Files.createDirectories(out.resolve("frames"));
         var settings = new GameplayCaptureSession.Settings(400, "sonic",
-                scene == SozConnectedMechanismRoute.Scene.LOWER ? "none" : "tails", "off", null, scene.x, scene.y);
+                scene == SozConnectedMechanismRoute.Scene.LOWER ? "" : "tails", "off", null, scene.x, scene.y);
         try (var session = new GameplayCaptureSession(settings);
              var csv = Files.newBufferedWriter(out.resolve("state.csv"))) {
             session.boot(RomTestUtils.ensureSonic3kRomAvailable().toPath(), 8, 1, settings);
             // Finish native setup before the first recorded controller input.
             GameServices.level().consumePendingInitialProcessSpritesPass();
             session.player().setRingCount(99);
+            SozConnectedMechanismRoute.assertRoster(scene);
             csv.write(GameplayCaptureSession.stateHeader() + ",bg,sand,collision");
             csv.newLine();
             var route = new SozConnectedMechanismRoute(scene);
