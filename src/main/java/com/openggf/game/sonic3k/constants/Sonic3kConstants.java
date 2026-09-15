@@ -25,6 +25,10 @@ public class Sonic3kConstants {
      * Uncompressed Map_Ring in the S&K half; Obj_RingInit's pointer is at $01A538.
      * make_art_tile(ArtTile_Ring,1,1) supplies palette line 1; pieces have offset 0.
      */
+    /** AnPal_PalSOZ1: four frames of four sand colors, locked-on ROM. */
+    public static final int ANPAL_SOZ1_ADDR = 0x0030DA;
+    public static final int ANPAL_SOZ1_SIZE = 32;
+
     public static final int MAP_RING_ADDR = 0x01A99A;
 
     /** Obj_FBZCloud stores exactly ten stable addresses at FBZ_cloud_addr. */

@@ -123,6 +123,83 @@ public class TestS3kSozPatternAnimation {
                 "Expected SOZ1 boss-arena compatibility bridge to force the custom phase back to zero");
     }
 
+    @Test
+    public void soz1SecondaryDmaWritesAllSixTilesAtEveryPhase() throws Exception {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 0).build();
+        var level = GameServices.level().getCurrentLevel();
+        var animator = resolvePatternAnimator();
+        fixture.camera().setFrozen(true);
+        for (int phase = 0; phase < 32; phase++) {
+            // At multiples of 32 the native phase is -cameraX/32 modulo 32.
+            fixture.camera().setX((short) (((32 - phase) & 31) * 32));
+            assertEquals(phase, animator.computeSoz1Phase());
+            animator.updateSoz1BackgroundTilesForGraph();
+            byte[] source = GameServices.rom().getRom().readBytes(0xBE5C0 + phase * 192, 192);
+            for (int pixel = 0; pixel < 384; pixel++) {
+                int packed = source[pixel / 2] & 255;
+                int expected = (pixel % 2 == 0 ? packed >> 4 : packed) & 15;
+                int actual = level.getPattern(0x33C + pixel / 64)
+                        .getPixel(pixel % 8, (pixel % 64) / 8);
+                assertEquals(expected, actual, "phase=" + phase + " pixel=" + pixel);
+            }
+        }
+    }
+
+    @Test
+    public void soz1ProductionScrollUsesNativeBandsAndIndependentShimmerPhases() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(8, 0).build();
+        var provider = new com.openggf.game.sonic3k.scroll.Sonic3kScrollHandlerProvider();
+        provider.load(GameServices.rom().getRom());
+        var handler = provider.getHandler(8);
+        byte[] wave = GameServices.rom().getRom().readBytes(0x5077E, 512);
+        int[] lines = new int[224];
+        for (int x : new int[]{0, 17, 511, 1023, 0x4380, -17}) {
+            for (int y : new int[]{0, 767, 768, 1024, 1535, 1536, -16}) {
+                for (int frame : new int[]{0, 1, 2, 63, 0xFFFF}) {
+                    handler.update(lines, x, y, frame, 0);
+                    assertEquals((short)y >> 4, handler.getVscrollFactorBG());
+                    assertEquals((short)x >> 4, handler.getBgCameraX());
+                    int fgStart = ((((short) frame >> 1) + 2 * (short)y) & 62) / 2;
+                    int bgStart = ((((short) frame >> 1) + 2 * ((short)y >> 4)) & 62) / 2;
+                    for (int row = 0; row < 224; row++) {
+                        int worldY = ((short)y >> 4) + row;
+                        int band = worldY < 272 ? 0 : Math.min(6, 1 + (worldY - 272) / 8);
+                        // Independent rational form of sub_55D56's 16.16 accumulator.
+                        int bg = Math.floorDiv((short)x * (4 + band), 64);
+                        int fgDelta = wave[2 * (fgStart + row) + 1];
+                        int bgDelta = wave[2 * (bgStart + row) + 1];
+                        assertEquals((short)(-x + fgDelta), (short)(lines[row] >> 16));
+                        assertEquals((short)(-bg + bgDelta), (short)lines[row],
+                                "x=" + x + " y=" + y + " row=" + row);
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void soz1PaletteReadsBeforeIncrementAndRestoresItsSixPassTimer() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(8, 0).build();
+        var rom = GameServices.rom().getRom();
+        var level = GameServices.level().getCurrentLevel();
+        var cycler = new Sonic3kPaletteCycler(com.openggf.data.RomByteReader.fromRom(rom), level, 8, 0);
+        byte[] source = rom.readBytes(0x30DA, 32);
+        for (int pass = 0; pass < 49; pass++) {
+            byte[] before = cycler.captureCyclerState();
+            cycler.update();
+            byte[] after = cycler.captureCyclerState();
+            for (int color = 0; color < 4; color++) {
+                int index = ((pass / 6) % 4) * 8 + color * 2;
+                int expected = ((source[index] & 255) << 8) | (source[index + 1] & 255);
+                assertEquals(expected, com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
+                        level.getPalette(2).getColor(12 + color)), "pass=" + pass);
+            }
+            cycler.restoreCyclerState(before);
+            cycler.update();
+            org.junit.jupiter.api.Assertions.assertArrayEquals(after, cycler.captureCyclerState());
+        }
+    }
+
     private static Sonic3kPatternAnimator resolvePatternAnimator() {
         AnimatedPatternManager manager = GameServices.level().getAnimatedPatternManager();
         assertNotNull(manager, "AnimatedPatternManager must be present");
