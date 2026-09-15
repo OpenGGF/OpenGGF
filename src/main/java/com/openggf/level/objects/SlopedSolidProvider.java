@@ -5,6 +5,18 @@ public interface SlopedSolidProvider extends SolidObjectProvider {
 
     boolean isSlopeFlipped();
 
+    /** Log2 horizontal pixels per sample: ordinary sloped2 tables use two;
+     * S3K SolidObjectTopSloped/SolidObjSloped use one byte per pixel. */
+    default int getSlopeSampleShift() { return 1; }
+
+    /**
+     * Optional direct top-helper window: accept raw feet-relative overlap in
+     * [0, limit), independent of player height or full-solid bottom classification.
+     * Null retains the existing solid classifier. S3K SolidObjCheckSloped reaches
+     * loc_1E45A's inclusive 16-pixel window (exclusive limit 17).
+     */
+    default Integer getDirectTopLandingOverlapLimit() { return null; }
+
     /**
      * Returns the signed slope sample at the already-transformed byte index.
      * <p>

@@ -1416,6 +1416,8 @@ public class Sonic3kConstants {
     public static final int MAP_FBZ_COLLAPSING_BRIDGE_ADDR = 0x02108E;
 
     // Map_SOZCollapsingBridge - SOZ bridge (3 frames)
+    public static final int MAP_SOZ_SPRING_VINE_ADDR = 0x040B0C;
+
     public static final int MAP_SOZ_COLLAPSING_BRIDGE_ADDR = 0x02127A;
 
     // ===== AIZ Disappearing Floor Mappings (Object 0x29) =====

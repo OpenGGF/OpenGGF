@@ -131,7 +131,7 @@ inventory obligation before implementing each family.
 | `$3E` | `$09` | `Obj_SOZPushableRock` | 1 | 0 | placeholder |
 | `$3E` | `$0A` | `Obj_SOZPushableRock` | 0 | 1 | placeholder |
 | `$3E` | `$87` | `Obj_SOZPushableRock` | 0 | 1 | placeholder |
-| `$3F` | `$00` | `Obj_SOZSpringVine` | 12 | 5 | placeholder |
+| `$3F` | `$00` | `Obj_SOZSpringVine` | 12 | 5 | `SozSpringVineObjectInstance` |
 | `$40` | `$60` | `Obj_SOZRisingSandWall` | 4 | 2 | placeholder |
 | `$41` | `$04` | `Obj_SOZLightSwitch` | 0 | 23 | placeholder |
 | `$41` | `$84` | `Obj_SOZLightSwitch` | 0 | 2 | placeholder |
@@ -291,5 +291,20 @@ These open obligations prevent calling this a complete zone inventory gate.
 
 Current quicksand candidate replaces all 84 placed `$38` placeholders (61 Act 1,
 23 Act 2). The ROM-backed inventory test pins both placement byte hashes and
-expects 214 remaining placeholder placements in Act 1 and 201 in Act 2. These
+expects 202 remaining placeholder placements in Act 1 and 196 in Act 2 after
+the spring-vine continuation replaces all 17 `$3F` placements. These
 counts describe implementation gaps, not passing routes.
+
+## Spring-vine family `$3F`
+
+`Obj_SOZSpringVine` (`$40786`) creates one independent later-slot display SST,
+with eight frame-zero pieces from mapping `$40B0C` and SOZ level art `$3C9`,
+palette 2. The controller does not draw. Its 96-byte one-pixel slope and the
+child's eight heights are generated together. P2 runs before P1 for tension and
+launch decisions; P1 runs before P2 for the subsequent top-solid pass. A signed
+side marker detects crossing directional X `$3C`; the launch is `-$EF0` on Y
+and `-$EF0` on X (positive when horizontally flipped), without a jump-button gate.
+The native controller/child each use coarse-X lifetime checks.
+
+First ordinary Act 1 target: `($298,$698)`. Other Act 1/2 placements and complete
+routes retain the act matrices' outstanding reachability/rewind/pixel obligations.

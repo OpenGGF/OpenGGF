@@ -2583,6 +2583,67 @@ public class TestSolidObjectManager {
         return player;
     }
 
+    @Test
+    void pixelResolutionSlopesKeepOddPixelLandingAndRidingSamples() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        for (boolean flip : new boolean[]{false, true}) {
+            class PixelSlope extends TestSolidObject implements SlopedSolidProvider {
+                PixelSlope() { super(200, 300, new SolidObjectParams(48, 0, 0), true, null, true); }
+                @Override public byte[] getSlopeData() {
+                    byte[] data = new byte[96];
+                    for (int i = 0; i < data.length; i++) data[i] = (byte)i;
+                    return data;
+                }
+                @Override public boolean isSlopeFlipped() { return flip; }
+                @Override public int getSlopeSampleShift() { return 0; }
+                @Override public int getSlopeBaseline() { return 0; }
+                @Override public boolean usesPlatformObjectLandingSnap() { return false; }
+            }
+            var object = new PixelSlope();
+            var manager = buildManager(object);
+            var player = new TestPlayableSprite((short)0, (short)0);
+            player.useGameRules(GameRules.SONIC_3K);
+            player.setAir(true); player.setYSpeed((short)0x100);
+            player.setCentreX((short)(200 - 48 + 37));
+            int sample = flip ? 58 : 37;
+            player.setCentreY((short)(300 - sample - player.getYRadius() - 1));
+            manager.updateSolidContacts(player);
+            assertTrue(player.isOnObject(), "falling player must use full pixel index, flip=" + flip);
+            assertEquals(300 - sample - player.getYRadius() - 1, player.getCentreY());
+            player.setCentreX((short)(200 - 48 + 38));
+            manager.updateSolidContacts(player);
+            sample = flip ? 57 : 38;
+            assertEquals(300 - sample - player.getYRadius(), player.getCentreY(),
+                    "continued ride must use the same full-resolution surface");
+        }
+    }
+
+    @Test
+    void sozVineLandingIncludesSixteenPixelOverlapButRejectsSeventeen() {
+        GameModuleRegistry.setCurrent(new Sonic3kGameModule());
+        for (int radius : new int[]{19, 15, 14}) for (int overlap : new int[]{15, 16, 17}) {
+            var vine = new com.openggf.game.sonic3k.objects.SozSpringVineObjectInstance(
+                    new ObjectSpawn(200, 300, 0x3F, 0, 0, false, 0));
+            var manager = buildManager(vine);
+            // Production's object pass clears the constructor's first-frame contact skip.
+            vine.snapshotPreUpdatePosition();
+            var player = new TestPlayableSprite((short)0, (short)0);
+            player.useGameRules(GameRules.SONIC_3K);
+            player.applyCustomRadii(7, radius);
+            player.setAir(true); player.setYSpeed((short)0x100);
+            player.setCentreX((short)200);
+            int surfaceY = 340 - 48;
+            player.setCentreY((short)(surfaceY - player.getYRadius() - 4 + overlap));
+            assertEquals(overlap <= 16, manager.hasStandingContact(player),
+                    "geometry overlap="+overlap+" radius="+player.getYRadius()+" y="+player.getCentreY()+" anchor="+vine.getY());
+            manager.processImmediateInlineSolidCheckpoint(vine, player, List.of());
+            assertEquals(overlap <= 16, player.isOnObject(), "native overlap=" + overlap);
+            // Snap reads the incoming radius; ResetOnFloor then restores standing radii.
+            if (overlap <= 16) assertEquals(surfaceY-radius-1, player.getCentreY(),
+                    "snap overlap=" + overlap + " incoming radius=" + radius);
+        }
+    }
+
     private ObjectManager buildManager(ObjectInstance instance) {
         ObjectRegistry registry = new ObjectRegistry() {
             @Override

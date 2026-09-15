@@ -32,6 +32,13 @@ Physical activation, every native team's death/reload and repeated reset are ope
 | Darkness / switch / ghosts / torches | Native pilot only; engine owners remain missing | Native ordinary-input Tails switch pull observed; engine route open | Before/at fade steps, grab/pull/release and capsule/checkpoint ghost state open | 900-frame darkness and four-frame palette cadence observed; independent P2 switch ownership proven | Native PNGs inspected; engine comparison open |
 | Vertical wrap / rising sand | Catalogue identifies extended wrap and special-event collision | Open | Cross-wrap and moving collision replay open | Unmatched | Unmatched |
 
+## Spring-vine continuation
+
+All five placed `$3F` vines now bind to the shared SOZ spring-vine implementation
+and ROM-backed art. The Act 1 first-vine route supplies representative local
+mechanic/rewind evidence; it does not establish ordinary reachability, respawn,
+phase coverage or rendered parity for these Act 2 placements. Those remain open.
+
 ## Execution evidence
 
 See the execution plan for exact command, commit, configurations, results/skips
