@@ -43,7 +43,8 @@ public final class SozBossWallObjectInstance extends AbstractObjectInstance
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x4B, 8, 8); }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
     @Override public void onSolidContact(PlayableEntity player, SolidContact contact, int frame) {
-        if (contact.standing() && player instanceof AbstractPlayableSprite playable) {
+        // loc_56A7E: d6 bits16/17 are side contacts (standing bit + $D).
+        if (contact.touchSide() && player instanceof AbstractPlayableSprite playable) {
             playable.setXSpeed((short) -0x300);
             playable.setYSpeed((short) -0x300);
         }

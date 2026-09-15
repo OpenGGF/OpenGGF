@@ -861,6 +861,16 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_HCZ && currentAct == 0) {
             applyHcz1IntroState();
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_SOZ && currentAct == 0 && !bootstrap.isSkipIntro()) {
+            // SpawnLevelMainSprites loc_695A, before the initial controller pass.
+            var players = new java.util.ArrayList<AbstractPlayableSprite>(GameServices.sprites().getRegisteredSidekicks());
+            if (GameServices.sprites().getMainPlayable() != null) players.addFirst(GameServices.sprites().getMainPlayable());
+            for (var player : players) {
+                player.setAir(true);
+                player.setAnimationId(2);
+            }
+            spawnSozFallingIntro(true);
+        }
         // ROM: sonic3k.asm loc_68A6 — simple falling intro (anim $1B + airborne).
         // MGZ1 is unconditional; LRZ1 explicitly skips Knuckles at
         // sonic3k.asm:8161-8165 (Player_mode != 3).
@@ -951,6 +961,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     public void applyZonePlayerStateAfterTitleCard() {
+        if (!hasSavedPlayerReturnState() && currentZone == Sonic3kZoneIds.ZONE_SOZ
+                && currentAct == 0 && !bootstrap.isSkipIntro()) spawnSozFallingIntro(true);
         // The title-card caller also owns LBZ1's launch below the shared seam.
         // Saved-state returns must skip that spawn as well as the shared intros.
         if (hasSavedPlayerReturnState()) {
@@ -984,6 +996,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         // dynamic objects; rebuild this level-owned controller before executing
         // those prelude object frames so its Random_Number cadence remains native.
         installFixedDynamicObjects(currentZone);
+        if (currentZone == Sonic3kZoneIds.ZONE_SOZ && currentAct == 0
+                && !hasSavedPlayerReturnState() && !bootstrap.isSkipIntro()) spawnSozFallingIntro(true);
         if (currentZone == Sonic3kZoneIds.ZONE_AIZ && currentAct == 0 && aizEvents != null) {
             aizEvents.restoreIntroObjectAfterPreludeReset();
         }
@@ -1057,6 +1071,23 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             }
             controller.setCarryTrigger(carryTrigger);
         }
+    }
+
+    private void spawnSozFallingIntro(boolean arm) {
+        var manager = GameServices.level().getObjectManager();
+        if (manager == null) return;
+        for (var object : manager.getActiveObjects()) {
+            if (object instanceof com.openggf.game.sonic3k.objects.SozFallingIntroInstance intro
+                    && !intro.isDestroyed()) {
+                if (arm) intro.arm();
+                return;
+            }
+        }
+        // loc_695A writes Dynamic_object_RAM+2*object_size: base3 + 2 = SST5.
+        var intro = manager.createDynamicObjectAtSlot(() ->
+                new com.openggf.game.sonic3k.objects.SozFallingIntroInstance(
+                        new ObjectSpawn(0, 0, 0, 0, 0, false, 0)), 5);
+        if (intro != null && arm) intro.arm();
     }
 
     private void spawnLbz1GroundLaunchIntro(boolean armImmediately) {

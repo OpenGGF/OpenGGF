@@ -1893,7 +1893,7 @@ public class ObjectManager {
      *
      * <p>This is for fixed-slot setup paths, not ordinary {@code AllocateObject}
      * calls. For example, S3K's {@code SpawnLevelMainSprites} writes the AIZ
-     * intro controller directly to dynamic object slot 2 (absolute SST slot 6)
+     * intro controller directly to dynamic object slot 2 (absolute SST slot 5)
      * instead of scanning for the first free slot.
      */
     public <T extends ObjectInstance> T createDynamicObjectAtSlot(

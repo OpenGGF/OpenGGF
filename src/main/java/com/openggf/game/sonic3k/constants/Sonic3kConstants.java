@@ -1788,6 +1788,13 @@ public class Sonic3kConstants {
     public static final int MAP_SANDWORM_ADDR = 0x186D10;
     public static final int ART_KOSM_ROCKN_ADDR = 0x16B2BA;
     public static final int MAP_ROCKN_ADDR = 0x08F086;
+    // Obj_SOZMiniboss absolute LEAs at $76A5E/$76A6E and ObjDat at $773AC/$773CA.
+    public static final int ART_KOSM_SOZ_MINIBOSS_ADDR = 0x16CB5C;
+    public static final int ART_KOSM_SOZ_MINIBOSS_SAND_ADDR = 0x16E0EE;
+    public static final int MAP_SOZ_MINIBOSS_ADDR = 0x0774A6;
+    public static final int MAP_SOZ_MINIBOSS_DUST_ADDR = 0x077626;
+    public static final int PAL_SOZ_MINIBOSS_FADE_ADDR = 0x077412;
+    public static final int PAL_SOZ_MINIBOSS_MAIN_ADDR = 0x077432;
 
     // ===== LRZ Badnik Art =====
     public static final int ART_UNC_FIREWORM_ADDR = 0x16EFB2;

@@ -31,7 +31,7 @@ class TestSozHyudoroTitleLifecycle {
         config.resolveDisplayAspect();SessionManager.clear();TestEnvironment.activeGameplayMode();
     }
     @Test void omittedTitleRetirementCreatesExactlyOneColdControllerAndRecreatesState() {
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();
         assertEquals(0,count(),"controller waits for the modeled omitted title to retire");
         assertEquals(0,S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow().lighting().darknessLevel());
         awaitBirth(f,false);
@@ -39,14 +39,14 @@ class TestSozHyudoroTitleLifecycle {
         assertEquals(1,count());assertEquals(0,controller().ghostCount());
     }
     @Test void visibleTitleRetirementCreatesControllerAfterChildrenRetire() throws Exception {
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,0).withFreshLevelStartLifecycle().build();
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0).withFreshLevelStartLifecycle().build();
         GameServices.level().loadZoneAndActWithTitleCard(8,1);
         var title=(Sonic3kTitleCardManager)GameServices.module().getTitleCardProvider();
         assertEquals(0,count());awaitBirth(f,false);assertTrue(title.isComplete());
         for(int i=0;i<10;i++)title.update();assertEquals(1,count());
     }
     @Test void checkpointDeathReloadRecreatesControllerWithoutSeamlessDarkness() {
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();awaitBirth(f,false);
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();awaitBirth(f,false);
         var old=controller();((CheckpointState)GameServices.level().getCheckpointState()).saveCheckpoint(1,0x140,0x3AC,false);
         GameServices.level().respawnPlayer();assertEquals(0,count());
         assertEquals(0,S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow().lighting().darknessLevel());
@@ -54,7 +54,7 @@ class TestSozHyudoroTitleLifecycle {
         assertNotSame(old,controller());assertEquals(1,GameServices.level().getCheckpointState().getLastCheckpointIndex());
     }
     @Test void seamlessReloadWaitsForDelayedInLevelTitleAndRewindsRetirement() throws Exception {
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,0).withFreshLevelStartLifecycle().build();
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0).withFreshLevelStartLifecycle().build();
         var request=SeamlessLevelTransitionRequest.builder(SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(8,1).runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
                 .preserveLevelGamestate(true).build();

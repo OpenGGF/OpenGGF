@@ -42,7 +42,7 @@ class TestSozPushableRockProduction {
             TestEnvironment.activeGameplayMode();
             int rockX=act==0 ? 0x3E0 : 0x1530;
             int rockY=act==0 ? 0x5F4 : 0x235;
-            var builder=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+            var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                     .startPosition((short)(rockX-48),(short)(rockY-8)).startPositionIsCentre()
                     .withFreshLevelStartLifecycle();
             if(!donor.equals("off")) builder.withCrossGameDonation(donor);

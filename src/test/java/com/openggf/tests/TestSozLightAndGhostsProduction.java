@@ -30,7 +30,7 @@ class TestSozLightAndGhostsProduction {
         config.resolveDisplayAspect();SessionManager.clear();TestEnvironment.activeGameplayMode();
     }
     @Test void placedLightPullReleasesAndRestoresSharedLighting() {
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,1).startPosition((short)0x2B0,(short)0x330).startPositionIsCentre().withFreshLevelStartLifecycle().build();
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).startPosition((short)0x2B0,(short)0x330).startPositionIsCentre().withFreshLevelStartLifecycle().build();
         var level=GameServices.level();
         var spawn=level.getCurrentLevel().getObjects().stream().filter(o->o.objectId()==0x41&&o.subtype()==4).findFirst().orElseThrow();
         NativePositionOps.writeXPosPreserveSubpixel(f.sprite(),spawn.x());
@@ -56,7 +56,7 @@ class TestSozLightAndGhostsProduction {
         assertNotNull(level.getObjectRenderManager().getRenderer(Sonic3kObjectArtKeys.SOZ_LIGHT_SWITCH));
     }
     @Test void capsuleButtonOpensCheckpointAndRecreatesEscapeGraph() {
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,1).startPosition((short)0xB50,(short)0x380)
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).startPosition((short)0xB50,(short)0x380)
                 .startPositionIsCentre().withFreshLevelStartLifecycle().build();
         for(int i=0;i<3;i++)f.stepFrame(false,false,false,false,false);
         var capsule=find(SozHyudoroCapsuleObjectInstance.class);
@@ -77,7 +77,7 @@ class TestSozLightAndGhostsProduction {
         assertNotNull(GameServices.level().getObjectRenderManager().getRenderer(Sonic3kObjectArtKeys.SOZ_GHOSTS));
     }
     @Test void dynamicGhostAttackAndFadeRestoreOwnerAndBody() {
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();
         ((CheckpointState)GameServices.level().getCheckpointState()).saveCheckpoint(1,0x140,0x3AC,false);
         var state=S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         state.lighting().initializeSeamlessDarkness();
@@ -99,7 +99,7 @@ class TestSozLightAndGhostsProduction {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"0xB00,0x1B8,0", "0x1470,0x310,4"})
     void placedArtTriggersReplaceRomTilesAndRestore(int x,int y,int subtype) {
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,1).startPosition((short)(x-0x40),(short)y)
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).startPosition((short)(x-0x40),(short)y)
                 .startPositionIsCentre().withFreshLevelStartLifecycle().build();
         for(int i=0;i<3;i++)f.stepFrame(false,false,false,false,false);
         assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream().anyMatch(o->o instanceof SozHyudoroArtTriggerObjectInstance&&o.getSpawn().subtype()==subtype));

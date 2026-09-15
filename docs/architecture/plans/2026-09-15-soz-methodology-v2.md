@@ -1649,3 +1649,50 @@ and full snapshot forward replay; it does not certify a complete boss route.
 The first arena replay exposed descriptor-identity comparison in the rewind diff:
 new equal terrain objects were reported as changed. Comparison now checks saved
 terrain contents and still rejects changed collision indices and frame state.
+
+### Kept object-state table
+
+SOZ cork state exposed a missing part of `Respawn_table_keep`: lower object-owned
+bits were captured for rewind but dropped on bonus/special-stage reload. The
+persistent snapshot now carries those bytes by layout index, preserves them when
+ring state is attached, and restores them before the first return placement scan.
+Normal loads still clear them. The regression includes entry280 to distinguish
+layout indexing from an eight-bit rolling counter. The mutable Mod API `0.7` pin
+includes this record extension and the previously added placement-ownership API;
+policy remains candidate `0.7.0` with no published baseline.
+
+Focused queued Maven: `TestPersistentRespawnDestroyLatchRoundTrip`,
+`TestLevelTransitionCoordinatorPeeks`, `TestBonusStageTransitionCoordinator`,
+`TestObjectPlacementControllerS1Counter`: 17 passed, no failures/errors/skips
+(47.387s). SDK/Javadoc/sample packaging and API hook-policy checks: 29 passed,
+no failures/errors/skips (26.672s). Full route and combined delivery checks remain
+pending.
+
+### Retirement and source-entry audit
+
+Ordinary replay exposed Skorp tails retaining a retired root. Retirement hooks
+now detach references while children retain their own next-dispatch deletion or
+debris behavior; the same boundary is covered for Sandworm/Rockn. Three direct
+retirement/replay cases pass;26 other focused badnik, viewport/donor, inventory
+and art checks passed. The wall contact audit also corrected d6 bits16/17:
+`SolidObject_cont` publishes side contact there, not standing. Three wall checks
+pass. See the frontier log for the still-red ordinary replay and its next owner.
+
+The SOZ1 falling-into-sand intro was missing from the original catalogue. Native
+`SpawnLevelMainSprites` loc695A initializes animation2/airborne and creates
+`Obj_LevelIntro_PlayerFallIntoGround` at41FEE. This must join the entry acceptance
+slice, including locked fall, sand splash, jump-pressed release, companion state
+and rewind; plain cold loading is not sufficient.
+
+### Cold sand entry implementation
+
+The native controller occupies absolute SST5 (`Dynamic_object_RAM` is SST3,
+plus two). Its first dispatch initializes control only; later dispatches apply
+old velocity before gravity, wait for physical jump press, and release the team
+on emergence. Logical controls are cleared while physical press remains readable.
+Local positioned fixtures explicitly skip this intro instead of inheriting a
+cold-entry controller after teleporting. The fixture option uses ordinary config
+state, since session overrides survive the per-test reset and contaminated the
+next cold-entry test. Two cold/skip and full-state emergence replay tests pass
+with no skips (queued `TestSozFallingIntro`, 48.432s). Ordinary trace still exposes
+an extra initial integration and companion cadence; this is not trace parity.

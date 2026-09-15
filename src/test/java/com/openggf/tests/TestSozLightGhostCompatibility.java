@@ -51,7 +51,7 @@ class TestSozLightGhostCompatibility {
             config.setSessionOverride(row.donor().equals("s1")?SonicConfiguration.SONIC_1_ROM:SonicConfiguration.SONIC_2_ROM,rom.getAbsolutePath());
         }
         CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();TestEnvironment.activeGameplayMode();
-        var builder=HeadlessTestFixture.builder().withZoneAndAct(8,1).startPosition((short)x,(short)y).startPositionIsCentre().withFreshLevelStartLifecycle();
+        var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).startPosition((short)x,(short)y).startPositionIsCentre().withFreshLevelStartLifecycle();
         if(!row.donor().equals("off"))builder.withCrossGameDonation(row.donor());
         var f=builder.build();assertEquals(row.width(),f.camera().getWidth()&0xFFFF);
         assertEquals(row.followers().isEmpty()?0:row.followers().split(",").length,GameServices.sprites().getRegisteredSidekicks().size());
