@@ -285,3 +285,12 @@ local branch deleted, and stale worktree metadata pruned. Consumed category and
 matched-baseline diagnostics were deleted. Original dirty disassemblies and
 untracked user files remain untouched. This documentation-only closure is pushed
 as a follow-up; unchanged engine tests are not repeated.
+
+Concurrent delivery note: SOZ merge `4bd85d687` arrived after this task's completed
+broad run, between the verification-record and closure commits. It was preserved
+and included in the develop push through `6fbe2c276`. Its six Java paths are
+disjoint from this simplification diff. The full ordinary/guard measurements above
+apply to `1cfe9ef82`, not to the later SOZ code; SOZ's bounded validation and
+upstream reconciliation are recorded in
+[its work plan](2026-09-15-soz-methodology-v2.md). No simplification source changed
+after the measured run.
