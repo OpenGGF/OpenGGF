@@ -93,6 +93,19 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
         }
         ensureTablesLoaded();
         resetScrollTracking();
+        var arenaState=com.openggf.game.GameServices.hasRuntime()
+                ?com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(com.openggf.game.GameServices.zoneRuntimeRegistry()).orElse(null):null;
+        if(arenaState!=null && arenaState.actIndex()==0 && arenaState.events().backgroundRoutine()!=0){
+            // sub_55DB6 + sub_55E4C: equal foreground/background shimmer phase.
+            bgX=(short)(cameraX-0x3CD0);
+            vscrollFactorBG=(short)(cameraY-0x900+arenaState.events().sandHeight());
+            int phase=(((short)levelFrameCounter>>1)+2*(short)cameraY)&0x3E;
+            for(int line=0;line<224;line++){
+                int wave=shimmer[((phase>>1)+line)&31];short fg=(short)(-cameraX+wave),bg=(short)(-bgX+wave);
+                buffer[line]=((fg&65535)<<16)|(bg&65535);trackOffset(fg,bg);
+            }
+            return;
+        }
         bgX = desertBackgroundX(cameraX);
         vscrollFactorBG = (short) ((short) cameraY >> 4);
         // Preserve fractions through all seven additions, as sub_55D56 does.
@@ -115,5 +128,13 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
         }
     }
 
-    @Override public int getBgCameraX() { return bgX; }
+    @Override public int getBgCameraX() {
+        var state = com.openggf.game.GameServices.hasRuntime()
+                ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                        com.openggf.game.GameServices.zoneRuntimeRegistry()).orElse(null) : null;
+        // loc_56676/566A8 draw the post-boss Plane-B source band at fixed X=$200.
+        // HScroll still uses bgX; this accessor selects the tilemap source window.
+        if (state != null && state.actIndex() == 1 && state.events().backgroundRoutine() >= 0x2C) return 0x200;
+        return bgX;
+    }
 }

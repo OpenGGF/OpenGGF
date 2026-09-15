@@ -1110,6 +1110,10 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         Soz1Cycle(byte[] tableData) { this.tableData = tableData; }
 
         @Override void tick(Level level, PaletteOwnershipRegistry registry) {
+            if (GameServices.hasRuntime()) {
+                var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+                if (state != null && state.eventPaletteFadeHeld()) return;
+            }
             timer = (short) (timer - 1);
             if (timer >= 0) return;
             timer = 5;
@@ -1136,7 +1140,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
         @Override void tick(Level level, PaletteOwnershipRegistry registry) {
             if (!GameServices.hasRuntime()) return;
             var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
-            if (state == null || state.actIndex() != 1) return;
+            if (state == null || state.actIndex() != 1 || state.eventPaletteFadeHeld()) return;
             var update = state.lighting().tickPalette();
             GraphicsManager gm = GameServices.graphics();
             if (update.lightOffset() >= 0) {

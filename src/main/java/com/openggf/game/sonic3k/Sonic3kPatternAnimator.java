@@ -132,8 +132,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             0x060, 0x060,
             0x030, 0x090
     };
-    private static final int SOZ1_BOSS_LOCK_MIN_X = 0x4180;
-    private static final int SOZ1_BOSS_LOCK_MIN_Y = 0x0960;
 
     private final AnimatedTileChannelGraph graph;
     private final Level level;
@@ -1233,21 +1231,13 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         return com.openggf.game.sonic3k.scroll.SwScrlSoz.desertTilePhase(getCameraX());
     }
 
-    // SOZ1 normally derives this phase from Events_bg+$10 and Camera_X_pos_BG_copy.
-    // Until SOZ event/runtime state exists, use the boss-arena camera locks as a
-    // compatibility bridge for the late-act path that forces the phase back to 0.
+    // sub_55E4C writes equal Events_bg+$10 and Camera_X_pos_BG_copy
+    // throughout the arena background routine, fixing AnimateTiles_SOZ1 at zero.
     private boolean isSoz1BossArenaPhaseLocked() {
-        if (zoneIndex != 0x08 || actIndex != 0) {
-            return false;
-        }
-        try {
-            int minX = GameServices.camera().getMinX() & 0xFFFF;
-            int minY = GameServices.camera().getMinY() & 0xFFFF;
-            return minX >= SOZ1_BOSS_LOCK_MIN_X && minY >= SOZ1_BOSS_LOCK_MIN_Y;
-        } catch (Exception e) {
-            LOG.fine(() -> "Sonic3kPatternAnimator.isSoz1BossArenaPhaseLocked: " + e.getMessage());
-            return false;
-        }
+        return zoneIndex == 8 && actIndex == 0
+                && com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                        .currentSoz(GameServices.zoneRuntimeRegistry())
+                        .map(state -> state.events().backgroundRoutine() != 0).orElse(false);
     }
 
     /**

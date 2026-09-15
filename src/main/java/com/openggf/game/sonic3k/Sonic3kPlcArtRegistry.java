@@ -2337,6 +2337,7 @@ public final class Sonic3kPlcArtRegistry {
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RAPEL_WIRE,
                 Sonic3kConstants.MAP_SOZ_RAPEL_WIRE_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x48, 2, null));
         if (actIndex == 0) {
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_ACT1_END_DOOR,0x5611E,0x29,2,null));
             standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SOZ_MINIBOSS,
                     Sonic3kConstants.ART_KOSM_SOZ_MINIBOSS_ADDR, CompressionType.KOSINSKI_MODULED,
                     0, Sonic3kConstants.MAP_SOZ_MINIBOSS_ADDR, 1, -1));

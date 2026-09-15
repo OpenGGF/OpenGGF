@@ -12,6 +12,23 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozScreenEvents {
+    @Test void nativeRoomAndPostBossModesSelectTheirBackgroundSourceWindows() {
+        var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 1).build();
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        var provider = GameServices.level().getZoneFeatureProvider();
+        for (int routine : new int[]{0,4,8,0xC,0x10,0x20}) {
+            state.events().backgroundRoutine(routine);
+            assertFalse(provider.bgWrapsHorizontally(), "native fixed source zero routine="+routine);
+        }
+        for (int routine : new int[]{0x14,0x18,0x1C,0x24,0x28,0x2C,0x30,0x34}) {
+            state.events().backgroundRoutine(routine);
+            assertTrue(provider.bgWrapsHorizontally());
+            assertTrue(provider.useLinearBackgroundLayoutOverflow(8));
+            GameServices.level().recomputeParallaxOnlyForCurrentFrame();
+            if (routine >= 0x2C) assertEquals(0x200,GameServices.parallax().getBgCameraX());
+        }
+    }
+
     @Test void bossArenaQueuesRomResourcesAndRecreatesItsEightWallSolids() throws Exception {
         var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1)
                 .startPosition((short) 0x5100, (short) 0x650).startPositionIsCentre()
@@ -23,6 +40,10 @@ class TestSozScreenEvents {
         assertEquals(0x24, state.events().backgroundRoutine());
         assertEquals(8, GameServices.level().getObjectManager().getActiveObjects().stream()
                 .filter(com.openggf.game.sonic3k.objects.SozBossWallObjectInstance.class::isInstance).count());
+        var walls=GameServices.level().getObjectManager().activeObjectsOfType(
+                com.openggf.game.sonic3k.objects.SozBossWallObjectInstance.class);
+        walls.sort(java.util.Comparator.comparingInt(com.openggf.level.objects.AbstractObjectInstance::getSlotIndex));
+        for(int index=0;index<8;index++)assertEquals(7-index,walls.get(index).getSpawn().subtype(),"native descending row allocation");
         assertTrue(state.events().artJobOrdinal() >= 0);
         var registry = fixture.gameplayMode().getRewindRegistry();
         var before = registry.capture();

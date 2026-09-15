@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 
 /** SOZ screen and special events. Mutable native state belongs to the zone runtime. */
 public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
+    private final SozAct1Events act1=new SozAct1Events(this);
     private int[] wallDelayTable;
     private byte[] shakeTable;
 
@@ -38,19 +39,8 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
         int playerY = player.getCentreY() & 0xFFFF;
         if (!events.initialized()) initializeScreen(act, playerX, events);
         camera().setYCopy((short) (camera().getYCopy() + events.screenShakeOffset()));
-        if (act == 0) {
-            // loc_55ACE / sub_55E96: establish the boss approach bounds before locking X.
-            if (events.backgroundRoutine() == 0) {
-                int bottom = playerX < 0x4000 ? 0xB20 : 0x960;
-                camera().setMaxY((short) bottom);
-                camera().setMaxYTarget((short) bottom);
-                if (bottom == 0x960 && (camera().getY() & 0xFFFF) >= bottom) {
-                    camera().setMinY((short) bottom);
-                    if ((camera().getX() & 0xFFFF) >= 0x4310) {
-                        camera().setMinX((short) 0x4180);
-                    }
-                }
-            }
+        if (act == 0 || events.seamlessEntry()) {
+            act1.update(act,frameCounter);
             return;
         }
         if (state.consumeSandCorkForegroundFlag() != 0) openAct2ForegroundPassage();
@@ -61,8 +51,11 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
     private void initializeScreen(int act, int playerX, SozEventState events) {
         events.initialized(true);
         if (act == 0) {
-            // SOZ1_BackgroundInit: Level_layout_main+2, row6, column13.
+            // SOZ1_BackgroundInit aliases BG row7 to row0, then seals row6 column13.
             zoneLayoutMutationPipeline().queue(context -> {
+                var map = levelManager().getCurrentLevel().getMap();
+                for (int x = 0; x < map.getWidth(); x++)
+                    context.surface().setBlockInMap(1, x, 7, map.getValue(1, x, 0) & 255);
                 context.surface().setBlockInMap(1, 13, 6, 0xFD);
                 return MutationEffects.redrawAllTilemaps();
             });
@@ -71,14 +64,18 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
             camera().setVerticalWrapEnabled(true, 0x800);
             events.foregroundRoutine(8);
             events.backgroundRoutine(playerX < 0x2980 ? 0x10 : 0x20);
-            zoneLayoutMutationPipeline().queue(context -> {
-                // sub_5697E clears ten BG chunk references in rows14 and15.
-                for (int row : new int[]{14, 15}) for (int x = 0x17; x < 0x21; x++)
-                    context.surface().setBlockInMap(1, x, row, 0);
-                return MutationEffects.redrawAllTilemaps();
-            });
+            clearAct2BackgroundColumns();
             if (playerX >= 0x4E80) openAct2ForegroundPassage();
         }
+    }
+
+    void clearAct2BackgroundColumns() {
+        zoneLayoutMutationPipeline().queue(context -> {
+            // sub_5697E: ten BG chunk references in rows14 and15.
+            for (int row : new int[]{14,15}) for (int x=0x17;x<0x21;x++)
+                context.surface().setBlockInMap(1,x,row,0);
+            return MutationEffects.redrawAllTilemaps();
+        });
     }
 
     /** sub_5622C copies stored layout cells, including the four lower foreground rows. */
@@ -170,7 +167,7 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
             camera().setMaxX((short) 0x5140);
             queueCustomResources(events, 0x1B0720, 0x1B0860);
             state.lighting().enterBossLight();
-            for (int row = 0; row < 8; row++) {
+            for (int row = 7; row >= 0; row--) {
                 final int index = row;
                 if (spawnObject(() -> new com.openggf.game.sonic3k.objects.SozBossWallObjectInstance(
                         new com.openggf.level.objects.ObjectSpawn(0, 0, 0, index, 0, false, 0))) == null) break;
@@ -217,7 +214,7 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    private void updateShake(SozEventState events, int levelFrameCounter) {
+    void updateShake(SozEventState events, int levelFrameCounter) {
         int flag = events.screenShakeFlag();
         int offset = 0;
         if (!spriteManager().getMainPlayable().getDead() && flag != 0) {
@@ -230,7 +227,7 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
         events.screenShakeOffset(offset);
     }
 
-    private void queueCustomResources(SozEventState events, int blocksAddress, int artAddress) {
+    void queueCustomResources(SozEventState events, int blocksAddress, int artAddress) {
         if (events.blockJobOrdinal() >= 0 || events.artJobOrdinal() >= 0)
             throw new IllegalStateException("SOZ replacement requested before previous resources retired");
         try {
