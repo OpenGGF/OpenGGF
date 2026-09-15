@@ -1786,3 +1786,24 @@ afterward. Combined production validation currently fails forced-recreation
 standing history: placed bridge index40 TOP entry disappears on restore.
 That real identity gap is under investigation;27selected tests are not reported
 as a passing set (one production failure,0skips,53.525s).
+
+Standing-history restoration was a real identity defect, not list equality:
+`DefaultSolidExecutionRegistry` stored spawn indices and character codes, so
+promoted collapsing bridge index40 disappeared when resolving placed objects
+after recreation. It now uses existing `ObjectRefId`/`PlayerRefId` mappings
+for placed and dynamic owners. The reproducing wire production4cases and7
+identity/registry checks pass (11total,0skips,54.241s); additional shared-spawn
+and duplicate-character identity coverage is pending.
+
+Wrapped rising-sand rendering is corrected in `a4d3f40e6`. The main background
+already had a2048-pixel wrapping texture; an attempted extra tilemap period
+override was rejected by measured texture dimensions. The actual missing floor
+was the BG-high overlay replay using wrapY=false. SOZ selects wrapped replay
+through its native `backgroundLayoutYMask`, retaining HCZ defaults. Root inspected
+`completion-connected-mechanisms/wrapped-overlay/lower/frames/01100.png`: Sonic
+is visibly grounded on the rising sand. Worker overlay/capture7tests passed,
+0skips; connected mechanisms13 and provider/consumers17 passed separately.
+
+The independent shared-spawn/duplicate-character standing identity regression
+also passes, together with connected mechanisms and HCZ overlay consumers:
+16tests,0skips,56.693s. No comparison rule was relaxed.

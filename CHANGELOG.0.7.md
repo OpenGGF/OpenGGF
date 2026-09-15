@@ -211,7 +211,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Act 2 entry use native event owners. Act 2 couples light switches, ghosts,
   torches and palette fades, and implements the final boss, collapsing wall,
   capsule/results and Lava Reef exit request. Mechanism state survives kept
-  stage returns, and object graphs reconstruct across rewind. Full-route and
+  stage returns, and object graphs—including promoted collapsing platforms—reconstruct
+  across rewind using stable object and player identities. Full-route and
   transient VDP redraw limits remain documented in the per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary

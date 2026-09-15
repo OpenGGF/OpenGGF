@@ -7,9 +7,8 @@ import com.openggf.game.rewind.snapshot.SolidExecutionSnapshot;
 import com.openggf.level.LevelManager;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
-import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.sprites.Sprite;
-import com.openggf.sprites.managers.SpriteManager;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.identity.PlayerRefId;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -109,41 +108,36 @@ public final class DefaultSolidExecutionRegistry
         if (objectManager == null) {
             return new SolidExecutionSnapshot(List.of());
         }
-        List<ObjectSpawn> spawns = objectManager.getAllSpawns();
+        var identities = objectManager.captureIdentityContext().requireIdentityTable();
         List<SolidExecutionSnapshot.PreviousStandingEntry> entries = new ArrayList<>();
         for (Map.Entry<ObjectInstance, IdentityHashMap<PlayableEntity, PlayerStandingState>> objectEntry
                 : previous.entrySet()) {
-            ObjectSpawn spawn = objectEntry.getKey().getSpawn();
-            int spawnIndex = indexOfIdentity(spawns, spawn);
-            if (spawnIndex < 0) {
+            ObjectRefId objectId = identities.encodeObject(objectEntry.getKey());
+            if (objectId == null) {
                 continue;
             }
             for (Map.Entry<PlayableEntity, PlayerStandingState> playerEntry
                     : objectEntry.getValue().entrySet()) {
-                String playerCode = playerCode(playerEntry.getKey());
-                if (playerCode == null) {
+                PlayerRefId playerId = identities.encodePlayer(playerEntry.getKey());
+                if (playerId == null) {
                     continue;
                 }
                 PlayerStandingState state = playerEntry.getValue();
                 entries.add(new SolidExecutionSnapshot.PreviousStandingEntry(
-                        spawnIndex,
-                        playerCode,
+                        objectId,
+                        playerId,
                         state.kind(),
                         state.standing(),
                         state.pushing()));
             }
         }
-        entries.sort((a, b) -> {
-            int bySpawn = Integer.compare(a.spawnIndex(), b.spawnIndex());
-            if (bySpawn != 0) {
-                return bySpawn;
-            }
-            int byPlayer = a.playerCode().compareTo(b.playerCode());
-            if (byPlayer != 0) {
-                return byPlayer;
-            }
-            return a.kind().compareTo(b.kind());
-        });
+        entries.sort(java.util.Comparator
+                .comparing((SolidExecutionSnapshot.PreviousStandingEntry e) -> e.objectId().kind())
+                .thenComparingInt(e -> e.objectId().spawnId())
+                .thenComparingInt(e -> e.objectId().dynamicId())
+                .thenComparingInt(e -> e.objectId().slotIndex())
+                .thenComparingInt(e -> e.objectId().generation())
+                .thenComparingInt(e -> e.playerId().encoded()));
         return new SolidExecutionSnapshot(entries);
     }
 
@@ -154,42 +148,16 @@ public final class DefaultSolidExecutionRegistry
         currentContext = ObjectSolidExecutionContext.inert();
         LevelManager levelManager = GameServices.levelOrNull();
         ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
-        SpriteManager spriteManager = GameServices.spritesOrNull();
-        if (objectManager == null || spriteManager == null) {
+        if (objectManager == null) {
             return;
         }
-        List<ObjectSpawn> spawns = objectManager.getAllSpawns();
+        var identities = objectManager.captureIdentityContext().requireIdentityTable();
         for (SolidExecutionSnapshot.PreviousStandingEntry entry : s.previousStanding()) {
-            if (entry.spawnIndex() < 0 || entry.spawnIndex() >= spawns.size()) {
-                continue;
-            }
-            ObjectInstance object = objectManager.getActiveObjectForRewind(spawns.get(entry.spawnIndex()));
-            Sprite sprite = spriteManager.getSprite(entry.playerCode());
-            if (object == null || !(sprite instanceof PlayableEntity player)) {
-                continue;
-            }
+            ObjectInstance object = identities.resolveObject(entry.objectId(), true);
+            PlayableEntity player = identities.resolvePlayer(entry.playerId(), true);
             previous.computeIfAbsent(object, ignored -> new IdentityHashMap<>(TEAM_SIZE_HINT))
                     .put(player, new PlayerStandingState(
                             entry.kind(), entry.standing(), entry.pushing()));
         }
-    }
-
-    private static int indexOfIdentity(List<ObjectSpawn> spawns, ObjectSpawn target) {
-        if (target == null) {
-            return -1;
-        }
-        for (int i = 0; i < spawns.size(); i++) {
-            if (spawns.get(i) == target) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    private static String playerCode(PlayableEntity player) {
-        if (player instanceof Sprite sprite) {
-            return sprite.getCode();
-        }
-        return null;
     }
 }
