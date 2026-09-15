@@ -94,7 +94,8 @@ public class BubbleShieldObjectInstance extends ShieldObjectInstance {
         }
         SpriteArtSet artSet = artProvider.getShieldArtSet(Sonic3kObjectArtKeys.BUBBLE_SHIELD);
         return new ShieldAnimationArtLifecycle.Art(
-                artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.BUBBLE_SHIELD),
+                artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.BUBBLE_SHIELD,
+                        (AbstractPlayableSprite) getPlayer()),
                 artSet != null ? artSet.animationSet() : null);
     }
 
