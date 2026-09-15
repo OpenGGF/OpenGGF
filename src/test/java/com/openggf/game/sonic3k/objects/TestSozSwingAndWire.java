@@ -118,6 +118,16 @@ class TestSozSwingAndWire {
         for(int i=0;i<500 && value(w,"routine")!=0;i++)step(w);
         assertEquals(0,value(w,"routine"));assertEquals(0x30,value(w,"length"));
     }
+    @Test void capturePreservesIncomingMappingUntilFirstHeldPass() {
+        var w=wire(4);
+        player.setMappingFrame(0x96);
+        step(w);
+        assertTrue(w.isPlayerHeld(player));
+        assertEquals(0x14,player.getAnimationId());
+        assertEquals(0x96,player.getMappingFrame(),"loc_4B13E does not write mapping_frame");
+        step(w);
+        assertEquals(0x92,player.getMappingFrame(),"loc_4B04A selects the held frame next pass");
+    }
     @Test void playerTwoCanGrabButCannotStartTheMainPlayerRatchet() {
         var p2=new TestablePlayableSprite("tails",(short)0,(short)0);
         p2.setCentreX((short)0x400);p2.setCentreY((short)0x344);player.setCentreX((short)0);
