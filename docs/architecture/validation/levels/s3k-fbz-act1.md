@@ -415,3 +415,9 @@ forward replay preserve both sprite tables and the separately published HUD
 counters; the focused/strict invocation passes 97 checks, zero skips. See the
 [validation ledger](../../research/s3k-zones/fbz-validation.md) for remaining
 intermediate-frame and whole-zone coverage limits.
+
+Retained-presentation follow-up (2026-09-15): real-boss title-init rewind now
+excludes the results renderer's rebuildable cache flag while retaining its
+gameplay readiness/timing state. The existing full-registry oracle passes in
+the final 158-case focused run, with no skips; the full strict FBZ replay also
+passes. All 36 fresh B2 capture PNGs match the reviewed v2 inputs exactly.

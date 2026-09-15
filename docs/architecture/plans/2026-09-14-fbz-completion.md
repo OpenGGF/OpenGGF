@@ -1889,3 +1889,30 @@ additional requested `TestSonic3kResultsScreenObjectInstance` pattern matched
 no class and supplies no coverage. The broad diagnostics were inspected and
 acknowledged through the runner. The ordinary lane's two regressions are
 resolved narrowly; guards and post-integration validation remain required.
+
+The outstanding full guard invocation (`maven_queue.py -Dmse=off -Pguards
+test -B`) completed 667 cases, four failures, no errors/skips, 2:51. Two
+message hashes match the baseline above exactly. The new failures were
+`TestArchitecturalSourceGuard#levelFrameStepDoesNotUseAmbientGameServices`
+and `TestArchUnitRules#low_level_layers_do_not_depend_on_runtime_layers`.
+The correction injects the level owner through `LevelFrameContext.from`,
+keeps descriptor/ROM-pattern conversion in `level.render.SpritePresentationRenderer`,
+and lets the low-level immutable buffer receive decoded attributes through
+its producer-owned decoder. SAT capture reuses the existing tile emitter.
+No guard baseline, Mod API signature or gameplay timing rule was changed.
+
+The context correction first passed 29 phase/rewind/strict-replay checks,
+no skips, Maven 1:09. Both complete affected architecture guard classes then
+passed all 101 cases, no failures/errors/skips, Maven 58.564 s. Final queued
+`-Ptrace-replay-r7` validation passed 158 tests with no skips (Maven 54.200 s):
+the 114 squeeze cases, title-init rewind, results children, immutable frame
+and registry cases, all three SAT replay/masking classes, and the complete
+strict FBZ trace (15.530 s body). It then successfully ran
+`FbzBoundaryFixtureCaptureTool ROM OUTPUT MANIFEST fbz1-boundary-2-outdoor`.
+All 36 PNGs in `boundary2-engine-sprite-publication-v3` match v2 pixel-for-pixel,
+including intermediate frames and both settled directions. The reviewed v2
+video remains an exact visual representation of this final candidate.
+
+The task also reconciles documentation-only develop commits through
+`2b2bf8e28`; the sole frontier-log append conflict retained both histories.
+Post-integration combined validation is still required before delivery.

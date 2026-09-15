@@ -196,3 +196,9 @@ controlled boundary afterstates still match the full frame, palette and retained
 plane. This adds no new uncontrolled visual recipe or elevator assist. The
 parked right-to-left S1 challenge remains unchanged. Commands and the separately
 matched S1 Act 1 gap are recorded in the completion plan.
+
+Retained-presentation follow-up (2026-09-15): broad validation exposed unused
+player DPLC tails in BEFORE_ENTRY rewind state. The frame now retains only
+referenced art; all 114 ordinary-roll phase/donor/width/rewind cases pass in
+the final 158-case focused run, no skips. The parked early right-to-left
+challenge remains unchanged. Post-integration broad verification is pending.

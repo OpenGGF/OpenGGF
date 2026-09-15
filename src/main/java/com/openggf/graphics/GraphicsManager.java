@@ -2021,18 +2021,13 @@ public class GraphicsManager {
 			}
 
 			if (spritePresentationBuilder != null) {
-				PatternDesc desc = new PatternDesc();
 				for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
 					for (SpriteSatEntry entry : processedEntries) {
 						if (entry.priorityBucket() != bucket) continue;
 						if (entry.debugSource() != null)
 							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.debugSource());
 						setCurrentSpriteHighPriority(entry.globalHighPriority());
-						SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(), (id, h, v, palette, x, y) -> {
-							desc.setHFlip(h); desc.setVFlip(v); desc.setPaletteIndex(palette);
-							desc.setPriority(entry.piecePriority() || entry.globalHighPriority());
-							renderPatternWithId(id, desc, x, y);
-						});
+						appendBatchedReplayCommands(entry, -1);
 					}
 				}
 				return;
@@ -2114,6 +2109,12 @@ public class GraphicsManager {
 	private void appendBatchedReplayCommands(SpriteSatEntry entry, int paletteTextureId) {
 		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
+					// CPU preparation uses this same tile decoder before any atlas lookup.
+					if (spritePresentationBuilder != null) {
+						prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
+						renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
+						return;
+					}
 					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
 					if (atlasEntry == null) {
 						return;

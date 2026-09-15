@@ -881,7 +881,7 @@ public final class LevelRenderer {
         if (lm.graphicsManager == null || lm.camera == null) return;
         preparingSpritePresentation = true;
         try {
-            spriteTables.prepare(SpritePresentation.prepare(lm.graphicsManager,
+            spriteTables.prepare(com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
                     lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
                         renderSpriteObjectPass(sprites, false);
                         if (lm.hudRenderManager != null && !lm.isHudSuppressed()) {
@@ -898,7 +898,7 @@ public final class LevelRenderer {
 
     void publishHudCounters(boolean advanceTimer) {
         if (lm.hudRenderManager == null || lm.graphicsManager == null || lm.camera == null || lm.isHudSuppressed()) return;
-        spriteTables.publishCounters(SpritePresentation.prepare(lm.graphicsManager,
+        spriteTables.publishCounters(com.openggf.level.render.SpritePresentationRenderer.prepare(lm.graphicsManager,
                 lm.camera.getXWithShake(), lm.camera.getYWithShake(), () -> {
                     SpritePresentation.layer(lm.graphicsManager, SpritePresentation.Layer.HUD);
                     prepareHudForDraw(lm.hudRenderManager, lm.graphicsManager);
@@ -908,7 +908,7 @@ public final class LevelRenderer {
     }
 
     private void drawPublishedSprites(java.util.function.Predicate<SpritePresentation.Layer> visible) {
-        SpritePresentation.draw(lm.graphicsManager, spriteTables.published(),
+        com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.published(),
                 lm.camera.getXWithShake(), lm.camera.getYWithShake(), visible);
     }
 
@@ -1164,7 +1164,7 @@ public final class LevelRenderer {
             if (LevelSpritePresentation.enabled(lm)) {
                 drawPublishedSprites(layer -> layer == SpritePresentation.Layer.HUD);
                 if (spriteTables.published().tiles().stream().anyMatch(tile -> tile.layer().isHud())) {
-                    SpritePresentation.draw(lm.graphicsManager, spriteTables.counters(),
+                    com.openggf.level.render.SpritePresentationRenderer.draw(lm.graphicsManager, spriteTables.counters(),
                             camera.getXWithShake(), camera.getYWithShake(),
                             layer -> layer == SpritePresentation.Layer.HUD_COUNTERS);
                 }

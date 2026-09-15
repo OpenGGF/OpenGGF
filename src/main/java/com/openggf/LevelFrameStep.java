@@ -214,7 +214,7 @@ public final class LevelFrameStep {
             // Special stages own a separate scene/table; never scan the parked
             // level's renderers as a side effect of their hardware-only loop.
             LevelSpritePresentation.prepare(
-                    com.openggf.game.GameServices.levelOrNull(), context.spriteManager());
+                    context.levelManager(), context.spriteManager());
         }
         serviceBoundary(context, HardwareServiceBoundary.POST_OBJECTS);
         serviceBoundary(context, HardwareServiceBoundary.PRE_MAIN_LOOP);
@@ -619,7 +619,7 @@ public final class LevelFrameStep {
             if (profile != null) {
                 if (profile instanceof com.openggf.game.internal.SpriteTablePublication) {
                     LevelSpritePresentation.publish(
-                            com.openggf.game.GameServices.levelOrNull(), frame.ownerPhase());
+                            context.levelManager(), frame.ownerPhase());
                 }
                 profile.serviceLevelLoadVBlank();
                 if (profile instanceof com.openggf.game.internal.QueuedPatternDmaPublication publication) {
