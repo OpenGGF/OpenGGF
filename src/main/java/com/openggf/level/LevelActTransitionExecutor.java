@@ -239,6 +239,15 @@ final class LevelActTransitionExecutor {
             gameplayMode.rebindActTransitionManagerAdapters(
                     levelManager.objectManager, levelManager.ringManager);
         }
+        // Target zone initialization clears its scoped palette/render registries.
+        // Complete that reset before installing transferred resources (including
+        // native Target_palette fade staging); no target initializer may erase them.
+        try {
+            levelManager.reinitializeZoneFeaturesForActTransition();
+        } catch (IOException e) {
+            LevelManager.LOGGER.warning("Failed to reinitialize zone features: " + e.getMessage());
+        }
+
         if (handoff != null) {
             handoff.transferAfterTargetInit();
             claimed.transferComplete = true;
@@ -250,12 +259,6 @@ final class LevelActTransitionExecutor {
         // transition boundary, so no Act-2 keyframe can target dead Act-1 owners.
         if (gameplayMode != null) {
             gameplayMode.registerLevelAdapters(levelManager);
-        }
-
-        try {
-            levelManager.reinitializeZoneFeaturesForActTransition();
-        } catch (IOException e) {
-            LevelManager.LOGGER.warning("Failed to reinitialize zone features: " + e.getMessage());
         }
 
         if (request.musicOverrideId() >= 0) {
