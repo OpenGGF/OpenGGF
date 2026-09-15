@@ -1772,3 +1772,10 @@ override (expected0, actual1421), then all5pillar tests passed without skips
 (17.635s). The isolated spike test now supplies its camera dependency explicitly;
 its earlier failure was missing test session state, not spike behavior. The
 connected special-rock fixture remains under separate route investigation.
+
+The ordinary replay next exposed a shared collapsing-bridge admission gap:
+`SolidObjectTop` / `loc_1E45A` rejects negative `object_control`, but permits
+positive wire capture. The real contact test reproduced the missing positive
+landing while the bit7 negative case passed. The semantic provider override
+then passed all14bridge regressions (0skips,52.811s); no zone-name physics
+branch or recorded state was introduced.

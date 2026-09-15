@@ -48,6 +48,22 @@ class TestS3kCollapsingBridgeParity {
         rider = (Sonic) fixture.sprite();
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
+    void nativePositiveControlCanLandButBit7ControlCannot(boolean positiveControl) {
+        var manager=GameServices.level().getObjectManager();
+        var bridge=manager.createDynamicObject(() -> new CollapsingBridgeObjectInstance(
+                new ObjectSpawn(1000,1000,0x0F,0,0,false,0)));
+        AbstractObjectInstance.updateCameraBounds(800,800,1120,1024,0);
+        rider.setCentreX((short)1000);rider.setCentreY((short)(984-rider.getYRadius()-1));
+        rider.setAir(true);rider.setYSpeed((short)0);rider.setOnObject(false);
+        rider.setObjectControlled(true);rider.setObjectControlAllowsCpu(positiveControl);
+        bridge.snapshotPreUpdatePosition();
+        manager.processImmediateInlineSolidCheckpoint(bridge,rider,java.util.List.of());
+        assertEquals(positiveControl,rider.isOnObject(),"loc_1E45A rejects only negative object_control");
+        assertEquals(positiveControl,manager.hasObjectStandingBit(rider,bridge));
+    }
+
     @Test
     void mgzCollapseWave_isNotSolidForUntrackedPlayers() throws Exception {
         CollapsingBridgeObjectInstance bridge = newMgzBridge(0x00);

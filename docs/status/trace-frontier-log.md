@@ -110474,3 +110474,11 @@ animation2. That production intro, not trace-state seeding, is the next target.
   solid-contact regression reproduced that missing semantic override and now
   passes; the combined trace rerun is pending. Eight advertised auxiliary
   schemas remain unverified; recorded gameplay remains comparison-only.
+
+- Combined slide-order/pillar candidate44d853536 rerun completed in58.797s:
+  2840errors,0warnings,0bootstrap errors,17646frames. First mismatch moved
+  to2312 `player_mapping_frame` (96vs92), wire capture; first physics
+  difference2336 `status_byte` (0Dvs05), collapsing-bridge standing admission.
+  The earlier frame1419 camera and1547 companion ground-speed differences
+  are absent. Source-backed capture-frame and positive-control contact fixes
+  are under focused verification; this remains a failing trace.

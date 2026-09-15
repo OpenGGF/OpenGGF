@@ -591,6 +591,13 @@ public class CollapsingBridgeObjectInstance extends AbstractObjectInstance
     }
 
     @Override
+    public boolean allowsObjectControlledSolidContacts() {
+        // SolidObjectTop / loc_1E45A rejects only negative object_control.
+        // Positive captures (such as SOZ's rappel wire) still land and arm collapse.
+        return true;
+    }
+
+    @Override
     public boolean rejectsZeroDistanceTopSolidLanding() {
         // SolidObjectTop reaches loc_1E45A for fresh contacts. Its unsigned
         // cmpi.w #-$10,d0 / blo accepts only negative overlap [-$10,-1],
