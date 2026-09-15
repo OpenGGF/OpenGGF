@@ -24,6 +24,19 @@ class TestSozQuicksand {
         p.setXSpeed((short)-0x101); p.setYSpeed((short)0x201);
         return p;
     }
+    @Test void nativeDeadCpuRoutineCannotAcquireOrReceiveUpwardDamping() {
+        for(int subtype:new int[]{0x10,0x50,0x90,0xD0}) for(short velocity:new short[]{0x201,-0x700}) {
+            var p=org.mockito.Mockito.spy(player(0x230,0x640));
+            var cpu=org.mockito.Mockito.mock(com.openggf.sprites.playable.SidekickCpuController.class);
+            org.mockito.Mockito.when(cpu.getState()).thenReturn(com.openggf.sprites.playable.SidekickCpuController.State.DEAD_FALLING);
+            org.mockito.Mockito.doReturn(cpu).when(p).getCpuController();
+            p.setCpuControlled(true);p.setYSpeed(velocity);
+            assertFalse(p.getDead(),"boundary-dead CPU uses its dispatch state instead of generic dead flag");
+            sand(subtype).update(0,p);
+            assertFalse(p.isOnObject(),"native routine6 cannot acquire subtype"+subtype);
+            assertEquals(velocity,p.getYSpeed(),"routine gate precedes ascending damping");
+        }
+    }
     @Test void firstPlacedSandAcquiresThenSinksOnTheFollowingObjectPass() {
         var o=sand(0x10); var p=player(0x230,0x640);
         o.update(0,p);

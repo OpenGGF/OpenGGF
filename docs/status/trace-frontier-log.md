@@ -110489,3 +110489,13 @@ animation2. That production intro, not trace-state seeding, is the next target.
   accompanied by `air`0vs1/status05vs07. Earlier wire capture/bridge admission
   differences are absent. `loc_4B0DE` masks status withFC on horizontal flip;
   the missing air-bit clear is the next focused correction.
+
+- Candidate4c3fff7e9: queued `-Ptrace-replay-r7
+  -Dtest=TestSozSwingAndWireProduction,TestS3kSonicTailsSozSegmentTraceReplay`
+  with absolute S3K ROM,5tests:4production passes/1trace failure,0skips,
+  60s. Wire production recreation now passes. Replay first divergence moves
+  to3480 `tails_y_speed` (-06C8vs-0660),3123total errors,0warnings,
+  0bootstrap errors,17646frames. Total count increased with the changed downstream
+  route, while the exact matching prefix extends through3479. CPU boundary death
+  uses DEAD_FALLING while generic dead=false; quicksand acquisition must still
+  reject native routine6 before its ascending+$68 force.

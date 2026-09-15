@@ -1832,3 +1832,9 @@ ratchet activation recreation case failed because solid-execution standing
 history lost the promoted bridge entry (ListN versus List12). This matches the
 parent's already-reproduced failure above, before final-swing entry; no assertion
 was weakened. The parent owns the identity correction and combined trace replay.
+
+Quicksand routine admission now recognizes boundary-dead CPU dispatch as
+native routine6 even though generic dead=false. `sub_400F0` rejects it before
+ascending+$68 damping; the same death admission applies to all four variants,
+and waterfall held-routine release. The unit regression failed before the fix;
+all16quicksand and4production route cases pass after it (0skips,53.384s).
