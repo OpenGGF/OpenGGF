@@ -231,3 +231,88 @@ comparing each registered subsystem with `RewindSnapshotDiff`. This is bounded
 rewind evidence for the reached strip; other variants retain local reconstruction
 checks and the remaining act-level rewind obligations stay open. Final delivery
 validation follows below.
+
+### Updated integration base and validation scope
+
+Candidate implementation: `86d800e53`; upstream reconciliation: `990203ad3`.
+Updated integration base is develop `59d5b888181b14f29a48cbb75312b2801d56d7dc`.
+Upstream FBZ rendering/fresh-load and results-driven load classification changes
+were merged by intent without conflicts; both versions' release prose remains.
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 59d5b8881 --preflight`
+passes the required tool checks. The unchanged runner's plan selects all 2,583
+ordinary classes because `Sonic3kObjectProfile` is classified as shared/unknown.
+This particular profile edit moves one implemented ID between sets; the registry
+guard exercises that contract. Runtime changes are confined to a single native
+object family and its factory, using existing clocks, physics setters, support and
+rewind APIs. No shared algorithm, build policy or timing contract changes.
+
+Under repository proportionate-validation policy, delivery uses the focused SOZ
+suite, the S3KL fan regression, required S3K entry/loading/bootstrap/decoding
+checks, the existing FBZ-to-SOZ load-timeline regression, and structural guards.
+This is focused validation, not a full ordinary-suite pass; whole-act native,
+trace, rendered and compatibility matrices remain open.
+
+### Next Act 1 dependency
+
+The opening spring vine is the next source-backed interaction to bring up before
+claiming a matched native approach. `Obj_SOZSpringVine` allocates one later-slot
+visual child with eight pieces, deforms a sloped support surface, and processes
+P2 before P1 in `sub_40878`; it is not a reskinned ordinary spring. Its allocation
+failure path, shared tension state, ROM-backed `Map_SOZSpringVine` / `ArtTile_SOZMisc`
+and slope publication must be included together. This is a source inventory lead,
+not a new passing behavior or a completed route claim.
+
+### Structural results and candidate correction
+
+The dedicated `-Pguards test -B` run on `990203ad3` completed 667 tests in
+3m16s: three failures, zero errors/skips. One was introduced by this candidate:
+`TestRewindCoverageGuard.noNewCoverageGapsBeyondBaseline` reported `halfExtent`
+and `variant` as undeclared final scalars. Both are recreated solely from the
+immutable placement subtype, so they now carry the existing `RewindTransient`
+annotation with that derivation reason. Mutable participant state still uses
+its captured helper. No coverage-baseline entry was added.
+
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestRewindCoverageGuard' test -B`
+then passed one test, zero failures/errors/skips (43.053s including recompilation).
+The remaining two guard failures were checked against the unchanged base;
+see the matched results below.
+
+The shared-slot regression command selecting `TestHCZCGZFanObjectInstance` and
+`TestS3kHczCgzFanGraphRewind` passed seven tests with zero failures/errors/skips
+(18.219s), using the absolute S3K ROM property above.
+
+### Matched baseline and focused delivery result
+
+On unchanged main-workspace develop `59d5b8881` (HEAD checked before and after),
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards '-Dtest=TestBuildToolingGuard,TestNoAssertionFreeDiagnostics' test -B`
+ran 119 tests in 51.255s: two failures, zero errors/skips. XML comparison confirmed
+identical failing method identities and messages on base and candidate:
+
+- `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`:
+  the guard still requires direct-Maven/concurrent-worktree guidance and the old
+  printed-pinned-base command; current repository guidance requires the Maven queue.
+- `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`:
+  existing `FbzRouteEvidenceProbe#printEvidence` and
+  `LevelSolidityMapProbe#writeSolidityMap` have no recognized assertion oracle.
+
+Those pre-existing failures remain unresolved and do not certify a green guard
+suite. No unrelated test or instruction was changed to conceal them. Consumed
+baseline XML/text reports were removed; no category-run diagnostics were created.
+
+Final candidate context: `990203ad3` plus the explicit constructor-derived field
+annotations, with no further gameplay changes. This focused command passed **81
+tests, zero failures/errors/skips**, in 22.910s:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSozQuicksand,TestSozObjectInventory,TestSozAct1QuicksandRoute,TestSonic3kObjectProfileRegistryGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestFbzSandopolisTimelineHeadless' \
+  "-Ds3k.rom.path=${SOZ_REPO}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${SOZ_REPO}/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+The seeded FBZ EXIT_READY test proves the production fresh-load timeline boundary
+and SOZ restore/replay; it does not prove the outgoing boss route. Changed Markdown
+links, whitespace and the AGENTS/CLAUDE mirror were checked. The commit resource
+policy initially rejected machine-local documentation paths; portable command
+variables fixed that issue without weakening the policy.

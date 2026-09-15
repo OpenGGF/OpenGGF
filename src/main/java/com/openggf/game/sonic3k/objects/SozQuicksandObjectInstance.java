@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.CharacterKey;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -20,7 +21,9 @@ import java.util.List;
  */
 public final class SozQuicksandObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
+    @RewindTransient(reason = "Constructor-derived from the immutable spawn subtype.")
     private final int halfExtent;
+    @RewindTransient(reason = "Constructor-derived from the immutable spawn subtype.")
     private final int variant;
     // Reuse the existing rewind-aware participant storage; no FBZ rules are involved.
     private final FbzParticipantStateTable participants = new FbzParticipantStateTable(2);

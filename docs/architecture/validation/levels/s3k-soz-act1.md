@@ -23,7 +23,7 @@ Physical activation, every native team's death/reload and repeated reset are ope
 
 | Boundary | Implementation / test binding | Reachability | Rewind | Native behavior | Pixels |
 | --- | --- | --- | --- | --- | --- |
-| ENTRY / LOAD / RESET | Existing ROM loading; SOZ event/scroll owners remain missing at baseline | Full entry product open | Load timeline/reset isolation open | Unmatched | Unmatched |
+| ENTRY / LOAD / RESET | Existing ROM loading; SOZ event/scroll owners remain missing at baseline | Seeded FBZ EXIT_READY → fresh SOZ load verified; full incoming route open | `TestFbzSandopolisTimelineHeadless` verifies load reset and destination replay; checkpoint/death breadth open | Unmatched | Unmatched |
 | Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Registered acquisition/held/release capture-restore and forward replay twice for the first strip in all four representative configurations; local slide cooldown reconstruction; other variant production spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
 | Other traversal objects / badniks | Inventory lists concrete shared factories versus placeholders | Open | Before/contact/held/release and creation/deletion open | Unmatched | Unmatched |
 | CHECKPOINT / DEATH | Five authored checkpoint records; live activation/reload tests needed | Open | Respawn/reset isolation open | Unmatched | Unmatched |
