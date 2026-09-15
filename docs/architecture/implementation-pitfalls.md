@@ -64,6 +64,10 @@ uncaptured `final` scalar, or an object reference not captured as a rewind id fa
 `TestRewindCoverageGuard`. A global static manager consumed across frames but unregistered
 fails `TestStaticStateRewindCoverageGuard` — fix it with a `RewindSnapshottable` adapter,
 not a baseline entry, unless the gap is genuinely intentional.
+New concrete object classes also change `TestRemainingRewindTailInventory`, an
+ordinary-suite check outside `-Pguards`. Run its real round-trip sweep and update
+the test/resource totals only after verifying the new class passes or has honest
+graph coverage. A passing coverage guard alone does not check those totals.
 
 **Managed children need identity relinking.** `RewindStateful` represents captured
 helper values; applying it to a live managed child can make an owner's captured
