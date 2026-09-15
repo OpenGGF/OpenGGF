@@ -120,6 +120,13 @@ must be resolved from ROM before implementation. Engine behavior is unchanged.
 
 ### Native pilot: ordinary inputs, comparison only
 
+The disassembly supplies the darkness timers, palette-step conditions and switch
+reset rules. The emulator pilot checks their combined execution under ordinary
+inputs and establishes a reusable visual reference; it is not needed to discover
+constants already explicit in source. Its useful additional evidence includes
+which participant activates the switch and the timing of the visible response.
+Keep future probes tied to a specific integration question or comparison need.
+
 Command variables: `SOZ_REPO` is the absolute main-checkout path;
 `SOZ_CAPTURE_ROOT` is the external task directory named `soz-v2-20260915`.
 Native artifacts remain outside the repository.
