@@ -33,7 +33,7 @@ import java.util.List;
  * that child sets the parent trigger bit consumed by the capsule-open routine.
  */
 public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjectInstance
-        implements MultiPieceSolidProvider {
+        implements MultiPieceSolidProvider, com.openggf.level.objects.ObjectControlledSolidContactController {
     protected static final int PIECE_BODY = 0;
     protected static final int PIECE_BUTTON = 1;
 
@@ -50,6 +50,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private boolean buttonTriggered;
     private boolean opened;
     private boolean resultsStarted;
+    private final List<PlayableEntity> resultsSolidContactPlayers = new ArrayList<>();
     private int postOpenTimer;
     protected S3kBossExplosionController explosionController;
 
@@ -267,7 +268,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         // (sonic3k.asm:181978-181990).
         S3kResultsScreenObjectInstance result =
                 spawnFreeChild(() -> createResultsScreen(character, currentAct));
-        if (nativeResultsRunsInAllocationPass()
+        if (result != null && nativeResultsRunsInAllocationPass()
                 && services().objectManager().reservedSlotWaitsForNextObjectPass(result.getSlotIndex())) {
             // A folded native object graph can leave the engine capsule in a
             // later SST than the ROM capsule even though the ROM's newly
@@ -307,6 +308,9 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         // Set_PlayerEndingPose preserves status and Obj_EggCapsule still tail-calls
         // SolidObjectFull after its routine dispatch. Keep this capsule as the
         // sole valid support while object_control=$81 suppresses normal solids.
+        if (!resultsSolidContactPlayers.contains(sprite)) {
+            resultsSolidContactPlayers.add(sprite);
+        }
         sprite.setObjectControlledSolidContactObject(this);
         ObjectControlState.nativeBit7FullControl().applyTo(sprite);
         sprite.setControlLocked(true);
@@ -314,6 +318,20 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         sprite.setYSpeed((short) 0);
         sprite.setGSpeed((short) 0);
         sprite.setAnimationId(Sonic3kAnimationIds.VICTORY);
+    }
+
+    @Override
+    public boolean allowsObjectControlledSolidContact(PlayableEntity player,
+            com.openggf.level.objects.ObjectInstance candidate) {
+        return candidate == this && resultsSolidContactPlayers.contains(player);
+    }
+
+    @Override
+    public boolean ownsCarriedPlayerForRewind(PlayableEntity player) {
+        // Set_PlayerEndingPose retains capsule support until the results owner
+        // releases object_control. Relink the recreated SST, not its old instance.
+        return resultsStarted && resultsSolidContactPlayers.contains(player)
+                && player instanceof AbstractPlayableSprite sprite && sprite.isObjectControlled();
     }
 
     @Override

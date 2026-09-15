@@ -103,6 +103,12 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance", "resultsSolidContactPlayers"), RewindFieldPolicy.CAPTURED),
+            // SOZ2 has two previous-link arms and a charge/terminal-particle cycle.
+            // Preserve exact identities, including partial allocation prefixes.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "terminal"), RewindFieldPolicy.CAPTURED),
             // ExplosionRewindState captures the exact configured factory references and
             // rebinds them on recreation. TRANSIENT excludes them only from the generic
             // codec; these construction policies are not omitted from rewind state.
