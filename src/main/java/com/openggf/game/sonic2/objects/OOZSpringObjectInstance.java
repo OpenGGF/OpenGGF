@@ -538,13 +538,7 @@ public class OOZSpringObjectInstance extends AbstractObjectInstance
             return updatePlayer == null ? List.of() : List.of(updatePlayer);
         }
         List<PlayableEntity> participants = services.playerQuery().playersFor(PLAYER_PARTICIPATION);
-        if (updatePlayer != null && !participants.contains(updatePlayer)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(updatePlayer);
-            withUpdatePlayer.addAll(participants);
-            return withUpdatePlayer;
-        }
-        return participants;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     private boolean solidExecutionIsInert() {

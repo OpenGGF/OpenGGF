@@ -41,6 +41,79 @@ class TestSmpsAssetCatalog {
     }
 
     @Test
+    void bindingKeepsCollectionSnapshotsAndFreezesEndFlagsAtBinding() {
+        int[] fm = { 0x16, 2, 4 };
+        int[] psg = { 0x80, 0xC0 };
+        Map<Integer, Integer> tempos = new java.util.HashMap<>(Map.of(1, 3));
+        Map<Integer, Integer> overrides = new java.util.HashMap<>(Map.of(0xEE, 2));
+        java.util.Set<Integer> endFlags = new java.util.HashSet<>(java.util.Set.of(0xEE));
+        SmpsSequencerConfig source = new SmpsSequencerConfig.Builder()
+                .fmChannelOrder(fm).psgChannelOrder(psg).speedUpTempos(tempos)
+                .coordFlagParamOverrides(overrides).extraTrkEndFlags(endFlags)
+                .coordFlagHandler(com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig.CONFIG.getCoordFlagHandler())
+                .build();
+        fm[0] = 99;
+        psg[0] = 99;
+        tempos.put(1, 99);
+        overrides.put(0xEE, 99);
+        // The public builder retains a read-only view of this set. Catalog
+        // binding has always frozen its contents at the time of binding.
+        endFlags.add(0xEF);
+        SmpsSequencerConfig frozen = SmpsAssetCatalog.copyConfigWithoutHandler(source);
+        endFlags.add(0xF0);
+
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new int[] { 0x16, 2, 4 }, frozen.getFmChannelOrder());
+        org.junit.jupiter.api.Assertions.assertArrayEquals(new int[] { 0x80, 0xC0 }, frozen.getPsgChannelOrder());
+        assertEquals(Map.of(1, 3), frozen.getSpeedUpTempos());
+        assertEquals(Map.of(0xEE, 2), frozen.getCoordFlagParamOverrides());
+        assertEquals(java.util.Set.of(0xEE, 0xEF), frozen.getExtraTrkEndFlags());
+        assertTrue(source.getExtraTrkEndFlags().contains(0xF0));
+        assertNull(frozen.getCoordFlagHandler());
+        assertSame(com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig.CONFIG.getCoordFlagHandler(), source.getCoordFlagHandler());
+        frozen.getFmChannelOrder()[0] = 99;
+        assertEquals(0x16, frozen.getFmChannelOrder()[0]);
+        assertThrows(UnsupportedOperationException.class, () -> frozen.getExtraTrkEndFlags().add(1));
+        assertThrows(UnsupportedOperationException.class, () -> frozen.getSpeedUpTempos().put(1, 2));
+        assertThrows(UnsupportedOperationException.class, () -> frozen.getCoordFlagParamOverrides().put(1, 2));
+    }
+
+    @Test
+    void bindingFreezesEndFlagsBeforeCallingHandlerFactory() {
+        java.util.Set<Integer> endFlags = new java.util.HashSet<>(java.util.Set.of(0xEE));
+        SmpsSequencerConfig source = new SmpsSequencerConfig.Builder()
+                .extraTrkEndFlags(endFlags).build();
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
+        var handler = com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig.CONFIG.getCoordFlagHandler();
+        handlers.register("test", state -> {
+            endFlags.add(0xEF);
+            return handler;
+        });
+        SmpsSequencerConfig bound = SmpsAssetCatalog.bindLegacyConfig("test", source, true, handlers);
+        assertEquals(java.util.Set.of(0xEE), bound.getExtraTrkEndFlags());
+        assertEquals(java.util.Set.of(0xEE, 0xEF), source.getExtraTrkEndFlags());
+        assertSame(handler, bound.getCoordFlagHandler());
+    }
+
+    @Test
+    void invalidConfigDoesNotCreateOrCacheAHandler() {
+        java.util.Set<Integer> endFlags = new java.util.HashSet<>();
+        endFlags.add(null);
+        SmpsSequencerConfig source = new SmpsSequencerConfig.Builder()
+                .extraTrkEndFlags(endFlags).build();
+        SmpsCoordFlagHandlerOwner handlers = new SmpsCoordFlagHandlerOwner(new SmpsCoordFlagRuntimeState());
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        handlers.register("test", state -> {
+            calls.incrementAndGet();
+            return com.openggf.game.sonic3k.audio.Sonic3kSmpsSequencerConfig.CONFIG.getCoordFlagHandler();
+        });
+        assertThrows(NullPointerException.class,
+                () -> SmpsAssetCatalog.bindLegacyConfig("test", source, true, handlers));
+        assertThrows(NullPointerException.class,
+                () -> SmpsAssetCatalog.bindLegacyConfig("test", null, true, handlers));
+        assertEquals(0, calls.get());
+    }
+
+    @Test
     void immutableConfigCopyPreservesSfxAdmissionPolicies() {
         SmpsSequencerConfig source = new SmpsSequencerConfig.Builder()
                 .sfxChannelOwnershipMode(

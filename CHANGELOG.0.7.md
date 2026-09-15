@@ -214,6 +214,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Development features carried forward
 
+- **Maintenance:** share save decoding, fallback drawing, screen texture creation,
+  tool WAV output, S2 participant-list handling, indexed palette validation and
+  collision-profile construction. Audio configuration binding reuses frozen
+  settings while retaining session handler ownership. Public API and ROM behavior
+  remain unchanged.
+
 - **Unpublished Mod API candidate:** mod loading, creator tooling, characters,
   standalone games, and custom-zone work are now available on the development
   line. The API descriptor remains the version/publication authority; this

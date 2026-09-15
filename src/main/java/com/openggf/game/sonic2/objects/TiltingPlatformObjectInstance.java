@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AudioConstants;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.SolidWireCommands;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -742,16 +743,7 @@ public class TiltingPlatformObjectInstance extends AbstractObjectInstance
         int right = cx + halfW;
         int top = cy - halfH;
         int bottom = cy + halfH;
-        appendLine(commands, left, top, right, top);
-        appendLine(commands, right, top, right, bottom);
-        appendLine(commands, right, bottom, left, bottom);
-        appendLine(commands, left, bottom, left, top);
+        SolidWireCommands.rectangle(commands, left, top, right, bottom, 0.7f, 0.4f, 0.9f);
     }
 
-    private void appendLine(List<GLCommand> commands, int x1, int y1, int x2, int y2) {
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID,
-                0.7f, 0.4f, 0.9f, x1, y1, 0, 0));
-        commands.add(new GLCommand(GLCommand.CommandType.VERTEX2I, -1, GLCommand.BlendType.SOLID,
-                0.7f, 0.4f, 0.9f, x2, y2, 0, 0));
-    }
 }

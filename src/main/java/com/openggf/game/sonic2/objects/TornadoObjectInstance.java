@@ -1553,13 +1553,7 @@ public class TornadoObjectInstance extends AbstractObjectInstance
 
     private List<PlayableEntity> teamPlayers(AbstractPlayableSprite updatePlayer) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(TEAM_PARTICIPATION);
-        if (updatePlayer == null || participants.contains(updatePlayer)) {
-            return participants;
-        }
-        java.util.ArrayList<PlayableEntity> withUpdatePlayer = new java.util.ArrayList<>(participants.size() + 1);
-        withUpdatePlayer.add(updatePlayer);
-        withUpdatePlayer.addAll(participants);
-        return withUpdatePlayer;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     private void forEachTeamPlayer(AbstractPlayableSprite updatePlayer,

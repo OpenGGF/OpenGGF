@@ -282,6 +282,59 @@ class TestModPaletteUsageValidator {
         assertTrue(zero.getMessage().contains("width and height must be positive"));
     }
 
+    @Test
+    void zoneWrapperPreservesReachabilityBackdropAndFirstFailure() {
+        List<ModLevelDefinition> definitions = List.of(
+                fixtureWithBlockPalette(2).claims(new ModPaletteClaim(2, 5, 0x00E0)).build(),
+                fixtureWithBlockPalette(2).claims().build(),
+                fixtureWithBlockPalette(2).fillPattern(0, 0).claims().build(),
+                fixtureWithBlockPalette(2).fillPattern(0, 0)
+                        .claims(new ModPaletteClaim(2, 0, 0)).build(),
+                fixtureWithBlockPalette(2).foregroundBlocks(255).claims().build(),
+                fixtureWithBlockPalette(2).blockChunk(0, 0, 1023, 0).claims().build(),
+                fixtureWithBlockPalette(2).chunkPattern(0, 0, 2047, 2, 0).claims().build());
+        for (ModLevelDefinition definition : definitions) {
+            var zone = zoneView(definition);
+            try {
+                ModPaletteUsageValidator.validate(OWNER, definition);
+                assertDoesNotThrow(() -> com.openggf.game.modzone.ModPaletteUsageValidator.validate(OWNER, zone));
+            } catch (ModRegistrationException expected) {
+                var actual = assertThrows(com.openggf.game.modzone.ModZoneRegistrationException.class,
+                        () -> com.openggf.game.modzone.ModPaletteUsageValidator.validate(OWNER, zone));
+                assertEquals(expected.getMessage(), actual.getMessage());
+                assertEquals(OWNER, actual.ownerModId());
+                assertEquals(FINDING_CODE, actual.findingCode());
+            }
+        }
+    }
+
+    @Test
+    void wrappersRetainDistinctDomainChecksAndFirstErrorOrder() {
+        ModLevelDefinition oversized = fixtureWithBlockPalette(2)
+                .patternCountWithMatchingBytes(2049)
+                .claims(new ModPaletteClaim(2, 5, 0x00E0)).build();
+        assertTrue(assertInvalid(oversized).getMessage().contains("patternCount must be in 1..2048"));
+        assertDoesNotThrow(() -> com.openggf.game.modzone.ModPaletteUsageValidator.validate(OWNER, zoneView(oversized)));
+
+        ModLevelDefinition malformed = fixtureWithBlockPalette(2)
+                .rawPatterns(new byte[1], 3).foregroundBlocks(255).claims().build();
+        assertEquals("pattern byte length 1 does not match declared record count",
+                assertInvalid(malformed).getMessage());
+        var failure = assertThrows(com.openggf.game.modzone.ModZoneRegistrationException.class,
+                () -> com.openggf.game.modzone.ModPaletteUsageValidator.validate(OWNER, zoneView(malformed)));
+        assertEquals("pattern byte length 1 does not match declared record count", failure.getMessage());
+    }
+
+    private static com.openggf.game.modzone.ModZoneLevelData zoneView(ModLevelDefinition d) {
+        return new com.openggf.game.modzone.ModZoneLevelData(d.formatVersion(), d.zoneIndex(),
+                d.blockGridSide(), d.width(), d.height(), 0, 0, 0, 0,
+                d.patternBytes(), d.chunkBytes(), d.blockBytes(), d.foregroundMap(),
+                d.backgroundMap().orElse(null), d.solidHeights(), d.solidWidths(), d.solidAngles(),
+                d.primaryCollisionIndices(), d.secondaryCollisionIndices(), d.paletteLines(),
+                d.hostMetadata(), d.paletteClaims(), List.of(), List.of(),
+                d.patternCount(), d.chunkCount(), d.blockCount());
+    }
+
     private static Fixture fixtureWithBlockPalette(int paletteLine) {
         return new Fixture().fillPattern(0, 5)
                 .fillChunk(0, 0, paletteLine, 0)

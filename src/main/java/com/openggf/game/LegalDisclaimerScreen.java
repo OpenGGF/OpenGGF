@@ -9,11 +9,9 @@ import com.openggf.graphics.FadeManager;
 import com.openggf.graphics.PixelFont;
 import com.openggf.graphics.PngTextureLoader;
 import com.openggf.graphics.TexturedQuadRenderer;
-
-import org.lwjgl.system.MemoryUtil;
+import com.openggf.graphics.SolidColorTexture;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -21,20 +19,10 @@ import java.util.function.ToIntFunction;
 import java.util.logging.Logger;
 
 import static org.lwjgl.opengl.GL11.GL_BLEND;
-import static org.lwjgl.opengl.GL11.GL_NEAREST;
 import static org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA;
-import static org.lwjgl.opengl.GL11.GL_RGBA;
 import static org.lwjgl.opengl.GL11.GL_SRC_ALPHA;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_MAG_FILTER;
-import static org.lwjgl.opengl.GL11.GL_TEXTURE_MIN_FILTER;
-import static org.lwjgl.opengl.GL11.GL_UNSIGNED_BYTE;
-import static org.lwjgl.opengl.GL11.glBindTexture;
 import static org.lwjgl.opengl.GL11.glBlendFunc;
 import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL11.glGenTextures;
-import static org.lwjgl.opengl.GL11.glTexImage2D;
-import static org.lwjgl.opengl.GL11.glTexParameteri;
 
 /**
  * Legal disclaimer screen shown on engine startup before the master title
@@ -120,7 +108,7 @@ public class LegalDisclaimerScreen {
             renderer.init();
             font = new MenuPixelFont();
             font.init("pixel-font.png", renderer);
-            solidWhiteTextureId = createSolidWhiteTexture();
+            solidWhiteTextureId = SolidColorTexture.createWhite();
             ToIntFunction<String> measure = s -> font.measureWidth(s, BODY_SCALE);
             wrappedBodyLines = new ArrayList<>();
             for (String paragraph : BODY_PARAGRAPHS) {
@@ -136,19 +124,6 @@ public class LegalDisclaimerScreen {
             LOGGER.severe("Failed to initialize legal disclaimer screen: " + e.getMessage());
             throw new RuntimeException("Failed to initialize legal disclaimer screen", e);
         }
-    }
-
-    private static int createSolidWhiteTexture() {
-        ByteBuffer pixel = MemoryUtil.memAlloc(4);
-        pixel.put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).put((byte) 0xFF).flip();
-        int texId = glGenTextures();
-        glBindTexture(GL_TEXTURE_2D, texId);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixel);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        MemoryUtil.memFree(pixel);
-        return texId;
     }
 
     public void update(InputHandler inputHandler) {

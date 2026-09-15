@@ -6,12 +6,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -477,15 +475,7 @@ class TestSingletonLifecycleGuard {
     }
 
     private static List<Path> javaSources(Path root) throws IOException {
-        if (!Files.exists(root)) {
-            return List.of();
-        }
-        try (Stream<Path> stream = Files.walk(root)) {
-            return stream
-                    .filter(path -> path.toString().endsWith(".java"))
-                    .sorted(Comparator.comparing(TestSingletonLifecycleGuard::normalize))
-                    .toList();
-        }
+        return ObjectGuardSourceScanner.sortedJavaSources(root);
     }
 
     private static String normalize(Path path) {

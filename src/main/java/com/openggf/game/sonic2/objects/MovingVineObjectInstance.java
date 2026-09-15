@@ -315,13 +315,7 @@ public class MovingVineObjectInstance extends AbstractObjectInstance implements 
 
     private List<PlayableEntity> interactionParticipants(PlayableEntity updatePlayer) {
         List<PlayableEntity> participants = services().playerQuery().playersFor(PLAYER_PARTICIPATION);
-        if (updatePlayer != null && !participants.contains(updatePlayer)) {
-            ArrayList<PlayableEntity> withUpdatePlayer = new ArrayList<>(participants.size() + 1);
-            withUpdatePlayer.add(updatePlayer);
-            withUpdatePlayer.addAll(participants);
-            return withUpdatePlayer;
-        }
-        return participants;
+        return Sonic2PlayerParticipants.prependIfAbsent(participants, updatePlayer);
     }
 
     /**
