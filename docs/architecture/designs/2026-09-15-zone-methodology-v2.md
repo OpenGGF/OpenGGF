@@ -36,7 +36,7 @@ Finish with complete routes and the full applicable validation obligations.
 
 1. **Establish evidence and ownership.** Inspect current production registrations,
    decoded placements/subtypes, reachable dynamic children, events, art/PLC and
-   audio. Recheck catalogue claims against the locked-on disassembly. Record the
+   audio, plus per-act parallax/deformation, animated tiles and palette cycles. Recheck catalogue claims against the locked-on disassembly. Record the
    owning routine, clock, update phase, state owner, lifecycle and test binding.
    Inventory the whole route, but implement only missing or incorrect behavior.
 2. **Write a discriminating focused test.** Observe the missing-behavior failure
@@ -62,6 +62,38 @@ Finish with complete routes and the full applicable validation obligations.
    timing changes and coupled boss/event sequences warrant independent review.
    Routine object families can share one review. Re-review changed findings;
    do not repeat clean reviews or add routine human approval ceremonies.
+
+## Presentation is part of each route slice
+
+A placement inventory cannot account for scrolling backgrounds or animated terrain.
+Every act must explicitly inventory and bind these production owners, including
+normal traversal and each event-selected mode:
+
+- **Parallax and deformation:** foreground/background camera copies, horizontal
+  bands, per-line shimmer, vertical scroll, shake and wrap; identify the ROM
+  tables and preserve fixed-point fractions and word arithmetic.
+- **Animated tiles:** both generic AniPLC and custom DMA paths, source ROM extents,
+  destination tiles, transfer units, phase/timer state and write order. Inspect
+  actual registrations; an existing animator or a shared script is not proof
+  that the act's visible effect is implemented.
+- **Palette and composition:** palette cycles, darkness/fades, plane ownership,
+  sprite/child priority and the coupling between palette state and animated art.
+- **Mode changes:** boss entry/exit, rising terrain and seamless act changes must
+  account for background layout replacement, queued art, renderer invalidation
+  and restored/reset animation state together.
+
+Give these effects named rows in each act matrix and explicit work in the route
+plan, rather than leaving them under a generic “visual polish” task. Do not mark
+an entry/traversal slice complete while it still uses an unverified generic scroll
+fallback or while its custom animated-art path is absent or incorrectly gated.
+This does not block independently useful object work; the slice stays partial.
+
+Verification covers band boundaries and camera/clock phases, adjacent DMA/timer
+updates, target ranges, visible renderer updates and capture/restore followed by
+replay. Match the declared native region across a short sequence at standard
+width, then check wider viewports for seams. A static screenshot cannot prove
+animated cadence; a changing CPU pattern cannot prove the renderer received it.
+Record absent event owners and unmatched native pixels as open dependencies.
 
 ## Independent evidence contract
 

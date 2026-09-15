@@ -1,7 +1,9 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15. Status: placed inventory, native pilot, quicksand, spring-vine and sand-rock slices integrated;
-pushable-rock implementation and local/native corroboration complete; full routes and native certification remain open.
+Date: 2026-09-15. Status: quicksand, vines, rocks, loop exits, static solids,
+floating pillars, push switches and doors integrated at the bounded scopes below.
+Parallax/deformation and custom animated-art acceptance remain incomplete;
+full routes, event systems, bosses and native certification remain open.
 
 ## Objective and authority
 
@@ -61,6 +63,35 @@ is early research; it does not replace the dependency order or claim traversal.
 Catalogue quicksand as object behavior, not water physics, unless source review
 disproves that distinction. `No_Resize` is not evidence that SOZ has no events.
 
+## Explicit presentation work and revised next batch
+
+The original slice table named scroll/animation routines but the execution summary
+and next-task selection drifted toward placed objects. Presentation remains part
+of route completion, not a final cosmetic pass. Audit at `e9e7267dc` found SOZ
+still selected the generic quarter-speed scroll fallback. Act 1 has a custom
+animated-art channel, but its phase may read cached presentation state and its
+secondary transfer copies `$60` bytes where native DMA requests `$60` words.
+Its declared range ends at `$33E`, rather than the required `$341`. These are
+implementation findings, not fixes delivered by this documentation correction.
+
+| Route slice | Required presentation delivery | Acceptance boundaries / current gap |
+| --- | --- | --- |
+| 1: normal Act 1 desert | Dedicated `sub_55D56` parallax, seven fractional X tiers, Y/16, `word_560DC` bands; `loc_55DF2` FG/BG heat shimmer; `AnimateTiles_SOZ1` and `AnPal_SOZ1` | ROM-backed tables; all 224 lines; independent FG/BG wave phases; all 32 art phases and split transfers; same-camera/update-order behavior; GPU-visible tiles `$330..$341`, reverse movement and rewind. Scroll fallback and partial custom DMA remain open; palette path must be audited |
+| 2: Act 1 arena | `sub_55DB6` / `sub_55E4C`, sand offset and shake, custom background blocks/art | Before/after arena switch, delayed redraw, shimmer and animation phase-zero handoff; event owner still open |
+| 3: Act 2 entry | Initial pyramid background, wrap setup, secondary art, palette fade and torch initialization | Queue readiness, fresh versus seamless entry, control release and reset/restore; still open |
+| 4: normal Act 2 traversal | Event-selected background framing, `sub_566D2` half-speed outdoor parallax where selected; `AnimateTiles_SOZ2` torches tied to the live palette fade accumulator | Three timer frames per animated intensity, pinned dark state, eight-pass cadence; correct six-tile DMA extent; brightening/darkening and rewind. Do not apply outdoor scrolling to every Act 2 state; owners remain open |
+| 5: sand and pyramid changes | `sub_566E8`, moving sand, background/collision changes, vertical wrap | Both sides of trigger/wrap, players/camera/objects/rendering together, art retention and restored state; open |
+| 6: boss and exit | `sub_56706`, `SOZ2_BGDrawArray`, wall reconstruction, animation inhibition and restored secondary art | Arena mode bands, darkness reset, repeated inhibition writes, defeat/exit restoration and rewind; open |
+
+Next implementation batch starts with the coupled **normal Act 1 parallax,
+heat shimmer and animated-background correction**, with source-derived arithmetic,
+ROM art-range checks and a short native/engine moving-camera comparison. Audit
+Act 1 palette cycling alongside it. Then resume the remaining Act 1 traversal
+blockers (swinging platforms, rappel wires, sand/path mechanisms and enemies) and
+join a continuous route to the miniboss. Act 2's palette/torch/event state is a
+separate coupled batch; implementing a bright-only torch loop is not completion.
+Boss, sand-rise and transition presentation stays attached to its owning slice.
+
 ## Acceptance and validation
 
 - Pin short comparison checkpoints before candidate rendering, including act
@@ -86,9 +117,10 @@ disproves that distinction. `No_Resize` is not evidence that SOZ has no events.
 
 ## Execution record and next action
 
-The placed inventory, native pilot, quicksand, spring-vine and sand-rock families are delivered
-at the bounded scope recorded below. Cold rock reachability, full dynamic/art/audio
-inventory and later route slices remain open. Keep commands, RED/GREEN results,
+The object families listed in the status header are delivered at the bounded scopes
+recorded below. The revised next batch above makes parallax and animated background
+art explicit. Cold rock reachability, full dynamic/art/audio/presentation inventory
+and later route slices remain open. Keep commands, RED/GREEN results,
 review findings, resolved
 catalogue contradictions, amendments and rejected approaches in this plan as work
 proceeds. Reuse the existing SOZ analysis for verified ROM findings and the act
@@ -1262,3 +1294,14 @@ The capture's inherited Discord shutdown warning did not prevent completion.
 Correction source `d5c8e463e` merged cleanly as `a2cac9c1e`. The same focused
 command passed on integrated `develop` at 19:39:08 BST: 77 tests, zero failures,
 errors or skips (53.426 seconds). Push policy and release-tree audit passed.
+
+### Presentation planning correction
+
+User review required explicit parallax and animated-tile work in the designs and
+plans. Updated the methodology design, slice-level work above, research arithmetic
+and both act matrices. Source audit checked `sub_55D56`, `loc_55DF2`,
+`MakeFGDeformArray`, `ApplyFGandBGDeformation` and `AnimateTiles_SOZ1/SOZ2`.
+Rejected the catalogue's 112-line and three-tile DMA claims: `$DF` loop extent
+produces 224 scanlines, and DMA d3 is a word count. The torch routine consumes
+the old frame byte before increment/reset, yielding frames 0,1,2, not two frames.
+No runtime code or effect was delivered in this documentation correction.
