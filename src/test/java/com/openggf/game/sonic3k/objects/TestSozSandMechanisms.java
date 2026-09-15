@@ -65,6 +65,52 @@ class TestSozSandMechanisms {
         p.setCentreY((short)0x3FF);marker.update(7,p);p.setCentreY((short)0x400);marker.update(8,p);
         assertTrue(p.isHighPriority());
     }
+    @Test void spawningBlocksReadOscillatorPositionAfterNativeControlWord() {
+        var saved = com.openggf.game.OscillationManager.snapshot();
+        try {
+            var values = saved.values();
+            var deltas = saved.deltas();
+            values[5] = 0x0300;
+            deltas[5] = 0xFF80;
+            com.openggf.game.OscillationManager.restore(new com.openggf.game.OscillationSnapshot(
+                    values, deltas, saved.activeSpeeds(), saved.activeLimits(),
+                    saved.control(), saved.lastFrame(), saved.suppressedUpdates()));
+            var manager = mock(ObjectManager.class);
+            var children = new ArrayList<SozSpawningSandBlocksObjectInstance>();
+            when(manager.createDynamicObject(any())).thenAnswer(call -> {
+                var child = (SozSpawningSandBlocksObjectInstance)
+                        ((java.util.function.Supplier<?>) call.getArgument(0)).get();
+                children.add(child);
+                return child;
+            });
+            var spawner = new SozSpawningSandBlocksObjectInstance(spawn(0x39, 1));
+            spawner.setServices(new StubObjectServices() {
+                @Override public ObjectManager objectManager() { return manager; }
+            });
+            spawner.update(0, null);
+            assertEquals(0x403, spawner.getY());
+            assertEquals(0x403, children.getFirst().getY());
+
+            // A zero derivative is not the native position-zero admission gate.
+            deltas[5] = 0;
+            values[5] = 0x0700;
+            com.openggf.game.OscillationManager.restore(new com.openggf.game.OscillationSnapshot(
+                    values, deltas, saved.activeSpeeds(), saved.activeLimits(),
+                    saved.control(), saved.lastFrame(), saved.suppressedUpdates()));
+            spawner.update(1, null);
+            assertEquals(0x403, spawner.getY(), "wait preserves the last emitted height");
+
+            values[5] = 0;
+            deltas[5] = 0xFF80;
+            com.openggf.game.OscillationManager.restore(new com.openggf.game.OscillationSnapshot(
+                    values, deltas, saved.activeSpeeds(), saved.activeLimits(),
+                    saved.control(), saved.lastFrame(), saved.suppressedUpdates()));
+            spawner.update(2, null);
+            assertEquals(0x400, spawner.getY(), "native position zero releases the wait");
+        } finally {
+            com.openggf.game.OscillationManager.restore(saved);
+        }
+    }
     @Test void allocatedBlockFallsSlidesForSubtypeDurationAndSinksWithNativeGravity() {
         com.openggf.game.OscillationManager.reset();
         var p=player(0x300,0x400);

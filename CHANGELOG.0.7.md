@@ -206,7 +206,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Sandopolis Act 1 now has layered desert parallax, foreground and background heat shimmer, scroll-driven
   background art and cycling sand colors, with preserved static desert tiles
   and consistent background wrapping in widescreen. Both acts also implement
-  swinging platforms, rappel wires, sand blocks, rising walls and corks, and
+  swinging platforms, rappel wires, oscillator-timed spawning sand blocks, rising walls and corks, and
   Skorp, Sandworm and Rockn. Terrain-driven sand slides run after camera tracking.
   The cold sand intro, Egg Golem arena and seamless
   Act 2 entry use native event owners. Act 2 couples light switches, ghosts,
@@ -215,7 +215,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   stage returns, and object graphs—including promoted collapsing platforms—reconstruct
   across rewind using stable object and player identities. Live rewind preserves
   the host audio clock across repeated death/reloads. Sonic 2 and S3K companions
-  copy the leader's collision plane and art priority when flight recovery ends.
+  copy the leader's collision plane and art priority when flight recovery ends,
+  and release stale engine platform support while retaining native interaction state.
   Full-route and
   transient VDP redraw limits remain documented in the per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,

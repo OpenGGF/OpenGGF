@@ -398,3 +398,13 @@ escape phase through a retained reference. The controller-only end-boss route
 exposed an unregistered reference between root deletion and destination load;
 continuous snapshots cover this interval even when selected hit/escape rewind
 spots all pass.
+
+### Oscillation table offsets include a native control word
+
+`OscillationManager.getByte/getWord` address data after the native two-byte
+control word. Subtract2 from `Oscillating_table+$NN` references before selecting
+an engine offset. SOZ `loc_402CC/loc_402EE` read native`+$16`, hence engine`$14`.
+Reading engine`$16` selected velocity instead of position: negative velocity's
+high byte displaced sand-block spawners by roughly255pixels and changed their
+zero-position release gate. Distinguish position and velocity in routine tests;
+reset-state tests where both high bytes are zero cannot catch this error.
