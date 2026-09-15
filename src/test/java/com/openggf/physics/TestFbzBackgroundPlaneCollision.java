@@ -114,6 +114,61 @@ class TestFbzBackgroundPlaneCollision {
     }
 
     @Test
+    void defaultMaskPreservesLegacyObjectProbeCoordinates() {
+        var collision = new BackgroundPlaneCollisionProvider.State(true, 0, 0x200);
+        GameServices.zoneRuntimeRegistry().install(new ZoneRuntimeState() {
+            @Override public String gameId() { return "test"; }
+            @Override public int zoneIndex() { return 0; }
+            @Override public int actIndex() { return 0; }
+            @Override public BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
+                return collision;
+            }
+        });
+        var layout = mock(com.openggf.level.Level.class);
+        when(level.getCurrentLevel()).thenReturn(layout);
+        when(layout.hasBackgroundCollisionRowAt(anyInt())).thenReturn(true);
+        BackgroundPlaneCollisionProvider legacy = () -> collision;
+        for (int y : new int[]{-0x100, 0, 0x100, 0x8000}) {
+            var expected = ObjectTerrainUtils.checkFloorDist(level, legacy, false, 0x100, y);
+            var actual = ObjectTerrainUtils.checkFloorDist(level, GameServices.backgroundPlaneCollision(), false, 0x100, y);
+            assertEquals(expected.distance(), actual.distance());
+            assertEquals(expected.foundSurface(), actual.foundSurface());
+        }
+        org.mockito.Mockito.verify(level, org.mockito.Mockito.atLeastOnce())
+                .getChunkDescAt((byte) 1, 0x100, -0x100);
+    }
+
+    @Test
+    void maskedBackgroundRowsReachPlayerAndObjectProbesBeforeAbsentRowRejection() {
+        GameServices.zoneRuntimeRegistry().install(new ZoneRuntimeState() {
+            @Override public String gameId() { return "test"; }
+            @Override public int zoneIndex() { return 0; }
+            @Override public int actIndex() { return 0; }
+            @Override public int backgroundCollisionYMask() { return 0x7FF; }
+            @Override public BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
+                return new BackgroundPlaneCollisionProvider.State(true,0x20,-0x800);
+            }
+        });
+        var layout=mock(com.openggf.level.Level.class);
+        when(level.getCurrentLevel()).thenReturn(layout);
+        when(layout.hasBackgroundCollisionRowAt(anyInt())).thenAnswer(call -> (int)call.getArgument(0)<0x800);
+        when(level.getChunkDescAt(anyByte(),anyInt(),anyInt())).thenAnswer(call -> {
+            int layer=(byte)call.getArgument(0),x=call.getArgument(1),y=call.getArgument(2);
+            return layer==1&&x>=0xE0&&x<0x100&&y>=0x100&&y<0x120?bgTile:null;
+        });
+        for(var direction:new Direction[]{Direction.DOWN,Direction.UP,Direction.RIGHT}) {
+            var result=new GroundSensor(sprite,direction,(byte)0,(byte)0,true).scanWorld(
+                    direction,(short)0,(short)0,(short)0,(short)0,
+                    direction==Direction.DOWN?sprite.getTopSolidBit():sprite.getLrbSolidBit());
+            assertNotNull(result);assertEquals(7,result.tileId());
+        }
+        var provider=GameServices.backgroundPlaneCollision();
+        assertTrue(ObjectTerrainUtils.checkFloorDist(level,provider,false,0x100,0x100).foundSurface());
+        assertTrue(ObjectTerrainUtils.checkRightWallDist(level,provider,false,0x100,0x100).foundSurface());
+        org.mockito.Mockito.verify(layout,org.mockito.Mockito.atLeastOnce()).hasBackgroundCollisionRowAt(0x100);
+    }
+
+    @Test
     void scanWorldUsesExplicitBackgroundPlaneForFloorCeilingAndWall() {
         GroundSensor sensor = new GroundSensor(sprite, Direction.DOWN, (byte) 0, (byte) 0, true);
 
