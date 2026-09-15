@@ -1024,3 +1024,17 @@ assert the ROM-backed glide capability and boss exit while retaining checks
 for every unrelated capability value. No production behavior changed in this
 correction. Development diagnostics were inspected and queued for acknowledgment;
 focused correction and integrated validation follow below.
+
+The corrected two-class selection passes **18 tests, zero failures/errors/skips**,
+49.665 s, queued `-Dmse=off
+-Dtest=TestCrossGameFeatureProviderRefactor,TestKis2PhysicsProvider test`.
+Commit `5c62649f4` contains only those assertion corrections and this record;
+`5f6da8185` reconciles incoming sprite-bank ownership work from `develop`
+`e949e124c` without conflicts. The owning task's completed baseline run
+`20260915T174807Z-47ae729d` was read before its owner removed diagnostics:
+20,631 ordinary tests, zero failures/errors, 19 skips (779.35 s); 668 guards,
+the same three failures and zero errors/skips (175.58 s). Failure identities,
+types and messages, and all skip records, match the earlier baseline exactly.
+Its command was `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
+--base d92fea6f15ba0f90f9df15aab2d8c19763ded87f --run` in the main workspace.
+Our development diagnostics acknowledgment has completed.
