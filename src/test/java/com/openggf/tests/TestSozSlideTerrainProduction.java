@@ -14,7 +14,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import java.util.ArrayList;
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Real SOZ layout lookup and post-object dispatch, including all registered player slots. */
+/** Real SOZ layout lookup and loop-tail dispatch, including all registered player slots. */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozSlideTerrainProduction {
     @AfterEach void reset() { SonicConfigurationService.getInstance().clearSessionOverrides(); SessionManager.clear(); }
@@ -45,7 +45,10 @@ class TestSozSlideTerrainProduction {
             player.applyCustomRadii(9,19);player.setGSpeed((short)0x3CC);
         }
         var registry=f.gameplayMode().getRewindRegistry();var before=registry.capture();
-        level.updateZoneFeaturesAfterObjectExecution();var after=registry.capture();
+        level.updateZoneFeaturesAfterObjectExecution();
+        for(var player:players) assertFalse(player.isSliding(), "terrain must wait until after camera/events");
+        GameServices.module().getZoneFeatureProvider().update(f.sprite(),GameServices.camera().getX(),8);
+        var after=registry.capture();
         for(var player:players) {
             assertTrue(player.isSliding());assertEquals(0x40C,player.getGSpeed());
             assertEquals(slideY-0x14+5,player.getCentreY());assertEquals(14,player.getYRadius());
@@ -53,7 +56,31 @@ class TestSozSlideTerrainProduction {
         }
         level.getObjectManager().setRewindInPlaceRestoreEnabledForTest(false);
         registry.restore(before);same(before,registry.capture());
-        level.updateZoneFeaturesAfterObjectExecution();same(after,registry.capture());
+        GameServices.module().getZoneFeatureProvider().update(f.sprite(),GameServices.camera().getX(),8);same(after,registry.capture());
+        if (wrappedOffset == 0) {
+            registry.restore(before);
+            var camera=GameServices.camera();
+            int preSlideY=f.sprite().getCentreY();
+            camera.setFrozen(false);camera.setLevelStarted(true);
+            camera.setMinY((short)0);camera.setMaxY((short)0xFFF);
+            camera.setY((short)(preSlideY-96));
+            var frameBefore=registry.capture();
+            Runnable frame=()->com.openggf.LevelFrameTestStep.execute(
+                    com.openggf.LevelFrameContext.from(f.gameplayMode()),level,camera,()->{},(name,step)->{
+                        if(name.equals("camera-scroll")) {
+                            assertFalse(f.sprite().isSliding(),"camera must sample before sub_730C");
+                            assertEquals(preSlideY,f.sprite().getCentreY());
+                        }
+                        step.run();
+                        if(name.equals("camera-scroll")) assertEquals(preSlideY-96,camera.getY(),
+                                "the grounded camera tracks the unadjusted player centre");
+                    });
+            frame.run();
+            assertTrue(f.sprite().isSliding());assertEquals(preSlideY+5,f.sprite().getCentreY());
+            assertEquals(preSlideY-96,camera.getY(),"slide Y adjustment cannot move this frame's camera");
+            var frameAfter=registry.capture();registry.restore(frameBefore);
+            same(frameBefore,registry.capture());frame.run();same(frameAfter,registry.capture());
+        }
     }
     private static void same(com.openggf.game.rewind.CompositeSnapshot expected,
             com.openggf.game.rewind.CompositeSnapshot actual) {

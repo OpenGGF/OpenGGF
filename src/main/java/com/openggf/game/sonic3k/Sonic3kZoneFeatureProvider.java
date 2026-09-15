@@ -359,6 +359,14 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
                 playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (participant instanceof AbstractPlayableSprite playable) {
                 updateAizForestFrontPriority(playable, zoneIndex);
+                // LevelLoop: DeformBgLayer -> ScreenEvents -> Handle_Onscreen_Water_Height.
+                // SOZ sub_730C must change Y/radii only after the camera has tracked this frame.
+                if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ
+                        && GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager mgr) {
+                    mgr.ensureZoneRuntimeStateInstalled();
+                    var events = mgr.getSozEvents();
+                    if (events != null) events.updateSlideTerrainAfterPlayablePhysics(playable);
+                }
             }
         }
     }
@@ -433,8 +441,7 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
     @Override
     public void updateAfterObjectExecution(AbstractPlayableSprite player, int cameraX, int zoneIndex) {
         if (player == null || player.getDead()
-                || (zoneIndex != Sonic3kZoneIds.ZONE_HCZ && zoneIndex != Sonic3kZoneIds.ZONE_ICZ
-                    && zoneIndex != Sonic3kZoneIds.ZONE_SOZ)) {
+                || (zoneIndex != Sonic3kZoneIds.ZONE_HCZ && zoneIndex != Sonic3kZoneIds.ZONE_ICZ)) {
             return;
         }
         var levelManager = GameServices.levelOrNull();
@@ -447,9 +454,6 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
                 if (events != null) {
                     events.updateSlideTerrainAfterPlayablePhysics(act, player);
                 }
-            } else if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ) {
-                var events = mgr.getSozEvents();
-                if (events != null) events.updateSlideTerrainAfterPlayablePhysics(player);
             } else {
                 var events = mgr.getIczEvents();
                 if (events != null) {
