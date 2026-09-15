@@ -71,6 +71,15 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+FBZ miniboss capture (2026-09-15): `GameplayCaptureTool --x/--y` reinitializes
+level events and executes a setup object update. That can select a different
+background state from a native position-only teleport and enqueue a one-time
+palette write before the next frame clears pending writes. Match the setup
+operations before diagnosing palette/event defects. A position-only setup with
+natural camera movement restored the expected sky and boss palette; both
+engines then landed Sonic on the plunger on frame 622. See the
+[miniboss comparison](../architecture/audits/2026-09-15-fbz1-miniboss-visual.md).
+
 Slots glass investigation (2026-09-14): a runtime-only priority assertion does
 not cover the real bonus loop's post-physics overrides. Enter the bonus stage
 through `GameLoop`, reacquire the focused sprite after the coordinator replaces

@@ -22,7 +22,8 @@ final class FbzMinibossAimerChild extends AbstractObjectInstance
 
     private FbzMinibossInstance boss;
     private int familySlot;
-    private int mappingFrame = 9;
+    // loc_6F07C / word_6FA58: neutral eyes until loc_6F0B8 selects an octant.
+    private int mappingFrame = 8;
     private int stateOrdinal;
     private int timer;
     /** Latent SST x_pos/y_pos words; Child_Draw_Sprite2 renders from the root. */
@@ -141,6 +142,8 @@ final class FbzMinibossAimerChild extends AbstractObjectInstance
         nativeY = (nativeY + offsetY) & 0xFFFF;
     }
     @Override public int getPriorityBucket() { return 2; }
+    // CreateChild1_Normal copies the root art_tile; SetUp_ObjAttributes3 retains it.
+    @Override public boolean isHighPriority() { return true; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

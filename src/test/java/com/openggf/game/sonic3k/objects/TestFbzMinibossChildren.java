@@ -20,6 +20,39 @@ import static org.mockito.Mockito.*;
 @org.junit.jupiter.api.parallel.Isolated
 class TestFbzMinibossChildren {
     @Test
+    void plungerUsesTheSeparateLevelBackedSpringArtwork() {
+        var services = mock(com.openggf.level.objects.ObjectServices.class);
+        var renderManager = mock(com.openggf.level.objects.ObjectRenderManager.class);
+        var renderer = mock(com.openggf.level.render.PatternSpriteRenderer.class);
+        when(services.renderManager()).thenReturn(renderManager);
+        when(renderManager.getRenderer(com.openggf.game.sonic3k.Sonic3kObjectArtKeys.FBZ_EGG_CAPSULE))
+                .thenReturn(renderer);
+        when(renderer.isReady()).thenReturn(true);
+        var boss = new FbzMinibossInstance(new ObjectSpawn(0x2F00, 0x5E0, 0xAA, 0, 0, true, 0));
+        var plunger = new FbzMinibossPlungerChild(boss);
+        plunger.setServices(services);
+        plunger.appendRenderCommands(new java.util.ArrayList<>());
+        // loc_6EFF6 -> ObjDat_FBZSpringPlunger: Map_FBZEggCapsule frame 5,
+        // art_tile 0 (level-backed palette and low tile priority).
+        verify(renderer).drawFrameIndex(5, 0x2F00, 0x5BC, false, false);
+        assertFalse(plunger.isHighPriority());
+    }
+
+    @Test
+    void closedFaceUsesNeutralEyesAndChildrenInheritCapsuleTilePriority() {
+        var boss = new FbzMinibossInstance(new ObjectSpawn(0x2F00, 0x5E0, 0xAA, 0, 0, true, 0));
+        var face = new FbzMinibossAimerChild(boss);
+        face.update(0, null);
+        // loc_6F07C -> word_6FA58 installs frame 8. The octant frames
+        // 9..16 belong only to loc_6F0B8 after the opening delay.
+        assertEquals(8, face.mappingFrame());
+        assertTrue(face.isHighPriority(), "CreateChild1_Normal inherits art_tile $A52E");
+        for (int index = 0; index < 3; index++) {
+            assertTrue(new FbzMinibossCoverChild(boss, index, 0, -8).isHighPriority());
+        }
+    }
+
+    @Test
     void circularChainCarriesParentFractionsThroughAllFiveLinks() throws Exception {
         var arm = FbzMinibossArmChild.forTest(
                 new FbzMinibossInstance(new ObjectSpawn(0x1000, 0x700, 0xAA, 0, 0, false, 0)), 0);

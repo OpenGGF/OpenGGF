@@ -101,7 +101,9 @@ final class FbzMinibossPlungerChild extends AbstractObjectInstance
     }
     @Override public int getPriorityBucket() { return 5; }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.FBZ_MINIBOSS);
-        if (r != null && r.isReady()) r.drawFrameIndex(8, x, y, false, false);
+        // loc_6EFF6 installs ObjDat_FBZSpringPlunger, not the miniboss's
+        // eye mappings: frame 5 of the level-backed Map_FBZEggCapsule.
+        PatternSpriteRenderer r = getRenderer(Sonic3kObjectArtKeys.FBZ_EGG_CAPSULE);
+        if (r != null && r.isReady()) r.drawFrameIndex(5, x, y, false, false);
     }
 }

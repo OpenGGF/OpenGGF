@@ -1,5 +1,15 @@
 # FBZ Act 1 coverage matrix
 
+Miniboss presentation follow-up (2026-09-15): the [visual comparison](../../audits/2026-09-15-fbz1-miniboss-visual.md)
+tracks the native plunger artwork, waiting-eye frame and inherited cover/face
+tile priority. The local setup places Sonic above the plunger and lets real
+contact open the boss. Artwork and tile priority are independent of viewport,
+donor and team selection; no movement or contact authority changes. Existing
+act breadth and complete-route visual gaps remain inherited. The focused child
+regressions and existing encounter/art/rewind/S3K checks passed 178 tests with
+zero failures/errors/skips; the corrected capture preserves the complete
+player/camera CSV and observed boss positions/timers.
+
 Hanging-handle presentation follow-up (2026-09-14): horizontal `$72` grab regions
 must not submit vertical chain art (`Obj_FBZChainLink` → `loc_3AA5A`).
 `TestFbzRailAndChainPlatforms` covers all six used horizontal subtypes and

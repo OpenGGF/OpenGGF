@@ -100,6 +100,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and forced exit input preserves the already-recorded follower history. Both Act 2 bosses retain their
   physical exit-art jobs through readiness and rewind; moving-background LEFT
   probes translate world coordinates before the sensor mirrors its tile metric.
+  The Act 1 miniboss uses the native spring-plunger artwork, neutral waiting
+  eyes, and foreground priority for its cover and face sprites.
   Upright spikes use their animated FBZ art, while wall spikes retain the shared
   sideways artwork; both tile banks participate in renderer refresh. Foreground
   and background shaders retain fragment centres while scaling, preventing a
