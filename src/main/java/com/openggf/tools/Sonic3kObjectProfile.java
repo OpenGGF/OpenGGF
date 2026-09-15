@@ -84,6 +84,15 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x33, // Button
             0x34, // StarPost
             0x35, // AIZForegroundPlant
+            0x39, // HCZLargeFan / SOZSpawningSandBlocks
+            0x3A, // HCZHandLauncher / SOZPathSwap
+            0x40, // HCZBlock / SOZRisingSandWall
+            0x43, // CNZRisingPlatform / SOZSwingingPlatform
+            0x47, // CNZCylinder / SOZSandCork
+            0x48, // CNZVacuumTube / SOZRapelWire
+            0x94, // Blastoid / Skorp
+            0x95, // Buggernaut / Sandworm
+            0x96, // TurboSpiker / Rockn
             0x3B, // HCZWaterWall / SOZLoopFallthrough
             0x49, // CNZGiantWheel / SOZSolidSprites
             0x42, // CNZCannon / SOZFloatingPillar
@@ -143,13 +152,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x32, // AIZDrawBridge
             0x36, // HCZBreakableBar
             0x37, // HCZWaterRush
-            0x39, // HCZLargeFan
-            0x3A, // HCZHandLauncher
-            0x40, // HCZBlock
             0x41, // CNZBalloon
-            0x43, // CNZRisingPlatform
-            0x47, // CNZCylinder
-            0x48, // CNZVacuumTube
             0x4C, // CNZSpiralTube
             0x4D, // CNZBarberPoleSprite
             0x4E, // CNZWireCage
@@ -187,9 +190,6 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x91, // AIZMiniboss
             0x92, // AIZEndBoss
             0x93, // Jawz
-            0x94, // Blastoid
-            0x95, // Buggernaut
-            0x96, // TurboSpiker
             0x97, // MegaChopper
             0x98, // Poindexter
             0x99, // HCZMiniboss

@@ -2330,6 +2330,12 @@ public final class Sonic3kPlcArtRegistry {
                     1, Sonic3kConstants.DPLC_SOZ_GHOSTS_ADDR, 18));
         }
         // Doors, push switches and pushable rocks share SOZMisc+$8C, palette 2.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SPAWNING_SAND_BLOCKS,
+                0x04043A, 0x3C0, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RISING_SAND_WALL,
+                0x040D10, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x69, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SAND_CORK,
+                0x041EAE, 0x3AF + 0xE, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_DOOR,
                 Sonic3kConstants.MAP_SOZ_DOOR_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x8C, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_PUSH_SWITCH,

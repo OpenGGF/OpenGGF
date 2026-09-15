@@ -122,6 +122,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kLBZEvents lbzEvents;
     private Sonic3kMGZEvents mgzEvents;
     private Sonic3kMHZEvents mhzEvents;
+    private com.openggf.game.sonic3k.events.Sonic3kSOZEvents sozEvents;
     private final AizPreparedTransitionArtState aizPreparedTransitionArt =
             new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -297,6 +298,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         } else {
             mhzEvents = null;
         }
+
+        sozEvents = zone == Sonic3kZoneIds.ZONE_SOZ
+                ? new com.openggf.game.sonic3k.events.Sonic3kSOZEvents() : null;
 
         // Install typed zone runtime state into the registry.
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
@@ -585,6 +589,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (mhzEvents != null && currentZone == Sonic3kZoneIds.ZONE_MHZ) {
             mhzEvents.update(currentAct, frameCounter);
         }
+        if (sozEvents != null && currentZone == Sonic3kZoneIds.ZONE_SOZ) {
+            sozEvents.update(currentAct, frameCounter);
+        }
         releasePendingMgzPostTransition();
         syncSidekickBoundsToCamera();
     }
@@ -599,6 +606,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
     @Override
     public void updatePrePhysics() {
+        if (sozEvents != null && currentZone == Sonic3kZoneIds.ZONE_SOZ) {
+            sozEvents.updateSpecialEvents(currentAct);
+        }
         // ROM LevelLoop dispatches SpecialEvents before Load_Sprites/Process_Sprites;
         // MHZ uses that slot for its arena repeat loops (sonic3k.asm:7887-7894,
         // 104080-104094). ScreenEvents remains in onUpdate() after camera movement.

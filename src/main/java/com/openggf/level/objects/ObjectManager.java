@@ -2842,6 +2842,25 @@ public class ObjectManager {
     }
 
     /**
+     * Moves a placement's active-lifetime ownership to an already allocated child.
+     * Mirrors copying respawn_addr to a child and clearing it in a transformed
+     * parent. Both SST slots, execution order and rewind identities stay intact.
+     */
+    public boolean transferPlacementOwnership(ObjectInstance from, ObjectInstance to) {
+        ObjectSpawn placementSpawn = instanceToSpawn.get(from);
+        if (placementSpawn == null || to == null || !dynamicObjects.contains(to)
+                || activeObjects.get(placementSpawn) != from) return false;
+        activeObjects.put(placementSpawn, to);
+        instanceToSpawn.remove(from);
+        instanceToSpawn.put(to, placementSpawn);
+        dynamicObjects.remove(to);
+        dynamicObjects.add(from);
+        bucketsDirty = true;
+        activeObjectsCacheDirty = true;
+        return true;
+    }
+
+    /**
      * Clears a placement's loaded/active bit while leaving its current object
      * instance alive.
      * <p>
