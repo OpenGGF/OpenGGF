@@ -1649,3 +1649,21 @@ and full snapshot forward replay; it does not certify a complete boss route.
 The first arena replay exposed descriptor-identity comparison in the rewind diff:
 new equal terrain objects were reported as changed. Comparison now checks saved
 terrain contents and still rejects changed collision indices and frame state.
+
+### Kept object-state table
+
+SOZ cork state exposed a missing part of `Respawn_table_keep`: lower object-owned
+bits were captured for rewind but dropped on bonus/special-stage reload. The
+persistent snapshot now carries those bytes by layout index, preserves them when
+ring state is attached, and restores them before the first return placement scan.
+Normal loads still clear them. The regression includes entry280 to distinguish
+layout indexing from an eight-bit rolling counter. The mutable Mod API `0.7` pin
+includes this record extension and the previously added placement-ownership API;
+policy remains candidate `0.7.0` with no published baseline.
+
+Focused queued Maven: `TestPersistentRespawnDestroyLatchRoundTrip`,
+`TestLevelTransitionCoordinatorPeeks`, `TestBonusStageTransitionCoordinator`,
+`TestObjectPlacementControllerS1Counter`: 17 passed, no failures/errors/skips
+(47.387s). SDK/Javadoc/sample packaging and API hook-policy checks: 29 passed,
+no failures/errors/skips (26.672s). Full route and combined delivery checks remain
+pending.

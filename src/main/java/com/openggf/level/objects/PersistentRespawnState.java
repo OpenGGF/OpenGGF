@@ -1,5 +1,7 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.ModApi;
+
 /**
  * A snapshot of the engine's persistent respawn-remember state (its model of
  * the ROM {@code Object_respawn_table}): which layout spawns are remembered as
@@ -46,27 +48,30 @@ package com.openggf.level.objects;
  * @param ringStatusBits {@link java.util.BitSet#toLongArray()} of the collected
  *     ring set (ROM {@code Ring_status_table}), or an empty array when the
  *     capture had no ring manager
+ * @param objectStateBits lower seven bits of each layout respawn byte; placement
+ *     rebuilds the active bit separately. These include SOZ cork activation.
  */
-@com.openggf.game.ModApi
+@ModApi
 public record PersistentRespawnState(
         long[] rememberedBits, long[] stayActiveBits, long[] destroyedInWindowBits,
-        long[] ringStatusBits) {
+        long[] ringStatusBits, byte[] objectStateBits) {
     public PersistentRespawnState {
         rememberedBits = rememberedBits == null ? null : rememberedBits.clone();
         stayActiveBits = stayActiveBits == null ? null : stayActiveBits.clone();
         destroyedInWindowBits = destroyedInWindowBits == null ? null : destroyedInWindowBits.clone();
         ringStatusBits = ringStatusBits == null ? new long[0] : ringStatusBits.clone();
+        objectStateBits = objectStateBits == null ? new byte[0] : objectStateBits.clone();
     }
 
     /** Legacy two-table snapshot with no permanent-destroy or ring-status capture. */
     public PersistentRespawnState(long[] rememberedBits, long[] stayActiveBits) {
-        this(rememberedBits, stayActiveBits, new long[0], new long[0]);
+        this(rememberedBits, stayActiveBits, new long[0], new long[0], new byte[0]);
     }
 
     /** Legacy three-table snapshot with no captured ring status. */
     public PersistentRespawnState(
             long[] rememberedBits, long[] stayActiveBits, long[] destroyedInWindowBits) {
-        this(rememberedBits, stayActiveBits, destroyedInWindowBits, new long[0]);
+        this(rememberedBits, stayActiveBits, destroyedInWindowBits, new long[0], new byte[0]);
     }
 
     @Override
@@ -89,10 +94,15 @@ public record PersistentRespawnState(
         return ringStatusBits.clone();
     }
 
+    @Override
+    public byte[] objectStateBits() {
+        return objectStateBits.clone();
+    }
+
     /** Returns a copy carrying the given {@code Ring_status_table} snapshot. */
     public PersistentRespawnState withRingStatusBits(long[] bits) {
         return new PersistentRespawnState(
                 rememberedBits, stayActiveBits, destroyedInWindowBits,
-                bits == null ? new long[0] : bits);
+                bits == null ? new long[0] : bits, objectStateBits);
     }
 }
