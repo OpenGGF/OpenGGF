@@ -45,7 +45,7 @@ user files and dirty research submodules.
 
 | Area | Delivered implementation / targeted checks | Remaining evidence or architecture |
 | --- | --- | --- |
-| Movement | superspeed, full-word skid, facing push, balance restart, temporary glide radii, idle climb branch; actual BK2 A→A+B input publication and rewind state | wall-grab suppression/displacement detach; full chain comparisons |
+| Movement | superspeed, full-word skid, facing push, balance restart, temporary glide radii, idle climb branch; actual BK2 A→A+B input publication and rewind state | wall-grab suppression; full chain comparisons (native anchor/displacement detach and ledge timing now have bounded regressions) |
 | Checkpoint | saved rings and 1-up flags through reload, direct special-stage return and rewind; stock S2 and new-act clearing | complete route/death sequence recording |
 | Zone contacts | wind min/clamp, held-vine pinning, propeller clear, grounded pillar squash, boss duck distinction and solid rules | additional per-zone routes |
 | Presentation | slot face, level-select title code, Super sound-test handoff, independent results headings and completion clocks | attract owner, native debug placement/maps, exact VDP masks, perfect bonus and tally sound clocks |

@@ -16,6 +16,13 @@ against a disassembly trace without converting. Y increases downward (Mega Drive
 convention). VDP coordinates in the disassembly are offset by +128; the engine uses direct
 screen coordinates.
 
+**Reused position words.** A field named `x_sub` is not always a fraction.
+KiS2 `Knuckles_BeginClimb` and S3K `Knuckles_Gliding_HitWall` store the grab's
+native X word there, then the climbing routine compares it with `x_pos` and
+detaches on displacement. Preserve the ROM's alias and instruction width;
+keeping a separate top-left anchor or restoring a supposed fraction changes
+both gameplay and replay after rewind.
+
 **Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
 object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
 the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can

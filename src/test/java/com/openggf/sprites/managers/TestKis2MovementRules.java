@@ -134,7 +134,7 @@ class TestKis2MovementRules {
             rules(rules);
             player.setCentreX((short) 0x100);
             player.setCentreY((short) 0x200);
-            player.setWallClimbX(player.getX());
+            player.setSubpixelRaw(player.getCentreX() & 0xFFFF, player.getYSubpixelRaw());
             player.setDoubleJumpFlag(4);
             player.setDoubleJumpProperty((byte) 0);
             player.setMappingFrame(0xB9);
@@ -253,7 +253,7 @@ class TestKis2MovementRules {
     void temporaryClimbRadiiPreservePinnedTopLeftAndCentre() throws Exception {
         player.setCentreX((short) 0x100);
         player.setCentreY((short) 0x200);
-        player.setWallClimbX(player.getX());
+        player.setSubpixelRaw(player.getCentreX() & 0xFFFF, player.getYSubpixelRaw());
         player.setDoubleJumpFlag(4);
         player.setMappingFrame(0xB9);
         int originalX = player.getX();
@@ -268,6 +268,182 @@ class TestKis2MovementRules {
             assertEquals(9, player.getXRadius());
             assertEquals(19, player.getYRadius());
         }
+    }
+
+    @Test
+    void wallGrabStoresNativeCentreWordAndRetainsGlideAnimation() throws Exception {
+        for (GameRules rules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(rules);
+            for (boolean right : new boolean[]{false, true}) {
+                player.setCentreX((short) 0x9100);
+                player.setCentreY((short) 0x200);
+                player.setSubpixelRaw(0xABCD, 0x1234);
+                player.setForcedAnimationId(0x20);
+                try (var terrain = mockStatic(com.openggf.physics.GlideWallGrabTerrain.class)) {
+                    terrain.when(() -> com.openggf.physics.GlideWallGrabTerrain.align(player, right, false))
+                            .thenReturn(true);
+                    method("glideHitWall", boolean.class).invoke(movement, right);
+                }
+                assertEquals(4, player.getDoubleJumpFlag());
+                assertEquals(0x9100, player.getXSubpixelRaw(), "x_sub aliases the native wall anchor");
+                assertEquals(0x1234, player.getYSubpixelRaw());
+                assertEquals(0x20, player.getForcedAnimationId(), "the grab changes mappings, not anim(a0)");
+                assertEquals(0xB7, player.getMappingFrame());
+            }
+        }
+    }
+
+    @Test
+    void displacedOrCarriedClimberDetachesWithoutSnappingBack() throws Exception {
+        for (GameRules rules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(rules);
+            for (boolean carried : new boolean[]{false, true}) {
+                player.setCentreX((short) (carried ? 0x100 : 0x101));
+                player.setCentreY((short) 0x200);
+                player.setSubpixelRaw(0x100, 0x5678);
+                player.setDoubleJumpFlag(4);
+                player.setOnObject(carried);
+                player.setXSpeed((short) 0x80);
+                player.setYSpeed((short) 0x40);
+                invoke("updateWallClimb");
+                assertEquals(2, player.getDoubleJumpFlag());
+                assertEquals(carried ? 0x100 : 0x101, player.getCentreX());
+                assertEquals(0x100, player.getXSubpixelRaw());
+                assertEquals(0x5678, player.getYSubpixelRaw());
+                assertEquals(0x80, player.getXSpeed(), "detach precedes the climb velocity clears");
+                assertEquals(0x40, player.getYSpeed());
+            }
+        }
+    }
+
+    @Test
+    void rewindRestoresNativeWallAnchorAndForwardDisplacementDetection() throws Exception {
+        for (GameRules rules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(rules);
+            player.setCentreX((short) 0x9100);
+            player.setCentreY((short) 0x200);
+            player.setSubpixelRaw(0x9100, 0x5678);
+            player.setDoubleJumpFlag(4);
+            player.setDoubleJumpProperty((byte) 3);
+            player.setOnObject(false);
+            input(false, false, false, false, false, false);
+            var snapshot = player.captureRewindState();
+            com.openggf.sprites.NativePositionOps.addXPosPreserveSubpixel(player, 1);
+            invoke("updateWallClimb");
+            assertEquals(2, player.getDoubleJumpFlag());
+            player.restoreRewindState(snapshot);
+            try (var terrain = mockStatic(ObjectTerrainUtils.class)) { invoke("updateWallClimb"); }
+            assertEquals(4, player.getDoubleJumpFlag());
+            assertEquals(0x9100, player.getXSubpixelRaw());
+            assertEquals((short) 0x9100, player.getCentreX());
+            com.openggf.sprites.NativePositionOps.addXPosPreserveSubpixel(player, -1);
+            invoke("updateWallClimb");
+            assertEquals(2, player.getDoubleJumpFlag());
+        }
+    }
+
+    @Test
+    void ledgeTableHoldsSixSlotsAndGroundsWithNativeWordAdds() throws Exception {
+        for (GameRules rules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(rules);
+            for (Direction facing : new Direction[]{Direction.LEFT, Direction.RIGHT}) {
+                prepareLedge(facing);
+                var animation = new PlayableSpriteAnimation(player);
+                invoke("enterLedgeClimb");
+                int sign = facing == Direction.RIGHT ? 1 : -1;
+                assertEquals(0x100 + sign * 3, player.getCentreX());
+                assertEquals(6, player.getAnimationTick());
+                invoke("enterLedgeClimb");
+                assertEquals(0x100 + sign * 3, player.getCentreX(), "mapping BD must not restart the entry");
+                animation.update(0);
+                for (int tick = 1; tick <= 18; tick++) {
+                    invoke("updateLedgeClimb");
+                    int step = tick / 6;
+                    int dx = new int[]{3, 11, 3, 11}[step];
+                    int dy = new int[]{-3, -13, -25, -30}[step];
+                    assertEquals(0x100 + sign * dx - (tick == 18 && sign == -1 ? 1 : 0),
+                            player.getCentreX(), "X at slot " + tick);
+                    assertEquals(0x200 + dy, player.getCentreY(), "Y at slot " + tick);
+                    assertEquals(0x100, player.getXSubpixelRaw());
+                    assertEquals(0x5678, player.getYSubpixelRaw());
+                    assertEquals(tick < 18, player.getAir());
+                    animation.update(tick);
+                }
+                assertEquals(0, player.getDoubleJumpFlag());
+                assertEquals(5, player.getAnimationId());
+            }
+        }
+    }
+
+    @Test
+    void rewindMidLedgeHoldRestoresCountdownAndForwardFinish() throws Exception {
+        prepareLedge(Direction.RIGHT);
+        var animation = new PlayableSpriteAnimation(player);
+        invoke("enterLedgeClimb");
+        animation.update(0);
+        for (int tick = 1; tick <= 3; tick++) {
+            invoke("updateLedgeClimb");
+            animation.update(tick);
+        }
+        var held = player.captureRewindState();
+        for (int pass = 0; pass < 2; pass++) {
+            if (pass != 0) player.restoreRewindState(held);
+            assertEquals(2, player.getAnimationTick());
+            for (int tick = 4; tick <= 18; tick++) {
+                invoke("updateLedgeClimb");
+                animation.update(tick);
+            }
+            assertEquals(0x10B, player.getCentreX());
+            assertEquals(0x1E2, player.getCentreY());
+            assertFalse(player.getAir());
+            assertEquals(0x100, player.getXSubpixelRaw());
+            assertEquals(0x5678, player.getYSubpixelRaw());
+        }
+    }
+
+    @Test
+    void reverseGravityLedgeMirrorsOnlyTheNativeYWordDelta() throws Exception {
+        rules(GameRules.SONIC_3K);
+        player.currentGameState().setReverseGravityActive(true);
+        try {
+            prepareLedge(Direction.RIGHT);
+            invoke("enterLedgeClimb");
+            assertEquals(0x103, player.getCentreX());
+            assertEquals(0x203, player.getCentreY());
+            assertEquals(0x100, player.getXSubpixelRaw());
+            assertEquals(0x5678, player.getYSubpixelRaw());
+        } finally {
+            player.currentGameState().setReverseGravityActive(false);
+        }
+    }
+
+    @Test
+    void climbingWordStepsPreserveBothLowWords() throws Exception {
+        for (GameRules rules : new GameRules[]{Kis2Rules.RULES, GameRules.SONIC_3K}) {
+            rules(rules);
+            for (boolean up : new boolean[]{false, true}) {
+                prepareLedge(Direction.RIGHT);
+                player.applyCustomRadii(10, 10);
+                input(up, !up, false, false, false, false);
+                try (var terrain = mockStatic(ObjectTerrainUtils.class)) { invoke("updateWallClimb"); }
+                assertEquals(0x200 + (up ? -1 : 1), player.getCentreY());
+                assertEquals(0x100, player.getCentreX());
+                assertEquals(0x100, player.getXSubpixelRaw());
+                assertEquals(0x5678, player.getYSubpixelRaw());
+            }
+        }
+    }
+
+    private void prepareLedge(Direction facing) {
+        player.setCentreX((short) 0x100);
+        player.setCentreY((short) 0x200);
+        player.setSubpixelRaw(0x100, 0x5678);
+        player.setDirection(facing);
+        player.setMappingFrame(0xB7);
+        player.setDoubleJumpFlag(4);
+        player.setObjectMappingFrameControl(true);
+        player.setForcedAnimationId(0x20);
+        player.setAir(true);
     }
 
     private void rules(GameRules rules) throws Exception {

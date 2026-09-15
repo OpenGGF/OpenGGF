@@ -339,3 +339,95 @@ fix should reproduce the anchor store and its displacement check, with
 shared S3K and rewind regressions, before investigating the downstream row
 2522 publication assertion. No wall-anchor implementation change was made
 in this return-handoff delivery.
+
+
+## 2026-09-15 — wall-grab anchor continuation
+
+Pinned base `dedd18877da190e65aeb74970929e2f2b4ece6c3`, implementation tree
+`.worktrees/kis2-wall-anchor`, clean baseline `.worktrees/kis2-wall-baseline`.
+`Knuckles_BeginClimb` writes the native X word into `x_sub`; S3K uses the same
+`x_pos+2` alias. The engine previously retained its old fraction and pinned
+the sprite back to a separate top-left anchor on every climb update. The
+candidate stores the alias, detaches before velocity clears if the native X
+word changed or the player is standing on an object, and otherwise clears
+climb velocities. The grab retains `anim(a0)` while selecting mapping `$B7`.
+No new rewind state or public API surface is required: native position words
+are already captured. Existing legacy wall-anchor accessors remain intact.
+
+Queued baseline regression command `python3 tools/testing/maven_queue.py
+-Dmse=off -Dtest=TestKis2MovementRules test` completed 12 tests with three
+expected new failures, zero errors/skips, 49.093 seconds. The store test saw
+`x_sub=$ABCD` instead of `$9100`; displacement and rewind-forward checks
+remained in climb state 4 instead of detaching to state 2. Existing tests
+that construct a climbing player are updated to seed the native anchor word.
+Both rule sets and both grab directions are exercised, including the unsigned
+native word above `$7FFF`, carried-player detach and an independent Y fraction.
+
+Final focused replay and broad results follow below.
+
+
+The anchor-only candidate's queued `-Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestKis2MovementRules,TestPlayableSpriteMovement,TestAbstractPlayableSpriteRewindCapture,TestKis2CompleteEmeraldRunChain,TestKis2Ehz1TraceReplay test`
+(with absolute S2/KiS2 ROM properties) completed 205 tests: 203 passes,
+two red traces, zero errors/skips, 55.940 seconds. The short KiS2 fixture
+improves from the previous 179 errors to 102. Chain segment 0 and the first
+returned EHZ1 segment retain 92 and one errors respectively. The next third
+EHZ1 difference moves from row 2230 `x_sub` to row 2255 `x` ($21F8/$2200),
+with 1,443 partial-report errors. The later art-publication stop shifts one
+row to 2523; the two return-art submission gaps remain 39 movie frames early.
+
+The newly exposed row is the second ledge-climb slot: native row 2254
+selects `$BD` and adds (+3,-3), then holds that position through row 2259.
+Row 2260 consumes (+8,-10). The engine's existing table contains the timer
+byte 6 but never used it, so it consumed that second entry on row 2255.
+The candidate now models `Knuckles_Climbing_Onto_Ledge` / `Knuckles_Climb_Ledge`:
+movement polls the existing animation timer; the animation phase decrements
+it after movement, including the entry slot. The table's word additions
+preserve both low words, S3K reverses Y under reverse gravity, and the final
+entry grounds in the same slot, including the left-facing -1 X adjustment.
+Mapping `$BD` prevents restarting an already-started entry. Regressions cover
+both rule sets, directions, six-slot holds, low words, native finish, reversed
+Y and a mid-hold capture/restore with identical forward completion.
+
+
+The combined wall/ledge candidate completed queued Maven focused validation
+with `-Ptrace-replay -Dsurefire.forkCount=1` and
+`-Dtest=TestKis2MovementRules,TestPlayableSpriteMovement,TestAbstractPlayableSpriteRewindCapture,TestKis2CompleteEmeraldRunChain,TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kKnucklesSuperEmeraldRunChain`,
+using the existing absolute KiS2/S2/S3K ROM paths: 211 tests, 207 passes,
+four inherited red trace tests, zero errors/skips, 1:08 Maven time. All 206
+movement/rewind checks pass. The first ledge attempt failed compilation for a
+missing NativePositionOps import; no tests ran until the import was corrected.
+
+The short KiS2 fixture now has 93 errors: 91 history-bootstrap differences and
+two animation mismatch records beginning at row 289 (animation $00/$20 and
+mapping $25/$C0), zero warnings. The matched baseline has 179 errors.
+Chain segment 4 (`seg3_ehz1`, 2,525 rows) and segment 6 (`seg4_ehz1`, 2,392 rows)
+now complete with zero compared errors, including physics and animation.
+The third SS interior art ledger compares 6,663 rows with zero errors; its
+physics remains uncompared. The new stop is the missing semantic
+`level_advance` boundary after segment 6, whose input starts at BK2 offset
+26,145. Earlier segment 0/2 ring differences remain unchanged. A third return
+art submission gap is now exercised and is also 39 movie frames early
+(expected 26,119; actual 26,080).
+
+Matched baseline/current stock S2 and S3K control reports are identical:
+S2 has 16,388 errors, first row 6 outstanding transfer IDs `[2]`/`[]`;
+S3K has 12,616 errors, first physics row 446 Y speed -$0448/+$0448 and the
+same missing first giant-ring boundary. These remain red controls, not parity
+certificates. The report filename `s2_ehz1` is also used by the short KiS2 test;
+its owner-specific suffix distinguishes it from stock S2.
+
+Baseline `dedd18877` full ordinary validation completed 20,412 tests with
+zero failures/errors and 18 inspected skips (704.9 seconds); 667 guards
+completed with two failures and no errors/skips (170.36 seconds). Failures are
+`TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+(stale direct-Maven guidance expectations) and
+`TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`
+(existing FbzRouteEvidenceProbe#printEvidence and
+LevelSolidityMapProbe#writeSolidityMap). Baseline diagnostics were inspected
+and acknowledged. Candidate and integration broad checks are pending.
+
+The earlier suspicion that setY cleared the fraction was rejected by reading
+AbstractSprite: it already preserves y_sub. Using NativePositionOps for the
+wall's word additions makes ownership explicit; it is not a separate Y-fraction
+bug fix. The regression protects the anchor and independent Y word while climbing.

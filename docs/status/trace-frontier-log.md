@@ -110090,3 +110090,32 @@ two baseline failures, zero guard errors/skips. The earlier candidate run on
 failure. The chain remains red at the frontier above. The next native lead
 is the wall-grab `x_pos -> x_sub` anchor store at row 2230, documented in the
 investigation; it is not yet implemented.
+
+
+## 2026-09-15 — KiS2 native wall anchor and ledge holds
+
+Base `dedd18877`, candidate `.worktrees/kis2-wall-anchor`, matched baseline
+`.worktrees/kis2-wall-baseline`. Command: `python3 tools/testing/maven_queue.py
+-Dmse=off -Ptrace-replay -Dsurefire.forkCount=1
+-Dtest=TestKis2MovementRules,TestPlayableSpriteMovement,TestAbstractPlayableSpriteRewindCapture,TestKis2CompleteEmeraldRunChain,TestKis2Ehz1TraceReplay,TestS2Ehz1TraceReplay,TestS3kKnucklesSuperEmeraldRunChain test`
+with absolute existing KiS2/S2/S3K ROM properties. Candidate: 211 tests,
+207 passes, four red traces, zero errors/skips. All 206 movement/rewind checks
+pass. Baseline control traces use the same trace classes and ROMs.
+
+Native `x_pos -> x_sub` wall anchoring, displacement/carry detachment, and
+six-slot ledge holds remove the segment-4 row-2230 fraction divergence and
+subsequent row-2255 ledge cascade. Segments 4 and 6 now complete 2,525 and
+2,392 rows respectively with zero compared errors. The chain reaches the third
+SS return and stops on the missing `level_advance` boundary after segment 6
+(`seg4_ehz1`, BK2 offset 26,145). The old row-2522 art-publication stop is gone.
+The third SS art ledger compares 6,663 rows without errors; SS physics is
+uncompared. All three exercised return submission gaps are 39 movie frames early.
+Segment 0 retains 92 errors (91 bootstrap plus row-2462 rings 43/53); segment 2
+retains one error (row-826 rings 95/85).
+
+Short KiS2: 179 -> 93 errors, zero warnings; 91 bootstrap plus animation/map
+records beginning row 289 ($00/$20; $25/$C0). Matched stock S2 and S3K control
+reports are identical: 16,388 and 12,616 errors respectively; first errors remain
+S2 row 6 transfer IDs `[2]`/`[]` and S3K row 446 Y speed -$0448/+$0448.
+See the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
+for native evidence, rejected assumptions, and broad validation follow-up.

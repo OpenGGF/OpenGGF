@@ -3333,8 +3333,11 @@ the owning KiS2 routine in the catalogue):
   detach probe. Near-edge/inside-bottom solid contacts use the existing matching
   rules; multi-sprite boss touch keeps $4D while normal duck touch uses $9C.
   Wall grabs now test both wall ends and the ROM ledge-fit range; glide floor
-  angles include tile flips, and sliding retains the animation register. Wall-grab
-  suppression/displacement detachment and complete rewind route coverage remain open.
+  angles include tile flips, and sliding retains the animation register. Wall grabs
+  store their native X anchor in `x_sub` and detach on displacement or object carry;
+  wall and ledge steps preserve the low position words. Ledge entries use the native
+  six-slot animation holds and same-slot grounding, with bounded rewind checks.
+  Wall-grab suppression and complete rewind route coverage remain open.
 - **Zone mechanics.** Wind tunnels use the $420 first-tunnel minimum, clamp Up
   movement and clear roll-jump/glide state. Held vines pin the player each pass;
   propeller launch clears the same state; grounded falling-pillar contact can
@@ -3368,10 +3371,11 @@ the owning KiS2 routine in the catalogue):
   3,180-row EHZ1 segment complete with 91 history-bootstrap differences and one
   monitor ring-reward timing difference. The return title card now releases
   after its final locked object pass, and synchronous reloads publish their
-  production load receipt. The chain passes two special-stage returns and
-  reaches `seg3_ehz1`, stopping at row 2522 (BK2 cursor 19304) on an art-publication
-  assertion after a movement divergence starts at row 2230. Both return gaps
-  still publish their first dynamic-art edge 39 movie frames early. The first
+  production load receipt. Native wall anchoring and ledge timing let
+  `seg3_ehz1` and `seg4_ehz1` complete all compared rows with zero errors. The
+  chain now stops because the EHZ1 level-advance boundary after `seg4_ehz1`
+  is not observed. All three exercised return gaps still publish their first
+  dynamic-art edge 39 movie frames early. The first
   returned EHZ1 segment completes with one ring-count difference. SS interiors do not
   compare gameplay, so this does not establish special-stage physics parity.
   Current evidence is tracked in [the frontier log](trace-frontier-log.md). There are no passing

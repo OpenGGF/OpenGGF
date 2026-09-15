@@ -5005,7 +5005,7 @@ public class TestPlayableSpriteMovement {
         private void prepareWallClimbProbe(int centreY, int mappingFrame) throws Exception {
                 mockSprite.setCentreX((short) 0x0100);
                 mockSprite.setCentreY((short) centreY);
-                mockSprite.setWallClimbX(mockSprite.getX());
+                mockSprite.setSubpixelRaw(mockSprite.getCentreX() & 0xFFFF, mockSprite.getYSubpixelRaw());
                 mockSprite.setDoubleJumpFlag(4);
                 mockSprite.setDoubleJumpProperty((byte) 0);
                 mockSprite.setObjectMappingFrameControl(true);

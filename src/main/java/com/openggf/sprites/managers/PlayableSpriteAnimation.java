@@ -184,6 +184,16 @@ public class PlayableSpriteAnimation {
             sprite.getSpindashDustController().update();
         }
 
+        // Knuckles_Climbing_Onto_Ledge / Knuckles_Climb_Ledge owns the
+        // mapping but still reaches Animate's anim_frame_duration decrement
+        // after movement (KiS2 SAnim_Do; S3K Animate_Knuckles). The next
+        // movement pass polls zero before consuming another table entry.
+        if (sprite.isObjectMappingFrameControl()
+                && sprite.getSecondaryAbility() == com.openggf.sprites.playable.SecondaryAbility.GLIDE
+                && sprite.getDoubleJumpFlag() == 5 && sprite.getAnimationTick() > 0) {
+            sprite.setAnimationTick(sprite.getAnimationTick() - 1);
+        }
+
         SpriteAnimationProfile profile = sprite.getAnimationProfile();
         if (sprite.getAnimationSet() != null && !sprite.getAnimationSet().getAllScripts().isEmpty()) {
             int forced = sprite.getForcedAnimationId();
