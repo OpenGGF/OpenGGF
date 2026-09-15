@@ -1307,6 +1307,15 @@ Detach properly (`setsid ... </dev/null`) and poll for an explicit `BUILD SUCCES
 `BUILD FAILURE` line before reading any total. An exit code from a wrapper is not the build's
 verdict, and a log that simply stops is not a result.
 
+The SOZ native probe exposed the same boundary in BizHawk (2026-09-15): a logged
+`NLua.Exceptions.LuaScriptException` was followed by process exit 0, while no
+observation file existed. The common native capture host now rejects logged Lua
+exceptions and supports required nonempty output files. Neither process success
+nor file presence certifies the observed gameplay. A standalone saved state must
+be detached from active movie playback before loading; inspect the load result
+and zone. The initial theory that the load merely returned no value was rejected:
+the zone remained wrong until `movie.stop()` preceded `savestate.load`.
+
 ## Thirty-ninth rule: create round worktrees copy-on-write
 
 Rounds want their own worktree, and often a second one for a same-tree control arm. A full

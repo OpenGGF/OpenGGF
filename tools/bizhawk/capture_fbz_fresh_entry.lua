@@ -5,8 +5,8 @@
 -- Ordinary AIZ vine cheat -> pause+A -> title level select -> FBZ1/2.
 -- No memory writes. Source: AIZRideVineHandle_CheckButtonSequence, Pause_Game,
 -- Obj_TitleSelection_Main, LS_Level_Order (FBZ1 index14), LevelSelect_StartZone.
-local out=assert(os.getenv('OGGF_FBZ_VISUAL_OUTPUT'))
-local plan=dofile(assert(os.getenv('OGGF_FBZ_VISUAL_PLAN')))
+local out=assert(os.getenv('OGGF_NATIVE_OUTPUT'))
+local plan=dofile(assert(os.getenv('OGGF_NATIVE_PLAN')))
 local act=plan.fresh_entry_act or 1;assert(act==1 or act==2)
 local selection=13+act
 local log=assert(io.open(out..'/selection.jsonl','w'))
@@ -18,8 +18,11 @@ local function step(button)
  joypad.set(keys);emu.frameadvance();record(button or 'neutral')
 end
 client.invisibleemulation(false);client.speedmode(6400)
-local state=os.getenv('OGGF_FBZ_FIXTURE_STATE')
-if state then assert(savestate.load(state)) else
+local state=os.getenv('OGGF_NATIVE_FIXTURE_STATE')
+if state then
+ -- A standalone state cannot be loaded while the launch BK2 is still active.
+ movie.stop();assert(savestate.load(state))
+else
  while emu.framecount()<15000 do
   emu.frameadvance()
   if mainmemory.read_u16_be(0xFE10)==0 and mainmemory.read_u8(0xB02E)==3

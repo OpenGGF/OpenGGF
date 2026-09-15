@@ -690,3 +690,48 @@ On that develop commit, `python3 tools/testing/maven_queue.py -Dmse=off
 '-Dtest=TestSonic3kObjectProfile,TestSonic3kObjectProfileRegistryGuard' test -B`
 passed all eight tests, zero failures/errors/skips, 19.173s. The integrated tracked
 tree matches the tested worktree; unrelated local files are preserved.
+
+
+## Shared native capture host (2026-09-15 continuation)
+
+User-requested extraction of the FBZ host into
+`tools/bizhawk/capture_native_references.py`, based on `a27e86f68617f9f96caf801ce646674dbae8c9b6`
+in `.worktrees/native-zone-capture`. The common host requires an explicit
+exporter, plan and expected ROM identity. FBZ manifest/offset/boundary policy
+stays in the compatibility command; repository exporters consume `OGGF_NATIVE_*`.
+Legacy external scripts retain aliases through the FBZ command only.
+
+The triggering SOZ probe failed `assert(savestate.load(...))` while movie playback
+was active. Removing the assertion did not load SOZ: the next zone assertion
+failed. Moving `movie.stop()` before the load produced the correct zone and
+observations. The separate intro controller lock remains a positioned-probe
+setup issue, not evidence that the rock implementation has native parity.
+Do not reuse the failed probe runs as gameplay evidence.
+
+The host now returns failure for logged Lua exceptions even when BizHawk exits 0,
+for timeout/process failure, and for missing or empty declared outputs. The
+`host.json` acceptance field remains pending independent evidence review.
+The rejected approach was treating the emulator process exit as exporter success.
+
+Validation is proportionate: the selector proposed 2,599 ordinary classes plus
+guards solely from unclassified scripts/test placement. This change affects only
+the diagnostic host/exporter environment and an ordinary test launcher, so Python
+host contracts, existing FBZ Python/Lua regressions, their focused JUnit consumers,
+and a real BizHawk launch cover the changed paths; no engine-suite pass is claimed.
+
+Observed native smoke capture: `$TASK_DIR/shared-host-1`, common command with
+`--require-output observations.csv --require-output native.png --timeout 30`,
+explicit `shared-host-smoke.lua`, `shared-host-plan.lua`, verified S3K ROM/complete
+BK2 and the prior `vine-1/fbz1-lfc35.State`. Exit 0, no host failures, 1.517 seconds.
+CSV contains exactly three SOZ1 (`$0800`) rows at LFC36–38, controller lock 1;
+PNG inspected as SOZ entry. This validates capture plumbing, not playable-route
+or pushable-rock behavior. Artifacts remain in the external SOZ task directory.
+
+Focused verification before integration:
+
+- `python3 tools/bizhawk/test_native_capture.py`: 12 passed.
+- `python3 src/test/resources/bizhawk/fbz_framebuffer_probe_test.py`: 7 passed.
+- `lua5.4 tools/bizhawk/test_fbz_boundary_fixture.lua tools/bizhawk/capture_fbz_boundary_fixture.lua`: 8 scenarios passed.
+- `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestNativeReferenceCaptureTool,TestFbzVisualExporterGuard,TestFbzVisualEvidenceToolingContract' test -B`: 7 JUnit tests, zero failures/errors/skips, 50.763 seconds, completed 16:40:06 BST. This includes the host Python suite and existing Lua exporter contract.
+- Java 21/Lua 5.4/PowerShell preflight, Python compile, diff whitespace and changed guide-link checks passed.
+- Independent read-only review found no actionable correctness or compatibility issues.

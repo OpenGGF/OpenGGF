@@ -5,11 +5,11 @@
 -- animation timers, or animation frame indices: all cadence proof is obtained
 -- by observing the complete-run BK2 advance naturally.
 
-local PLAN_PATH = assert(os.getenv("OGGF_FBZ_VISUAL_PLAN"), "OGGF_FBZ_VISUAL_PLAN is required")
-local OUTPUT_ROOT = assert(os.getenv("OGGF_FBZ_VISUAL_OUTPUT"), "OGGF_FBZ_VISUAL_OUTPUT is required")
-local ROM_SHA1 = assert(os.getenv("OGGF_FBZ_ROM_SHA1"), "OGGF_FBZ_ROM_SHA1 is required")
-local BK2_SHA256 = assert(os.getenv("OGGF_FBZ_BK2_SHA256"), "OGGF_FBZ_BK2_SHA256 is required")
-local HOST_RECEIPT = assert(os.getenv("OGGF_FBZ_HOST_RECEIPT"), "OGGF_FBZ_HOST_RECEIPT is required")
+local PLAN_PATH = assert(os.getenv("OGGF_NATIVE_PLAN"), "OGGF_NATIVE_PLAN is required")
+local OUTPUT_ROOT = assert(os.getenv("OGGF_NATIVE_OUTPUT"), "OGGF_NATIVE_OUTPUT is required")
+local ROM_SHA1 = assert(os.getenv("OGGF_NATIVE_ROM_SHA1"), "OGGF_NATIVE_ROM_SHA1 is required")
+local BK2_SHA256 = assert(os.getenv("OGGF_NATIVE_BK2_SHA256"), "OGGF_NATIVE_BK2_SHA256 is required")
+local HOST_RECEIPT = assert(os.getenv("OGGF_NATIVE_HOST_RECEIPT"), "OGGF_NATIVE_HOST_RECEIPT is required")
 
 local plan = dofile(PLAN_PATH)
 assert(plan.manifest_sha256 == "261535247F627A3A48E088C4E640A544453D3AC9602054570088BD24737406D1",
@@ -215,7 +215,7 @@ local function shell_quote(value)
     return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 local function observe_framebuffer()
-    local probe = os.getenv("OGGF_FBZ_FRAMEBUFFER_PROBE")
+    local probe = os.getenv("OGGF_NATIVE_FRAMEBUFFER_PROBE")
     if not probe then return DISPLAY_VERIFICATION, nil end
     local frame = emu.framecount()
     if framebuffer_cache and framebuffer_cache.frame == frame then
@@ -225,7 +225,7 @@ local function observe_framebuffer()
     local captured = pcall(client.screenshot, path)
     local status, digest = "unverified-framebuffer-probe-failed", nil
     if captured then
-        local command = shell_quote(os.getenv("OGGF_FBZ_PYTHON") or "python3")
+        local command = shell_quote(os.getenv("OGGF_NATIVE_PYTHON") or "python3")
             .. " " .. shell_quote(probe) .. " --probe-framebuffer " .. shell_quote(path)
         local pipe = io.popen(command, "r")
         if pipe then
