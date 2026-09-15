@@ -359,6 +359,14 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
                 playerQuery.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
             if (participant instanceof AbstractPlayableSprite playable) {
                 updateAizForestFrontPriority(playable, zoneIndex);
+                // LevelLoop: DeformBgLayer -> ScreenEvents -> Handle_Onscreen_Water_Height.
+                // SOZ sub_730C must change Y/radii only after the camera has tracked this frame.
+                if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ
+                        && GameServices.module().getLevelEventProvider() instanceof Sonic3kLevelEventManager mgr) {
+                    mgr.ensureZoneRuntimeStateInstalled();
+                    var events = mgr.getSozEvents();
+                    if (events != null) events.updateSlideTerrainAfterPlayablePhysics(playable);
+                }
             }
         }
     }

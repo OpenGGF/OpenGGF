@@ -481,6 +481,9 @@ public class Sonic3kGameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == com.openggf.game.internal.SidekickCpuInitializationPolicy.class) {
+            return (T) com.openggf.game.sonic3k.sidekick.Sonic3kSidekickCpuInitializationPolicy.INSTANCE;
+        }
         if (type == com.openggf.game.internal.HudWarningPolicyProvider.class) {
             // Render_HUD / loc_DB68 tests bit 3 of Level_frame_counter,
             // independently of Timer_frame and Update_HUD_timer.

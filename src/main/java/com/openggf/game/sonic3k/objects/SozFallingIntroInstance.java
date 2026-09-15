@@ -25,7 +25,10 @@ public final class SozFallingIntroInstance extends AbstractObjectInstance
         for (var player : players()) {
             player.setControlLocked(true);
             player.clearForcedInputMask();
-            player.setLogicalInputState(false, false, false, false, false, false);
+            // Native clr.w Ctrl_1/2_logical bypasses the input publisher's
+            // lock-latching rule; physical pad edges remain available.
+            player.clearLogicalInputState();
+            if (player.getCpuController() != null) player.getCpuController().clearController2LogicalLatch();
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         }
     }
@@ -41,7 +44,10 @@ public final class SozFallingIntroInstance extends AbstractObjectInstance
         for (var player : players) {
             player.setControlLocked(true);
             player.clearForcedInputMask();
-            player.setLogicalInputState(false, false, false, false, false, false);
+            // Native clr.w Ctrl_1/2_logical bypasses the input publisher's
+            // lock-latching rule; physical pad edges remain available.
+            player.clearLogicalInputState();
+            if (player.getCpuController() != null) player.getCpuController().clearController2LogicalLatch();
         }
         switch (routine) {
             case 0 -> {

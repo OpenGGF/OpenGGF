@@ -377,9 +377,9 @@ See the execution plan and act matrices for actual validation and inherited gaps
 ## Completion campaign object batches
 
 The first mechanism/badnik batches and the light/ghost batch are integrated on
-the completion branch through `6f10f848e`. The only remaining placed placeholder
-is Act 2's endboss `$98`; the Act 1 miniboss `$97` is dynamically created by the
-arena and is implemented separately. This count is factory coverage, not a claim
+the completion branch, including final boss `382eee7fc`. Both acts now have
+zero placed placeholders: 599 Act 1 and 490 Act 2 records bind to concrete factories.
+The Act 1 miniboss `$97` is dynamically created by the arena and implemented separately. This count is factory coverage, not a claim
 that either complete route or every compatibility configuration is verified.
 
 Native low-level gaps remain explicit: cork `loc_41E78` reads the art-tile low

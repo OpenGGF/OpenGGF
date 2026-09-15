@@ -110440,3 +110440,37 @@ animation2. That production intro, not trace-state seeding, is the next target.
   dispatch and companion movement suppression remain under investigation.
 - Eight advertised auxiliary schemas remain unverified. No fixture or recorded
   gameplay values were changed or used to drive the engine.
+
+### SOZ cold entry and first terrain owner
+
+- Completion candidate after `04cbcd574` and arena merge64b7e4be9, queued
+  `-Ptrace-replay-r7 -Dtest=TestSozScreenEvents,TestSozAct1ArenaProduction,TestS3kSonicTailsSozSegmentTraceReplay`
+  with explicit S3KROM:12tests,11pass,1trace failure,0skips (57.851s).
+  Wall resource validation now waits on actual queue completion and replays the
+  same counted duration; the integrated final boss legitimately adds queue work.
+- Replay:3417errors,0warnings,0bootstrap errors,17646frames. First error is
+  frame63 `tails_cpu_ctrl2_pressed`, expected0000actual0010. P1/P2 initial
+  gravity and positions now match. The first physical divergence is1419:
+  `g_speed`040C vs03CC, Y0631vs062C, animation19vs00. Disassembly identifies
+  the missing terrain-driven `sub_730C` sand slide, distinct from placed quicksand.
+- Intro now uses direct `clearLogicalInputState` plus the existing CPU logical
+  latch clear: ordinary input publication intentionally ignores writes under
+  a control lock. Six intro/sidekick/art checks pass,0skips (53.335s); the trace
+  has not yet been rerun after this final logical-latch change.
+- Fresh diagnostic rebuild showed prior P1 extra-step output came from stale
+  compiled classes during an overlapping edit/compile, not a further production
+  ordering defect. Temporary dispatch instrumentation was removed.
+
+### SOZ slide phase and pillar contact follow-up
+
+- Candidate7a94f4fae, queued `-Ptrace-replay-r7
+  -Dtest=TestS3kSonicTailsSozSegmentTraceReplay` with explicit S3K ROM:
+  2975errors,0warnings,0bootstrap errors across17646frames (56.220s).
+  First error moved to1419 `camera_y`, expected05CC actual05CF; player
+  slide motion matches there. Native LevelLoop places `sub_730C` after camera
+  scrolling; the loop-tail correction is prepared in36af09e67.
+- First companion difference1547 is `tails_g_speed`, expected0 actual058D.
+  Native `loc_1E042` admits zero x_vel on left pillar penetration. A focused
+  solid-contact regression reproduced that missing semantic override and now
+  passes; the combined trace rerun is pending. Eight advertised auxiliary
+  schemas remain unverified; recorded gameplay remains comparison-only.

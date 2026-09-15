@@ -36,7 +36,9 @@ Finish with complete routes and the full applicable validation obligations.
 
 1. **Establish evidence and ownership.** Inspect current production registrations,
    decoded placements/subtypes, reachable dynamic children, events, art/PLC and
-   audio, plus per-act parallax/deformation, animated tiles and palette cycles. Recheck catalogue claims against the locked-on disassembly. Record the
+   audio, plus per-act parallax/deformation, animated tiles and palette cycles.
+   Audit player initialization and shared player-dispatch zone hooks too: terrain
+   or chunk-driven movement can exist outside every placed-object/event table. Recheck catalogue claims against the locked-on disassembly. Record the
    owning routine, clock, update phase, state owner, lifecycle and test binding.
    Inventory the whole route, but implement only missing or incorrect behavior.
 2. **Write a discriminating focused test.** Observe the missing-behavior failure
@@ -62,6 +64,17 @@ Finish with complete routes and the full applicable validation obligations.
    timing changes and coupled boss/event sequences warrant independent review.
    Routine object families can share one review. Re-review changed findings;
    do not repeat clean reviews or add routine human approval ceremonies.
+
+## Player and terrain hooks are part of the inventory
+
+Follow callers outside the zone's object and event arrays: main/companion spawn,
+CPU initialization, post-object player feature dispatch, layout-driven movement,
+collision row masks, checkpoint returns and control-word writes. Record when
+these hooks run relative to player movement and object slots. A cold intro and a
+terrain slide can share no placed object ID, yet determine the first playable
+route. SOZ exposed both: `loc_695A` installs its falling intro; `sub_714E` selects
+`sub_730C` from layout chunks for sand-slide speed, radii and animation. A complete
+factory inventory therefore remains one evidence column, never zone completion.
 
 ## Presentation is part of each route slice
 

@@ -1594,6 +1594,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         return hczEvents;
     }
 
+    public com.openggf.game.sonic3k.events.Sonic3kSOZEvents getSozEvents() {
+        return sozEvents;
+    }
+
     public Sonic3kICZEvents getIczEvents() {
         return iczEvents;
     }

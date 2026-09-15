@@ -1,6 +1,10 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.game.GameServices;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.NativePositionOps;
+import com.openggf.physics.Direction;
+import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SozEventState;
@@ -11,6 +15,8 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
     private final SozAct1Events act1=new SozAct1Events(this);
     private int[] wallDelayTable;
     private byte[] shakeTable;
+    private byte[] slideBlocks;
+    private byte[] slideModes;
 
     private void ensureRomTables() {
         if (wallDelayTable != null) return;
@@ -19,9 +25,66 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
             wallDelayTable = new int[17];
             for (int i = 0; i < 17; i++) wallDelayTable[i] = ((bytes[i * 2] & 255) << 8) | (bytes[i * 2 + 1] & 255);
             shakeTable = rom().readBytes(0x4F424, 84);
+            slideBlocks = rom().readBytes(0x74AC, 17);
+            slideModes = rom().readBytes(0x74BD, 34);
         } catch (java.io.IOException failure) {
             throw new IllegalStateException("Cannot load SOZ event tables", failure);
         }
+    }
+
+    /** Native sub_730C, after camera scrolling and screen events, for either act and every playable slot. */
+    public void updateSlideTerrainAfterPlayablePhysics(AbstractPlayableSprite player) {
+        ensureRomTables();
+        // Layout_row_index_mask is $7C at level load, $3C in SOZ2_ScreenInit.
+        // Mask the word sample even when the camera has not enabled vertical wrapping yet.
+        int yMask = levelManager().getFeatureActId() == 0 ? 0xFFF : 0x7FF;
+        int block = levelManager().getBlockIdAt(player.getCentreX(), (player.getCentreY() + 0x14) & yMask);
+        if (applySlideTerrain(player, block, slideBlocks, slideModes)
+                && (objectServices().objectManager().getVblaCounter() & 0xF) == 0) {
+            objectServices().playSfx(Sonic3kSfx.SLIDE_SKID_QUIET.id);
+        }
+    }
+
+    static boolean applySlideTerrain(AbstractPlayableSprite player, int block, byte[] blocks, byte[] modes) {
+        int index = -1;
+        for (int i = blocks.length - 1; i >= 0; i--) {
+            if ((blocks[i] & 0xFF) == block) { index = i; break; }
+        }
+        int mode = index < 0 ? -1 : modes[index * 2 + 1];
+        int half = player.getCentreX() & 0x7F;
+        if (player.getAir() || player.isOnObject() || index < 0
+                || (mode == 1 && half >= 0x40) || (mode == 2 && half < 0x40)) {
+            if (player.isSliding()) {
+                player.setMoveLockTimer(5);
+                player.setSliding(false);
+                if (!player.getAir()) {
+                    player.restoreDefaultRadii();
+                    player.clearRollingFlagPreserveRadii();
+                    player.setRollingJump(false);
+                    player.setAnimationId(0);
+                }
+            }
+            return false;
+        }
+        int target = mode > 2 ? (player.getTopSolidBit() == 0xC ? -8 : 8) : modes[index * 2];
+        int velocity = player.getGSpeed();
+        int oldHigh = (byte) (velocity >> 8);
+        if (target < 0 ? oldHigh > target : oldHigh < target) {
+            velocity = (short) (velocity + (target < 0 ? -0x40 : 0x40));
+            if (!player.isSliding() && (target < 0 ? velocity >= 0 : velocity < 0)) {
+                velocity >>= 1;
+                if (target == -8 || target == 8) velocity = 0;
+            }
+            player.setGSpeed((short) velocity);
+        }
+        if (oldHigh != 0) player.setDirection(oldHigh < 0 ? Direction.LEFT : Direction.RIGHT);
+        player.setAnimationId(0x19);
+        NativePositionOps.addYPosPreserveSubpixel(player, (byte) (player.getYRadius() - 0xE));
+        player.applyCustomRadii(7, 0xE);
+        player.clearRollingFlagPreserveRadii();
+        player.setRollingJump(false);
+        player.setSliding(true);
+        return true;
     }
 
     private SozZoneRuntimeState state() {

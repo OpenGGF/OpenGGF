@@ -41,6 +41,10 @@ class TestSozPillarAndRockSwitch {
         }
     }
     @Test void spikedFacesHurtOnlyTheirNewContactAndRespectInvulnerability() throws Exception {
+        // Real death handling freezes the camera; this isolated contact test owns that dependency.
+        var deathCamera=new com.openggf.camera.Camera();
+        try (var globals=mockStatic(com.openggf.game.GameServices.class, CALLS_REAL_METHODS)) {
+        globals.when(com.openggf.game.GameServices::camera).thenReturn(deathCamera);
         for(int frame:new int[]{1,2}) for(ContactKind kind:new ContactKind[]{ContactKind.TOP,ContactKind.BOTTOM,ContactKind.SIDE}) {
             var rom=mock(Rom.class);
             when(rom.readBytes(0x4116A+frame*4L,4)).thenReturn(new byte[]{32,80,(byte)frame,(byte)(frame==1?0x30:0xC)});
@@ -59,6 +63,25 @@ class TestSozPillarAndRockSwitch {
             boolean damaging=frame==1?kind==ContactKind.TOP:kind==ContactKind.BOTTOM;
             assertEquals(damaging,p.getDead(),"frame="+frame+" contact="+kind);
             if(damaging)verify(p).applyHurtOrDeath(1000,com.openggf.game.DamageCause.NORMAL,false);
+        }
+    }
+    }
+    @Test void zeroHorizontalSpeedStopsGroundVelocityOnlyOnTheNativeLeftBranch() throws Exception {
+        var rom=mock(Rom.class);when(rom.readBytes(0x4116A,4)).thenReturn(new byte[]{32,64,0,0});
+        var p=new TestablePlayableSprite("sonic",(short)0,(short)0);
+        var services=new StubObjectServices(){@Override public Rom rom(){return rom;}}
+                .withPlayerQuery(new ObjectPlayerQuery(()->p,List::of)).withIsolatedObjectManager();
+        var manager=services.objectManager();
+        var pillar=new SozFloatingPillarObjectInstance(new ObjectSpawn(1000,1000,0x42,0,0,false,0));
+        manager.addDynamicObject(pillar);pillar.update(0,p);
+        AbstractObjectInstance.updateCameraBounds(800,800,1120,1024,0);
+        pillar.snapshotPreUpdatePosition();
+        for(boolean left:new boolean[]{true,false}) {
+            p.setCentreX((short)(left?962:1038));p.setCentreY((short)1000);
+            p.setAir(false);p.setXSpeed((short)0);p.setGSpeed((short)0x58D);
+            manager.processImmediateInlineSolidCheckpoint(pillar,p,List.of());
+            assertEquals(left?957:1043,p.getCentreX());
+            assertEquals(left?0:0x58D,p.getGSpeed(),"loc_1E042 admits zero x_vel only on left-side penetration");
         }
     }
     @Test void earlierSolidCannotConsumePillarsAirborneStandingBit() throws Exception {
