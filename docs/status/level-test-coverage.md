@@ -239,3 +239,9 @@ moving-pillar rides with whole-registry rewind. Representative character, width,
 team and S1-donor cases supplement local timing/contact/mapping tests. See the
 [execution record](../architecture/plans/2026-09-15-soz-methodology-v2.md) for
 observed validation and remaining gaps; full act completion is still open.
+
+SOZ presentation obligations are explicit in both act matrices: Act 1 normal
+parallax/heat shimmer, scroll-driven animated tiles and arena replacement; Act 2
+event-selected backgrounds, darkness-coupled torch art, sand/wrap and boss modes.
+These remain open independently of the implemented placed-object families. See
+the [revised SOZ batch order](../architecture/plans/2026-09-15-soz-methodology-v2.md#explicit-presentation-work-and-revised-next-batch).

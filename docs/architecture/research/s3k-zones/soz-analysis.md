@@ -186,11 +186,17 @@ Three objects are spawned by SOZ1_BackgroundEvent stage 1:
 
 **Description:** SOZ Act 1 uses per-line FG and BG deformation via the shared `AIZ2_SOZ1_LRZ3_FGDeformDelta` sine table (line 105635). This creates a heat-shimmer/mirage effect on the desert background. The BG scroll uses a multi-tier accumulation system via `sub_55D56`.
 
-**FG deformation (`sub_55E4C`, line 113938):**
-- 112 scanlines ($70) of per-line deformation
-- Each line gets a delta from `AIZ2_SOZ1_LRZ3_FGDeformDelta` indexed by `(Camera_Y * 2 + Level_frame_counter / 2) & $3E`
-- FG scroll = Camera X (negated) + delta
-- BG scroll = Camera BG X (negated) + delta (same delta applied to both planes)
+**Normal desert deformation (`loc_55DF2`):**
+- 224 scanlines: `d1=$DF` is the inclusive loop extent, not a 112-line effect.
+- FG wave byte offset is `(Camera_Y * 2 + asr.w(Level_frame_counter,1)) & $3E`.
+- BG uses its own wave byte offset with `Camera_Y_pos_BG_copy`, then consumes
+  successive ROM words while applying `word_560DC` bands.
+- FG scroll = negated camera X + FG delta; BG scroll = negated band X + BG delta.
+
+**Arena deformation (`sub_55E4C`):**
+- `$70` loop iterations write two lines each: also 224 scanlines.
+- This branch uses one FG-camera-derived delta stream for both planes and a
+  single BG X. Do not substitute it for the normal desert banded path.
 
 **BG scroll bands (`word_560DC` draw array, line 114206):**
 
@@ -207,7 +213,7 @@ Three objects are spawned by SOZ1_BackgroundEvent stage 1:
 **BG X accumulation (`sub_55D56`, line 113833):**
 - Base BG X = Camera X / 16 (with 16.16 fixed-point precision)
 - `Events_bg+$10` = Camera X / 32
-- 7 entries filled in `HScroll_table` with halving accumulation from the BG X position
+- 7 entries filled in `HScroll_table` with a constant Camera X / 64 increment, preserving 16.16 fractions until each word is written
 - This creates 7 speed tiers for the background layers, slower further from camera
 
 **BG Y scroll:** Camera Y / 16
@@ -325,21 +331,21 @@ $1268, $1260, $1260, $125C, $1254, $1248, $1248, $1248
 
 **DMA transfers:**
 - **Transfer 1:** From `ArtUnc_AniSOZ1_BG` + computed offset, to VRAM tile $330, size from `word_281B8[split*2]`
-- **Transfer 2:** From `ArtUnc_AniSOZ1_BG` + base offset, to VRAM tile $330+transfer1_size, size from `word_281B8[split*2+1]`
-- **Transfer 3:** From `ArtUnc_AniSOZ1_BG2` + `(offset * $C0)`, to VRAM tile $33C, size $60 (3 tiles)
+- **Transfer 2:** From `ArtUnc_AniSOZ1_BG` + base offset, to the byte address immediately after transfer 1 (`$6600 + 2 * firstWordCount`), size from `word_281B8[split*2+1]`
+- **Transfer 3:** From `ArtUnc_AniSOZ1_BG2` + `(offset * $C0)`, to VRAM tile $33C, size $60 words = $C0 bytes (6 tiles)
 
 **Split table (`word_281B8`, line 54928):**
 
 | Split Index | First Size | Second Size |
 |-------------|-----------|------------|
-| 0 | $C0 (6 tiles) | $00 (0 tiles) |
-| 1 | $90 (4.5 tiles) | $30 (1.5 tiles) |
-| 2 | $60 (3 tiles) | $60 (3 tiles) |
-| 3 | $30 (1.5 tiles) | $90 (4.5 tiles) |
+| 0 | $C0 words (12 tiles) | $00 words (0 tiles) |
+| 1 | $90 words (9 tiles) | $30 words (3 tiles) |
+| 2 | $60 words (6 tiles) | $60 words (6 tiles) |
+| 3 | $30 words (3 tiles) | $90 words (9 tiles) |
 
 **Trigger:** Always active (position-driven, not timer-driven)
 **Source art:** `ArtUnc_AniSOZ1_BG` (main BG patterns), `ArtUnc_AniSOZ1_BG2` (secondary BG patterns)
-**Destination VRAM:** Tiles $330-$33B (main), $33C-$33E (secondary)
+**Destination VRAM:** Tiles $330-$33B (main), $33C-$341 (secondary)
 
 **Confidence:** HIGH
 
@@ -351,18 +357,18 @@ $1268, $1260, $1260, $125C, $1254, $1248, $1248, $1248
 
 **Mechanism:**
 1. Decrements `Anim_Counters`. When < 0, resets to 7 (8-frame period)
-2. Increments frame counter `Anim_Counters+1`, wraps at 2 (so 2 frames of animation)
-3. Combines frame with darkness level: `index = (Palette_cycle_counters+$06 & 6)` -> maps to 0, 3, 6 via `d1 + d1/2` computation. When `index == 6` (maximum darkness), frame offset is not added
+2. Reads the old frame byte, increments it, then resets the stored byte if the old value is at least 2. The selected sequence is 0, 1, 2 (three frames).
+3. Combines frame with darkness level: `index = (Palette_cycle_counters+$06 & 6)` -> maps masked values 0, 2, 4, 6 to 0, 3, 6, 9 via `d1 + d1/2` computation. When the computed index is 6, the frame offset is not added; verify reachable fade-accumulator values through the palette owner
 4. Final DMA index = `computed_index * $C0` ($C0 = 192 bytes = 6 tiles * 32 bytes)
 
 **DMA transfer:**
 - From `ArtUnc_AniSOZ2_BG` + computed offset
 - To VRAM $6600
-- Size $60 (3 tiles)
+- Size $60 words = $C0 bytes (6 tiles)
 
-**Frame count:** 2 base frames x up to 4 darkness variants = 7 total visual states; the max-darkness case uses a single frame because the computed index is pinned
+**Frame selection:** Three-frame groups; computed base 6 is pinned to a single source frame. Enumerate reachable intensity groups from the palette/event state, not a guessed Cartesian frame count.
 **Timer period:** 8 frames
-**Trigger:** Always active, but can be gated by `Anim_Counters = $7F` (set during boss arena to disable)
+**Trigger:** Signed-byte timer underflow. Boss event paths repeatedly write `Anim_Counters = $7F` to inhibit updates; a single write alone delays animation rather than permanently disabling it.
 **Source art:** `ArtUnc_AniSOZ2_BG`
 **Destination VRAM:** $6600
 
