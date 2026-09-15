@@ -226,7 +226,13 @@ public final class SozRapelWireObjectInstance extends AbstractObjectInstance imp
             ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(p);
             p.setObjectMappingFrameControl(true);
             p.setDirection(owner.flipped?Direction.LEFT:Direction.RIGHT);p.setRenderFlips(owner.flipped,false);
-            players.flag(slot,0,true);positionPlayer(p);owner.sound(Sonic3kSfx.GRAB);
+            players.flag(slot,0,true);
+            // loc_4B13E..4B1CE captures position and anim, but preserves the incoming
+            // mapping_frame. Only the next held pass (loc_4B04A) selects a frame/DPLC.
+            NativePositionOps.writeXPosPreserveSubpixel(p,getX());
+            NativePositionOps.writeYPosPreserveSubpixel(p,getY()+0x14);
+            p.setAnimationId(0x14);
+            owner.sound(Sonic3kSfx.GRAB);
         }
         private void release(AbstractPlayableSprite p,int slot) {
             ObjectControlState.none().applyTo(p);p.setObjectMappingFrameControl(false);
