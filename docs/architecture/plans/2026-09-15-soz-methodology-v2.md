@@ -382,3 +382,10 @@ with no runtime changes or altered failure categories. Focused verification uses
 `python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestRemainingRewindTailInventory,TestSozQuicksand' test`:
 16 tests passed, zero failures/errors/skips, in 49.241s including a fresh compile.
 The inventory test runs the real sweep across all 1,011 concrete object classes.
+
+Follow-up commits `c2812dc11` and `1050440ca` merged into develop as
+`7fae85a69`. The integrated command
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestRemainingRewindTailInventory test`
+passed one test, zero failures/errors/skips, in 19.353s. This is the focused
+post-integration inventory check; the engine checks above remain applicable
+because the follow-up changes no production code.
