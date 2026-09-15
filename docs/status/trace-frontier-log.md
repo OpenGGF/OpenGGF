@@ -110385,5 +110385,11 @@ errors, first row 1963 `dynamic_art.edges` [622]/[]. Segment 14 (`seg9_cpz1`)
 completes all 5,574 rows with 57,715 errors, first row 1112 Y $01CA/$01B5; its
 following `level_advance` boundary is not observed. The final focused replay
 reports mode LEVEL at BK2 cursor **65,856**, **7,405 movie frames** beyond the
-former 58,451 stop. No fixture payloads changed. Final combined validation is pending. See the
+former 58,451 stop. No fixture payloads changed. Integrated at `3808306ad`: final
+four-class replay has five tests, four known trace assertions, zero errors/skips
+(43.122 s), with all 22 report payloads unchanged. Queued category validation
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base e949e124c --run`
+passes 20,645 ordinary tests with 19 baseline skips; 668 guards retain the exact
+three baseline failures (build guidance, migrated README, assertion-free probes).
+No new or worsened failure remains. See the
 [causal evidence](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#glide-attack-continuation-2026-09-15-base-d92fea6f1).

@@ -1038,3 +1038,26 @@ types and messages, and all skip records, match the earlier baseline exactly.
 Its command was `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
 --base d92fea6f15ba0f90f9df15aab2d8c19763ded87f --run` in the main workspace.
 Our development diagnostics acknowledgment has completed.
+
+
+Integration `3808306ad98b5b5b5774b35086b8759b538667b0` includes the incoming
+sprite-bank validation record as well as the source reconciliation. Fixed
+worktree `.worktrees/kis2-speed-frontier` ran `LUA_BIN=lua5.4 python3
+tools/testing/run_categories.py --base e949e124c --run`, run
+`20260915T180655Z-4e90a0f7`: **2,609 ordinary reports, 20,645 tests, zero
+failures/errors, 19 skips** (745.29 s); **84 guard reports, 668 tests, the same
+three baseline failures, zero errors/skips** (177.90 s). All failure identities,
+types and messages and all skip records match the newer baseline; neither
+lane omitted diagnostic cases. No new or worsened failure remains. This is
+an ordinary-suite pass with inherited guard failures, not an all-green suite.
+
+The final queued four-class trace command at that integration commit completed
+five tests, four known trace assertions, zero errors/skips, 43.122 s. All **22
+normalized JSON report payload hashes** exactly match the pre-merge candidate,
+including the four independent controls. Segment 13 remains 1,068 errors,
+first row 1963 `dynamic_art.edges`; CPZ1 remains 57,715 errors, first row 1112
+Y $01CA/$01B5, with the missing following boundary at **BK2 cursor 65,856**.
+Compared rows and fixture bytes are unchanged. The next investigation is that
+CPZ1 glide-position divergence, not the later ring-count cascade. Rings remain
+comparison-only; the final CPZ1 row reports native 82/engine 4 after the movement
+desync. Special-stage gameplay and inherited return-art timing gaps remain.
