@@ -1,12 +1,13 @@
 # Sprite-publication bank audit — 2026-09-15
 
-## Scope and result
+## Initial inspection scope and result
 
 Bounded inspection following the S3K main-player Tails regression introduced
 by `7653029ab` and fixed by `1055d9cc3`. Source inventory was inspected at
 `6e6740a07ab9b38627026b8cf1ad536ece059551`. This is a bank/caller and
 reachability audit, not a complete audit of that commit's loading/timing
-changes, a visual certification, or an implementation pass.
+changes, a visual certification, or an implementation pass. The authorized follow-up
+implementation and its separate evidence are recorded below.
 
 The unused-capacity fix addresses the demonstrated Tails corruption. A host/donor address mismatch and three
 additional concrete allocation/reuse risks merit targeted reproduction.
@@ -177,3 +178,101 @@ and no broad engine suite or gameplay capture was run for this inspection.
 Validation comprised source/caller inspection, stock-ROM loader measurements,
 the Hyper-trail disassembly check, and documentation syntax/link checks.
 The temporary inventory probe is regenerable in minutes and is not retained.
+
+## Authorized follow-up implementation
+
+The follow-up starts at `d92fea6f15ba0f90f9df15aab2d8c19763ded87f`.
+Three independent Astra investigations reproduced the high-priority risks.
+These are additional allocation defects; the tests do not attribute their
+introduction to `7653029ab`.
+
+### Donated shared Tails art
+
+`971d46f49` (investigation commit `7d58869c7`) relocates the first shared-art
+donor tail as well as duplicates, through the existing level allocator. Both
+legacy and prepared initialization reserve the complete 28-tile donor bank.
+Native S2 keeps its `$7B0` tail address. No donor API change is needed.
+
+On unchanged baseline production code, all eight combinations of S1/S3K host
+contracts, main/sidekick and legacy/prepared initialization reproduced base
+`-1`. The fixed focused run passed 24 tests with no skips:
+`TestDonorTailsTailBanks,TestLevelPlayableArtInitializerModArt,TestTailsRendering`,
+using `maven_queue.py -Dmse=off` and the absolute `sonic2.rom.path`.
+The donor regression uses real S2 ROM art and mocked host contracts; it compares
+139 body frames against directional-roll/spindash tail art, in both draw orders
+and direct/deferred collection. It is not a live donor-zone gameplay capture.
+
+### Powered Sonic owners
+
+`56fdcb50c` (investigation commit `2c0204756`) reserves a private powered bank
+when the owner's normal renderer already occupies the virtual player range.
+It reserves the full 33-tile Super capacity rather than reusing the 29-tile
+normal allocation. Native main-player `$680` and the ROM's current-art Hyper
+trail remain unchanged. Allocation is lazy and reused across transformations;
+revert and rewind retain the appropriate renderer and donor render context.
+
+Both new Sonic/Knuckles-main cases failed bank ownership on unchanged baseline
+production code. The fixed focused run passed 22 tests with no skips:
+`TestSonic3kPoweredPatternBanks,TestSonic3kSuperStateRewind`, using
+`maven_queue.py -Dmse=off` and the absolute `s3k.rom.path`. It exercises supported
+activation, two powered owners, isolated ROM pattern versions, both draw orders,
+direct/deferred collection, revert and same-controller rewind. Controller
+recreation on a level reload was inspected, not reproduced in this test.
+Independent review found no blocking issue.
+
+### Independent shield owners
+
+`0a4184643` (investigation commit `c054e66d8`) makes shield renderers and
+mutable banks owned per player, while shield types
+for the same player retain their native mutual exclusion. The first non-CPU
+owner keeps `$79C`; additional owners reserve 36 tiles each in the bounded
+`TRANSIENT_EFFECTS + $1000..$2000` subrange. This avoids sparks/splash at the
+range start and snowboard art at `+$2000`/`+$4000`. Capacity is checked against
+loaded art, and exhaustion fails explicitly.
+
+A provider-owned effects subrange was chosen instead of the existing player
+allocator: shield constructors can load before playable-art initialization,
+which resets that allocator, and playable-art refresh can reset it without
+reloading the object provider. Provider reload clears shield ownership;
+persistent objects rebind their renderers while keeping animation cursors.
+Donor teardown and initialization also clear ownership. Ordinary respawn keeps
+the same player identity. Native and donor shield selection is exclusive in
+the current production paths: native S3K art wins when available; donor
+insta-shields are the fallback. No creator API signature changes are needed.
+
+The unchanged baseline failed all four direct/deferred and forward/reverse
+render-order cases when two Sonic insta-shields were staggered by three updates:
+frames 3 and 0 require different ROM pixels in shared tiles `$7A0`/`$7A1`.
+An initial four-update stagger passed because its **used** slots were disjoint;
+it was rejected as an inadequate reproduction. Tests also cover main fire plus
+CPU insta-shield (supported fixed/auxiliary slot ownership), same-owner visual
+suppression, donor fallback, rewind recreation, provider source reload and
+bounded allocation. These are headless ROM-pixel tests, not a gameplay video.
+
+The focused run passed 35 tests with zero skips, including existing shield
+lifecycle, priority, lightning and rewind cases, the renderer corruption guard,
+and the mandated PLC art-registry mapping check. The final narrow run added the
+bounds/reset regression and confirmed the API pins: 30 tests passed, zero skips
+(`TestShieldPublicationBanks`, `TestShieldAnimationArtLifecycle`,
+`TestModApiPinPolicy`, `TestModApiSignatureSurface`), using queued Maven with
+`-Dmse=off` and the absolute `s3k.rom.path`.
+
+### LBZ spark/splash overlap: no runtime change
+
+The fixed-address overlap remains a source-level risk, but a bounded entry
+check did not establish incompatible simultaneous use. Ground launch clears
+`jumping` and uses the spring animation. `PlayableSpriteMovement.doJumpHeight`
+only admits the lightning double jump inside the `isJumping()` branch.
+A temporary ROM-backed LBZ1 headless test gave Sonic a lightning shield before
+the normal title-card handoff, let the intro release him, then alternated two
+held/two released jump updates throughout the splash. The splash completed
+without a `LightningSpark` object: one test passed, zero skips, on unchanged
+production code at `d92fea6f1`. Command: queued Maven with `-Dmse=off`,
+`-Dtest=TestS3kLbz1GroundLaunchIntroHeadless#lightningAbilityCannotStartDuringGroundLaunchSplash`
+and the absolute `s3k.rom.path`.
+
+This does not certify every entry/team/restore configuration. No artificial
+spark spawn was used to label the overlap a gameplay bug, and neither splash
+addresses nor object timing were changed. The regenerable temporary test and
+log were removed. Reopen this finding if a supported overlapping lifetime is
+observed; shared splash cursor divergence also remains unestablished.

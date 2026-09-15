@@ -282,6 +282,12 @@ patterns referenced by its displayed tiles. Capturing an entire staging bank
 also captures unused tails from older animations; an eight-frame S1 rewind
 exposed five differing unused slots despite identical displayed art. Keep
 referenced versions immutable and leave unrelated bank history out of the frame.
+Filtering unused slots does not separate simultaneous owners: a retained frame
+can store only one image per tile ID. Allocate independent banks for independent
+players, reserve the largest selected form capacity, and keep allocation lifetime
+aligned with renderer lifetime. Test staggered frames whose **used** slots overlap;
+different animation cursors alone can still select disjoint slots and hide a
+collision. See the [bank audit](audits/2026-09-15-sprite-publication-banks.md).
 Results-screen renderer cache flags are likewise derived: rebuilding claimed
 ROM art clears the cache, so such flags use `RewindTransient` while gameplay
 readiness and timing stay captured.
