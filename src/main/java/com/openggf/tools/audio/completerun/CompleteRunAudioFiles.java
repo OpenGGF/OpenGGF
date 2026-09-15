@@ -43,7 +43,7 @@ public final class CompleteRunAudioFiles {
         catch (IOException missing) { return false; }
     }
 
-    public static void requireDigest(Path path, String algorithm, String expected, String label)
+    public static void requireDigest(Path path, String algorithm, String pinnedDigest, String label)
             throws IOException {
         try {
             MessageDigest digest = MessageDigest.getInstance(algorithm);
@@ -52,7 +52,7 @@ public final class CompleteRunAudioFiles {
                 int count;
                 while ((count = input.read(buffer)) >= 0) digest.update(buffer, 0, count);
             }
-            if (!expected.equals(HexFormat.of().formatHex(digest.digest()))) {
+            if (!pinnedDigest.equals(HexFormat.of().formatHex(digest.digest()))) {
                 throw new IllegalArgumentException(label + " identity does not match the fixed profile");
             }
         } catch (NoSuchAlgorithmException impossible) {

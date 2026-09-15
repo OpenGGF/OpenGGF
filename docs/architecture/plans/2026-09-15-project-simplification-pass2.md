@@ -70,7 +70,7 @@ No arithmetic or bounds policy was repaired as part of the extraction.
 Preview extraction retains typed local manifests and the second disk read;
 wrapper tests replace the manifest from the hash supplier to protect that order.
 Whole-generation transactionality and asynchronous ownership were not changed.
-The final implementation removes 125 production Java lines overall, including
+The final implementation removes 128 production Java lines overall, including
 four new internal helpers. The reduction is smaller than discovery estimates:
 explicit adapters preserve caller policies without a callback-heavy framework.
 
@@ -101,3 +101,56 @@ test were restored byte-for-byte to the pinned base, and the new comparator was
 removed. No signature pin, API declaration or policy was altered to bypass the
 hook. The remaining source is unchanged from the 277-test focused run; the broad
 run will validate the final retained scope.
+
+## First broad run and reconciliation
+
+At `48ab5ea1e`, command
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base 6cd8ec1881fcab438705ec4fd736804dd6630a50 --run`
+completed run `20260915T103934Z-56a46939`:
+
+- Ordinary: 2,592 reports, 20,498 tests, one failure, zero errors, 19 skips;
+  746.97 seconds. TestRemainingRewindTailInventory expected 1010/790 total/passed
+  but found 1011/791 after the pre-existing SOZ quicksand addition. Upstream
+  `c2812dc11` independently corrects this inventory. The corrected test passed
+  on current develop (one test, zero failures/errors/skips).
+- Guards: 84 reports, 668 tests, five failures, zero errors/skips; 173.25 seconds.
+  Two task regressions: Sonic1FmVoiceDecoder was in the shared audio package rather
+  than game.sonic1; CompleteRunAudioFiles used the overly generic parameter name
+  `expected`, which the authority guard rejects in authenticated tooling. Move the
+  helper to game.sonic1.audio.smps and name the fixed identity `pinnedDigest`.
+  No guard or baseline is weakened; digest checking supplies no gameplay data.
+- The other three failures reproduce on develop `316788395` with identical method
+  identities and complete messages: TestRewindArchitectureGuard reports SOZ's two
+  RewindTransient annotations; TestBuildToolingGuard still expects old direct-Maven
+  guidance; TestNoAssertionFreeDiagnostics flags FbzRouteEvidenceProbe#printEvidence
+  and LevelSolidityMapProbe#writeSolidityMap. Matched command:
+  `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+  -Dtest=TestRewindArchitectureGuard,TestBuildToolingGuard,TestNoAssertionFreeDiagnostics test -B`.
+  Baseline: 123 tests, three failures, zero errors/skips.
+- All 19 skip identities/reasons were inspected. Eighteen are the inherited opt-in
+  routes/benchmarks/native/local-reference checks and CPZ assumption from pass one.
+  The additional native scroll check is opt-in and already passed in the focused
+  native run; no stock-ROM prerequisites were missing.
+
+Upstream since the pinned base includes resource-aware Maven admission/cleanup,
+the SOZ inventory correction, and KiS2 native act-entry/gap ownership changes.
+They are disjoint from the simplification source. Preserve them, run a final
+integrated selection, and report its exact commit/results. Focused guard fixes
+and reconciliation are in progress.
+
+### Guard correction result
+
+The authority guard passed all 25 tests after the parameter became pinnedDigest.
+The first relocation recheck exposed the second architecture boundary: shared
+Sonic1SmpsData cannot depend on a helper in game.sonic1. The final owner is the
+semantic shared `audio.smps.FmVoiceOperatorOrder.swapMiddleOperatorsInPlace`:
+it performs only the six middle-operator swaps; S1 callers own when it is needed.
+No architecture rule or frozen baseline changed. Original copying and overflow
+behavior stay in the callers. Obsolete compiled helper classes were removed
+before checking the moved source.
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestArchUnitRules test -B`
+passed 29 tests, zero failures/errors/skips (53.083 seconds). Combined authority
+and architecture recheck before the final relocation had 54 tests, one failure;
+that failure was the now-corrected downward dependency. Consumed first broad-run
+diagnostics were acknowledged and deleted. No raw reports are archived.

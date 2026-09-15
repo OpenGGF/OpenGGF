@@ -1,5 +1,6 @@
 package com.openggf.audio.smps;
 
+
 /**
  * SMPS 68k music data parser for Sonic 1.
  *
@@ -109,7 +110,7 @@ public class Sonic1SmpsData extends AbstractSmpsData {
 
         byte[] voice = new byte[stride];
         System.arraycopy(data, offset, voice, 0, stride);
-        Sonic1FmVoiceDecoder.normalizeInPlace(voice);
+        FmVoiceOperatorOrder.swapMiddleOperatorsInPlace(voice);
         return voice;
     }
 

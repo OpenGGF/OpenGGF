@@ -1,7 +1,8 @@
 package com.openggf.game.sonic1.audio.smps;
 
+import com.openggf.audio.smps.FmVoiceOperatorOrder;
+
 import com.openggf.audio.smps.AbstractSmpsData;
-import com.openggf.audio.smps.Sonic1FmVoiceDecoder;
 import com.openggf.audio.smps.SmpsSfxData;
 import com.openggf.audio.smps.ZeroAddressFmVoiceProvider;
 
@@ -96,7 +97,7 @@ public class Sonic1SfxData extends AbstractSmpsData
         }
         byte[] voice = Arrays.copyOfRange(
                 zeroAddressVoiceBank, offset, offset + 25);
-        Sonic1FmVoiceDecoder.normalizeInPlace(voice);
+        FmVoiceOperatorOrder.swapMiddleOperatorsInPlace(voice);
         return voice;
     }
 
@@ -188,7 +189,7 @@ public class Sonic1SfxData extends AbstractSmpsData
 
         byte[] voice = new byte[stride];
         System.arraycopy(data, offset, voice, 0, stride);
-        Sonic1FmVoiceDecoder.normalizeInPlace(voice);
+        FmVoiceOperatorOrder.swapMiddleOperatorsInPlace(voice);
         return voice;
     }
 

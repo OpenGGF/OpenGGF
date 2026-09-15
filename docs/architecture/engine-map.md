@@ -569,7 +569,7 @@ loading. Game managers retain manifest types, rereads and lazy suppliers;
 capture coordinates and publication order. Raw uncompressed S2/S3K object art
 uses `PatternDecompressor.fromBytes` after caller-specific validation.
 
-`Sonic1FmVoiceDecoder` normalizes operator order on caller-owned voice copies;
+`FmVoiceOperatorOrder` swaps middle operators on caller-owned voice copies;
 address resolution and copy/bounds semantics remain in music/SFX owners.
 HScrollBuffer and VScrollBuffer each share one private native upload tail between
 their array/view paths. `CompleteRunAudioFiles` shares path and digest checks,
