@@ -164,6 +164,18 @@ through `Do_ControllerPal`; `VInt_0` lag does not. VInt14 is Sega-art loading, n
 the level title-card loop, which arms VIntC. These distinctions were established
 by FBZ native/GPU paired evidence on 2026-09-14.
 
+**Retained SAT requires retained scroll.** S3K `VInt` writes `V_scroll_value`
+to VSRAM and `VInt_8_Cont` uploads `H_scroll_buffer` alongside the prepared
+sprite table. Retaining screen-relative sprites while sampling terrain with the
+next CPU camera makes stationary world objects slide by one camera delta.
+Retain the matching horizontal/vertical scroll buffers, camera origin and plane
+routing; use them for both visible terrain and its high-priority sprite mask.
+Do not rebase old sprites onto the live camera to hide the mismatch. Stationary
+FBZ boundary captures missed this regression: add a moving-camera check in a
+second zone. Pixel oracles must sample the CPU scroll before the VBlank they
+describe; reading the next loop after rendering compares different generations.
+See the [MHZ follow-up](audits/2026-09-15-s3k-presentation-camera.md).
+
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
 later `Render_Sprites` builds the next table. An emulator-frame screenshot can
@@ -264,3 +276,14 @@ referenced versions immutable and leave unrelated bank history out of the frame.
 Results-screen renderer cache flags are likewise derived: rebuilding claimed
 ROM art clears the cache, so such flags use `RewindTransient` while gameplay
 readiness and timing stay captured.
+
+### S3K full-resolution top-sloped surfaces
+
+`SolidObjectTopSloped` uses `SolidObjCheckSloped` / `SolidObjSloped`, sampling one
+height byte per horizontal pixel. The similarly named `...Sloped2` helper uses
+two pixels per sample. Keep table resolution explicit for both new landings and
+continued rides, including odd X positions and horizontal flips. SOZ spring vine
+(`Obj_SOZSpringVine`, `$40786`) also reaches `loc_1E45A`, whose unsigned `blo` test
+admits a 16-pixel overlap; test 15/16/17 rather than assuming an exclusive 16.
+Its controller's `Delete_Sprite_If_Not_In_Range` tail does not draw: the separate
+`Sprite_OnScreen_Test` child owns the eight visible pieces and its own X cull.

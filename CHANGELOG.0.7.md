@@ -76,7 +76,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   publishes at its DMA-serving VBlank after the animation counter advances;
   rewind preserves both presented art and queued submissions. Gameplay sprite geometry and
   HUD labels retain the prepared table until its publishing VBlank, including
-  skipped drawing, camera changes and rewind. Numeric HUD tiles follow their own
+  skipped drawing, camera changes and rewind. Terrain scroll and sprite-occlusion
+  masks publish with that table, keeping objects aligned with moving cameras
+  across S3K zones. Numeric HUD tiles follow their own
   VBlank updates, and mutable player art stays paired with the prepared mapping. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
   preserves the native wait and score bonus before the end sign, and the ending
@@ -186,7 +188,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **S3K campaign work:** the promoted development baseline includes further MHZ
   and FBZ work, LBZ Big Arm, Super Emerald sanctuary/progression, and powered
   effects. Sandopolis now implements its four quicksand variants, including
-  per-player capture, jump release, sand-slide movement and rewindable cooldowns.
+  per-player capture, jump release, sand-slide movement and rewindable cooldowns,
+  plus spring vines with shared tension, deforming surfaces and directional launches,
+  and sand rocks that break under rolling landings and release their riders.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. MHZ end-boss debris

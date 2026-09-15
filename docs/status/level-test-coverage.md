@@ -125,10 +125,10 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_ICECAP_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
 | S3K | `S3K_LAUNCH_BASE_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
 | S3K | `S3K_LAUNCH_BASE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
-| S3K | `S3K_MUSHROOM_HILL_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
+| S3K | `S3K_MUSHROOM_HILL_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending; [moving-camera presentation regression](../architecture/audits/2026-09-15-s3k-presentation-camera.md) is a local check, not act certification |
 | S3K | `S3K_MUSHROOM_HILL_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
-| S3K | `S3K_SANDOPOLIS_1` | [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) — v2 bring-up; route/native/visual gaps remain |
-| S3K | `S3K_SANDOPOLIS_2` | [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md) — v2 bring-up; route/native/visual gaps remain |
+| S3K | `S3K_SANDOPOLIS_1` | [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) — v2 bring-up; quicksand and vine slices tracked, full route/native/visual gaps remain |
+| S3K | `S3K_SANDOPOLIS_2` | [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md) — v2 bring-up; quicksand and vine slices tracked, full route/native/visual gaps remain |
 | S3K | `S3K_LAVA_REEF_1` | Audit pending |
 | S3K | `S3K_LAVA_REEF_2` | Audit pending |
 | S3K | `S3K_SKY_SANCTUARY_1` | Audit pending |
@@ -206,3 +206,11 @@ changes a crush into a safe crossing, reproduced by synchronized gameplay videos
 FBZ Act 1 miniboss presentation (2026-09-15): the [Act 1 matrix](../architecture/validation/levels/s3k-fbz-act1.md)
 records the paired opened-boss setup and local plunger/face/priority corrections.
 Full-act and complete-route visual certification remains open.
+
+SOZ sand-rock continuation (2026-09-15): `TestSozSandRockProduction` adds short
+positioned break/removal and twice-replayed registered rewind spots for both
+acts, with Act 1 representative 320/640 widths, S1 donor and extra follower.
+These are independent of the failed cold approach; see the
+[Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) and
+[Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md). Full route,
+all-character, checkpoint and native/pixel certification obligations remain open.

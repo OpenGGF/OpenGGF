@@ -26,6 +26,9 @@ class TestLevelSpritePresentationLifecycle {
         assertTrue(before.prepared().tiles().stream().anyMatch(tile -> tile.layer() == SpritePresentation.Layer.PLAYER));
         assertTrue(before.prepared().tiles().stream().anyMatch(tile -> tile.layer() == SpritePresentation.Layer.HUD));
         fixture.stepFrame(false, false, false, true, false);
+        assertNotNull(before.preparedScroll());
+        assertEquals(before.preparedScroll(), tables.publishedScroll(),
+                "VBlank must publish the scroll registers/buffers paired with SAT");
         assertEquals(before.prepared(), tables.published(), "VBlank must upload the preceding loop's table");
         var next = tables.capture();
         registry.restore(composite);
@@ -36,5 +39,6 @@ class TestLevelSpritePresentationLifecycle {
         assertTrue(tables.capture().prepared().tiles().isEmpty());
         assertTrue(tables.published().tiles().isEmpty());
         assertTrue(tables.counters().tiles().isEmpty());
+        assertNull(tables.publishedScroll());
     }
 }

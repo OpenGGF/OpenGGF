@@ -507,7 +507,7 @@ The same reset is performed during:
 | 58 | `Obj_SOZPathSwap` | SOZ-specific path switcher | At line 40023. |
 | 59 | `Obj_SOZLoopFallthrough` | Loop fallthrough trigger | Catches player falling at y_vel >= $800, puts into spin state, applies gravity until past target Y. |
 | 62 | `Obj_SOZPushableRock` | Pushable rock | Moved by player contact. |
-| 63 | `Obj_SOZSpringVine` | Spring-loaded vine | Bounces player like a spring but with vine visual. |
+| 63 | `Obj_SOZSpringVine` | Spring-loaded vine | Shared P2-before-P1 tension deforms a 96-byte pixel slope and eight-piece display child. Crossing directional X $3C launches without a jump-button gate; controller is invisible. |
 | 64 | `Obj_SOZRisingSandWall` | Rising sand wall | Sand wall that rises up. |
 | 65 | `Obj_SOZLightSwitch` | Light switch (Act 2) | Grabable switch -- player hangs from handle, pulls it down. Resets `SOZ_darkness_level` to 0 and restarts 15-second timer. Uses multi-sprite (main body + handle). |
 | 66 | `Obj_SOZFloatingPillar` | Floating sand pillar | Solid platform. Art tile $001, palette 2. |
@@ -676,3 +676,11 @@ This allows the pyramid interior to extend vertically beyond the normal 1024px l
 - **Darkness palette system:** The bidirectional fade with variable-length table indexing (`$34` bytes per step, driven by `Palette_cycle_counters+$06` which can go negative during brightening) requires careful counter management. Confidence: MEDIUM.
 - **Extended Y wrap:** Non-standard `Screen_Y_wrap_value=$7FF` may expose edge cases in tile drawing routines that assume $3FF. Confidence: MEDIUM.
 - **Rising sand special event:** Uses `Special_events_routine=$10` to hook into the global `SpecialEvents` system, creating per-frame BG collision with `Background_collision_flag` and camera Y offset. Interactions with normal collision system need testing. Confidence: LOW-MEDIUM.
+
+### Breakable sand-rock implementation note (2026-09-15)
+
+SKL `$44`, `Obj_SOZBreakableSandRock` `$41702`, is implemented for both acts.
+The parent itself animates five mapping frames (`$4182E`); it does not spawn
+fragments. Rolling is sampled before SolidObjectFull and the post-call standing
+mask includes retained offscreen P2 bits. See the placed inventory and act matrices
+for the distinction between bindings, positioned behavior checks and cold routes.

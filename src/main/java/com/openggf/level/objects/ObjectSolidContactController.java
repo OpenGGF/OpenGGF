@@ -4091,7 +4091,7 @@ public final class ObjectSolidContactController {
             // rather than a signed -1.
             sampleX = ((~sampleX) + width2) & 0xFFFF;
         }
-        sampleX = sampleX >>> 1;
+        sampleX = sampleX >>> slopedAdapter.provider().getSlopeSampleShift();
         Integer slopeSampleValue = slopedAdapter.provider().sampleSlopeByte(sampleX);
         if (slopeSampleValue == null) {
             return null;
@@ -4120,7 +4120,10 @@ public final class ObjectSolidContactController {
         }
         int relY = playerCenterY - baseY + 4 + verticalOverlapCompensation;
 
-        if (relY < minRelY || relY >= maxTop * 2) {
+        Integer directTopLimit = topSolidOnly && !riding
+                ? slopedAdapter.provider().getDirectTopLandingOverlapLimit() : null;
+        int verticalLimit = directTopLimit != null ? directTopLimit : maxTop * 2;
+        if (relY < minRelY || relY >= verticalLimit) {
             return null;
         }
 
@@ -4203,9 +4206,13 @@ public final class ObjectSolidContactController {
             absDistX = distX;
         }
 
+        Integer directTopLimit = topSolidOnly && !sticky && instance instanceof SlopedSolidProvider sloped
+                ? sloped.getDirectTopLandingOverlapLimit() : null;
         int distY;
         int absDistY;
-        if (relY <= maxTop) {
+        // Direct top helpers compare feet-relative overlap, even when it exceeds
+        // the radius of a rolling player; they have no bottom-contact branch.
+        if (directTopLimit != null || relY <= maxTop) {
             distY = relY;
             absDistY = distY;
         } else {
@@ -4223,7 +4230,7 @@ public final class ObjectSolidContactController {
 
         // Sonic 1 top-solid objects use PlatformObject/SlopeObject semantics:
         // top-landing is resolved purely by X-range + top Y-window (no side-priority compare).
-        if (topSolidOnly && usesUnifiedCollisionModel(player)) {
+        if (topSolidOnly && (directTopLimit != null || usesUnifiedCollisionModel(player))) {
             if (player.getYSpeed() < 0) {
                 return null;
             }
@@ -4255,7 +4262,8 @@ public final class ObjectSolidContactController {
             }
             boolean rejectsZeroDistanceTopLanding = detectionDistY == 0
                     && rejectsZeroDistanceTopSolidLanding(instance);
-            if (detectionDistY < 0 || detectionDistY >= 0x10 || rejectsZeroDistanceTopLanding) {
+            int overlapLimit = directTopLimit != null ? directTopLimit : 0x10;
+            if (detectionDistY < 0 || detectionDistY >= overlapLimit || rejectsZeroDistanceTopLanding) {
                 if (rejectsZeroDistanceTopLanding) {
                     notifyZeroDistanceTopSolidLandingRejected(instance, player);
                 }
@@ -5141,12 +5149,12 @@ public final class ObjectSolidContactController {
         } else if (relX >= width2) {
             relX = width2 - 1;
         }
-        // ROM: lsr.w #1,d0 — shift BEFORE flip (matches SlopeObject2/MvSonicOnSlope)
-        int sampleX = relX >> 1;
+        // Sloped2 shifts before flip; full-resolution Sloped omits the shift.
+        int sampleShift = sloped.getSlopeSampleShift();
+        int sampleX = relX >> sampleShift;
         if (sloped.isSlopeFlipped()) {
-            // ROM: not.w d0 / add.w d1,d0 — where d1 = halfWidth
-            // not.w gives ~sampleX = -sampleX - 1, then + halfWidth
-            sampleX = halfWidth - sampleX - 1;
+            // NOT.W then add the table width: width - sampleX - 1.
+            sampleX = (width2 >> sampleShift) - sampleX - 1;
         }
         if (sampleX < 0) {
             sampleX = 0;

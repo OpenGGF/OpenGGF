@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k;
 
 public final class Sonic3kObjectArtKeys {
+    public static final String SOZ_BREAKABLE_SAND_ROCK = "soz_breakable_sand_rock";
+    public static final String SOZ_SPRING_VINE = "soz_spring_vine";
+
     public static final String MONITOR = "monitor";
     public static final String SPIKES = "s3k_spikes";
     public static final String AIZ_RIDE_VINE = "aiz_ride_vine";
