@@ -1208,10 +1208,9 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         if (isSoz1BossArenaPhaseLocked()) {
             return 0;
         }
-        int cameraX = getCameraX();
-        int eventsBg10 = cameraX >> 5;
-        int cameraXPosBgCopy = resolveSoz1BgCameraX(cameraX);
-        return (eventsBg10 - cameraXPosBgCopy) & 0x1F;
+        // sub_55D56 uses the current camera. Animation may precede the
+        // presentation pass, so do not read ParallaxManager's cached BG copy.
+        return com.openggf.game.sonic3k.scroll.SwScrlSoz.desertTilePhase(getCameraX());
     }
 
     // SOZ1 normally derives this phase from Events_bg+$10 and Camera_X_pos_BG_copy.
@@ -1229,18 +1228,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             LOG.fine(() -> "Sonic3kPatternAnimator.isSoz1BossArenaPhaseLocked: " + e.getMessage());
             return false;
         }
-    }
-
-    private int resolveSoz1BgCameraX(int cameraX) {
-        try {
-            int bgCameraX = GameServices.parallax().getBgCameraX();
-            if (bgCameraX != Integer.MIN_VALUE) {
-                return bgCameraX;
-            }
-        } catch (Exception e) {
-            LOG.fine(() -> "Sonic3kPatternAnimator.resolveSoz1BgCameraX: " + e.getMessage());
-        }
-        return cameraX >> 4;
     }
 
     /**
@@ -1717,7 +1704,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             applyRawPatternSliceToLevel(soz1BgData, baseOffset, secondWordCount << 1, secondDestTile);
         }
 
-        applyRawPatternSliceToLevel(soz1Bg2Data, phase * 0x0C0, 0x060, 0x33C);
+        applyRawPatternSliceToLevel(soz1Bg2Data, phase * 0x0C0, 0x0C0, 0x33C);
     }
 
     private void ensureHczPatternCapacity() {

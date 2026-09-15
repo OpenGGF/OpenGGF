@@ -39,6 +39,7 @@ No S3K discrepancy was added or reclassified by the cutover.
 22. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
 23. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
 24. [SOZ Pushable Rock: Door Coupling](#soz-pushable-rock-door-coupling)
+25. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
 
 ---
 
@@ -1822,3 +1823,15 @@ reaching switch `($4830,$5B0)`. The required preceding world/route state has not
 been established. Do not claim completion of this puzzle from unit contact tests
 or the separate passing channel-8 switch/door route. See the act matrix and v2
 execution record.
+
+## SOZ Background Event Modes and Torch Animation
+
+Normal Act 1 desert parallax, heat shimmer, scroll-driven animated-art extent
+and sand palette cycling are implemented with bounded checks. Act 1's arena
+background replacement/rising sand and seamless transition are not yet owned;
+the animator retains the existing camera-lock phase-zero compatibility bridge.
+Act 2 still uses generic scroll fallback and lacks its custom darkness-coupled
+torch animation and event-selected background modes. These require the actual
+zone-event/palette state rather than camera-position heuristics or a bright-only
+animation loop. Full native pixel certification also remains open. See the
+[SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md#explicit-presentation-work-and-revised-next-batch).

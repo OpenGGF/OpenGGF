@@ -141,6 +141,13 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 loadLbzCycles(reader, list, actIndex);
                 break;
 
+            case 0x08: // AnPal_SOZ1; Act 2 needs the coupled darkness owner.
+                if (actIndex == 0) {
+                    list.add(new Soz1Cycle(reader.slice(Sonic3kConstants.ANPAL_SOZ1_ADDR,
+                            Sonic3kConstants.ANPAL_SOZ1_SIZE)));
+                }
+                break;
+
             case 0x09: // LRZ — AnPal_LRZ1 / AnPal_LRZ2 lava + crystal colors
                 loadLrzCycles(reader, list, actIndex);
                 break;
@@ -1086,6 +1093,28 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 // Direct palette-cycler tests may run without a gameplay session.
             }
             return false;
+        }
+    }
+
+    /** AnPal_SOZ1 ($2546): signed word timer; consume offset before adding eight. */
+    private static class Soz1Cycle extends PaletteCycle {
+        private final byte[] tableData;
+        private int timer;
+        private int offset;
+
+        Soz1Cycle(byte[] tableData) { this.tableData = tableData; }
+
+        @Override void tick(Level level, PaletteOwnershipRegistry registry) {
+            timer = (short) (timer - 1);
+            if (timer >= 0) return;
+            timer = 5;
+            int source = offset;
+            offset = (offset + 8) & 0x1F;
+            GraphicsManager gm = GameServices.graphics();
+            S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                    S3kPaletteOwners.SOZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                    2, 12, slice(tableData, source, 8));
+            cacheFallbackPaletteTexture(registry, gm, level, 2);
         }
     }
 

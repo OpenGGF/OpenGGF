@@ -302,3 +302,13 @@ continued rides, including odd X positions and horizontal flips. SOZ spring vine
 admits a 16-pixel overlap; test 15/16/17 rather than assuming an exclusive 16.
 Its controller's `Delete_Sprite_If_Not_In_Range` tail does not draw: the separate
 `Sprite_OnScreen_Test` child owns the eight visible pieces and its own X cull.
+
+### Animated-art DMA units and cached camera phases
+
+SOZ1 presentation investigation (2026-09-15): `Add_To_DMA_Queue` takes d3 in
+**words**, while engine raw-pattern slices use bytes. `$60` words fills six tiles,
+not three. Check the final destination tile as well as the first; a test which
+only proves one tile changes misses half-length transfers. The channel graph's
+owned destination range must grow with the actual copy. Also distinguish the
+current gameplay camera from a previous presentation pass's cached parallax
+copy when deriving animation phases. See the [SOZ execution record](plans/2026-09-15-soz-methodology-v2.md#normal-act-1-desert-presentation-implementation).

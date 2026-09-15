@@ -401,7 +401,7 @@ That makes it a shared art-loading dependency for the SOZ/LRZ1 animation slot, n
 - **Limit:** $20 (wraps at $20, so 4 frames: offsets 0, 8, $10, $18)
 - **Timer:** `Palette_cycle_counters+$0A`, period = 6 frames (reset to 5)
 - **Table:** `AnPal_PalSOZ1` at line 4302 (16 words = 4 frames x 4 colors)
-- **Destination:** `Normal_palette_line_3+$18` (4 words) and `Normal_palette_line_3+$1C` (4 words) = Palette line 2 (index 3), colors 12-15
+- **Destination:** two longwords at `Normal_palette_line_3+$18` and `+$1C` = four words total, zero-based palette index 2, colors 12–15
 - **Conditional:** Always active
 - **Color values (4 frames):**
 
@@ -710,3 +710,14 @@ The `$3B` and `$49` placed families now have source-derived implementations.
 See the [inventory](soz-object-inventory.md#loop-exits-and-solid-terrain-sprites)
 for the exact control/solid contracts and remaining placeholder counts. These
 positioned interactions extend local coverage; complete act traversal remains open.
+
+## Normal Act 1 presentation implementation status (2026-09-15)
+
+`SwScrlSoz` now binds normal desert scrolling and ROM-backed shimmer/bands.
+`AnimateTiles_SOZ1`'s secondary copy and channel range cover all six tiles through
+`$341`, and its phase uses the current camera calculation. `AnPal_SOZ1` is
+registered for Act 1, targeting zero-based palette2 colors12–15; its prior
+destination prose above has been corrected. See the [execution record](../../plans/2026-09-15-soz-methodology-v2.md#normal-act-1-desert-presentation-implementation)
+for measured native fields, regression results and unmatched pixel boundaries.
+Act 1 arena/transition presentation, Act 2's event-selected backgrounds and
+darkness-coupled torch animation are still open.

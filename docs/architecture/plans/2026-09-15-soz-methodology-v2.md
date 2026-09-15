@@ -2,7 +2,8 @@
 
 Date: 2026-09-15. Status: quicksand, vines, rocks, loop exits, static solids,
 floating pillars, push switches and doors integrated at the bounded scopes below.
-Parallax/deformation and custom animated-art acceptance remain incomplete;
+Normal Act 1 parallax, heat shimmer, animated background art and sand palette
+cycling are implemented with bounded checks; later presentation modes remain open;
 full routes, event systems, bosses and native certification remain open.
 
 ## Objective and authority
@@ -76,17 +77,17 @@ implementation findings, not fixes delivered by this documentation correction.
 
 | Route slice | Required presentation delivery | Acceptance boundaries / current gap |
 | --- | --- | --- |
-| 1: normal Act 1 desert | Dedicated `sub_55D56` parallax, seven fractional X tiers, Y/16, `word_560DC` bands; `loc_55DF2` FG/BG heat shimmer; `AnimateTiles_SOZ1` and `AnPal_SOZ1` | ROM-backed tables; all 224 lines; independent FG/BG wave phases; all 32 art phases and split transfers; same-camera/update-order behavior; GPU-visible tiles `$330..$341`, reverse movement and rewind. Scroll fallback and partial custom DMA remain open; palette path must be audited |
+| 1: normal Act 1 desert | Dedicated `sub_55D56` parallax, seven fractional X tiers, Y/16, `word_560DC` bands; `loc_55DF2` FG/BG heat shimmer; `AnimateTiles_SOZ1` and `AnPal_SOZ1` | ROM-backed tables; all 224 lines; independent FG/BG wave phases; all 32 art phases and split transfers; same-camera/update-order behavior; GPU-visible tiles `$330..$341`, reverse movement and rewind. Normal-desert owners and focused checks now implemented (record below); full native pixels and wider phase coverage remain open |
 | 2: Act 1 arena | `sub_55DB6` / `sub_55E4C`, sand offset and shake, custom background blocks/art | Before/after arena switch, delayed redraw, shimmer and animation phase-zero handoff; event owner still open |
 | 3: Act 2 entry | Initial pyramid background, wrap setup, secondary art, palette fade and torch initialization | Queue readiness, fresh versus seamless entry, control release and reset/restore; still open |
 | 4: normal Act 2 traversal | Event-selected background framing, `sub_566D2` half-speed outdoor parallax where selected; `AnimateTiles_SOZ2` torches tied to the live palette fade accumulator | Three timer frames per animated intensity, pinned dark state, eight-pass cadence; correct six-tile DMA extent; brightening/darkening and rewind. Do not apply outdoor scrolling to every Act 2 state; owners remain open |
 | 5: sand and pyramid changes | `sub_566E8`, moving sand, background/collision changes, vertical wrap | Both sides of trigger/wrap, players/camera/objects/rendering together, art retention and restored state; open |
 | 6: boss and exit | `sub_56706`, `SOZ2_BGDrawArray`, wall reconstruction, animation inhibition and restored secondary art | Arena mode bands, darkness reset, repeated inhibition writes, defeat/exit restoration and rewind; open |
 
-Next implementation batch starts with the coupled **normal Act 1 parallax,
+The coupled presentation batch recorded below implements **normal Act 1 parallax,
 heat shimmer and animated-background correction**, with source-derived arithmetic,
-ROM art-range checks and a short native/engine moving-camera comparison. Audit
-Act 1 palette cycling alongside it. Then resume the remaining Act 1 traversal
+ROM art-range checks and native/engine moving-camera observations (not matched
+pixels), plus Act 1 palette cycling. Next resume the remaining Act 1 traversal
 blockers (swinging platforms, rappel wires, sand/path mechanisms and enemies) and
 join a continuous route to the miniboss. Act 2's palette/torch/event state is a
 separate coupled batch; implementing a bright-only torch loop is not completion.
@@ -1305,3 +1306,111 @@ Rejected the catalogue's 112-line and three-tile DMA claims: `$DF` loop extent
 produces 224 scanlines, and DMA d3 is a word count. The torch routine consumes
 the old frame byte before increment/reset, yielding frames 0,1,2, not two frames.
 No runtime code or effect was delivered in this documentation correction.
+
+## Normal Act 1 desert presentation implementation
+
+Task base `2843b657430dedfba57484aa1130dcaed79d2597`, worktree
+`.worktrees/soz-desert`, branch `feature/ai-soz-desert`. Implements the revised
+next batch's normal desert presentation; arena/redraw/sand modes and all Act 2
+event-selected presentation remain open. No new placed-object family is claimed.
+
+`SwScrlSoz` now handles Act 1: ROM wave `$5077E`, bands `$560DC`, signed camera
+Y/16 and seven 16.16 X tiers (base X/16, constant X/64 increment). Normal
+`loc_55DF2` has independent FG/BG wave phases and writes all 224 lines. The
+handler has no logical accumulator: camera and `Level_frame_counter` reconstruct
+its output. Act 2 retains the existing fallback until its event owner is delivered.
+
+`AnimateTiles_SOZ1` now writes all six secondary tiles (`$60` DMA words = `$C0`
+bytes), extending graph ownership through `$341`. Its phase uses the current
+camera's `sub_55D56` calculation instead of a potentially stale presentation-pass
+BG copy. The existing late-arena camera-lock compatibility bridge is unchanged
+and remains to be replaced by the actual arena owner. The newly registered
+`AnPal_SOZ1` consumes four ROM colors before incrementing its offset, every six
+passes; timer and offset use the existing palette-cycle rewind codec and palette
+ownership path. The zero-based destination is palette 2, colors 12–15.
+
+### Regressions, consumer check and review
+
+- Initial `TestS3kSozPatternAnimation`: five tests, two failures, no errors/skips,
+  19:57:30 BST (46.796 seconds). Missing dedicated scroll returned the sentinel
+  BG X; secondary phase0 pixel192 read7 instead of ROM11.
+- After scroll/DMA implementation, six tests had only the new palette failure:
+  pass0 expected `$2CE`, observed `$06C`, 19:59:52 BST (48.418 seconds).
+- With palette registration, the eight-name selection below passed 81 tests,
+  no failures/errors/skips, 20:01:25 BST (52.719 seconds). It includes actual
+  quicksand/vine and mechanism routes with world rewind and compatibility cases.
+- Consumer selection completed 234 tests with eight errors, no failures/skips,
+  20:03:14 BST (21.741 seconds). All eight were provider-routing tests for other
+  zones using an unopened ROM. Eager SOZ table reads caused the errors. SOZ now
+  reads its tables on first Act 1 init/update and fails explicitly there if data
+  is unavailable; no fallback asset table was added. All other 226 checks passed.
+- The narrow scroll/SOZ recheck passed 99 tests, no failures/errors/skips, at
+  20:05:48 BST (50.358 seconds). Existing rewind inventory needed no pin change.
+- Read-only source review found no actionable issue in arithmetic, DMA, palette
+  cadence/rewind or the final lazy-loading change.
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3kSozPatternAnimation,TestSozAct1QuicksandRoute,TestSozAct1SpringVineRoute,TestSozMechanismsProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$S3K_ROM" "-Dsonic1.rom.path=$S1_ROM" test -B
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestS3k*PatternAnimation,TestS3k*PaletteCycling,com.openggf.game.sonic3k.scroll.*Test,TestPaletteCycleStateCodec,TestRemainingRewindTailInventory,TestAnimatedTileChannelGraph*,TestPatternSpriteRendererCorruptionGuard' \
+  "-Ds3k.rom.path=$S3K_ROM" test -B
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=com.openggf.game.sonic3k.scroll.*Test,TestS3kSozPatternAnimation' \
+  "-Ds3k.rom.path=$S3K_ROM" test -B
+```
+
+Proportionate validation: the unmodified selector chooses 2,612 ordinary classes
+plus guards because shared owner/registration files trigger its fallback, around
+24 minutes ordinary +10 minutes guards at prior normalization cost. This slice
+adds SOZ-local arithmetic/palette behavior and adjusts only SOZ DMA ownership;
+shared algorithms, timing ports and public contracts are unchanged. The explicit
+production tests, all S3K scroll/animation/palette consumer tests, graph/rewind
+checks, rendered captures and relevant structural guards address those bounded
+risks. This is focused validation, not a full-suite pass. Java21/Lua5.4/PowerShell
+preflight passed. No category run directory was produced.
+
+### Native and rendered observations
+
+External task root remains `$TASK_ROOT` (`soz-v2-20260915`). Native host command
+uses `capture_native_references.py`, official BizHawk2.11/GPGX, locked-on ROM
+SHA1 `CFBF98C36C776677290A872547AC47C53D2761D6`, the preceding complete Sonic/Tails
+BK2, and `quicksand-1/fbz1-lfc35.State` (SHA256
+`42FBA067A592A5B7E3B45D001F30C553E0FFEC5083DF0967F5929C574CA0BEBA`).
+Exporter `native-desert.lua`, empty plan, output `native-desert-1`, required
+`desert.csv`, timeout45. It stops playback before loading the save, verifies
+SOZ1, then holds right with jump during the first20 of each80 passes; no RAM
+setup writes. Exporter SHA256
+`C6FB9A5EB28FBD8DA45B46AC6BDBF02325472E1E7198200771F131F83AABAF74`.
+
+Host completed with no failures in 2.168 seconds. Independently inspected600
+contiguous rows, LFC36–635: **134,400 packed scanline words match** the ROM-derived
+rational band calculation with actual LFC, no offset. Both BG camera coordinates
+and all600 animated phase bytes match. Camera advances X32→418, Y1033→1517;
+100 palette transitions occur. A trial LFC−1 calculation immediately mismatched
+row0/line0, so no fitted phase correction was introduced. Native image300 inspected.
+This corroborates normal-desert fields; it supplies no engine gameplay values.
+
+`InputLogAuthorTool` authored600 frames, repeating20 right+jump then60 right
+(the final cycle is truncated). `GameplayCaptureTool --game s3k --zone soz
+--act 1 --main sonic --sidekick tails --input $TASK_ROOT/desert-input.txt`
+produced `engine-desert-1` at width320 (600frames,20.152 seconds) and
+`engine-desert-wide-528` at width528 (240frames,18.261 seconds). Both completed
+with the inherited Discord shutdown warning only. CSV preceded image inspection:
+standard frame300 player `(692,1660)`, camera `(533,1564)`, no hurt/death;
+wide frame150 camera `(324,1551)`, player `(567,1639)`, no hurt/death. Desert
+bands and art are visible; no seam observed in the inspected wide scene.
+The initial wide640 capture request was rejected before rendering because the
+tool supports preset widths; 528 replaced it without changing engine behavior.
+
+The engine and native entries do not have matching camera/phase trajectories, so
+these captures are visual inspection and numeric source corroboration, not matched
+pixel certification. The standard scripted route stalls at X692 later in the clip;
+it is not full traversal evidence. Arena/transition, Act 2 presentation and broader
+phase/viewport/native pixel obligations remain open in the act matrices.
+
+Selected structural validation completed at 20:06:52 BST in58.388 seconds:
+`-Pguards -Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestObjectUpdateClockTerminologyGuard`,
+123 tests, zero failures/errors/skips. Post-integration verification uses the union
+of the two ordinary selections above, so the final tree is checked once together.

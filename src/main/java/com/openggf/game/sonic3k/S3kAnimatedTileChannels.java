@@ -105,7 +105,7 @@ final class S3kAnimatedTileChannels {
                 "s3k.soz1.scroll",
                 owner::shouldRunSoz1CustomChannels,
                 ctx -> owner.computeSoz1Phase(),
-                new DestinationPlan(0x330, 0x33E),
+                new DestinationPlan(0x330, 0x341),
                 AnimatedTileCachePolicy.ON_PHASE_CHANGE,
                 new SplitTransferApplyStrategy(owner::updateSoz1BackgroundTilesForGraph)
         ));
