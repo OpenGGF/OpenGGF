@@ -30,7 +30,17 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
                         (short) -(0x2E0 + events.sandHeight()))
                 : com.openggf.physics.BackgroundPlaneCollisionProvider.State.INACTIVE;
     }
+    /** DrawBGAsYouMove rooms and the post-boss fixed-$200 Draw_TileRow band. */
+    public boolean backgroundPlaneWindowActive() {
+        int routine = events.backgroundRoutine();
+        return actIndex == 0 ? routine != 0
+                : routine == 0x14 || routine == 0x18 || routine == 0x1C || routine >= 0x24;
+    }
     public SozEventState events() { return events; }
+    /** Animate_Palette/loc_3BE2: SOZ event-owned negative Palette_fade_timer lifetime. */
+    public boolean eventPaletteFadeHeld() {
+        return actIndex == 0 ? events.backgroundRoutine() >= 0xC : events.seamlessEntry();
+    }
     public void requestEndBossDefeat() { sandCorkBackgroundFlag = 0x55; }
     public void requestMinibossDoorClose() { events.doorSignal(-1); }
     public void requestMinibossShake(int duration) { events.screenShakeFlag(duration); }

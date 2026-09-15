@@ -192,7 +192,16 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
                 || zoneId == Sonic3kZoneIds.ZONE_FBZ
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
                 || isHcz2BackgroundPlaneWindowActive(zoneId)
-                || isCnzBossBackgroundWindowActive(zoneId);
+                || isCnzBossBackgroundWindowActive(zoneId)
+                || isSozEventBackgroundWindowActive(zoneId);
+    }
+
+    /** SOZ event DrawBGAsYouMove reads arena/room columns beyond the normal repeating strip. */
+    private boolean isSozEventBackgroundWindowActive(int zoneId) {
+        return zoneId == Sonic3kZoneIds.ZONE_SOZ && GameServices.hasRuntime()
+                && S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
+                        .map(com.openggf.game.sonic3k.runtime.SozZoneRuntimeState::backgroundPlaneWindowActive)
+                        .orElse(false);
     }
 
     /**
@@ -265,7 +274,8 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
         // BG camera runs past the data the ROM plane shows blank chunks. Linear
         // overflow reproduces that instead of wrapping back into the normal strip.
         return isCnzBossBackgroundWindowActive()
-                || isHcz2BackgroundPlaneWindowActive(zoneIndex);
+                || isHcz2BackgroundPlaneWindowActive(zoneIndex)
+                || isSozEventBackgroundWindowActive(zoneIndex);
     }
 
     /**
@@ -630,6 +640,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
             if (actIndex == 1) {
                 registry.register(aizBattleshipRenderFeature);
             }
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ) {
+            registry.register(new com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect());
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
             registry.register(hczBgHighPriorityForegroundOverlayEffect);

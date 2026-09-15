@@ -58,7 +58,7 @@ class TestSozBadnikProduction {
                 bound |= manager.getActiveObjects().stream().anyMatch(o -> o.getClass().getSimpleName().equals(family));
                 child |= manager.getActiveObjects().stream().anyMatch(o -> o.getClass().getEnclosingClass()!=null && o.getClass().getEnclosingClass().getSimpleName().equals(family));
                 if(frame==8 || frame==24 || frame==140) {
-                    var after=registry.capture(); registry.restore(before); same(before,registry.capture(),family+" restore "+frame);
+                    var after=registry.capture(); manager.setRewindInPlaceRestoreEnabledForTest(false); registry.restore(before); same(before,registry.capture(),family+" restore "+frame);
                     fixture.stepFrame(false,false,false,false,false);same(after,registry.capture(),family+" replay "+frame);
                 }
             }
@@ -92,6 +92,7 @@ class TestSozBadnikProduction {
         manager.validateRewindReferenceClosure();
         fixture.stepFrame(false,false,false,false,false);
         var after=registry.capture();
+        manager.setRewindInPlaceRestoreEnabledForTest(false);
         registry.restore(before);
         owner=manager.getActiveObjects().stream().filter(AbstractObjectInstance.class::isInstance)
                 .map(AbstractObjectInstance.class::cast).filter(o -> o.getSlotIndex()==slot)
