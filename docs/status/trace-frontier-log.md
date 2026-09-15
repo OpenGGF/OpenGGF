@@ -110266,3 +110266,12 @@ the measured candidate, and every stock S1/S2 report matches the pre-task
 baseline. Separate `-Ptrace-replay-r7` FBZ/AIZ/loading/bootstrap/decoder checks
 pass all 59 tests, no errors/skips (37.194 s); full FBZ replay remains green.
 Combined ordinary/guard validation follows on the frozen reconciled tree.
+
+
+Candidate `0d0965c8b` completed the full change-based selection against
+`59d5b8881`: 20,467 ordinary tests, zero failures/errors, 18 inspected skips;
+668 guards with exactly the two inherited direct-Maven/diagnostic failures,
+matching baseline class/test identities and full messages. Command:
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base 59d5b8881 --run`.
+Elapsed ordinary/guards: 729.31/172.20 seconds. No new or worsened failure;
+this is an ordinary-suite pass with inherited red guards, not all gates green.

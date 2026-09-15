@@ -665,3 +665,25 @@ in 16.80 seconds. The change-based plan against pre-task `59d5b8881` selects all
 2,585 ordinary classes and guards because the admission owner is shared.
 Normal combined validation is required; the earlier observation-only receipt
 fix's proportionate-validation exception is not used for this timing change.
+
+
+Combined candidate validation at `0d0965c8b` completed with
+`LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base 59d5b8881 --run`
+(run `20260915T100304Z-dabf6019`). Ordinary: 2,585 reports, 20,467 tests, zero
+failures/errors, 18 inspected skips (729.31 seconds). Guards: 84 reports, 668
+tests, two failures, zero errors/skips (172.20 seconds). The two class/method
+identities and complete assertion messages exactly match the retained baseline:
+`TestBuildToolingGuard#supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+expects superseded direct-Maven guidance, and
+`TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree` flags
+existing `FbzRouteEvidenceProbe#printEvidence` and
+`LevelSolidityMapProbe#writeSolidityMap`. No new or worsened failure is observed;
+the combined command remains red for those inherited guards.
+
+The current-base full result at `1cfe9ef82`, recorded by the concurrent
+simplification delivery, was 20,466 ordinary tests with zero failures/errors,
+18 skips and the same 668 guards/two failures. The candidate adds one passing
+regression. Skips are opt-in benchmarks/soaks/routes/captures, unavailable EGL/GL
+probes, local audio references and the existing CPZ spin-tube prerequisite;
+no stock-ROM test is skipped for a missing dump. The tree stayed frozen through
+both lanes. Inspection is complete and diagnostic acknowledgment was requested.
