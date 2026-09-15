@@ -86,7 +86,16 @@ final class S3kAnimatedTileChannels {
         return channels;
     }
 
-    static List<AnimatedTileChannel> buildSozChannels(Sonic3kPatternAnimator owner) {
+    static List<AnimatedTileChannel> buildSozChannels(Sonic3kPatternAnimator owner, int actIndex) {
+        if (actIndex == 1) {
+            return List.of(new AnimatedTileChannel(
+                    "s3k.soz2.torches",
+                    owner::shouldRunSoz2CustomChannels,
+                    ctx -> ctx.frameCounter(),
+                    new DestinationPlan(0x330, 0x335),
+                    AnimatedTileCachePolicy.ALWAYS,
+                    ctx -> owner.updateSoz2TorchesForGraph()));
+        }
         List<AnimatedTileChannel> channels = new ArrayList<>(1);
 
         channels.add(new AnimatedTileChannel(

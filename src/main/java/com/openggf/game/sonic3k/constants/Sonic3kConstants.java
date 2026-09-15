@@ -28,6 +28,12 @@ public class Sonic3kConstants {
     /** AnPal_PalSOZ1: four frames of four sand colors, locked-on ROM. */
     public static final int ANPAL_SOZ1_ADDR = 0x0030DA;
     public static final int ANPAL_SOZ1_SIZE = 32;
+    /** Five darkness banks used by AnPal_SOZ2. */
+    public static final int ANPAL_SOZ2_SAND_SIZE = 160;
+    public static final int ANPAL_SOZ2_LIGHT_ADDR = 0x00317A;
+    public static final int ANPAL_SOZ2_LIGHT_SIZE = 260;
+    public static final int ART_UNC_ANI_SOZ2_BG_ADDR = 0x0BFDC0;
+    public static final int ART_UNC_ANI_SOZ2_BG_SIZE = 7 * 0xC0;
 
     public static final int MAP_RING_ADDR = 0x01A99A;
 
