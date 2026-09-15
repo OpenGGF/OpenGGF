@@ -3945,6 +3945,7 @@ public class SidekickCpuController {
         sidekick.setJumping(false);
         sidekick.setPushing(false);
         sidekick.setOnObject(false);
+        clearRecoveryGroundingCache();
         sidekick.setMoveLockTimer(0);
         clearRespawnAnimationState();
         // loc_13B50 clears the complete tumble selector before installing the
@@ -4149,6 +4150,14 @@ public class SidekickCpuController {
                 // (sonic3k.asm:26458-26472,26631-26648).
                 sidekick.setAnimationId(0);
             }
+            // loc_13CD2 masks status to underwater then sets in-air. Preserve
+            // radii and the native interact pointer; these are not TouchFloor.
+            // S2 loc_1BC68 clears these same bits with literal status=2. Its
+            // additional underwater clear remains an inherited separate gap.
+            sidekick.clearRollingFlagPreserveRadii();
+            sidekick.setPushing(false);
+            sidekick.setOnObject(false);
+            clearRecoveryGroundingCache();
             sidekick.setAir(true);
             sidekick.setDirection(Direction.RIGHT);
             // S3K loc_13D34 and S2 loc_1BC68 copy the live leader's
@@ -4188,6 +4197,19 @@ public class SidekickCpuController {
         // (sonic3k.asm:26646-26652).
         ObjectControlState.nativeBit7FullControl().applyTo(sidekick);
         sidekick.setObjectMappingFrameControl(false);
+    }
+
+    /** Native recovery status resets invalidate engine support, not object SST bits. */
+    private void clearRecoveryGroundingCache() {
+        LevelManager levelManager = sidekick.currentLevelManagerIfAvailable();
+        if (levelManager != null && levelManager.getObjectManager() != null) {
+            // A prior support can survive while object_control skips solid cleanup.
+            // Keeping that cache after Status_OnObj is cleared makes pre-movement
+            // recovery incorrectly ground the player before its first air dispatch.
+            // clearRidingObject deliberately preserves object-owned standing bits
+            // and the player's stale native interact slot for their native owners.
+            levelManager.getObjectManager().clearRidingObject(sidekick);
+        }
     }
 
     private void publishRecoveryFlightAnimation(int animationId) {

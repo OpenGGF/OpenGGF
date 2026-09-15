@@ -87,6 +87,10 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 tails.setTopSolidBit((byte) (secondary ? 0xC : 0xE));
                 tails.setLrbSolidBit((byte) (secondary ? 0xD : 0xF));
                 tails.setHighPriority(!secondary);
+                tails.setRollingFlagPreserveRadii(true);
+                tails.applyCustomRadii(7,14);
+                tails.setPushing(true);
+                tails.setOnObject(true);
                 var cpu = new SidekickCpuController(tails, sonic);
                 cpu.forceStateForTest(SidekickCpuController.State.FLIGHT_AUTO_RECOVERY, 0);
                 cpu.update(1);
@@ -94,6 +98,12 @@ class TestSidekickCpuControllerFlightAutoRecovery {
                 assertEquals(sonic.getTopSolidBit(), tails.getTopSolidBit());
                 assertEquals(sonic.getLrbSolidBit(), tails.getLrbSolidBit());
                 assertEquals(sonic.isHighPriority(), tails.isHighPriority());
+                assertFalse(tails.getRolling());
+                assertFalse(tails.getPushing());
+                assertFalse(tails.isOnObject());
+                assertTrue(tails.getAir());
+                assertEquals(7,tails.getXRadius());
+                assertEquals(14,tails.getYRadius());
             }
         }
     }
