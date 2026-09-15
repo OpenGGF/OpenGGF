@@ -27,7 +27,7 @@ for Sonic, Tails and Knuckles. All five posts have native-character activation/r
 | --- | --- | --- | --- | --- | --- |
 | PARALLAX / HEAT SHIMMER | `SwScrlSoz`: ROM tables, seven fractional bands and independent FG/BG phases; SOZ1 render mode enables foreground rows | Normal desert moving-camera capture; all-line boundary regression | Camera/frame reconstruction; restored foreground mode reproduces GPU frame; existing production route restore/replay passes | 600 native rows / 134,400 scroll words match source-derived arithmetic; BG copies and art phase also agree | 320/528 corrected scenes inspected; all five viewport period checks, exposed-sky seam and320/528 foreground row-displacement regressions; exact native pixel match and full route breadth open |
 | ANIMATED TILES / PALETTE | Corrected SOZ1 DMA/channel range `$330..$341`; `AnPal_SOZ1` cycle; unused LRZ scripts excluded | All32 secondary-art phases and 49 palette passes checked against ROM | Six-pass timer/offset restore checked; quicksand/vine/mechanism world replay passes | Full six-tile secondary transfer; native phase/cadence corroboration | Static `$350..$357` preserved across update/VBlank cycles; purple flame overwrite removed in captures; matched cadence/pixel sequence still open |
-| ARENA PRESENTATION | `SozAct1Events`, source window, background priority replay, shake/sand and phase handoff implemented | Positioned approach reaches native arena admission; production test covers post-results seamless reload | `TestSozAct1ArenaProduction` covers admission, redraw boundaries, successful allocation prefixes and destination replay after seamless handoff; connected fight-to-handoff replay remains open | `sub_55DB6`, `sub_55E4C` differ from normal desert | Temple doorway capture inspected; partial-row VDP redraw and matched native sequence open |
+| ARENA PRESENTATION | `SozAct1Events`, source window, background priority replay, shake/sand and phase handoff implemented | Positioned approach reaches native arena admission; production test covers post-results seamless reload | `TestSozAct1ArenaProduction` covers admission, redraw boundaries, successful allocation prefixes and destination replay after seamless handoff; connected positioned fight-to-handoff replay is covered by `TestSozAct1VictoryProduction` | `sub_55DB6`, `sub_55E4C` differ from normal desert | Temple doorway capture inspected; partial-row VDP redraw and matched native sequence open |
 | ENTRY / LOAD / RESET | ROM loading and event/scroll owners implemented; cold sand intro in Act1 and title-owned ghosts in Act2 | Seeded FBZ EXIT_READY → fresh SOZ load verified; full incoming route open | `TestFbzSandopolisTimelineHeadless` verifies incoming load reset/destination replay; all checkpoints and selected repeated team reloads covered below | Unmatched | Unmatched |
 | Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Registered acquisition/held/release capture-restore and forward replay twice for the first strip in all four representative configurations; local slide cooldown reconstruction; other variant production spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
 | Spring-vine acquisition/tension/launch | `SozSpringVineObjectInstance`; native P2-before-P1 tension, pixel slope and eight-piece child | `TestSozAct1SpringVineRoute`: cold first-vine approach/launch at 320/640 widths, S1 donor and extra follower | All registered state restored and replayed twice at acquisition/tension/launch in each configuration; unit child recreation and independent participant state | 473 native slope/child-height observations match the source-derived arithmetic; full trajectory parity open | Native image and engine eight-piece display inspected; short engine capture ends before vine acquisition, no matched pixel certification |
@@ -36,7 +36,7 @@ for Sonic, Tails and Knuckles. All five posts have native-character activation/r
 | Other traversal objects / badniks | All 599 Act1/490 Act2 placed records bind to concrete factories; family production tests listed below | Positioned family reachability; connected cold routes remain open | Short graph/contact/creation/deletion restore/replay, including forced recreation; complete per-placement/participant product open | Source-backed branches; matched native sequences remain open | Local ROM-art captures; full pixel comparison open |
 | CHECKPOINT / DEATH | `TestSozCheckpointReloadProduction`: all five authored posts × three native leaders; representative post also covers five widths and three donors | Physical activation from positioned approaches; cold route between posts open | Activation recreated/replayed, production death/reload; selected repeated mixed/duplicate-team reset checks below | Source checkpoint placement/respawn assertions; matched native death movie open | Native pixel comparison open |
 | WORLD / CAMERA / EVENTS | Captured `SozEventState`, mutation pipeline and arena owners | Positioned arena admission and source camera gates covered | Event/camera/art graph and terrain restore/replay in focused tests; connected full-route event sequence open | Source-backed state/threshold checks; native sequence comparison open | Arena/cold scenes inspected; matched native sequence open |
-| BOSS / EXIT | Egg Golem positional sink defeat, door and seamless Act2 entry implemented | Positioned awakening/admission and seeded post-results handoff; cold victory open | Awakening graph and destination state replay; local hit/sink/allocation tests. Connected production attack→sink→handoff replay remains open | Native source positional defeat; matched combat trajectory open | Positioned awakening/door captures; full native pixel sequence open |
+| BOSS / EXIT | Egg Golem positional sink defeat, door and seamless Act2 entry implemented | Controller-only positioned admission → pursuit/sink → results → door → playable Act2; cold victory open | Eight forced graph reconstruction/replay milestones through admission, articulation, attack, sink, signpost, results, alignment and fade, plus Act2 destination replay | Native source positional defeat; matched combat trajectory open | Positioned awakening/door and connected victory captures; full native pixel sequence open |
 
 ## Execution evidence
 
@@ -147,3 +147,36 @@ Remaining obligations include connected cold victory routes, matched native
 trajectories/pixels, repeated seamless/next-zone transitions, every checkpoint's
 full width/donor/team product, and coupled mechanism ownership across those
 routes. Selected configuration and local graph tests are not full-act certification.
+
+## Connected positioned Act1 victory
+
+`TestSozAct1VictoryProduction` starts Sonic/Tails at the ordinary arena approach
+(320 pixels, donor off, 99 starting rings), lets native events create the golem,
+and supplies controller input only. Pursuit carries the golem into the native
+positional sink; Sonic escapes during its final committed jump. No boss phase,
+defeat flag, results state or transition state is seeded. Results, alignment,
+door fade and the seamless loader reach playable Act2. Eight transition-edge
+snapshots force complete object recreation and exact forward replay; the
+incoming Act2 graph also restores and replays. The focused victory, arena and
+miniboss selection passed seven tests with zero skips.
+
+This closes the connected positioned battle-to-handoff obligation for this
+configuration. Cold full-act victory, other leader/donor/width combinations,
+repeated seamless transitions and matched native trajectories/pixels remain open.
+
+The connected render exposed a shared load-order bug: target zone initialization
+ran after the resource handoff and cleared its staged fade palettes. Moving
+zone initialization before the post-target handoff preserves SOZ target colors
+and ICZ transferred queue ownership. The strengthened selection (including
+shared executor/handoff, zone-feature and ICZ rewind consumers) passed 29 tests,
+zero skips. The change-based plan selects 2,651 ordinary classes plus guards;
+combined broad validation belongs to the SOZ integration owner.
+
+`TestSozAct1VictoryCapture` passed separately with zero skips, recording 5,349
+actual GameLoop frames and rendering every fourth frame (15 fps). The durable
+capture is `$SOZ_CAPTURE_ROOT/completion-act1-victory/native-320/`:
+`capture.mp4`, original PNG frames and `state.csv` including controller masks.
+Frame 3344 shows the sink/escape, 5069 enters Act2, and 5348 shows Sonic/Tails
+in the visible dark temple after native control release. Destination palette
+and non-HUD world-pixel assertions prevent the previously black readiness state
+from passing. This engine film is not a native pixel-comparison oracle.

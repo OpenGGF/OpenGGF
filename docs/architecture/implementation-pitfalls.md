@@ -354,3 +354,14 @@ retraction, then encoded that mistake as a unit expectation. Check aliases in
 the owning constants table before claiming a shipped bug; follow both the
 writer and reader. Test sustained behavior and release, not only arrival at a
 routine. The SOZ methodology-v2 plan records the correction.
+
+### Seamless target initialization must precede resource handoff
+
+The post-target resource handoff may install persistent palette targets, rotation
+gates and native event state. `reinitializeZoneFeaturesForActTransition` clears
+zone-scoped palette/render registries, so running it after the handoff erases
+those resources. SOZ's connected Act1 victory capture exposed this: controls
+released in Act2 while every restored world/player palette stayed black. Keep
+target initialization before `transferAfterTargetInit`, and verify both readiness
+and destination palette/pixels. ICZ's other production handoff transfers queued
+resource ownership to the already initialized event owner.

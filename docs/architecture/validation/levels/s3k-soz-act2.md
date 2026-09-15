@@ -192,3 +192,12 @@ Remaining obligations include connected cold victory routes, matched native
 trajectories/pixels, repeated seamless/next-zone transitions, every checkpoint's
 full width/donor/team product, and coupled mechanism ownership across those
 routes. Selected configuration and local graph tests are not full-act certification.
+
+## Connected incoming Act1 victory
+
+`TestSozAct1VictoryProduction` now drives the positioned Sonic/Tails Act1 arena
+through pursuit, native positional sink, results, alignment and door fade into
+this act, without seeded boss/defeat/transition state. It restores/replays eight
+outgoing graph edges and the incoming Act2 graph, and verifies restored palette
+lines after control release. This is a native-donor 320-pixel incoming route;
+full cold-zone and repeated seamless transition products remain open.
