@@ -1838,3 +1838,26 @@ native routine6 even though generic dead=false. `sub_400F0` rejects it before
 ascending+$68 damping; the same death admission applies to all four variants,
 and waterfall held-routine release. The unit regression failed before the fix;
 all16quicksand and4production route cases pass after it (0skips,53.384s).
+
+### Connected victory and independent recording follow-up
+
+`e4478100e`, integrated by `d849452c1`, connects the positioned Act1 arena
+approach through ordinary pursuit, sink victory, results, door and visible Act2.
+Eight graph recreation/replay edges and destination replay pass. The continuous
+capture revealed a real black-world handoff: target zone initialization cleared
+palette staging after resource transfer. The shared executor now initializes
+zone features before `transferAfterTargetInit`; the other production consumer,
+ICZ, is included in focused checks.29consumer tests and1capture test passed,
+0skips. Root inspected final frame05348 in the unified external
+`completion-act1-victory/native-320` folder: both players and temple are visible.
+The89.2-second movie is an arena-to-destination scenario, not a cold full act.
+
+`84b2d2b7d` adds an independent59507-row SOZ recording harness and repairs the
+S2/S3K recovery handoff's missing collision-plane/art-priority copy. The new
+cross-game regression failed before the fix; all18recovery tests then passed,
+0skips. The independent trace did not improve (9763errors; first queue34,
+Tails2312), rejecting the copy omission as this recording's immediate cause.
+The earlier emerald recording reaches transformation4868 without supplied
+prior-campaign progression. Exact commands, compared counts and limits are in
+[the frontier log](../../status/trace-frontier-log.md). Neither recording's
+comparison rows supply gameplay state; queue checks and later rows remain intact.
