@@ -37,7 +37,7 @@ public final class SozZoneRuntimeState implements S3kZoneRuntimeState {
                 : routine == 0x14 || routine == 0x18 || routine == 0x1C || routine >= 0x24;
     }
     // SOZ2_ScreenInit/loc_561D8: Layout_row_index_mask=$3C selects 16 rows.
-    @Override public int backgroundCollisionYMask() { return actIndex == 1 ? 0x7FF : 0xFFFF; }
+    @Override public int backgroundLayoutYMask() { return actIndex == 1 ? 0x7FF : 0xFFFF; }
     public SozEventState events() { return events; }
     /** Animate_Palette/loc_3BE2: SOZ event-owned negative Palette_fade_timer lifetime. */
     public boolean eventPaletteFadeHeld() {

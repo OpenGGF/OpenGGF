@@ -173,7 +173,7 @@ class TestBackgroundPlaneCollisionProvider {
     private record ExplicitState(BackgroundPlaneCollisionProvider.State collisionState, int mask)
             implements ZoneRuntimeState {
         ExplicitState(BackgroundPlaneCollisionProvider.State state) { this(state,0xFFFF); }
-        @Override public int backgroundCollisionYMask() { return mask; }
+        @Override public int backgroundLayoutYMask() { return mask; }
         @Override public String gameId() { return "test"; }
         @Override public int zoneIndex() { return 0; }
         @Override public int actIndex() { return 0; }
