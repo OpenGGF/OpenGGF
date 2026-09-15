@@ -107,20 +107,9 @@ public class Sonic1SmpsData extends AbstractSmpsData {
             return null;
         }
 
-        // S1 voice bytes per 4-byte group are in order Op4,Op3,Op2,Op1 (InsMode=DEFAULT).
-        // The S1 sequencer profile consumes normalized order: Op4,Op2,Op3,Op1.
-        // The difference: bytes at positions [g+1] and [g+2] are swapped.
-        // Convert S1 → S2 format by swapping the middle two bytes in each group.
         byte[] voice = new byte[stride];
         System.arraycopy(data, offset, voice, 0, stride);
-
-        // Swap positions [g+1] and [g+2] for each 4-byte operator group
-        // Groups start at byte offsets 1, 5, 9, 13, 17, 21
-        for (int g = 1; g < 25; g += 4) {
-            byte tmp = voice[g + 1];
-            voice[g + 1] = voice[g + 2];
-            voice[g + 2] = tmp;
-        }
+        Sonic1FmVoiceDecoder.normalizeInPlace(voice);
         return voice;
     }
 

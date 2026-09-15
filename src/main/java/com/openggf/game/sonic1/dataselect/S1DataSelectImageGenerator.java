@@ -4,14 +4,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.openggf.game.sonic1.Sonic1ZoneRegistry;
 import com.openggf.game.sonic1.scroll.Sonic1ZoneConstants;
 import com.openggf.graphics.RgbaImage;
-import com.openggf.graphics.ScreenshotCapture;
+import com.openggf.game.dataselect.PreviewImageFiles;
 import com.openggf.version.AppVersion;
 
 import java.io.IOException;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,16 +64,9 @@ public final class S1DataSelectImageGenerator {
         for (ZoneCaptureSpec spec : ZONES) {
             PreviewCaptureTarget captureTarget = resolveCaptureTarget(spec.zoneId());
             RgbaImage capture = captureSource.capture(spec.zoneId(), captureTarget);
-            RgbaImage preview = scaleToPreview(capture);
+            RgbaImage preview = PreviewImageFiles.scaleToPreview(capture, PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
-            Path tempPng = Files.createTempFile(cacheRoot, spec.fileStem() + "-", ".tmp");
-            Path finalPng = cacheRoot.resolve(spec.fileName());
-            try {
-                ScreenshotCapture.savePNG(preview, tempPng);
-                moveAtomically(tempPng, finalPng);
-            } finally {
-                Files.deleteIfExists(tempPng);
-            }
+            PreviewImageFiles.writePng(preview, cacheRoot, spec.fileStem(), spec.fileName());
             zoneFiles.put(spec.zoneKey(), spec.fileName());
         }
 
@@ -123,35 +114,10 @@ public final class S1DataSelectImageGenerator {
                     Instant.now().toString(),
                     zoneFiles);
             MAPPER.writerWithDefaultPrettyPrinter().writeValue(tempManifest.toFile(), manifest);
-            moveAtomically(tempManifest, finalManifest);
+            PreviewImageFiles.moveAtomically(tempManifest, finalManifest);
         } finally {
             Files.deleteIfExists(tempManifest);
         }
-    }
-
-    private static void moveAtomically(Path source, Path target) throws IOException {
-        try {
-            Files.move(source, target,
-                    StandardCopyOption.REPLACE_EXISTING,
-                    StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
-        }
-    }
-
-    private static RgbaImage scaleToPreview(RgbaImage source) {
-        if (source.width() == PREVIEW_WIDTH && source.height() == PREVIEW_HEIGHT) {
-            return source.copy();
-        }
-        int[] pixels = new int[PREVIEW_WIDTH * PREVIEW_HEIGHT];
-        for (int y = 0; y < PREVIEW_HEIGHT; y++) {
-            int sourceY = Math.min(source.height() - 1, y * source.height() / PREVIEW_HEIGHT);
-            for (int x = 0; x < PREVIEW_WIDTH; x++) {
-                int sourceX = Math.min(source.width() - 1, x * source.width() / PREVIEW_WIDTH);
-                pixels[y * PREVIEW_WIDTH + x] = source.argb(sourceX, sourceY);
-            }
-        }
-        return new RgbaImage(PREVIEW_WIDTH, PREVIEW_HEIGHT, pixels);
     }
 
     /**

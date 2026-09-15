@@ -400,6 +400,24 @@ public class TestS1DataSelectImageCacheManager {
         assertFalse(Files.exists(cacheRoot.resolve("manifest.json")));
     }
 
+    @Test
+    void loadingRereadsManifestAfterValidation() throws Exception {
+        writeManifest("sha-valid", writeZoneSet());
+        var calls = new java.util.concurrent.atomic.AtomicInteger();
+        S1DataSelectImageCacheManager manager = new S1DataSelectImageCacheManager(
+                tempDir, config, () -> {
+                    calls.incrementAndGet();
+                    try {
+                        writeManifest("sha-valid", Map.of());
+                    } catch (IOException e) {
+                        throw new java.io.UncheckedIOException(e);
+                    }
+                    return "sha-valid";
+                }, mapper);
+        assertTrue(manager.loadCachedPreviews().isEmpty());
+        assertEquals(1, calls.get());
+    }
+
     private void writeManifest(String romSha256, Map<String, String> zones) throws IOException {
         writeManifest(romSha256, zones, AppVersion.get(), S1DataSelectImageCacheManager.GENERATOR_FORMAT_VERSION);
     }

@@ -8,13 +8,11 @@ import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.graphics.RgbaImage;
 import com.openggf.game.dataselect.DataSelectPreviewCapture;
 import com.openggf.game.dataselect.PreviewCacheGenerationTask;
-import com.openggf.graphics.ScreenshotCapture;
-import com.openggf.version.AppVersion;
+import com.openggf.game.dataselect.PreviewCacheFiles;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -91,28 +89,11 @@ public class S2DataSelectImageCacheManager {
         if (manifest == null) {
             return false;
         }
-        if (!AppVersion.get().equals(manifest.engineVersion())) {
-            return false;
-        }
-        if (manifest.generatorFormatVersion() != GENERATOR_FORMAT_VERSION) {
-            return false;
-        }
-        if (!Objects.equals(romSha256Supplier.get(), manifest.romSha256())) {
-            return false;
-        }
-        if (manifest.zones() == null || !EXPECTED_ZONE_KEYS.equals(manifest.zones().keySet())) {
-            return false;
-        }
-        for (String relativePath : manifest.zones().values()) {
-            if (relativePath == null || relativePath.isBlank()) {
-                return false;
-            }
-            Path imagePath = cacheRoot.resolve(relativePath);
-            if (Files.notExists(imagePath) || !isDecodablePng(imagePath)) {
-                return false;
-            }
-        }
-        return true;
+        return PreviewCacheFiles.valid(cacheRoot,
+                new PreviewCacheFiles.Manifest(manifest.engineVersion(),
+                        manifest.generatorFormatVersion(), manifest.romSha256(), manifest.zones()),
+                GENERATOR_FORMAT_VERSION, romSha256Supplier, EXPECTED_ZONE_KEYS,
+                S2DataSelectImageGenerator.PREVIEW_WIDTH, S2DataSelectImageGenerator.PREVIEW_HEIGHT);
     }
 
     /**
@@ -126,23 +107,9 @@ public class S2DataSelectImageCacheManager {
         if (manifest == null || manifest.zones() == null) {
             return Map.of();
         }
-        Map<Integer, RgbaImage> previews = new LinkedHashMap<>();
-        for (int zoneId : S2DataSelectImageGenerator.supportedZoneIds()) {
-            String zoneKey = S2DataSelectImageGenerator.zoneKeyForZoneId(zoneId);
-            if (zoneKey == null) {
-                return Map.of();
-            }
-            String relativePath = manifest.zones().get(zoneKey);
-            if (relativePath == null || relativePath.isBlank()) {
-                return Map.of();
-            }
-            try {
-                previews.put(zoneId, ScreenshotCapture.loadPNG(cacheRoot.resolve(relativePath)));
-            } catch (IOException e) {
-                return Map.of();
-            }
-        }
-        return Map.copyOf(previews);
+        return PreviewCacheFiles.load(cacheRoot, manifest.zones(),
+                S2DataSelectImageGenerator.supportedZoneIds(),
+                S2DataSelectImageGenerator::zoneKeyForZoneId);
     }
 
     private void startGenerationIfEligible() {
@@ -173,13 +140,4 @@ public class S2DataSelectImageCacheManager {
         }
     }
 
-    private boolean isDecodablePng(Path imagePath) {
-        try {
-            RgbaImage image = ScreenshotCapture.loadPNG(imagePath);
-            return image.width() == S2DataSelectImageGenerator.PREVIEW_WIDTH
-                    && image.height() == S2DataSelectImageGenerator.PREVIEW_HEIGHT;
-        } catch (IOException e) {
-            return false;
-        }
-    }
 }

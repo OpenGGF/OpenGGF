@@ -562,3 +562,15 @@ and angle arrays without adding validation.
 `SmpsConfigBinding` snapshots end flags before lazily resolving the session handler;
 no caller enumerates every configuration field when rebinding. The copy-coverage
 guard checks public accessors independently of this representation.
+
+`PreviewCacheFiles` owns donated-preview version/hash/zone/PNG checks and image
+loading. Game managers retain manifest types, rereads and lazy suppliers;
+`PreviewImageFiles` owns scaling and file replacement while generators retain
+capture coordinates and publication order. Raw uncompressed S2/S3K object art
+uses `PatternDecompressor.fromBytes` after caller-specific validation.
+
+`Sonic1FmVoiceDecoder` normalizes operator order on caller-owned voice copies;
+address resolution and copy/bounds semantics remain in music/SFX owners.
+HScrollBuffer and VScrollBuffer each share one private native upload tail between
+their array/view paths. `CompleteRunAudioFiles` shares path and digest checks,
+leaving producer ordering, snapshot ownership and publication in their callers.
