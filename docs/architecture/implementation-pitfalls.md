@@ -388,3 +388,13 @@ compare zero only for an actually empty slot. Preserve same-word replacements
 and detect changed words. A live occupant without a code-pointer provider is
 unknown, not an empty slot. Rewind tests need a recycled slot whose old contact
 is absent after reconstruction, not just restoration of an unchanged owner.
+
+### Independently allocated exit helpers must not retain the retiring boss
+
+SOZ `loc_77A6E` is allocated without a parent pointer. It waits on `_unkFAB8`
+bit 0, set at `loc_779C0`, then `loc_77A98` follows Player 1 independently
+until level clear. Model that captured signal rather than reading the boss's
+escape phase through a retained reference. The controller-only end-boss route
+exposed an unregistered reference between root deletion and destination load;
+continuous snapshots cover this interval even when selected hit/escape rewind
+spots all pass.
