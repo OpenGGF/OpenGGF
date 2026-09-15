@@ -203,7 +203,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   pushable rocks that fall onto their authored tracks, loop fall-through
   controllers, both static solid platform shapes, moving and spiked pillars,
   and connected push switches and doors, including special-rock activation and correct body-over-track layering.
-  Sandopolis Act 1 now has layered desert parallax, heat shimmer, scroll-driven
+  Sandopolis Act 1 now has layered desert parallax, foreground and background heat shimmer, scroll-driven
   background art and cycling sand colors, with preserved static desert tiles
   and consistent background wrapping in widescreen.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,

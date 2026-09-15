@@ -714,7 +714,9 @@ positioned interactions extend local coverage; complete act traversal remains op
 
 ## Normal Act 1 presentation implementation status (2026-09-15)
 
-`SwScrlSoz` now binds normal desert scrolling and ROM-backed shimmer/bands.
+`SwScrlSoz` binds normal desert scrolling and ROM-backed shimmer/bands.
+SOZ1 also registers the foreground heat-haze render mode; calculating the FG
+scroll words alone does not enable their consumption by the tile renderer.
 `AnimateTiles_SOZ1`'s secondary copy and channel range cover all six tiles through
 `$341`, and its phase uses the current camera calculation. `AnPal_SOZ1` is
 registered for Act 1, targeting zero-based palette2 colors12–15; its prior

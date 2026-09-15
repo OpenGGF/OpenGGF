@@ -322,3 +322,13 @@ registering a shared list; a data pointer alone does not establish execution.
 AniPLC regression checks must include VBlank publication, since submission-only
 checks see unchanged CPU tiles while the next presentation corrupts them.
 The SOZ desert artifact correction in the methodology-v2 plan records the case.
+
+
+### Scroll-buffer parity does not prove foreground deformation is rendered
+
+SOZ1 computed correct FG/BG scroll words while only BG used per-line sampling.
+The foreground tile pass also needs the owning zone's advanced render mode;
+register it at that boundary instead of adding a zone check to the shared shader.
+For a pixel-displacement oracle, compare opaque foreground regions: shifting a
+composite through a transparent edge also shifts the independently scrolled BG
+and gives a false failure. The SOZ methodology-v2 plan records this correction.

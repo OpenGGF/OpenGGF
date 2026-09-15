@@ -74,6 +74,22 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
     private final SpecialRenderEffect iczBigSnowPileBackgroundEffect = new IczBigSnowPileBackgroundEffect();
     private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
     private final AdvancedRenderMode fbzBossPlaneRenderMode = new FbzBossPlaneRenderMode();
+    private final AdvancedRenderMode sozForegroundHeatHazeMode = new AdvancedRenderMode() {
+        @Override
+        public String id() {
+            return "soz-foreground-heat-haze";
+        }
+
+        @Override
+        public void contribute(AdvancedRenderModeContext context, AdvancedRenderFrameState.Builder builder) {
+            // SOZ1 loc_55DF2 / MakeFGDeformArray supplies the foreground half
+            // of H_scroll_buffer. Consume that ROM wave through the same tile
+            // rendering path as AIZ2; SOZ2 does not use this deformation.
+            if (context.zoneIndex() == Sonic3kZoneIds.ZONE_SOZ && context.actIndex() == 0) {
+                builder.enableForegroundHeatHaze();
+            }
+        }
+    };
     private final AdvancedRenderMode slotMachineForegroundScrollMode = new AdvancedRenderMode() {
         @Override
         public String id() {
@@ -629,6 +645,9 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
     public void registerAdvancedRenderModes(AdvancedRenderModeController controller, int zoneIndex, int actIndex) {
         if (zoneIndex == Sonic3kZoneIds.ZONE_AIZ) {
             controller.register(aizTransitionRenderFeature);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ && actIndex == 0) {
+            controller.register(sozForegroundHeatHazeMode);
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_SLOT_MACHINE) {
             controller.register(slotMachineForegroundScrollMode);
