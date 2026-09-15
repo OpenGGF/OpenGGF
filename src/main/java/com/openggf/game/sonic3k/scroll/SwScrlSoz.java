@@ -57,6 +57,19 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
             resetScrollTracking();
             bgX = (short) cameraX >> 1;
             vscrollFactorBG = (short) ((short) cameraY >> 1);
+            var state = com.openggf.game.GameServices.hasRuntime()
+                    ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                            com.openggf.game.GameServices.zoneRuntimeRegistry()).orElse(null) : null;
+            if (state != null && state.actIndex() == 1) {
+                var events = state.events();
+                if (events.backgroundRoutine() == 0x14 || events.backgroundRoutine() == 0x18) {
+                    bgX = (short) (cameraX - 0x1930);
+                    vscrollFactorBG = (short) (cameraY + 0x2E0 + events.sandHeight());
+                } else if (events.backgroundRoutine() == 0x1C && events.savedBackgroundX() != 0) {
+                    bgX = events.savedBackgroundX();
+                    vscrollFactorBG = (short) events.savedBackgroundY();
+                }
+            }
             short fg = (short) -cameraX;
             short bg = (short) -bgX;
             java.util.Arrays.fill(buffer, 0, 224, ((fg & 0xFFFF) << 16) | (bg & 0xFFFF));
