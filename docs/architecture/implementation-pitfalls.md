@@ -365,3 +365,15 @@ released in Act2 while every restored world/player palette stayed black. Keep
 target initialization before `transferAfterTargetInit`, and verify both readiness
 and destination palette/pixels. ICZ's other production handoff transfers queued
 resource ownership to the already initialized event owner.
+
+### CPU recovery status resets must release engine grounding caches
+
+A native `status` reset can clear `Status_OnObj` while preserving the stale
+interaction pointer and the old object's standing bit. The engine has additional
+riding/standing snapshots: clear those at recovery's native status reset with
+`ObjectManager.clearRidingObject`, without clearing the ROM-owned interaction
+or object bits. Otherwise object-control frames can preserve a former support,
+and the pre-movement desynchronization recovery grounds Tails on the first
+normal frame, skipping gravity. The independent SOZ recording exposed this at
+recovery handoff; the resulting missed Tails Sandworm kill later changed Sonic's
+rebound, so Sonic's first position mismatch was a downstream symptom.
