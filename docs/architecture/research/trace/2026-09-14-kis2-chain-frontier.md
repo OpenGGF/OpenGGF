@@ -1002,3 +1002,25 @@ policy check is recorded separately after completion.
 The corrected queued `-Dtest=TestModApiPinPolicy test` run passes all four tests,
 zero failures/errors/skips, 18.369 s. The candidate signature pin changes only
 the two canonical constructors and their two new record components/accessors.
+
+Source commit `4a4ecb7ae` was reconciled with updated `develop` `d9de72b7a`
+in `298913b39` without conflicts; `e66138058` records the exact cursor and
+clarifies the source comment. The reconciled four-class queued trace command
+completed five tests with four known trace assertions, zero errors/skips,
+70 seconds. All 22 normalized JSON report payload hashes exactly match the
+pre-merge candidate, including the four independent controls and cursor 65,856.
+
+Development validation at `e66138058`, command `LUA_BIN=lua5.4 python3
+tools/testing/run_categories.py --base d9de72b7a314bdd6e4157eb4db2ef638e2669d96
+--run`, run `20260915T173243Z-cc147878`: 20,607 ordinary tests, two failures,
+zero errors, 19 skips (745.05 s); 668 guard tests, the exact three baseline
+failures, zero errors/skips (178.01 s). All skip identities and reasons match
+the baseline. The new failures were existing rule expectations:
+`TestCrossGameFeatureProviderRefactor.hybridRulesPreserveBaseBoundaryAndSidekickFlags`
+expected the newly donated glide flag to remain false, and
+`TestKis2PhysicsProvider.rulesRetainSonic2DefaultsOutsideShippedLockOnChanges`
+required the entire stock capability record by identity. They now explicitly
+assert the ROM-backed glide capability and boss exit while retaining checks
+for every unrelated capability value. No production behavior changed in this
+correction. Development diagnostics were inspected and queued for acknowledgment;
+focused correction and integrated validation follow below.
