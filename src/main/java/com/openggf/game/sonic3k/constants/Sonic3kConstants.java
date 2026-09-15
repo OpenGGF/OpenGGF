@@ -1428,6 +1428,8 @@ public class Sonic3kConstants {
     public static final int MAP_SOZ_PUSHABLE_ROCK_ADDR = 0x040776;
     public static final int SOZ_ROCK_RIDE_INFO_ADDR = 0x1E3FD8;
     public static final int MAP_SOZ_BREAKABLE_SAND_ROCK_ADDR = 0x04182E;
+    public static final int MAP_SOZ_SWINGING_PLATFORM_ADDR = 0x0416C6;
+    public static final int MAP_SOZ_RAPEL_WIRE_ADDR = 0x04B1D0;
     public static final int MAP_SOZ_SPRING_VINE_ADDR = 0x040B0C;
 
     // Map_SOZCollapsingBridge - SOZ bridge (3 frames)
