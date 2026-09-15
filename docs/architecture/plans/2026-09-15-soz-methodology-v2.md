@@ -1,7 +1,7 @@
 # Sandopolis Zone: methodology v2 application plan
 
 Date: 2026-09-15. Status: placed inventory, native pilot, quicksand, spring-vine and sand-rock slices integrated;
-full routes and native certification remain open.
+pushable-rock implementation and local/native corroboration complete; full routes and native certification remain open.
 
 ## Objective and authority
 
@@ -744,3 +744,163 @@ and push-policy audit also passed. A native compatibility-command smoke capture
 at `$TASK_DIR/legacy-host-1` used the old `OGGF_FBZ_*` variables and fresh-entry
 flag: exit 0, no failures, 1.266 seconds; its CSV and PNG match the common-command
 capture byte for byte. No engine gameplay or full-suite result is inferred.
+
+### Pushable-rock continuation
+
+Base `342f01cb4dadb5e1ed771270d90f759923825807`; isolated
+`.worktrees/soz-pushable-rock`, branch `feature/ai-soz-pushable-rock`.
+The next missing placed Act 1 actor after the sand-rock spot is SKL `$3E` at
+`($3E0,$5F4)`, subtype 9. Seven Act 1 and three Act 2 placements use this family.
+S3KL `$3E` remains the HCZ conveyor belt. Cold traversal to these spots is still
+open; the first acceptance target is an independent positioned production push
+through the complete authored track, with normal input after setup.
+
+`Obj_SOZPushableRock` is at ROM `$40546`, mapping pointer `$40776`, art base
+`ArtTile_SOZMisc+$8C`, palette 2. The single mapping has two 2x3 pieces, tile `$25`,
+with a flipped second piece. `SOZRockRideInfo` at `$1E3FD8` contains ROM pointers;
+subtype low five bits index them. Subtype 9 reads `$1F6CCA`:
+Y `$630`, X `$460`, Y `$652`, X `$4F0`, then `$FFFF`. Runtime track data is read
+through the ROM service, never copied from the disassembly as fallback assets.
+
+Source contract: save each player's Status_Push before SolidObjectFull, then read
+the object's per-player pushing bits; process P1 first and P2 only if P1 was not
+eligible. A shared signed word timer decrements on an eligible pass and moves one
+pixel at underflow, reloading four. Shift the pushing player's centre by the same
+pixel, preserve its subpixel, play PushBlock and probe the trailing edge at
+Y+11 with primary solid bit `$C`, independently of the focused player's path.
+FindFloor still honors the global background-collision owner. Floor distance up to 14 snaps; greater distance enters falling. MoveSprite
+uses the old velocity before `$38` gravity. Y equality does not finish a fall;
+X equality does finish a horizontal ride. Target Y snaps preserve the fraction,
+X velocity survives later falls, and a negative next track word stops motion.
+The terminal read leaves the native track cursor unchanged. Horizontal sound gates
+on `Level_frame_counter & $1F`, not V-int. Falling at/below signed camera-max-Y
+plus `$120` writes X `$7F00` and disables carry before ordinary culling.
+
+The existing `SolidObjectProvider.setPlayerPushing` callback models native object
+pushing bits, including an offscreen P2 skip which produces no fresh contact.
+Using it avoids a new shared collision API. Review caught the PUSH-to-FALL carry
+boundary: the checkpoint remembered X before the prior push, but native FALL
+saves its d4 after that push. Initial X velocity is zero, so the implementation
+suppresses horizontal carry until there is actual track velocity; a live solid
+controller rider/pusher regression covers this. No shared collision algorithm
+changed. Retained offscreen-P2 rider-baseline behavior remains a shared controller
+coverage concern; this slice does not claim it certified.
+
+Subtype `$87` also registers native `_unkF7C4` for SOZDoor's `sub_41AA8` rock
+interaction. Door implementation is still missing; that coupled behavior remains
+an explicit inherited gap, not a completed door route. The rock's ordinary push
+and track semantics apply to the high-bit subtype, with its low-five-bit path.
+
+
+Validation selection against the pinned base chooses all 2,599 ordinary classes
+plus guards through registration/constants and inventory paths. Proportionate
+validation applies to this bounded object family: there are no shared collision,
+physics, timing-service, public API or build-policy changes. Focused checks cover
+its source branch edges, real controller rider/pusher transition, ROM tracks and
+art, both acts' positioned production spots, registered-state rewind, inventory,
+registry/profile and required S3K bootstrap/loading/AIZ regressions. Structural
+checks run in a fresh JVM; CI smoke remains unchanged. This is not a local full-suite
+claim. Java 21/Lua 5.4/PowerShell preflight passed with `LUA_BIN=/usr/bin/lua5.4`.
+
+
+First focused run:
+`python3 tools/testing/maven_queue.py -Dmse=off
+'-Dtest=TestSozPushableRock,TestSonic3kObjectProfile,TestSonic3kObjectProfileRegistryGuard'
+test -B` passed 18 tests, zero failures/errors/skips, 50.040s after queue wait.
+This includes ten pushable-rock unit cases and both profile checks, avoiding the
+separate profile-expectation omission found in the preceding sand-rock slice.
+
+
+#### Updated-base verification and probe corrections
+
+The task was preserved and advanced to `98f5d4fc1b9265a8a4857b026e56548a6738fd29`
+before final checks. Append-only conflicts in this plan and both pitfall mirrors
+retained the shared capture-host record, upstream FBZ art-word lesson and SOZ
+lessons. Registry/art changes merged without conflict. The refreshed selector
+lists 2,602 ordinary classes plus guards; the bounded-family proportionate scope
+above still applies. There are no shared production physics or timing changes.
+
+Rejected test/probe setups:
+
+- Releasing Right after a two-pixel Y change mistook slope following for free fall.
+  The first combined run had 230 tests, five production-spot failures and no skips;
+  the other 225 passed. The production observer now requires downward motion with
+  unchanged X for the first free-fall step. Four Act 1 configurations then passed.
+- Holding position in Act 2 lets the longer track leave the ordinary camera cull
+  window. Holding Right throughout outruns the rock and resets the level after
+  falling into the pit. The final test boards with normal input, brakes, then rides.
+  A monotonic level-frame check rejects unnoticed death/reload; complete registered
+  rewind is exercised twice at actual boarding as well as the four track boundaries.
+- Waiting 1,800 native frames did not clear the entry lock. Source inspection found
+  `Obj_LevelIntro_PlayerFallIntoGround` (`$41FF4`), whose `loc_420A6` waits for fresh
+  A/B/C and whose `loc_4213C` clears both locks and deletes the intro actor. A one-time
+  lock clear was also rejected: the active intro rewrites it. The final probe makes
+  the ordinary jump at observation step 46 and sees unlock at step 51, before any
+  positioned player setup. This supersedes the earlier unresolved entry-lock note.
+
+Native evidence is now reproducible through
+`tools/bizhawk/capture_soz_pushable_rock.lua`. It accepts the verified SOZ1 LFC35
+state, completes that intro handshake, sets only P1 position/motion/control once,
+then holds Right after 30 neutral frames until the rock enters free fall. It
+releases input afterward. These are declared positioned observations, not cold
+traversal or full engine/native trajectory parity.
+
+```bash
+python3 tools/bizhawk/capture_native_references.py \
+  --bizhawk-home "$BIZHAWK_HOME" --rom "$S3K_ROM" \
+  --rom-sha1 CFBF98C36C776677290A872547AC47C53D2761D6 --movie "$BK2" \
+  --exporter tools/bizhawk/capture_soz_pushable_rock.lua \
+  --plan "$TASK_DIR/pushable-plan.lua" \
+  --fixture-state "$TASK_DIR/vine-1/fbz1-lfc35.State" \
+  --output "$TASK_DIR/native-pushable-10" \
+  --require-output pushable.csv --require-output terminal.json --timeout 30
+```
+
+The explicit plan is `return {}`; the exporter owns this fixed diagnostic recipe.
+The source ROM/BK2/state hashes are recorded in `host.json`; exporter SHA-256 is
+`7D064977F55F04D2D5DAAFE08287069FC61ACC9E40AB31366D2F0598926DD3A4`.
+The promoted probe reproduced the preceding diagnostic's two CSV files byte for
+byte: 785 contiguous object rows, 48 pushes spaced five frames apart, first fall
+at frame 295, first ride 318, second fall 398, second ride 417, terminal 542.
+The rock stays at `($4F0,$652)` through frame 799 with unchanged terminal cursor
+`$1F6CD2`. Exit 0, no host failures, 2.067 seconds. No engine state was hydrated
+from these rows. Missing terminal observations produce no `terminal.json`.
+
+Engine visual checks used `InputLogAuthorTool --inline '300 R; 500 -'` and
+`GameplayCaptureTool --game s3k --zone soz --act 1 --x 0x3B0 --y 0x5EC
+--main sonic --sidekick tails`, the resulting `pushable-input.txt`, and widths
+320 and 528. Outputs are `$TASK_DIR/engine-pushable-1` and
+`$TASK_DIR/engine-pushable-wide`: each has 800 state rows/PNGs and an MP4, with no
+death rows. CSVs were read first; intact frame 100, falling frame 300 and wide
+terminal frame 550 were inspected. The existing background/palette differences
+remain outside this object-art check. The 320 view does not show the terminal;
+the 528 view does. Capture command completed successfully; its inherited Discord
+worker shutdown warning did not prevent output or process completion.
+
+Combined focused command (ROM variables are existing absolute paths):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSozPushableRock,TestSozPushableRockProduction,TestSolidObjectManager,TestSozObjectInventory,TestRemainingRewindTailInventory,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestSonic3kObjectProfile,TestSonic3kObjectProfileRegistryGuard,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$S3K_ROM" "-Dsonic1.rom.path=$S1_ROM" test -B
+```
+
+248 tests passed, zero failures/errors/skips, 23.887 seconds at 16:58:10 BST.
+After adding the actual-boarding rewind checkpoint, the production class alone
+passed all five configurations again (20.119 seconds, 17:02:19 BST). The remaining
+unchanged checks were not repeated for that test-only addition.
+
+Separate structural command:
+`python3 tools/testing/maven_queue.py -Dmse=off -Pguards
+'-Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestObjectUpdateClockTerminologyGuard'
+test -B`: 123 passed, zero failures/errors/skips, 59.284 seconds at 17:00:01 BST.
+The rewind inventory is 1,015 total / 795 passed / 220 graph-covered / no failure
+buckets. This is focused validation, not a full ordinary-suite or full-guard pass.
+
+
+Final review found no material movement, terminal, culling, native-setup or
+rewind defect. Its validation suggestion was applied: the Act 2 terminal now
+asserts the current riding relation, not the sticky “ever boarded” flag. All
+five production configurations passed again with that assertion (48.772 seconds,
+17:05:31 BST, zero failures/errors/skips). Updated-base preflight, mirror equality,
+Lua syntax, changed-link and whitespace checks passed.

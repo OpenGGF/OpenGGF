@@ -1416,6 +1416,8 @@ public class Sonic3kConstants {
     public static final int MAP_FBZ_COLLAPSING_BRIDGE_ADDR = 0x02108E;
 
     // Map_SOZCollapsingBridge - SOZ bridge (3 frames)
+    public static final int MAP_SOZ_PUSHABLE_ROCK_ADDR = 0x040776;
+    public static final int SOZ_ROCK_RIDE_INFO_ADDR = 0x1E3FD8;
     public static final int MAP_SOZ_BREAKABLE_SAND_ROCK_ADDR = 0x04182E;
     public static final int MAP_SOZ_SPRING_VINE_ADDR = 0x040B0C;
 

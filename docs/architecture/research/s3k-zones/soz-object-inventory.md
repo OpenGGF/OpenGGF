@@ -121,16 +121,16 @@ inventory obligation before implementing each family.
 | `$3A` | `$09` | `Obj_SOZPathSwap` | 2 | 2 | placeholder |
 | `$3A` | `$11` | `Obj_SOZPathSwap` | 8 | 6 | placeholder |
 | `$3B` | `$21` | `Obj_SOZLoopFallthrough` | 0 | 3 | placeholder |
-| `$3E` | `$00` | `Obj_SOZPushableRock` | 1 | 0 | placeholder |
-| `$3E` | `$01` | `Obj_SOZPushableRock` | 1 | 0 | placeholder |
-| `$3E` | `$02` | `Obj_SOZPushableRock` | 1 | 0 | placeholder |
-| `$3E` | `$03` | `Obj_SOZPushableRock` | 1 | 0 | placeholder |
-| `$3E` | `$04` | `Obj_SOZPushableRock` | 1 | 0 | placeholder |
-| `$3E` | `$05` | `Obj_SOZPushableRock` | 0 | 1 | placeholder |
-| `$3E` | `$06` | `Obj_SOZPushableRock` | 1 | 0 | placeholder |
-| `$3E` | `$09` | `Obj_SOZPushableRock` | 1 | 0 | placeholder |
-| `$3E` | `$0A` | `Obj_SOZPushableRock` | 0 | 1 | placeholder |
-| `$3E` | `$87` | `Obj_SOZPushableRock` | 0 | 1 | placeholder |
+| `$3E` | `$00` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
+| `$3E` | `$01` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
+| `$3E` | `$02` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
+| `$3E` | `$03` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
+| `$3E` | `$04` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
+| `$3E` | `$05` | `Obj_SOZPushableRock` | 0 | 1 | `SozPushableRockObjectInstance` |
+| `$3E` | `$06` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
+| `$3E` | `$09` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
+| `$3E` | `$0A` | `Obj_SOZPushableRock` | 0 | 1 | `SozPushableRockObjectInstance` |
+| `$3E` | `$87` | `Obj_SOZPushableRock` | 0 | 1 | `SozPushableRockObjectInstance` |
 | `$3F` | `$00` | `Obj_SOZSpringVine` | 12 | 5 | `SozSpringVineObjectInstance` |
 | `$40` | `$60` | `Obj_SOZRisingSandWall` | 4 | 2 | placeholder |
 | `$41` | `$04` | `Obj_SOZLightSwitch` | 0 | 23 | placeholder |
@@ -319,3 +319,12 @@ allocation occurs: five mapping frames shrink the rock before coarse-X deletion.
 Remaining placeholder placements after this family: **185 Act 1 / 183 Act 2**.
 The unsuccessful cold approach and positioned production coverage are tracked in
 the execution plan; binding counts do not certify route reachability.
+
+Pushable-rock continuation: all seven Act 1 and three Act 2 `$3E` placements
+bind to `SozPushableRockObjectInstance`. The low five subtype bits select the
+ROM-backed alternating Y/X track. Saved player pushing status and object-owned
+push bits control one-pixel movement every five eligible passes; floor distance
+above 14 starts the track. The `$87` SOZDoor coupling remains unimplemented with
+that door family. Remaining placeholder placements: **178 Act 1 / 180 Act 2**.
+See the [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) for
+source evidence, rejected carry behavior and production validation.

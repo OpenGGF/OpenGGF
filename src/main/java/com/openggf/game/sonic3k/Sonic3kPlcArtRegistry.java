@@ -2315,9 +2315,12 @@ public final class Sonic3kPlcArtRegistry {
     private static void addSozEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
-        // Obj_SOZSpringVine at $40786 points to $40B0C, ArtTile_SOZMisc/palette 2.
+        // Obj_SOZPushableRock at $40546 points to $40776, ArtTile_SOZMisc+$8C/palette 2.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_PUSHABLE_ROCK,
+                Sonic3kConstants.MAP_SOZ_PUSHABLE_ROCK_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x8C, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_BREAKABLE_SAND_ROCK,
                 Sonic3kConstants.MAP_SOZ_BREAKABLE_SAND_ROCK_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x10, 2, null));
+        // Obj_SOZSpringVine at $40786 points to $40B0C, ArtTile_SOZMisc/palette 2.
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SPRING_VINE,
                 Sonic3kConstants.MAP_SOZ_SPRING_VINE_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC, 2, null));
         // StillSprite groups: subtypes 46 (SOZ objects), 47 (cork)

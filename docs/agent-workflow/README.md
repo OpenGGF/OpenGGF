@@ -16,6 +16,8 @@ checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-
 
 - `FbzVisualCaptureTool` also records actual tilemap GPU uniforms and hash-bound descriptor, lookup and atlas readbacks, so camera-state acceptance can be separated from shader sampling defects. See [FBZ GPU sampling evidence](../architecture/research/s3k-zones/fbz-validation.md#gpu-sampling-and-retained-background-history-2026-09-14).
 
+- [SOZ pushable-rock probe](../../tools/bizhawk/capture_soz_pushable_rock.lua) finishes the native entry jump, then records the positioned push/fall/track/stop sequence with the shared host (2026-09-15 SOZ methodology v2).
+
 - [Native reference capture](../../tools/bizhawk/README.md) runs explicit zone-owned Lua exporters/plans with an isolated BizHawk 2.11 configuration, source hashes and failed-export detection. The FBZ command remains a compatibility profile (2026-09-15 SOZ methodology v2).
 
 Nine `com.openggf.tools` CLIs. All invocations are PowerShell-quoted (quote each `-D...` property).

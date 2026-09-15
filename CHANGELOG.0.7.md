@@ -194,7 +194,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   effects. Sandopolis now implements its four quicksand variants, including
   per-player capture, jump release, sand-slide movement and rewindable cooldowns,
   plus spring vines with shared tension, deforming surfaces and directional launches,
-  and sand rocks that break under rolling landings and release their riders.
+  sand rocks that break under rolling landings and release their riders,
+  and pushable rocks that fall onto their authored tracks.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. MHZ end-boss debris

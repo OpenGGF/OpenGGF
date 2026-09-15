@@ -214,3 +214,9 @@ These are independent of the failed cold approach; see the
 [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) and
 [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md). Full route,
 all-character, checkpoint and native/pixel certification obligations remain open.
+
+
+SOZ pushable-rock continuation (2026-09-15): the [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md)
+and [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md) track positioned
+push/fall/ride/stop spots and transition rewind checks. Cold approach, all-character
+breadth, offscreen rider carry and the subtype `$87` door coupling remain open.
