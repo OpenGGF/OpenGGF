@@ -786,7 +786,7 @@ controller rider/pusher regression covers this. No shared collision algorithm
 changed. Retained offscreen-P2 rider-baseline behavior remains a shared controller
 coverage concern; this slice does not claim it certified.
 
-Subtype `$87` also registers native `_unkF7C4` for SOZDoor's `sub_41AA8` rock
+Subtype `$87` also registers native `_unkF7C4` for SOZPushSwitch's `sub_41AA8` rock
 interaction. Door implementation is still missing; that coupled behavior remains
 an explicit inherited gap, not a completed door route. The rock's ordinary push
 and track semantics apply to the high-bit subtype, with its low-five-bit path.
@@ -1049,3 +1049,178 @@ passed on that actual `develop` commit: **255 tests, zero failures/errors/skips*
 51.979 seconds, completed 17:45:22 BST. No implementation changes occurred during
 integration; the separate 123 structural checks remain applicable. The native
 probe and engine image are bounded corroboration/visual checks as described above.
+
+## Connected mechanisms batch
+
+User requested a larger chunk. Worktree `soz-mechanisms`, branch
+`feature/ai-soz-mechanisms`, starts at `d9de72b7a314bdd6e4157eb4db2ef638e2669d96`.
+Fetch/fast-forward found the base current; preceding push CI `34997088728` passed.
+Scope: floating pillars `$42`, push switches `$45`, doors `$46`, and the existing
+special-rock `$87` link. This adds 135 concrete placements and targets a connected
+puzzle, with independent short pillar/hazard checks. Whole-act completion remains
+outside this batch's claim.
+
+The new SOZ runtime state stores only `_unkF7C4`'s object-slot identity. Signals
+remain in the existing, rewind-registered `Level_trigger_array`; no shadow array,
+trace hydration or new shared collision algorithm is introduced. A switch checks
+the current occupant/routine of the published slot, not the nearest rock. Pillar
+shape bytes and all three mapping tables are loaded from the locked-on ROM.
+
+Independent source review caught the pillar's damage classification (native
+`HurtCharacter` selects normal sound for routine `$411D8`) and the need for
+owner-local airborne stale-standing consumption. Both corrections use existing
+engine contracts. An initially proposed unflipped-switch decay quirk was rejected:
+ROM `$41A5A` contains `66 D8`, branching to `loc_41A34` and setting d5. It does
+**not** fall through into decay on non-displacement pushes. The offscreen transition
+at `loc_4197E` really does fall through into retained decay in the same pass.
+
+Native corroboration uses the common capture host, BizHawk 2.11, locked-on ROM
+SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`, complete Sonic/Tails BK2
+SHA-256 `82EABFBC65E33C160CE209BAA1CA3F967CB677FE22350BC100625D8C41A8E1BF`,
+and the previously recorded SOZ2 LFC35 save. External output:
+`$TASK_ROOT/native-mechanisms-2`.
+The diagnostic holds a declared positioned entry `($2600,$1A4)` while camera
+streaming catches up, confirms door `$268C` is loaded, then uses ordinary right
+and jump input. No reference state is supplied to the engine.
+
+The host completed with no reported failures. CSV has 600 contiguous frames,
+LFC420–1019. At frame0 the switch is X9776, signal0 and doorY448. At frame150
+signal114, switchX9804 and doorY562; after charging to120 the jump crosses the
+switch and door, with player X10081/Y428 at frame300. The inactive second switch
+on channel8 also decays the byte; net charge growth is below one per pass.
+Frame150 PNG inspected as the expected switch scene. These are source
+corroboration and route observations, not matched engine trajectories or pixels.
+The earlier `native-mechanisms-1` probe did not wait for target placement loading,
+so its initial entry cannot anchor a matched comparison; the corrected probe
+checks the owning door before starting observations.
+
+The initial compile/old rock and
+inventory regression completed 20 tests with no failures/errors/skips. Initial
+isolated switch/door tests completed six with no failures/errors/skips; later
+edge-case and production additions supersede that limited scope. An initial
+production entry at `($2500,$170)` stalled before reaching a switch; it is not
+passing route evidence. The connected test now uses the explicitly observed
+second switch and its downstream door.
+
+Scope decision: the unchanged change-based selector chooses 2,609 ordinary
+classes plus guards because zone registration, art keys and discovery profiles
+fall back to the full suite. At the documented normalization cost that is roughly
+24 minutes ordinary plus 10 minutes guards, excluding queueing. Proportionate
+validation applies here: changes are confined to the new SOZ owners and their
+registrations, with no shared physics, collision algorithm, timing-port or public
+Mod API change. The existing trigger and runtime snapshot contracts are reused.
+Combined focused validation will cover SOZ interactions/production routes,
+shared solid consumers, runtime adapters, the ROM art crawler/corruption guard,
+profile bindings, rewind inventory and required AIZ/bootstrap/load/decoder gates;
+a separate JVM covers the applicable source/rewind/services/physics/clock guards.
+This is focused validation, not a full ordinary-suite pass. Java21/Lua5.4/PowerShell
+preflight passed on the task tree; no tests are implied by preflight.
+
+Additional rewind review found that `ensureZoneRuntimeStateInstalled()` needs to
+recognize SOZ's self-owned state, just as LBZ does. Without that case, restore
+reconciliation could replace a nonempty rock link with a new default state.
+The candidate now preserves it on reconciliation and clears it on fresh act
+installation; both paths have a focused regression. Deleted rocks are rejected
+explicitly even if the manager's active-object cache still contains their instance.
+
+The first Act 1 pillar spot `($5A0,$660)` died at the first observed engine pass:
+player `(1440,1580)`, pillar `(1440,1664)`, no acquired support. Native
+`native-pillar-2` normalizes a live routine 2 immediately before observation and
+also enters routine 6 on the first pass at this constrained ceiling/hazard site.
+Its different oscillator phase means this is corroboration of an unsafe landing
+spot, not matched trajectory evidence. `native-pillar-1` did not normalize the
+actor routine after warmup and cannot establish the cause. The production ride
+spot moves to the separate placed pillar `($1380,$560)`; neither collision nor
+oscillator behavior is changed to make a positioned fixture survive.
+
+Placement inspection resolves the pillar fixture deaths: both `($5A0,$660)` and
+`($1380,$560)` have `$6B` invisible hurt blocks directly above them, at Y`$5F0`
+and `$4F0`, respectively. The ordinary ride spot is now `($8E0,$670)`, with no
+such nearby placement. Setup also starts airborne above the maximum pillar
+excursion and checks survival before the controlled landing, avoiding an already
+dead actor being mistaken for a failed landing.
+
+The special-rock positive-route attempt was rejected rather than used to change
+physics: from the fresh positioned entry, the rock falls onto ROM track 7
+`$5EC,$47F0,$FFFF` before reaching switch `$4830`. Positive local contact remains
+covered, while the production spot verifies slot publication and invalidation on
+fall with rewind. Rewinding the very first bootstrap pass exposed an unattributed
+`instaShieldRegistered` false→true restore boundary; the interaction spot settles
+three production frames first. The new SOZ runtime reconciliation regression
+independently verifies preservation of a nonempty slot and clearing on fresh act
+installation. Full positive special-rock puzzle reachability stays in known
+discrepancies. The native attempt `native-rock-switch-2` publishes slot46092 and
+routine `$405D6`, but the starting badnik kills P1 before contact and reloads the
+level, so it supplies no positive-coupling or route evidence. The first attempt
+waited for a downstream door outside the initial loading window and correctly
+failed its required-output check.
+
+`native-mechanisms-2` was additionally checked across all 600 rows: switch X is
+exactly `9776 + (signal >> 2)`, door Y is exactly `448 + signal`, and the largest
+single-pass door displacement is one pixel. First recorded passage past X`$26B0`
+is frame251/LFC671, player `(9905,428)`, signal102.
+
+Engine capture `engine-mechanisms-1` uses native width320 and the round-trip-checked
+input `200 R; 20 R+A; 180 R; 20 R+A; 80 R`. `InputLogAuthorTool` wrote 500 frames;
+`GameplayCaptureTool` completed 500 PNGs, state CSV and MP4 in 20.054 seconds at
+18:49:13 BST. CSV was read before inspecting still240: the jump clears the switch,
+with the downstream passage open. Frame300 is `(9932,428)` beyond the door;
+frame499 is `(10357,492)` with 23 rings, no hurt or death. This is a functioning
+rendered local route, not matched native pixels or whole-act completion. The
+inherited Discord worker shutdown warning did not prevent process completion.
+
+The final short run completed at 19:04:57 BST: 30 tests, zero failures/errors/skips
+(53.220 seconds including compilation), covering all nine production cases, ten
+switch/door cases and eleven runtime-adapter cases. The final Act 1 pillar at
+`($8E0,$670)` lands and carries correctly; the initial sites' invisible hurt blocks
+remain intact. Participant slots are now bound in query order before collision
+callbacks can bind a follower first, with a follower-only retained-push rewind
+regression.
+
+Before combined delivery validation, the worktree fast-forwarded to actual
+`develop` base `3808306ad98b5b5b5774b35086b8759b538667b0`. Git's task-local
+autostash reapplied cleanly, preserving all new files. Incoming changes include
+sprite/shield publication banks and KiS2 capability/boss-rebound parity; no
+conflicts or upstream edits were discarded. Updated-base preflight passed.
+The selector now contains 2,612 ordinary classes; the same bounded-impact
+proportionate-validation decision applies. The final check covers these 20
+relevant classes, with explicit existing ROM paths:
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSozMechanisms,TestSozPillarAndRockSwitch,TestSozMechanismsProduction,TestSozObjectInventory,TestSozPushableRock,TestSozPushableRockProduction,TestSozLoopFallthrough,TestSozSolidSprites,TestSozRouteControllersProduction,TestSolidObjectManager,TestRemainingRewindTailInventory,TestSonic3kPlcArtRegistry,TestPatternSpriteRendererCorruptionGuard,TestSonic3kObjectProfile,TestSonic3kObjectProfileRegistryGuard,TestS3kZoneRuntimeStateAdapters,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' \
+  "-Ds3k.rom.path=$S3K_ROM" "-Dsonic1.rom.path=$S1_ROM" test -B
+python3 tools/testing/maven_queue.py -Dmse=off -Pguards \
+  '-Dtest=TestRewindArchitectureGuard,TestArchitecturalSourceGuard,TestObjectServicesMigrationGuard,TestObjectPhysicsStandardizationGuard,TestObjectUpdateClockTerminologyGuard' test -B
+```
+
+The combined candidate run on base `3808306ad` completed at 19:08:09 BST in
+1:01: 305 tests, one failure, no errors or skips. The sole failure was the
+rewind inventory count pin: all three new object classes passed the isolated
+round-trip sweep, increasing total/passed from 1017/797 to 1020/800 while the
+220 graph-covered cases and every failure bucket stayed unchanged. Both the
+Java pin and readable inventory summary were updated; the latter also lagged
+the incoming base by two classes. All other 304 checks, including the nine
+production cases and required AIZ/load gates, passed. A narrow inventory
+recheck follows this bookkeeping-only correction.
+
+The structural run completed at 19:20:24 BST: 123 checks, one failure, no
+errors/skips. `productionObjectLifecycleRawCallCountsDoNotGrow` found 583 raw
+destruction calls against a 582 budget, including three new retained-switch
+expiration sites. Those three now use `ObjectLifetimeOps.expireDynamic(this)`;
+the already-released placement stays released, and replacement/zero-charge
+expiration retains the same lifetime behavior. The other 122 guard checks passed.
+The affected switch/production/inventory tests and lifecycle guard are rerun
+narrowly before integration; no unrelated lifecycle calls or budgets are changed.
+
+The inventory-only recheck produced a fresh passing report at 19:23:53 BST
+(one test, no failures/errors/skips). The lifecycle guard recheck completed
+at 19:24:14 BST in 19.705 seconds: all 33 checks passed, no errors/skips.
+Together with the unchanged guard results, all 123 selected structural checks
+now pass; this is the selected guard scope, not the complete guard profile.
+
+Final affected-behavior recheck completed at 19:24:38 BST in 23.525 seconds:
+`TestSozMechanisms,TestSozMechanismsProduction,TestRemainingRewindTailInventory`,
+20 tests, zero failures/errors/skips, with both explicit ROM paths above.
+This verifies the final lifecycle helper edit, connected route/rewind cases and
+corrected inventory pin before integration.

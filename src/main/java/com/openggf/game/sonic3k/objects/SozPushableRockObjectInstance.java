@@ -40,12 +40,14 @@ public final class SozPushableRockObjectInstance extends AbstractObjectInstance
     @Override public void update(int vIntRunCount, PlayableEntity leader) {
         if (!initialized) {
             try {
-                // Subtype bit 7 also publishes the native door link; that coupling
-                // remains with the missing SOZDoor owner (documented discrepancy).
                 int entry = Sonic3kConstants.SOZ_ROCK_RIDE_INFO_ADDR + ((spawn.subtype() & 0x1F) << 2);
                 nextTrackWord = services().rom().read32BitAddr(entry);
                 target = readTrackWord();
                 nextTrackWord += 2;
+                // Load_SOZ_Pushable_Rock_Track_Ride_Info publishes _unkF7C4.
+                if ((spawn.subtype() & 0x80) != 0 && services().zoneRuntimeState()
+                        instanceof com.openggf.game.sonic3k.runtime.SozZoneRuntimeState state)
+                    state.publishPushableRockSlot(getSlotIndex());
             } catch (IOException e) {
                 throw new UncheckedIOException("Cannot load SOZ rock track from ROM", e);
             }
@@ -140,6 +142,9 @@ public final class SozPushableRockObjectInstance extends AbstractObjectInstance
             return;
         }
     }
+
+    boolean isLinkedSwitchRock() { return !isDestroyed() && initialized && phase == PUSH && (spawn.subtype() & 0x80) != 0; }
+    void moveBySwitch(int x) { xFixed = (x << 16) | (xFixed & 0xFFFF); }
 
     @Override public void setPlayerPushing(PlayableEntity player, boolean pushing) {
         participants.flag(participants.slot(player), 0, pushing);

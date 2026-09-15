@@ -86,6 +86,9 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x35, // AIZForegroundPlant
             0x3B, // HCZWaterWall / SOZLoopFallthrough
             0x49, // CNZGiantWheel / SOZSolidSprites
+            0x42, // CNZCannon / SOZFloatingPillar
+            0x45, // CNZLightBulb / SOZPushSwitch
+            0x46, // CNZHoverFan / SOZDoor
             0x38, // HCZCGZFan / SOZQuicksand
             0x44, // CNZTrapDoor / SOZBreakableSandRock
             0x3E, // HCZConveyorBelt / SOZPushableRock
@@ -144,10 +147,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x3A, // HCZHandLauncher
             0x40, // HCZBlock
             0x41, // CNZBalloon
-            0x42, // CNZCannon
             0x43, // CNZRisingPlatform
-            0x45, // CNZLightBulb
-            0x46, // CNZHoverFan
             0x47, // CNZCylinder
             0x48, // CNZVacuumTube
             0x4C, // CNZSpiralTube

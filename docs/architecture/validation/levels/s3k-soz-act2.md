@@ -26,7 +26,7 @@ Physical activation, every native team's death/reload and repeated reset are ope
 | ENTRY / LOAD / RESET | Existing ROM loading; SOZ event/scroll owners remain missing at baseline | Full entry product open | Load timeline/reset isolation open | Unmatched | Unmatched |
 | Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Local slide cooldown reconstruction; full registered-state before/contact/release spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
 | Sand-rock rolling landing / breakup / removal | `SozBreakableSandRockObjectInstance`; saved animation and owner standing latch | `TestSozSandRockProduction`: positioned first-rock spot; cold reachability open | All registered state restored and replayed twice at break, phase 6 and phase 24 removal | Source-derived; mixed-rider and offscreen retained-latch unit checks; native trajectory unmatched | ROM mapping/art checks pass; Act 1 shares the inspected mapping; Act 2 visual comparison open |
-| Pushable rock / edge fall / track ride / stop | `SozPushableRockObjectInstance`; ROM track and native push priority | `TestSozPushableRockProduction`: first-rock positioned push, board/brake and complete ride at 320; cold reachability open | All registered state restored/replayed twice at push, initial fall, horizontal start and terminal; boarding also covered | Source-reviewed and real rider carry tested; native trajectory and subtype `$87` door coupling open | ROM mapping/art checks pass; shared Act 1 display inspected; Act 2 pixel comparison open |
+| Pushable rock / edge fall / track ride / stop | `SozPushableRockObjectInstance`; ROM track and native push priority | `TestSozPushableRockProduction`: first-rock positioned push, board/brake and complete ride at 320; cold reachability open | All registered state restored/replayed twice at push, initial fall, horizontal start and terminal; boarding also covered | Source-reviewed and real rider carry tested; native trajectory open; subtype `$87` coupling is covered by the connected-mechanism continuation | ROM mapping/art checks pass; shared Act 1 display inspected; Act 2 pixel comparison open |
 | Other traversal objects / badniks | Inventory lists concrete shared factories versus placeholders | Open | Before/contact/held/release and creation/deletion open | Unmatched | Unmatched |
 | CHECKPOINT / DEATH | Five authored checkpoint records; live activation/reload tests needed | Open | Respawn/reset isolation open | Unmatched | Unmatched |
 | WORLD / CAMERA / EVENTS | Dedicated coupled owners required | Open | Before/active/after sand rise, camera lock, terrain/palette changes open | Unmatched | Unmatched |
@@ -61,3 +61,31 @@ player bypasses ordinary movement using the existing native full-control contrac
 Local tests cover speed/bounds/routine gates, literal radii, fixed-point fractions,
 release equality, subtype bit 7 masking and independent participant restoration.
 No full route or matched native trajectory/pixel certification is implied.
+
+## Connected mechanism continuation
+
+All 41 placed `$42` pillars, 19 `$45` push switches and 20 `$46` doors have
+concrete ROM-backed owners. `TestSozMechanismsProduction` starts before the switch
+at `($2630,$1B0)`, charges shared channel 8, jumps across the switch and downstream
+door at `($268C,$1C0)`, then continues until the switch becomes an invisible decay
+owner. Whole-registry restore/replay spots cover charge, opening, traversal and
+retention. Cases cover Sonic/Tails at 320/640, solo Tails, solo Knuckles, mixed
+followers and an S1-donor Sonic/Tails route; each verifies the configured roster,
+width and donor movement capability. This is representative breadth, not the full
+viewport × donor × character product.
+
+A separate placed horizontal pillar at `($303F,$2C0)` covers landing and carried
+movement with whole-registry rewind. Local mechanism checks cover both door
+orientations/signs, shared trigger interoperability, exact decay boundaries,
+retained replacement, native slot invalidation and upper/lower spiked faces.
+The special rock at `($4770,$5B5)` publishes `_unkF7C4` for the switch at
+`($4830,$5B0)`; the consumer is `SOZPushSwitch.sub_41AA8`, correcting the earlier
+attribution to the door. Its positioned production spot covers link publication and invalidation on
+fall, independently of the ordinary channel-8 puzzle. Positive contact is covered
+locally; full positive placed-puzzle reachability remains open. Exact outcomes
+belong to the execution plan.
+
+Native channel-8 observations corroborate charging, door displacement and passage.
+They are not matched engine trajectories or pixel certification. Cold reachability,
+all puzzle placements, full load/death/checkpoint breadth, lighting/ghost events
+and boss/exit obligations remain open.

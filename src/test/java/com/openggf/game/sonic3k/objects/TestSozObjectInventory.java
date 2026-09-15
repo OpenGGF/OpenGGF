@@ -18,8 +18,8 @@ class TestSozObjectInventory {
     @Test void romPlacementsAndRemainingFactoryGapsMatchInventory() throws Exception {
         try (var rom=new Rom()) {
             assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
-            verify(rom,0x1F4866,3600,599,"72f954524c0d68b213be273d6b5317621c60c1a4aab8949ffc2cc72482dc66db",162);
-            verify(rom,0x1F5676,2946,490,"3cca36d2d4db8db480f36c67fafa46833f4f7a63ff1cab6d6835d2380bb225c0",163);
+            verify(rom,0x1F4866,3600,599,"72f954524c0d68b213be273d6b5317621c60c1a4aab8949ffc2cc72482dc66db",107);
+            verify(rom,0x1F5676,2946,490,"3cca36d2d4db8db480f36c67fafa46833f4f7a63ff1cab6d6835d2380bb225c0",83);
         }
     }
     @Test void vineMappingPointerAndSinglePieceMatchTheRom() throws Exception {
@@ -74,6 +74,23 @@ class TestSozObjectInventory {
             assertEquals(3,frames.get(0).pieces().size()); assertEquals(2,frames.get(1).pieces().size());
             assertEquals(8,frames.get(1).pieces().get(0).tileIndex());
             assertEquals(16,frames.get(1).pieces().get(1).tileIndex());
+        }
+    }
+    @Test void mechanismMappingsMatchExactRomShapes() throws Exception {
+        try(var rom=new Rom()) {
+            assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+            int[][] tables={{0x412E0,16,20,20},{0x41B56,2,1},{0x41C72,7,5}};
+            int[][] firstPieces={{4,2,0x18},{4,1,0},{3,1,0x10}};
+            for(int i=0;i<tables.length;i++) {
+                int[] table=tables[i];
+                var frames=com.openggf.game.sonic3k.S3kSpriteDataLoader.loadMappingFrames(
+                        RomByteReader.fromRom(rom),table[0],table.length-1);
+                assertEquals(table.length-1,frames.size());
+                for(int frame=0;frame<frames.size();frame++) assertEquals(table[frame+1],frames.get(frame).pieces().size());
+                var piece=frames.getFirst().pieces().getFirst();
+                assertEquals(firstPieces[i][0],piece.widthTiles());assertEquals(firstPieces[i][1],piece.heightTiles());
+                assertEquals(firstPieces[i][2],piece.tileIndex());
+            }
         }
     }
     private void verify(Rom rom,int address,int size,int count,String sha,int missing) throws Exception {

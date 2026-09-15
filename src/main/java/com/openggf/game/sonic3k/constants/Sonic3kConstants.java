@@ -1415,13 +1415,18 @@ public class Sonic3kConstants {
     // Map_FBZCollapsingBridge - FBZ bridge (3 frames)
     public static final int MAP_FBZ_COLLAPSING_BRIDGE_ADDR = 0x02108E;
 
-    // Map_SOZCollapsingBridge - SOZ bridge (3 frames)
+    // SOZ traversal mappings and shape/track tables from the locked-on ROM.
+    public static final int MAP_SOZ_FLOATING_PILLAR_ADDR = 0x0412E0;
+    public static final int MAP_SOZ_PUSH_SWITCH_ADDR = 0x041B56;
+    public static final int MAP_SOZ_DOOR_ADDR = 0x041C72;
+    public static final int SOZ_FLOATING_PILLAR_SHAPES_ADDR = 0x04116A;
     public static final int MAP_SOZ_SOLID_SPRITES_ADDR = 0x041FC8;
     public static final int MAP_SOZ_PUSHABLE_ROCK_ADDR = 0x040776;
     public static final int SOZ_ROCK_RIDE_INFO_ADDR = 0x1E3FD8;
     public static final int MAP_SOZ_BREAKABLE_SAND_ROCK_ADDR = 0x04182E;
     public static final int MAP_SOZ_SPRING_VINE_ADDR = 0x040B0C;
 
+    // Map_SOZCollapsingBridge - SOZ bridge (3 frames)
     public static final int MAP_SOZ_COLLAPSING_BRIDGE_ADDR = 0x02127A;
 
     // ===== AIZ Disappearing Floor Mappings (Object 0x29) =====
