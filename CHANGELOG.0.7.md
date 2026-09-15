@@ -121,7 +121,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and background shaders retain fragment centres while scaling, preventing a
   one-pixel sampling shift caused by GPU division rounding. Retained background
   redraws use native strip counts, clipped windows, aligned column sources and
-  reset scroll origins when changing modes, preserving untouched rows.
+  reset scroll origins when changing modes, preserving untouched rows. Player
+  sprite publication retains only the current mapping's art, so S3K main-player
+  Tails keeps his tail artwork when body animations leave unused bank slots.
   Bent pipes retain their ROM placement flips. Stage rings retain the native
   animation timer across level-counter resets and seamless reloads, including rewind.
   S3K's TIME label uses its dedicated ROM glyph, and life-count digits use the

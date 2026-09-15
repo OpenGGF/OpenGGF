@@ -88,9 +88,9 @@ public class PlayerSpriteRenderer {
             }
         }
 
-        com.openggf.level.render.SpritePresentationRenderer.bindPatternBank(graphicsManager,
-                patternBank.getBasePatternIndex(), patternBank.getPatterns());
         SpriteMappingFrame frame = artSet.mappingFrames().get(frameIndex);
+        com.openggf.level.render.SpritePresentationRenderer.bindPatternBank(graphicsManager,
+                patternBank.getBasePatternIndex(), patternBank.getPatterns(), frame);
         if (graphicsManager.isSpriteSatCollectionActive()) {
             int satPaletteIndex = resolveRenderPaletteIndex(artSet.paletteIndex());
             for (int i = 0; i < frame.pieces().size(); i++) {
@@ -168,8 +168,6 @@ public class PlayerSpriteRenderer {
         if (frameIndex < 0 || frameIndex >= artSet.mappingFrames().size()) {
             return new SpritePieceRenderer.FrameBounds(0, 0, -1, -1);
         }
-        com.openggf.level.render.SpritePresentationRenderer.bindPatternBank(graphicsManager,
-                patternBank.getBasePatternIndex(), patternBank.getPatterns());
         SpriteMappingFrame frame = artSet.mappingFrames().get(frameIndex);
         return SpritePieceRenderer.computeFrameBounds(frame.pieces(), hFlip, vFlip);
     }
