@@ -86,6 +86,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     /** Super Sonic sprite renderer (loaded from ROM, uses Map_SuperSonic / PLC_SuperSonic). */
     private PlayerSpriteRenderer superRenderer;
+    private SpriteArtSet superArtSet;
     /** Normal sprite renderer (saved on activation, restored on revert). */
     private PlayerSpriteRenderer normalRenderer;
 
@@ -235,7 +236,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
 
         try {
-            SpriteArtSet superArtSet = playerArt.loadFormArtSet("sonic", S3kFormTier.SUPER);
+            superArtSet = playerArt.loadFormArtSet("sonic", S3kFormTier.SUPER);
             if (superArtSet != null) {
                 superRenderer = new PlayerSpriteRenderer(superArtSet);
                 if (CrossGameFeatureProvider.isActive()) {
@@ -597,6 +598,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
             if (normalRenderer == null) {
                 normalRenderer = player.getSpriteRenderer();
             }
+            ensurePoweredPatternBank();
             player.setSpriteRenderer(superRenderer);
         }
         player.setShieldVisible(false);
@@ -720,6 +722,27 @@ public class Sonic3kSuperStateController extends SuperStateController {
         return words;
     }
 
+    private void ensurePoweredPatternBank() {
+        PlayerSpriteRenderer normal = normalRenderer != null ? normalRenderer : player.getSpriteRenderer();
+        var privateBanks = com.openggf.graphics.PatternAtlasRange.SIDEKICK_BANKS;
+        if (superArtSet == null || normal == null
+                || !privateBanks.contains(normal.patternBankBase())
+                || privateBanks.contains(superRenderer.patternBankBase())) {
+            return;
+        }
+        // Native Player_1 keeps ArtTile_Player_1 (0x680), including its Hyper trail.
+        // Additional owners need their own full Super bank: its 33 tiles cannot
+        // reuse a normal Sonic allocation, whose ROM DPLCs require only 29.
+        int base = GameServices.level().reserveSidekickPatternBank(superArtSet.bankSize());
+        var privateArt = new SpriteArtSet(superArtSet.artTiles(), superArtSet.mappingFrames(),
+                superArtSet.dplcFrames(), superArtSet.paletteIndex(), base, superArtSet.frameDelay(),
+                superArtSet.bankSize(), superArtSet.animationProfile(), superArtSet.animationSet());
+        superRenderer = new PlayerSpriteRenderer(privateArt);
+        if (CrossGameFeatureProvider.isActive()) {
+            superRenderer.setRenderContext(GameServices.crossGameFeatures().getDonorRenderContext());
+        }
+    }
+
     private void reconcileRewindPresentation(SuperState restoredState) {
         boolean activeSuper = restoredState == SuperState.SUPER;
         reconcileRewindPhysicsAndAnimationProfile(activeSuper);
@@ -728,6 +751,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 player.setAnimationSet(superAnimSet);
             }
             if (usesSonicFormPresentation() && superRenderer != null) {
+                ensurePoweredPatternBank();
                 player.setSpriteRenderer(superRenderer);
             }
             player.setShieldVisible(false);
