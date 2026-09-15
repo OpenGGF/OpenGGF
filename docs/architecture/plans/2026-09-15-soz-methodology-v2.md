@@ -1,7 +1,7 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15. Status: planned; implementation and native certification have
-not begun under this plan. This delivery documents the agreed method and target.
+Date: 2026-09-15. Status: initial inventory/native pilot and first quicksand implementation in progress;
+full routes and native certification remain open.
 
 ## Objective and authority
 
@@ -14,7 +14,9 @@ Use existing runtime support where correct; this is not a direction to rewrite i
 The [SOZ catalogue](../research/s3k-zones/soz-analysis.md) is the starting research,
 not verified current coverage. The planning base is develop `44f8503b3886d99dc5b64b29b59fc7b67f47d793`.
 No implementation or trace baseline was measured for this documentation change.
-Pin the actual updated integration commit when execution begins.
+Execution base: `2b2bf8e2818f424106a9494523bdf8fae53f082b`; isolated
+`.worktrees/soz-v2` on `feature/ai-soz-v2`. The intervening upstream commit only
+adds score/ring coverage to the roadmap and is preserved.
 
 ## First execution slice: inventory and native pilot
 
@@ -95,3 +97,137 @@ policy trailers and behavioral scenarios: blocked native capture must remain
 unaccepted; seeded boss evidence must not become a cold-route pass; compatibility
 failure must expand the affected checks; a title-lifecycle catalogue contradiction
 must be resolved from ROM before implementation. Engine behavior is unchanged.
+
+## 2026-09-15 initial execution
+
+### Inventory and source corrections
+
+- [Placed inventory](../research/s3k-zones/soz-object-inventory.md): 599 Act 1 and
+  490 Act 2 live placements, excluding one terminator per act. Exact source bytes
+  match the verified locked-on ROM at `$1F4866` and `$1F5676`. SKL object IDs are
+  hexadecimal in the inventory; the older analysis's object table is decimal.
+- Shared art/loading and Act 1 custom animation exist. Dedicated SOZ event,
+  scroll, darkness and most object owners are absent; concrete shared factories
+  do not establish production subtype or traversal coverage.
+- `loc_56324` allocates `Obj_TitleCard` at fade count 5 and sets its `$3E` byte.
+  Thus “no title card” in the catalogue was incorrect. `loc_55CEA` preserves the
+  relative P2 offset when moving P1 to `($140,$3AC)`; it does not place both at
+  the same coordinate. Both catalogue descriptions are corrected.
+- [Act 1](../validation/levels/s3k-soz-act1.md) and
+  [Act 2](../validation/levels/s3k-soz-act2.md) matrices now enumerate obligations
+  and inherited gaps. Dynamic-spawn/art/audio inventories remain incomplete.
+
+### Native pilot: ordinary inputs, comparison only
+
+Command variables: `SOZ_REPO` is the absolute main-checkout path;
+`SOZ_CAPTURE_ROOT` is the external task directory named `soz-v2-20260915`.
+Native artifacts remain outside the repository.
+ROM SHA-1: `CFBF98C36C776677290A872547AC47C53D2761D6`.
+BK2 SHA-256: `82EABFBC65E33C160CE209BAA1CA3F967CB677FE22350BC100625D8C41A8E1BF`.
+Source reference: `docs/skdisasm` at `1a454a0e335137a1a016d1090a9f4528d36944cf`;
+unrelated working-reference edits were preserved.
+
+Reused the existing native visual host with an explicit diagnostic Lua override;
+its historical FBZ output names and unused checkpoint plan are not SOZ acceptance
+metadata. The probe uses the reset BK2 opening, ordinary AIZ vine cheat, pause/A,
+title menu and level-select index 17 (SOZ2). No RAM writes or gameplay hydration.
+From LFC35, idle until step 2801, steer toward X `$2B0` through step 3099 with
+20-of-50-frame jump holds, then release inputs through step 3800. The saved
+`native-pilot.lua`, `host.json`, input/switch rows and PNGs identify the exact run.
+
+Command (absolute source and output paths as above):
+
+```bash
+python3 tools/bizhawk/capture_fbz_visual_references.py \
+  --bizhawk-home ${SOZ_REPO}/docs/BizHawk-2.11-linux-x64 \
+  --rom "${SOZ_REPO}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  --movie ${SOZ_REPO}/src/test/resources/traces/s3k/_movies/s3k-complete-sonic-tails.bk2 \
+  --exporter ${SOZ_CAPTURE_ROOT}/native-pilot.lua \
+  --fresh-entry-act 2 \
+  --output ${SOZ_CAPTURE_ROOT}/pilot-3 --timeout 120
+```
+
+`pilot-1` failed before emulation because the sandbox could not open X. Running
+with display permission produced `pilot-2` in 7.927s and the expanded observer
+`pilot-3` in 9.029s, both exit 0. Their 3800 darkness rows are byte-identical.
+This is native evidence only, not an engine parity result or published fixture.
+
+- Darkness changes at LFC923/1823/2723: 900-frame spacing. Shade steps 1→2
+  at LFC923/927 and 3→4 at LFC2723/2727: four-frame spacing.
+- Tails acquires the first switch at step 3106, native slot16, centre `($2B0,$300)`.
+  Its P2 held byte is 1; P1 remains uncontrolled. Travel advances by two from
+  step 3107 through step 3122, reaching `$20`. This is independent follower
+  activation, not a P1-only switch contract.
+- At step 3122 the owner resets darkness to zero, timer to 899 and fade direction
+  to byte `$FC`. The first palette step follows at 3123, then 3127/3131/3135.
+  Native dark and restored-light PNGs were visually inspected; engine palette,
+  torch and ghost comparisons remain open.
+
+The SOZ1 probe uses level-select index 16, then Right with 20-of-70-frame jump
+holds for 1000 frames. Read-only hooks at `$3FD4E/$3FDCE/$3FE18/$3FE42`
+observe the normal-strip owner. `quicksand-1` exits 0 in 7.627s. At native frame 4587,
+P1 centre `(562,1620)` is captured by the first `($230,$640)` strip: velocities
+`(-3632,168)` become `(-1816,84)` and status2 becomes14. Next frame the held pass
+changes `(-1792,140)` to `(-896,168)`. Source explains the arithmetic and the
+acquisition return; these measurements are corroboration, not runtime constants.
+
+### Focused implementation and verification
+
+`TestSozQuicksand` first ran against the baseline registry: five tests, five
+expected failures, zero errors/skips (47.006s Maven). `$38` still resolved to a
+placeholder. Implemented its four invisible variants through the SKL binding,
+retaining S3KL's HCZ fan at the same ID. The owner uses native word comparisons,
+per-participant held/cooldown state, the actual level clock for waterfall damping,
+and native position operations for fractional slide movement. No runtime assets
+are read from the disassembly.
+
+The next focused run compiled the implementation but exposed missing service
+injection in all five direct-object fixtures; corrected the fixtures rather than
+weakening production service requirements. Further results are recorded below.
+
+Tool preflight initially rejected ambient Lua. With `LUA_BIN=/usr/bin/lua5.4`,
+`run_categories.py --base 9ee0efd93 --preflight` passed Java 21/Lua 5.4/PowerShell;
+no tests ran in preflight. Final selection uses the actual execution base above.
+
+The final pilot (`pilot-4`, exit 0 in 8.880s) adds ghost prerequisites. All 3800
+observations have `Hyudoro_count=0` and `Last_star_post_hit=0`; darkness rows
+remain byte-identical to pilot 3. `Hyudoro_ctr` gates Sonic/Tails spawning on the
+checkpoint flag, so this pilot does not certify released ghost behavior. Its
+Lua SHA-256 is `7F575C20CCF6BFD4253E1ED20726354F1324707A73FCB76BC5C03E7A31A61A6D`.
+
+Independent source review identified a real candidate defect: `setRolling`
+changes sprite dimensions and therefore ROM centre coordinates. Replaced it with
+existing raw rolling-flag operations and explicit radii; the waterfall retains
+its old radii. Strengthened the deep-sand test so setup cannot cancel the defect.
+Added flipped slide/sand/waterfall, Knuckles jump and distinct-participant rewind
+cases. The discovery guard also correctly required `$38` to move to the shared
+implemented-ID set: every zone now has a concrete owner, with different owners
+in S3KL and SKL. These are test/implementation corrections, not oracle relaxation.
+
+The first cold-route test pressed jump immediately at load and missed the native
+approach. A 35-frame neutral opening reaches the placed strip without a teleport.
+That exposed a production integration defect: inline solid cleanup cleared
+`Status_OnObj` despite the sand's retained participant bit. The object now uses
+existing `markObjectSupportThisFrame`, as other non-solid owners do, after each
+acquisition/held pass; releases and slide cooldown do not claim support. A second
+independent source review found no substantive issue with that boundary fix.
+
+Focused command in `.worktrees/soz-v2` (execution base plus candidate changes):
+
+```bash
+python3 tools/testing/maven_queue.py -Dmse=off \
+  '-Dtest=TestSozQuicksand,TestSozObjectInventory,TestSonic3kObjectProfileRegistryGuard,TestSozAct1QuicksandRoute' \
+  "-Ds3k.rom.path=${SOZ_REPO}/Sonic and Knuckles & Sonic 3 (W) [!].gen" \
+  "-Dsonic1.rom.path=${SOZ_REPO}/Sonic The Hedgehog (W) (REV01) [!].gen" test
+```
+
+Result: 22 tests, zero failures/errors/skips, Maven 42.925s. This establishes
+local object behavior, ROM placement/factory inventory and representative cold
+entry/release, not a complete SOZ route or a matched native engine sequence.
+The expanded `TestSozAct1QuicksandRoute` then passed all four configurations
+(zero failures/errors/skips, Maven 18.942s). It restores the registered gameplay
+snapshot and repeats one forward input twice at acquisition, held and release,
+comparing each registered subsystem with `RewindSnapshotDiff`. This is bounded
+rewind evidence for the reached strip; other variants retain local reconstruction
+checks and the remaining act-level rewind obligations stay open. Final delivery
+validation follows below.

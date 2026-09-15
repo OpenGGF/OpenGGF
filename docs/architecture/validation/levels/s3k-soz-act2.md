@@ -1,0 +1,39 @@
+# S3K Sandopolis Act 2 coverage matrix
+
+Canonical slot: `S3K_SANDOPOLIS_2`; ROM zone `$08`, act index 1, SKL pointer set.
+Status: partial bring-up; no full-act, native-parity or visual certification.
+Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
+[placed inventory](../../research/s3k-zones/soz-object-inventory.md).
+
+## Route and configuration obligations
+
+| Route/dimension | Obligation | Current evidence / gap |
+| --- | --- | --- |
+| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Full route open; short quicksand checks tracked below |
+| Tails solo | Same, including native character branches and flight interactions | Unassessed |
+| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Unassessed; no unsupported classification |
+| Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Local quicksand participant test only; production breadth open. Resolve current maximum from production team contract |
+| Widths 320/400/512/640/800 | Actual camera/render widths; entry/reset × every supported donor; sensitive interactions and rewind | Representative Act 1 quicksand test only; full per-act breadth open |
+| Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Representative Act 1 S1 quicksand test only; remaining per-act breadth open |
+
+Decoded checkpoint placements: `$02` at `($0860,$05C8)`, `$03` at `($13F0,$0428)`, `$04` at `($1F00,$0108)`, `$05` at `($3280,$01A8)`, `$06` at `($4EC0,$04A8)`.
+Physical activation, every native team's death/reload and repeated reset are open.
+
+## Behavioral obligations
+
+| Boundary | Implementation / test binding | Reachability | Rewind | Native behavior | Pixels |
+| --- | --- | --- | --- | --- | --- |
+| ENTRY / LOAD / RESET | Existing ROM loading; SOZ event/scroll owners remain missing at baseline | Full entry product open | Load timeline/reset isolation open | Unmatched | Unmatched |
+| Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Local slide cooldown reconstruction; full registered-state before/contact/release spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
+| Other traversal objects / badniks | Inventory lists concrete shared factories versus placeholders | Open | Before/contact/held/release and creation/deletion open | Unmatched | Unmatched |
+| CHECKPOINT / DEATH | Five authored checkpoint records; live activation/reload tests needed | Open | Respawn/reset isolation open | Unmatched | Unmatched |
+| WORLD / CAMERA / EVENTS | Dedicated coupled owners required | Open | Before/active/after sand rise, camera lock, terrain/palette changes open | Unmatched | Unmatched |
+| BOSS / EXIT | Route slice 6: end boss, wall reconstruction and outgoing transition | Open | Before spawn/attack/hit/defeat/cleanup open | Unmatched | Unmatched |
+| Darkness / switch / ghosts / torches | Native pilot only; engine owners remain missing | Native ordinary-input Tails switch pull observed; engine route open | Before/at fade steps, grab/pull/release and capsule/checkpoint ghost state open | 900-frame darkness and four-frame palette cadence observed; independent P2 switch ownership proven | Native PNGs inspected; engine comparison open |
+| Vertical wrap / rising sand | Catalogue identifies extended wrap and special-event collision | Open | Cross-wrap and moving collision replay open | Unmatched | Unmatched |
+
+## Execution evidence
+
+See the execution plan for exact command, commit, configurations, results/skips
+and external native capture directory. Pending tests are not passing evidence.
+The unit and short-route checks do not satisfy the remaining full act matrix.
