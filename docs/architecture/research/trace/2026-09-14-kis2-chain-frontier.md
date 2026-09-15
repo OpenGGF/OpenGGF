@@ -425,9 +425,32 @@ completed with two failures and no errors/skips (170.36 seconds). Failures are
 `TestNoAssertionFreeDiagnostics#noAssertionFreeTestMethodsUnderTestsTree`
 (existing FbzRouteEvidenceProbe#printEvidence and
 LevelSolidityMapProbe#writeSolidityMap). Baseline diagnostics were inspected
-and acknowledged. Candidate and integration broad checks are pending.
+and acknowledged. Candidate and integration broad results follow below.
 
 The earlier suspicion that setY cleared the fraction was rejected by reading
 AbstractSprite: it already preserves y_sub. Using NativePositionOps for the
 wall's word additions makes ownership explicit; it is not a separate Y-fraction
 bug fix. The regression protects the anchor and independent Y word while climbing.
+
+
+Implementation `f9e17bcc7` merged without conflicts as
+`5fed74d4200536d02d6a13774616c9c78433e0fb`, retaining the intervening FBZ
+miniboss visual delivery (`9aa24c795`, integrated `094337a0b`, verification
+`f47ccece2`). The KiS2 implementation/test files are unchanged by integration.
+Queued combined command, in the isolated implementation tree for both runs:
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base dedd18877da190e65aeb74970929e2f2b4ece6c3 --run`.
+Preflight passed in the actual launch environment. The runner selected all
+2,574 ordinary classes and all guards; neither run timed out.
+
+- Candidate `f9e17bcc7`: 20,419 ordinary tests, zero failures/errors, 18 skips
+  (685.18 seconds); 667 guards, two failures, zero errors/skips (170.36 seconds).
+- Integrated `5fed74d42`: 20,421 ordinary tests, zero failures/errors, 18 skips
+  (716.10 seconds); 667 guards, two failures, zero errors/skips (170.25 seconds).
+
+All skip identities match the baseline. Guard failure identities and messages
+match the two baseline failures documented above exactly. No new or worsened
+failure was observed. This is a completed full ordinary/guard check with inherited
+guard failures, not an entirely green suite. Matched focused replay evidence
+remains valid for the unchanged KiS2/S2/S3K movement and animation code; the
+chain remains red at the missing level-advance boundary. Results were inspected
+and submitted for runner acknowledgement before cleanup.

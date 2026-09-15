@@ -2,6 +2,10 @@
 
 Support material to help agents implement OpenGGF objects/zones/trace-fixes with less context loss.
 
+Zone delivery: [methodology v2](../architecture/designs/2026-09-15-zone-methodology-v2.md)
+retains FBZ's route slices and adds early short native comparisons and compatibility
+checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-15-soz-methodology-v2.md).
+
 ## Tools
 
 - [FBZ boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) supports `--sprite-publication` to compare the complete native CPU sprite table with the following consecutive frame’s VDP table; duplicate samples and gaps are explicit. The boundary exporter supplies the read-only CPU snapshots.

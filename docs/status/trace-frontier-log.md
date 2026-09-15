@@ -110171,3 +110171,13 @@ The complete strict replay still passes (17.270 s body), no first error.
 All fourteen settled boundary afterstates match after the separate SAT and HUD
 numeric publications. Intermediate redraws and independent Hyper progression
 remain open; broad validation/integration are not yet claimed.
+
+
+Wall/ledge implementation `f9e17bcc7` integrated without conflicts as
+`5fed74d42`, retaining upstream FBZ miniboss changes. Candidate and integrated
+queued full selections used `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base dedd18877da190e65aeb74970929e2f2b4ece6c3 --run`
+in `.worktrees/kis2-wall-anchor`: respectively 20,419 and 20,421 ordinary
+tests, zero failures/errors and the same 18 baseline skips. Both ran 667 guards
+with the two identical baseline failures (stale build guidance; existing
+assertion-free FBZ/solidity probes), zero errors/skips. The integrated KiS2
+runtime matches the focused replay candidate; no new failure was observed.
