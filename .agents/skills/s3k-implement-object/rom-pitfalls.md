@@ -4676,3 +4676,24 @@ standing bit after the checkpoint; `standingNow()` alone is insufficient, and
 player OnObj may belong to a different object. Test a retained offscreen rider
 with a no-contact checkpoint. This also matters when one rolling rider breaks a
 shared platform and every standing rider must be released.
+
+## Add `art_tile` to the complete mapping word before decoding its fields
+
+**Evidence:** FBZ `Obj_FBZChainLink` / `Map_FBZChainLink` (2026-09-15
+chain-art follow-up). The object installs
+`make_art_tile(ArtTile_FBZMisc,2,0) = $4379`; each repeated link piece stores
+`$E0EE`. `Draw_Sprite` adds those words as unsigned 16-bit values, so
+`$E0EE + $4379 = $12467`, truncated to `$2467`. The carry clears priority,
+selects palette line 1, and resolves source tile `$467`.
+
+Parsing tile index, flips, palette, and priority first and then adding each field
+independently loses carries between the fields. The FBZ chain consequently keeps
+the raw high-priority bit and appears in front of scenery that should occlude it,
+even though its object priority remains the correct `$80` bucket.
+
+When mapping words contain large or apparently negative tile offsets, add the
+object's full `art_tile` word modulo `$10000` first, then decode the final tile,
+flip, palette, and priority fields. Test both the resolved attributes and the
+actual level-pattern identity; a correct-looking tile index alone does not catch
+the priority carry. This applies across S1/S2/S3K mapping consumers that use the
+same word-addition path.

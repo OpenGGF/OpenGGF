@@ -17,12 +17,20 @@ regressions and existing encounter/art/rewind/S3K checks passed 178 tests with
 zero failures/errors/skips; the corrected capture preserves the complete
 player/camera CSV and observed boss positions/timers.
 
-Hanging-handle presentation follow-up (2026-09-14): horizontal `$72` grab regions
+Hanging-handle presentation follow-up (2026-09-14, amended 2026-09-15): horizontal `$72` grab regions
 must not submit vertical chain art (`Obj_FBZChainLink` → `loc_3AA5A`).
 `TestFbzRailAndChainPlatforms` covers all six used horizontal subtypes and
-retains a positive vertical descent/mapping check. This local render-only change
+retains a positive vertical descent/mapping check. `TestFbzChainLinkArtWord`
+checks the real 15-frame mapping table, shared terminal frame, representative
+piece geometry, resolved palette/priority, and exact `$467`/`$379` level-pattern
+sources after the ROM's 16-bit `$E0EE + $4379` addition. This local render-only change
 preserves the existing interaction/rewind obligations and inherited visual gaps;
-execution evidence is in the [completion record](../../plans/2026-09-14-fbz-completion.md).
+earlier execution evidence is in the [completion record](../../plans/2026-09-14-fbz-completion.md).
+Focused validation on `bugfix/ai-fbz-chain-art-word`, based on `c8138d304`, ran
+`TestFbzChainLinkArtWord`, `TestFbzRailAndChainPlatforms`, the full registry mapping
+crawler, the renderer corruption guard, and the required S3K loading/bootstrap
+checks: 98 tests passed with zero failures, errors, or skips. This is bounded
+art/presentation validation, not a full ordinary-suite or pixel-comparison pass.
 
 Spike-art follow-up (2026-09-14): the ROM-backed
 `TestSonic3kObjectArtProvider#fbzSpikeOrientationsUseTheirNativeTileBanksInBothActs`

@@ -168,6 +168,40 @@ public class Sonic3kObjectArt {
     }
 
     /**
+     * Builds the FBZ descending chain after applying the object's complete
+     * {@code art_tile} word to every mapping piece.
+     *
+     * <p>{@code Obj_FBZChainLink} uses {@code make_art_tile(ArtTile_FBZMisc,2,0)}.
+     * Its repeated link piece is encoded as {@code $E0EE}; the native word
+     * addition wraps {@code $E0EE + $4379} to {@code $2467}, clearing the
+     * priority bit as well as resolving the final palette. Treating those
+     * fields independently leaves the links in the foreground.</p>
+     */
+    public ObjectSpriteSheet buildFbzChainLinkSheet(int artTileBase) {
+        if (reader == null) return null;
+        List<SpriteMappingFrame> rawFrames = S3kSpriteDataLoader.loadMappingFrames(
+                reader, Sonic3kConstants.MAP_FBZ_CHAIN_LINK_ADDR);
+        int artTileWord = artTileBase | (2 << 13);
+        List<SpriteMappingFrame> resolvedFrames = new ArrayList<>(rawFrames.size());
+        int minTile = Integer.MAX_VALUE;
+        int maxTile = Integer.MIN_VALUE;
+        for (SpriteMappingFrame rawFrame : rawFrames) {
+            List<SpriteMappingPiece> resolvedPieces = new ArrayList<>(rawFrame.pieces().size());
+            for (SpriteMappingPiece rawPiece : rawFrame.pieces()) {
+                SpriteMappingPiece resolvedPiece = SpriteMappingPieces.withTileWord(
+                        rawPiece, (SpriteMappingPieces.toTileWord(rawPiece) + artTileWord) & 0xFFFF);
+                resolvedPieces.add(resolvedPiece);
+                minTile = Math.min(minTile, resolvedPiece.tileIndex());
+                maxTile = Math.max(maxTile,
+                        resolvedPiece.tileIndex() + resolvedPiece.widthTiles() * resolvedPiece.heightTiles());
+            }
+            resolvedFrames.add(new SpriteMappingFrame(resolvedPieces));
+        }
+        if (minTile == Integer.MAX_VALUE) return null;
+        return buildLevelArtSheet(0, 0, resolvedFrames, minTile, maxTile);
+    }
+
+    /**
      * Builds the AIZ1Tree sprite sheet.
      * <p>
      * From disassembly (Map - Act 1 Tree.asm):

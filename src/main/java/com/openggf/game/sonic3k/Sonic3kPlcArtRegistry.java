@@ -1366,7 +1366,7 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_FBZ_MISC + 0x0A, 1, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_CHAIN_LINK,
                 Sonic3kConstants.MAP_FBZ_CHAIN_LINK_ADDR,
-                Sonic3kConstants.ARTTILE_FBZ_MISC, 2, null));
+                Sonic3kConstants.ARTTILE_FBZ_MISC, 2, "buildFbzChainLinkSheet"));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.FBZ_SNAKE_PLATFORM,
                 Sonic3kConstants.MAP_FBZ_SNAKE_PLATFORM_ADDR,
                 Sonic3kConstants.ARTTILE_FBZ_MISC + 0xF2, 1, null));

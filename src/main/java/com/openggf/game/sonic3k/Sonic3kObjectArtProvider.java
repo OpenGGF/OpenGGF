@@ -1254,6 +1254,7 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
             case "buildAiz1TreeSheet" -> art.buildAiz1TreeSheet(artTileBase);
             case "buildAiz1ZiplinePegSheet" -> art.buildAiz1ZiplinePegSheet(artTileBase);
             case "buildAizForegroundPlantSheet" -> art.buildAizForegroundPlantSheet(artTileBase);
+            case "buildFbzChainLinkSheet" -> art.buildFbzChainLinkSheet(artTileBase);
             case "buildAnimatedStillSpritesSheet" -> art.buildAnimatedStillSpritesSheet(artTileBase);
             case "buildAnimStillLrzD3Sheet" -> art.buildAnimStillLrzD3Sheet(artTileBase);
             case "buildAnimStillLrz2Sheet" -> art.buildAnimStillLrz2Sheet(artTileBase);

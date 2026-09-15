@@ -91,7 +91,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   next dispatch, player control restores the native idle pose, and camera easing
   targets follow the Act 2 coordinate rebase. Retained title children and camera
   workers follow their original dispatch order. Horizontal chain grab regions stay invisible,
-  preventing stray descending handles from appearing along the route. Chains reject hurt/dead grabs,
+  preventing stray descending handles from appearing along the route. Descending chain mappings
+  apply the full 16-bit art-tile addition, preserving their native palette and scenery priority.
+  Chains reject hurt/dead grabs,
   vertical cages keep their orbit separate from the player ground angle, and
   magnetic platforms use the native ceiling and contact boundaries. Their chains
   retain the fixed end fitting without drawing an extra platform. Disappearing
