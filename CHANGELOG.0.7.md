@@ -206,7 +206,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Sandopolis Act 1 now has layered desert parallax, foreground and background heat shimmer, scroll-driven
   background art and cycling sand colors, with preserved static desert tiles
   and consistent background wrapping in widescreen. Both acts also implement
-  swinging platforms, rappel wires, sand blocks, rising walls and corks, and
+  swinging platforms, rappel wires, oscillator-timed spawning sand blocks, rising walls and corks, and
   Skorp, Sandworm and Rockn. Terrain-driven sand slides run after camera tracking.
   The cold sand intro, Egg Golem arena and seamless
   Act 2 entry use native event owners. Act 2 couples light switches, ghosts,

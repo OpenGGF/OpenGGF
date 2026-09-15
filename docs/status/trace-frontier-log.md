@@ -110542,10 +110542,28 @@ animation2. That production intro, not trace-state seeding, is the next target.
 - Same independent full-trace command (`-Ptrace-replay-r7
   -Dtest=TestS3kSozCompleteRunTraceReplay`, absolute S3K ROM), clean candidate
   source:59336compared rows,13159errors (10326physics,2833animation),0warnings,
-  0skips. First overall error remains queue34. All player fields match through
+  0skips. First overall error remains queue34. All compared player fields match through
   5669; first Tails error5670 is premature despawn (native133A/AD2 CPU6,
   engine7F00/0 CPU2), and first P1 error is y-speed7291, formerly6241.
   Total errors increase because the downstream trajectory changes; this is
   prefix improvement, not an overall green run. Final trace elapsed time was
   not retained and is not inferred from earlier invocations. No rows or queue
   comparisons were removed. Investigating the next source-owned boundary.
+
+- `05fd83228` fixes live SST slot reads in companion despawn checks. Queued
+  `-Dtest=TestS3kLiveInteractSlotProduction,TestSidekickCpuDespawnParity,TestSozRecoverySupportProduction,TestSidekickCpuControllerFlightAutoRecovery`
+  with `-Dmse=off` and the absolute S3K ROM:88passed,0skips,49.839s. Same-word
+  replacement, changed-word, empty-slot and zero-equal branches include forced
+  replay. Unknown live code providers remain unknown, rather than guessed empty.
+  The same independent full trace reports59336frames,12970errors (10158physics,
+  2812animation),0warnings/0skips, Maven1:07 (test17.11s). Queue34 remains;
+  first player mismatch moves to Tails mapping5977 (8vs7), first physics Tails6423
+  (g-speed-3vsA5,y-speed540vs0,air1vs0,status2vs8). P1 first y-speed remains7291.
+- Cold controller capture and native object rows identify P1's7291 missed landing:
+  native sliding sand block at`136D/848` receives the player, whereas the engine
+  spawner at`13A6/8B7` emits a falling child far below it. `loc_402CC/402EE` use
+  Oscillating_table+$16; the engine API excludes the control word and needs$14.
+  Root regression on current SOZ tree fails before fix (expected403,actual4FF),
+  1failure/0skips,18.440s. Queued `-Dtest=TestSozSandMechanisms,TestSozSandMechanismsProduction`
+  with explicit S3K ROM after fix:20passed,0skips,55.420s. Full trace movement
+  remains to be measured; no gameplay state was supplied from comparison rows.

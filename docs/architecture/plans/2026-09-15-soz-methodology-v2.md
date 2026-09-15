@@ -1878,7 +1878,7 @@ now clear the engine riding cache and common roll/push/on-object flags while
 preserving radii, native interaction slot and object-owned standing bits. A real
 manager regression failed before the fix;107recovery/solid checks and59final
 S3K checks pass without skips, including forced graph recreation/replay. The
-independent trace remains red but all player fields now match through5669;
+independent trace remains red but all compared player fields now match through5669;
 first main-player divergence moves6241→7291. Raw errors increase9763→13159 as
 the subsequent trajectory changes; the longer exact prefix is the measured gain.
 The next Tails frontier5670 is premature despawn. Queue34 remains separate.

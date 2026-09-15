@@ -11,6 +11,9 @@ import java.util.List;
 /** SKL $39, Obj_SOZSpawningSandBlocks ($40276), including independently allocated blocks. */
 public final class SozSpawningSandBlocksObjectInstance extends AbstractObjectInstance
         implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
+    // loc_402CC/loc_402EE read Oscillating_table+$16. The manager starts
+    // after the native control word, so $14 selects position, not velocity.
+    private static final int OSCILLATION_POSITION_OFFSET = 0x14;
     private int phase, xFixed, yFixed, xVelocity, yVelocity, timer, waitTimer, rangeAnchor, range, sinkOrigin;
     private boolean child;
     private boolean drawThisPass;
@@ -34,12 +37,12 @@ public final class SozSpawningSandBlocksObjectInstance extends AbstractObjectIns
             if (waitTimer != 0) {
                 waitTimer = (short) (waitTimer - 1);
                 if (waitTimer != 0) return;
-                if (OscillationManager.getByte(0x16) != 0) {
+                if (OscillationManager.getByte(OSCILLATION_POSITION_OFFSET) != 0) {
                     waitTimer = 1; timer = (short) (timer - 1); return;
                 }
             }
             drawThisPass = true;
-            yFixed = ((spawn.y() + (OscillationManager.getByte(0x16) & 0xFF)) & 0xFFFF) << 16;
+            yFixed = ((spawn.y() + (OscillationManager.getByte(OSCILLATION_POSITION_OFFSET) & 0xFF)) & 0xFFFF) << 16;
             timer = (short) (timer - 1);
             if (timer < 0) {
                 timer = 0x7F;
