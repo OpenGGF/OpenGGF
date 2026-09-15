@@ -55,6 +55,11 @@ public final class AudioKeyframeStore {
     }
 
     public int replayToLogicalState(AudioManager audio, long targetFrame) {
+        return replayToLogicalState(audio, targetFrame, targetFrame);
+    }
+
+    /** Gameplay keyframes and externally owned audio clocks may have different origins. */
+    public int replayToLogicalState(AudioManager audio, long targetFrame, long commandTimelineFrame) {
         Objects.requireNonNull(audio, "audio");
         Map.Entry<Long, AudioLogicalSnapshot> keyframe = keyframes.floorEntry(targetFrame);
         if (keyframe == null) {
@@ -71,7 +76,7 @@ public final class AudioKeyframeStore {
         int end = timeline.entryCount();
         for (int i = start; i < end; i++) {
             AudioTimelineEntry entry = timeline.entryAt(i);
-            if (entry.frame() <= targetFrame) {
+            if (entry.frame() <= commandTimelineFrame) {
                 audio.replayTimelineCommandLogically(entry.command());
                 replayed++;
             }
