@@ -77,7 +77,7 @@ class QueueCliTests(unittest.TestCase):
                  dict(full=False, tests=['new'], guards=False)]
 
         @contextmanager
-        def slot(root):
+        def slot(root, *, exclusive=False):
             events.append('acquired')
             yield 12
             events.append('released')
@@ -92,6 +92,16 @@ class QueueCliTests(unittest.TestCase):
         self.assertEqual(['new'], run.call_args.args[1]['tests'])
         self.assertEqual(90, run.call_args.args[2])
         self.assertEqual(12, run.call_args.kwargs['queue_fd'])
+
+    def test_two_worker_cli_requests_exclusive_queue(self):
+        plan = dict(full=False, tests=['test'], guards=False)
+        with patch.object(runner, 'maven_slot') as slot, \
+                patch.object(runner, 'make_plan', return_value=plan), \
+                patch.object(runner, 'preflight'), \
+                patch.object(runner, 'run_plan', return_value=0), \
+                patch('sys.stdout', new_callable=io.StringIO):
+            self.assertEqual(0, runner.main(['--category', 'physics', '--workers', '2', '--run']))
+        self.assertTrue(slot.call_args.kwargs['exclusive'])
 
 
 if __name__ == '__main__':

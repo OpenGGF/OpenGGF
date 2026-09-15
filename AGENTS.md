@@ -88,10 +88,14 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   `python3 tools/testing/maven_queue.py <maven arguments>` from the intended worktree.
   Submit the command even if another agent is testing: it waits, reports status and
   starts automatically. Waiting requires no permission or manual lock cleanup.
+  Linux admission allows different worktrees to overlap when conservative memory/CPU
+  reservations fit (two runs by default); one worktree remains exclusive. Other platforms
+  retain serialization. Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
+  Git policy settings and profiling are documented in `tools/testing/README.md`.
   The queue holds a slot only during execution; cancellation releases a waiting
   request or stops its running Maven process tree. Keep the command session alive
   while waiting. Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.
-  OS locks release automatically; never delete `maven-queue.lock` to force access.
+  OS locks release automatically; never delete Maven queue/slot/worktree lock files to force access.
 - Category runs have a configurable **per-invocation** timeout (`--max-minutes`,
   default 40) and a 10-minute no-output timeout. Queue waiting does not count.
   A timeout means incomplete validation; inspect the cause and rerun the necessary

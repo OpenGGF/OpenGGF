@@ -138,8 +138,11 @@ python3 tools/testing/maven_queue.py -Dmse=off package
 
 Submit checks when ready, even while another agent is testing. Leave the command session
 running: it prints a waiting notice every 30 seconds and starts automatically when it
-acquires the slot. The queue serializes whole invocations; category ordinary/guard lanes
-stay together. There is no background service, task owner or approval step. The OS chooses
+acquires a slot. On Linux, the queue admits up to two invocations in different
+worktrees when memory and CPU budgets fit; category ordinary/guard lanes stay together.
+The same worktree always remains exclusive. Unsupported resource probes/platforms
+and CPU allocations smaller than two per-run reservations retain serial execution.
+There is no background service, task owner or approval step. The OS chooses
 among waiting processes; strict FIFO ordering is not promised. Different clones have
 separate queues. Each command still uses its own worktree and `target/` directory.
 
@@ -150,17 +153,49 @@ releasing the slot. Category runs retain their timeouts and diagnostic summaries
 selection is recomputed after waiting so it describes the tree actually being tested.
 Avoid editing that worktree during execution; the category runner rejects changed trees.
 
-The shared Git directory contains `maven-queue.lock`, an OS-managed execution lock. Its
-presence is **not** evidence of an active run, and it must never be deleted to force access:
+Admission uses available memory, CPU affinity, visible cgroup v2 limits and one-minute
+system load. Each prospective run reserves **7 GiB RAM and 8 CPU cores**, with **2 GiB
+memory headroom**. Existing runs also count as full reservations, in addition to their
+usage already reflected in OS counters. This deliberate overestimate covers startup
+bursts; it may queue work even when a less conservative estimate would fit. These are
+admission estimates, not hard limits or a guarantee against unrelated host load.
+No running command is preempted when resources later fall. The estimate covers the
+single-worker default suite and `smoke`/`guards`. Category `--workers 2`, other explicit
+Maven profiles, Maven thread/fork/heap overrides, and nonempty `MAVEN_OPTS`,
+`JAVA_TOOL_OPTIONS` or `JDK_JAVA_OPTIONS` retain exclusive execution. Implicit profiles
+or heap settings in custom project/user Maven configuration are not detected; use the
+serial override for those unmeasured shapes.
+
+Use `OPENGGF_MAVEN_QUEUE=serial` for an exclusive run (in PowerShell, set
+`$env:OPENGGF_MAVEN_QUEUE = 'serial'`). The default is `auto`. Serial callers and the
+previous single-lock wrapper exclude resource-aware callers in both directions.
+Shared Git settings tune the policy across linked worktrees:
+
+```bash
+git config openggf.mavenMaxRuns 2
+git config openggf.mavenMemoryGiB 7
+git config openggf.mavenCpuCores 8
+git config openggf.mavenHeadroomGiB 2
+```
+
+Values must be positive and finite; `mavenMaxRuns` is an integer from 1 to 64. Change
+settings between runs: callers read policy when they enter the queue. A request whose
+budget cannot fit waits until resources or the request's configuration change; cancel
+and resubmit after changing settings. Separate clones have separate reservations.
+
+The shared Git directory contains `maven-queue.lock`, an OS-managed compatibility lock,
+`maven-admission.lock` for atomic admission, and numbered `maven-slot-*.lock` leases.
+Each worktree's Git directory also contains `maven-worktree.lock`. Their
+presence is **not** evidence of an active run. Never delete these files to force access:
 that could create two independent locks. Normal exits and handled cancellation release
-it automatically; dead waiting processes leave no queue entries. On POSIX the Maven child
-inherits the lock descriptor as protection against a killed Python parent. After a forced
+them automatically; dead waiting processes leave no queue entries. On POSIX the Maven child
+inherits all execution lock descriptors as protection against a killed Python parent. After a forced
 kill, especially on Windows, check for surviving Maven/JVM processes before further work.
 This is local coordination, not a sandbox against arbitrary commands.
 
-Direct `mvn` and older runner versions do not participate in the queue. Use the wrapper
-for local Maven builds/tests, and allow any already-running older invocation to finish
-before adopting it. Existing `openggf-validation/task.json`, `task.lock` and
+Direct `mvn` and runners predating the single-lock queue do not participate. Use the
+wrapper for local Maven builds/tests. The immediately preceding single-lock queue is
+compatible and remains exclusive. Existing `openggf-validation/task.json`, `task.lock` and
 `target/category-tests-last-broad.json` files are ignored, not migrated or deleted;
 they do not authorize or block new runs. CI and release commands/gates are unchanged.
 
@@ -168,6 +203,25 @@ Changes confined to the Python runner/tests and this prose guidance use the Pyth
 suite below plus actual tool preflight. Changes to selection policy, POM, Java, workflows
 or hooks still require their normal change-based validation. This avoids launching tens
 of thousands of engine tests to verify timeout, subprocess and retention behavior.
+
+### Exploratory resource profiling
+
+The optional profiler requires `psutil` in the Python launch environment. It invokes the
+category runner, so queueing, timeouts, ROM discovery and diagnostics remain unchanged:
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/profile_maven.py --output target/maven-profile.json -- --category all --run
+```
+
+It samples descendant process RSS and cumulative user/system CPU once per second and
+writes an aggregate JSON every 30 samples and at exit. Wall time and mean CPU include
+queue wait; profile an uncontended queue for an isolated estimate. RSS sums shared pages
+and can overcount physical memory; sampling misses short-lived processes and peaks,
+so CPU time is a lower bound. It measures ordinary and guard lanes, not separate
+trace/native profiles. Inspect category results and skips before describing coverage.
+`complete` means the runner exited, not that tests passed. Record useful measurements
+and conditions in the task's existing architecture artifact; remove temporary JSON
+and acknowledge category diagnostics after consuming them.
 
 ### Automatic storage cleanup
 

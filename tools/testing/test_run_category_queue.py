@@ -7,12 +7,16 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 TOOLS = Path(__file__).resolve().parent
 
 
 class QueueTests(unittest.TestCase):
     def setUp(self):
+        self.mode = patch.dict(os.environ, {"OPENGGF_MAVEN_QUEUE": "serial"})
+        self.mode.start()
+        self.addCleanup(self.mode.stop)
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name) / 'repo'
@@ -35,13 +39,15 @@ class QueueTests(unittest.TestCase):
                 process.kill()
             process.communicate(timeout=5)
 
-    def launch(self, name, root=None):
+    def launch(self, name, root=None, resource_snapshot=(100 * 1024**3, 128, 0)):
         code = '''
-import sys, time
+import sys, time, json
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 from maven_queue import maven_slot
-root, marker = map(Path, sys.argv[2:])
+import maven_resources
+maven_resources.snapshot = lambda: json.loads(sys.argv[4])
+root, marker = map(Path, sys.argv[2:4])
 with maven_slot(root):
     marker.with_suffix('.started').touch()
     while not marker.with_suffix('.release').exists():
@@ -49,7 +55,7 @@ with maven_slot(root):
 '''
         marker = Path(self.temp.name) / name
         process = subprocess.Popen([sys.executable, '-c', code, str(TOOLS),
-                                    str(root or self.root), str(marker)],
+                                    str(root or self.root), str(marker), json.dumps(resource_snapshot)],
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         self.processes.append(process)
         return process, marker
@@ -108,6 +114,110 @@ with maven_slot(root):
         second.with_suffix('.release').touch()
         self.assertEqual(0, waiter.wait(timeout=5))
 
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_auto_allows_linked_worktrees_but_serializes_same_tree(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        self.git('config', 'openggf.mavenMemoryGiB', '0.01')
+        self.git('config', 'openggf.mavenCpuCores', '0.01')
+        self.git('config', 'openggf.mavenHeadroomGiB', '0.01')
+        first_process, first = self.launch('first')
+        self.wait_started(first_process, first)
+        second_process, second = self.launch('second', self.linked)
+        self.wait_started(second_process, second)
+        third_process, third = self.launch('third')
+        time.sleep(.3)
+        self.assertFalse(third.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        first_process.wait(timeout=5)
+        self.wait_started(third_process, third)
+        second.with_suffix('.release').touch()
+        third.with_suffix('.release').touch()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_auto_queues_when_memory_budget_cannot_fit(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        self.git('config', 'openggf.mavenMemoryGiB', '1000000')
+        process, marker = self.launch('too-large')
+        time.sleep(.4)
+        self.assertIsNone(process.poll())
+        self.assertFalse(marker.with_suffix('.started').exists())
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_serial_holder_excludes_auto_request(self):
+        holder, first = self.launch('serial')
+        self.wait_started(holder, first)
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        waiter, second = self.launch('auto', self.linked)
+        time.sleep(.3)
+        self.assertFalse(second.with_suffix('.started').exists())
+        self.assertIsNone(waiter.poll())
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_auto_ceiling_blocks_a_third_distinct_worktree(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        other = Path(self.temp.name) / 'other'
+        self.git('worktree', 'add', '--detach', '-q', str(other))
+        holder, first = self.launch('first')
+        self.wait_started(holder, first)
+        second_process, second = self.launch('second', self.linked)
+        self.wait_started(second_process, second)
+        third_process, third = self.launch('third', other)
+        time.sleep(.3)
+        self.assertFalse(third.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(third_process, third)
+        second.with_suffix('.release').touch()
+        third.with_suffix('.release').touch()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_auto_holder_excludes_serial_request(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        holder, first = self.launch('auto')
+        self.wait_started(holder, first)
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'serial'
+        waiter, second = self.launch('serial', self.linked)
+        time.sleep(.3)
+        self.assertFalse(second.with_suffix('.started').exists())
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(waiter, second)
+        second.with_suffix('.release').touch()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux inherited descriptor contract')
+    def test_auto_killed_wrapper_retains_worktree_lease(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        command, marker = self.launch_command('auto-killed')
+        self.wait_started(command, marker)
+        command.kill()
+        command.wait(timeout=5)
+        later, last = self.launch('same-tree', self.linked)
+        time.sleep(.3)
+        self.assertFalse(last.with_suffix('.started').exists())
+        # Another tree may still use the second slot.
+        other, other_marker = self.launch('other-tree')
+        self.wait_started(other, other_marker)
+        marker.with_suffix('.release').touch()
+        self.wait_started(later, last)
+        last.with_suffix('.release').touch()
+        other_marker.with_suffix('.release').touch()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_unavailable_counters_and_small_cpu_allocations_keep_serial_progress(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        for index, snapshot in enumerate((None, (100 * 1024**3, 2, 0))):
+            first_process, first = self.launch(f'fallback-{index}', resource_snapshot=snapshot)
+            self.wait_started(first_process, first)
+            second_process, second = self.launch(f'fallback-next-{index}', self.linked,
+                                                  resource_snapshot=snapshot)
+            time.sleep(.3)
+            self.assertFalse(second.with_suffix('.started').exists())
+            first.with_suffix('.release').touch()
+            first_process.wait(timeout=5)
+            self.wait_started(second_process, second)
+            second.with_suffix('.release').touch()
+            second_process.wait(timeout=5)
+
     def launch_command(self, name, category=False, exit_code=0):
         """Run the real CLIs/runner, replacing only the Maven executable with a probe."""
         marker = Path(self.temp.name) / name
@@ -134,6 +244,8 @@ from pathlib import Path
 from unittest.mock import patch
 sys.path.insert(0, sys.argv[1])
 import maven_queue as queue
+import maven_resources
+maven_resources.snapshot = lambda: (100 * 1024**3, 128, 0)
 import run_categories as runner
 original = subprocess.Popen
 marker, fake, code, category = sys.argv[2:]
