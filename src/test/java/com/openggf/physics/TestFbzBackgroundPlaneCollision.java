@@ -144,7 +144,7 @@ class TestFbzBackgroundPlaneCollision {
             @Override public String gameId() { return "test"; }
             @Override public int zoneIndex() { return 0; }
             @Override public int actIndex() { return 0; }
-            @Override public int backgroundCollisionYMask() { return 0x7FF; }
+            @Override public int backgroundLayoutYMask() { return 0x7FF; }
             @Override public BackgroundPlaneCollisionProvider.State backgroundPlaneCollisionStateOrNull() {
                 return new BackgroundPlaneCollisionProvider.State(true,0x20,-0x800);
             }

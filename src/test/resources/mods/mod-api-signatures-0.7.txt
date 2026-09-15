@@ -7891,7 +7891,7 @@ METHOD com.openggf.game.zone.ZoneRuntimeState public  boolean rightWallDeepProbe
 METHOD com.openggf.game.zone.ZoneRuntimeState public  boolean usesPersistentBackgroundVdpPlane()
 METHOD com.openggf.game.zone.ZoneRuntimeState public  byte[] captureBytes()
 METHOD com.openggf.game.zone.ZoneRuntimeState public  com.openggf.physics.BackgroundPlaneCollisionProvider$State backgroundPlaneCollisionStateOrNull()
-METHOD com.openggf.game.zone.ZoneRuntimeState public  int backgroundCollisionYMask()
+METHOD com.openggf.game.zone.ZoneRuntimeState public  int backgroundLayoutYMask()
 METHOD com.openggf.game.zone.ZoneRuntimeState public  int levelRepeatOffset()
 METHOD com.openggf.game.zone.ZoneRuntimeState public  void restoreBytes(byte[])
 METHOD com.openggf.game.zone.ZoneRuntimeState public,abstract  int actIndex()
