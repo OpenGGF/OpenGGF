@@ -204,7 +204,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   controllers, both static solid platform shapes, moving and spiked pillars,
   and connected push switches and doors, including special-rock activation and correct body-over-track layering.
   Sandopolis Act 1 now has layered desert parallax, heat shimmer, scroll-driven
-  background art and cycling sand colors.
+  background art and cycling sand colors, with preserved static desert tiles
+  and consistent background wrapping in widescreen.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. MHZ end-boss debris

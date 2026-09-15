@@ -1386,7 +1386,11 @@ public final class LevelRenderer {
         if (!perLineScrollActive && bgPeriodWidthPixels > bgPeriodCap) {
             bgPeriodWidthPixels = bgPeriodCap;
         }
-        int renderWidth = Math.max(lm.cachedScreenWidth, bgPeriodWidthPixels);
+        // The compositor uses this width as its modulo. A wider display must
+        // repeat the plane, not enlarge its period (e.g. 512 -> 528 creates a
+        // duplicate 16px strip followed by a seam). Per-line tile-pass paths
+        // already select the viewport width above because they need no H wrap.
+        int renderWidth = bgPeriodWidthPixels;
         // Add CHUNK_HEIGHT (16px) to cover VScroll range
         // This prevents bottom clipping when VScroll > 0 (max VScroll = 15, max gameY = 223, max fboY = 238 < 272)
         int renderHeight = 256 + LevelConstants.CHUNK_HEIGHT;

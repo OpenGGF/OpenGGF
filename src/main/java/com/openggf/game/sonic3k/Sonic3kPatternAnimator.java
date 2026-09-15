@@ -294,7 +294,11 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
 
-        List<AniPlcScriptState> parsedScripts = AniPlcParser.parseScripts(reader, aniPlcAddr);
+        // Offs_AniPLC names LRZ1 for both SOZ acts, but AnimateTiles_SOZ1/2
+        // return directly: neither invokes AnimateTiles_DoAniPLC. Loading that
+        // unused list would replace static SOZ art at $350-$357 with lava flames.
+        List<AniPlcScriptState> parsedScripts = zoneIndex == 0x08
+                ? List.of() : AniPlcParser.parseScripts(reader, aniPlcAddr);
         this.lbzRegularScriptCount = parsedScripts.size();
         if (zoneIndex == 0x06 && actIndex == 0) {
             List<AniPlcScriptState> specScripts = AniPlcParser.parseScripts(reader,
@@ -2096,7 +2100,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             return;
         }
         if (zoneIndex == 0x08 && actIndex == 0) {
-            graph.install(S3kAnimatedTileChannels.buildSozChannels(this, scripts));
+            graph.install(S3kAnimatedTileChannels.buildSozChannels(this));
             return;
         }
         if (zoneIndex == 0x03) {

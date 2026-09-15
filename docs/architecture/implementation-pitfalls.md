@@ -312,3 +312,13 @@ only proves one tile changes misses half-length transfers. The channel graph's
 owned destination range must grow with the actual copy. Also distinguish the
 current gameplay camera from a previous presentation pass's cached parallax
 copy when deriving animation phases. See the [SOZ execution record](plans/2026-09-15-soz-methodology-v2.md#normal-act-1-desert-presentation-implementation).
+
+
+### Custom animation dispatch can leave an AniPLC pointer unused
+
+SOZ1/2's `Offs_AniPLC` entries name LRZ1, but their custom handlers return
+without executing it. Follow calls/branches to `AnimateTiles_DoAniPLC` before
+registering a shared list; a data pointer alone does not establish execution.
+AniPLC regression checks must include VBlank publication, since submission-only
+checks see unchanged CPU tiles while the next presentation corrupts them.
+The SOZ desert artifact correction in the methodology-v2 plan records the case.

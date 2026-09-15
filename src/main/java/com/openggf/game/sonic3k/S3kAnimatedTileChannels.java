@@ -86,20 +86,8 @@ final class S3kAnimatedTileChannels {
         return channels;
     }
 
-    static List<AnimatedTileChannel> buildSozChannels(Sonic3kPatternAnimator owner,
-                                                      List<AniPlcScriptState> scripts) {
-        List<AnimatedTileChannel> channels = new ArrayList<>(scripts.size() + 1);
-        for (int i = 0; i < scripts.size(); i++) {
-            AniPlcScriptState script = scripts.get(i);
-            channels.add(new AnimatedTileChannel(
-                    "s3k.soz.script." + i,
-                    owner::shouldRunScriptChannels,
-                    ctx -> ctx.frameCounter(),
-                    scriptDestination(script),
-                    AnimatedTileCachePolicy.ALWAYS,
-                    ctx -> owner.tickScript(script)
-            ));
-        }
+    static List<AnimatedTileChannel> buildSozChannels(Sonic3kPatternAnimator owner) {
+        List<AnimatedTileChannel> channels = new ArrayList<>(1);
 
         channels.add(new AnimatedTileChannel(
                 "s3k.soz1.scroll",
