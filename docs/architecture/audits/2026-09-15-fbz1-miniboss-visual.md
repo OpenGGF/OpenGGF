@@ -104,5 +104,14 @@ SHA-256 identities of the reviewed stills:
 | `engine-after/frame-720.png` | `1e7b917052e9012ccbd54ddd72ea2aa1400fc10318c39a590f04777c1279e47f` |
 
 Full-act certification, complete-run trace parity and the inherited matrix gaps
-remain outside this local rendering correction. Integration verification is
-recorded below once complete.
+remain outside this local rendering correction.
+
+## Integration
+
+Implementation `9aa24c795` merged without conflicts into `develop` as
+`094337a0b8dce0ca72751327e83a752125534e16`. The integrated production/test/build
+tree matches the verified development tree. The integrated command
+`python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestFbzMinibossChildren test`
+passed all 50 tests with zero failures/errors/skips in 46.053 seconds including
+compilation (08:44:03 BST). Test identities and outcomes match the development
+run exactly. Remaining follow-up here is documentation only.
