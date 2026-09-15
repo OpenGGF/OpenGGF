@@ -8,6 +8,9 @@ import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrBodyInstance;
 import com.openggf.game.sonic3k.objects.badniks.ButterdroidBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CaterkillerJrHeadInstance;
 import com.openggf.game.sonic3k.objects.badniks.CluckoidBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.SkorpBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.SandwormBadnikInstance;
+import com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.CorkeyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.DragonflyBadnikInstance;
 import com.openggf.game.sonic3k.objects.badniks.Flybot767BadnikInstance;
@@ -970,7 +973,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SkorpBadnikInstance(spawn);
                     }
                     return new BlastoidBadnikInstance(spawn);
                 });
@@ -978,7 +981,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new SandwormBadnikInstance(spawn);
                     }
                     return new BuggernautBadnikInstance(spawn);
                 });
@@ -986,7 +989,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
-                        return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
+                        return new RocknBadnikInstance(spawn);
                     }
                     return new TurboSpikerBadnikInstance(spawn);
                 });
