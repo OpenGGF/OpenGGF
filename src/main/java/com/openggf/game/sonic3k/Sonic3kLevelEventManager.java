@@ -931,6 +931,25 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
     }
 
+    /**
+     * Obj_TitleCardWait2/loc_2D86E allocates the SOZ2 Hyudoro controller when
+     * the title owner's children have retired. This also runs on saved-player
+     * reloads: their intro suppression does not suppress the native controller.
+     */
+    public void onTitleCardOwnerRetired() {
+        if (currentZone != Sonic3kZoneIds.ZONE_SOZ || currentAct != 1) {
+            return;
+        }
+        var objectManager = GameServices.level().getObjectManager();
+        if (objectManager == null || objectManager.getActiveObjects().stream()
+                .anyMatch(com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance.class::isInstance)) {
+            return;
+        }
+        objectManager.createDynamicObject(() ->
+                new com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance(
+                        new com.openggf.level.objects.ObjectSpawn(0x120, 0xA0, 0xAA, 0, 0, false, 0)));
+    }
+
     public void applyZonePlayerStateAfterTitleCard() {
         // The title-card caller also owns LBZ1's launch below the shared seam.
         // Saved-state returns must skip that spawn as well as the shared intros.
