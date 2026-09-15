@@ -89,3 +89,8 @@ Native channel-8 observations corroborate charging, door displacement and passag
 They are not matched engine trajectories or pixel certification. Cold reachability,
 all puzzle placements, full load/death/checkpoint breadth, lighting/ghost events
 and boss/exit obligations remain open.
+
+Push-switch visual follow-up: the fixed frame-0 track is painted before the
+frame-1 moving body, matching native main-before-child SAT precedence. The
+connected-mechanism capture is repeated at the same entry/input for overlap QA;
+this local correction does not close the inherited whole-act visual gaps.

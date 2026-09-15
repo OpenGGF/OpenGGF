@@ -135,8 +135,9 @@ public final class SozPushSwitchObjectInstance extends AbstractObjectInstance
         if(retained) return;
         var r=getRenderer(Sonic3kObjectArtKeys.SOZ_PUSH_SWITCH);
         if(r!=null && r.isReady()) {
-            r.drawFrameIndex(1,x,spawn.y(),flipped(),(spawn.renderFlags()&2)!=0);
+            // Native main sprite precedes its child in SAT priority; paint the track first.
             r.drawFrameIndex(0,spawn.x()+(flipped()?-16:16),spawn.y(),false,false);
+            r.drawFrameIndex(1,x,spawn.y(),flipped(),(spawn.renderFlags()&2)!=0);
         }
     }
 }

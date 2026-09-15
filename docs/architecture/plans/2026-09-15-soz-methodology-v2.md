@@ -1234,3 +1234,27 @@ passed as recorded above; no full-suite or complete-act certification is implied
 CI push policy and release-tree audit passed before delivery. No trace frontier
 changed. The full special-rock puzzle approach and inherited act-matrix gaps
 remain open.
+
+### Push-switch overlap correction
+
+User visual review found the moving body behind its fixed track. Native
+`Obj_SOZPushSwitch` uses main mapping frame 1 and child frame 0; the multi-sprite
+builder submits the main before `loc_1B46A` processes children, giving the main
+earlier SAT precedence. The engine uses painter order, so the two frame calls
+must be reversed: track first, moving body last. This corrects the original
+`6c8dad550` rendering without changing geometry, movement or rewind state.
+
+The branch starts at `5002e9e8c`. The change selector proposes 2,151 ordinary
+classes plus guards. Proportionate validation uses the six classes
+`TestSozMechanisms,TestSozMechanismsProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+with the explicit S3K and S1 ROM properties from the preceding batch, and a fresh
+`GameplayCaptureTool` run with the same 500-frame input and positioned entry.
+Only object-local drawing order changed; shared rendering and gameplay algorithms
+are untouched. No new test mirrors the two-call implementation; the real rendered
+overlap is the visual acceptance check.
+
+Worktree validation completed at 19:37:20 BST: 77 tests, zero failures/errors/skips
+(49.225 seconds). Capture `engine-mechanisms-layer-fix` completed 500 frames at
+19:37:40 BST. All 500 CSV state rows equal `engine-mechanisms-1`; inspected
+still150 shows the body covering the track instead of being covered by it.
+The capture's inherited Discord shutdown warning did not prevent completion.
