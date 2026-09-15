@@ -39,23 +39,26 @@ class QueueTests(unittest.TestCase):
                 process.kill()
             process.communicate(timeout=5)
 
-    def launch(self, name, root=None, resource_snapshot=(100 * 1024**3, 128, 0)):
+    def launch(self, name, root=None, resource_snapshot=(100 * 1024**3, 128, 0),
+               estimate=900, aging_seconds=300):
         code = '''
 import sys, time, json
 from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 from maven_queue import maven_slot
-import maven_resources
+import maven_resources, maven_schedule
+maven_schedule.AGING_SECONDS = float(sys.argv[6])
 maven_resources.snapshot = lambda: json.loads(sys.argv[4])
 root, marker = map(Path, sys.argv[2:4])
-with maven_slot(root):
+with maven_slot(root, estimate=float(sys.argv[5])):
     marker.with_suffix('.started').touch()
     while not marker.with_suffix('.release').exists():
         time.sleep(.02)
 '''
         marker = Path(self.temp.name) / name
         process = subprocess.Popen([sys.executable, '-c', code, str(TOOLS),
-                                    str(root or self.root), str(marker), json.dumps(resource_snapshot)],
+                                    str(root or self.root), str(marker), json.dumps(resource_snapshot),
+                                    str(estimate), str(aging_seconds)],
                                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         self.processes.append(process)
         return process, marker
@@ -68,6 +71,94 @@ with maven_slot(root):
             if time.monotonic() > deadline:
                 self.fail('Queued process did not acquire its slot')
             time.sleep(.02)
+
+    def wait_queued(self, count):
+        deadline = time.monotonic() + 5
+        while len(list((self.root / '.git/maven-waiters').glob('*.request'))) < count:
+            if time.monotonic() > deadline:
+                self.fail('Requests were not published to the scheduler')
+            time.sleep(.02)
+
+    def test_legacy_unregistered_lock_and_scheduler_remain_mutually_exclusive(self):
+        from maven_queue import _try_lock, _unlock, _acquire
+        with (self.root / '.git/maven-queue.lock').open('a+b') as legacy:
+            legacy.write(b'\0')
+            legacy.flush()
+            _try_lock(legacy)
+            try:
+                process, marker = self.launch('new-client', self.linked, estimate=30)
+                self.wait_queued(1)
+                self.assertFalse(marker.with_suffix('.started').exists())
+            finally:
+                _unlock(legacy)
+            self.wait_started(process, marker)
+            self.assertFalse(_acquire(legacy))
+            marker.with_suffix('.release').touch()
+            process.wait(timeout=5)
+            self.assertTrue(_acquire(legacy))
+            _unlock(legacy)
+
+    def test_short_run_overtakes_queued_full_suite(self):
+        holder, first = self.launch('holder')
+        self.wait_started(holder, first)
+        large, full = self.launch('full', self.linked, estimate=900)
+        self.wait_queued(1)
+        small, focused = self.launch('focused', estimate=30)
+        self.wait_queued(2)
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(small, focused)
+        self.assertFalse(full.with_suffix('.started').exists())
+        focused.with_suffix('.release').touch()
+        small.wait(timeout=5)
+        self.wait_started(large, full)
+        full.with_suffix('.release').touch()
+        large.wait(timeout=5)
+        self.assertEqual([], list((self.root / '.git/maven-waiters').glob('*.request')))
+
+    def test_aged_large_run_wins_before_new_short_run(self):
+        holder, first = self.launch('holder', aging_seconds=.3)
+        self.wait_started(holder, first)
+        large, full = self.launch('full', self.linked, estimate=900, aging_seconds=.3)
+        self.wait_queued(1)
+        time.sleep(.4)
+        small, focused = self.launch('focused', estimate=30, aging_seconds=.3)
+        self.wait_queued(2)
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(large, full)
+        self.assertFalse(focused.with_suffix('.started').exists())
+        full.with_suffix('.release').touch()
+        large.wait(timeout=5)
+        self.wait_started(small, focused)
+        focused.with_suffix('.release').touch()
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux resource admission')
+    def test_backfill_stops_once_blocked_request_ages(self):
+        os.environ['OPENGGF_MAVEN_QUEUE'] = 'auto'
+        other = Path(self.temp.name) / 'other'
+        self.git('worktree', 'add', '--detach', '-q', str(other))
+        holder, first = self.launch('holder', aging_seconds=.5)
+        self.wait_started(holder, first)
+        blocked, waiting = self.launch('blocked', estimate=30, aging_seconds=.5)
+        self.wait_queued(1)
+        backfill, second = self.launch('backfill', self.linked, estimate=60, aging_seconds=.5)
+        self.wait_started(backfill, second)
+        self.assertFalse(waiting.with_suffix('.started').exists())
+        time.sleep(.6)
+        second.with_suffix('.release').touch()
+        backfill.wait(timeout=5)
+        later, third = self.launch('later', other, estimate=30, aging_seconds=.5)
+        self.wait_queued(2)
+        time.sleep(.3)
+        self.assertFalse(third.with_suffix('.started').exists())
+        self.assertIsNone(holder.poll())  # Aging never preempts running work.
+        first.with_suffix('.release').touch()
+        holder.wait(timeout=5)
+        self.wait_started(blocked, waiting)
+        self.wait_started(later, third)
+        waiting.with_suffix('.release').touch()
+        third.with_suffix('.release').touch()
 
     def test_linked_worktrees_wait_and_continue_without_task_registration(self):
         holder, first = self.launch('first')

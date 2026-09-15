@@ -142,9 +142,41 @@ acquires a slot. On Linux, the queue admits up to two invocations in different
 worktrees when memory and CPU budgets fit; category ordinary/guard lanes stay together.
 The same worktree always remains exclusive. Unsupported resource probes/platforms
 and CPU allocations smaller than two per-run reservations retain serial execution.
-There is no background service, task owner or approval step. The OS chooses
-among waiting processes; strict FIFO ordering is not promised. Different clones have
-separate queues. Each command still uses its own worktree and `target/` directory.
+There is no background service, task owner or approval step. Participating waiters
+use short-run priority with aging; different clones have separate queues. Each command still uses its own worktree and `target/` directory.
+
+#### Waiting order
+
+New requests are ordered by estimated duration, then arrival time. After **five minutes**
+a request enters an aged group ordered by arrival time, ahead of all unaged requests.
+This protects larger runs from a continuous stream of new short checks. Five minutes
+is a priority threshold, not a start-time guarantee: running Maven commands are never
+preempted, and external resource pressure can still delay admission.
+
+An unaged request blocked by its worktree, an exclusive run or resource limits can be
+bypassed by another request that fits (backfilling). Once the oldest aged request is
+blocked, **new admissions pause** until it can start or is cancelled; existing runs
+finish normally. This deliberately leaves some capacity idle to avoid repeatedly
+postponing the older request. Already-running backfill can still delay it.
+
+Estimates are coarse ordering hints, independent of the RAM/CPU reservation:
+
+| Request shape | Initial estimate |
+|---|---:|
+| Exact `-Dtest=Class` or `Class#method` selector | 30 seconds startup, plus 0.3 seconds per additional comma-separated selector |
+| Partial category selection | 30 seconds startup, plus 0.3 seconds per additional selected class; add 180 seconds for guards |
+| Full suite, wildcard selector, or unknown Maven command/profile | 900 seconds |
+| Explicit guard-only Maven run without a test selector | 180 seconds |
+| Diagnostic acknowledgment | 1 second, exclusive metadata operation |
+
+Estimates are capped at 900 seconds. The per-class allowance rounds the earlier
+722-second / 2,588-class ordinary profile; it is only a rough average. The category
+estimate uses the plan at submission;
+the actual selection is still recomputed after waiting. Compilation, expensive individual
+tests and local cache state can make these estimates inaccurate. Aging handles mistakes;
+there is no timing history, estimate override flag, timeout change or smaller heap budget
+for a focused request. A short check submitted after a full suite has already started
+cannot interrupt it, but may use the other slot when its resource budget fits.
 
 The wrapper forwards Maven arguments without shell interpolation, streams normal output,
 and returns Maven's exit status. It adds no timeout to a focused/raw Maven command.
@@ -188,14 +220,20 @@ The shared Git directory contains `maven-queue.lock`, an OS-managed compatibilit
 Each worktree's Git directory also contains `maven-worktree.lock`. Their
 presence is **not** evidence of an active run. Never delete these files to force access:
 that could create two independent locks. Normal exits and handled cancellation release
-them automatically; dead waiting processes leave no queue entries. On POSIX the Maven child
+them automatically. While waiting, the scheduler creates a unique leased
+`maven-waiters/*.request` file under the shared Git directory containing only worktree
+lock location, arrival time, estimated duration and execution mode. No Maven arguments,
+PIDs or gameplay data are stored. The OS lease determines liveness; dispatch/cancellation
+removes the request, and later scheduler scans prune unlocked records from killed waiters.
+These temporary request records are not validation receipts or manual task registration. On POSIX the Maven child
 inherits all execution lock descriptors as protection against a killed Python parent. After a forced
 kill, especially on Windows, check for surviving Maven/JVM processes before further work.
 This is local coordination, not a sandbox against arbitrary commands.
 
 Direct `mvn` and runners predating the single-lock queue do not participate. Use the
-wrapper for local Maven builds/tests. The immediately preceding single-lock queue is
-compatible and remains exclusive. Existing `openggf-validation/task.json`, `task.lock` and
+wrapper for local Maven builds/tests. Previous single-lock and resource-admission wrappers remain lock-compatible, but
+they do not publish priority requests and can bypass waiting order. Update participating
+worktrees to this scheduler for its priority/aging policy to apply throughout the queue. Existing `openggf-validation/task.json`, `task.lock` and
 `target/category-tests-last-broad.json` files are ignored, not migrated or deleted;
 they do not authorize or block new runs. CI and release commands/gates are unchanged.
 

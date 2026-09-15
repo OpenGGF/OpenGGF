@@ -188,3 +188,67 @@ slot context but performs only metadata deletion. It retains exclusive queue loc
 without CPU/RAM admission, so housekeeping cannot be held up solely by low free
 resources. A regression test first failed with `cleanup probed resources`, then passed
 with explicit exclusive acquisition. This does not bypass active legacy Maven runs.
+
+## Short-run scheduling follow-up
+
+Follow-up base: `a27e86f68617f9f96caf801ce646674dbae8c9b6`, developed in
+`.worktrees/ai-maven-priority`. The resource queue previously left waiting order to
+OS lock acquisition. A focused test could therefore lose the next slot to a full
+suite even when both had already queued.
+
+The scheduler now favours estimated short jobs. Exact selectors and partial category
+plans use a 30-second startup allowance plus 0.3 seconds per additional class/selector;
+the latter rounds the measured ~722 seconds / 2,588 ordinary classes above. Guard work
+adds 180 seconds; full/unknown requests use a 900-second estimate, also the cap.
+These are ordering hints, not measured per-test runtimes, resource budgets or timeouts.
+The actual category selection is still recomputed after admission.
+
+Five-minute aging promotes requests into arrival order ahead of unaged work. Before
+aging, another eligible request can backfill capacity when a higher-priority request
+is blocked. An aged blocked head stops new admissions until it can start or is
+cancelled. Existing runs are never preempted. This bounds how long new backfill may
+be admitted, not the aged job's start time: running work and external resource pressure
+can still delay it. It deliberately trades some utilization for protection against
+starvation. A focused test submitted after a full suite starts cannot interrupt it.
+
+Waiting requests automatically acquire a unique `.git/maven-waiters/*.request` lease
+under the common admission lock. JSON starts after the Windows lock byte and contains
+only scheduling fields and the worktree lock path. A PID is never an authority.
+Normal dispatch/cancellation removes the file; subsequent scans remove unlocked
+records left by killed waiters, including incomplete publications. Live malformed
+records fail closed; unrelated files are preserved. Resource admission, old shared/
+exclusive compatibility locks, per-worktree exclusion, cancellation and execution
+lease inheritance remain in place. Older wrappers can bypass priority because they
+do not publish requests; participating worktrees must update to obtain the full policy.
+
+Rejected alternatives:
+
+- Pure shortest-job-first: a continuous stream of short checks can starve full suites.
+- Strict FIFO: repeats the reported latency problem for single-test feedback.
+- Unbounded backfilling: repeatedly occupies capacity needed by an older request.
+- Predicted start-time reservations: estimates are not execution limits, so an exact
+  no-delay guarantee would be misleading without preemption or reliable upper bounds.
+- Treating a short estimate as a smaller memory reservation: a single test still
+  starts the normal JVM and can reach its full heap limit.
+- Persistent PID receipts or task registration: OS-leased ephemeral requests provide
+  liveness and cleanup without restoring the retired validation-owner protocol.
+
+Validation uses the Python-runner exception. The dry-run plan selected 2,598 classes
+plus guards by its shared-path fallback; no engine, POM, selection-policy, workflow
+or hook files changed. Commands:
+
+```bash
+python3 -m unittest discover -s tools/testing -p 'test_run_categor*.py'
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base a27e86f68617f9f96caf801ce646674dbae8c9b6 --preflight
+git diff --check
+cmp AGENTS.md CLAUDE.md
+```
+
+The complete Python run passed 80 tests; the added legacy-lock case then passed in
+the 18-test competing-process queue suite. Those processes establish short-before-
+large order, aged-large-before-new-short order, backfilling and drain behaviour,
+non-preemption, stale-waiter cleanup, old unregistered lock exclusion, resource caps,
+per-worktree exclusion, argument/exit preservation and inherited execution leases.
+Fast process tests shorten the same aging constant explicitly; deterministic policy
+tests cover the production 300-second boundary. Preflight passed Java 21, Lua 5.4 and
+PowerShell. No engine-suite pass or per-test runtime prediction is claimed.

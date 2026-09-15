@@ -90,7 +90,12 @@ python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B        # separat
   starts automatically. Waiting requires no permission or manual lock cleanup.
   Linux admission allows different worktrees to overlap when conservative memory/CPU
   reservations fit (two runs by default); one worktree remains exclusive. Other platforms
-  retain serialization. Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
+  retain serialization. Waiting requests favour short estimates; after five minutes,
+  aged requests take priority in arrival order. An aged blocked request pauses new
+  admissions so existing jobs can drain. Running jobs are never preempted. Temporary
+  OS-leased waiting records are automatic and pruned after cancellation/death;
+  older wrappers retain lock safety but cannot honour priority. See the testing guide.
+  Set `OPENGGF_MAVEN_QUEUE=serial` for exclusive execution; shared
   Git policy settings and profiling are documented in `tools/testing/README.md`.
   The queue holds a slot only during execution; cancellation releases a waiting
   request or stops its running Maven process tree. Keep the command session alive

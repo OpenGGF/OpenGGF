@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Queue local Maven commands across linked worktrees; no task bookkeeping.
+"""Queue local Maven commands across linked worktrees; no manual registration.
 
 Usage: python3 tools/testing/maven_queue.py -Dmse=off -Dtest=TestExample test
-The OS owns the lock, so an idle file never blocks execution. Waiting order is
-chosen by the OS, not guaranteed FIFO. Origin: 2026-09-14 testing queue cleanup.
+The OS owns execution and waiting leases. Short estimated runs are preferred;
+five-minute aging protects larger waiters. Origin: 2026-09-14 testing queue cleanup.
 """
 from contextlib import contextmanager, ExitStack
 import errno
+import math
 import os
 from pathlib import Path
 import signal
@@ -53,79 +54,120 @@ def _acquire(stream, shared=False):
         return False
 
 
+def _execution_leases(stack, common, request, config):
+    """Probe capacity under the admission lock; retain leases in stack on success."""
+    from maven_resources import snapshot, admits
+
+    tree = _open_lock(stack, Path(request['tree']))
+    if not _acquire(tree):
+        return None
+    stack.callback(_unlock, tree)
+    legacy = _open_lock(stack, common / 'maven-queue.lock')
+    if not _acquire(legacy, shared=request['auto']):
+        return None
+    stack.callback(_unlock, legacy)
+    if not request['auto']:
+        return tree, legacy
+    # Fixed namespace still sees live slots if maxRuns was lowered.
+    slots = [_open_lock(stack, common / f'maven-slot-{i}.lock') for i in range(64)]
+    free = []
+    try:
+        for slot in slots:
+            if _acquire(slot):
+                free.append(slot)
+        resources = snapshot()
+        if resources is not None and free and admits(resources, config, len(slots) - len(free)):
+            selected = free.pop(0)
+            stack.callback(_unlock, selected)
+            return tree, legacy, selected
+        return None
+    finally:
+        for slot in free:
+            _unlock(slot)
+
+
 @contextmanager
-def maven_slot(root, *, exclusive=False):
-    """Queue with OS-owned leases; never delete persistent lock files.
+def maven_slot(root, *, exclusive=False, estimate=900):
+    """Automatically schedule waiters, then retain OS-owned execution leases.
 
-    Shared ownership of the original lock permits resource-admitted runs while
-    remaining mutually exclusive with serial callers and older queue versions.
-    All execution leases are inherited by Maven on POSIX, including the tree lock.
+    Short estimates win until five-minute aging promotes arrival order. Blocked
+    unaged requests allow backfilling; an aged head stops new admissions so active
+    jobs can drain. Older clients retain lock compatibility but not priority.
     """
-    from maven_resources import policy, snapshot, admits
+    from maven_resources import policy, snapshot
+    from maven_schedule import WaitingRequest, choose, aged
 
+    if not isinstance(estimate, (int, float)) or not math.isfinite(estimate) or estimate <= 0:
+        raise ValueError('Maven duration estimate must be finite and positive')
     root = Path(root).resolve()
     common = Path(subprocess.check_output(
         ['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'],
-        cwd=root, text=True).strip())
+        cwd=root, text=True).strip()).resolve()
     git_dir = Path(subprocess.check_output(
-        ['git', 'rev-parse', '--absolute-git-dir'], cwd=root, text=True).strip())
+        ['git', 'rev-parse', '--absolute-git-dir'], cwd=root, text=True).strip()).resolve()
     mode = os.environ.get('OPENGGF_MAVEN_QUEUE', 'auto')
     if mode not in ('auto', 'serial'):
         raise ValueError('OPENGGF_MAVEN_QUEUE must be auto or serial')
     config = policy(root)
     resources = snapshot() if mode == 'auto' and not exclusive and os.name == 'posix' else None
-    # Small CPU allocations cannot accommodate two full reservations. Preserve
-    # serial progress instead of making the default budget impossible to admit.
     auto = resources is not None and resources[1] >= 2 * config['cpuCores']
     with ExitStack() as stack:
-        legacy = _open_lock(stack, common / 'maven-queue.lock')
-        tree = _open_lock(stack, git_dir / 'maven-worktree.lock')
         gate = _open_lock(stack, common / 'maven-admission.lock')
-        # Fixed namespace allows lowering maxRuns without overlooking live leases.
-        slots = [_open_lock(stack, common / f'maven-slot-{i}.lock') for i in range(64)] if auto else []
         started = next_notice = time.monotonic()
+        request = None
+        execution = None
         leases = None
-        while leases is None:
-            reason = "this worktree is busy"
-            if _acquire(tree):
-                reason = "an exclusive Maven run is active"
-                if _acquire(legacy, shared=auto):
-                    if not auto:
-                        leases = (tree, legacy)
-                    elif _acquire(gate):
-                        free = []
-                        try:
-                            for slot in slots:
-                                if _acquire(slot):
-                                    free.append(slot)
-                            resources = snapshot()
-                            active = len(slots) - len(free)
-                            reason = (f"{active} active; {resources[0] / 1024**3:.1f} GiB available, "
-                                      f"{resources[1]:g} CPUs, load {resources[2]:.1f}"
-                                      if resources else "resource counters unavailable")
-                            if resources is not None and free and admits(resources, config, len(slots) - len(free)):
-                                leases = (tree, legacy, free.pop(0))
-                        finally:
-                            for slot in free:
-                                _unlock(slot)
-                            _unlock(gate)
-                    if leases is None:
-                        _unlock(legacy)
-                if leases is None:
-                    _unlock(tree)
-            if leases is None:
-                now = time.monotonic()
-                if now >= next_notice:
-                    print(f'Waiting for Maven slot/resources ({now - started:.0f}s; {reason}): {root}. '
-                          'It will start automatically; Ctrl-C cancels this request.', flush=True)
-                    next_notice = now + 30
-                time.sleep(.2)
-        print(f'Maven slot acquired ({"resource-aware" if auto else "serial"}): {root}', flush=True)
         try:
+            while leases is None:
+                if _acquire(gate):
+                    try:
+                        if request is None:
+                            request = WaitingRequest(common, dict(
+                                tree=str(git_dir / 'maven-worktree.lock'), auto=auto,
+                                estimate=estimate, enqueued=started), _acquire)
+
+                        def fits(record):
+                            nonlocal execution, leases
+                            candidate = ExitStack()
+                            try:
+                                found = _execution_leases(candidate, common, record, config)
+                                if found and record['id'] == request.record['id']:
+                                    execution, leases = candidate, found
+                                    return True
+                                return found is not None
+                            finally:
+                                if candidate is not execution:
+                                    candidate.close()
+
+                        choose(request.pending(_acquire), time.monotonic(), fits)
+                        if leases is not None:
+                            request.remove()
+                    finally:
+                        _unlock(gate)
+                if leases is None:
+                    now = time.monotonic()
+                    if now >= next_notice:
+                        priority = 'aged FIFO' if request and aged(request.record, now) else 'short-run priority'
+                        print(f'Waiting for Maven slot ({now - started:.0f}s; estimate {estimate:g}s; '
+                              f'{priority}): {root}. Higher-priority requests or capacity may delay admission. '
+                              'It will start automatically; Ctrl-C cancels this request.', flush=True)
+                        next_notice = now + 30
+                    time.sleep(.2)
+            print(f'Maven slot acquired ({"resource-aware" if auto else "serial"}; '
+                  f'estimate {estimate:g}s): {root}', flush=True)
             yield tuple(stream.fileno() for stream in leases)
         finally:
-            for stream in reversed(leases):
-                _unlock(stream)
+            if execution is not None:
+                execution.close()
+            if request is not None:
+                # A killed waiter leaves an unlocked file, pruned by the next
+                # scheduler scan. Never wait for cleanup during cancellation.
+                request.close()
+                if _acquire(gate):
+                    try:
+                        request.remove()
+                    finally:
+                        _unlock(gate)
 
 
 def inherited_slot(fd):
@@ -173,6 +215,7 @@ def needs_exclusive(args):
 
 def main(argv=None):
     from category_artifacts import stop_process_tree
+    from maven_schedule import maven_estimate
 
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args == ['--help']:
@@ -183,7 +226,7 @@ def main(argv=None):
     if not args:
         raise ValueError('Supply Maven arguments after --')
     # Use the caller's worktree, including when this script lives in another one.
-    with maven_slot(Path.cwd(), exclusive=needs_exclusive(args)) as fd:
+    with maven_slot(Path.cwd(), exclusive=needs_exclusive(args), estimate=maven_estimate(args)) as fd:
         with subprocess.Popen(['mvn', *args], start_new_session=(os.name == 'posix'),
                               **inherited_slot(fd)) as process:
             try:
