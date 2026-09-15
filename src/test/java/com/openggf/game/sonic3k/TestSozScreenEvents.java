@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozScreenEvents {
     @Test void bossArenaQueuesRomResourcesAndRecreatesItsEightWallSolids() throws Exception {
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 1)
+        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1)
                 .startPosition((short) 0x5100, (short) 0x650).startPositionIsCentre()
                 .withFreshLevelStartLifecycle().build();
         fixture.camera().setY((short) 0x600);
@@ -48,7 +48,7 @@ class TestSozScreenEvents {
     }
 
     @Test void foregroundCorkCopiesStoredRomLayoutAndRewindsThroughProductionLoop() {
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 1)
+        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1)
                 .withFreshLevelStartLifecycle().build();
         fixture.stepFrame(false, false, false, false, false);
         var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
@@ -78,7 +78,7 @@ class TestSozScreenEvents {
     }
 
     @Test void sandReleaseUsesFractionalSpecialEventMotionAndRewindCollisionOffset() {
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 1).build();
+        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1).build();
         var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         var events = new Sonic3kSOZEvents();
         NativePositionOps.writeXPosResetSubpixel(fixture.sprite(), 0x2000);
@@ -108,7 +108,7 @@ class TestSozScreenEvents {
     }
 
     @Test void lowerRoomAndSandExitUseNativePositionGates() {
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 1).build();
+        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1).build();
         var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
         var events = new Sonic3kSOZEvents();
         NativePositionOps.writeXPosResetSubpixel(fixture.sprite(), 0x2000);
@@ -136,7 +136,7 @@ class TestSozScreenEvents {
     }
 
     @Test void act1ApproachUsesPlayerXThenCameraGate() {
-        var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 0).build();
+        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 0).build();
         var events = new Sonic3kSOZEvents();
         NativePositionOps.writeXPosResetSubpixel(fixture.sprite(), 0x3FFF);
         events.update(0, 0);

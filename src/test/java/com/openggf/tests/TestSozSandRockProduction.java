@@ -42,7 +42,7 @@ class TestSozSandRockProduction {
             TestEnvironment.activeGameplayMode();
             int rockX=act==0 ? 0x260 : 0x1C0;
             int rockY=act==0 ? 0x5B0 : 0x3B0;
-            var builder=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+            var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                     .startPosition((short)rockX,(short)(rockY-64)).startPositionIsCentre()
                     .withFreshLevelStartLifecycle();
             if(!donor.equals("off")) builder.withCrossGameDonation(donor);

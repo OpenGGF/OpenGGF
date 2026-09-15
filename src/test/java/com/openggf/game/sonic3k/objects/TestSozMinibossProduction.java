@@ -23,7 +23,7 @@ class TestSozMinibossProduction {
             config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,320);
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
             CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();TestEnvironment.activeGameplayMode();
-            var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,0).startPosition((short)0x4380,(short)0x980).startPositionIsCentre().withFreshLevelStartLifecycle().build();
+            var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0).startPosition((short)0x4380,(short)0x980).startPositionIsCentre().withFreshLevelStartLifecycle().build();
             fixture.sprite().setRingCount(99);
             var manager=GameServices.level().getObjectManager();
             var placed=manager.createDynamicObject(()->new Sonic3kObjectRegistry().create(new ObjectSpawn(0x439D,0x9F7,0x97,0,0,false,0)));

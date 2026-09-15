@@ -282,6 +282,7 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
         private Bk2Movie bk2Movie;
         private int bk2FrameOffset;
         private boolean startPositionIsCentre;
+        private Boolean skipZoneIntro;
         private boolean customStartPositionProvided;
         private String crossGameDonorCode;
         private boolean freshLevelStartLifecycle;
@@ -343,6 +344,12 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
          * decides whether that lifecycle permits the fixture's synthetic
          * pre-frame terrain snap.
          */
+        /** Explicit scenario choice for local interactions that bypass the cold intro. */
+        public Builder withSkippedZoneIntro() {
+            this.skipZoneIntro = true;
+            return this;
+        }
+
         public Builder withFreshLevelStartLifecycle() {
             this.freshLevelStartLifecycle = true;
             return this;
@@ -382,6 +389,10 @@ public final class HeadlessTestFixture implements TraceReplayFixture {
 
             // 1. Reset transient per-test state
             TestEnvironment.resetPerTest();
+            if (skipZoneIntro != null) {
+                SonicConfigurationService.getInstance().setConfigValue(
+                        SonicConfiguration.S3K_SKIP_INTROS, skipZoneIntro);
+            }
             GraphicsManager.getInstance().initHeadless();
             if (crossGameDonorCode != null && !crossGameDonorCode.isBlank()) {
                 try {

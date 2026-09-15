@@ -44,7 +44,7 @@ public final class Sonic3kBootstrapResolver {
                 && !mainCharacter.isBlank()
                 && !"sonic".equalsIgnoreCase(mainCharacter.trim());
 
-        if (skipIntros || nonSonicMain) {
+        if (skipIntros || (nonSonicMain && zone != Sonic3kZoneIds.ZONE_SOZ)) {
             return new Sonic3kLoadBootstrap(Sonic3kLoadBootstrap.Mode.SKIP_INTRO, null);
         }
 
@@ -55,6 +55,8 @@ public final class Sonic3kBootstrapResolver {
     private static int[] getIntroStartPosition(int zone, int act) {
         if (zone == Sonic3kZoneIds.ZONE_AIZ && act == 0) return AIZ1_INTRO_START_POS.clone();
         if (zone == Sonic3kZoneIds.ZONE_LBZ && act == 0) return LBZ1_INTRO_START_POS.clone();
+        // loc_695A: all player modes fall from the ordinary SOZ1 start.
+        if (zone == Sonic3kZoneIds.ZONE_SOZ && act == 0) return new int[]{0xC0, 0x400};
         // Future zones: add entries here
         return null;
     }

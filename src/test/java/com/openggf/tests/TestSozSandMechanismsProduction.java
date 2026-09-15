@@ -19,7 +19,7 @@ class TestSozSandMechanismsProduction {
     @CsvSource({"0,0xE74,0x4BA", "0,0x1CCC,0xA7A", "0,0x30F4,0xB5A", "0,0x3CB4,0x4FA", "1,0x574,0x3FA", "1,0x22F4,0x4FA"})
     void everyPlacedWallRisesAndReplays(int act,int x,int y) {
         TestEnvironment.activeGameplayMode();
-        var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+        var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                 .startPosition((short)(x-48),(short)(y-100)).startPositionIsCentre()
                 .withFreshLevelStartLifecycle().build();
         fixture.sprite().refreshPersistentInstaShieldRegistration();
@@ -40,7 +40,7 @@ class TestSozSandMechanismsProduction {
     @CsvSource({"0x2130,0x50,0x18", "0x2130,0x550,0x0A", "0x4940,0x450,0x9C", "0x4B80,0x1D0,0x9E"})
     void everyCorkSubtypeBreaksThroughProductionTouchAndRewindsChildGraph(int x,int y,int subtype) {
         TestEnvironment.activeGameplayMode();
-        var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,1)
+        var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
                 .startPosition((short)x,(short)y).startPositionIsCentre()
                 .withFreshLevelStartLifecycle().build();
         fixture.sprite().refreshPersistentInstaShieldRegistration();
@@ -95,7 +95,7 @@ class TestSozSandMechanismsProduction {
     @CsvSource({"0x12FE,0x7B8,0x15", "0x1DF0,0x93A,0x12", "0x1F00,0x1B8,0x15"})
     void placedSpawnersAllocateNativeBlocksAndReplay(int x,int y,int subtype) {
         TestEnvironment.activeGameplayMode();
-        var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,0)
+        var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0)
                 .startPosition((short)(x+subtype*8),(short)(y-48)).startPositionIsCentre()
                 .withFreshLevelStartLifecycle().build();
         fixture.sprite().refreshPersistentInstaShieldRegistration();

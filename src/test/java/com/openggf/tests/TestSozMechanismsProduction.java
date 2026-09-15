@@ -36,7 +36,7 @@ class TestSozMechanismsProduction {
                 config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,true);
                 config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,"s1");
             }
-            var builder=HeadlessTestFixture.builder().withZoneAndAct(8,1)
+            var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
                     .startPosition((short)0x2600,(short)0x1A4).startPositionIsCentre()
                     .withFreshLevelStartLifecycle();
             if(donor.equals("s1"))builder.withCrossGameDonation("s1");
@@ -96,7 +96,7 @@ class TestSozMechanismsProduction {
             config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,320);
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
             CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();TestEnvironment.activeGameplayMode();
-            var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+            var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                     .startPosition((short)x,(short)(y-160)).startPositionIsCentre().withFreshLevelStartLifecycle().build();
             fixture.sprite().setAir(true);
             assertFalse(fixture.sprite().getDead(),"alive after positioned fixture construction");
@@ -142,7 +142,7 @@ class TestSozMechanismsProduction {
             config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,320);
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
             CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();TestEnvironment.activeGameplayMode();
-            var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,1)
+            var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
                     .startPosition((short)0x4740,(short)0x5AD).startPositionIsCentre().withFreshLevelStartLifecycle().build();
             var player=fixture.sprite();var registry=fixture.gameplayMode().getRewindRegistry();
             // Settle production-owned player effects before the first rewind spot.

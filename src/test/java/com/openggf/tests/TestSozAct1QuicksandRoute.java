@@ -40,7 +40,7 @@ class TestSozAct1QuicksandRoute {
             }
             CrossGameFeatureProvider.getInstance().resetState(); SessionManager.clear();
             TestEnvironment.activeGameplayMode();
-            var builder=HeadlessTestFixture.builder().withZoneAndAct(8,0).withFreshLevelStartLifecycle();
+            var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0).withFreshLevelStartLifecycle();
             if(!donor.equals("off")) builder.withCrossGameDonation(donor);
             var fixture=builder.build();
             assertEquals(width,fixture.camera().getWidth()&0xFFFF);

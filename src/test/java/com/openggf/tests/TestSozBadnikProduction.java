@@ -45,7 +45,7 @@ class TestSozBadnikProduction {
                 config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,true);
                 config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,donor);
             }
-            var builder=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+            var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                     .startPosition((short)x,(short)y).startPositionIsCentre().withFreshLevelStartLifecycle();
             if(!donor.equals("off")) builder.withCrossGameDonation(donor);
             var fixture=builder.build();
@@ -72,7 +72,7 @@ class TestSozBadnikProduction {
     @CsvSource({"SkorpBadnikInstance,0x350,0x5D4", "SandwormBadnikInstance,0xA50,0xBDC",
             "RocknBadnikInstance,0xE60,0xF0"})
     void managerRetirementDetachesChildrenBeforeTheirNextDispatch(String family,int x,int y) {
-        var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,0)
+        var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0)
                 .startPosition((short)x,(short)y).startPositionIsCentre()
                 .withFreshLevelStartLifecycle().build();
         var manager=GameServices.level().getObjectManager();

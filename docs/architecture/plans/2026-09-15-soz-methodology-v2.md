@@ -1680,6 +1680,19 @@ pass. See the frontier log for the still-red ordinary replay and its next owner.
 
 The SOZ1 falling-into-sand intro was missing from the original catalogue. Native
 `SpawnLevelMainSprites` loc695A initializes animation2/airborne and creates
-`Obj_LevelIntro_PlayerFallIntoGround` at42000. This must join the entry acceptance
+`Obj_LevelIntro_PlayerFallIntoGround` at41FEE. This must join the entry acceptance
 slice, including locked fall, sand splash, jump-pressed release, companion state
 and rewind; plain cold loading is not sufficient.
+
+### Cold sand entry implementation
+
+The native controller occupies absolute SST5 (`Dynamic_object_RAM` is SST3,
+plus two). Its first dispatch initializes control only; later dispatches apply
+old velocity before gravity, wait for physical jump press, and release the team
+on emergence. Logical controls are cleared while physical press remains readable.
+Local positioned fixtures explicitly skip this intro instead of inheriting a
+cold-entry controller after teleporting. The fixture option uses ordinary config
+state, since session overrides survive the per-test reset and contaminated the
+next cold-entry test. Two cold/skip and full-state emergence replay tests pass
+with no skips (queued `TestSozFallingIntro`, 48.432s). Ordinary trace still exposes
+an extra initial integration and companion cadence; this is not trace parity.

@@ -34,7 +34,7 @@ class TestSozSwingAndWireProduction {
     }
     @ParameterizedTest @CsvSource({"0,0x9F8,0xB96", "1,0x1C08,0x516"})
     void placedTriggeredPlatformLandsCarriesAndRestoresGraph(int act,int x,int y) {
-        var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+        var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                 .startPosition((short)x,(short)(y+0x20)).startPositionIsCentre().withFreshLevelStartLifecycle().build();
         for(int i=0;i<3;i++)fixture.stepFrame(false,false,false,false,false);
         var manager=GameServices.level().getObjectManager();
@@ -62,7 +62,7 @@ class TestSozSwingAndWireProduction {
     }
     @ParameterizedTest @CsvSource({"0,0x90C,0x940", "1,0x18F4,0x240"})
     void placedWireCapturesExtendsRatchetsAndRecreatesEveryLink(int act,int x,int y) {
-        var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+        var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                 .startPosition((short)x,(short)(y+0x40)).startPositionIsCentre().withFreshLevelStartLifecycle().build();
         for(int i=0;i<3;i++)fixture.stepFrame(false,false,false,false,false);
         var manager=GameServices.level().getObjectManager();

@@ -110424,3 +110424,19 @@ unverified, so this is physics/animation coverage only. Source inspection found
 an omitted SOZ1 entry owner: `SpawnLevelMainSprites` loc695A creates
 `Obj_LevelIntro_PlayerFallIntoGround` and initializes both players airborne with
 animation2. That production intro, not trace-state seeding, is the next target.
+
+## 2026-09-15 — SOZ cold-entry controller investigation
+
+- Worktree `.worktrees/soz-completion`, candidate over `9dd12ced0`.
+- Queued command: `python3 tools/testing/maven_queue.py -Dmse=off
+  -Ptrace-replay-r7 -Dsurefire.forkCount=1
+  -Dtest=TestSozFallingIntro,TestS3kSonicTailsSozSegmentTraceReplay
+  -Ds3k.rom.path="$S3K_ROM" test -B`. Completed in53.248s;3tests,
+  2failures,0errors,0skips. One was fixture config leakage, subsequently fixed
+  and both intro tests passed separately.
+- Replay reports3991errors,0warnings; first frame0 `y_sub` expected0000,
+  actual3800, with `y_speed` expected0038,actual0070. Companion later advances
+  twice per frame. Native source now explains the missing sand intro; initial
+  dispatch and companion movement suppression remain under investigation.
+- Eight advertised auxiliary schemas remain unverified. No fixture or recorded
+  gameplay values were changed or used to drive the engine.
