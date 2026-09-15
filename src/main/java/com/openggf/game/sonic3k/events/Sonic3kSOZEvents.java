@@ -32,7 +32,7 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
         }
     }
 
-    /** Native sub_730C, after object execution, for either act and every playable slot. */
+    /** Native sub_730C, after camera scrolling and screen events, for either act and every playable slot. */
     public void updateSlideTerrainAfterPlayablePhysics(AbstractPlayableSprite player) {
         ensureRomTables();
         // Layout_row_index_mask is $7C at level load, $3C in SOZ2_ScreenInit.

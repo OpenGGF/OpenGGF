@@ -547,7 +547,7 @@ SOZ does NOT use the engine's water subsystem (`DynamicWaterHeight` / `WaterTran
 
 ### Grounded layout sand slides (`sub_730C`)
 
-`sub_714E` dispatches SOZ to `sub_730C` after object execution, for both native
+`sub_714E` dispatches SOZ to `sub_730C` after camera scrolling and screen events, for both native
 playable slots and both acts. This terrain handler is separate from object `$38`.
 It samples the foreground 128-pixel layout chunk at `(x_pos, y_pos+$14)` and searches
 the 17 ROM IDs at `$74AC`: `$0F,$13,$14,$15,$16,$17,$35,$6C,$6D,$76,$77,$7E,$7F,$85,$8A,$8C,$90`.
@@ -561,8 +561,12 @@ sets radii `(7,$0E)`, clears roll/roll-jump, and sets secondary-status bit 7.
 The quiet skid sound is gated by `V_int_run_count & $0F == 0`. Airborne/on-object
 or nonmatching terrain exits at `loc_734A`: clear slide, set movement lock 5;
 only grounded exits restore default radii and animation 0, with no Y adjustment.
-The runtime uses the existing post-object per-playable feature seam and captured
+The runtime uses the existing loop-tail per-playable feature update and captured
 player fields; ROM table bytes are immutable assets, not runtime state.
+`LevelLoop` orders `Process_Sprites`, `DeformBgLayer`, `ScreenEvents`, then
+`Handle_Onscreen_Water_Height`; the initial dispatch in `1bd8dfcb5` immediately after objects was
+rejected because it made the camera consume the same-frame radius/Y adjustment.
+The camera must track the pre-slide position without an artificial camera offset.
 
 This missing owner explained the ordinary SOZ1 trace's first physical divergence
 at frame 1419 (Y +5, ground velocity +$40, animation `$19`); those observations
