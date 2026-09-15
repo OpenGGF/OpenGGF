@@ -1497,3 +1497,15 @@ all event-specific per-line overrides. Source inspection confirms those override
 still select viewport width; their broader native certification remains open.
 The final pixel/viewport selection passed6 tests with no failures/errors/skips
 at20:30:48BST (19.304 seconds). Post-integration result is recorded below.
+
+
+Delivery: source `98cecce2f`, clean merge into the unchanged `develop` base at
+`096b6249c6b04e3fd3e4b0320d4cffaa2b5b4c42`. Combined post-integration ordinary
+selection is the union of the two selections above (including the final pixel
+regression):561 tests,549 passed, zero failures/errors,12 opt-in skips,
+58.312 seconds at20:34:06BST. Skip identities match the candidate selections;
+no new failures. The123 selected structural checks passed on the same source.
+No full-suite or whole-act pixel certification is claimed. Diff whitespace
+and CI push policy checks passed. Direct comparison of wide frame60's exposed
+sky rectangle `(500..527,50..159)` counts1760 black pixels before the fix and
+zero after it; the corrected capture is outside the repository.
