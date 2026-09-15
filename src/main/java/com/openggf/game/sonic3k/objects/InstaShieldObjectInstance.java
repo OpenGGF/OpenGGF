@@ -45,7 +45,8 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
     private ShieldAnimationArtLifecycle.Art loadShieldArt() {
         Sonic3kObjectArtProvider artProvider = getS3kArtProvider();
         if (artProvider != null) {
-            PlayerSpriteRenderer renderer = artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.INSTA_SHIELD);
+            PlayerSpriteRenderer renderer = artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.INSTA_SHIELD,
+                        (AbstractPlayableSprite) getPlayer());
             if (renderer != null) {
                 SpriteArtSet artSet = artProvider.getShieldArtSet(Sonic3kObjectArtKeys.INSTA_SHIELD);
                 return new ShieldAnimationArtLifecycle.Art(
@@ -56,7 +57,7 @@ public class InstaShieldObjectInstance extends ShieldObjectInstance implements I
         // gameService() registry. S2/S1 modules won't return CrossGameFeatureProvider here.
         CrossGameFeatureProvider donor = services().crossGameFeatures();
         if (donor != null) {
-            PlayerSpriteRenderer renderer = donor.getInstaShieldRenderer();
+            PlayerSpriteRenderer renderer = com.openggf.game.CrossGameShieldArt.renderer(donor, (AbstractPlayableSprite) getPlayer());
             SpriteArtSet artSet = donor.getInstaShieldArtSet();
             return new ShieldAnimationArtLifecycle.Art(
                     renderer, artSet != null ? artSet.animationSet() : null);

@@ -131,6 +131,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   reset scroll origins when changing modes, preserving untouched rows. Player
   sprite publication retains only the current mapping's art, so S3K main-player
   Tails keeps his tail artwork when body animations leave unused bank slots.
+  Donated Tails tails and powered Sonic teammates retain independent art banks,
+  including the larger Super Sonic sprite capacity. Independently animated shields
+  keep per-player art, including staggered insta-shields and donor playback.
   Bent pipes retain their ROM placement flips. Stage rings retain the native
   animation timer across level-counter resets and seamless reloads, including rewind.
   S3K's TIME label uses its dedicated ROM glyph, and life-count digits use the

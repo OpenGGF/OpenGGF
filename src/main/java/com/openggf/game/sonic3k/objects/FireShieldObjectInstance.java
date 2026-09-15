@@ -105,7 +105,8 @@ public class FireShieldObjectInstance extends ShieldObjectInstance {
         }
         SpriteArtSet artSet = artProvider.getShieldArtSet(Sonic3kObjectArtKeys.FIRE_SHIELD);
         return new ShieldAnimationArtLifecycle.Art(
-                artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.FIRE_SHIELD),
+                artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.FIRE_SHIELD,
+                        (AbstractPlayableSprite) getPlayer()),
                 artSet != null ? artSet.animationSet() : null);
     }
 

@@ -147,7 +147,8 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
         }
         SpriteArtSet artSet = artProvider.getShieldArtSet(Sonic3kObjectArtKeys.LIGHTNING_SHIELD);
         return new ShieldAnimationArtLifecycle.Art(
-                artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.LIGHTNING_SHIELD),
+                artProvider.getShieldDplcRenderer(Sonic3kObjectArtKeys.LIGHTNING_SHIELD,
+                        (AbstractPlayableSprite) getPlayer()),
                 artSet != null ? artSet.animationSet() : null);
     }
 
