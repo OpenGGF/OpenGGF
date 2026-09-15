@@ -110119,3 +110119,13 @@ reports are identical: 16,388 and 12,616 errors respectively; first errors remai
 S2 row 6 transfer IDs `[2]`/`[]` and S3K row 446 Y speed -$0448/+$0448.
 See the [investigation](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md)
 for native evidence, rejected assumptions, and broad validation follow-up.
+
+
+Wall/ledge implementation `f9e17bcc7` integrated without conflicts as
+`5fed74d42`, retaining upstream FBZ miniboss changes. Candidate and integrated
+queued full selections used `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base dedd18877da190e65aeb74970929e2f2b4ece6c3 --run`
+in `.worktrees/kis2-wall-anchor`: respectively 20,419 and 20,421 ordinary
+tests, zero failures/errors and the same 18 baseline skips. Both ran 667 guards
+with the two identical baseline failures (stale build guidance; existing
+assertion-free FBZ/solidity probes), zero errors/skips. The integrated KiS2
+runtime matches the focused replay candidate; no new failure was observed.
