@@ -146,9 +146,51 @@ class TestSozEndBossProduction {
         var postResults=f.gameplayMode().getRewindRegistry().capture();f.stepIdleFrames(1);
         replay(f,postResults,f.gameplayMode().getRewindRegistry().capture());
         boss=manager.activeObjectsOfType(SozEndBossInstance.class).getFirst();
-        for(int i=0;i<1200&&!boss.isDestroyed();i++)f.stepIdleFrames(1);
-        assertTrue(boss.isDestroyed(),"native forced walk reaches LRZ: phase="
-                +TestSozEndBoss.integer(boss,"escapePhase")+" x="+p.getCentreX()+" y="+p.getCentreY());
+        var config=SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.LIVE_REWIND_ENABLED,true);
+        config.setSessionOverride(SonicConfiguration.DISCORD_RICH_PRESENCE_ENABLED,false);
+        var input=new com.openggf.control.InputHandler();
+        var neutral=new com.openggf.debug.playback.Bk2FrameInput(0,0,0,false,"");
+        input.setLogicalOverride(com.openggf.debug.playback.RecordedInputSnapshots.fromBk2(neutral,neutral));
+        var loop=new com.openggf.GameLoop(input);loop.setGameplayMode(f.gameplayMode());
+        loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+        int largestOldFrame=0;boolean loaded=false;
+        try {
+            for(int i=0;i<1500;i++) {
+                f.gameplayMode().getFadeManager().update();
+                loop.step();
+                var controller=f.gameplayMode().getRewindController();
+                if(GameServices.level().getCurrentZone()==9) {
+                    assertEquals(0,GameServices.level().getCurrentAct());
+                    assertTrue(f.gameplayMode().isGameplayRuntimeReady());
+                    assertNotSame(manager,GameServices.level().getObjectManager());
+                    assertTrue(boss.isDestroyed());
+                    assertTrue(largestOldFrame>10,"outgoing gameplay must have rewind history");
+                    assertTrue(controller==null || controller.currentFrame()<largestOldFrame,
+                            "level load must clear the outgoing rewind timeline");
+                    loaded=true;break;
+                }
+                if(controller!=null)largestOldFrame=Math.max(largestOldFrame,controller.currentFrame());
+            }
+            assertTrue(loaded,"GameLoop consumes the native LRZ request; phase="
+                    +TestSozEndBoss.integer(boss,"escapePhase")+" x="+p.getCentreX()+" y="+p.getCentreY());
+            // Let the destination's real title owner retire; do not raw-consume its request.
+            boolean destinationReady=false;
+            for(int i=0;i<500;i++) {
+                f.gameplayMode().getFadeManager().update();loop.step();
+                var title=GameServices.module().getTitleCardProvider();
+                if(loop.getCurrentGameMode()==com.openggf.game.GameMode.LEVEL
+                        && (title==null || title.isComplete())
+                        && !f.gameplayMode().getFadeManager().isActive()
+                        && !GameServices.camera().getFocusedSprite().isControlLocked()) {
+                    destinationReady=true;break;
+                }
+            }
+            assertTrue(destinationReady,"LRZ title/fade must retire and release playable controls");
+            assertEquals(com.openggf.game.GameMode.LEVEL,loop.getCurrentGameMode());
+            assertEquals(9,GameServices.level().getCurrentZone());assertEquals(0,GameServices.level().getCurrentAct());
+            assertFalse(GameServices.camera().getFocusedSprite().getDead());
+        } finally {loop.closePresence();}
 
     }
     private static void replay(HeadlessTestFixture f,CompositeSnapshot before,CompositeSnapshot after){
