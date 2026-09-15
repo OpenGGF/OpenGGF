@@ -110352,4 +110352,3 @@ checks pass. These are focused checks, not broad delivery validation.
   S3K Knuckles remains 12,616 errors, first physics row 446 Y-speed sign.
 
 See the [native evidence and rejected paths](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b).
-

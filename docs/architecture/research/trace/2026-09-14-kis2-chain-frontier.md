@@ -865,3 +865,33 @@ zero errors/skips, 60 seconds including rebuild. The updated base now includes
 SOZ vine/sand-rock and S3K retained-camera presentation work. Required full
 baseline/development/integration verification is being completed through the
 Maven queue; no additional control regression is observed.
+
+Validation of source `f56bd4f5c`, reconciled with develop in `a24aa6609`:
+
+- Updated-base full ordinary run `20260915T131945Z-ef899b66` at
+  `d3cd963a4`: 20,535 tests, one failure, zero errors, 19 skips (704.89 s).
+  The runner stopped before guards because upstream changed the main tree
+  during validation. Separate queued guards completed: 668 tests, two failures,
+  zero errors/skips. This is a completed ordinary run plus separate guards,
+  not an uninterrupted two-lane baseline.
+- Development run `20260915T133130Z-e45f325e` at `a24aa6609`,
+  `LUA_BIN=lua5.4 python3 tools/testing/run_categories.py --base
+  d3cd963a4d14a8a5bfd0bac1967a983906966b4f --run`: 20,542 ordinary tests,
+  one failure, zero errors, 19 skips (757.74 s); 668 guard tests, two failures,
+  zero errors/skips (184.38 s). Every failure identity and message, and every
+  skipped-case record, matches the baseline. Seven additional tests pass.
+- The ordinary failure was
+  `TestSonic3kObjectProfile.cnzPlacedActorsAreMarkedImplementedForS3klLevelsOnly`:
+  its old CNZ-only assertion rejected the newly implemented SKL object $44.
+  Upstream corrected this test in `79e20e6bb`; merge `60f232249` includes it
+  and develop `342f01cb4`. Queued focused `-Dtest=TestSonic3kObjectProfile test`
+  passes all six tests with zero failures/errors/skips (18.002 s).
+- Both inherited guard failures are unrelated to this change:
+  `TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`
+  still demands guidance replaced by Maven queues, and
+  `TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`
+  flags `FbzRouteEvidenceProbe.printEvidence` and
+  `LevelSolidityMapProbe.writeSolidityMap`. Neither is repaired here.
+
+Consumed category diagnostics were inspected and acknowledged. Integration
+verification remains pending; existing trace discrepancies are not waived.
