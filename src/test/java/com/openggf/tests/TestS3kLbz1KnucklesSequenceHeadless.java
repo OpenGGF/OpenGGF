@@ -368,7 +368,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         for (int frame = 0; frame < 0x40; frame++) {
             miniboss.update(frame, null);
         }
-        miniboss.appendRenderCommands(new ArrayList<>());
+        renderEveryBucket(miniboss);
 
         org.mockito.Mockito.verify(bossRenderer, org.mockito.Mockito.times(14)).drawFrameIndex(
                 org.mockito.ArgumentMatchers.anyInt(),
@@ -406,7 +406,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         for (int frame = 0; frame < 0x130; frame++) {
             miniboss.update(frame, null);
         }
-        miniboss.appendRenderCommands(new ArrayList<>());
+        renderEveryBucket(miniboss);
 
         ArgumentCaptor<Integer> xCaptor = ArgumentCaptor.forClass(Integer.class);
         ArgumentCaptor<Integer> yCaptor = ArgumentCaptor.forClass(Integer.class);
@@ -489,9 +489,9 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         }.withConfiguration(SonicConfigurationService.getInstance()));
         miniboss.forceOpenForTest(0x3EC0, 0x01B8);
 
-        miniboss.appendRenderCommands(new ArrayList<>());
+        renderEveryBucket(miniboss);
         miniboss.update(1, null);
-        miniboss.appendRenderCommands(new ArrayList<>());
+        renderEveryBucket(miniboss);
 
         ArgumentCaptor<Integer> frameCaptor = ArgumentCaptor.forClass(Integer.class);
         org.mockito.Mockito.verify(bossRenderer, org.mockito.Mockito.times(28)).drawFrameIndex(
@@ -526,7 +526,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         });
         robotnik.forceInitializedForTest(0x3EC0, 0x01A0, 0x0E, 0x0200, 0x0200, true);
 
-        robotnik.appendRenderCommands(new ArrayList<>());
+        renderEveryBucket(robotnik);
 
         verify(renderer).drawFrameIndex(0x0A, 0x3EC0, 0x01A0, true, false, 0);
         verify(renderer).drawFrameIndex(0, 0x3EC0, 0x0184, true, false, 0);
@@ -557,11 +557,11 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         }.withConfiguration(SonicConfigurationService.getInstance()));
         robotnik.forceMinibossBoxReleaseForTest(0x3EC0, 0x0160);
 
-        robotnik.appendRenderCommands(new ArrayList<>());
+        renderEveryBucket(robotnik);
         for (int frame = 0; frame < 2; frame++) {
             robotnik.update(frame, null);
         }
-        robotnik.appendRenderCommands(new ArrayList<>());
+        renderEveryBucket(robotnik);
 
         ArgumentCaptor<Integer> frameCaptor = ArgumentCaptor.forClass(Integer.class);
         org.mockito.Mockito.verify(boxRenderer, org.mockito.Mockito.atLeast(11)).drawFrameIndex(
@@ -701,7 +701,7 @@ class TestS3kLbz1KnucklesSequenceHeadless {
         assertEquals(0x20, robotnik.getHitReactionTimerForTest());
         assertFalse(robotnik.isDestroyed(),
                 "Obj_LBZ1Robotnik reacts to hits but has no defeat/deletion path.");
-        robotnik.appendRenderCommands(new ArrayList<>());
+        renderEveryBucket(robotnik);
         verify(renderer).drawFrameIndex(2, 0x3EC0, 0x0184, false, false, 0);
 
         robotnik.onPlayerAttack(null, new TouchResponseResult(0x0F, 0x20, 0x20, TouchCategory.ENEMY));
@@ -1267,5 +1267,16 @@ class TestS3kLbz1KnucklesSequenceHeadless {
                 .filter(object -> name.equals(object.getName()))
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Draws an inline-part owner the way ObjectManager does: once per bucket and
+     * tile-priority class, so parts in their own ROM buckets are rendered too.
+     */
+    private static void renderEveryBucket(com.openggf.level.objects.MultiBucketRenderable owner) {
+        for (int bucket = com.openggf.graphics.RenderPriority.MAX; bucket >= com.openggf.graphics.RenderPriority.MIN; bucket--) {
+            owner.appendRenderCommands(new ArrayList<>(), bucket, false);
+            owner.appendRenderCommands(new ArrayList<>(), bucket, true);
+        }
     }
 }

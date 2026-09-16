@@ -121,9 +121,14 @@ public class LightningShieldObjectInstance extends ShieldObjectInstance {
             {-0x200, -0x200}, {0x200, -0x200},
             {-0x200,  0x200}, {0x200,  0x200}
         };
+        // Obj_LightningShield_Main re-syncs the shield's bit 15 from Player_1's art_tile
+        // (sonic3k.asm:34751-34755) immediately before bsr Obj_LightningShield_CreateSpark, and
+        // each spark copies the shield's art_tile (sonic3k.asm:34825): isHighPriority() here is
+        // the player's flag this frame.
+        boolean sparkHighPriority = isHighPriority();
         for (int[] vel : velocities) {
             LightningSparkObjectInstance spark = new LightningSparkObjectInstance(
-                    cx, cy, vel[0], vel[1], sparkAnimationSet, sparkTiles);
+                    cx, cy, vel[0], vel[1], sparkAnimationSet, sparkTiles, sparkHighPriority);
             if (afterDynamicObjectPass && tryServices() != null
                     && tryServices().objectManager() != null) {
                 tryServices().objectManager().queueDynamicObjectAfterExec(spark);

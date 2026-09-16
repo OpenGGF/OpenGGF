@@ -1470,28 +1470,13 @@ public class ObjectManager {
             unifiedBuckets[i].clear();
         }
 
-        // Bucket active objects
+        // Bucket active and dynamic objects; an owner of inline-drawn ROM children
+        // (MultiBucketRenderable) is listed in every bucket its parts occupy.
         for (ObjectInstance instance : activeObjects.values()) {
-            int bucket = RenderPriority.clamp(instance.getPriorityBucket());
-            int idx = bucket - RenderPriority.MIN;
-            unifiedBuckets[idx].add(instance);
-            if (instance.isHighPriority()) {
-                highPriorityBuckets[idx].add(instance);
-            } else {
-                lowPriorityBuckets[idx].add(instance);
-            }
+            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
-
-        // Bucket dynamic objects
         for (ObjectInstance instance : dynamicObjects) {
-            int bucket = RenderPriority.clamp(instance.getPriorityBucket());
-            int idx = bucket - RenderPriority.MIN;
-            unifiedBuckets[idx].add(instance);
-            if (instance.isHighPriority()) {
-                highPriorityBuckets[idx].add(instance);
-            } else {
-                lowPriorityBuckets[idx].add(instance);
-            }
+            ObjectRenderParts.addToRenderBuckets(instance, unifiedBuckets, lowPriorityBuckets, highPriorityBuckets);
         }
 
         // ROM parity: lower sprite-table indices render in front. Objects execute and
@@ -1512,7 +1497,7 @@ public class ObjectManager {
         int targetBucket = RenderPriority.clamp(bucket);
         int idx = targetBucket - RenderPriority.MIN;
         List<ObjectInstance>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
-        drawBucketInstancesWithPriority(buckets[idx], graphicsManager);
+        drawBucketInstancesWithPriority(buckets[idx], targetBucket, highPriority, graphicsManager);
     }
 
     /**
@@ -1530,10 +1515,10 @@ public class ObjectManager {
         int targetBucket = RenderPriority.clamp(bucket);
         int idx = targetBucket - RenderPriority.MIN;
 
-        drawBucketInstances(unifiedBuckets[idx], callback);
+        drawBucketInstances(unifiedBuckets[idx], targetBucket, callback);
     }
 
-    private void drawBucketInstances(List<ObjectInstance> instances, ObjectDrawCallback callback) {
+    private void drawBucketInstances(List<ObjectInstance> instances, int bucket, ObjectDrawCallback callback) {
         if (instances.isEmpty()) {
             return;
         }
@@ -1542,10 +1527,17 @@ public class ObjectManager {
         try {
             renderCommands.clear();
             for (ObjectInstance instance : instances) {
-                if (callback != null) {
-                    callback.beforeDraw(instance, instance.isHighPriority());
+                for (int pass = 0; pass < 2; pass++) {
+                    boolean high = pass == 1;
+                    if (!ObjectRenderParts.drawsClass(instance, bucket, high)) {
+                        continue;
+                    }
+                    if (callback != null) {
+                        callback.beforeDraw(instance, high);
+                    }
+                    objectCallbacks.run(instance,
+                            () -> ObjectRenderParts.appendRenderCommands(instance, renderCommands, bucket, high));
                 }
-                objectCallbacks.run(instance, () -> instance.appendRenderCommands(renderCommands));
             }
 
             if (!renderCommands.isEmpty()) {
@@ -1591,10 +1583,16 @@ public class ObjectManager {
         // (The InstancedPatternRenderer bakes priority per-instance and doesn't
         // need the flush, but it's harmless — empty flushes are no-ops.)
 
-        drawBucketInstancesWithPriority(unifiedBuckets[idx], gfx);
+        drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, null, gfx);
     }
 
-    private void drawBucketInstancesWithPriority(List<ObjectInstance> instances, GraphicsManager gfx) {
+    /**
+     * @param onlyClass when non-null, draw only that tile-priority class (the split
+     *                  low/high lists); when null, draw every class the object has in
+     *                  the bucket, low parts first, flushing the batch between classes
+     */
+    private void drawBucketInstancesWithPriority(List<ObjectInstance> instances, int bucket,
+                                                 Boolean onlyClass, GraphicsManager gfx) {
         if (instances.isEmpty()) {
             return;
         }
@@ -1607,15 +1605,22 @@ public class ObjectManager {
             boolean collectingSat = gfx.isSpriteSatCollectionActive();
             for (int i = 0; i < instances.size(); i++) {
                 ObjectInstance instance = instances.get(collectingSat ? instances.size() - 1 - i : i);
-                objectCallbacks.run(instance, () -> {
-                    int mask = instance.getTileOcclusionPaletteMask();
-                    if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                        gfx.flushPatternBatch();
-                        gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                        gfx.beginPatternBatch();
+                for (int pass = 0; pass < 2; pass++) {
+                    boolean high = pass == 1;
+                    if ((onlyClass != null && onlyClass != high)
+                            || !ObjectRenderParts.drawsClass(instance, bucket, high)) {
+                        continue;
                     }
-                    instance.appendRenderCommands(renderCommands);
-                });
+                    objectCallbacks.run(instance, () -> {
+                        int mask = ObjectRenderParts.tileOcclusionPaletteMask(instance, high);
+                        if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
+                            gfx.flushPatternBatch();
+                            gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
+                            gfx.beginPatternBatch();
+                        }
+                        ObjectRenderParts.appendRenderCommands(instance, renderCommands, bucket, high);
+                    });
+                }
             }
 
             if (!renderCommands.isEmpty()) {

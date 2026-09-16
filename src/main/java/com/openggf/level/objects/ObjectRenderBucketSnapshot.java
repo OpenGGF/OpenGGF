@@ -74,7 +74,10 @@ final class ObjectRenderBucketSnapshot {
                 ? object.getSlotIndex()
                 : Integer.MAX_VALUE;
         int bucket = RenderPriority.clamp(instance.getPriorityBucket()) - RenderPriority.MIN;
-        return (slot << 8)
+        long extra = instance instanceof MultiBucketRenderable parts
+                ? MultiBucketRenderable.extraBucketSignature(parts) : 0L;
+        return (extra << 40)
+                | (slot << 8)
                 | (long) (bucket << 1)
                 | (instance.isHighPriority() ? 1L : 0L);
     }

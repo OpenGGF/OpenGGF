@@ -5,6 +5,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 
 import java.util.List;
@@ -22,7 +23,16 @@ final class HczEndBossBubbleParticle extends AbstractBossChild implements Rewind
     private int mappingFrame;
 
     HczEndBossBubbleParticle(HczEndBossInstance boss) {
-        super(boss, "HCZEndBossBubbleParticle", 3, 0);
+        // HCZEndBossBubble_ObjData priority $280 (sonic3k.asm:142188-142191), applied by
+        // HCZEndBossBubble_Init's SetUp_ObjAttributes (sonic3k.asm:141315-141317).
+        super(boss, "HCZEndBossBubbleParticle", RenderPriority.fromS3kWord(0x280), 0);
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // HCZEndBossBubble_ObjData art make_art_tile(ArtTile_Bubbles,0,1) sets bit 15
+        // (sonic3k.asm:142190).
+        return true;
     }
 
     @Override

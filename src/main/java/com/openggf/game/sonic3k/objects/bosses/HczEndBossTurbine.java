@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -105,8 +106,9 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
      * @param yOffset Vertical offset from boss center
      */
     public HczEndBossTurbine(HczEndBossInstance boss, int xOffset, int yOffset) {
-        // priority=3, objectId=0 (dynamic child — no ROM object slot)
-        super(boss, "HCZEndBossTurbine", 3, 0);
+        // HCZEndBossFan_ObjData priority $200 (sonic3k.asm:142158-142159), applied by
+        // HCZEndBossFan_Init's SetUp_ObjAttributes3 (sonic3k.asm:141030-141032).
+        super(boss, "HCZEndBossTurbine", RenderPriority.fromS3kWord(0x200), 0);
         this.boss = boss;
         this.xOffset = xOffset;
         this.yOffset = yOffset;
@@ -114,6 +116,13 @@ public class HczEndBossTurbine extends AbstractBossChild implements TouchRespons
         this.animFrame = 0;
         this.animCounter = 0;
         this.animSpeed = ANIM_SPEED_ACTIVE;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // CreateChild1_Normal copies the boss's art_tile (sonic3k.asm:176933), whose
+        // make_art_tile(ArtTile_HCZEndBoss,1,1) sets bit 15 (sonic3k.asm:142152).
+        return true;
     }
 
     private HczEndBossTurbine(ObjectSpawn spawn, HczEndBossInstance boss, int ignored) {

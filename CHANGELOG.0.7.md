@@ -6,6 +6,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
+  boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now
+  draw in the display list their ROM `priority` word selects instead of their
+  owner's, and the lightning shield spark keeps the shield's tile priority.
+
+- **Guards:** the build-tooling guard checks the queued-Maven commands the agent
+  guidance actually documents, the TraceChaser cutover inventory retains the
+  re-created native capture guide, and the two opt-in probes now assert their output.
+
 - **Sprite priority buckets:** objects transcribed from S3K now convert the ROM
   `priority` word to a bucket (`$280` is bucket 5, not clamped to 7), so the CNZ
   hover fan, cannon and trap door and the LRZ collapsing bridge draw in their ROM

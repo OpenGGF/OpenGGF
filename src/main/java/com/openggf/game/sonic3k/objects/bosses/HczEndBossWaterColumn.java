@@ -13,6 +13,7 @@ import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -276,13 +277,22 @@ public class HczEndBossWaterColumn extends AbstractBossChild implements SolidObj
     // =========================================================================
 
     public HczEndBossWaterColumn(HczEndBossInstance boss, HczEndBossTurbine turbine) {
-        super(boss, "HCZEndBossWaterColumn", 3, 0);
+        // HCZEndBossPlatform_ObjData priority $80 (sonic3k.asm:142164-142166), applied by
+        // HCZEndBossPlatform_Init's SetUp_ObjAttributes2 (sonic3k.asm:141112-141114).
+        super(boss, "HCZEndBossWaterColumn", RenderPriority.fromS3kWord(0x80), 0);
         this.boss = boss;
         this.turbine = turbine;
         this.routine = ROUTINE_INIT;
         this.solidActive = false;
         this.player1Grabbed = false;
         this.player2Grabbed = false;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // HCZEndBossPlatform_ObjData art make_art_tile(ArtTile_HCZEndBoss,0,1) sets bit 15
+        // (sonic3k.asm:142165).
+        return true;
     }
 
     private HczEndBossWaterColumn(ObjectSpawn spawn, HczEndBossInstance boss) {

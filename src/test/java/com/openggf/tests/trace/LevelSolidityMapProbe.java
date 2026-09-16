@@ -80,6 +80,10 @@ class LevelSolidityMapProbe {
                 sb.append('\n');
             }
             Files.writeString(Path.of(out), sb.toString());
+            String written = Files.readString(Path.of(out));
+            org.junit.jupiter.api.Assertions.assertFalse(written.isBlank(), "solidity map must not be empty");
+            org.junit.jupiter.api.Assertions.assertTrue(written.chars().anyMatch(c -> c == '#'),
+                    "solidity map must contain at least one solid cell; check zone/act/bounds");
         } finally {
             level.dispose();
         }
