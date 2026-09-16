@@ -47,6 +47,8 @@ class TestSozEndBossInputRoute {
                     &&!milestones.contains("capsule"))milestone="capsule";
             else if(!results&&GameServices.gameState().isEndOfLevelActive()&&!milestones.contains("results"))milestone="results";
             else if(results&&!GameServices.gameState().isEndOfLevelActive())milestone="walk";
+            var plane=com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow().events().postBossPlane();
+            if(milestone==null && plane.revision()>0 && !milestones.contains("redraw"+plane.revision()))milestone="redraw"+plane.revision();
             if(milestone!=null&&milestones.add(milestone)) {
                 trail.append(tick).append(':').append(milestone).append(' ');
                 var after=registry.capture();manager.setRewindInPlaceRestoreEnabledForTest(false);
@@ -55,7 +57,7 @@ class TestSozEndBossInputRoute {
             }
         }
         assertEquals(8,hits,trail.toString());
-        assertTrue(milestones.containsAll(java.util.Set.of("shell","capsule","results","walk")),trail.toString());
+        assertTrue(milestones.containsAll(java.util.Set.of("shell","capsule","results","walk","redraw1","redraw2","redraw8")),trail.toString());
         assertEquals(9,GameServices.level().getCurrentZone(),trail.toString());
         assertEquals(0,GameServices.level().getCurrentAct());
         assertTrue(f.gameplayMode().isGameplayRuntimeReady());

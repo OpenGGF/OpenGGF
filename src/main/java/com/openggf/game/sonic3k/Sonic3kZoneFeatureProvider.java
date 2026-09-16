@@ -53,7 +53,7 @@ import java.util.logging.Logger;
  * Handles AIZ intro ocean phase detection, title card suppression,
  * and other S3K-specific zone features.
  */
-public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy {
+public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.BackgroundDescriptorOverride, ZoneFeatureProvider, com.openggf.game.internal.ZoneTumbleAnimationPolicy {
     @Override
     public boolean negativeTumbleUsesUnreflectedAngle(boolean facingLeft) {
         // Anim_Tumble / Anim_TumbleLeft (sonic3k.asm:24938-24984):
@@ -194,6 +194,18 @@ public class Sonic3kZoneFeatureProvider implements ZoneFeatureProvider, com.open
                 || isHcz2BackgroundPlaneWindowActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId)
                 || isSozEventBackgroundWindowActive(zoneId);
+    }
+
+    @Override public long backgroundDescriptorRevision() {
+        if (!GameServices.hasRuntime() || GameServices.level().getFeatureZoneId() != Sonic3kZoneIds.ZONE_SOZ) return 0;
+        return S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
+                .map(state -> (long) state.events().postBossPlane().revision()).orElse(0L);
+    }
+
+    @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        return state != null && state.events().postBossPlane().revision() != 0
+                ? state.events().postBossPlane().descriptor(sourceX, sourceY) : 0;
     }
 
     /** SOZ event DrawBGAsYouMove reads arena/room columns beyond the normal repeating strip. */

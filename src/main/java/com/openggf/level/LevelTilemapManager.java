@@ -53,6 +53,7 @@ public class LevelTilemapManager {
 
     // --- Background tilemap data ---
     private byte[] backgroundTilemapData;
+    private long backgroundDescriptorRevision;
     private int backgroundTilemapWidthTiles;
     private int backgroundTilemapHeightTiles;
     private boolean backgroundTilemapDirty = true;
@@ -267,6 +268,14 @@ public class LevelTilemapManager {
             return;
         }
 
+        long descriptorRevision = zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundDescriptorOverride owner
+                ? owner.backgroundDescriptorRevision() : 0;
+        if (descriptorRevision != backgroundDescriptorRevision) {
+            backgroundDescriptorRevision = descriptorRevision;
+            backgroundTilemapDirty = true;
+            bgWindowShiftCandidate = false;
+        }
+
         boolean requiresFullWidthBgTilemap = zoneRuntimeRequiresFullWidthBgTilemap();
         boolean backgroundWrap = zoneFeatureProvider != null
                 && zoneFeatureProvider.bgWrapsHorizontally()
@@ -317,7 +326,7 @@ public class LevelTilemapManager {
         // block/chunk/pattern rebuild loop. Any unproven precondition falls back
         // to the full rebuild below. The CPU array stays canonical; the GPU may
         // retain physical columns as a ring and upload only the entering tiles.
-        boolean shifted = bgWindowShiftCandidate
+        boolean shifted = backgroundDescriptorRevision == 0 && bgWindowShiftCandidate
                 && tryIncrementalBgWindowShift(blockLookup, zoneFeatureProvider, currentZone);
         bgWindowShiftCandidate = false;
         if (!shifted) {
@@ -644,6 +653,15 @@ public class LevelTilemapManager {
         backgroundTilemapWidthTiles = data.widthTiles;
         backgroundTilemapHeightTiles = data.heightTiles;
         retainedBackgroundPlaneAuthoritative = false;
+        if (backgroundDescriptorRevision != 0
+                && zoneFeatureProvider instanceof com.openggf.game.internal.BackgroundDescriptorOverride owner) {
+            for (int y = 0; y < data.heightTiles; y++) for (int x = 0; x < data.widthTiles; x++) {
+                int offset = (y * data.widthTiles + x) * 4;
+                int descriptor = owner.backgroundDescriptorAt(params.xQueryOffset() + x * 8,
+                        params.yQueryOffset() + y * 8);
+                writeTilemapDescriptor(backgroundTilemapData, offset, descriptor);
+            }
+        }
 
         bgLastBuildValid = true;
         bgLastBuildLevel = geometry.level();

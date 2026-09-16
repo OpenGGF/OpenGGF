@@ -246,16 +246,24 @@ public final class Sonic3kSOZEvents extends Sonic3kZoneEvents {
             state.lighting().holdBossTimers();
             if ((short) state.sandCorkBackgroundFlag() < 0) {
                 events.savedBackgroundX((short) (camera().getXCopy() + 0x1240 - events.bossX() - 0x100));
+                events.postBossPlane().begin(
+                        (short) (camera().getXCopy() + 0x1240 - events.bossX()),
+                        (short) (camera().getYCopy() + 0x488 - events.bossY()),
+                        (short) camera().getYCopy() >> 1, events.bossWall()::rowOffset,
+                        levelManager()::getBackgroundTileDescriptorAtWorld);
                 events.redrawRemaining(15);
                 events.backgroundRoutine(0x2C);
                 queueCustomResources(events, 0x1AD68E, 0x1AD81E);
                 loadPaletteFromPalPointers(0x1B);
             } else updateBossWall(state);
         } else if (events.backgroundRoutine() == 0x2C && events.artJobOrdinal() < 0) {
+            events.postBossPlane().advance((short) camera().getYCopy() >> 1,
+                    levelManager()::getBackgroundTileDescriptorAtWorld);
             events.redrawRemaining(events.redrawRemaining() - 2);
             if (events.redrawRemaining() < 0) {
                 events.savedBackgroundX(0);
                 events.backgroundRoutine(0x30);
+                events.postBossPlane().clear();
                 camera().setMaxX((short) 0x52C0);
                 state.lighting().resumeTorch();
             }
