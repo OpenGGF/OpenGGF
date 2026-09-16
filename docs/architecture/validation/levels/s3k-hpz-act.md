@@ -36,7 +36,7 @@ S1 Sonic+Sonic duplicate, S2 Sonic+Tails, Sonic+Tails+Knuckles at 800.
 | OBJECT: placed Master/Super Emeralds in `$1601` | `Obj_HPZMasterEmerald`, `Obj_HPZSuperEmerald` have no zone branch; states 1 and 2 are selectable (`loc_907A8`) | unit | `TestHpzSanctuaryObjects#pedestalStatesUseRomCentrePositionsAndFourStateBehavior` | implemented (state-1 selectability corrected) | pass | Native altar presentation pending probe; production pedestal entry from `$1601` not route-tested |
 | LIFE: checkpoint `$34` sub 2 at `$CF0,$3E8`, death/reload | StarPost; `HPZ_ScreenInit` Knuckles `$AA0` limit | 25 Sonic/Tails width × donor rows; 5 Knuckles rows | `TestS3kHpzLifecycleProduction#touchingThePlacedStarPostThenDyingReloadsAtThePost` | implemented | pass, 30 cases | Knuckles cannot reach this post (camera max X `$AA0`), asserted instead; rewind at activation not replayed here |
 | LOAD: LRZ3 → `$1601` incoming | LRZ events | — | — | missing (LRZ) | blocked | LRZ bring-up |
-| ORACLE: route timing | Sonic+Tails complete-run `hpz22_2` rows `$1E46+` | — | `TestS3kSonicTailsHpz2SegmentTraceReplay` (expected red) | — | unrun | Measure after the fight lane lands |
+| ORACLE: route timing | Sonic+Tails complete-run `hpz22_2` rows `$1E46+` | — | `TestS3kSonicTailsHpz222SegmentTraceReplay` (expected red) | — | blocked: 1902 errors, first frame 0 `camera_y`; replay never leaves the LRZ3 prefix (`84c9e38d8`) | Unblocks with LRZ3 bring-up; see trace frontier log 2026-09-17 |
 
 ## Execution evidence
 

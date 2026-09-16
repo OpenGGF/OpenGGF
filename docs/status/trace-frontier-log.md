@@ -110626,3 +110626,16 @@ animation2. That production intro, not trace-state seeding, is the next target.
   `TestS3kAizTraceReplay` frontier here was frame 20713, so develop currently
   carries an unattributed AIZ2 reload camera-lock regression; the owning commit
   was not bisected in this task.
+
+### 2026-09-17 — Sonic + Tails HPZ segment blocked by the LRZ3 prefix
+
+- `84c9e38d8` (`.worktrees/ai-hpz-bring-up`, HPZ bring-up branch):
+  `python3 tools/testing/maven_queue.py -Dmse=off -B -Ptrace-replay
+  -Dtest=TestS3kSonicTailsHpz222SegmentTraceReplay "-Ds3k.rom.path=<absolute S3K ROM>" test`
+  reports 1 test, 1 failure, 0 skips: 1902 errors, 0 warnings, first error frame 0
+  `camera_y` (expected `$02F0`, actual `$030C`); previously 1913 at the same first error.
+  The report's latest zone/act state stays at frame 0 (`$16` act 0): the segment starts in the
+  LRZ3 boss arena and the engine never reaches the ROM's `$1601` entry at row `$1E46`
+  (LRZ3 has no events or boss yet). The 871 errors at rows `>= $1E46` are therefore the LRZ3
+  dependency, not Hidden Palace divergences. HPZ strict replay stays blocked until LRZ3 hands
+  off to `$1601`; HPZ acceptance uses cold controller routes and native probes meanwhile.
