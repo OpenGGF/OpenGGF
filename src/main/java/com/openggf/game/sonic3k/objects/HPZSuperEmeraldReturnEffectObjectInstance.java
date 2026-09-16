@@ -6,6 +6,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -131,6 +132,21 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
 
     boolean drawsCurrentFrameForTest() {
         return drawCurrentFrame;
+    }
+
+    // loc_2ECD0 never writes priority (sonic3k.asm:64173-64193), so the AllocateObject-cleared
+    // word 0 stands: display list 0 is the ROM value.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // loc_2ECD0 art make_art_tile(ArtTile_Shield,0,1) sets bit 15 (sonic3k.asm:64176).
+        return true;
     }
 
     @Override

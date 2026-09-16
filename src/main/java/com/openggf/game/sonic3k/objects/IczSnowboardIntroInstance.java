@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.events.S3kIczEventWriteSupport;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -168,6 +169,14 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             spawnDustIfNeeded(player);
         }
         updateDynamicSpawn(currentX, currentY);
+    }
+
+    // Obj_LevelIntroICZ1 writes priority $80 (sonic3k.asm:77008).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override
@@ -688,6 +697,14 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             }
         }
 
+        // loc_393EE writes priority $100 (sonic3k.asm:76755).
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
+        }
+
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             PatternSpriteRenderer renderer = IczSnowboardArtLoader.snowboardRenderer(services());
@@ -738,6 +755,14 @@ public class IczSnowboardIntroInstance extends AbstractObjectInstance implements
             if (++frame >= Sonic3kConstants.MAP_SNOWBOARD_DUST_FRAMES) {
                 setDestroyed(true);
             }
+        }
+
+        // sub_39924 writes priority $100 (sonic3k.asm:77161).
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
         }
 
         @Override

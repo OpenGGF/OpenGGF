@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 
@@ -287,5 +288,17 @@ public class ExplosionObjectInstance extends AbstractObjectInstance implements S
             return;
         }
         renderManager.getExplosionRenderer().drawFrameIndex(animFrame, spawn.x(), spawn.y(), false, false);
+    }
+
+    /**
+     * Badnik-death explosion bucket: S1 Obj27/Obj3F {@code move.b #1,obPriority(a0)}
+     * (_incObj/27, 3F Explosions.asm:35), S2 Obj27 {@code move.b #1,priority(a0)}
+     * (s2.asm:46728), S3K Obj_Explosion {@code move.w #$80,priority(a0)} (sonic3k.asm:42196).
+     */
+    private static final int EXPLOSION_PRIORITY_BUCKET = RenderPriority.bucket(1);
+
+    @Override
+    public int getPriorityBucket() {
+        return EXPLOSION_PRIORITY_BUCKET;
     }
 }

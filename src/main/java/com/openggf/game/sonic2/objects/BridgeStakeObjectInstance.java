@@ -2,6 +2,7 @@ package com.openggf.game.sonic2.objects;
 
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -37,6 +38,23 @@ public class BridgeStakeObjectInstance extends AbstractObjectInstance implements
     @Override
     public BridgeStakeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new BridgeStakeObjectInstance(ctx.spawn(), getName());
+    }
+
+    // Obj1C_Init copies the last objsubdecl byte into priority(a0) (docs/s2disasm/s2.asm:24093);
+    // one entry per subtype from Obj1C_InitData (s2.asm:24023-24043).
+    private static final int[] PRIORITY_BY_SUBTYPE = {
+            6, 6, 1, 6, 4, 4, 1, 1, 1,          // s2.asm:24023-24031
+            4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // s2.asm:24032-24043 (waterfall/oilfall rows)
+    };
+
+    @Override
+    public int getPriorityBucket() {
+        int subtype = spawn.subtype() & 0xFF;
+        if (subtype >= PRIORITY_BY_SUBTYPE.length) {
+            // Past the ROM table (never placed in shipped layouts); keep the engine default.
+            return RenderPriority.bucket(0);
+        }
+        return RenderPriority.bucket(PRIORITY_BY_SUBTYPE[subtype]);
     }
 
     @Override

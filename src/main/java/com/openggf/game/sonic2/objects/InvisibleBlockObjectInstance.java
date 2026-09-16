@@ -7,6 +7,7 @@ import com.openggf.debug.DebugOverlayManager;
 import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SolidObjectParams;
 import com.openggf.level.objects.SolidObjectProvider;
@@ -31,8 +32,9 @@ public class InvisibleBlockObjectInstance extends BoxObjectInstance
     private int halfHeight;
 
     public InvisibleBlockObjectInstance(ObjectSpawn spawn, String name) {
-        // Gray color for debug rendering
-        super(spawn, name, 16, 16, 0.5f, 0.5f, 0.5f, false);
+        // Gray color for debug rendering. Obj74_Init art word make_art_tile(ArtTile_ArtNem_Powerups,0,1)
+        // sets bit 15 (docs/s2disasm/s2.asm:46589), so the object is sprite-over-plane high priority.
+        super(spawn, name, 16, 16, 0.5f, 0.5f, 0.5f, true);
 
         int subtype = spawn.subtype();
         // Width: ((upper 4 bits) + 1) * 16 / 2 for half-width
@@ -77,6 +79,14 @@ public class InvisibleBlockObjectInstance extends BoxObjectInstance
         // That helper adds the live y_radius(a1) to d2, then doubles d2 for
         // the lower reject bound (docs/s2disasm/s2.asm:35156-35169).
         return true;
+    }
+
+    // Obj74 never writes priority (docs/s2disasm/s2.asm:46586-46602) and, with gameRevision=1, never calls DisplaySprite (the REV00 debug-mode display at s2.asm:46621-46627 is assembled out). ROM never draws it; bucket 0 is the cleared SST byte.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

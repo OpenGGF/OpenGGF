@@ -117,6 +117,7 @@ public final class ObjectScaffoldTool {
             b.append("import com.openggf.level.objects.ObjectSpawn;\n\n");
         } else {
             b.append("import com.openggf.graphics.GLCommand;\n");
+            b.append("import com.openggf.graphics.RenderPriority;\n");
             b.append("import com.openggf.level.objects.").append(baseClass).append(";\n");
             b.append("import com.openggf.level.objects.ObjectLifetimeOps;\n");
             b.append("import com.openggf.level.objects.ObjectPlayerQuery;\n");
@@ -164,9 +165,18 @@ public final class ObjectScaffoldTool {
             b.append("        super(spawn, \"").append(className).append("\",\n");
             b.append("                /* rendererKey       */ \"TODO_register_in_Sonic3kObjectArtKeys\",\n");
             b.append("                /* collisionSizeIndex */ 0,  // TODO: ROM collision size index (verify in disasm)\n");
-            b.append("                /* priorityBucket     */ 0); // TODO: ROM sprite priority bucket (verify in disasm)\n");
+            b.append("                /* priorityBucket     */ romPriorityBucket());\n");
             b.append("        // AbstractS3kBadnikInstance derives facingLeft from render_flags bit 0 already.\n");
             b.append("        // TODO: init subtype state from spawn.subtype() (verify the bit layout in the disassembly).\n");
+            b.append("    }\n\n");
+
+            b.append("    /**\n");
+            b.append("     * TODO: return com.openggf.graphics.RenderPriority.fromS3kWord(0x___) with the word from\n");
+            b.append("     * `move.w #$___,priority(a0)` or the ObjDat third word ($80 is bucket 1, $280 is bucket 5;\n");
+            b.append("     * bucket 0 is FRONT-MOST). The art word's bit 15 is isHighPriority(), never a bucket.\n");
+            b.append("     */\n");
+            b.append("    private static int romPriorityBucket() {\n");
+            b.append("        throw new UnsupportedOperationException(\"fill the ROM sprite priority word from the disassembly\");\n");
             b.append("    }\n\n");
 
             b.append("    @Override\n");
@@ -223,6 +233,14 @@ public final class ObjectScaffoldTool {
             b.append("        // and draw from ROM-backed art (registered in the game's art/PLC registry).\n");
             b.append("        // TODO: draw the correct mapping frame once art is registered.\n");
             b.append("    }\n\n");
+
+            b.append("    @Override\n");
+            b.append("    public int getPriorityBucket() {\n");
+            b.append("        // TODO: S1/S2 `move.b #n,priority(a0)` -> RenderPriority.bucket(n);\n");
+            b.append("        //       S3K `move.w #$xxx,priority(a0)` or ObjDat third word -> RenderPriority.fromS3kWord(0xxxx).\n");
+            b.append("        // Bucket 0 is FRONT-MOST. The art word's bit 15 is isHighPriority(), never a bucket.\n");
+            b.append("        throw new UnsupportedOperationException(\"fill the ROM sprite priority bucket from the disassembly\");\n");
+            b.append("    }\n\n");
         } else {
             b.append("    public ").append(className).append("(ObjectSpawn spawn) {\n");
             b.append("        // GUARD: the injected service context is NOT bound during construction wiring.\n");
@@ -251,6 +269,14 @@ public final class ObjectScaffoldTool {
             b.append("        // services() is safe here. Resolve the renderer through services().renderManager()\n");
             b.append("        // and draw from ROM-backed art (registered in the game's art/PLC registry).\n");
             b.append("        // TODO: draw the correct mapping frame once art is registered.\n");
+            b.append("    }\n\n");
+
+            b.append("    @Override\n");
+            b.append("    public int getPriorityBucket() {\n");
+            b.append("        // TODO: S1/S2 `move.b #n,priority(a0)` -> RenderPriority.bucket(n);\n");
+            b.append("        //       S3K `move.w #$xxx,priority(a0)` or ObjDat third word -> RenderPriority.fromS3kWord(0xxxx).\n");
+            b.append("        // Bucket 0 is FRONT-MOST. The art word's bit 15 is isHighPriority(), never a bucket.\n");
+            b.append("        throw new UnsupportedOperationException(\"fill the ROM sprite priority bucket from the disassembly\");\n");
             b.append("    }\n\n");
         }
 

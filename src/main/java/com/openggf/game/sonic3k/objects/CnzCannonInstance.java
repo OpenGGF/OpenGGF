@@ -73,7 +73,8 @@ public final class CnzCannonInstance extends AbstractObjectInstance
     /** Synthetic subtype used by Obj_CNZEndBoss for its watched cannon slot. */
     public static final int END_SEQUENCE_SUBTYPE = 0x80;
 
-    private static final int PRIORITY = 0x280;
+    /** ROM {@code move.w #$280,priority(a0)} at Obj_CNZCannon init: bucket 5. */
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
     private static final int FRAME_CHAMBER_IDLE = 4;
     private static final int FRAME_SPIN_MIN = 0;
     private static final int FRAME_SPIN_MAX = 8;
@@ -381,7 +382,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(PRIORITY);
+        return PRIORITY_BUCKET;
     }
 
     @Override
@@ -508,7 +509,7 @@ public final class CnzCannonInstance extends AbstractObjectInstance
 
         @Override
         public int getPriorityBucket() {
-            return PRIORITY;
+            return PRIORITY_BUCKET;
         }
     }
 }

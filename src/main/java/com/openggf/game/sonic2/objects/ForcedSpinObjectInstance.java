@@ -9,6 +9,7 @@ import com.openggf.debug.DebugOverlayToggle;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindStateful;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -448,6 +449,14 @@ public class ForcedSpinObjectInstance extends BoxObjectInstance implements Rewin
         } catch (Exception e) {
             // Don't let audio failure break game logic
         }
+    }
+
+    // Obj84_Init move.b #5,priority(a0) (docs/s2disasm/s2.asm:46782). The ROM never calls DisplaySprite for Obj84 (s2.asm:46761-46977); the engine draws only a debug marker, so the byte is transcribed for the record.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(5);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

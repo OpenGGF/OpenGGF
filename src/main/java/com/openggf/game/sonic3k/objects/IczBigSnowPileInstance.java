@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.events.Sonic3kICZEvents;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.LevelManager;
 import com.openggf.level.Pattern;
@@ -107,6 +108,16 @@ public final class IczBigSnowPileInstance extends AbstractObjectInstance
         if (player != null && currentY == FINAL_Y) {
             handleJumpEscape(player);
         }
+    }
+
+    // Obj_ICZ1BigSnowPile never calls Draw_Sprite and never writes priority
+    // (sonic3k.asm:110438-110484): the ROM never displays the pile, so the
+    // cleared word 0 is the verified value.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

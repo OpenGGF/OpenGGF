@@ -6,6 +6,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -199,6 +200,10 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     @Override public int getX() { return x; }
     @Override public int getY() { return y; }
     @Override public int getOutOfRangeReferenceX() { return x; }
+    // ObjDat3_90FCC priority word 0 (sonic3k.asm:198374): display list 0 is the ROM value.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override public int getPriorityBucket() { return PRIORITY_BUCKET; }
     @Override public boolean isHighPriority() { return true; }
     HPZSSEntryControlObjectInstance parentForTest() { return parentRef; }
 }

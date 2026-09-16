@@ -6,6 +6,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AnimalObjectInstance;
 import com.openggf.level.objects.DestructionEffects;
@@ -897,6 +898,15 @@ public final class ClamerObjectInstance extends AbstractObjectInstance
             motion.yVel = -((TrigLookupTable.sinHex(angle) * PROJECTILE_DEFLECT_SPEED) >> 8);
             collisionEnabled = false;
             return true;
+        }
+
+        // S3KBadnikProjectile_Init runs SetUp_ObjAttributes on ObjDat3_8913C, priority $200
+        // (sonic3k.asm:182264, 186019).
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x200);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
         }
 
         @Override

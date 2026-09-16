@@ -98,6 +98,17 @@ reverse. Merely creating a mask object is insufficient: the zone must enable
 the SAT collection/post-pass. The SOZ priority audit on 2026-09-16 exposed both
 failures with a door drawn through the sand and a same-bucket mask hiding the
 wrong object.
+**The bucket encoding differs per game and the engine defaults are silent.** S1/S2
+store the bucket as a byte (`move.b #4,priority(a0)` is bucket 4); S3K stores the
+display-list byte offset as a word (`move.w #$280,priority(a0)` is bucket 5, `$80` is
+bucket 1, not a flag), and ObjDat/ObjDat3 tables carry the same word third. Transcribe
+through `RenderPriority.bucket(n)` / `RenderPriority.fromS3kWord(word)`; `clamp` folds
+a raw S3K word into bucket 7 without complaint (four CNZ/LRZ objects shipped that way).
+`getPriorityBucket()` defaults to bucket 0, the front-most, so every class that draws
+must override it; `TestObjectPriorityBucketGuard` enforces this and a ROM priority of 0
+opts in by returning `bucket(0)` with the citation. `isHighPriority()` is the art
+word's bit 15, a different property. See the
+[sprite priority bucket audit](audits/2026-09-16-sprite-priority-bucket-audit.md).
 Resolve relative mapping attributes with the complete native 16-bit art-word
 addition before separating fields. SOZ pillar spikes use `$C49B/$D49B + $4001`,
 which clears priority as palette bits wrap; independent palette addition leaves

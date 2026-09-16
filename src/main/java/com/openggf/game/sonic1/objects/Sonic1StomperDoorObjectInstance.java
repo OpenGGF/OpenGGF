@@ -5,6 +5,7 @@ import com.openggf.game.sonic1.Sonic1SwitchManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -146,8 +147,8 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
     // Type 3/4 flip offset: addi.w #$38,d0 when x-flipped
     private static final int TYPE3_FLIP_OFFSET = 0x38;
 
-    // obPriority from ROM: move.b #4,obPriority(a0)
-    private static final int PRIORITY = 4;
+    // Sto_Main move.b #4,obPriority(a0): docs/s1disasm/_incObj/6B SBZ Stomper and Sliding Door.asm:84.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
 
     /** Debug color (steel blue for SBZ machinery). */
     private static final DebugColor DEBUG_COLOR = new DebugColor(100, 140, 200);
@@ -616,6 +617,11 @@ public class Sonic1StomperDoorObjectInstance extends AbstractObjectInstance
     }
 
     // ---- Rendering ----
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

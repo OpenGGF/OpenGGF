@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.graphics.RenderPriority;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -89,7 +90,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
     /** ROM {@code move.b #$2A,$30(a0)} in {@code loc_39D84} (sonic3k.asm:77497). */
     private static final int POST_COLLAPSE_SOLID_FRAMES = 0x2A;
     /** ROM {@code move.w #$80,priority(a0)} (sonic3k.asm:77387). */
-    private static final int PRIORITY = 0x80;
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
     /** ROM {@code word_39E20} (sonic3k.asm:77548). Verified header {@code 0015} = 22 entries. */
     private static final int DEBRIS_TABLE_ADDR = 0x00039E20;
     /** ROM {@code move.b #7,anim_frame_timer(a0)} in {@code loc_39D4E} (sonic3k.asm:77477). */
@@ -388,7 +389,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
 
     @Override
     public int getPriorityBucket() {
-        return PRIORITY;
+        return PRIORITY_BUCKET;
     }
 
     @Override
@@ -526,7 +527,7 @@ public final class LrzCollapsingBridgeInstance extends AbstractObjectInstance
         @Override
         public int getPriorityBucket() {
             // move.w #$80,priority(a1) (sonic3k.asm:77530).
-            return PRIORITY;
+            return PRIORITY_BUCKET;
         }
 
         @Override

@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.events.Sonic3kZoneEvents;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -555,6 +556,15 @@ public class CutsceneKnucklesHcz2Instance extends AbstractObjectInstance
     // =========================================================================
     // Rendering
     // =========================================================================
+
+    // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
+    // (sonic3k.asm:134800, 178886).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

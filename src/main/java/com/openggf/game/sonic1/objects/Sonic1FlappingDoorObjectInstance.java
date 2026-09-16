@@ -7,6 +7,7 @@ import com.openggf.game.ZoneFeatureProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
@@ -103,6 +104,14 @@ public class Sonic1FlappingDoorObjectInstance extends AbstractObjectInstance
         animationFrameIndex = 0;
         // Matches AnimateSprite animation-change behavior (obTimeFrame := 0).
         animationTimer = 0;
+    }
+
+    // Flap_Main never writes obPriority, so the cleared SST byte (0) stands: docs/s1disasm/_incObj/0C LZ Flapping Door.asm:19-29.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

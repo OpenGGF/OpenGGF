@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -530,6 +531,14 @@ public class MCZRotPformsObjectInstance extends AbstractObjectInstance
         for (MCZRotPformsObjectInstance child : children) {
             child.owner = this;
         }
+    }
+
+    // Obj6A_Init move.b #4,priority(a0) (docs/s2disasm/s2.asm:54170); children run Obj6A_Init themselves, Obj6A_InitSubObject copies no priority (s2.asm:54213-54220).
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

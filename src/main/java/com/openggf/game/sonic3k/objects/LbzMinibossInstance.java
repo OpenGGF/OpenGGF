@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -275,6 +276,22 @@ public final class LbzMinibossInstance extends AbstractObjectInstance
         // frame from creation, regardless of the parent's routine.
         updatePanels();
         updateDynamicSpawn(getX(), getY());
+    }
+
+    // ObjDat_LBZMiniboss priority $280 (sonic3k.asm:151903). The arm panels take per-subtype
+    // word_727E2 ($300/$380/$280) at loc_727B0 (sonic3k.asm:151737) but are drawn inline, so
+    // their own lists are not modelled.
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat_LBZMiniboss art make_art_tile(ArtTile_LBZMiniboss,1,1) sets bit 15 (sonic3k.asm:151902).
+        return true;
     }
 
     @Override

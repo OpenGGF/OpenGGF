@@ -3,6 +3,7 @@ package com.openggf.game.sonic2.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractMonitorObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
@@ -55,6 +56,20 @@ public final class MonitorContentsObjectInstance extends AbstractMonitorObjectIn
     @Override
     protected void onIconDeactivated() {
         ObjectLifetimeOps.expireDynamic(this);
+    }
+
+    // Obj2E_Init move.b #3,priority(a0): docs/s2disasm/s2.asm:25750.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(3);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // make_art_tile(ArtTile_ArtNem_Powerups,0,1) sets art-word bit 15: docs/s2disasm/s2.asm:25747.
+        return true;
     }
 
     @Override

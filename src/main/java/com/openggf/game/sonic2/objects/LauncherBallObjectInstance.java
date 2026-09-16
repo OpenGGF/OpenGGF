@@ -6,6 +6,7 @@ import com.openggf.camera.Camera;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2AnimationIds;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectSpawn;
@@ -459,6 +460,14 @@ public class LauncherBallObjectInstance extends AbstractObjectInstance implement
         for (AbstractPlayableSprite p : toRelease) {
             releasePlayer(p);
         }
+    }
+
+    // Obj48_Init move.b #1,priority(a0): docs/s2disasm/s2.asm:51284.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(1);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

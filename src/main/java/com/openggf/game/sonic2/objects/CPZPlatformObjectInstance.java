@@ -6,6 +6,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -97,6 +98,22 @@ public class CPZPlatformObjectInstance extends AbstractObjectInstance
         applyMovement(player);
 
         updateDynamicSpawn(x, y);
+    }
+
+    // Obj19_Init move.b #4,priority(a0): docs/s2disasm/s2.asm:47980.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // Only the WFZ art word sets bit 15: make_art_tile(ArtTile_ArtNem_WfzFloatingPlatform,1,1)
+        // (docs/s2disasm/s2.asm:47969); the CPZ/OOZ words at s2.asm:47961/47965 leave it clear.
+        var services = tryServices();
+        return services != null && services.currentZone() == Sonic2ZoneConstants.ROM_ZONE_WFZ;
     }
 
     @Override

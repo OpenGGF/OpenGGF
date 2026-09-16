@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.objects.bosses.CnzEndBossBoundaryController;
 import com.openggf.game.sonic3k.objects.bosses.S3kSharedBossCameraGate;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
 import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -466,6 +467,15 @@ public class CutsceneKnucklesCnz2AInstance extends AbstractObjectInstance
             case JUMP -> RAW_JUMP;
             case LAND_TO_LAUGH -> RAW_LAND_TO_LAUGH;
         };
+    }
+
+    // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
+    // (sonic3k.asm:134800, 178886).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

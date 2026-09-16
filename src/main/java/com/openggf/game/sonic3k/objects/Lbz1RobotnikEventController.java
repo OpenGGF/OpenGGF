@@ -17,6 +17,7 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -133,7 +134,10 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
-        return true;
+        // ObjDat_LBZ1Robotnik art make_art_tile(ArtTile_RobotnikShip,0,0) leaves bit 15 clear
+        // (sonic3k.asm:192783) and Obj_RobotnikHead3 copies that bit from the ship
+        // (sonic3k.asm:136198-136200).
+        return false;
     }
 
     @Override
@@ -199,6 +203,16 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
             }
         }
         updateDynamicSpawn(motion.x & 0xFFFF, motion.y & 0xFFFF);
+    }
+
+    // ObjDat_LBZ1Robotnik priority $100 (sonic3k.asm:192784). The carried ChildObjDat_8D25C box
+    // pieces also start at $100 (ObjDat3_8D23C, sonic3k.asm:192789) and are drawn inline; their
+    // later $380 rewrite at loc_8CF10 (sonic3k.asm:192504) is not modelled.
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

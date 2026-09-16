@@ -5,6 +5,7 @@ import com.openggf.game.rewind.RewindStateful;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectServices;
@@ -131,6 +132,15 @@ public final class LbzRideGrappleInstance extends AbstractObjectInstance impleme
             moving = true;
         }
         updateDynamicSpawn(motion.x, motion.y);
+    }
+
+    // Obj_LBZRideGrapple writes priority $80 (sonic3k.asm:52132); the loc_2668E multisprite helper
+    // copies it with move.w priority(a0),priority(a1) (sonic3k.asm:52149).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

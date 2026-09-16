@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -192,6 +193,15 @@ public final class S3kResultsElementObjectInstance extends AbstractObjectInstanc
     static boolean withinNativeRenderWindow(int screenX, int widthPixels) {
         return screenX + widthPixels >= 0
                 && screenX - widthPixels < NATIVE_SCREEN_WIDTH;
+    }
+
+    // Obj_LevelResultsCreate never writes priority for the ObjArray_LevResults SSTs
+    // (sonic3k.asm:62591-62612), so the cleared word 0 stands: display list 0 is the ROM value.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

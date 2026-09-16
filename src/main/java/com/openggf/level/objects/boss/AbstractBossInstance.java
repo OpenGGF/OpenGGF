@@ -270,6 +270,14 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
     /**
      * ROM object id used by the transient boss-defeat explosion object.
      */
+    /**
+     * Sprite bucket of the defeat explosion: S2 Obj58 and the S3K explosion table
+     * use 0; Sonic 1 bosses override with Obj3F's bucket 1.
+     */
+    protected int getBossExplosionPriorityBucket() {
+        return BossExplosionObjectInstance.S2_S3K_PRIORITY_BUCKET;
+    }
+
     protected int getBossExplosionObjectId() {
         return 0;
     }
@@ -305,7 +313,8 @@ public abstract class AbstractBossInstance extends AbstractObjectInstance
                 state.x + xOffset,
                 state.y + yOffset,
                 getBossExplosionObjectId(),
-                getBossExplosionSfxId());
+                getBossExplosionSfxId(),
+                getBossExplosionPriorityBucket());
         services().objectManager().addDynamicObject(explosion);
     }
 

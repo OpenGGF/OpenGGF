@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -162,6 +163,23 @@ public class SidewaysPformObjectInstance extends AbstractObjectInstance
         AbstractPlayableSprite player = (AbstractPlayableSprite) playerEntity;
         applyMovement();
         updateDynamicSpawn(x, y);
+    }
+
+    // Obj7A_LoadSubObject move.b #4,priority(a1) (docs/s2disasm/s2.asm:56325); Obj7A_Init enters it
+    // with a1=a0 (s2.asm:56310-56311) so the parent and every child get the same byte.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // CPZ art word make_art_tile(ArtTile_ArtNem_CPZStairBlock,3,1) sets bit 15 (docs/s2disasm/s2.asm:56298);
+        // the MCZ override make_art_tile(ArtTile_ArtKos_LevelArt,0,0) clears it (s2.asm:56302).
+        // Children copy art_tile from the parent (s2.asm:56323).
+        return !isMcz;
     }
 
     @Override

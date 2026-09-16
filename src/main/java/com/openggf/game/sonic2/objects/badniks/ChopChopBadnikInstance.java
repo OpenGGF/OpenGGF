@@ -39,6 +39,8 @@ import java.util.List;
  */
 public class ChopChopBadnikInstance extends AbstractBadnikInstance implements RewindRecreatable {
     // Collision size from subObjData in disassembly
+    /** Obj91 bubble child: {@code move.b #4,priority(a1)} (s2.asm:74201). */
+    private static final int CHOP_CHOP_BUBBLE_PRIORITY_BUCKET = RenderPriority.bucket(4);
     private static final int COLLISION_SIZE_INDEX = 0x02;
 
     // Movement constants from disassembly
@@ -176,7 +178,9 @@ public class ChopChopBadnikInstance extends AbstractBadnikInstance implements Re
                 null,
                 3,
                 -0x88,
-                false));
+                false,
+                null,
+                CHOP_CHOP_BUBBLE_PRIORITY_BUCKET));
     }
 
     /**
