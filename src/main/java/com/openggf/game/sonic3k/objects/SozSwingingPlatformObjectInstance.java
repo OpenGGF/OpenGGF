@@ -85,7 +85,7 @@ public final class SozSwingingPlatformObjectInstance extends AbstractObjectInsta
     @Override public boolean usesCustomOutOfRangeCheck() { return true; }
     @Override public boolean isCustomOutOfRange(int cameraX) {
         boolean out = isCoarseXOutOfRange(spawn.x(), cameraX, coarseXCullRange());
-        if (out && display != null) display.setDestroyed(true);
+        if (out && display != null) ObjectLifetimeOps.deleteNoRespawn(display);
         return out;
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) {

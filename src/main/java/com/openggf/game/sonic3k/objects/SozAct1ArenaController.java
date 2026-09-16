@@ -23,7 +23,7 @@ public final class SozAct1ArenaController extends AbstractObjectInstance impleme
         if(routine==4){if(--timer!=0)return;events.doorSignal(-1);routine=8;}
         if(events.doorSignal()!=0)return;
         spawnFreeChild(()->new SozMinibossInstance(new ObjectSpawn(0x439D,0x9F7,0x97,0,0,false,0)));
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
     }
     @Override public boolean isPersistent(){return true;}
     @Override public void appendRenderCommands(List<GLCommand> commands){}
@@ -40,7 +40,7 @@ public final class SozAct1ArenaController extends AbstractObjectInstance impleme
         @Override public int getX(){return x;}
         @Override public int getY(){return 0xA00;}
         @Override public int getPriorityBucket(){return 4;}
-        @Override public void update(int vIntRunCount,PlayableEntity player){if(services().currentAct()!=0)setDestroyed(true);else x=services().camera().getX()&65535;}
+        @Override public void update(int vIntRunCount,PlayableEntity player){if(services().currentAct()!=0)ObjectLifetimeOps.deleteNoRespawn(this);else x=services().camera().getX()&65535;}
         @Override public void appendRenderCommands(List<GLCommand> commands){
             var graphics=services().graphicsManager();if(isDestroyed() || !graphics.isSpriteSatCollectionActive())return;
             graphics.requestSpriteMask();var rom=reader(services());
@@ -68,7 +68,7 @@ public final class SozAct1ArenaController extends AbstractObjectInstance impleme
         @Override public void update(int vIntRunCount,PlayableEntity player){
             var events=((SozZoneRuntimeState)services().zoneRuntimeState()).events();
             visible=false;
-            if(routine==2 && services().currentAct()!=0){setDestroyed(true);return;}
+            if(routine==2 && services().currentAct()!=0){ObjectLifetimeOps.deleteNoRespawn(this);return;}
             if(routine==0 || routine==2){
                 if(events.doorSignal()==0)return;
                 services().playSfx(Sonic3kSfx.DOOR_OPEN.id);

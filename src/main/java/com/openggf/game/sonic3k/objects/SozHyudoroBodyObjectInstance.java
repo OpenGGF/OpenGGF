@@ -31,8 +31,8 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
         super(spawn,"SOZHyudoro");this.controller=controller;xFixed=spawn.x()<<16;yFixed=spawn.y()<<16;
     }
     @Override public void update(int vIntRunCount,PlayableEntity leader){
-        if(deletePending){setDestroyed(true);return;}
-        if(controller==null){setDestroyed(true);return;}
+        if(deletePending){ObjectLifetimeOps.deleteNoRespawn(this);return;}
+        if(controller==null){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(!initialized){initialize();}
         int dark=controller.darkness();
         if(fading){animate();return;}
@@ -140,6 +140,18 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     @Override public int getCollisionFlags(){return !fading&&routine==16?0xD7:0;}
     @Override public int getCollisionProperty(){return collisionProperty;}
     @Override public boolean usesS3kTouchSpecialPropertyResponse(){return true;}
+    // Native Draw_And_Touch_Sprite polls the collision property on every overlap.
+    @Override public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(false);
+    }
+    @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return new TouchResponseProfile(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                true, true, multiRegionSource, TouchShieldDeflectCapability.NONE, 0, false,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                multiRegionSource ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
     @Override public boolean requiresContinuousTouchCallbacks(){return true;}
     @Override public int getX(){return ((xFixed>>16)+(worldPosition?0:(services().camera().getX()&0xFFFF)-0x80))&0xFFFF;}
     @Override public int getY(){return ((yFixed>>16)+(worldPosition?0:(services().camera().getY()&0xFFFF)-0x80))&0xFFFF;}

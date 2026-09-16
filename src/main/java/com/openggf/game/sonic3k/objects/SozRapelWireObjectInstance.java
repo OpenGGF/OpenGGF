@@ -129,7 +129,7 @@ public final class SozRapelWireObjectInstance extends AbstractObjectInstance imp
     @Override public boolean isCustomOutOfRange(int cameraX) {
         int reference=routine==IDLE?spawn.x():getX();
         boolean out=isCoarseXOutOfRange(reference,cameraX,coarseXCullRange());
-        if(out) for(Segment s=first;s!=null;s=s.next) s.setDestroyed(true);
+        if(out) for(Segment s=first;s!=null;s=s.next) ObjectLifetimeOps.deleteNoRespawn(s);
         return out;
     }
     @Override public void appendRenderCommands(List<GLCommand> commands) {
@@ -159,7 +159,7 @@ public final class SozRapelWireObjectInstance extends AbstractObjectInstance imp
             previousX=spawn.x();previousY=spawn.y(); frame=index==17?0x21:0;
         }
         @Override public void update(int vIntRunCount,PlayableEntity leader) {
-            if(owner==null || owner.isDestroyed()) { setDestroyed(true); return; }
+            if(owner==null || owner.isDestroyed()) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             int oldX=getX(),oldY=getY();
             if(index==1) {
                 xVelocity=(short)(owner.scalar(owner.angle+(owner.flipped?0:0x80))*0x20/owner.length);

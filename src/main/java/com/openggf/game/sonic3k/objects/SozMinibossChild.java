@@ -32,10 +32,10 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
     @Override public void update(int vIntRunCount,PlayableEntity player){
         if(debris){move(0x38);flicker=!flicker;visible=!flicker;
             int dx=((x&0xFF80)-((cameraLeft()-0x80)&0xFF80))&65535,dy=(y-cameraTop()+0x80)&65535;
-            if(dx>0x80+viewportWidth()+0xC0 || dy>0x200)setDestroyed(true);
+            if(dx>0x80+viewportWidth()+0xC0 || dy>0x200)ObjectLifetimeOps.deleteNoRespawn(this);
             updateDynamicSpawn(x,y);return;
         }
-        if(kind<DUST && (owner==null || owner.isDestroyed())){setDestroyed(true);return;}
+        if(kind<DUST && (owner==null || owner.isDestroyed())){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(kind==HITBOX){
             x=owner.getX()+(index==0?(owner.flip?12:-12):0);y=owner.getY()+(index==0?-28:0);flip=owner.flip;
             if(routine==0){frame=0x1A;collision=index==0?0:0xA8;routine=index==0?4:2;}
@@ -58,7 +58,7 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
             }
         }else if(kind==COVER){
             if(routine==0){routine=2;y+=0x40;frame=0x18;flip=owner.flip;yVel=-0x100;timer=0x3F;}
-            else if(--timer<0)setDestroyed(true);else move(0);
+            else if(--timer<0)ObjectLifetimeOps.deleteNoRespawn(this);else move(0);
         }else{
             if(routine==0){
                 routine=2;priority=3;visible=false;
@@ -66,7 +66,7 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
                 x=owner.getX()+(owner.flip?-dx:dx)+offset;y=owner.getY()+(kind==DUST?0x38:4);
                 flip=offset>=0;timer=(byte)romByte(0x770B9+index*2);script=0x7749B;
             }else if(routine==2){timer=(byte)(timer-1);if(timer<0)routine=4;}
-            else{visible=true;if(animateMulti(false)<0)setDestroyed(true);}
+            else{visible=true;if(animateMulti(false)<0)ObjectLifetimeOps.deleteNoRespawn(this);}
         }
         updateDynamicSpawn(x,y);
     }
@@ -90,6 +90,18 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
     @Override public int getCollisionFlags(){return isDestroyed()?0:collision;}
     @Override public int getCollisionProperty(){return collisionProperty;}
     @Override public boolean usesS3kTouchSpecialPropertyResponse(){return true;}
+    // Native Draw_And_Touch_Sprite polls the collision property on every overlap.
+    @Override public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(false);
+    }
+    @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return new TouchResponseProfile(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                true, true, multiRegionSource, TouchShieldDeflectCapability.NONE, 0, false,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                multiRegionSource ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
     @Override public boolean requiresContinuousTouchCallbacks(){return true;}
     @Override public void onTouchResponse(PlayableEntity player,TouchResponseResult result,int vIntRunCount){
         if(collision!=0xD7)return;
@@ -116,7 +128,7 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
                 colors[i]=value;bytes[i*2]=(byte)(value>>8);bytes[i*2+1]=(byte)value;
             }
             S3kPaletteWriteSupport.applyLine(registry,services().currentLevel(),services().graphicsManager(),"s3k.soz.miniboss",S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE,1,bytes);
-            if(--steps==0){if(registry!=null)registry.setPaletteRotationDisabled(false);setDestroyed(true);}
+            if(--steps==0){if(registry!=null)registry.setPaletteRotationDisabled(false);ObjectLifetimeOps.deleteNoRespawn(this);}
         }
     }
     /** CreateBossExp04 selects Obj_WaitForParent. Negative $80 means continuous explosions. */
@@ -127,7 +139,7 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
         Explosions(ObjectSpawn spawn,SozMinibossInstance owner){super(spawn,"EggGolemExplosions",Sonic3kObjectArtKeys.SOZ_MINIBOSS);this.owner=owner;visible=false;}
         @Override public Explosions recreateForRewind(RewindRecreateContext context){return new Explosions(context.spawn());}
         @Override public void update(int vIntRunCount,PlayableEntity player){
-            if(owner==null || owner.isDestroyed()){setDestroyed(true);return;}
+            if(owner==null || owner.isDestroyed()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
             x=owner.getX();y=owner.getY();
             if(--timer>=0)return;timer=2;
             var manager=services().objectManager();
@@ -168,7 +180,7 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
             if(!reached){player.setForcedInputMask((fromRight?AbstractPlayableSprite.INPUT_LEFT:AbstractPlayableSprite.INPUT_RIGHT)|(player.getPushing()?AbstractPlayableSprite.INPUT_JUMP:0));return;}
             NativePositionOps.writeXPosPreserveSubpixel(player,0x43A0);player.clearForcedInputMask();player.setDirection(com.openggf.physics.Direction.RIGHT);
             player.setXSpeed((short)0);player.setYSpeed((short)0);player.setGSpeed((short)0);
-            ((SozZoneRuntimeState)services().zoneRuntimeState()).requestMinibossPostResultsAlignmentComplete();setDestroyed(true);
+            ((SozZoneRuntimeState)services().zoneRuntimeState()).requestMinibossPostResultsAlignmentComplete();ObjectLifetimeOps.deleteNoRespawn(this);
         }
     }
 
@@ -183,8 +195,8 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
         @Override public boolean isPersistent(){return true;}
         @Override public void update(int vIntRunCount,PlayableEntity player){
             acceleration+=0x4000;var camera=services().camera();
-            if(minimum){int next=Math.max(target,(camera.getMinX()&65535)-(acceleration>>16));camera.setMinX((short)next);if(next==target)setDestroyed(true);}
-            else{int next=Math.min(target,(camera.getMaxX()&65535)+(acceleration>>16));camera.setMaxX((short)next);if(next==target)setDestroyed(true);}
+            if(minimum){int next=Math.max(target,(camera.getMinX()&65535)-(acceleration>>16));camera.setMinX((short)next);if(next==target)ObjectLifetimeOps.deleteNoRespawn(this);}
+            else{int next=Math.min(target,(camera.getMaxX()&65535)+(acceleration>>16));camera.setMaxX((short)next);if(next==target)ObjectLifetimeOps.deleteNoRespawn(this);}
         }
     }
     /** loc_863C0 positive Ctrl_2_locked suppresses human input, not native CPU follow. */
@@ -193,9 +205,9 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
         public P2Hold(ObjectSpawn spawn){super(spawn,"EggGolemP2Hold",Sonic3kObjectArtKeys.SOZ_MINIBOSS);visible=false;}
         @Override public boolean isPersistent(){return true;}
         @Override public void update(int vIntRunCount,PlayableEntity leader){
-            if(!(services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite player)){setDestroyed(true);return;}
+            if(!(services().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite player)){ObjectLifetimeOps.deleteNoRespawn(this);return;}
             if(!initialized){initialized=true;player.setControlLocked(true);if(player.getCpuController()!=null)player.getCpuController().clearManualControlTimer();}
-            if(!player.isControlLocked()){setDestroyed(true);return;}
+            if(!player.isControlLocked()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
             if(player.getCpuController()!=null)player.getCpuController().clearController2LogicalLatch();
         }
     }

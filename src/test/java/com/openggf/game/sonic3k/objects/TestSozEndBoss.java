@@ -169,7 +169,9 @@ class TestSozEndBoss {
     }
     @Test void independentExitFollowerUsesCapturedFallSignalAfterBossRetires() {
         var tails=new TestablePlayableSprite("tails",(short)0,(short)0);
-        services.withPlayerQuery(new ObjectPlayerQuery(()->player,()->List.of(tails)));
+        var extra=new TestablePlayableSprite("extra",(short)0x1234,(short)0x2345);
+        tails.setObjectControlAllowsCpu(true);
+        services.withPlayerQuery(new ObjectPlayerQuery(()->player,()->List.of(tails,extra,tails)));
         var boss=root();
         var follower=manager.createDynamicObject(()->new SozEndBossChild(boss,null,17));
         assertNull(get(follower,"boss"));
@@ -183,6 +185,13 @@ class TestSozEndBoss {
         assertEquals(player.getCentreX(),tails.getCentreX());
         assertEquals(player.getCentreY()-32,tails.getCentreY());
         assertTrue(tails.isObjectControlled());assertEquals(0x1A,tails.getAnimationId());
+        assertFalse(tails.isObjectControlAllowsCpu(), "native $81 stops the P2 CPU");
+        assertTrue(tails.isObjectControlSuppressesMovement());
+        assertTrue(extra.isObjectControlled(), "engine followers receive native P2 control");
+        assertFalse(extra.isObjectControlAllowsCpu());
+        assertEquals(player.getCentreX(),extra.getCentreX());
+        assertEquals(player.getCentreY()-32,extra.getCentreY());
+        assertEquals(1,tails.getObjectControlGeneration(), "duplicate identity is processed once");
         var rewind=new RewindRegistry();rewind.register(manager.rewindSnapshottable());
         var before=rewind.capture();manager.setRewindInPlaceRestoreEnabledForTest(false);
         rewind.restore(before);assertTrue(RewindSnapshotDiff.diffKey("object-manager",before.get("object-manager"),rewind.capture().get("object-manager")).isEmpty());
