@@ -67,7 +67,7 @@ public final class GameplayCaptureTool {
                 : TraceToolRomLocations.resolve(arguments.donor(), GameServices.configuration(), Path.of(""));
         GameplayCaptureSession.Settings settings = new GameplayCaptureSession.Settings(
                 arguments.width(), arguments.mainCharacter(), arguments.sidekickCharacter(),
-                arguments.donor(), donorRom, arguments.startX(), arguments.startY(), arguments.emeralds());
+                arguments.donor(), donorRom, arguments.startX(), arguments.startY(), arguments.emeralds(), arguments.titleCard());
         int zone = ZoneIds.resolve(arguments.game(), arguments.zone());
         int act = arguments.act();
 
@@ -169,7 +169,7 @@ public final class GameplayCaptureTool {
                             String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
                             int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
                             boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
-                            Path outDir, String emeralds) {
+                            Path outDir, String emeralds, boolean titleCard) {
 
         public static Arguments parse(String[] argv) {
             String game = "s3k";
@@ -197,6 +197,7 @@ public final class GameplayCaptureTool {
             int fps = 60;
             Path outDir = null;
             String emeralds = null;
+            boolean titleCard = false;
             for (int i = 0; i < argv.length; i++) {
                 String flag = argv[i];
                 switch (flag) {
@@ -234,6 +235,7 @@ public final class GameplayCaptureTool {
                     case "--fps" -> fps = number(value(argv, ++i, flag), flag);
                     case "--out-dir" -> outDir = Path.of(value(argv, ++i, flag));
                     case "--emeralds" -> emeralds = value(argv, ++i, flag);
+                    case "--title-card" -> titleCard = true;
                     default -> throw new IllegalArgumentException("Unknown argument: " + flag);
                 }
             }
@@ -251,7 +253,7 @@ public final class GameplayCaptureTool {
             }
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
                     settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
-                    video, scale, fps, outDir, emeralds);
+                    video, scale, fps, outDir, emeralds, titleCard);
         }
 
         private static String value(String[] argv, int index, String flag) {
