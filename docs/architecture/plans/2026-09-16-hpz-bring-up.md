@@ -229,3 +229,19 @@ at planned movie frames on one pass; later probes load the nearest state (user r
   `native/sonic-tails-states/states/{0441749,0442965,0444117,0444373,0445781,0447381}.State`
   = rows `$1E00` (entry), `$22C0` (before lower teleporter), `$2740` and `$2840` (seam),
   `$2DC0` (after the fight, before the altar), `$3400` (collapse and ending).
+
+### 2026-09-17 native probes from saved states
+
+Six probes (`native/run-probes.sh`, exporter `capture_hpz_route_reference.lua`, BizHawk 2.11,
+ROM SHA-1 `CFBF98C3…61D6`, movie SHA-256 `AD40FB0B…3C0`, host exit 0, 2-5 s each) answered:
+
+| Question | Native evidence | Engine comparison | Conclusion |
+| --- | --- | --- | --- |
+| Palette control at camera X `$460` | Pink `Pal_HPZIntro` gem colours on screen before movie frame 442050 (camera `$45D`→`$463`), green `Pal_HPZ` colours after | Same threshold from source; demo `03` | Corroborated; first visible switched frame not isolable (tiles off screen at the crossing) |
+| Teleporter light, gate, charge, rise, settle | `$040C/$0408` + gate while on screen; AnPal resumes at 8-frame cadence off screen; `word_4670C` every 4 frames with colour 1 = second word; drift start → first `$10` rise step 60 frames; 74 steps; settle offsets over the first 24 frames `0,0,0,-2,-4,…,-36` | Engine capture `raw-06`: drift → rise 60 frames, 74 steps, identical 24-frame settle offsets | Native behaviour matched for the sampled fields and interval |
+| `$EC0` background redraw | `Events_routine_bg` 0→4 at movie frame 444308 (P1 X `$EC2`), →8 at 444315; the brick background stays continuous across all frames | Engine keeps continuous parallax without the redraw machine | Redraw machine port rejected: no visible native effect at this boundary |
+| `$1601` altar pedestals | Save holds all Super Emeralds (`3333333`); coloured pedestals at the ROM positions, red/orange/blue/cyan colours | `--emeralds 3333333` capture at `$15A8,$3AC`: same colours and positions, frame-7 flicker on alternate frames | Presentation matches by inspection; camera Y differs only because the engine view was positioned |
+
+Measurement hazard found and fixed: the first probe read palette line 4 at `$FC32`; palette lines
+are `$20` bytes (`Normal_palette_line_4 = $FC60`), so those columns were wrong until the exporter fix.
+The palette and teleporter conclusions above use the corrected re-run.

@@ -120,6 +120,16 @@ public final class GameplayCaptureSession implements AutoCloseable {
                         + "' did not activate; check the donor ROM configuration");
             }
         }
+        if (settings.emeraldStates() != null) {
+            // Declared capture setup: seven ROM Collected_emeralds_array values (0-3).
+            java.util.List<Integer> states = settings.emeraldStates().chars()
+                    .map(c -> c - '0').boxed().toList();
+            if (states.size() != 7 || states.stream().anyMatch(v -> v < 0 || v > 3)) {
+                throw new IllegalArgumentException("--emeralds needs seven digits 0-3");
+            }
+            GameServices.gameState().restoreS3kEmeraldProgress(states,
+                    states.stream().anyMatch(v -> v >= 2));
+        }
         player = GameServices.camera().getFocusedSprite();
         if (player == null) {
             throw new IllegalStateException("no focused playable sprite after boot");
@@ -253,7 +263,12 @@ public final class GameplayCaptureSession implements AutoCloseable {
      * ROM path when non-null; {@code sidekickCharacter} is blank for solo.
      */
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
-                           Path donorRom, Integer startX, Integer startY) {
+                           Path donorRom, Integer startX, Integer startY, String emeraldStates) {
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null);
+        }
+
         public Settings {
             Objects.requireNonNull(mainCharacter, "mainCharacter");
             sidekickCharacter = sidekickCharacter == null ? "" : sidekickCharacter;
