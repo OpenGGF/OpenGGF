@@ -52,7 +52,7 @@ public final class GameplayCaptureTool {
     public static Report run(Arguments arguments) throws IOException {
         Bk2Movie movie = arguments.input() == null ? null
                 : new Bk2MovieLoader().loadMovieOrInputLog(arguments.input());
-        int scriptFrames = movie == null ? 0 : movie.getFrameCount();
+        int scriptFrames = movie == null ? 0 : Math.max(0, movie.getFrameCount() - arguments.inputStart());
         int totalFrames = arguments.frames() != null ? arguments.frames() : arguments.settle() + scriptFrames;
         if (totalFrames <= 0) {
             throw new IllegalArgumentException("Nothing to capture: supply --input or --frames");
@@ -82,8 +82,9 @@ public final class GameplayCaptureTool {
             state.newLine();
             for (int frame = 0; frame < totalFrames; frame++) {
                 int scriptIndex = frame - arguments.settle();
+                int movieIndex = scriptIndex + arguments.inputStart();
                 Bk2FrameInput input = movie != null && scriptIndex >= 0 && scriptIndex < scriptFrames
-                        ? movie.getFrame(scriptIndex) : null;
+                        ? movie.getFrame(movieIndex) : null;
                 session.step(input);
                 lastFrame = frame;
                 state.write(session.stateLine(frame, input));
@@ -166,7 +167,7 @@ public final class GameplayCaptureTool {
     /** Parsed CLI. Numbers accept decimal or {@code 0x} hex. */
     public record Arguments(String game, Path rom, String zone, int act, Integer startX, Integer startY, int width,
                             String mainCharacter, String sidekickCharacter, String donor, Path donorRom, Path input,
-                            int settle, Integer frames, int captureFrom, int every, Set<Integer> stills,
+                            int settle, int inputStart, Integer frames, int captureFrom, int every, Set<Integer> stills,
                             boolean stopOnDeath, int deathGrace, boolean video, int scale, int fps,
                             Path outDir) {
 
@@ -184,6 +185,7 @@ public final class GameplayCaptureTool {
             Path donorRom = null;
             Path input = null;
             int settle = 0;
+            int inputStart = 0;
             Integer frames = null;
             int captureFrom = 0;
             int every = 1;
@@ -213,6 +215,7 @@ public final class GameplayCaptureTool {
                     case "--donor-rom" -> donorRom = Path.of(value(argv, ++i, flag));
                     case "--input" -> input = Path.of(value(argv, ++i, flag));
                     case "--settle" -> settle = number(value(argv, ++i, flag), flag);
+                    case "--input-start" -> inputStart = number(value(argv, ++i, flag), flag);
                     case "--frames" -> frames = number(value(argv, ++i, flag), flag);
                     case "--capture-from" -> captureFrom = number(value(argv, ++i, flag), flag);
                     case "--every" -> every = number(value(argv, ++i, flag), flag);
@@ -245,7 +248,7 @@ public final class GameplayCaptureTool {
                 throw new IllegalArgumentException("--act is one-based (1 or 2)");
             }
             return new Arguments(game, rom, zone, act - 1, startX, startY, width, main, sidekick, donor, donorRom, input,
-                    settle, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
+                    settle, inputStart, frames, captureFrom, every, Set.copyOf(stills), stopOnDeath, deathGrace,
                     video, scale, fps, outDir);
         }
 

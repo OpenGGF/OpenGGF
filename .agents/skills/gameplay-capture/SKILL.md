@@ -44,6 +44,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--donor off\|s1\|s2` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
 | `--input <file>` | none | `Input Log.txt` or `.bk2`; neutral input after it ends |
 | `--settle <n>` | `0` | Neutral frames before the input log starts |
+| `--input-start <n>` | `0` | First movie frame to play (e.g. a level start late in a complete-run `.bk2`) |
 | `--frames <n>` | settle + log length | Total frames to step |
 | `--capture-from`, `--every` | `0`, `1` | First captured frame and PNG stride |
 | `--stills a,b` | none | Extra `still-<frame>.png` copies at those frames |

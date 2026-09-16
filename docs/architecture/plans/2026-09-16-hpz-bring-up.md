@@ -143,6 +143,8 @@ children before implementation. Engine subtype `$28` still falls back to
 | `04-hpz-knuckles-background-patch-before-after.mp4` | `HPZ_BackgroundInit` Knuckles row patch removes the Master Emerald backdrop | `--main knuckles`, same input, frames 385-660 | Backdrop enters at ~423 |
 | `05-hpz-teleporter-lower-to-upper-pad.mp4` | `Obj_SSZHPZTeleporter` + `Obj_TeleporterBeam`: charge, rise `$4A0`, settle on the upper pad | Teleport `$AF0,$8B0`, `inputs/jump-onto-pad.txt`, frames 80-480 | Lands ~118, rise 260-340, released ~440 |
 | `06-hpz-knuckles-teleporter-exit-to-ssz2.mp4` | Knuckles' forced `$4A` upper pad lifts him above camera Y `$240`; `loc_45B94` saves and starts `$A01` | `--main knuckles`, teleport `$AF0,$400`, `inputs/jump-onto-pad.txt`, frames 80-460 | Exit request frame 286, SSZ act 2 loaded at 298 (SSZ presentation itself is unimplemented) |
+| `20-hpz-knuckles-cold-route-uncut.mp4` | Uncut cold Knuckles route to SSZ act 2 from his movie input | `--main knuckles --input <knuckles complete-run bk2> --input-start 411496`, frames 0-999 | Exit ~880 |
+| `21-hpz-sonic-tails-cold-route-to-fight-uncut.mp4` | Uncut cold Sonic + Tails route from `$1601` entry to the fight floor (current frontier) | `--input <sonic-tails complete-run bk2> --input-start 441757`, frames 0-2999 | Teleporter ~1500-1750 |
 
 Not demonstrable at width 320: the `$AA0` camera limits (Knuckles right, Sonic/Tails
 upper-route left). On the reachable routes a wall stops the player before the camera
@@ -213,3 +215,17 @@ exit boundary (giant_ring) was never observed"), reproduces with the same messag
 Native evidence note: the first complete-run capture replayed from movie frame 0 and had not reached
 HPZ after seven minutes, so it was stopped. `capture_hpz_route_reference.lua` now saves native states
 at planned movie frames on one pass; later probes load the nearest state (user recommendation).
+
+### 2026-09-17 cold routes, capture alignment and native states
+
+- `TestS3kHpzColdRoutes`: Sonic + Tails movie input from frame 441758 (row `$1E09`) reaches the
+  fight floor via the `$B40` teleporter; Knuckles movie input from frame 411496 meets the `$A01`
+  exit condition within 60 frames of the ROM's row `$35C` and loads SSZ act 2. 2 tests, 0 skips.
+- `GameplayCaptureTool --input-start` plays a late movie section. The capture path runs one frame
+  behind `HeadlessTestFixture` on the same input (per-frame comparison: first position difference
+  at frame 6, a constant one-frame lag), so route captures use start frame - 1. Recorded as a
+  harness difference, not a gameplay divergence.
+- Native states for probes (host exit 0, 436 s, BK2 SHA-256 `AD40FB0B…3C0`, ROM SHA-1 verified):
+  `native/sonic-tails-states/states/{0441749,0442965,0444117,0444373,0445781,0447381}.State`
+  = rows `$1E00` (entry), `$22C0` (before lower teleporter), `$2740` and `$2840` (seam),
+  `$2DC0` (after the fight, before the altar), `$3400` (collapse and ending).
