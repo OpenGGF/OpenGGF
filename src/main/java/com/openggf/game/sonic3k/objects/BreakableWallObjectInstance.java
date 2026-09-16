@@ -205,7 +205,7 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
                 break;
             }
             if (participant instanceof AbstractPlayableSprite sprite) {
-                applyCheckpointContact(sprite, batch.perPlayer().get(participant));
+                applyCheckpointContact(sprite, batch.perPlayer().get(participant), participantIndex == 0);
                 if (broken && participantIndex == 0) {
                     restoreSidekickPushContactsAfterPrimaryBreak(participants, batch, participantIndex + 1);
                 }
@@ -251,7 +251,8 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         return new ObjectPlayerQuery(() -> primary, query::sidekicks);
     }
 
-    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result) {
+    private void applyCheckpointContact(AbstractPlayableSprite player, PlayerSolidContactResult result,
+            boolean playerOneLeg) {
         if (player == null || result == null || broken || result.kind() == com.openggf.game.solid.ContactKind.NONE) {
             return;
         }
@@ -263,6 +264,13 @@ public class BreakableWallObjectInstance extends AbstractObjectInstance
         // MGZ spin-break walls key off side-contact feedback instead of the
         // generic push flag. The other modes still require a pushing contact.
         if (config.breakMode == BreakMode.MGZ_SPIN_BREAK) {
+            if (result.kind() != com.openggf.game.solid.ContactKind.SIDE) {
+                return;
+            }
+        } else if (config.breakMode == BreakMode.KNUCKLES_ONLY && playerOneLeg) {
+            // loc_21862 tests SolidObjectFull's Player_1 side-touch bit (swap d6),
+            // which loc_1E094 also sets for an airborne player without Status_Push.
+            // Only the Player_2 leg (loc_218B0) consults the wall's pushing bit.
             if (result.kind() != com.openggf.game.solid.ContactKind.SIDE) {
                 return;
             }

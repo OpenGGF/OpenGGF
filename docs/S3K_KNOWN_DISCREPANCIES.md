@@ -1833,11 +1833,20 @@ when the rock enters its fall routine.
 entry, pushing right starts the authored `$5EC → $47F0 → $FFFF` track before
 reaching switch `($4830,$5B0)`. The required preceding world/route state has not
 been established. Do not claim completion of this puzzle from unit contact tests
-or the separate passing channel-8 switch/door route. The independent recording
-contains no player or nearby-object samples in this lower puzzle region; it uses
-the upper switch at `($4A30,$330)` and swing instead. This establishes the
-recorded route, not that the lower coupling is optional or that its passage works.
-See the act matrix and v2 execution record.
+or the separate passing channel-8 switch/door route. The independent Sonic + Tails
+recordings and the Tails solo recording never enter this region; they use the upper
+switch at `($4A30,$330)` and swing instead.
+
+Native evidence of passage exists in the committed Knuckles run segment
+`runs/s3k-knuckles-complete-superemeralds/soz_2` (Act 2 rows 28758–31456). Knuckles
+first stands on push switch `$9B` at `$4830` alone; door `$0B` at `$4A0D` stays
+closed and he climbs the wall at `$49F5` instead. Above, sand cork `$9C` at `$4940`
+falls from y `$3E8` to `$580` (rows ~29880–30000). On his return the rock is pushed
+from `$4770` to `$4834` (rows 30268–31240, player grounded at y `$5AC`), carrying the
+switch to `$4850`; the door is raised (y `$514`, was `$580`) when he walks through at
+y `$5AC` (row ~31420).
+The recording does not establish whether the cork drop is required for the push, and
+the engine has not reproduced this sequence. See the v2 execution record.
 
 ## SOZ Background Event Modes and Torch Animation
 

@@ -2955,3 +2955,52 @@ entry, a corrected clip with shifted event times, sparse-frame footage and mixed
 viewport sources. Each stays scoped to the requested work; deferred native/visual
 acceptance remains open and the reel never substitutes for a continuous route.
 No engine behavior or executable helper changed, so engine suites are not rerun.
+
+## Recorded-route evidence follow-up (2026-09-16)
+
+Base `develop` / `4a9962069`; worktree `.worktrees/soz-recorded-routes`, branch
+`bugfix/ai-soz-recorded-routes`. Question: do the committed native run segments
+answer the lower subtype-`$87` puzzle, and does the engine follow the recorded
+Knuckles and Tails solo inputs?
+
+### Lower puzzle: native passage found
+
+A position scan of every committed SOZ recording for Act 2 rows inside
+`$4600–$4A80 × $500–$680` found samples only in the Knuckles segment
+`runs/s3k-knuckles-complete-superemeralds/soz_2` (2,450 rows, 28758–31439); both
+Sonic + Tails recordings, `soz_completerun` and the Tails solo segments have none.
+Object codes resolve through `sonic3k.lst`: `loc_405D6` rock, `loc_418E4`
+push switch, `loc_41BE0` door, `loc_41E6A` sand cork. The observed sequence and
+its limits are recorded under "SOZ Pushable Rock: Door Coupling" in the S3K
+known discrepancies. The engine has not yet reproduced it, and the earlier
+positioned attempts do not record whether the cork had already fallen.
+
+### Engine replay of recorded solo inputs
+
+Temporary, uncommitted `AbstractTraceReplayTest` subclasses drove the four solo
+segments with a per-row engine-position logger (comparison only). The two
+segments that start mid-level (`knuckles/soz_2` after a bonus stage, `tails/soz_2`
+in Act 2) never became playable: the player stayed at the bootstrap position with
+control locked, so they are a harness bootstrap limitation and gave no route
+evidence. The two Act 1 segments exposed two engine defects:
+
+- **Knuckles-only breakable wall** (`knuckles/soz` row 1463, wall `$D90,$470`):
+  `loc_21862` breaks on SolidObjectFull's Player_1 side-touch bit, which
+  `loc_1E094` also sets in the air; the engine required `pushingNow`, so a
+  jumping Knuckles stopped at `$D75` instead of continuing at x_vel `$359` from
+  `$D71`. The Player_2 leg (`loc_218B0`) keeps its wall pushing-bit gate.
+  After the fix, errors fell from 256 to 73 and the engine path stayed within
+  32 px through the bonus-stage entry at row 3193.
+- **Tails flight activation frame** (`tails/soz` row 534): `Tails_Stand_Freespace`
+  sets `double_jump_flag` inside `Tails_JumpHeight` but still applies
+  `MoveSprite_TestGravity` (+`$38`) that frame; the engine applied flight gravity
+  (+`$08`) immediately (`$FE20` vs native `$FE50`). One existing assertion in
+  `TestSidekickCpuManualFlight` had encoded the same-frame behavior from the
+  original feature commit `9e20ecff6` and now expects `$0038`. After the fix the
+  first >32 px separation moved from row 709 to 6560 and errors fell from 1219
+  to 1058.
+
+The next Tails separation is a one-frame-early hurt at row 5758 from an
+emerging `Obj_Sandworm` while Tails sinks in quicksand; it is not yet diagnosed.
+Pure fixed-input replay drifts after that, so later deaths (engine row 15874)
+are not attributed.

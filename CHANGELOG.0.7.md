@@ -6,6 +6,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K Knuckles walls and Tails flight start:** Knuckles now breaks the
+  Knuckles-only walls (HCZ, MGZ, CNZ, LBZ, MHZ and SOZ variants) when he hits them
+  in mid-air, keeping his speed as the ROM does, instead of stopping against them.
+  Player-controlled Tails keeps normal air gravity on the frame flight starts, so the
+  climb out of a jump matches the ROM from the first flying frame.
+
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now
   draw in the display list their ROM `priority` word selects instead of their

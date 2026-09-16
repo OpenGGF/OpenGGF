@@ -124,6 +124,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 	private boolean inputJump, inputJumpPress;
 	private boolean inputRawLeft, inputRawRight;
 	private boolean tailsFlightVerticalUpdatedThisFrame;
+	// Tails_JumpHeight sets double_jump_flag mid-Tails_Stand_Freespace; the rest of
+	// that frame still runs the normal airborne path (sonic3k.asm:27553-27564).
+	private boolean tailsFlightActivatedThisFrame;
 	private boolean slopeResistAppliedThisFrame;
 	private boolean directionalBrakeReachedZero;
 	private boolean facingFlipForcesPushClearAfterGroundWall;
@@ -500,6 +503,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// from an earlier slip".
 		sprite.setSlopeRepelJustSlipped(false);
 		tailsFlightVerticalUpdatedThisFrame = false;
+		tailsFlightActivatedThisFrame = false;
 
 		// Invalidate the pre-friction inertia snapshot at frame start; doGroundMove
 		// repopulates it before updateCrouchState consumes it (see field comment).
@@ -1545,11 +1549,14 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			return false;
 		}
 		sprite.getTailsFlightController().activate();
+		tailsFlightActivatedThisFrame = true;
 		return true;
 	}
 
 	private void updateManualTailsFlight() {
-		if (!isManualTailsFlightActive()) {
+		// Tails_Stand_Freespace only branches to Tails_FlyingSwimming on entry, so
+		// Tails_Move_FlySwim first runs on the frame after activation.
+		if (tailsFlightActivatedThisFrame || !isManualTailsFlightActive()) {
 			return;
 		}
 		boolean carryingMainCharacter = sprite.getTailsCarryController() != null
@@ -3270,7 +3277,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			sprite.move(sprite.getXSpeed(), sprite.getYSpeed());
 			return;
 		}
-		if (isTailsFlightPhysicsActive(sprite)) {
+		if (isTailsFlightPhysicsActive(sprite) && !tailsFlightActivatedThisFrame) {
 			// Tails_FlyingSwimming (sonic3k.asm:27570) applies Tails_Move_FlySwim
 			// before MoveSprite_TestGravity2. MoveSprite_TestGravity2 does not
 			// apply +$38 air gravity (that's MoveSprite_TestGravity's job), and
@@ -3320,7 +3327,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			cpu.applyFlyingCarryVerticalVelocity();
 			return;
 		}
-		if (isTailsFlightPhysicsActive(sprite)) {
+		if (isTailsFlightPhysicsActive(sprite) && !tailsFlightActivatedThisFrame) {
 			sprite.setYSpeed((short) (sprite.getYSpeed() + 0x08));
 			return;
 		}
@@ -4364,7 +4371,7 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// NOT the $28 used in Obj01_MdAir/MdJump. All three games (S1/S2/S3K) are identical.
 		// S3K Tails_FlyingSwimming owns its +$08 flight/swim gravity and skips
 		// this generic underwater subtraction (sonic3k.asm:27570, 27633).
-		if (!sprite.isInWater() || isTailsFlightPhysicsActive(sprite)) {
+		if (!sprite.isInWater() || isTailsFlightPhysicsActive(sprite) && !tailsFlightActivatedThisFrame) {
 			return;
 		}
 		short reduction = 0x28;
