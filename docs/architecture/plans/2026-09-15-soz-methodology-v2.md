@@ -3032,3 +3032,53 @@ exposed that the engine does not raise the `starpost_bonus` transition at the en
 of Knuckles `soz` (step cap exceeded at BK2 cursor 349659), and that the Tails
 chain loses segment ownership after an engine death that follows the
 undiagnosed row-6553 separation.
+
+### Replay follow-up: enemy art, touch ability and end-sign timing
+
+Continued on `bugfix/ai-soz-recorded-routes` after `939d4a137`.
+
+- `c69f11008`: `scheduleEnemyKosArt` had no SOZ case, so `PLCKosM_SOZ` was never
+  submitted and every later Kosinski ordinal lagged by three. This caused the
+  row-34 queue mismatch in every SOZ replay, the `soz_completerun` KosM FIFO abort,
+  and the stalled star-post bonus art. Measurements are in the trace frontier log.
+  With it, engine Knuckles in `knuckles/soz` touches the bonus stars on row 3193,
+  the native request frame.
+- `c785b8415`: TouchResponse takes the Insta-Shield branch only for Sonic. The
+  engine gave flying Tails and gliding Knuckles the expanded box and temporary
+  invincibility, so the recorded Skorp-tail hurt at `tails/soz` row 6553 never
+  happened. The standalone Tails Act 1 replay then matched to row 17834 (errors
+  1016 -> 527). No other S3K trace replay report changed (61 tests, identical
+  per-class results on the branch before and after).
+- `f5f0f2f83`: `loc_76E48` jumps into `Obj_EndSignControl`, installing the `$77`
+  wait in the golem's final pass; the engine replacement installed one pass later.
+  Obj_EndSign now spawns on native row 16732, and the recorded Tails bumps carry it
+  to the hidden monitor. The Tails Act 1 replay matches to the act handoff at row
+  18108 with no engine death; before 17771 only eight small error groups remain.
+
+Test-only controller consequences (no production rule was fitted): the positioned
+SOZ1 golem route uses the left-side approach for every Tails row (native Tails at
+width 320 died at tick 3202 without flight invulnerability), and native Tails in
+`TestSozEndBossInputRoute` uses the default `48/12/-12` rhythm with presses started
+only on the ground (a bounded 216-combination rhythm search without that option found
+no route once flight became vulnerable).
+
+Change-based run on `f5f0f2f83` against `4a9962069` (run
+`20260916T211907Z-24be7833`): 2672 ordinary classes, 21,619 tests, six failures,
+zero errors, 27 opt-in/native skips, 991 s; guards 669 tests, zero failures, 179 s.
+Failures were the five native-Tails end-boss rows fixed by the grounded-press
+controller (the class then passed 30/30) and the pre-existing width-800
+`TestSozAct1ArenaAdmission` failure. Diagnostics were acknowledged and deleted.
+
+Still open from the recorded routes:
+
+- The engine clears Ring_count when results end (engine row 17771); native
+  `Obj_TitleCardWait` clears it at row 18198 after the Act 2 title card. The
+  generic non-seamless results reset in `S3kResultsScreenObjectInstance` is shared
+  by several zones and needs its own measured change.
+- Standalone mid-level segments lack native saved-return state. Chain replays from
+  segments 57/48 now pass the star-post bonus request but stop in the shared run-chain
+  title-card timing (`duplicate or reordered hardware service boundary at raw_frame=914`,
+  `missing PLC preparation for LEVEL_TITLE_CARD`); this is S3K run-chain
+  infrastructure, not SOZ gameplay.
+- `knuckles/soz` first differs at row 2039 (`player_animation_id` `$00` vs `$20`);
+  not yet investigated.
