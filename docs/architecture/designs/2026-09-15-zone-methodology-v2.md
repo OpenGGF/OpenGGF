@@ -32,7 +32,9 @@ why art priority, plane assignment and child presentation need independent check
 
 **Inventory → focused failing test → playable route slice → short native
 comparison and representative compatibility → boundary review → next slice.**
-Finish with complete routes and the full applicable validation obligations.
+Extend a cold traversal route from the first slice; finish with complete routes
+and the full applicable validation obligations. Full-route native parity replay
+can remain late without deferring ordinary cold reachability.
 
 1. **Establish evidence and ownership.** Inspect current production registrations,
    decoded placements/subtypes, reachable dynamic children, events, art/PLC and
@@ -50,7 +52,13 @@ Finish with complete routes and the full applicable validation obligations.
 3. **Deliver a route slice.** Join the necessary objects, events, collision, art
    and camera behavior into a traversable boundary. Resolve shared ownership
    before consumers. Keep local tests independent of long route prerequisites.
-4. **Compare a short native sequence.** Check entry, active behavior and release
+   Preserve controller inputs from cold entry to the current frontier and extend
+   them with each slice. Record the first blocker and actual resolved roster,
+   donor and viewport; positioned success does not advance that cold frontier.
+4. **Compare a short native sequence.** Read the owning disassembly first. Give
+   each native probe a named unresolved integration or presentation question;
+   do not rediscover explicit source constants through measurement. Check entry,
+   active behavior and release
    with the same declared inputs and equivalent starting conditions. Compare
    relevant state and actual rendered output where presentation changed. A
    one-frame screenshot or final-state equality cannot prove update cadence.
@@ -107,6 +115,10 @@ replay. Match the declared native region across a short sequence at standard
 width, then check wider viewports for seams. A static screenshot cannot prove
 animated cadence; a changing CPU pattern cannot prove the renderer received it.
 Record absent event owners and unmatched native pixels as open dependencies.
+Inspect moving captures at native and representative wide widths before closing
+a presentation slice. Include animation-phase changes, exposed plane edges and
+sprite/track overlaps. Record what was inspected: creating a movie or checking
+CPU tile data does not establish that the rendered sequence is correct.
 
 ## Independent evidence contract
 
@@ -168,3 +180,23 @@ Promote reusable probes and lessons into existing tools/catalogues. Durable
 captures live in an explicit external task directory; temporary diagnostics follow
 the repository cleanup rules. This revision rejects both blanket trace deferral
 and constant full-route replay during foundational implementation.
+
+## SOZ retrospective amendments (2026-09-16)
+
+The [SOZ retrospective](../plans/2026-09-15-soz-methodology-v2.md#2026-09-16-retrospective-and-remaining-acceptance)
+records useful source-backed tests and boundary reviews, but late cold traversal
+and insufficient moving visual inspection. The inventory now includes player and
+terrain dispatch plus coupled presentation; the delivery loop requires an evolving
+cold route and question-led native probes. Strict replay remains separate.
+
+At delivery, reconcile the plan header, active next actions and matrix summaries
+with final evidence. Keep dated failed attempts and rejected approaches as history,
+with clear scope. Name the delivered configuration and remaining acceptance;
+an implementation campaign or one character route does not close the methodology.
+
+Keep the complete media archive separate from an editorial highlights reel.
+The archive preserves labelled probes, failures and originals. Highlights use
+moving gameplay, one useful example per feature, ordered by act and level
+progression, with bosses and exits at their route positions. Avoid still montages
+and repeated width/roster tests. Record exact source intervals and retain full
+cold runs for uninterrupted traversal evidence.

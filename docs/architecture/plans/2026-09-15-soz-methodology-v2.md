@@ -1,10 +1,13 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15. Status: both acts' placed factories, bosses, coupled lighting,
-scroll/animation, arena and transition owners are implemented at the bounded
-scopes below. Cold-route verification is active; terrain-driven sand sliding is implemented and
-wrapped background collision is the current source-backed traversal follow-up.
-Full native/pixel certification remains open, including partial VDP redraws.
+Date: 2026-09-15; status reconciled 2026-09-16. Implementation and two cold
+native-movement Sonic + Tails routes at width 320 are delivered on `develop`
+(`358679affa`, delivery record `1e3626aca`). Both bosses and outgoing transitions
+are verified in those routes. Full methodology acceptance remains incomplete:
+the lower Act 2 subtype-$87 puzzle, strict native behavior/pixel parity, broader
+character/donor/viewport routes and remaining lifecycle/rewind products are open.
+See [remaining acceptance](#2026-09-16-retrospective-and-remaining-acceptance).
+Dated execution sections retain the evidence and status at the time of each run.
 
 ## Objective and authority
 
@@ -67,6 +70,10 @@ disproves that distinction. `No_Resize` is not evidence that SOZ has no events.
 
 ## Explicit presentation work and revised next batch
 
+Historical amendment during implementation; the current status and next actions
+are in the header and final retrospective. This table records the amendment’s
+acceptance boundaries, not today’s outstanding task list.
+
 The original slice table named scroll/animation routines but the execution summary
 and next-task selection drifted toward placed objects. Presentation remains part
 of route completion, not a final cosmetic pass. Audit at `e9e7267dc` found SOZ
@@ -119,14 +126,12 @@ Boss, sand-rise and transition presentation stays attached to its owning slice.
 
 ## Execution record and next action
 
-The object families listed in the status header are delivered at the bounded scopes
-recorded below. The revised next batch above makes parallax and animated background
-art explicit. Cold rock reachability, full dynamic/art/audio/presentation inventory
-and later route slices remain open. Keep commands, RED/GREEN results,
-review findings, resolved
-catalogue contradictions, amendments and rejected approaches in this plan as work
-proceeds. Reuse the existing SOZ analysis for verified ROM findings and the act
-matrices for acceptance evidence. No new receipt or log format is required.
+Implementation and the two bounded cold routes are delivered. Next establish
+independent passage evidence for the lower Act 2 rock/switch puzzle, then resolve
+the strict trace failure and expand the remaining matrix obligations.
+The [retrospective](#2026-09-16-retrospective-and-remaining-acceptance) is the current
+action list; subsequent dated sections preserve the execution history. Reuse the
+SOZ analysis for ROM findings and act matrices for acceptance evidence.
 
 Documentation validation for this initial plan checks local links, whitespace,
 policy trailers and behavioral scenarios: blocked native capture must remain
@@ -1596,16 +1601,17 @@ progression shortcuts.
 
 All existing and new media stays under the existing external SOZ task root
 (`soz-v2-20260915`), preserving previously shared links. An external capture index
-tracks sources. At the end, concatenate the task's clips into a chronological
-highlights compilation, normalizing video dimensions without distorting pixels,
-and keep the originals beside it. Earlier broken attempts remain labelled as
-work-in-progress evidence, not certified gameplay. Native references and positioned
-setups must remain distinguishable from ordinary engine routes in captions.
+tracks sources. Preserve a complete chronological archive and a separate curated
+highlights reel. The latter follows Act 1 then Act 2 progression using moving
+successful gameplay; repeated tests and sampled stills belong in the archive.
+Failed attempts, native references and positioned setups remain labelled and
+distinguishable from ordinary engine routes.
 
-Campaign status: active. Remaining acceptance is the full matrix above, including
-both boss exits, Act1→Act2 and Act2→next-zone handoffs, supported character routes,
-lifecycle/breadth tests, and final compilation. Do not mark complete from a count
-of registered objects or merged commits.
+Campaign delivery status: integrated and pushed, with both cold Sonic + Tails
+boss exits and handoffs verified and media delivered. Original full-matrix
+acceptance remains incomplete: route breadth, native/pixel parity and remaining
+mechanic/lifecycle obligations continue below. Registered object counts, merged
+commits and two successful routes do not close those gaps.
 
 ### Shared Act 2 lighting prerequisite
 
@@ -2053,9 +2059,63 @@ queue capacity or guard budget was weakened to close delivery.
 
 The unified external `soz-v2-20260915` folder retains the original media,
 controller inputs and state records. Its 311 movie/probe sources are assembled
-chronologically by `assemble_highlights.py` into `SOZ-work-compilation.mp4` and
-`SOZ-work-highlights.mp4`, with separate chapter indexes and a source SHA-256
-inventory. Sparse probes, positioned scenarios and excerpts are labelled; final
-cold movies remain available independently. The external README records final
+chronologically by `assemble_highlights.py` into `SOZ-work-compilation.mp4`, with
+a chapter index and source SHA-256 inventory. After user feedback about stills
+and duplicate tests, `curate_highlights.py` replaces the initial all-source reel
+with 22 moving excerpts (4:20.700) from the two final cold runs, ordered through
+Act 1 then Act 2, in `SOZ-work-highlights.mp4`. `highlights-chapters.csv` records
+exact source intervals. The archive and originals are unchanged; final cold
+movies remain available independently. The external README records final
 media verification and durations. Generated validation diagnostics are consumed
 and acknowledged rather than archived.
+
+## 2026-09-16 retrospective and remaining acceptance
+
+The campaign delivered playable cold completions, not every acceptance item in
+the original objective. Earlier aggregate “complete” wording was too broad.
+Act matrices remain authoritative for individual obligations. This reconciliation
+claims no new runtime result, route coverage or native parity.
+
+### Lessons and amendments
+
+- **Inventory:** placed factories were insufficient. User review prompted explicit
+  parallax/animated-tile planning; foreground shimmer, cold player entry and
+  terrain-driven sand sliding also needed their own production owners. The design
+  includes presentation and player/terrain dispatch from the start.
+- **Sequencing:** positioned family tests preceded cold success for too long.
+  Cold traversal exposed shared collision, initialization and transition issues.
+  Future slices extend a persistent cold input route while keeping short local
+  tests independent; this does not require constant strict full-route replay.
+- **Native evidence:** source already explained darkness constants. The pilot
+  added live participant ownership and visible timing evidence. Future probes
+  start with a named question left after source review.
+- **Visual acceptance:** initial inspection missed purple flame tiles, a wide
+  background seam and switch/track layering. Moving native/wide inspection must
+  examine animation phases, exposed edges and overlaps, not just artifact creation.
+- **Configuration:** a purported solo capture resolved an unknown alias to a
+  fallback character. Assert actual roster/donor/viewport before counting evidence;
+  corrected captures do not retroactively certify the earlier attempts.
+- **Rejected work:** 42 Act 1 redraw image pairs showed no visible change at the
+  tested boundaries, so the prototype was removed. Act 2’s measured entry flash
+  and wide-margin redraw justified `60526be71`. Source-level differences alone
+  do not establish a visible defect or justify unnecessary renderer changes.
+- **Media:** representing all 311 sources made poor highlights. The revised
+  22-scene reel is editorial selection; the archive preserves the complete record.
+
+### Remaining acceptance, in recommended order
+
+1. Establish native and engine passage evidence for the lower Act 2 subtype-$87
+   rock/switch puzzle. The successful upper route and failed lower attempts prove
+   neither lower passage nor its optionality. Do not alter geometry without evidence.
+2. Resolve the independent strict trace failure and compare outstanding native
+   state/presentation intervals. Cold engine completion is not native parity;
+   retain the recorded frontier and comparison tolerances.
+3. Expand complete routes across supported characters, donors, viewports and teams,
+   prioritizing distinct branches and sensitive mechanics in the act matrices.
+4. Close remaining checkpoint, repeated-transition, rewind/forward-replay and
+   per-mechanic obligations. Whole-route success does not certify every placement,
+   branch, lifecycle boundary or pixel sequence.
+
+Final ordinary-suite results and baseline guard attribution remain as recorded
+above. This follow-up changes prose only: check links, status/scope consistency,
+media references and commit policy; do not rerun unchanged engine tests.
