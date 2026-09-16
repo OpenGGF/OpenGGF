@@ -247,3 +247,5 @@ Normal Act 1 parallax/shimmer, corrected animated art and sand palette cycling n
 have focused checks and 320/528 captures; matched pixels and remaining event modes
 stay open independently of the implemented placed-object families. See
 the [revised SOZ batch order](../architecture/plans/2026-09-15-soz-methodology-v2.md#explicit-presentation-work-and-revised-next-batch).
+
+SOZ cold-route continuation (2026-09-16): the [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md#cold-controller-completion) now records a fixed-input native Sonic + Tails, width-320 run from cold entry through the real boss to playable Act 2. The explicit capture test passes on the merged runtime without skips. Other character/donor/viewport routes and exact native parity remain separate obligations.

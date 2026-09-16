@@ -1,7 +1,7 @@
 # S3K Sandopolis Act 1 coverage matrix
 
 Canonical slot: `S3K_SANDOPOLIS_1`; ROM zone `$08`, act index 0, SKL pointer set.
-Status: partial bring-up; no full-act, native-parity or visual certification.
+Status: native Sonic + Tails cold completion verified; broader route, native-parity and visual certification remain open.
 Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 [placed inventory](../../research/s3k-zones/soz-object-inventory.md).
 
@@ -9,7 +9,7 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 
 | Route/dimension | Obligation | Current evidence / gap |
 | --- | --- | --- |
-| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Native-character checkpoint coverage and positioned mechanisms/boss boundaries implemented; Act 1 has short cold quicksand/vine routes. Connected cold completion remains open |
+| Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Sonic + Tails at native 320 completes cold entry through the boss and playable Act 2 using the fixed controller asset; Sonic solo full completion remains open. Native-character checkpoint and positioned boundary checks supplement the route |
 | Tails solo | Same, including native character branches and flight interactions | Every authored post activates/reloads; selected traversal and boss branches covered. Full flight-sensitive route and victory remain open |
 | Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Every authored post activates/reloads; local native character branches and selected mechanisms covered. Full distinct route/progression remains open |
 | Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Selected mechanisms and three-player terrain restore/replay covered; repeated checkpoint team reset evidence below. No finite follower maximum is declared by the production team contract; full multi-owner interaction breadth remains open |
@@ -36,7 +36,7 @@ for Sonic, Tails and Knuckles. All five posts have native-character activation/r
 | Other traversal objects / badniks | All 599 Act1/490 Act2 placed records bind to concrete factories; family production tests listed below | Positioned family reachability; connected cold routes remain open | Short graph/contact/creation/deletion restore/replay, including forced recreation; complete per-placement/participant product open | Source-backed branches; matched native sequences remain open | Local ROM-art captures; full pixel comparison open |
 | CHECKPOINT / DEATH | `TestSozCheckpointReloadProduction`: all five authored posts × three native leaders; representative post also covers five widths and three donors | Physical activation from positioned approaches; cold route between posts open | Activation recreated/replayed, production death/reload; selected repeated mixed/duplicate-team reset checks below | Source checkpoint placement/respawn assertions; matched native death movie open | Native pixel comparison open |
 | WORLD / CAMERA / EVENTS | Captured `SozEventState`, mutation pipeline and arena owners | Positioned arena admission and source camera gates covered | Event/camera/art graph and terrain restore/replay in focused tests; connected full-route event sequence open | Source-backed state/threshold checks; native sequence comparison open | Arena/cold scenes inspected; matched native sequence open |
-| BOSS / EXIT | Egg Golem positional sink defeat, door and seamless Act2 entry implemented | Controller-only positioned admission → pursuit/sink → results → door → playable Act2; cold victory open | Eight forced graph reconstruction/replay milestones through admission, articulation, attack, sink, signpost, results, alignment and fade, plus Act2 destination replay | Native source positional defeat; matched combat trajectory open | Positioned awakening/door and connected victory captures; full native pixel sequence open |
+| BOSS / EXIT | Egg Golem positional sink defeat, door and seamless Act2 entry implemented | Controller-only cold Sonic + Tails and positioned admission → pursuit/sink → results → door → playable Act2 verified | Eight forced graph reconstruction/replay milestones through admission, articulation, attack, sink, signpost, results, alignment and fade, plus Act2 destination replay | Native source positional defeat; matched combat trajectory open | Positioned awakening/door and connected victory captures; full native pixel sequence open |
 
 ## Execution evidence
 
@@ -188,3 +188,21 @@ and airborne players at all relevant boundary values and three radii. The
 99-test solid/vine/short-route selection passes without skips after correction;
 short-route graph replay remains included. The separate full-trace result is
 recorded in the frontier log rather than inferred from these focused checks.
+
+## Cold controller completion
+
+`9f779282f` adds `TestSozColdAct1Capture` and the compressed controller asset
+`src/test/resources/routes/s3k/soz1-cold-sonic-tails.bk2`. The 26,716-frame
+route starts from cold SOZ1 with the intro enabled, uses native Sonic + Tails
+at width 320, crosses the real level, defeats the naturally spawned Egg Golem
+by sinking it, and reaches released Act2 control at frame 26,535. It retains
+180 destination frames and asserts no death, the live roster, boss/sink events,
+destination palette and visible world pixels. No post-boot position, physics,
+phase or damage writes drive the route.
+
+The final merged runtime rerun at `f43f63425` passed one explicit capture test
+with no skips (29.10s test; 1:21 Maven). The full route is fixed input; source
+trace timing data is not consumed. This closes the native Sonic + Tails cold
+route obligation, not solo/donor/width products or native pixel parity. Local
+forced-recreation checks above provide rewind evidence separately; this cold
+movie does not assert rewind at every point in its route.

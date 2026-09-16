@@ -1988,3 +1988,22 @@ nearby-object samples inside X `$46C0..$4A80`, Y `$480..$700`; it instead uses
 the upper `$4A30/$330` switch and `$4AF8` swing. These observations justify no
 geometry or collision change and do not establish that the lower puzzle is
 optional. Failed captures remain labelled in the unified media folder.
+
+### Verified cold Act 1 completion
+
+`9f779282f` preserves the 26,716-frame controller route and explicit capture
+consumer. A repeat on merged runtime `f43f63425` passes one test without skips:
+queued Maven `-Dmse=off -Dtest=TestSozColdAct1Capture -Ds3k.rom.path="$SOZ_ROM"
+-Dsoz.cold.act1.capture="$SOZ_CAPTURE_ROOT/completion-cold-route/native-320-final"
+-Dsoz.cold.act1.stride=4 test -B`. Here `$SOZ_ROM` is the discovered absolute
+locked-on ROM path and `$SOZ_CAPTURE_ROOT` is the unified external media folder.
+JUnit took 29.098s; Maven including recompilation took 1:21.
+
+The naturally spawned boss appears at frame22,823, sinks at25,122, and the
+normal handoff loads Act2 at26,436 and releases control at26,535. The capture
+asserts no player death, the actual Sonic+Tails roster, boss/sink transitions,
+nonblack target palette and visible destination world. Root inspected the
+final temple image with both players visible; the route author inspected the
+sinking frame. Inputs supply no gameplay-state or hardware-timing values.
+The cold route is native width320 with intros enabled, not every configuration.
+Short production graph tests remain the separate rewind evidence.
