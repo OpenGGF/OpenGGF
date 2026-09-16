@@ -1839,8 +1839,12 @@ arena/seamless defect was not supported by measurement. At native camera Y
 or moving cameras were identical, despite different underlying tilemap bytes:
 the foreground hides the partial arena redraw. The seamless redraw occurs
 behind the palette fade. The unused retained-plane prototype was discarded.
-Act2 sand-exit/post-boss redraw visibility is still under investigation; full
-native pixel certification remains open. These engine A/B checks establish
+Act2 post-boss redraw now retains ROM-backed descriptors through art admission
+and the native two-row updates. This removes an entry flash and preserves the
+visible rising redraw in wide margins. Tests cover widths 320/528/800, same-revision
+rewind restoration, clipping and return to ordinary caching. Sand-exit A/B checks
+show no visible difference at 320/528; the 800-pixel route did not reach the exit.
+Full native pixel certification remains open. Engine A/B checks establish
 visibility in those scenarios, not pixel identity with native hardware.
 
 **Native low-level limits:** failed spring-vine allocation can write foreign SST

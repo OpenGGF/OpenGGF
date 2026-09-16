@@ -1910,3 +1910,23 @@ its redraw. All prototype source and tests were removed; diagnostic images remai
 in `completion-arena-redraw/native-bounds-pixel-comparison` in the unified capture
 folder. This corrects the earlier visible-defect assumption and does not certify
 native pixel identity. Act2 redraw visibility is being measured independently.
+
+`60526be71` resolves the measured post-boss redraw defect. BG2C retains a captured
+64×32 descriptor plane through art admission, then applies the native two-row
+writes and entering-row maintenance. An optional internal renderer interface
+supplies those descriptors without changing normal background caching or the
+existing 512-pixel period. The first entry frame previously flashed new
+high-priority descriptors before the art arrived; subsequent partial writes are
+visible in wide margins. The initial native-width A/B experiment excluded that
+entry frame because its mutation did not survive resource admission, so its
+later-frame occlusion result did not rule out this flash.
+
+Source/runtime/controller graph checks pass 11 tests, source/graphics checks
+pass 6, and cache plus required S3K bootstrap/loading checks pass 88, all without
+skips. Same-revision registry restoration recovers identical image and tilemap
+bytes; clear-to-normal checks the cache against the ROM source. Root inspected
+800-pixel frames 00000, 00008 and 00029: retained margin, partial rising redraw,
+and completed temple. The three `capture-4x-slow.mp4` clips in
+`completion-act2-redraw/verified-retained-production` are explicitly slow motion.
+These are source-backed engine checks, not native pixel certification. No Act1
+retained-plane prototype was restored.

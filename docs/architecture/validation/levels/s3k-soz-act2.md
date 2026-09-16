@@ -253,3 +253,16 @@ capture, hits occur at257/318/586/634/883/925/1144/1270 and Lava Reef loads at28
 Root inspected frame03048: Sonic and the destination cavern are visible.
 The complete movie and input/state records are in
 `completion-endboss-victory/native-320` in the unified external capture folder.
+
+## Post-boss presentation during art admission
+
+`60526be71` retains the native BG2C descriptor plane through resource admission
+and its two-row redraws. This removes the first-entry art flash at native width
+and reproduces the visible partial redraw beside the arena at widths 528/800.
+`TestSozPostBossPlaneState` covers row cadence, moving-camera maintenance and
+wrap/clipping. `TestSozEndBossInputRoute` recreates/replays all eight redraw
+boundaries. `TestSozPostBossRedrawCapture` verifies identical full-registry
+restoration at the same revision and checks every descriptor after returning to
+normal caching. The final three source and three graphics cases pass without
+skips; required bootstrap/cache checks also pass. Slow-motion clips remain in
+the unified capture folder. Matched native framebuffer certification remains open.
