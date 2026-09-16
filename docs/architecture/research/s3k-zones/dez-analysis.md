@@ -3,13 +3,13 @@
 ## Summary
 
 - **Zone:** Death Egg Zone (DEZ)
-- **Zone Index:** 0x0A (acts 1 and 2), 0x17 (act 3 / Final Boss)
+- **Zone Index:** 0x0B (acts 1 and 2; level-select `$B00`/`$B01`, `sonic3k.asm:10158-10159`), 0x17 (act 3 / Final Boss)
 - **Zone Set:** SKL (zones 7-13: MHZ-DDZ)
 - **Acts:** 1, 2, and 3 (Final Boss arena, zone $17 act 0)
 - **Water:** No
 - **Palette Cycling:** Yes (1 DEZ1-only channel + 2 shared DEZ1/DEZ2 channels = 3 channels total)
 - **Animated Tiles:** Yes (8 AniPLC scripts, shared between Act 1 and Act 2)
-- **Character Branching:** No -- Sonic/Tails and Knuckles share the same start positions, event routines, and layout. Knuckles does not reach Act 3 (goes to Mecha Sonic boss in Sky Sanctuary instead).
+- **Character Branching:** No -- DEZ is a Sonic/Tails zone. Knuckles' story ends in Sky Sanctuary (`$A01`) before DEZ, so his route never plays DEZ. The start-position table still has identical Knuckles entries, which are not evidence of a Knuckles route.
 - **Parallax:** Minimal -- both acts use `PlainDeformation` (flat BG scroll with no multi-layer deformation). Act 3 has a custom deform with `ApplyDeformation2` and `ShakeScreen_Setup`.
 - **Seamless Transition:** Yes -- Act 1 transitions seamlessly to Act 2 via `DEZ1_BackgroundEvent`.
 - **Unique Mechanics:** Reverse gravity (`Reverse_gravity_flag`), light tunnel transport, gravity switching objects, teleporters, hover machines, conveyor belts/pads, energy bridges, bumper walls, gravity puzzles.
@@ -200,20 +200,19 @@ Complex initialization:
 
 ### Act 1 Miniboss (`Obj_DEZMiniboss`)
 
-- **Object:** `Obj_DEZMiniboss` at line 167659
+- **Object:** `Obj_DEZMiniboss` at line 167664
 - **Spawn trigger:** Object-based (placed in object layout, uses `Check_CameraInRange` with bounds from `word_7DDA4`)
 - **Music:** Changes to `mus_Miniboss`
 - **PLC load:** PLC $7B (loads `ArtNem_RobotnikShip` and `ArtNem_BossExplosion` via `PLC_78_79_7A_7B`)
 - **Art load:** `ArtKosM_DEZMinibossMisc` queued to VRAM at `ArtTile_DEZMiniboss` ($0400)
 - **Palette:** `Pal_DEZMiniboss1` loaded to palette line 1. `Pal_DEZMiniboss2` loaded later (at line 168278)
 - **Object data:** Uses `ObjDat_DEZMiniboss` (mappings: `Map_DEZMiniboss`, art tile: `ArtTile_DEZMiniboss` with palette 1, priority)
-- **Defeat behavior:** Boss flag cleared, music restored to `mus_DEZ2` (line 169744). Camera max X unlocked via `Obj_IncLevEndXGradual` at X=$3620. When player passes camera right edge, triggers `StartNewLevel` with `d0 = $1700` (DEZ3 Final Boss zone).
-- **Ring/timer preservation:** `Act3_flag` set, `Ring_count` -> `Act3_ring_count`, `Timer` -> `Act3_timer`
+- **Defeat behavior:** Spawns the act results via `Obj_EndSignControl` (line 168091) and releases the vertical camera limits (`Obj_DecLevStartYGradual` / `Obj_IncLevEndYGradual`, lines 168179-168185). It does **not** hand off to DEZ3; an earlier revision attributed the `$1700` handoff to this object, but that code belongs to `Obj_DEZEndBoss` (below).
 - **Confidence:** HIGH
 
 ### Act 2 Boss (`Obj_DEZEndBoss`)
 
-- **Object:** `Obj_DEZEndBoss` at line 169543
+- **Object:** `Obj_DEZEndBoss` at line 169548
 - **Spawn trigger:** Object-based (`Check_CameraInRange` with bounds at `word_7F0BE`: Y range $198-$498, X range $33E0-$3480)
 - **Arena bounds:** Y range $218-$288, X range $3400-$34E0 (from `word_7F0C6`)
 - **Music:** Changes to `mus_EndBoss`
@@ -223,7 +222,7 @@ Complex initialization:
 - **Hit points:** 8 (`collision_property = 8`)
 - **Movement:** Oscillating Y velocity ($100 initial), plays `sfx_WaveHover` every 64 frames
 - **6-phase routine:** Init, approach, attack pattern 1, retreat, attack pattern 2, retreat (via `off_7F102` at line 169594)
-- **Defeat behavior:** Sets `Events_fg_5`, starts act clear sequence
+- **Defeat behavior:** Boss flag cleared, music restored to `mus_DEZ2` (line 169749). Camera max X unlocked via `Obj_IncLevEndXGradual` at X=$3620. When the player passes the trigger X, sets `Act3_flag`, saves `Ring_count` -> `Act3_ring_count` and `Timer` -> `Act3_timer`, and calls `StartNewLevel` with `d0 = $1700` (lines 169778-169786, DEZ3 Final Boss zone)
 - **Confidence:** HIGH
 
 ### Act 3 Final Boss (`Obj_DEZ3_Boss`)
@@ -484,8 +483,8 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
 | `Obj_DEZGravityPuzzle` | Gravity Puzzle | Gravity-based puzzle mechanism | Line 96082. Uses `ArtTile_DEZMisc2+$31` |
 | `Obj_FBZDEZPlayerLauncher` | Player Launcher | Tube launcher (shared FBZ/DEZ) | Line 79389. Uses `ArtTile_DEZMisc2` |
 | `Map_HCZCNZDEZDoor` | Door | Sliding door (shared HCZ/CNZ/DEZ) | Line 66163. Uses `ArtTile_DEZMisc+$1E` |
-| `Obj_DEZMiniboss` | Act 1 Miniboss | DEZ Act 1 boss | Line 167659 |
-| `Obj_DEZEndBoss` | Act 2 Boss | DEZ Act 2 end boss | Line 169543 |
+| `Obj_DEZMiniboss` | Act 1 Miniboss | DEZ Act 1 boss | Line 167664 |
+| `Obj_DEZEndBoss` | Act 2 Boss | DEZ Act 2 end boss | Line 169548 |
 | `Obj_DEZ3_Boss` | Final Boss | Robotnik giant mech (Act 3) | Line 170909. 12-phase fight. |
 | `Obj_DEZ3_Boss_Fireball` | Final Boss Fireball | Projectile from final boss | Line 171996 |
 
@@ -562,7 +561,7 @@ Act 2 does NOT have the Act 1-specific energy conduit cycling (channel 0).
   - Act 2: Sonic ($0140, $03AC), Knuckles ($0140, $03AC) -- identical
   - Act 3 Boss: Sonic ($0060, $0070)
 
-- **Character Branching:** Minimal for DEZ compared to other zones. Sonic/Tails and Knuckles share the same start positions and level layouts. The primary character difference is at the game progression level: Knuckles' story does not include DEZ3 (the Final Boss), proceeding instead to Mecha Sonic in Sky Sanctuary.
+- **Character Branching:** DEZ is played only by Sonic and Tails. Knuckles' story finishes at Sky Sanctuary before DEZ, so the identical Knuckles start entries are table defaults, not a route. Sonic-vs-Tails differences are the miniboss landing Y (`Player_mode` check near line 168258) and the ending branch after DEZ3.
 
 - **No chunk adjustments:** Unlike AIZ, DEZ has no `Adjust_*Chunks` routines.
 

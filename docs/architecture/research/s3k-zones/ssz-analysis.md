@@ -139,11 +139,11 @@ SSZ is an S&K zone; the S3 `LevelResizeArray` (line 38808) maps SSZ slots to `No
      | $13C0 | $0660 |
      | $7FFF | $03E0 |
 
-4. **MTZ Boss trigger (line 116262):** When Player Y is in range $440-$880 and `Events_bg+$00` is not negative and not already triggered:
+4. **GHZ Boss trigger, lower arena (line 116262):** When Player Y is in range $440-$880 and `Events_bg+$00` is not negative and not already triggered:
    - If `Events_bg+$01` not yet set: lock Camera_min_X_pos=$160, Camera_max_X_pos=$19A0. When Player Y >= $7C0 and Camera X == $160 and player on ground: lock Camera_max_X_pos=$160, Camera_min/target_max_Y_pos=$7C0. Set `Events_bg+$01`.
    - When Camera Y reaches $7C0: spawn `Obj_SSZGHZBoss` (GHZ recreation boss). Set `Events_bg+$05`, Events_bg+$00 = $7F00.
 
-5. **GHZ Boss trigger (line 116298):** When Player Y < $440 and `Events_bg+$02` is not negative:
+5. **MTZ Boss trigger, upper arena (line 116298):** When Player Y < $440 and `Events_bg+$02` is not negative:
    - If `Events_bg+$03` not yet set: lock Camera_max_X_pos=$1660. When Player Y >= $420 and Camera X == $1660 and player on ground: lock Camera_min_X_pos=$1660, Camera_min/target_max_Y_pos=$380. Set `Events_bg+$03`.
    - When Camera Y reaches $380: spawn `Obj_SSZMTZBoss` (MTZ recreation boss). Set `Events_bg+$05`, Events_bg+$02 = $7F00.
 

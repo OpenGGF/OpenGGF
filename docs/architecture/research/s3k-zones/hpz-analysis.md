@@ -3,27 +3,35 @@
 ## Summary
 
 - **Zone:** Hidden Palace Zone (HPZ)
-- **Zone Index:** 0x0A (standard), but loaded as **zone 0x17 act 1** (`Current_zone_and_act = $1701`)
+- **Zone Index:** loaded as **zone 0x16 act 1** (`Current_zone_and_act = $1601`); HPZ has no standard zone index of its own
 - **Zone Set:** SKL
-- **Acts:** 1 only (single act); plus a **Special Stage Arena** sub-level at zone 0x18 act 1 (`$1801`)
+- **Acts:** 1 only (single act); plus the **Super Emerald sanctuary** sub-level (HPZS) at zone 0x17 act 1 (`$1701`)
 - **Water:** No
 - **Palette Cycling:** Yes (generic `AnPal_HPZ` glow on palette line 4; the Master Emerald object also writes the same line-4 colors during the altar sequence)
 - **Animated Tiles:** Yes (4 AniPLC scripts -- waterfall/gem sparkle animations)
 - **Character Branching:** Yes -- Knuckles has a restricted right boundary ($AA0) vs. Sonic/Tails who have a left boundary restriction ($AA0 min X when Y < $480). Knuckles also has a unique cutscene (`CutsceneKnux_HPZ`)
-- **Unique Mechanic:** HPZ is a sub-level accessed via Super Emerald ring entry; it is NOT a standard 2-act zone. The Obj_HPZPaletteControl object performs a camera-position-triggered palette swap (Intro palette -> Main palette at Camera X >= $460). Background switches parallax origin based on player X ($EC0 threshold).
+- **Unique Mechanic:** HPZ is a sub-level reached from LRZ; it is NOT a standard 2-act zone. The Super Emerald giant-ring entry goes to the separate HPZS sanctuary (`$1701`), not to this act. The Obj_HPZPaletteControl object performs a camera-position-triggered palette swap (Intro palette -> Main palette at Camera X >= $460). Background switches parallax origin based on player X ($EC0 threshold).
 
 ## Zone Loading Architecture
 
-HPZ is **not** a standard zone in the level select order. It is a sub-level that shares zone slot 0x17 with LRZ Boss:
+HPZ is **not** a standard zone in the level select order. It is a sub-level that shares zone slot 0x16 with LRZ Boss:
 
 | Zone Slot | Act 0 | Act 1 |
 |-----------|-------|-------|
-| 0x17 | LRZ Boss (LRZ3) | **HPZ** (main) |
-| 0x18 | DEZ Boss (DEZ3) | **HPZS** (Special Stage Arena) |
+| 0x16 | LRZ Boss (LRZ3) | **HPZ** (main) |
+| 0x17 | DEZ Boss (DEZ3) | **HPZS** (Super Emerald sanctuary) |
 
-**Entry path:** Player enters HPZ via the Special Stage ring (`SSEntryFlash_GoSS` at line 128383). When the player has all 7 Chaos Emeralds and is in an S&K level (or the subtype is negative), the code sets `Special_bonus_entry_flag = 2` and `Current_zone_and_act = $1701`.
+Evidence: the per-act sprite table ends `LRZ3_Sprites, HPZ_Sprites, DEZ3_Sprites, HPZMini_Sprites`
+(`sonic3k.asm:202440-202443`), the screen-event table pairs `HPZ_*` with `$1601` and `HPZS_*`
+with `$1701` (`sonic3k.asm:102347-102354`), the level-select list names `$1601` "LRZ act 4"
+(`sonic3k.asm:10155`), and title-card selection checks `$1601` for Hidden Palace
+(`sonic3k.asm:62150`). An earlier revision of this document placed HPZ at `$1701`; that slot is the sanctuary.
 
-**HPZ-specific loading:** HPZ has a custom loading sequence (at line 63125) that:
+**Entry paths:**
+- **HPZ (`$1601`)** is reached by level progression from LRZ.
+- **HPZS (`$1701`)** is reached via the Special Stage ring (`SSEntryFlash_GoSS` at line 128383). When the player has all 7 Chaos Emeralds and is in an S&K level (or the subtype is negative), the code sets `Special_bonus_entry_flag = 2` and `Current_zone_and_act = $1701` (`sonic3k.asm:128417-128418`).
+
+**HPZS (sanctuary) loading:** the custom loading sequence at line 63125 sets `$1701` (`sonic3k.asm:63174`) and belongs to the sanctuary, not the playable HPZ act. It:
 1. Loads `Pal_HPZIntro` palette (intro colors at $CCC) fading to `Pal_HPZ` target palette
 2. Copies `Layout_HPZ` directly to level layout RAM
 3. Decompresses chunks and blocks via `Kos_Decomp` (not standard LevelResourcePlan)
@@ -363,5 +371,5 @@ The cycling creates a slow pulsing glow effect on the emerald/gem tiles -- stead
 ### Known Risks
 - **BG transition visual glitch risk (MEDIUM):** The row-by-row BG redraw during X=$EC0 crossings uses `Draw_PlaneVertBottomUpComplex`, which draws one row per frame. If the engine's BG draw system doesn't support this incremental approach, the transition may appear as a sudden snap rather than a smooth wipe.
 - **Palette overlap (LOW):** `AnPal_HPZ` and `Obj_HPZMasterEmerald` both target the same line 4 bytes. The ROM resolves this by running them as separate writers; if the engine's palette update ordering drifts from the ROM, the altar glow can change shape even though the target bytes are correct.
-- **Sub-level zone encoding (LOW):** HPZ uses zone 0x17 act 1, not zone 0x0A. All table lookups (AnPal, AniPLC, Screen/BG events, music, level sizes) must use the $1701 encoding. The engine's zone registry must map HPZ to this sub-level slot correctly.
+- **Sub-level zone encoding (MEDIUM):** HPZ uses zone 0x16 act 1 (`$1601`); the sanctuary uses zone 0x17 act 1 (`$1701`). All table lookups (AnPal, AniPLC, Screen/BG events, music, level sizes) must use the matching encoding. The engine registry currently maps its HPZ act-1 slot to the sanctuary resources, so adding the playable act must not break the sanctuary's save, results-return and title-card identity.
 - **Cutscene state naming (LOW):** The key cutscene transitions are concrete, but several intermediate `loc_64xxxx` states are still flow-named rather than semantically named. The implementation hooks are known; the remaining work is a readability pass, not a behavior investigation.
