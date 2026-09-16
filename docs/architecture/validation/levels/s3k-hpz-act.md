@@ -30,11 +30,11 @@ S1 Sonic+Sonic duplicate, S2 Sonic+Tails, Sonic+Tails+Knuckles at 800.
 | PRESENT: `$EC0` background seam redraw | `HPZ_BackgroundEvent` state machine | native | Visual only (`raw-08-bg-seam-ec0`) | partial (not ported; parallax origin switch only) | engine capture showed no tear | Native reference needed |
 | OBJECT: teleporter transport | `Obj_SSZHPZTeleporter` + `Obj_TeleporterBeam` | 34 rows | `TestS3kHpzTeleporterHeadless`, `TestS3kHpzCompatibilityMatrix#lowerTeleporterTransportReplaysAtChargeAndRise` | implemented | pass, 1 + 34 cases | Upper pad subtype 0 intangibility during transport not asserted directly |
 | REWIND: entry, teleporter charge, rise | Registry restore equals capture; forward replay equals original | 34 rows × 3 spots | `TestS3kHpzCompatibilityMatrix` | implemented | pass | Settle boundary and beam contraction/deletion spot not yet replayed |
-| ROUTE (Knuckles): upper teleporter → `$A01` | `loc_45B94` | native | Demo `06-hpz-knuckles-teleporter-exit-to-ssz2.mp4` | implemented | capture only, no test | Add production test and breadth |
+| ROUTE (Knuckles): upper teleporter → `$A01` | `loc_45B94` | native 320 | `TestS3kHpzLifecycleProduction#knucklesUpperTeleporterStartsSkySanctuaryActTwo`; demo `06-hpz-knuckles-teleporter-exit-to-ssz2.mp4` | implemented | pass | Width/donor breadth for the exit and a cold route from the Knuckles start open |
 | BOSS: Knuckles fight, emerald theft, collapse | `CutsceneKnux_HPZ` | — | fight lane `feature/ai-hpz-knuckles-fight` | missing (in progress) | unrun | — |
 | ROUTE (Sonic/Tails): altar teleporter → `$A00` | `loc_45AD6`, `loc_45BF4` | — | fight lane | missing (in progress) | unrun | — |
 | OBJECT: placed Master/Super Emeralds in `$1601` | `Obj_HPZMasterEmerald`, `Obj_HPZSuperEmerald` | native | Visual only (`raw-09-altar-1601`) | partial (sanctuary implementation reused) | unrun | Verify `$1601` branches against ROM |
-| LIFE: checkpoint `$34` at `$CF0,$3E8`, death/restart | StarPost | — | — | inherited generic | unrun | Required |
+| LIFE: checkpoint `$34` sub 2 at `$CF0,$3E8`, death/reload | StarPost; `HPZ_ScreenInit` Knuckles `$AA0` limit | 25 Sonic/Tails width × donor rows; 5 Knuckles rows | `TestS3kHpzLifecycleProduction#touchingThePlacedStarPostThenDyingReloadsAtThePost` | implemented | pass, 30 cases | Knuckles cannot reach this post (camera max X `$AA0`), asserted instead; rewind at activation not replayed here |
 | LOAD: LRZ3 → `$1601` incoming | LRZ events | — | — | missing (LRZ) | blocked | LRZ bring-up |
 | ORACLE: route timing | Sonic+Tails complete-run `hpz22_2` rows `$1E46+` | — | `TestS3kSonicTailsHpz2SegmentTraceReplay` (expected red) | — | unrun | Measure after the fight lane lands |
 
@@ -44,3 +44,7 @@ Worktree `.worktrees/ai-hpz-bring-up`, all ROMs by absolute path, `maven_queue.p
 `TestS3kHpzCompatibilityMatrix`: 68 tests (34 entry + 34 teleporter), 0 failures, 0 errors,
 0 skips, 6.2 s. Changing the teleporter end assertion to `< $100` produced 34 failures at
 that assertion (proves the teleporter rows execute to the end); reverted before commit.
+
+`TestS3kHpzLifecycleProduction` (`315a483db` + test): 31 tests, 0 failures, 0 skips. The
+first run failed only the five Knuckles post rows (checkpoint index -1): his `$AA0` camera
+boundary keeps him away from the post, which the rows now assert.
