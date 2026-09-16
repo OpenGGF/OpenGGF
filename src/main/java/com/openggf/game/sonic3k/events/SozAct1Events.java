@@ -141,6 +141,12 @@ final class SozAct1Events extends Sonic3kZoneEvents {
     }
     private void updateSeamlessEntry(SozZoneRuntimeState state,int levelFrameCounter){
         var events=state.events();
+        if(events.titleCardAllocationPending()){
+            // loc_56324's AllocateObject gave Obj_TitleCard a later slot; Obj_TitleCardInit
+            // queues its KosM art on the following object pass (sonic3k.asm:62108-62166).
+            events.titleCardAllocationPending(false);
+            levelManager().requestInLevelTitleCard(8,1,true,com.openggf.game.TitleCardProvider.RESET_AT_NATIVE_WAIT_GATE);
+        }
         if(events.foregroundRoutine()<8){
             if(events.foregroundRoutine()==0){camera().setVerticalWrapEnabled(true,0x800);events.foregroundRoutine(4);events.redrawRemaining(15);}
             events.redrawRemaining(events.redrawRemaining()-2);
@@ -164,7 +170,7 @@ final class SozAct1Events extends Sonic3kZoneEvents {
     }
     private void fadeEntryFirstLine(SozEventState events,int levelFrameCounter){
         if((levelFrameCounter&1)==0)return;
-        if(events.fadePasses()==5)levelManager().requestInLevelTitleCard(8,1,true,com.openggf.game.TitleCardProvider.RESET_AT_NATIVE_WAIT_GATE);
+        if(events.fadePasses()==5)events.titleCardAllocationPending(true);
         fadePalette(0,1,true);events.fadePasses(events.fadePasses()-1);
         if(events.fadePasses()<0){events.fadePasses(0x15);events.backgroundRoutine(0xC);fadeEntryBackground(events,levelFrameCounter);}
     }
