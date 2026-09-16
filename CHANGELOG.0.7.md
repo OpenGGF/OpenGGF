@@ -6,7 +6,7 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
-- **S3K Knuckles walls, Tails flight start and Sandworm timing:** Knuckles now breaks the
+- **S3K player abilities and Sandopolis timing:** Knuckles now breaks the
   Knuckles-only walls (HCZ, MGZ, CNZ, LBZ, MHZ and SOZ variants) when he hits them
   in mid-air, keeping his speed as the ROM does, instead of stopping against them.
   Player-controlled Tails keeps normal air gravity on the frame flight starts, so the
@@ -14,7 +14,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Sandworms wait one more frame after first appearing on screen before starting
   their emerge timer, so they surface on the ROM frame. Sandopolis now queues its
   Skorp, Sandworm and Rockn art at level start like the ROM, keeping later art
-  loading in step.
+  loading in step. Flying Tails and gliding Knuckles no longer borrow Sonic's
+  Insta-Shield invincibility and wider touch box, so hazards hurt them as in the ROM.
+  The Sandopolis Act 1 signpost now drops on the ROM frame after the golem sinks.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now

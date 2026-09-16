@@ -24,6 +24,7 @@ import com.openggf.physics.TerrainCheckResult;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.DamageCause;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.Knuckles;
 import com.openggf.sprites.playable.SidekickCpuController;
@@ -345,7 +346,12 @@ final class ObjectTouchResponseController {
         currentPlayer = player;
         int playerWidth = 0x10; // Normal width
         PlayerCapabilityRules capabilityRules = playerCapabilityRulesOrNull(player);
+        // TouchResponse branches to Touch_NoInstaShield unless character_id is
+        // Sonic, so Tails flight and Knuckles glide (double_jump_flag=1) keep the
+        // normal box and vulnerability.
         if (capabilityRules != null && capabilityRules.instaShieldEnabled()
+                && player instanceof AbstractPlayableSprite abilitySprite
+                && abilitySprite.getSecondaryAbility() == SecondaryAbility.INSTA_SHIELD
                 && player.getDoubleJumpFlag() == 1
                 && player.getShieldType() == null
                 && player.getInvincibleFrames() == 0) {
