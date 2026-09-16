@@ -1857,7 +1857,11 @@ extension; it does not certify wider cold routes or native pixel identity.
 viewport plus alignment/shimmer margin, instead of repeating its first 512px.
 The BG-high color/mask passes use the main pass's source period. Native-width
 residency stays 512px. Wider views extend the authored right edge with repeated
-ROM masonry and stop the camera before the foreground wall at `$4500`. This is
+ROM masonry. The wide view's right edge locks at the native arena view's edge
+(`$4310+320 = $4450`), so the player's `$4438` stop reads as the screen lock and
+the foreground wall at `$4500` stays offscreen. The native arena spans 720px; a
+wider view lowers the arena minimum below `$4180` and shows level art left of it,
+and admission uses the focused player's `$43B0` position. This is
 an intentional presentation extension, not native scenery or modified collision.
 Positioned arena captures must cross the `$4308,$918` priority switch; spawning
 below it can incorrectly show Sonic behind the pyramid. Full native pixel
