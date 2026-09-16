@@ -4,9 +4,10 @@ import java.nio.ByteBuffer;
 
 /** Native SOZ screen-event RAM; one captured owner shared with arena objects and scroll. */
 public final class SozEventState {
-    static final int SNAPSHOT_BYTES = 23 * Integer.BYTES + SozBossWallState.SNAPSHOT_BYTES + 2 * Long.BYTES;
+    static final int SNAPSHOT_BYTES = 23 * Integer.BYTES + SozBossWallState.SNAPSHOT_BYTES + SozPostBossPlaneState.SNAPSHOT_BYTES + 2 * Long.BYTES;
     private long blockJobOrdinal = -1;
     private long artJobOrdinal = -1;
+    private final SozPostBossPlaneState postBossPlane = new SozPostBossPlaneState();
     private final SozBossWallState bossWall = new SozBossWallState();
     private boolean initialized;
     private int foregroundRoutine;
@@ -36,6 +37,7 @@ public final class SozEventState {
     public void blockJobOrdinal(long value) { blockJobOrdinal = value; }
     public long artJobOrdinal() { return artJobOrdinal; }
     public void artJobOrdinal(long value) { artJobOrdinal = value; }
+    public SozPostBossPlaneState postBossPlane() { return postBossPlane; }
     public SozBossWallState bossWall() { return bossWall; }
     public boolean initialized() { return initialized; }
     public void initialized(boolean value) { initialized = value; }
@@ -96,6 +98,7 @@ public final class SozEventState {
                 .putInt(bossWallHitY).putInt(bossX).putInt(bossY).putInt(bossArtPhase)
                 .putInt(backgroundCollision ? 1 : 0).putInt(seamlessEntry ? 1 : 0);
         bossWall.capture(buffer);
+        postBossPlane.capture(buffer);
         buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal).putInt(endBossFallStarted ? 1 : 0);
     }
 
@@ -123,6 +126,7 @@ public final class SozEventState {
         backgroundCollision = buffer.getInt() != 0;
         seamlessEntry = buffer.getInt() != 0;
         bossWall.restore(buffer);
+        postBossPlane.restore(buffer);
         blockJobOrdinal = buffer.getLong();
         artJobOrdinal = buffer.getLong();
         endBossFallStarted = buffer.getInt() != 0;
