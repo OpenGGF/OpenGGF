@@ -186,6 +186,36 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void lowerSlotEndSignControlRestoresControlOnTheNextPass() throws Exception {
+        // soz_completerun rows 28940-28942: Obj_LevelResults (slot 12) retires on row
+        // 28940, the lower-slot Obj_EndSignControlAwaitStart (slot 8) calls
+        // Restore_PlayerControl on row 28941, so Sonic never moves under held input.
+        ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x08, 0);
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
+        results.setServices(services);
+        services.withIsolatedObjectManager();
+        prepareFinalExitDispatch(results);
+
+        S3kBossDefeatSignpostFlow controlOwner =
+                new S3kBossDefeatSignpostFlow(0x4220, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE);
+        controlOwner.setServices(services);
+        setPrivate(controlOwner, "initialized", true);
+        setPrivateEnum(controlOwner, "phase", "AWAIT_RESULTS");
+        services.objectManager().addDynamicObject(controlOwner);
+        controlOwner.setSlotIndex(8);
+        results.setSlotIndex(12);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+
+        results.update(0, player);
+
+        assertTrue(player.isObjectControlled(),
+                "the results owner must not restore control for a lower-slot EndSignControl owner");
+    }
+
+    @Test
     void aizBossFlowDoesNotRepeatDisplacedOwnerEntriesInResultsWait()
             throws Exception {
         ActTransitionRecordingServices services =

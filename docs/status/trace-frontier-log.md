@@ -110682,3 +110682,17 @@ animation2. That production intro, not trace-state seeding, is the next target.
 - First physics divergence is now row 28940 (end of Act 1 results: `camera_x` `$4180` vs
   `$4198`); first overall error unchanged at 5977 `tails_mapping_frame`. All other S3K
   replay reports are identical to the previous branch sweep.
+
+### 2026-09-16 — SOZ1 results exit: gradual camera bounds and lower-slot control restore
+
+- `bugfix/ai-soz-recorded-routes` after `06d52d8dd`; same focused and sweep commands.
+- `Obj_LevelResults` never writes camera bounds; SOZ1's golem opens them with
+  `Obj_DecLevStartXGradual`/`Obj_IncLevEndXGradual`. The engine restored level bounds
+  on results exit, so the camera jumped (Tails route rows 17771-17795, `soz_completerun`
+  row 28940). SOZ Act 1 is now a boss-owned gradual expansion.
+- The results owner restored player control in its own pass; SOZ1's
+  `Obj_EndSignControlAwaitStart` is in a lower slot (8 vs 12) and restores on the next
+  pass, so the ROM player never obeys the held input at row 28941. The results owner
+  now defers to any live lower-slot EndSignControl owner. `TestS3kSozCompleteRunTraceReplay`:
+  10483 -> 9164 errors; first physics divergence row 28941 -> 29093 (CPU Tails
+  `x_speed` on the walk to the pyramid). Other S3K replay reports unchanged.

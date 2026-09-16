@@ -19,7 +19,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The Sandopolis Act 1 signpost now drops on the ROM frame after the golem sinks,
   and Sandopolis and Death Egg keep their ring count after Act 1 results until the
   Act 2 title card, as in the ROM. Knuckles caught by Sandopolis falling sand while
-  gliding now drops his glide pose instead of keeping it.
+  gliding now drops his glide pose instead of keeping it. After the Sandopolis Act 1
+  results the camera opens gradually and the walk to the pyramid starts on the ROM
+  frame instead of briefly obeying held input.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now

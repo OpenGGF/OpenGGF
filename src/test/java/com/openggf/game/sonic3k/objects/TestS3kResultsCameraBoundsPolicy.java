@@ -15,6 +15,12 @@ class TestS3kResultsCameraBoundsPolicy {
     }
 
     @Test
+    void sandopolisActOneLeavesArenaBoundsToTheGolemGradualWorkers() {
+        // Recorded Tails SOZ1 rows 17771-17800: camera_x stays $4180 then ramps.
+        assertFalse(S3kResultsScreenObjectInstance.shouldRestoreLevelCameraBoundsOnExit(0x08, 0));
+    }
+
+    @Test
     void ordinaryResultsExitStillRestoresLevelCameraBounds() {
         assertTrue(S3kResultsScreenObjectInstance.shouldRestoreLevelCameraBoundsOnExit(0x03, 0));
         assertTrue(S3kResultsScreenObjectInstance.shouldRestoreLevelCameraBoundsOnExit(0x05, 1));
