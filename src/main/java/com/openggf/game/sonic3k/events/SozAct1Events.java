@@ -104,7 +104,7 @@ final class SozAct1Events extends Sonic3kZoneEvents {
     private void requestAct2Reload(){
         var player=spriteManager().getMainPlayable();
         var handoff=seamlessTransitionResourceHandoffs().register(new SozActTransitionHandoff(
-                0x140-(player.getCentreX()&65535),0x3AC-(player.getCentreY()&65535)));
+                0x140-(player.getCentreX()&65535),0x3AC-(player.getCentreY()&65535),this));
         levelManager().requestSeamlessTransition(SeamlessLevelTransitionRequest.builder(
                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(8,1).deactivateLevelNow(false).preserveMusic(true).preserveLevelGamestate(true)

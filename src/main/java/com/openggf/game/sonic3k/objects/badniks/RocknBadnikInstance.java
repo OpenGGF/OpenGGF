@@ -75,6 +75,18 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
             if (object instanceof Shell shell && shell.owner == this) shell.owner = null;
         }
     }
+    // Obj_Rockn publishes special-property $D9; retain the standard attack/actor policy.
+    @Override public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(false);
+    }
+    @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        TouchResponseProfile base = super.getTouchResponseProfile(multiRegionSource);
+        return new TouchResponseProfile(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                base.continuousCallbacks(), base.requiresRenderFlagForTouch(), multiRegionSource,
+                base.shieldDeflectCapability(), base.shieldReactionFlags(),
+                base.enablesPostSpecialTouchAirborneSideVelocityPreservation(), base.attackBouncePolicy(),
+                base.actorContextPolicy(), base.stopAfterFirstOverlapPolicy());
+    }
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return true; }
     @Override public int getCollisionFlags() { return routine == 4 ? 0xD9 : 0; }
     @Override public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) { }
@@ -91,7 +103,7 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
         }
         @Override public Shell recreateForRewind(RewindRecreateContext context) { return new Shell(context.spawn(), null); }
         @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {
-            if (owner == null || owner.isDestroyed()) { setDestroyed(true); return; }
+            if (owner == null || owner.isDestroyed()) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if (routine == 0) { routine = 2; return; }
             if (routine == 2) {
                 if (player != null && Math.abs((short)(player.getCentreX() - currentX)) <= 0x28
@@ -125,7 +137,7 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
         Legs(ObjectSpawn spawn, Shell owner) { super(spawn, "RocknLegs", Sonic3kObjectArtKeys.ROCKN, 0, 3); this.owner = owner; mappingFrame = 4; }
         @Override public Legs recreateForRewind(RewindRecreateContext context) { return new Legs(context.spawn(), null); }
         @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {
-            if (owner == null || owner.isDestroyed()) { setDestroyed(true); return; }
+            if (owner == null || owner.isDestroyed()) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if (--timer < 0) { mappingFrame = 3; timer = -1; }
             currentX = owner.getX(); currentY = owner.getY();
         }

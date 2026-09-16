@@ -40,7 +40,7 @@ class TestSozCheckpointReloadProduction {
     }
     @ParameterizedTest @MethodSource("remainingPosts")
     void otherPlacedPostsActivateAndReload(int act,int index,int x,int y,String character) {
-        touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,320,"off");
+        assertAll(() -> touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,320,"off"));
     }
     @ParameterizedTest @MethodSource("scenarios")
     void touchCheckpointThenDeathReloadsItsNativePosition(int act,int index,int x,int y,String character,

@@ -76,7 +76,7 @@ public final class SozFallingIntroInstance extends AbstractObjectInstance
                         player.setControlLocked(false);
                     }
                     splash(players);
-                    setDestroyed(true);
+                    ObjectLifetimeOps.deleteNoRespawn(this);
                 } else for (var player : players) move(player, true);
             }
             default -> throw new IllegalStateException("SOZ intro routine " + routine);
@@ -121,7 +121,7 @@ public final class SozFallingIntroInstance extends AbstractObjectInstance
                 if (++lowerFrame >= 0xD) lowerFrame = 9;
             }
             if (timer == 0xC) upperFrame = 0xD;
-            if (--timer < 0) setDestroyed(true);
+            if (--timer < 0) ObjectLifetimeOps.deleteNoRespawn(this);
         }
         @Override public int getPriorityBucket() { return 1; }
         @Override public int getOnScreenHalfWidth() { return 0xC; }

@@ -61,7 +61,7 @@ public final class SozHyudoroCapsuleObjectInstance extends AbstractObjectInstanc
         private SozHyudoroCapsuleObjectInstance parentRef;private boolean recessed;private int entries;
         public Button(ObjectSpawn spawn){this(spawn,null,false);}
         private Button(ObjectSpawn spawn,SozHyudoroCapsuleObjectInstance parent,boolean recessed){super(spawn,"SOZHyudoroCapsuleButton");parentRef=parent;this.recessed=recessed;}
-        @Override public void update(int vIntRunCount,PlayableEntity p){entries++;if(parentRef==null||parentRef.isDestroyed())setDestroyed(true);}
+        @Override public void update(int vIntRunCount,PlayableEntity p){entries++;if(parentRef==null||parentRef.isDestroyed())ObjectLifetimeOps.deleteNoRespawn(this);}
         @Override public void onSolidContact(PlayableEntity p,SolidContact c,int vIntRunCount){if(!recessed&&c.standing()&&parentRef!=null){recessed=true;parentRef.triggered=true;}}
         @Override public SolidObjectParams getSolidParams(){return new SolidObjectParams(0x1B,4,6);}
         @Override public SolidRoutineProfile getSolidRoutineProfile(){return SolidRoutineProfile.fullSolid(false,true,false);}
@@ -98,7 +98,7 @@ public final class SozHyudoroCapsuleObjectInstance extends AbstractObjectInstanc
         public Fragment(ObjectSpawn spawn){super(spawn,"SOZHyudoroCapsuleFragment");xFixed=spawn.x()<<16;yFixed=spawn.y()<<16;yVelocity=VELOCITY[spawn.subtype()>>>1][1];}
         @Override public void update(int vIntRunCount,PlayableEntity p){if(!initialized){initialized=true;return;}
             xFixed+=VELOCITY[spawn.subtype()>>>1][0]<<8;yFixed+=yVelocity<<8;yVelocity=(short)(yVelocity+0x38);visible=!visible;
-            if(((getY()-services().camera().getY()+0x80)&0xFFFF)>0x200)setDestroyed(true);
+            if(((getY()-services().camera().getY()+0x80)&0xFFFF)>0x200)ObjectLifetimeOps.deleteNoRespawn(this);
         }
         @Override public int getX(){return (xFixed>>16)&0xFFFF;}@Override public int getY(){return (yFixed>>16)&0xFFFF;}
         @Override public int getPriorityBucket(){return 2;}

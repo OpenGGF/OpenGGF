@@ -11,6 +11,7 @@ import com.openggf.level.objects.*;
 import com.openggf.physics.TrigLookupTable;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.List;
@@ -163,11 +164,11 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         }
     }
     private void restoreControl(){int music=services().getCurrentLevelMusicId();if(music>=0)services().playMusic(music);for(var entity:services().playerQuery().playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS))
-        if(entity instanceof AbstractPlayableSprite p){p.setObjectControlled(false);p.setControlLocked(false);p.clearAirForNativeControlRestore();p.setAnimationId(5);p.setForcedAnimationId(-1);}
+        if(entity instanceof AbstractPlayableSprite p){ObjectControlState.none().applyTo(p);p.setControlLocked(false);p.clearAirForNativeControlRestore();p.setAnimationId(5);p.setForcedAnimationId(-1);}
         if(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p){p.clearLogicalInputState();p.setForcedInputMask(0);p.setControlLocked(true);}}
     private void forcedWalk(PlayableEntity entity){if((services().camera().getMaxYTarget()&65535)>=0x700)services().camera().setMaxY((short)0x800);if(!(entity instanceof AbstractPlayableSprite p))return;
         if((p.getCentreX()&0xFFFF)>=0x5468){xFixed=p.getCentreX()<<16;yFixed=p.getCentreY()<<16;xVelocity=p.getXSpeed();yVelocity=0;
-            escapePhase=7;if(!knuckles()){p.setObjectControlled(true);p.setObjectControlSuppressesMovement(true);p.setAnimationId(0x1A);}return;}
+            escapePhase=7;if(!knuckles()){ObjectControlState.nativeBit7FullControl().applyTo(p);p.setAnimationId(0x1A);}return;}
         boolean jump=p.getPushing()||forcedJumpTimer!=0;if(p.getPushing())forcedJumpTimer=0x1F;else if(forcedJumpTimer!=0)forcedJumpTimer--;
         p.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT|(jump?AbstractPlayableSprite.INPUT_JUMP:0));
         p.setLogicalInputState(false,false,false,true,jump,p.getPushing());}
@@ -178,7 +179,7 @@ public final class SozEndBossInstance extends AbstractObjectInstance
     private void exitFall(PlayableEntity entity){if(!(entity instanceof AbstractPlayableSprite p))return;yVelocity=Math.min(yVelocity,0x1000);move();yVelocity+=0x38;
         NativePositionOps.writeXPosPreserveSubpixel(p,getX());NativePositionOps.writeYPosPreserveSubpixel(p,getY());
         if(--timer<0)nextZone();}
-    private void nextZone(){services().requestZoneAndAct(9,0,true);setDestroyed(true);}
+    private void nextZone(){services().requestZoneAndAct(9,0,true);ObjectLifetimeOps.deleteNoRespawn(this);}
     public boolean ownsPostResultsTransition(){return escapePhase!=0&&!isDestroyed();}
     boolean fallingIntoNextZone(){return escapePhase==8;}
     boolean flipped(){return flipped;} int xVelocity(){return xVelocity;}
@@ -192,6 +193,18 @@ public final class SozEndBossInstance extends AbstractObjectInstance
     @Override public int getX(){return xFixed>>>16;} @Override public int getY(){return yFixed>>>16;}
     @Override public int getOnScreenHalfWidth(){return 32;}
     @Override public int getOnScreenHalfHeight(){return 32;}
+    // Native Draw_And_Touch_Sprite polls the collision property on every overlap.
+    @Override public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(false);
+    }
+    @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return new TouchResponseProfile(TouchCategoryDecodeMode.NORMAL,
+                true, true, multiRegionSource, TouchShieldDeflectCapability.NONE, 0, false,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                multiRegionSource ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
     @Override public boolean requiresContinuousTouchCallbacks(){return true;}
     @Override public boolean isPersistent(){return true;} @Override public int getPriorityBucket(){return 6;}
     @Override public void appendRenderCommands(List<GLCommand> commands){if(hidden)return;var r=getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);

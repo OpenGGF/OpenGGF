@@ -211,7 +211,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The cold sand intro, Egg Golem arena and seamless
   Act 2 entry use native event owners. Act 2 couples light switches, ghosts,
   torches and palette fades, and implements the final boss, collapsing wall,
-  capsule/results and the Lava Reef transition. The independent exit follower
+  capsule/results and the Lava Reef transition. Post-boss background rows remain
+  intact during art loading and redraw in order, including widescreen margins.
+  The independent exit follower
   survives boss retirement and rewind. Mechanism state survives kept
   stage returns, and object graphs—including promoted collapsing platforms—reconstruct
   across rewind using stable object and player identities. Live rewind preserves

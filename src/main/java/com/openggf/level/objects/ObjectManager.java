@@ -2808,24 +2808,7 @@ public class ObjectManager {
     }
 
     public void markRemembered(ObjectSpawn spawn) {
-        // Look up the instance to check if it should stay active.
-        // activeObjects is an IdentityHashMap so try identity first.
-        ObjectInstance instance = activeObjects.get(spawn);
-        if (instance == null) {
-            // Fallback: scan by equals() in case the caller's spawn reference
-            // differs from the canonical key stored in the IdentityHashMap.
-            for (Map.Entry<ObjectSpawn, ObjectInstance> entry : activeObjects.entrySet()) {
-                if (entry.getKey().equals(spawn)) {
-                    instance = entry.getValue();
-                    break;
-                }
-            }
-        }
-        if (instance != null) {
-            placement.markRemembered(spawn, instance);
-        } else {
-            placement.markRemembered(spawn);
-        }
+        placement.markRemembered(spawn, activeObjects);
     }
 
     public void clearRemembered() {
@@ -2847,17 +2830,13 @@ public class ObjectManager {
      * parent. Both SST slots, execution order and rewind identities stay intact.
      */
     public boolean transferPlacementOwnership(ObjectInstance from, ObjectInstance to) {
-        ObjectSpawn placementSpawn = instanceToSpawn.get(from);
-        if (placementSpawn == null || to == null || !dynamicObjects.contains(to)
-                || activeObjects.get(placementSpawn) != from) return false;
-        activeObjects.put(placementSpawn, to);
-        instanceToSpawn.remove(from);
-        instanceToSpawn.put(to, placementSpawn);
-        dynamicObjects.remove(to);
-        dynamicObjects.add(from);
-        bucketsDirty = true;
-        activeObjectsCacheDirty = true;
-        return true;
+        boolean transferred = placement.transferPlacementOwnership(from, to,
+                activeObjects, instanceToSpawn, dynamicObjects);
+        if (transferred) {
+            bucketsDirty = true;
+            activeObjectsCacheDirty = true;
+        }
+        return transferred;
     }
 
     /**

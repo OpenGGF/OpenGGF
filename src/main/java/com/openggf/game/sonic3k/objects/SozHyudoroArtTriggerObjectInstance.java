@@ -21,7 +21,7 @@ public final class SozHyudoroArtTriggerObjectInstance extends AbstractObjectInst
                     0x536,Sonic3kConstants.ART_NEM_EGG_CAPSULE_ADDR)),services());
             if(!result.complete())throw new IllegalStateException("SOZ capsule PLC: "+result.failure());
         } else if(services().gameModule().getObjectArtProvider() instanceof Sonic3kObjectArtProvider provider)provider.reloadEnemyKosArt();
-        applied=true;setDestroyed(true);
+        applied=true;ObjectLifetimeOps.deleteNoRespawn(this);
     }
     @Override public boolean usesCustomOutOfRangeCheck(){return true;}
     @Override public boolean isCustomOutOfRange(int cameraX){return false;}

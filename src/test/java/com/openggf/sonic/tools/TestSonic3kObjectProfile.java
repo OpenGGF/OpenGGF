@@ -81,7 +81,7 @@ public class TestSonic3kObjectProfile {
     }
 
     @Test
-    public void cnzOnlyPlacedActorsAreMarkedImplementedForS3klLevelsOnly() {
+    public void cnzPlacedActorsKeepPointerTableImplementationBoundaries() {
         Sonic3kObjectProfile profile = new Sonic3kObjectProfile();
         List<LevelConfig> levels = profile.getLevels();
 
@@ -101,6 +101,8 @@ public class TestSonic3kObjectProfile {
                 0xA3, 0xA4, 0xA5, 0xA6, 0xA7
         };
         Sonic3kObjectRegistry registry = new Sonic3kObjectRegistry();
+        var sklOwners = java.util.Map.of(0x41, "SOZLightSwitch", 0x43, "SOZSwingingPlatform",
+                0x47, "SOZSandCork", 0x48, "SOZRapelWire");
         for (int objectId : implementedCnzIds) {
             assertTrue(profile.getImplementedIds(cnz2).contains(objectId),
                     "CNZ object $" + Integer.toHexString(objectId) + " should be reported as implemented");
@@ -111,6 +113,10 @@ public class TestSonic3kObjectProfile {
                 // owner in both pointer tables, so they are legitimately shared.
                 assertTrue(Sonic3kObjectProfile.SHARED_IMPLEMENTED_IDS.contains(objectId),
                         "object $" + Integer.toHexString(objectId) + " has one owner in both sets");
+            } else if (sklOwners.containsKey(objectId)) {
+                assertEquals(sklOwners.get(objectId), registry.getPrimaryName(objectId, S3kZoneSet.SKL));
+                assertTrue(profile.getImplementedIds(mhz1).contains(objectId),
+                        "implemented SOZ owner shares the numeric slot with CNZ");
             } else {
                 assertFalse(profile.getImplementedIds(mhz1).contains(objectId),
                         "CNZ object $" + Integer.toHexString(objectId) + " must stay out of the SKL set");

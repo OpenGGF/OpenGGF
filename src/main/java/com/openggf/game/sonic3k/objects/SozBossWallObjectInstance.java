@@ -20,7 +20,7 @@ public final class SozBossWallObjectInstance extends AbstractObjectInstance
     @Override public void update(int vIntRunCount, PlayableEntity leader) {
         var runtime = services().zoneRuntimeRegistry().current();
         if (!(runtime instanceof SozZoneRuntimeState state) || state.actIndex() != 1) {
-            setDestroyed(true);
+            ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
         if (!initialized) {
