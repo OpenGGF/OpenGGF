@@ -156,9 +156,9 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_SLOT_MACHINE` | Audit pending; bonus-loop player priority and native glass overlap covered by `TestGameLoopBonusPlayerPriority` and `TestS3kSlotsGlassNative` ([scope and evidence](../architecture/validation/2026-09-14-slots-glass-layering.md)). Donor/team and rewind visual breadth remain open. |
 | S3K | `S3K_SLOT_MACHINE_2` | Audit pending |
 | S3K | `S3K_LRZ_BOSS` | Audit pending |
-| S3K | `S3K_HIDDEN_PALACE_SANCTUARY` | Audit pending |
+| S3K | `S3K_HIDDEN_PALACE` | Playable act `$1601`; [bring-up plan](../architecture/plans/2026-09-16-hpz-bring-up.md) in progress; matrix pending |
 | S3K | `S3K_DEZ_BOSS` | Audit pending |
-| S3K | `S3K_SPECIAL_STAGE_ARENA` | Audit pending |
+| S3K | `S3K_SPECIAL_STAGE_ARENA` | Super Emerald sanctuary `$1701`; lifecycle covered by `TestS3kHpzSanctuaryHeadless` and `TestS3kHpzGraphRewind`; matrix pending |
 
 Initial inventory: S1: 21 slots, S2: 20 slots, S3K: 48 slots; 89 total. These are inventory counts, not coverage percentages.
 
