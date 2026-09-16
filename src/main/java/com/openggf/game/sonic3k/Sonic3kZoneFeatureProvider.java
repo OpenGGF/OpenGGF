@@ -764,11 +764,6 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         if (zoneIndex == Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA && actIndex == 1) {
             return true;
         }
-        // Canonical HPZ owns a separate nonlinear-resource presentation policy.
-        if (zoneIndex == Sonic3kZoneIds.ZONE_HPZ && actIndex == 1) {
-            return Sonic3kLevelResourceProfile.resolve(zoneIndex, actIndex)
-                    .requireCustomResources().suppressTitleCard();
-        }
         if (zoneIndex != 0 || actIndex != 0) {
             return false;
         }

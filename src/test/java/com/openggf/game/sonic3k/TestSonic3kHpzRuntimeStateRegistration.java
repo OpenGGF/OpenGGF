@@ -35,7 +35,7 @@ class TestSonic3kHpzRuntimeStateRegistration {
     }
 
     @Test
-    void initLevelInstallsSanctuaryRuntimeStateForBothAliases() {
+    void initLevelInstallsHpzRuntimeStateForSanctuaryAndHiddenPalace() {
         Sonic3kLevelEventManager manager =
                 (Sonic3kLevelEventManager) GameServices.module().getLevelEventProvider();
 

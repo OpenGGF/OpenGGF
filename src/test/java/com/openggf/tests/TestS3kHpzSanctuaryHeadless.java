@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class TestS3kHpzSanctuaryHeadless {
 
     @ParameterizedTest
-    @ValueSource(ints = {0x16, 0x17})
+    @ValueSource(ints = {0x17})
     void sanctuaryPublishesEverySceneSpriteRenderer(int zone) {
         HeadlessTestFixture.builder().withZoneAndAct(zone, 1).build();
         var art = GameServices.module().getObjectArtProvider();
@@ -47,7 +47,7 @@ public class TestS3kHpzSanctuaryHeadless {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0x16, 0x17})
+    @ValueSource(ints = {0x17})
     void sanctuaryWithoutChaosEmeraldsUnlocksWithoutConversionPan(int zone) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(zone, 1)
@@ -65,7 +65,7 @@ public class TestS3kHpzSanctuaryHeadless {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0x16, 0x17})
+    @ValueSource(ints = {0x17})
     void freshSanctuaryStartsItsCeremonyAtTheSpawnCameraAndRestoresSonic(int zone) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(zone, 1)
@@ -129,7 +129,7 @@ public class TestS3kHpzSanctuaryHeadless {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0x16, 0x17})
+    @ValueSource(ints = {0x17})
     void everyPedestalSurvivesAWalkAcrossTheSanctuaryAndBack(int zone) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(zone, 1)

@@ -349,13 +349,15 @@ public final class Sonic3kPlcArtRegistry {
     private static void addZoneEntries(int zoneIndex, int actIndex,
                                        List<StandaloneArtEntry> standalone,
                                        List<LevelArtEntry> levelArt) {
-        // SSEntryFlash_GoSS / loc_618AC enters $1701. Ask the profile owner
-        // for the sanctuary aliases ($1601 and $1701) so both register the
-        // art used by Obj_HPZSSEntryControl. Do not resolve a full profile
+        // SSEntryFlash_GoSS / loc_618AC enters the $1701 sanctuary. The
+        // playable $1601 act also places Obj_HPZMasterEmerald,
+        // Obj_HPZSuperEmerald and Obj_SSZHPZTeleporter (Object Pos/1.bin), so
+        // both register the HPZ emerald/teleporter art. Do not resolve a full profile
         // here: mod zones plan art with indices outside the ROM zone/act
         // table (for example zone 64, level 1024) and the profile
         // constructor rejects those, which broke every S3K mod-zone load.
-        if (Sonic3kLevelResourceProfile.isHpzSanctuary(zoneIndex, actIndex)) {
+        if (Sonic3kLevelResourceProfile.isHpzSanctuary(zoneIndex, actIndex)
+                || Sonic3kLevelResourceProfile.isHiddenPalace(zoneIndex, actIndex)) {
             addHpzEntries(actIndex, standalone, levelArt);
             return;
         }

@@ -256,7 +256,7 @@ class TestSonic3kLevelLoading {
         camera.setFocusedSprite(sprite);
         camera.setFrozen(false);
 
-        levelManager.loadZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1);
+        levelManager.loadZoneAndAct(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1);
         GroundSensor.setLevelManager(levelManager);
 
         Sonic3kLevel level = assertInstanceOf(
@@ -305,6 +305,24 @@ class TestSonic3kLevelLoading {
         assertEquals(0x03AC, sprite.getCentreY());
         assertEquals(0x15A0, camera.getX() & 0xFFFF);
         assertEquals(0x0240, camera.getY() & 0xFFFF);
+    }
+
+    @Test
+    void hiddenPalaceActLoadsRom1601BoundsAndObjectSet() throws Exception {
+        preparePlayable();
+
+        levelManager.loadZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1);
+
+        Sonic3kLevel level = assertInstanceOf(
+                Sonic3kLevel.class, levelManager.getCurrentLevel());
+        // LevelSizes "HPZ" row (sonic3k.asm:38142).
+        assertEquals(0x0000, level.getMinX());
+        assertEquals(0x1880, level.getMaxX());
+        assertEquals(0x0000, level.getMinY());
+        assertEquals(0x0B20, level.getMaxY());
+        assertEquals(S3kZoneSet.SKL, level.getObjectZoneSet());
+        assertEquals(Sonic3kZoneIds.ZONE_HPZ, levelManager.getCurrentZone());
+        assertEquals(1, levelManager.getCurrentAct());
     }
 
     @Test

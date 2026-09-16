@@ -114,10 +114,10 @@ public class Sonic3kZoneRegistry extends AbstractZoneRegistry {
                 List.of(LevelData.S3K_GUMBALL, LevelData.S3K_GUMBALL_2),               // 19 Gumball
                 List.of(LevelData.S3K_GLOWING_SPHERE, LevelData.S3K_GLOWING_SPHERE_2), // 20 Glowing Spheres
                 List.of(LevelData.S3K_SLOT_MACHINE, LevelData.S3K_SLOT_MACHINE_2),     // 21 Slot Machine
-                // Keep the raw ROM's 24x2 zone table intact. Canonical HPZ
-                // act 1 resolves the nonlinear $1701 sanctuary resources.
-                List.of(LevelData.S3K_LRZ_BOSS,
-                        LevelData.S3K_HIDDEN_PALACE_SANCTUARY),                         // 22 HPZ
+                // Keep the raw ROM's 24x2 zone table intact: $1600 is the LRZ
+                // boss act and $1601 the playable Hidden Palace act. The
+                // Super Emerald sanctuary is $1701 (zone 23 act 1).
+                List.of(LevelData.S3K_LRZ_BOSS, LevelData.S3K_HIDDEN_PALACE),   // 22 LRZ boss / HPZ
                 List.of(LevelData.S3K_DEZ_BOSS, LevelData.S3K_SPECIAL_STAGE_ARENA)     // 23 DEZ boss / SS arena
         ), ZONE_NAMES);
     }

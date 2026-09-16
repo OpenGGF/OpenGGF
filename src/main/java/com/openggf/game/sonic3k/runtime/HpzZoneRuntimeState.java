@@ -6,8 +6,8 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 /**
- * Runtime-shared Hidden Palace sanctuary state ({@code $1701} and the engine
- * alias {@code $1601}).
+ * Runtime-shared Hidden Palace state for the Super Emerald sanctuary
+ * ({@code $1701}) and the playable Hidden Palace act ({@code $1601}).
  *
  * <p>The sanctuary has no zone-events class; its only per-frame event state is
  * the screen shake the falling-crystal ceremony raises. {@code HPZS_ScreenEvent}

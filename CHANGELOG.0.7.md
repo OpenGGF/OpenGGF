@@ -6,6 +6,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
+  the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
+  instead of the Super Emerald sanctuary (`$1701`), which remains reachable from the
+  giant ring.
+
 - **S3K parity fixes from the discrepancy audit:** Madmole's body is its own object
   in its own slot; the MHZ dragonfly tail enters its return on the same frame as
   the ROM; the MHZ pulley-lift button sequence writes the debug cheat flag; the HPZ

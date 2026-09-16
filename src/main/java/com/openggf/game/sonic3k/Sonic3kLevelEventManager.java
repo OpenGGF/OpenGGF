@@ -479,7 +479,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new SozZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
-        } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)) {
+        } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)
+                || Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
             registry.install(new HpzZoneRuntimeState(zone, act, playerCharacter));
         } else {
             registry.clear();

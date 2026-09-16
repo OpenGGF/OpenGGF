@@ -8,6 +8,7 @@ import com.openggf.level.LevelDescriptor;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -23,18 +24,41 @@ class TestSonic3kNonlinearHpzProfile {
     }
 
     @Test
-    void sanctuaryDescriptorKeepsCanonicalIdentityButSelectsRom1701Resources() {
+    void hiddenPalaceActIsTheLinearRom1601Level() {
         Sonic3kZoneRegistry registry = new Sonic3kZoneRegistry();
         LevelDescriptor descriptor = registry.getLevelDataForZone(
                 Sonic3kZoneIds.ZONE_HPZ).get(1);
 
-        assertEquals(0xED, descriptor.levelIndex());
-        assertEquals("LAVA REEF", registry.getZoneName(Sonic3kZoneIds.ZONE_HPZ));
+        // Sprite_Listing / ScreenEvents pair $1601 with HPZ_Sprites and
+        // HPZ_ScreenInit (sonic3k.asm:202441, 102348); LevelList_DA6E resumes
+        // the Hidden Palace save slot at $1601 (sonic3k.asm:17510).
+        assertEquals(0x0030, descriptor.startX());
+        assertEquals(0x0AEC, descriptor.startY());
+        Sonic3kLevelResourceProfile profile =
+                Sonic3kLevelResourceProfile.resolve(Sonic3kZoneIds.ZONE_HPZ, 1);
+        assertEquals(0x16, profile.romZone());
+        assertEquals(1, profile.romAct());
+        assertEquals(0x2D, profile.tableIndex());
+        assertEquals(0x1601, profile.romEventIdentity());
+        assertEquals(S3kZoneSet.SKL, profile.objectZoneSet());
+        assertEquals(Sonic3kLevelResourceProfile.EventKind.STANDARD, profile.eventKind());
+        assertTrue(profile.customResources().isEmpty());
+        assertFalse(Sonic3kLevelResourceProfile.isHpzSanctuary(Sonic3kZoneIds.ZONE_HPZ, 1));
+        assertTrue(Sonic3kLevelResourceProfile.isHiddenPalace(Sonic3kZoneIds.ZONE_HPZ, 1));
+    }
+
+    @Test
+    void sanctuaryDescriptorSelectsRom1701Resources() {
+        Sonic3kZoneRegistry registry = new Sonic3kZoneRegistry();
+        LevelDescriptor descriptor = registry.getLevelDataForZone(
+                Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA).get(1);
+
+        assertEquals(0xEF, descriptor.levelIndex());
         assertEquals(0x1640, descriptor.startX());
         assertEquals(0x03AC, descriptor.startY());
 
         Sonic3kLevelResourceProfile profile =
-                Sonic3kLevelResourceProfile.resolve(Sonic3kZoneIds.ZONE_HPZ, 1);
+                Sonic3kLevelResourceProfile.resolve(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1);
         assertEquals(0x17, profile.romZone());
         assertEquals(1, profile.romAct());
         assertEquals(0x2F, profile.tableIndex());
@@ -67,6 +91,8 @@ class TestSonic3kNonlinearHpzProfile {
         assertEquals(0x0320, resources.maxY());
         assertTrue(resources.suppressTitleCard());
         assertEquals(Sonic3kMusic.LRZ2.id,
+                registry.getMusicId(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1));
+        assertEquals(Sonic3kMusic.LRZ2.id,
                 registry.getMusicId(Sonic3kZoneIds.ZONE_HPZ, 1));
     }
 
@@ -92,31 +118,33 @@ class TestSonic3kNonlinearHpzProfile {
     }
 
     @Test
-    void sanctuarySuppressesOrdinaryLevelTitleCard() {
+    void sanctuarySuppressesOrdinaryLevelTitleCardButHiddenPalaceDoesNot() {
         Sonic3kZoneFeatureProvider features = new Sonic3kZoneFeatureProvider();
 
         assertTrue(features.shouldSuppressInitialTitleCard(
+                Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1));
+        // TitleCard_LevelGfx selects the Hidden Palace card for $1601
+        // (sonic3k.asm:62149-62151).
+        assertFalse(features.shouldSuppressInitialTitleCard(
                 Sonic3kZoneIds.ZONE_HPZ, 1));
     }
 
     @Test
-    void eventManagerSelectsHpzsHandlersFromRomIdentityWithoutChangingCanonicalZone() {
+    void eventManagerSelectsHpzHandlersForTheHiddenPalaceAct() {
         Sonic3kLevelEventManager events = new Sonic3kLevelEventManager();
 
         events.initLevel(Sonic3kZoneIds.ZONE_HPZ, 1);
 
-        assertEquals(0x1701, events.getActiveRomEventIdentity());
-        assertEquals(Sonic3kLevelEventManager.ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB,
+        assertEquals(0x1601, events.getActiveRomEventIdentity());
+        assertEquals(Sonic3kLevelEventManager.ScreenEventIdentity.STANDARD,
                 events.getScreenEventIdentity());
-
     }
 
     @Test
     void giantRingDestinationSelectsTheCompleteSanctuaryProfile() {
         var profile = Sonic3kLevelResourceProfile.resolve(
                 Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1);
-        assertEquals(Sonic3kLevelResourceProfile.resolve(Sonic3kZoneIds.ZONE_HPZ, 1),
-                profile);
+        assertTrue(profile.customResources().isPresent());
         Sonic3kLevelEventManager events = new Sonic3kLevelEventManager();
         events.initLevel(Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1);
         assertEquals(Sonic3kLevelEventManager.ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB,
