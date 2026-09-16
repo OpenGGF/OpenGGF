@@ -1456,13 +1456,15 @@ public class TestSonic3kPlcArtRegistry {
     }
 
     @Test
-    public void sozPlanHasThreeBadniks() {
+    public void sozPlanHasThreeBadniksAndActOneBossArt() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x08, 0);
         assertNotNull(plan);
-        assertEquals(9, plan.standaloneArt().size());
+        assertEquals(11, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SKORP)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SANDWORM)));
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.ROCKN)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SOZ_MINIBOSS)));
+        assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.SOZ_MINIBOSS_DUST)));
     }
 
     @Test

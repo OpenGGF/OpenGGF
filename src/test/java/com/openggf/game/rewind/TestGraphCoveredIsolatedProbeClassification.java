@@ -691,6 +691,15 @@ class TestGraphCoveredIsolatedProbeClassification {
                 evidence);
     }
 
+    @Test
+    void sozBadnikChildrenUseTheirProductionGraphRecreationEvidence() {
+        for (String name : new String[]{"RocknBadnikInstance$Shell", "RocknBadnikInstance$Legs",
+                "SandwormBadnikInstance$Segment"}) {
+            assertGraphCovered("com.openggf.game.sonic3k.objects.badniks." + name,
+                    "com.openggf.tests.TestSozBadnikProduction");
+        }
+    }
+
     private void assertGraphCovered(String className, String evidence) {
         RoundTripSweepResult result = RewindRoundTripHarness.probeClass(className);
         RoundTripSweepResult.GraphCovered covered =

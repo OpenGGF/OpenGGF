@@ -31,7 +31,8 @@ class TestSozEndBoss {
     private int requestedZone=-1,requestedAct=-1;
     private boolean deactivateRequested;
     @BeforeEach void setup() throws Exception {
-        TestEnvironment.activeGameplayMode();rom=new Rom();assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+        rom=new Rom();assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
+        TestEnvironment.configureRomFixture(rom);
         state=new SozZoneRuntimeState(1,PlayerCharacter.SONIC_ALONE);
         player=new TestablePlayableSprite("sonic",(short)0,(short)0);player.setCentreX((short)0x5100);player.setCentreY((short)0x600);
         var gameState=new GameStateManager();var camera=new Camera();camera.setX((short)0x5100);camera.setY((short)0x600);

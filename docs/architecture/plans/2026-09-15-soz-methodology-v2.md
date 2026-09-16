@@ -1930,3 +1930,45 @@ and completed temple. The three `capture-4x-slow.mp4` clips in
 `completion-act2-redraw/verified-retained-production` are explicitly slow motion.
 These are source-backed engine checks, not native pixel certification. No Act1
 retained-plane prototype was restored.
+
+## Combined delivery validation
+
+At `240071d5e`, queued category validation against pre-task base
+`1a63f57015a8012e6a34b2fe4f07cc0d52f91056` selected all 2,657 ordinary classes
+plus guards (`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
+--base 1a63f57015a8012e6a34b2fe4f07cc0d52f91056 --run`). The ordinary lane
+completed 21,158 tests with four failures, no errors and 25 skips in 818.64s.
+Failures were the rewind-tail class inventory, SOZ standalone-art count, stock
+zone-dependent factory inventory and the old CNZ-only numeric-slot assumption.
+The guard lane completed 668 tests with nine failures, no errors/skips in 180.38s.
+SOZ-owned findings covered event access, lifetime/touch/control conventions,
+update-clock naming, the object-manager facade budget and test lifecycle/oracles.
+These are being corrected through their existing owners, not by raising budgets.
+
+A bounded matched run on unchanged updated `develop` at
+`ea5973d9aafa12dc85de014fe413cf0501a2c770` used queued Maven with `-Dmse=off
+-Pguards -Dtest=TestBuildToolingGuard,TestTraceChaserBoundaryGuard,TestNoAssertionFreeDiagnostics
+test -B`: 131 tests, three failures, no errors/skips, 52.799s. The baseline
+failures are stale direct-Maven prose expectations, tracked `tools/bizhawk/README.md`,
+and assertion-free `FbzRouteEvidenceProbe#printEvidence` /
+`LevelSolidityMapProbe#writeSolidityMap`. The SOZ checkpoint delegate adds a new
+oracle finding only in the candidate and must be fixed; the baseline failures
+are not attributed to this task.
+
+The 25 ordinary skips include opt-in diagnostics/benchmarks, native graphics
+capability gates, the CPZ spin-tube assumption and separate capture scenarios.
+SOZ captures were exercised explicitly in the focused runs recorded above;
+this ordinary run does not certify those skipped capture invocations or trace
+parity. Final correction and integrated-tree results remain pending.
+
+The root correction batch moves placement ownership and remembered-spawn lookup
+into the existing placement controller, injects zone-event access into the
+seamless handoff, and updates the explicit art/factory/rewind inventories. The
+three badnik children are classified against their production graph test, which
+now asserts that the actual shell, legs and segment types exist at recreation
+milestones. The focused 343-test run passed 342 tests; its sole stale hardcoded
+inventory pin was corrected and the one-test rerun passed without skips.
+The final inventory is 1,063 classes: 839 isolated passes and 224 graph-covered.
+Focused guards then passed 81 of 82 tests with no skips; the sole failure contains
+exactly the two unchanged baseline diagnostic probes above. SOZ event access,
+facade size, lifecycle setup and checkpoint oracle findings are cleared.

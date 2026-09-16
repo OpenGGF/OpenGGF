@@ -52,17 +52,27 @@ class TestSozBadnikProduction {
             assertEquals(width,fixture.camera().getWidth() & 65535);
             var manager=GameServices.level().getObjectManager();
             boolean bound=false,child=false;
+            var recreatedChildren = new java.util.HashSet<String>();
             var registry=fixture.gameplayMode().getRewindRegistry();
             for(int frame=0;frame<180;frame++) {
                 var before=registry.capture();fixture.stepFrame(false,false,false,false,false);
                 bound |= manager.getActiveObjects().stream().anyMatch(o -> o.getClass().getSimpleName().equals(family));
                 child |= manager.getActiveObjects().stream().anyMatch(o -> o.getClass().getEnclosingClass()!=null && o.getClass().getEnclosingClass().getSimpleName().equals(family));
                 if(frame==8 || frame==24 || frame==140) {
+                    manager.getActiveObjects().stream()
+                            .filter(o -> o.getClass().getEnclosingClass()!=null
+                                    && o.getClass().getEnclosingClass().getSimpleName().equals(family))
+                            .forEach(o -> recreatedChildren.add(o.getClass().getSimpleName()));
                     var after=registry.capture(); manager.setRewindInPlaceRestoreEnabledForTest(false); registry.restore(before); same(before,registry.capture(),family+" restore "+frame);
                     fixture.stepFrame(false,false,false,false,false);same(after,registry.capture(),family+" replay "+frame);
                 }
             }
             assertTrue(bound,"production registry binds "+family);assertTrue(child,"production allocates children "+family);
+            if (family.equals("RocknBadnikInstance"))
+                assertTrue(recreatedChildren.containsAll(java.util.Set.of("Shell", "Legs")),
+                        "both levels of the Rockn graph must undergo recreation: " + recreatedChildren);
+            if (family.equals("SandwormBadnikInstance"))
+                assertTrue(recreatedChildren.contains("Segment"), "segment owner graph must undergo recreation");
         } finally {
             CrossGameFeatureProvider.getInstance().resetState();config.clearSessionOverrides();saved.forEach(config::setSessionOverride);
             config.resolveDisplayAspect();SessionManager.clear();TestEnvironment.activeGameplayMode();

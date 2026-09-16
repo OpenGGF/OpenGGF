@@ -120,7 +120,10 @@ class TestRemainingRewindTailInventory {
         // MHZ1's independent defeat-explosion controller also passes the isolated sweep.
         // SOZ quicksand passes the isolated sweep; no remaining-tail category grows.
         // SOZ doors, push switches and floating pillars all pass the isolated sweep.
-        return new TailInventory(1020, 800, 220, 0, buckets);
+        // Full SOZ bring-up: 39 additional isolated passes and four graph-covered
+        // children. Rockn Shell/Legs and Sandworm Segment require their real owners;
+        // TestSozBadnikProduction explicitly recreates those child types.
+        return new TailInventory(1063, 839, 224, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
