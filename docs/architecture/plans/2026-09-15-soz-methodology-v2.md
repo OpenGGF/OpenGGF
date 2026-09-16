@@ -2007,3 +2007,22 @@ final temple image with both players visible; the route author inspected the
 sinking frame. Inputs supply no gameplay-state or hardware-timing values.
 The cold route is native width320 with intros enabled, not every configuration.
 Short production graph tests remain the separate rewind evidence.
+
+### Verified cold Act 2 completion
+
+`de765d83d` preserves 32,432 controller frames and `TestSozColdAct2Capture`.
+Queued Maven `-Dmse=off -Dtest=TestSozColdAct2Capture
+-Ds3k.rom.path="$SOZ_ROM"
+-Dsoz.cold.act2.capture="$SOZ_CAPTURE_ROOT/completion-cold-route/act2-native-320-final"
+-Dsoz.cold.act2.stride=1 test` passed one test without skips:137.1s test,
+2:35 Maven. A subsequent sparse repeat with explicit final control-lock and
+object-control assertions passed one test without skips:4.747s test,23.416s
+Maven. Production runtime is unchanged from `819d99cc1`.
+
+The route reaches the real boss after all three corks and the timed final
+shaft, delivers eight natural hits, completes capsule/results and loads LRZ
+at32,252, retaining180 destination frames. The matrix records exact combat
+milestones. Both players are visible in the inspected destination; control is
+released. The native recording's upper switch/swing route is followed, leaving
+the separate lower rock puzzle explicitly unverified. No collision, geometry
+or physics tuning was needed for the final Act2 route authoring.

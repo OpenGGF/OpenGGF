@@ -220,8 +220,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the host audio clock across repeated death/reloads. Sonic 2 and S3K companions
   copy the leader's collision plane and art priority when flight recovery ends,
   and release stale engine platform support while retaining native interaction state.
-  Full-route and
-  transient VDP redraw limits remain documented in the per-act matrices.
+  Fixed controller replays now complete both acts from cold native Sonic + Tails
+  starts through playable destinations. Broader character/donor/viewport routes,
+  the lower Act 2 rock puzzle and exact native parity remain documented in the
+  per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. MHZ end-boss debris
