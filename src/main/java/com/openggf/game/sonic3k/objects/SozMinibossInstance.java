@@ -166,7 +166,7 @@ public final class SozMinibossInstance extends SozMinibossSprite implements Spaw
         spawnFreeChild(() -> new SozMinibossChild.Alignment(getSpawn(),savedMinX,savedMaxX));
         // loc_76E48 converts the existing SST to EndSignControl even when allocation is full.
         int slot=ObjectLifetimeOps.detachSlotForTransfer(this);
-        setDestroyed(true);
+        ObjectLifetimeOps.deleteNoRespawn(this);
         ObjectLifetimeOps.addReplacementAtTransferredSlot(services().objectManager(),
                 new S3kBossDefeatSignpostFlow(x,0,S3kBossDefeatSignpostFlow.CleanupAction.NONE)
                         .withNativeControlSlot(slot),slot);

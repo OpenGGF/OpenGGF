@@ -10,6 +10,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.*;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
+import com.openggf.sprites.playable.ObjectControlState;
 import java.util.IdentityHashMap;
 import java.util.List;
 
@@ -45,29 +46,29 @@ public final class SozEndBossChild extends AbstractObjectInstance
     public SozEndBossChild(ObjectSpawn spawn) {
         super(spawn,"SOZEndBossChild");role=spawn.subtype();x=spawn.x();y=spawn.y();
     }
-    @Override public void update(int vInt, PlayableEntity leader) {
+    @Override public void update(int vIntRunCount, PlayableEntity leader) {
         visible=false;
-        if(retired){setDestroyed(true);return;}
+        if(retired){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(dying){move();vy=(short)(vy+0x38);visible=(phase++&1)!=0;
             if(isCoarseXOutOfRange(x,services().camera().getX(),0x280)
-                    || ((y-services().camera().getY()+0x80)&0xFFFF)>0x200)setDestroyed(true);
+                    || ((y-services().camera().getY()+0x80)&0xFFFF)>0x200)ObjectLifetimeOps.deleteNoRespawn(this);
             return;
         }
         if(role==17){followFallingPlayer();return;}
-        if(boss==null){setDestroyed(true);return;}
+        if(boss==null){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(!initialized){initialized=true;if(initialize(leader))return;}
         switch(role) {
-            case UPPER,LOWER,REAR -> shell(vInt);
-            case OVERLAY -> {visible=true;if(boss.defeated()||x<0x5180)setDestroyed(true);}
+            case UPPER,LOWER,REAR -> shell(vIntRunCount);
+            case OVERLAY -> {visible=true;if(boss.defeated()||x<0x5180)ObjectLifetimeOps.deleteNoRespawn(this);}
             case FRONT -> {follow();visible=true;if(boss.dismantling())startFlicker();}
             case PILOT -> pilot();
-            case SHOULDER,ELBOW,HAND,BACK_SHOULDER,BACK_ELBOW,BACK_HAND -> limb(vInt);
-            case CHARGE -> charge(vInt);
+            case SHOULDER,ELBOW,HAND,BACK_SHOULDER,BACK_ELBOW,BACK_HAND -> limb(vIntRunCount);
+            case CHARGE -> charge(vIntRunCount);
             case PARTICLE -> particle();
             case PROJECTILE -> projectile();
-            case MASK -> {follow();visible=true;if(--timer<0)setDestroyed(true);}
-            case FLAME -> {dx=boss.flipped()?-30:30;follow();visible=(vInt&1)==0&&boss.xVelocity()!=0;
-                if(boss.dismantling()||boss.hidden())setDestroyed(true);}
+            case MASK -> {follow();visible=true;if(--timer<0)ObjectLifetimeOps.deleteNoRespawn(this);}
+            case FLAME -> {dx=boss.flipped()?-30:30;follow();visible=(vIntRunCount&1)==0&&boss.xVelocity()!=0;
+                if(boss.dismantling()||boss.hidden())ObjectLifetimeOps.deleteNoRespawn(this);}
             default -> throw new IllegalStateException("SOZ child role "+role);
         }
     }
@@ -106,7 +107,7 @@ public final class SozEndBossChild extends AbstractObjectInstance
     }
     private void follow(){x=((parent==null?boss.getX():parent.x)+(byte)dx)&0xFFFF;
         y=((parent==null?boss.getY():parent.y)+(byte)dy)&0xFFFF;}
-    private void limb(int vInt) {
+    private void limb(int vIntRunCount) {
         if(role==SHOULDER||role==BACK_SHOULDER){dx=role==SHOULDER?boss.limbAngle()>>2:0;follow();}
         else {
             int angle=(role>=BACK_SHOULDER?-boss.limbAngle():boss.limbAngle())&255;
@@ -122,32 +123,32 @@ public final class SozEndBossChild extends AbstractObjectInstance
         if(role<=HAND){var contacts=checkpointAll();
             if(role==HAND&&!boss.defeated()&&contacts!=null)contacts.perPlayer().forEach((p,c)->{
                 // sub_78178 reads the player's $34 invulnerability timer.
-                if(c.kind()==ContactKind.SIDE&&p.getCentreX()<=x&&!p.getInvulnerable())hurt(p,vInt);
+                if(c.kind()==ContactKind.SIDE&&p.getCentreX()<=x&&!p.getInvulnerable())hurt(p,vIntRunCount);
             });}
         if((role==SHOULDER||role==BACK_SHOULDER)?boss.dismantling():parent!=null&&parent.dying) {
             releaseRiders();startFlicker();
         }
     }
-    private void shell(int vInt) {
+    private void shell(int vIntRunCount) {
         if(role==UPPER&&shellWaiting){if(!boss.shellOpen())shellWaiting=false;
-            if(boss.defeated()){releaseRiders();setDestroyed(true);}return;}
+            if(boss.defeated()){releaseRiders();ObjectLifetimeOps.deleteNoRespawn(this);}return;}
         if(role==LOWER&&boss.shellOpen()){releaseRiders();shellWaiting=true;
-            if(boss.defeated())setDestroyed(true);return;}
+            if(boss.defeated())ObjectLifetimeOps.deleteNoRespawn(this);return;}
         shellWaiting=false;dx=role==REAR?32:0;dy=role==UPPER?-20:role==LOWER?68:0;follow();
         var standing=new IdentityHashMap<PlayableEntity,Boolean>();
         for(var p:players())standing.put(p,services().objectManager().hasObjectStandingBit(p,this));
         var contacts=checkpointAll();
         if(contacts!=null)contacts.perPlayer().forEach((p,c)->{
             if(role==UPPER&&c.kind()==ContactKind.SIDE){
-                if(p.getCentreX()>x)hurt(p,vInt);
+                if(p.getCentreX()>x)hurt(p,vIntRunCount);
                 else if(!isKnuckles(p)||p.getAnimationId()==2
                         ||p instanceof AbstractPlayableSprite a&&a.getDoubleJumpFlag()==1){
                     boss.openShell(p);shellWaiting=true;releaseRiders();}
             } else if(role==LOWER&&(c.kind()==ContactKind.SIDE||Boolean.TRUE.equals(standing.get(p)))) {
-                p.setOnObject(false);if(!p.getInvulnerable())hurt(p,vInt);
+                p.setOnObject(false);if(!p.getInvulnerable())hurt(p,vIntRunCount);
             }
         });
-        if(role==REAR?boss.dismantling():boss.defeated()){releaseRiders();setDestroyed(true);}
+        if(role==REAR?boss.dismantling():boss.defeated()){releaseRiders();ObjectLifetimeOps.deleteNoRespawn(this);}
     }
     private boolean isKnuckles(PlayableEntity p){return p instanceof AbstractPlayableSprite a
             &&com.openggf.game.CharacterKey.KNUCKLES.equals(a.characterKey());}
@@ -155,15 +156,15 @@ public final class SozEndBossChild extends AbstractObjectInstance
             ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED);}
     private void releaseRiders(){var manager=services().objectManager();if(manager==null)return;
         for(var p:players())if(manager.hasObjectStandingBit(p,this)){manager.clearRidingObject(p);p.setOnObject(false);p.setAir(true);}}
-    private void hurt(PlayableEntity p,int vInt){if(p.getDead()||p.getInvulnerable())return;
+    private void hurt(PlayableEntity p,int vIntRunCount){if(p.getDead()||p.getInvulnerable())return;
         if(p instanceof AbstractPlayableSprite a){int pos=(a.getCentreY()<<16|a.getYSubpixelRaw())-(a.getYSpeed()<<8);
             NativePositionOps.writeYPosPreserveSubpixel(a,pos>>16);a.setSubpixelRaw(a.getXSubpixelRaw(),pos&0xFFFF);}
         if(p.isCpuControlled()){p.applyHurt(x,DamageCause.NORMAL);return;}
-        boolean rings=p.getRingCount()>0;if(rings&&!p.hasShield())services().spawnLostRings(p,vInt);
+        boolean rings=p.getRingCount()>0;if(rings&&!p.hasShield())services().spawnLostRings(p,vIntRunCount);
         p.applyHurtOrDeath(x,DamageCause.NORMAL,rings);}
     private void startFlicker(){parent=null;dying=true;visible=true;vx=boss.word(0x852F4+subtype*2);vy=boss.word(0x852F6+subtype*2);}
     private void pilot(){follow();visible=true;
-        if(boss.hidden()){setDestroyed(true);return;}
+        if(boss.hidden()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(phase==1&&boss.defeated()){frame=3;return;}
         if(--animationTimer<0){animationTimer=phase==1?5:boss.knuckles()?15:5;animationCursor^=1;frame=animationCursor;}
         if(boss.defeated()){frame=3;phase=1;}else if(phase==0&&boss.hurtFlash())frame=2;
@@ -183,36 +184,39 @@ public final class SozEndBossChild extends AbstractObjectInstance
         }
         return false;
     }
-    private void charge(int vInt){
+    private void charge(int vIntRunCount){
         if(phase==0&&terminalFinished()){phase=1;terminal=null;timer=8;services().playSfx(Sonic3kSfx.LASER.id);
             var mask=spawnChild(()->new SozEndBossChild(boss,this,MASK));
             if(mask!=null&&mask.getSlotIndex()>=0)spawnChild(()->new SozEndBossChild(boss,this,PROJECTILE));}
-        if(phase!=0&&--timer<0){dying=true;setDestroyed(true);return;}
-        follow();if(boss.defeated()||boss.shellOpen()){dying=true;setDestroyed(true);return;}
-        visible=(vInt&1)==0;
+        if(phase!=0&&--timer<0){dying=true;ObjectLifetimeOps.deleteNoRespawn(this);return;}
+        follow();if(boss.defeated()||boss.shellOpen()){dying=true;ObjectLifetimeOps.deleteNoRespawn(this);return;}
+        visible=(vIntRunCount&1)==0;
     }
     private void particle(){
-        if(phase==0){if(--timer>=0){if(parent.dying||boss.shellOpen())setDestroyed(true);return;}phase=1;}
+        if(phase==0){if(--timer>=0){if(parent.dying||boss.shellOpen())ObjectLifetimeOps.deleteNoRespawn(this);return;}phase=1;}
         if(--animationTimer<0){animationTimer=7;
             if(animationCursor==4){retired=true;}else frame=boss.byteAt(0x78349+animationCursor++);}
         vx=(short)(vx+0x10);dx=(short)(dx+vx);
         if(!yCentered){vy=(short)(vy+(dy<0?0x10:-0x10));int next=(short)(dy+vy);
             if((next^dy)<0){next=0;yCentered=true;}dy=next;}
         x=(parent.x+(byte)(dx>>>8))&0xFFFF;y=(parent.y+(byte)(dy>>>8))&0xFFFF;
-        if(parent.dying||boss.shellOpen()){dying=true;setDestroyed(true);}visible=true;
+        if(parent.dying||boss.shellOpen()){dying=true;ObjectLifetimeOps.deleteNoRespawn(this);}visible=true;
     }
     private void projectile(){visible=true;
         if(phase==0&&--timer>=0){dx=(byte)(dx+(vx>>8));dy=(byte)(dy+(vy>>8));follow();
-            if(parent.dying)setDestroyed(true);return;}
-        phase=1;parent=null;move();if(isCoarseXOutOfRange(x,services().camera().getX(),0x280))setDestroyed(true);
+            if(parent.dying)ObjectLifetimeOps.deleteNoRespawn(this);return;}
+        phase=1;parent=null;move();if(isCoarseXOutOfRange(x,services().camera().getX(),0x280))ObjectLifetimeOps.deleteNoRespawn(this);
     }
     /** loc_77A6E/77A98 is an independently allocated owner, later than the root. */
     private void followFallingPlayer(){
         if(phase==0&&!((com.openggf.game.sonic3k.runtime.SozZoneRuntimeState)
                 services().zoneRuntimeState()).events().endBossFallStarted())return;
         var main=services().playerQuery().mainPlayerOrNull();if(main==null)return;
-        for(var other:services().playerQuery().sidekicks())if(other instanceof AbstractPlayableSprite sprite){
-            if(phase==0){sprite.setHighPriority(false);sprite.setObjectControlled(true);
+        // loc_77A98 owns Player_2; each engine follower receives the same P2 role.
+        for(var other:services().playerQuery().playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED))
+            if(other!=main && other instanceof AbstractPlayableSprite sprite){
+            if(phase==0){sprite.setHighPriority(false);ObjectControlState.nativeBit7FullControl().applyTo(sprite);
                 sprite.setAnimationId(0x1A);sprite.setControlLocked(false);}
             NativePositionOps.writeXPosPreserveSubpixel(sprite,main.getCentreX());
             NativePositionOps.writeYPosPreserveSubpixel(sprite,main.getCentreY()-32);

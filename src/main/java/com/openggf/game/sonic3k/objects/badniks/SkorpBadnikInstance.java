@@ -94,7 +94,7 @@ public final class SkorpBadnikInstance extends AbstractS3kBadnikInstance impleme
             return new Tail(context.spawn(), null, null, 0);
         }
         @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {
-            if (owner == null || previous == null || owner.isDestroyed()) { setDestroyed(true); return; }
+            if (owner == null || previous == null || owner.isDestroyed()) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             facingLeft = previous.badnikFacingLeft();
             if (routine == 0) routine = 2; // loc_8E78C falls through to idle.
             switch (routine) {

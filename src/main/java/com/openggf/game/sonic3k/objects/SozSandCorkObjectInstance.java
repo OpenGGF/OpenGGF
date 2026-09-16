@@ -28,7 +28,7 @@ public final class SozSandCorkObjectInstance extends AbstractObjectInstance
             initialized = true;
             var manager = services().objectManager();
             if (phase == 0 && manager != null && manager.isSpawnStateBitSet(spawn, 0)) {
-                spawnColumns(true); setDestroyed(true); return;
+                spawnColumns(true); ObjectLifetimeOps.deleteNoRespawn(this); return;
             }
         }
         if (phase == 0) {
@@ -66,7 +66,7 @@ public final class SozSandCorkObjectInstance extends AbstractObjectInstance
             }
         } else if (phase == 1) {
             moveDebris();
-            if (yVelocity >= 0x400 && !isOnScreen()) setDestroyed(true);
+            if (yVelocity >= 0x400 && !isOnScreen()) ObjectLifetimeOps.deleteNoRespawn(this);
         } else {
             if (travel != 0) { yFixed += 4 << 16; travel = (travel - 4) & 0xFFFF; }
             // Native loc_41E78 reads the low byte at a0-$1FB, an unrelated SST
@@ -97,6 +97,18 @@ public final class SozSandCorkObjectInstance extends AbstractObjectInstance
     }
     @Override public int getCollisionFlags() { return phase == 0 ? 0xC6 : 0; }
     @Override public int getCollisionProperty() { return 0; }
+    // Native Draw_And_Touch_Sprite polls the collision property on every overlap.
+    @Override public TouchResponseProfile getTouchResponseProfile() {
+        return getTouchResponseProfile(false);
+    }
+    @Override public TouchResponseProfile getTouchResponseProfile(boolean multiRegionSource) {
+        return new TouchResponseProfile(TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY,
+                true, true, multiRegionSource, TouchShieldDeflectCapability.NONE, 0, false,
+                TouchAttackBouncePolicy.STANDARD_ENEMY_KILL,
+                TouchActorContextPolicy.MAIN_FULL_SIDEKICK_HURT_ONLY,
+                multiRegionSource ? TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_MAIN_ONLY
+                        : TouchOverlapStopPolicy.STOP_AFTER_FIRST_OVERLAP_FOR_ALL_ACTORS);
+    }
     @Override public boolean requiresContinuousTouchCallbacks() { return true; }
     @Override public boolean usesS3kTouchSpecialPropertyResponse() { return true; }
     @Override public int romObjectCodePointerHighWord() { return 4; }

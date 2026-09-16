@@ -85,7 +85,7 @@ public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance impl
                 moveWithVelocity(); yVelocity = (short)(yVelocity + 0x38); flicker = !flicker;
                 int dx = ((currentX & 0xFF80) - ((cameraLeft() - 0x80) & 0xFF80)) & 65535;
                 int dy = (currentY - cameraTop() + 0x80) & 65535;
-                if (dx > 0x80 + viewportWidth() + 0xC0 || dy > 0x200) setDestroyed(true);
+                if (dx > 0x80 + viewportWidth() + 0xC0 || dy > 0x200) ObjectLifetimeOps.deleteNoRespawn(this);
                 return;
             }
             if (owner == null || owner.isDestroyed()) {
@@ -144,7 +144,7 @@ public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance impl
             }
             if (!splash) {
                 animate(1, 3, 4); moveWithVelocity();
-                if (--timer < 0) { if (routine == 2) { routine = 3; yVelocity = 0x40; timer = 31; } else setDestroyed(true); }
+                if (--timer < 0) { if (routine == 2) { routine = 3; yVelocity = 0x40; timer = 31; } else ObjectLifetimeOps.deleteNoRespawn(this); }
                 return;
             }
             if (routine == 2) {
@@ -156,7 +156,7 @@ public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance impl
             } else {
                 // byte_8ED98: frame 7/3, frame 7/3, frame 8/5, callback delete.
                 if (--animTimer < 0) {
-                    if (++animFrame >= 3) setDestroyed(true);
+                    if (++animFrame >= 3) ObjectLifetimeOps.deleteNoRespawn(this);
                     else { mappingFrame = animFrame == 2 ? 8 : 7; animTimer = animFrame == 2 ? 5 : 3; }
                 }
             }
