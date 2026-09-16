@@ -663,6 +663,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_SOZ) {
             registry.register(new com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect());
+            registry.register(com.openggf.game.sonic3k.render.SozBgHighPriorityForegroundOverlayEffect.spritePriorityMask());
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_HCZ) {
             registry.register(hczBgHighPriorityForegroundOverlayEffect);
@@ -785,7 +786,10 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
 
     @Override
     public boolean useSpriteSatMasking(int zoneIndex) {
-        return zoneIndex == Sonic3kZoneIds.ZONE_GUMBALL;
+        // SOZ uses Map_SOZ1EndDoor's sand-surface mask, the placed Obj_SpriteMask,
+        // and the end-boss laser mask. Their marker/companion pairs require the
+        // same SAT post-pass as Gumball; ordinary painter rendering drops them.
+        return zoneIndex == Sonic3kZoneIds.ZONE_GUMBALL || zoneIndex == Sonic3kZoneIds.ZONE_SOZ;
     }
 
     protected AizZoneRuntimeState getAizState() {

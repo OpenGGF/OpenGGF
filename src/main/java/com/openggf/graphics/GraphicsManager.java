@@ -2008,6 +2008,7 @@ public class GraphicsManager {
 		// `spriteSatEntries` itself (no defensive copy). The replay below consumes
 		// the processed list synchronously, so the live buffer is cleared in the
 		// finally block only after the replay finished with it.
+		// Lower SAT indices win overlap: mask in native order, replay in reverse painter order.
 		List<SpriteSatEntry> processedEntries = SpriteSatMaskPostProcessor.processReusable(spriteSatEntries, applyMask);
 
 		spriteSatCollectionActive = false;
@@ -2022,7 +2023,8 @@ public class GraphicsManager {
 
 			if (spritePresentationBuilder != null) {
 				for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-					for (SpriteSatEntry entry : processedEntries) {
+					for (int i = processedEntries.size() - 1; i >= 0; i--) {
+						SpriteSatEntry entry = processedEntries.get(i);
 						if (entry.priorityBucket() != bucket) continue;
 						if (entry.debugSource() != null)
 							spritePresentationBuilder.layer = SpritePresentation.Layer.valueOf(entry.debugSource());
@@ -2090,7 +2092,7 @@ public class GraphicsManager {
 			satReplayBatchOpen = false;
 			int paletteTexId = paletteTextureId;
 			for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-				for (int i = 0, n = processedEntries.size(); i < n; i++) {
+				for (int i = processedEntries.size() - 1; i >= 0; i--) {
 					SpriteSatEntry processedEntry = processedEntries.get(i);
 					if (processedEntry.priorityBucket() == bucket) {
 						appendBatchedReplayCommands(processedEntry, paletteTexId);
@@ -2170,7 +2172,8 @@ public class GraphicsManager {
 			return reusableReplayCommands;
 		}
 		for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-			for (SpriteSatEntry processedEntry : processedEntries) {
+			for (int i = processedEntries.size() - 1; i >= 0; i--) {
+				SpriteSatEntry processedEntry = processedEntries.get(i);
 				if (processedEntry.priorityBucket() == bucket) {
 					appendDirectReplayCommands(processedEntry, paletteTextureId, reusableReplayCommands);
 				}

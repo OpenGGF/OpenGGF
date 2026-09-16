@@ -211,7 +211,18 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The cold sand intro, Egg Golem arena and seamless
   Act 2 entry use native event owners. The golem arena opens at the equivalent
   centered native viewport in widescreen, so the right wall cannot prevent the
-  admission camera gate from firing. Act 2 couples light switches, ghosts,
+  admission camera gate from firing. The last-checkpoint debug shortcut reloads
+  destination events, so skipping to the SOZ2 boss no longer retains early-room
+  darkness or omits the boss background. Arena and laser sprite masks clip later
+  sprites, including the opening door and sinking golem beneath the sand.
+  Sprite overlap follows bucket and native slot order independently of terrain
+  priority, and golem dust keeps its own priority across the sand boundary.
+  Detached golem parts retain their priority, Rockn eyes follow its walking direction,
+  and the rising pyramid shakes terrain and sprites together. Sprite-art replay
+  avoids per-tile temporary allocations while preserving immutable rewind frames.
+  Spiked pillars resolve native art-word carries, and high-priority background
+  sand hides submerged pillars and spikes.
+  Act 2 couples light switches, ghosts,
   torches and palette fades, and implements the final boss, collapsing wall,
   capsule/results and the Lava Reef transition. Post-boss background rows remain
   intact during art loading and redraw in order, including widescreen margins.
@@ -223,7 +234,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   copy the leader's collision plane and art priority when flight recovery ends,
   and release stale engine platform support while retaining native interaction state.
   Fixed controller replays now complete both acts from cold native Sonic + Tails
-  starts through playable destinations. Broader character/donor/viewport routes,
+  starts through playable destinations. Compatibility acceptance follows the
+  supported donor roster and checks ROM-backed art and animations for each live
+  participant before and after tested loads. Broader character/donor/viewport routes,
   the lower Act 2 rock puzzle and exact native parity remain documented in the
   per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,

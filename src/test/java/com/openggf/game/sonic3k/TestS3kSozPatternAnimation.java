@@ -184,6 +184,8 @@ public class TestS3kSozPatternAnimation {
         for (int x : new int[]{0, 17, 511, 1023, 0x4380, -17}) {
             for (int y : new int[]{0, 767, 768, 1024, 1535, 1536, -16}) {
                 for (int frame : new int[]{0, 1, 2, 63, 0xFFFF}) {
+                    GameServices.camera().setXCopy((short)x);
+                    GameServices.camera().setYCopy((short)y);
                     handler.update(lines, x, y, frame, 0);
                     assertEquals((short)y >> 4, handler.getVscrollFactorBG());
                     assertEquals((short)x >> 4, handler.getBgCameraX());
@@ -235,6 +237,8 @@ public class TestS3kSozPatternAnimation {
         int[] lines = new int[224];
         for (int x : new int[]{0, 1, 511, 0x2980, 0xFFFF, 0x8001}) {
             for (int y : new int[]{0, 1, 0x7FF, 0xFFFF}) {
+                GameServices.camera().setXCopy((short)x);
+                GameServices.camera().setYCopy((short)y);
                 handler.update(lines, x, y, 5, 1);
                 assertEquals(Math.floorDiv((short) x, 2), handler.getBgCameraX());
                 assertEquals(Math.floorDiv((short) y, 2), handler.getVscrollFactorBG());

@@ -66,14 +66,16 @@ class TestSozConnectedMechanismsProduction {
             var rom=donor.equals("s1")?RomTestUtils.ensureSonic1RomAvailable():RomTestUtils.ensureSonic2RomAvailable();
             config.setSessionOverride(donor.equals("s1")?SonicConfiguration.SONIC_1_ROM:SonicConfiguration.SONIC_2_ROM,rom.getAbsolutePath());
         }
-        if (scene == SozConnectedMechanismRoute.Scene.LOWER)
-            SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        String followers=SozAcceptanceConfigurations.supportedFollowers(donor,
+                scene==SozConnectedMechanismRoute.Scene.LOWER?"":"tails");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,followers);
         TestEnvironment.activeGameplayMode();
         var builder = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1)
                 .startPosition((short) scene.x, (short) scene.y).startPositionIsCentre()
                 .withFreshLevelStartLifecycle();
         if(!donor.equals("off"))builder.withCrossGameDonation(donor);
         var fixture=builder.build();
+        SozAcceptanceConfigurations.assertUsableTeam(donor);
         assertEquals(width,fixture.camera().getWidth()&65535);
         assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
         if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
@@ -81,7 +83,7 @@ class TestSozConnectedMechanismsProduction {
         // Finish native setup before the first recorded controller input.
         GameServices.level().consumePendingInitialProcessSpritesPass();
         fixture.sprite().setRingCount(99);
-        SozConnectedMechanismRoute.assertRoster(scene);
+        SozConnectedMechanismRoute.assertRoster(scene,followers);
         fixture.sprite().refreshPersistentInstaShieldRegistration();
         var route = new SozConnectedMechanismRoute(scene);
         var registry = fixture.gameplayMode().getRewindRegistry();

@@ -2122,6 +2122,10 @@ media references and commit policy; do not rerun unchanged engine tests.
 
 ## 2026-09-16 non-trace acceptance follow-up
 
+The later [supported-roster correction](#2026-09-16-supported-roster-correction)
+supersedes this section's character/donor product claims; original run counts
+remain historical evidence, not current certification.
+
 User direction: finish remaining work while skipping traces for now. Base is
 `e25269d0e70d0db9ddbb5b914a30795d859ab755`, worktree `.worktrees/soz-acceptance`,
 local branch `feature/ai-soz-acceptance`. No strict replay, trace production or
@@ -2331,3 +2335,382 @@ validation. The commit hook caught absolute machine-local paths in the command
 record; commands now use `ROM_ROOT` while retaining the exact ROM filenames,
 options and selections. Existing dirty disassemblies and unrelated user files
 were preserved. Captures remain in the external unified SOZ task directory.
+
+
+## 2026-09-16 supported-roster correction
+
+Based on integrated `d2b84abb5`, isolated branch `feature/ai-soz-tails-route`.
+The outstanding S1-donor Tails end-boss search exposed an acceptance error,
+not evidence for a boss/physics change. `LaunchProfile.mainCharacterValues`,
+`sidekickValues` and `sanitizedFor`, the donor capability declarations and
+`CONFIGURATION.md` already restrict S1 to Sonic, S2 to Sonic/Tails, and native
+S3K to Sonic/Tails/Knuckles. Raw test configuration had bypassed that gate.
+
+A landing-triggered, 20-frame held-jump controller opened the shell at tick182
+but died at285 without a hit. It was rejected. A paired 601-frame-bounded probe
+then ran identical default controller decisions with S1 and S2 donors. Rolling
+status and movement initially matched, but animation differed at tick0: S1
+remained animation0, S2 used roll2. The first non-animation state difference was
+at tick257: S2 removed one boss hit point while S1 took damage. The S1 fixture
+died at468; the S2 observation reached600. `Sonic1PlayerArt.loadForCharacter`
+returns null for Tails, leaving no profile; `ObjectTouchResponseController`
+requires the roll animation and rolling status for a spin attack. The production
+launch clamps this unsupported request. Neither boss geometry nor touch logic
+was changed. Temporary observation/controller code and CSVs are disposable;
+these findings supersede the earlier search's interpretation.
+
+The corrected acceptance helper consults `LaunchProfile.sanitizedFor` and asserts
+ROM-backed renderer, animation profile/scripts and mappings for every participant,
+including at the tested destination/reload. Character keys, not internal follower
+instance codes such as `tails_p2`, identify characters. The launch regression
+checks S1 Tails/Knuckles and S2 Knuckles fallback explicitly. The matrix becomes:
+
+- All ten checkpoints × five widths × six supported character/donor combinations:
+  300 physical activation/replay/death-reload cases.
+- Each boss: 30 natural victories covering the same supported combinations and
+  widths, with the existing graph recreation/replay and playable transition.
+  Act1 Sonic uses the supported stock pair with off/S2 and solo with S1. A
+  Sonic-duplicate S1 companion changed combat enough to kill the width320
+  controller at3677; that mixed-combat route remains unauthored, not a runtime
+  defect. The default solo S1 controller also died at3197; the existing left-side
+  approach passed all five widths. Repeated duplicate-team lifecycle coverage
+  remains in the90-case test.
+- Repeated team reloads retain 90 cases and one/two/six follower counts. S1 uses
+  Sonic duplicates; S2 substitutes Sonic for Knuckles; native rosters retain
+  mixed characters and duplicates. No finite maximum is asserted.
+- Connected mechanisms retain all60 width/donor cases. Other donor-sensitive
+  object/light/badnik tests replace unsupported S1 Tails followers with Sonic.
+
+This corrects the support premise; it does not erase remaining supported cold
+route breadth, mixed combat, repeated seamless/exits, lower subtype-$87 passage,
+or native presentation obligations. Trace recording/replay remains deferred.
+
+### Validation and delivery
+
+The change-based plan selected2660 ordinary classes plus guards because test
+helpers are unclassified. Proportionate validation applies: production source,
+physics, timing, asset loading and launch policy are unchanged; only bounded SOZ
+fixtures, assertions and one launch-policy regression change. Run the affected
+SOZ classes, launch-profile tests and the mandatory S3K quartet. This is focused
+validation, not a full-suite claim. The completed selections below account for711 unique passing cases, zero errors
+and zero skips on the corrected acceptance tree. Initial failures were the new
+helper reading follower instance codes (173 cases), then the width320 S1 golem
+controller (one case); each affected class was rerun after its correction. No
+unattributed runtime failure remains in these selections.
+
+All commands used `python3 tools/testing/maven_queue.py -Dmse=off`, `test -B`,
+and these explicit ROM properties (`ROM_ROOT` is the main workspace):
+
+```bash
+"-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+"-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+```
+
+Selections and completed outcomes:
+
+- `-Dtest=TestSozCheckpointReloadProduction,TestSozTeamCheckpointResetProduction,TestSozConnectedMechanismsProduction,TestSozLightGhostCompatibility,TestSozSandRockProduction,TestSozAct1VictoryProduction,TestSozEndBossInputRoute,TestLaunchProfile,TestLaunchProfileApplier,TestLaunchProfileStore,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+  initial663 cases,173 assertion failures, no errors/skips,1:54 Maven. The
+  415 cases outside the five affected classes passed and were not repeated.
+- `-Dtest=TestSozPushableRockProduction,TestSozMechanismsProduction,TestSozRouteControllersProduction,TestSozAct1SpringVineRoute,TestSozBadnikProduction,TestSozAct1QuicksandRoute`:
+  48 passed, zero failures/errors/skips,25.711s Maven.
+- `-Dtest=TestSozAct1VictoryProduction,TestSozConnectedMechanismsProduction,TestSozLightGhostCompatibility,TestSozSandRockProduction,TestSozTeamCheckpointResetProduction`:
+  248 cases, one S1 golem-controller failure, zero errors/skips,1:38 Maven;
+  the218 non-golem cases passed with corrected participant keys.
+- `-Dtest=TestSozAct1VictoryProduction`: the final left-approach controller
+  completed30 cases, zero failures/errors/skips,49.93s JUnit /1:07 Maven.
+
+The temporary comparison probe's two passing observation tests are not part of
+these711 acceptance cases. No trace fixtures or native parity checks were run.
+
+## 2026-09-16 sprite priority and masking pass
+
+Continues from roster correction `0187f991e` on `feature/ai-soz-tails-route`,
+with combined integration base `d2b84abb5`. The user reported bosses, doors and
+spikes appearing in front of terrain/objects. The source audit separates native
+SAT bucket/slot order from `art_tile` terrain priority; it does not change bucket
+constants to compensate for a renderer defect.
+
+Confirmed defects and fixes:
+
+- SOZ created `loc_55F98` / `Map_SOZ1EndDoor` masks but only Gumball enabled SAT
+  collection. Enable it for SOZ so arena, placed Act2 and boss-laser masks reach
+  the existing post-pass. The production door regression failed before this
+  change and passed after it: no submitted door tile extends below world Y `$A00`.
+- Unified object/player drawing split each bucket into low/high terrain-priority
+  groups. `Draw_Sprite` appends object pointers and `Render_Sprites` consumes them
+  in native slot order, independent of `art_tile` bit15. Keep combined buckets;
+  reverse native order for painter drawing, with players ahead of objects.
+- Mask collection previously consumed painter order. A three-object regression
+  (front object, mask, rear object in one bucket) hid the front object instead of
+  the rear. Collect ascending slots, mask later entries, then reverse pieces for
+  CPU, direct and instanced replay. Two shared regressions failed before the fix.
+- Golem dust inherited the body's X-dependent bucket/terrain priority.
+  `ObjDat3_773CA`, `loc_770C4` and `loc_770DA` keep dust at bucket3/high and do not
+  call the body's `sub_770EA`. Preserve that priority on both sides of `$4200`.
+  The dust regression failed before the override.
+
+The ordinary SOZ door (bucket4/low), generic spikes (4/low), floating/spiked
+pillars (5/low), push switch (6/low), and boss-part table were checked against
+their disassembly owners. Their constants were retained. This is a source audit,
+not independent native pixel certification of every placement or child phase.
+
+Focused verification before broad validation:
+
+- Queued Maven `-Dmse=off -Dtest=TestLevelRendererBucketInvalidation,TestGraphicsManagerSpriteSatReplay,TestSatReplayBatching,TestSpriteSatMaskPostProcessor,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestSozSpriteMaskPresentation,TestSozMiniboss,TestGumball* test -B`, with the explicit S3K ROM property: 69 passed, no failures/errors/skips.
+- Expanded ordering/mapping-piece regression, arena-mask widths320/400/512/640/800,
+  positioned Act1 victory at800 and four Act2 mechanism captures: 25 passed,
+  no failures/errors/skips. The five capture scenarios use the real GameLoop.
+- Act1's5325 state rows exactly match the previous wide victory capture. Inspected
+  opening-door and golem-sinking frames show the sand-surface clipping; Act2
+  upper/lower/rock/switch captures complete with terrain and sprite presentation.
+
+Durable originals are retained under the unified external SOZ task folder's
+`priority-pass/`. No new traces are recorded or replayed. Shared ordering changes
+require normal change-based validation; the earlier roster-only proportionate
+exception does not cover them. The final-boss capture passed (one test, no skips), with all3050 state rows
+identical to the prior positioned victory. It retains eight natural hits and the
+playable LRZ handoff. Boss articulation/defeat and destination frames were inspected.
+The six final movies pass full FFmpeg decode checks. The highlights replace six
+boss/defeat/handoff excerpts with corrected footage while retaining22 chapters,
+Act1-before-Act2 order and260.700s at1920×1080/60fps. Originals remain intact.
+The shared mask clips whole tile rows; sub-tile/native pixel parity remains an
+explicit limitation. Broad validation and integration are pending at this checkpoint.
+
+### Broad-run findings and native sand follow-up
+
+First broad run `20260916T102345Z-2dba7579` completed the ordinary lane:
+2661 reports,21563 tests,6 failures,0 errors,27 skips,975.8s. All failures are
+attributed to this change: one existing follower-chain ordering expectation,
+four new mask-test widths that reused a320px camera, and a source guard counting
+four ring-draw paths after removal of an unreachable branch left three. Restore
+the established multi-follower presentation order, open a fresh session for each
+mask width, and update the dead-branch count. The earlier five requested mask
+widths did not establish five actual camera widths; the new assertion exposed it.
+The runner stopped before guards because the working tree changed during the run.
+This is incomplete broad validation, not a green result. The27 skips comprise
+opt-in capture/benchmark/native cases, two unavailable GL capability checks and
+the existing CPZ spin-tube assumption; no required ROM path was missing.
+
+The rising-sand inspection exposed a further defect. Native source
+`Obj_SOZFloatingPillar` uses art word `$4001`; frame2's spike word `$D49B` becomes
+`$149C` after 16-bit addition, clearing priority. The independent palette-only
+sum retained the raw mapping priority bit. Also, the existing SOZ BG-high replay
+ran after foreground but was absent from the sprite-priority mask pass.
+The new pixel regression compares submerged spike pixels with a tiles-only
+render while requiring the exposed pillar body to remain visible.
+
+Native probes use the common host, the existing SOZ2 save SHA256
+`A7CF91BB8EE8EE93D3B51E4E3C0271F549FCDE12D7BB93916E9331364F963074`, and the verified
+locked-on ROM. Both completed1600 observation rows in under four seconds.
+The first probe reused controller inputs after positioned camera streaming but
+died before the desired comparison height. The second explicitly holds P1 at
+`$22A0/$0340` from frame500, allowing native sand and pillar routines to advance;
+it is an isolated presentation probe, not ordinary route or trajectory parity.
+Frames960/1200/1440 show the pillar/spikes disappearing beneath the rising sand.
+Both originals, plans, Lua exporters, screenshots and host provenance are under
+external `priority-pass/native-sand-priority-*`. No trace fixture is published.
+
+A ROM scan of the ten common SOZ level-art families found priority carries only
+in the pillar's eight spike mapping pieces; ordinary doors/switches/rocks/vines
+and sand blocks retained their existing words. The pillar builder shares FBZ's
+full-art-word resolver and is admitted through the provider's explicit builder
+switch. The first wiring attempt omitted that switch; sheet-presence and exposed-
+body assertions caught the missing art, so disappearance could not masquerade
+as successful occlusion.
+
+The focused corrected tree passed53 tests, no failures/errors/skips, with queued
+Maven `-Dmse=off -Dtest=TestSozFloatingPillarArtWord,TestFbzChainLinkArtWord,TestSozSandPriorityPixels,TestHczOverlayCommandPool,TestSonic3kPlcArtRegistry#s3kArtRegistryMappingsStayWithinSaneSpriteSheetLimits,TestPatternSpriteRendererCorruptionGuard,TestSozSpriteMaskPresentation,TestSpriteManagerRender,TestLevelRendererBucketInvalidation,RenderOrderTest test -B`
+and the explicit S3K ROM path. The five mask widths now assert their actual
+camera dimensions. Overlay command tests retain independent mask/visible modes
+and verify that pooled mask state does not leak into HCZ's visible replay.
+
+Final six production capture scenarios passed with no failures/errors/skips.
+All recorded state rows remain identical to the preceding captures: Act1 victory
+5325, Act2 boss3050, upper680, lower3065, rock240 and switch180. The updated lower
+frame1200 visibly clips spikes at the sand surface, preserving the pillar above
+it. Final capture sources live under external `priority-pass/complete/`; earlier
+intermediate/native probes remain labelled in the archive. The highlights also
+replace the rising-sand excerpt with this corrected moving capture.
+
+Final broad selection after these fixes is2663 ordinary classes plus guards,
+against the same combined integration base. Record the completed outcome after
+that run; do not mutate the candidate during validation. Integration and push
+remain pending until required checks complete.
+
+
+### Detached miniboss child priority follow-up
+
+The second broad attempt (`20260916T105504Z-b71b350c`) was explicitly cancelled
+before completion to fix another source-confirmed child-phase defect. It is not
+a validation pass; its temporary diagnostics were acknowledged and removed.
+`loc_76F24` applies `sub_770EA` before dispatching detached parts through
+`loc_849D8` to `Obj_FlickerMove`. The generic debris routine preserves the last
+bucket/art priority; recalculating it as debris crosses `$4200` was incorrect.
+Capture these attributes at detachment and preserve them through rewind.
+`CreateChild` also copies the parent's art word into the hitbox child;
+`loc_76F6A` assigns bucket5 without the X gate. Preserve that inherited bit for
+its visible hit-reaction frames rather than using the body's current X.
+Focused regressions cover both sides of the boundary and forced debris
+reconstruction. The refreshed Act1 moving capture is retained separately under
+external `priority-pass/complete-debris/`; previous captures remain intact.
+
+Queued Maven `-Dmse=off -Dtest=TestSozMiniboss,TestSozSpriteMaskPresentation,TestSozAct1VictoryCapture test -B`
+with the explicit S3K ROM, capture destination and800px width passed20 tests,
+no failures/errors/skips. This includes the refreshed production victory/handoff
+capture. Java21/Lua5.4/PowerShell preflight passed before the final broad run.
+
+
+### Priority candidate validation and playtest follow-up
+
+Run `20260916T110822Z-f18b0fd4` completed against base `d2b84abb5`: ordinary
+2663 reports/21567 tests, zero failures/errors,27 skips,953.33s. Skips are opt-in
+capture/benchmark/native checks, the two unavailable GL capabilities and the
+existing CPZ spin-tube assumption; no missing ROM skips. Guards completed
+84 reports/668 tests with three failures, zero errors/skips,176.71s:
+`TestBuildToolingGuard.supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap`,
+`TestTraceChaserBoundaryGuard.onlyReviewedForwardersRemainAtMigratedRoots`, and
+`TestNoAssertionFreeDiagnostics.noAssertionFreeTestMethodsUnderTestsTree`.
+A matched base run is pending; this is not a fully green delivery.
+
+The user's subsequent playtest adds five obligations before integration: Rockn
+child facing, terrain during pyramid rumble, the Act2 outer boss layer, room-entry
+light/ghost handling, and measured memory/GC churn. Preserve native event gates;
+check ordinary-route entry separately from positioned boss captures. Profile
+allocations before selecting performance changes. Earlier priority work and
+moving captures remain part of this combined delivery.
+
+The matched baseline command on main `develop` at `d2b84abb5` was queued Maven
+`-Dmse=off -Pguards -Dtest=TestBuildToolingGuard,TestTraceChaserBoundaryGuard,TestNoAssertionFreeDiagnostics test -B`:
+131 tests, the same three failures and exact messages, zero errors/skips.
+The guidance guard expects superseded direct-Maven prose; the boundary guard
+rejects tracked `tools/bizhawk/README.md`; the diagnostic guard names existing
+`FbzRouteEvidenceProbe#printEvidence` and `LevelSolidityMapProbe#writeSolidityMap`.
+No SOZ change introduced these failures. Consumed category diagnostics were removed.
+
+
+### Playtest findings and matched allocation measurement
+
+`Refresh_ChildPositionAdjusted` copies render flips through Rockn's shell to its
+visible eye child. The implementation copied positions only; propagate facing
+at the native refresh boundaries and cover repeated left/right turns.
+`SOZ1/2_ScreenEvent` adds the previous shake to `Camera_Y_pos_copy` before
+background deformation. `SwScrlSoz` now uses those published camera words for
+foreground V-scroll, background positioning and shimmer phase, matching sprites
+without moving the physical gameplay camera or adding shake twice. Arithmetic
+oracles explicitly publish their camera inputs; production tests check both
+positive and negative shake offsets.
+
+Queued focused Maven selection
+`TestSozBadnikFamilies,TestSozScreenEvents,TestS3kSozPatternAnimation,TestLevelSpritePresentation,TestLevelSpritePresentationLifecycle,TestPatternAtlas*`
+passed63 tests, zero failures/errors/skips. The subsequent
+`TestSozLightAndGhostsProduction,TestSozAct1VictoryCapture,TestSozEndBossVictoryCapture`
+passed8 tests with no failures/errors/skips. The new room-entry case starts with
+live ghosts, rejects camera Y `$4FF`, enters at `$500`, verifies brightness,
+eight wall solids and ghost disappearance, and restores/replays the entry.
+Normal cold-route and positioned boss captures show the outer layer. The user
+subsequently identified the last-checkpoint debug shortcut as the failing entry
+path; the investigation and regression below supersede the earlier open report.
+Refreshed moving originals are under external `playtest-followup/`.
+
+A temporary Java/JFR probe booted SOZ2 with native Sonic+Tails at 400px and replayed
+the first6000 inputs of `soz2-cold-sonic-tails.bk2`. It measured5400 frames after
+600 warmup frames, separately around `GameplayCaptureSession.step` and the
+production draw/flush/GL-finish path, excluding pixel readback, PNG and CSV writes.
+Audio was disabled; live rewind was explicitly tested both enabled and disabled.
+ThreadMXBean measured bytes per frame; JFR identified allocation owners, not
+precise source totals (its weighted samples include class-loading outliers).
+
+| Live rewind | Before logic bytes/frame | After logic bytes/frame | Before render bytes/frame | After render bytes/frame |
+|---|---:|---:|---:|---:|
+| Enabled |116727.75|116934.73|19323.26|5160.10|
+| Disabled |102676.13|100549.95|19371.50|5160.21|
+
+The render reduction is about73%. Avoid enum `values()` clones in atlas-range
+lookups and reuse one draw-local Pattern while immediately copying immutable
+DPLC versions into the atlas; pack/unpack words without temporary long arrays.
+Keep immutable frame ownership and redraw/rewind semantics. Sampled position,
+event and lighting columns match before/after. Logic allocation remains material;
+this is bounded allocation improvement, not proof that all live GC stalls are
+resolved or a real-time frame-rate benchmark. Raw profiles are temporary.
+
+A later320px run with rewind enabled consumed all32432 authored inputs and
+reached LRZ. It measured31832 post-warmup frames:119396.56 logic and5861.07 render
+bytes/frame. Sampled median logic allocation in successive route windows was
+95000,83800,92720 and83424 bytes/frame (sampling every120 frames), with no monotonic
+growth in this run. The first sampled boss mode is `$28` at frame29880 with
+darkness/fade zero; post-boss mode `$30` appears at31320. This is an ordinary
+controller-route observation, not a trace-parity claim or a retained-heap proof.
+The refreshed highlights retain22 chapters/260.700s and now show the pyramid
+rising before the golem, using moving `playtest-followup/` captures.
+
+
+### Last-checkpoint shortcut and boss-entry state
+
+The user clarified that the missing shell and persistent ghosts followed a skip
+to the last checkpoint. `GameLoopDebugShortcuts` moved coordinates without a
+load boundary. From early SOZ2 this retained background routine `$10`, bypassing
+`sub_5699A`'s sand-exit gate and never reaching `$20`, the owner of `loc_564D4`'s
+boss-entry check. Consequently `loc_56510..565C6` never loaded the boss background,
+brightened the room or created its wall solids. Normal play's gates were correct;
+do not weaken those gates to compensate for a debug shortcut.
+
+The generic shortcut now seeds a fresh checkpoint and requests the production
+reload. It does not save the source room's event/camera runtime. Destination
+screen initialization selects `$20`; ordinary arena entry then loads art, creates
+eight wall solids and clears darkness. Checkpoint coordinates use native centers.
+The shortcut costs no life and resets rewind history at the normal load boundary.
+Controls and configuration documentation now describe this behavior and correctly
+identify the furthest-right placed checkpoint rather than the last activated one.
+
+`TestSozLastCheckpointShortcutProduction` failed before the fix at 320, 400 and 800px
+and passed afterward. The final focused command selected that class plus
+`TestGameLoopDebugShortcuts`: 4 tests, zero failures/errors/skips. It checks a
+populated source rewind history, destination timeline isolation, unchanged lives,
+checkpoint 6 at `$4EC0,$4A8`, late-room event initialization, brightness, eight wall
+solids and the submitted outer-shell art job. The lighting regression separately
+covers ghost fade-out and entry replay.
+
+The broad invocation `20260916T114458Z-176e7327` was cancelled when this entry-path
+clarification arrived. It is incomplete, not a pass; its diagnostics were consumed
+and removed. The final combined candidate requires a fresh broad run after these
+changes. The earlier three guard failures remain matched to the unchanged base.
+
+The 400px moving follow-up calls the actual shortcut from early SOZ2, then uses
+ordinary directional/jump input through the switch and drop. At capture frame 689
+camera Y reaches 1283, background mode becomes `$24`, and darkness/fade are zero;
+mode `$28` follows at 718. The shell is visibly present at 760. The retained final
+capture under external `playtest-followup/checkpoint-shortcut-shell/` seeds 99 rings
+after reload to survive boss contact; it does not alter events, geometry or
+position. Early capture attempts either stopped pushing or jumped before holding
+the switch long enough; those are input-authoring failures, not boss-entry proof.
+
+### Combined candidate verification and MGZ2 cross-check
+
+The final combined command was
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base d2b84abb5 --run`
+on `feature/ai-soz-tails-route` at `0187f991e` plus this priority/playtest change.
+Completed run `20260916T120529Z-098ba3e0`: 2,664 ordinary reports / 21,573 tests,
+zero failures/errors, 27 skips, 956.50 seconds; 84 guard reports / 668 tests,
+three failures, zero errors/skips, 176.41 seconds. The three guard identities
+and exact messages match the earlier baseline comparison above. This is an
+ordinary-suite pass with pre-existing guard failures, not an all-green suite.
+All result/skipped cases were inspected and the diagnostics were acknowledged
+and removed. Skips were opt-in capture/native/benchmark/soak diagnostics, two
+unavailable GL capabilities and the existing CPZ spin-tube assumption; none were
+missing-ROM skips. Required AIZ/loading/bootstrap/decoding checks passed.
+
+The user also identified MGZ2 as a checkpoint-shortcut failure. Its existing
+`MGZ2_BackgroundInit` implementation reconstructs the completed floor rise from
+late checkpoint coordinates. A production capture called the same new C helper
+from early MGZ2, reloaded checkpoint 7 at `$3E00,$08F8`, then observed rise routine
+8 and offset `$1D0`, with lives unchanged at 3. The rendered scene was inspected
+at 400px with native Sonic+Tails (`playtest-followup/mgz2-checkpoint/`). No MGZ2
+production change was needed. The ordinary suite also passed all 13 existing
+`TestS3kMgz2BgRiseHeadless` cases. This establishes reuse of the normal respawn
+initialization, not replay of the skipped floor-rising animation or restoration
+of arbitrary traversed layer switches.
+
+The refreshed highlights passed full decoding: 22 chapters, 260.700 seconds,
+Act1 before Act2, now including the moving checkpoint-to-boss approach. The
+original compilation and all source captures remain in the unified task folder.

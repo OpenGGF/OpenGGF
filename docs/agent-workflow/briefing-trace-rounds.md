@@ -165,6 +165,15 @@ and every entry field, including slot, instead of collapsing the list into one
 value per slot. Suppressing a visual on restore would delete legitimate state;
 it is not a correction for a comparator that paired the wrong objects.
 
+SOZ donor-roster audit (2026-09-16): raw headless character overrides can bypass
+production launch availability. S1-donor Tails instantiated and passed lifecycle
+checks without playable art or an animation profile; its rolling status did not
+produce the roll animation required by touch attacks. Derive supported teams from
+the production launch policy and check each participant's renderer, animation
+profile/scripts and mappings before certifying interaction or reload coverage.
+A retained configuration string or an instantiated sprite is insufficient. Do not
+repair an unsupported debug combination by changing shared combat rules.
+
 | Rule | Signature | What it looks like |
 |---|---|---|
 | 25 | `-Dmse=off` missing | CLI `-D` properties silently never reach the fork |

@@ -122,7 +122,7 @@ five seconds for accepted writes to finish.
 | Key | Action |
 |-----|--------|
 | D | Toggle free-fly debug mode (move camera freely with arrow keys) |
-| C | Teleport to the last checkpoint (furthest 'right') in this act. |
+| C | Reload at the furthest-right checkpoint in this act, initializing destination events without losing a life. |
 
 The `D` mode is the engine's free-fly debug movement capability. It is not Sonic
 2's native `Debug_placement_mode`: ring/item placement and the other level-wide

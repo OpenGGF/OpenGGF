@@ -24,7 +24,7 @@ class TestSozBadnikProduction {
         "0,0x330,0x5D4,SkorpBadnikInstance,352,tails,none,off",
         "0,0xE50,0xF0,RocknBadnikInstance,400,knuckles,none,off",
         "1,0x180,0x674,SkorpBadnikInstance,528,sonic,'tails,knuckles',off",
-        "0,0xA30,0xBDC,SandwormBadnikInstance,800,sonic,tails,s1",
+        "0,0xA30,0xBDC,SandwormBadnikInstance,800,sonic,sonic,s1",
         "1,0x550,0x3DC,SandwormBadnikInstance,320,sonic,tails,s2",
         "0,0x330,0x5D4,SkorpBadnikInstance,512,knuckles,none,off",
         "1,0x550,0x3DC,SandwormBadnikInstance,640,tails,sonic,off"})
@@ -49,6 +49,7 @@ class TestSozBadnikProduction {
                     .startPosition((short)x,(short)y).startPositionIsCentre().withFreshLevelStartLifecycle();
             if(!donor.equals("off")) builder.withCrossGameDonation(donor);
             var fixture=builder.build();
+            SozAcceptanceConfigurations.assertUsableTeam(donor);
             assertEquals(width,fixture.camera().getWidth() & 65535);
             var manager=GameServices.level().getObjectManager();
             boolean bound=false,child=false;

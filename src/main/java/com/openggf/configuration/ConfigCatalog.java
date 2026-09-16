@@ -344,7 +344,7 @@ public final class ConfigCatalog {
         put(FRAME_STEP_KEY, of("debug.keys", "frameStep", KEY,
                 "Step forward one frame while paused; the gamepad right bumper (RB/R1) also steps a frame"));
         put(DEBUG_LAST_CHECKPOINT_KEY, of("debug.keys", "lastCheckpoint", KEY,
-                "Teleport to the last checkpoint"));
+                "Reload at the furthest-right checkpoint"));
         put(LEVEL_SELECT_KEY, of("debug.keys", "levelSelect", KEY, "Open the level select screen"));
         put(SUPER_SONIC_DEBUG_KEY, of("debug.keys", "superSonic", KEY, "Toggle Super Sonic debug mode"));
         put(GIVE_EMERALDS_KEY, of("debug.keys", "giveEmeralds", KEY, "Give all chaos emeralds"));

@@ -23,14 +23,15 @@ class TestSozAct1VictoryProduction {
         for(String character:new String[]{"sonic","tails","knuckles"})
             for(int width:new int[]{320,400,512,640,800})
                 for(String donor:new String[]{"off","s1","s2"})
-                    rows.add(Arguments.of(character,width,donor));
+                    if(SozAcceptanceConfigurations.supportsCharacter(donor,character))
+                        rows.add(Arguments.of(character,width,donor));
         return rows.stream();
     }
     @ParameterizedTest @MethodSource("configurations")
     void positionedApproachLuresGolemIntoSandThenEntersAct2(String character,int width,String donor){
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,character);
-        String followers=character.equals("sonic")?"tails":"";
+        String followers=character.equals("sonic")&&!donor.equals("s1")?"tails":"";
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,followers);
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,"NATIVE_4_3");
         config.resolveDisplayAspect();
@@ -47,16 +48,17 @@ class TestSozAct1VictoryProduction {
                 .startPositionIsCentre().withFreshLevelStartLifecycle();
         if(!donor.equals("off"))builder.withCrossGameDonation(donor);
         var f=builder.build();
+        SozAcceptanceConfigurations.assertUsableTeam(donor);
         assertEquals(character,f.sprite().getCode());
         assertEquals(width,GameServices.camera().getWidth());
         assertEquals(followers.isEmpty()?0:1,GameServices.sprites().getRegisteredSidekicks().size());
-        if(!followers.isEmpty())assertEquals("tails",GameServices.sprites().getSidekickCharacterName(GameServices.sprites().getRegisteredSidekicks().getFirst()));
+        if(!followers.isEmpty())assertEquals(followers,GameServices.sprites().getSidekickCharacterName(GameServices.sprites().getRegisteredSidekicks().getFirst()));
         assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
         if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
         assertEquals(!donor.equals("s1"),f.sprite().getGameRules().playerCapability().spindashEnabled());
         f.sprite().setRingCount(99);
         var route=new SozAct1VictoryRoute(character.equals("knuckles")
-                || (character.equals("tails")&&donor.equals("s2")));
+                || donor.equals("s1") || (character.equals("tails")&&donor.equals("s2")));
         var registry=f.gameplayMode().getRewindRegistry();
         var milestones=new java.util.LinkedHashSet<String>();StringBuilder trail=new StringBuilder();
         var previousInput=new com.openggf.debug.playback.Bk2FrameInput(-1,0,0,false,"");
@@ -104,7 +106,9 @@ class TestSozAct1VictoryProduction {
             int palette=0;for(int color=0;color<16;color++)palette|=com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(GameServices.level().getCurrentLevel().getPalette(line).getColor(color));
             assertNotEquals(0,palette,"native entry fade must restore destination palette line "+line);
         }
-        assertEquals(8,GameServices.level().getCurrentZone());assertEquals(1,GameServices.level().getCurrentAct());
+        assertEquals(8,GameServices.level().getCurrentZone());
+        SozAcceptanceConfigurations.assertUsableTeam(donor);
+        assertEquals(1,GameServices.level().getCurrentAct());
         var before=registry.capture();f.stepFrame(false,false,false,false,false);var after=registry.capture();
         GameServices.level().getObjectManager().setRewindInPlaceRestoreEnabledForTest(false);
         registry.restore(before);same(before,registry.capture(),"Act2 restore");

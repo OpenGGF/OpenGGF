@@ -76,6 +76,36 @@ class TestSozLightAndGhostsProduction {
         var before=f.gameplayMode().getRewindRegistry().capture();f.stepFrame(false,false,false,false,false);replay(f,before,false,"escaped ghosts and fragment graph");
         assertNotNull(GameServices.level().getObjectRenderManager().getRenderer(Sonic3kObjectArtKeys.SOZ_GHOSTS));
     }
+    @Test void bossRoomEntryBrightensAndFadesExistingGhostsAtTheNativeThreshold() {
+        var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
+                .startPosition((short)0x4FF0,(short)0x480).startPositionIsCentre()
+                .withFreshLevelStartLifecycle().build();
+        f.camera().setY((short)0x4FF);f.camera().setFrozen(true);
+        f.sprite().setInvulnerableFrames(1000);f.sprite().setRingCount(99);
+        f.stepFrame(false,false,false,false,false);
+        var state=S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        assertEquals(0x20,state.events().backgroundRoutine());
+        ((CheckpointState)GameServices.level().getCheckpointState()).saveCheckpoint(1,0x4FF0,0x480,false);
+        state.lighting().initializeSeamlessDarkness();
+        var manager=GameServices.level().getObjectManager();
+        if(manager.activeObjectsOfType(SozHyudoroControllerObjectInstance.class).isEmpty())
+            manager.addDynamicObject(new SozHyudoroControllerObjectInstance(new ObjectSpawn(0x120,0xA0,0xAA,0,0,false,0)));
+        for(int i=0;i<80;i++)f.stepFrame(false,false,false,false,false);
+        assertFalse(manager.activeObjectsOfType(SozHyudoroBodyObjectInstance.class).isEmpty());
+        NativePositionOps.writeXPosResetSubpixel(f.sprite(),0x5000);
+        f.stepFrame(false,false,false,false,false);
+        assertEquals(5,state.lighting().darknessLevel(),"camera below $500 must not enter the arena");
+        f.camera().setY((short)0x500);
+        var before=f.gameplayMode().getRewindRegistry().capture();
+        f.stepFrame(false,false,false,false,false);
+        replay(f,before,false,"boss room light, ghost fade and wall allocation");
+        assertEquals(0,state.lighting().darknessLevel());
+        assertEquals(0x24,state.events().backgroundRoutine());
+        assertEquals(8,manager.activeObjectsOfType(SozBossWallObjectInstance.class).size());
+        for(int i=0;i<45;i++)f.stepFrame(false,false,false,false,false);
+        assertEquals(0,state.lighting().fadeStep());
+        assertTrue(manager.activeObjectsOfType(SozHyudoroBodyObjectInstance.class).isEmpty());
+    }
     @Test void dynamicGhostAttackAndFadeRestoreOwnerAndBody() {
         var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();
         ((CheckpointState)GameServices.level().getCheckpointState()).saveCheckpoint(1,0x140,0x3AC,false);

@@ -70,11 +70,11 @@ public class TestSatReplayBatching {
         assertEquals(3, getIntField(batchCommand, "instanceCount"));
         FloatBuffer instanceBuffer = (FloatBuffer) getField(batchCommand, "instanceBuffer");
 
-        // Bucket-major order: bucket 4 first, then bucket 2 in submission order —
+        // Bucket-major order: bucket 4 first, then bucket 2 in reverse SAT order —
         // identical to the direct (unbatched) replay path's command order.
         assertEquals(20f, instanceBuffer.get(0), "first instance x");
-        assertEquals(10f, instanceBuffer.get(FLOATS_PER_INSTANCE), "second instance x");
-        assertEquals(30f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE), "third instance x");
+        assertEquals(30f, instanceBuffer.get(FLOATS_PER_INSTANCE), "second instance x");
+        assertEquals(10f, instanceBuffer.get(2 * FLOATS_PER_INSTANCE), "third instance x");
 
         // Per-instance VDP priority survives batching as the tile-occlusion
         // palette mask (instance float 9): high-priority pieces are occluded by

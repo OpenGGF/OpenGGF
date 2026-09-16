@@ -1547,9 +1547,8 @@ public final class LevelRenderer {
         graphicsManager.setCurrentSpriteHighPriority(false);
         graphicsManager.beginPatternBatch();
 
-        boolean bonusStageSpriteSatOrdering = zoneFeatureProvider != null
+        boolean useSpriteSatMasking = zoneFeatureProvider != null
                 && zoneFeatureProvider.useSpriteSatMasking(lm.currentZone);
-        boolean useSpriteSatMasking = bonusStageSpriteSatOrdering;
         TraceGhostHook.GhostLayerRenderer traceGhostHook = selectGhostLayerHook(
                 currentTraceVisibility, TraceGhostHook.active());
         GhostRenderRegistry gameplayGhosts = resolveGameplayGhostRegistry();
@@ -1563,48 +1562,32 @@ public final class LevelRenderer {
             // SAT collection must follow sprite-table order, not painter order.
             // Draw_Sprite inserts into Sprite_table_input by ascending priority bucket,
             // and lower sprite slots end up in front later during rasterization.
-            // In the Gumball stage the playable sprites must still come after same-bucket
-            // machine objects so Sonic/sidekicks remain on top within bucket 2.
+            // Players occupy the first SST slots, ahead of same-bucket objects.
             for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
                 graphicsManager.setCurrentSpriteSatBucket(bucket);
-                if (objectManager != null) {
-                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
-                }
                 if (spriteManager != null) {
                     SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
                     spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
+                }
+                if (objectManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
                 drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
             }
             graphicsManager.endSpriteSatCollectionAndReplay();
         } else {
             for (int bucket = RenderPriority.MAX; bucket >= RenderPriority.MIN; bucket--) {
-                if (bonusStageSpriteSatOrdering) {
-                    // In the gumball bonus stage, the player and bonus-stage objects share
-                    // the same priority buckets. Draw objects first so lower-slot player
-                    // sprites remain on top within a shared bucket.
-                    if (objectManager != null) {
-                        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                        objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
-                    }
-                    if (spriteManager != null) {
-                        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
-                        spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, null);
-                    }
-                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
-                } else {
-                    if (spriteManager != null) {
-                        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
-                        spriteManager.drawPreparedUnifiedBucketWithPriority(
-                                bucket, graphicsManager, ghostLayerHook);
-                    }
-                    if (objectManager != null) {
-                        SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
-                        objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
-                    }
-                    drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
+                // Painter order reverses the native SAT: objects before players.
+                if (objectManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.OBJECT);
+                    objectManager.drawUnifiedBucketWithPriority(bucket, graphicsManager);
                 }
+                if (spriteManager != null) {
+                    SpritePresentation.layer(graphicsManager, SpritePresentation.Layer.PLAYER);
+                    spriteManager.drawPreparedUnifiedBucketWithPriority(bucket, graphicsManager, ghostLayerHook);
+                }
+                drawStageRingsForBucket(ringManager, graphicsManager, bucket, true);
             }
         }
         graphicsManager.flushPatternBatch();

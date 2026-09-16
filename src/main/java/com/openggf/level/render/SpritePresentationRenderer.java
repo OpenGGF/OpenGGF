@@ -44,20 +44,36 @@ public final class SpritePresentationRenderer {
     }
 
     private static PatternVersion version(Pattern pattern) {
-        long[] words = new long[4];
-        for (int i = 0; i < 64; i++) {
-            words[i / 16] |= (long) (pattern.getPixel(i % 8, i / 8) & 15) << ((i % 16) * 4);
+        return new PatternVersion(packWord(pattern, 0), packWord(pattern, 16),
+                packWord(pattern, 32), packWord(pattern, 48));
+    }
+
+    private static long packWord(Pattern pattern, int start) {
+        long word = 0;
+        for (int i = 0; i < 16; i++) {
+            word |= (long) (pattern.getPixel((start + i) % 8, (start + i) / 8) & 15) << (i * 4);
         }
-        return new PatternVersion(words[0], words[1], words[2], words[3]);
+        return word;
     }
 
     public static Pattern pattern(PatternVersion version) {
         Pattern pattern = new Pattern();
-        long[] words = {version.a(), version.b(), version.c(), version.d()};
-        for (int i = 0; i < 64; i++) {
-            pattern.setPixel(i % 8, i / 8, (byte) ((words[i / 16] >>> ((i % 16) * 4)) & 15));
-        }
+        unpackPattern(version, pattern);
         return pattern;
+    }
+
+    private static void unpackPattern(PatternVersion version, Pattern pattern) {
+        for (int group = 0; group < 4; group++) {
+            long word = switch (group) {
+                case 0 -> version.a();
+                case 1 -> version.b();
+                case 2 -> version.c();
+                default -> version.d();
+            };
+            for (int i = 0; i < 16; i++) {
+                pattern.setPixel(i % 8, group * 2 + i / 8, (byte) ((word >>> (i * 4)) & 15));
+            }
+        }
     }
 
     /** Resolve stable art addresses in the cache and restore the published generation of mutable virtual banks. */
@@ -70,7 +86,13 @@ public final class SpritePresentationRenderer {
         PatternDesc desc = new PatternDesc();
         graphics.beginPatternAtlasBatch();
         try {
-            frame.patternVersions().forEach((id, version) -> graphics.cachePatternTexture(pattern(version), id));
+            // Atlas upload copies pixels immediately; one draw-local scratch tile
+            // avoids allocating a Pattern and arrays for every immutable DPLC slot.
+            Pattern scratch = new Pattern();
+            for (var entry : frame.patternVersions().entrySet()) {
+                unpackPattern(entry.getValue(), scratch);
+                graphics.cachePatternTexture(scratch, entry.getKey());
+            }
         } finally { graphics.endPatternAtlasBatch(); }
         Tile previous = null;
         graphics.flushPatternBatch();

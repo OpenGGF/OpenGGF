@@ -89,6 +89,23 @@ slots appear in front; painter rendering reverses both orders. Folded boss parts
 can have independent buckets even when attached to the same rocket. Compare native
 pixels against ROM table-driven composition, rather than testing a numeric
 "front" flag against the same assumption used by the implementation.
+Do not split a unified bucket into low/high terrain-priority groups: that
+reorders sprites within the same SAT bucket. Collect mask entries in native
+ascending slot order, apply masks to later entries, then reverse the resulting
+pieces for painter replay (CPU, direct and instanced paths alike). Players occupy
+the first slots and precede objects during collection; painter order is the
+reverse. Merely creating a mask object is insufficient: the zone must enable
+the SAT collection/post-pass. The SOZ priority audit on 2026-09-16 exposed both
+failures with a door drawn through the sand and a same-bucket mask hiding the
+wrong object.
+Resolve relative mapping attributes with the complete native 16-bit art-word
+addition before separating fields. SOZ pillar spikes use `$C49B/$D49B + $4001`,
+which clears priority as palette bits wrap; independent palette addition leaves
+the spikes falsely in front. A BG-high color replay also needs an equivalent
+sprite-priority-mask contribution, or correctly low sprites still cover it.
+Assert both submerged pixels and exposed art so a missing sheet cannot make a
+mask test pass. Registry builder names use `Sonic3kObjectArtProvider.invokeBuilder`
+(the explicit switch, not reflection); wire that case as well as the registry.
 The separate `art_tile` high bit controls sprite-versus-tile priority. Native
 child creation copies that bit; `SetUp_ObjAttributes3` can change the SAT bucket
 without clearing it. FBZ2's laser-room children need both properties preserved.
@@ -417,3 +434,13 @@ surface, then `CMP.W #-$10 / BLO`. Taken together these admit native values
 second comparison. Treating this as an inclusive0..16 range made the SOZ spring
 vine capture a rolling player one frame early. Test both zero and the negative
 window edge rather than deriving a signed interval from either branch alone.
+
+
+### Debug checkpoint jumps need a load boundary
+
+Moving the player and camera to a distant checkpoint leaves source-room event
+state alive. In SOZ2, a jump from the early temple keeps background routine `$10`
+and bypasses the sand-exit transition to `$20`, preventing boss wall art and room
+brightening. Seed a fresh checkpoint and use the production reload; do not save
+source runtime state or bypass native event gates. Verify destination events,
+unchanged lives and rewind timeline isolation, not coordinates alone.

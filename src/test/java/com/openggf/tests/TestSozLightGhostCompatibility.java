@@ -23,7 +23,7 @@ class TestSozLightGhostCompatibility {
         List<Scenario> rows=new ArrayList<>();
         for(String main:List.of("sonic","tails","knuckles"))for(int width:new int[]{320,400,512,640,800})rows.add(new Scenario(main,width,"off",""));
         rows.add(new Scenario("sonic",320,"off","tails"));
-        rows.add(new Scenario("sonic",320,"s1","tails"));
+        rows.add(new Scenario("sonic",320,"s1","sonic"));
         rows.add(new Scenario("sonic",400,"s2","tails"));
         rows.add(new Scenario("sonic",800,"off","tails,knuckles"));
         return rows.stream();
@@ -53,7 +53,7 @@ class TestSozLightGhostCompatibility {
         CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();TestEnvironment.activeGameplayMode();
         var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).startPosition((short)x,(short)y).startPositionIsCentre().withFreshLevelStartLifecycle();
         if(!row.donor().equals("off"))builder.withCrossGameDonation(row.donor());
-        var f=builder.build();assertEquals(row.width(),f.camera().getWidth()&0xFFFF);
+        var f=builder.build();SozAcceptanceConfigurations.assertUsableTeam(row.donor());assertEquals(row.width(),f.camera().getWidth()&0xFFFF);
         assertEquals(row.followers().isEmpty()?0:row.followers().split(",").length,GameServices.sprites().getRegisteredSidekicks().size());
         assertEquals(!row.donor().equals("off"),CrossGameFeatureProvider.isActive());
         if(!row.donor().equals("off"))assertEquals(row.donor(),CrossGameFeatureProvider.getInstance().getDonorGameId());

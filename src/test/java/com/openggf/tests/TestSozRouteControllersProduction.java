@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozRouteControllersProduction {
     @ParameterizedTest
-    @CsvSource({"0,320,off,tails,0", "0,640,off,tails,0", "0,320,s1,tails,0", "0,320,off,'tails,knuckles',0", "1,320,off,tails,0", "0,320,off,tails,1", "1,320,off,tails,1"})
+    @CsvSource({"0,320,off,tails,0", "0,640,off,tails,0", "0,320,s1,sonic,0", "0,320,off,'tails,knuckles',0", "1,320,off,tails,0", "0,320,off,tails,1", "1,320,off,tails,1"})
     void placedSolidSupportsLandingWithRewind(int act, int width, String donor, String followers, int subtype) {
         var config=SonicConfigurationService.getInstance();
         var saved=new EnumMap<SonicConfiguration,Object>(SonicConfiguration.class);
@@ -48,6 +48,7 @@ class TestSozRouteControllersProduction {
                     .withFreshLevelStartLifecycle();
             if(!donor.equals("off")) builder.withCrossGameDonation(donor);
             var fixture=builder.build();
+            SozAcceptanceConfigurations.assertUsableTeam(donor);
             assertEquals(width,fixture.camera().getWidth()&0xFFFF);
             assertEquals(followers.split(",").length,GameServices.sprites().getSidekicks().size());
             assertEquals(!donor.equals("s1"),fixture.sprite().getGameRules().playerCapability().spindashEnabled());

@@ -22,11 +22,15 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
     private int collision;
     private int collisionProperty;
     private boolean debris;
+    private int debrisPriority;
+    private boolean debrisHighPriority;
+    private boolean inheritedHighPriority;
     private boolean flicker;
     SozMinibossChild(ObjectSpawn spawn){this(spawn,null,0,0);}
     SozMinibossChild(ObjectSpawn spawn,SozMinibossInstance owner,int kind,int index){
         super(spawn,"EggGolemChild",kind>=DUST?Sonic3kObjectArtKeys.SOZ_MINIBOSS_DUST:Sonic3kObjectArtKeys.SOZ_MINIBOSS);
         this.owner=owner;this.kind=kind;this.index=index;
+        inheritedHighPriority=owner!=null&&owner.isHighPriority();
     }
     @Override public SozMinibossChild recreateForRewind(RewindRecreateContext context){return new SozMinibossChild(context.spawn());}
     @Override public void update(int vIntRunCount,PlayableEntity player){
@@ -45,6 +49,10 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
         }else if(kind==PART){
             if(routine==0)routine=2;
             if(owner.collapsing()){
+                // loc_76F24 applies sub_770EA before loc_849D8 replaces the
+                // routine with Obj_FlickerMove, which preserves these attributes.
+                debrisPriority=super.getPriorityBucket();
+                debrisHighPriority=super.isHighPriority();
                 debris=true;collision=0;
                 int[] vx={-0x200,0x200,-0x300,0x300,-0x200,0,-0x400,0x400};
                 int[] vy={-0x200,-0x200,-0x200,-0x200,-0x200,-0x200,-0x300,-0x300};
@@ -87,6 +95,12 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
         }
         return false;
     }
+    // CreateChild copies the parent art word; loc_76F6A assigns hitbox bucket 5
+    // without applying sub_770EA, including its visible hit-reaction frames.
+    // ObjDat3_773CA gives dust its own $180/high-priority attributes. Unlike
+    // body parts and the cover, loc_770C4/770DA never execute sub_770EA's X gate.
+    @Override public int getPriorityBucket(){return debris?debrisPriority:kind>=DUST?3:kind==HITBOX?5:super.getPriorityBucket();}
+    @Override public boolean isHighPriority(){return debris?debrisHighPriority:kind==HITBOX?inheritedHighPriority:kind>=DUST||super.isHighPriority();}
     @Override public int getCollisionFlags(){return isDestroyed()?0:collision;}
     @Override public int getCollisionProperty(){return collisionProperty;}
     @Override public boolean usesS3kTouchSpecialPropertyResponse(){return true;}

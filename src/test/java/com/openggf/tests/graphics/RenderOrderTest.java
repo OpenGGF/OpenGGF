@@ -243,7 +243,7 @@ public class RenderOrderTest {
     public void testStageRingsRenderAtRomPriorityBucketInsideSpriteObjectPasses() throws IOException {
         String source = Files.readString(Path.of("src/main/java/com/openggf/level/LevelRenderer.java"));
 
-        assertEquals(4, countOccurrences(source, "drawStageRingsForBucket(ringManager,"),
+        assertEquals(3, countOccurrences(source, "drawStageRingsForBucket(ringManager,"),
                 "LevelRenderer should place stage-ring drawing in each sprite/object bucket path");
         assertTrue(source.contains("bucket != RenderPriority.PLAYER_DEFAULT"),
                 "Obj25 rings use ROM priority bucket 2, so higher-bucket clouds must draw before rings");

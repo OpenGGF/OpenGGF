@@ -12,6 +12,21 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozScreenEvents {
+    @Test void pyramidRumbleUsesThePublishedCameraCopyForTerrainAndSprites() throws Exception {
+        var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0).build();
+        var state=S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        state.events().backgroundRoutine(8);state.events().sandPosition(0x80<<16);
+        fixture.camera().setX((short)0x4310);fixture.camera().setY((short)0x960);
+        var handler=new com.openggf.game.sonic3k.scroll.SwScrlSoz(GameServices.rom().getRom());
+        handler.init(0,0x4310,0x960);int[] scroll=new int[224];
+        for(int shake:new int[]{0,2,-2,1}) {
+            fixture.camera().setYCopy((short)(0x960+shake));
+            handler.update(scroll,0x4310,0x960,32,0);
+            assertEquals(fixture.camera().getYWithShake(),handler.getVscrollFactorFG());
+            assertEquals(0xE0+shake,handler.getVscrollFactorBG());
+            assertEquals(0x960,fixture.camera().getY(),"render shake must not move the gameplay camera");
+        }
+    }
     @Test void nativeRoomAndPostBossModesSelectTheirBackgroundSourceWindows() {
         var fixture = HeadlessTestFixture.builder().withZoneAndAct(8, 1).build();
         var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();

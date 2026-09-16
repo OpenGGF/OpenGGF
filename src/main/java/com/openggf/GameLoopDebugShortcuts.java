@@ -67,8 +67,8 @@ final class GameLoopDebugShortcuts {
     }
 
     /**
-     * Debug function: Teleports the player to the furthest right checkpoint in the level.
-     * Only works in LEVEL mode (END key is used for special stage completion in special stage mode).
+     * Debug function: Reloads the level at its furthest right checkpoint.
+     * Uses the normal checkpoint load boundary to initialize destination events and objects.
      */
     void teleportToLastCheckpoint(LevelManager levelManager, SpriteManager spriteManager,
                                   Camera camera, SonicConfigurationService configService,
@@ -94,31 +94,24 @@ final class GameLoopDebugShortcuts {
             int checkpointY = lastCheckpoint.y();
 
             var sprite = spriteManager.getSprite(mainCode);
-            if (sprite instanceof AbstractPlayableSprite player) {
-                // Teleport player to checkpoint position
-                player.setX((short) checkpointX);
-                player.setY((short) checkpointY);
-                player.setXSpeed((short) 0);
-                player.setYSpeed((short) 0);
-                player.setGSpeed((short) 0);
-                player.setAir(false);
-                player.setRolling(false);
-
-                // Move camera to center on player (prevents pit death from camera mismatch)
+            if (sprite instanceof AbstractPlayableSprite) {
                 int screenWidth = configService.getInt(SonicConfiguration.SCREEN_WIDTH_PIXELS);
                 int screenHeight = configService.getInt(SonicConfiguration.SCREEN_HEIGHT_PIXELS);
-                int cameraX = checkpointX - (screenWidth / 2);
-                int cameraY = checkpointY - (screenHeight / 2);
+                int cameraX = Math.max(0, checkpointX - screenWidth / 2);
+                int cameraY = Math.max(0, checkpointY - screenHeight / 2);
+                int checkpointIndex = lastCheckpoint.subtype() & 0x7F;
 
-                // Clamp camera to reasonable range (floor at 0)
-                cameraX = Math.max(0, cameraX);
-                cameraY = Math.max(0, cameraY);
+                // A coordinate-only jump preserves the source room's event state.
+                // Seed a fresh checkpoint rather than saving the source runtime;
+                // the production reload initializes events from the destination.
+                var checkpoint = levelManager.getCheckpointState();
+                checkpoint.clear();
+                checkpoint.restoreFromSaved(checkpointX, checkpointY, cameraX, cameraY, checkpointIndex);
+                checkpoint.restoreStarPostActivationMark(checkpointIndex);
+                levelManager.requestRespawn();
 
-                camera.setX((short) cameraX);
-                camera.setY((short) cameraY);
-
-                LOGGER.info("DEBUG: Teleported to checkpoint at (" + checkpointX + ", " + checkpointY +
-                    "), camera at (" + cameraX + ", " + cameraY + ")");
+                LOGGER.info("DEBUG: Reloading at checkpoint " + checkpointIndex + " at ("
+                        + checkpointX + ", " + checkpointY + ")");
             }
         } else {
             LOGGER.info("DEBUG: No checkpoints found in this level");
