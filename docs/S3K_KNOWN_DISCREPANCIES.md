@@ -412,6 +412,17 @@ seamlessly. The earlier-deferred forest-loop BG fix
 warranted**: its premise (empty filler scrolls into view) does not manifest with
 the current smooth-scroll renderer. No remaining display gap.
 
+**Plane ring camera generation (2026-09-16).** The persistent `$200` foreground
+ring is the engine's Plane A, and `ScreenEvents` → `DrawTilesAsYouMove`
+(`sonic3k.asm:104978`, `103171`) fills it from the live `Camera_X_pos_copy`
+in the same CPU loop iteration in which `AIZ2_DoShipLoop` subtracts `$200` and
+retargets `Camera_X_pos_rounded`. Only H-scroll/VSRAM/SAT are VBlank-published,
+and the lag path retains them; the wrap equals the plane width, so the retained
+scroll still aliases onto the same cells. The ring camera and
+`Level_repeat_offset` are therefore pushed together from the gameplay step
+(`LevelForegroundPlane.drawAsYouMove`), not from the retained scroll
+presentation; `TestAiz2ForestRingCameraGeneration` pins the wrap-on-lag case.
+
 ---
 
 ## MHZ Swing Vine / Vertical Swing Bar Forced Camera Scroll (Resolved)

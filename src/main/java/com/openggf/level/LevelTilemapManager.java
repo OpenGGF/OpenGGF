@@ -994,10 +994,16 @@ public class LevelTilemapManager {
         setForegroundRingCamera(cameraX, screenWidthPx, 0);
     }
 
+    /**
+     * Pushed from the gameplay step ({@code LevelForegroundPlane.drawAsYouMove}).
+     * A wrap offset is the native {@code Level_repeat_offset} of that step; it is
+     * retained, and summed with any later one, until the next reconcile consumes
+     * it, so a step without a draw does not lose the baseline translation.
+     */
     public void setForegroundRingCamera(int cameraX, int screenWidthPx, int worldWrapOffset) {
         this.foregroundRingCameraX = cameraX;
         this.foregroundRingScreenWidthPx = screenWidthPx;
-        this.foregroundRingWorldWrapOffset = Math.max(0, worldWrapOffset);
+        this.foregroundRingWorldWrapOffset += Math.max(0, worldWrapOffset);
     }
 
     /**
@@ -1026,6 +1032,9 @@ public class LevelTilemapManager {
         }
         foregroundRingLastLeftCol = Math.floorDiv(foregroundRingCameraX, chunkWidth) * chunkWidth;
         foregroundRingLastRightCol = rightCol;
+        // A fresh seed already stands at the wrapped camera; a pending native
+        // wrap offset would otherwise translate these baselines a second time.
+        foregroundRingWorldWrapOffset = 0;
     }
 
     /**

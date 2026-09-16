@@ -211,6 +211,17 @@ FBZ boundary captures missed this regression: add a moving-camera check in a
 second zone. Pixel oracles must sample the CPU scroll before the VBlank they
 describe; reading the next loop after rendering compares different generations.
 See the [MHZ follow-up](audits/2026-09-15-s3k-presentation-camera.md).
+Plane drawing is the exception: `ScreenEvents` ends in `DrawTilesAsYouMove`
+(`sonic3k.asm:104978`, `103171`), which reads live `Camera_X_pos_copy` against
+`Camera_X_pos_rounded` and writes VRAM inside the CPU loop, and
+`AIZ2_DoShipLoop` retargets that baseline in the same routine as its `$200`
+camera subtraction. The engine's AIZ2 foreground ring therefore takes the live
+camera and the live `Level_repeat_offset` from the gameplay step
+(`LevelForegroundPlane.drawAsYouMove`), never the published scroll
+generation: pairing the published camera with the live offset trips the ring's
+large-jump reseed when the wrap lands on a lag frame (2026-09-16 AIZ2 forest
+regression). The `$200` wrap equals the 64-tile plane width, so a retained
+scroll register still aliases onto the same ring cells.
 
 **CPU sprite state is not the presented SAT.** S3K `VInt_8_Cont` uploads
 `Sprite_table` to VRAM `$F800`; the resumed `LevelLoop` then runs objects and
