@@ -306,7 +306,12 @@ the high-priority replay uses the same source period as the main pass.
 The 800px positioned Sonic+Tails capture reaches the rising pyramid, fight,
 defeat and Act2 entry with a continuous source window. Media are under
 `pyramid-allocation/act1-widescreen-final/` in the unified external task directory.
-This fixes repeated cache content; it does not author new scenery outside the
-ROM's pyramid layout. At 800px, unused layout cells beyond its right edge remain
-visible beside the foreground wall. Native pixel certification and the wider
-cold-route product remain open. See the execution plan for verification details.
+That residency fix alone left the unauthored right margin visible. The subsequent
+presentation extension repeats the final 64px ROM masonry strip beyond BG `$780`
+and caps the wider camera before foreground `$4500`, leaving native player
+movement bounds unchanged. `TestSozPyramidWindow` also checks entry through the
+ROM priority switch, arena admission with the view cap, descriptor provenance,
+and full-state rewind/replay at all six widths. The capture starts above the
+`$4308,$918` switch rather than spawning below it with fresh-load low priority.
+Native pixel certification and the wider cold-route product remain open.
+See the execution plan for verification details.
