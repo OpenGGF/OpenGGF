@@ -110652,3 +110652,15 @@ animation2. That production intro, not trace-state seeding, is the next target.
 - Same branch also carries Knuckles-only wall side-contact breaks, the Tails flight
   activation frame and the Sandworm `Obj_WaitOffscreen` handshake; none moved a
   non-SOZ S3K replay.
+
+### 2026-09-16 — SOZ results keep Ring_count until the Act 2 title card
+
+- `bugfix/ai-soz-recorded-routes` after `8247c211e`. `loc_2DD06` deletes the Act 1
+  results owner for zones `$08`/`$0B` without `Obj_TitleCard`, so `Ring_count` is not
+  cleared until the later `Obj_TitleCardWait` (`sonic3k.asm:62708-62730, 62220-62235`);
+  the engine reset it when results ended. Recorded Tails SOZ1 kept 88 rings from row
+  17771 to 18198; the engine now clears at 18192 (six rows early, the shared in-level
+  title-card timing model, not changed here).
+- `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestS3kSozCompleteRunTraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" test -B`: 59336 frames, 13244 errors (was 13591),
+  first error unchanged at frame 5977 `tails_mapping_frame`.

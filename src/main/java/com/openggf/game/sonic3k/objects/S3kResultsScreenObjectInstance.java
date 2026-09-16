@@ -1003,8 +1003,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // request above, where it becomes visible after the title children
             // reach their display positions (sonic3k.asm:62708-62720,
             // 62214-62235).
+            // loc_2DD06 deletes the results owner for Sandopolis 1 and Death Egg 1
+            // without creating Obj_TitleCard, so nothing clears Timer/Ring_count
+            // here; the later act title card's Obj_TitleCardWait owns that reset
+            // (sonic3k.asm:62708-62730, 62220-62235).
             if (!hasSeamlessTransition && !retainedReloadState
-                    && !aizAct1MinibossTitleHandoff) {
+                    && !aizAct1MinibossTitleHandoff && !skipTitleCard) {
                 resetLevelGamestateForActTransition();
             }
         }

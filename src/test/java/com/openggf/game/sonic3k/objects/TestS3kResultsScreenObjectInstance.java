@@ -261,6 +261,28 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void sandopolisAndDeathEggActOneResultsLeaveRingsForTheLaterTitleCard() throws Exception {
+        // loc_2DD06 deletes the results SST for zones $08/$0B without Obj_TitleCard, so
+        // Ring_count survives until the later title card's Obj_TitleCardWait. Recorded
+        // s3k-tails-full-chain-all-emeralds SOZ1 keeps 88 rings from row 17771 to 18198.
+        for (int zone : new int[]{0x08, 0x0B}) {
+            ActTransitionRecordingServices services = new ActTransitionRecordingServices(zone, 0);
+            S3kResultsScreenObjectInstance results = transitionShell(
+                    services, PlayerCharacter.SONIC_AND_TAILS, 0);
+            results.setServices(services);
+
+            Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+            onExitReady.setAccessible(true);
+            onExitReady.invoke(results);
+            onExitReady.invoke(results);
+
+            assertEquals(List.of(), services.titleCard.calls,
+                    "loc_2DD38 shows no immediate title card for zone " + zone);
+            verify(services.levelManager, never()).resetLevelGamestate(org.mockito.ArgumentMatchers.any(LevelState.class));
+        }
+    }
+
+    @Test
     void aizActOneMinibossTitleHandoffDefersLevelGamestateResetToTitleCard() throws Exception {
         ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x00, Sonic3kMusic.AIZ2.id);
         S3kResultsScreenObjectInstance results = transitionShell(
