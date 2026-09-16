@@ -199,3 +199,17 @@ evidence columns in the act matrix (implemented / reachable / rewind / native / 
 
 Out of HPZ scope and recorded as dependencies: LRZ3 → `$1601` incoming transition (needs LRZ
 events); SSZ presentation after the exits (SSZ bring-up); replacing the CNZ beam stand-in.
+
+### 2026-09-17 pedestal selectability and inherited run-chain failure
+
+`365ac485b`: `Obj_HPZSuperEmerald` arms states 1 and 2 (`loc_907A8`, `$38` bit 0); the engine
+armed only state 2, and `TestHpzSanctuaryObjects` asserted that engine choice. Corrected with the
+ROM citation. Sanctuary set (`TestHpzSanctuaryObjects,TestS3kHpzSanctuaryHeadless,TestS3kHpzGraphRewind,*SuperEmerald*,*Sanctuary*`):
+7 classes, 44 tests, 1 failure, 0 skips. The failure,
+`TestS3kKnucklesSuperEmeraldRunChain#aiz1ToDoomsdayAcrossEverySpecialAndBonusStage` ("Segment 0 (aiz)
+exit boundary (giant_ring) was never observed"), reproduces with the same message on the base commit
+`70aa0a0b7` in `.worktrees/hpz-baseline-verify` (1 test, 1 failure): inherited, not attributed to HPZ work.
+
+Native evidence note: the first complete-run capture replayed from movie frame 0 and had not reached
+HPZ after seven minutes, so it was stopped. `capture_hpz_route_reference.lua` now saves native states
+at planned movie frames on one pass; later probes load the nearest state (user recommendation).
