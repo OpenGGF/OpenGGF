@@ -22,6 +22,72 @@ class TestSozPyramidWindow {
 
     @ParameterizedTest
     @ValueSource(ints = {320, 400, 512, 528, 640, 800})
+    void arenaEntryCrossesPrioritySwitchAndKeepsWideForegroundWallOffscreen(int width) {
+        configureWidth(width);
+        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 0)
+                .startPosition((short) 0x43B0, (short) 0x8E0).startPositionIsCentre()
+                .withFreshLevelStartLifecycle().build();
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        assertFalse(fixture.sprite().isHighPriority(), "fresh positioned load starts before the switch");
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        var before = registry.capture();
+        for (int frame = 0; frame < 120; frame++) fixture.stepFrame(false, false, false, false, false);
+        assertTrue(fixture.sprite().isHighPriority(), "falling across ROM Obj_PathSwap $4308,$918 sets priority");
+        assertTrue(state.events().backgroundRoutine() >= 4, "camera cap must not prevent pyramid admission");
+        if (width > 320) {
+            assertTrue((fixture.camera().getX() & 65535) + width <= 0x4500, "foreground wall stays offscreen");
+            assertTrue((fixture.sprite().getCentreX() & 65535) >= 0x43B0, "view cap must not shorten player movement bounds");
+        }
+        var after = registry.capture();
+        registry.restore(before);
+        for (int frame = 0; frame < 120; frame++) fixture.stepFrame(false, false, false, false, false);
+        var replay = registry.capture();
+        for (var key : after.entries().keySet()) {
+            var diff = com.openggf.game.rewind.RewindSnapshotDiff.diffKey(key, after.get(key), replay.get(key));
+            assertTrue(diff.isEmpty(), key + ": " + diff);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {320, 400, 512, 528, 640, 800})
+    void extensionUsesRomMasonryWithoutRepeatingDoorOrChangingLayout(int width) {
+        configureWidth(width);
+        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 0).build();
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElseThrow();
+        var owner = (com.openggf.game.internal.BackgroundDescriptorOverride)
+                GameServices.level().getZoneFeatureProvider();
+        assertEquals(0, owner.backgroundDescriptorRevision());
+        state.events().backgroundRoutine(8);
+        if (width == 320) {
+            assertEquals(0, owner.backgroundDescriptorRevision(), "native source is unchanged");
+            return;
+        }
+        assertNotEquals(0, owner.backgroundDescriptorRevision());
+        for (int y = 0; y < 0x400; y += 8) {
+            for (int x = 0x600; x < 0x900; x += 8) {
+                int original = GameServices.level().getBackgroundTileDescriptorAtWorld(x, y);
+                int source = x < 0x780 ? x : 0x740 + (x - 0x780) % 0x40;
+                assertEquals(GameServices.level().getBackgroundTileDescriptorAtWorld(source, y),
+                        owner.backgroundDescriptorAt(x, y));
+                assertEquals(original, GameServices.level().getBackgroundTileDescriptorAtWorld(x, y),
+                        "presentation lookup must not mutate layout");
+            }
+        }
+        state.events().backgroundRoutine(0);
+        assertEquals(0, owner.backgroundDescriptorRevision(), "extension ends with the event window");
+    }
+
+    private void configureWidth(int width) {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS, width);
+        com.openggf.game.session.SessionManager.clear();
+        com.openggf.tests.TestEnvironment.activeGameplayMode();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {320, 400, 512, 528, 640, 800})
     void pyramidWindowCoversViewportAndRestoresNormalDesertPeriod(int width) throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT, "NATIVE_4_3");

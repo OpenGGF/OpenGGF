@@ -22,10 +22,17 @@ final class SozAct1Events extends Sonic3kZoneEvents {
         var events=state.events();
         if(act==1){updateSeamlessEntry(state,levelFrameCounter);return;}
         var player=spriteManager().getMainPlayable();
+        int playerX=player.getCentreX()&65535;
+        // Widescreen presentation: stop before the authored foreground wall at
+        // $4500. Leave Camera_max_X_pos untouched: the ROM also uses it as the
+        // player's movement boundary with a fixed 320px offset.
+        int wideRight=0x4500-camera().getWidth();
+        boolean wideArena=playerX>=0x4000 && camera().getWidth()>320;
+        if(wideArena && (camera().getX()&65535)>wideRight)camera().setX((short)wideRight);
         switch(events.backgroundRoutine()){
             case 0 -> {
                 if(state.consumeSandCorkBackgroundFlag()==0){
-                    int bottom=(player.getCentreX()&65535)<0x4000?0xB20:0x960;
+                    int bottom=playerX<0x4000?0xB20:0x960;
                     camera().setMaxY((short)bottom);
                     if(bottom==0x960 && (camera().getY()&65535)>=bottom){
                         camera().setMinY((short)bottom);
@@ -35,7 +42,13 @@ final class SozAct1Events extends Sonic3kZoneEvents {
                         // solid arena wall. Width 320 preserves the ROM condition.
                         int nativeLeft=(camera().getX()&65535)
                                 + Math.max(0,(camera().getWidth()-320)/2);
-                        if(nativeLeft>=0x4310){camera().setMinX((short)0x4180);state.requestSandCorkRelease(false);}
+                        // A capped wide view can stop before the native camera gate.
+                        // Its focused player still reaches the same $4310+$A0
+                        // admission position; do not move the ROM gate at 320px.
+                        boolean atWideLimit=wideArena && (camera().getX()&65535)>=wideRight;
+                        if(nativeLeft>=0x4310 || (atWideLimit && playerX>=0x43B0)){
+                            camera().setMinX((short)0x4180);state.requestSandCorkRelease(false);
+                        }
                     }
                     return;
                 }

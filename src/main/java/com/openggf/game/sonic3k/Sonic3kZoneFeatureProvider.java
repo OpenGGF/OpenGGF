@@ -199,13 +199,27 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     @Override public long backgroundDescriptorRevision() {
         if (!GameServices.hasRuntime() || GameServices.level().getFeatureZoneId() != Sonic3kZoneIds.ZONE_SOZ) return 0;
         return S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
-                .map(state -> (long) state.events().postBossPlane().revision()).orElse(0L);
+                .map(state -> extendedSozPyramid(state) ? -1L
+                        : (long) state.events().postBossPlane().revision()).orElse(0L);
     }
 
     @Override public int backgroundDescriptorAt(int sourceX, int sourceY) {
         var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (state != null && extendedSozPyramid(state)) {
+            // SOZ1's authored pyramid ends at BG column 15 ($780). Wider views
+            // repeat its last 64px of plain masonry; keep the doorway in column 13
+            // and all original descriptors untouched. This is a widescreen
+            // presentation extension, not ROM terrain or collision data.
+            int x = sourceX >= 0x780 ? 0x740 + Math.floorMod(sourceX - 0x780, 0x40) : sourceX;
+            return GameServices.level().getBackgroundTileDescriptorAtWorld(x, sourceY);
+        }
         return state != null && state.events().postBossPlane().revision() != 0
                 ? state.events().postBossPlane().descriptor(sourceX, sourceY) : 0;
+    }
+
+    private boolean extendedSozPyramid(com.openggf.game.sonic3k.runtime.SozZoneRuntimeState state) {
+        return state.actIndex() == 0 && state.backgroundPlaneWindowActive()
+                && GameServices.camera().getWidth() > 320;
     }
 
     /** SOZ event DrawBGAsYouMove reads arena/room columns beyond the normal repeating strip. */

@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ pyramid capture (2026-09-16): a positioned start at `$43B0,$9D4` skips
+`Obj_PathSwap` at `$4308,$918`, leaving Sonic at fresh-load low sprite priority.
+A follower can later cross a switch independently, producing a misleading
+leader/follower rendering difference. Starting above that switch at `$43B0,$8E0`
+and falling through it sets both priorities via production logic. Record live
+priority flags; do not force high priority or weaken background priority to repair
+a capture that omitted the entry interaction.
+
 SOZ allocation profiling (2026-09-16): aggregate JFR allocation samples include
 recorder/control threads, which can dominate with `HashMap$KeySet` allocations.
 Attribute stacks before calling them gameplay churn. Measure the gameplay thread

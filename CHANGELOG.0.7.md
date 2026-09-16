@@ -220,7 +220,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Detached golem parts retain their priority, Rockn eyes follow its walking direction,
   and the rising pyramid shakes terrain and sprites together. Its widescreen source
   window spans the viewport instead of repeating the native 512-pixel cache;
-  background priority passes share the same wrap period. Sprite-art replay
+  background priority passes share the same wrap period. Wider pyramid views
+  repeat existing masonry past the authored edge and stop before the foreground
+  wall, preserving native movement bounds. Sprite-art replay
   and player queries avoid redundant temporary maps and static-art lookups
   while preserving immutable rewind frames.
   Spiked pillars resolve native art-word carries, and high-priority background
