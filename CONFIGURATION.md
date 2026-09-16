@@ -932,7 +932,7 @@ The gamepad Back/Select/View button on the primary connected pad is a hardcoded 
 | `NEXT_ACT` | `debug.keys.nextAct` | `266` | PAGE_UP | Skip to the next act within the current zone. |
 | `NEXT_ZONE` | `debug.keys.nextZone` | `267` | PAGE_DOWN | Skip to the first act of the next zone. |
 | `DEBUG_MODE_KEY` | `debug.keys.debugMode` | `68` | D | Toggle free-fly debug movement mode (requires `DEBUG_VIEW_ENABLED`). The gamepad north face button (Y/Triangle) on the primary connected pad also toggles it, unconditionally (not remappable). |
-| `DEBUG_LAST_CHECKPOINT_KEY` | `debug.keys.lastCheckpoint` | `67` | C | Teleport the player to the most recently activated checkpoint. |
+| `DEBUG_LAST_CHECKPOINT_KEY` | `debug.keys.lastCheckpoint` | `67` | C | Reload at the furthest-right checkpoint, initializing destination events without losing a life. |
 | `LEVEL_SELECT_KEY` | `debug.keys.levelSelect` | `298` | F9 | Open the level select screen at runtime. |
 | `TEST` | `debug.keys.test` | `84` | T | Generic test button used during development. |
 
@@ -1116,7 +1116,7 @@ debug:
     nextZone: PAGE_DOWN   # Advance to the next zone
     debugMode: D   # Toggle debug movement mode
     frameStep: Q   # Step forward one frame while paused
-    lastCheckpoint: C   # Teleport to the last checkpoint
+    lastCheckpoint: C   # Reload at the furthest-right checkpoint
     levelSelect: F9   # Open the level select screen
     superSonic: U   # Toggle Super Sonic debug mode
     giveEmeralds: E   # Give all chaos emeralds

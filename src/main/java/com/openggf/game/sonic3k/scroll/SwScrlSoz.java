@@ -14,6 +14,7 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
     private boolean tablesLoaded;
     private int bgX;
     private boolean desert;
+    private short foregroundY;
 
     public SwScrlSoz(Rom rom) { this.rom = rom; }
 
@@ -52,6 +53,16 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
     @Override public void update(int[] buffer, int cameraX, int cameraY,
                                  int levelFrameCounter, int actId) {
         desert = actId == 0;
+        // SOZ1/2_ScreenEvent applies the previous shake offset to these copies
+        // before background deformation. Sprites consume the same published copy.
+        var runtime = com.openggf.game.GameServices.hasRuntime()
+                ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                        com.openggf.game.GameServices.zoneRuntimeRegistry()).orElse(null) : null;
+        if (runtime != null && runtime.actIndex() == actId) {
+            cameraX = com.openggf.game.GameServices.camera().getXCopy();
+            cameraY = com.openggf.game.GameServices.camera().getYCopy();
+        }
+        foregroundY = (short) cameraY;
         if (!desert) {
             // sub_566D2 + PlainDeformation: shift camera words before negation.
             resetScrollTracking();
@@ -127,6 +138,8 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
                 remaining = bandHeights[++band];
         }
     }
+
+    @Override public short getVscrollFactorFG() { return foregroundY; }
 
     @Override public int getBgCameraX() {
         var state = com.openggf.game.GameServices.hasRuntime()

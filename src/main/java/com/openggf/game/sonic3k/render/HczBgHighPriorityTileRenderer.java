@@ -48,6 +48,10 @@ final class HczBgHighPriorityTileRenderer {
     }
 
     static void render(SpecialRenderEffectContext context, boolean wrapY) {
+        render(context, wrapY, false);
+    }
+
+    static void render(SpecialRenderEffectContext context, boolean wrapY, boolean priorityMask) {
         GraphicsManager graphicsManager = context.graphicsManager();
         if (graphicsManager.isHeadlessMode() || !graphicsManager.isGlInitialized()) {
             return;
@@ -107,7 +111,7 @@ final class HczBgHighPriorityTileRenderer {
                 hScrollData, bgScrollBias, planePeriodWrapTiles, bgWorldOffsetY,
                 graphicsManager.getPatternAtlasWidth(),
                 graphicsManager.getPatternAtlasHeight(), atlasId, paletteId, uwPalId,
-                useUnderwaterPalette, waterlineScreenY).withVerticalWrap(wrapY));
+                useUnderwaterPalette, waterlineScreenY).withVerticalWrap(wrapY).withPriorityMask(priorityMask));
     }
 
     /**
@@ -136,7 +140,7 @@ final class HczBgHighPriorityTileRenderer {
         private BackgroundRenderer backgroundRenderer;
         private int screenW, screenH, atlasWidth, atlasHeight, atlasId, paletteId, underwaterPaletteId;
         private float offsetY, waterlineY, planePeriodWrapTiles;
-        private boolean underwater, leased, wrapY;
+        private boolean underwater, leased, wrapY, priorityMask;
 
         OverlayCommand configure(TilemapGpuRenderer renderer, BackgroundRenderer backgroundRenderer,
                 int screenW, int screenH, int[] hScroll, int bgScrollBias, int planePeriodWrapTiles,
@@ -176,12 +180,17 @@ final class HczBgHighPriorityTileRenderer {
                         (short) (M68KMath.unpackBG(packed) + bgScrollBias));
             }
             Arrays.fill(this.hScroll, copyLength, this.hScroll.length, 0);
-            this.underwater = underwater; this.waterlineY = waterlineY; leased = true; wrapY = false;
+            this.underwater = underwater; this.waterlineY = waterlineY; leased = true; wrapY = false; priorityMask = false;
             return this;
         }
 
         OverlayCommand withVerticalWrap(boolean enabled) {
             wrapY = enabled;
+            return this;
+        }
+
+        OverlayCommand withPriorityMask(boolean enabled) {
+            priorityMask = enabled;
             return this;
         }
 
@@ -194,7 +203,7 @@ final class HczBgHighPriorityTileRenderer {
                 renderer.render(TilemapGpuRenderer.Layer.BACKGROUND, screenW, screenH,
                         viewport[0], viewport[1], viewport[2], viewport[3], 0.0f, offsetY,
                         atlasWidth, atlasHeight, atlasId,
-                        paletteId, underwaterPaletteId, 1, wrapY, false, underwater, waterlineY);
+                        paletteId, underwaterPaletteId, 1, wrapY, priorityMask, underwater, waterlineY);
             } finally { release(); }
         }
 

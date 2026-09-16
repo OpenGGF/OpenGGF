@@ -1856,6 +1856,25 @@ show no visible difference at 320/528; the 800-pixel route did not reach the exi
 Full native pixel certification remains open. Engine A/B checks establish
 visibility in those scenarios, not pixel identity with native hardware.
 
+**Sprite composition:** SOZ now activates its arena/placed/laser sprite-mask
+post-pass; shared collection and replay preserve native bucket/slot/piece order
+independently of terrain priority. Spiked pillars now resolve the complete native
+art-word carry, and the BG-high replay contributes to sprite occlusion. A pixel
+regression checks submerged spikes against a tiles-only render while retaining
+the exposed body. Moving engine captures cover the opening door,
+golem sinking, selected Act2 mechanisms and the final boss. The existing mask
+postprocessor clips whole tile rows, so sub-tile scanline parity remains unverified;
+these engine inspections do not certify every placement or native pixel identity.
+See the dated priority pass in the SOZ plan. Rockn child-facing and pyramid
+terrain-shake defects reported during playtesting are corrected. A subsequent
+Act2 report of a missing boss outer layer and persistent ghosts was traced to
+the last-checkpoint debug shortcut retaining the source room's event state.
+The shortcut now reloads the destination checkpoint; native Sonic+Tails regression
+checks cover 320/400/800px, event initialization, wall art, light clearing, lives
+and rewind timeline isolation. Render allocation was reduced in a matched profile, but gameplay
+snapshot/presentation allocation remains material; live GC stalls are not certified
+resolved.
+
 **Native low-level limits:** failed spring-vine allocation can write foreign SST
 bytes (above). Cork quiet-skid polling and the boss charge's failed-allocation
 terminal poll can also read bytes belonging to an arbitrary foreign object.

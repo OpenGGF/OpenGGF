@@ -207,3 +207,15 @@ moving gameplay, one useful example per feature, ordered by act and level
 progression, with bosses and exits at their route positions. Avoid still montages
 and repeated width/roster tests. Record exact source intervals and retain full
 cold runs for uninterrupted traversal evidence.
+
+### Sprite composition audit amendment (2026-09-16)
+
+Audit bucket order, slot order, mapping-piece order and terrain priority as
+separate contracts. Resolve full art-word additions before interpreting palette
+and priority fields; carry can clear an apparent mapping priority bit. Verify
+that high-priority background pixels contribute to sprite occlusion as well as
+the visible terrain pass. Verify that native sprite-mask objects reach the production
+SAT post-pass, then test their interaction with earlier/later same-bucket objects
+and players. A correct object bucket alone cannot certify composition. Inspect
+moving arena entry, articulation, sinking/defeat and doors/spikes against terrain;
+keep independent native pixel parity distinct from engine visual inspection.

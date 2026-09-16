@@ -4733,3 +4733,16 @@ lock byte once does not bypass an actor which writes it every frame. For a
 native positioned probe, first finish the intro through its ordinary jump,
 then normalize the explicitly declared player setup. The reusable
 `tools/bizhawk/capture_soz_pushable_rock.lua` records that entry handshake.
+
+
+## SOZ golem children do not share one dynamic priority rule
+
+The SOZ priority audit (2026-09-16) distinguishes sprite bucket order from the
+art word's terrain-priority bit. `sub_770EA` changes body/cover attributes at
+X `$4200`, but dust's `ObjDat3_773CA` remains bucket3/high and the hitbox's
+`loc_76F6A` remains bucket5 with the art word copied at creation. Detached parts
+apply the X gate once before `loc_849D8` replaces their routine with
+`Obj_FlickerMove`; their last attributes must then remain fixed, including
+through rewind. Applying the parent's dynamic getter to every child causes
+layer changes the native child routines never perform. Audit the routine after
+a generic debris dispatch, not only the originating object's setup table.

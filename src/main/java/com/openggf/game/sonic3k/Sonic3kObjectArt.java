@@ -178,10 +178,19 @@ public class Sonic3kObjectArt {
      * fields independently leaves the links in the foreground.</p>
      */
     public ObjectSpriteSheet buildFbzChainLinkSheet(int artTileBase) {
+        return buildLevelArtSheetWithResolvedTileWords(
+                Sonic3kConstants.MAP_FBZ_CHAIN_LINK_ADDR, artTileBase | (2 << 13));
+    }
+
+    /** Obj_SOZFloatingPillar: $C49B/$D49B + $4001 wraps to low-priority spike art. */
+    public ObjectSpriteSheet buildSozFloatingPillarSheet(int artTileBase) {
+        return buildLevelArtSheetWithResolvedTileWords(
+                Sonic3kConstants.MAP_SOZ_FLOATING_PILLAR_ADDR, artTileBase | (2 << 13));
+    }
+
+    private ObjectSpriteSheet buildLevelArtSheetWithResolvedTileWords(int mappingAddress, int artTileWord) {
         if (reader == null) return null;
-        List<SpriteMappingFrame> rawFrames = S3kSpriteDataLoader.loadMappingFrames(
-                reader, Sonic3kConstants.MAP_FBZ_CHAIN_LINK_ADDR);
-        int artTileWord = artTileBase | (2 << 13);
+        List<SpriteMappingFrame> rawFrames = S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddress);
         List<SpriteMappingFrame> resolvedFrames = new ArrayList<>(rawFrames.size());
         int minTile = Integer.MAX_VALUE;
         int maxTile = Integer.MIN_VALUE;

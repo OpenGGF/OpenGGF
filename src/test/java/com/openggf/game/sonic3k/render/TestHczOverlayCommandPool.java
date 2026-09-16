@@ -18,7 +18,7 @@ class TestHczOverlayCommandPool {
         int[] secondScroll = scrollData(201, 202);
         var first = new HczBgHighPriorityTileRenderer.OverlayCommand().configureCaptured(
                 renderer, backgroundRenderer, 320, 224, firstScroll, 0, 64, 12, 13, 14, 15, 16, 17, true, 18,
-                new int[]{1, 2, 3, 4}).withVerticalWrap(true);
+                new int[]{1, 2, 3, 4}).withVerticalWrap(true).withPriorityMask(true);
         var second = new HczBgHighPriorityTileRenderer.OverlayCommand().configureCaptured(
                 renderer, backgroundRenderer, 420, 244, secondScroll, 0, 40, 23, 24, 25, 26, 27, 28, false, 29,
                 new int[]{5, 6, 7, 8});
@@ -35,6 +35,8 @@ class TestHczOverlayCommandPool {
         assertEquals(List.of("201,202", "101,102"), backgroundRenderer.uploads,
                 "each queued overlay must retain its frame's full per-line HScroll snapshot");
         assertEquals(List.of(77, 77), renderer.hScrollTextureIds);
+        assertEquals(List.of(false, true), renderer.priorityMasks,
+                "mask and visible replay commands retain independent output modes");
         assertEquals(List.of(false, true), renderer.verticalWraps,
                 "each queued overlay retains its own native vertical-wrap policy");
         assertEquals(List.of(40.0f, 64.0f), renderer.vdpWrapWidths,
@@ -42,7 +44,10 @@ class TestHczOverlayCommandPool {
         var reused = HczBgHighPriorityTileRenderer.acquireCaptured(
                 renderer, new int[]{9, 10, 11, 12}, 33);
         assertTrue(reused == first || reused == second);
-        reused.discard();
+        reused.configureCaptured(renderer, backgroundRenderer, 320, 224, firstScroll,
+                0, 64, 0, 1, 1, 2, 3, 0, false, 0, new int[]{0, 0, 320, 224});
+        reused.execute(0, 0, 0, 0);
+        assertFalse(renderer.priorityMasks.getLast(), "pooled mask state must not leak into HCZ overlays");
     }
 
     @Test
@@ -102,6 +107,7 @@ class TestHczOverlayCommandPool {
         private final List<Integer> hScrollTextureIds = new ArrayList<>();
         private final List<Float> vdpWrapWidths = new ArrayList<>();
         private final List<Boolean> verticalWraps = new ArrayList<>();
+        private final List<Boolean> priorityMasks = new ArrayList<>();
 
         @Override public void enablePerLineScroll(int hScrollTextureId, float screenHeight,
                 float vdpWrapWidth, float nametableBase, float sampleYOffsetPx) {
@@ -113,6 +119,7 @@ class TestHczOverlayCommandPool {
                 float ox, float oy, int aw, int ah, int at, int pt, int upt, int pp,
                 boolean wy, boolean mask, boolean uw, float water) {
             verticalWraps.add(wy);
+            priorityMasks.add(mask);
             calls.add(ww + "," + wh + ":" + vx + "," + vy + "," + vw + "," + vh
                     + ":" + ox + "," + oy + ":" + aw + "," + ah + "," + at + "," + pt
                     + "," + upt + ":" + uw + "," + water);

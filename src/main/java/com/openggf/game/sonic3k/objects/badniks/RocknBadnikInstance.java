@@ -101,10 +101,11 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
             super(spawn, "RocknShell", Sonic3kObjectArtKeys.SOZ_BREAKABLE_SAND_ROCK, 0, 4);
             this.owner = owner; currentY -= 8;
         }
+        private boolean renderFacingLeft() { return facingLeft; }
         @Override public Shell recreateForRewind(RewindRecreateContext context) { return new Shell(context.spawn(), null); }
         @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {
             if (owner == null || owner.isDestroyed()) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
-            if (routine == 0) { routine = 2; return; }
+            if (routine == 0) { routine = 2; facingLeft = owner.facingLeft; return; }
             if (routine == 2) {
                 if (player != null && Math.abs((short)(player.getCentreX() - currentX)) <= 0x28
                         && Math.abs((short)(player.getCentreY() - currentY)) <= 0x40) {
@@ -112,7 +113,8 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
                 }
             } else if (routine == 4) { if (--timer < 0) { routine = 6; timer = 7; } }
             else if (routine == 6) { currentY -= 2; if (--timer < 0) { routine = 8; owner.shellRaised = true; } }
-            else { currentX = owner.getX(); currentY = owner.getY() - (owner.mappingFrame == 0 ? 24 : 23); }
+            else { currentX = owner.getX(); currentY = owner.getY() - (owner.mappingFrame == 0 ? 24 : 23);
+                facingLeft = owner.facingLeft; }
         }
         @Override protected void onRemovedFromObjectManager() {
             // Child_Draw_Sprite retires its dependent display on the next pass.
@@ -139,7 +141,8 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
         @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {
             if (owner == null || owner.isDestroyed()) { ObjectLifetimeOps.deleteNoRespawn(this); return; }
             if (--timer < 0) { mappingFrame = 3; timer = -1; }
-            currentX = owner.getX(); currentY = owner.getY();
+            // Refresh_ChildPositionAdjusted propagates the parent render flip.
+            currentX = owner.getX(); currentY = owner.getY(); facingLeft = owner.renderFacingLeft();
         }
         @Override public int getOnScreenHalfWidth() { return 24; }
         @Override public int getOnScreenHalfHeight() { return 16; }

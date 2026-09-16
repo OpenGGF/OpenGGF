@@ -361,3 +361,30 @@ raw debug fixture lacked an animation profile: at the first pilot contact, the
 S2 control attacked while the S1 fixture took damage. The failed route search
 therefore did not establish a supported gameplay defect. Mixed-team combat,
 repeated exits and native trajectory/pixel comparison remain open.
+
+## Sprite composition follow-up (2026-09-16)
+
+The [priority audit](../../plans/2026-09-15-soz-methodology-v2.md#2026-09-16-sprite-priority-and-masking-pass)
+corrects shared slot/piece ordering and activates SOZ's native sprite masks.
+Positioned upper/lower/rock/switch moving captures complete with the corrected
+shared renderer. Door, generic-spike and floating/spiked-pillar bucket/terrain
+metadata match their disassembly owners. This does not certify every placement,
+laser-mask phase or native pixel parity; those presentation obligations remain.
+
+A native held-scene probe independently corroborates pillar/spike occlusion by
+rising sand. `TestSozFloatingPillarArtWord` checks both spike directions' full-word
+carry and ROM pattern identity; `TestSozSandPriorityPixels` compares submerged
+spike pixels against terrain-only rendering and requires exposed body pixels.
+This fixes both raw mapping priority and the missing BG-high mask contribution.
+The probe is declared positioned/held presentation, not a completed native route.
+
+The boss-entry lighting regression starts with live ghosts, rejects camera
+Y `$4FF`, admits `$500`, and verifies brightening, eight wall solids, ghost
+fade-out and restored forward replay. The cold320px Sonic+Tails route also
+reaches the boss-background mode with darkness/fade zero and continues to LRZ
+with live rewind enabled. The reported missing outer shell and persistent ghosts
+were traced to the coordinate-only last-checkpoint debug shortcut, which retained
+early-room event state. The shortcut now uses the production checkpoint reload.
+`TestSozLastCheckpointShortcutProduction` covers native Sonic+Tails at 320/400/800px,
+unchanged lives, isolated rewind history, destination events, wall solids and art
+submission. Broader donor/leader products for the shortcut remain untested.

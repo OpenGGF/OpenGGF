@@ -33,7 +33,7 @@ public class TestGraphicsManagerSpriteSatReplay {
     }
 
     @Test
-    public void spriteSatReplay_replaysBucketsBackToFrontWhilePreservingOrderWithinEachBucket() throws Exception {
+    public void spriteSatReplay_replaysBucketsBackToFrontWhileReversingSatOrderWithinEachBucket() throws Exception {
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 1), 0);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 2), 1);
         graphicsManager.cachePatternTexture(createSolidPattern((byte) 3), 2);
@@ -83,8 +83,8 @@ public class TestGraphicsManagerSpriteSatReplay {
         assertTrue(graphicsManager.commands.get(1) instanceof PatternRenderCommand);
         assertTrue(graphicsManager.commands.get(2) instanceof PatternRenderCommand);
         assertEquals(20f, getFloatField(graphicsManager.commands.get(0), "x"));
-        assertEquals(10f, getFloatField(graphicsManager.commands.get(1), "x"));
-        assertEquals(30f, getFloatField(graphicsManager.commands.get(2), "x"));
+        assertEquals(30f, getFloatField(graphicsManager.commands.get(1), "x"));
+        assertEquals(10f, getFloatField(graphicsManager.commands.get(2), "x"));
     }
 
     private static Pattern createSolidPattern(byte color) {

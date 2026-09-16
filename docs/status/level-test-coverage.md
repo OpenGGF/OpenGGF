@@ -277,3 +277,16 @@ unsupported debug overrides and are superseded. Acceptance now checks usable
 ROM-backed art and animations for every live participant, including after loads;
 S1 team stress cases use Sonic duplicates. See the
 [roster correction](../architecture/plans/2026-09-15-soz-methodology-v2.md#2026-09-16-supported-roster-correction).
+
+SOZ playtest/priority follow-up (2026-09-16): the act matrices now cover native
+slot/piece order, arena masks across five actual widths, submerged spike pixels,
+miniboss child priority/recreation, Rockn child facing, synchronized pyramid
+shake and dark boss-room entry/ghost fade with rewind. The user's missing-shell
+and persistent-ghost entry path remains un-reproduced. See the
+[combined evidence and limits](../architecture/plans/2026-09-15-soz-methodology-v2.md#playtest-findings-and-matched-allocation-measurement).
+
+
+SOZ2 last-checkpoint debug skipping now has a production reload regression at
+320/400/800px with native Sonic+Tails: destination events, boss wall art/solids,
+brightness, preserved lives and rewind timeline isolation. Ordinary checkpoint
+activation coverage did not exercise the former coordinate-only shortcut.

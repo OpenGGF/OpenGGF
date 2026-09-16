@@ -153,6 +153,8 @@ public class ObjectManager {
     private final List<ObjectInstance>[] lowPriorityBuckets = new ArrayList[BUCKET_COUNT];
     @SuppressWarnings("unchecked")
     private final List<ObjectInstance>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
+    @SuppressWarnings("unchecked")
+    private final List<ObjectInstance>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
     private final ObjectRenderBucketSnapshot renderBucketSnapshot =
             new ObjectRenderBucketSnapshot();
@@ -293,6 +295,7 @@ public class ObjectManager {
         for (int i = 0; i < BUCKET_COUNT; i++) {
             lowPriorityBuckets[i] = new ArrayList<>();
             highPriorityBuckets[i] = new ArrayList<>();
+            unifiedBuckets[i] = new ArrayList<>();
         }
     }
 
@@ -1464,12 +1467,14 @@ public class ObjectManager {
         for (int i = 0; i < BUCKET_COUNT; i++) {
             lowPriorityBuckets[i].clear();
             highPriorityBuckets[i].clear();
+            unifiedBuckets[i].clear();
         }
 
         // Bucket active objects
         for (ObjectInstance instance : activeObjects.values()) {
             int bucket = RenderPriority.clamp(instance.getPriorityBucket());
             int idx = bucket - RenderPriority.MIN;
+            unifiedBuckets[idx].add(instance);
             if (instance.isHighPriority()) {
                 highPriorityBuckets[idx].add(instance);
             } else {
@@ -1481,6 +1486,7 @@ public class ObjectManager {
         for (ObjectInstance instance : dynamicObjects) {
             int bucket = RenderPriority.clamp(instance.getPriorityBucket());
             int idx = bucket - RenderPriority.MIN;
+            unifiedBuckets[idx].add(instance);
             if (instance.isHighPriority()) {
                 highPriorityBuckets[idx].add(instance);
             } else {
@@ -1495,6 +1501,7 @@ public class ObjectManager {
         for (int i = 0; i < BUCKET_COUNT; i++) {
             lowPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
             highPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
+            unifiedBuckets[i].sort(RENDER_SLOT_DESCENDING);
         }
 
         renderBucketSnapshot.capture(activeObjects.values(), dynamicObjects);
@@ -1523,14 +1530,10 @@ public class ObjectManager {
         int targetBucket = RenderPriority.clamp(bucket);
         int idx = targetBucket - RenderPriority.MIN;
 
-        // Draw low-priority objects first (they appear behind)
-        drawBucketInstances(lowPriorityBuckets[idx], false, callback);
-
-        // Draw high-priority objects second (they appear in front)
-        drawBucketInstances(highPriorityBuckets[idx], true, callback);
+        drawBucketInstances(unifiedBuckets[idx], callback);
     }
 
-    private void drawBucketInstances(List<ObjectInstance> instances, boolean highPriority, ObjectDrawCallback callback) {
+    private void drawBucketInstances(List<ObjectInstance> instances, ObjectDrawCallback callback) {
         if (instances.isEmpty()) {
             return;
         }
@@ -1540,7 +1543,7 @@ public class ObjectManager {
             renderCommands.clear();
             for (ObjectInstance instance : instances) {
                 if (callback != null) {
-                    callback.beforeDraw(instance, highPriority);
+                    callback.beforeDraw(instance, instance.isHighPriority());
                 }
                 objectCallbacks.run(instance, () -> instance.appendRenderCommands(renderCommands));
             }
@@ -1588,19 +1591,7 @@ public class ObjectManager {
         // (The InstancedPatternRenderer bakes priority per-instance and doesn't
         // need the flush, but it's harmless — empty flushes are no-ops.)
 
-        if (!lowPriorityBuckets[idx].isEmpty()) {
-            gfx.flushPatternBatch();
-            gfx.setCurrentSpriteHighPriority(false);
-            gfx.beginPatternBatch();
-            drawBucketInstancesWithPriority(lowPriorityBuckets[idx], gfx);
-        }
-
-        if (!highPriorityBuckets[idx].isEmpty()) {
-            gfx.flushPatternBatch();
-            gfx.setCurrentSpriteHighPriority(true);
-            gfx.beginPatternBatch();
-            drawBucketInstancesWithPriority(highPriorityBuckets[idx], gfx);
-        }
+        drawBucketInstancesWithPriority(unifiedBuckets[idx], gfx);
     }
 
     private void drawBucketInstancesWithPriority(List<ObjectInstance> instances, GraphicsManager gfx) {
@@ -1611,7 +1602,11 @@ public class ObjectManager {
         enableVerticalWrapIfNeeded();
         try {
             renderCommands.clear();
-            for (ObjectInstance instance : instances) {
+            // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
+            // The cached lists use reverse order for ordinary painter drawing.
+            boolean collectingSat = gfx.isSpriteSatCollectionActive();
+            for (int i = 0; i < instances.size(); i++) {
+                ObjectInstance instance = instances.get(collectingSat ? instances.size() - 1 - i : i);
                 objectCallbacks.run(instance, () -> {
                     int mask = instance.getTileOcclusionPaletteMask();
                     if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {

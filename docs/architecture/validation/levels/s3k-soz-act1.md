@@ -276,3 +276,21 @@ before it at all five widths. The event uses the centered native viewport for
 native-320 behavior unchanged. An explicit 800-pixel moving capture passes through
 natural sinking and visible, unlocked Act 2; its battle, sink and destination
 frames were inspected. Native pixel matching remains open.
+
+## Sprite composition follow-up (2026-09-16)
+
+The [priority audit](../../plans/2026-09-15-soz-methodology-v2.md#2026-09-16-sprite-priority-and-masking-pass)
+corrects shared slot/piece ordering and activates SOZ's native sprite masks.
+The production arena-door mask is asserted at320/400/512/640/800. The final800px
+moving victory capture has5325 gameplay-state rows identical to the earlier run;
+opening-door and sinking-golem clipping were visually inspected. Dust retains
+its independent bucket/terrain priority on both sides of the sand boundary.
+
+The priority audit also covers detached golem parts retaining their last bucket
+and art priority through movement and forced rewind reconstruction, plus the
+hit-reaction child's inherited art priority and independent bucket. Native
+owners are `loc_76F24`, `loc_849D8`/`Obj_FlickerMove`, and `loc_76F6A`.
+
+Playtest follow-up verifies Rockn's shell/eye facing through repeated turns and
+publishes the same shaken camera copy to foreground/background terrain and
+sprites during pyramid rise. A refreshed800px victory/handoff movie passes.

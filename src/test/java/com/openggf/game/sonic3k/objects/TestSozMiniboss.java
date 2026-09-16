@@ -68,6 +68,50 @@ class TestSozMiniboss {
     private Object field(Object value,String name){try{var f=value.getClass().getDeclaredField(name);f.setAccessible(true);return f.get(value);}catch(Exception ex){throw new AssertionError(ex);}}
     private CompositeSnapshot capture(){var r=new RewindRegistry();r.register(manager.rewindSnapshottable());return r.capture();}
     private void restore(CompositeSnapshot snapshot){var r=new RewindRegistry();r.register(manager.rewindSnapshottable());r.restore(snapshot);boss=manager.getActiveObjects().stream().filter(SozMinibossInstance.class::isInstance).map(SozMinibossInstance.class::cast).findFirst().orElse(null);}
+    @Test void dustRetainsItsOwnPriorityOnBothSidesOfTheSandBoundary() {
+        for(int kind:new int[]{SozMinibossChild.DUST,SozMinibossChild.COLLAPSE_DUST}) {
+            var child=manager.createDynamicObject(()->new SozMinibossChild(spawn(),boss,kind,0));
+            child.update(0,player);
+            for(int x:new int[]{0x41FF,0x4200}) {
+                child.x=x;
+                // ObjDat3_773CA sets $180/high; loc_770C4/770DA never call sub_770EA.
+                assertEquals(3,child.getPriorityBucket());
+                assertTrue(child.isHighPriority());
+            }
+        }
+    }
+    @Test void hitReactionRetainsItsCopiedArtPriorityAndOwnBucket() {
+        for(int parentX:new int[]{0x41FF,0x4200}) {
+            boss.x=parentX;
+            var head=manager.createDynamicObject(()->new SozMinibossChild(spawn(),boss,SozMinibossChild.HITBOX,0));
+            boss.x=parentX<0x4200?0x4201:0x41FE;
+            head.update(clock++,player);
+            head.frame=0x12; // Visible hit-reaction mapping; idle frame $1A is empty.
+            assertEquals(5,head.getPriorityBucket());
+            assertEquals(parentX>=0x4200,head.isHighPriority());
+        }
+    }
+    @Test void detachedPartsRetainPriorityAcrossTheSandBoundaryAndRecreation() {
+        boss.hitBy(player);
+        for(int startX:new int[]{0x41FF,0x4200}) {
+            var part=manager.createDynamicObject(()->new SozMinibossChild(spawn(),boss,SozMinibossChild.PART,0));
+            part.x=startX;
+            part.update(clock++,player);
+            assertTrue((boolean)field(part,"debris"));
+            int bucket=startX<0x4200?1:5;
+            boolean high=startX>=0x4200;
+            part.x=startX<0x4200?0x4201:0x41FE;
+            assertEquals(bucket,part.getPriorityBucket());
+            assertEquals(high,part.isHighPriority());
+            var snapshot=capture();
+            manager.setRewindInPlaceRestoreEnabledForTest(false);
+            restore(snapshot);
+            var restored=children().stream().filter(c->c.getSlotIndex()==part.getSlotIndex()).findFirst().orElseThrow();
+            assertEquals(bucket,restored.getPriorityBucket());
+            assertEquals(high,restored.isHighPriority());
+            assertTrue(RewindSnapshotDiff.diffKey("object-manager",snapshot.get("object-manager"),capture().get("object-manager")).isEmpty());
+        }
+    }
     @Test void romPointersAndNativeStartPauseAreExact(){
         assertEquals(0x16CB5C,reader.readU32BE(0x76A60));assertEquals(0x16E0EE,reader.readU32BE(0x76A70));
         assertEquals(0x774A6,reader.readU32BE(0x773AC));assertEquals(0x77626,reader.readU32BE(0x773CA));

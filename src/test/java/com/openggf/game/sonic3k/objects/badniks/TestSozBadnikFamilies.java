@@ -19,7 +19,10 @@ class TestSozBadnikFamilies {
         AbstractObjectInstance.updateCameraBounds(0, 0, 4096, 4096, 0);
         ObjectManager manager = mock(ObjectManager.class);
         doAnswer(call -> { children.add(call.getArgument(0)); return null; }).when(manager).addDynamicObjectAfterCurrent(any());
-        services = new StubObjectServices() { @Override public ObjectManager objectManager() { return manager; } };
+        services = new StubObjectServices() {
+            @Override public ObjectManager objectManager() { return manager; }
+            @Override public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(()->null,List::of); }
+        };
     }
     @AfterEach void reset() { AbstractObjectInstance.resetCameraBoundsForTests(); }
     private ObjectSpawn spawn(int id, int subtype, int flags) { return new ObjectSpawn(200, 200, id, subtype, flags, false, 0); }
@@ -65,6 +68,24 @@ class TestSozBadnikFamilies {
         worm.setDestroyed(true);
         for(int f=2;f<200;f++) childrenTick(f,null);
         assertTrue(children.stream().allMatch(AbstractObjectInstance::isDestroyed));
+    }
+    @Test void rocknEyesFollowBothWalkingDirectionsThroughTheShell() throws Exception {
+        var facing=AbstractBadnikInstance.class.getDeclaredField("facingLeft");facing.setAccessible(true);
+        var rock = new RocknBadnikInstance(spawn(0x96,0,0)); init(rock); childrenTick(1,null);
+        PlayableEntity target=mock(PlayableEntity.class);
+        when(target.getCentreX()).thenReturn((short)200); when(target.getCentreY()).thenReturn((short)200);
+        for(int f=2;f<=19;f++){rock.update(f,target);childrenTick(f,target);}
+        try (MockedStatic<ObjectTerrainUtils> terrain=mockStatic(ObjectTerrainUtils.class)) {
+            terrain.when(()->ObjectTerrainUtils.checkFloorDist(anyInt(),anyInt(),eq(7)))
+                    .thenReturn(new TerrainCheckResult(0,(byte)0,1));
+            for(short targetX:new short[]{150,250,150}) {
+                when(target.getCentreX()).thenReturn(targetX);
+                rock.update(20,target);childrenTick(20,target);
+                assertEquals(targetX<rock.getX(),facing.getBoolean(rock));
+                for(var child:children) assertEquals(facing.getBoolean(rock),facing.getBoolean(child),
+                        "Refresh_ChildPositionAdjusted must propagate facing to shell and eyes");
+            }
+        }
     }
     @Test void rocknWaitsForShellEightTickDelayAndEightRiseSteps() {
         var rock = new RocknBadnikInstance(spawn(0x96,0x22,0)); init(rock); childrenTick(1,null);
