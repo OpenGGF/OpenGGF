@@ -145,6 +145,7 @@ class TestGameplayModeContextRewindRegistry {
                 "camera",
                 "gamestate",
                 "gamerng",
+                com.openggf.game.timing.VIntRunCounter.REWIND_KEY,
                 "timermanager",
                 "fademanager",
                 "oscillation",
@@ -160,12 +161,12 @@ class TestGameplayModeContextRewindRegistry {
     }
 
     @Test
-    void exactlyThirteenAtomicKeysAfterAttach() {
+    void exactlyFourteenAtomicKeysAfterAttach() {
         GameplayModeContext ctx = buildAttachedContext();
         RewindRegistry registry = ctx.getRewindRegistry();
         CompositeSnapshot snapshot = registry.capture();
-        assertEquals(13, snapshot.entries().keySet().size(),
-                "Expected exactly 13 atomic adapters, got: " + snapshot.entries().keySet());
+        assertEquals(14, snapshot.entries().keySet().size(),
+                "Expected exactly 14 atomic adapters, got: " + snapshot.entries().keySet());
     }
 
     @Test
@@ -331,7 +332,7 @@ class TestGameplayModeContextRewindRegistry {
         assertNotNull(second);
         assertNotSame(first, second, "Re-attach should produce a new RewindRegistry instance");
         // New registry should have the same thirteen keys
-        assertEquals(13, second.capture().entries().keySet().size());
+        assertEquals(14, second.capture().entries().keySet().size());
     }
 
     @Test

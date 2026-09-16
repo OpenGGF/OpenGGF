@@ -1734,15 +1734,23 @@ public final class IczEndBossInstance extends AbstractBossInstance
             return;
         }
         boolean flipped = robotnikShipFlipX();
-        shipRenderer.drawFrameIndex(robotnikShipFrame, robotnikShipX, robotnikShipY, flipped, false,
-                ROBOTNIK_SHIP_PALETTE_LINE);
-        shipRenderer.drawFrameIndex(robotnikHeadFrame, robotnikShipX, robotnikShipY + ROBOTNIK_HEAD_Y_OFFSET,
-                flipped, false, ROBOTNIK_SHIP_PALETTE_LINE);
+        // ChildObjDat_72336 allocates Obj_RobotnikShip4 (151295-151298); its
+        // Obj_RobotnikShipInit creates the head with Child1_MakeRoboHead
+        // (136415-136416) and Obj_RobotnikShipReady later creates the flame with
+        // Child1_MakeRoboShipFlame (136465-136466), each through
+        // CreateChild1_Normal / AllocateObjectAfterCurrent (176924-176929). All
+        // three carry priority $280 (136645-136662), so within the list the
+        // lower slot wins: ship in front of head in front of flame. Painter's
+        // order therefore runs flame, head, ship.
         if (robotnikShipFlameVisible) {
             int flameDx = flipped ? -ROBOTNIK_SHIP_FLAME_DX : ROBOTNIK_SHIP_FLAME_DX;
             shipRenderer.drawFrameIndex(ROBOTNIK_SHIP_FLAME_FRAME, robotnikShipX + flameDx, robotnikShipY,
                     flipped, false, ROBOTNIK_SHIP_PALETTE_LINE);
         }
+        shipRenderer.drawFrameIndex(robotnikHeadFrame, robotnikShipX, robotnikShipY + ROBOTNIK_HEAD_Y_OFFSET,
+                flipped, false, ROBOTNIK_SHIP_PALETTE_LINE);
+        shipRenderer.drawFrameIndex(robotnikShipFrame, robotnikShipX, robotnikShipY, flipped, false,
+                ROBOTNIK_SHIP_PALETTE_LINE);
     }
 
     private boolean robotnikShipFlipX() {
@@ -2060,12 +2068,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
             if (renderer == null || !renderer.isReady()) {
                 return;
             }
-            renderer.drawFrameIndex(ESCAPE_FRAME, x, y, true, false, ROBOTNIK_SHIP_PALETTE_LINE);
-            renderer.drawFrameIndex(HEAD_FRAME_ANGRY, x, y + HEAD_Y_OFFSET, true, false,
-                    ROBOTNIK_SHIP_PALETTE_LINE);
+            // Same slot order as renderRobotnikShip(): the escaping ship keeps its
+            // head (slot ship+1) and flame (allocated after the head) children,
+            // so paint flame, head, ship.
             if (flyingRight) {
                 renderer.drawFrameIndex(FLAME_FRAME, x - FLAME_DX, y, true, false, ROBOTNIK_SHIP_PALETTE_LINE);
             }
+            renderer.drawFrameIndex(HEAD_FRAME_ANGRY, x, y + HEAD_Y_OFFSET, true, false,
+                    ROBOTNIK_SHIP_PALETTE_LINE);
+            renderer.drawFrameIndex(ESCAPE_FRAME, x, y, true, false, ROBOTNIK_SHIP_PALETTE_LINE);
         }
     }
 

@@ -1633,13 +1633,20 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
         if (shipRenderer == null) return;
         int podX = state.x + renderOffsetX(POD_OFFSET_X);
         int podY = state.y + POD_OFFSET_Y;
-        shipRenderer.drawFrameIndex(currentPodFrame(), podX, podY, flipX, false);
+        // Obj_MGZEndBoss allocates the pod with Child1_MakeRoboShip3 (sonic3k.asm:142771-142772);
+        // Obj_RobotnikShipInit then creates the head (Child1_MakeRoboHead, 136415-136416)
+        // and Obj_RobotnikShipReady the flame (Child1_MakeRoboShipFlame, 136465-136466),
+        // each via CreateChild1_Normal / AllocateObjectAfterCurrent (176924-176929).
+        // All three are priority $280 (136645-136662) and the lower slot wins in
+        // Draw_Sprite order, so the pod is in front of the head, which is in front
+        // of the flame. Painter's order: flame, head, pod.
         if (isEscapePodActive()) {
             shipRenderer.drawFrameIndex(SHIP_FLAME_FRAME, podX + renderOffsetX(SHIP_FLAME_OFFSET_X),
                     podY + SHIP_FLAME_OFFSET_Y, flipX, false, SHIP_FLAME_PALETTE_LINE);
         }
         shipRenderer.drawFrameIndex(computeHeadFrame(), podX + renderOffsetX(HEAD_OFFSET_X),
                 podY + HEAD_OFFSET_Y, flipX, false);
+        shipRenderer.drawFrameIndex(currentPodFrame(), podX, podY, flipX, false);
     }
 
     /**
@@ -1662,7 +1669,8 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
             return;
         }
         boolean craftFlipX = endBossMiniCraftFlyingRight || flipX;
-        shipRenderer.drawFrameIndex(POD_ESCAPE_FRAME, endBossMiniCraftX, endBossMiniCraftY, craftFlipX, false);
+        // Same slot order as drawPodAndHead(): flame (latest child), head, then
+        // the pod on top.
         if (endBossMiniCraftFlyingRight && shouldDrawShipFlame()) {
             int flameOffX = craftFlipX ? -SHIP_FLAME_OFFSET_X : SHIP_FLAME_OFFSET_X;
             shipRenderer.drawFrameIndex(SHIP_FLAME_FRAME,
@@ -1677,6 +1685,7 @@ public class MgzDrillingRobotnikInstance extends AbstractBossInstance implements
                 endBossMiniCraftY + HEAD_OFFSET_Y,
                 craftFlipX,
                 false);
+        shipRenderer.drawFrameIndex(POD_ESCAPE_FRAME, endBossMiniCraftX, endBossMiniCraftY, craftFlipX, false);
     }
 
     private int currentPodFrame() {

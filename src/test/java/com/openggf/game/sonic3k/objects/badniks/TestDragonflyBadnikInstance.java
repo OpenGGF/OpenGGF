@@ -226,7 +226,7 @@ class TestDragonflyBadnikInstance {
     }
 
     @Test
-    void sevenSegmentTailEntersReturnOneFrameApartDownTheChainNotAllAtOnce() {
+    void sevenSegmentTailEntersReturnOnTheSameFrameInAscendingSlotOrder() {
         SpawnHarness harness = new SpawnHarness();
         DragonflyBadnikInstance dragonfly = dragonfly(harness.services);
         TestablePlayableSprite player = player();
@@ -244,11 +244,20 @@ class TestDragonflyBadnikInstance {
 
         Integer[] returnEntryFrame = new Integer[segments.size()];
         boolean[] wasReturning = new boolean[segments.size()];
+        Integer hoverEntryFrame = null;
 
+        // CreateChild4_LinkListRepeated allocates every segment through
+        // AllocateObjectAfterCurrent with a0 still the Dragonfly; that routine
+        // scans forward from a0 for the first free SST (sonic3k.asm:37917-37930),
+        // so the chain occupies ascending slots and the object-execution walk
+        // runs Dragonfly, segment 0, segment 1, ... within one frame.
         int frame = 2;
         while (frame < 500 && (!"WAITING".equals(dragonfly.getStateName())
                 || returnEntryFrame[segments.size() - 1] == null)) {
             dragonfly.update(frame, player);
+            if (hoverEntryFrame == null && "WAITING".equals(dragonfly.getStateName())) {
+                hoverEntryFrame = frame;
+            }
             for (int i = 0; i < segments.size(); i++) {
                 segments.get(i).update(frame, player);
                 boolean isReturning = segments.get(i).isReturningToParentY();
@@ -260,14 +269,49 @@ class TestDragonflyBadnikInstance {
             frame++;
         }
 
+        assertNotNull(hoverEntryFrame, "the Dragonfly never entered hover-wait");
         for (int i = 0; i < segments.size(); i++) {
             assertNotNull(returnEntryFrame[i], "segment " + i + " never entered the return phase");
+            assertEquals(hoverEntryFrame, returnEntryFrame[i],
+                    "loc_8DE8A reads btst #2,$38 of parent3 live; segment " + i
+                            + " runs after its anchor in the same ascending slot walk, so the whole"
+                            + " chain enters return on the frame loc_8DDCA sets the Dragonfly's bit");
         }
-        for (int i = 1; i < segments.size(); i++) {
-            assertEquals(returnEntryFrame[i - 1] + 1, (int) returnEntryFrame[i],
-                    "loc_8DE8A gates segment " + i + "'s return on btst #2,$38 of segment " + (i - 1)
-                            + ", a 1-frame ripple down the chain, not a simultaneous transition");
+    }
+
+    @Test
+    void segmentRunningBeforeItsAnchorSeesTheAnchorGateOneFrameLate() {
+        DragonflyBadnikInstance dragonfly = dragonfly();
+        putDragonflyOnScreen();
+        activateDragonfly(dragonfly);
+        DragonflyBadnikInstance.LinkedBodyChild first =
+                new DragonflyBadnikInstance.LinkedBodyChild(dragonfly, 0, 0);
+        DragonflyBadnikInstance.LinkedBodyChild second =
+                new DragonflyBadnikInstance.LinkedBodyChild(dragonfly, first, 2, 1);
+        TestablePlayableSprite player = player();
+
+        Integer firstEntry = null;
+        Integer secondEntry = null;
+        for (int frame = 2; frame < 200 && secondEntry == null; frame++) {
+            dragonfly.update(frame, player);
+            // Reverse the ROM slot order on purpose: the gate is the live $38
+            // bit, so a follower that runs before its anchor only sees the bit
+            // as it stood at the end of the previous frame.
+            second.update(frame, player);
+            first.update(frame, player);
+            if (firstEntry == null && first.isReturningToParentY()) {
+                firstEntry = frame;
+            }
+            if (secondEntry == null && second.isReturningToParentY()) {
+                secondEntry = frame;
+            }
         }
+
+        assertNotNull(firstEntry);
+        assertNotNull(secondEntry);
+        assertEquals(firstEntry + 1, (int) secondEntry,
+                "with no explicit visibility delay, update order alone decides when a link sees"
+                        + " its anchor's btst #2,$38 result");
     }
 
     @Test

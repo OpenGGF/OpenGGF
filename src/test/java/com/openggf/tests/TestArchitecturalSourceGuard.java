@@ -1310,7 +1310,7 @@ class TestArchitecturalSourceGuard {
         String provider = Files.readString(SRC_MAIN.resolve("com/openggf/game/sonic3k/Sonic3kObjectArtProvider.java"));
         String constants = Files.readString(SRC_MAIN.resolve(
                 "com/openggf/game/sonic3k/constants/Sonic3kConstants.java"));
-        String discrepancies = Files.readString(Path.of("docs", "S3K_KNOWN_DISCREPANCIES.md"));
+        String pitfalls = Files.readString(Path.of("docs", "architecture", "implementation-pitfalls.md"));
         List<String> violations = new ArrayList<>();
         for (String constant : List.of(
                 "MAP_HCZ_MINIBOSS_ADDR",
@@ -1322,8 +1322,8 @@ class TestArchitecturalSourceGuard {
             if (!constants.contains("public static final int " + constant)) {
                 violations.add("Sonic3kConstants must expose ROM address " + constant);
             }
-            if (!discrepancies.contains(constant)) {
-                violations.add("docs/S3K_KNOWN_DISCREPANCIES.md must document " + constant);
+            if (!pitfalls.contains(constant)) {
+                violations.add("docs/architecture/implementation-pitfalls.md must document " + constant);
             }
         }
 

@@ -83,6 +83,22 @@ class TestObjectManagerMultiBucketRenderable {
     }
 
     @Test
+    void partsSortByTheSlotTheyReport() {
+        ObjectManager manager = newObjectManager();
+        Owner owner = new Owner(5, false, new int[] {2}, false);
+        owner.partSlot = 60; // ROM child allocated after the plain object below
+        Plain plain = new Plain(2, false);
+        manager.addDynamicObjectAtSlot(owner, 40);
+        manager.addDynamicObjectAtSlot(plain, 50);
+        // Bucket 2: the part (slot 60) paints first, the plain object (slot 50) on top.
+        assertEquals(List.of("body@5:low", "part@2:low", "plain@2:low"), collect(manager));
+
+        owner.partSlot = 41; // slot change alone must re-sort the cached list
+        manager.refreshRenderBucketsIfChanged();
+        assertEquals(List.of("body@5:low", "plain@2:low", "part@2:low"), collect(manager));
+    }
+
+    @Test
     void partSharingTheOwnersBucketIsListedOnce() {
         ObjectManager manager = newObjectManager();
         Owner owner = new Owner(5, false, new int[] {5}, false);
@@ -121,6 +137,7 @@ class TestObjectManagerMultiBucketRenderable {
         private int[] extraBuckets;
         private boolean extraHigh;
         private int mixedBucket = -1;
+        private int partSlot = -1;
         private final List<Integer> bucketsAsked = new ArrayList<>();
         private final List<String> classesAsked = new ArrayList<>();
 
@@ -155,6 +172,12 @@ class TestObjectManagerMultiBucketRenderable {
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
             appendRenderCommands(commands, getPriorityBucket());
+        }
+
+        @Override
+        public int partSlotIndex(int bucket, boolean highPriority) {
+            return bucket != bodyBucket && partSlot >= 0 ? partSlot
+                    : MultiBucketRenderable.super.partSlotIndex(bucket, highPriority);
         }
 
         @Override

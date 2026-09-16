@@ -1199,6 +1199,9 @@ public class GameLoop {
 
     private void stepInternalBody() {
         requireInputHandler();
+        // VInt_Done bumps V_int_run_count on every V-int (sonic3k.asm:542-543); the
+        // carrier counts the iterations no level object clock is bound to service.
+        com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).serviceRepresentedVBlank();
         LevelIterationAdmissionController.refreshTraceInputSnapshot(inputHandler);
         audioUpdatedThisStep = false;
         refreshRuntimeBindings();
@@ -2755,9 +2758,11 @@ public class GameLoop {
 
         bonusStageTransitionPending = true;
         if (shouldStartBonusStageExitFade(provider)) {
-            fadeManager.startFadeToBlack(() -> {
-                doExitBonusStage(provider, savedState);
-            });
+            // Restart_level_flag re-enters Level:, whose Pal_FadeToBlack holds the
+            // frozen stage for 22 V-ints ($15 + dbf) and services the Nemesis queue
+            // on each (sonic3k.asm:7896, 7504-7524, 5042-5051): the death-restart fade.
+            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
+                    () -> doExitBonusStage(provider, savedState));
             LOGGER.info("Starting fade-to-black to exit Bonus Stage");
         } else {
             doExitBonusStage(provider, savedState);
@@ -2860,7 +2865,8 @@ public class GameLoop {
                 gameState::addLife);
         pendingBonusReturnStarPostMark = -1;
 
-        // Initialize zone title card (ROM: Level routine always shows title card on reload)
+        // Level/loc_62B6 spawns Obj_TitleCard on this reload for every zone but $1701
+        // or Act3_flag (sonic3k.asm:7730-7735); the recorded gumball exit shows it.
         int apparentZone = (savedState.savedApparentZoneAndAct() >> 8) & 0xFF;
         int apparentAct = savedState.savedApparentZoneAndAct() & 0xFF;
         TitleCardProvider tcp = getTitleCardProviderLazy();
@@ -2877,7 +2883,7 @@ public class GameLoop {
         levelManager.playCurrentLevelMusic();
 
         // Fade from black — level + zone title card become visible together
-        fadeManager.startFadeFromBlack(null);
+        GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
 
         if (gameModeChangeListener != null) {
             gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);

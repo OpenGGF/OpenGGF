@@ -121,6 +121,7 @@ public class Sonic3kGameModule implements GameModule {
     private final Sonic3kZoneRegistry zoneRegistry = new Sonic3kZoneRegistry();
     private final Sonic3kTitleScreenManager titleScreenProvider = new Sonic3kTitleScreenManager();
     private final Sonic3kLevelSelectManager levelSelectProvider = new Sonic3kLevelSelectManager();
+    private final Sonic3kCheatFlags cheatFlags = new Sonic3kCheatFlags();
     private final com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile dataSelectHostProfile =
             new com.openggf.game.sonic3k.dataselect.S3kDataSelectProfile();
     private DataSelectPresentationProvider dataSelectPresentationProvider;
@@ -481,6 +482,9 @@ public class Sonic3kGameModule implements GameModule {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getGameService(Class<T> type) {
+        if (type == Sonic3kCheatFlags.class) {
+            return (T) cheatFlags;
+        }
         if (type == com.openggf.game.internal.SidekickCpuInitializationPolicy.class) {
             return (T) com.openggf.game.sonic3k.sidekick.Sonic3kSidekickCpuInitializationPolicy.INSTANCE;
         }

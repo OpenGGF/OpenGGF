@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.Sonic3kCheatFlags;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.GameStateManager;
@@ -480,6 +481,139 @@ class TestMhzPulleyLiftObjectInstance {
     }
 
     @Test
+    void pulleyButtonSequenceWithLevelSelectSetEntersDebugCheatAndPlaysRingRight() {
+        RecordingServices services = new RecordingServices();
+        services.cheatFlags.enableLevelSelectAndSlowMotion();
+        AbstractObjectInstance pulley = pulley(services, 0);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
+        pulley.update(0, player);
+        services.clear();
+
+        int frame = pressSequence(pulley, player, 1, LEFT, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP);
+        assertFalse(services.cheatFlags.isDebugCheatEntered(),
+                "eight matches leave byte_3E5E8+1 nonzero, so sub_3E598 returns without writing");
+
+        pressSequence(pulley, player, frame, UP);
+
+        assertTrue(services.cheatFlags.isDebugCheatEntered(),
+                "the ninth match reads byte_3E5E8's zero pad byte and, with the Level_select_flag word"
+                        + " nonzero, writes $0101 to Debug_cheat_flag");
+        assertEquals(1, services.sfxCount(Sonic3kSfx.RING_RIGHT.id),
+                "loc_3E5CC plays sfx_RingRight once after the flag write");
+        assertTrue(services.cheatFlags.isLevelSelectEnabled(),
+                "the locked-on branch leaves Level_select_flag as it was");
+    }
+
+    @Test
+    void pulleyButtonSequenceWithoutLevelSelectOnlyResetsTheCounter() {
+        RecordingServices services = new RecordingServices();
+        AbstractObjectInstance pulley = pulley(services, 0);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
+        pulley.update(0, player);
+        services.clear();
+
+        pressSequence(pulley, player, 1, LEFT, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP, UP);
+
+        assertFalse(services.cheatFlags.isDebugCheatEntered(),
+                "tst.w (Level_select_flag) is zero on the locked-on cartridge without the AIZ vine cheat,"
+                        + " so sub_3E598 branches to loc_3E5E0 and writes nothing");
+        assertFalse(services.cheatFlags.isLevelSelectEnabled(),
+                "SK_alone_flag is zero, so the loc_3E5CC Level_select_flag write is not reached");
+        assertFalse(services.playedSfx(Sonic3kSfx.RING_RIGHT.id),
+                "the beq.s loc_3E5E0 path skips Play_SFX");
+    }
+
+    @Test
+    void wrongPressRestartsPulleyButtonSequenceFromTheFirstEntry() {
+        RecordingServices services = new RecordingServices();
+        services.cheatFlags.enableLevelSelectAndSlowMotion();
+        AbstractObjectInstance pulley = pulley(services, 0);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
+        pulley.update(0, player);
+        services.clear();
+
+        int frame = pressSequence(pulley, player, 1, LEFT, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP, LEFT);
+        frame = pressSequence(pulley, player, frame, UP);
+        assertFalse(services.cheatFlags.isDebugCheatEntered(),
+                "a mismatch stores 0 to $40(a0) (loc_3E5E0), it does not step back one entry");
+
+        frame = pressSequence(pulley, player, frame, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP, UP);
+        assertFalse(services.cheatFlags.isDebugCheatEntered(),
+                "loc_3E5E0 consumes the mismatching LEFT press; it is not re-read as the first entry,"
+                        + " so two further LEFTs are one short");
+
+        pressSequence(pulley, player, frame, LEFT, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP, UP);
+        assertTrue(services.cheatFlags.isDebugCheatEntered(),
+                "a complete nine-press sequence after the reset enters the cheat");
+    }
+
+    @Test
+    void heldDirectionIsOnePressAndNeutralFramesDoNotDisturbPulleyButtonSequence() {
+        RecordingServices services = new RecordingServices();
+        services.cheatFlags.enableLevelSelectAndSlowMotion();
+        AbstractObjectInstance pulley = pulley(services, 0);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
+        pulley.update(0, player);
+        services.clear();
+
+        int frame = pressSequence(pulley, player, 1, LEFT, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP);
+        player.setDirectionalInputPressed(true, false, false, false);
+        for (int i = 0; i < 4; i++) {
+            pulley.update(frame++, player);
+        }
+        player.setDirectionalInputPressed(false, false, false, false);
+        for (int i = 0; i < 8; i++) {
+            pulley.update(frame++, player);
+        }
+
+        assertTrue(services.cheatFlags.isDebugCheatEntered(),
+                "sub_3E598 compares the Ctrl_1_logical pressed byte, so a held UP is one match");
+        assertEquals(1, services.sfxCount(Sonic3kSfx.RING_RIGHT.id),
+                "holding UP after the ninth match must not re-run the sequence");
+    }
+
+    @Test
+    void twoDirectionsPressedTogetherDoNotMatchPulleyButtonSequence() {
+        RecordingServices services = new RecordingServices();
+        services.cheatFlags.enableLevelSelectAndSlowMotion();
+        AbstractObjectInstance pulley = pulley(services, 0);
+        TestablePlayableSprite player = fallingPlayerAt(0x17CE, 0x062C);
+        pulley.update(0, player);
+        services.clear();
+
+        int frame = pressSequence(pulley, player, 1, LEFT, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP);
+        frame = pressSequence(pulley, player, frame, UP | LEFT);
+        assertFalse(services.cheatFlags.isDebugCheatEntered(),
+                "cmp.b byte_3E5E8(pc,d1.w),d0 needs the whole pressed byte to equal button_up_mask");
+
+        pressSequence(pulley, player, frame, LEFT, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP, UP);
+        assertTrue(services.cheatFlags.isDebugCheatEntered());
+    }
+
+    @Test
+    void nativeP2HoldDoesNotAdvancePulleyButtonSequence() {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        RecordingServices services = new RecordingServices();
+        services.cheatFlags.enableLevelSelectAndSlowMotion();
+        AbstractObjectInstance pulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, 0, 0, false, 0));
+        TestablePlayableSprite sidekick = fallingPlayerAt(0x17CE, 0x062C);
+        services.withGameState(mock(GameStateManager.class)).withSidekicks(List.of(sidekick));
+        pulley.setServices(services);
+        TestablePlayableSprite sonic = fallingPlayerAt(0x1900, 0x0660);
+        pulley.update(0, sonic);
+        assertTrue(sidekick.isObjectControlled(), "precondition: native P2 holds the left handle");
+        services.clear();
+
+        // The sidekick's directional input drives the Player_2 hold byte; Sonic stays off the pulley.
+        pressSequence(pulley, sidekick, 1, sonic, LEFT, LEFT, LEFT, RIGHT, RIGHT, RIGHT, UP, UP, UP);
+
+        assertFalse(services.cheatFlags.isDebugCheatEntered(),
+                "sub_3E598 returns at cmpa.w #Player_1,a1 for the Player_2 hold byte");
+        assertFalse(services.playedSfx(Sonic3kSfx.RING_RIGHT.id));
+    }
+
+    @Test
     void idleSpawnUsesParentCopyOffsetsBeforeChildHandleOffsets() {
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
         when(renderer.isReady()).thenReturn(true);
@@ -512,6 +646,40 @@ class TestMhzPulleyLiftObjectInstance {
         return player;
     }
 
+    private static final int UP = 1;
+    private static final int DOWN = 2;
+    private static final int LEFT = 4;
+    private static final int RIGHT = 8;
+
+    private static AbstractObjectInstance pulley(RecordingServices services, int subtype) {
+        Sonic3kObjectRegistry registry = new ZoneForTestRegistry(Sonic3kZoneIds.ZONE_MHZ);
+        AbstractObjectInstance pulley = (AbstractObjectInstance) registry.create(new ObjectSpawn(
+                0x1800, 0x0600, MHZ_PULLEY_LIFT, subtype, 0, false, 0));
+        pulley.setServices(services);
+        return pulley;
+    }
+
+    /**
+     * Presses each pad mask for one frame with a neutral frame between presses,
+     * so every entry is a fresh Ctrl_1_logical press edge. Returns the next frame.
+     */
+    private static int pressSequence(AbstractObjectInstance pulley, TestablePlayableSprite player,
+            int frame, int... masks) {
+        return pressSequence(pulley, player, frame, player, masks);
+    }
+
+    private static int pressSequence(AbstractObjectInstance pulley, TestablePlayableSprite padOwner,
+            int frame, TestablePlayableSprite playerOne, int... masks) {
+        for (int mask : masks) {
+            padOwner.setDirectionalInputPressed((mask & UP) != 0, (mask & DOWN) != 0,
+                    (mask & LEFT) != 0, (mask & RIGHT) != 0);
+            pulley.update(frame++, playerOne);
+            padOwner.setDirectionalInputPressed(false, false, false, false);
+            pulley.update(frame++, playerOne);
+        }
+        return frame;
+    }
+
     private static int detailValue(String details, String key) {
         int start = details.indexOf(key + "=");
         int valueStart = start + key.length() + 1;
@@ -521,6 +689,13 @@ class TestMhzPulleyLiftObjectInstance {
 
     private static final class RecordingServices extends TestObjectServices {
         private final List<Integer> sfx = new ArrayList<>();
+        private final Sonic3kCheatFlags cheatFlags = new Sonic3kCheatFlags();
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T gameService(Class<T> type) {
+            return type == Sonic3kCheatFlags.class ? (T) cheatFlags : null;
+        }
 
         @Override
         public void playSfx(int soundId) {

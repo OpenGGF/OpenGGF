@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.sonic3k.Sonic3kCheatFlags;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
@@ -21,8 +22,9 @@ import java.util.List;
  * S3K SKL object $06 - MHZ pulley lift.
  *
  * <p>ROM reference: {@code Obj_MHZPulleyLift}. This ports the route-critical
- * handle grab/carry/release path from {@code loc_3E472/sub_3E508}; rendering
- * uses MHZ level PLC art ({@code Map_MHZPulleyLift / ArtTile_MHZMisc+$DD}).
+ * handle grab/carry/release path from {@code loc_3E472/sub_3E508}, including the
+ * per-handle {@code sub_3E598} button-sequence cheat; rendering uses MHZ level
+ * PLC art ({@code Map_MHZPulleyLift / ArtTile_MHZMisc+$DD}).
  */
 public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         implements SpawnRewindRecreatable {
@@ -47,6 +49,20 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
     private static final int PLAYER_FRAME_PULL_HIGH = 0x92;
     private static final byte[] LOWER_PULLEY_X_ADJUST = {
             0, 8, 8, 8, 8, 8, 7, 6, 5, 4, 3, 2, 1, 0, 0, 0
+    };
+    // Genesis pad bit layout shared by Ctrl_1_logical's held (high) and
+    // pressed (low) bytes: button_up=0, button_down=1, button_left=2, button_right=3.
+    private static final int PAD_UP_MASK = 1 << 0;
+    private static final int PAD_DOWN_MASK = 1 << 1;
+    private static final int PAD_LEFT_MASK = 1 << 2;
+    private static final int PAD_RIGHT_MASK = 1 << 3;
+    // byte_3E5E8 (sonic3k.asm:82657-82666): the nine pressed-byte values
+    // sub_3E598 expects in order. The table ends at an `even` pad byte of 0,
+    // which is what the +1 lookahead reads after the ninth match.
+    private static final int[] CHEAT_BUTTON_SEQUENCE = {
+            PAD_LEFT_MASK, PAD_LEFT_MASK, PAD_LEFT_MASK,
+            PAD_RIGHT_MASK, PAD_RIGHT_MASK, PAD_RIGHT_MASK,
+            PAD_UP_MASK, PAD_UP_MASK, PAD_UP_MASK
     };
 
     private final HandleState leftHandle = new HandleState(LEFT_HANDLE_X_OFFSET);
@@ -144,7 +160,9 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
                 + " parentRightOffset=" + parentRightHandleOffset
                 + " remainingPullSteps=" + remainingPullSteps
                 + " leftGrabbed=" + leftHandle.hasGrabbedPlayer()
-                + " rightGrabbed=" + rightHandle.hasGrabbedPlayer();
+                + " rightGrabbed=" + rightHandle.hasGrabbedPlayer()
+                + " leftCheatProgress=" + leftHandle.cheatSequenceProgress
+                + " rightCheatProgress=" + rightHandle.cheatSequenceProgress;
     }
 
     private void updateParentPosition() {
@@ -235,21 +253,94 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
             releaseHandle(hold, player, true);
             return;
         }
+        int heldDirections = heldDirectionMask(player);
+        // Ctrl_1_logical low byte: buttons that went down this frame. A/B/C
+        // presses already took the release branch above, and a Start press
+        // pauses the frame before Process_Sprites runs, so the directional
+        // bits are the only ones that can reach loc_3E5F2.
+        int pressedDirections = heldDirections & ~hold.heldDirectionsLastFrame;
+        hold.heldDirectionsLastFrame = heldDirections;
+        if (hold == handle.player1) {
+            // loc_3E5F2 calls sub_3E598 before any facing/pull handling; it
+            // returns immediately for a1 != Player_1 (sonic3k.asm:82622-82623).
+            advanceCheatButtonSequence(handle, pressedDirections);
+        }
         snapPlayerToHandle(handle, player);
-        boolean downPressed = player.isDownPressed();
+        boolean downPressed = (heldDirections & PAD_DOWN_MASK) != 0;
         // loc_3E472 clears the handle's $3A pull flag at the start of every
         // child SST update; sub_3E508 sets it again only while DOWN is held
         // (sonic3k.asm:82511-82518,82687-82696). A released DOWN therefore
         // falls through loc_3E4AA and retracts the handle immediately.
         handle.pullActive |= downPressed;
-        if (downPressed) {
-            if (!hold.downPressedLastFrame && isPullEnabled()) {
-                playPulleyMoveSfx();
-            }
+        if ((pressedDirections & PAD_DOWN_MASK) != 0 && isPullEnabled()) {
+            playPulleyMoveSfx();
         }
-        hold.downPressedLastFrame = downPressed;
         updatePlayerFacingFromHeldInput(player);
         applyPlayerPulleyFrame(handle, player);
+    }
+
+    /**
+     * {@code sub_3E598} (sonic3k.asm:82622-82653): the MHZ pulley debug-cheat
+     * entry. {@code $40(a0)} on the handle child counts matched presses against
+     * {@code byte_3E5E8}; the pressed byte must equal the expected mask exactly,
+     * a frame with no press leaves the counter alone, and any other press resets
+     * it. After the ninth match the {@code +1} lookahead reads the table's zero
+     * pad byte and the flag write runs:
+     * <pre>
+     *   tst.w  SK_alone_flag-Level_select_flag(a4)
+     *   bne.s  loc_3E5CC              ; S&amp;K alone: set Level_select_flag/Slow_motion_flag
+     *   tst.w  (a4)                   ; locked on: needs Level_select_flag word nonzero
+     *   beq.s  loc_3E5E0              ;   otherwise only reset the counter, no sound
+     *   addq.w #Debug_cheat_flag-Level_select_flag,a4
+     * loc_3E5CC:
+     *   moveq  #1,d1
+     *   move.b d1,(a4)
+     *   move.b d1,1(a4)               ; Debug_cheat_flag = $0101
+     *   ... Play_SFX sfx_RingRight
+     * loc_3E5E0:
+     *   move.b #0,$40(a0)
+     * </pre>
+     * The engine models the locked-on ROM only, so {@code SK_alone_flag} is
+     * always zero here and the {@code loc_3E5CC} level-select write is not
+     * reachable.
+     */
+    private void advanceCheatButtonSequence(HandleState handle, int pressedDirections) {
+        if (pressedDirections == 0) {
+            return;
+        }
+        if (pressedDirections != CHEAT_BUTTON_SEQUENCE[handle.cheatSequenceProgress]) {
+            handle.cheatSequenceProgress = 0;
+            return;
+        }
+        handle.cheatSequenceProgress++;
+        if (handle.cheatSequenceProgress < CHEAT_BUTTON_SEQUENCE.length) {
+            return;
+        }
+        handle.cheatSequenceProgress = 0;
+        ObjectServices objectServices = tryServices();
+        Sonic3kCheatFlags flags = objectServices == null ? null : objectServices.gameService(Sonic3kCheatFlags.class);
+        if (flags == null || !flags.isLevelSelectWordSet()) {
+            return;
+        }
+        flags.enableDebugCheat();
+        objectServices.playSfx(Sonic3kSfx.RING_RIGHT.id);
+    }
+
+    private static int heldDirectionMask(AbstractPlayableSprite player) {
+        int mask = 0;
+        if (player.isUpPressed()) {
+            mask |= PAD_UP_MASK;
+        }
+        if (player.isDownPressed()) {
+            mask |= PAD_DOWN_MASK;
+        }
+        if (player.isLeftPressed()) {
+            mask |= PAD_LEFT_MASK;
+        }
+        if (player.isRightPressed()) {
+            mask |= PAD_RIGHT_MASK;
+        }
+        return mask;
     }
 
     private void updateUngrippedHandle(HandleState handle, PlayerHoldState hold,
@@ -291,7 +382,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         player.setSpindash(false);
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(player);
         player.setObjectMappingFrameControl(true);
-        hold.downPressedLastFrame = player.isDownPressed();
+        hold.heldDirectionsLastFrame = heldDirectionMask(player);
         applyPlayerPulleyFrame(handle, player);
         player.setRenderFlips(player.getRenderHFlip(), false);
         ObjectServices objectServices = tryServices();
@@ -331,7 +422,7 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         }
         hold.grabbed = false;
         hold.player = null;
-        hold.downPressedLastFrame = false;
+        hold.heldDirectionsLastFrame = 0;
     }
 
     private void updateHandleOffset(HandleState handle) {
@@ -443,6 +534,8 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
         private final PlayerHoldState player2 = new PlayerHoldState();
         private int offset;
         private boolean pullActive;
+        // $40(a0) on the handle child: sub_3E598's button-sequence progress.
+        private int cheatSequenceProgress;
 
         private HandleState(int xOffset) {
             this.xOffset = xOffset;
@@ -456,7 +549,9 @@ public final class MhzPulleyLiftObjectInstance extends AbstractObjectInstance
     private static final class PlayerHoldState {
         private int releaseCooldown;
         private boolean grabbed;
-        private boolean downPressedLastFrame;
+        // Previous frame's held directional bits, so a Ctrl_x_logical
+        // pressed byte can be derived for this hold.
+        private int heldDirectionsLastFrame;
         private AbstractPlayableSprite player;
     }
 }

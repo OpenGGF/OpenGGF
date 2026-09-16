@@ -15,32 +15,23 @@ No S3K discrepancy was added or reclassified by the cutover.
 
 ## Table of Contents
 
-1. [AIZ Intro Object Spawn Source](#aiz-intro-object-spawn-source)
-2. [Obj_Wait Timer Pattern](#obj_wait-timer-pattern)
-3. [Host-side KosM Preparation with Native Readiness](#host-side-kosm-preparation-with-native-readiness)
-4. [Knuckles DPLC Pre-Loading](#knuckles-dplc-pre-loading)
-5. [Save System](#save-system)
-6. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics)
-7. [HCZ Object Mappings: Removal of `docs/` Runtime Reads](#hcz-object-mappings-removal-of-docs-runtime-reads)
-8. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation)
-9. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped)
-10. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset)
-11. [LBZ2 End Boss Smoke Puffs: Immortal-Object Quirk Not Replicated](#lbz2-end-boss-smoke-puffs-immortal-object-quirk-not-replicated)
-12. [LBZ2 Finale Player Scripts: Engine Animation IDs Instead of Raw Mapping Frames](#lbz2-finale-player-scripts-engine-animation-ids-instead-of-raw-mapping-frames)
-13. [AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored](#aiz2-boss-rewind-transient-combatcosmetic-children-restored)
-14. [MHZ StickyVine Pull: Heuristic Replaced with ROM `sub_3EC66` Vector Math](#mhz-stickyvine-pull-heuristic-replaced-with-rom-sub_3ec66-vector-math)
-15. [Madmole Cap/Body: Single Merged Object Instead of Parent+Child Split](#madmole-capbody-single-merged-object-instead-of-parentchild-split)
-16. [MHZ Dragonfly Tail Ripple: Explicit One-Frame Gate Instead of Object-List Reordering](#mhz-dragonfly-tail-ripple-explicit-one-frame-gate-instead-of-object-list-reordering)
-17. [MHZ Swing Vine / Vertical Swing Bar Forced Camera Scroll (Resolved)](#mhz-swing-vine--vertical-swing-bar-forced-camera-scroll-resolved)
-18. [MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)](#mhz2-end-boss-background-vertical-deform-sub_554b8)
-19. [MHZ Deferred Items: Out-of-Scope Divergences Confirmed During the Parity-Fix Wave](#mhz-deferred-items-out-of-scope-divergences-confirmed-during-the-parity-fix-wave)
-20. [Super Emerald Special Stage Results: Sanctuary Reveal Replaced by an Immediate Exit](#super-emerald-special-stage-results-sanctuary-reveal-replaced-by-an-immediate-exit)
-21. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
-22. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
-23. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
-24. [SOZ Pushable Rock: Door Coupling](#soz-pushable-rock-door-coupling)
-25. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
-26. [Inline-Drawn Children Keep Their Owner's Sprite Bucket (Resolved)](#inline-drawn-children-keep-their-owners-sprite-bucket-resolved)
+1. [YM Service Timing: Source-Relative Timeline Without Absolute VInt Phase](#ym-service-timing-source-relative-timeline-without-absolute-vint-phase)
+2. [AIZ Intro Object Spawn Source](#aiz-intro-object-spawn-source)
+3. [Obj_Wait Timer Pattern](#obj_wait-timer-pattern)
+4. [Host-side KosM Preparation with Native Readiness](#host-side-kosm-preparation-with-native-readiness)
+5. [Knuckles DPLC Pre-Loading](#knuckles-dplc-pre-loading)
+6. [Save System](#save-system)
+7. [Tails Flying-With-Cargo Physics](#tails-flying-with-cargo-physics)
+8. [MGZ2 Quake Chunk Source Address](#mgz2-quake-chunk-source-address)
+9. [AIZ2 Battleship Ship-Loop Display Compensation](#aiz2-battleship-ship-loop-display-compensation)
+10. [LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped](#lbz1-miniboss-box-pieces-plc-vram-restore-skipped)
+11. [LBZ2 Launch Pad Collapse: Mutation Pipeline Offset](#lbz2-launch-pad-collapse-mutation-pipeline-offset)
+12. [Standalone Sonic & Knuckles Cartridge Behaviour Is Out of Scope](#standalone-sonic--knuckles-cartridge-behaviour-is-out-of-scope)
+13. [Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA](#air-countdown-digits-rebuilt-mapping-frames-instead-of-vram-dma)
+14. [s3k_kos_direct.prepared: a sub-frame ROM bit compared against a boundary-granular model](#s3k_kos_directprepared-a-sub-frame-rom-bit-compared-against-a-boundary-granular-model)
+15. [SEGA Screen: an engine addition the ROM does not have](#sega-screen-an-engine-addition-the-rom-does-not-have)
+16. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
+17. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
 
 ---
 
@@ -78,15 +69,14 @@ do not introduce trace-fed runtime state.
 The native lab, compact oracle, transactional service tests, rewind/observer
 guards, bounded playback trace, and three-ROM audio suites are recorded in
 `docs/architecture/validation/audio/2026-08-22-s3k-blue-sphere-audio-validation.md`.
-The replacement trace requires a closed-world drained prefix: its exact
-13-event committed Spring tail is followed immediately by the exact Blue Sphere
-attack stream, with no intervening event. The pending service contains only the
-reviewed 34 source/segment-tagged writes and rejects every music or
-completion-restore prefix. The rollback guard structurally requires its capture as the first
-unconditional transaction-helper statement and rejects any additional work.
-Human listening remains required before integration.
 
 ---
+
+
+
+
+
+
 
 ## AIZ Intro Object Spawn Source
 
@@ -147,6 +137,12 @@ The intro object is active on the first frame of level execution, identical to t
 
 ---
 
+
+
+
+
+
+
 ## Obj_Wait Timer Pattern
 
 **Location:** `AizPlaneIntroInstance.java`, `CutsceneKnucklesAiz1Instance.java`  
@@ -185,6 +181,12 @@ if (--waitTimer < 0) {
 Timer-driven routine transitions fire on the exact same frame as the ROM's `Obj_Wait` pattern.
 
 ---
+
+
+
+
+
+
 
 ## Host-side KosM Preparation with Native Readiness
 
@@ -230,12 +232,16 @@ mutation remain native-owned and rewind-safe.
 
 `TestS3kKosModuleQueue`, `TestSonic3kTitleCardKosQueue`,
 and `TestS3kKosStructuralSequence` cover decoder parity, FIFO ownership,
-and consumer polling. Recorded-identity and composed before/on/after
-completion rewind acceptance remain pending publication of the corrected
-6.35 timing fixtures; candidate-only integration tests are intentionally not
-part of the green prerequisite bundle.
+and consumer polling; `TestS3kKosTimingRewindIntegration` (ROM-gated) covers
+rewind across the recorded completion boundary.
 
 ---
+
+
+
+
+
+
 
 ## Knuckles DPLC Pre-Loading
 
@@ -279,6 +285,12 @@ Every Knuckles animation frame displays the correct patterns at the correct posi
 
 ---
 
+
+
+
+
+
+
 ## Save System
 
 **Location:** `com.openggf.game.save`, `com.openggf.game.dataselect`, `com.openggf.game.sonic3k.dataselect`  
@@ -299,7 +311,7 @@ OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envel
 - **Snapshot providers** - game-specific payload capture is handled by `SaveSnapshotProvider` implementations rather than direct SRAM-style writes.
 - **Session-owned launch metadata** - active slot ownership, selected team, and launch zone/act are carried by `WorldSession` and `SaveSessionContext` rather than being inferred from config during gameplay.
 - **Restricted clear restart modeling** - clear slots use Java-side restart tables reconstructed from the disassembly, including Knuckles-specific restrictions, rather than exposing unrestricted level selection.
-- **Native S3K save-screen parity** - the native `S3K` `1 PLAYER` route now renders from the authored object layout and mapping frames; the old RECTI/text-placeholder selector path is gone on that production path. Cross-game donation remains separate work, and the temporary S1/S2 placeholder managers are not part of this parity claim.
+- **Native S3K save-screen parity** - the native `S3K` `1 PLAYER` route now renders from the authored object layout and mapping frames; the old RECTI/text-placeholder selector path is gone on that production path.
 
 ### Rationale
 
@@ -317,6 +329,12 @@ OpenGGF now keeps the native S3K save-screen flow but stores saves as JSON envel
 - `2026-04-13`: native S3K parity pass captured via `com.openggf.game.sonic3k.dataselect.S3kDataSelectVisualCapture`, which renders the live native S3K Data Select frontend with real ROM assets into `target/s3k-dataselect-visual/native_s3k_dataselect_slot1.png` for inspection.
 
 ---
+
+
+
+
+
+
 
 ## Tails Flying-With-Cargo Physics
 
@@ -347,115 +365,54 @@ The engine reproduces this behavior with a feature-scoped gate rather than a fla
 
 ---
 
-## HCZ Object Mappings: Removal of `docs/` Runtime Reads
 
-**Location:** `Sonic3kObjectArtProvider.java`, `Sonic3kConstants.java`
-**ROM Reference:** `Lockon S3/LockOn Data.asm:838` (`Map_HCZMiniboss`), `:856` (`Map_HCZEndBoss`), `:192` (`Map_HCZWaterWall`)
 
-### Original Implementation (engine, pre-fix)
 
-`Sonic3kObjectArtProvider` previously parsed three HCZ object mapping tables (`Map_HCZMiniboss`, `Map_HCZEndBoss`, `Map_HCZWaterWall`) by reading `.asm` source files from `docs/skdisasm/Levels/HCZ/Misc Object Data/` at runtime via `Files.readAllLines`, falling back to an empty mapping list (and therefore invisible sprites) whenever the disassembly tree was absent. This violated the project's "ROM only for runtime assets" hard rule documented in `CLAUDE.md`.
 
-### Fixed Implementation
 
-All three call sites now read mapping bytes from the user-supplied ROM via `S3kSpriteDataLoader.loadMappingFrames(reader, mappingAddr)` using the new constants:
-- `MAP_HCZ_MINIBOSS_ADDR = 0x3629E0` (was incorrectly `0x362A28`, which pointed at the first frame body rather than the offset table base)
-- `MAP_HCZ_END_BOSS_ADDR = 0x3634D4`
-- `MAP_HCZ_WATERWALL_ADDR = 0x22EE10`
-
-Each address was derived from the disassembly's absolute `Frame_<addr>` labels (since the lock-on data is anchored at `org $200000` in the `Sonic3_Complete` build) and verified by reading the ROM at the computed offset and confirming the first word equals the expected offset-table size and the first frame's piece count matches the source.
-
-The duplicate-frame workaround for shared `Frame_362BB0` labels in HCZ miniboss is no longer needed, because ROM-based reading of duplicate offsets yields duplicate frame entries naturally.
-
-### Rationale
-
-This is not a behavioral discrepancy from the ROM — sprite output is identical to before, when the disassembly tree was present. It is recorded here only because the previous implementation deviated from the project's ROM-only sourcing rule and silently degraded under the (CI / fresh clone) configurations where `docs/skdisasm/` is absent.
-
-### Verification
-
-`TestSonic3kLevelLoading` and `TestSonic3kBootstrapResolver` continue to pass. The `loadMappingsFromAsmInclude` helper and the three `Path` constants pointing under `docs/` have been removed from `Sonic3kObjectArtProvider`.
-
----
 
 ## MGZ2 Quake Chunk Source Address
 
-**Location:** `Sonic3kMGZEvents.MGZ_QUAKE_CHUNK_ROM_ADDR`
-**ROM Reference:** `0x3CBBB4`, S3-half `MGZ2_QuakeChunks`
+**Location:** `Sonic3kMGZEvents.MGZ_QUAKE_CHUNK_ROM_ADDR = 0x3CBBB4`
+**ROM Reference:** `MGZ2_QuakeChunks` (`sonic3k.lst:316889`), read by `sub_517EA`
+(`sonic3k.asm:106937-106950`)
 
-The MGZ2 earthquake chunk replacement table is currently read from the S3-half
-address `0x3CBBB4`. The project normally prefers S&K-side addresses for locked-on
-S3K runtime data, but this quake table is recorded as a reviewed exception until an
-equivalent S&K-side source is verified.
-
-`TestArchitecturalSourceGuard.mgz2QuakeChunkS3HalfAddressIsReviewedAndDocumented`
-pins both the runtime address and this documentation so the exception cannot drift
-silently.
+The engine's S3K sourcing rule prefers S&K-half data (addresses below `0x200000`).
+`MGZ2_QuakeChunks` is the one MGZ2 table that lives only in the Sonic 3 half: the
+`$1080`-byte table occurs exactly once in the locked-on image, at `0x3CBBB4`, and the
+S&K-half MGZ2 event code (`sub_517EA`, reached from `MGZ2_QuakeEvent` and
+`MGZ2_ChunkEventReset`) reads it through the lock-on mapping with
+`lea (MGZ2_QuakeChunks).l,a4`. There is no S&K-side copy to prefer, so this address is
+the permanent source. `TestArchitecturalSourceGuard` pins the constant and this entry.
 
 ---
+
+
+
 
 ## AIZ2 Battleship Ship-Loop Display Compensation
 
 Gameplay state follows the S&K disassembly: `AIZ2_DoShipLoop` writes
 `Level_repeat_offset=$200` and subtracts `$200` from camera/player state when
 the post-bombing ship loop reaches `$46C0`
-(`docs/skdisasm/sonic3k.asm:105200-105221`). Do not change
-`BATTLESHIP_WRAP_DIST_POST_BOMBING` away from `$200`.
+(`docs/skdisasm/sonic3k.asm:105200-105221`); `BATTLESHIP_WRAP_DIST_POST_BOMBING`
+is that `$200`.
 
-**Display validated seamless (2026-06-16).** Once the AIZ trace frontier advanced
-past the battleship (`TestS3kAizTraceReplay` first error f19089, into the AIZ2
-end-boss arena), the ship-loop wrap was visually validated via a trace-faithful
-`TraceCaptureTool` capture: at the `$200` wrap (trace f16507 cam `$443C` → f16508
-cam `$4240`) the burning-forest background renders continuously with **no seam,
-no repeated columns, and no empty `$200`–`$400` filler scrolling into view** — the
-current non-wrapping `SwScrlAiz.battleshipSmoothScrollX` BG deform handles the loop
-seamlessly. The earlier-deferred forest-loop BG fix
-(`docs/architecture/plans/2026-05-29-aiz2-battleship-wrap-seam.md`) is **not
-warranted**: its premise (empty filler scrolls into view) does not manifest with
-the current smooth-scroll renderer. No remaining display gap.
-
-**Plane ring camera generation (2026-09-16).** The persistent `$200` foreground
-ring is the engine's Plane A, and `ScreenEvents` → `DrawTilesAsYouMove`
-(`sonic3k.asm:104978`, `103171`) fills it from the live `Camera_X_pos_copy`
-in the same CPU loop iteration in which `AIZ2_DoShipLoop` subtracts `$200` and
-retargets `Camera_X_pos_rounded`. Only H-scroll/VSRAM/SAT are VBlank-published,
-and the lag path retains them; the wrap equals the plane width, so the retained
-scroll still aliases onto the same cells. The ring camera and
-`Level_repeat_offset` are therefore pushed together from the gameplay step
-(`LevelForegroundPlane.drawAsYouMove`), not from the retained scroll
-presentation; `TestAiz2ForestRingCameraGeneration` pins the wrap-on-lag case.
+**Deliberate renderer difference.** The ROM handles the burning-forest background
+through `Level_repeat_offset` and its plane ring; the engine's
+`SwScrlAiz.battleshipSmoothScrollX` is a non-wrapping smooth scroll that renders
+the loop without a seam, repeated columns or filler. The foreground ring itself is
+generated from the gameplay step exactly as `DrawTilesAsYouMove` does
+(`LevelForegroundPlane.drawAsYouMove`, `TestAiz2ForestRingCameraGeneration`).
+Validation history: the 2026-05-29 seam plan and the 2026-06-16 capture.
 
 ---
 
-## MHZ Swing Vine / Vertical Swing Bar Forced Camera Scroll (Resolved)
 
-**Location:** `Camera.requestForcedScroll(int, int)`, `MhzSwingVineObjectInstance`,
-`MhzSwingBarVerticalObjectInstance`
-**ROM Reference:** consumer `loc_1BFB8` (`sonic3k.asm:38296-38300`), setters
-`loc_226F2` (swing vine, `sonic3k.asm:47072-47074`) and `loc_3F0CC` (vertical bar,
-`sonic3k.asm:83575-83577`)
 
-Previously neither MHZ traversal object modeled the ROM `Scroll_force_positions`
-flag, so while a player hung on the vine or climbed the vertical bar the camera kept
-tracking the *player* with its normal deadzone/delay instead of the forced object
-coordinates. Now resolved: `Camera` models the ROM flag as a frame-scoped,
-coordinate-carrying request (`requestForcedScroll(forcedX, forcedY)`) that, for that
-frame, zeroes the horizontal scroll frame offset (`H_scroll_frame_offset`) and points
-the horizontal/vertical camera math at the forced coordinates instead of the focused
-sprite (mirroring the existing `requestFastVerticalScroll()` `Fast_V_scroll_flag`
-pattern). The request auto-clears each `updatePosition`.
 
-The two consumers pass different coordinate pairs, matching the ROM setters:
-- **Swing vine** — forced X and Y both from the vine object (`x_pos(a0)` / `y_pos(a0)`).
-  The setter lives in the swing routine `loc_226B0`, so it fires only while the vine is
-  swinging and Player 1 is grabbed (not during a stationary slow-grab hang).
-- **Vertical bar** — forced X from the bar (`x_pos(a0)`), forced Y from
-  `Player_1+y_pos`, fired every frame Player 1 is hanging.
 
-The abstraction is game-agnostic; the AIZ ride-vine consumers (out of scope here) can
-adopt it later. Covered by `TestCameraForcedScroll`,
-`TestMhzSwingVineObjectInstance`, and `TestMhzSwingBarVerticalObjectInstance`.
 
----
 
 ## LBZ1 Miniboss Box Pieces: PLC VRAM Restore Skipped
 
@@ -490,6 +447,12 @@ covers the piece lifecycle including the off-screen cull;
 `TestSonic3kPlcArtRegistry` guards the standalone sheets.
 
 ---
+
+
+
+
+
+
 
 ## LBZ2 Launch Pad Collapse: Mutation Pipeline Offset
 
@@ -535,861 +498,24 @@ gameplay map writes.
 
 ---
 
-## LBZ2 End Boss Smoke Puffs: Immortal-Object Quirk Not Replicated
 
-**Location:** `LbzEndBossInstance.LbzEndBossSmokePuffChild`
 
-**ROM Reference:** `sonic3k.asm` `loc_73BA0`/`loc_73BDC`, anim script `byte_741F8`
 
-### Original Implementation
 
-The LBZ2 end-boss smoke puff is meant to delay `-2*(subtype-$10)` frames, play
-frames `7,7,8,9` at delay 5, then delete via the `$F4` anim command, whose
-handler (`AnimateRaw_CustomCode`) aliases `Obj_Wait` with `$34 =
-Go_Delete_Sprite`. However, the puff's main loop `loc_73BDC` executes
-`addq.w #1,$2E(a0)` every frame, while the `$F4` command only runs
-`subq.w #1,$2E(a0)` once per anim pass (~19 frames). `$2E` therefore grows
-monotonically and never goes negative, so `Go_Delete_Sprite` never fires: the
-ROM object loops its smoke frames in a leaked object slot until the level
-unloads (invisible for the rising subtype-0 puffs once off-screen, and masked
-by the short fight duration for the explosion-spray puffs).
 
-### Our Implementation
 
-The engine implements the clearly-intended behaviour: delay, play `7,7,8,9` at
-the ROM cadence, then expire the child.
+## Standalone Sonic & Knuckles Cartridge Behaviour Is Out of Scope
 
-### Rationale
-
-Replicating the slot leak would accumulate stale objects with no gameplay or
-visual value the original authors intended. All other smoke parameters (delays,
-frame cadence, subtype-0 rise velocity) match the ROM.
-
-### Verification
-
-`TestLbzEndBossInstance` covers the spike-ball spray spawning the four delayed
-smoke puffs and the rolling-smoke speed gate.
+The engine runs the locked-on Sonic 3 & Knuckles image only. Every branch the ROM
+takes on `SK_alone_flag` (standalone S&K entry, the pulley-lift cheat's direct
+`Level_select_flag` write, S&K-only title and level-select paths) is modelled with the
+flag clear. This is a product-scope decision, not a parity gap: the standalone image is
+not a supported input.
 
 ---
 
-## LBZ2 Finale Player Scripts: Engine Animation IDs Instead of Raw Mapping Frames
 
-**Status:** Resolved for the post-boss player scripts. The heading remains for existing links.
 
-**Location:** `LbzFinalBoss1Instance.java`
-
-**ROM Reference:** `sonic3k.asm` `loc_72C68`/`loc_72C9E`,
-`Animate_ExternalPlayerSprite`, `byte_7386A`/`byte_73874`.
-
-The finale uses raw mapping frames `$55`, `$59`, `$5A` at six-dispatch
-intervals. The external animator advances past the table's initial `$C4` entry.
-Sonic's terminal zero on dispatch 19 changes the boss routine to `loc_72CC6`;
-P2 still receives its animation call on that dispatch, then both mapping frames
-remain held through the final fall. P2's longer table is consequently not run
-to completion. Render flipping does not change the player's status-facing bit.
-The shipped `FixBugs=0` branch preserves P2's animation byte during setup and
-clears it on the following external-animation dispatch.
-
-`TestLbzFinalBoss1Instance` verifies the setup, six-dispatch cadence, terminal
-callback, retained mappings, and final-fall transition threshold. See the
-[ending audit](architecture/audits/2026-09-09-lbz2-ending-sequence.md) for the
-review scope and validation limits. These checks do not establish pixel-perfect
-parity for the complete scene.
-
----
-
-## AIZ2 Boss Rewind: Transient Combat/Cosmetic Children Restored
-
-**Location:** `Sonic3kObjectRegistry.java` (`DYNAMIC_REWIND_CODECS`), `ObjectManager.recreateDynamicObject`
-
-### Behaviour
-
-The held-rewind system recreates dynamic objects on a backward seek via per-class
-rewind codecs. Held rewind restores the nearest keyframe and then re-simulates forward
-to the displayed frame every frame, so an object reverses cleanly only if it is captured
-in the keyframe and recreated on restore. The AIZ2 ship-loop driver objects
-(`AizBattleshipInstance`, `AizBossSmallInstance`, `AizBgTreeSpawnerInstance`,
-`AizBgTreeInstance`), the boss-endgame `Aiz2BossEndSequenceController`, and the
-**structural** miniboss/end-boss children (body, arm, ship, flame column, napalm
-controller, flame barrel) have codecs.
-
-In addition, all of the short-lived **combat and cosmetic** children now have codecs and
-are restored across a rewind boundary:
-
-`AizShipBombInstance`, `AizBombExplosionInstance`, `AizMinibossBarrelShotChild`,
-`AizMinibossBarrelShotFlareChild`, `AizMinibossImpactFlameChild`,
-`AizMinibossFlameChild`, `AizMinibossDebrisChild`, `AizEndBossPropellerChild`,
-`AizEndBossFlameChild`, `AizEndBossBombChild`, `AizEndBossSmokeChild`,
-`AizEndBossDebrisChild`.
-
-There are no longer any intentionally-dropped AIZ2 battleship/boss transient children.
-
-### Rationale
-
-Previously these children were given no codec, so a rewind restore dropped them and the
-forward re-simulation re-emitted them from scratch — bombs and boss attacks visibly
-played *forward* and re-triggered/stacked instead of reversing. Restoring them makes the
-whole scene rewind cleanly.
-
-Each codec only builds a structurally-correct instance and relies on the generic field
-capturer to reapply the captured non-final scalar state afterward:
-
-- **Parent relink.** Codecs that need the live boss/ship find it in
-  `getActiveObjects()`. Dynamic entries are captured and restored in spawn order, and a
-  parent always spawns before its children, so the parent is already recreated when the
-  child's codec runs. `AizShipBombInstance` relinks the live `AizBattleshipInstance`;
-  the end-boss bomb/smoke and the miniboss flame relink their boss.
-- **Sibling relink.** Some children also need a live sibling, not just the boss:
-  `AizEndBossPropellerChild` needs its `AizEndBossArmChild`, `AizEndBossFlameChild` needs
-  its `AizEndBossPropellerChild`, `AizMinibossBarrelShotChild` needs its
-  `AizMinibossFlameBarrelChild`, and `AizMinibossBarrelShotFlareChild` needs its
-  anchoring barrel shot. Siblings are recreated earlier in spawn order, so they are
-  present. When several live siblings of the same type exist, the child is relinked to
-  the one nearest its captured spawn position; if no live sibling/boss is present the
-  child is dropped (codec returns null) rather than recreated with a dangling reference.
-- **Self-contained.** `AizBombExplosionInstance`, `AizEndBossDebrisChild`,
-  `AizMinibossImpactFlameChild`, and `AizMinibossDebrisChild` carry their world position
-  in their spawn and need no relink.
-
-To make the differentiating constructor arguments survive recreate, the fields that were
-derived from non-spawn constructor args were made non-final so the generic field capturer
-captures and reapplies them (the codec passes placeholders). Object-reference fields
-(`sourceShip`, `boss`, `parent`, `arm`, `propeller`, `barrel`, `anchor`) remain final and
-are relinked by the codec.
-
-The bosses themselves (`AizMinibossInstance` id `0x91`, `AizEndBossInstance` id `0x92`)
-are layout-spawned and recreated by the object registry, and they re-spawn their children
-from a routine (not the constructor), so no double-spawn occurs.
-
-### Verification
-
-`TestAiz2ObjectRewindCodecs` asserts a codec exists for each restored class (including
-the formerly-dropped transients). `TestAiz2TransientChildRewind` boots AIZ act 2, drops a
-battleship bomb, captures, removes it, restores, and asserts the bomb is recreated with
-its mid-flight scalar state (not reset to spawn defaults) and relinked to the live ship.
-## Batch-2 Rewind: Transient Cosmetic Children Not Rewound (Re-emit In-Frame)
-
-`MgzEndBossDefeatDebrisChild` is intentionally **not** captured/recreated across a
-held-rewind boundary (no rewind codec; its `#recreate` and `#finalScalar` keys stay in
-`src/test/resources/rewind/coverage-baseline.txt`). It is short-lived cosmetic debris:
-three MGZ end-boss fragments emitted at defeat that drift at constant velocity, render a
-static frame, and self-destruct the moment they pass the offscreen margin. They hold no
-player, score, terrain, or arena state, so a one-frame catch-up on forward re-simulation
-is invisible. This mirrors the AIZ2 transient-children precedent above: capture is only
-worthwhile when a dropped object would otherwise visibly re-emit and play forward; a
-sub-lifetime cosmetic fragment that re-emits in-frame does not qualify.
-
-All other batch-2 S3K transient/relink children (`AizRockFragmentChild`,
-`CnzMinibossDebrisChild`, `S3kBossExplosionChild`, `S3kSignpostSparkleChild`,
-`MhzPollenParticleInstance`, `MhzMinibossFlameInstance`,
-`Sonic3kStarPostBonusStarChild`, `IczEndBossEggCapsuleInstance`,
-`CaterkillerJrBodyInstance`, `BuggernautBabyInstance`) now have rewind codecs in
-`Sonic3kObjectRegistry` and are restored on a backward seek. `Sonic3kSSEntryFlashObjectInstance`
-now restores through graph-tested `RewindRecreatable`; compact restore resolves the exact
-captured parent ring by `ObjectRefId` and reapplies the flash scalars.
-`MhzMinibossEscapeShardInstance` likewise restores through graph-tested `RewindRecreatable`
-generic recreate with exact/compact parent relink instead of a dynamic codec.
-
-## Batch-4 Rewind: AIZ Intro Plane Children
-
-`AizIntroEmeraldGlowChild` now models the two animated AIZ1 intro-plane pieces as real,
-slot-owning dynamic SST objects, matching `CreateChild1_Normal` and preserving later
-allocation pressure. Each child implements `RewindRecreatable`, relinks to the restored
-`AizIntroPlaneChild`, and exposes its variant and offsets to generic compact scalar capture.
-The three former coverage gaps therefore require neither a baseline exception nor a
-zone-specific rewind codec. The children also render through the shared intro-plane art,
-so their animation and slot identities survive backward seeks together with the parent
-graph.
-
-The remaining AIZ2/Batch-2 transient-children precedent above is narrower: capture is only
-worthwhile when a dropped object would otherwise visibly re-emit and play forward.
-
-The other batch-4 HCZ end-boss scene objects (`HczEndBossInstance`,
-`HczEndBossEggCapsuleInstance`, `HczEndBossGeyserCutscene`, `HczEndBossRobotnikShip`,
-`HczEndBossTurbine`, `HczEndBossBlade`, `HczEndBossBladeSplash`,
-`HczEndBossBladeWaterChute`, `HczEndBossWaterColumn`) plus the AIZ boss/intro objects
-(`AizEndBossInstance`, `Aiz2EndEggCapsuleInstance`, `AizIntroPlaneChild`,
-`AizIntroWaveChild`) now have rewind codecs in `Sonic3kObjectRegistry` and are restored on
-a backward seek.
-
----
-
-## MHZ StickyVine Pull: Heuristic Replaced with ROM `sub_3EC66` Vector Math
-
-**Location:** `MhzStickyVineObjectInstance.applyStickyPull`
-**ROM Reference:** `sub_3EC66` (`sonic3k.asm` ~83210-83258), called from `loc_3EB26` after `sub_3EC2A`
-
-### Original Implementation (engine, pre-fix)
-
-`applyStickyPull` used a `sign(d)*clamp(|d|/2,1,4)` heuristic: it pulled the player 1-4
-whole pixels per frame directly toward the anchor along each axis independently, and
-derived the ground `ground_vel`-halving threshold from `abs(dx)<<6` rather than the ROM's
-actual pull magnitude. This reproduced the ROM's air/ground branch *structure* (position
-pull, air `x_vel` halving, ground `ground_vel` halving) but not its displacement magnitude
-or true diagonal direction.
-
-### Fixed Implementation
-
-`applyStickyPull` now ports `sub_3EC66` directly: it computes the full 32-bit
-(pixel:subpixel) delta between the player and the vine anchor in the same Q16.16
-representation as the ROM's `x_pos`/`y_pos` longword (the engine's `xPixel`/`xSubpixel`
-split already mirrors this exactly), takes the integer pixel component (`swap d1`/`swap
-d2`) as the `GetArcTan(dxPixel, dyPixel)` input, derives magnitude `d3 =
-(|dxPixel|+|dyPixel|)*2`, and looks up `(sin, cos) = GetSineCosine(angle)` via the
-engine's shared `TrigLookupTable.calcAngle`/`sinHex`/`cosHex` (the same tables other S3K
-objects such as `MGZDashTriggerObjectInstance` and `GumballItemObjectInstance` already use
-for `GetArcTan`/`GetSineCosine` parity). The pull is a full 32-bit sub-pixel position
-subtract (`x_pos -= cos(angle)*d3*4`; `y_pos -= sin(angle)*d3*2` while airborne only), and
-the ground `ground_vel`-halving gate now compares against the ROM's actual `(cos(angle)*d3*4)
->> 8` pull magnitude instead of the heuristic's `abs(dx)<<6` proxy.
-
-### Rationale
-
-This was a parity bug, not an intentional divergence: the heuristic's per-frame pull was an
-order of magnitude too large (whole pixels vs. the ROM's sub-pixel drift) and ignored pull
-direction on the non-dominant axis, so the vine's "sticky" feel diverged visibly from the
-ROM. It is recorded here per this document's fixed-bug precedent (see "HCZ Object Mappings"
-above) so the before/after behavior change is traceable.
-
-### Verification
-
-`TestMhzStickyVineObjectInstance#activeAirPullMatchesRomArcTanSineCosineVector` asserts the
-per-frame position delta for a known `(dx, dy)` matches `GetArcTan`/`GetSineCosine` computed
-from the same production `TrigLookupTable`.
-`TestMhzStickyVineObjectInstance#groundedStickyPullHalvesGroundSpeedWhenRomThresholdIsExceeded`
-exercises the corrected ground `ground_vel`-halving gate with a drift large enough to clear
-the ROM `$200`/`$10` threshold. The full `TestMhzStickyVineObjectInstance` suite passes.
-
----
-
-## Madmole Cap/Body: Single Merged Object Instead of Parent+Child Split
-
-**Location:** `MadmoleBadnikInstance.java` (MHZ, S3K SKL slot `$8C`)
-**ROM Reference:** `Obj_Madmole`, `sonic3k.asm:193075-193526`
-
-### Original Implementation
-
-The ROM models Madmole as two separate objects sharing one placement-table
-spawn: the **parent** (the visible ground cap) keeps its own SST slot and
-calls `sub_8D876` (`SolidObjectFull`, `d1=$1F,d2=4,d3=5`) unconditionally
-every frame — this call never depends on the body's state. The parent spawns
-a **child** body object via `CreateChild1_Normal` (`ChildObjDat_8D9C0`) when a
-player enters `$A0` range; the child runs its own rise/pause/drill/sink
-routine on its own slot and has `collision_flags $0B` (a normal ENEMY hitbox)
-while active. The parent sets `$38(a0)` bit 1 when it spawns the child and
-waits (`loc_8D5D4`) for that bit to clear before re-arming. The **only** place
-that clears it is the child's own normal sink-completion path
-(`loc_8D6D6: bclr #1,$38(a1) / jmp Go_Delete_Sprite`). If the player instead
-kills the child via the generic enemy-touch/`EnemyDefeated`-style path, the
-child's own code never reaches `loc_8D6D6`, so the parent's bit 1 never
-clears — the parent parks at `loc_8D5D4` forever, `sub_8D876` keeps running
-every frame regardless, and the cap becomes a permanent solid stump that
-never spawns a new child.
-
-### Our Implementation
-
-`MadmoleBadnikInstance` models the cap and body as **one merged engine
-object** (single SST slot, single `AbstractBadnikInstance`) rather than a
-ROM-faithful parent+child pair — the body's rise/pause/drill/sink cycle is a
-`state` field on the same instance, and `getCollisionFlags()`/
-`getSolidParams()` switch between the cap's zero-collision solid shape and
-the body's `$0B` enemy shape based on that state. To reproduce the ROM
-outcome above without a second SST slot, `destroyBadnik(PlayableEntity)` is
-overridden: on defeat it snaps the state back to `BURIED` (cap-only,
-`offsetY=0`, matching `sub_8D876` always being called against the parent's
-unmoved position), sets a `bodyDefeated` latch that permanently short-circuits
-`updateBuried()`'s range check (the engine equivalent of `$38(a0)` bit 1 never
-clearing), and spawns the explosion/animal/points sequence at the body's
-last position with a **freshly allocated slot** (`badnikSlot=-1`, `spawn=null`)
-instead of transferring the parent's own slot — the merged object is never
-marked `isDestroyed()`, so it keeps its own slot and keeps reporting solid
-contact every frame, exactly like the ROM parent.
-
-### Why This Is Acceptable
-
-Runtime gameplay behavior is preserved: the cap remains a solid stump after
-the body is defeated, and it never re-emerges — matching the ROM outcome
-described above. Only the *object model* differs (one merged instance with an
-internal latch vs. two SST-slot objects linked by a busy bit); this keeps the
-existing single-object rewind/render/collision wiring for Madmole intact
-rather than requiring a parent+dynamically-spawned-child split purely to
-mirror ROM's slot layout.
-
----
-
-## MHZ Dragonfly Tail Ripple: Explicit One-Frame Gate Instead of Object-List Reordering
-
-**Location:** `DragonflyBadnikInstance.java` (`LinkedBodyChild.updateVerticalPhase`,
-`DragonflyHoverReturnGate`)
-
-**ROM Reference:** `sonic3k.asm` `loc_8DE8A`/`loc_8DEA8`/`loc_8DF24` (segment return-gate
-check/set/clear), `CreateChild4_LinkListRepeated`/`AllocateObjectAfterCurrent`
-(`sonic3k.asm:177038-177061,37917`)
-
-### Original Implementation
-
-Each Dragonfly linked-body tail segment gates its FOLLOW-to-RETURN transition on
-`btst #2,$38` of its `parent3` anchor (the previous segment, or the Dragonfly itself for
-segment 0). The observable one-frame ripple down the chain (segment *n* enters return
-exactly one frame after segment *n*-1) is not itself an explicit delay in `loc_8DE8A`; it
-falls out of `CreateChild4_LinkListRepeated` calling `AllocateObjectAfterCurrent` for every
-segment, which always inserts the new child immediately after the *Dragonfly's own* object-list
-slot. Because every segment is inserted at that same point, each later-created segment ends up
-processed **before** the earlier ones each frame -- segment *n*-1 always runs after segment *n*
-within a frame, so segment *n* only ever observes segment *n*-1's bit as it stood at the end of
-the *previous* frame. The Dragonfly-to-segment-0 hop has no such delay, since the Dragonfly
-itself always runs first.
-
-### Our Implementation
-
-The engine's object manager does not replicate ROM object-list slot insertion order, so
-`LinkedBodyChild` models the *resulting* one-frame ripple directly instead: each segment tracks
-its own `returnGateBit` (mirrors `$38` bit 2, set entering return, cleared completing the wait
-phase) and a `returnGateVisibleToFollower` value that is promoted from `returnGateBit` once at
-the start of the segment's own `update()`. A segment's FOLLOW-phase check reads its
-`followAnchor`'s gate via the shared `DragonflyHoverReturnGate` interface, which the Dragonfly
-implements directly (live/immediate, matching the same-frame Dragonfly-to-segment-0 visibility)
-and each `LinkedBodyChild` implements via its delayed `returnGateVisibleToFollower`. This
-reproduces the exact one-frame-per-link cascade regardless of the order the engine happens to
-call `update()` on the chain each frame.
-
-### Rationale
-
-Replicating the ROM's actual object-list slot-reversal quirk would require reworking how
-`ObjectManager` orders dynamic-object updates for an unrelated, incidental allocation-order
-side effect, at high regression risk to every other spawned-child object. Modeling the
-*observable* one-frame delay directly, keyed off each segment's own return-gate state rather
-than object-list position, produces byte-for-byte identical animation timing without that risk.
-
-### Verification
-
-`TestDragonflyBadnikInstance#sevenSegmentTailEntersReturnOneFrameApartDownTheChainNotAllAtOnce`
-spawns a real 7-segment tail and asserts each segment enters its return phase exactly one frame
-after the previous segment. `TestDragonflyBadnikInstance#linkedChildStartsVerticalReturnWhenParentEntersHoverWait`
-continues to cover the same-frame Dragonfly-to-segment-0 hop.
-
----
-
-## MHZ2 End-Boss Background Vertical Deform (`sub_554B8`)
-
-**Location:** `SwScrlMhz.java` (`computeMhzDeform`, `computeBgY`), `Sonic3kMHZEvents.java`
-(`isBossAreaBackgroundDeformActive`), `MhzZoneRuntimeState.java`
-**ROM Reference:** `sub_554B8` (asm ~113118-113151), dispatched from `MHZ2_BackgroundEvent_Index`
-per the exact `Events_routine_bg` table below (asm 112861-113104)
-
-### Original Implementation (engine, pre-fix)
-
-`SwScrlMhz.computeMhzDeform` unconditionally computed the BG vertical scroll factor with
-the standard `MHZ_Deform` formula, `Camera_Y_pos_copy * 5/32 + $76`, for every frame of
-act 2. During the end-boss arena the ROM instead routes through `sub_554B8`, which uses
-`(Camera_Y_pos_copy - $280) * 5/32 + $180` — a different offset and base. The engine never
-modeled this branch, so the boss-arena background scrolled at the wrong vertical rate/bias
-the whole encounter.
-
-### Fixed Implementation
-
-`Sonic3kMHZEvents.isBossAreaBackgroundDeformActive()` exposes the exact ROM routine-to-deform
-mapping through `MhzZoneRuntimeState`, not a flat `Events_routine_bg >= $8` cutoff (the first
-version of this fix used that cutoff and was corrected in review — see below). `SwScrlMhz`'s
-`computeMhzDeform` branches on that predicate and calls the existing generalized
-`computeBgY(cameraY, yOffset, baseY)` helper with `(0x280, 0x180)` when it is true, `(0, 0x76)`
-otherwise.
-
-The predicate is `act2BackgroundRoutine != 0 && act2BackgroundRoutine != $C`, which is every
-routine value the field can hold except those two:
-
-- Routine `0` (loc_551EE, asm 112883-112899): ROM is conditional on `P1.x >= $3700 && P1.y <
-  $500`, but that is the exact condition `updateAct2InitialBackgroundEvent()` already tests to
-  decide whether to advance to routine `4` within the same frame — so by the time this
-  predicate is read, `act2BackgroundRoutine` only remains `0` when the ROM condition was
-  false. Standard deform.
-- Routine `4` (loc_55236, asm 112910-112911): ROM-unconditional `sub_554B8`. Numerically `< $8`,
-  so the original `>= $8` cutoff wrongly used standard deform here.
-- Routine `8` (loc_55250, asm 112922-112966): ROM three-way branches on `P1.y`/status bit 1, but
-  `updateAct2EndBossCustomLayoutEvent()`'s three exits mean `act2BackgroundRoutine` only remains
-  `8` across the frame boundary on the one ROM exit (loc_552E0) that calls `sub_554B8`; its other
-  two exits transition to `$C` (standard) or `$10` (which itself funnels to `sub_554B8`) within
-  the same frame.
-- Routine `$C` (loc_552F8, asm 112977-112986): ROM-unconditional standard `MHZ_Deform`.
-  Numerically `>= $8`, so the original `>= $8` cutoff wrongly used `sub_554B8` here.
-- Routines `>= $10` (loc_55312 onward): all funnel to `sub_554B8` via loc_55486 (asm 113099).
-
-`computeBgY`'s existing shift-based math (`asr.l #3` / `asr.l #2` + add, ported as Java `>>`,
-not `/`) already floors negative deltas correctly per ROM semantics; a regression test pins
-that so a future refactor toward `* 5 / 32` truncating division would be caught.
-
-### Rationale
-
-This is a parity fix, not an intentional deviation — recorded here per the MHZ parity-fix
-plan's per-commit documentation rule so the resolved defect is traceable. Horizontal shake
-handling (`Screen_shake_offset`) was already correct and untouched.
-
-### Verification
-
-`SwScrlMhzTest`:
-- `endBossVerticalDeformUsesSub554B8BaseWhenRoutineBgIsInBossAreaRange` — routine `8` (the
-  loc_552E0 exit) uses `sub_554B8`.
-- `routineBg4UsesSub554B8Unconditionally` — routine `4` uses `sub_554B8` even though it is
-  numerically below `$8`.
-- `routineBgCUsesStandardMhzDeformUnconditionally` — routine `$C` uses standard `MHZ_Deform`
-  even though it is numerically `>= $8`.
-- `sub554B8UsesAsrFlooringNotTruncatingDivisionForNegativeDelta` — a `cameraY < $280` case
-  asserts the ROM-exact floored result, which a truncating-division oracle would get wrong.
-
----
-
-## MHZ Madmole deferred body deletion (corrected)
-
-`loc_8D6D6` clears the cap's busy bit but `Go_Delete_Sprite` only installs
-`Delete_Current_Sprite` for the next pass. The body still returns through
-`Child_DrawTouch_Sprite` at its final submerged position. The consolidated
-engine object previously snapped that still-collidable body onto the cap.
-Cleanup now waits for the deferred-delete pass, preserving final movement,
-collision, mapping and slot occupancy. The focused boundary test passes;
-the MHZ zone replay advances from row 2,830 to row 6,958. Further route and
-checkpoint parity remains unresolved (see the trace frontier log).
-
-## MHZ Deferred Items: Out-of-Scope Divergences Confirmed During the Parity-Fix Wave
-
-**Location:** various (see per-item notes below)
-**ROM Reference:** various (see per-item notes below)
-
-The 2026-07-01 MHZ parity-fix wave's audit identified several additional divergences that
-were deliberately left unfixed, either because the engine's behavior is preferable to the ROM's,
-because the item is a scope-limited follow-up, or because fixing it needs a dedicated
-investigation this wave's task briefs explicitly excluded. Recorded here per the wave's Task 15
-note and Task V1 (Step 5) reconciliation so they are tracked rather than silently dropped.
-
-- **Standalone S&K entry remains outside the supported locked-on ROM scope.**
-  `sub_54B80` tests `SK_alone_flag`, not the player character. The Act 1
-  camera now follows the locked-on height rule for every character: min X
-  `$C0` above Y `$580`, otherwise zero. The existing Knuckles boundary test
-  covers this correction; further Knuckles-route work is excluded from the
-  current Sonic/Tails completion scope.
-- **Act 1 → Act 2 title-card handoff (implemented).**
-  The old deferred note is obsolete. `updateAct1BackgroundEvent` requests
-  the target-level reload with `TITLE_OWNER` art admission, preserved results
-  globals, the in-level title card and its event-state reset. Existing
-  `TestSonic3kMHZEvents` transition tests cover this contract.
-- **MHZ1 miniboss offscreen lifetime (corrected, 2026-09-12).**
-  The boss and its attached flames were subject to ordinary object-manager
-  distance unloading. `Obj_MHZMiniboss` / `loc_751E2` ends in
-  `Draw_And_Touch_Sprite`, and `loc_757D6` follows the parent's lifetime
-  through `Child_DrawTouch_Sprite`; neither uses a distance-delete helper.
-  Both now remain registered offscreen until explicit encounter cleanup.
-  The first dash still intentionally leaves the screen and waits for the
-  camera in `loc_75392`. A real-manager regression test checks offscreen
-  retention, resumed movement, attached flames and explicit deletion.
-- **MHZ1 miniboss defeat visuals (corrected, 2026-09-12).**
-  Fresh MHZ1 loads lacked the shared boss explosion renderer. Boss initialization
-  now loads the ROM-backed sheet required by `PLC_MHZMiniboss_Explosion`.
-  The shared late-load helper also uploads its patterns: registration alone
-  left the renderer unready and still silently discarded explosion draws.
-  `loc_75DCC`'s independent `CreateBossExp10` controller now survives the
-  body's 64-update music/signpost handoff and completes 31 explosion attempts.
-  Random offsets use the native low/high words after successful allocation;
-  each explosion owns its initialization sound. Real-manager tests cover
-  fresh art registration, the complete burst count, and controller rewind
-  after body retirement. The initial checks missed upload readiness; the
-  strengthened check now passes, following the user's successful manual
-  verification. See [defeat validation](architecture/validation/2026-09-12-mhz1-boss-defeat.md).
-- **Fixed SST owner duplication at act handoff (corrected, 2026-09-12).**
-  A freshly reset manager installed a new fixed-slot controller before
-  carrying the original into the same slot. MHZ's pollen owner and HCZ's
-  water-splash owner were both duplicated, causing identical rewind IDs at
-  transition-boundary capture. Exact-slot carry now removes the fresh default
-  in each carried slot before importing the original identity and owner.
-  The real resource-reload regression reproduces the original exception in
-  both zones and checks single ownership, retained identity/slot, and rewind.
-- **Mushmeanie shell-direction pointer (verified, 2026-09-12).**
-  The earlier stale-pointer diagnosis was incorrect: `Check_PlayerCollision`
-  explicitly stores the selected player pointer into the parent's `$44`.
-  `loc_8DC42` reads that pointer after `loc_8DC9C` reverses the player's
-  velocity. The engine's saved attacking-player velocity follows this path;
-  existing tests cover P1 and P2. No stale ROM-header read needs implementing.
-- **PulleyLift level-select cheat.** The ROM's MHZ Pulley Lift object has an undocumented
-  level-select easter-egg trigger; the engine does not reproduce it. Intentionally out of scope
-  (`MhzPulleyLiftObjectInstance`).
-- **Mushmeanie left-wall bounce sign (verified correct, 2026-09-12).**
-  `loc_8DB94` selects `ObjCheckRightWallDist` or `ObjCheckLeftWallDist`, then both
-  branches enter `loc_8DBB4`, which explicitly executes `add.w d1,x_pos(a0)`.
-  The current `currentX += wall.distance()` therefore matches the shipped ROM,
-  including its counterintuitive left-wall penetration correction. The earlier
-  proposed subtraction was based on a different object's routine and is rejected.
-  `TestMushmeanieBadnikInstance#leftWallBouncePreservesRomAddDistanceQuirk`
-  covers the left branch. The separately recorded ICZ path-follow wall question
-  still requires its own owning-routine investigation.
-- **MHZ1 door latch ownership (corrected, 2026-09-12).**
-  `_unkFAA9` now belongs to `MhzZoneRuntimeState` and is included in its rewind
-  payload, so button/door streaming does not reset the lowered position.
-  Contrary to the old note, full level reload does clear this byte:
-  `loc_60DE` clears `_unkFA80` through `DMA_queue`. A newly installed MHZ
-  runtime therefore resets it, including checkpoint reload. The focused
-  recreation/rewind test covers both lifetimes.
-- **`MhzEndBossDefeatFragmentChild` velocity table and end-boss body collision category
-  (Task V1 Step 4 spot-checks).** The velocity table was verified against raw ROM bytes and found
-  to be genuinely wrong (using `Obj_VelocityIndex` rows 4-9 instead of the ROM-correct rows 2-7,
-  once `CreateChild6_Simple`'s subtype pre-scaling by 2 is accounted for) and has been fixed in this
-  pass; see the class javadoc and `TestMhzBossObjects#mhzEndBossFadeWaitUnderflowSpawnsRomDefeatFragments`.
-  The end-boss body's `BOSS`-category `getCollisionFlags()` (`0xCF`, inherited from
-  `AbstractBossInstance`) alongside the dedicated `MhzEndBossHitProxyChild`'s `ENEMY`-category
-  `0x25` was verified **correct as designed**: ROM's `Obj_MHZEndBoss` (`loc_76004`) sets the main
-  body's own `collision_flags(a0)=$0F` and runs it through `Draw_And_Touch_Sprite` every frame,
-  while the separately-allocated `ChildObjDat_76982 -> loc_764A0` hit-proxy child independently
-  registers its own `word_76964`-sourced `collision_flags=$25` via `Child_AddToTouchList` -- ROM's
-  own architecture genuinely scans both as independent touch surfaces with different roles (general
-  body contact vs. the attackable weak point), predating this wave and already covered by
-  `TestMhzBossObjects#mhzBossesExposeRomCollisionHitCounts` and the `MHZEndBossHitProxy*` tests.
-  No fix needed for the collision-category half of this spot-check.
-- **MHZ end-boss fragment parent-flip inheritance (corrected, 2026-09-12).**
-  `CreateChild6_Simple` copies mappings/art_tile but not render flags;
-  `loc_766CA` calls `SetUp_ObjAttributes`, which sets only bit 2. Consequently
-  `Set_IndexedVelocity` sees the child's bit 0 clear regardless of the parent.
-  Fragment construction now uses the unmirrored ROM velocity table for both
-  parent orientations. `loc_766CA`'s first pass only initializes/draws; subsequent
-  `Obj_FlickerMove` passes alternate hidden/visible starting hidden. Boundary
-  deletion retains its slot until the next pass, matching `Go_Delete_Sprite_3`.
-  The defeat-spawn test exercises both parent orientations and the first three passes.
-
-### Verification
-
-The defeat-fragment velocity fix is covered by
-`TestMhzBossObjects#mhzEndBossFadeWaitUnderflowSpawnsRomDefeatFragments`. The parent-flip and Mushmeanie wall checks described above extend that coverage.
-The native pulley menu/debug unlock and standalone S&K entry remain excluded.
-Direct Sonic/Tails implementation coverage and validation are recorded in
-[the completion audit](architecture/research/s3k-zones/mhz-completion-audit.md);
-this section does not establish frame-perfect zone parity.
-
-## S3K Bonus Stage Rewind: Gumball/Pachinko Live, Slot Machine Deferred
-
-**Location:** `S3kSlotBonusStageRuntime`, `S3kSlotStageState`, `GameLoop.isBonusStageRewindable()`
-**ROM Reference:** n/a (engine-only feature)
-
-Live rewind was extended to the Gumball and Pachinko bonus stages via
-`BonusStageProvider.supportsRewind()`, but the Slot Machine bonus stage intentionally continues to
-report `supportsRewind()==false` and is excluded from rewind entirely (held rewind input is ignored
-while it is active; no keyframes are recorded for it).
-
-Slot Machine rewind is deferred rather than fixed here because `S3kSlotBonusStageRuntime` holds
-live cross-references and bespoke mutable state that the standard object/level rewind adapters do
-not capture:
-
-- `S3kSlotStageState` — roughly 35 scalar fields, six `int[3]` arrays, and two `Deque<int[]>`
-  reward queues.
-- Runtime bookkeeping outside that state object: `continueAwarded`, `exitFadeStarted`,
-  `exitTriggered`, `lastFrameCounter`, and the coordinator's own `slotFrameCounter`.
-- A swapped-in player sprite (`slotPlayer`) driven by a custom `slotPlayerRuntime` (fixed-point
-  `slotOriginX/Y`, exit-sequence phase), with CPU sidekicks suppressed for the duration.
-- Parallel `List`s (`slotRingRewards` / `slotSpikeRewards`) of `ObjectManager`-tracked dynamic
-  reward objects that would need to be reconciled back to their rewind-recreated instances
-  (extending the `S3kSlotRewindSupport` re-resolution pattern already used elsewhere).
-- Mutable render buffers (`S3kSlotRenderBuffers`); `pointGrid`/`visibleCells` are derived and
-  could be rebuilt, but the animation state feeding them is not currently captured.
-
-Because the Slot Machine's `updateDuringLevelFrame()` is `true`, the held-rewind re-simulation
-stepper *would* drive `slotRuntime.update(...)` if rewind were enabled for it, so a faithful
-snapshot/restore of all of the above is mandatory for deterministic re-simulation — this is
-materially more work than the Gumball/Pachinko adapter (a single `BonusStageAccumulatorSnapshot`
-covering rings/lives/shield) and was scoped out as its own follow-up.
-
-**Decision:** Slot Machine rewind will be tackled together with Sonic 1's Special Stage in a
-dedicated follow-up, because both need the same shape of fix — snapshotting a self-contained
-minigame runtime with its own mutable state that bypasses the standard object/level snapshot model
-(S1's special stage is a monolithic manager with a mutated layout array, custom player
-physics/camera, and its own scroll accumulators; Slots has its runtime plus `S3kSlotStageState`). A
-shared "self-contained runtime snapshot" approach should be designed once and applied to both,
-after an investigation spike.
-
-### Impact
-
-None on the shipped Gumball/Pachinko rewind support. The Slot Machine bonus stage keeps its
-pre-existing (non-rewindable) behavior; holding rewind while it is active is a no-op, matching its
-behavior before this change.
-
-## Gumball Machine Frame-0 RNG Reseed: Preserve Run-History Entropy, Do Not Clobber With a Session Counter
-
-ROM `Obj_GumballMachine` seeds `RNG_seed` from `V_int_run_count` on init:
-
-```
-move.l (V_int_run_count).w,(RNG_seed).w   ; sonic3k.asm:127412
-```
-
-`V_int_run_count` is a persistent counter incremented every VBlank interrupt since power-on. The
-purpose of this write is to fold *run-history entropy* (menu time, prior acts, etc.) into the
-bonus-stage RNG so the ball-subtype roll (`sub_612A8`, `sonic3k.asm:127988-128008`) varies
-run-to-run.
-
-### Resolution (no longer a divergence)
-
-`GumballMachineObjectInstance` previously re-derived that seed from its `update` `frameCounter`
-argument — `ObjectManager.vblaCounter`, a per-gameplay-session object-dispatch counter that resets
-on every session rebuild and lives in a materially smaller range than the hardware run counter
-(observed `0x0400` locally vs. `0x1598` recorded for the same frame-0 tick). That was the actual
-bug: `vblaCounter` is *not* `V_int_run_count`, so seeding from it clobbered a correct seed with a
-wrong per-session count and flipped the ball subtype (e.g. awarding 10 rings for a ball the recorded
-run never dispensed as a reward).
-
-The engine's shared RNG **already carries** run-history entropy when the machine spawns: it has been
-advanced by all prior gameplay in live play, and in trace replay
-`TraceReplaySessionBootstrap.applyInitialRngSeedForReplay` has already primed it to the recorded
-run's exact seed (that recording's `V_int_run_count`) — uniformly for every trace carrying
-`metadata.rng_seed`, as ordinary initial-state reconstruction, not per-frame hydration. So the ROM
-invariant `RNG_seed == V_int_run_count` is already satisfied by the RNG's own established state on
-this tick. Modeling the reseed is therefore a read of that same value — a no-op — and the object no
-longer performs the erroneous `setSeed`. This is applied **uniformly** to live play and trace
-replay (no trace-identity gating, no simulation-time trace read), so there is no live/replay
-behavioral split.
-
-An earlier iteration instead had `TraceReplaySessionBootstrap` suppress the reseed *only during
-trace replay*; that trace-gated split was reverted. The current fix removes the wrong reseed for
-every caller, which both closes the trace divergence and keeps live play on the RNG's genuine
-run-dependent entropy rather than the acknowledged-wrong session counter.
-
-### Impact
-
-The Gumball bonus stage's frame-0 ball-subtype roll now consumes the RNG's established
-run-history seed on every path. Trace replay reproduces the recorded run's subtypes (the frontier
-past the spurious early ring award); live play keeps run-dependent variety without a reference
-recording to diverge from. No other Gumball, Pachinko, or Slots behavior is affected; the RNG stream
-itself (post-seed advancement) is unchanged and remains ROM-faithful.
-
-Slots is *also* affected by a `vblaCounter`-vs-`V_int_run_count` gap (the counter-provenance mismatch the Gumball roll previously had):
-`S3kSlotBonusStageRuntime.globalVIntRunCounter()` feeds `ObjectManager.vblaCounter` into
-`S3kSlotOptionCycleSystem.tick(...)` as the ROM-faithful *shape* of `Slots_CycleOptions`'s several
-`V_int_run_count` reads (reel-word seeds, per-reel velocity offsets, the fixed-row scan seed, the
-random-target draw, and the post-decelerate countdown extension — sonic3k.asm:99614-99946). Because
-`vblaCounter` is a per-gameplay-session approximation with the same reset-cadence and smaller-range
-mismatch described above, all of those Slots computations can select a different (and
-differently-timed) reel target/prize than a specific recorded run whenever local session timing
-differs from the original hardware's power-on-relative VBlank count, exactly as with the Gumball
-frame-0 roll. This is the same underlying counter gap surfacing at a second, independent call site,
-not a new discrepancy; the correct fix is the same deferred persistent VBlank-driven global counter
-described above, which would resolve both sites at once.
-
-### Resolution (trace replay only): metadata-primed `V_int_run_count` base
-
-Unlike the Gumball reseed above (a single frame-0 read, satisfied once the shared RNG is primed),
-`Slots_CycleOptions` reads `V_int_run_count` on an ongoing basis across the whole slots bonus stage,
-so priming the shared RNG once at bootstrap cannot cover it. Recorder v6.32-s3k+ instead captures the
-ROM `V_int_run_count` longword (sonic3k.constants.asm:790, `CrossResetRAM+$0C`) once at bonus-segment
-arm time and emits it as decimal `metadata.v_int_run_count`, for gumball/pachinko/slots segments
-(zone ids `0x13`-`0x15`; harmless no-op field for gumball/pachinko, which do not consume it).
-`TraceReplaySessionBootstrap.applyBonusStageEntry` reads `TraceMetadata#recordedVIntRunCount()` and,
-when present and the segment is `SLOT_MACHINE`, calls
-`S3kSlotBonusStageRuntime.primeVIntRunCountForReplay(recordedBase)` immediately after
-`onDeferredSetupComplete()` (same comparison-bootstrap "load a save state" pattern as
-`applyInitialRngSeedForReplay`/`metadata.rng_seed`, and gated the same data-driven way — no
-zone/route/frame carve-out). `globalVIntRunCounter()` then returns `recordedBase +
-ticks-elapsed-since-priming` (ticks measured off the same `ObjectManager.vblaCounter` used before,
-so the *cadence* is unchanged — only the base value moves) instead of the raw per-session
-`vblaCounter` value.
-
-**Measured effect (`TestS3kSlotsBonusTraceReplay`, `s3-knux-multibonus-ss`/`slots`):** this closes the
-specific divergence this section originally cited (rings 75→76 at the trace's first reel resolution,
-previously observed at frame ~269-271): with the base primed, that same reel resolves correctly and
-the first divergence moves to frame 301 (still a `rings` off-by-one, now on a *later* reel cycle — the
-machine cycles through multiple spins across the 1200-frame segment, each an independent
-`Slots_CycleOptions` pass). Total report error-group count moved from 179 to 182 — a later frontier
-that *unmasks* further reel-cycle divergences the original frame-271 cascade had been hiding, not a
-regression in the fix itself: three separate `+1`/`-1`-scale `rings` mismatches remain (frames 301,
-849, and a larger 971-1029 cluster consistent with a subsequently-diverged reward/exit path). A small
-sweep of the tick-alignment constant (base+0 vs base+1 vs base+2 ticks-since-priming) confirmed
-base+1 — the natural, no-fudge-factor result of priming once before the trace's frame 0 and reading
-back after that frame's own `ObjectManager.update()` VBlank tick — is the local optimum; shifting
-either direction strictly worsens both the error count and the frontier, so the residual is not a
-further constant-offset bug. It is most likely either (a) a second, independent
-`Slots_CycleOptions`-consumption timing wrinkle across multi-spin cycles, or (b) a lag/pause-frame
-VBla-counter parity gap specific to this trace's later frames, and is left as an open, still-tracked
-frontier item rather than force-fit with an unjustified per-cycle correction.
-
-**Residual gap (unchanged):** live play and legacy traces recorded before v6.32-s3k still fall back to
-raw `ObjectManager.vblaCounter` with no base correction — the underlying gap described above (a
-per-gameplay-session counter standing in for hardware's power-on-relative `V_int_run_count`) is
-**not** closed for live play; only trace replay's reproducibility of a specific recorded run's *first*
-reel cycle is fixed, with a further multi-cycle/lag-parity gap left open per the measured effect above.
-The correct live-play fix remains the same deferred persistent VBlank-driven global counter mentioned
-above, which would resolve both the Gumball and Slots call sites (and this replay-only workaround) at
-once.
-
----
-
-## Gumball Bonus-Stage Exit Choreography: ~152-Frame ROM Sequence Not Reproduced
-
-### Original Implementation
-
-When the player descends to the gumball machine's exit trigger, the ROM plays a
-~152-frame exit choreography, all inside `game_mode=0x8C` (the level-restart
-variant of `Level`, `V_int` still ticking every frame). Decoded from the recorded
-run `s3-knux-multibonus-ss/gumball` tail (interior frames ~1277-1429), the
-sequence is three phases:
-
-1. **~23 frames — player held at the machine bottom.** The player reaches the exit
-   trigger and is held frozen at the chute (`y=0x35C`, `y_speed=0x0F70` clamped,
-   `present=1`, `routine=02`) while the fade-to-black plays. The exit trigger
-   (`loc_61050`: `subq.w #1,($FF2020).l` then `Check_PlayerInRange word_610AE`
-   `x[-$100,$200] y[-$10,$40]`, sonic3k.asm:127741) fires `loc_61076` on the
-   in-range frame, which sets `Restart_level_flag=1` and copies
-   `Ring_count -> Saved_ring_count` (sonic3k.asm:127754-127765).
-2. **~80 frames — `clearRAM Object_RAM` + level reload.** The player object is
-   zeroed (`air 1->0`, `routine 0`, all fields 0) while the returning level
-   decompresses/loads behind the black screen.
-3. **~50 frames — return-level fade-in.** The player is repositioned to the star
-   post (`y=0x25C`), the camera jumps to the return position, and the level fades
-   in, still `routine=0`, before gameplay proper resumes.
-
-### Our Implementation
-
-The engine's live bonus exit is a ~21-frame `FadeManager` fade-to-black
-(`GameLoop.exitBonusStage` -> `startFadeToBlack` -> `doExitBonusStage`) followed by
-a synchronous `loadZoneAndAct` (~1 frame) and the normal return title-card path.
-The ~152-frame ROM choreography is **not** reproduced; the engine returns to the
-level roughly 130 frames sooner.
-
-In the multi-stage chain replay, the return comparator is re-anchored to the
-return segment's recorded offset after `stage_exit` is observed
-(`AbstractRunChainTest.handoffIntoInterior` / the bonus branch of the return-attach
-in `assertChainReplay`) rather than relying on the cursor arriving there
-organically. `GameLoop.updateBonusStageMode`'s exit-fade freeze branch still
-advances the shared playback cursor + VBla counter once per frozen frame — that is
-retained as **correct `V_int` modeling** (the ROM's exit frames are `game_mode=0x8C`
-with `V_int` ticking), and it narrows the drift, but it cannot close it because of
-the reload phase below.
-
-### Rationale
-
-The choreography's frame count cannot be reproduced organically and reproducing it
-would buy nothing that is validated:
-
-- **~80 of the frames have no natural engine equivalent.** The ROM's phase-2 is the
-  `clearRAM Object_RAM` + level decompression that spans ~80 black-screen frames;
-  the engine performs the equivalent `loadZoneAndAct` synchronously in a single
-  frame. There is no cursor-advancing engine work to fill those frames without
-  artificial, zone-specific padding.
-- **No gameplay-visible state depends on the duration.** The choreography is a
-  fade + reload + fade-in; the player is either frozen or cleared throughout. The
-  chain validates the *boundary state* instead — ring carry-over (asserted, and
-  fixed to the ROM `Ring_count -> Saved_ring_count` copy above), checkpoint/star-post
-  restore, and the return position — all of which are independent of how many frames
-  the fade took.
-- **The exit tail has no comparator coverage anyway.** Both the standalone
-  `TestS3kGumballBonusTraceReplay` and the chain interior comparator stop diverging
-  only at the stage exit (their first error is at the descent's last frame, ~f1276);
-  neither compares the post-catch tail, so a duration-matching implementation would
-  be unverifiable.
-
-### Verification
-
-Recorded `s3-knux-multibonus-ss/gumball/physics.csv.gz` + `aux_state.jsonl.gz` tail
-decode (three phases above; `game_mode=0x8C` throughout via the frame-1277
-`zone_act_state` event). `TestS3kGumballBonusTraceReplay` stays green (interior
-comparator stops at the exit). `TestS3kMegaRunChain` clears the gumball round trip;
-the chain's remaining seg2 (aiz_2) blocker is a separate landing/animation-state
-fidelity slip at f186/f192, tracked in docs/status/trace-frontier-log.md, not this
-divergence.
-
----
-
-## HPZ Sanctuary Background: Screen Shake and Two-Band Plane Fill Not Modelled
-
-The giant-ring destination `$1701` now selects the same sanctuary resource,
-object, palette, camera, and scroll paths as the legacy engine alias `$1601`.
-A routing regression had left the real destination on ordinary level defaults,
-without its controller or seven emerald pedestals. ROM-backed lifecycle tests
-exercise both destinations through the ceremony and pedestal traversal.
-The rendering limitations below remain separate from that restored routing.
-
-`SwScrlHpz` ports `HPZ_BackgroundInit` / `HPZ_BackgroundEvent` and their shared
-scroll math at `loc_5A33C` (sonic3k.asm:120069-120280). Two parts of the ROM
-routine are deliberately not carried over.
-
-### Original Implementation
-
-1. **`Screen_shake_offset` fold-in.** `sub_5A32C` / `sub_5A334` subtract
-   `Screen_shake_offset` from `Camera_Y_pos_copy` before scaling by 3/16 and add
-   it back to the result, and `loc_5A262` / `loc_5A2E4` tail-call
-   `ShakeScreen_Setup` (sonic3k.asm:104219) to advance the offset. The sanctuary's
-   only shake source is the falling-crystal ceremony, which writes a timed
-   `Screen_shake_flag` that indexes `ScreenShakeArray`.
-2. **Two-band plane fill.** `HPZ_BackgroundInit` copies `HScroll_table` word 0 to
-   word 1 and word 2 to word 3, masks both with `$FFF0`, and passes
-   `HPZ_BGDrawArray = {$200, $7FFF}` to `Refresh_PlaneTileDeform`, so the BG
-   nametable is filled from the layout at two different X positions split at BG
-   plane Y `$200`.
-
-### Our Implementation
-
-`SwScrlHpz.backgroundY` keeps the shake term as a single named local pinned to
-zero at both ROM points, and the handler builds one background X base rather than
-a banded plane fill. The 3/16 scroll rates, the `$EC0` seam offsets
-(`$348`/`$000` and `$E00`/`$700`), the `loc_5A388` 3/4-to-1/4 gradient, and
-`HPZ_BGDeformArray` are all modelled.
-
-### Rationale
-
-- **The shake has no amplitude to fold in yet.** `HPZSanctuaryFallingCrystalObjectInstance`
-  publishes `GameStateManager.setScreenShakeActive(boolean)`, not the ROM's
-  `Screen_shake_flag` countdown, so there is no per-frame offset for the handler to
-  read. HPZ produced no screen shake before this handler existed either; modelling
-  the counter is a separate change with its own owner, and the fold-in points are
-  documented in place so it lands in one edit.
-- **The plane-fill split is unobservable in the sanctuary.** `Sonic3kLevelResourceProfile`
-  pins the hub camera at `($15A0, $0320)`, which puts `Camera_Y_pos_BG_copy` at
-  `$01E6` — entirely inside band 0 of `HPZ_BGDrawArray`. The second band would only
-  be reachable if the engine ever framed HPZ below BG plane Y `$200`, which no
-  current route does.
-
-### Verification
-
-`SwScrlHpzTest` pins the provider route, both seam offset pairs,
-`Camera_Y_pos_BG_copy = $01E6` for the special-stage return framing, and the
-resulting deform bands (26 lines at `-$053E`, then `-$05B8` to the bottom of the
-display). Headless `HeadlessGameBoot` capture of zone `$16` act 1 shows the
-sanctuary crystal wall spanning the full display instead of surviving only in the
-leftmost columns, which was the visible symptom of the previous generic-fallback
-parallax.
-
----
-
-## Super Emerald Special Stage Results: Sanctuary Reveal Replaced by an Immediate Exit
-
-### Original Implementation
-
-`Obj_SpecialStage_Results` routine 6 (`loc_2E512`, sonic3k.asm) sees a cleared Super
-Emerald stage — S3 locked on, `SK_special_stage_flag` set, `Special_stage_spheres_left`
-zero — and jumps to routine `$E` (`loc_2E616`) instead of falling through to the Chaos
-Emerald check at `loc_2E540`. `SpecialStage_Results` has already rebuilt HPZ as the
-backdrop for that routine (Layout_HPZ, `HPZ_128x128_*`, `PLCID_48`, camera at the shrine),
-so routine `$E` pans `Camera_Y_pos` down to `$320` to reveal the shrine, spawns the Super
-Emerald pedestal sprites and the invincibility-star orbit, and — once
-`Super_emerald_count` reaches 7 — pans across and spawns ObjDat2_2E984,
-"NOW &lt;name&gt; CAN / BE HYPER &lt;name&gt;". The seven small Chaos Emerald indicators at
-`loc_2EAA6` test `cmpi.b #1` against `Collected_emeralds_array`, so on this screen — where
-every collected emerald is state 2 or 3 — none of them draw.
-
-### Our Implementation
-
-The engine's Super Emerald results screen keeps the `Pal_Results` backdrop, so it has no
-shrine to pan to. The Chaos Emerald reveal is correctly suppressed and the screen exits
-after the bonus tally; the sanctuary itself is then entered through the ordinary Big Ring
-route. The small emerald indicators remain gated on "collected at all" rather than the
-ROM's exact `state == 1`, so they stay visible on the Super Emerald screen.
-
-### Rationale
-
-The shrine reveal needs the results screen to host a live HPZ level render, which is a
-separate piece of work from the message-selection fix; suppressing the wrong message does
-not depend on it. Tightening the indicator gate to `state == 1` in the meantime would leave
-the Super Emerald results screen with no emeralds shown at all — worse than the current
-approximation, because the big shrine emeralds that replace them are not drawn yet. Both
-halves land together when the shrine backdrop does.
-
-### Verification
-
-`TestS3kSpecialStageResultsReveal` pins the suppressed reveal, the Super_emerald_count
-sourcing (`sub_2ECA8`), the SUPER EMERALD word (`loc_2EB88`), and the S3-side versus
-S&K-side reveal selection at `loc_2E540`.
-
----
 
 ## Air Countdown Digits: Rebuilt Mapping Frames Instead of VRAM DMA
 
@@ -1436,54 +562,15 @@ collapses to a single shared sheet with no visible difference. Emulating the DMA
 would mean modelling `ArtTile_DashDust` as mutable VRAM shared with the dash
 dust, which buys nothing the tile rebase doesn't already give us.
 
-## AIZ2 mid-level enemy-art admission (RESOLVED 2026-08-10)
 
-**Status:** RESOLVED. This entry is retained because its original text stated a ROM claim
-that was WRONG, and the correction matters more than the entry did.
 
-### What this entry originally claimed, and why it was wrong
 
-It said the recorded ROM had the direct decompression queue already working on a module
-inside `ArtKosM_AIZ_Bloominator` (0x367DCA) on the admission frame, implying an older
-parent owned that iteration's module step and that the engine failed to model parent
-ownership across a mid-level admission.
 
-**None of that is in the fixtures.** Decoding the recorded `load_queue_state` rows
-directly gives `active_source = 0x36800E` on both admission frames (5542 in
-`aiz1_to_hcz_fullrun`, 6345 in `aiz_completerun`). That is `ArtKosM_AIZ_MonkeyDude + 2`
-— module 0 of the FIRST `PLCKosM_AIZ` entry, in plain PLC order
-(`skdisasm/sonic3k.asm:64349-64351`). The module FIFO was **empty** when `LoadEnemyArt`
-ran; there was no older parent. Bloominator's module 0 is 0x367DCC and it is published
-four rows LATER (5546 / 6349), after MonkeyDude retires. The value 0x367DCE appears
-nowhere in either fixture.
 
-### The actual defect, now fixed
-
-The module queue's held-loop-tail deferral was suppressing the **submission** of a head
-archive's first module, not merely its readiness. Instrumented at the admission row: the
-AIZ2 `LoadEnemyArt` batch is submitted correctly during the event pass (3 parents,
-capacity available), then the same row's POST_OBJECTS step ran with the held-tail flag
-set, took the `activeChild == null && deferFirstChild` early return, and published
-nothing. The next POST_OBJECTS — the held-tail closure — submitted 0x36800E. So the child
-arrived one loop late and the row's snapshot showed an idle direct FIFO.
-
-That deferral has no ROM basis for a level-loop producer. The two producers that set the
-flag are now split: the generic held-loop-tail arm defers only readiness and visibility,
-as its own documentation always said it should, while the locked title-card owner — whose
-`LoadEnemyArt` genuinely runs after that iteration's module step — declares its late
-ordering explicitly. The fix removes a suppression rather than adding a compensator, so
-it holds for any recording.
-
-### Residual, still open
-
-`AIZ2_WAIT_FIRE_REDRAW_FRAMES = 38` and `AIZ2_FIRE_REDRAW_FRAMES = 8` remain documented
-in-code as coming from a fixture regen, i.e. fixture-measured rather than ROM-derived.
-That is a hard rule 3 exposure inherited with the branch and is what makes the admission
-frame fixture-relative in the first place.
 
 ## `s3k_kos_direct.prepared`: a sub-frame ROM bit compared against a boundary-granular model
 
-**Status:** OPEN, bounded. One asymmetric comparison-side excusal, added 2026-08-10 in
+**Status:** bounded, permanent modelling limit. One asymmetric comparison-side excusal, added 2026-08-10 in
 `LoadQueueComparisonProjection`. It fires exactly once across the current fixture set
 (AIZ complete run, frame 6349, direct job ordinal 36) and nowhere in CNZ or MHZ.
 
@@ -1561,102 +648,11 @@ whether a recorded input only changes *when* real engine work becomes ready; a s
 decides *what* a compared row says, so it is outside the exception however well the ROM
 behaviour is cited.
 
-## MGZ swinging platform endpoint: the inherited `d1` high word is not modelled
 
-`MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue` is a fitted
-angle/slot table and is knowingly incorrect. It is recorded here rather than removed
-because removing it trades one measured red for another.
 
-**Mechanism (ROM-derived).** `GetSineCosine` returns the cosine with
-`move.w SineTable(pc,d0.w),d1` (`sonic3k.asm:3025`), a word write, so the high word of
-`d1` on entry to `sub_34074` is inherited from whatever ran before. `sub_34074` then does
-`swap d1 / asr.l #4` (`sonic3k.asm:70487-70490`), which pushes that inherited word `H`
-into the low twelve bits of the per-link X step, and accumulates five steps. With `C` the
-cosine word:
 
-```
-platformX = pivotX + ((20480*C + 5*(H >> 4)) >> 16)
-```
 
-The engine computes the `H == 0` case. The extra term is at most `5*$FFF = $4FFB`, so it
-can carry at most one pixel, and only when both of
 
-```
-k = (5 * (C & $F)) & $F >= 11        (H >> 4) >= ($10000 - k*$1000) / 5
-```
-
-hold. The first condition is fully ROM-derived; measured against `Levels/Misc/sine.bin`,
-all thirteen angles in the fitted table satisfy it with `k` in 12..15, which is
-independent confirmation that the table is approximating this mechanism and not something
-else. The second condition needs `H`, and the engine has no model of inter-object register
-carry through `Process_Sprites`, so the table stands in for it.
-
-The sine (Y) side needs no term: `Process_Sprites`' `sub_1AAFC` does `move.l (a0),d0`
-before `jsr (a1)` (`sonic3k.asm:35983-35988`), so `d0`'s high word is the high word of
-`loc_3403A`'s own address, `$0003`, and `asr.l #4` of `$0003` is zero.
-
-**Measured consequence.** At `e9d5eb610`:
-
-| change | `TestS3kSonicTailsMgzSegmentTraceReplay` | `TestS3kMgzTraceReplay` |
-|---|---|---|
-| table kept (current) | 3950 errors, first frame 10709 (`x` $23DB/$23DC) | green |
-| table removed | 3921 errors, first frame 12932 | 14 errors, first frame 25770 (`x` $2A78/$2A77) |
-
-At MGZ segment frame 10709 the player is riding slot 6 at byte angle `$62`; the table adds
-the carry and the ROM does not, so the platform sits at `$23D5` instead of `$23D4` and the
-rider is carried one pixel too far right. At `TestS3kMgzTraceReplay` frame 25770 the ridden
-platform is slot 7 of a different pivot group and the ROM *does* take the carry.
-
-**Removal condition.** Model `d1`'s inherited high word across the object execution order
-(the value left by the previously executed SST slot), then compute the carry from the
-formula above and delete both the table and this entry. Do not extend the table with more
-angles: it cannot be right, because the carry is not a function of the angle alone.
-
-## Segment trace replays start with an empty save-game inventory
-
-**What diverges.** Any per-zone *segment* fixture cut from a complete run replays
-with zero Chaos Emeralds, zero Super Emeralds and an empty
-`Collected_special_ring_array`, regardless of what the recording's player had
-at that point in the movie. Object branches that read those globals therefore
-take the low-inventory arm in the engine and the high-inventory arm in the ROM.
-
-**Measured case.** `TestS3kSonicTailsMgzSegmentTraceReplay`, frame 17383 --
-3410 of the class's 3446 errors start there, and frames 13864-15531 and
-15562-17382 are clean. `Obj_SSEntryRing`'s collision arm `loc_6170A`
-(`docs/skdisasm/sonic3k.asm:128283-128291`) branches on
-`cmpi.b #7,(Chaos_emerald_count).w`. MGZ is `Current_zone` 2, so
-`SSEntry_CheckLevel` (`:128433-128443`) reports an S3 level and the ROM takes
-`loc_61794` (`:128318-128327`): `moveq #50,d0 / jmp (AddRings).l`, ring
-self-retires, player keeps rolling. The trace shows `rings` `0x28 -> 0x5A` on
-that single frame with `anim` still `$02`.
-
-The engine takes `loc_6173A` (`:128290-128295`) instead, which writes
-`mapping_frame = 0`, `anim = $1C`, `object_control = $53` -- and those are
-exactly the engine's compared values at 17383. The object is **not** at fault:
-`Sonic3kSSEntryRingObjectInstance.awardsFiftyRingsInsteadOfCapture` already
-models the full ROM branch and `isSonic3HalfLevel()` already models
-`SSEntry_CheckLevel`. A probe at the touch reported
-`zone=2 hasAllEmeralds=false hasAllSuper=false isS3Half=true award=false`;
-only the inventory term is wrong.
-
-**Why it is not closed.** The fixture's own `metadata.json`, `physics.csv` and
-frame `-1` bootstrap aux events carry no inventory field, and
-`AbstractTraceReplayTest` does not read the parent run manifest. The value does
-exist in committed data -- `runs/s3k-sonic-tails-complete-emeralds/run_manifest.json`
-records `emeralds_after: 7` into segment 15 and `emeralds_before: 7` from
-segment 18, and MGZ is `segment_index: 16` -- but seeding an inventory counter
-from it is hydration of gameplay state into the engine, which hard rule 4
-permits only for the hardware-timing port. The pre-trace bootstrap carve-out
-covers position, RNG seed, oscillator pre-advance and frame counters, not
-save-game progress.
-
-**Removal condition.** Take an explicit decision on whether starting save-game
-inventory belongs in the frame-0 bootstrap contract. If it does, extend the
-segment bootstrap to derive it from the parent run manifest's recorded
-progression -- for every game, since S1 and S2 segment fixtures have the same
-shape -- and measure the blast radius across every segment class before
-landing. Do **not** close it by keying on the run id, the fixture name, the
-zone or a frame index. Delete this entry when the bootstrap carries the value.
 
 ## SEGA Screen: an engine addition the ROM does not have
 
@@ -1701,109 +697,11 @@ Full context:
 
 ---
 
-## PSG admission stale-IX silence remains incomplete
 
-**What the ROM does.** The S3K sound driver is built with `fix_sndbugs = 0`
-(`Sound/Z80 Sound Driver.asm:16`), so `cfSetPSGNoise` takes the `else` branch at
-`:3559-3572`. That branch puts exactly two bytes on the PSG bus, back to back and
-with nothing between them: `0DFh` to silence PSG3, then the effect's own noise
-operand. The routine has no calls between the two writes, so their adjacency is
-structural rather than incidental.
 
-**Resolved ordering gap (2026-09-05).** The engine previously emitted
-`DF FF E7`: noise-channel ownership injected a second silence after the loader
-had already emitted the guaranteed admission `FF`. The S3K profile now selects
-`REGISTER_SEQUENCE`, so admission retains its `FF` in header order and the
-command emits adjacent `DF E7`. Ownership, release and rollback are unchanged.
 
-**Scope of the resolved gap.** Every S3K effect that carries a PSG form was affected, because all 36 of
-them declare `$E7`. Among them are three behind reported AIZ1 audio faults:
-`sfx_Splash` (`$39`), `sfx_InstaAttack` (`$42`) and `sfx_Collapse` (`$59`).
 
-**Remaining admission gap.** `zGetSFXChannelPointers.is_psg` calls
-`zSilencePSGChannel` before replacing IX (:2131-2154). That stale pointer can
-contribute additional PSG writes before the guaranteed `FF`; the engine still
-models only the guaranteed write. Collapse's preceding FM5 header contributes
-none, so this comparison does not establish general stale-IX parity.
 
-**Coverage and next frontier.** `TestS3kNoiseFormEffectWriteStream` asserts that
-`DF` immediately precedes the ROM-derived noise operand for all three effects.
-The synthetic zero-operand test also checks adjacent `DF FF` without a duplicate.
-Observation starts after admission
-so a setup silence cannot be mistaken for the track's first pass.
-The independent committed AIZ1 intro oracle now advances within service
-**1570** from event **43** to **48**. The event-43 duplicate was an engine
-sequencer defect: note-start modulation sent Collapse's frequency pair and the
-single volume tail reached by the ROM's `zUpdatePSGTrack` fall-through
-(`Sound/Z80 Sound Driver.asm:4059-4135`), then the generic attacked-note
-epilogue sent the same `F0` again. The engine now suppresses that epilogue only
-when the configured S3K frequency tail already performed the write. The new
-frontier is reference PSG `FF` against an exhausted engine service stream.
-That `FF` is the second byte of the ordered `AF FF` source-driver frequency
-transaction and, because bit 7 is set, is also physically decoded as a PSG3
-volume latch. The engine formerly made a new ownership decision for that
-second bus byte and rejected it. The ROM checks track override once before
-writing the pair and performs no ownership decision between its bytes. The
-driver now admits the source transaction once and forwards both bytes verbatim,
-preserving the chip's final latch and noise attenuation. The next FM3 release
-gap is also resolved: the covered music track's retained normal/special mode
-is written to register `27` before its voice, matching `cfStopTrack`
-(:3443-3518). The music PSG3 envelope gap is also resolved: an attacked note
-still resets `VolEnv`, but while overridden it no longer consumes the first
-envelope byte before `zUpdatePSGTrack`'s override return (:4058-4115). The
-S3K's `cfChangePSGVolume` envelope rewind is also now byte-accurate: its `DEC`
-wraps `VolEnv` from `00` to `FF`; the prior Java guard incorrectly left zero
-unchanged (`Sound/Z80 Sound Driver.asm:3263-3285`). The oracle advances from
-service **1594** to **1652**. That ordered-write gap is also resolved: retail
-`zUpdateSFXTracks` walks fixed FM3..FM6 then PSG1..PSG3 RAM slots, independent
-of sound admission/header order (`Sound/Z80 Sound Driver.asm:727-759`). The
-S3K PSG track stop also preserves the shipped pointer helper's unconditional
-`FF` after its channel/noise silence and before ownership restoration
-(`:2115-2142, :3443-3469, :4226-4249`). The covered music track's signed raw
-noise byte is now restored without changing its playing/rest state
-(`:3521-3533`). The oracle advances to service **2012** event 1: reference PSG
-`BF` versus engine PSG `FF`.
-`TestS3kOracleRequestSidecarWiring` pins that mismatch and separately asserts a
-matching 1690-service prefix through ordinal 1689. Service 1690 and the full
-window are not claimed to match. The immediate `FF` RAM state is proven; a
-later envelope walk from `FF` remains unverified because retail `zDoVolEnv`
-uses it as an unsigned `envelope + 255` table offset while Java bounds the
-cursor to the loaded envelope array. The DAC stream
-remains independently red at run 338, byte 0 (`88` versus `7F`). See the
-[2026-09-05 validation report](architecture/validation/audio/2026-09-05-s3k-psg-takeover.md)
-for commands and red-first evidence; this is not full-window audio parity.
-
-The later SFX-header correction moved the frontier to service 2357. That
-state mismatch was diagnostic input selection: retail raw ring request `33h`
-toggles boot-zeroed `zRingSpeaker` at dispatch and selects Sound34/Sound33
-(`Sound/Z80 Sound Driver.asm:547,1919-1928`), while the capture loaded Sound33
-directly. The capture now applies the alternating transform at its pending
-driver callback and advances to service **2409**, `MUS_PSG1.overridden`
-(`true` versus `false`). This does not close live request parity: S3K still has
-no production three-slot mailbox consumer, AudioManager selects rings before
-retail's consume point and resets its fallback side on stop paths. The
-capture's 1-up/fade mailbox-clearing behavior remains unverified against
-`zUpdateMusic` (:658-701).
-
-## HCZ1 miniboss local parity corrections (2026-09-13)
-
-Resolved the arena Y-lock reset, omitted second rocket speed-2 wait, and
-lower-engine odd-V-int rendering/touch registration. The follow-up corrected the
-initial audit's inverted priority interpretation and restored independent exhaust
-priority/activation, falling rocket debris, whirlpool slowdown, bubble animation
-and depth, and defeat-handoff bubble deletion. Bubble links and the optional
-explosion controller now survive rewind through that cleanup boundary. See the
-[ROM audit and coverage limits](architecture/audits/2026-09-13-hcz1-miniboss-parity.md).
-The viewport follow-up converts the initial camera-range and horizontal-lock
-observations to native framing, retaining the ROM's world-bound writes. At 640px
-and 800px, comparing the render origin directly required the player to cross the
-arena terrain wall before the lock could trigger. Threshold regressions cover all
-five supported widths; ordinary-input 800px off/S2 routes now reach the six-hit
-defeat and production reload. See the
-[route handover](architecture/plans/2026-09-14-route-controller-handover.md#full-route-viewportdonor-completion-follow-up)
-for the combined matrix and validation state.
-Full encounter slot-pressure, transient graph, level rendering and character/donor
-route certification remain open; these local corrections do not close those gaps.
 
 ## SOZ Spring Vine: Failed Display Allocation
 
@@ -1814,38 +712,16 @@ failed display-object allocation. OpenGGF leaves the controller active without
 a display when no slot is available, rather than emulating writes through an
 invalid allocation result. Normal successful allocation retains one later-slot
 display child with eight pieces. Allocation-failure RAM corruption is outside
-the spring-vine parity claim; this does not certify whole-act slot-pressure behavior.
+the spring-vine parity claim.
 
 
-## SOZ Pushable Rock: Door Coupling
 
-**Location:** `SozPushableRockObjectInstance`, native `Obj_SOZPushableRock` (`$40546`).
 
-The ordinary push/fall/track/stop behavior and subtype-bit-7 switch coupling are
-implemented. The rock publishes `_unkF7C4`; `SOZPushSwitch.sub_41AA8` checks that
-slot's current routine, charges the shared trigger and separates the rock from
-the switch. Doors consume the trigger byte. Local contact and slot-reuse checks
-cover the positive coupling; production rewind covers publication and invalidation
-when the rock enters its fall routine.
 
-**Remaining gap:** full positive puzzle reachability at the Act 2 rock
-`($4770,$5B5)`, subtype `$87`, is unverified. From the current fresh positioned
-entry, pushing right starts the authored `$5EC → $47F0 → $FFFF` track before
-reaching switch `($4830,$5B0)`. The required preceding world/route state has not
-been established. Do not claim completion of this puzzle from unit contact tests
-or the separate passing channel-8 switch/door route. The independent recording
-contains no player or nearby-object samples in this lower puzzle region; it uses
-the upper switch at `($4A30,$330)` and swing instead. This establishes the
-recorded route, not that the lower coupling is optional or that its passage works.
-See the act matrix and v2 execution record.
+
+
 
 ## SOZ Background Event Modes and Torch Animation
-
-Normal desert parallax/heat shimmer and animated art, Act1 arena replacement,
-rising sand and seamless Act2 events are implemented. The animator reads the
-native event phase instead of camera-lock heuristics. Act2 implements its normal,
-sand-room, boss and post-boss scroll modes; torches and palette fades share the
-captured light state, including boss inhibition and release.
 
 **Widescreen arena admission:** `sub_55E96`'s `$4310` gate is evaluated at
 its centered native-width viewport origin. Comparing the wider outer left edge
@@ -1853,7 +729,7 @@ prevented admission at widths 640/800 because the player reached the solid
 `$4438` wall first. Native width preserves the ROM condition. This is a viewport
 extension; it does not certify wider cold routes or native pixel identity.
 
-**Widescreen pyramid residency:** the Act1 event source window now covers the
+**Widescreen pyramid residency:** the Act1 event source window covers the
 viewport plus alignment/shimmer margin, instead of repeating its first 512px.
 The BG-high color/mask passes use the main pass's source period. Native-width
 residency stays 512px. Wider views extend the authored right edge with repeated
@@ -1863,101 +739,16 @@ the foreground wall at `$4500` stays offscreen. The native arena spans 720px; a
 wider view lowers the arena minimum below `$4180` and shows level art left of it,
 and admission uses the focused player's `$43B0` position. This is
 an intentional presentation extension, not native scenery or modified collision.
-Positioned arena captures must cross the `$4308,$918` priority switch; spawning
-below it can incorrectly show Sonic behind the pyramid. Full native pixel
-comparison and wider cold-route certification remain open.
-
-**Redraw fidelity limits:** the renderer rebuilds the selected source window as
-whole native row/column redraws advance. The earlier claim of a visible Act1
-arena/seamless defect was not supported by measurement. At native camera Y
-`$960`, 42 phased-versus-whole image pairs across widths320/528/800 and static
-or moving cameras were identical, despite different underlying tilemap bytes:
-the foreground hides the partial arena redraw. The seamless redraw occurs
-behind the palette fade. The unused retained-plane prototype was discarded.
-Act2 post-boss redraw now retains ROM-backed descriptors through art admission
-and the native two-row updates. This removes an entry flash and preserves the
-visible rising redraw in wide margins. Tests cover widths 320/528/800, same-revision
-rewind restoration, clipping and return to ordinary caching. Sand-exit A/B checks
-show no visible difference at 320/528; the 800-pixel route did not reach the exit.
-Full native pixel certification remains open. Engine A/B checks establish
-visibility in those scenarios, not pixel identity with native hardware.
-
-**Sprite composition:** SOZ now activates its arena/placed/laser sprite-mask
-post-pass; shared collection and replay preserve native bucket/slot/piece order
-independently of terrain priority. Spiked pillars now resolve the complete native
-art-word carry, and the BG-high replay contributes to sprite occlusion. A pixel
-regression checks submerged spikes against a tiles-only render while retaining
-the exposed body. Moving engine captures cover the opening door,
-golem sinking, selected Act2 mechanisms and the final boss. The existing mask
-postprocessor clips whole tile rows, so sub-tile scanline parity remains unverified;
-these engine inspections do not certify every placement or native pixel identity.
-See the dated priority pass in the SOZ plan. Rockn child-facing and pyramid
-terrain-shake defects reported during playtesting are corrected. A subsequent
-Act2 report of a missing boss outer layer and persistent ghosts was traced to
-the last-checkpoint debug shortcut retaining the source room's event state.
-The shortcut now reloads the destination checkpoint; native Sonic+Tails regression
-checks cover 320/400/800px, event initialization, wall art, light clearing, lives
-and rewind timeline isolation. Render allocation was reduced in a matched profile, but gameplay
-snapshot/presentation allocation remains material; live GC stalls are not certified
-resolved.
 
 **Native low-level limits:** failed spring-vine allocation can write foreign SST
 bytes (above). Cork quiet-skid polling and the boss charge's failed-allocation
 terminal poll can also read bytes belonging to an arbitrary foreign object.
 Known SOZ terminal states are represented, but no arbitrary SST-byte service is
-invented to reproduce unrelated memory contents. Final-boss PLC6D art loads from
-the ROM; exact later Nemesis FIFO service timing remains a shared service gap.
+invented to reproduce unrelated memory contents.
 
-The independent SOZ recording also retains a Kosinski service-timing divergence
-from frame34. With the corrected vine landing, replay reaches a later checkpoint
-without a compared Sonic movement mismatch, then aborts when bonus-star art
-submission finds the four-entry module FIFO full. The partial22525-frame result
-is incomplete trace coverage; queue capacity/admission have not been relaxed.
-See the frontier log for the exact command and remaining companion/animation
-mismatches. Ordinary controller route evidence is recorded separately.
-
-See the [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act
-matrices for current route, rewind and compatibility evidence.
+Open SOZ items (service timing, the module FIFO abort, pixel certification) are
+tracked in [S3K known bugs](status/s3k-known-bugs.md) and the frontier log; route,
+rewind and compatibility evidence lives in the
+[SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act matrices.
 
 ---
-
-## Inline-Drawn Children Keep Their Owner's Sprite Bucket (Resolved)
-
-### Original Implementation
-
-Several bosses and set pieces allocate child SST slots with their own `priority`
-word, so the children can sit in a different display list from the owner: ICZ
-miniboss orbs (`ObjDat3_71972` `$280`, then `$180` at `loc_7153A`, `$180`/`$300`
-in `sub_717B8`), LBZ miniboss centre child (`word_72962` `$200`) and arm links
-(`word_727E2`, `$300`/`$380`/`$300`/`$380`/`$300`/`$280` per link), LBZ miniboss box
-pieces (`$100`, then `$380` at `loc_8CF10` when their flight timer expires), ICZ
-end-boss top body child (`word_72312` `$200`) and frost puffs (`ObjDat3_72324`
-`$80`), and the HCZ end-boss children (`HCZEndBossFan_ObjData` `$200`,
-`HCZEndBossBomb_PriorityBySubtype` `$280`/`$200`/`$180`, platform and column `$80`,
-water line `0`, bubbles `$280`, ship and head `$280`). The lightning shield spark
-copies the shield's art word, whose bit 15 tracks Player 1's.
-
-### Our Implementation
-
-Resolved on 2026-09-16. Owners that draw ROM children inline implement
-`MultiBucketRenderable`: the object manager lists the owner in every display
-list its parts occupy, draws only that list's parts, and keeps each part's
-art-word bit 15, including a list that holds both classes (ICZ orbs still at
-`$280` under the high-priority body). Part words that change at runtime (ICZ
-orbs, LBZ box pieces, HCZ bomb subtype shift) are rewritten at the ROM write
-points. HCZ end-boss children are separate instances and now pass their table
-words. The spark captures the shield's flag at creation.
-
-Remaining approximation: parts drawn inline share their owner's SST slot for
-in-list ordering, where the ROM orders by each child's own slot. Two adjacent
-observations were recorded, not changed: the ICZ miniboss ice shell is drawn
-only after release (the ROM draws it from creation), and Robotnik ship
-renderers draw the head over the ship (ROM slot order puts the ship in front).
-
-### Verification
-
-`TestObjectManagerMultiBucketRenderable`, `TestIczMinibossRenderBuckets`,
-`TestIczEndBossRenderBuckets`, `TestLbzMinibossPartBuckets`,
-`TestHczEndBossChildBuckets`, and the lightning shield spark case in
-`TestSonic3kLightningShieldObjectInstance`. See the
-[sprite priority bucket audit](architecture/audits/2026-09-16-sprite-priority-bucket-audit.md).

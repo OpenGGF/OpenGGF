@@ -538,9 +538,24 @@ class TestHpzSanctuaryObjects {
         when(services.gameState()).thenReturn(gsm);
         crystal.setServices(services);
 
-        for (int i = 0; i < 24; i++) crystal.update(i, null);
-        assertEquals(8, crystal.screenShakeTimerForTest());
-        assertTrue(gsm.isScreenShakeActive());
+        com.openggf.game.zone.ZoneRuntimeRegistry registry =
+                new com.openggf.game.zone.ZoneRuntimeRegistry();
+        com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState hpz =
+                new com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState(
+                        com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA, 1,
+                        com.openggf.game.PlayerCharacter.SONIC_ALONE);
+        registry.install(hpz);
+        when(services.zoneRuntimeRegistry()).thenReturn(registry);
+
+        for (int i = 0; i < 23; i++) crystal.update(i, null);
+        assertEquals(0, hpz.screenShake().flag(), "no shake before the crystal lands");
+        crystal.update(23, null);
+        // loc_90CF4: move.w #8,(Screen_shake_flag).w (sonic3k.asm:198089).
+        assertEquals(8, hpz.screenShake().flag());
+        assertEquals(0, hpz.screenShake().offset(),
+                "the object only writes the flag; ShakeScreen_Setup produces the offset");
+        assertFalse(gsm.isScreenShakeActive(),
+                "the sanctuary shake is the ROM countdown, not the generic boolean");
         verify(services).playSfx(
                 com.openggf.game.sonic3k.audio.Sonic3kSfx.BOSS_LASER.id);
     }

@@ -13,8 +13,8 @@ import java.util.List;
  * The owner stays one instance for update, rewind and slot accounting; the
  * {@link ObjectManager} places it in every bucket it reports and asks it to draw
  * only the parts that belong to the bucket being painted. Within a bucket the
- * parts are ordered by the owner's SST slot, which approximates the ROM's
- * child slots (allocated after the parent, so drawn behind it in the same list).
+ * parts are ordered by the SST slot {@link #partSlotIndex(int, boolean)} reports,
+ * so an owner can place its parts where the ROM's child slots would fall.
  * <p>
  * Part buckets may change at runtime (ROM {@code priority} rewrites); the
  * render-bucket cache re-reads them once per frame.
@@ -72,6 +72,16 @@ public interface MultiBucketRenderable extends ObjectInstance {
         }
     }
 
+    /**
+     * SST slot that orders the parts of {@code bucket} and class against other
+     * objects in the same display list (lower slot paints on top, as Draw_Sprite
+     * appends in slot order). Defaults to the owner's slot; owners whose ROM
+     * children occupy known slots (allocated after the parent) return that slot.
+     */
+    default int partSlotIndex(int bucket, boolean highPriority) {
+        return ObjectRenderParts.slotIndex(this);
+    }
+
     /** Palette-line occlusion mask for parts of {@code bucket} in the {@code highPriority} class. */
     static int tileOcclusionPaletteMask(boolean highPriority) {
         return highPriority ? 0 : 0xF;
@@ -92,6 +102,27 @@ public interface MultiBucketRenderable extends ObjectInstance {
             signature |= classBits(renderable, bucket);
         }
         return signature;
+    }
+
+    /** Eight-bit hash of the part slots so a slot change re-sorts the cached lists. */
+    static int partSlotSignature(MultiBucketRenderable renderable) {
+        int hash = slotHash(renderable, renderable.getPriorityBucket());
+        for (int bucket : renderable.extraRenderBuckets()) {
+            hash = hash * 31 + slotHash(renderable, bucket);
+        }
+        return hash & 0xFF;
+    }
+
+    private static int slotHash(MultiBucketRenderable renderable, int bucket) {
+        int classes = renderable.partTilePriorities(bucket);
+        int hash = 0;
+        if ((classes & LOW_PARTS) != 0) {
+            hash = hash * 31 + renderable.partSlotIndex(bucket, false);
+        }
+        if ((classes & HIGH_PARTS) != 0) {
+            hash = hash * 31 + renderable.partSlotIndex(bucket, true);
+        }
+        return hash;
     }
 
     private static int classBits(MultiBucketRenderable renderable, int bucket) {

@@ -5,7 +5,8 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
-import com.openggf.level.objects.DestructionEffects;
+import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.SolidObjectParams;
@@ -32,10 +33,14 @@ import java.util.function.IntConsumer;
 /**
  * S3K SKL Obj $8C - Madmole.
  *
- * <p>ROM reference: {@code Obj_Madmole} at {@code sonic3k.asm:193070}. This
- * class models the parent cap and its body child as one runtime object: the
- * parent waits for the player within {@code $A0}, keeps its busy bit while the
- * child rises/attacks/sinks, then waits 60 frames before arming again.
+ * <p>ROM reference: {@code Obj_Madmole} at {@code sonic3k.asm:193075}. This
+ * class is the parent ground cap. It waits for a player within {@code $A0},
+ * sets its {@code $38} bit 1 busy flag and allocates the separate
+ * {@link MadmoleBodyChild} with {@code CreateChild1_Normal}
+ * ({@code ChildObjDat_8D9C0}). It waits until the body clears that bit on its
+ * normal sink-delete path, then waits 60 frames before arming again. The cap
+ * runs {@code sub_8D876} ({@code SolidObjectFull}) every frame regardless of
+ * the body.
  */
 public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         implements SolidObjectProvider, SpawnRewindRecreatable, RomObjectCodePointerProvider {
@@ -55,9 +60,9 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         return 0x0008;
     }
 
-
     private static final int CAP_COLLISION_FLAGS = 0;
     private static final int CAP_MAPPING_FRAME = 0x0D;
+    // word_8D9B4 (sonic3k.asm:193500): body collision_flags $0B.
     private static final int BODY_CHILD_COLLISION_SIZE_INDEX = 0x0B;
     private static final int PRIORITY_BUCKET = 5;
     private static final int CAP_RENDER_HALF_WIDTH = 0x18;
@@ -73,6 +78,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     private static final int[] SIDE_DRILL_FRAMES = {3, 3, 4, 4, 4, 4, 4, 4};
     private static final int[] SIDE_CHILD_FRAMES = {5, 6, 7, 8, 9, 10, 11, 12};
     private static final int COOLDOWN_FRAMES = 60;
+    // ChildObjDat_8D9C0 (sonic3k.asm:193505-193508): body offset (0,+$10).
     private static final int BODY_CHILD_Y_OFFSET = 0x10;
     private static final int SIDE_CHILD_X_OFFSET = 0x0E;
     private static final int SIDE_CHILD_Y_OFFSET = -0x0C;
@@ -98,38 +104,27 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
     // drill (loc_8D768/loc_8D778/loc_8D7A8) moves via MoveSprite_LightGravity.
     private static final int SIDE_CHILD_LIGHT_GRAVITY = 0x20;
 
+    /** Parent routine: 2 = loc_8D5B0, 4 = loc_8D5D4, 6 = loc_8D5F4. */
     private enum State {
-        BURIED,
-        RISING,
-        PAUSING,
-        DRILLING,
-        SINKING,
+        WAIT_FOR_PLAYER,
+        WAIT_FOR_BODY,
         COOLDOWN
     }
 
-    private State state = State.BURIED;
-    private int homeY;
+    private State state = State.WAIT_FOR_PLAYER;
     private int timer;
-    private int animFrame;
-    private int animTimer;
-    private boolean sideDrillActive;
-    private boolean awaitingParentObserve;
     private boolean waitingForOnscreen = true;
     private boolean initialized;
-    private boolean bodyChildSlotReserved;
-    // ROM parity: models the parent's $38(a0) bit 1 "child alive" latch never
-    // clearing once EnemyDefeated destroys the body child off the normal
-    // sink-delete path (loc_8D6D6 is the only place that bclr's it). Once set,
-    // Obj_Madmole's routine 2 wait-for-child-done parks forever and the parent
-    // cap -- which runs sub_8D876 (SolidObjectFull) unconditionally every frame
-    // on its own SST slot -- becomes a permanent solid stump that never spawns
-    // a new body child.
-    private boolean bodyDefeated;
+    // ROM $38(a0) bit 1. Set by loc_8D5BE when the body is allocated; cleared
+    // only by the body's loc_8D6D6 sink-delete callback.
+    private boolean bodyBusy;
+    // ROM status(a0) bit 7 as the body's Child_DrawTouch_Sprite reads it after
+    // Sprite_CheckDelete removed this cap (the engine unload path, not a kill).
+    private boolean romStatusDeleted;
 
     public MadmoleBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Madmole", Sonic3kObjectArtKeys.MADMOLE,
                 CAP_COLLISION_FLAGS, PRIORITY_BUCKET);
-        this.homeY = spawn.y();
         mappingFrame = CAP_MAPPING_FRAME;
     }
 
@@ -139,53 +134,109 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
             return;
         }
         if (waitingForOnscreen) {
-            if (!isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
-                updateDynamicSpawn(currentX, currentY);
-                return;
+            // Obj_WaitOffscreen restores Obj_Madmole on the first on-screen frame
+            // and returns before the routine dispatch.
+            if (isOnScreen(WAIT_OFFSCREEN_MARGIN)) {
+                waitingForOnscreen = false;
             }
-            waitingForOnscreen = false;
             updateDynamicSpawn(currentX, currentY);
             return;
         }
         if (!initialized) {
+            // Routine 0, loc_8D5A6: SetUp_ObjAttributes only.
             initialized = true;
             updateDynamicSpawn(currentX, currentY);
             return;
         }
 
         switch (state) {
-            case BURIED -> updateBuried(playerEntity);
-            case RISING -> updateRising(playerEntity);
-            case PAUSING -> updatePausing(playerEntity);
-            case DRILLING -> updateDrilling();
-            case SINKING -> updateSinking();
+            case WAIT_FOR_PLAYER -> updateWaitForPlayer(playerEntity);
+            case WAIT_FOR_BODY -> updateWaitForBody();
             case COOLDOWN -> updateCooldown();
         }
 
         updateDynamicSpawn(currentX, currentY);
     }
 
+    /** loc_8D5B0 / loc_8D5BE (sonic3k.asm:193101-193117). */
+    private void updateWaitForPlayer(PlayableEntity playerEntity) {
+        PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
+        if (target == null) {
+            return;
+        }
+        if (findSonicTailsHorizontalDistance(target) >= ACTIVATION_RANGE) {
+            return;
+        }
+        state = State.WAIT_FOR_BODY;
+        bodyBusy = true;
+        // CreateChild1_Normal -> AllocateObjectAfterCurrent (sonic3k.asm:176924-176930):
+        // the body takes the next free slot after the cap and runs its routine 0
+        // later in this same object pass.
+        int bodyX = currentX;
+        int bodyY = currentY + BODY_CHILD_Y_OFFSET;
+        spawnChild(() -> new MadmoleBodyChild(this, bodyX, bodyY));
+    }
+
+    /** loc_8D5D4 / loc_8D5DE (sonic3k.asm:193119-193131). */
+    private void updateWaitForBody() {
+        // Uses the shipped branch: bit 1 is cleared only by loc_8D6D6. If the body
+        // is destroyed through Touch_EnemyNormal/EnemyDefeated it becomes an
+        // explosion without reaching loc_8D6D6, so the cap stays here forever as a
+        // solid stump. A fixed version would clear the bit on defeat and re-arm.
+        if (bodyBusy) {
+            return;
+        }
+        state = State.COOLDOWN;
+        timer = COOLDOWN_FRAMES;
+    }
+
+    /** loc_8D5F4 -> Obj_Wait, then $34 = loc_8D5FA (sonic3k.asm:193133-193140). */
+    private void updateCooldown() {
+        timer--;
+        if (timer >= 0) {
+            return;
+        }
+        state = State.WAIT_FOR_PLAYER;
+        timer = 0;
+    }
+
+    /** loc_8D6D6: {@code bclr #1,$38(a1)} on the body's parent3. */
+    void clearBodyBusy() {
+        bodyBusy = false;
+    }
+
+    /** status(a1) bit 7 as tested by the body's Child_DrawTouch_Sprite. */
+    boolean romStatusDeleted() {
+        return romStatusDeleted || isDestroyed();
+    }
+
+    @Override
+    public void onUnload() {
+        // Sprite_CheckDelete / loc_85094 sets status bit 7 before the slot is freed.
+        romStatusDeleted = true;
+    }
+
     @Override
     public int getCollisionFlags() {
-        if (waitingForOnscreen || !initialized) {
-            return 0;
-        }
-        return isBodyChildActive() ? BODY_CHILD_COLLISION_SIZE_INDEX : CAP_COLLISION_FLAGS;
+        // ObjDat_Madmole collision_flags = 0 (sonic3k.asm:193493-193497); the cap
+        // never calls Add_SpriteToCollisionResponseList.
+        return CAP_COLLISION_FLAGS;
     }
 
     @Override
     public int getOnScreenHalfWidth() {
-        return isBodyChildActive() ? BODY_RENDER_HALF_WIDTH : CAP_RENDER_HALF_WIDTH;
+        return CAP_RENDER_HALF_WIDTH;
     }
 
     @Override
     public int getOnScreenHalfHeight() {
-        return isBodyChildActive() ? BODY_RENDER_HALF_HEIGHT : CAP_RENDER_HALF_HEIGHT;
+        return CAP_RENDER_HALF_HEIGHT;
     }
 
     @Override
     public SolidObjectParams getSolidParams() {
-        return SolidObjectParams.of(0x1F, 4, 5, 0, homeY - currentY);
+        // sub_8D876: d1=$1F, d2=4, d3=5 at the cap's own x_pos/y_pos.
+        return SolidObjectParams.of(0x1F, 4, 5, 0, 0);
     }
 
     @Override
@@ -223,235 +274,7 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         if (renderer == null || !renderer.isReady()) {
             return;
         }
-
-        if (isBodyChildActive()) {
-            renderer.drawFrameIndex(mappingFrame, currentX, currentY, !facingLeft, false);
-        }
-        renderer.drawFrameIndex(CAP_MAPPING_FRAME, currentX, homeY, false, false);
-    }
-
-    private void updateBuried(PlayableEntity playerEntity) {
-        mappingFrame = CAP_MAPPING_FRAME;
-        yVelocity = 0;
-        currentY = homeY;
-        if (bodyDefeated) {
-            // The body child was destroyed by EnemyDefeated; the parent's
-            // child-alive latch never clears, so it never re-checks range or
-            // spawns a new body -- only the solid cap stump remains.
-            return;
-        }
-        PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
-        if (target == null) {
-            return;
-        }
-
-        int dx = findSonicTailsHorizontalDistance(target);
-        if (dx >= ACTIVATION_RANGE) {
-            return;
-        }
-
-        state = State.RISING;
-        reserveBodyChildSlot();
-        currentY = homeY + BODY_CHILD_Y_OFFSET;
-        mappingFrame = 0;
-        ySubpixel = 0;
-        timer = RISE_SINK_FRAMES;
-        yVelocity = RISE_Y_VELOCITY;
-        // ROM loc_8D620 (routine 0) sets up y_vel/$2E and falls straight through to
-        // loc_8D636 (routine 2), so the body child performs its first MoveSprite2
-        // rise step on the very frame it is created.
-        updateRising(playerEntity);
-    }
-
-    private void updateRising(PlayableEntity playerEntity) {
-        moveWithVelocity();
-        faceTowardPlayer(playerEntity);
-        timer--;
-        if (timer >= 0) {
-            return;
-        }
-
-        state = State.PAUSING;
-        timer = PAUSE_FRAMES;
-        yVelocity = 0;
-    }
-
-    private void updatePausing(PlayableEntity playerEntity) {
-        faceTowardPlayer(playerEntity);
-        timer--;
-        if (timer >= 0) {
-            return;
-        }
-
-        state = State.DRILLING;
-        timer = 0;
-        animFrame = 0;
-        animTimer = 0;
-        sideDrillActive = false;
-    }
-
-    private void updateDrilling() {
-        if (!sideDrillActive) {
-            if (animateRaw(ATTACK_STARTUP_FRAMES)) {
-                sideDrillActive = true;
-                services().playSfx(Sonic3kSfx.SPIKE_MOVE.id);
-                spawnSideDrillChild();
-            }
-            return;
-        }
-
-        if (!animateRaw(SIDE_DRILL_FRAMES)) {
-            return;
-        }
-
-        state = State.SINKING;
-        timer = RISE_SINK_FRAMES;
-        yVelocity = SINK_Y_VELOCITY;
-    }
-
-    private boolean animateRaw(int[] frames) {
-        animTimer--;
-        if (animTimer >= 0) {
-            return false;
-        }
-
-        animFrame++;
-        if (animFrame >= frames.length) {
-            animFrame = 0;
-            animTimer = 0;
-            return true;
-        }
-
-        mappingFrame = frames[animFrame];
-        animTimer = RAW_ANIMATION_DELAY;
-        return false;
-    }
-
-    private void spawnSideDrillChild() {
-        int xOffset = facingLeft ? -SIDE_CHILD_X_OFFSET : SIDE_CHILD_X_OFFSET;
-        spawnChild(() -> new SideDrillChild(currentX + xOffset, currentY + SIDE_CHILD_Y_OFFSET, facingLeft));
-    }
-
-    private void updateSinking() {
-        if (awaitingParentObserve) {
-            // ROM parent Obj_Madmole routine 4 (loc_8D5D4) runs before its body
-            // child each frame (lower SST slot). On the frame the body finishes
-            // sinking and clears the parent busy bit ($38 bit 1) via loc_8D6D6,
-            // the parent has already tested the still-set bit and waited, so it
-            // only begins its 60-frame Obj_Wait cooldown (loc_8D5DE) the following
-            // frame. Model that one-frame parent-observe gap here.
-            awaitingParentObserve = false;
-            // Go_Delete_Sprite only installs Delete_Current_Sprite. The body
-            // keeps its final submerged position/collision until this next pass.
-            currentY = homeY;
-            ySubpixel = 0;
-            yVelocity = 0;
-            mappingFrame = CAP_MAPPING_FRAME;
-            releaseBodyChildSlot();
-            state = State.COOLDOWN;
-            timer = COOLDOWN_FRAMES;
-            return;
-        }
-        moveWithVelocity();
-        timer--;
-        if (timer >= 0) {
-            return;
-        }
-
-        // loc_8D6D6 -> Go_Delete_Sprite returns through loc_8D602 to
-        // Child_DrawTouch_Sprite: publish and draw the final body state here.
-        // Its slot is cleared by Delete_Current_Sprite on the following pass.
-        awaitingParentObserve = true;
-    }
-
-    private void updateCooldown() {
-        timer--;
-        // ROM routine 6 uses Obj_Wait: subq.w #1,$2E, branch only once negative.
-        if (timer >= 0) {
-            return;
-        }
-
-        state = State.BURIED;
-        timer = 0;
-    }
-
-    @Override
-    protected void destroyBadnik(PlayableEntity player) {
-        if (bodyDefeated || !isBodyChildActive()) {
-            // The buried cap has zero collision size and cannot be attacked;
-            // guard a stray/duplicate call against re-running the sequence.
-            return;
-        }
-        bodyDefeated = true;
-        releaseBodyChildSlot();
-        int bodyX = currentX;
-        int bodyY = currentY;
-        state = State.BURIED;
-        timer = 0;
-        sideDrillActive = false;
-        mappingFrame = CAP_MAPPING_FRAME;
-        currentY = homeY;
-        ySubpixel = 0;
-        yVelocity = 0;
-        // ROM parity: EnemyDefeated only replaces the body child's own SST
-        // slot with an explosion (spawn=null: the body child has no static
-        // placement-table spawn of its own, so there is nothing to latch
-        // respawn tracking against, and badnikSlot=-1 allocates a fresh slot
-        // rather than transferring the parent cap's slot -- the cap keeps its
-        // own slot and keeps running SolidObjectFull every frame).
-        DestructionEffects.destroyBadnik(bodyX, bodyY, null, player, services(), getDestructionConfig());
-        if (player instanceof AbstractPlayableSprite playable) {
-            // Touch_EnemyNormal applies its kill bounce after EnemyDefeated.
-            // This class consolidates the destroyed body child into the still-live
-            // parent cap, so ObjectTouchResponseController cannot infer the child
-            // death from this parent instance's isDestroyed() flag.
-            applyEnemyDefeatedBounce(playable, bodyY);
-        }
-    }
-
-    private static void applyEnemyDefeatedBounce(AbstractPlayableSprite player, int enemyY) {
-        int ySpeed = player.getYSpeed();
-        if (ySpeed < 0) {
-            player.setYSpeed((short) (ySpeed + 0x100));
-        } else if (player.getCentreY() >= enemyY) {
-            player.setYSpeed((short) (ySpeed - 0x100));
-        } else {
-            player.setYSpeed((short) -ySpeed);
-        }
-    }
-
-    private void reserveBodyChildSlot() {
-        if (bodyChildSlotReserved || getSlotIndex() < 0
-                || services().objectManager() == null) {
-            return;
-        }
-        bodyChildSlotReserved = true;
-        // loc_8D5BE uses CreateChild1_Normal, whose allocator scans forward
-        // from the parent cap's slot for the body at loc_8D602.
-        services().objectManager().allocateChildSlotsAfter(spawn, 1, getSlotIndex());
-    }
-
-    private void releaseBodyChildSlot() {
-        if (!bodyChildSlotReserved || services().objectManager() == null) {
-            return;
-        }
-        services().objectManager().freeReservedChildSlot(spawn, 0);
-        bodyChildSlotReserved = false;
-    }
-
-    private boolean isBodyChildActive() {
-        return state == State.RISING
-                || state == State.PAUSING
-                || state == State.DRILLING
-                || state == State.SINKING;
-    }
-
-    private void faceTowardPlayer(PlayableEntity playerEntity) {
-        PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
-        if (target == null) {
-            return;
-        }
-        facingLeft = !findSonicTailsTargetIsRight(target);
+        renderer.drawFrameIndex(CAP_MAPPING_FRAME, currentX, currentY, false, false);
     }
 
     public String getStateName() {
@@ -462,8 +285,258 @@ public final class MadmoleBadnikInstance extends AbstractS3kBadnikInstance
         return timer;
     }
 
-    public int getYVelocity() {
-        return yVelocity;
+    boolean isBodyBusy() {
+        return bodyBusy;
+    }
+
+    /**
+     * Madmole body: ChildObjDat_8D9C0 code {@code loc_8D602}
+     * (sonic3k.asm:193142-193216). It owns its SST slot, rises, pauses, drills,
+     * sinks, clears the cap's busy bit and deletes through Go_Delete_Sprite.
+     */
+    static final class MadmoleBodyChild extends AbstractS3kBadnikInstance implements RewindRecreatable {
+
+        /** Body routine: 2 = loc_8D636, 4 = loc_8D656, 6 = loc_8D67A, 8 = loc_8D6CA. */
+        private enum BodyState {
+            RISING,
+            PAUSING,
+            DRILLING,
+            SINKING
+        }
+
+        // parent3. The central "parent" object-field policy keeps it transient;
+        // recreateForRewind relinks it to the live cap at the same position.
+        private final MadmoleBadnikInstance parent;
+        private BodyState state = BodyState.RISING;
+        private boolean initialized;
+        private int timer;
+        private boolean sideDrillActive;
+        // Child_DrawTouch_Sprite result for this pass: false once the cap's
+        // status bit 7 sent the body through Go_Delete_Sprite.
+        private boolean drawTouchThisFrame = true;
+        // Go_Delete_Sprite installed Delete_Current_Sprite; freed on the next pass.
+        private boolean deletePending;
+
+        MadmoleBodyChild(MadmoleBadnikInstance parent, int x, int y) {
+            // CreateChild1_Normal does not copy render_flags, so bit 0 starts clear.
+            super(new ObjectSpawn(x, y, 0, 0, 0, false, 0, -1, null, null),
+                    "MadmoleBody", Sonic3kObjectArtKeys.MADMOLE,
+                    BODY_CHILD_COLLISION_SIZE_INDEX, PRIORITY_BUCKET);
+            this.parent = parent;
+            this.currentX = x;
+            this.currentY = y;
+            this.mappingFrame = 0;
+        }
+
+        @Override
+        public AbstractObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+            MadmoleBadnikInstance liveParent = findLiveParentForRewind(ctx);
+            return liveParent == null ? null
+                    : new MadmoleBodyChild(liveParent, ctx.spawn().x(), ctx.spawn().y());
+        }
+
+        private static MadmoleBadnikInstance findLiveParentForRewind(RewindRecreateContext ctx) {
+            if (ctx == null || ctx.spawn() == null || ctx.objectServices() == null
+                    || ctx.objectServices().objectManager() == null) {
+                return null;
+            }
+            MadmoleBadnikInstance best = null;
+            long bestDistance = Long.MAX_VALUE;
+            for (ObjectInstance instance : ctx.objectServices().objectManager().getActiveObjects()) {
+                if (!(instance instanceof MadmoleBadnikInstance cap) || cap.isDestroyed()) {
+                    continue;
+                }
+                // The body never moves horizontally, so x_pos identifies its cap.
+                long dx = (long) cap.getX() - ctx.spawn().x();
+                long dy = (long) cap.getY() - ctx.spawn().y();
+                long distance = dx * dx + dy * dy;
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    best = cap;
+                }
+            }
+            return best;
+        }
+
+        @Override
+        protected void updateMovement(int vIntRunCount, PlayableEntity playerEntity) {
+            if (deletePending) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return;
+            }
+            switch (state) {
+                case RISING -> updateRising(playerEntity);
+                case PAUSING -> updatePausing(playerEntity);
+                case DRILLING -> updateDrilling();
+                case SINKING -> updateSinking();
+            }
+            // Child_DrawTouch_Sprite (sonic3k.asm:178053-178058) runs after the
+            // routine: if parent3's status bit 7 is set, Go_Delete_Sprite skips
+            // both the touch list and Draw_Sprite for this pass.
+            if (parent.romStatusDeleted()) {
+                drawTouchThisFrame = false;
+                deletePending = true;
+            } else {
+                drawTouchThisFrame = true;
+            }
+            updateDynamicSpawn(currentX, currentY);
+        }
+
+        /** loc_8D620 falling through to loc_8D636 (sonic3k.asm:193158-193177). */
+        private void updateRising(PlayableEntity playerEntity) {
+            if (!initialized) {
+                initialized = true;
+                yVelocity = RISE_Y_VELOCITY;
+                timer = RISE_SINK_FRAMES;
+            }
+            faceTowardPlayer(playerEntity);
+            moveWithVelocity();
+            timer--;
+            if (timer >= 0) {
+                return;
+            }
+            // loc_8D648: y_vel is left at -$100 but routine 4 never moves.
+            state = BodyState.PAUSING;
+            timer = PAUSE_FRAMES;
+        }
+
+        /** loc_8D656 / loc_8D662. */
+        private void updatePausing(PlayableEntity playerEntity) {
+            faceTowardPlayer(playerEntity);
+            timer--;
+            if (timer >= 0) {
+                return;
+            }
+            state = BodyState.DRILLING;
+            animFrame = 0;
+            animTimer = 0;
+            sideDrillActive = false;
+        }
+
+        /** loc_8D67A Animate_Raw over byte_8D9D8 then byte_8D9DD. */
+        private void updateDrilling() {
+            if (!sideDrillActive) {
+                if (animateRaw(ATTACK_STARTUP_FRAMES)) {
+                    // loc_8D680: switch script, play sfx, CreateChild1_Normal from
+                    // the body's own slot (AllocateObjectAfterCurrent).
+                    sideDrillActive = true;
+                    services().playSfx(Sonic3kSfx.SPIKE_MOVE.id);
+                    int xOffset = facingLeft ? -SIDE_CHILD_X_OFFSET : SIDE_CHILD_X_OFFSET;
+                    int x = currentX + xOffset;
+                    int y = currentY + SIDE_CHILD_Y_OFFSET;
+                    boolean left = facingLeft;
+                    spawnChild(() -> new SideDrillChild(x, y, left));
+                }
+                return;
+            }
+            if (!animateRaw(SIDE_DRILL_FRAMES)) {
+                return;
+            }
+            // loc_8D6AE.
+            state = BodyState.SINKING;
+            timer = RISE_SINK_FRAMES;
+            yVelocity = SINK_Y_VELOCITY;
+        }
+
+        private boolean animateRaw(int[] frames) {
+            animTimer--;
+            if (animTimer >= 0) {
+                return false;
+            }
+            animFrame++;
+            if (animFrame >= frames.length) {
+                // loc_84428 clears anim_frame; AnimateRaw_CustomCode clears the timer.
+                animFrame = 0;
+                animTimer = 0;
+                return true;
+            }
+            mappingFrame = frames[animFrame];
+            animTimer = RAW_ANIMATION_DELAY;
+            return false;
+        }
+
+        /** loc_8D6CA: MoveSprite2 then Obj_Wait with $34 = loc_8D6D6. */
+        private void updateSinking() {
+            moveWithVelocity();
+            timer--;
+            if (timer >= 0) {
+                return;
+            }
+            // loc_8D6D6: bclr #1,$38(parent3) then Go_Delete_Sprite. The body is
+            // still drawn and added to the touch list by Child_DrawTouch_Sprite
+            // this pass; Delete_Current_Sprite frees the slot next pass. The cap
+            // runs earlier in slot order, so it observes the clear next frame.
+            parent.clearBodyBusy();
+            deletePending = true;
+        }
+
+        /** sub_8D886: Find_SonicTails and set render_flags bit 0 when d0 != 0. */
+        private void faceTowardPlayer(PlayableEntity playerEntity) {
+            PlayableEntity target = closestNativePlayerByHorizontalDistance(playerEntity);
+            if (target == null) {
+                return;
+            }
+            facingLeft = !findSonicTailsTargetIsRight(target);
+        }
+
+        @Override
+        public int getCollisionFlags() {
+            return drawTouchThisFrame ? BODY_CHILD_COLLISION_SIZE_INDEX : 0;
+        }
+
+        @Override
+        public int getOnScreenHalfWidth() {
+            return BODY_RENDER_HALF_WIDTH;
+        }
+
+        @Override
+        public int getOnScreenHalfHeight() {
+            return BODY_RENDER_HALF_HEIGHT;
+        }
+
+        @Override
+        public boolean usesCustomOutOfRangeCheck() {
+            // loc_8D602 ends in Child_DrawTouch_Sprite, never Sprite_CheckDelete;
+            // the body only leaves through its parent check or loc_8D6D6.
+            return true;
+        }
+
+        @Override
+        public boolean isCustomOutOfRange(int cameraX) {
+            return false;
+        }
+
+        @Override
+        public void appendRenderCommands(List<GLCommand> commands) {
+            if (!drawTouchThisFrame) {
+                return;
+            }
+            super.appendRenderCommands(commands);
+        }
+
+        String getStateName() {
+            return state.name();
+        }
+
+        int getTimer() {
+            return timer;
+        }
+
+        int getYVelocity() {
+            return yVelocity;
+        }
+
+        int getMappingFrame() {
+            return mappingFrame;
+        }
+
+        boolean isDeletePending() {
+            return deletePending;
+        }
+
+        MadmoleBadnikInstance parentForTests() {
+            return parent;
+        }
     }
 
     static final class SideDrillChild extends AbstractObjectInstance

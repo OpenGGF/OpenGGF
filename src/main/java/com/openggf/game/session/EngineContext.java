@@ -27,6 +27,13 @@ public final class EngineContext {
     private final RomDetectionService romDetection;
     private final CrossGameFeatureProvider crossGameFeatures;
     private final ModuleResolutionService moduleResolutionService;
+    /**
+     * Power-on {@code V_int_run_count} (docs/skdisasm/sonic3k.asm:542-543). Engine-lifetime
+     * like the console's work RAM: gameplay sessions bind their object clock to it and
+     * hand the count back when they close.
+     */
+    private final com.openggf.game.timing.VIntRunCounter vIntRunCounter =
+            new com.openggf.game.timing.VIntRunCounter();
 
     public EngineContext(SonicConfigurationService configuration, GraphicsManager graphics,
                           AudioManager audio, RomManager roms, PerformanceProfiler profiler,
@@ -73,4 +80,6 @@ public final class EngineContext {
     public RomDetectionService romDetection() { return romDetection; }
     public CrossGameFeatureProvider crossGameFeatures() { return crossGameFeatures; }
     public ModuleResolutionService moduleResolutionService() { return moduleResolutionService; }
+    /** Engine-internal; reach it through {@link EngineTiming#vIntRunCounter(EngineContext)}. */
+    com.openggf.game.timing.VIntRunCounter vIntRunCounter() { return vIntRunCounter; }
 }

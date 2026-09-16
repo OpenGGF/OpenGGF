@@ -6,6 +6,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K parity fixes from the discrepancy audit:** Madmole's body is its own object
+  in its own slot; the MHZ dragonfly tail enters its return on the same frame as
+  the ROM; the MHZ pulley-lift button sequence writes the debug cheat flag; the HPZ
+  sanctuary shakes its background when the crystal lands; the ICZ miniboss ice shell
+  is drawn from creation; Robotnik's ship is drawn in front of his head; LBZ2 boss
+  smoke puffs keep the ROM's spawn and delete timing; Slot Machine randomness reads a
+  real power-on V-int count; and the Gumball exit fades for the ROM's 22 V-ints.
+
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now
   draw in the display list their ROM `priority` word selects instead of their
