@@ -3000,7 +3000,35 @@ evidence. The two Act 1 segments exposed two engine defects:
   first >32 px separation moved from row 709 to 6560 and errors fell from 1219
   to 1058.
 
-The next Tails separation is a one-frame-early hurt at row 5758 from an
-emerging `Obj_Sandworm` while Tails sinks in quicksand; it is not yet diagnosed.
-Pure fixed-input replay drifts after that, so later deaths (engine row 15874)
-are not attributed.
+The next Tails separation was a one-frame-early hurt at row 5758 from an
+emerging `Obj_Sandworm` while Tails sinks in quicksand. Engine object logging
+showed the `$22B0` worm initializing on row 5629 against native 5630 (native
+emergence 5758 = initialization + 128 `Obj_Wait` ticks). `Obj_WaitOffscreen`
+(`loc_85AD2`/`loc_85B02`) first queues its placeholder, releases on the next pass
+only from the previous Render_Sprites on-screen bit, and returns; the engine
+released on the first on-screen update. The Sandworm now uses the placeholder
+handshake already used by `IczStalagtiteObjectInstance`; errors fell from 1058
+to 1016.
+
+Validation of `9556dac05`: change-based run against `4a9962069`
+(`run_categories.py --base 4a9962069 --run`, run `20260916T200316Z-254934c1`)
+selected 2672 ordinary classes: 21,616 tests, six failures, zero errors, 27
+opt-in/native skips, 976 s; guards 669 tests, zero failures, 194 s. Five
+failures were native-Tails `TestSozEndBossInputRoute` cases at every width
+(death at tick 366); the same class passes 30/30 on base `4a9962069`, so they are
+caused by the flight-start correction. Those test-only controller parameters were
+authored against the old flight gravity; a bounded search of period/hold/approach
+kept only choices that complete all five widths, and native Tails now uses
+`24/12/-12` (the old `32/20/-32` dies at 366 on every width). The sixth failure,
+`TestSozAct1ArenaAdmission` width 800 ("one pixel before the native gate"), fails
+identically on the base and is not attributed to this work.
+
+Standalone mid-level segments lack native saved-return state: Knuckles `soz_2`
+restarts at the Act 1 star post, where the engine correctly spawns the SOZ1
+falling intro only because no star post is recorded as hit; Tails `soz_2` is
+re-captured by the special-stage ring it had just used. Booting the runs with
+`AbstractRunChainTest.assertChainReplayFromSegment` (segments 57 and 48) instead
+exposed that the engine does not raise the `starpost_bonus` transition at the end
+of Knuckles `soz` (step cap exceeded at BK2 cursor 349659), and that the Tails
+chain loses segment ownership after an engine death that follows the
+undiagnosed row-6553 separation.

@@ -6,11 +6,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
-- **S3K Knuckles walls and Tails flight start:** Knuckles now breaks the
+- **S3K Knuckles walls, Tails flight start and Sandworm timing:** Knuckles now breaks the
   Knuckles-only walls (HCZ, MGZ, CNZ, LBZ, MHZ and SOZ variants) when he hits them
   in mid-air, keeping his speed as the ROM does, instead of stopping against them.
   Player-controlled Tails keeps normal air gravity on the frame flight starts, so the
-  climb out of a jump matches the ROM from the first flying frame.
+  climb out of a jump matches the ROM from the first flying frame. Sandopolis
+  Sandworms wait one more frame after first appearing on screen before starting
+  their emerge timer, so they surface on the ROM frame.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now
