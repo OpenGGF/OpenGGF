@@ -3082,3 +3082,34 @@ Still open from the recorded routes:
   infrastructure, not SOZ gameplay.
 - `knuckles/soz` first differs at row 2039 (`player_animation_id` `$00` vs `$20`);
   not yet investigated.
+
+### Replay follow-up: results exit, quicksand glide and CPU Tails despawns
+
+Commits `de9ba7d79` (SOZ/DEZ results keep rings until the Act 2 title card),
+`dab958c0e` (sand capture ends the engine glide pose), `0b8b2bdca` and `06d52d8dd`
+(still-sprite code words and off-screen monitor solidity for the CPU Tails despawn
+check), `1a1be5f48` (SOZ1 golem owns the post-results camera bounds and the
+lower-slot control restore). Evidence and measurements are in the trace frontier log.
+
+Resulting replay state: the recorded Knuckles Act 1 segment matches every compared
+field to the bonus-stage entry; the recorded Tails Act 1 segment matches physics to the
+act handoff (row 18108, one row late) with rings cleared six rows early by the shared
+in-level title-card timing model; `soz_completerun` falls from 13591 to 9164 errors with
+its first physics divergence at row 29093.
+
+Rejected during this round: a `Knux_TouchFloor` animation tail on the generic object
+landing hook. The ROM rule is real, but the recorded Knuckles case was a quicksand
+capture that never reached that hook, so the unmeasured change was reverted.
+
+Change-based run on `1a1be5f48` against `4a9962069` (run `20260916T225117Z-967920c2`):
+2672 ordinary classes, 21,625 tests, one failure (the pre-existing width-800
+`TestSozAct1ArenaAdmission`), zero errors, 27 opt-in/native skips, 1019 s; guards 669
+tests, zero failures, 186 s. Diagnostics acknowledged and deleted.
+
+Next open replay items:
+
+- `soz_completerun` row 29093: during the post-golem alignment walk (`Ctrl_2_locked`
+  set, CPU input still applied) the ROM CPU Tails applies no input while the engine CPU
+  presses right toward target `$43EA` and brakes (`x_vel` -$14C -> -$CC vs ROM -$140).
+- Row 5977: CPU Tails mapping frame `$08` vs `$07` for three short spans (animation only).
+- Tails Act 1 handoff one row late (row 18108) and the Act 2 route beyond it.
