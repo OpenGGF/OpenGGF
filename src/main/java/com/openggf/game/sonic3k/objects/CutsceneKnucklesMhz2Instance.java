@@ -121,6 +121,8 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
 
     @Override
     public boolean isHighPriority() {
+        // ObjSlot_CutsceneKnux_MHZ2 art make_art_tile(ArtTile_CutsceneKnux,1,1) sets bit 15
+        // (sonic3k.asm:134803).
         return true;
     }
 
@@ -482,6 +484,15 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
         return routine;
     }
 
+    // ObjSlot_CutsceneKnux_MHZ2 priority $180, written by SetUp_ObjAttributesSlotted
+    // (sonic3k.asm:134807, 178886).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.MHZ2_CUTSCENE_KNUCKLES_PRESS);
@@ -544,6 +555,21 @@ public final class CutsceneKnucklesMhz2Instance extends AbstractObjectInstance
             if (y <= deleteY) {
                 setDestroyed(true);
             }
+        }
+
+        // loc_63324 ObjDat3_6646E priority word 0 (sonic3k.asm:134871): display list 0 is the
+        // ROM value.
+        private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
+        }
+
+        @Override
+        public boolean isHighPriority() {
+            // ObjDat3_6646E art make_art_tile(ArtTile_MHZMisc+$21,3,1) sets bit 15 (sonic3k.asm:134870).
+            return true;
         }
 
         @Override

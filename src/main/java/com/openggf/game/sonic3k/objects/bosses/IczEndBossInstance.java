@@ -1548,6 +1548,20 @@ public final class IczEndBossInstance extends AbstractBossInstance
         return Sonic3kSfx.EXPLODE.id;
     }
 
+    // loc_71C36 ObjDat3_72306 priority $280 (sonic3k.asm:151276).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat3_72306 art make_art_tile(ArtTile_ICZEndBoss,1,1) sets bit 15 (sonic3k.asm:151275).
+        return true;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (!arenaGateInitialized) {
@@ -1828,6 +1842,15 @@ public final class IczEndBossInstance extends AbstractBossInstance
         public void update(int vIntRunCount, PlayableEntity player) {
             visible = !visible;
             super.update(vIntRunCount, player);
+        }
+
+        // loc_720F2 word_72330 priority $180 (sonic3k.asm:151293); CreateChild1_Normal copied the
+        // boss's art_tile, so the inherited high-priority flag stands.
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
         }
 
         @Override

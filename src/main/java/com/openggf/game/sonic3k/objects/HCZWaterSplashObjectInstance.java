@@ -3,6 +3,7 @@ package com.openggf.game.sonic3k.objects;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -68,6 +69,14 @@ public class HCZWaterSplashObjectInstance extends AbstractObjectInstance impleme
             animTimer = ANIM_TIMER_RESET;
             mappingFrame = (mappingFrame + 1) & ANIM_FRAME_MASK;
         }
+    }
+
+    // Obj_HCZWaterSplash writes priority $300 on both subtype paths (sonic3k.asm:75263, 75285).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x300);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

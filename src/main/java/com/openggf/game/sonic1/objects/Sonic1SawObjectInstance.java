@@ -6,6 +6,7 @@ import com.openggf.game.sonic1.audio.Sonic1Sfx;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.OscillationManager;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
@@ -467,6 +468,14 @@ public class Sonic1SawObjectInstance extends AbstractObjectInstance
     }
 
     // ---- Rendering ----
+
+    // Saw_Main move.b #4,obPriority(a0): docs/s1disasm/_incObj/6A SBZ Saws and Pizza Cutters.asm:25.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

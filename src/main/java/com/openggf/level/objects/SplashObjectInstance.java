@@ -1,6 +1,7 @@
 package com.openggf.level.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.physics.Direction;
 import com.openggf.game.PlayableEntity;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -138,5 +139,17 @@ public class SplashObjectInstance extends AbstractObjectInstance implements Rewi
         boolean facingLeft = player.getDirection() == Direction.LEFT;
 
         return new SplashObjectInstance(splashX, splashY, renderer, facingLeft);
+    }
+
+    /**
+     * Water splash bucket: S1 Obj08 {@code move.b #1,obPriority(a0)}
+     * (_incObj/08 LZ Water Splash.asm:21), S2 Obj08 {@code move.b #1,priority(a0)}
+     * (s2.asm:42725), S3K Obj_DashDust {@code move.w #$80,priority(a0)} (sonic3k.asm:33971).
+     */
+    private static final int DUST_PRIORITY_BUCKET = RenderPriority.bucket(1);
+
+    @Override
+    public int getPriorityBucket() {
+        return DUST_PRIORITY_BUCKET;
     }
 }

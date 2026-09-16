@@ -5,6 +5,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
 import com.openggf.level.objects.ObjectManager;
@@ -127,6 +128,14 @@ public class MTZLongPlatformCogInstance extends AbstractObjectInstance implement
         // (despawnOutOfRangeObjects / isWithinSpawnWindow, ((spawnX & 0xFF80) -
         // Camera_X_pos_coarse) unsigned > 0x280) already covers every dynamic object,
         // so no per-object DeleteObject is added here.
+    }
+
+    // Standalone cog: Obj65_Init move.b #4,priority(a0) (docs/s2disasm/s2.asm:52863); child cog: move.b #4,priority(a1) (s2.asm:52918).
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

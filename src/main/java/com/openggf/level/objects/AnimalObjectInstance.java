@@ -5,6 +5,7 @@ import com.openggf.game.GameModule;
 import com.openggf.game.rules.GameRules;
 import com.openggf.game.rules.ObjectInteractionRules;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.physics.ObjectTerrainUtils;
 import com.openggf.physics.TerrainCheckResult;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -346,5 +347,18 @@ public class AnimalObjectInstance extends AbstractObjectInstance
 
     public void setY(int y) {
         this.currentY = y;
+    }
+
+    /**
+     * Freed-animal sprite bucket, identical in all three games: S1 Obj28
+     * {@code move.b #6,obPriority(a0)} (_incObj/28, 29 Animals and Points.asm:142),
+     * S2 Obj28 {@code move.b #6,priority(a0)} (s2.asm:24590), S3K Obj_Animal
+     * {@code move.w #$300,priority(a0)} (sonic3k.asm:61043).
+     */
+    private static final int ANIMAL_PRIORITY_BUCKET = RenderPriority.bucket(6);
+
+    @Override
+    public int getPriorityBucket() {
+        return ANIMAL_PRIORITY_BUCKET;
     }
 }

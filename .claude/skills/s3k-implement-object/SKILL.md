@@ -24,6 +24,14 @@ which behavior is required; derive unspecified details from the requested route.
   writes, allocation failure, and same-pass update visibility where the ROM uses them.
 - Load art, mappings, DPLCs, and animation data through the ROM pipeline. Verify
   addresses and data shape, then register art and the object factory.
+- Transcribe the sprite bucket: S3K `priority` is a word, `move.w #$280,priority(a0)`
+  is bucket 5 (`word / $80`, 0 = front-most) and goes through
+  `RenderPriority.fromS3kWord(0x280)`; the ObjDat/ObjDat3 third word is the same
+  field. Override `getPriorityBucket()` on every class that draws, returning
+  `bucket(0)` with the citation when the ROM leaves priority at 0. The art word's
+  bit 15 (`make_art_tile(.., pal, 1)`) is `isHighPriority()`, never a bucket. Copy
+  runtime priority writes and `priority(a0)`→`priority(a1)` child copies at the
+  same points; `$80` is bucket 1, not a flag.
 - Capture new persistent state and recreate paths for rewind. Exercise the
   affected routine edge/subtype with focused tests and the relevant object/art guards.
   Use trace replay when it provides evidence for the changed behavior.

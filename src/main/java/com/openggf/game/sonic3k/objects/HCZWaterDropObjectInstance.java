@@ -4,6 +4,7 @@ import com.openggf.debug.DebugRenderContext;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -314,6 +315,16 @@ public class HCZWaterDropObjectInstance extends AbstractObjectInstance implement
             // ROM: set anim to 1, clear collision, set routine to 2
             // Touch path: Animate_Sprite detects anim change, resets timer to 0
             startSplashAnimation(0);
+        }
+
+        // loc_382DE copies every SST word from subtype down to 0 out of the spawner
+        // (sonic3k.asm:75175-75178), including the priority Obj_WaterDrop wrote as #0
+        // (sonic3k.asm:75154): display list 0 is the ROM value.
+        private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
         }
 
         @Override

@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.rewind.RewindTransient;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.WaterSystem;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -119,6 +120,21 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
         if (!isInRangeAt(x)) {
             setDestroyedByOffscreen();
         }
+    }
+
+    // ObjSlot_CutsceneKnux priority $180, written by SetUp_ObjAttributesSlotted
+    // (sonic3k.asm:134800, 178886).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjSlot_CutsceneKnux art make_art_tile(ArtTile_CutsceneKnux,1,1) sets bit 15 (sonic3k.asm:134797).
+        return true;
     }
 
     @Override
@@ -503,6 +519,15 @@ public final class CutsceneKnucklesLbz2Instance extends AbstractObjectInstance i
             if (!isInRangeAt(x)) {
                 setDestroyedByOffscreen();
             }
+        }
+
+        // loc_629CE ObjDat3_6641A priority $280 (sonic3k.asm:134836); its art word
+        // make_art_tile(ArtTile_Explosion,2,0) leaves bit 15 clear (sonic3k.asm:134835).
+        private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+
+        @Override
+        public int getPriorityBucket() {
+            return PRIORITY_BUCKET;
         }
 
         @Override

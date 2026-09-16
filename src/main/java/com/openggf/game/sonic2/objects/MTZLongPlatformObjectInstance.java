@@ -7,6 +7,7 @@ import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.scroll.Sonic2ZoneConstants;
 import com.openggf.debug.DebugRenderContext;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.level.PatternDesc;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -290,6 +291,14 @@ public class MTZLongPlatformObjectInstance extends AbstractObjectInstance
         // ROM loc_26C1C tail (s2.asm:52469-52484) marks the object gone + clears
         // its respawn bit from objoff_34; getOutOfRangeReferenceX exposes that
         // anchor to the shared ObjectManager out_of_range path.
+    }
+
+    // Obj65_Init move.b #4,priority(a0): docs/s2disasm/s2.asm:52863.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

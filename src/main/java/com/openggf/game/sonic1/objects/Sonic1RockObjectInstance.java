@@ -2,6 +2,7 @@ package com.openggf.game.sonic1.objects;
 
 import com.openggf.level.objects.SpawnRewindRecreatable;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
@@ -43,11 +44,16 @@ public class Sonic1RockObjectInstance extends AbstractObjectInstance
     // Reference: docs/s1disasm/_incObj/3B Purple Rock.asm:20,24-28.
     private static final int ACT_WIDTH = 0x13;
 
-    // From disassembly: move.b #4,obPriority(a0)
-    private static final int PRIORITY = 4;
+    // move.b #4,obPriority(a0): docs/s1disasm/_incObj/3B GHZ Purple Rock.asm:27.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(4);
 
     public Sonic1RockObjectInstance(ObjectSpawn spawn) {
         super(spawn, "PurpleRock");
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

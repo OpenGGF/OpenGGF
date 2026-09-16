@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.runtime.MhzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
@@ -127,6 +128,15 @@ public class MhzPollenParticleInstance extends AbstractObjectInstance implements
         // Sampling here is essential when the camera moves vertically during
         // the same frame (sonic3k.asm:36347-36365, 81767-81805).
         renderFlagOnScreen = isWithinRenderSpriteBounds(4, 4);
+    }
+
+    // Obj_MHZ_Pollen_Spawner writes move.w #0,priority(a1) on both spawn paths
+    // (sonic3k.asm:81662, 81699): display list 0 is the ROM value.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(0);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

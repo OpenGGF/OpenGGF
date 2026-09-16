@@ -9,6 +9,7 @@ import com.openggf.game.sonic2.constants.Sonic2ObjectIds;
 import com.openggf.game.sonic2.constants.Sonic2Constants;
 import com.openggf.game.sonic2.resources.Sonic2PlcRequests;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -64,6 +65,16 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private static final int LASER_GROUND_Y = 0x0250;
     private static final int[] LASER_TARGETS = {0x238, 0x230, 0x240, 0x25F};
     private static final int MAX_CHILD_SPRITES = 8;
+    // Obj55 priority word ($18, s2.constants.asm:23) as DisplaySprite reads it: bucket = (word >> 8) & 7
+    // (docs/s2disasm/s2.asm:30360-30362). Obj55_Init writes #3 (s2.asm:68382) inside `if ~~fixBugs`;
+    // fixBugs = 0 is modelled, so the write happens and the object keeps using DisplaySprite
+    // (s2.asm:68513-68520). The fixed branch skips the write and forces list 3 via DisplaySprite3.
+    private static final int MAIN_PRIORITY_WORD = 3 << 8;
+    // Obj55_Laser_Init move.b #4,priority(a0): s2.asm:68987.
+    private static final int LASER_PRIORITY_WORD = 4 << 8;
+    // Obj55_Laser_CreateWave move.b #2,priority(a1): s2.asm:69066; Obj55_Wave copies the whole SST
+    // into each later segment (s2.asm:69091-69095), so they inherit the same word.
+    private static final int WAVE_PRIORITY_WORD = 2 << 8;
     private static final int MAIN_VEHICLE_CHILD_FRAME = 1;
     private static final int CHAIN_CHILD_FRAME = 7;
     private static final int[] WAVE_ANIMATION_FRAMES = {
@@ -72,6 +83,8 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     };
 
     private int bossSubtype;
+    // Live priority word; see MAIN_PRIORITY_WORD and syncPriorityWordFromSub3Y().
+    private int priorityWord;
     private int bossCountdown;
     private int status;
     private int mainFrame;
@@ -112,6 +125,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         // ROM Obj55_Init sets boss_subtype=2 and returns; Obj55_Main_Init runs on
         // the next object pass (docs/s2disasm/s2.asm:68225-68238,68258-68276).
         bossSubtype = SUB_MAIN;
+        priorityWord = MAIN_PRIORITY_WORD; // s2.asm:68382
         state.x = spawn.x();
         state.y = spawn.y();
         state.xFixed = state.x << 16;
@@ -309,6 +323,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
         mainFrame = 5;
         childSpriteCount = 8;
         initializeChainChildFrames();
+        syncPriorityWordFromSub3Y(); // Obj55_LaserShooter_Init chain loop, s2.asm:68660-68665
         collisionFlags = 0x8A;
         touchCollisionX = state.x;
         touchCollisionY = state.y;
@@ -451,6 +466,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private void initializeLaserFromParent() {
         bossSubtype = SUB_LASER;
         state.routineSecondary = LASER_MAIN;
+        priorityWord = LASER_PRIORITY_WORD; // s2.asm:68987
         Sonic2OOZBossInstance parent = laserParent;
         int parentX = parent != null ? parent.getPreUpdateX() : spawn.x();
         int parentY = parent != null ? parent.getPreUpdateY() : spawn.y();
@@ -474,6 +490,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     private void initializeWaveFromSpawn() {
         bossSubtype = SUB_LASER;
         state.routineSecondary = WAVE_MAIN;
+        priorityWord = WAVE_PRIORITY_WORD; // s2.asm:69066, copied to later segments at 69091-69095
         state.x = spawn.x();
         state.y = spawn.y();
         state.xFixed = state.x << 16;
@@ -593,6 +610,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
             childYs[i] = childBaseY + (TrigLookupTable.sinHex(childAngle) >> 6);
             childFrames[i] = CHAIN_CHILD_FRAME;
         }
+        syncPriorityWordFromSub3Y(); // Obj55_LaserShooter_Wind chain loop, s2.asm:68831-68837
         state.sineCounter = (state.sineCounter + 2) & 0xFF;
     }
 
@@ -620,6 +638,7 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
             childYs[i] = SPIKE_Y + childYOffset;
             childFrames[i] = CHAIN_CHILD_FRAME;
         }
+        syncPriorityWordFromSub3Y(); // Obj55_SpikeChain_Move chain loop, s2.asm:68915-68934
         state.sineCounter = (state.sineCounter + 1) & 0xFF;
     }
 
@@ -838,6 +857,25 @@ public class Sonic2OOZBossInstance extends AbstractBossInstance implements Spawn
     @Override
     protected int getBossExplosionObjectId() {
         return com.openggf.game.sonic2.constants.Sonic2ObjectIds.BOSS_EXPLOSION;
+    }
+
+    /**
+     * Obj55 is multi-sprite, and its priority word ($18) is the same SST word as sub3_y_pos
+     * (s2.constants.asm:23,99). With fixBugs = 0 the ROM keeps displaying through DisplaySprite
+     * (s2.asm:68513-68520, 68776-68783, 68906-68913), so every write of the second child sprite's
+     * y position also rewrites the display-list bucket, and the value persists into later main
+     * phases because Obj55_Main_Init never rewrites priority. Obj55_SpikeChain_Init writes only
+     * child frames (s2.asm:68880-68884), so it is not a sync point.
+     */
+    private void syncPriorityWordFromSub3Y() {
+        if (childSpriteCount > 1 && childYs != null) {
+            priorityWord = childYs[1] & 0xFFFF;
+        }
+    }
+
+    @Override
+    public int getPriorityBucket() {
+        return RenderPriority.bucket((priorityWord >> 8) & 7); // DisplaySprite, s2.asm:30360-30362
     }
 
     @Override

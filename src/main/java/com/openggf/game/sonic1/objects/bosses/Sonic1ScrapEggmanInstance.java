@@ -4,6 +4,7 @@ import com.openggf.game.sonic1.constants.Sonic1Constants;
 import com.openggf.game.sonic1.constants.Sonic1ObjectIds;
 import com.openggf.game.PlayableEntity;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectInstance;
@@ -57,6 +58,12 @@ public class Sonic1ScrapEggmanInstance extends AbstractObjectInstance
 
     /** Y clamp for final landing position */
     private static final int LANDING_CLAMP_Y = BOSS_SBZ2_Y + 0x8B; // 0x059B
+
+    // SEgg_Main copies the SEgg_ObjData priority byte into obPriority for the body (row 1, value 3;
+    // docs/s1disasm/_incObj/82, 83 SBZ Eggman Cutscene and Crumbling Floor.asm:30,44) and the
+    // button (row 2, value 3; lines 31,63).
+    private static final int EGGMAN_PRIORITY_BUCKET = RenderPriority.bucket(3);
+    private static final int BUTTON_PRIORITY_BUCKET = RenderPriority.bucket(3);
 
     // ---- Velocity constants (8.8 fixed-point) ----
     /** Leap X velocity: -0xFC = approx -0.98 px/frame */
@@ -408,6 +415,11 @@ public class Sonic1ScrapEggmanInstance extends AbstractObjectInstance
     // ---- Rendering ----
 
     @Override
+    public int getPriorityBucket() {
+        return EGGMAN_PRIORITY_BUCKET;
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
         if (isDestroyed()) {
             return;
@@ -514,6 +526,11 @@ public class Sonic1ScrapEggmanInstance extends AbstractObjectInstance
                     // Just display - nothing to update
                 }
             }
+        }
+
+        @Override
+        public int getPriorityBucket() {
+            return BUTTON_PRIORITY_BUCKET;
         }
 
         @Override

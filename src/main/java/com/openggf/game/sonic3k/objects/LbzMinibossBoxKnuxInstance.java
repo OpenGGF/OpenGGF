@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -289,6 +290,17 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
                 spawnChild(() -> new S3kBossExplosionChild(explosion.x(), explosion.y()));
             }
         }
+    }
+
+    // Obj_LBZMinibossBoxKnux never draws itself; each loc_8D046 box child spawns ChildObjDat_8D25C
+    // pieces that take ObjDat3_8D23C priority $100 at loc_8CE64 (sonic3k.asm:192789). The per-piece
+    // $380 rewrite at loc_8CF10 (sonic3k.asm:192504) is not modelled: the rigs draw every piece
+    // under this object's bucket.
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

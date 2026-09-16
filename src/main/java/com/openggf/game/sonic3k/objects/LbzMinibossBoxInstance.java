@@ -11,6 +11,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
@@ -126,6 +127,17 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
         spawnChild(() -> new LbzMinibossInstance(new ObjectSpawn(
                 x & 0xFFFF, y & 0xFFFF, Sonic3kObjectIds.LBZ_MINIBOSS, 0, 0, false, 0)));
         phase = Phase.DONE;
+    }
+
+    // Obj_LBZMinibossBox never draws itself; its ChildObjDat_8D25C pieces take ObjDat3_8D23C
+    // priority $100 at loc_8CE64 (sonic3k.asm:192789). The per-piece $380 rewrite at loc_8CF10
+    // (sonic3k.asm:192504) after a released piece's flight timer is not modelled: the rig
+    // draws every piece under this object's bucket.
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

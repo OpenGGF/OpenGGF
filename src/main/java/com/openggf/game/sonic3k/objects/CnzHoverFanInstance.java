@@ -38,7 +38,8 @@ import java.util.List;
  */
 public final class CnzHoverFanInstance extends AbstractObjectInstance implements RewindRecreatable {
 
-    private static final int PRIORITY = 0x280;
+    /** ROM {@code move.w #$280,priority(a0)} at Obj_CNZHoverFan init: bucket 5. */
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
 
     // ROM: move.b #$10,width_pixels(a0) / move.b #$10,height_pixels(a0)
     private static final int HALF_WIDTH = 0x10;
@@ -253,7 +254,7 @@ public final class CnzHoverFanInstance extends AbstractObjectInstance implements
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(PRIORITY);
+        return PRIORITY_BUCKET;
     }
 
     @Override

@@ -6,6 +6,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **Sprite priority buckets:** objects transcribed from S3K now convert the ROM
+  `priority` word to a bucket (`$280` is bucket 5, not clamped to 7), so the CNZ
+  hover fan, cannon and trap door and the LRZ collapsing bridge draw in their ROM
+  layer, and the S1/S2/S3K objects that never stated a bucket (HCZ water splash,
+  ICZ miniboss, LBZ launcher and grapple among them) no longer draw in front of the
+  player. A structural guard now rejects any drawing object without a declared bucket.
+
 - **S3K slots bonus:** keep the player behind the central capsule glass during
   gameplay; the shared bonus loop no longer overrides the slot player's priority.
 

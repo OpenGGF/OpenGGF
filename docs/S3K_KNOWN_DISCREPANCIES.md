@@ -40,6 +40,7 @@ No S3K discrepancy was added or reclassified by the cutover.
 23. [SOZ Spring Vine: Failed Display Allocation](#soz-spring-vine-failed-display-allocation)
 24. [SOZ Pushable Rock: Door Coupling](#soz-pushable-rock-door-coupling)
 25. [SOZ Background Event Modes and Torch Animation](#soz-background-event-modes-and-torch-animation)
+26. [Inline-Drawn Children Keep Their Owner's Sprite Bucket](#inline-drawn-children-keep-their-owners-sprite-bucket)
 
 ---
 
@@ -1902,3 +1903,41 @@ mismatches. Ordinary controller route evidence is recorded separately.
 
 See the [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act
 matrices for current route, rewind and compatibility evidence.
+
+---
+
+## Inline-Drawn Children Keep Their Owner's Sprite Bucket
+
+### Original Implementation
+
+Several bosses and set pieces allocate child SST slots with their own `priority`
+word, so the children can sit in a different display list from the owner: ICZ
+miniboss orbs and shards (`word_7196C` `$280`, `ObjDat3_71972` `$280` then `$180`
+at `loc_7153A`, `sub_717B8` `$180`/`$300`), LBZ miniboss arm panels (`word_727E2`,
+per subtype `$280`-`$380`), LBZ miniboss box pieces (`$100`, then `$380` at
+`loc_8CF10` when their flight timer expires), ICZ end-boss body parts
+(`ObjDat3_72324` `$80`), and the HCZ end-boss fan, bomb, platform, column and
+geyser debris (`$200`/`$80`/`$280`, sonic3k.asm:142139-142170). The lightning
+shield spark inherits the shield's art word, whose bit 15 tracks Player 1's.
+
+### Our Implementation
+
+These parts are drawn inside the owner's render call (state records or rigs,
+not object instances), so they render in the owner's bucket: ICZ miniboss and
+ICZ end boss 5, LBZ miniboss 5, LBZ box pieces 2, HCZ end boss body 2. The
+lightning spark keeps the engine shield's clear bit. Every object instance now
+declares its own bucket (the 2026-09-16 audit), so the remaining gaps are
+exactly these inline draws.
+
+### Rationale
+
+Splitting the rigs into per-part instances changes slot allocation and rewind
+capture for bosses whose routes are already verified; the audit recorded the
+values instead of reshaping them. Visible effect is limited to which of two
+overlapping boss parts is in front.
+
+### Verification
+
+See the [sprite priority bucket audit](architecture/audits/2026-09-16-sprite-priority-bucket-audit.md)
+for the per-class table and citations. `TestObjectPriorityBucketGuard` (guards
+profile) rejects any new drawing object without a declared bucket.

@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.boss.AbstractBossInstance;
+import com.openggf.level.objects.boss.BossExplosionObjectInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
@@ -230,6 +231,12 @@ public abstract class AbstractS1EggmanBossInstance extends AbstractBossInstance 
     @Override
     protected int getBossExplosionSfxId() {
         return Sonic1Sfx.BOSS_EXPLOSION.id;
+    }
+
+    /** Sonic 1 boss explosions are Obj3F: {@code move.b #1,obPriority(a0)}. */
+    @Override
+    protected int getBossExplosionPriorityBucket() {
+        return BossExplosionObjectInstance.S1_PRIORITY_BUCKET;
     }
 
     @Override

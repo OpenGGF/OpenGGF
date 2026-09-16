@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.audio.GameSound;
 import com.openggf.game.sonic2.Sonic2ObjectArtKeys;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -454,6 +455,14 @@ public class HexBumperObjectInstance extends AbstractObjectInstance
 
         // Play sound
         services().playSfx(GameSound.BUMPER);
+    }
+
+    // ObjD7_Init move.b #1,priority(a0): docs/s2disasm/s2.asm:59967.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(1);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

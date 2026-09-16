@@ -4,6 +4,7 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -265,6 +266,14 @@ public final class FbzDezPlayerLauncherInstance extends AbstractObjectInstance
     @Override
     public int getOnScreenHalfHeight() {
         return RENDER_HALF_SIZE;
+    }
+
+    // Obj_FBZDEZPlayerLauncher writes priority $280 at loc_3B956 (sonic3k.asm:79406).
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

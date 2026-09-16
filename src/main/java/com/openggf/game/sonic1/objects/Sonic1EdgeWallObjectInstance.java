@@ -1,6 +1,7 @@
 package com.openggf.game.sonic1.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectArtKeys;
 import com.openggf.level.objects.ObjectSpawn;
@@ -54,6 +55,14 @@ public class Sonic1EdgeWallObjectInstance extends AbstractObjectInstance
         this.solid = (subtype & 0x10) == 0;
         // Frame = subtype with bit 4 cleared
         this.frameIndex = subtype & ~0x10;
+    }
+
+    // move.b #6,obPriority(a0): docs/s1disasm/_incObj/44 GHZ Edge Walls.asm:23.
+    private static final int PRIORITY_BUCKET = RenderPriority.bucket(6);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

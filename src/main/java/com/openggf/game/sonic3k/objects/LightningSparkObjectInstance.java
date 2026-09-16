@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
 import com.openggf.level.Pattern;
@@ -152,6 +153,16 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
         yVel = motionState.yVel;
 
         stepAnimation();
+    }
+
+    // Obj_LightningShield_CreateSpark writes priority $80 (sonic3k.asm:34827). The spark inherits the
+    // shield's art_tile (sonic3k.asm:34825); the engine shield never carries bit 15, so the default
+    // isHighPriority() matches it.
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
     }
 
     @Override

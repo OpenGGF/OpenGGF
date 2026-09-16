@@ -37,7 +37,8 @@ import java.util.List;
 public final class CnzTrapDoorInstance extends AbstractObjectInstance
         implements RewindRecreatable, SolidObjectProvider {
 
-    private static final int PRIORITY = 0x80;
+    /** ROM {@code move.w #$80,priority(a0)} at Obj_CNZTrapDoor init: bucket 1. */
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
     // ROM: move.w #$20,d1 / move.w #9,d3 / jsr SolidObjectTop
     private static final SolidObjectParams SOLID_PARAMS =
@@ -186,7 +187,7 @@ public final class CnzTrapDoorInstance extends AbstractObjectInstance
 
     @Override
     public int getPriorityBucket() {
-        return RenderPriority.clamp(PRIORITY);
+        return PRIORITY_BUCKET;
     }
 
     int getRenderFrameForTest() {

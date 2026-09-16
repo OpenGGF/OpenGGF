@@ -10,6 +10,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.objects.bosses.S3kSharedBossCameraGate;
 import com.openggf.graphics.GLCommand;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.Level;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
@@ -1064,6 +1065,22 @@ public final class IczMinibossInstance extends AbstractBossInstance implements S
     @Override
     protected int getBossExplosionSfxId() {
         return Sonic3kSfx.EXPLODE.id;
+    }
+
+    // ObjDat3_71960 priority $280 (sonic3k.asm:150441). The orb/shard children ($280 word_7196C,
+    // $280 ObjDat3_71972 then $180 at loc_7153A, $180/$300 in sub_717B8, $180 word_7197E) are drawn
+    // inline by this object, so their own lists are not modelled.
+    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
+
+    @Override
+    public int getPriorityBucket() {
+        return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // ObjDat3_71960 art make_art_tile(ArtTile_ICZMiniboss,1,1) sets bit 15 (sonic3k.asm:150440).
+        return true;
     }
 
     @Override

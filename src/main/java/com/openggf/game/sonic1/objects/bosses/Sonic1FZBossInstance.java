@@ -1043,7 +1043,8 @@ public class Sonic1FZBossInstance extends AbstractBossInstance
                 finalSourceX,
                 finalSourceY,
                 Sonic1ObjectIds.EXPLOSION,
-                Sonic1Sfx.BOSS_EXPLOSION.id));
+                Sonic1Sfx.BOSS_EXPLOSION.id,
+                BossExplosionObjectInstance.S1_PRIORITY_BUCKET));
     }
 
     private void requestEndingTransition() {
