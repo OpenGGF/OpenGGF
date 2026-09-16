@@ -531,6 +531,14 @@ public class Sonic3kTitleCardManager
     @Override
     public void requestLevelGamestateResetAtInLevelDisplay(
             int additionalDispatches, int phaseOneDispatchOverlap) {
+        if (additionalDispatches == RESET_AT_NATIVE_WAIT_GATE) {
+            if (inLevelMode) {
+                resetLevelGamestateOnInLevelDisplay = true;
+                heldLevelCounterDispatchOwned = true;
+                resetLevelGamestateCountdown = RESET_AT_NATIVE_WAIT_GATE;
+            }
+            return;
+        }
         int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
         requestLevelGamestateResetAtInLevelDisplay();
         if (resetLevelGamestateOnInLevelDisplay) {
@@ -940,6 +948,14 @@ public class Sonic3kTitleCardManager
         }
         if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0
                 && --resetLevelGamestateCountdown == 0) {
+            consumeLevelGamestateResetRequest();
+        }
+        if (resetLevelGamestateOnInLevelDisplay
+                && resetLevelGamestateCountdown == RESET_AT_NATIVE_WAIT_GATE
+                && isExternalInLevelWaitReady()) {
+            // Obj_TitleCardWait clears Timer/Ring_count on the pass after the children
+            // stop publishing movement (sonic3k.asm:62220-62235).
+            resetLevelGamestateCountdown = 0;
             consumeLevelGamestateResetRequest();
         }
         switch (state) {

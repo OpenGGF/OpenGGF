@@ -164,7 +164,7 @@ final class SozAct1Events extends Sonic3kZoneEvents {
     }
     private void fadeEntryFirstLine(SozEventState events,int levelFrameCounter){
         if((levelFrameCounter&1)==0)return;
-        if(events.fadePasses()==5)levelManager().requestInLevelTitleCard(8,1,true);
+        if(events.fadePasses()==5)levelManager().requestInLevelTitleCard(8,1,true,com.openggf.game.TitleCardProvider.RESET_AT_NATIVE_WAIT_GATE);
         fadePalette(0,1,true);events.fadePasses(events.fadePasses()-1);
         if(events.fadePasses()<0){events.fadePasses(0x15);events.backgroundRoutine(0xC);fadeEntryBackground(events,levelFrameCounter);}
     }

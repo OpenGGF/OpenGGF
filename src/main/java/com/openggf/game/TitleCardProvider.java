@@ -37,6 +37,12 @@ public interface TitleCardProvider {
      * Defers a fresh level-gamestate install to the native in-level title-card
      * display boundary. Games without that handoff can ignore the request.
      */
+    /**
+     * {@code additionalDispatches} value selecting the native {@code Obj_TitleCardWait}
+     * gate (children arrived and the movement latch consumed) instead of a dispatch count.
+     */
+    int RESET_AT_NATIVE_WAIT_GATE = -1;
+
     default void requestLevelGamestateResetAtInLevelDisplay() {
         // No-op for games without S3K's in-level act-title handoff.
     }
