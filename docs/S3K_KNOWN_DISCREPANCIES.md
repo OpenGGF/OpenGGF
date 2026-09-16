@@ -1821,8 +1821,11 @@ when the rock enters its fall routine.
 entry, pushing right starts the authored `$5EC → $47F0 → $FFFF` track before
 reaching switch `($4830,$5B0)`. The required preceding world/route state has not
 been established. Do not claim completion of this puzzle from unit contact tests
-or the separate passing channel-8 switch/door route. See the act matrix and v2
-execution record.
+or the separate passing channel-8 switch/door route. The independent recording
+contains no player or nearby-object samples in this lower puzzle region; it uses
+the upper switch at `($4A30,$330)` and swing instead. This establishes the
+recorded route, not that the lower coupling is optional or that its passage works.
+See the act matrix and v2 execution record.
 
 ## SOZ Background Event Modes and Torch Animation
 

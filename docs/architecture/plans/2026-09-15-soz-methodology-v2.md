@@ -1972,3 +1972,19 @@ The final inventory is 1,063 classes: 839 isolated passes and 224 graph-covered.
 Focused guards then passed 81 of 82 tests with no skips; the sole failure contains
 exactly the two unchanged baseline diagnostic probes above. SOZ event access,
 facade size, lifecycle setup and checkpoint oracle findings are cleared.
+
+The object-policy correction `6e0ae9e75` passed 123 focused checks without skips
+and is merged into the completion branch. It uses existing deletion, touch and
+control contracts; the exit helper retains all engine followers under the
+explicit native-P2 extension policy and tests duplicate identity. No guard
+allowlist or numeric budget changed. Read-only review of `7191f0664` found no
+concrete issue: handoff accessors resolve the target services dynamically after
+initialization, and placement delegation preserves ownership and cache flags.
+
+The final lower-rock audit did not establish a passage. Correcting an attempt
+that never entered spin dash and then trying charge/brake/jump variants reached
+`$49FD` but did not pass the door. The independent recording has zero player or
+nearby-object samples inside X `$46C0..$4A80`, Y `$480..$700`; it instead uses
+the upper `$4A30/$330` switch and `$4AF8` swing. These observations justify no
+geometry or collision change and do not establish that the lower puzzle is
+optional. Failed captures remain labelled in the unified media folder.
