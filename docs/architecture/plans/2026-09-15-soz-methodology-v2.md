@@ -2832,3 +2832,25 @@ one follower, and a separate solo smoke check reported zero followers with
 rewind disabled. Its absolute output is an independent harness check, not a new
 percentage comparison against the earlier temporary harness. The paired
 allocation reduction above retains its original measurement provenance.
+
+### Integrated pyramid/allocation verification
+
+Source/test/evidence commit `76809107c` merged into `develop` as `a7042dfe1`,
+without conflicts or upstream changes. Main-workspace branch and unrelated
+changes were preserved. The final corrected capture replaced only the existing
+Act1 widescreen excerpts; the refreshed reel passed full decoding, retaining
+22 chapters / 260.700 seconds, Act1 before Act2, with all original captures kept.
+
+The combined post-integration command was
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+4ad126bd8fa19262bc0b1221a4820f3598869009 --run` on `a7042dfe1`.
+Run `20260916T135612Z-d9260e32`: 2,665 ordinary reports / 21,580 tests,
+zero failures/errors, 27 skips, 975.71 seconds. Guards: 84 reports / 668 tests,
+three failures, zero errors/skips, 179.63 seconds. Exact failing identities and
+messages, plus all skip identities/reasons, match the candidate run and recorded
+baseline. There are no new or worsened failures. This is an ordinary-suite pass
+with pre-existing guard failures, not an all-green suite. Diagnostics were
+inspected, compared and acknowledged/deleted. This documentation-only record
+does not require another engine run. Remaining unauthored 800px margins,
+gameplay allocation work, native parity and broader route gaps stay explicit;
+traces remain deferred.
