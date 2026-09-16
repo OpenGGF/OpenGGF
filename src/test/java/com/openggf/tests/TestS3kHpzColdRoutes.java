@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * route slices land.
  */
 @RequiresRom(SonicGame.SONIC_3K)
-class TestS3kHpzSonicTailsColdRoute {
+class TestS3kHpzColdRoutes {
     static final Path BK2 = Path.of(
             "src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/s3k-sonic-tails-complete-emeralds.bk2");
     static final int FIRST_LEVEL_FRAME = 441758;
@@ -33,6 +33,56 @@ class TestS3kHpzSonicTailsColdRoute {
     void reset() {
         SonicConfigurationService.getInstance().clearSessionOverrides();
         SessionManager.clear();
+    }
+
+    /**
+     * Knuckles complete-run segment {@code hpz22}: row 0 is Level_frame_counter 1 at movie
+     * frame 411496; the ROM reaches the {@code $A01} load (zone_act_state) at row 859 after
+     * rising on the {@code $B40} pad from about row {@code $2B8}.
+     */
+    @Test
+    void knucklesRecordedInputsLeaveForSkySanctuaryActTwo() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "knuckles");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1)
+                .withFreshLevelStartLifecycle()
+                .withRecording(Path.of(
+                        "src/test/resources/traces/s3k/runs/s3k-knuckles-complete-superemeralds/s3k-knuckles-complete-superemeralds.bk2"))
+                .withRecordingStartFrame(411496)
+                .build();
+        var player = fixture.sprite();
+        assertEquals("knuckles", player.getCode());
+        var manager = GameServices.level().getObjectManager();
+        var loop = new com.openggf.GameLoop(new com.openggf.control.InputHandler());
+        loop.setGameplayMode(fixture.gameplayMode());
+        loop.setGameMode(com.openggf.game.GameMode.LEVEL);
+        try {
+            int requestFrame = -1;
+            for (int frame = 0; frame < 1000 && requestFrame < 0; frame++) {
+                fixture.stepFrameFromRecording();
+                assertFalse(player.getDead(), "Knuckles died at route frame " + frame);
+                if ((GameServices.camera().getY() & 0xFFFF) < 0x240 && (player.getCentreX() & 0xFFFF) >= 0xB00) {
+                    requestFrame = frame;
+                }
+            }
+            assertTrue(requestFrame > 0, "Knuckles must reach the loc_45B94 exit condition");
+            assertTrue(Math.abs(requestFrame - 0x35C) <= 60,
+                    "exit condition near the ROM's row $35C, was " + requestFrame);
+            boolean loaded = false;
+            for (int i = 0; i < 600 && !loaded; i++) {
+                fixture.gameplayMode().getFadeManager().update();
+                loop.step();
+                loaded = GameServices.level().getObjectManager() != manager
+                        || GameServices.level().getCurrentZone() != Sonic3kZoneIds.ZONE_HPZ;
+            }
+            assertTrue(loaded);
+            assertEquals(Sonic3kZoneIds.ZONE_SSZ, GameServices.level().getCurrentZone());
+            assertEquals(1, GameServices.level().getCurrentAct());
+        } finally {
+            loop.closePresence();
+        }
     }
 
     @Test
