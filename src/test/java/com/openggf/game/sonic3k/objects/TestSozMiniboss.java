@@ -184,6 +184,10 @@ class TestSozMiniboss {
         var flow=manager.activeObjectsOfType(S3kBossDefeatSignpostFlow.class).getFirst();
         assertEquals(slot,flow.getSlotIndex());
         assertTrue(manager.activeObjectsOfType(SozMinibossChild.Alignment.class).isEmpty());
+        // loc_76E48 jumps into Obj_EndSignControl in the sinking pass; recorded
+        // s3k-tails-full-chain-all-emeralds SOZ1 spawns Obj_EndSign 120 frames later.
+        assertEquals(0x77-1,flow.waitTimerAfterInitialization(),
+                "the in-pass Obj_EndSignControl install owns the first $77 wait entry");
     }
 
     @Test void everyRepeatedChildTableRetainsEachAllocationPrefix() throws Exception {

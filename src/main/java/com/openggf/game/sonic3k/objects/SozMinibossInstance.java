@@ -165,10 +165,13 @@ public final class SozMinibossInstance extends SozMinibossSprite implements Spaw
         x=(services().camera().getX()&65535)+0xA0;
         spawnFreeChild(() -> new SozMinibossChild.Alignment(getSpawn(),savedMinX,savedMaxX));
         // loc_76E48 converts the existing SST to EndSignControl even when allocation is full.
+        // It jumps into Obj_EndSignControl, which installs the $77 wait in this same
+        // pass; the replacement's own install pass runs one pass later, so its wait
+        // starts one entry through (sonic3k.asm:158168-158174, 180377-180383).
         int slot=ObjectLifetimeOps.detachSlotForTransfer(this);
         ObjectLifetimeOps.deleteNoRespawn(this);
         ObjectLifetimeOps.addReplacementAtTransferredSlot(services().objectManager(),
-                new S3kBossDefeatSignpostFlow(x,0,S3kBossDefeatSignpostFlow.CleanupAction.NONE)
+                new S3kBossDefeatSignpostFlow(x,0,S3kBossDefeatSignpostFlow.CleanupAction.NONE,1,0,0,0)
                         .withNativeControlSlot(slot),slot);
     }
     void hitBy(AbstractPlayableSprite player){attackerSlot=player==services().playerQuery().mainPlayerOrNull()?1:2;collapsing=true;pendingCollapse=true;}
