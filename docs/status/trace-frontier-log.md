@@ -110594,3 +110594,15 @@ animation2. That production intro, not trace-state seeding, is the next target.
   with the absolute S3K ROM passes99tests,0skips,54.927s. Generic slope
   classification and continued riding are unchanged. The full trace after this
   correction remains to be measured.
+
+- `5d67103dc`, same independent trace command in `soz-completion`: the replay
+  aborts with `S3K KosM module FIFO is full` while `Sonic3kStarPostObjectInstance`
+  submits bonus-star art. Maven reports1test error/0skips,29.200s. The partial
+  report contains22525compared frames through22567,2995divergences
+  (2648physics/347animation),0warnings/bootstrap errors. There are no P1
+  position/speed/angle/air/camera mismatches in those compared frames; ring13343
+  and mapping21749 differ. Tails mapping5977 and queue34 remain. This is an
+  incomplete replay, not a reduction of the full59336-frame error total. The
+  four-entry module queue rejects a further submission after the existing timing
+  divergence; capacity and comparison admission were not relaxed to finish the
+  recording. Ordinary controller cold-route validation remains independent.

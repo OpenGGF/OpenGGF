@@ -1850,5 +1850,13 @@ Known SOZ terminal states are represented, but no arbitrary SST-byte service is
 invented to reproduce unrelated memory contents. Final-boss PLC6D art loads from
 the ROM; exact later Nemesis FIFO service timing remains a shared service gap.
 
+The independent SOZ recording also retains a Kosinski service-timing divergence
+from frame34. With the corrected vine landing, replay reaches a later checkpoint
+without a compared Sonic movement mismatch, then aborts when bonus-star art
+submission finds the four-entry module FIFO full. The partial22525-frame result
+is incomplete trace coverage; queue capacity/admission have not been relaxed.
+See the frontier log for the exact command and remaining companion/animation
+mismatches. Ordinary controller route evidence is recorded separately.
+
 See the [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act
 matrices for current route, rewind and compatibility evidence.
