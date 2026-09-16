@@ -19,6 +19,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TestLaunchProfile {
 
     @Test
+    void s3kHostClampsCharactersAbsentFromTheSelectedDonor() {
+        // SOZ acceptance must not bypass this gate with raw character overrides.
+        for (String character : new String[]{"tails", "knuckles"}) {
+            var requested = new LaunchProfile(false, "s1", false, "global", character, character);
+            var resolved = requested.sanitizedFor(SONIC_3K);
+            assertEquals("sonic", resolved.mainCharacter());
+            assertEquals("none", resolved.sidekick());
+        }
+        var requested = new LaunchProfile(false, "s2", false, "global", "knuckles", "knuckles");
+        var resolved = requested.sanitizedFor(SONIC_3K);
+        assertEquals("sonic", resolved.mainCharacter());
+        assertEquals("tails", resolved.sidekick());
+    }
+
+    @Test
     void stockProfilesMatchEachGameDefaults() {
         assertStock(SONIC_1, new LaunchProfile(false, "off", false, "global", "sonic", "none"));
         assertStock(SONIC_2, new LaunchProfile(false, "off", false, "global", "sonic", "tails"));

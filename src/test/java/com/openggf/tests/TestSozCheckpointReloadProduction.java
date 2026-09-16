@@ -26,7 +26,8 @@ class TestSozCheckpointReloadProduction {
         var rows = new java.util.ArrayList<Arguments>();
         for (int act : new int[]{0, 1}) for (String character : new String[]{"sonic", "tails", "knuckles"})
             for (int width : new int[]{320, 400, 512, 640, 800}) for (String donor : new String[]{"off", "s1", "s2"})
-                rows.add(Arguments.of(act, act == 0 ? 1 : 2, act == 0 ? 0x1A30 : 0x860,
+                if(SozAcceptanceConfigurations.supportsCharacter(donor,character))
+                    rows.add(Arguments.of(act, act == 0 ? 1 : 2, act == 0 ? 0x1A30 : 0x860,
                         act == 0 ? 0x428 : 0x5C8, character, width, donor));
         return rows.stream();
     }
@@ -36,7 +37,8 @@ class TestSozCheckpointReloadProduction {
         var rows=new java.util.ArrayList<Arguments>();
         for(var post:posts)for(String character:new String[]{"sonic","tails","knuckles"})
             for(int width:new int[]{320,400,512,640,800})for(String donor:new String[]{"off","s1","s2"})
-                rows.add(Arguments.of(post[0],post[1],post[2],post[3],character,width,donor));
+                if(SozAcceptanceConfigurations.supportsCharacter(donor,character))
+                    rows.add(Arguments.of(post[0],post[1],post[2],post[3],character,width,donor));
         return rows.stream();
     }
     @ParameterizedTest @MethodSource("remainingPosts")
@@ -65,6 +67,7 @@ class TestSozCheckpointReloadProduction {
                 .startPosition((short)(x-24),(short)(y+4)).startPositionIsCentre().withFreshLevelStartLifecycle();
         if(!donor.equals("off"))builder.withCrossGameDonation(donor);
         var f=builder.build();
+        SozAcceptanceConfigurations.assertUsableTeam(donor);
         assertEquals(width,f.camera().getWidth()&65535);
         assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
         if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
@@ -98,6 +101,7 @@ class TestSozCheckpointReloadProduction {
                     assertEquals(width,GameServices.camera().getWidth()&65535);
                     assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
                     if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
+                    SozAcceptanceConfigurations.assertUsableTeam(donor);
                     assertEquals(character,GameServices.camera().getFocusedSprite().getCode());
                     assertEquals(!donor.equals("s1"),GameServices.camera().getFocusedSprite()
                             .getGameRules().playerCapability().spindashEnabled());

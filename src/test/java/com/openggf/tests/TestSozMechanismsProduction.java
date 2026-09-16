@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozMechanismsProduction {
     @ParameterizedTest
-    @CsvSource({"320,sonic,tails,off", "640,sonic,tails,off", "320,tails,none,off", "320,knuckles,none,off", "320,sonic,'tails,knuckles',off", "320,sonic,tails,s1"})
+    @CsvSource({"320,sonic,tails,off", "640,sonic,tails,off", "320,tails,none,off", "320,knuckles,none,off", "320,sonic,'tails,knuckles',off", "320,sonic,sonic,s1"})
     void pushSwitchOpensPlacedDoorAndPlayerTraversesWithRewind(int width,String character,String followers,String donor) {
         var config=SonicConfigurationService.getInstance();
         var saved=new EnumMap<SonicConfiguration,Object>(SonicConfiguration.class);
@@ -41,6 +41,7 @@ class TestSozMechanismsProduction {
                     .withFreshLevelStartLifecycle();
             if(donor.equals("s1"))builder.withCrossGameDonation("s1");
             var fixture=builder.build();
+            SozAcceptanceConfigurations.assertUsableTeam(donor);
             assertEquals(width,fixture.camera().getWidth()&0xFFFF);
             assertEquals(followers.equals("none")?0:followers.split(",").length,GameServices.sprites().getSidekicks().size());
             assertEquals(!donor.equals("s1"),fixture.sprite().getGameRules().playerCapability().spindashEnabled());

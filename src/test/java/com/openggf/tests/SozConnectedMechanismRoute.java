@@ -26,11 +26,14 @@ final class SozConnectedMechanismRoute {
     SozConnectedMechanismRoute(Scene scene) { this.scene = scene; }
 
     static void assertRoster(Scene scene) {
+        assertRoster(scene, scene==Scene.LOWER?"":"tails");
+    }
+    static void assertRoster(Scene scene,String expectedFollower) {
         org.junit.jupiter.api.Assertions.assertInstanceOf(com.openggf.sprites.playable.Sonic.class, GameServices.camera().getFocusedSprite());
         var followers = GameServices.sprites().getRegisteredSidekicks();
         org.junit.jupiter.api.Assertions.assertEquals(scene == Scene.LOWER ? 0 : 1, followers.size());
         if (scene != Scene.LOWER)
-            org.junit.jupiter.api.Assertions.assertEquals("tails", GameServices.sprites().getSidekickCharacterName(followers.getFirst()));
+            org.junit.jupiter.api.Assertions.assertEquals(expectedFollower, GameServices.sprites().getSidekickCharacterName(followers.getFirst()));
     }
 
     Bk2FrameInput input(int frame, AbstractPlayableSprite player) {

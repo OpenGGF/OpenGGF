@@ -27,7 +27,7 @@ class TestSozTeamCheckpointResetProduction {
         for(int act:new int[]{0,1})for(int width:new int[]{320,400,512,640,800})
             for(String donor:new String[]{"off","s1","s2"})
                 for(String followers:new String[]{"tails","tails,knuckles","tails,tails,knuckles,sonic,knuckles,sonic"})
-                    rows.add(Arguments.of(act,followers,width,donor));
+                    rows.add(Arguments.of(act,SozAcceptanceConfigurations.supportedFollowers(donor,followers),width,donor));
         return rows.stream();
     }
     @ParameterizedTest @MethodSource("configurations")
@@ -105,6 +105,7 @@ class TestSozTeamCheckpointResetProduction {
     }
 
     private static void assertTeam(String names,int width,String donor) {
+        SozAcceptanceConfigurations.assertUsableTeam(donor);
         assertEquals(width,GameServices.camera().getWidth()&65535);
         assertEquals(!donor.equals("off"),com.openggf.game.CrossGameFeatureProvider.isActive());
         if(!donor.equals("off"))assertEquals(donor,com.openggf.game.CrossGameFeatureProvider.getInstance().getDonorGameId());

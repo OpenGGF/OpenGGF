@@ -223,7 +223,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   copy the leader's collision plane and art priority when flight recovery ends,
   and release stale engine platform support while retaining native interaction state.
   Fixed controller replays now complete both acts from cold native Sonic + Tails
-  starts through playable destinations. Broader character/donor/viewport routes,
+  starts through playable destinations. Compatibility acceptance follows the
+  supported donor roster and checks ROM-backed art and animations for each live
+  participant before and after tested loads. Broader character/donor/viewport routes,
   the lower Act 2 rock puzzle and exact native parity remain documented in the
   per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,

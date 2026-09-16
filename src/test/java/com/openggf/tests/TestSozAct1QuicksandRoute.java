@@ -20,7 +20,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozAct1QuicksandRoute {
     @ParameterizedTest
-    @CsvSource({"320,off,tails", "640,off,tails", "320,s1,tails", "320,off,'tails,knuckles'"})
+    @CsvSource({"320,off,tails", "640,off,tails", "320,s1,sonic", "320,off,'tails,knuckles'"})
     void ordinaryInputReachesTheFirstPlacedQuicksand(int width, String donor, String followers) {
         var config=SonicConfigurationService.getInstance();
         var saved=new EnumMap<SonicConfiguration,Object>(SonicConfiguration.class);
@@ -43,6 +43,7 @@ class TestSozAct1QuicksandRoute {
             var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,0).withFreshLevelStartLifecycle();
             if(!donor.equals("off")) builder.withCrossGameDonation(donor);
             var fixture=builder.build();
+            SozAcceptanceConfigurations.assertUsableTeam(donor);
             assertEquals(width,fixture.camera().getWidth()&0xFFFF);
             assertEquals(followers.split(",").length,GameServices.sprites().getSidekicks().size());
             assertEquals(!donor.equals("s1"),fixture.sprite().getGameRules().playerCapability().spindashEnabled());

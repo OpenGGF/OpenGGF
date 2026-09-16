@@ -23,9 +23,7 @@ class TestSozEndBossInputRoute {
         for(String character:new String[]{"sonic","tails","knuckles"})
             for(int width:new int[]{320,400,512,640,800})
                 for(String donor:new String[]{"off","s1","s2"}) {
-                    // S1-donor Tails victory is still un-authored; the Act 2
-                    // matrix records it as open, not a passing combat case.
-                    if(character.equals("tails")&&donor.equals("s1"))continue;
+                    if(!SozAcceptanceConfigurations.supportsCharacter(donor,character))continue;
                     rows.add(Arguments.of(character,width,donor));
                 }
         return rows.stream();
@@ -52,6 +50,7 @@ class TestSozEndBossInputRoute {
                 .withFreshLevelStartLifecycle();
         if(!donor.equals("off"))builder.withCrossGameDonation(donor);
         var f=builder.build();
+        SozAcceptanceConfigurations.assertUsableTeam(donor);
         assertEquals(character,f.sprite().getCode());
         assertEquals(width,GameServices.camera().getWidth());
         assertTrue(GameServices.sprites().getRegisteredSidekicks().isEmpty());
@@ -123,6 +122,7 @@ class TestSozEndBossInputRoute {
                 }
             }
             assertTrue(ready,"the real LRZ title/fade must release playable controls");
+            SozAcceptanceConfigurations.assertUsableTeam(donor);
             assertEquals(9,GameServices.level().getCurrentZone());
             assertEquals(0,GameServices.level().getCurrentAct());
             assertEquals(character,GameServices.sprites().getMainPlayable().getCode());

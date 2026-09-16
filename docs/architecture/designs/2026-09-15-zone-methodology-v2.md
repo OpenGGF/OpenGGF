@@ -153,6 +153,13 @@ from the [coverage backlog](../../status/level-test-coverage.md). Follow the
 [level test standard](../../guide/contributing/level-test-standard.md), including
 width/donor lifecycle products, supported characters/team shapes, and before,
 active and after rewind spots with forward replay or intentional timeline reset.
+Derive the character/donor roster from the production launch contract before
+expanding products. Raw debug overrides may instantiate an unsupported character
+without art or animations. Assert actual per-participant ROM-backed renderer,
+animation profile/scripts and mappings, including after lifecycle boundaries;
+configuration strings and object presence alone do not establish compatibility.
+The SOZ [roster correction](../plans/2026-09-15-soz-methodology-v2.md#2026-09-16-supported-roster-correction)
+records the failed premise and the paired observation that exposed it.
 
 For each obligation record separately:
 

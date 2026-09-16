@@ -2122,6 +2122,10 @@ media references and commit policy; do not rerun unchanged engine tests.
 
 ## 2026-09-16 non-trace acceptance follow-up
 
+The later [supported-roster correction](#2026-09-16-supported-roster-correction)
+supersedes this section's character/donor product claims; original run counts
+remain historical evidence, not current certification.
+
 User direction: finish remaining work while skipping traces for now. Base is
 `e25269d0e70d0db9ddbb5b914a30795d859ab755`, worktree `.worktrees/soz-acceptance`,
 local branch `feature/ai-soz-acceptance`. No strict replay, trace production or
@@ -2331,3 +2335,90 @@ validation. The commit hook caught absolute machine-local paths in the command
 record; commands now use `ROM_ROOT` while retaining the exact ROM filenames,
 options and selections. Existing dirty disassemblies and unrelated user files
 were preserved. Captures remain in the external unified SOZ task directory.
+
+
+## 2026-09-16 supported-roster correction
+
+Based on integrated `d2b84abb5`, isolated branch `feature/ai-soz-tails-route`.
+The outstanding S1-donor Tails end-boss search exposed an acceptance error,
+not evidence for a boss/physics change. `LaunchProfile.mainCharacterValues`,
+`sidekickValues` and `sanitizedFor`, the donor capability declarations and
+`CONFIGURATION.md` already restrict S1 to Sonic, S2 to Sonic/Tails, and native
+S3K to Sonic/Tails/Knuckles. Raw test configuration had bypassed that gate.
+
+A landing-triggered, 20-frame held-jump controller opened the shell at tick182
+but died at285 without a hit. It was rejected. A paired 601-frame-bounded probe
+then ran identical default controller decisions with S1 and S2 donors. Rolling
+status and movement initially matched, but animation differed at tick0: S1
+remained animation0, S2 used roll2. The first non-animation state difference was
+at tick257: S2 removed one boss hit point while S1 took damage. The S1 fixture
+died at468; the S2 observation reached600. `Sonic1PlayerArt.loadForCharacter`
+returns null for Tails, leaving no profile; `ObjectTouchResponseController`
+requires the roll animation and rolling status for a spin attack. The production
+launch clamps this unsupported request. Neither boss geometry nor touch logic
+was changed. Temporary observation/controller code and CSVs are disposable;
+these findings supersede the earlier search's interpretation.
+
+The corrected acceptance helper consults `LaunchProfile.sanitizedFor` and asserts
+ROM-backed renderer, animation profile/scripts and mappings for every participant,
+including at the tested destination/reload. Character keys, not internal follower
+instance codes such as `tails_p2`, identify characters. The launch regression
+checks S1 Tails/Knuckles and S2 Knuckles fallback explicitly. The matrix becomes:
+
+- All ten checkpoints × five widths × six supported character/donor combinations:
+  300 physical activation/replay/death-reload cases.
+- Each boss: 30 natural victories covering the same supported combinations and
+  widths, with the existing graph recreation/replay and playable transition.
+  Act1 Sonic uses the supported stock pair with off/S2 and solo with S1. A
+  Sonic-duplicate S1 companion changed combat enough to kill the width320
+  controller at3677; that mixed-combat route remains unauthored, not a runtime
+  defect. The default solo S1 controller also died at3197; the existing left-side
+  approach passed all five widths. Repeated duplicate-team lifecycle coverage
+  remains in the90-case test.
+- Repeated team reloads retain 90 cases and one/two/six follower counts. S1 uses
+  Sonic duplicates; S2 substitutes Sonic for Knuckles; native rosters retain
+  mixed characters and duplicates. No finite maximum is asserted.
+- Connected mechanisms retain all60 width/donor cases. Other donor-sensitive
+  object/light/badnik tests replace unsupported S1 Tails followers with Sonic.
+
+This corrects the support premise; it does not erase remaining supported cold
+route breadth, mixed combat, repeated seamless/exits, lower subtype-$87 passage,
+or native presentation obligations. Trace recording/replay remains deferred.
+
+### Validation and delivery
+
+The change-based plan selected2660 ordinary classes plus guards because test
+helpers are unclassified. Proportionate validation applies: production source,
+physics, timing, asset loading and launch policy are unchanged; only bounded SOZ
+fixtures, assertions and one launch-policy regression change. Run the affected
+SOZ classes, launch-profile tests and the mandatory S3K quartet. This is focused
+validation, not a full-suite claim. The completed selections below account for711 unique passing cases, zero errors
+and zero skips on the corrected acceptance tree. Initial failures were the new
+helper reading follower instance codes (173 cases), then the width320 S1 golem
+controller (one case); each affected class was rerun after its correction. No
+unattributed runtime failure remains in these selections.
+
+All commands used `python3 tools/testing/maven_queue.py -Dmse=off`, `test -B`,
+and these explicit ROM properties (`ROM_ROOT` is the main workspace):
+
+```bash
+"-Ds3k.rom.path=$ROM_ROOT/Sonic and Knuckles & Sonic 3 (W) [!].gen"
+"-Dsonic1.rom.path=$ROM_ROOT/Sonic The Hedgehog (W) (REV01) [!].gen"
+"-Dsonic2.rom.path=$ROM_ROOT/Sonic The Hedgehog 2 (W) (REV01) [!].gen"
+```
+
+Selections and completed outcomes:
+
+- `-Dtest=TestSozCheckpointReloadProduction,TestSozTeamCheckpointResetProduction,TestSozConnectedMechanismsProduction,TestSozLightGhostCompatibility,TestSozSandRockProduction,TestSozAct1VictoryProduction,TestSozEndBossInputRoute,TestLaunchProfile,TestLaunchProfileApplier,TestLaunchProfileStore,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`:
+  initial663 cases,173 assertion failures, no errors/skips,1:54 Maven. The
+  415 cases outside the five affected classes passed and were not repeated.
+- `-Dtest=TestSozPushableRockProduction,TestSozMechanismsProduction,TestSozRouteControllersProduction,TestSozAct1SpringVineRoute,TestSozBadnikProduction,TestSozAct1QuicksandRoute`:
+  48 passed, zero failures/errors/skips,25.711s Maven.
+- `-Dtest=TestSozAct1VictoryProduction,TestSozConnectedMechanismsProduction,TestSozLightGhostCompatibility,TestSozSandRockProduction,TestSozTeamCheckpointResetProduction`:
+  248 cases, one S1 golem-controller failure, zero errors/skips,1:38 Maven;
+  the218 non-golem cases passed with corrected participant keys.
+- `-Dtest=TestSozAct1VictoryProduction`: the final left-approach controller
+  completed30 cases, zero failures/errors/skips,49.93s JUnit /1:07 Maven.
+
+The temporary comparison probe's two passing observation tests are not part of
+these711 acceptance cases. No trace fixtures or native parity checks were run.

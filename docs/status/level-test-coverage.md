@@ -254,8 +254,8 @@ SOZ Act 2 cold-route completion (2026-09-16): the [Act 2 matrix](../architecture
 
 
 SOZ non-trace acceptance follow-up (2026-09-16): every authored checkpoint now
-covers three leaders × five required widths × off/S1/S2 donors, with real activation,
-restore/replay and production death/reload (450 cases). Repeated native/mixed/duplicate
+covers six supported character/donor combinations × five required widths, with
+real activation, restore/replay and production death/reload (300 cases). Repeated native/mixed/duplicate
 team reloads cover the same width/donor product in both acts (90 cases), and four
 connected Act 2 mechanism routes cover that product with graph recreation/replay
 (60 cases). See the [acceptance record](../architecture/plans/2026-09-15-soz-methodology-v2.md#2026-09-16-non-trace-acceptance-follow-up).
@@ -266,10 +266,14 @@ Strict traces are deferred at the user's request; these results do not certify
 native pixels or complete route/configuration breadth.
 
 
-The same follow-up adds 45 positioned golem-to-Act2 victories (Sonic + Tails,
-solo Tails, solo Knuckles × five widths × three donors) and 40 solo end-boss-to-LRZ
-victories (all corresponding character/donor combinations except S1-donor Tails).
+The corrected follow-up covers 30 positioned golem-to-Act2 victories and 30 solo
+end-boss-to-LRZ victories: six supported character/donor combinations × five widths.
 Each verifies natural victory and event/boss graph restore/replay. A five-width
 threshold regression and an 800-pixel moving victory capture cover the corrected
 Act 1 admission gate. These close bounded boss/transition obligations; full cold
-routes and S1-donor Tails end-boss victory remain open.
+routes remain open. Production launch policy supports Sonic/Tails/Knuckles with
+donation off, Sonic with S1, and Sonic/Tails with S2. Earlier counts included
+unsupported debug overrides and are superseded. Acceptance now checks usable
+ROM-backed art and animations for every live participant, including after loads;
+S1 team stress cases use Sonic duplicates. See the
+[roster correction](../architecture/plans/2026-09-15-soz-methodology-v2.md#2026-09-16-supported-roster-correction).
