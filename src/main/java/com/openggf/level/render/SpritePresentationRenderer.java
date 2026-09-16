@@ -5,8 +5,6 @@ import com.openggf.graphics.SpritePresentation;
 import com.openggf.graphics.SpritePresentation.*;
 import com.openggf.level.Pattern;
 import com.openggf.level.PatternDesc;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Predicate;
 
 /** Level-owned conversion between runtime ROM patterns and immutable graphics presentation values. */
@@ -22,25 +20,21 @@ public final class SpritePresentationRenderer {
 
     public static void bindPatternBank(GraphicsManager graphics, int base, Pattern[] patterns) {
         if (!SpritePresentation.isPreparing(graphics)) return;
-        Map<Integer, PatternVersion> versions = new HashMap<>();
         for (int index = 0; index < patterns.length; index++) {
-            versions.put(base + index, version(patterns[index]));
+            SpritePresentation.bindPatternVersion(graphics, base + index, version(patterns[index]));
         }
-        SpritePresentation.bindPatternVersions(graphics, versions);
     }
 
     /** Publish only this mapping's slots: unused bank capacity may overlap another sprite's bank. */
     public static void bindPatternBank(GraphicsManager graphics, int base, Pattern[] patterns,
                                        SpriteMappingFrame frame) {
         if (!SpritePresentation.isPreparing(graphics)) return;
-        Map<Integer, PatternVersion> versions = new HashMap<>();
         for (SpriteMappingPiece piece : frame.pieces()) {
             int end = Math.min(patterns.length, piece.tileIndex() + piece.widthTiles() * piece.heightTiles());
             for (int index = Math.max(0, piece.tileIndex()); index < end; index++) {
-                versions.put(base + index, version(patterns[index]));
+                SpritePresentation.bindPatternVersion(graphics, base + index, version(patterns[index]));
             }
         }
-        SpritePresentation.bindPatternVersions(graphics, versions);
     }
 
     private static PatternVersion version(Pattern pattern) {

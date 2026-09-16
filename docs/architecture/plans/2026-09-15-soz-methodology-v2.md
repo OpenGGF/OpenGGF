@@ -1843,7 +1843,7 @@ Quicksand routine admission now recognizes boundary-dead CPU dispatch as
 native routine6 even though generic dead=false. `sub_400F0` rejects it before
 ascending+$68 damping; the same death admission applies to all four variants,
 and waterfall held-routine release. The unit regression failed before the fix;
-all16quicksand and4production route cases pass after it (0skips,53.384s).
+all 16quicksand and4production route cases pass after it (0skips,53.384s).
 
 ### Connected victory and independent recording follow-up
 
@@ -2733,3 +2733,102 @@ identities/reasons also match the worktree run. Results were inspected and the
 entire diagnostics directory acknowledged and removed. No new or worsened
 failure was found. This documentation-only record requires no repeated engine
 run; remaining native/route-product gaps and trace deferral are unchanged.
+
+## Pyramid residency and gameplay allocation follow-up (2026-09-16)
+
+Base: `develop` / `4ad126bd8`; implementation in local
+`bugfix/ai-soz-pyramid-allocation`. The user's widescreen pyramid report and the
+remaining gameplay allocation budget define this slice; traces remain deferred.
+
+The shared BG-high replay still enlarged its source period to the display width,
+although the main tile pass had already stopped doing that. Its regression failed
+with expected 30 tiles versus actual 40 for a narrow source; the corrected helper
+caps at the source/handler period independently of viewport width. Color and
+sprite-priority-mask replays now sample the same columns as the main pass.
+This alone did not remove the pyramid duplication: SOZ1's event source still used
+a 512px residency window for an 800px view. `sub_55DB6` and `DrawBGAsYouMove`
+stream continuous layout columns, so the event handler now requests at least the
+viewport plus aligned-column/shimmer margin. Normal desert repeating art stays
+at 512px. Tests cover six widths and whole-registry restore to the normal mode.
+
+Tiles-only frame 400 and 1200 comparisons at width800 preserve the first 480px
+exactly; changed bounds are `(504,0)-(601,3)` and `(502,0)-(743,160)` respectively.
+The raised pyramid no longer repeats its first window. The ROM layout ends with
+unused cells to its right; those remain visible at exploratory width800. Inventing
+or mirroring extra architecture was not adopted: it has no native source and is a
+separate widescreen presentation choice. No full native pixel certification is
+claimed. The updated 6,000-frame positioned Sonic+Tails movie reaches Act2 and
+replaces the existing Act1 widescreen excerpts rather than adding duplicate tests.
+All captures remain under the unified external `soz-v2-20260915/pyramid-allocation/`
+directory; original captures are preserved.
+
+Allocation measurements use ordinary `soz2-cold-sonic-tails.bk2`, width400,
+Sonic+Tails, rewind enabled, 600 warmup frames then 5,400 measured frames, Java21,
+`-Xmx768m`. `ThreadMXBean` brackets step and render independently, excluding PNG
+readback/encoding and CSV writes. Base gameplay: 116,894.870 bytes/frame; final:
+108,728.579 (-6.986%). Render remains about 5,160 bytes/frame. All 50 sampled
+position/event/light states match. These are allocation measurements, not claims
+of faster frame times or shorter GC pauses. JFR recorder-thread allocations
+initially dominated aggregate samples; stack attribution excluded that false lead.
+
+Changes remove temporary player-query identity maps, use the existing identity
+scan for small teams, find nearest players without collecting a list, bind DPLC
+versions directly into the presentation builder, and avoid boxing static-art IDs
+outside the mutable bank range. Published lists, sprite tiles and DPLC generations
+remain immutable; mutable frame pooling was deliberately not adopted because
+rewind retains those objects. Sprite tile construction remains the largest
+measured gameplay allocation source, so this is a bounded reduction, not closure
+of the memory/GC workstream.
+
+`GameplayAllocationTool` preserves the recurring probe. Run after queued compile:
+`java -Xmx768m -cp <compiled-runtime-classpath> com.openggf.tools.GameplayAllocationTool
+--rom <absolute-S3K-ROM> --input src/test/resources/routes/s3k/soz2-cold-sonic-tails.bk2
+--zone 8 --act 2 --out-dir target/alloc --width 400 --frames 6000 --warmup 600
+--rewind true --jfr true`. Keep diagnostics temporary and compare sampled state.
+The act option is one-based; zone is the runtime numeric index. This tool uses
+ordinary input, never trace hydration.
+
+Focused validation: initial 34 existing SOZ/animation/presentation tests passed;
+36 renderer/query/event tests then passed. The combined required S3K stability
+and focused run completed 94 cases with five failures only in the new test's
+viewport setup (camera retained320). Reopening its session fixed that setup;
+all six viewport/restore cases then passed. The final static-art lookup change
+passed all13 sprite presentation cases, including immutable DPLC and Tails body/
+tail overlap. No skipped ROM cases. Combined delivery validation follows below.
+
+### Combined candidate check and final boundary review
+
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+4ad126bd8fa19262bc0b1221a4820f3598869009 --run` completed run
+`20260916T132756Z-479c93e6` on the task tree: 2,665 ordinary reports / 21,580 tests,
+zero failures/errors, 27 skips, 989.40 seconds. Guards: 84 reports / 668 tests,
+three failures, zero errors/skips, 177.85 seconds. The three identities and exact
+messages match the already-attributed baseline failures documented above. Skips
+are the same opt-in/graphics/native-reference/CPZ cases, with no missing-ROM skip.
+Results were inspected and the diagnostics acknowledged/deleted. This is not an
+all-green guard result.
+
+Boundary review after that frozen-tree run reproduced 12 residency misses in
+1,201 ordinary arena frames: the ROM 0/+1 shimmer samples `bgX-1` on aligned
+camera columns. The handler now selects that preceding pixel for its tilemap
+window while leaving HScroll world coordinates unchanged. The six-width test
+also checks every scanline at all 16 horizontal alignments, including both edges;
+the existing width margin suffices. This local scroll follow-up receives focused
+SOZ event/animation/window and 30-case victory-route validation, then the required
+full integrated run. The reusable tool also normalizes `--sidekick none` to the
+capture session's empty name and prints actual leader/follower count; its loop
+counter includes input-row decoding, matching the original measurement boundary.
+
+The final focused command selected `TestSozPyramidWindow,TestSozScreenEvents,
+TestS3kSozPatternAnimation,TestSozAct1VictoryProduction` through the Maven queue
+with all three absolute ROM properties: 52 tests, zero failures/errors/skips,
+97 seconds. The live 1,201-frame bounds probe then reported zero misses (before:
+12). A fresh 6,000-frame corrected capture has identical player/camera/state CSV
+rows to the preceding capture and enters Act2 at frame 5045 without deaths;
+`pyramid-allocation/act1-widescreen-final/` is the final reel source.
+
+The promoted allocation tool completed 5,400 measured frames with live Sonic and
+one follower, and a separate solo smoke check reported zero followers with
+rewind disabled. Its absolute output is an independent harness check, not a new
+percentage comparison against the earlier temporary harness. The paired
+allocation reduction above retains its original measurement provenance.

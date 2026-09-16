@@ -79,8 +79,12 @@ class TestHczOverlayCommandPool {
         assertEquals(64, HczBgHighPriorityTileRenderer.computePlanePeriodWrapTiles(320, 320, 512));
         // 512px window tilemap: wrap width equals the window itself.
         assertEquals(64, HczBgHighPriorityTileRenderer.computePlanePeriodWrapTiles(320, 64, 512));
-        // Tilemap narrower than the screen: renderWidth grows to the screen.
-        assertEquals(40, HczBgHighPriorityTileRenderer.computePlanePeriodWrapTiles(320, 30, 512));
+        // The display width never changes the source plane period.
+        assertEquals(30, HczBgHighPriorityTileRenderer.computePlanePeriodWrapTiles(320, 30, 512));
+        for (int width : new int[]{400, 512, 640, 800}) {
+            assertEquals(64, HczBgHighPriorityTileRenderer.computePlanePeriodWrapTiles(width, 64, 512));
+            assertEquals(64, HczBgHighPriorityTileRenderer.computePlanePeriodWrapTiles(width, 256, 512));
+        }
     }
 
     private static int[] scrollData(int first, int last) {

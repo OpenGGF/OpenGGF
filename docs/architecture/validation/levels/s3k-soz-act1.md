@@ -294,3 +294,19 @@ owners are `loc_76F24`, `loc_849D8`/`Obj_FlickerMove`, and `loc_76F6A`.
 Playtest follow-up verifies Rockn's shell/eye facing through repeated turns and
 publishes the same shaken camera copy to foreground/background terrain and
 sprites during pyramid rise. A refreshed800px victory/handoff movie passes.
+
+## Widescreen pyramid follow-up (2026-09-16)
+
+`TestSozPyramidWindow` checks the event-selected residency width at 320, 400,
+512, 528, 640 and 800 pixels and its return to the normal 512-pixel desert
+period after whole-registry restore. Every scanline at all 16 horizontal alignments
+keeps both visible edges resident, including the shimmer pixel before an aligned
+column. `TestHczOverlayCommandPool` checks that
+the high-priority replay uses the same source period as the main pass.
+The 800px positioned Sonic+Tails capture reaches the rising pyramid, fight,
+defeat and Act2 entry with a continuous source window. Media are under
+`pyramid-allocation/act1-widescreen-final/` in the unified external task directory.
+This fixes repeated cache content; it does not author new scenery outside the
+ROM's pyramid layout. At 800px, unused layout cells beyond its right edge remain
+visible beside the foreground wall. Native pixel certification and the wider
+cold-route product remain open. See the execution plan for verification details.

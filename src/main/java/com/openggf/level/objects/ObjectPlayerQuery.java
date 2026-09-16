@@ -10,7 +10,6 @@ import com.openggf.sprites.managers.SpriteManager;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -184,18 +183,7 @@ public final class ObjectPlayerQuery {
     }
 
     private List<PlayableEntity> nearestEnginePlayer(int referenceX, int referenceY) {
-        List<PlayableEntity> players = uniquePlayers(mainPlayerOrNull(), rawSidekicks(), Integer.MAX_VALUE);
-        PlayableEntity nearest = null;
-        long nearestDistance = Long.MAX_VALUE;
-        for (PlayableEntity player : players) {
-            long dx = (long) player.getCentreX() - referenceX;
-            long dy = (long) player.getCentreY() - referenceY;
-            long distance = dx * dx + dy * dy;
-            if (distance < nearestDistance) {
-                nearest = player;
-                nearestDistance = distance;
-            }
-        }
+        PlayableEntity nearest = nearestUnique(mainPlayerOrNull(), rawSidekicks(), referenceX, referenceY);
         return nearest == null ? List.of() : List.of(nearest);
     }
 
@@ -221,30 +209,18 @@ public final class ObjectPlayerQuery {
     private static List<PlayableEntity> uniquePlayers(PlayableEntity main,
                                                       List<? extends PlayableEntity> sidekicks,
                                                       int sidekickLimit) {
-        ArrayList<PlayableEntity> players = new ArrayList<>();
-        IdentityHashMap<PlayableEntity, Boolean> seen = new IdentityHashMap<>();
-        addIfPresent(players, seen, main);
+        // Teams are small. Identity scans avoid a map and its backing array on
+        // every object query while retaining identity (not equals) semantics.
+        ArrayList<PlayableEntity> players = new ArrayList<>(1 + Math.min(sidekicks.size(), sidekickLimit));
+        if (main != null) players.add(main);
         int addedSidekicks = 0;
-        for (PlayableEntity sidekick : sidekicks) {
-            if (addedSidekicks >= sidekickLimit) {
-                break;
-            }
-            if (addIfPresent(players, seen, sidekick)) {
-                addedSidekicks++;
-            }
+        for (int i = 0; i < sidekicks.size() && addedSidekicks < sidekickLimit; i++) {
+            PlayableEntity candidate = sidekicks.get(i);
+            if (candidate == null || candidate == main || duplicateBefore(sidekicks, i, candidate)) continue;
+            players.add(candidate);
+            addedSidekicks++;
         }
         return players;
-    }
-
-    private static boolean addIfPresent(List<PlayableEntity> players,
-                                        IdentityHashMap<PlayableEntity, Boolean> seen,
-                                        PlayableEntity player) {
-        if (player == null || seen.containsKey(player)) {
-            return false;
-        }
-        players.add(player);
-        seen.put(player, Boolean.TRUE);
-        return true;
     }
 
     private static PlayableEntity resolveMainPlayer(ObjectServices services) {

@@ -115,13 +115,13 @@ final class HczBgHighPriorityTileRenderer {
     }
 
     /**
-     * Mirrors the main tile pass's FBO render width: the BG plane period capped
-     * by the tilemap's own width, but never narrower than the screen.
+     * Mirrors the main tile pass's source period, capped by the tilemap's width.
+     * A wider viewport repeats that period; it does not enlarge it.
      */
     static int computePlanePeriodWrapTiles(int screenWidthPx, int tilemapWidthTiles, int bgPeriodWidthPx) {
         int tilemapWidthPx = tilemapWidthTiles * Pattern.PATTERN_WIDTH;
         int periodPx = Math.min(tilemapWidthPx, bgPeriodWidthPx);
-        return Math.max(screenWidthPx, periodPx) / Pattern.PATTERN_WIDTH;
+        return periodPx / Pattern.PATTERN_WIDTH;
     }
 
     static OverlayCommand acquireCaptured(TilemapGpuRenderer renderer, int[] viewport, int marker) {

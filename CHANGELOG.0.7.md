@@ -218,8 +218,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Sprite overlap follows bucket and native slot order independently of terrain
   priority, and golem dust keeps its own priority across the sand boundary.
   Detached golem parts retain their priority, Rockn eyes follow its walking direction,
-  and the rising pyramid shakes terrain and sprites together. Sprite-art replay
-  avoids per-tile temporary allocations while preserving immutable rewind frames.
+  and the rising pyramid shakes terrain and sprites together. Its widescreen source
+  window spans the viewport instead of repeating the native 512-pixel cache;
+  background priority passes share the same wrap period. Sprite-art replay
+  and player queries avoid redundant temporary maps and static-art lookups
+  while preserving immutable rewind frames.
   Spiked pillars resolve native art-word carries, and high-priority background
   sand hides submerged pillars and spikes.
   Act 2 couples light switches, ghosts,

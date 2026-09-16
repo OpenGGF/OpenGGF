@@ -139,12 +139,32 @@ public final class SwScrlSoz extends SwScrlS3kDefault {
         }
     }
 
+    @Override public int getBgPeriodWidth() {
+        var state = com.openggf.game.GameServices.hasRuntime()
+                ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                        com.openggf.game.GameServices.zoneRuntimeRegistry()).orElse(null) : null;
+        if (state != null && state.actIndex() == 0 && state.events().backgroundRoutine() != 0) {
+            // sub_55DB6 streams a continuous pyramid layout through the native
+            // 512px plane. Widescreen needs a larger residency window, not a
+            // repeated copy of those first 512 pixels. Include column alignment
+            // and the per-line shimmer at the right edge.
+            int width = com.openggf.game.GameServices.camera().getWidth();
+            return Math.max(512, (width + 31) & ~15);
+        }
+        return 512;
+    }
+
     @Override public short getVscrollFactorFG() { return foregroundY; }
 
     @Override public int getBgCameraX() {
         var state = com.openggf.game.GameServices.hasRuntime()
                 ? com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
                         com.openggf.game.GameServices.zoneRuntimeRegistry()).orElse(null) : null;
+        // The SOZ1 ROM shimmer table contains 0/+1 offsets. On an aligned
+        // camera column, select the preceding column as well: the first pixel
+        // samples bgX-1. HScroll keeps the unmodified world coordinate; this
+        // accessor selects residency (as it does for the post-boss band below).
+        if (state != null && state.actIndex() == 0 && state.events().backgroundRoutine() != 0) return bgX - 1;
         // loc_56676/566A8 draw the post-boss Plane-B source band at fixed X=$200.
         // HScroll still uses bgX; this accessor selects the tilemap source window.
         if (state != null && state.actIndex() == 1 && state.events().backgroundRoutine() >= 0x2C) return 0x200;
