@@ -41,8 +41,8 @@ events and remains a recorded gap, not a reason to position the player.
 | Slice | Scope and ROM owners | Early check and principal risk |
 | --- | --- | --- |
 | 1. Identity | Registry, resource profile, title card, art plan, runtime state | Done: `$1601` bounds/object set, `$1701` sanctuary lifecycle unchanged |
-| 2. Screen and background events | `HPZ_ScreenInit` / `HPZ_ScreenEvent` (character camera clamps, `Obj_HPZPaletteControl` spawn, screen shake, `Events_fg_4` chunk `$61` write and redraw); `HPZ_BackgroundInit` / `HPZ_BackgroundEvent` (`$EC0` seam redraw machine, Knuckles background patch) | Clamp edges per character; the chunk write goes through `ZoneLayoutMutationPipeline`; seam redraw before/at/after `$EC0` |
-| 3. Palette and animated tiles | `AnPal_HPZ`, `AniPLC_HPZ` (4 scripts), `Obj_HPZPaletteControl` (`$B1`, intro → main palette at camera X `$460`) | Line-4 writer order with the Master Emerald; timer/counter phase at entry |
+| 2. Screen and background events (done except the `$EC0` background redraw machine, see evidence) | `HPZ_ScreenInit` / `HPZ_ScreenEvent` (character camera clamps, `Obj_HPZPaletteControl` spawn, screen shake, `Events_fg_4` chunk `$61` write and redraw); `HPZ_BackgroundInit` / `HPZ_BackgroundEvent` (`$EC0` seam redraw machine, Knuckles background patch) | Clamp edges per character; the chunk write goes through `ZoneLayoutMutationPipeline`; seam redraw before/at/after `$EC0` |
+| 3. Palette and animated tiles (done) | `AnPal_HPZ`, `AniPLC_HPZ` (4 scripts), `Obj_HPZPaletteControl` (`$B1`, intro → main palette at camera X `$460`) | Line-4 writer order with the Master Emerald; timer/counter phase at entry |
 | 4. Placed objects in the playable act | `$B0` Master Emerald and `$B4` Super Emerald placements in `$1601`, generic shared objects | Behaviour outside the sanctuary controller; emerald-state gating |
 | 5. Knuckles fight | `$82` subtype `$28` `CutsceneKnux_HPZ` (47 routines), dizzy stars, dust, `mus_Knuckles`, three DPLC sets, collapse via `Events_fg_4` | Registry currently falls back to the AIZ2 cutscene for subtype `$28`; rewind across every state |
 | 6. Teleporter and exits | `Obj_SSZHPZTeleporter` (`$79`) full behaviour, camera lock `$1600`, line-4 palette takeover, `StartNewLevel` `$A00`; Knuckles subtype `$4A` save and `$A01` | Handoff into SSZ, which has no events yet: verify the request and load, record the SSZ gap |
@@ -52,7 +52,7 @@ events and remains a recorded gap, not a reason to position the player.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slice 1 |
+| Implemented | Slices 1-3 (identity; screen/background events; AnPal, AniPLC and palette control) |
 | Cold-reachable | Level load only; no traversal verified |
 | Rewind-verified | Not started for `$1601` |
 | Native behaviour matched | Not started |
@@ -76,3 +76,47 @@ Result from fresh `target/surefire-reports`: 107 tests, 0 failures, 0 errors,
 LevelSizes row (`$1880` × `$B20`), which the sanctuary bounds (`$1500-$1640`,
 `$320`) cannot satisfy. The sanctuary headless lifecycle cases now run on `$17`
 only, the ROM giant-ring destination.
+
+### 2026-09-16 slices 2-3 — events, palette and animation
+
+Commit `362771221` plus the guard repair that follows it. Implemented:
+`Sonic3kHPZEvents` (`HPZ_ScreenInit` character limits, `HPZ_BackgroundInit` Knuckles
+row patch, one-shot `Obj_HPZPaletteControl` allocation after the fade, `Events_fg_4`
+chunk `$61` writes to foreground row 7 through the mutation pipeline); the shared
+HPZ screen shake now also runs for `$1601`; `HPZPaletteControlObjectInstance`;
+`AnPal_HPZ` and `AniPLC_HPZ` for `$1601` and `$1701` (OffsAnPal / Offs_AniFunc
+entries 45 and 47); `Obj_HPZMasterEmerald` init writes `Palette_cycle_counter1 = 7999`.
+AnPal counters, the `Palette_cycle_counters+$00` gate, `Events_bg+$00` and
+`Events_fg_4` are captured by `HpzZoneRuntimeState`.
+
+Decisions and limits:
+- `HPZ_BackgroundEvent`'s `$EC0` seam state machine only sequences plane redraws;
+  `SwScrlHpz` already selects the parallax origin from the same predicate. Not ported;
+  a moving visual check across `$EC0` is still required before calling it equivalent.
+- `HPZ_ScreenInit` runs on the first event pass rather than before the first frame.
+- In headless fixtures the palette cycler resolves through a local ownership registry,
+  so the AnPal test asserts palette colours rather than `ownerAt`. Breaking the cycle
+  registration made that test fail (verified, then restored).
+
+Evidence (worktree, all ROMs by absolute path, `maven_queue.py -Dmse=off`):
+- Focused HPZ set (`TestHpzZoneRuntimeStatePaletteCycle`, `TestS3kHpzActEventsHeadless`,
+  `TestS3kHpzPatternAnimation`, the slice-1 classes and the four required S3K classes):
+  119 tests, 0 failures, 0 errors, 0 skips across the two runs.
+- `-Pguards` full run on `362771221`: 669 tests, 1 failure
+  (`TestZoneEventRuntimeAccessGuard`: the new events class called `GameServices`
+  directly). Repaired by routing through a `paletteFadeActive()` event helper; the
+  guard class and `TestS3kHpzActEventsHeadless` rerun green (1 + 5 tests, 0 skips).
+  The full guard suite has not been rerun after the repair.
+
+## Next: slice 5 inventory (Knuckles fight)
+
+`CutsceneKnux_HPZ` (`sonic3k.asm:131264`) is a 47-routine AI fight, not a scripted
+cutscene: proximity/decision tables (`loc_660BE`), `Find_SonicTails`, three DPLC sets
+switched through `$44(a0)`, `mus_Knuckles` via a delayed music object, `Pal_CutsceneKnux`
+on line 2, and shared coordination bits in `_unkFAB8` with the Robotnik ship sequence
+(`PLC_KnuxHPZCutsceneShip`, `sonic3k.asm:131961`) that follows the fight. The collapse
+sets `Events_fg_4` at `sonic3k.asm:132337`; music returns to `mus_LRZ2`
+(`131801-131805`) and `mus_Miniboss` is used at `132591`. The routine block spans
+roughly `131264-133503`; decompose it into fight, ship/emerald theft and collapse
+children before implementation. Engine subtype `$28` still falls back to
+`CutsceneKnucklesAiz2Instance`.

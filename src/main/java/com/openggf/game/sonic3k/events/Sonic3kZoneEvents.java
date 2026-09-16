@@ -163,6 +163,12 @@ public abstract class Sonic3kZoneEvents {
         return AizPreparedTransitionArtBridge.current(module().getLevelEventProvider());
     }
 
+    /** ROM {@code Palette_fade_timer} non-zero: a screen fade is still running. */
+    protected boolean paletteFadeActive() {
+        var fade = GameServices.fadeOrNull();
+        return fade != null && fade.isActive();
+    }
+
     protected ZoneRuntimeRegistry zoneRuntimeRegistry() {
         return GameServices.zoneRuntimeRegistry();
     }

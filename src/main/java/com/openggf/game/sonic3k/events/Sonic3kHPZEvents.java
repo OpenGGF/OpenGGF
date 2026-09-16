@@ -1,6 +1,5 @@
 package com.openggf.game.sonic3k.events;
 
-import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.mutation.MutationEffects;
 import com.openggf.game.sonic3k.objects.HPZPaletteControlObjectInstance;
@@ -41,7 +40,7 @@ public class Sonic3kHPZEvents extends Sonic3kZoneEvents {
 
     @Override
     public void update(int act, int frameCounter) {
-        HpzZoneRuntimeState state = GameServices.hasRuntime()
+        HpzZoneRuntimeState state = hasRuntime()
                 ? S3kRuntimeStates.currentHpz(zoneRuntimeRegistry()).orElse(null)
                 : null;
         if (state == null) {
@@ -52,8 +51,7 @@ public class Sonic3kHPZEvents extends Sonic3kZoneEvents {
             applyScreenInit(state.playerCharacter());
         }
         // tst.w (Events_bg+$00) / tst.w (Palette_fade_timer): allocate once after the fade.
-        var fade = GameServices.fadeOrNull();
-        if (!state.paletteControlAllocated() && (fade == null || !fade.isActive())) {
+        if (!state.paletteControlAllocated() && !paletteFadeActive()) {
             spawnObject(() -> new HPZPaletteControlObjectInstance(
                     new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
             // st (Events_bg+$00) runs whether or not AllocateObject succeeded.
