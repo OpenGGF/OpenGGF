@@ -2864,9 +2864,9 @@ widescreen scrolling before the foreground becomes a wall. Base is
 `.worktrees/soz-pyramid-presentation`.
 
 The earlier positioned capture skipped the ordinary `Obj_PathSwap` at
-`$4308,$918` (subtype `$27`). Native `loc_1CE54`/vertical counterpart apply the
+`$4308,$918` (subtype `$27`). Native `sub_1CF42`/`loc_1CFBC` apply the
 subtype priority bits when the player crosses. A production drop from
-`$43B0,$8E0` changes both Sonic and Tails from low to high priority by frame30.
+`$43B0,$8E0` changes both Sonic and Tails from low to high priority by frame 30.
 The capture setup is corrected; the runtime priority switch and render ordering
 are not overridden. The initial left approach probe at `$41B0,$990` fell into
 the sand and died, so it is not entry or rendering evidence.
@@ -2874,20 +2874,20 @@ the sand and died, so it is not entry or rendering evidence.
 Wider active Act1 background windows repeat plain ROM masonry strip `$740..$77F`
 beyond authored edge `$780`, through the existing render-only descriptor owner.
 Original columns, including the doorway, retain their descriptors. Layout and
-collision bytes are unchanged; native width320 keeps the original renderer path.
+collision bytes are unchanged; native width 320 keeps the original renderer path.
 Zone events cap camera position at `$4500 - viewportWidth`. The capped wide view
 admits the arena when the player reaches native focus position `$4310+$A0` if
 the camera gate can no longer be reached. Native width retains the ROM gate.
 
 Rejected: reducing `Camera_max_X_pos` to make this presentation cap. The player
 boundary uses that word plus native `$128`, so it moved Sonic left and stalled
-or killed 12 of30 victory configurations. The implementation instead preserves
+or killed 12 of 30 victory configurations. The implementation instead preserves
 that bound and limits the actual camera position. Existing camera rewind state
 owns the position; no new persistent state or terrain mutation is introduced.
 
-The initial 128px repeat included the right doorway-shadow fragment. Frame1200
+The initial 128px repeat included the right doorway-shadow fragment. Frame 1200
 exposed a second partial doorway at the screen edge; narrowing the source to
-`$740..$77F` removes that fragment. Frame600 (rise) and frame1200 (fight) were
+`$740..$77F` removes that fragment. Frame 600 (rise) and frame 1200 (fight) were
 visually checked with the final source strip.
 
 Validation in the development worktree (Java21, absolute S3K ROM path):
@@ -2896,7 +2896,7 @@ Validation in the development worktree (Java21, absolute S3K ROM path):
 - `python3 tools/testing/maven_queue.py -Dmse=off
   -Dtest=TestSozPyramidWindow,TestSozScreenEvents,TestSozAct1VictoryProduction
   -Ds3k.rom.path=<absolute-root-ROM> test -B`: 55 tests, no failures/skips,
-  including all30 character/donor/width victory routes and full-registry rewind.
+  including all 30 character/donor/width victory routes and full-registry rewind.
 - Final source strip: queued Maven with
   `-Dtest=TestSozPyramidWindow,TestSozScreenEvents,TestSozAct1VictoryCapture,TestS3kSozPatternAnimation,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`,
   the same ROM property, `-Dsoz.act1.victory.width=800`,
@@ -2907,7 +2907,7 @@ Validation in the development worktree (Java21, absolute S3K ROM path):
   and the same ROM property: 55 tests, no failures/skips.
 - `LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
   --base 3998a70298fe5ed0e10a349bc53dec8f7b90bcbc --preflight`: passed.
-  The change-based plan selects2665 ordinary classes plus84 guards because the
+  The change-based plan selects 2665 ordinary classes plus 84 guards because the
   provider path is shared/unclassified. Proportionate validation applies: the
   implementation adds only SOZ1-gated behavior in existing owners, changes no
   shared algorithm/API/schema, and directly exercises its render, admission,
@@ -2915,10 +2915,17 @@ Validation in the development worktree (Java21, absolute S3K ROM path):
   not a new full-suite pass. Native pixel parity and wider cold routes remain open.
 
 Final capture is `pyramid-presentation/final/` under the unified external task
-root: 5373 frames (89.55s), Act2 loaded at5093 and playable at5192. Both priority
-flags are high at frame30. After the initial boot-only frame0, every Act1 camera
-position stays at or left of `$41E0` for width800. The four existing Act1 arena
+root: 5373 frames (89.55s), Act2 loaded at 5093 and playable at 5192. Both priority
+flags are high at frame 30. After the initial boot-only frame 0, every Act1 camera
+position stays at or left of `$41E0` for width 800. The four existing Act1 arena
 excerpts use this movie; Act1 remains before Act2 with no extra duplicate scenes.
 Original captures are preserved.
 
-Integration verification: pending merge.
+Source commit `5162c693b` merged without conflicts as `8d1ca597d` into
+`develop`; upstream remained at the pinned base. The combined focused Maven
+command on that merge used the union of the test selections above, excluding
+the opt-in capture and retaining `TestSozAct1VictoryProduction`: 177 tests,
+zero failures, errors or skips. This is focused integration verification under
+the proportionate-validation policy, not a full-suite rerun. The refreshed reel
+passes a full `ffmpeg -xerror` decode and remains 260.7 seconds, 22 chapters,
+1920x1080 at 60fps. No unrelated workspace changes were staged.
