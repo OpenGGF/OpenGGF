@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.S3kEmeraldProgression;
 import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
@@ -44,12 +45,14 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
     private boolean completionInitialized;
     private boolean completedAtSpawn;
     private boolean glowSpawned;
+    private boolean paletteCycleDelayWritten;
     private Boolean onScreenOverrideForTest;
 
     private record RewindExtra(int scriptByteOffset, int rotationTimer,
                                int currentColorIndex,
                                boolean completionInitialized, boolean completedAtSpawn,
-                               boolean glowSpawned, ObjectRefId parentId)
+                               boolean glowSpawned, boolean paletteCycleDelayWritten,
+                               ObjectRefId parentId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HPZMasterEmeraldObjectInstance(ObjectSpawn spawn) {
@@ -93,6 +96,16 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
             return;
         }
         latchCompletion();
+        if (!paletteCycleDelayWritten) {
+            paletteCycleDelayWritten = true;
+            // Obj_HPZMasterEmerald init: move.w #8000-1,(Palette_cycle_counter1).w
+            // (sonic3k.asm:197497) holds AnPal_HPZ off while the altar owns line 4.
+            var registry = services().zoneRuntimeRegistry();
+            if (registry != null) {
+                S3kRuntimeStates.currentHpz(registry)
+                        .ifPresent(state -> state.setPaletteCycleCounter1(8000 - 1));
+            }
+        }
         if (parentRef != null) {
             progression = parentRef.progressionForChild();
             runtime = parentRef.runtimeForChild();
@@ -183,7 +196,8 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
                 .map(table -> table.encodeObject(parentRef)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(
                 new RewindExtra(scriptByteOffset, rotationTimer, currentColorIndex,
-                        completionInitialized, completedAtSpawn, glowSpawned, parentId));
+                        completionInitialized, completedAtSpawn, glowSpawned,
+                        paletteCycleDelayWritten, parentId));
     }
 
     @Override
@@ -197,6 +211,7 @@ public final class HPZMasterEmeraldObjectInstance extends AbstractObjectInstance
             completionInitialized = extra.completionInitialized();
             completedAtSpawn = extra.completedAtSpawn();
             glowSpawned = extra.glowSpawned();
+            paletteCycleDelayWritten = extra.paletteCycleDelayWritten();
             if (extra.parentId() != null) {
                 parentRef = (HPZSSEntryControlObjectInstance) context.requireIdentityTable()
                         .resolveObject(extra.parentId(), true);

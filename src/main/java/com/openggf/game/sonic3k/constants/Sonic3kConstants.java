@@ -27,6 +27,9 @@ public class Sonic3kConstants {
      */
     /** AnPal_PalSOZ1: four frames of four sand colors, locked-on ROM. */
     public static final int ANPAL_SOZ1_ADDR = 0x0030DA;
+    /** {@code AnPal_PalHPZ}: 10 x 2 colours (sonic3k.lst:8693). */
+    public static final int ANPAL_HPZ_ADDR = 0x003728;
+    public static final int ANPAL_HPZ_SIZE = 0x28;
     public static final int ANPAL_SOZ1_SIZE = 32;
     /** Five darkness banks used by AnPal_SOZ2. */
     public static final int ANPAL_SOZ2_SAND_SIZE = 160;
@@ -1021,6 +1024,8 @@ public class Sonic3kConstants {
     // AniPLC_MHZ: 4 scripts (mushroom caps and foreground foliage, both acts)
     // Verified by table position immediately before AniPLC_LRZ1 at 0x028A6A.
     public static final int ANIPLC_MHZ_ADDR = 0x0289E8;
+    /** {@code AniPLC_HPZ} (sonic3k.lst:67357). */
+    public static final int ANIPLC_HPZ_ADDR = 0x028C40;
 
     // ArtUnc_AniAIZ2_FirstTree: Static tree art for AIZ2 near-spawn area (camera X < 0x1C0)
     // 0x460 bytes = 35 tiles, loaded to VRAM tile $0CA

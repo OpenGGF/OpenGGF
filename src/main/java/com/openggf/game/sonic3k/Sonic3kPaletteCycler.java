@@ -175,6 +175,18 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
             case 0x14:
                 loadPachinkoCycles(reader, list);
                 break;
+            // OffsAnPal entries 45 ($1601 Hidden Palace) and 47 ($1701 sanctuary)
+            // are AnPal_HPZ; entries 44 (LRZ3) and 46 (DEZ3) are not
+            // (sonic3k.asm:3161-3164).
+            case 0x16, 0x17:
+                if (actIndex == 1) {
+                    byte[] hpzData = safeSlice(reader, Sonic3kConstants.ANPAL_HPZ_ADDR,
+                            Sonic3kConstants.ANPAL_HPZ_SIZE);
+                    if (hpzData.length >= Sonic3kConstants.ANPAL_HPZ_SIZE) {
+                        list.add(new HpzCycle(hpzData));
+                    }
+                }
+                break;
             case 0x15:
                 loadSlotsCycles(reader, list);
                 break;
@@ -1581,6 +1593,38 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 cacheFallbackPaletteTexture(registry, gm, level, 2);
                 dirty = false;
             }
+        }
+    }
+
+    // ========== HPZ Palette Cycle ==========
+    // ROM: AnPal_HPZ (sonic3k.asm:3934-3951). Counters live in HpzZoneRuntimeState
+    // because Obj_HPZMasterEmerald and the HPZ teleporter write them.
+    private static class HpzCycle extends PaletteCycle {
+        private final byte[] hpzData; // AnPal_PalHPZ: 10 frames x 4 bytes
+
+        HpzCycle(byte[] hpzData) {
+            this.hpzData = hpzData;
+        }
+
+        @Override
+        void tick(Level level, PaletteOwnershipRegistry registry) {
+            if (!GameServices.hasRuntime()) {
+                return;
+            }
+            var state = S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry()).orElse(null);
+            if (state == null) {
+                return;
+            }
+            int offset = state.tickPaletteCycle();
+            if (offset < 0) {
+                return;
+            }
+            // move.l (a0,d0.w),(Normal_palette_line_4+$2).w -> line 4 colors 1-2
+            GraphicsManager gm = GameServices.graphics();
+            S3kPaletteWriteSupport.applyContiguousPatch(registry, level, gm,
+                    S3kPaletteOwners.HPZ_ZONE_CYCLE, S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                    3, 1, slice(hpzData, offset, 4));
+            cacheFallbackPaletteTexture(registry, gm, level, 3);
         }
     }
 

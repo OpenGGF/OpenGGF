@@ -124,6 +124,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     private Sonic3kMGZEvents mgzEvents;
     private Sonic3kMHZEvents mhzEvents;
     private com.openggf.game.sonic3k.events.Sonic3kSOZEvents sozEvents;
+    private com.openggf.game.sonic3k.events.Sonic3kHPZEvents hpzEvents;
     private final AizPreparedTransitionArtState aizPreparedTransitionArt =
             new AizPreparedTransitionArtState();
     private final S3kFixedAirCountdownManager fixedAirCountdownManager =
@@ -302,6 +303,12 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
 
         sozEvents = zone == Sonic3kZoneIds.ZONE_SOZ
                 ? new com.openggf.game.sonic3k.events.Sonic3kSOZEvents() : null;
+        if (Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
+            hpzEvents = new com.openggf.game.sonic3k.events.Sonic3kHPZEvents();
+            hpzEvents.init(act);
+        } else {
+            hpzEvents = null;
+        }
 
         // Install typed zone runtime state into the registry.
         // Uses getActiveRuntime() to avoid the mode-checking side effects of
@@ -562,13 +569,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     instanceof Sonic3kSuperStateController superState) {
             superState.applyHyperKnucklesWallQuake(camera());
         }
-        if (screenEventIdentity == ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB) {
+        if (screenEventIdentity == ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB || hpzEvents != null) {
             HpzZoneRuntimeState hpzState = GameServices.hasRuntime()
                     ? S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry()).orElse(null)
                     : null;
             if (hpzState != null) {
                 // ROM ScreenEvents: HPZS_ScreenEvent and HPZS_BackgroundEvent both
-                // read Screen_shake_offset, and the background event tail-calls
+                // (and HPZ_ScreenEvent / HPZ_BackgroundEvent for $1601,
+                // sonic3k.asm:120075-120076, 120128) read Screen_shake_offset, and the background event tail-calls
                 // ShakeScreen_Setup (sonic3k.asm:120855) for the next frame. The
                 // engine advances the countdown here, at the head of the pass, so
                 // the applied word is the one the previous setup produced and the
@@ -608,6 +616,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         }
         if (sozEvents != null && currentZone == Sonic3kZoneIds.ZONE_SOZ) {
             sozEvents.update(currentAct, frameCounter);
+        }
+        if (hpzEvents != null && currentZone == Sonic3kZoneIds.ZONE_HPZ) {
+            hpzEvents.update(currentAct, frameCounter);
         }
         releasePendingMgzPostTransition();
         syncSidekickBoundsToCamera();

@@ -9,7 +9,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
   instead of the Super Emerald sanctuary (`$1701`), which remains reachable from the
-  giant ring.
+  giant ring. Hidden Palace now applies its character camera limits and Knuckles
+  background layout, switches from its intro palette past the entrance, cycles its
+  crystal glow, and animates its waterfall and gem tiles; the sanctuary gains the same
+  glow and tile animation.
 
 - **S3K parity fixes from the discrepancy audit:** Madmole's body is its own object
   in its own slot; the MHZ dragonfly tail enters its return on the same frame as
