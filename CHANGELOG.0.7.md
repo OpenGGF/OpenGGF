@@ -237,7 +237,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The cold sand intro, Egg Golem arena and seamless
   Act 2 entry use native event owners. The golem arena opens at the equivalent
   centered native viewport in widescreen, so the right wall cannot prevent the
-  admission camera gate from firing. The last-checkpoint debug shortcut reloads
+  admission camera gate from firing. Widescreen views of the arena end at the native
+  view's right edge, so the player stops against the screen lock rather than an
+  invisible wall mid-screen. The last-checkpoint debug shortcut reloads
   destination events, so skipping to the SOZ2 boss no longer retains early-room
   darkness or omits the boss background. Arena and laser sprite masks clip later
   sprites, including the opening door and sinking golem beneath the sand.
