@@ -12,7 +12,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Player-controlled Tails keeps normal air gravity on the frame flight starts, so the
   climb out of a jump matches the ROM from the first flying frame. Sandopolis
   Sandworms wait one more frame after first appearing on screen before starting
-  their emerge timer, so they surface on the ROM frame.
+  their emerge timer, so they surface on the ROM frame. Sandopolis now queues its
+  Skorp, Sandworm and Rockn art at level start like the ROM, keeping later art
+  loading in step.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now

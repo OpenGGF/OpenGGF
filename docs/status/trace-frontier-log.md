@@ -110626,3 +110626,29 @@ animation2. That production intro, not trace-state seeding, is the next target.
   `TestS3kAizTraceReplay` frontier here was frame 20713, so develop currently
   carries an unattributed AIZ2 reload camera-lock regression; the owning commit
   was not bisected in this task.
+
+### 2026-09-16 — SOZ LoadEnemyArt batch submitted
+
+- Branch `bugfix/ai-soz-recorded-routes` (`.worktrees/soz-recorded-routes`), on top of
+  `939d4a137`, against base `4a9962069` (`.worktrees/soz-base-attrib`). Both trees ran
+  `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3k*TraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" -Dsurefire.failIfNoSpecifiedTests=false test -B`
+  with fresh `target/trace-reports` (61 tests; base 20 failures/2 errors, branch
+  21 failures/1 error, 0 skips). Every non-SOZ report is identical, including the
+  AIZ frames 5497/6302 and zero-error FBZ/bonus/special-stage results.
+- `Sonic3kObjectArtProvider.scheduleEnemyKosArt` had no SOZ case, so the engine never
+  submitted `PLCKosM_SOZ` (Skorp, Sandworm, Rockn; `sonic3k.asm:64333-64334,
+  64417-64421`) that the recording queues at row 34. Every later Kosinski ordinal
+  lagged by three, and the star-post bonus-art job then waited on a recorded
+  completion that could not match.
+- `TestS3kSozCompleteRunTraceReplay`: base aborts after 22525 compared frames
+  (2995 errors, first error frame 34 `queue.s3k_kos_direct.busy`). Branch replays all
+  59336 frames without the `KosM module FIFO is full` abort: 13591 errors, first
+  error frame 5977 `tails_mapping_frame` (expected `$08`, actual `$07`). Inside the
+  base's 22525-frame window error groups fall 2985 -> 2604 (physics 2638 -> 2257,
+  animation unchanged at 347). The full-run total is not comparable with the
+  earlier partial count.
+- Same branch also carries Knuckles-only wall side-contact breaks, the Tails flight
+  activation frame and the Sandworm `Obj_WaitOffscreen` handshake; none moved a
+  non-SOZ S3K replay.
