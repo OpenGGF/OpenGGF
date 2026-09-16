@@ -124,7 +124,10 @@ final class SozAct1Events extends Sonic3kZoneEvents {
         var player=spriteManager().getMainPlayable();
         var handoff=seamlessTransitionResourceHandoffs().register(new SozActTransitionHandoff(
                 0x140-(player.getCentreX()&65535),0x3AC-(player.getCentreY()&65535),this));
-        levelManager().requestSeamlessTransition(SeamlessLevelTransitionRequest.builder(
+        // loc_55C84 runs Load_Level and the coordinate rebase inside this background-event
+        // dispatch once Kos_modules_left is clear (sonic3k.asm:113811-113870); deferring
+        // to the next loop iteration leaves one unreloaded frame.
+        levelManager().applySynchronousScreenEventTransition(SeamlessLevelTransitionRequest.builder(
                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(8,1).deactivateLevelNow(false).preserveMusic(true).preserveLevelGamestate(true)
                 .showInLevelTitleCard(false).runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
@@ -133,6 +136,8 @@ final class SozAct1Events extends Sonic3kZoneEvents {
                 .postTransitionMinX(0xA0).postTransitionMaxX(0xA0).postTransitionMinXTarget(0xA0).postTransitionMaxXTarget(0xA0)
                 .postTransitionMinY(0x34C).postTransitionMaxY(0x34C).postTransitionMaxYTarget(0x34C).postTransitionMinYTarget(0x34C)
                 .resourceHandoff(handoff).build());
+        // First legal post-transition rewind state: the synchronous reload has finished.
+        if(hasRuntime())levelManager().markSynchronousSeamlessTransitionBoundary();
     }
     private void updateSeamlessEntry(SozZoneRuntimeState state,int levelFrameCounter){
         var events=state.events();
