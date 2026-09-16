@@ -110393,3 +110393,216 @@ passes 20,645 ordinary tests with 19 baseline skips; 668 guards retain the exact
 three baseline failures (build guidance, migrated README, assertion-free probes).
 No new or worsened failure remains. See the
 [causal evidence](../architecture/research/trace/2026-09-14-kis2-chain-frontier.md#glide-attack-continuation-2026-09-15-base-d92fea6f1).
+
+
+### 2026-09-15 — SOZ completion ordinary-route ownership check
+
+At `6f10f848e` in `.worktrees/soz-completion`, queued Maven
+`-Dmse=off -Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestS3kSonicTailsSozSegmentTraceReplay -Ds3k.rom.path="$S3K_ROM" test -B`
+completed with one test error, zero skips (51.135s). It aborted at trace index1814,
+ROM frame1814, `FULL_LEVEL_FRAME`: `SkorpBadnikInstance.Tail.owner` retained a
+Skorp no longer registered in the rewind identity table. This is an ownership
+failure, not a completed parity measurement; no aggregate mismatch count is
+claimed. The short family tests had not included this retirement boundary.
+
+
+Follow-up on the same completion branch repairs Skorp retirement and equivalent
+Sandworm/Rockn child references. The three direct retirement/replay checks pass;
+the remaining26 badnik/breadth/inventory/art checks passed in the preceding run.
+The initial test attempted a full snapshot between object removal and collision
+list retirement; that is not a valid completed-frame boundary. It now validates
+reference closure immediately and captures the composite after the next frame.
+
+Queued Maven `-Ptrace-replay-r7 -Dsurefire.forkCount=1
+-Dtest=TestSozBossWallState,TestS3kSonicTailsSozSegmentTraceReplay` with explicit ROM
+completed in55.206s: wall checks3 passed, trace failed without a closure exception.
+Report:17646 compared frames,4299 error spans,0 warnings,0 bootstrap errors;
+first frame0 `tails_y_speed` expected0038/actual0000, with leader gravity and
+animation mismatches at the same boundary. Eight advertised aux schemas are
+unverified, so this is physics/animation coverage only. Source inspection found
+an omitted SOZ1 entry owner: `SpawnLevelMainSprites` loc695A creates
+`Obj_LevelIntro_PlayerFallIntoGround` and initializes both players airborne with
+animation2. That production intro, not trace-state seeding, is the next target.
+
+## 2026-09-15 — SOZ cold-entry controller investigation
+
+- Worktree `.worktrees/soz-completion`, candidate over `9dd12ced0`.
+- Queued command: `python3 tools/testing/maven_queue.py -Dmse=off
+  -Ptrace-replay-r7 -Dsurefire.forkCount=1
+  -Dtest=TestSozFallingIntro,TestS3kSonicTailsSozSegmentTraceReplay
+  -Ds3k.rom.path="$S3K_ROM" test -B`. Completed in53.248s;3tests,
+  2failures,0errors,0skips. One was fixture config leakage, subsequently fixed
+  and both intro tests passed separately.
+- Replay reports3991errors,0warnings; first frame0 `y_sub` expected0000,
+  actual3800, with `y_speed` expected0038,actual0070. Companion later advances
+  twice per frame. Native source now explains the missing sand intro; initial
+  dispatch and companion movement suppression remain under investigation.
+- Eight advertised auxiliary schemas remain unverified. No fixture or recorded
+  gameplay values were changed or used to drive the engine.
+
+### SOZ cold entry and first terrain owner
+
+- Completion candidate after `04cbcd574` and arena merge64b7e4be9, queued
+  `-Ptrace-replay-r7 -Dtest=TestSozScreenEvents,TestSozAct1ArenaProduction,TestS3kSonicTailsSozSegmentTraceReplay`
+  with explicit S3KROM:12tests,11pass,1trace failure,0skips (57.851s).
+  Wall resource validation now waits on actual queue completion and replays the
+  same counted duration; the integrated final boss legitimately adds queue work.
+- Replay:3417errors,0warnings,0bootstrap errors,17646frames. First error is
+  frame63 `tails_cpu_ctrl2_pressed`, expected0000actual0010. P1/P2 initial
+  gravity and positions now match. The first physical divergence is1419:
+  `g_speed`040C vs03CC, Y0631vs062C, animation19vs00. Disassembly identifies
+  the missing terrain-driven `sub_730C` sand slide, distinct from placed quicksand.
+- Intro now uses direct `clearLogicalInputState` plus the existing CPU logical
+  latch clear: ordinary input publication intentionally ignores writes under
+  a control lock. Six intro/sidekick/art checks pass,0skips (53.335s); the trace
+  has not yet been rerun after this final logical-latch change.
+- Fresh diagnostic rebuild showed prior P1 extra-step output came from stale
+  compiled classes during an overlapping edit/compile, not a further production
+  ordering defect. Temporary dispatch instrumentation was removed.
+
+### SOZ slide phase and pillar contact follow-up
+
+- Candidate7a94f4fae, queued `-Ptrace-replay-r7
+  -Dtest=TestS3kSonicTailsSozSegmentTraceReplay` with explicit S3K ROM:
+  2975errors,0warnings,0bootstrap errors across17646frames (56.220s).
+  First error moved to1419 `camera_y`, expected05CC actual05CF; player
+  slide motion matches there. Native LevelLoop places `sub_730C` after camera
+  scrolling; the loop-tail correction is prepared in36af09e67.
+- First companion difference1547 is `tails_g_speed`, expected0 actual058D.
+  Native `loc_1E042` admits zero x_vel on left pillar penetration. A focused
+  solid-contact regression reproduced that missing semantic override and now
+  passes; the combined trace rerun is pending. Eight advertised auxiliary
+  schemas remain unverified; recorded gameplay remains comparison-only.
+
+- Combined slide-order/pillar candidate44d853536 rerun completed in58.797s:
+  2840errors,0warnings,0bootstrap errors,17646frames. First mismatch moved
+  to2312 `player_mapping_frame` (96vs92), wire capture; first physics
+  difference2336 `status_byte` (0Dvs05), collapsing-bridge standing admission.
+  The earlier frame1419 camera and1547 companion ground-speed differences
+  are absent. Source-backed capture-frame and positive-control contact fixes
+  are under focused verification; this remains a failing trace.
+
+- Candidateb6b4e37d1 (wire capture24556719d plus bridge91db399e5), same
+  queued replay command and ROM:2834errors,0warnings,0bootstrap errors,
+  17646frames,57.721s. First error is now2396 `camera_y` (09A1vs099B),
+  accompanied by `air`0vs1/status05vs07. Earlier wire capture/bridge admission
+  differences are absent. `loc_4B0DE` masks status withFC on horizontal flip;
+  the missing air-bit clear is the next focused correction.
+
+- Candidate4c3fff7e9: queued `-Ptrace-replay-r7
+  -Dtest=TestSozSwingAndWireProduction,TestS3kSonicTailsSozSegmentTraceReplay`
+  with absolute S3K ROM,5tests:4production passes/1trace failure,0skips,
+  60s. Wire production recreation now passes. Replay first divergence moves
+  to3480 `tails_y_speed` (-06C8vs-0660),3123total errors,0warnings,
+  0bootstrap errors,17646frames. Total count increased with the changed downstream
+  route, while the exact matching prefix extends through3479. CPU boundary death
+  uses DEAD_FALLING while generic dead=false; quicksand acquisition must still
+  reject native routine6 before its ascending+$68 force.
+
+- Candidate727087017, same standalone emerald-run replay:2892errors,
+  0warnings,0bootstrap errors,17646frames,25.450s. First mismatch4868
+  `player_animation_id` (1Fvs02) is `Sonic_Transform`, after52rings; physics
+  matched through4868 and all compared fields through4867. Metadata provides
+  no prior-campaign emerald progression, while the recording requests a
+  transformation. No emeralds were supplied from comparison rows or inferred
+  from the fixture name. This segment remains red at its progression boundary.
+- Selected existing `soz_completerun` (59507rows, BK2offset282195) as an
+  independent ordinary-input frontier. Its recorded Sonic animation never
+  enters1F. Added `TestS3kSozCompleteRunTraceReplay` without row trims or
+  changed tolerances; queued full recording comparison is pending.
+
+- Independent `soz_completerun` on727087017 plus new harness:9763errors,
+  0warnings,0skips,39.673s. First reported error34 is direct Kos queue busy
+  timing (truevsfalse); those queue comparisons remain enabled. First player
+  state error2312 is Tails y-speed0038vs0000/air1vs0 after flight recovery.
+  Native loc_13D34 (S2 loc_1BC68 tail) copies live leader collision bits and
+  art priority at handoff; engine omitted those copies. First main-player
+  position difference is6242 Y0A90vs0A91. Investigating the handoff first;
+  no queue comparison or later rows were removed.
+
+- Recovery collision/art handoff regression failed before the fix (expected
+  top bit14, actual12), then all18 `TestSidekickCpuControllerFlightAutoRecovery`
+  tests passed,0skips,52.981s in `soz-completion` on727087017 plus the fix.
+  Both S2/S3K and both collision-plane directions are covered. The same queued
+  independent trace command after the fix still reports9763errors,0warnings,
+  0skips,59336compared frames,39.192s, with unchanged first queue34 and
+  Tails2312/main-player6242 frontiers. The missing copy is a proven source
+  discrepancy, but this experiment rejects it as the cause of this frontier.
+
+- `b52f3f52d` in `soz-sand-mechanisms`, integrated into `soz-completion`:
+  the recovery2312 mismatch came from stale engine grounding support, not
+  terrain. The pre-fix production regression failed on retained support.
+  Queued `-Dmse=off -Dtest=TestSozRecoverySupportProduction,TestSidekickCpuControllerFlightAutoRecovery,TestObjectSolidContactController,TestSolidObjectManager test -B`
+  with the absolute main-workspace S3K ROM:107tests,0skips,52.842s.
+  Final `-Dtest=TestSozRecoverySupportProduction,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+  with the same queued Maven/ROM flags:59tests,0skips,20.650s.
+  Recovery clears engine support and common status flags while preserving
+  native interaction/object-standing bytes; forced recreation/replay passes.
+- Same independent full-trace command (`-Ptrace-replay-r7
+  -Dtest=TestS3kSozCompleteRunTraceReplay`, absolute S3K ROM), clean candidate
+  source:59336compared rows,13159errors (10326physics,2833animation),0warnings,
+  0skips. First overall error remains queue34. All compared player fields match through
+  5669; first Tails error5670 is premature despawn (native133A/AD2 CPU6,
+  engine7F00/0 CPU2), and first P1 error is y-speed7291, formerly6241.
+  Total errors increase because the downstream trajectory changes; this is
+  prefix improvement, not an overall green run. Final trace elapsed time was
+  not retained and is not inferred from earlier invocations. No rows or queue
+  comparisons were removed. Investigating the next source-owned boundary.
+
+- `05fd83228` fixes live SST slot reads in companion despawn checks. Queued
+  `-Dtest=TestS3kLiveInteractSlotProduction,TestSidekickCpuDespawnParity,TestSozRecoverySupportProduction,TestSidekickCpuControllerFlightAutoRecovery`
+  with `-Dmse=off` and the absolute S3K ROM:88passed,0skips,49.839s. Same-word
+  replacement, changed-word, empty-slot and zero-equal branches include forced
+  replay. Unknown live code providers remain unknown, rather than guessed empty.
+  The same independent full trace reports59336frames,12970errors (10158physics,
+  2812animation),0warnings/0skips, Maven1:07 (test17.11s). Queue34 remains;
+  first player mismatch moves to Tails mapping5977 (8vs7), first physics Tails6423
+  (g-speed-3vsA5,y-speed540vs0,air1vs0,status2vs8). P1 first y-speed remains7291.
+- Cold controller capture and native object rows identify P1's7291 missed landing:
+  native sliding sand block at`136D/848` receives the player, whereas the engine
+  spawner at`13A6/8B7` emits a falling child far below it. `loc_402CC/402EE` use
+  Oscillating_table+$16; the engine API excludes the control word and needs$14.
+  Root regression on current SOZ tree fails before fix (expected403,actual4FF),
+  1failure/0skips,18.440s. Queued `-Dtest=TestSozSandMechanisms,TestSozSandMechanismsProduction`
+  with explicit S3K ROM after fix:20passed,0skips,55.420s. Full trace movement
+  remains to be measured; no gameplay state was supplied from comparison rows.
+
+- `37170aaad`, measured at integrated `a66e14bf5` in `soz-completion`:
+  `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay-r7
+  -Dtest=TestS3kSozCompleteRunTraceReplay
+  "-Ds3k.rom.path=$SOZ_ROM"
+  test -B` (`SOZ_ROM` is the discovered absolute main-workspace S3K ROM path)
+  completes in1:13,1failed test/0skips,59336compared frames,
+  10506errors (9388physics/1118animation),0warnings/bootstrap errors. Queue34
+  remains first overall; Tails mapping5977 remains and first Tails physics moves
+  to9046. P1/camera kinematics match through19410; ring count differs at13343
+  (3expected/4actual). First P1 movement mismatch19411 is a spring-vine landing
+  at`$3498/$9C0`: expected y`$9AD`,actual`$9B0`, y-speed`$14E`versus0.
+  This is a longer exact movement prefix, not a passing full trace. The ordinary
+  capture driver has a separately measured trajectory and cannot inherit this
+  hardware-timed replay's matching prefix; its cold route remains independently
+  controlled and validated.
+
+- Spring-vine19411 source diagnosis: `loc_1E45A` rejects exact zero overlap
+  through its unsigned `CMP.W #-$10 / BLO`, admitting only1..16. The optional
+  direct-top classifier admitted0. The expanded production-solid regression
+  fails before the fix at overlap0 (1failure/0skips,51.698s). The corrected
+  classifier is exercised at overlaps-1/0/1/15/16/17, three radii and grounded/
+  airborne entry. Queued `-Dmse=off
+  -Dtest=TestSolidObjectManager,TestSozSpringVine,TestSozAct1SpringVineRoute`
+  with the absolute S3K ROM passes99tests,0skips,54.927s. Generic slope
+  classification and continued riding are unchanged. The full trace after this
+  correction remains to be measured.
+
+- `5d67103dc`, same independent trace command in `soz-completion`: the replay
+  aborts with `S3K KosM module FIFO is full` while `Sonic3kStarPostObjectInstance`
+  submits bonus-star art. Maven reports1test error/0skips,29.200s. The partial
+  report contains22525compared frames through22567,2995divergences
+  (2648physics/347animation),0warnings/bootstrap errors. There are no P1
+  position/speed/angle/air/camera mismatches in those compared frames; ring13343
+  and mapping21749 differ. Tails mapping5977 and queue34 remain. This is an
+  incomplete replay, not a reduction of the full59336-frame error total. The
+  four-entry module queue rejects a further submission after the existing timing
+  divergence; capacity and comparison admission were not relaxed to finish the
+  recording. Ordinary controller cold-route validation remains independent.

@@ -18,7 +18,7 @@ class TestHczOverlayCommandPool {
         int[] secondScroll = scrollData(201, 202);
         var first = new HczBgHighPriorityTileRenderer.OverlayCommand().configureCaptured(
                 renderer, backgroundRenderer, 320, 224, firstScroll, 0, 64, 12, 13, 14, 15, 16, 17, true, 18,
-                new int[]{1, 2, 3, 4});
+                new int[]{1, 2, 3, 4}).withVerticalWrap(true);
         var second = new HczBgHighPriorityTileRenderer.OverlayCommand().configureCaptured(
                 renderer, backgroundRenderer, 420, 244, secondScroll, 0, 40, 23, 24, 25, 26, 27, 28, false, 29,
                 new int[]{5, 6, 7, 8});
@@ -35,6 +35,8 @@ class TestHczOverlayCommandPool {
         assertEquals(List.of("201,202", "101,102"), backgroundRenderer.uploads,
                 "each queued overlay must retain its frame's full per-line HScroll snapshot");
         assertEquals(List.of(77, 77), renderer.hScrollTextureIds);
+        assertEquals(List.of(false, true), renderer.verticalWraps,
+                "each queued overlay retains its own native vertical-wrap policy");
         assertEquals(List.of(40.0f, 64.0f), renderer.vdpWrapWidths,
                 "each overlay must replay its captured plane-period wrap width");
         var reused = HczBgHighPriorityTileRenderer.acquireCaptured(
@@ -99,6 +101,7 @@ class TestHczOverlayCommandPool {
         private final List<String> calls = new ArrayList<>();
         private final List<Integer> hScrollTextureIds = new ArrayList<>();
         private final List<Float> vdpWrapWidths = new ArrayList<>();
+        private final List<Boolean> verticalWraps = new ArrayList<>();
 
         @Override public void enablePerLineScroll(int hScrollTextureId, float screenHeight,
                 float vdpWrapWidth, float nametableBase, float sampleYOffsetPx) {
@@ -109,6 +112,7 @@ class TestHczOverlayCommandPool {
         @Override public void render(Layer layer, int ww, int wh, int vx, int vy, int vw, int vh,
                 float ox, float oy, int aw, int ah, int at, int pt, int upt, int pp,
                 boolean wy, boolean mask, boolean uw, float water) {
+            verticalWraps.add(wy);
             calls.add(ww + "," + wh + ":" + vx + "," + vy + "," + vw + "," + vh
                     + ":" + ox + "," + oy + ":" + aw + "," + ah + "," + at + "," + pt
                     + "," + upt + ":" + uw + "," + water);

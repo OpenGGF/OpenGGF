@@ -132,8 +132,6 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             0x060, 0x060,
             0x030, 0x090
     };
-    private static final int SOZ1_BOSS_LOCK_MIN_X = 0x4180;
-    private static final int SOZ1_BOSS_LOCK_MIN_Y = 0x0960;
 
     private final AnimatedTileChannelGraph graph;
     private final Level level;
@@ -189,6 +187,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
     private byte[] lbzWaterlineScrollData;
     private final byte[] soz1BgData;
     private final byte[] soz1Bg2Data;
+    private final byte[] soz2BgData;
     private final byte[] pachinkoScratch;
     private final byte[] pachinkoLowSource;
     private final byte[] pachinkoHighSource;
@@ -280,6 +279,7 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.iczArt5Data = null;
             this.soz1BgData = null;
             this.soz1Bg2Data = null;
+            this.soz2BgData = null;
             this.pachinkoScratch = null;
             this.pachinkoLowSource = null;
             this.pachinkoHighSource = null;
@@ -561,6 +561,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             this.soz1Bg2Data = null;
         }
 
+        this.soz2BgData = zoneIndex == 0x08 && actIndex == 1
+                ? loadRawBytes(reader, Sonic3kConstants.ART_UNC_ANI_SOZ2_BG_ADDR,
+                        Sonic3kConstants.ART_UNC_ANI_SOZ2_BG_SIZE) : null;
+
         if (zoneIndex == 0x14) {
             byte[] lowSource = loadKosinskiBytes(reader,
                     Sonic3kConstants.ART_KOS_PACHINKO_BG1_ADDR,
@@ -742,6 +746,16 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                 && hcz2Art2Data != null
                 && hcz2Art3Data != null
                 && hcz2Art4Data != null;
+    }
+
+    boolean shouldRunSoz2CustomChannels() { return soz2BgData != null; }
+
+    void updateSoz2TorchesForGraph() {
+        if (!GameServices.hasRuntime()) return;
+        var state = S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        if (state == null || state.actIndex() != 1) return;
+        int frame = state.lighting().tickTorch();
+        if (frame >= 0) applyRawPatternSliceToLevel(soz2BgData, frame * 0xC0, 0xC0, 0x330);
     }
 
     boolean shouldRunSoz1CustomChannels() {
@@ -1217,21 +1231,13 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
         return com.openggf.game.sonic3k.scroll.SwScrlSoz.desertTilePhase(getCameraX());
     }
 
-    // SOZ1 normally derives this phase from Events_bg+$10 and Camera_X_pos_BG_copy.
-    // Until SOZ event/runtime state exists, use the boss-arena camera locks as a
-    // compatibility bridge for the late-act path that forces the phase back to 0.
+    // sub_55E4C writes equal Events_bg+$10 and Camera_X_pos_BG_copy
+    // throughout the arena background routine, fixing AnimateTiles_SOZ1 at zero.
     private boolean isSoz1BossArenaPhaseLocked() {
-        if (zoneIndex != 0x08 || actIndex != 0) {
-            return false;
-        }
-        try {
-            int minX = GameServices.camera().getMinX() & 0xFFFF;
-            int minY = GameServices.camera().getMinY() & 0xFFFF;
-            return minX >= SOZ1_BOSS_LOCK_MIN_X && minY >= SOZ1_BOSS_LOCK_MIN_Y;
-        } catch (Exception e) {
-            LOG.fine(() -> "Sonic3kPatternAnimator.isSoz1BossArenaPhaseLocked: " + e.getMessage());
-            return false;
-        }
+        return zoneIndex == 8 && actIndex == 0
+                && com.openggf.game.sonic3k.runtime.S3kRuntimeStates
+                        .currentSoz(GameServices.zoneRuntimeRegistry())
+                        .map(state -> state.events().backgroundRoutine() != 0).orElse(false);
     }
 
     /**
@@ -2099,8 +2105,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             graph.install(S3kAnimatedTileChannels.buildHczChannels(this, scripts, actIndex));
             return;
         }
-        if (zoneIndex == 0x08 && actIndex == 0) {
-            graph.install(S3kAnimatedTileChannels.buildSozChannels(this));
+        if (zoneIndex == 0x08) {
+            graph.install(S3kAnimatedTileChannels.buildSozChannels(this, actIndex));
             return;
         }
         if (zoneIndex == 0x03) {

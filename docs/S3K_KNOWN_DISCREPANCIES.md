@@ -1821,19 +1821,49 @@ when the rock enters its fall routine.
 entry, pushing right starts the authored `$5EC → $47F0 → $FFFF` track before
 reaching switch `($4830,$5B0)`. The required preceding world/route state has not
 been established. Do not claim completion of this puzzle from unit contact tests
-or the separate passing channel-8 switch/door route. See the act matrix and v2
-execution record.
+or the separate passing channel-8 switch/door route. The independent recording
+contains no player or nearby-object samples in this lower puzzle region; it uses
+the upper switch at `($4A30,$330)` and swing instead. This establishes the
+recorded route, not that the lower coupling is optional or that its passage works.
+See the act matrix and v2 execution record.
 
 ## SOZ Background Event Modes and Torch Animation
 
-Normal Act 1 desert parallax, heat shimmer, scroll-driven animated-art extent
-and sand palette cycling are implemented with bounded checks. Unused LRZ scripts
-are excluded so static desert art remains intact; the background repeat period
-is preserved in widescreen. Act 1's arena
-background replacement/rising sand and seamless transition are not yet owned;
-the animator retains the existing camera-lock phase-zero compatibility bridge.
-Act 2 still uses generic scroll fallback and lacks its custom darkness-coupled
-torch animation and event-selected background modes. These require the actual
-zone-event/palette state rather than camera-position heuristics or a bright-only
-animation loop. Full native pixel certification also remains open. See the
-[SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md#explicit-presentation-work-and-revised-next-batch).
+Normal desert parallax/heat shimmer and animated art, Act1 arena replacement,
+rising sand and seamless Act2 events are implemented. The animator reads the
+native event phase instead of camera-lock heuristics. Act2 implements its normal,
+sand-room, boss and post-boss scroll modes; torches and palette fades share the
+captured light state, including boss inhibition and release.
+
+**Redraw fidelity limits:** the renderer rebuilds the selected source window as
+whole native row/column redraws advance. The earlier claim of a visible Act1
+arena/seamless defect was not supported by measurement. At native camera Y
+`$960`, 42 phased-versus-whole image pairs across widths320/528/800 and static
+or moving cameras were identical, despite different underlying tilemap bytes:
+the foreground hides the partial arena redraw. The seamless redraw occurs
+behind the palette fade. The unused retained-plane prototype was discarded.
+Act2 post-boss redraw now retains ROM-backed descriptors through art admission
+and the native two-row updates. This removes an entry flash and preserves the
+visible rising redraw in wide margins. Tests cover widths 320/528/800, same-revision
+rewind restoration, clipping and return to ordinary caching. Sand-exit A/B checks
+show no visible difference at 320/528; the 800-pixel route did not reach the exit.
+Full native pixel certification remains open. Engine A/B checks establish
+visibility in those scenarios, not pixel identity with native hardware.
+
+**Native low-level limits:** failed spring-vine allocation can write foreign SST
+bytes (above). Cork quiet-skid polling and the boss charge's failed-allocation
+terminal poll can also read bytes belonging to an arbitrary foreign object.
+Known SOZ terminal states are represented, but no arbitrary SST-byte service is
+invented to reproduce unrelated memory contents. Final-boss PLC6D art loads from
+the ROM; exact later Nemesis FIFO service timing remains a shared service gap.
+
+The independent SOZ recording also retains a Kosinski service-timing divergence
+from frame34. With the corrected vine landing, replay reaches a later checkpoint
+without a compared Sonic movement mismatch, then aborts when bonus-star art
+submission finds the four-entry module FIFO full. The partial22525-frame result
+is incomplete trace coverage; queue capacity/admission have not been relaxed.
+See the frontier log for the exact command and remaining companion/animation
+mismatches. Ordinary controller route evidence is recorded separately.
+
+See the [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act
+matrices for current route, rewind and compatibility evidence.

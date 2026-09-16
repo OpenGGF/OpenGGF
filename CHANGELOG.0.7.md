@@ -198,14 +198,32 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   and FBZ work, LBZ Big Arm, Super Emerald sanctuary/progression, and powered
   effects. Sandopolis now implements its four quicksand variants, including
   per-player capture, jump release, sand-slide movement and rewindable cooldowns,
-  plus spring vines with shared tension, deforming surfaces and directional launches,
+  plus spring vines with shared tension, deforming surfaces, native landing boundaries and directional launches,
   sand rocks that break under rolling landings and release their riders,
   pushable rocks that fall onto their authored tracks, loop fall-through
   controllers, both static solid platform shapes, moving and spiked pillars,
   and connected push switches and doors, including special-rock activation and correct body-over-track layering.
   Sandopolis Act 1 now has layered desert parallax, foreground and background heat shimmer, scroll-driven
   background art and cycling sand colors, with preserved static desert tiles
-  and consistent background wrapping in widescreen.
+  and consistent background wrapping in widescreen. Both acts also implement
+  swinging platforms, rappel wires, oscillator-timed spawning sand blocks, rising walls and corks, and
+  Skorp, Sandworm and Rockn. Terrain-driven sand slides run after camera tracking.
+  The cold sand intro, Egg Golem arena and seamless
+  Act 2 entry use native event owners. Act 2 couples light switches, ghosts,
+  torches and palette fades, and implements the final boss, collapsing wall,
+  capsule/results and the Lava Reef transition. Post-boss background rows remain
+  intact during art loading and redraw in order, including widescreen margins.
+  The independent exit follower
+  survives boss retirement and rewind. Mechanism state survives kept
+  stage returns, and object graphs—including promoted collapsing platforms—reconstruct
+  across rewind using stable object and player identities. Live rewind preserves
+  the host audio clock across repeated death/reloads. Sonic 2 and S3K companions
+  copy the leader's collision plane and art priority when flight recovery ends,
+  and release stale engine platform support while retaining native interaction state.
+  Fixed controller replays now complete both acts from cold native Sonic + Tails
+  starts through playable destinations. Broader character/donor/viewport routes,
+  the lower Act 2 rock puzzle and exact native parity remain documented in the
+  per-act matrices.
   Giant-ring sanctuary entry uses the same emerald ceremony, palette,
   camera, background setup, and emerald/teleporter sprite art as direct sanctuary
   loading, including the ROM’s `$1701` level identity. MHZ end-boss debris

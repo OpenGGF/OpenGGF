@@ -1,10 +1,10 @@
 # Sandopolis Zone: methodology v2 application plan
 
-Date: 2026-09-15. Status: quicksand, vines, rocks, loop exits, static solids,
-floating pillars, push switches and doors integrated at the bounded scopes below.
-Normal Act 1 parallax, heat shimmer, animated background art and sand palette
-cycling are implemented with bounded checks; later presentation modes remain open;
-full routes, event systems, bosses and native certification remain open.
+Date: 2026-09-15. Status: both acts' placed factories, bosses, coupled lighting,
+scroll/animation, arena and transition owners are implemented at the bounded
+scopes below. Cold-route verification is active; terrain-driven sand sliding is implemented and
+wrapped background collision is the current source-backed traversal follow-up.
+Full native/pixel certification remains open, including partial VDP redraws.
 
 ## Objective and authority
 
@@ -24,7 +24,8 @@ adds score/ring coverage to the roadmap and is preserved.
 ## First execution slice: inventory and native pilot
 
 1. Inspect production zone, event, object, scroll, palette, animation, PLC and
-   transition registrations, existing tests and current discrepancy/frontier
+   transition registrations, player spawn/CPU and terrain-driven player hooks,
+   existing tests and current discrepancy/frontier
    records. Decode both acts' actual placements, including used subtypes and
    reachable children. Separate absent factories from implemented route gaps.
 2. Reverify source labels and branches in the existing analysis with the S3K
@@ -52,7 +53,7 @@ representative compatibility, rewind/replay and review of the coupled boundary.
 
 | Slice | Scope and owning reference leads | Early independent check and principal risk |
 | --- | --- | --- |
-| 1. Act 1 entry and desert traversal | `SOZ1_ScreenEvent`, `SOZ1_BackgroundEvent`, `AnPal_SOZ1`, `AnimateTiles_SOZ1`; placed quicksand variants, rocks, vines, platforms and badniks | Camera-driven background/animation at entry; quicksand approach, sink and escape in adjacent phases. Verify movement donor feasibility and actual production object bindings |
+| 1. Act 1 entry and desert traversal | `loc_695A`, `sub_730C`, `SOZ1_ScreenEvent`, `SOZ1_BackgroundEvent`, `AnPal_SOZ1`, `AnimateTiles_SOZ1`; placed quicksand variants, rocks, vines, platforms and badniks | Camera-driven background/animation at entry; quicksand approach, sink and escape in adjacent phases. Verify movement donor feasibility and actual production object bindings |
 | 2. Act 1 arena and miniboss | `sub_55E96`, `sub_55D94`, `Obj_SOZMiniboss`; sand rise, delayed redraw/art handoff, door children | Trigger before/at/after lock, art readiness and spawn order; ordinary boss interaction through defeat and door opening; failed child allocation and rewind |
 | 3. Seamless Act 2 entry | `SOZ1_BackgroundEvent`, `sub_55EFC`, `SOZ2_ScreenInit`, `SOZ2_BackgroundEvent` | Paired-player door admission versus solo/extra followers; fade, queue readiness, reload, wrap setup, title lifecycle and control release. Compare the entire short transition, not just its destination |
 | 4. Act 2 darkness and traversal | `AnPal_SOZ2`, `AnimateTiles_SOZ2`, `Obj_SOZLightSwitch`, Hyudoro/capsule routines; doors, switches, wires, sand corks | Light switch immediately before/at/after a darkness step and during brightening; ghost release/character/checkpoint conditions, torch/palette agreement and held-player ownership |
@@ -78,9 +79,9 @@ implementation findings, not fixes delivered by this documentation correction.
 | Route slice | Required presentation delivery | Acceptance boundaries / current gap |
 | --- | --- | --- |
 | 1: normal Act 1 desert | Dedicated `sub_55D56` parallax, seven fractional X tiers, Y/16, `word_560DC` bands; `loc_55DF2` FG/BG heat shimmer; `AnimateTiles_SOZ1` and `AnPal_SOZ1` | ROM-backed tables; all 224 lines; independent FG/BG wave phases; all 32 art phases and split transfers; same-camera/update-order behavior; GPU-visible tiles `$330..$341`, reverse movement and rewind. Normal-desert owners and focused checks now implemented (record below); full native pixels and wider phase coverage remain open |
-| 2: Act 1 arena | `sub_55DB6` / `sub_55E4C`, sand offset and shake, custom background blocks/art | Before/after arena switch, delayed redraw, shimmer and animation phase-zero handoff; event owner still open |
-| 3: Act 2 entry | Initial pyramid background, wrap setup, secondary art, palette fade and torch initialization | Queue readiness, fresh versus seamless entry, control release and reset/restore; still open |
-| 4: normal Act 2 traversal | Event-selected background framing, `sub_566D2` half-speed outdoor parallax where selected; `AnimateTiles_SOZ2` torches tied to the live palette fade accumulator | Three timer frames per animated intensity, pinned dark state, eight-pass cadence; correct six-tile DMA extent; brightening/darkening and rewind. Do not apply outdoor scrolling to every Act 2 state; owners remain open |
+| 2: Act 1 arena | `sub_55DB6` / `sub_55E4C`, sand offset and shake, custom background blocks/art | Before/after arena switch, delayed redraw, shimmer and animation phase-zero handoff; event owner and final arena rendering implemented; partial VDP row presentation open |
+| 3: Act 2 entry | Initial pyramid background, wrap setup, secondary art, palette fade and torch initialization | Queue readiness, fresh versus seamless entry, control release and reset/restore implemented; full cold victory route open |
+| 4: normal Act 2 traversal | Event-selected background framing, `sub_566D2` half-speed outdoor parallax where selected; `AnimateTiles_SOZ2` torches tied to the live palette fade accumulator | Three timer frames per animated intensity, pinned dark state, eight-pass cadence; correct six-tile DMA extent; brightening/darkening and rewind. Do not apply outdoor scrolling to every Act 2 state; coupled owners implemented; full route/pixel comparison open |
 | 5: sand and pyramid changes | `sub_566E8`, moving sand, background/collision changes, vertical wrap | Both sides of trigger/wrap, players/camera/objects/rendering together, art retention and restored state; open |
 | 6: boss and exit | `sub_56706`, `SOZ2_BGDrawArray`, wall reconstruction, animation inhibition and restored secondary art | Arena mode bands, darkness reset, repeated inhibition writes, defeat/exit restoration and rewind; open |
 
@@ -1526,7 +1527,7 @@ shimmer. Register SOZ1's foreground heat-haze mode through the existing zone
 provider/controller, as AIZ2 does. Its zone/act gate excludes SOZ2; it carries no
 mutable state and is restored through the existing controller snapshot. The
 shared renderer, wave arithmetic, palette, sprites and physics are unchanged.
-Arena/background-event owners remain open under the existing obligations.
+Arena/background-event coupled owners implemented; full route/pixel comparison open under the existing obligations.
 
 The registration regression failed before the change (SOZ1 expected enabled,
 actual disabled). It also checks restored registration and rejection of SOZ2/HCZ
@@ -1575,3 +1576,453 @@ tests after integration, zero failures/errors/skips,55.590 seconds at20:45:35BST
 The76 selected structural checks passed on the same source. Diff whitespace and
 CI push policy passed. This closes the normal SOZ1 foreground-render connection;
 it does not certify the inherited arena/event presentation gaps.
+
+
+## Full SOZ completion campaign
+
+User-authorized goal begins at `1a63f57015a8012e6a34b2fe4f07cc0d52f91056`.
+Complete both acts' remaining ROM-backed objects, events, bosses, transitions and
+presentation, then the per-act/character route and rewind obligations. Loading
+or short positioned captures do not close the goal. Preserve inherited gaps until
+implemented and verified. Integrate verified batches into `develop`; keep task
+branches local and follow the existing delivery policy.
+
+Work allocation: parent owns the shared SOZ runtime/event/light/palette/scroll
+contracts and integration; independent worktrees implement swinging platforms and
+rappel wires, the three badnik families, and local sand/path mechanisms. Boss and
+Hyudoro work follows the relevant shared contracts. Maintain source-derived
+thresholds and production ownership; no trace-state hydration or fixture-specific
+progression shortcuts.
+
+All existing and new media stays under the existing external SOZ task root
+(`soz-v2-20260915`), preserving previously shared links. An external capture index
+tracks sources. At the end, concatenate the task's clips into a chronological
+highlights compilation, normalizing video dimensions without distorting pixels,
+and keep the originals beside it. Earlier broken attempts remain labelled as
+work-in-progress evidence, not certified gameplay. Native references and positioned
+setups must remain distinguishable from ordinary engine routes in captions.
+
+Campaign status: active. Remaining acceptance is the full matrix above, including
+both boss exits, Act1→Act2 and Act2→next-zone handoffs, supported character routes,
+lifecycle/breadth tests, and final compilation. Do not mark complete from a count
+of registered objects or merged commits.
+
+### Shared Act 2 lighting prerequisite
+
+Local implementation `5056db010` owns the native palette/torch counters in
+`SozLightingState`, captured through `SozZoneRuntimeState`. It preserves signed
+word/byte expiry, pre-increment sand/torch reads, forced sand writes on fade steps,
+mid-fade switch reversal, and the boss timer hold without repeatedly restarting
+brightening. Both palette and animation upload ROM bytes; no reference rows supply
+runtime state. Normal Act 2 scroll now uses `sub_566D2`'s signed half-camera words.
+
+Source audit correction: `sub_55EFC` is called by the seamless transition, not cold
+Act 2 initialization. The unused reset code before `AnPal_SOZ2` is not its prologue.
+Cold counters start at zero and the first palette tick advances darkness to one;
+seamless entry seeds darkness5, step4 and timer1799. The earlier pilot agrees with
+the cold path. The catalogue also incorrectly described palette selection as
+`step & 6`; that mask belongs to torch selection, while palette selection uses the
+52-byte slice offset. Both prose errors are corrected.
+
+Focused validation at `5056db010`: queued Maven `-Dmse=off
+-Dtest=TestSozLightingState,TestSozRuntimeState,TestS3kSozPatternAnimation
+-Ds3k.rom.path="$S3K_ROM" test -B`: 15 tests, zero failures/errors/skips (50.146s).
+Coverage includes all seven torch frames, exact ROM palette destination bytes,
+cold/seamless initial state, timer/fade edges and capture/restore forward replay.
+This is prerequisite validation; switch/ghost/event wiring and complete routes
+remain pending. Initial production test stopped before the final dark bank;
+extending it through 3700 ticks supplied that missing test coverage.
+
+### Act 2 boss background and terrain replay prerequisite
+
+The event owner now queues the ROM boss/secondary terrain and art, binds queued
+job identities across rewind, runs the thirteen-row wall deformation and its eight
+solid rows, and restores the secondary background after collapse. Native delayed
+redraw helpers consume two columns/rows per dispatch, including same-call
+fallthrough on sand exit. Sand special events stop on player death and the moving
+sand pass performs the native standing-object release check.
+
+Focused queued Maven validation on the completion branch:
+`-Dtest=TestSozBossWallState,TestSozScreenEvents,TestRewindSnapshotDiffTerrain,TestRewindSnapshotDiffDynamicIdentity`
+with explicit `-Ds3k.rom.path="$S3K_ROM"`: 12 tests passed, no failures/errors/skips
+(49.807s). This covers wall stage timing, queued ROM bytes, solid graph recreation,
+and full snapshot forward replay; it does not certify a complete boss route.
+The first arena replay exposed descriptor-identity comparison in the rewind diff:
+new equal terrain objects were reported as changed. Comparison now checks saved
+terrain contents and still rejects changed collision indices and frame state.
+
+### Kept object-state table
+
+SOZ cork state exposed a missing part of `Respawn_table_keep`: lower object-owned
+bits were captured for rewind but dropped on bonus/special-stage reload. The
+persistent snapshot now carries those bytes by layout index, preserves them when
+ring state is attached, and restores them before the first return placement scan.
+Normal loads still clear them. The regression includes entry280 to distinguish
+layout indexing from an eight-bit rolling counter. The mutable Mod API `0.7` pin
+includes this record extension and the previously added placement-ownership API;
+policy remains candidate `0.7.0` with no published baseline.
+
+Focused queued Maven: `TestPersistentRespawnDestroyLatchRoundTrip`,
+`TestLevelTransitionCoordinatorPeeks`, `TestBonusStageTransitionCoordinator`,
+`TestObjectPlacementControllerS1Counter`: 17 passed, no failures/errors/skips
+(47.387s). SDK/Javadoc/sample packaging and API hook-policy checks: 29 passed,
+no failures/errors/skips (26.672s). Full route and combined delivery checks remain
+pending.
+
+### Retirement and source-entry audit
+
+Ordinary replay exposed Skorp tails retaining a retired root. Retirement hooks
+now detach references while children retain their own next-dispatch deletion or
+debris behavior; the same boundary is covered for Sandworm/Rockn. Three direct
+retirement/replay cases pass;26 other focused badnik, viewport/donor, inventory
+and art checks passed. The wall contact audit also corrected d6 bits16/17:
+`SolidObject_cont` publishes side contact there, not standing. Three wall checks
+pass. See the frontier log for the still-red ordinary replay and its next owner.
+
+The SOZ1 falling-into-sand intro was missing from the original catalogue. Native
+`SpawnLevelMainSprites` loc695A initializes animation2/airborne and creates
+`Obj_LevelIntro_PlayerFallIntoGround` at41FEE. This must join the entry acceptance
+slice, including locked fall, sand splash, jump-pressed release, companion state
+and rewind; plain cold loading is not sufficient.
+
+### Cold sand entry implementation
+
+The native controller occupies absolute SST5 (`Dynamic_object_RAM` is SST3,
+plus two). Its first dispatch initializes control only; later dispatches apply
+old velocity before gravity, wait for physical jump press, and release the team
+on emergence. Logical controls are cleared while physical press remains readable.
+Local positioned fixtures explicitly skip this intro instead of inheriting a
+cold-entry controller after teleporting. The fixture option uses ordinary config
+state, since session overrides survive the per-test reset and contaminated the
+next cold-entry test. Two cold/skip and full-state emergence replay tests pass
+with no skips (queued `TestSozFallingIntro`, 48.432s). Ordinary trace still exposes
+an extra initial integration and companion cadence; this is not trace parity.
+
+### Boss, title and transition integration
+
+- `382eee7fc`: final boss and child graph, real eight-hit combat, wall handshake,
+  capsule/results, escape and native LRZ request. Corrected production breadth
+  asserts actual320/352/400/512/528/640/800 widths and follower counts:68tests,
+  zero skips. An earlier width/team setup was invalid and is not breadth evidence.
+  Shared capsule results support now captures/relinks its participant owners.
+- `1919562e6`: Act1 arena admission, controller/door, rising sand and seamless
+  Act2 load/title/fades.22focused tests passed, zero skips (21.593s). Natural
+  admission from a positioned approach appears in the26.667s arena film; this
+  is not a cold full-act victory. Temple rendering needed source-window selection,
+  raw layout columns and background-high replay above foreground-low. Correct
+  CPU art alone did not prove the displayed image. Merge64b7e4be9 retained
+  both acts' independent art registrations and palette/window runtime methods.
+- `0176523e6`: capture startup now retires the omitted title through its native
+  owner, permitting Hyudoro initialization. Raw title-request consumption had
+  hidden ghosts from otherwise plausible positioned captures. Four capture
+  regressions and four ghost lifecycle checks passed, zero skips.
+- `a203872dc`: explicit captured graph-reference policies and forced recreation
+  in production rewind helpers.58guard/production checks plus24strengthened
+  out-of-place checks passed, zero skips.
+- `04cbcd574`: source `loc_13AB4→loc_13B18` preserves assembled sidekick state
+  instead of clearing object control in CPU INIT. A game-owned semantic service
+  selects the branch; shared CPU code does not name a zone.169focused consumers
+  and58required S3K loading/bootstrap regressions passed, zero skips.
+
+Remaining visual limit: event redraw counters follow native two-row cadence,
+while the renderer presents the new selected source window as a whole. Exact
+partial Plane-A/Plane-B contents across seamless load need retained-plane
+ownership and cross-load reconciliation, not a fitted delay. No such renderer
+migration is included in this slice. Ordinary-route and final combined delivery
+checks remain distinct from the above focused evidence.
+
+The merged art/event check completed30tests:29passed and one assumed an empty
+20-frame art queue. The final boss adds legitimate ROM work; the test now awaits
+the real completion token with a bounded240-frame limit and replays the observed
+number of steps. Six screen checks plus five arena checks pass after that fix.
+The explicit mapping corruption guard, intro and sidekick state checks pass
+(6tests,0skips,53.335s). Ordinary-input cold capture reaches death at3988; it
+is retained as an unsuccessful route attempt. The missing terrain sand-slide
+owner found at trace1419 is the next concrete traversal fix.
+
+### Reload and team follow-up
+
+`37260aa17` verifies actual boss-to-LRZ load consumption, destination title/fade
+retirement, released controls and outgoing rewind timeline reset. Checkpoint
+coverage now expands its six native cases to90 actual configurations: both acts,
+Sonic/Tails/Knuckles,320/400/512/640/800 widths, and off/S1/S2 donors. Each walks
+into a placed starpost, recreates/replays activation and performs production
+death/reload, asserting actual width, donor and player capability. Queued
+`TestSozCheckpointReloadProduction` with all three absolute ROM properties:
+90passed,0skips (21.253s). This covers one post per act, not all placements.
+
+The capture session now uses the native omitted-title boundary after later
+loads as well as boot. Its repeated SOZ2 load creates a new ghost controller;
+S1/S2 startup consumers and sprite visibility also pass (4tests,0skips,52.697s).
+`28aabd127` preserves the actual third/fourth ghost contact identities through
+recreation, retaining native P1/P2 priority. Six contact cases and60existing
+regressions passed,0skips.
+
+All ten placed checkpoints now have physical activation and production
+death/reload evidence for Sonic, Tails and Knuckles:24additional native cases
+passed without skips (19.432s), complementing the90configuration matrix.
+The methodology now explicitly inventories player spawn, CPU and layout-driven
+hooks outside object/event tables after discovery of `sub_730C`. Its27focused
+ROM/shared-seam/production cases passed,0skips, in `1bd8dfcb5`.
+
+Pillar side contact now follows `SolidObject_cont` / `loc_1E042`: zero horizontal
+velocity still clears ground velocity on left penetration, while the right
+branch preserves it. The real solid-contact regression failed before the
+override (expected0, actual1421), then all5pillar tests passed without skips
+(17.635s). The isolated spike test now supplies its camera dependency explicitly;
+its earlier failure was missing test session state, not spike behavior. The
+connected special-rock fixture remains under separate route investigation.
+
+The ordinary replay next exposed a shared collapsing-bridge admission gap:
+`SolidObjectTop` / `loc_1E45A` rejects negative `object_control`, but permits
+positive wire capture. The real contact test reproduced the missing positive
+landing while the bit7 negative case passed. The semantic provider override
+then passed all14bridge regressions (0skips,52.811s); no zone-name physics
+branch or recorded state was introduced.
+
+Wire flip `loc_4B0DE` also clears status bit1 via AND FC; the focused
+regression reproduced preserved-air before the fix and all23unit cases pass
+afterward. Combined production validation currently fails forced-recreation
+standing history: placed bridge index40 TOP entry disappears on restore.
+That real identity gap is under investigation;27selected tests are not reported
+as a passing set (one production failure,0skips,53.525s).
+
+Standing-history restoration was a real identity defect, not list equality:
+`DefaultSolidExecutionRegistry` stored spawn indices and character codes, so
+promoted collapsing bridge index40 disappeared when resolving placed objects
+after recreation. It now uses existing `ObjectRefId`/`PlayerRefId` mappings
+for placed and dynamic owners. The reproducing wire production4cases and7
+identity/registry checks pass (11total,0skips,54.241s); additional shared-spawn
+and duplicate-character identity coverage is pending.
+
+Wrapped rising-sand rendering is corrected in `a4d3f40e6`. The main background
+already had a2048-pixel wrapping texture; an attempted extra tilemap period
+override was rejected by measured texture dimensions. The actual missing floor
+was the BG-high overlay replay using wrapY=false. SOZ selects wrapped replay
+through its native `backgroundLayoutYMask`, retaining HCZ defaults. Root inspected
+`completion-connected-mechanisms/wrapped-overlay/lower/frames/01100.png`: Sonic
+is visibly grounded on the rising sand. Worker overlay/capture7tests passed,
+0skips; connected mechanisms13 and provider/consumers17 passed separately.
+
+The independent shared-spawn/duplicate-character standing identity regression
+also passes, together with connected mechanisms and HCZ overlay consumers:
+16tests,0skips,56.693s. No comparison rule was relaxed.
+
+### Rappel wire final-swing alias correction
+
+The next ordinary SOZ1 frontier at frame2648 showed expected handle X `$D00`
+versus `$CF4`, with expected player frame `$91` versus `$90`. Source audit found
+that the original implementation (`c746aa1af`) had misidentified `$46` as an
+untouched pointer. `sonic3k.constants.asm:46` defines `parent3 = $46`; the wire
+initializer writes the seventeenth endpoint there, and `loc_4AC98` tests its P1
+capture byte. The claimed shipped-ROM bug was an implementation error. Final
+swing now continues while P1 is held, selecting retract after release and still
+performing the current pass's angle update. All eight placed subtype checks now
+hold through a complete 128-pass angle cycle before releasing, rather than
+asserting the erroneous immediate retraction. The irrelevant ROM-byte `$38`
+assertion was removed. Research/inventory/discrepancy prose contained no other
+claim of an unused `$46` wire pointer; the source comment and test were the
+stale claims. The alias-verification lesson is in implementation pitfalls.
+
+Validation on parent base `306d7fe0f` plus this correction: queued
+`TestSozSwingAndWire,TestSozSwingAndWireProduction` with the absolute locked-on
+ROM property ran27tests,0skips in52.179s. All23unit cases passed, including eight
+complete final-swing cycles. Three production cases passed; the existing wire
+ratchet activation recreation case failed because solid-execution standing
+history lost the promoted bridge entry (ListN versus List12). This matches the
+parent's already-reproduced failure above, before final-swing entry; no assertion
+was weakened. The parent owns the identity correction and combined trace replay.
+
+Quicksand routine admission now recognizes boundary-dead CPU dispatch as
+native routine6 even though generic dead=false. `sub_400F0` rejects it before
+ascending+$68 damping; the same death admission applies to all four variants,
+and waterfall held-routine release. The unit regression failed before the fix;
+all16quicksand and4production route cases pass after it (0skips,53.384s).
+
+### Connected victory and independent recording follow-up
+
+`e4478100e`, integrated by `d849452c1`, connects the positioned Act1 arena
+approach through ordinary pursuit, sink victory, results, door and visible Act2.
+Eight graph recreation/replay edges and destination replay pass. The continuous
+capture revealed a real black-world handoff: target zone initialization cleared
+palette staging after resource transfer. The shared executor now initializes
+zone features before `transferAfterTargetInit`; the other production consumer,
+ICZ, is included in focused checks.29consumer tests and1capture test passed,
+0skips. Root inspected final frame05348 in the unified external
+`completion-act1-victory/native-320` folder: both players and temple are visible.
+The89.2-second movie is an arena-to-destination scenario, not a cold full act.
+
+`84b2d2b7d` adds an independent59507-row SOZ recording harness and repairs the
+S2/S3K recovery handoff's missing collision-plane/art-priority copy. The new
+cross-game regression failed before the fix; all18recovery tests then passed,
+0skips. The independent trace did not improve (9763errors; first queue34,
+Tails2312), rejecting the copy omission as this recording's immediate cause.
+The earlier emerald recording reaches transformation4868 without supplied
+prior-campaign progression. Exact commands, compared counts and limits are in
+[the frontier log](../../status/trace-frontier-log.md). Neither recording's
+comparison rows supply gameplay state; queue checks and later rows remain intact.
+
+Connected lower-room escape validation lands in`aa90938e9`: ordinary input now
+connects cork, switch8, placed swing, switch9 and native exit/redraw20. Six graph
+milestones force recreation and forward replay. Production and capture boot
+boundaries are aligned before the first input; eight combined checks pass with
+zero skips. Earlier attempts were defeated by route timing, and an initial
+fixture/capture mismatch came from the pending initial Process_Sprites pass and
+follower setup. No gameplay behavior was changed to make the route succeed.
+The Act2 matrix records exact configuration and remaining breadth limits.
+
+`b52f3f52d` resolves the measured recovery2312 mismatch. The CPU handoff itself
+matched position and native control, but `handleMovementDispatch` promoted stale
+engine platform support to grounded state before gravity. Recovery status resets
+now clear the engine riding cache and common roll/push/on-object flags while
+preserving radii, native interaction slot and object-owned standing bits. A real
+manager regression failed before the fix;107recovery/solid checks and59final
+S3K checks pass without skips, including forced graph recreation/replay. The
+independent trace remains red but all compared player fields now match through5669;
+first main-player divergence moves6241→7291. Raw errors increase9763→13159 as
+the subsequent trajectory changes; the longer exact prefix is the measured gain.
+The next Tails frontier5670 is premature despawn. Queue34 remains separate.
+
+`496f44d99` corrects the lower escape's requested solo roster: `none` was an
+unknown character alias and produced fallback Sonic. Blank is the real solo
+setting. Both harnesses now assert actual leader/follower identities; all8
+production/capture checks pass again with zero skips. Definitive captures use
+`completion-connected-mechanisms/verified-rosters`; prior attempts are retained
+and labelled. Five switchB passage trials remain unproved, with no established
+runtime defect. The source-driven rock track and switch decay were not altered.
+
+`9fc8974f8` adds an ordinary-controller final-boss route from the positioned
+`$51C0/$620` approach through eight hits, capsule, results, forced walk and Lava
+Reef. After initial setup it does not write player position, velocity, boss HP
+or phase. Continuous snapshots and forced graph recreation exposed an exit
+helper retaining a deleted boss. Native `loc_77A6E` has no parent pointer; the
+helper now reads the captured `_unkFAB8` fall signal and follows independently.
+The worker reports72focused checks,63final checks and the58-test required S3K
+quartet passing without skips. The actual-solo native-width capture contains
+3050gameplay frames and reaches Lava Reef at2869. This remains a positioned
+boss-to-destination route; connected cold Act2 validation is separate.
+
+The proposed retained-plane Act1 arena redraw implementation was rejected after
+42 image pairs at cameraY`$960`, widths320/528/800, static and moving camera,
+showed zero changed pixels despite8,170–10,775changed tilemap bytes. The
+foreground occludes those partial writes. Seamless loading fades palettes before
+its redraw. All prototype source and tests were removed; diagnostic images remain
+in `completion-arena-redraw/native-bounds-pixel-comparison` in the unified capture
+folder. This corrects the earlier visible-defect assumption and does not certify
+native pixel identity. Act2 redraw visibility is being measured independently.
+
+`60526be71` resolves the measured post-boss redraw defect. BG2C retains a captured
+64×32 descriptor plane through art admission, then applies the native two-row
+writes and entering-row maintenance. An optional internal renderer interface
+supplies those descriptors without changing normal background caching or the
+existing 512-pixel period. The first entry frame previously flashed new
+high-priority descriptors before the art arrived; subsequent partial writes are
+visible in wide margins. The initial native-width A/B experiment excluded that
+entry frame because its mutation did not survive resource admission, so its
+later-frame occlusion result did not rule out this flash.
+
+Source/runtime/controller graph checks pass 11 tests, source/graphics checks
+pass 6, and cache plus required S3K bootstrap/loading checks pass 88, all without
+skips. Same-revision registry restoration recovers identical image and tilemap
+bytes; clear-to-normal checks the cache against the ROM source. Root inspected
+800-pixel frames 00000, 00008 and 00029: retained margin, partial rising redraw,
+and completed temple. The three `capture-4x-slow.mp4` clips in
+`completion-act2-redraw/verified-retained-production` are explicitly slow motion.
+These are source-backed engine checks, not native pixel certification. No Act1
+retained-plane prototype was restored.
+
+## Combined delivery validation
+
+At `240071d5e`, queued category validation against pre-task base
+`1a63f57015a8012e6a34b2fe4f07cc0d52f91056` selected all 2,657 ordinary classes
+plus guards (`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py
+--base 1a63f57015a8012e6a34b2fe4f07cc0d52f91056 --run`). The ordinary lane
+completed 21,158 tests with four failures, no errors and 25 skips in 818.64s.
+Failures were the rewind-tail class inventory, SOZ standalone-art count, stock
+zone-dependent factory inventory and the old CNZ-only numeric-slot assumption.
+The guard lane completed 668 tests with nine failures, no errors/skips in 180.38s.
+SOZ-owned findings covered event access, lifetime/touch/control conventions,
+update-clock naming, the object-manager facade budget and test lifecycle/oracles.
+These are being corrected through their existing owners, not by raising budgets.
+
+A bounded matched run on unchanged updated `develop` at
+`ea5973d9aafa12dc85de014fe413cf0501a2c770` used queued Maven with `-Dmse=off
+-Pguards -Dtest=TestBuildToolingGuard,TestTraceChaserBoundaryGuard,TestNoAssertionFreeDiagnostics
+test -B`: 131 tests, three failures, no errors/skips, 52.799s. The baseline
+failures are stale direct-Maven prose expectations, tracked `tools/bizhawk/README.md`,
+and assertion-free `FbzRouteEvidenceProbe#printEvidence` /
+`LevelSolidityMapProbe#writeSolidityMap`. The SOZ checkpoint delegate adds a new
+oracle finding only in the candidate and must be fixed; the baseline failures
+are not attributed to this task.
+
+The 25 ordinary skips include opt-in diagnostics/benchmarks, native graphics
+capability gates, the CPZ spin-tube assumption and separate capture scenarios.
+SOZ captures were exercised explicitly in the focused runs recorded above;
+this ordinary run does not certify those skipped capture invocations or trace
+parity. Final correction and integrated-tree results remain pending.
+
+The root correction batch moves placement ownership and remembered-spawn lookup
+into the existing placement controller, injects zone-event access into the
+seamless handoff, and updates the explicit art/factory/rewind inventories. The
+three badnik children are classified against their production graph test, which
+now asserts that the actual shell, legs and segment types exist at recreation
+milestones. The focused 343-test run passed 342 tests; its sole stale hardcoded
+inventory pin was corrected and the one-test rerun passed without skips.
+The final inventory is 1,063 classes: 839 isolated passes and 224 graph-covered.
+Focused guards then passed 81 of 82 tests with no skips; the sole failure contains
+exactly the two unchanged baseline diagnostic probes above. SOZ event access,
+facade size, lifecycle setup and checkpoint oracle findings are cleared.
+
+The object-policy correction `6e0ae9e75` passed 123 focused checks without skips
+and is merged into the completion branch. It uses existing deletion, touch and
+control contracts; the exit helper retains all engine followers under the
+explicit native-P2 extension policy and tests duplicate identity. No guard
+allowlist or numeric budget changed. Read-only review of `7191f0664` found no
+concrete issue: handoff accessors resolve the target services dynamically after
+initialization, and placement delegation preserves ownership and cache flags.
+
+The final lower-rock audit did not establish a passage. Correcting an attempt
+that never entered spin dash and then trying charge/brake/jump variants reached
+`$49FD` but did not pass the door. The independent recording has zero player or
+nearby-object samples inside X `$46C0..$4A80`, Y `$480..$700`; it instead uses
+the upper `$4A30/$330` switch and `$4AF8` swing. These observations justify no
+geometry or collision change and do not establish that the lower puzzle is
+optional. Failed captures remain labelled in the unified media folder.
+
+### Verified cold Act 1 completion
+
+`9f779282f` preserves the 26,716-frame controller route and explicit capture
+consumer. A repeat on merged runtime `f43f63425` passes one test without skips:
+queued Maven `-Dmse=off -Dtest=TestSozColdAct1Capture -Ds3k.rom.path="$SOZ_ROM"
+-Dsoz.cold.act1.capture="$SOZ_CAPTURE_ROOT/completion-cold-route/native-320-final"
+-Dsoz.cold.act1.stride=4 test -B`. Here `$SOZ_ROM` is the discovered absolute
+locked-on ROM path and `$SOZ_CAPTURE_ROOT` is the unified external media folder.
+JUnit took 29.098s; Maven including recompilation took 1:21.
+
+The naturally spawned boss appears at frame22,823, sinks at25,122, and the
+normal handoff loads Act2 at26,436 and releases control at26,535. The capture
+asserts no player death, the actual Sonic+Tails roster, boss/sink transitions,
+nonblack target palette and visible destination world. Root inspected the
+final temple image with both players visible; the route author inspected the
+sinking frame. Inputs supply no gameplay-state or hardware-timing values.
+The cold route is native width320 with intros enabled, not every configuration.
+Short production graph tests remain the separate rewind evidence.
+
+### Verified cold Act 2 completion
+
+`de765d83d` preserves 32,432 controller frames and `TestSozColdAct2Capture`.
+Queued Maven `-Dmse=off -Dtest=TestSozColdAct2Capture
+-Ds3k.rom.path="$SOZ_ROM"
+-Dsoz.cold.act2.capture="$SOZ_CAPTURE_ROOT/completion-cold-route/act2-native-320-final"
+-Dsoz.cold.act2.stride=1 test` passed one test without skips:137.1s test,
+2:35 Maven. A subsequent sparse repeat with explicit final control-lock and
+object-control assertions passed one test without skips:4.747s test,23.416s
+Maven. Production runtime is unchanged from `819d99cc1`.
+
+The route reaches the real boss after all three corks and the timed final
+shaft, delivers eight natural hits, completes capsule/results and loads LRZ
+at32,252, retaining180 destination frames. The matrix records exact combat
+milestones. Both players are visible in the inspected destination; control is
+released. The native recording's upper switch/swing route is followed, leaving
+the separate lower rock puzzle explicitly unverified. No collision, geometry
+or physics tuning was needed for the final Act2 route authoring.

@@ -77,4 +77,36 @@ class TestGameplayCaptureSmoke {
             assertTrue(changed > 100, "playable sprite pixels expected near (" + sx + "," + sy + "), changed=" + changed);
         }
     }
+    @Test
+    void omittedTitleStillCreatesNativeSozControllerAndGhosts() throws Exception {
+        Path rom = RomTestUtils.ensureSonic3kRomAvailable().toPath();
+        GameplayCaptureSession.Settings settings = new GameplayCaptureSession.Settings(
+                320, "sonic", "", "off", null, null, null);
+        try (GameplayCaptureSession session = new GameplayCaptureSession(settings)) {
+            session.boot(rom, 8, 1, settings);
+            var level = com.openggf.game.GameServices.level();
+            var art = (com.openggf.game.sonic3k.Sonic3kObjectArtProvider)
+                    level.getObjectRenderManager().getArtProvider();
+            assertTrue(art.capture().titleCardTeardownTicks() >= 0,
+                    "capture must retain the omitted native title owner");
+            for (int i = 0; i < 200; i++) session.step(null);
+            assertEquals(1, level.getObjectManager().getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance.class::isInstance).count());
+            ((com.openggf.game.CheckpointState) level.getCheckpointState())
+                    .saveCheckpoint(1, 0x140, 0x3AC, false);
+            for (int i = 0; i < 40; i++) session.step(null);
+            assertTrue(level.getObjectManager().getActiveObjects().stream()
+                    .anyMatch(com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance.class::isInstance),
+                    "the title-created controller must execute its real checkpoint-gated ghost behavior");
+            assertTrue(session.render().width() > 0);
+            var previousObjects = level.getObjectManager();
+            level.loadZoneAndAct(8, 1);
+            org.junit.jupiter.api.Assertions.assertNotSame(previousObjects, level.getObjectManager());
+            for (int i = 0; i < 200; i++) session.step(null);
+            assertEquals(1, level.getObjectManager().getActiveObjects().stream()
+                    .filter(com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance.class::isInstance).count(),
+                    "a later load must retire its title owner and create its own controller too");
+        }
+    }
+
 }

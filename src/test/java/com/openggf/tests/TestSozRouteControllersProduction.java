@@ -43,7 +43,7 @@ class TestSozRouteControllersProduction {
             int solidX=act==0 ? (subtype==0 ? 0x2190 : 0x2198) : (subtype==0 ? 0x18F0 : 0xA82);
             int solidY=act==0 ? (subtype==0 ? 0x118 : 0x138) : (subtype==0 ? 0x218 : 0x608);
             int playerX=solidX+(subtype==1 && act==0 ? 24 : 0);
-            var builder=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+            var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                     .startPosition((short)playerX,(short)(solidY-(subtype==0 ? 24 : 8)-21)).startPositionIsCentre()
                     .withFreshLevelStartLifecycle();
             if(!donor.equals("off")) builder.withCrossGameDonation(donor);
@@ -96,7 +96,7 @@ class TestSozRouteControllersProduction {
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
             CrossGameFeatureProvider.getInstance().resetState(); SessionManager.clear();
             TestEnvironment.activeGameplayMode();
-            var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,1)
+            var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
                     .startPosition((short)0xB50,(short)0x130).startPositionIsCentre()
                     .withFreshLevelStartLifecycle().build();
             assertEquals(width,fixture.camera().getWidth()&0xFFFF);

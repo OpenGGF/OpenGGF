@@ -18,8 +18,8 @@ class TestSozObjectInventory {
     @Test void romPlacementsAndRemainingFactoryGapsMatchInventory() throws Exception {
         try (var rom=new Rom()) {
             assertTrue(rom.open(RomTestUtils.ensureSonic3kRomAvailable().getAbsolutePath()));
-            verify(rom,0x1F4866,3600,599,"72f954524c0d68b213be273d6b5317621c60c1a4aab8949ffc2cc72482dc66db",107);
-            verify(rom,0x1F5676,2946,490,"3cca36d2d4db8db480f36c67fafa46833f4f7a63ff1cab6d6835d2380bb225c0",83);
+            verify(rom,0x1F4866,3600,599,"72f954524c0d68b213be273d6b5317621c60c1a4aab8949ffc2cc72482dc66db",0);
+            verify(rom,0x1F5676,2946,490,"3cca36d2d4db8db480f36c67fafa46833f4f7a63ff1cab6d6835d2380bb225c0",0);
         }
     }
     @Test void vineMappingPointerAndSinglePieceMatchTheRom() throws Exception {
@@ -103,7 +103,7 @@ class TestSozObjectInventory {
         };
         assertEquals(missing,placements.stream().map(registry::create)
                 .filter(PlaceholderObjectInstance.class::isInstance).count(),
-                "update the explicit inventory as families are implemented; zero is not yet expected");
+                "update the explicit inventory as families are implemented; factory coverage does not certify routes");
         placements.stream().filter(p -> p.objectId()==0x38).forEach(p ->
                 assertInstanceOf(SozQuicksandObjectInstance.class,registry.create(p)));
     }

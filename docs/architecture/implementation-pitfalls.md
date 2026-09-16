@@ -160,6 +160,16 @@ reference is the pinned `ym3438.c`, and `Ym2612Chip` is engine glue over it. For
 reference the libvgm cores, for the sequencer the SMPSPlay source, rather than simplified
 versions. Diagnose against a source of truth instead of twiddling knobs.
 
+**External audio clocks are not rewind frame numbers.** GameLoop's audio clock
+continues through title/fade intervals while live rewind records gameplay only
+and resets its origin on level loads. `recordExternalStep` must observe the
+completed host clock, not overwrite it with the shorter rewind counter: a fade
+completion can issue `InitAudio` commands before the next host tick and violate
+timeline ordering. Keep the recorded coordinate mapping for seek/truncation,
+prune it with history, and reroot it at load boundaries. Test internal/external
+step changes, branching, and consecutive death reloads with live rewind enabled.
+Origin: SOZ mixed/duplicate-team checkpoint validation, 2026-09-15.
+
 **AniPLC submission is not presentation.** S3K `AnimateTiles_DoAniPLC` changes
 counters and queues immutable ROM art; `Process_DMA_Queue` publishes it during a
 later eligible VInt. Keep Level patterns, the level atlas and aliased object
@@ -332,3 +342,78 @@ register it at that boundary instead of adding a zone check to the shared shader
 For a pixel-displacement oracle, compare opaque foreground regions: shifting a
 composite through a transparent edge also shifts the independently scrolled BG
 and gives a false failure. The SOZ methodology-v2 plan records this correction.
+
+
+### Resolve raw object offsets through the constants table
+
+The SOZ rappel wire final swing reads `$46(a0)` in `loc_4AC98`, while its
+initializer writes `parent3(a0)`. `sonic3k.constants.asm` defines `parent3 = $46`:
+these are the same initialized endpoint reference. An earlier implementation
+misread the numeric spelling as an unused pointer and forced immediate
+retraction, then encoded that mistake as a unit expectation. Check aliases in
+the owning constants table before claiming a shipped bug; follow both the
+writer and reader. Test sustained behavior and release, not only arrival at a
+routine. The SOZ methodology-v2 plan records the correction.
+
+### Seamless target initialization must precede resource handoff
+
+The post-target resource handoff may install persistent palette targets, rotation
+gates and native event state. `reinitializeZoneFeaturesForActTransition` clears
+zone-scoped palette/render registries, so running it after the handoff erases
+those resources. SOZ's connected Act1 victory capture exposed this: controls
+released in Act2 while every restored world/player palette stayed black. Keep
+target initialization before `transferAfterTargetInit`, and verify both readiness
+and destination palette/pixels. ICZ's other production handoff transfers queued
+resource ownership to the already initialized event owner.
+
+### CPU recovery status resets must release engine grounding caches
+
+A native `status` reset can clear `Status_OnObj` while preserving the stale
+interaction pointer and the old object's standing bit. The engine has additional
+riding/standing snapshots: clear those at recovery's native status reset with
+`ObjectManager.clearRidingObject`, without clearing the ROM-owned interaction
+or object bits. Otherwise object-control frames can preserve a former support,
+and the pre-movement desynchronization recovery grounds Tails on the first
+normal frame, skipping gravity. The independent SOZ recording exposed this at
+recovery handoff; the resulting missed Tails Sandworm kill later changed Sonic's
+rebound, so Sonic's first position mismatch was a downstream symptom.
+
+### Native interaction pointers follow recycled SST slots
+
+S3K `sub_13EFC` compares the saved code-pointer high word with the current word
+at the player's `interact` slot, then refreshes that word while on an object.
+A released Java contact does not imply that the native slot is empty: allocation
+may already have installed another object there. Read the live slot occupant;
+compare zero only for an actually empty slot. Preserve same-word replacements
+and detect changed words. A live occupant without a code-pointer provider is
+unknown, not an empty slot. Rewind tests need a recycled slot whose old contact
+is absent after reconstruction, not just restoration of an unchanged owner.
+
+### Oscillation table offsets include a native control word
+
+`OscillationManager.getByte/getWord` address data after the native two-byte
+control word. Subtract2 from `Oscillating_table+$NN` references before selecting
+an engine offset. SOZ `loc_402CC/loc_402EE` read native`+$16`, hence engine`$14`.
+Reading engine`$16` selected velocity instead of position: negative velocity's
+high byte displaced sand-block spawners by roughly255pixels and changed their
+zero-position release gate. Distinguish position and velocity in routine tests;
+reset-state tests where both high bytes are zero cannot catch this error.
+
+### Independently allocated exit helpers must not retain the retiring boss
+
+SOZ `loc_77A6E` is allocated without a parent pointer. It waits on `_unkFAB8`
+bit 0, set at `loc_779C0`, then `loc_77A98` follows Player 1 independently
+until level clear. Model that captured signal rather than reading the boss's
+escape phase through a retained reference. The controller-only end-boss route
+exposed an unregistered reference between root deletion and destination load;
+continuous snapshots cover this interval even when selected hit/escape rewind
+spots all pass.
+
+### Unsigned negative-window comparisons can exclude zero
+
+S3K `loc_1E45A` first uses `BHI` after subtracting the player's feet from the
+surface, then `CMP.W #-$10 / BLO`. Taken together these admit native values
+`$FFF0..$FFFF`, corresponding to positive overlap1..16; zero is rejected by the
+second comparison. Treating this as an inclusive0..16 range made the SOZ spring
+vine capture a rolling player one frame early. Test both zero and the negative
+window edge rather than deriving a signed interval from either branch alone.

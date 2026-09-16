@@ -28,6 +28,21 @@ import static org.mockito.Mockito.when;
 class TestBackgroundPlaneCollisionProvider {
 
     @Test
+    void nativeRowMaskAppliesAfterTranslationAndDefaultsPreserveSignedCoordinates() {
+        var registry = new ZoneRuntimeRegistry();
+        var collision = new BackgroundPlaneCollisionProvider.State(true, 0, -0x6E0);
+        var provider = provider(new GameStateManager(), new Camera(), new ParallaxManager(), registry,
+                mock(LevelManager.class));
+        registry.install(new ExplicitState(collision));
+        for (int y : new int[]{-0x8000,-0x1000,-1,0,0x56C,0x7FF,0xFFFF})
+            assertEquals(y+0x6E0, provider.backgroundY(collision,y));
+        registry.install(new ExplicitState(collision,0x7FF));
+        for (int y : new int[]{-0x8000,-0x1000,-1,0,0x56C,0x7FF,0xFFFF})
+            assertEquals((y+0x6E0)&0x7FF, provider.backgroundY(collision,y));
+        assertEquals(0x44C,provider.backgroundY(collision,0x56C));
+    }
+
+    @Test
     void inactiveLegacyStateProducesForegroundOnlyProbe() {
         GameStateManager gameState = new GameStateManager();
         BackgroundPlaneCollisionProvider provider = provider(gameState, new Camera(),
@@ -155,8 +170,10 @@ class TestBackgroundPlaneCollisionProvider {
         @Override public int getBgCameraX() { return bgCameraX; }
     }
 
-    private record ExplicitState(BackgroundPlaneCollisionProvider.State collisionState)
+    private record ExplicitState(BackgroundPlaneCollisionProvider.State collisionState, int mask)
             implements ZoneRuntimeState {
+        ExplicitState(BackgroundPlaneCollisionProvider.State state) { this(state,0xFFFF); }
+        @Override public int backgroundLayoutYMask() { return mask; }
         @Override public String gameId() { return "test"; }
         @Override public int zoneIndex() { return 0; }
         @Override public int actIndex() { return 0; }

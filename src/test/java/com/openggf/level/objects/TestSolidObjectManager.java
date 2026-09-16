@@ -2619,9 +2619,10 @@ public class TestSolidObjectManager {
     }
 
     @Test
-    void sozVineLandingIncludesSixteenPixelOverlapButRejectsSeventeen() {
+    void sozVineLandingRequiresPositiveOverlapThroughSixteenPixels() {
         GameModuleRegistry.setCurrent(new Sonic3kGameModule());
-        for (int radius : new int[]{19, 15, 14}) for (int overlap : new int[]{15, 16, 17}) {
+        for (boolean airborne : new boolean[]{false, true})
+        for (int radius : new int[]{19, 15, 14}) for (int overlap : new int[]{-1, 0, 1, 15, 16, 17}) {
             var vine = new com.openggf.game.sonic3k.objects.SozSpringVineObjectInstance(
                     new ObjectSpawn(200, 300, 0x3F, 0, 0, false, 0));
             var manager = buildManager(vine);
@@ -2630,16 +2631,16 @@ public class TestSolidObjectManager {
             var player = new TestPlayableSprite((short)0, (short)0);
             player.useGameRules(GameRules.SONIC_3K);
             player.applyCustomRadii(7, radius);
-            player.setAir(true); player.setYSpeed((short)0x100);
+            player.setAir(airborne); player.setYSpeed((short)0x100);
             player.setCentreX((short)200);
             int surfaceY = 340 - 48;
             player.setCentreY((short)(surfaceY - player.getYRadius() - 4 + overlap));
-            assertEquals(overlap <= 16, manager.hasStandingContact(player),
+            assertEquals(overlap > 0 && overlap <= 16, manager.hasStandingContact(player),
                     "geometry overlap="+overlap+" radius="+player.getYRadius()+" y="+player.getCentreY()+" anchor="+vine.getY());
             manager.processImmediateInlineSolidCheckpoint(vine, player, List.of());
-            assertEquals(overlap <= 16, player.isOnObject(), "native overlap=" + overlap);
+            assertEquals(overlap > 0 && overlap <= 16, player.isOnObject(), "native overlap=" + overlap);
             // Snap reads the incoming radius; ResetOnFloor then restores standing radii.
-            if (overlap <= 16) assertEquals(surfaceY-radius-1, player.getCentreY(),
+            if (overlap > 0 && overlap <= 16) assertEquals(surfaceY-radius-1, player.getCentreY(),
                     "snap overlap=" + overlap + " incoming radius=" + radius);
         }
     }

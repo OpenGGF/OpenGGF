@@ -249,7 +249,8 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.PACHINKO_MAGNET_ORB,
                 Sonic3kObjectIds.PACHINKO_PLATFORM,
                 Sonic3kObjectIds.PACHINKO_TRIANGLE_BUMPER,
-                Sonic3kObjectIds.UPDRAFT),
+                Sonic3kObjectIds.UPDRAFT,
+                0x8B), // SpriteMask uses the stock SOZ runtime.
                 registry.stockZoneBoundFactoryIds());
     }
 

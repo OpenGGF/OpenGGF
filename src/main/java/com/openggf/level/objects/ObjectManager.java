@@ -1893,7 +1893,7 @@ public class ObjectManager {
      *
      * <p>This is for fixed-slot setup paths, not ordinary {@code AllocateObject}
      * calls. For example, S3K's {@code SpawnLevelMainSprites} writes the AIZ
-     * intro controller directly to dynamic object slot 2 (absolute SST slot 6)
+     * intro controller directly to dynamic object slot 2 (absolute SST slot 5)
      * instead of scanning for the first free slot.
      */
     public <T extends ObjectInstance> T createDynamicObjectAtSlot(
@@ -2808,24 +2808,7 @@ public class ObjectManager {
     }
 
     public void markRemembered(ObjectSpawn spawn) {
-        // Look up the instance to check if it should stay active.
-        // activeObjects is an IdentityHashMap so try identity first.
-        ObjectInstance instance = activeObjects.get(spawn);
-        if (instance == null) {
-            // Fallback: scan by equals() in case the caller's spawn reference
-            // differs from the canonical key stored in the IdentityHashMap.
-            for (Map.Entry<ObjectSpawn, ObjectInstance> entry : activeObjects.entrySet()) {
-                if (entry.getKey().equals(spawn)) {
-                    instance = entry.getValue();
-                    break;
-                }
-            }
-        }
-        if (instance != null) {
-            placement.markRemembered(spawn, instance);
-        } else {
-            placement.markRemembered(spawn);
-        }
+        placement.markRemembered(spawn, activeObjects);
     }
 
     public void clearRemembered() {
@@ -2839,6 +2822,21 @@ public class ObjectManager {
      */
     public void removeFromActiveSpawns(ObjectSpawn spawn) {
         placement.removeFromActive(spawn);
+    }
+
+    /**
+     * Moves a placement's active-lifetime ownership to an already allocated child.
+     * Mirrors copying respawn_addr to a child and clearing it in a transformed
+     * parent. Both SST slots, execution order and rewind identities stay intact.
+     */
+    public boolean transferPlacementOwnership(ObjectInstance from, ObjectInstance to) {
+        boolean transferred = placement.transferPlacementOwnership(from, to,
+                activeObjects, instanceToSpawn, dynamicObjects);
+        if (transferred) {
+            bucketsDirty = true;
+            activeObjectsCacheDirty = true;
+        }
+        return transferred;
     }
 
     /**

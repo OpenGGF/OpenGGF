@@ -100,7 +100,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
         }
         loop = boot.boot(romPath, zone, act);
         LevelManager level = GameServices.level();
-        level.consumeTitleCardRequest();
+        // Omit only presentation. The native title owner must still retire its
+        // children/admission lease and publish any title-owned level objects.
+        level.skipPendingInitialTitleCardPresentation();
         if (loop.getCurrentGameMode() != GameMode.LEVEL) {
             throw new IllegalStateException("capture did not boot into LEVEL mode: " + loop.getCurrentGameMode());
         }
@@ -143,7 +145,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
         Bk2FrameInput current = input != null ? input : neutral(previousInput);
         loop.getInputHandler().setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previousInput));
         previousInput = current;
-        GameServices.level().consumeTitleCardRequest();
+        // A later level load has the same native omitted-title boundary as
+        // boot; consuming only its request would discard the owner's teardown.
+        GameServices.level().skipPendingInitialTitleCardPresentation();
         UiRenderPipeline ui = GameServices.graphics().getUiRenderPipeline();
         if (ui != null) {
             ui.updateFade();

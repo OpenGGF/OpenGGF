@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -124,7 +125,7 @@ public class TestS3kSozPatternAnimation {
     }
 
     @Test
-    public void soz1BossArenaCompatibilityBridgeForcesPhaseZero() {
+    public void soz1NativeArenaRoutineForcesPhaseZero() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(0x08, 0)
                 .build();
@@ -134,6 +135,7 @@ public class TestS3kSozPatternAnimation {
         camera.setX((short) 0x4380);
         camera.setY((short) 0x0960);
 
+        assertFalse(com.openggf.game.GameServices.level().getZoneFeatureProvider().bgWrapsHorizontally(), "Normal desert retains its multi-band plane");
         Sonic3kPatternAnimator animator = resolvePatternAnimator();
         assertNotEquals(0, animator.computeSoz1Phase(),
                 "Sanity check: SOZ1 phase should not already be zero before the boss lock bridge is active");
@@ -141,8 +143,12 @@ public class TestS3kSozPatternAnimation {
         camera.setMinX((short) 0x4180);
         camera.setMinY((short) 0x0960);
 
-        assertEquals(0, animator.computeSoz1Phase(),
-                "Expected SOZ1 boss-arena compatibility bridge to force the custom phase back to zero");
+        assertNotEquals(0, animator.computeSoz1Phase(), "Camera bounds alone do not own animation phase");
+        com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                com.openggf.game.GameServices.zoneRuntimeRegistry()).orElseThrow().events().backgroundRoutine(4);
+        assertEquals(0, animator.computeSoz1Phase(), "Native arena background words are equal");
+        assertTrue(com.openggf.game.GameServices.level().getZoneFeatureProvider().bgWrapsHorizontally());
+        assertTrue(com.openggf.game.GameServices.level().getZoneFeatureProvider().useLinearBackgroundLayoutOverflow(8));
     }
 
     @Test
@@ -220,6 +226,73 @@ public class TestS3kSozPatternAnimation {
             cycler.update();
             org.junit.jupiter.api.Assertions.assertArrayEquals(after, cycler.captureCyclerState());
         }
+    }
+
+    @Test
+    public void soz2NormalBackgroundUsesSignedHalfSpeedBeforeNegation() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(8, 1).build();
+        var handler = new com.openggf.game.sonic3k.scroll.SwScrlSoz(GameServices.rom().getRom());
+        int[] lines = new int[224];
+        for (int x : new int[]{0, 1, 511, 0x2980, 0xFFFF, 0x8001}) {
+            for (int y : new int[]{0, 1, 0x7FF, 0xFFFF}) {
+                handler.update(lines, x, y, 5, 1);
+                assertEquals(Math.floorDiv((short) x, 2), handler.getBgCameraX());
+                assertEquals(Math.floorDiv((short) y, 2), handler.getVscrollFactorBG());
+                for (int line : lines) {
+                    assertEquals((short) -x, (short) (line >> 16));
+                    assertEquals((short) -Math.floorDiv((short) x, 2), (short) line);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void soz2SharedLightingUploadsExactRomPaletteAndTorchBanks() throws Exception {
+        HeadlessTestFixture.builder().withZoneAndAct(8, 1).build();
+        var runtime = com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(
+                GameServices.zoneRuntimeRegistry()).orElseThrow();
+        var light = runtime.lighting();
+        var level = GameServices.level().getCurrentLevel();
+        var rom = GameServices.rom().getRom();
+        var cycler = new Sonic3kPaletteCycler(com.openggf.data.RomByteReader.fromRom(rom), level, 8, 1);
+        var animator = resolvePatternAnimator();
+        assertTrue(GameServices.animatedTileChannelGraph().channels().stream()
+                .anyMatch(channel -> channel.channelId().equals("s3k.soz2.torches")));
+        light.initializeSeamlessDarkness();
+        light.resetLight();
+        // Exercise all five palette banks and all seven torch frames through production owners.
+        boolean[] seenTorchFrames = new boolean[7];
+        for (int pass = 0; pass < 3700; pass++) {
+            int priorFadeStep = light.fadeStep();
+            cycler.update();
+            if (priorFadeStep != light.fadeStep()) {
+                byte[] palette = rom.readBytes(0x317A + light.fadeOffset(), 52);
+                for (int color = 0; color < 26; color++) {
+                    int expected = ((palette[color * 2] & 255) << 8) | (palette[color * 2 + 1] & 255);
+                    int line = color < 11 ? 2 : 3;
+                    int index = color < 11 ? color + 1 : color - 10;
+                    assertEquals(expected, com.openggf.game.palette.PaletteWriteSupport.segaWordFromColor(
+                            level.getPalette(line).getColor(index)), "pass=" + pass + " color=" + color);
+                }
+            }
+            int torchTimer = light.torchTimer();
+            int oldFrame = light.torchFrame();
+            animator.update();
+            animator.publishAniPlcAtVBlank();
+            if (torchTimer == 0) {
+                int bank = light.fadeStep() < 2 ? 0 : light.fadeStep() < 4 ? 3 : 6;
+                int frame = bank == 6 ? 6 : bank + oldFrame;
+                seenTorchFrames[frame] = true;
+                byte[] source = rom.readBytes(0xBFDC0 + frame * 192, 192);
+                for (int pixel = 0; pixel < 384; pixel++) {
+                    int packed = source[pixel / 2] & 255;
+                    int expected = (pixel % 2 == 0 ? packed >> 4 : packed) & 15;
+                    assertEquals(expected, level.getPattern(0x330 + pixel / 64)
+                            .getPixel(pixel % 8, (pixel % 64) / 8), "pass=" + pass + " pixel=" + pixel);
+                }
+            }
+        }
+        for (int frame = 0; frame < 7; frame++) assertTrue(seenTorchFrames[frame], "torch frame=" + frame);
     }
 
     private static Sonic3kPatternAnimator resolvePatternAnimator() {

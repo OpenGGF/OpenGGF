@@ -71,6 +71,26 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ full-route comparison (2026-09-16): a matching hardware-timed trace prefix
+does not establish the same prefix in a separately booted ordinary capture,
+even when both consume the same BK2 input rows. Measure each driver's live
+positions and milestones. The corrected trace matched Sonic through19410 while
+the ordinary capture had already taken a different route. Keep controller-route
+reachability evidence separate from trace parity and preserve each executed log.
+
+SOZ roster correction (2026-09-16): the capture CLI normalizes `none`, but direct
+`GameplayCaptureSession.Settings` requires a blank sidekick name for solo play.
+An unknown name can resolve to fallback Sonic and still produce plausible video.
+Assert live leader and follower identities in both the test and capture driver;
+requested configuration is not evidence of the roster actually running.
+
+SOZ completion (2026-09-15): the capture CLI's `--act` is one-based, while
+`GameplayCaptureSession.boot` takes a zero-based act. Assert the loaded act and
+its art before trusting a positioned capture. A wrong-act boss setup can render
+plausible terrain with missing boss sprites. Full rewind comparisons must compare
+terrain descriptor contents, not newly reconstructed Java object identities;
+retain checks for changed collision data and frame state.
+
 KiS2 act-entry investigation (2026-09-15): a correct title-card release row does
 not prove the following gap row is held. Setup-only admission can return before
 the one-shot source-loop flag is consumed, leaving one destination gameplay

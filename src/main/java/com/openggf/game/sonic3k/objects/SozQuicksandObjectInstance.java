@@ -92,7 +92,7 @@ public final class SozQuicksandObjectInstance extends AbstractObjectInstance
     private boolean flippedY() { return (spawn.renderFlags() & 2) != 0; }
 
     private void acquire(AbstractPlayableSprite p, int slot) {
-        if (!inside(p) || p.isOnObject() || p.getDead() || p.isDebugMode()
+        if (!inside(p) || p.isOnObject() || inDeadRoutine(p) || p.isDebugMode()
                 || p.isObjectControlled() || (variant != 0xC0 && p.isHurt())) {
             return;
         }
@@ -146,7 +146,7 @@ public final class SozQuicksandObjectInstance extends AbstractObjectInstance
 
     private void updateHeld(AbstractPlayableSprite p, int slot) {
         boolean controlledExit = (variant == 0x80 || variant == 0xC0) && p.isObjectControlled();
-        boolean routineExit = variant == 0x80 && (p.isHurt() || p.getDead());
+        boolean routineExit = variant == 0x80 && (p.isHurt() || inDeadRoutine(p));
         if (!inside(p) || !p.getAir() || controlledExit || routineExit) {
             release(p, slot);
             if (variant == 0x40) {
@@ -197,6 +197,15 @@ public final class SozQuicksandObjectInstance extends AbstractObjectInstance
         }
         p.setYSpeed(p.getYSpeed() < 0 ? (short) (p.getYSpeed() + 0x68)
                 : (short) (flippedY() ? -0x198 : 0xA8));
+    }
+
+    private static boolean inDeadRoutine(AbstractPlayableSprite p) {
+        // sub_400F0 and the other acquisition tails reject routine >= 6 before
+        // applying force. Boundary-killed CPUs use a dedicated dead dispatch
+        // while the generic sprite dead flag stays clear.
+        var cpu = p.getCpuController();
+        return p.getDead() || (p.isCpuControlled() && cpu != null
+                && cpu.getState() == com.openggf.sprites.playable.SidekickCpuController.State.DEAD_FALLING);
     }
 
     private static void roll(AbstractPlayableSprite p) {

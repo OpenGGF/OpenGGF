@@ -49,6 +49,13 @@ explicitly. These are
 changes to the unpublished candidate; version `0.7.0` remains unchanged and its
 normalized `0.7` signature pin is replaced in place.
 
+The SOZ completion extends `PersistentRespawnState` with the object-owned lower
+respawn-table bits so bonus/special-stage returns preserve activated mechanisms.
+Its canonical constructor now accepts those bytes. Placement ownership transfer
+is also exposed by `ObjectManager` for children that retain a parent's layout
+entry. These update the mutable `0.7` pin; the descriptor's candidate version
+remains `0.7.0` and no published baseline is created.
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:

@@ -36,7 +36,7 @@ class TestSozMechanismsProduction {
                 config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,true);
                 config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,"s1");
             }
-            var builder=HeadlessTestFixture.builder().withZoneAndAct(8,1)
+            var builder=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
                     .startPosition((short)0x2600,(short)0x1A4).startPositionIsCentre()
                     .withFreshLevelStartLifecycle();
             if(donor.equals("s1"))builder.withCrossGameDonation("s1");
@@ -96,7 +96,7 @@ class TestSozMechanismsProduction {
             config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,320);
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
             CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();TestEnvironment.activeGameplayMode();
-            var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,act)
+            var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,act)
                     .startPosition((short)x,(short)(y-160)).startPositionIsCentre().withFreshLevelStartLifecycle().build();
             fixture.sprite().setAir(true);
             assertFalse(fixture.sprite().getDead(),"alive after positioned fixture construction");
@@ -142,16 +142,20 @@ class TestSozMechanismsProduction {
             config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,320);
             config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
             CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();TestEnvironment.activeGameplayMode();
-            var fixture=HeadlessTestFixture.builder().withZoneAndAct(8,1)
-                    .startPosition((short)0x4740,(short)0x5AD).startPositionIsCentre().withFreshLevelStartLifecycle().build();
+            var fixture=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1)
+                    .startPosition((short)0x4754,(short)0x5AC).startPositionIsCentre().withFreshLevelStartLifecycle().build();
             var player=fixture.sprite();var registry=fixture.gameplayMode().getRewindRegistry();
+            player.setRingCount(99);
             // Settle production-owned player effects before the first rewind spot.
             for(int i=0;i<3;i++)fixture.stepFrame(false,false,false,false,false);
             var state=assertInstanceOf(SozZoneRuntimeState.class,GameServices.zoneRuntimeRegistry().current());
             assertTrue(state.pushableRockSlot()>=0,"placed special rock publishes its SST slot");
-            boolean published=false,invalidated=false;StringBuilder diagnostic=new StringBuilder();
+            assertFalse(player.getAir(), "positioned start must stand on the actual ledge beside the rock");
+            assertTrue(Math.abs(player.getCentreX()-0x4770)<0x30, "start must reach the native rock push face");
+            boolean published=false,invalidated=false,pushed=false;StringBuilder diagnostic=new StringBuilder();
             for(int frame=0;frame<500;frame++) {
                 var before=registry.capture();fixture.stepFrame(false,false,false,true,false);
+                pushed |= player.getPushing();
                 if(frame%100==0)diagnostic.append(frame).append(":").append(player.getCentreX()).append(",")
                         .append(player.getCentreY()).append(" signal=").append(SozZoneRuntimeState.trigger(11)).append("; ");
                 if(!published && state.pushableRockSlot()>=0) {
@@ -162,6 +166,7 @@ class TestSozMechanismsProduction {
                 assertFalse(player.getDead(),diagnostic.toString());
             }
             assertTrue(published && invalidated,"placed special rock link lifecycle: "+diagnostic);
+            assertTrue(pushed, "real player contact must push the placed rock before it falls");
         } finally {
             CrossGameFeatureProvider.getInstance().resetState();config.clearSessionOverrides();saved.forEach(config::setSessionOverride);
             config.resolveDisplayAspect();SessionManager.clear();TestEnvironment.activeGameplayMode();

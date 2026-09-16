@@ -10,13 +10,13 @@ live counts are **599 + 490 = 1089**. IDs and subtypes below are hexadecimal.
 The older analysis object table uses decimal IDs. Pointer names come from
 `Object pointers - SK Set 2.asm`; pointer set is SKL, independent of art half.
 
-Factory column is the initial discovery-profile classification, not execution
+Factory column is the current discovery-profile classification, not execution
 or route certification. Concrete shared families still need their SOZ data and
 subtypes tested through production. The initial SKL-only factory is `$14`
 (not placed here). Dynamic children/art/audio ownership remain an explicit
 inventory obligation before implementing each family.
 
-| ID | Subtype | ROM pointer owner | Act 1 | Act 2 | Initial factory |
+| ID | Subtype | ROM pointer owner | Act 1 | Act 2 | Current factory |
 | --- | --- | --- | ---: | ---: | --- |
 | `$01` | `$01` | `Obj_Monitor` | 2 | 1 | shared concrete |
 | `$01` | `$03` | `Obj_Monitor` | 21 | 8 | shared concrete |
@@ -116,10 +116,10 @@ inventory obligation before implementing each family.
 | `$38` | `$A8` | `Obj_SOZQuicksand` | 1 | 0 | placeholder |
 | `$38` | `$C8` | `Obj_SOZQuicksand` | 9 | 0 | placeholder |
 | `$38` | `$D0` | `Obj_SOZQuicksand` | 21 | 4 | placeholder |
-| `$39` | `$12` | `Obj_SOZSpawningSandBlocks` | 1 | 0 | placeholder |
-| `$39` | `$15` | `Obj_SOZSpawningSandBlocks` | 2 | 0 | placeholder |
-| `$3A` | `$09` | `Obj_SOZPathSwap` | 2 | 2 | placeholder |
-| `$3A` | `$11` | `Obj_SOZPathSwap` | 8 | 6 | placeholder |
+| `$39` | `$12` | `Obj_SOZSpawningSandBlocks` | 1 | 0 | `SozSpawningSandBlocksObjectInstance` |
+| `$39` | `$15` | `Obj_SOZSpawningSandBlocks` | 2 | 0 | `SozSpawningSandBlocksObjectInstance` |
+| `$3A` | `$09` | `Obj_SOZPathSwap` | 2 | 2 | `SozPathSwapObjectInstance` |
+| `$3A` | `$11` | `Obj_SOZPathSwap` | 8 | 6 | `SozPathSwapObjectInstance` |
 | `$3B` | `$21` | `Obj_SOZLoopFallthrough` | 0 | 3 | `SozLoopFallthroughObjectInstance` |
 | `$3E` | `$00` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
 | `$3E` | `$01` | `Obj_SOZPushableRock` | 1 | 0 | `SozPushableRockObjectInstance` |
@@ -132,9 +132,9 @@ inventory obligation before implementing each family.
 | `$3E` | `$0A` | `Obj_SOZPushableRock` | 0 | 1 | `SozPushableRockObjectInstance` |
 | `$3E` | `$87` | `Obj_SOZPushableRock` | 0 | 1 | `SozPushableRockObjectInstance` |
 | `$3F` | `$00` | `Obj_SOZSpringVine` | 12 | 5 | `SozSpringVineObjectInstance` |
-| `$40` | `$60` | `Obj_SOZRisingSandWall` | 4 | 2 | placeholder |
-| `$41` | `$04` | `Obj_SOZLightSwitch` | 0 | 23 | placeholder |
-| `$41` | `$84` | `Obj_SOZLightSwitch` | 0 | 2 | placeholder |
+| `$40` | `$60` | `Obj_SOZRisingSandWall` | 4 | 2 | `SozRisingSandWallObjectInstance` |
+| `$41` | `$04` | `Obj_SOZLightSwitch` | 0 | 23 | `SozLightSwitchObjectInstance` |
+| `$41` | `$84` | `Obj_SOZLightSwitch` | 0 | 2 | `SozLightSwitchObjectInstance` |
 | `$42` | `$00` | `Obj_SOZFloatingPillar` | 2 | 5 | placeholder |
 | `$42` | `$01` | `Obj_SOZFloatingPillar` | 2 | 4 | placeholder |
 | `$42` | `$02` | `Obj_SOZFloatingPillar` | 0 | 2 | placeholder |
@@ -151,14 +151,14 @@ inventory obligation before implementing each family.
 | `$42` | `$22` | `Obj_SOZFloatingPillar` | 1 | 1 | placeholder |
 | `$42` | `$24` | `Obj_SOZFloatingPillar` | 7 | 1 | placeholder |
 | `$42` | `$25` | `Obj_SOZFloatingPillar` | 3 | 2 | placeholder |
-| `$43` | `$04` | `Obj_SOZSwingingPlatform` | 0 | 2 | placeholder |
-| `$43` | `$05` | `Obj_SOZSwingingPlatform` | 3 | 2 | placeholder |
-| `$43` | `$06` | `Obj_SOZSwingingPlatform` | 1 | 0 | placeholder |
-| `$43` | `$13` | `Obj_SOZSwingingPlatform` | 7 | 4 | placeholder |
-| `$43` | `$14` | `Obj_SOZSwingingPlatform` | 6 | 2 | placeholder |
-| `$43` | `$15` | `Obj_SOZSwingingPlatform` | 2 | 1 | placeholder |
-| `$43` | `$16` | `Obj_SOZSwingingPlatform` | 0 | 2 | placeholder |
-| `$43` | `$17` | `Obj_SOZSwingingPlatform` | 1 | 0 | placeholder |
+| `$43` | `$04` | `Obj_SOZSwingingPlatform` | 0 | 2 | `SozSwingingPlatformObjectInstance` |
+| `$43` | `$05` | `Obj_SOZSwingingPlatform` | 3 | 2 | `SozSwingingPlatformObjectInstance` |
+| `$43` | `$06` | `Obj_SOZSwingingPlatform` | 1 | 0 | `SozSwingingPlatformObjectInstance` |
+| `$43` | `$13` | `Obj_SOZSwingingPlatform` | 7 | 4 | `SozSwingingPlatformObjectInstance` |
+| `$43` | `$14` | `Obj_SOZSwingingPlatform` | 6 | 2 | `SozSwingingPlatformObjectInstance` |
+| `$43` | `$15` | `Obj_SOZSwingingPlatform` | 2 | 1 | `SozSwingingPlatformObjectInstance` |
+| `$43` | `$16` | `Obj_SOZSwingingPlatform` | 0 | 2 | `SozSwingingPlatformObjectInstance` |
+| `$43` | `$17` | `Obj_SOZSwingingPlatform` | 1 | 0 | `SozSwingingPlatformObjectInstance` |
 | `$44` | `$00` | `Obj_SOZBreakableSandRock` | 17 | 13 | `SozBreakableSandRockObjectInstance` |
 | `$45` | `$01` | `Obj_SOZPushSwitch` | 0 | 2 | placeholder |
 | `$45` | `$02` | `Obj_SOZPushSwitch` | 0 | 1 | placeholder |
@@ -189,18 +189,18 @@ inventory obligation before implementing each family.
 | `$46` | `$1C` | `Obj_SOZDoor` | 0 | 2 | placeholder |
 | `$46` | `$1D` | `Obj_SOZDoor` | 0 | 1 | placeholder |
 | `$46` | `$1F` | `Obj_SOZDoor` | 0 | 1 | placeholder |
-| `$47` | `$0A` | `Obj_SOZSandCork` | 0 | 1 | placeholder |
-| `$47` | `$18` | `Obj_SOZSandCork` | 0 | 1 | placeholder |
-| `$47` | `$9C` | `Obj_SOZSandCork` | 0 | 1 | placeholder |
-| `$47` | `$9E` | `Obj_SOZSandCork` | 0 | 1 | placeholder |
-| `$48` | `$04` | `Obj_SOZRapelWire` | 1 | 0 | placeholder |
-| `$48` | `$05` | `Obj_SOZRapelWire` | 2 | 1 | placeholder |
-| `$48` | `$06` | `Obj_SOZRapelWire` | 0 | 2 | placeholder |
-| `$48` | `$07` | `Obj_SOZRapelWire` | 0 | 1 | placeholder |
-| `$48` | `$08` | `Obj_SOZRapelWire` | 1 | 0 | placeholder |
-| `$48` | `$42` | `Obj_SOZRapelWire` | 1 | 0 | placeholder |
-| `$48` | `$46` | `Obj_SOZRapelWire` | 0 | 1 | placeholder |
-| `$48` | `$81` | `Obj_SOZRapelWire` | 2 | 0 | placeholder |
+| `$47` | `$0A` | `Obj_SOZSandCork` | 0 | 1 | `SozSandCorkObjectInstance` |
+| `$47` | `$18` | `Obj_SOZSandCork` | 0 | 1 | `SozSandCorkObjectInstance` |
+| `$47` | `$9C` | `Obj_SOZSandCork` | 0 | 1 | `SozSandCorkObjectInstance` |
+| `$47` | `$9E` | `Obj_SOZSandCork` | 0 | 1 | `SozSandCorkObjectInstance` |
+| `$48` | `$04` | `Obj_SOZRapelWire` | 1 | 0 | `SozRapelWireObjectInstance` |
+| `$48` | `$05` | `Obj_SOZRapelWire` | 2 | 1 | `SozRapelWireObjectInstance` |
+| `$48` | `$06` | `Obj_SOZRapelWire` | 0 | 2 | `SozRapelWireObjectInstance` |
+| `$48` | `$07` | `Obj_SOZRapelWire` | 0 | 1 | `SozRapelWireObjectInstance` |
+| `$48` | `$08` | `Obj_SOZRapelWire` | 1 | 0 | `SozRapelWireObjectInstance` |
+| `$48` | `$42` | `Obj_SOZRapelWire` | 1 | 0 | `SozRapelWireObjectInstance` |
+| `$48` | `$46` | `Obj_SOZRapelWire` | 0 | 1 | `SozRapelWireObjectInstance` |
+| `$48` | `$81` | `Obj_SOZRapelWire` | 2 | 0 | `SozRapelWireObjectInstance` |
 | `$49` | `$00` | `Obj_SOZSolidSprites` | 8 | 6 | `SozSolidSpritesObjectInstance` |
 | `$49` | `$01` | `Obj_SOZSolidSprites` | 8 | 8 | `SozSolidSpritesObjectInstance` |
 | `$6B` | `$00` | `Obj_InvisibleHurtBlockVertical` | 7 | 5 | shared concrete |
@@ -231,39 +231,39 @@ inventory obligation before implementing each family.
 | `$85` | `$08` | `Obj_SSEntryRing` | 0 | 1 | shared concrete |
 | `$85` | `$09` | `Obj_SSEntryRing` | 0 | 1 | shared concrete |
 | `$85` | `$0A` | `Obj_SSEntryRing` | 0 | 1 | shared concrete |
-| `$8B` | `$40` | `Obj_SpriteMask` | 0 | 1 | placeholder |
-| `$94` | `$20` | `Obj_Skorp` | 5 | 1 | placeholder |
-| `$94` | `$30` | `Obj_Skorp` | 0 | 2 | placeholder |
-| `$94` | `$38` | `Obj_Skorp` | 1 | 0 | placeholder |
-| `$94` | `$40` | `Obj_Skorp` | 8 | 4 | placeholder |
-| `$94` | `$50` | `Obj_Skorp` | 1 | 1 | placeholder |
-| `$94` | `$60` | `Obj_Skorp` | 4 | 1 | placeholder |
-| `$94` | `$80` | `Obj_Skorp` | 2 | 1 | placeholder |
-| `$94` | `$90` | `Obj_Skorp` | 0 | 1 | placeholder |
-| `$94` | `$C0` | `Obj_Skorp` | 1 | 0 | placeholder |
-| `$94` | `$E0` | `Obj_Skorp` | 0 | 2 | placeholder |
-| `$95` | `$00` | `Obj_Sandworm` | 24 | 8 | placeholder |
-| `$96` | `$1B` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$36` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$41` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$44` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$45` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$47` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$4C` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$4D` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$4F` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$5A` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$73` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$81` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$94` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$B2` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$D1` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$F1` | `Obj_Rockn` | 1 | 0 | placeholder |
-| `$96` | `$F6` | `Obj_Rockn` | 1 | 0 | placeholder |
+| `$8B` | `$40` | `Obj_SpriteMask` | 0 | 1 | `SozSpriteMaskObjectInstance` |
+| `$94` | `$20` | `Obj_Skorp` | 5 | 1 | `SkorpBadnikInstance` |
+| `$94` | `$30` | `Obj_Skorp` | 0 | 2 | `SkorpBadnikInstance` |
+| `$94` | `$38` | `Obj_Skorp` | 1 | 0 | `SkorpBadnikInstance` |
+| `$94` | `$40` | `Obj_Skorp` | 8 | 4 | `SkorpBadnikInstance` |
+| `$94` | `$50` | `Obj_Skorp` | 1 | 1 | `SkorpBadnikInstance` |
+| `$94` | `$60` | `Obj_Skorp` | 4 | 1 | `SkorpBadnikInstance` |
+| `$94` | `$80` | `Obj_Skorp` | 2 | 1 | `SkorpBadnikInstance` |
+| `$94` | `$90` | `Obj_Skorp` | 0 | 1 | `SkorpBadnikInstance` |
+| `$94` | `$C0` | `Obj_Skorp` | 1 | 0 | `SkorpBadnikInstance` |
+| `$94` | `$E0` | `Obj_Skorp` | 0 | 2 | `SkorpBadnikInstance` |
+| `$95` | `$00` | `Obj_Sandworm` | 24 | 8 | `SandwormBadnikInstance` |
+| `$96` | `$1B` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$36` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$41` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$44` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$45` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$47` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$4C` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$4D` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$4F` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$5A` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$73` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$81` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$94` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$B2` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$D1` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$F1` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
+| `$96` | `$F6` | `Obj_Rockn` | 1 | 0 | `RocknBadnikInstance` |
 | `$98` | `$00` | `Obj_SOZEndBoss` | 0 | 1 | placeholder |
-| `$AB` | `$00` | `Obj_SOZHyudoroCapsuleLoadArt` | 0 | 1 | placeholder |
-| `$AB` | `$04` | `Obj_SOZHyudoroCapsuleLoadArt` | 0 | 1 | placeholder |
-| `$AC` | `$00` | `Obj_SOZHyudoroCapsule` | 0 | 1 | placeholder |
+| `$AB` | `$00` | `Obj_SOZHyudoroCapsuleLoadArt` | 0 | 1 | `SozHyudoroArtTriggerObjectInstance` |
+| `$AB` | `$04` | `Obj_SOZHyudoroCapsuleLoadArt` | 0 | 1 | `SozHyudoroArtTriggerObjectInstance` |
+| `$AC` | `$00` | `Obj_SOZHyudoroCapsule` | 0 | 1 | `SozHyudoroCapsuleObjectInstance` |
 
 ## First family contract: quicksand `$38`
 
@@ -373,3 +373,16 @@ riders horizontally. Mapping frames are 7/5 pieces at `$41C72`; switch mapping
 These three factories replace 135 further placed placeholders, leaving
 **107 Act 1 / 83 Act 2**. The CNZ owners at these numeric IDs remain distinct.
 See the execution plan and act matrices for actual validation and inherited gaps.
+
+## Completion campaign object batches
+
+The first mechanism/badnik batches and the light/ghost batch are integrated on
+the completion branch, including final boss `382eee7fc`. Both acts now have
+zero placed placeholders: 599 Act 1 and 490 Act 2 records bind to concrete factories.
+The Act 1 miniboss `$97` is dynamically created by the arena and implemented separately. This count is factory coverage, not a claim
+that either complete route or every compatibility configuration is verified.
+
+Native low-level gaps remain explicit: cork `loc_41E78` reads the art-tile low
+byte of SST slot seven positions earlier for its quiet skid sound. No unrelated
+frame clock is substituted; arbitrary foreign-slot bytes are not modeled. The
+boss charge's failed-allocation terminal-slot poll has the same general limit.

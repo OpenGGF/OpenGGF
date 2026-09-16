@@ -127,8 +127,8 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_LAUNCH_BASE_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
 | S3K | `S3K_MUSHROOM_HILL_1` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending; [moving-camera presentation regression](../architecture/audits/2026-09-15-s3k-presentation-camera.md) is a local check, not act certification |
 | S3K | `S3K_MUSHROOM_HILL_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
-| S3K | `S3K_SANDOPOLIS_1` | [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) — v2 bring-up; quicksand and vine slices tracked, full route/native/visual gaps remain |
-| S3K | `S3K_SANDOPOLIS_2` | [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md) — v2 bring-up; quicksand and vine slices tracked, full route/native/visual gaps remain |
+| S3K | `S3K_SANDOPOLIS_1` | [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) — v2 bring-up; concrete objects, bosses, coupled events and recreation tracked; full-route/native and transient redraw gaps remain |
+| S3K | `S3K_SANDOPOLIS_2` | [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md) — v2 bring-up; concrete objects, bosses, coupled events and recreation tracked; full-route/native and transient redraw gaps remain |
 | S3K | `S3K_LAVA_REEF_1` | Audit pending |
 | S3K | `S3K_LAVA_REEF_2` | Audit pending |
 | S3K | `S3K_SKY_SANCTUARY_1` | Audit pending |
@@ -247,3 +247,7 @@ Normal Act 1 parallax/shimmer, corrected animated art and sand palette cycling n
 have focused checks and 320/528 captures; matched pixels and remaining event modes
 stay open independently of the implemented placed-object families. See
 the [revised SOZ batch order](../architecture/plans/2026-09-15-soz-methodology-v2.md#explicit-presentation-work-and-revised-next-batch).
+
+SOZ cold-route continuation (2026-09-16): the [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md#cold-controller-completion) now records a fixed-input native Sonic + Tails, width-320 run from cold entry through the real boss to playable Act 2. The explicit capture test passes on the merged runtime without skips. Other character/donor/viewport routes and exact native parity remain separate obligations.
+
+SOZ Act 2 cold-route completion (2026-09-16): the [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md#cold-controller-completion) records the fixed native Sonic + Tails, width-320 run through eight natural boss hits, capsule/results and playable Lava Reef. Dense capture and explicit destination-control assertions pass without skips. The lower subtype-$87 puzzle and broader parity/configuration products remain open.

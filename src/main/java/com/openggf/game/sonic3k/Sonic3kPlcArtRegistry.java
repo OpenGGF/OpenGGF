@@ -2315,7 +2315,53 @@ public final class Sonic3kPlcArtRegistry {
     private static void addSozEntries(int actIndex,
                                       List<StandaloneArtEntry> standalone,
                                       List<LevelArtEntry> levelArt) {
+        if (actIndex == 1) {
+            standalone.add(new StandaloneArtEntry(ObjectArtKeys.BOSS_EXPLOSION,
+                    Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR, CompressionType.NEMESIS,
+                    Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_SIZE, Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.EGG_CAPSULE,
+                    Sonic3kConstants.ART_NEM_EGG_CAPSULE_ADDR, CompressionType.NEMESIS,
+                    Sonic3kConstants.ART_NEM_EGG_CAPSULE_SIZE, Sonic3kConstants.MAP_EGG_CAPSULE_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SOZ_END_BOSS,
+                    0x16E1B0, CompressionType.KOSINSKI_MODULED, 0, 0x7834E, 1, -1));
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_END_BOSS_BODY, 0x7848A, 1, 0, null));
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR, CompressionType.NEMESIS,
+                    Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_SIZE, Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0, -1));
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.FBZ_EGGROBO_HEAD,
+                    Sonic3kConstants.ART_KOSM_FBZ_EGGROBO_HEAD_ADDR, CompressionType.KOSINSKI_MODULED,
+                    Sonic3kConstants.ART_KOSM_FBZ_EGGROBO_HEAD_SIZE, Sonic3kConstants.MAP_FBZ_EGGROBO_HEAD_ADDR, 0, -1));
+        }
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SWINGING_PLATFORM,
+                Sonic3kConstants.MAP_SOZ_SWINGING_PLATFORM_ADDR, 1, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RAPEL_WIRE,
+                Sonic3kConstants.MAP_SOZ_RAPEL_WIRE_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x48, 2, null));
+        if (actIndex == 0) {
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_ACT1_END_DOOR,0x5611E,0x29,2,null));
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SOZ_MINIBOSS,
+                    Sonic3kConstants.ART_KOSM_SOZ_MINIBOSS_ADDR, CompressionType.KOSINSKI_MODULED,
+                    0, Sonic3kConstants.MAP_SOZ_MINIBOSS_ADDR, 1, -1));
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SOZ_MINIBOSS_DUST,
+                    Sonic3kConstants.ART_KOSM_SOZ_MINIBOSS_SAND_ADDR, CompressionType.KOSINSKI_MODULED,
+                    0, Sonic3kConstants.MAP_SOZ_MINIBOSS_DUST_ADDR, 2, -1));
+        }
+        if (actIndex == 1) {
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_LIGHT_SWITCH,
+                    Sonic3kConstants.MAP_SOZ_LIGHT_SWITCH_ADDR, 0x3AF, 0, null));
+            levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_GHOST_CAPSULE,
+                    Sonic3kConstants.MAP_EGG_CAPSULE_ADDR, 0x536, 0, null));
+            standalone.add(new StandaloneArtEntry(Sonic3kObjectArtKeys.SOZ_GHOSTS,
+                    Sonic3kConstants.ART_UNC_SOZ_GHOSTS_ADDR, CompressionType.UNCOMPRESSED,
+                    Sonic3kConstants.ART_UNC_SOZ_GHOSTS_SIZE, Sonic3kConstants.MAP_SOZ_GHOSTS_ADDR,
+                    1, Sonic3kConstants.DPLC_SOZ_GHOSTS_ADDR, 18));
+        }
         // Doors, push switches and pushable rocks share SOZMisc+$8C, palette 2.
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SPAWNING_SAND_BLOCKS,
+                0x04043A, 0x3C0, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_RISING_SAND_WALL,
+                0x040D10, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x69, 2, null));
+        levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_SAND_CORK,
+                0x041EAE, 0x3AF + 0xE, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_DOOR,
                 Sonic3kConstants.MAP_SOZ_DOOR_ADDR, Sonic3kConstants.ARTTILE_SOZ_MISC + 0x8C, 2, null));
         levelArt.add(new LevelArtEntry(Sonic3kObjectArtKeys.SOZ_PUSH_SWITCH,

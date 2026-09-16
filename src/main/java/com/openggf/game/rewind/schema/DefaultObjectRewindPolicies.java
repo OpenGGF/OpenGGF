@@ -103,6 +103,31 @@ final class DefaultObjectRewindPolicies {
     );
 
     private static final Map<FieldKey, RewindFieldPolicy> EXACT_FIELD_POLICIES = Map.ofEntries(
+            // These SOZ SST links remain mutable during native graph teardown.
+            // Capture their identities explicitly so both schema restore and the
+            // coverage audit agree; constructors deliberately recreate null links.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance", "controller"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroBodyObjectInstance", "pendingContacts"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozHyudoroCapsuleObjectInstance$Button", "parentRef"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozMinibossChild", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozMinibossChild$Explosions", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance", "endpoint"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance", "first"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance$Segment", "next"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance$Segment", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozRapelWireObjectInstance$Segment", "preceding"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozSwingingPlatformObjectInstance", "display"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Legs", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.RocknBadnikInstance$Shell", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.SandwormBadnikInstance$Segment", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.SkorpBadnikInstance$Tail", "owner"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.badniks.SkorpBadnikInstance$Tail", "previous"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.AbstractS3kUprightEggCapsuleInstance", "resultsSolidContactPlayers"), RewindFieldPolicy.CAPTURED),
+            // SOZ2 has two previous-link arms and a charge/terminal-particle cycle.
+            // Preserve exact identities, including partial allocation prefixes.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "boss"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SozEndBossChild", "terminal"), RewindFieldPolicy.CAPTURED),
             // ExplosionRewindState captures the exact configured factory references and
             // rebinds them on recreation. TRANSIENT excludes them only from the generic
             // codec; these construction policies are not omitted from rewind state.

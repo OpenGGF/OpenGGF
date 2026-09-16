@@ -162,7 +162,7 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     private int bwdCounter;
     // ROM: v_objstate[2..255] — per-counter-slot state.
     // Bit 7: set = object loaded or permanently destroyed.
-    private final int[] objState = new int[256];
+    private int[] objState = new int[256];
     // Maps active spawn (identity) → counter value assigned during load.
     // Used to clear objState bit when the object is normally unloaded.
     private final IdentityHashMap<ObjectSpawn, Integer> spawnToCounter = new IdentityHashMap<>();
@@ -197,6 +197,9 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     void setTwoAxisCursorPlacement(boolean twoAxisCursorPlacement) {
         this.twoAxisCursorPlacement = twoAxisCursorPlacement;
+        if (twoAxisCursorPlacement && objState.length < spawns.size()) {
+            objState = Arrays.copyOf(objState, spawns.size());
+        }
     }
 
     void setWindowingStrategy(ObjectWindowingStrategy strategy) {
@@ -234,6 +237,21 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
                 && execOrder[oldExecIndex] == object) {
             execOrder[oldExecIndex] = null;
         }
+        return true;
+    }
+
+    boolean transferPlacementOwnership(ObjectInstance from, ObjectInstance to,
+            Map<ObjectSpawn, ObjectInstance> activeObjects,
+            Map<ObjectInstance, ObjectSpawn> instanceToSpawn,
+            List<ObjectInstance> dynamicObjects) {
+        ObjectSpawn placementSpawn = instanceToSpawn.get(from);
+        if (placementSpawn == null || to == null || !dynamicObjects.contains(to)
+                || activeObjects.get(placementSpawn) != from) return false;
+        activeObjects.put(placementSpawn, to);
+        instanceToSpawn.remove(from);
+        instanceToSpawn.put(to, placementSpawn);
+        dynamicObjects.remove(to);
+        dynamicObjects.add(from);
         return true;
     }
 
@@ -450,8 +468,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
      * {@link PersistentRespawnState}.
      */
     PersistentRespawnState capturePersistentRespawn() {
+        // The kept ROM table includes object-owned low bits, not just its load latch.
+        byte[] lowerBits = new byte[twoAxisCursorPlacement ? spawns.size() : 0];
+        for (int i = 0; i < lowerBits.length; i++) lowerBits[i] = (byte) (objState[i] & 0x7F);
         return new PersistentRespawnState(remembered.toLongArray(), stayActive.toLongArray(),
-                destroyedInWindow.toLongArray());
+                destroyedInWindow.toLongArray(), new long[0], lowerBits);
     }
 
     /**
@@ -475,6 +496,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         // the table wipe at :37429-37438), so a bit 7 left set by
         // Delete_Current_Sprite must survive the return.
         destroyedInWindow.or(BitSet.valueOf(state.destroyedInWindowBits()));
+        if (twoAxisCursorPlacement) {
+            byte[] lowerBits = state.objectStateBits();
+            for (int i = 0; i < Math.min(lowerBits.length, spawns.size()); i++) {
+                objState[i] |= lowerBits[i] & 0x7F;
+            }
+        }
     }
 
     int restoreRewindState(
@@ -808,6 +835,27 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     public List<ObjectSpawn> getAllSpawns() {
         return spawns;
+    }
+
+    void markRemembered(ObjectSpawn spawn, Map<ObjectSpawn, ObjectInstance> activeObjects) {
+        // Look up the instance to check if it should stay active.
+        // activeObjects is an IdentityHashMap so try identity first.
+        ObjectInstance instance = activeObjects.get(spawn);
+        if (instance == null) {
+            // Fallback: scan by equals() in case the caller's spawn reference
+            // differs from the canonical key stored in the IdentityHashMap.
+            for (Map.Entry<ObjectSpawn, ObjectInstance> entry : activeObjects.entrySet()) {
+                if (entry.getKey().equals(spawn)) {
+                    instance = entry.getValue();
+                    break;
+                }
+            }
+        }
+        if (instance != null) {
+            markRemembered(spawn, instance);
+        } else {
+            markRemembered(spawn);
+        }
     }
 
     void markRemembered(ObjectSpawn spawn) {
@@ -1489,6 +1537,12 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     boolean isCounterStateBitSet(ObjectSpawn spawn, int bit) {
+        // Two-axis placement owns one respawn byte per layout entry, not an
+        // S1 rolling counter. Lower bits survive ordinary culling and rewind.
+        if (twoAxisCursorPlacement && bit >= 0 && bit < 7) {
+            int index = getSpawnIndex(spawn);
+            return index >= 0 && (objState[index] & (1 << bit)) != 0;
+        }
         Integer counter = spawnToCounter.get(spawn);
         if (counter == null || bit < 0 || bit > 7) {
             return false;
@@ -1497,6 +1551,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
     }
 
     void setCounterStateBit(ObjectSpawn spawn, int bit) {
+        if (twoAxisCursorPlacement && bit >= 0 && bit < 7) {
+            int index = getSpawnIndex(spawn);
+            if (index >= 0) objState[index] |= 1 << bit;
+            return;
+        }
         Integer counter = spawnToCounter.get(spawn);
         if (counter != null && bit >= 0 && bit <= 7) {
             objState[counter] |= 1 << bit;
