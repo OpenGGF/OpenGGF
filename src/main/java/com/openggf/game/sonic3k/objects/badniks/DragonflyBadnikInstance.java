@@ -251,9 +251,9 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
      * Mirrors ROM {@code $38} bit 2 on the main Dragonfly (set in {@code loc_8DDCA}
      * on entering hover-wait, cleared in {@code loc_8DDF8} on exit). The first
      * linked-body segment (whose {@code parent3} anchor is the Dragonfly itself)
-     * reads this directly; unlike the tail-internal hops, the Dragonfly always
-     * runs before any child in the ROM object list, so this is visible the same
-     * frame it changes -- no one-frame delay needed here.
+     * reads this directly. The Dragonfly and every segment occupy ascending SST
+     * slots (see {@link LinkedBodyChild#returnGateBit}), so each link observes
+     * its anchor's bit in the same frame it changes.
      */
     @Override
     public boolean isHoverReturnGateOpen() {
@@ -377,14 +377,16 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
         private boolean setupFrame = true;
         // Mirrors this segment's own ROM $38 bit 2 (set entering the return
         // phase in loc_8DEA8, cleared completing the wait phase in loc_8DF24).
+        // The next segment reads it live through its parent3 anchor: every
+        // segment is allocated by CreateChild4_LinkListRepeated through
+        // AllocateObjectAfterCurrent with a0 still the Dragonfly, and that
+        // routine scans FORWARD from a0 for the first free SST
+        // (sonic3k.asm:37917-37930), so segment n always lands in a higher
+        // slot than segment n-1 and the ascending object-execution walk runs
+        // it later in the same frame. ObjectManager reproduces that order
+        // (SlotAllocator.allocateAfter), so no explicit visibility delay is
+        // modelled here.
         private boolean returnGateBit;
-        // What the NEXT segment in the chain observes. CreateChild4_LinkListRepeated
-        // inserts each new segment via AllocateObjectAfterCurrent right after the
-        // Dragonfly's own slot, so later segments end up processed BEFORE earlier
-        // ones within a frame; a segment therefore only sees its predecessor's
-        // returnGateBit as it stood at the end of the PREVIOUS frame, producing
-        // the ROM's one-frame ripple down the chain. Promoted once per own update().
-        private boolean returnGateVisibleToFollower;
 
         private LinkedBodyChild() {
             this(new DragonflyBadnikInstance(new ObjectSpawn(0, 0, 0, 0, 0, false, 0)), 0, 0);
@@ -426,7 +428,6 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
                 setDestroyed(true);
                 return;
             }
-            returnGateVisibleToFollower = returnGateBit;
             if (setupFrame) {
                 setupFrame = false;
                 updateDynamicSpawn(childX, childY);
@@ -468,7 +469,7 @@ public final class DragonflyBadnikInstance extends AbstractS3kBadnikInstance
 
         @Override
         public boolean isHoverReturnGateOpen() {
-            return returnGateVisibleToFollower;
+            return returnGateBit;
         }
 
         private void updateParentRelativeY() {

@@ -3512,7 +3512,11 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
             // seamless act-transition path, but must carry this clock across
             // the rebuild so slot-phased object gates (e.g. Batbrain) retain
             // their native timing.
-            int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
+            // A session's first object clock continues the power-on V_int_run_count
+            // (CrossResetRAM, never cleared by Level: sonic3k.asm:542-543).
+            int inheritedVblaCounter = objectManager != null
+                    ? objectManager.getVblaCounter()
+                    : com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).objectClockSeed();
             int inheritedVIntRunCounterPhaseOffset = objectManager != null
                     ? objectManager.getVIntRunCounterPhaseOffset()
                     : 0;
@@ -3965,7 +3969,9 @@ public class LevelManager extends InitialProcessSpritesLevelManagerBase {
         // Load_Level does not clear it. The ObjectManager owns our live copy of
         // that clock, so carry it across the manager rebuild even though the
         // per-act object execution counter intentionally restarts.
-        int inheritedVblaCounter = objectManager != null ? objectManager.getVblaCounter() : 0;
+        int inheritedVblaCounter = objectManager != null
+                ? objectManager.getVblaCounter()
+                : com.openggf.game.session.EngineTiming.vIntRunCounter(engineServices).objectClockSeed();
         int inheritedVIntRunCounterPhaseOffset = objectManager != null
                 ? objectManager.getVIntRunCounterPhaseOffset()
                 : 0;

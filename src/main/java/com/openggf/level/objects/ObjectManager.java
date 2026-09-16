@@ -150,11 +150,11 @@ public class ObjectManager {
 
     // Pre-bucketed lists for O(n) rendering instead of O(n*buckets)
     @SuppressWarnings("unchecked")
-    private final List<ObjectInstance>[] lowPriorityBuckets = new ArrayList[BUCKET_COUNT];
+    private final List<ObjectRenderParts.RenderEntry>[] lowPriorityBuckets = new ArrayList[BUCKET_COUNT];
     @SuppressWarnings("unchecked")
-    private final List<ObjectInstance>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
+    private final List<ObjectRenderParts.RenderEntry>[] highPriorityBuckets = new ArrayList[BUCKET_COUNT];
     @SuppressWarnings("unchecked")
-    private final List<ObjectInstance>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
+    private final List<ObjectRenderParts.RenderEntry>[] unifiedBuckets = new ArrayList[BUCKET_COUNT];
     private boolean bucketsDirty = true;
     private final ObjectRenderBucketSnapshot renderBucketSnapshot =
             new ObjectRenderBucketSnapshot();
@@ -243,11 +243,6 @@ public class ObjectManager {
     // captureExecStartPlayerCentreY / getPlayerCentreYAtExecStart.
     private final java.util.Map<PlayableEntity, Integer> execStartPlayerCentreY =
             new java.util.IdentityHashMap<>(2);
-    private static final Comparator<ObjectInstance> RENDER_SLOT_DESCENDING = (a, b) -> {
-        int slotA = a instanceof AbstractObjectInstance aoiA ? aoiA.getSlotIndex() : Integer.MAX_VALUE;
-        int slotB = b instanceof AbstractObjectInstance aoiB ? aoiB.getSlotIndex() : Integer.MAX_VALUE;
-        return Integer.compare(slotB, slotA);
-    };
 
     public ObjectManager(List<ObjectSpawn> spawns, ObjectRegistry registry,
             int planeSwitcherObjectId, PlaneSwitcherConfig planeSwitcherConfig,
@@ -1484,9 +1479,9 @@ public class ObjectManager {
         // painter's-algorithm order. Sort each bucket descending by slot so lower
         // slot indices appear on top.
         for (int i = 0; i < BUCKET_COUNT; i++) {
-            lowPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
-            highPriorityBuckets[i].sort(RENDER_SLOT_DESCENDING);
-            unifiedBuckets[i].sort(RENDER_SLOT_DESCENDING);
+            lowPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
+            highPriorityBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
+            unifiedBuckets[i].sort(ObjectRenderParts.SLOT_DESCENDING);
         }
 
         renderBucketSnapshot.capture(activeObjects.values(), dynamicObjects);
@@ -1496,8 +1491,8 @@ public class ObjectManager {
         ensureBucketsPopulated();
         int targetBucket = RenderPriority.clamp(bucket);
         int idx = targetBucket - RenderPriority.MIN;
-        List<ObjectInstance>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
-        drawBucketInstancesWithPriority(buckets[idx], targetBucket, highPriority, graphicsManager);
+        List<ObjectRenderParts.RenderEntry>[] buckets = highPriority ? highPriorityBuckets : lowPriorityBuckets;
+        drawBucketInstancesWithPriority(buckets[idx], targetBucket, graphicsManager);
     }
 
     /**
@@ -1518,26 +1513,21 @@ public class ObjectManager {
         drawBucketInstances(unifiedBuckets[idx], targetBucket, callback);
     }
 
-    private void drawBucketInstances(List<ObjectInstance> instances, int bucket, ObjectDrawCallback callback) {
-        if (instances.isEmpty()) {
+    private void drawBucketInstances(List<ObjectRenderParts.RenderEntry> entries, int bucket,
+                                     ObjectDrawCallback callback) {
+        if (entries.isEmpty()) {
             return;
         }
 
         enableVerticalWrapIfNeeded();
         try {
             renderCommands.clear();
-            for (ObjectInstance instance : instances) {
-                for (int pass = 0; pass < 2; pass++) {
-                    boolean high = pass == 1;
-                    if (!ObjectRenderParts.drawsClass(instance, bucket, high)) {
-                        continue;
-                    }
-                    if (callback != null) {
-                        callback.beforeDraw(instance, high);
-                    }
-                    objectCallbacks.run(instance,
-                            () -> ObjectRenderParts.appendRenderCommands(instance, renderCommands, bucket, high));
+            for (ObjectRenderParts.RenderEntry entry : entries) {
+                if (callback != null) {
+                    callback.beforeDraw(entry.instance(), entry.high());
                 }
+                objectCallbacks.run(entry.instance(),
+                        () -> ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket));
             }
 
             if (!renderCommands.isEmpty()) {
@@ -1583,17 +1573,12 @@ public class ObjectManager {
         // (The InstancedPatternRenderer bakes priority per-instance and doesn't
         // need the flush, but it's harmless — empty flushes are no-ops.)
 
-        drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, null, gfx);
+        drawBucketInstancesWithPriority(unifiedBuckets[idx], idx + RenderPriority.MIN, gfx);
     }
 
-    /**
-     * @param onlyClass when non-null, draw only that tile-priority class (the split
-     *                  low/high lists); when null, draw every class the object has in
-     *                  the bucket, low parts first, flushing the batch between classes
-     */
-    private void drawBucketInstancesWithPriority(List<ObjectInstance> instances, int bucket,
-                                                 Boolean onlyClass, GraphicsManager gfx) {
-        if (instances.isEmpty()) {
+    private void drawBucketInstancesWithPriority(List<ObjectRenderParts.RenderEntry> entries, int bucket,
+                                                 GraphicsManager gfx) {
+        if (entries.isEmpty()) {
             return;
         }
 
@@ -1603,24 +1588,17 @@ public class ObjectManager {
             // Draw_Sprite / Render_Sprites consume SST order; masks affect later entries.
             // The cached lists use reverse order for ordinary painter drawing.
             boolean collectingSat = gfx.isSpriteSatCollectionActive();
-            for (int i = 0; i < instances.size(); i++) {
-                ObjectInstance instance = instances.get(collectingSat ? instances.size() - 1 - i : i);
-                for (int pass = 0; pass < 2; pass++) {
-                    boolean high = pass == 1;
-                    if ((onlyClass != null && onlyClass != high)
-                            || !ObjectRenderParts.drawsClass(instance, bucket, high)) {
-                        continue;
+            for (int i = 0; i < entries.size(); i++) {
+                ObjectRenderParts.RenderEntry entry = entries.get(collectingSat ? entries.size() - 1 - i : i);
+                objectCallbacks.run(entry.instance(), () -> {
+                    int mask = ObjectRenderParts.tileOcclusionPaletteMask(entry);
+                    if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
+                        gfx.flushPatternBatch();
+                        gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
+                        gfx.beginPatternBatch();
                     }
-                    objectCallbacks.run(instance, () -> {
-                        int mask = ObjectRenderParts.tileOcclusionPaletteMask(instance, high);
-                        if (gfx.getCurrentSpriteTileOcclusionPaletteMask() != mask) {
-                            gfx.flushPatternBatch();
-                            gfx.setCurrentSpriteTileOcclusionPaletteMask(mask);
-                            gfx.beginPatternBatch();
-                        }
-                        ObjectRenderParts.appendRenderCommands(instance, renderCommands, bucket, high);
-                    });
-                }
+                    ObjectRenderParts.appendRenderCommands(entry, renderCommands, bucket);
+                });
             }
 
             if (!renderCommands.isEmpty()) {

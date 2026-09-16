@@ -249,13 +249,22 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         if (renderer == null) {
             return;
         }
-        renderer.drawFrameIndex(SHIP_FRAME, getX(), getY(), facingLeft, false, PALETTE_LINE);
-        renderer.drawFrameIndex(headFrame, getX(), getY() + HEAD_Y_OFFSET, facingLeft, false, PALETTE_LINE);
+        // Obj_LBZ1Robotnik allocates its head with Child1_MakeRoboHead3 and, at
+        // loc_8CCF8, its flame with Child1_MakeRoboShipFlame (sonic3k.asm:192195-192196,
+        // 192308-192309), both via CreateChild1_Normal / AllocateObjectAfterCurrent
+        // (176924-176929), so both children sit in later slots than the ship. The
+        // ship itself is priority $100 (ObjDat_LBZ1Robotnik, 192784) while the
+        // head and flame are $280 (ObjDat_RobotnikHead 136648, ObjDat3_RoboShipFlame
+        // 136661): the ship's list is drawn first and wins anyway. This owner
+        // folds all three into its $100 list, so painter's order runs flame,
+        // head, ship to keep the ship in front.
         if (flameVisible) {
             int flameDx = facingLeft ? -FLAME_X_OFFSET : FLAME_X_OFFSET;
             renderer.drawFrameIndex(FLAME_FRAME, getX() + flameDx, getY() + FLAME_Y_OFFSET,
                     facingLeft, false, PALETTE_LINE);
         }
+        renderer.drawFrameIndex(headFrame, getX(), getY() + HEAD_Y_OFFSET, facingLeft, false, PALETTE_LINE);
+        renderer.drawFrameIndex(SHIP_FRAME, getX(), getY(), facingLeft, false, PALETTE_LINE);
     }
 
     public int getRoutineForTest() {

@@ -136,7 +136,8 @@ final class ObjectCallbackRouter {
         int bucket = RenderPriority.clamp(call(instance, instance::getPriorityBucket))
                 - RenderPriority.MIN;
         long extra = instance instanceof MultiBucketRenderable parts
-                ? call(instance, () -> MultiBucketRenderable.extraBucketSignature(parts)) : 0L;
+                ? call(instance, () -> MultiBucketRenderable.extraBucketSignature(parts)
+                        | ((long) MultiBucketRenderable.partSlotSignature(parts) << 16)) : 0L;
         return (extra << 40) | (slot << 8) | (long) (bucket << 1)
                 | (call(instance, instance::isHighPriority) ? 1L : 0L);
     }

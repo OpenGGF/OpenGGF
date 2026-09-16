@@ -33,6 +33,7 @@ import com.openggf.game.sonic3k.events.S3kTransitionEventBridge;
 import com.openggf.game.sonic3k.runtime.AizZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.CnzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.HczZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.FbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.IczZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
@@ -478,6 +479,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new SozZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
+        } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)) {
+            registry.install(new HpzZoneRuntimeState(zone, act, playerCharacter));
         } else {
             registry.clear();
         }
@@ -559,7 +562,20 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             superState.applyHyperKnucklesWallQuake(camera());
         }
         if (screenEventIdentity == ScreenEventIdentity.HPZ_SPECIAL_STAGE_HUB) {
-            applyHpzsScreenEvent(camera());
+            HpzZoneRuntimeState hpzState = GameServices.hasRuntime()
+                    ? S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry()).orElse(null)
+                    : null;
+            if (hpzState != null) {
+                // ROM ScreenEvents: HPZS_ScreenEvent and HPZS_BackgroundEvent both
+                // read Screen_shake_offset, and the background event tail-calls
+                // ShakeScreen_Setup (sonic3k.asm:120855) for the next frame. The
+                // engine advances the countdown here, at the head of the pass, so
+                // the applied word is the one the previous setup produced and the
+                // scroll handler consumes it without re-running the setup.
+                hpzState.advanceScreenShake(frameCounter,
+                        mainPlayer != null && mainPlayer.getDead());
+                applyHpzsScreenEvent(camera(), hpzState.appliedScreenShakeOffset());
+            }
         }
 
         // ROM: ScreenEvents dispatches to both FG and BG handlers each frame.
@@ -597,11 +613,14 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
     }
 
     /**
-     * ROM {@code HPZS_ScreenEvent}: publish screen shake on the copied camera
-     * word before the ordinary tile-movement draw consumes it.
+     * ROM {@code HPZS_ScreenEvent} (sonic3k.asm:120823-120826):
+     * {@code move.w (Screen_shake_offset).w,d0 / add.w d0,(Camera_Y_pos_copy).w}
+     * before {@code DrawTilesAsYouMove}. The copy is the sprite and foreground
+     * vertical scroll source, so this is the only place the sanctuary shake
+     * enters the camera; the scroll handler publishes no separate shake offset.
      */
-    static void applyHpzsScreenEvent(com.openggf.camera.Camera camera) {
-        camera.setYCopy((short) (camera.getYCopy() + camera.getShakeOffsetY()));
+    static void applyHpzsScreenEvent(com.openggf.camera.Camera camera, int screenShakeOffset) {
+        camera.setYCopy((short) (camera.getYCopy() + screenShakeOffset));
     }
 
     @Override
@@ -1237,6 +1256,7 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 new com.openggf.game.sonic3k.objects.AizTreeRevealStaticAdapter(),
                 new com.openggf.game.sonic3k.objects.Aiz2BossEndSequenceStaticAdapter(),
                 new Sonic3kLevelTriggerStaticAdapter(),
+                new Sonic3kCheatFlagsRewindAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterSkimStaticAdapter(),
                 new com.openggf.game.sonic3k.features.HCZWaterTunnelStaticAdapter(),
                 new com.openggf.game.sonic3k.objects.HCZBreakableBarStaticAdapter(),
@@ -1508,6 +1528,10 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     state instanceof MhzZoneRuntimeState mhzState && mhzState.isBackedBy(mhzEvents);
             case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState;
             case Sonic3kZoneIds.ZONE_SOZ -> state instanceof SozZoneRuntimeState;
+            case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
+                    state instanceof HpzZoneRuntimeState hpzState
+                            && hpzState.zoneIndex() == currentZone
+                            && hpzState.actIndex() == currentAct;
             default -> false;
         };
     }

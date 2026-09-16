@@ -5,11 +5,14 @@ import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.zone.ZoneRuntimeRegistry;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.ObjectLifetimeOps;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -33,6 +36,8 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             0x1D, 0x1F, 0x1D, 0x20, 0x1D, 0x21, 0x1D,
             0x22, 0x1D, 0x23, 0x1D, 0x24, 0x1D
     };
+    /** {@code loc_90CF4}: {@code move.w #8,(Screen_shake_flag).w} on landing (sonic3k.asm:198089). */
+    private static final int LANDING_SCREEN_SHAKE_FLAG = 8;
 
     // parentRef naming opts into the engine's two-phase ObjectRefId relink.
     private HPZSSEntryControlObjectInstance parentRef;
@@ -43,7 +48,6 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     private int rawAnimationTimer = -1;
     private int rawAnimationIndex;
     private int mappingFrame = 8;
-    private int screenShakeTimer;
     private int lastFrameCounter;
     private boolean midpointPublished;
     private boolean published;
@@ -51,7 +55,7 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     private record RewindExtra(
             ObjectRefId parentId, int subtype, int x, int y, int landingTimer,
             int rawAnimationTimer, int rawAnimationIndex, int mappingFrame,
-            int screenShakeTimer, int lastFrameCounter,
+            int lastFrameCounter,
             boolean midpointPublished, boolean published)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
@@ -85,9 +89,6 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
         lastFrameCounter = vIntRunCount;
-        if (screenShakeTimer > 0 && --screenShakeTimer == 0 && tryServices() != null) {
-            services().gameState().setScreenShakeActive(false);
-        }
         if (published || parentRef == null) return;
         if (rawAnimationTimer >= 0) {
             if (rawAnimationIndex < RAW_LANDING_FRAMES.length) {
@@ -105,9 +106,8 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             if (y >= TARGET_Y[subtype]) {
                 y = TARGET_Y[subtype];
                 landingTimer = 0x3F;
-                screenShakeTimer = 8;
+                writeLandingScreenShakeFlag();
                 if (tryServices() != null) {
-                    services().gameState().setScreenShakeActive(true);
                     services().playSfx(Sonic3kSfx.BOSS_LASER.id);
                 }
             }
@@ -124,13 +124,28 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
         }
     }
 
+    /**
+     * {@code loc_90CF4} only writes {@code Screen_shake_flag}; the sanctuary
+     * runtime state runs {@code ShakeScreen_Setup} each frame and the HPZS
+     * screen/background events consume the resulting offset.
+     */
+    private void writeLandingScreenShakeFlag() {
+        ObjectServices services = tryServices();
+        ZoneRuntimeRegistry registry = services == null ? null : services.zoneRuntimeRegistry();
+        if (registry == null) {
+            return;
+        }
+        S3kRuntimeStates.currentHpz(registry)
+                .ifPresent(state -> state.screenShake().writeFlag(LANDING_SCREEN_SHAKE_FLAG));
+    }
+
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parentRef)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 parentId, subtype, x, y, landingTimer, rawAnimationTimer,
-                rawAnimationIndex, mappingFrame, screenShakeTimer,
+                rawAnimationIndex, mappingFrame,
                 lastFrameCounter, midpointPublished, published));
     }
 
@@ -149,7 +164,6 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
             rawAnimationTimer = extra.rawAnimationTimer();
             rawAnimationIndex = extra.rawAnimationIndex();
             mappingFrame = extra.mappingFrame();
-            screenShakeTimer = extra.screenShakeTimer();
             lastFrameCounter = extra.lastFrameCounter();
             midpointPublished = extra.midpointPublished();
             published = extra.published();
@@ -170,10 +184,6 @@ public final class HPZSanctuaryFallingCrystalObjectInstance extends AbstractObje
 
     int rawAnimationTimerForTest() {
         return rawAnimationTimer;
-    }
-
-    int screenShakeTimerForTest() {
-        return screenShakeTimer;
     }
 
     boolean shouldDrawForTest(int frameCounter) {

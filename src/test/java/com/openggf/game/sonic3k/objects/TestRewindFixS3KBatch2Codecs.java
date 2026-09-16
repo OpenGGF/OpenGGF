@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>The accept-drop {@code MgzEndBossDefeatDebrisChild} is intentionally NOT
  * listed: it stays uncovered (transient cosmetic, re-emitted in-frame) and is
- * documented in {@code docs/S3K_KNOWN_DISCREPANCIES.md}.
+ * recorded in the dated rewind audit under docs/architecture.
  *
  * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
  * active gameplay session. Full session round-trip is handled by the rewind

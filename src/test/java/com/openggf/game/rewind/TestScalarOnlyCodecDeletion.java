@@ -1104,7 +1104,7 @@ public class TestScalarOnlyCodecDeletion {
                             "triggerIndex"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance",
-                            "homeY"),
+                            "bodyBusy"),
                     new MutableFieldCoverageCandidate(
                             "com.openggf.game.sonic3k.objects.badniks.MonkeyDudeBadnikInstance",
                             "activeStepCount", "firstStepCount", "initialFacingLeft", "treeAnchorX"),

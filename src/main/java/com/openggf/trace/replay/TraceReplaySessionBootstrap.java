@@ -14,7 +14,6 @@ import com.openggf.game.OscillationManager;
 import com.openggf.game.session.GameplayModeContext;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.game.session.SessionManager;
-import com.openggf.game.sonic3k.Sonic3kBonusStageCoordinator;
 import com.openggf.game.sonic3k.Sonic3kLevelAnimationManager;
 import com.openggf.game.sonic3k.Sonic3kLevelEventManager;
 import com.openggf.game.sonic3k.objects.PachinkoEnergyTrapObjectInstance;
@@ -903,22 +902,41 @@ public final class TraceReplaySessionBootstrap {
             GameServices.level().getObjectManager()
                     .publishRepresentedInitialCollisionResponseList();
         }
-        // Comparison-bootstrap seam (same pattern as applyInitialRngSeedForReplay
-        // / metadata.rng_seed above): when the trace recorded the ROM's
-        // free-running V_int_run_count at bonus-stage entry (recorder
-        // v6.32-s3k+, bonus segments only -- see TraceMetadata#recordedVIntRunCount),
-        // prime the slots runtime's counter base so Slots_CycleOptions's
-        // recorded reel outcomes become reproducible instead of approximated
-        // by the per-session ObjectManager.vblaCounter (S3K-Known-Discrepancies,
-        // "Slots is also affected"). No-op for gumball/pachinko or legacy traces.
-        if (type == BonusStageType.SLOT_MACHINE
-                && meta.recordedVIntRunCount() != null
-                && provider instanceof Sonic3kBonusStageCoordinator coordinator
-                && coordinator.activeSlotRuntime() != null) {
-            coordinator.activeSlotRuntime().primeVIntRunCountForReplay(
-                    meta.recordedVIntRunCount(), trace.initialVblankCounter());
-        }
+        // The object clock IS V_int_run_count during replay: applyBootstrap seeds
+        // it to the pre-row-zero value (initialVblankCounter - 1) and the first
+        // serviced V-blank advances it onto row zero's recorded counter, the
+        // hardware-relative initial base of the cross-game timing contract
+        // (section 4). A bonus segment's metadata.v_int_run_count is the same
+        // longword the recorder read at arm time, one V-int before row zero, so
+        // it must agree with that seed rather than supply a second one.
+        requireRecordedVIntRunCountAgreesWithRowZero(
+                meta.recordedVIntRunCount(), trace.initialVblankCounter());
         return true;
+    }
+
+    /**
+     * Guards the recorder contract behind the object-clock seed: the arm-time
+     * {@code V_int_run_count} longword ({@code S3KRam.VIntRunCount}, 0xFE0C)
+     * precedes row zero's {@code vblank_counter} (its low word, 0xFE0E) by
+     * exactly the V-int that produced row zero. A recorder that moved either
+     * read would silently desync every {@code V_int_run_count} consumer, so the
+     * disagreement is fatal instead of absorbed by a per-stage offset.
+     */
+    static void requireRecordedVIntRunCountAgreesWithRowZero(
+            Long recordedVIntRunCount, int rowZeroVblankCounter) {
+        if (recordedVIntRunCount == null) {
+            return;
+        }
+        int expectedRowZero = (int) ((recordedVIntRunCount + 1) & 0xFFFFL);
+        int actualRowZero = rowZeroVblankCounter & 0xFFFF;
+        if (expectedRowZero != actualRowZero) {
+            throw new IllegalStateException(
+                    "metadata.v_int_run_count " + recordedVIntRunCount
+                            + " does not precede row zero's vblank_counter 0x"
+                            + Integer.toHexString(actualRowZero)
+                            + " by one V-int (expected 0x"
+                            + Integer.toHexString(expectedRowZero) + ")");
+        }
     }
 
     private static boolean shouldInterleaveS2TitleCardPrelude(TraceData trace,
