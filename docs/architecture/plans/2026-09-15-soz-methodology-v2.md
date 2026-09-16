@@ -2311,3 +2311,23 @@ failures/errors/skips (54.88s JUnit / 1:12 Maven). Destination checks retain the
 requested character, actual width and donor movement capability. Only this
 changed test class was repeated; the other focused selection results above
 remain applicable. No production title/load owner changed.
+
+
+### Integration verification
+
+Source/test/docs commit `31686bac5` fast-forwarded into the main workspace's
+unchanged `develop` branch from `e25269d0e`; fetch/pull found no upstream delta
+and no conflict resolution was needed. Post-integration queued Maven selected
+`TestSozAct1ArenaAdmission,TestSozAct1VictoryProduction,TestSozEndBossInputRoute`
+with `-Dmse=off`, the same explicit S3K/S1/S2 ROM paths and `test -B`.
+All 90 cases passed with zero failures/errors/skips in 2:54 Maven
+(0.517s admission, 71.46s golem, 52.75s end-boss JUnit). This confirms the integrated
+runtime threshold and both natural-victory transition paths; it is focused
+post-integration validation, not a full-suite run. The follow-up integration
+record changes documentation only and does not require repeating engine tests.
+
+The changed Markdown files passed 150 local link/anchor checks and whitespace
+validation. The commit hook caught absolute machine-local paths in the command
+record; commands now use `ROM_ROOT` while retaining the exact ROM filenames,
+options and selections. Existing dirty disassemblies and unrelated user files
+were preserved. Captures remain in the external unified SOZ task directory.
