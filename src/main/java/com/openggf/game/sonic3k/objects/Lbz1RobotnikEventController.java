@@ -19,6 +19,7 @@ import com.openggf.game.timing.HardwareWorkKind;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.MultiBucketRenderable;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
 import com.openggf.level.objects.ObjectPlayerQuery;
@@ -43,7 +44,8 @@ import java.util.List;
  * {@code LBZ1_EventVScroll} ownership, and the handoff into {@code Obj_LBZMiniboss}.
  */
 public final class Lbz1RobotnikEventController extends AbstractObjectInstance
-        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable {
+        implements TouchResponseProvider, TouchResponseAttackable, SpawnRewindRecreatable,
+        MultiBucketRenderable {
     private static final int ROUTINE_INIT = 0x00;
     private static final int ROUTINE_APPROACH_HOVER = 0x02;
     private static final int ROUTINE_FIRST_RISE = 0x04;
@@ -206,8 +208,9 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     }
 
     // ObjDat_LBZ1Robotnik priority $100 (sonic3k.asm:192784). The carried ChildObjDat_8D25C box
-    // pieces also start at $100 (ObjDat3_8D23C, sonic3k.asm:192789) and are drawn inline; their
-    // later $380 rewrite at loc_8CF10 (sonic3k.asm:192504) is not modelled.
+    // pieces also start at $100 (ObjDat3_8D23C, sonic3k.asm:192789) and each drifting piece
+    // rewrites $380 at loc_8CF10 (sonic3k.asm:192504); the rig tracks the per-piece word and
+    // this owner draws each piece in that piece's bucket.
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
 
     @Override
@@ -216,12 +219,30 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
     }
 
     @Override
+    public boolean isHighPriority(int bucket) {
+        // Ship/head: see isHighPriority(). Box pieces: ObjDat3_8D23C art
+        // make_art_tile(ArtTile_LBZMinibossBox,2,0) leaves bit 15 clear (sonic3k.asm:192788).
+        return false;
+    }
+
+    @Override
+    public int[] extraRenderBuckets() {
+        return boxRig == null ? new int[0]
+                : LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, boxRig);
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        appendRenderCommands(commands, PRIORITY_BUCKET);
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands, int bucket) {
         if (isDestroyed()) {
             return;
         }
-        drawMinibossBox();
-        if (shipGone) {
+        drawMinibossBox(bucket);
+        if (shipGone || bucket != PRIORITY_BUCKET) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.ROBOTNIK_SHIP);
@@ -654,7 +675,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         boxRig.update(camera != null ? camera.getX() & 0xFFFF : LbzMinibossBoxRig.NO_CAMERA);
     }
 
-    private void drawMinibossBox() {
+    private void drawMinibossBox(int bucket) {
         if (boxRig == null || !boxRig.hasVisiblePieces()) {
             return;
         }
@@ -662,7 +683,7 @@ public final class Lbz1RobotnikEventController extends AbstractObjectInstance
         if (boxRenderer == null) {
             return;
         }
-        boxRig.draw(boxRenderer, BOX_PALETTE_LINE);
+        boxRig.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
     }
 
     private void ensureRobotnikArtLoaded() {

@@ -11,8 +11,8 @@ import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.LbzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.MultiBucketRenderable;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -31,7 +31,8 @@ import java.util.List;
  * the fight: it locks the camera, hosts the closed box pieces, fades to the
  * miniboss music, and spawns {@code Obj_LBZMiniboss} once the player walks in.
  */
-public final class LbzMinibossBoxInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class LbzMinibossBoxInstance extends AbstractObjectInstance implements SpawnRewindRecreatable,
+        MultiBucketRenderable {
     private static final int CAMERA_MIN_X = 0x3C00;
     private static final int CAMERA_MAX_X = 0x3EA0;
     private static final int CAMERA_LOCKED_MIN_X = 0x3DA0;
@@ -130,10 +131,10 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
     }
 
     // Obj_LBZMinibossBox never draws itself; its ChildObjDat_8D25C pieces take ObjDat3_8D23C
-    // priority $100 at loc_8CE64 (sonic3k.asm:192789). The per-piece $380 rewrite at loc_8CF10
-    // (sonic3k.asm:192504) after a released piece's flight timer is not modelled: the rig
-    // draws every piece under this object's bucket.
-    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+    // priority $100 at loc_8CE64 (sonic3k.asm:192789) and each drifting piece rewrites $380 at
+    // loc_8CF10 (sonic3k.asm:192504). The rig tracks the per-piece word and this owner draws
+    // each piece in that piece's bucket.
+    private static final int PRIORITY_BUCKET = LbzMinibossBoxRig.PIECE_PRIORITY_BUCKET;
 
     @Override
     public int getPriorityBucket() {
@@ -141,7 +142,25 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
     }
 
     @Override
+    public boolean isHighPriority(int bucket) {
+        // ObjDat3_8D23C art make_art_tile(ArtTile_LBZMinibossBox,2,0) leaves bit 15 clear
+        // (sonic3k.asm:192788) for every piece.
+        return false;
+    }
+
+    @Override
+    public int[] extraRenderBuckets() {
+        return boxRig == null ? new int[0]
+                : LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, boxRig);
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        appendRenderCommands(commands, PRIORITY_BUCKET);
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands, int bucket) {
         if (isDestroyed() || boxRig == null || !boxRig.hasVisiblePieces()) {
             return;
         }
@@ -149,7 +168,7 @@ public final class LbzMinibossBoxInstance extends AbstractObjectInstance impleme
         if (boxRenderer == null) {
             return;
         }
-        boxRig.draw(boxRenderer, BOX_PALETTE_LINE);
+        boxRig.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
     }
 
     private boolean isPlayerKnuckles() {

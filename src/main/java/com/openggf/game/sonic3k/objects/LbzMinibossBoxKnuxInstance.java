@@ -10,8 +10,8 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kObjectIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.graphics.GLCommand;
-import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.MultiBucketRenderable;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
@@ -32,7 +32,8 @@ import java.util.List;
  * five wall explosions at {@code y=$A20}, the Knuckles box-chunk swap, and the
  * end-sign handoff once the camera descends past {@code $A7C}.
  */
-public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance implements SpawnRewindRecreatable {
+public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance implements SpawnRewindRecreatable,
+        MultiBucketRenderable {
     /** ROM word_8CF70 row 1: activation camera range (yMin,yMax,xMin,xMax). */
     private static final int RANGE_Y_MIN = 0x7B6;
     private static final int RANGE_Y_MAX = 0x9C0;
@@ -293,10 +294,10 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
     }
 
     // Obj_LBZMinibossBoxKnux never draws itself; each loc_8D046 box child spawns ChildObjDat_8D25C
-    // pieces that take ObjDat3_8D23C priority $100 at loc_8CE64 (sonic3k.asm:192789). The per-piece
-    // $380 rewrite at loc_8CF10 (sonic3k.asm:192504) is not modelled: the rigs draw every piece
-    // under this object's bucket.
-    private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+    // pieces that take ObjDat3_8D23C priority $100 at loc_8CE64 (sonic3k.asm:192789) and each
+    // drifting piece rewrites $380 at loc_8CF10 (sonic3k.asm:192504). The rigs track the per-piece
+    // word and this owner draws each piece in that piece's bucket.
+    private static final int PRIORITY_BUCKET = LbzMinibossBoxRig.PIECE_PRIORITY_BUCKET;
 
     @Override
     public int getPriorityBucket() {
@@ -304,7 +305,24 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
     }
 
     @Override
+    public boolean isHighPriority(int bucket) {
+        // ObjDat3_8D23C art make_art_tile(ArtTile_LBZMinibossBox,2,0) leaves bit 15 clear
+        // (sonic3k.asm:192788) for every piece.
+        return false;
+    }
+
+    @Override
+    public int[] extraRenderBuckets() {
+        return LbzMinibossBoxRig.extraRenderBuckets(PRIORITY_BUCKET, leftRig, rightRig);
+    }
+
+    @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        appendRenderCommands(commands, PRIORITY_BUCKET);
+    }
+
+    @Override
+    public void appendRenderCommands(List<GLCommand> commands, int bucket) {
         if (isDestroyed() || leftRig == null) {
             return;
         }
@@ -312,8 +330,8 @@ public final class LbzMinibossBoxKnuxInstance extends AbstractObjectInstance imp
         if (boxRenderer == null) {
             return;
         }
-        leftRig.draw(boxRenderer, BOX_PALETTE_LINE);
-        rightRig.draw(boxRenderer, BOX_PALETTE_LINE);
+        leftRig.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
+        rightRig.draw(boxRenderer, BOX_PALETTE_LINE, bucket);
     }
 
     private boolean isPlayerKnuckles() {

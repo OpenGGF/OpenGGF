@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.rewind.RewindStateful;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 /**
@@ -47,6 +48,19 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
     /** ROM loc_8CF1E: pieces persist until $280 past the coarse camera-back position. */
     private static final int OFFSCREEN_COARSE_RANGE = 0x280;
     private static final int DRIFTING_PIECE_BASE = 6;
+    /**
+     * ROM loc_8CE64: every piece takes ObjDat3_8D23C priority $100 through SetUp_ObjAttributes
+     * (sonic3k.asm:192427-192429, 192786-192789). The art word make_art_tile(ArtTile_LBZMinibossBox,2,0)
+     * leaves bit 15 clear (sonic3k.asm:192788), so pieces never sit above high-priority tiles.
+     */
+    public static final int PIECE_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x100);
+    /**
+     * ROM loc_8CF10: when a drifting piece's late Animate_Raw script ends ($F4 -> $34 callback),
+     * the callback installs loc_8CF1E and writes priority $380 (sonic3k.asm:192502-192505). The
+     * six burst pieces Go_Delete_Sprite instead (off_8D1AC, sonic3k.asm:192733-192739).
+     */
+    public static final int LINGER_PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x380);
+    private static final int[] NO_EXTRA_BUCKETS = new int[0];
 
     private final Piece[] pieces = new Piece[PIECE_PARTS.length];
     private boolean released;
@@ -111,15 +125,65 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
         return false;
     }
 
+    /** Draws every live piece regardless of bucket (headless callers and tests). */
     public void draw(PatternSpriteRenderer renderer, int paletteLine) {
+        draw(renderer, paletteLine, -1);
+    }
+
+    /**
+     * Draws the live pieces whose ROM priority word currently maps to {@code bucket};
+     * {@code -1} draws every live piece.
+     */
+    public void draw(PatternSpriteRenderer renderer, int paletteLine, int bucket) {
         for (Piece piece : pieces) {
-            if (piece.deleted) {
+            if (piece.deleted || (bucket >= 0 && piece.priorityBucket != bucket)) {
                 continue;
             }
             int flags = PIECE_PARTS[piece.index][1];
             renderer.drawFrameIndex(piece.frame, piece.x, piece.y,
                     (flags & 0x01) != 0, (flags & 0x02) != 0, paletteLine);
         }
+    }
+
+    /** Bit mask (bit = bucket index) of the buckets the live pieces currently occupy. */
+    public int liveBucketMask() {
+        int mask = 0;
+        for (Piece piece : pieces) {
+            if (!piece.deleted) {
+                mask |= 1 << piece.priorityBucket;
+            }
+        }
+        return mask;
+    }
+
+    /** Current bucket of piece {@code index} (test/diagnostic access). */
+    public int pieceBucketForTest(int index) {
+        return pieces[index].priorityBucket;
+    }
+
+    /**
+     * Buckets other than {@code ownerBucket} that any live piece of {@code rigs} occupies, for
+     * {@link com.openggf.level.objects.MultiBucketRenderable#extraRenderBuckets()}.
+     */
+    public static int[] extraRenderBuckets(int ownerBucket, LbzMinibossBoxRig... rigs) {
+        int mask = 0;
+        for (LbzMinibossBoxRig rig : rigs) {
+            if (rig != null) {
+                mask |= rig.liveBucketMask();
+            }
+        }
+        mask &= ~(1 << ownerBucket);
+        if (mask == 0) {
+            return NO_EXTRA_BUCKETS;
+        }
+        int[] buckets = new int[Integer.bitCount(mask)];
+        int n = 0;
+        for (int bucket = RenderPriority.MIN; bucket <= RenderPriority.MAX; bucket++) {
+            if ((mask & (1 << bucket)) != 0) {
+                buckets[n++] = bucket;
+            }
+        }
+        return buckets;
     }
 
     @Override
@@ -150,6 +214,10 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
             piece.timer = snapshot.timer();
             piece.animIndex = snapshot.animIndex();
             piece.deleted = snapshot.deleted();
+            // The $380 write is the loc_8CF10 callback that installs loc_8CF1E, so the
+            // bucket is a function of the restored phase and needs no snapshot field.
+            piece.priorityBucket = piece.phase == Piece.Phase.LINGER
+                    ? LINGER_PRIORITY_BUCKET : PIECE_PRIORITY_BUCKET;
         }
     }
 
@@ -179,6 +247,8 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
         private int animIndex;
         private Phase phase = Phase.FOLLOW;
         private boolean deleted;
+        /** Live ROM priority word as a bucket; $100 from loc_8CE64, $380 from loc_8CF10. */
+        private int priorityBucket = PIECE_PRIORITY_BUCKET;
 
         private enum Phase {
             FOLLOW,
@@ -251,8 +321,10 @@ public final class LbzMinibossBoxRig implements RewindStateful<LbzMinibossBoxRig
                         timer = LATE_ANIM_DELAY;
                         return;
                     }
-                    // ROM loc_8CF10 -> loc_8CF1E: stay drawn until off-screen.
+                    // ROM loc_8CF10 -> loc_8CF1E: stay drawn until off-screen, now
+                    // behind everything else (move.w #$380,priority(a0), sonic3k.asm:192504).
                     phase = Phase.LINGER;
+                    priorityBucket = LINGER_PRIORITY_BUCKET;
                 }
                 case LINGER -> {
                     if (cameraX == NO_CAMERA) {

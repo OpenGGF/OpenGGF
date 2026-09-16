@@ -77,6 +77,39 @@ class TestSonic3kLightningShieldObjectInstance {
                 "Obj_LightningShield_CreateSpark seeds +/-$200 velocities before MoveSprite2");
     }
 
+    /**
+     * ROM Obj_LightningShield_CreateSpark copies the shield's art_tile into each spark
+     * (sonic3k.asm:34825) right after Obj_LightningShield_Main re-synced that word's bit 15
+     * from Player_1 (sonic3k.asm:34751-34755), so a spark carries the player's high-priority
+     * flag as it stood on the creation frame and keeps it afterwards.
+     */
+    @Test
+    void sparksCaptureThePlayersHighPriorityFlagAtCreation() {
+        for (boolean high : new boolean[] {false, true}) {
+            ObjectManager objectManager = mock(ObjectManager.class);
+            AbstractPlayableSprite sonic = new Tails("sonic", (short) 0x693, (short) 0x67F);
+            sonic.setHighPriority(high);
+            LightningShieldObjectInstance shield = new LightningShieldObjectInstance(sonic);
+            shield.setServices(new StubObjectServices() {
+                @Override
+                public ObjectManager objectManager() {
+                    return objectManager;
+                }
+            });
+            assertEquals(high, shield.isHighPriority());
+
+            shield.triggerSparks();
+            sonic.setHighPriority(!high);
+
+            ArgumentCaptor<ObjectInstance> captor = ArgumentCaptor.forClass(ObjectInstance.class);
+            verify(objectManager, times(4)).addDynamicObjectAfterCurrent(captor.capture());
+            for (ObjectInstance spark : captor.getAllValues()) {
+                assertEquals(high, spark.isHighPriority(),
+                        "spark keeps the flag copied at creation, not the player's later flag");
+            }
+        }
+    }
+
     @Test
     void abilityDefersSparkAllocationUntilShieldObjectTurn() {
         ObjectManager objectManager = mock(ObjectManager.class);

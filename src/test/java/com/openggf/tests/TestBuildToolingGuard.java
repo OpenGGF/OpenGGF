@@ -951,7 +951,7 @@ class TestBuildToolingGuard {
     }
 
     @Test
-    void supportedDocumentationMustUseDirectMavenAndExplicitHookBootstrap() throws Exception {
+    void supportedDocumentationMustUseQueuedMavenAndExplicitHookBootstrap() throws Exception {
         Path agentsPath = Path.of("AGENTS.md");
         Path claudePath = Path.of("CLAUDE.md");
         String agents = Files.readString(agentsPath, StandardCharsets.UTF_8);
@@ -964,17 +964,19 @@ class TestBuildToolingGuard {
                 || !agents.contains("tools/testing/install-hooks.ps1")) {
             violations.add("AGENTS.md/CLAUDE.md do not document explicit hook bootstrap");
         }
+        // Local Maven goes through the shared queue wrapper (tools/testing/maven_queue.py),
+        // never bare mvn: direct mvn bypasses admission and the worktree slot.
         for (String requiredText : List.of(
                 "python3 tools/testing/run_categories.py --list",
-                "python3 tools/testing/run_categories.py --base <printed-pinned-base> --run",
-                "mvn -Dmse=off package",
-                "mvn -Dmse=off \"-Dtest=TestCollisionLogic\" test",
-                "mvn -Dmse=off -Pguards test -B",
+                "python3 tools/testing/run_categories.py --base <pre-task-commit> --run",
+                "python3 tools/testing/maven_queue.py -Dmse=off package",
+                "python3 tools/testing/maven_queue.py -Dmse=off \"-Dtest=TestCollisionLogic\" test",
+                "python3 tools/testing/maven_queue.py -Dmse=off -Pguards test -B",
                 "Maven output belongs in the current worktree's `target/` directory.",
                 "Do not share or\n  copy build trees.",
-                "Concurrent Maven runs need separate worktrees.")) {
+                "Direct `mvn` bypasses the queue; use the wrapper for local builds/tests.")) {
             if (!agents.contains(requiredText)) {
-                violations.add("AGENTS.md/CLAUDE.md do not contain required direct-Maven guidance: "
+                violations.add("AGENTS.md/CLAUDE.md do not contain required queued-Maven guidance: "
                         + requiredText);
             }
         }

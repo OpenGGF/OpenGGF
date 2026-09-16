@@ -6,6 +6,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -111,7 +112,10 @@ public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindR
     // =========================================================================
 
     public HczEndBossRobotnikShip(HczEndBossInstance boss) {
-        super(boss, "HCZEndBossRobotnikShip", 3, 0);
+        // HCZEndBoss_ShipChild -> Obj_RobotnikShip2: Obj_RobotnikShipInit applies ObjDat_RobotnikShip
+        // priority $280 (sonic3k.asm:136655-136658); its art make_art_tile(ArtTile_RobotnikShip,0,0)
+        // leaves bit 15 clear, matching the default isHighPriority().
+        super(boss, "HCZEndBossRobotnikShip", RenderPriority.fromS3kWord(0x280), 0);
         this.boss = boss;
         this.routine = ROUTINE_INIT;
         this.headAnimCounter = 0;

@@ -199,6 +199,30 @@ Lead correction to the two `BreakObjectToPieces` rows: `move.b priority(a0),prio
 - Lbz1RobotnikEventController: `isHighPriority()` true to false (ObjDat_LBZ1Robotnik uses `make_art_tile(ArtTile_RobotnikShip,0,0)`).
 - FbzEndBossFlameChild: `isHighPriority()` hard-coded true to `weapon.isHighPriority()` (Child_GetPriority).
 
+## Follow-up (same day): inline-drawn parts and the three pre-existing guard failures
+
+Branch `bugfix/ai-render-part-buckets`.
+
+- `MultiBucketRenderable` lets an owner report its parts' buckets and art-word classes
+  and draw per bucket and class; `ObjectManager` lists the owner in every bucket and
+  re-reads the parts each frame (`TestObjectManagerMultiBucketRenderable`). Converted:
+  ICZ miniboss (orbs per `OrbState.priority`, shards), ICZ end boss (top child `$200`,
+  frost puffs `$80`), LBZ miniboss (centre `$200`, links `word_727E2`), LBZ box pieces
+  (`$100` then `$380` at `loc_8CF10`) for all three owners, HCZ end-boss children (table
+  words, bomb subtype shift), lightning spark (shield's bit 15 at creation). Every
+  recorded gap in the tables above is closed except in-list ordering by the owner's slot.
+- Corrections to the audit lane's first transcription: HCZ end-boss children are
+  separate instances, and their old `loc_` citations map through `sonic3k.lst` to the
+  current named labels (`HCZEndBossFan_Init` and so on); the ICZ "shards `word_7197E`
+  `$180`" row is the defeat debris (`ChildObjDat_719B0`), which no engine class renders.
+- Pre-existing guard failures: `TestBuildToolingGuard` now checks the queued-Maven
+  commands CLAUDE.md actually carries (the wrapper policy landed in `b06618d70`,
+  `10510e90a`, `4877b43d5` without updating the guard); the TraceChaser cutover
+  inventory marks `tools/bizhawk/README.md` as retained (re-created by `2b6e4629b` for the
+  native reference capture host); `FbzRouteEvidenceProbe` fails a row that produces no
+  evidence and compares against an optional baseline file, and `LevelSolidityMapProbe`
+  asserts the written map is non-empty and contains solid cells.
+
 ## Rejected
 
 - A per-game `GameRules` priority provider for the shared classes: the values agree

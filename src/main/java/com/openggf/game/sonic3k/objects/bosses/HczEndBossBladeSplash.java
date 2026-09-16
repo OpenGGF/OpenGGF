@@ -8,6 +8,7 @@ import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
+import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -64,7 +65,9 @@ public class HczEndBossBladeSplash extends AbstractBossChild implements RewindRe
      * @param bladeX World X of the blade when it entered water.
      */
     public HczEndBossBladeSplash(HczEndBossInstance boss, int bladeX) {
-        super(boss, "HCZEndBossBladeSplash", 3, 0);
+        // HCZEndBossSplash_ObjData priority $80 (sonic3k.asm:142174-142176), applied by
+        // HCZEndBossSplash_Init's SetUp_ObjAttributes2 (sonic3k.asm:141283-141285).
+        super(boss, "HCZEndBossBladeSplash", RenderPriority.fromS3kWord(0x80), 0);
         this.boss = boss;
 
         // Position at blade's X, water_level - 4 (ROM: loc_6B46E)
@@ -78,6 +81,13 @@ public class HczEndBossBladeSplash extends AbstractBossChild implements RewindRe
         this.animComplete = false;
 
         updateDynamicSpawn();
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        // HCZEndBossSplash_ObjData art make_art_tile(ArtTile_HCZEndBoss,0,1) sets bit 15
+        // (sonic3k.asm:142175).
+        return true;
     }
 
     private HczEndBossBladeSplash(ObjectSpawn spawn, HczEndBossInstance boss) {

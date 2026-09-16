@@ -26,7 +26,10 @@ import java.nio.file.Path;
  *
  * <p>Inputs: the S3K ROM plus the S1/S2 donor ROMs for the donor rows; the
  * same team/width/donor configuration as {@code TestFbzCompatibilityMatrix}.
- * Rows never assert, so a red row prints its failure and the run continues.
+ * Each row is its own parameterized test: a red row fails that row and the
+ * others still run. With {@code -Dopenggf.fbz.evidence.baseline=<file>} (the
+ * {@code EVIDENCE} lines from a previous run) each row also asserts byte
+ * identity against its baseline line.
  * Opt-in: {@code -Dmse=off -Dopenggf.fbz.evidence=true
  * -Dtest=FbzRouteEvidenceProbe}; about two minutes for all rows.
  *
@@ -86,14 +89,29 @@ class FbzRouteEvidenceProbe {
         Object call() throws Exception;
     }
 
-    private static void run(String label, Row row) {
+    private static void run(String label, Row row) throws Exception {
+        String line;
         try {
-            System.out.println("EVIDENCE " + label + " " + row.call());
+            line = "EVIDENCE " + label + " " + row.call();
+            System.out.println(line);
         } catch (Throwable failure) {
             System.out.println("FAIL " + label + " " + failure.getMessage());
+            throw new AssertionError("row " + label + " did not produce evidence", failure);
         } finally {
             CrossGameFeatureProvider.getInstance().resetState();
             SonicConfigurationService.getInstance().clearSessionOverrides();
+        }
+        String baseline = System.getProperty("openggf.fbz.evidence.baseline");
+        if (baseline != null && !baseline.isBlank()) {
+            String prefix = "EVIDENCE " + label + " ";
+            String expected = java.nio.file.Files.readAllLines(java.nio.file.Path.of(baseline)).stream()
+                    .filter(l -> l.startsWith(prefix)).findFirst()
+                    .orElseThrow(() -> new AssertionError("baseline has no line for row " + label));
+            org.junit.jupiter.api.Assertions.assertEquals(expected, line,
+                    "row " + label + " evidence must be byte-identical to the baseline");
+        } else {
+            org.junit.jupiter.api.Assertions.assertTrue(line.startsWith("EVIDENCE " + label + " RouteCompletionEvidence["),
+                    "row " + label + " must print a RouteCompletionEvidence record");
         }
     }
 

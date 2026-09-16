@@ -65,16 +65,33 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
     private int frameIndex;
     private int delayCounter;
     private int currentMappingFrame;
+    /**
+     * ROM Obj_LightningShield_CreateSpark copies the shield's art_tile into each spark
+     * (sonic3k.asm:34825), and the shield's bit 15 tracks Player_1's art_tile every frame
+     * (init sonic3k.asm:34724-34726, main sonic3k.asm:34751-34755). Captured once at creation;
+     * the spark never re-reads it. Plain field so the generic rewind capture restores it.
+     */
+    private boolean highPriority;
 
     private final SubpixelMotion.State motionState = new SubpixelMotion.State(0, 0, 0, 0, 0, 0);
 
     LightningSparkObjectInstance() {
-        this(0, 0, 0, 0, null, null);
+        this(0, 0, 0, 0, null, null, false);
     }
 
     public LightningSparkObjectInstance(int x, int y, int xVel, int yVel,
             SpriteAnimationSet animSet, Pattern[] sparkTiles) {
+        this(x, y, xVel, yVel, animSet, sparkTiles, false);
+    }
+
+    /**
+     * @param highPriority the creating shield's art-word bit 15 at creation time
+     *                     (sonic3k.asm:34825), i.e. the player's flag that frame
+     */
+    public LightningSparkObjectInstance(int x, int y, int xVel, int yVel,
+            SpriteAnimationSet animSet, Pattern[] sparkTiles, boolean highPriority) {
         super(new ObjectSpawn(x, y, 0, 0, 0, false, 0), "LightningSpark");
+        this.highPriority = highPriority;
         this.currentX = x;
         this.currentY = y;
         this.xSub = 0;
@@ -91,8 +108,9 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
 
     /**
      * Rewind recreate factory. The captured dynamic spawn carries the spark's
-     * position; movement/animation scalars are reapplied by the generic field
-     * capturer after recreate, so the constructor velocities are placeholders.
+     * position; movement/animation scalars and the captured art-word bit 15 are
+     * reapplied by the generic field capturer after recreate, so the constructor
+     * velocities and high-priority flag are placeholders.
      * Art (animation set + spark tiles) is re-fetched from the live S3K object-art
      * provider exactly as {@link LightningShieldObjectInstance#triggerSparks()}
      * does; the object null-guards missing art, so a structurally-valid instance is
@@ -155,14 +173,19 @@ public class LightningSparkObjectInstance extends AbstractObjectInstance impleme
         stepAnimation();
     }
 
-    // Obj_LightningShield_CreateSpark writes priority $80 (sonic3k.asm:34827). The spark inherits the
-    // shield's art_tile (sonic3k.asm:34825); the engine shield never carries bit 15, so the default
-    // isHighPriority() matches it.
+    // Obj_LightningShield_CreateSpark writes priority $80 (sonic3k.asm:34827) and copies the
+    // shield's art_tile (sonic3k.asm:34825), so the spark carries the player's bit 15 as it
+    // stood when the spark was created; see {@link #highPriority}.
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
 
     @Override
     public int getPriorityBucket() {
         return PRIORITY_BUCKET;
+    }
+
+    @Override
+    public boolean isHighPriority() {
+        return highPriority;
     }
 
     @Override
