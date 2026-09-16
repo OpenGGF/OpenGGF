@@ -14,33 +14,33 @@ Owning [v2 execution plan](../../plans/2026-09-15-soz-methodology-v2.md) and
 | Route/dimension | Obligation | Current evidence / gap |
 | --- | --- | --- |
 | Sonic solo / Sonic + Tails | Cold entry, ordinary traversal, checkpoint/death, boss and exit | Sonic + Tails at native 320 completes cold entry through eight natural boss hits and the Lava Reef transition using fixed controller input. Sonic solo full completion remains open; checkpoint and positioned boundaries supplement the route |
-| Tails solo | Same, including native character branches and flight interactions | Every authored post activates/reloads; selected traversal and boss branches covered. Full flight-sensitive route and victory remain open |
-| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Every authored post activates/reloads; local native character branches and selected mechanisms covered. Full distinct route/progression remains open |
+| Tails solo | Same, including native character branches and flight interactions | Every authored post activates/reloads; positioned solo victory covers off/S2 donors at all five widths. S1-donor victory and full flight-sensitive cold route remain open |
+| Knuckles solo | Verify distinct start/capsule/boss/progression branches from ROM | Every authored post activates/reloads; positioned solo victory covers all five widths and three donors. Full distinct cold route/progression remains open |
 | Mixed / maximum / duplicate followers | Independent held state, authority, release, death and leader chain | Selected mechanisms and three-player terrain restore/replay covered; repeated checkpoint team reset evidence below. No finite follower maximum is declared by the production team contract; full multi-owner interaction breadth remains open |
-| Widths 320/400/512/640/800 | Actual camera/render widths; entry/reset × every supported donor; sensitive interactions and rewind | Representative checkpoint covers all five actual widths × three leaders × off/S1/S2 in this act. Selected sensitive interactions also cover widths; this is not full traversal/render coverage at every width |
-| Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Representative checkpoint covers each donor × five widths × three leaders, asserting movement capability and reload state. Full donor interaction/boss/route product remains open |
+| Widths 320/400/512/640/800 | Actual camera/render widths; entry/reset × every supported donor; sensitive interactions and rewind | Every authored checkpoint covers all five actual widths × three leaders × off/S1/S2 in this act. Selected sensitive interactions also cover widths; this is not full traversal/render coverage at every width |
+| Donors off/S1/S2 | Confirm production support, actual movement profile, mandatory mechanics and rewind | Every authored checkpoint covers each donor × five widths × three leaders, asserting movement capability and reload state. Forty positioned boss-to-LRZ cases cover eight character/donor combinations at each width; S1-donor Tails victory and full traversal/interaction breadth remain open |
 
 Decoded checkpoint placements: `$02` at `($0860,$05C8)`, `$03` at `($13F0,$0428)`, `$04` at `($1F00,$0108)`, `$05` at `($3280,$01A8)`, `$06` at `($4EC0,$04A8)`.
 `TestSozCheckpointReloadProduction` now physically activates post2 at `($860,$5C8)`,
 recreates/restores the activation state, then exercises production death/reload
-for Sonic, Tails and Knuckles. All five posts have native-character activation/reload checks. The representative post also covers the complete five-width × three-donor × three-leader product; other posts use native 320 configurations.
+for Sonic, Tails and Knuckles. All five posts have native-character activation/reload checks. Every post covers the complete five-width × three-donor × three-leader product, including restored activation and production death/reload.
 
 ## Behavioral obligations
 
 | Boundary | Implementation / test binding | Reachability | Rewind | Native behavior | Pixels |
 | --- | --- | --- | --- | --- | --- |
-| PARALLAX / BACKGROUND MODES | `SwScrlSoz` normal half-scroll, rising rooms, boss wall and saved background modes | `TestSozScreenEvents` exercises room/boss modes and native position gates; connected route open | Sand collision offset, ROM layout mutation and boss-wall solid recreation tested; full connected wrap/exit replay open | `sub_566D2`, `sub_566E8`, `sub_56706`, `SOZ2_BGDrawArray` source checks | Standard/wide matched native sequence comparison open |
+| PARALLAX / BACKGROUND MODES | `SwScrlSoz` normal half-scroll, rising rooms, boss wall and saved background modes | `TestSozScreenEvents` exercises room/boss modes and native position gates; connected route open | Sand collision offset, ROM layout mutation and boss-wall solid recreation tested; positioned upper wrap and lower-room exit replay cover five widths × three donors; cold/native sequence comparison open | `sub_566D2`, `sub_566E8`, `sub_56706`, `SOZ2_BGDrawArray` source checks | Standard/wide matched native sequence comparison open |
 | ANIMATED TORCH TILES / PALETTE | Custom torch DMA and captured master/fade/sand clocks implemented, including boss hold/release | `TestSozLightGhostCompatibility` covers actual light hold/release and ghost/fade behavior | Palette/torch clocks and art state covered by focused lighting/animation and production replay; full cadence movie open | `AnimateTiles_SOZ2`: old-byte frame sequence 0/1/2, eight-pass period, six-tile DMA; pinned intensity branch | Torch pixels must agree with palette at adjacent steps; GPU visibility open |
 | ENTRY / LOAD / RESET | ROM loading and event/scroll owners implemented; cold sand intro in Act1 and title-owned ghosts in Act2 | Fresh/seamless entry and title-owned ghosts tested; cold Act 1 Sonic + Tails route reaches playable Act 2; broader incoming routes open | Act1→Act2 destination replay, all checkpoints and selected repeated team reloads covered; repeated seamless-transition cycles open | Unmatched | Unmatched |
 | Quicksand entry/held/release | `TestSozQuicksand`: four variant branches, unsigned bounds, input and clock tests | Act 1 short cold route: `TestSozAct1QuicksandRoute`; Act 2 binding/traversal open | Local slide cooldown reconstruction; full registered-state before/contact/release spots open | Native Act 1 acquisition/held force observations corroborate source; no full engine sequence match | Invisible owner; terrain/palette presentation unverified |
 | Sand-rock rolling landing / breakup / removal | `SozBreakableSandRockObjectInstance`; saved animation and owner standing latch | `TestSozSandRockProduction`: positioned first-rock spot; cold reachability open | All registered state restored and replayed twice at break, phase 6 and phase 24 removal | Source-derived; mixed-rider and offscreen retained-latch unit checks; native trajectory unmatched | ROM mapping/art checks pass; Act 1 shares the inspected mapping; Act 2 visual comparison open |
 | Pushable rock / edge fall / track ride / stop | `SozPushableRockObjectInstance`; ROM track and native push priority | `TestSozPushableRockProduction`: first-rock positioned push, board/brake and complete ride at 320; cold reachability open | All registered state restored/replayed twice at push, initial fall, horizontal start and terminal; boarding also covered | Source-reviewed and real rider carry tested; native trajectory open; subtype `$87` coupling has local contact checks, but full lower-puzzle passage remains unverified | ROM mapping/art checks pass; shared Act 1 display inspected; Act 2 pixel comparison open |
 | Other traversal objects / badniks | All 599 Act1/490 Act2 placed records bind to concrete factories; family production tests listed below | Positioned family reachability plus the recorded cold Sonic + Tails route; per-family cold milestone coverage and other routes remain open | Short graph/contact/creation/deletion restore/replay, including forced recreation; complete per-placement/participant product open | Source-backed branches; matched native sequences remain open | Local ROM-art captures; full pixel comparison open |
-| CHECKPOINT / DEATH | `TestSozCheckpointReloadProduction`: all five authored posts × three native leaders; representative post also covers five widths and three donors | Physical activation from positioned approaches; cold route between posts open | Activation recreated/replayed, production death/reload; selected repeated mixed/duplicate-team reset checks below | Source checkpoint placement/respawn assertions; matched native death movie open | Native pixel comparison open |
+| CHECKPOINT / DEATH | `TestSozCheckpointReloadProduction`: all five authored posts × three leaders × five widths × three donors | Physical activation from positioned approaches; cold route between posts open | Activation recreated/replayed, production death/reload; selected repeated mixed/duplicate-team reset checks below | Source checkpoint placement/respawn assertions; matched native death movie open | Native pixel comparison open |
 | WORLD / CAMERA / EVENTS | Captured `SozEventState`/lighting/wall owners and mutation pipeline | Positioned cork/room/wall and boss stimuli exercised | `TestSozScreenEvents` covers cork layout, fractional sand collision and eight-solid wall graph; connected full-route sequence open | ROM tables and native event thresholds checked; matched sequence open | Local captures; whole-route comparison open |
-| BOSS / EXIT | Endboss eight-hit combat, wall reconstruction, capsule/results and LRZ load implemented | `TestSozColdAct2Capture`: cold Sonic + Tails route through natural combat, capsule, results and LRZ load; positioned `TestSozEndBossProduction` supplies short independent boundary checks | Graph/charge and killing-hit/results/post-results replay; outgoing timeline reset and LRZ title/control readiness verified. Repeated exits and donor combat breadth open | Native source graph/combat/escape; matched native trajectory open | Seven actual widths exercised; sparse boss stills, not matched continuous native combat film |
+| BOSS / EXIT | Endboss eight-hit combat, wall reconstruction, capsule/results and LRZ load implemented | `TestSozColdAct2Capture`: cold Sonic + Tails route through natural combat, capsule, results and LRZ load; positioned `TestSozEndBossProduction` supplies short independent boundary checks | Graph/charge and killing-hit/results/post-results replay; outgoing timeline reset and LRZ title/control readiness verified. Forty solo combat/exit cases cover eight character/donor combinations × five widths; repeated exits and S1-donor Tails victory remain open | Native source graph/combat/escape; matched native trajectory open | Seven actual widths exercised; sparse boss stills, not matched continuous native combat film |
 | Darkness / switch / ghosts / torches | Native pilot plus engine switch/capsule/ghost and coupled palette/torch owners implemented | Native ordinary-input Tails pull plus positioned engine switch/capsule/ghost behavior in 19 configurations; cold Sonic + Tails traversal recorded, full lighting/participant sequence comparison open | Hold/release, capsule opening and actual multi-player ghost contacts recreated/replayed; complete lighting journey open | 900-frame darkness and four-frame palette cadence observed; independent P2 switch ownership proven | Native PNGs inspected; engine comparison open |
-| Vertical wrap / rising sand | Runtime extended wrap and fractional rising-sand collision implemented | Source-gated positioned room/sand tests; connected cork→wrap→loop-exit route open | Fractional collision offset, terrain mutation and wrapped slide lookup recreated/replayed; connected cross-wrap movement open | Source-derived arithmetic; native sequence match open | Matched sequence open |
+| Vertical wrap / rising sand | Runtime extended wrap and fractional rising-sand collision implemented | Connected upper cork→carry→wrap and lower cork→switches→swing→room-exit routes cover five widths × three donors; cold reachability remains separate | Fractional collision offset, terrain mutation and connected cross-wrap/room-exit movement recreated/replayed; full per-placement/participant product remains open | Source-derived arithmetic; native sequence match open | Matched sequence open |
 
 ## Spring-vine continuation
 
@@ -294,3 +294,50 @@ Maven); the added control-release assertions passed a sparse repeat without
 skips (4.747s test, 23.416s Maven). Root inspected the visible LRZ destination
 with both characters. Full native parity and other character/donor/viewport
 products remain open; short graph tests provide rewind coverage separately.
+
+## Non-trace acceptance follow-up (2026-09-16)
+
+Strict trace replay is deferred at the user's request. On the acceptance tree
+based on `e25269d0e`, the expanded `TestSozCheckpointReloadProduction` passes
+450 cases across both acts without failures/errors/skips: every authored post,
+Sonic/Tails/Knuckles, widths 320/400/512/640/800 and donors off/S1/S2. Each case
+physically activates the post, restores/replays activation and uses the production
+death/reload loop. Reload assertions check position, actual width, leader identity,
+donor identity and movement capability. These are positioned lifecycle checks,
+not full routes or rendered-width certification.
+
+`TestSozTeamCheckpointResetProduction` passes 90 cases without failures/errors/skips:
+each act × five widths × three donors × native pair, mixed followers and a
+six-follower duplicate-character stress roster. Each performs two consecutive
+real checkpoint death/reloads, asserting live CPU chains and identities, donor
+capabilities, control release, timeline reset and stale rock-owner cleanup.
+The stress roster is not a declared maximum; the engine has no finite maximum.
+
+`TestSozConnectedMechanismsProduction` passes 60 cases without failures/errors/skips:
+four positioned Act 2 scenarios × five widths × three donors. It covers upper
+cork/carry/wrap, the connected lower sand-room escape, rock fall/link invalidation,
+and direct switch charging with forced graph recreation and forward replay.
+The lower sand-room escape is distinct from the late subtype-$87 puzzle.
+
+The modified capture tests assert requested width and actual follower identities.
+Matched sparse-capture controls still complete both acts at native width 320.
+Reusing those fixed inputs at 400/800 does not establish wider completion: Act 1
+dies at frames 10,536/1,804 respectively, and Act 2 does not reach the boss at
+either width. This is failed input-route portability, not an attributed engine
+regression. Further authored routes and native/pixel comparison remain open.
+
+
+`TestSozEndBossInputRoute` now passes 40 positioned, controller-only victories:
+Sonic with off/S1/S2 donors, Tails with off/S2, and Knuckles with off/S1/S2, each
+at widths 320/400/512/640/800. Each case asserts the actual solo character, width
+and donor movement capability, delivers eight natural hits, opens the capsule,
+finishes results and reaches playable LRZ through the real GameLoop-owned load
+and title/fade release. Destination character, width and movement capability are
+asserted again. Full registry restoration/replay covers shell
+opening, hits, capsule/results and background redraw milestones. No damage,
+boss-phase or post-setup player-position writes are used. The authoring setup
+starts at the arena approach with 99 rings; this is not a cold whole-act route.
+S1-donor Tails victory remains un-authored: bounded input searches and a direct
+attempt opened the shell but did not damage the pilot. That observation alone
+does not establish an engine defect or impossibility. Mixed-team combat,
+repeated exits and native trajectory/pixel comparison remain open.

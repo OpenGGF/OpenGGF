@@ -29,7 +29,13 @@ final class SozAct1Events extends Sonic3kZoneEvents {
                     camera().setMaxY((short)bottom);
                     if(bottom==0x960 && (camera().getY()&65535)>=bottom){
                         camera().setMinY((short)bottom);
-                        if((camera().getX()&65535)>=0x4310){camera().setMinX((short)0x4180);state.requestSandCorkRelease(false);}
+                        // sub_55E96 compares the native 320px viewport's left edge.
+                        // The engine centers a wider viewport on the same focus;
+                        // comparing its outer edge can leave the gate beyond the
+                        // solid arena wall. Width 320 preserves the ROM condition.
+                        int nativeLeft=(camera().getX()&65535)
+                                + Math.max(0,(camera().getWidth()-320)/2);
+                        if(nativeLeft>=0x4310){camera().setMinX((short)0x4180);state.requestSandCorkRelease(false);}
                     }
                     return;
                 }

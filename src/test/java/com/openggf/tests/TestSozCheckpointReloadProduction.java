@@ -35,12 +35,13 @@ class TestSozCheckpointReloadProduction {
                 {1,3,0x13F0,0x428},{1,4,0x1F00,0x108},{1,5,0x3280,0x1A8},{1,6,0x4EC0,0x4A8}};
         var rows=new java.util.ArrayList<Arguments>();
         for(var post:posts)for(String character:new String[]{"sonic","tails","knuckles"})
-            rows.add(Arguments.of(post[0],post[1],post[2],post[3],character));
+            for(int width:new int[]{320,400,512,640,800})for(String donor:new String[]{"off","s1","s2"})
+                rows.add(Arguments.of(post[0],post[1],post[2],post[3],character,width,donor));
         return rows.stream();
     }
     @ParameterizedTest @MethodSource("remainingPosts")
-    void otherPlacedPostsActivateAndReload(int act,int index,int x,int y,String character) {
-        assertAll(() -> touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,320,"off"));
+    void otherPlacedPostsActivateAndReload(int act,int index,int x,int y,String character,int width,String donor) {
+        assertAll(() -> touchCheckpointThenDeathReloadsItsNativePosition(act,index,x,y,character,width,donor));
     }
     @ParameterizedTest @MethodSource("scenarios")
     void touchCheckpointThenDeathReloadsItsNativePosition(int act,int index,int x,int y,String character,
@@ -96,6 +97,10 @@ class TestSozCheckpointReloadProduction {
                     assertFalse(GameServices.camera().getFocusedSprite().getDead());
                     assertEquals(width,GameServices.camera().getWidth()&65535);
                     assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
+                    if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
+                    assertEquals(character,GameServices.camera().getFocusedSprite().getCode());
+                    assertEquals(!donor.equals("s1"),GameServices.camera().getFocusedSprite()
+                            .getGameRules().playerCapability().spindashEnabled());
                     break;
                 }
             }

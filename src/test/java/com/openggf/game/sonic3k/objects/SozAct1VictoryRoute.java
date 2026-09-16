@@ -6,6 +6,12 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 /** Controller-only positioned arena route, shared by the SOZ victory test and render capture. */
 final class SozAct1VictoryRoute {
+    private final boolean approachFromLeft;
+
+    SozAct1VictoryRoute() { this(false); }
+    SozAct1VictoryRoute(boolean approachFromLeft) {
+        this.approachFromLeft=approachFromLeft;
+    }
     private boolean awakened;
     private boolean sinking;
     private boolean escaping;
@@ -20,7 +26,16 @@ final class SozAct1VictoryRoute {
             if(boss.routine()==12 && boss.getX()<0x4200)escaping=true;
         }
         boolean left=awakened&&!escaping&&(player.getCentreX()&65535)>0x42D0;
-        boolean right=escaping&&(player.getCentreX()&65535)<0x43A0;
+        // Advance toward the right side while waiting, then approach the
+        // golem's activation range once it appears.
+        boolean right=(boss==null && !awakened && (GameServices.camera().getX()&65535)<0x4310)
+                || (escaping&&(player.getCentreX()&65535)<0x43A0);
+        if(!awakened && boss!=null && boss.routine()<=4
+                && (player.getCentreX()&65535)>boss.getX()+64)left=true;
+        if(approachFromLeft && !awakened && boss!=null && boss.routine()<=4) {
+            left=(player.getCentreX()&65535)>boss.getX()-24;
+            right=(player.getCentreX()&65535)<boss.getX()-32;
+        }
         boolean jump=awakened&&(tick%48<8);
         return new Bk2FrameInput(tick,(left?4:0)|(right?8:0)|(jump?16:0),jump?1:0,false,"");
     }

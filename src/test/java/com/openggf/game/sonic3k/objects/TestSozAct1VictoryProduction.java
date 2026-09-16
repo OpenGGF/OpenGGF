@@ -9,25 +9,57 @@ import com.openggf.tests.*;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 @RequiresRom(SonicGame.SONIC_3K)
 class TestSozAct1VictoryProduction {
     @AfterEach void reset(){SonicConfigurationService.getInstance().clearSessionOverrides();CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();}
-    @Test void positionedApproachLuresGolemIntoSandThenEntersAct2(){
+    static Stream<Arguments> configurations() {
+        var rows=new java.util.ArrayList<Arguments>();
+        for(String character:new String[]{"sonic","tails","knuckles"})
+            for(int width:new int[]{320,400,512,640,800})
+                for(String donor:new String[]{"off","s1","s2"})
+                    rows.add(Arguments.of(character,width,donor));
+        return rows.stream();
+    }
+    @ParameterizedTest @MethodSource("configurations")
+    void positionedApproachLuresGolemIntoSandThenEntersAct2(String character,int width,String donor){
         var config=SonicConfigurationService.getInstance();config.clearSessionOverrides();
-        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,"sonic");
-        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,"tails");
-        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,320);
-        config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,false);
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE,character);
+        String followers=character.equals("sonic")?"tails":"";
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE,followers);
+        config.setSessionOverride(SonicConfiguration.DISPLAY_ASPECT,"NATIVE_4_3");
+        config.resolveDisplayAspect();
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,width);
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,!donor.equals("off"));
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,donor);
+        if(!donor.equals("off")) {
+            var rom=donor.equals("s1")?RomTestUtils.ensureSonic1RomAvailable():RomTestUtils.ensureSonic2RomAvailable();
+            config.setSessionOverride(donor.equals("s1")?SonicConfiguration.SONIC_1_ROM:SonicConfiguration.SONIC_2_ROM,rom.getAbsolutePath());
+        }
         config.setSessionOverride(SonicConfiguration.S3K_SKIP_INTROS,true);
         CrossGameFeatureProvider.getInstance().resetState();SessionManager.clear();TestEnvironment.activeGameplayMode();
-        var f=HeadlessTestFixture.builder().withZoneAndAct(8,0).startPosition((short)0x43B0,(short)0x9D4)
-                .startPositionIsCentre().withFreshLevelStartLifecycle().build();
+        var builder=HeadlessTestFixture.builder().withZoneAndAct(8,0).startPosition((short)0x43B0,(short)0x9D4)
+                .startPositionIsCentre().withFreshLevelStartLifecycle();
+        if(!donor.equals("off"))builder.withCrossGameDonation(donor);
+        var f=builder.build();
+        assertEquals(character,f.sprite().getCode());
+        assertEquals(width,GameServices.camera().getWidth());
+        assertEquals(followers.isEmpty()?0:1,GameServices.sprites().getRegisteredSidekicks().size());
+        if(!followers.isEmpty())assertEquals("tails",GameServices.sprites().getSidekickCharacterName(GameServices.sprites().getRegisteredSidekicks().getFirst()));
+        assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
+        if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
+        assertEquals(!donor.equals("s1"),f.sprite().getGameRules().playerCapability().spindashEnabled());
         f.sprite().setRingCount(99);
-        var route=new SozAct1VictoryRoute();var registry=f.gameplayMode().getRewindRegistry();
+        var route=new SozAct1VictoryRoute(character.equals("knuckles")
+                || (character.equals("tails")&&donor.equals("s2")));
+        var registry=f.gameplayMode().getRewindRegistry();
         var milestones=new java.util.LinkedHashSet<String>();StringBuilder trail=new StringBuilder();
+        var previousInput=new com.openggf.debug.playback.Bk2FrameInput(-1,0,0,false,"");
         for(int tick=0;tick<6000&&GameServices.level().getCurrentAct()==0;tick++) {
             var boss=SozAct1VictoryRoute.boss();var manager=GameServices.level().getObjectManager();
             int phase=boss==null?-1:boss.phase(),routine=boss==null?-1:boss.routine();
@@ -47,12 +79,16 @@ class TestSozAct1VictoryProduction {
             else if(com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentSoz(GameServices.zoneRuntimeRegistry())
                     .orElseThrow().events().backgroundRoutine()==0xC&&!milestones.contains("fade"))milestone="fade";
             if(tick%240==0||milestone!=null)trail.append(tick).append(" p=").append(Integer.toHexString(f.sprite().getCentreX()&65535))
-                    .append(',').append(Integer.toHexString(f.sprite().getCentreY()&65535)).append(" phase=").append(phase).append(" routine=").append(routine).append(' ').append(milestone).append('\n');
+                    .append(',').append(Integer.toHexString(f.sprite().getCentreY()&65535))
+                    .append(" cam=").append(Integer.toHexString(GameServices.camera().getX()&65535)).append(',').append(Integer.toHexString(GameServices.camera().getY()&65535))
+                    .append(" limits=").append(Integer.toHexString(GameServices.camera().getMaxX()&65535)).append(',').append(Integer.toHexString(GameServices.camera().getMaxY()&65535)).append(" phase=").append(phase).append(" routine=").append(routine).append(' ').append(milestone).append('\n');
             if(milestone!=null&&milestones.add(milestone)) {
                 var after=registry.capture();manager.setRewindInPlaceRestoreEnabledForTest(false);
                 registry.restore(before);same(before,registry.capture(),milestone+" restore");
+                f.runner().primeInputState(previousInput);
                 step(f,input);same(after,registry.capture(),milestone+" replay");
             }
+            previousInput=input;
         }
         assertEquals(1,GameServices.level().getCurrentAct(),"route did not enter Act2\n"+trail);
         assertTrue(route.sinking(),"native positional sink, not a seeded defeat flag, must win the battle");

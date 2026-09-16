@@ -1835,6 +1835,12 @@ native event phase instead of camera-lock heuristics. Act2 implements its normal
 sand-room, boss and post-boss scroll modes; torches and palette fades share the
 captured light state, including boss inhibition and release.
 
+**Widescreen arena admission:** `sub_55E96`'s `$4310` gate is evaluated at
+its centered native-width viewport origin. Comparing the wider outer left edge
+prevented admission at widths 640/800 because the player reached the solid
+`$4438` wall first. Native width preserves the ROM condition. This is a viewport
+extension; it does not certify wider cold routes or native pixel identity.
+
 **Redraw fidelity limits:** the renderer rebuilds the selected source window as
 whole native row/column redraws advance. The earlier claim of a visible Act1
 arena/seamless defect was not supported by measurement. At native camera Y

@@ -17,7 +17,9 @@ import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SozZoneRuntimeState;
 import com.openggf.tests.rules.*;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Positioned starts; every subsequent transition comes from production controls and objects. */
@@ -46,15 +48,36 @@ class TestSozConnectedMechanismsProduction {
         config.resolveDisplayAspect();
         SessionManager.clear();
     }
+    static Stream<Arguments> configurations() {
+        var rows=new java.util.ArrayList<Arguments>();
+        for(var scene:SozConnectedMechanismRoute.Scene.values())
+            for(int width:new int[]{320,400,512,640,800})for(String donor:new String[]{"off","s1","s2"})
+                rows.add(Arguments.of(scene,width,donor));
+        return rows.stream();
+    }
     @ParameterizedTest
-    @EnumSource(SozConnectedMechanismRoute.Scene.class)
-    void corkCarryWrapAndPlacedSwitchUseTheProductionGraph(SozConnectedMechanismRoute.Scene scene) {
+    @MethodSource("configurations")
+    void corkCarryWrapAndPlacedSwitchUseTheProductionGraph(SozConnectedMechanismRoute.Scene scene,int width,String donor) {
+        var config=SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.SCREEN_WIDTH_PIXELS,width);
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_FEATURES_ENABLED,!donor.equals("off"));
+        config.setSessionOverride(SonicConfiguration.CROSS_GAME_SOURCE,donor);
+        if(!donor.equals("off")) {
+            var rom=donor.equals("s1")?RomTestUtils.ensureSonic1RomAvailable():RomTestUtils.ensureSonic2RomAvailable();
+            config.setSessionOverride(donor.equals("s1")?SonicConfiguration.SONIC_1_ROM:SonicConfiguration.SONIC_2_ROM,rom.getAbsolutePath());
+        }
         if (scene == SozConnectedMechanismRoute.Scene.LOWER)
             SonicConfigurationService.getInstance().setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "");
         TestEnvironment.activeGameplayMode();
-        var fixture = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1)
+        var builder = HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8, 1)
                 .startPosition((short) scene.x, (short) scene.y).startPositionIsCentre()
-                .withFreshLevelStartLifecycle().build();
+                .withFreshLevelStartLifecycle();
+        if(!donor.equals("off"))builder.withCrossGameDonation(donor);
+        var fixture=builder.build();
+        assertEquals(width,fixture.camera().getWidth()&65535);
+        assertEquals(!donor.equals("off"),CrossGameFeatureProvider.isActive());
+        if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
+        assertEquals(!donor.equals("s1"),fixture.sprite().getGameRules().playerCapability().spindashEnabled());
         // Finish native setup before the first recorded controller input.
         GameServices.level().consumePendingInitialProcessSpritesPass();
         fixture.sprite().setRingCount(99);

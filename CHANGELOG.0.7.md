@@ -209,7 +209,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   swinging platforms, rappel wires, oscillator-timed spawning sand blocks, rising walls and corks, and
   Skorp, Sandworm and Rockn. Terrain-driven sand slides run after camera tracking.
   The cold sand intro, Egg Golem arena and seamless
-  Act 2 entry use native event owners. Act 2 couples light switches, ghosts,
+  Act 2 entry use native event owners. The golem arena opens at the equivalent
+  centered native viewport in widescreen, so the right wall cannot prevent the
+  admission camera gate from firing. Act 2 couples light switches, ghosts,
   torches and palette fades, and implements the final boss, collapsing wall,
   capsule/results and the Lava Reef transition. Post-boss background rows remain
   intact during art loading and redraw in order, including widescreen margins.

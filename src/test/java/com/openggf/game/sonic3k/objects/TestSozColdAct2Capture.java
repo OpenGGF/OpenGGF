@@ -37,7 +37,8 @@ class TestSozColdAct2Capture {
                 Path.of("src/test/resources/routes/s3k/soz2-cold-sonic-tails.bk2"));
         int stride = Integer.getInteger("soz.cold.act2.stride", 4);
         assertTrue(stride > 0);
-        var settings = new GameplayCaptureSession.Settings(320, "sonic", "tails", "off", null, null, null);
+        var settings = new GameplayCaptureSession.Settings(Integer.getInteger("soz.cold.width", 320), "sonic",
+                System.getProperty("soz.cold.followers", "tails"), "off", null, null, null);
         var inputs = new ArrayList<RecordedFrameInput>();
         boolean bossSeen = false;
         boolean capsuleSeen = false;
@@ -54,8 +55,13 @@ class TestSozColdAct2Capture {
             assertEquals(1, GameServices.level().getCurrentAct());
             assertEquals("sonic", session.player().getCode());
             var followers = GameServices.level().getObjectManager().getObjectServices().playerQuery().sidekicks();
-            assertEquals(1, followers.size());
-            assertInstanceOf(com.openggf.sprites.playable.Tails.class, followers.getFirst());
+            assertEquals(settings.width(), GameServices.camera().getWidth());
+            String[] expectedFollowers = settings.sidekickCharacter().isBlank() ? new String[0]
+                    : settings.sidekickCharacter().split(",");
+            assertEquals(expectedFollowers.length, followers.size());
+            for (int i = 0; i < expectedFollowers.length; i++)
+                assertEquals(expectedFollowers[i], GameServices.sprites().getSidekickCharacterName(assertInstanceOf(
+                        com.openggf.sprites.playable.AbstractPlayableSprite.class, followers.get(i))));
             // Headless boot leaves the native initial Process_Sprites pass pending.
             GameServices.level().consumePendingInitialProcessSpritesPass();
             csv.write(GameplayCaptureSession.stateHeader() + ",zone,act,boss_hp,capsule_open,results,p1_mask,p2_mask");
@@ -126,7 +132,8 @@ class TestSozColdAct2Capture {
             assertTrue(visible > 1000, "destination world must be visible outside the HUD");
             ScreenshotCapture.savePNG(image, output.resolve("destination.png"));
             Files.writeString(output.resolve("milestones.txt"), milestones + "LRZ load frame: " + readyFrame
-                    + "\nController frames: " + movie.getFrameCount() + "\nCold Sonic+Tails native320; intro enabled.\n");
+                    + "\nController frames: " + movie.getFrameCount() + "\nCold Sonic; followers=" + settings.sidekickCharacter()
+                    + "; width=" + settings.width() + "; donor=off; intro enabled.\n");
         }
     }
 }

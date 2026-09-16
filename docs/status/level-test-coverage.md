@@ -251,3 +251,25 @@ the [revised SOZ batch order](../architecture/plans/2026-09-15-soz-methodology-v
 SOZ cold-route continuation (2026-09-16): the [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md#cold-controller-completion) now records a fixed-input native Sonic + Tails, width-320 run from cold entry through the real boss to playable Act 2. The explicit capture test passes on the merged runtime without skips. Other character/donor/viewport routes and exact native parity remain separate obligations.
 
 SOZ Act 2 cold-route completion (2026-09-16): the [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md#cold-controller-completion) records the fixed native Sonic + Tails, width-320 run through eight natural boss hits, capsule/results and playable Lava Reef. Dense capture and explicit destination-control assertions pass without skips. The lower subtype-$87 puzzle and broader parity/configuration products remain open.
+
+
+SOZ non-trace acceptance follow-up (2026-09-16): every authored checkpoint now
+covers three leaders × five required widths × off/S1/S2 donors, with real activation,
+restore/replay and production death/reload (450 cases). Repeated native/mixed/duplicate
+team reloads cover the same width/donor product in both acts (90 cases), and four
+connected Act 2 mechanism routes cover that product with graph recreation/replay
+(60 cases). See the [acceptance record](../architecture/plans/2026-09-15-soz-methodology-v2.md#2026-09-16-non-trace-acceptance-follow-up).
+The lower subtype-$87 passage remains unverified after bounded native and engine
+input attempts. Native-width cold recordings still complete; unchanged recordings
+fail at widths 400/800, so wider full routes require independent input authoring.
+Strict traces are deferred at the user's request; these results do not certify
+native pixels or complete route/configuration breadth.
+
+
+The same follow-up adds 45 positioned golem-to-Act2 victories (Sonic + Tails,
+solo Tails, solo Knuckles × five widths × three donors) and 40 solo end-boss-to-LRZ
+victories (all corresponding character/donor combinations except S1-donor Tails).
+Each verifies natural victory and event/boss graph restore/replay. A five-width
+threshold regression and an 800-pixel moving victory capture cover the corrected
+Act 1 admission gate. These close bounded boss/transition obligations; full cold
+routes and S1-donor Tails end-boss victory remain open.

@@ -2119,3 +2119,195 @@ claims no new runtime result, route coverage or native parity.
 Final ordinary-suite results and baseline guard attribution remain as recorded
 above. This follow-up changes prose only: check links, status/scope consistency,
 media references and commit policy; do not rerun unchanged engine tests.
+
+## 2026-09-16 non-trace acceptance follow-up
+
+User direction: finish remaining work while skipping traces for now. Base is
+`e25269d0e70d0db9ddbb5b914a30795d859ab755`, worktree `.worktrees/soz-acceptance`,
+local branch `feature/ai-soz-acceptance`. No strict replay, trace production or
+hardware-timing tolerance change is part of this follow-up.
+
+### Verified lifecycle and mechanism breadth
+
+Queued focused Maven (`-Dmse=off`, explicit absolute S3K/S1/S2 ROM properties,
+`test -B`) completed these expanded production selections:
+
+| Selection (`-Dtest=`) | Cases | Failures/errors/skips | JUnit / Maven time |
+| --- | ---: | --- | --- |
+| `TestSozCheckpointReloadProduction` | 450 | 0 / 0 / 0 | 21.990s / 40.752s |
+| `TestSozTeamCheckpointResetProduction` | 90 | 0 / 0 / 0 | 7.807s / 26.594s |
+| `TestSozConnectedMechanismsProduction` | 60 | 0 / 0 / 0 | 22.250s / 39.079s |
+
+Every checkpoint now covers all three leaders, five required logical widths and
+three donors with activation replay and death/reload. Repeated team reloads cover
+native/mixed/duplicate teams over the full width/donor product. Four connected
+mechanism scenarios cover that same product, including forced graph recreation.
+The act matrices record the exact obligations closed; these checks do not certify
+full character routes, every team-sensitive interaction or native pixels.
+
+### Cold input portability
+
+`TestSozColdAct1Capture,TestSozColdAct2Capture` now accept `soz.cold.width` and
+`soz.cold.followers`, retaining native-320 Sonic + Tails defaults and asserting
+resolved width/roster. The same explicit capture properties as the final campaign
+were used under external `acceptance-followup/cold-*`, with PNG strides 30,000
+and 40,000 respectively. Only controller inputs are replayed.
+
+Both matched native-width controls pass with zero skips (23.304s Maven). At
+width 400, Act 1 dies at frame 10,536; at 800 it dies at 1,804. Act 2 fails the
+real-boss-reached assertion at both widths after all 32,432 inputs. First observed
+position separation beyond 30 pixels at width 400 is Act 1 frame 5,926 and Act 2
+frame 3,979; these are ordinary engine route observations, not trace frontiers.
+No production cause is attributed from fixed-input failure alone. Wider routes
+need independent controller authoring; do not alter spawn/collision timing to
+make a native-width input recording pass unchanged.
+
+### Native lower-passage investigation
+
+New positioned probes are under the unified media root's `acceptance-followup/`.
+They load the prior SOZ2 LFC35 save after stopping movie playback and verify zone
+and unlocked controls. Declared setup positions/motion and optional rings/P2
+position are written before observation only. The original badnik-overlap entry
+again dies without useful pushing; it remains rejected setup evidence.
+
+The revised `$4754/$5AC` approach with ordinary right/jump input does push the
+native rock, which then leaves its push routine before the switch, corroborating
+the engine's fall/link invalidation. Direct switch, spin-jump and paired-controller
+trials have not established passage. In `native-lower-diagnose-1`, the player
+remains routine 2 with 99 rings: the jump's upward speed becomes zero near
+`$493E/$593`, then the player reaches the lower wall at `$49F5`. This is a failed
+positioned route, not proof of an impossible or optional puzzle and not native
+pixel/trajectory certification. No collision, geometry or door timer changed.
+
+User observation identified deprecated `bit.band` console spam during the slow
+probe. Current probes use `&`; the matching completion-marker run has
+1,200 observations and finishes in 3.069s rather than timing out at 45s.
+Screenshot frequency was also reduced, so the speedup is not attributed solely
+to removal of the warnings. The reusable warning is recorded in the existing measurement-hazard catalogue.
+
+
+A bounded engine-only input-authoring search also failed to produce a passage:
+8-frame action blocks, up to 70 rounds, 128 retained candidate states, and
+16 neutral/directional/jump/spindash timing choices per candidate. It used the
+engine's own snapshots for search, then required a clean forward run before any
+result could count. The height-favoring search stopped at its round bound with
+best X `$48E5`; an earlier forward-distance search reached `$49F5` before losing
+all candidates. Neither is an exhaustive impossibility proof. The temporary
+failing authoring test was removed; no fitted gameplay rule or acceptance bypass
+was retained. The next useful evidence is a successful native controller route,
+not another geometry change inferred from these failed attempts.
+
+
+### Widescreen arena admission finding
+
+Expanding controller-only boss routes found a real Act 1 admission blocker at
+widths 640/800. With ordinary right input, the player stops at the arena wall
+`$4438`, while the outer camera left edge is still below `$4310` (at width 800,
+`$42A8`). The camera gate cannot be reached by further walking. The ROM owner
+is `sub_55E96`, which compares its native 320-pixel `Camera_X_pos` at `$4310`
+after the Y camera reaches `$960`. The engine centers wider views on the same
+player, so this local admission check now adds half the extra viewport width
+before comparing the native gate. Width 320 is unchanged; camera bounds, terrain
+and boss routines are unchanged. This is an intentional widescreen extension,
+not an inferred native physics correction.
+
+The new threshold regression initially passed native 320 and failed all four
+wider cases at the exact centered-native boundary (5 cases, 4 failures, no errors
+or skips). It checks the pixel immediately before admission and equality at the
+gate, with the player still before the arena wall. Full victory/transition tests
+are required in addition to this local threshold check.
+
+The first expanded boss rewind checks also exposed test-driver input history:
+restoring the gameplay registry leaves external runner button history untouched.
+The tests now prime the preceding input before re-executing the captured edge;
+Knuckles shell-contact sprite differences disappear without dropping compared
+fields or changing production rewind. Controller routes for other characters are
+authored independently; a Sonic jump rhythm can invoke flight/glide midair.
+
+
+The final end-boss selection passes 40 cases, zero failures/errors/skips
+(54.72s JUnit, within a combined Maven run whose Act 1 controller candidates
+still failed). This class result is not a claim that the combined invocation
+passed. Cases are Sonic off/S1/S2, Tails off/S2, Knuckles off/S1/S2 at each required
+width, all solo. Controller authoring found native Tails period/hold/approach
+`32/20/-32`, native Knuckles `40/4/+32`, and donor Knuckles `16/4/-48`; those
+numbers select only test inputs, not boss/physics behavior. Other verified cases
+retain the original `48/12/-12` input strategy. All eight hits and graph rewind
+assertions pass in clean forward runs, including capsule/results and LRZ load.
+A ground-jump-only candidate was rejected because it failed natural combat;
+repeated broad rhythm searches did not author S1-donor Tails. Its bounded direct
+attempt kept pilot HP at eight while opening the shell, then died at frame 851.
+No runtime capability, collision box or damage rule was changed to force it through.
+
+
+### Final focused validation and media
+
+The final ordinary selection `TestSoz*,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils`
+completed 1,139 tests, zero failures/errors, eight skips in 3:42 Maven. It includes
+all 56 SOZ classes and the four required S3K regressions. The skips are explicitly
+opt-in captures: Act1Victory, ColdAct1, ColdAct2, EndBossVictory, Miniboss,
+Act1Arena, ConnectedMechanism and PostBossRedraw. They are not missing-ROM skips.
+`TestHeadlessStateTeardownGuard,TestSingletonLifecycleGuard` in a separate
+`-Pguards` JVM passed all 13 checks without skips (18.285s Maven).
+
+Both cold controller captures were then run explicitly after the runtime fix:
+2 tests, no failures/errors/skips, 21.194s Maven, outputs in
+`acceptance-followup/cold-final-control/{act1,act2}`. The captures use sparse PNG
+strides 30,000/40,000 but execute every controller frame and retain the complete
+state CSV. This is controller playback, not strict trace replay.
+
+Commands, from `.worktrees/soz-acceptance` based on `e25269d0e`; set
+`ROM_ROOT` to the existing ROM directory (the actual run used absolute paths):
+
+```bash
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base e25269d0e70d0db9ddbb5b914a30795d859ab755 --preflight
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off '-Dtest=TestSoz*,TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils' "-Ds3k.rom.path=${ROM_ROOT}/Sonic and Knuckles & Sonic 3 (W) [!].gen" "-Dsonic1.rom.path=${ROM_ROOT}/Sonic The Hedgehog (W) (REV01) [!].gen" "-Dsonic2.rom.path=${ROM_ROOT}/Sonic The Hedgehog 2 (W) (REV01) [!].gen" test -B
+LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/maven_queue.py -Dmse=off -Pguards -Dtest=TestHeadlessStateTeardownGuard,TestSingletonLifecycleGuard test -B
+```
+
+The change-based plan selects the full 2,660-class ordinary suite plus guards,
+with a historical cost around 24 + 10 minutes. Proportionate focused validation
+was chosen: the sole runtime edit is one local SOZ1 widescreen admission condition,
+with no shared algorithm, public contract or native-width condition change.
+The focused selection exercises its threshold, complete boss/transition paths,
+rewind and neighboring SOZ event/object consumers; the explicit GPU capture
+checks the visible result. This is not a full-suite pass. Preflight initially
+found the default Lua version unsuitable; explicitly selecting `/usr/bin/lua5.4`
+passed Java 21, Lua and PowerShell checks before validation.
+
+All 45 final Act1 victory cases pass (74.18s JUnit in the final selection).
+Knuckles and S2-donor Tails use an authored left-side golem approach; Sonic and
+other Tails variants retain the established approach. Early escape/braking and
+ground-jump-only candidates failed and were discarded. The surviving control
+choices do not alter boss AI, geometry, movement or native character capabilities.
+
+The explicit `TestSozAct1VictoryCapture` at `soz.act1.victory.width=800` passed
+without skips (9.906s JUnit / 26.379s Maven). It produced 5,325 state rows and
+1,332 PNGs, encoded at the normal 15fps cadence to an 88.800-second movie under
+`acceptance-followup/act1-victory-wide800/`. Battle, sinking and visible unlocked
+Act2 frames were inspected. The curated reel replaces its earlier golem battle
+excerpt with 13 seconds from this moving wide capture; it remains 22 chronological
+Act1-then-Act2 scenes and 260.700 seconds. Full decode and chapter/source checks
+pass. The original 311-source archive is retained unchanged; the capture README
+now distinguishes it from the acceptance follow-up. Failed native probes and
+sparse still controls are not added to the highlights.
+
+### Still open after this follow-up
+
+Strict traces remain deferred. Full cold character/donor/viewport routes, the
+S1-donor Tails final-boss victory, positive lower subtype-$87 puzzle passage,
+repeated seamless/exit cycles and remaining per-participant/native-pixel obligations
+are not certified by these bounded checks. Their existing matrix entries remain
+open; no production rule was changed solely to make a failed recording pass.
+
+
+The end-boss route check was strengthened after the combined selection to let
+`GameLoop` own the pending LRZ load, title/fade and playable control release.
+Constructing a new loop only after the headless driver had already consumed the
+load stalled all 40 title checks; that rejected harness handoff was corrected by
+switching before the load, after the final tested boss/redraw milestone. A single
+Sonic control passed, then the complete 40-case selection passed with zero
+failures/errors/skips (54.88s JUnit / 1:12 Maven). Destination checks retain the
+requested character, actual width and donor movement capability. Only this
+changed test class was repeated; the other focused selection results above
+remain applicable. No production title/load owner changed.

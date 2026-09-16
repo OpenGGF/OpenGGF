@@ -71,6 +71,22 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ controller-route rewind (2026-09-16): a composite gameplay snapshot does
+not own a standalone `HeadlessTestRunner`'s external button history. Before
+replaying an input edge after restoring the snapshot, call `primeInputState`
+with the input preceding the captured frame. Otherwise a just-pressed jump may
+become held input (or vice versa), producing false flight/glide and sprite-state
+divergences. Compare the full registered state and replay the same input; do not
+remove the input-edge fields from the comparison.
+
+BizHawk Lua API warning flood (SOZ, 2026-09-16): deprecated `bit.band` calls
+inside a per-frame probe spam the Lua console and can turn a short capture into
+a timeout. Use Lua's native `&` operator (and corresponding native bit operators),
+not deprecated compatibility helpers. A 1,200-frame SOZ probe timed out after
+45 seconds; after removing the repeated warning and reducing screenshots, it
+completed in about three seconds. Require a final completion marker as well as
+nonempty CSV output so a buffered partial run cannot look complete.
+
 SOZ full-route comparison (2026-09-16): a matching hardware-timed trace prefix
 does not establish the same prefix in a separately booted ordinary capture,
 even when both consume the same BK2 input rows. Measure each driver's live
