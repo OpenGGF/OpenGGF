@@ -1113,13 +1113,12 @@ public final class LevelRenderer {
         }
         dispatchSpecialRenderEffects(SpecialRenderEffectStage.AFTER_BACKGROUND, lm.frameCounter);
 
-        // Draw Foreground (Layer 0) low-priority pass
+        // Draw Foreground (Layer 0) low-priority pass. The AIZ2 forest-loop
+        // plane ring takes its camera and Level_repeat_offset from the gameplay
+        // step (LevelForegroundPlane.drawAsYouMove), never from the
+        // retained scroll presentation: ROM DrawTilesAsYouMove writes Plane A
+        // from the live CPU camera inside ScreenEvents.
         profiler.beginSection("render.fg");
-        if (lm.tilemapManager != null && lm.zoneFeatureProvider != null
-                && lm.zoneFeatureProvider.foregroundWrapsHorizontally()) {
-            lm.tilemapManager.setForegroundRingCamera(presentationCameraXWithShake(), lm.cachedScreenWidth,
-                    lm.zoneFeatureProvider.foregroundWorldWrapOffset());
-        }
         lm.ensureForegroundTilemapData();
         enqueueForegroundTilemapPass(0);
         if (currentAdvancedRenderFrameState.reversePlaneAssignment()) {

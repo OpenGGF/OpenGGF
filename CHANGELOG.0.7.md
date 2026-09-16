@@ -87,7 +87,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   HUD labels retain the prepared table until its publishing VBlank, including
   skipped drawing, camera changes and rewind. Terrain scroll and sprite-occlusion
   masks publish with that table, keeping objects aligned with moving cameras
-  across S3K zones. Numeric HUD tiles follow their own
+  across S3K zones; the AIZ2 forest-loop plane ring stays on the live camera
+  in the same step as `AIZ2_DoShipLoop`, like `DrawTilesAsYouMove`, so a wrap
+  on a lag frame no longer blanks the foreground. Numeric HUD tiles follow their own
   VBlank updates, and mutable player art stays paired with the prepared mapping. The Act 1 boss arms
   clamp their angles and release their chain state in the original order; defeat
   preserves the native wait and score bonus before the end sign, and the ending

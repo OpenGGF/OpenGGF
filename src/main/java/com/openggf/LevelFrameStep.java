@@ -11,6 +11,7 @@ import com.openggf.game.resources.PlcFrameLifecycleCoordinator.PlcLifecycleFrame
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.timing.HardwareServiceBoundary;
 import com.openggf.level.LevelManager;
+import com.openggf.level.LevelForegroundPlane;
 import com.openggf.level.LevelSpritePresentation;
 import com.openggf.level.LevelPaletteBridgeAccess;
 import com.openggf.sprites.managers.SpriteManager;
@@ -524,6 +525,11 @@ public final class LevelFrameStep {
         // 4c. Flush gameplay layout mutations queued by zone events before
         //     boundary easing and post-camera systems observe the changed level.
         levelManager.flushQueuedLayoutMutations();
+
+        // 4c'. ROM ScreenEvents ends in DrawTilesAsYouMove (sonic3k.asm:104978):
+        //      the AIZ2 forest-loop plane ring pairs this frame's live camera with
+        //      its Level_repeat_offset here, before the VBlank publishes scroll.
+        LevelForegroundPlane.drawAsYouMove(levelManager);
 
         // 4d. Boundary easing (ROM DynamicLevelEvents boundary tail): ease the
         //     bottom boundary toward target reading the post-scroll camera, and

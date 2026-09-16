@@ -110606,3 +110606,23 @@ animation2. That production intro, not trace-state seeding, is the next target.
   four-entry module queue rejects a further submission after the existing timing
   divergence; capacity and comparison admission were not relaxed to finish the
   recording. Ordinary controller cold-route validation remains independent.
+
+### 2026-09-16 — AIZ replays measured around the forest-ring fix
+
+- `5286a09c9` (unmodified develop, `.worktrees/lead-verify-aiz-baseline`) and the
+  same tree plus `bugfix/ai-aiz2-forest-ring-live-camera`:
+  `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-replay
+  -Dtest=TestS3kAizTraceReplay,TestS3kAizZoneSliceTraceReplay
+  "-Ds3k.rom.path=<absolute S3K ROM>" -DfailIfNoTests=false test` reports
+  17 tests, 4 failures, 0 skips on both trees, with identical errors:
+  `TestS3kAizTraceReplay.replayMatchesTrace` first error frame 5497 `camera_x`
+  (expected `$0010`, actual `$0012`, 59 errors);
+  `TestS3kAizZoneSliceTraceReplay` first error frame 6302 `camera_x` (same
+  values, 101 errors); `aiz2ReloadResumeAppliesRomCameraLock` and
+  `aiz2FireRevealReleasesReloadCameraLockOnRomFrame` fail on the same AIZ2
+  reload camera lock (`$0010` expected, `$000C`/`$002D` observed). These predate
+  and are unchanged by the forest-ring fix, whose code is gated on the
+  post-bombing forest loop and cannot run at frame 5497. The last recorded
+  `TestS3kAizTraceReplay` frontier here was frame 20713, so develop currently
+  carries an unattributed AIZ2 reload camera-lock regression; the owning commit
+  was not bisected in this task.
