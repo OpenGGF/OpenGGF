@@ -175,6 +175,8 @@ class TestSozMiniboss {
         for(int i=0;i<70;i++)step();
         assertEquals(0x4200,camera.getMinX()&65535);assertEquals(0x4450,camera.getMaxX()&65535);
         verify(player).setXSpeed((short)0);verify(player).setYSpeed((short)0);
+        // loc_76EE4 clr.w (Ctrl_1_logical): the locked leader's recorded input must go idle.
+        verify(player).clearLogicalInputState();
     }
     @Test void endSignConversionKeepsTheNativeSlotWhenNoFreeSlotsRemain(){
         until(()->boss.phase()==2,200);boss.y=0xA10;step();
