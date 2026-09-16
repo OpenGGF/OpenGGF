@@ -141,6 +141,7 @@ children before implementation. Engine subtype `$28` still falls back to
 | `02b-hpz-anpal-wall-light-glow-before-after.mp4` | `AnPal_HPZ` wall-light glow | Teleport `$E40,$340`, idle, frames 100-280 | Continuous |
 | `03-hpz-palette-control-camera-460.mp4` | `Obj_HPZPaletteControl` switches `Pal_HPZIntro` → `Pal_HPZ` (top gems pink → purple) | Cold start, `inputs/run-right-jump.txt`, frames 585-660 | Camera re-crosses `$460` at frame 621 |
 | `04-hpz-knuckles-background-patch-before-after.mp4` | `HPZ_BackgroundInit` Knuckles row patch removes the Master Emerald backdrop | `--main knuckles`, same input, frames 385-660 | Backdrop enters at ~423 |
+| `05-hpz-teleporter-lower-to-upper-pad.mp4` | `Obj_SSZHPZTeleporter` + `Obj_TeleporterBeam`: charge, rise `$4A0`, settle on the upper pad | Teleport `$AF0,$8B0`, `inputs/jump-onto-pad.txt`, frames 80-480 | Lands ~118, rise 260-340, released ~440 |
 
 Not demonstrable at width 320: the `$AA0` camera limits (Knuckles right, Sonic/Tails
 upper-route left). On the reachable routes a wall stops the player before the camera
@@ -153,3 +154,24 @@ Located with `LevelTileUsageLocatorTool`: `AniPLC_HPZ` tiles `$2D0-$2DB` are pla
 X `$B00-$B7F`, Y `$380-$47F` and `$880` (the teleporters); line-4 colours 1-2 at X
 `$D00-$177F`, Y `$300-$47F`. Neither is visible from the level start, which is why the
 first cold-load comparison showed no difference.
+
+### 2026-09-16 slice 6a — teleporter transport and Knuckles exit
+
+Implemented `TeleporterBeamObjectInstance` (faithful `Obj_TeleporterBeam`: spawn, wait,
+expand, contract, `$46` progress byte) and the HPZ teleporter state machine (idle light and
+`AnPal_HPZ` gate, charge, rise, `Gradual_SwingOffset` settle, Knuckles `$4A` override) plus
+`HpzTeleporterRouteHelperObjectInstance` (`loc_45B94`: Knuckles exit to `$A01`; Sonic/Tails
+helpers below X `$1000` delete). The altar teleporter's ending branch (`loc_45AD6`,
+`loc_45BF4`) is deferred to the Knuckles fight slice because it drives the fight object
+through `_unkFAA4` and `_unkFAB8`.
+
+Route truth for the ending: the Sonic + Tails complete-run segment
+`runs/s3k-sonic-tails-complete-emeralds/hpz22_2` (comparison data, used only to read the
+route) enters `$1601` at row `$1E46`, rides the `$B40` teleporter at `$2328-$251C`, fights
+Knuckles near X `$11C0` (`$2904-$2DE6`), crosses the altar at Y `$3AC`, drops through the
+collapse near X `$18B0` to Y `$64C` (`$34BC`), then walks left and is held at X `$1628`
+(`$37AA`) before the `$A00` exit. The existing `CnzTeleporterBeamInstance` is a timing
+stand-in, not a port; CNZ keeps it until that route is revisited.
+
+Evidence: `TestS3kHpzTeleporterHeadless` (new) plus `TestHpzSanctuaryObjects`,
+`TestS3kHpzSanctuaryHeadless`, `TestS3kHpzGraphRewind`: 32 tests, 0 failures, 0 skips.

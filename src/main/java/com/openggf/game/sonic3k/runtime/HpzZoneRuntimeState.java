@@ -21,7 +21,7 @@ import java.util.Objects;
  */
 public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + Integer.BYTES + 2 * Short.BYTES + 3;
+            S3kScreenShake.captureBytes() + Integer.BYTES + 2 * Short.BYTES + 4;
     /** {@code AnPal_HPZ}: {@code Palette_cycle_counter0} steps by 4 and wraps at {@code $28}. */
     private static final int PALETTE_CYCLE_STEP = 4;
     private static final int PALETTE_CYCLE_WRAP = 0x28;
@@ -37,6 +37,7 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean paletteCycleSuppressed;
     private boolean paletteControlAllocated;
     private boolean foregroundCollapsePending;
+    private boolean teleporterTransportActive;
 
     public HpzZoneRuntimeState(int zoneIndex, int actIndex, PlayerCharacter playerCharacter) {
         this.zoneIndex = zoneIndex;
@@ -129,6 +130,15 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
         return pending;
     }
 
+    /** {@code Events_bg+$04}: a teleporter transport is in progress; receiving pads are intangible. */
+    public boolean teleporterTransportActive() {
+        return teleporterTransportActive;
+    }
+
+    public void setTeleporterTransportActive(boolean active) {
+        teleporterTransportActive = active;
+    }
+
     @Override
     public byte[] captureBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES);
@@ -139,6 +149,7 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.put((byte) (paletteCycleSuppressed ? 1 : 0));
         buffer.put((byte) (paletteControlAllocated ? 1 : 0));
         buffer.put((byte) (foregroundCollapsePending ? 1 : 0));
+        buffer.put((byte) (teleporterTransportActive ? 1 : 0));
         return buffer.array();
     }
 
@@ -155,5 +166,6 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
         paletteCycleSuppressed = buffer.get() != 0;
         paletteControlAllocated = buffer.get() != 0;
         foregroundCollapsePending = buffer.get() != 0;
+        teleporterTransportActive = buffer.get() != 0;
     }
 }
