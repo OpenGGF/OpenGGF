@@ -23,10 +23,13 @@ final class SozAct1Events extends Sonic3kZoneEvents {
         if(act==1){updateSeamlessEntry(state,levelFrameCounter);return;}
         var player=spriteManager().getMainPlayable();
         int playerX=player.getCentreX()&65535;
-        // Widescreen presentation: stop before the authored foreground wall at
-        // $4500. Leave Camera_max_X_pos untouched: the ROM also uses it as the
-        // player's movement boundary with a fixed 320px offset.
-        int wideRight=0x4500-camera().getWidth();
+        // Widescreen presentation: end the view where the native 320px arena
+        // view ends ($4310+320 = $4450), so the player's $4438 stop reads as the
+        // screen lock instead of an invisible wall mid-screen. This also keeps
+        // the authored foreground wall at $4500 offscreen. Leave Camera_max_X_pos
+        // untouched: the ROM also uses it as the player's movement boundary with
+        // a fixed 320px offset.
+        int wideRight=0x4450-camera().getWidth();
         boolean wideArena=playerX>=0x4000 && camera().getWidth()>320;
         if(wideArena && (camera().getX()&65535)>wideRight)camera().setX((short)wideRight);
         switch(events.backgroundRoutine()){
@@ -47,7 +50,10 @@ final class SozAct1Events extends Sonic3kZoneEvents {
                         // admission position; do not move the ROM gate at 320px.
                         boolean atWideLimit=wideArena && (camera().getX()&65535)>=wideRight;
                         if(nativeLeft>=0x4310 || (atWideLimit && playerX>=0x43B0)){
-                            camera().setMinX((short)0x4180);state.requestSandCorkRelease(false);
+                            // The native arena spans $4180-$4450 (720px). A view wider than
+                            // that keeps its right edge on the lock and gives up the left.
+                            camera().setMinX((short)(wideArena?Math.min(0x4180,wideRight):0x4180));
+                            state.requestSandCorkRelease(false);
                         }
                     }
                     return;
