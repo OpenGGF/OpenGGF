@@ -110664,3 +110664,21 @@ animation2. That production intro, not trace-state seeding, is the next target.
 - `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestS3kSozCompleteRunTraceReplay"
   "-Ds3k.rom.path=<absolute S3K ROM>" test -B`: 59336 frames, 13244 errors (was 13591),
   first error unchanged at frame 5977 `tails_mapping_frame`.
+
+### 2026-09-16 — SOZ CPU Tails despawn parity (still sprites, off-screen monitor)
+
+- `bugfix/ai-soz-recorded-routes` after `dab958c0e`, same focused and sweep commands as
+  the SOZ entries above (fresh `target/trace-reports`, 61 S3K replay tests).
+- Row 9046: the sand sets Tails' `Status_OnObj` without updating `interact`; the stale
+  slot now holds `Obj_AnimatedStillSprite` (word `$0002`) against the `$0004`
+  `Tails_CPU_interact` latch, so `sub_13EFC` despawns Tails. `StillSpriteInstance` and
+  `AnimatedStillSpriteInstance` did not publish a code word and were treated as unknown.
+  `TestS3kSozCompleteRunTraceReplay`: 13244 -> 10766 errors; the next Tails despawn
+  separation moved to row 18642.
+- Row 18642: off-screen CPU Tails lands on a monitor. `SolidObject_Monitor_Tails` reaches
+  `SolidObject_cont` without `SolidObjectFull`'s Player_2 render gate
+  (`sonic3k.asm:40486-40500, 40588-40596`); the S3K monitor now bypasses the engine's
+  off-screen full-solid gate as the S2 monitor already did. 10766 -> 10483 errors.
+- First physics divergence is now row 28940 (end of Act 1 results: `camera_x` `$4180` vs
+  `$4198`); first overall error unchanged at 5977 `tails_mapping_frame`. All other S3K
+  replay reports are identical to the previous branch sweep.

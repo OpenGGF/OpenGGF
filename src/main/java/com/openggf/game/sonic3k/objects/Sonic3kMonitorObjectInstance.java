@@ -654,7 +654,16 @@ public class Sonic3kMonitorObjectInstance extends AbstractMonitorObjectInstance
         // 40559-40590, 41394-41632). That normal classifier is required for
         // P2 side contact to win over top landing when horizontal penetration is
         // smaller, e.g. CNZ f11061 against the monitor at $1A50,$00D0.
-        return SolidRoutineProfile.fullSolid(false, usesInclusiveRightEdge(), false);
+        return SolidRoutineProfile.fullSolid(false, usesInclusiveRightEdge(), bypassesOffscreenSolidGate());
+    }
+
+    @Override
+    public boolean bypassesOffscreenSolidGate() {
+        // Obj_MonitorMain calls SolidObject_Monitor_Tails for Player_2, which branches
+        // straight to SolidObject_cont without SolidObjectFull's Player_2 render_flags
+        // test (sonic3k.asm:40486-40500, 40588-40596). An off-screen CPU Tails still
+        // lands on the monitor (soz_completerun row 18642).
+        return true;
     }
 
     @Override
