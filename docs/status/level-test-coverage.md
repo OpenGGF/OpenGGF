@@ -158,7 +158,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_LRZ_BOSS` | Audit pending |
 | S3K | `S3K_HIDDEN_PALACE` | [Act matrix](../architecture/validation/levels/s3k-hpz-act.md) — in progress; entry, events, animation and teleporter breadth covered; Knuckles fight and Sonic/Tails exit open |
 | S3K | `S3K_DEZ_BOSS` | Audit pending |
-| S3K | `S3K_SPECIAL_STAGE_ARENA` | Super Emerald sanctuary `$1701`; lifecycle covered by `TestS3kHpzSanctuaryHeadless` and `TestS3kHpzGraphRewind`; matrix pending |
+| S3K | `S3K_SPECIAL_STAGE_ARENA` | [Sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md) — partial; results-return reveal missing |
 
 Initial inventory: S1: 21 slots, S2: 20 slots, S3K: 48 slots; 89 total. These are inventory counts, not coverage percentages.
 
