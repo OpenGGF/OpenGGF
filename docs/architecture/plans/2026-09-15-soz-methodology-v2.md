@@ -2026,3 +2026,36 @@ milestones. Both players are visible in the inspected destination; control is
 released. The native recording's upper switch/swing route is followed, leaving
 the separate lower rock puzzle explicitly unverified. No collision, geometry
 or physics tuning was needed for the final Act2 route authoring.
+
+### Integrated delivery verification
+
+The completion branch merged into `develop` without conflicts at
+`358679affa0b4d3ff44c18e49ca77ff55297849d`; unrelated main-workspace changes
+were preserved. Final queued validation used
+`LUA_BIN=/usr/bin/lua5.4 python3 tools/testing/run_categories.py --base
+1a63f57015a8012e6a34b2fe4f07cc0d52f91056 --run`, after actual-tree preflight.
+It selected all 2,659 ordinary classes plus guards. Ordinary completed 21,161
+tests with zero failures/errors and 27 skips in 835.57s. Guards completed 668
+tests with three failures, zero errors/skips in 184.39s.
+
+Each guard failure's test identity and every nonblank failure-message line
+matches the bounded unchanged-`develop` baseline recorded above: stale direct
+Maven prose expectations, the tracked BizHawk README, and the two assertion-free
+legacy probes. No SOZ-owned failure remains. This is an ordinary-suite pass
+with three pre-existing guard failures, not a fully green combined run.
+
+The 27 skips are the earlier 25 plus the two opt-in cold capture classes; both
+cold captures passed explicitly as recorded above. Other skips remain opt-in
+measurements, separate graphics/audio captures and the existing CPZ spin-tube
+assumption. No missing-ROM skip was reported. Independent strict trace parity
+and the lower Act2 rock puzzle remain the documented limits; no test tolerance,
+queue capacity or guard budget was weakened to close delivery.
+
+The unified external `soz-v2-20260915` folder retains the original media,
+controller inputs and state records. Its 311 movie/probe sources are assembled
+chronologically by `assemble_highlights.py` into `SOZ-work-compilation.mp4` and
+`SOZ-work-highlights.mp4`, with separate chapter indexes and a source SHA-256
+inventory. Sparse probes, positioned scenarios and excerpts are labelled; final
+cold movies remain available independently. The external README records final
+media verification and durations. Generated validation diagnostics are consumed
+and acknowledged rather than archived.
