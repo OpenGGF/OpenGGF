@@ -1841,6 +1841,14 @@ prevented admission at widths 640/800 because the player reached the solid
 `$4438` wall first. Native width preserves the ROM condition. This is a viewport
 extension; it does not certify wider cold routes or native pixel identity.
 
+**Widescreen pyramid residency:** the Act1 event source window now covers the
+viewport plus alignment/shimmer margin, instead of repeating its first 512px.
+The BG-high color/mask passes use the main pass's source period. Native-width
+residency stays 512px. At exploratory 800px, the ROM's unused layout cells beyond
+the pyramid's authored right edge remain visible next to the foreground wall;
+this correction does not invent an extended pyramid. Full native pixel comparison
+and wider cold-route certification remain open.
+
 **Redraw fidelity limits:** the renderer rebuilds the selected source window as
 whole native row/column redraws advance. The earlier claim of a visible Act1
 arena/seamless defect was not supported by measurement. At native camera Y

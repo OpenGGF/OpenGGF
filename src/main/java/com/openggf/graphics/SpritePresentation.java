@@ -37,6 +37,8 @@ public final class SpritePresentation {
         final List<Tile> tiles = new ArrayList<>();
         final List<Primitive> primitives = new ArrayList<>();
         final Map<Integer, PatternVersion> patternVersions = new HashMap<>();
+        int firstPatternVersion = Integer.MAX_VALUE;
+        int lastPatternVersion = Integer.MIN_VALUE;
         final int cameraX, cameraY;
         final Function<Object, Attributes> descriptorDecoder;
         Layer layer = Layer.OBJECT;
@@ -73,7 +75,11 @@ public final class SpritePresentation {
             // animation data and cannot affect this frame's presentation.
             Map<Integer, PatternVersion> referencedPatterns = new HashMap<>();
             for (Tile tile : builder.tiles) {
-                PatternVersion version = builder.patternVersions.get(tile.patternId());
+                // Most tiles reference static ROM art. Avoid boxing every static
+                // address merely to discover it has no mutable DPLC generation.
+                int id = tile.patternId();
+                if (id < builder.firstPatternVersion || id > builder.lastPatternVersion) continue;
+                PatternVersion version = builder.patternVersions.get(id);
                 if (version != null) referencedPatterns.put(tile.patternId(), version);
             }
             return new Frame(builder.tiles, builder.primitives, referencedPatterns);
@@ -92,7 +98,23 @@ public final class SpritePresentation {
 
     public static void bindPatternVersions(GraphicsManager graphics, Map<Integer, PatternVersion> versions) {
         Builder builder = graphics.spritePresentationBuilder;
-        if (builder != null) builder.patternVersions.putAll(versions);
+        if (builder != null) {
+            builder.patternVersions.putAll(versions);
+            for (int id : versions.keySet()) {
+                builder.firstPatternVersion = Math.min(builder.firstPatternVersion, id);
+                builder.lastPatternVersion = Math.max(builder.lastPatternVersion, id);
+            }
+        }
+    }
+
+    /** Bind directly into the current producer, without an intermediate bank map. */
+    public static void bindPatternVersion(GraphicsManager graphics, int id, PatternVersion version) {
+        Builder builder = graphics.spritePresentationBuilder;
+        if (builder != null) {
+            builder.patternVersions.put(id, version);
+            builder.firstPatternVersion = Math.min(builder.firstPatternVersion, id);
+            builder.lastPatternVersion = Math.max(builder.lastPatternVersion, id);
+        }
     }
 
     public static void layer(GraphicsManager graphics, Layer layer) {

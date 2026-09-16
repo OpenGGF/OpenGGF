@@ -8,6 +8,8 @@ checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-
 
 ## Tools
 
+- `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
+
 - [Maven resource profiler](../../tools/testing/profile_maven.py): sample queued ordinary/guard runs for process-tree memory and CPU admission estimates (2026-09-15 Maven resource task).
 
 - [FBZ boundary comparator](../../tools/bizhawk/compare_fbz_boundary_fixture.py) supports `--sprite-publication` to compare the complete native CPU sprite table with the following consecutive frame’s VDP table; duplicate samples and gaps are explicit. The boundary exporter supplies the read-only CPU snapshots.

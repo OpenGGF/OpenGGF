@@ -82,6 +82,21 @@ class TestObjectPlayerQuery {
     }
 
     @Test
+    void listQueriesRetainSnapshotsAndCountOnlyUniqueNonNullSidekicks() {
+        var first = player("first", 0, 0);
+        var second = player("second", 1, 0);
+        var raw = new java.util.ArrayList<PlayableEntity>(Arrays.asList(null, first, first, second));
+        var query = new ObjectPlayerQuery(() -> null, () -> raw);
+        assertEquals(List.of(first), query.playersFor(ObjectPlayerParticipationPolicy.NATIVE_P1_P2));
+        var snapshot = query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS);
+        raw.clear();
+        assertEquals(List.of(first, second), snapshot);
+        assertEquals(List.of(), query.playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS));
+        org.junit.jupiter.api.Assertions.assertThrows(UnsupportedOperationException.class,
+                () -> snapshot.add(first));
+    }
+
+    @Test
     void nearestEnginePlayerKeepsStableOrderOnDistanceTie() {
         FakePlayer main = player("main", 90, 100);
         FakePlayer firstSidekick = player("tails", 110, 100);

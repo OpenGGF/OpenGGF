@@ -71,6 +71,14 @@ that looks like a real result.
 
 ### Measurement hazards — all produce plausible output
 
+SOZ allocation profiling (2026-09-16): aggregate JFR allocation samples include
+recorder/control threads, which can dominate with `HashMap$KeySet` allocations.
+Attribute stacks before calling them gameplay churn. Measure the gameplay thread
+with `ThreadMXBean` around loop and rendering separately, excluding screenshot
+readback/encoding and CSV writes, after a fixed warmup. Match controller route,
+rewind setting, viewport and sampled state before comparing. Bytes/frame is not
+a frame-time or GC-pause improvement. `GameplayAllocationTool` preserves this probe.
+
 SOZ controller-route rewind (2026-09-16): a composite gameplay snapshot does
 not own a standalone `HeadlessTestRunner`'s external button history. Before
 replaying an input edge after restoring the snapshot, call `primeInputState`
