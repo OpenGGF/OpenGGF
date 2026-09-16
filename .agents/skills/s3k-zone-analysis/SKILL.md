@@ -21,6 +21,7 @@ registrations to distinguish implemented behavior from actual gaps.
 | Animated tiles | `Offs_AniFunc`, `AnimateTiles_*`, AniPLC lists, custom direct uploads |
 | Palette | `AnimatePalettes`/`AnPal_*`; event-driven mutations separately |
 | Objects and bosses | Zone-set pointer table, object placements, subtype and character paths |
+| Player/terrain/lifecycle hooks | Player and CPU initialization, terrain/chunk dispatch, checkpoint returns and control-word writes outside object tables |
 | Art readiness | PLC calls, direct Kosinski/KosM submissions, event gates |
 
 Use `rg` against `docs/skdisasm/sonic3k.asm`; follow actual pointers into `s3.asm`
@@ -48,7 +49,7 @@ that do not use AniPLC scripts. Do not infer a feature exists from a name alone.
 If consumers need the established 13-section format, normalize it with:
 
 ```bash
-mvn exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" \
+python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.tools.ZoneSpecNormalizerTool" \
   "-Dexec.args=docs/architecture/research/s3k-zones/<zone>-analysis.md"
 ```
 
