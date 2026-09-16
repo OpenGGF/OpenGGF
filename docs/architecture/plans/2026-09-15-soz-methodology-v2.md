@@ -2714,3 +2714,22 @@ of arbitrary traversed layer switches.
 The refreshed highlights passed full decoding: 22 chapters, 260.700 seconds,
 Act1 before Act2, now including the moving checkpoint-to-boss approach. The
 original compilation and all source captures remain in the unified task folder.
+
+### Integrated verification
+
+Source/test commit `116d542a9` and roster correction `0187f991e` were merged into
+`develop` as `7bdb0fc41`, without conflicts or upstream changes. Main-workspace
+branch and unrelated dirty/untracked files were preserved. The commit hook
+classified a redundant comment-only change to the exposed configuration enum
+as an API change; that comment edit was dropped. Public API signatures did not
+change; the configuration catalogue and user-facing docs retain the correction.
+
+The same combined command against pinned base `d2b84abb5` ran after integration
+on `7bdb0fc41`: run `20260916T122949Z-6981ad54`, 2,664 ordinary reports / 21,573 tests,
+zero failures/errors, 27 skips, 978.01 seconds. Guards: 84 reports / 668 tests,
+three failures, zero errors/skips, 177.78 seconds. All three failing identities
+and exact messages match the unchanged baseline and worktree run. All 27 skip
+identities/reasons also match the worktree run. Results were inspected and the
+entire diagnostics directory acknowledged and removed. No new or worsened
+failure was found. This documentation-only record requires no repeated engine
+run; remaining native/route-product gaps and trace deferral are unchanged.
