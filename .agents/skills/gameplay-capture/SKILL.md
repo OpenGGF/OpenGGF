@@ -14,19 +14,23 @@ check a visual change, or to reproduce a route failure with real rendering.
 It is not parity evidence and does not read traces. For rendering an existing trace
 replay use `trace-capture`; for authoring the input log use `bk2-input-authoring`.
 
+For a multi-capture work compilation or an updated reel, use
+[gameplay-highlights](../gameplay-highlights/SKILL.md) for provenance, editorial
+selection, act ordering and final video verification.
+
 ## Run
 
 Author the input first (or use a recorded `.bk2`):
 
 ```bash
-mvn exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" \
+python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.tools.InputLogAuthorTool" \
   "-Dexec.args=--inline '60 R; 1 D+R; 40 D+R; 60 -' --out target/capture/run.txt"
-mvn exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" \
+python3 tools/testing/maven_queue.py exec:java "-Dexec.mainClass=com.openggf.tools.GameplayCaptureTool" \
   "-Dexec.args=--game s3k --zone fbz --act 2 --x 0x1CF0 --y 0x76C \
     --input target/capture/run.txt --out-dir target/capture/fbz2-squeeze"
 ```
 
-`mvn exec:java` does not recompile; add `compile` after editing engine code.
+`exec:java` does not recompile; add `compile` after editing engine code.
 Use a task directory outside the repository for captures the user should keep.
 
 | Flag | Default | Meaning |

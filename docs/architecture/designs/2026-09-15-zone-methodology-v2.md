@@ -4,6 +4,17 @@ Date: 2026-09-15. Agreed direction; first application: Sandopolis Zone (SOZ).
 This document defines the method, not a certification of an implemented zone.
 The [SOZ plan](../plans/2026-09-15-soz-methodology-v2.md) applies it to both acts.
 
+## Execution skills
+
+Use [s3k-zone-bring-up](../../../.agents/skills/s3k-zone-bring-up/SKILL.md) as the
+end-to-end execution entry point for this methodology. It routes to specialist
+implementation and capture skills, maintains separate acceptance claims, and
+follows the repository delivery policy. Use
+[gameplay-highlights](../../../.agents/skills/gameplay-highlights/SKILL.md) for the
+unified media archive, source provenance, act-ordered edit and refreshed excerpts.
+The skills carry reusable procedure; this design owns the evidence model and
+task plans own scope, decisions, outcomes and remaining work.
+
 ## Origin and changes from FBZ
 
 The [FBZ design](2026-07-12-fbz-complete-zone-design.md) (`2d07c9c72`),

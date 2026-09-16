@@ -2929,3 +2929,29 @@ zero failures, errors or skips. This is focused integration verification under
 the proportionate-validation policy, not a full-suite rerun. The refreshed reel
 passes a full `ffmpeg -xerror` decode and remains 260.7 seconds, 22 chapters,
 1920x1080 at 60fps. No unrelated workspace changes were staged.
+
+
+### Reusable delivery skills (2026-09-16)
+
+The campaign method now has an execution entry point in
+[the expanded S3K bring-up skill](../../../.agents/skills/s3k-zone-bring-up/SKILL.md)
+and a separate cross-game
+[gameplay highlights skill](../../../.agents/skills/gameplay-highlights/SKILL.md).
+The methodology design remains the evidence-model owner; this task plan remains
+historical evidence, not a file to load wholesale for every future zone.
+
+Skill extraction includes player/terrain/checkpoint hooks, explicit parallax and
+animated-art inventory, early cold routes, setup provenance, moving composition
+checks, independent acceptance columns and replacement of corrected reel clips.
+It deliberately does not hardcode SOZ coordinates, viewport size, reel duration,
+chapter count, broad test costs or a mandatory delegation/approval ceremony.
+Existing capture and analysis examples use the repository Maven queue.
+
+Validation is documentation/instruction-only: all four touched skills pass the
+skill-creator validator, mirror bytes match, and 62 local reference paths resolve.
+Manual behavioral review covers a resumed whole-zone campaign, an isolated local
+fix, explicitly deferred traces, a blocked native comparison, misleading positioned
+entry, a corrected clip with shifted event times, sparse-frame footage and mixed
+viewport sources. Each stays scoped to the requested work; deferred native/visual
+acceptance remains open and the reel never substitutes for a continuous route.
+No engine behavior or executable helper changed, so engine suites are not rerun.

@@ -6,6 +6,20 @@ Zone delivery: [methodology v2](../architecture/designs/2026-09-15-zone-methodol
 retains FBZ's route slices and adds early short native comparisons and compatibility
 checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-15-soz-methodology-v2.md).
 
+## Delivery skills
+
+- [S3K zone bring-up](../../.agents/skills/s3k-zone-bring-up/SKILL.md) is the
+  end-to-end entry point: inventory, playable slices, visual/native evidence,
+  compatibility and rewind, current acceptance status, media and integration.
+- [Gameplay capture](../../.agents/skills/gameplay-capture/SKILL.md) records an
+  individual ordinary gameplay scenario.
+- [Gameplay highlights](../../.agents/skills/gameplay-highlights/SKILL.md) maintains
+  the unified source archive and curates a reproducible, act-ordered moving reel.
+  It also replaces outdated excerpts after follow-up fixes.
+
+These skills apply the methodology and current repository policy; plans retain
+per-task decisions and evidence. Highlights do not certify uninterrupted routes.
+
 ## Tools
 
 - `GameplayAllocationTool`: ordinary BK2-driven loop/render bytes per frame, excluding PNG/readback and CSV allocation. Use `--rom <absolute-path> --input <bk2> --zone <numeric-id> --act <one-based> --out-dir target/alloc`; optional `--frames 6000 --warmup 600 --width 400 --main sonic --sidekick tails --rewind true --jfr true`. `--sidekick none` selects solo play; the console reports the live roster count. Loop allocation includes input-row decoding. Compare route state before interpreting allocation deltas; JFR includes other threads, whereas reported counters measure the gameplay thread. Keep raw diagnostics temporary.
