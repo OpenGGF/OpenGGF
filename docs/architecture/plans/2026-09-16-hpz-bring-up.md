@@ -6,6 +6,17 @@ execution base develop `70aa0a0b7`. Applies
 Hidden Palace act (`$1601`). The Super Emerald sanctuary (`$1701`) was delivered
 earlier and is in scope only where the two acts share owners.
 
+## Goal and delivery rule
+
+Goal (user, 2026-09-16): finish HPZ. Every feature or fix gets a short demo video
+with at least half a second (30 frames) of lead-in and lead-out around the moment it
+shows. Demos are `GameplayCaptureTool` output kept outside the repository in
+`~/Videos/OGGF/hpz-bring-up/` (raw captures `raw-*`, clips numbered by slice, input
+scripts in `inputs/`, clip helpers `make_clip.sh` and `side_by_side.sh`). A demo is
+not parity evidence. Where a before/after is shown, the "before" build disables only
+the demonstrated registration in an uncommitted temporary edit that is reverted and
+recompiled immediately (`git status` checked clean).
+
 ## Objective and selection
 
 HPZ was ranked the lowest-effort remaining 0.7 campaign zone (score 5/10) in a
@@ -120,3 +131,25 @@ sets `Events_fg_4` at `sonic3k.asm:132337`; music returns to `mus_LRZ2`
 roughly `131264-133503`; decompose it into fight, ship/emerald theft and collapse
 children before implementation. Engine subtype `$28` still falls back to
 `CutsceneKnucklesAiz2Instance`.
+
+## Demo captures
+
+| Clip | Shows | Setup | Moment |
+| --- | --- | --- | --- |
+| `01-hpz-playable-act-loads.mp4` | `$1601` loads the playable act (slice 1) | Cold `--zone hpz --act 2`, frames 0-150 | Whole clip; there is no pre-load lead-in |
+| `02a-hpz-aniplc-teleporter-tiles-before-after.mp4` | `AniPLC_HPZ`: teleporter tube spirals instead of placeholder letter tiles | Teleport `$B40,$3C0`, idle, frames 100-280 | Continuous |
+| `02b-hpz-anpal-wall-light-glow-before-after.mp4` | `AnPal_HPZ` wall-light glow | Teleport `$E40,$340`, idle, frames 100-280 | Continuous |
+| `03-hpz-palette-control-camera-460.mp4` | `Obj_HPZPaletteControl` switches `Pal_HPZIntro` → `Pal_HPZ` (top gems pink → purple) | Cold start, `inputs/run-right-jump.txt`, frames 585-660 | Camera re-crosses `$460` at frame 621 |
+| `04-hpz-knuckles-background-patch-before-after.mp4` | `HPZ_BackgroundInit` Knuckles row patch removes the Master Emerald backdrop | `--main knuckles`, same input, frames 385-660 | Backdrop enters at ~423 |
+
+Not demonstrable at width 320: the `$AA0` camera limits (Knuckles right, Sonic/Tails
+upper-route left). On the reachable routes a wall stops the player before the camera
+reaches `$AA0`, so captures with and without the limits were identical
+(`raw-04-knuckles-run*`, `raw-05-upper-left-*`). They remain covered by
+`TestS3kHpzActEventsHeadless`. The screen shake and `Events_fg_4` collapse have no
+production trigger until the Knuckles fight (slice 5) lands.
+
+Located with `LevelTileUsageLocatorTool`: `AniPLC_HPZ` tiles `$2D0-$2DB` are placed only at
+X `$B00-$B7F`, Y `$380-$47F` and `$880` (the teleporters); line-4 colours 1-2 at X
+`$D00-$177F`, Y `$300-$47F`. Neither is visible from the level start, which is why the
+first cold-load comparison showed no difference.
