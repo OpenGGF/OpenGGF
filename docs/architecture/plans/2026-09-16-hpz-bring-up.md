@@ -176,3 +176,26 @@ stand-in, not a port; CNZ keeps it until that route is revisited.
 
 Evidence: `TestS3kHpzTeleporterHeadless` (new) plus `TestHpzSanctuaryObjects`,
 `TestS3kHpzSanctuaryHeadless`, `TestS3kHpzGraphRewind`: 32 tests, 0 failures, 0 skips.
+
+## Remaining acceptance work (2026-09-17)
+
+User direction: tackle every open item, following methodology v2 as applied in the FBZ and
+SOZ campaigns. Ordered so shared evidence precedes consumers; each row carries its own
+evidence columns in the act matrix (implemented / reachable / rewind / native / visual).
+
+| # | Work | Evidence target |
+| --- | --- | --- |
+| 1 | Knuckles fight, emerald theft, collapse, altar teleporter ending to `$A00` (lane `feature/ai-hpz-knuckles-fight`) | Focused ROM-derived tests, rewind at fight/ending spots, demo clips, independent boundary review |
+| 2 | Cold controller routes from `$1601` entry: Sonic + Tails to `$A00`, Sonic solo, Tails, Knuckles to `$A01`; inputs preserved as authored logs, first blocker recorded | Route tests with actual resolved roster/width/donor; full uncut capture per route |
+| 3 | Question-led native probes with the shared BizHawk capture host: `$EC0` background redraw visibility; `$1601` altar Master/Super Emerald presentation; teleporter beam/light cadence; palette-control switch | Declared question, ROM identity, entry recipe, fields and interval; engine vs native comparison recorded |
+| 4 | Port `HPZ_BackgroundEvent`'s redraw machine only if probe 3 shows a visible difference; otherwise record the rejected change with evidence (SOZ precedent) | Native vs engine frames around `$EC0` |
+| 5 | Verify `$1601` altar emerald object branches against the ROM and native capture | Focused tests + native frame |
+| 6 | Remaining rewind spots: teleporter settle and beam deletion, fight/ending states, `$A00`/`$A01` load timeline isolation | Restore equality + forward replay |
+| 7 | Breadth gaps: Knuckles exit and palette control at every width/donor; upper-route left limit wide rows; team shapes through the fight and exit | Matrix rows with case counts |
+| 8 | Strict trace: `TestS3kSonicTailsHpz2SegmentTraceReplay` and the Knuckles `hpz22` segment; record frontier, fix HPZ-owned divergences from ROM evidence; LRZ3-owned prefix recorded as a dependency | Trace frontier log entry with command/commit/first error |
+| 9 | Title card and sanctuary regression: assert the Hidden Palace card; add `$1701` sanctuary matrix rows for the AnPal/AniPLC change | Tests + matrix |
+| 10 | Media: act-ordered highlights reel from verified captures, archive kept separate | `gameplay-highlights` skill |
+| 11 | Delivery: change-based validation against `70aa0a0b7`, guards, docs/changelog reconciliation, integration to develop, push, worktree cleanup | Recorded commands and counts |
+
+Out of HPZ scope and recorded as dependencies: LRZ3 → `$1601` incoming transition (needs LRZ
+events); SSZ presentation after the exits (SSZ bring-up); replacing the CNZ beam stand-in.
