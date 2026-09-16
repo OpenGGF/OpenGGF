@@ -48,7 +48,8 @@ class TestHpzSanctuaryObjects {
         assertTrue(pedestal(0, progression, runtime).isDestroyed());
         assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY,
                 pedestal(1, progression, runtime).display());
-        assertFalse(pedestal(1, progression, runtime).isSelectable());
+        assertTrue(pedestal(1, progression, runtime).isSelectable(),
+                "loc_907A8 sets the $38 selection bit for state 1 as well as state 2");
         assertEquals(HPZSuperEmeraldObjectInstance.Display.GRAY,
                 pedestal(2, progression, runtime).display());
         assertTrue(pedestal(2, progression, runtime).isSelectable());
