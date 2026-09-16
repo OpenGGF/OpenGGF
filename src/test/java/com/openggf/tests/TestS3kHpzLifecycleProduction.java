@@ -13,7 +13,6 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -134,9 +133,11 @@ class TestS3kHpzLifecycleProduction {
         }
     }
 
-    @Test
-    void knucklesUpperTeleporterStartsSkySanctuaryActTwo() {
-        var fixture = boot("knuckles", 320, "off", 0xAF0, 0x400);
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {320, 400, 512, 640, 800})
+    void knucklesUpperTeleporterStartsSkySanctuaryActTwo(int width) {
+        // Knuckles is supported only without donation (LaunchProfile), so width is his breadth axis.
+        var fixture = boot("knuckles", width, "off", 0xAF0, 0x400);
         var manager = GameServices.level().getObjectManager();
         var loop = new GameLoop(new InputHandler());
         loop.setGameplayMode(fixture.gameplayMode());

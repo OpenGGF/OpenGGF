@@ -587,7 +587,7 @@ public class Sonic3kTitleCardManager
         int actArtAddr = (actIndex == 0)
                 ? Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM1_ADDR
                 : Sonic3kConstants.ART_KOSM_TITLE_CARD_NUM2_ADDR;
-        int artIndex = (zoneIndex == 22) ? 13 : zoneIndex;
+        int artIndex = Sonic3kTitleCardMappings.zoneArtIndex(zoneIndex, actIndex);
         try {
             Rom rom = GameServices.rom().getRom();
             S3kKosModuleQueue queue =
@@ -876,8 +876,8 @@ public class Sonic3kTitleCardManager
         }
 
         // Set up elements
-        actNumberVisible = !Sonic3kTitleCardMappings.isSingleActZone(zoneIndex);
-        int zoneFrame = Sonic3kTitleCardMappings.getZoneFrame(zoneIndex);
+        actNumberVisible = !Sonic3kTitleCardMappings.isSingleActZone(zoneIndex, actIndex);
+        int zoneFrame = Sonic3kTitleCardMappings.getZoneFrame(zoneIndex, actIndex);
 
         elemFrame[ELEM_BANNER] = Sonic3kTitleCardMappings.FRAME_BANNER;
         elemFrame[ELEM_ZONE_NAME] = zoneFrame;
@@ -1524,7 +1524,7 @@ public class Sonic3kTitleCardManager
 
             // 4. Load zone-specific art → VRAM $54D (index $4D)
             // Zone 22 (HPZ) maps to art array index 13
-            int artIndex = (zoneIndex == 22) ? 13 : zoneIndex;
+            int artIndex = Sonic3kTitleCardMappings.zoneArtIndex(zoneIndex, actIndex);
             if (artIndex >= 0 && artIndex < Sonic3kConstants.TITLE_CARD_ZONE_ART_ADDRS.length) {
                 queueKosmArt(rom, Sonic3kConstants.TITLE_CARD_ZONE_ART_ADDRS[artIndex],
                         Sonic3kConstants.VRAM_TITLE_CARD_ZONE_ART - VRAM_BASE);

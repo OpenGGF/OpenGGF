@@ -22,15 +22,15 @@ S1 Sonic+Sonic duplicate, S2 Sonic+Tails, Sonic+Tails+Knuckles at 800.
 
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |
 | --- | --- | --- | --- | --- | --- | --- |
-| ENTRY: `$1601` resources, bounds, object set | Registry/sprite/screen-event tables, LevelSizes `$1880`×`$B20` | native | `TestSonic3kLevelLoading#hiddenPalaceActLoadsRom1601BoundsAndObjectSet`, `TestSonic3kNonlinearHpzProfile` | implemented | pass (`e3ae26530`) | Title-card presentation not asserted |
+| ENTRY: `$1601` resources, bounds, object set, title card | Registry/sprite/screen-event tables, LevelSizes `$1880`×`$B20`; `Obj_TitleCardName`/`Obj_TitleCardAct` overrides | native | `TestSonic3kLevelLoading#hiddenPalaceActLoadsRom1601BoundsAndObjectSet`, `TestSonic3kNonlinearHpzProfile`, `TestSonic3kTitleCardSublevelMappings` | implemented | pass | Title card rendering not captured |
 | ENTRY: character start and ScreenInit limits | Knuckles start `$10,$2EC`, Sonic/Tails `$30,$AEC`; `HPZ_ScreenInit` | 30 width × character/donor rows + 4 team rows | `TestS3kHpzCompatibilityMatrix#coldEntryAppliesCharacterStartLimitsAndPaletteControl` | implemented | pass, 34 cases (uncommitted run on `4a93aebf0` + test) | Sonic/Tails upper-route `$AA0` left limit only covered at 320 (`TestS3kHpzActEventsHeadless`) |
-| EVENT: palette control at camera X `$460` | `Obj_HPZPaletteControl` | native | `TestS3kHpzActEventsHeadless#paletteControlSwitchesToPalHpzWhenTheCameraCrosses460` | implemented | pass (`362771221`) | Width sensitivity: camera X is the trigger; wide rows not run |
+| EVENT: palette control at camera X `$460`; Sonic/Tails upper-route `$AA0` left limit | `Obj_HPZPaletteControl`; `HPZ_ScreenInit` | native crossing; 34 width/character/donor/team rows from the upper corridor | `TestS3kHpzActEventsHeadless#paletteControlSwitchesToPalHpzWhenTheCameraCrosses460`, `TestS3kHpzCompatibilityMatrix#upperCorridorEntrySelectsPalHpzAndCharacterCameraLimit` | implemented | pass, 1 + 34 | Native switch timing pending probe |
 | EVENT: `Events_fg_4` collapse chunks | `HPZ_ScreenEvent` row 7 cols `$30/$31` = `$61` | native, synthetic trigger | `TestS3kHpzActEventsHeadless#foregroundCollapseWritesChunk61IntoRowSeven` | implemented | pass | Production trigger belongs to the Knuckles fight lane |
 | PRESENT: AnPal_HPZ / AniPLC_HPZ | ROM tables entries 45/47 | native | `TestHpzZoneRuntimeStatePaletteCycle`, `TestS3kHpzPatternAnimation`, `TestS3kHpzActEventsHeadless#anPalHpz...` | implemented | pass | Native pixel comparison open |
 | PRESENT: `$EC0` background seam redraw | `HPZ_BackgroundEvent` state machine | native | Visual only (`raw-08-bg-seam-ec0`) | partial (not ported; parallax origin switch only) | engine capture showed no tear | Native reference needed |
 | OBJECT: teleporter transport | `Obj_SSZHPZTeleporter` + `Obj_TeleporterBeam` | 34 rows | `TestS3kHpzTeleporterHeadless`, `TestS3kHpzCompatibilityMatrix#lowerTeleporterTransportReplaysAtChargeAndRise` | implemented | pass, 1 + 34 cases | Upper pad subtype 0 intangibility during transport not asserted directly |
-| REWIND: entry, teleporter charge, rise | Registry restore equals capture; forward replay equals original | 34 rows × 3 spots | `TestS3kHpzCompatibilityMatrix` | implemented | pass | Settle boundary and beam contraction/deletion spot not yet replayed |
-| ROUTE (Knuckles): upper teleporter → `$A01` | `loc_45B94` | native 320 | `TestS3kHpzLifecycleProduction#knucklesUpperTeleporterStartsSkySanctuaryActTwo`; demo `06-hpz-knuckles-teleporter-exit-to-ssz2.mp4` | implemented | pass | Width/donor breadth for the exit and a cold route from the Knuckles start open |
+| REWIND: entry, upper-corridor entry, teleporter charge, rise, settle release, beam deletion | Registry restore equals capture; forward replay equals original | 34 rows × 6 spots | `TestS3kHpzCompatibilityMatrix` | implemented | pass | Fight/ending and load-boundary spots pending |
+| ROUTE (Knuckles): upper teleporter → `$A01` | `loc_45B94` | 5 widths (Knuckles has no donor support per `LaunchProfile`) | `TestS3kHpzLifecycleProduction#knucklesUpperTeleporterStartsSkySanctuaryActTwo`; demo `06-hpz-knuckles-teleporter-exit-to-ssz2.mp4` | implemented | pass, 5 | Cold route from the Knuckles start open |
 | BOSS: Knuckles fight, emerald theft, collapse | `CutsceneKnux_HPZ` | — | fight lane `feature/ai-hpz-knuckles-fight` | missing (in progress) | unrun | — |
 | ROUTE (Sonic/Tails): altar teleporter → `$A00` | `loc_45AD6`, `loc_45BF4` | — | fight lane | missing (in progress) | unrun | — |
 | OBJECT: placed Master/Super Emeralds in `$1601` | `Obj_HPZMasterEmerald`, `Obj_HPZSuperEmerald` | native | Visual only (`raw-09-altar-1601`) | partial (sanctuary implementation reused) | unrun | Verify `$1601` branches against ROM |
@@ -48,3 +48,7 @@ that assertion (proves the teleporter rows execute to the end); reverted before 
 `TestS3kHpzLifecycleProduction` (`315a483db` + test): 31 tests, 0 failures, 0 skips. The
 first run failed only the five Knuckles post rows (checkpoint index -1): his `$AA0` camera
 boundary keeps him away from the post, which the rows now assert.
+
+Breadth follow-up: `TestS3kHpzCompatibilityMatrix` 102 tests and `TestS3kHpzLifecycleProduction`
+35 tests, 0 failures, 0 skips. Title-card set (`-Dtest=TestSonic3kTitleCardSublevelMappings,*TitleCard*`):
+19 classes, 81 tests, 0 failures, 0 skips.

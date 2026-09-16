@@ -140,25 +140,68 @@ class TestS3kHpzCompatibilityMatrix {
         var player = fixture.sprite();
         boolean charged = false;
         boolean rose = false;
-        for (int frame = 0; frame < 700 && !(charged && rose && !player.isObjectControlled()); frame++) {
+        boolean released = false;
+        boolean beamDeleted = false;
+        for (int frame = 0; frame < 700 && !(released && beamDeleted); frame++) {
             var before = fixture.gameplayMode().getRewindRegistry().capture();
             boolean transportBefore = hpz().teleporterTransportActive();
+            boolean controlledBefore = player.isObjectControlled();
+            boolean beamBefore = beamPresent();
             int yBefore = player.getCentreY() & 0xFFFF;
             fixture.stepFrame(false, false, false, false, false);
-            if (!charged && !transportBefore && hpz().teleporterTransportActive()) {
+            if (rose && !beamDeleted && beamBefore && !beamPresent()) {
+                replay(fixture, before, "Obj_TeleporterBeam contraction delete");
+                beamDeleted = true;
+                if (controlledBefore && !player.isObjectControlled()) {
+                    released = true;
+                }
+            } else if (!charged && !transportBefore && hpz().teleporterTransportActive()) {
                 replay(fixture, before, "beam progress 8 roll");
                 charged = true;
             } else if (charged && !rose && yBefore - (player.getCentreY() & 0xFFFF) == 0x10) {
                 replay(fixture, before, "loc_457BE rise step");
                 rose = true;
+            } else if (rose && !released && controlledBefore && !player.isObjectControlled()) {
+                replay(fixture, before, "loc_4581C settle release");
+                released = true;
             }
         }
+        assertTrue(released, "the settle must release the player");
+        assertTrue(beamDeleted, "the contracting beam must delete itself");
         assertTrue(charged, "the $4A pad must charge");
         assertTrue(rose, "the transport must lift the player");
         assertFalse(player.isObjectControlled(), "the settle must release the player");
         assertTrue((player.getCentreY() & 0xFFFF) < 0x480, "player reaches the upper floor");
         assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
                 .noneMatch(TeleporterBeamObjectInstance.class::isInstance), "beam contracts and deletes");
+    }
+
+    @ParameterizedTest
+    @MethodSource("scenarios")
+    void upperCorridorEntrySelectsPalHpzAndCharacterCameraLimit(Scenario row) {
+        var fixture = boot(row, 0xCF0, 0x3C0);
+        for (int i = 0; i < 90; i++) {
+            fixture.stepFrame(false, false, false, false, false);
+        }
+        var control = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.HPZPaletteControlObjectInstance.class::isInstance)
+                .map(com.openggf.game.sonic3k.objects.HPZPaletteControlObjectInstance.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(4, control.selectionForTestPublic(), "camera X >= $460 selects Pal_HPZ at width " + row.width());
+        if (row.main().equals("knuckles")) {
+            assertEquals(0xAA0, GameServices.camera().getMaxX() & 0xFFFF);
+        } else {
+            // HPZ_ScreenInit: Player_1 y < $480 on a Sonic/Tails load sets Camera_min_X_pos = $AA0.
+            assertEquals(0xAA0, GameServices.camera().getMinX() & 0xFFFF);
+        }
+        var before = fixture.gameplayMode().getRewindRegistry().capture();
+        fixture.stepFrame(false, false, false, false, false);
+        replay(fixture, before, "upper corridor entry");
+    }
+
+    private static boolean beamPresent() {
+        return GameServices.level().getObjectManager().getActiveObjects().stream()
+                .anyMatch(TeleporterBeamObjectInstance.class::isInstance);
     }
 
     private static void replay(HeadlessTestFixture fixture, CompositeSnapshot before, String label) {
