@@ -118,16 +118,21 @@ repeatable onset defect within the scenarios above.
 `PlayableSpriteMovement.moveSpriteTestGravity` / `doLevelBoundary`,
 `CollisionSystem.resolveGroundWallCollision`.
 
-**Symptom.** With `Reverse_gravity_flag` forced set, a player now integrates position upward
-(`MoveSprite_TestGravity`, sonic3k.asm:36068) and dies at the top of the level
-(`loc_11722`, :23202) — but the terrain sensors still treat the surface below as the floor,
-because `sub_11FD6`/`sub_11FEE` (:24127-24149), `Call_Player_AnglePos` (:22329) and
-`ChooseChkFloorEdge` (:24156) are not ported. An inverted player therefore rises into the
-ceiling without landing on it and is not pushed out of the floor correctly. Nothing in the
-shipped game reaches this state today: no object writes the flag yet, so the whole branch is
-unreachable outside tests and the upright game is unaffected.
+**Symptom.** With `Reverse_gravity_flag` forced set, a player integrates position upward
+(`MoveSprite_TestGravity`, sonic3k.asm:36068), dies at the top of the level (`loc_11722`, :23202),
+and the airborne collision wrappers `sub_11FD6`/`sub_11FEE` (:24127-24149) now select the opposite
+sensor array and mirror the angle they return. What is still missing is the grounded path —
+`Call_Player_AnglePos` (:22329) and `ChooseChkFloorEdge` (:24156) — and every row of groups B, C,
+E, F, G, H and I: player actions, solid objects, springs, spikes, monitors, rings and companions.
+Nothing in the shipped game reaches this state today: no object writes the flag yet, so the whole
+branch is unreachable outside tests and the upright game is unaffected.
 
-**Suspected cause.** Not a defect — step 2a-1 of a deliberately sliced port. 92 of the 116
+**Verification gap.** The probe swap is asserted at its selector, not behaviourally: there is no
+test of an inverted player landing on real ceiling terrain, because no fixture with a known flat
+ceiling exists. Treat "the wrappers swap" as established and "an inverted player lands correctly"
+as unverified.
+
+**Suspected cause.** Not a defect — steps 2a-1 and part of 2a-2 of a deliberately sliced port. 90 of the 116
 `Reverse_gravity_flag` references in the disassembly are still unimplemented; the row-by-row
 inventory is
 [s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).

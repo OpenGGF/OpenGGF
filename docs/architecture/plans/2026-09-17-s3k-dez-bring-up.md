@@ -476,6 +476,18 @@ Written together with the [LRZ](2026-09-17-lrz-bring-up.md), [SSZ](2026-09-17-ss
   `Saved2_status_secondary`; stage 0 restores `Act3_ring_count` and `Act3_timer` when non-zero and
   flags the HUD. Whichever of LRZ and DEZ lands first builds it as a game-state owner with a rewind
   adapter; the other reuses it. In this plan that is slice 8 (save) and slice 9 (restore).
+- **The ring sentinel is going away (LRZ `3418eba6e`).** Shared `Sonic3kRingPlacement` currently
+  spawns a leading `(0,0)` sentinel as a real ring in every S3K act; the LRZ branch drops it and the
+  fix arrives at merge time. Do not duplicate it here. Any DEZ ring-count assertion targets the ROM
+  counts (278 / 198 / 0); a number inflated by the sentinel is marked
+  "pending LRZ `3418eba6e`" rather than baked in as expected.
+- **The act-aware scroll provider landed in LRZ `bbd156d37`**, not as a separate shared commit:
+  `$1600`/`$1700` take the default handler, `$1601`/`$1701` keep `SwScrlHpz`, `getHandler` becomes
+  two-argument and `currentActFor()` supplies the live-level fallback. Slice 9 takes it with
+  `git checkout bbd156d37 -- src/main/java/com/openggf/game/sonic3k/scroll/Sonic3kScrollHandlerProvider.java`,
+  then removes the three LRZ-only lines (the `lrzHandler` field, its `new SwScrlLrz()` and the
+  `ZONE_LRZ` case) and re-adds slice 1's DEZ `$0B` case. This supersedes the "first campaign to land
+  makes the provider act-aware" note above: LRZ landed it.
 - **Clock-seeded RNG/aim** (`V_int_run_count`: Mecha Sonic, DEZ turrets as in DDZ) needs a declared
   seed for movie-route matching until the full cold chain supplies it; label such evidence seeded.
 - **Knuckles trace testing is out of scope (user decision 2026-09-17).** One Knuckles replay class
@@ -530,14 +542,20 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 ## Status
 
 Slices 0 and 1 delivered 2026-09-17 on base `035e48a58` (`0d9a4f3ea`, `4e7655bf9`); see the
-evidence log. **Slice 2 is part-delivered**: step 2a-1 (position integration), the death plane and
-the flag's level-load lifecycle. Steps 2a-2, 2a-3, 2b and 2c remain, and 2a-2 is the next
-dependency for everything else in the slice — until the collision probes swap, an inverted player
-integrates upward into terrain the sensors still read as floor below.
+evidence log. **Slice 2 is part-delivered**: step 2a-1 (position integration), the death plane, the flag's
+level-load lifecycle, and the first half of 2a-2 (the `sub_11FD6`/`sub_11FEE` probe selector and
+angle mirror). The rest of 2a-2, and all of 2a-3, 2b and 2c, remain.
+
+The blocker for the rest is not ROM reading — it is that **no fixture exists in which an inverted
+player can be shown landing on real ceiling terrain**. Three candidates were tried and rejected
+with evidence (see the slice 2 part 2 evidence entry). Building a controlled flat-floor/flat-ceiling
+fixture is the prerequisite for everything that follows, because without it the push-out sites,
+landing tails, player actions, objects and companions all have expectations that cannot be
+asserted against anything real.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slice 1: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Slice 2 part 1: inverted position integration (`MoveSprite_TestGravity`/`2` and `CalcRoomInFront`), the death plane at the top of the level, the level-load clear and the seamless act change's preserve. Reverse gravity now stands at 14 of 116 ROM references covered, 6 partial, 92 missing. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art |
+| Implemented | Slice 1: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Slice 2 part 1: inverted position integration (`MoveSprite_TestGravity`/`2` and `CalcRoomInFront`), the death plane at the top of the level, the level-load clear and the seamless act change's preserve. Slice 2 part 2: the `sub_11FD6`/`sub_11FEE` probe swap and its angle mirror. Reverse gravity now stands at 14 of 116 ROM references covered, 8 partial, 90 missing — and the two wrapper rows are partial because the selector and mirror are asserted while an inverted landing on real ceiling terrain is not. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art |
 | Cold-reachable | Not started |
 | Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted. Capture/restore across an *inverted physics state* is not verified and cannot be until step 2a-2 |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` (slice 0), all six classes red from frame 0 |
@@ -844,4 +862,68 @@ in `resetSession()` (line 252), not in `resetForLevel()` (line 275)" and propose
 there "after checking its two callers … If the seamless `$B00` → `$B01` path goes through the
 second, the clear must not run there." It does go through the second, so the clear alone would have
 been wrong: the executor needed the matching save/restore. Both halves landed together.
+
+
+### 2026-09-17 — Slice 2, part 2: the probe swap, and the trace baseline for part 1
+
+Base for the trace comparison `f60b3f3e2`; part 1 is `5aa6a8673`.
+
+**Trace non-regression for part 1 — matched, both sides measured in this worktree with
+`clean test` and `-Ptrace-replay`.** Not a full profile: four classes chosen to cover all three
+games' player physics. Baseline was measured by detaching this worktree to `f60b3f3e2`, not by
+reasoning from HEAD.
+
+| Class | `f60b3f3e2` | `5aa6a8673` |
+| --- | --- | --- |
+| `TestS1Ghz1TraceReplay` | 1/1 green | 1/1 green |
+| `TestS1Mz1TraceReplay` | 1/1 green | 1/1 green |
+| `TestS2Ehz1TraceReplay` | red, 16388 errors, first error frame 6 `dynamic_art.outstanding_transfer_ids` (expected=[2], actual=[]) | red, 16388 errors, frame 6, same field and values |
+| `TestS3kAizTraceReplay` | 3/16 red, 59 errors, first error frame 5497 `camera_x` expected `0x0010` actual `0x0012` | 3/16 red, 59 errors, frame 5497, same values |
+
+Identical on both sides, failure for failure. The two reds are pre-existing and
+**baseline-attributed**; part 1 moved nothing. This is a four-class subset, not "the S1, S2 and S3K
+trace profiles", and it is not evidence that any other trace class is unaffected.
+
+**What part 2 implements.** `sub_11FD6` / `sub_11FEE` as a production selector
+(`CollisionSystem.floorProbeSensors` / `ceilingProbeSensors`) plus the angle mirror
+(`surfaceAngle`), wired into all six probe sites of `resolveAirCollision` and into the two places
+that write `angle(a0)` (`landOnFloor`, `doCeilingCollision`).
+
+One ROM subtlety worth keeping: **only `d3` is mirrored, not the shared angle registers.**
+`FindFloor` writes the raw angle to `Primary_Angle`/`Secondary_Angle` before the wrapper's
+`addi.b #$40 / neg.b / subi.b #$40` runs, and it is those raw bytes that the character control tail
+copies into `next_tilt`/`tilt`. So `publishAirFloorAngleRegisters` and `applyPairedAngleWrites`
+keep receiving unmirrored results and only `angle(a0)` gets the mirrored value.
+
+**RED → GREEN.** `TestS3kReverseGravityProbeSelection` (2 tests, seam) and the angle-mirror test in
+`TestS3kReverseGravityTerrain`. Twelve reverse-gravity tests green, `Skipped: 0`.
+
+**What part 2 does NOT establish, and why — read this before trusting the table.** There is no test
+of an inverted player landing on a real ceiling. Three fixtures were tried and each failed for a
+reason worth recording rather than working around:
+
+1. **The Death Egg act 1 spawn is not standing on terrain.** Instrumenting the probes showed the
+   ground sensors returning `null` on every frame while the player was nonetheless grounded: the
+   spawn rests on a solid *object*. Object contact is group H / step 2b and is not gravity-swapped
+   yet, so an upright "landing" there proves nothing about `sub_11FD6`.
+2. **The Angel Island act 1 spawn is held by the intro cutscene** (`object_control` set, position
+   frozen for every frame). With `withSkippedZoneIntro()` the player moves, but there the sensors'
+   own stride reports no floor where `ObjectTerrainUtils.checkFloorDist` reports one at distance 0.
+   That disagreement is about engine sensor semantics, not about reverse gravity, and chasing it
+   here would have meant tuning a fixture until it passed.
+3. An earlier version of the reverse-gravity test **could not have disagreed**: with 2a-1 landed,
+   an inverted player simply rises away from the floor below, so "the floor did not catch it"
+   passes whether or not the probes swap. It was replaced with a descending case (negative `y_vel`
+   under the flag) before any implementation, and that version did fail for the right reason
+   (`y_vel = -912`, exactly `-$400 + 2 × $38`: gravity still accumulating, nothing stopping it).
+
+A further instrumentation mistake, since it will bite the next agent: `TerrainCollisionManager.getSensorResult`
+returns a **shared pooled buffer**. Probing the ground sensors and then the ceiling sensors and
+printing both shows the ceiling results twice. Clone the array before the next call.
+
+**What slice 2 still needs.** A controlled flat-ceiling fixture is the prerequisite for the rest of
+2a-2: without it, the five push-out sites, the landing/`ground_vel` tails and everything in 2a-3,
+2b and 2c have no way to be asserted against real terrain. Building that fixture — a small synthetic
+collision layout, or a verified coordinate pair (flat floor, flat ceiling above it) in one act — is
+the first task of the next session, not more per-zone archaeology.
 

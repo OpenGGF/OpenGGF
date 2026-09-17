@@ -77,8 +77,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 19696 | `loc_F638` | `sub_F61C` (CalcRoomInFront): negates the projected `y_vel` before the wall probe | `CollisionSystem.resolveGroundWallCollision` predicted Y | covered |
 | 22330 | `Call_Player_AnglePos` | `Call_Player_AnglePos`: mirrors `angle` (`+$40, neg, -$40`) around `Player_AnglePos`, which then uses ceiling sensors | — | missing |
 | 23191 | `Player_Boundary_CheckBottom` | `Player_Boundary_CheckBottom`: death plane becomes the **top** (`loc_11722`) | `PlayableSpriteMovement.doLevelBoundary` | covered |
-| 24128 | `sub_11FD6` | `sub_11FD6`: floor check becomes `Sonic_CheckCeiling` with mirrored angle (10 callers) | — | missing |
-| 24142 | `sub_11FEE` | `sub_11FEE`: ceiling check becomes `Sonic_CheckFloor` with mirrored angle (9 callers) | — | missing |
+| 24128 | `sub_11FD6` | `sub_11FD6`: floor check becomes `Sonic_CheckCeiling` with mirrored angle (10 callers) | `CollisionSystem.floorProbeSensors` + `surfaceAngle` | partial |
+| 24142 | `sub_11FEE` | `sub_11FEE`: ceiling check becomes `Sonic_CheckFloor` with mirrored angle (9 callers) | `CollisionSystem.ceilingProbeSensors` + `surfaceAngle` | partial |
 | 24156 | `ChooseChkFloorEdge` | `ChooseChkFloorEdge`: selects `ChkFloorEdge_ReverseGravity` (7 callers: balance, glide, climb) | `GlideWallGrabTerrain.align` only | partial |
 | 36069 | `MoveSprite_TestGravity` | `MoveSprite_TestGravity`: `y_vel += $38` as usual, **position** integrates `-y_vel` (9 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
 | 36089 | `MoveSprite_TestGravity2` | `MoveSprite_TestGravity2`: position integrates `-y_vel` (16 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
@@ -251,7 +251,7 @@ is the RAM wipe described above).
 
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| A. Shared integration and sensor wrappers | 8 | 4 | 1 | 3 | 0 |
+| A. Shared integration and sensor wrappers | 8 | 4 | 3 | 1 | 0 |
 | B. Sonic (and Sonic/Knuckles shared) routines | 20 | 0 | 1 | 18 | 1 |
 | C. Tails routines | 21 | 1 | 1 | 18 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
@@ -262,12 +262,21 @@ is the RAM wipe described above).
 | I. Monitors, springs, spikes | 6 | 2 | 0 | 4 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **14** | **6** | **92** | **4** |
+| **Total** | **116** | **14** | **8** | **90** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
 
-Updated 2026-09-17 for slice 2 step 2a-1 and the flag's lifecycle. The five rows that moved to
+Updated 2026-09-17 for slice 2 step 2a-1, the flag's lifecycle, and the first half of 2a-2.
+
+`sub_11FD6` and `sub_11FEE` are **partial, not covered**: the wrapper selects the opposite sensor
+array and mirrors the angle it returns, and both are asserted
+(`TestS3kReverseGravityProbeSelection`, `TestS3kReverseGravityTerrain`). What is not asserted is an
+inverted player actually landing on a real ceiling. The five push-out sites those wrappers feed
+(`loc_11F6E` :24081, `Player_HitCeiling` :24178, `loc_120C2` :24246, `loc_1211A` :24284,
+`loc_12148` :24308) stay **missing** for that reason: each was worked through by hand and the
+ROM's `neg.w d1` appears to fall out of the engine encoding the push-out sign in the probe's
+`Direction`, but an argument is not a measurement and none of them has been run. The five rows that moved to
 covered (19696, 23191, 28426, 36069, 36089) are each exercised with the flag forced set, from a
 real S3K level, by `TestS3kReverseGravityIntegration` and `TestS3kReverseGravityBoundary`. The
 nine rows that were already marked covered before this slice are **not** in that position: they

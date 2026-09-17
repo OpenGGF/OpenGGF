@@ -951,7 +951,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         switch (quadrant) {
             case 0x00 -> {
                 doWallCheckBoth(sprite);
-                SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                SensorResult[] groundResult = floorProbes(sprite);
                 publishAirFloorAngleRegisters(groundResult);
                 doTerrainCollisionAir(sprite, groundResult, landingHandler, landingProbeHandler);
             }
@@ -962,7 +962,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                         return;
                     }
                 }
-                SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                SensorResult[] ceilingResult = ceilingProbes(sprite);
                 applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
@@ -970,7 +970,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                     // rising unless WindTunnel_flag_P2 forces the floor check
                     // (sonic3k.asm:29000-29008). Do not publish angles from a
                     // helper the native dispatch never invoked.
-                    SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                    SensorResult[] groundResult = floorProbes(sprite);
                     publishAirFloorAngleRegisters(groundResult);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
                             landingProbeHandler, forceFloorCheck);
@@ -978,7 +978,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             }
             case 0x80 -> {
                 doWallCheckBoth(sprite);
-                SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                SensorResult[] ceilingResult = ceilingProbes(sprite);
                 applyPairedAngleWrites(ceilingResult);
                 doCeilingCollision(sprite, ceilingResult);
             }
@@ -988,12 +988,12 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
                         return;
                     }
                 }
-                SensorResult[] ceilingResult = terrainProbes(sprite, sprite.getCeilingSensors(), "ceiling");
+                SensorResult[] ceilingResult = ceilingProbes(sprite);
                 applyPairedAngleWrites(ceilingResult);
                 boolean ceilingHit = doCeilingCollisionInternal(sprite, ceilingResult);
                 if (!ceilingHit && (forceFloorCheck || sprite.getYSpeed() >= 0)) {
                     // Mirrored right-moving branch (sonic3k.asm:29095-29103).
-                    SensorResult[] groundResult = terrainProbes(sprite, sprite.getGroundSensors(), "ground");
+                    SensorResult[] groundResult = floorProbes(sprite);
                     publishAirFloorAngleRegisters(groundResult);
                     doTerrainCollisionAirDirect(sprite, groundResult, landingHandler,
                             landingProbeHandler, forceFloorCheck);
@@ -1170,10 +1170,13 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
     private void landOnFloor(AbstractPlayableSprite sprite, SensorResult result,
                              Consumer<AbstractPlayableSprite> landingHandler) {
         moveForSensorResult(sprite, result);
+        // loc_11F6E: move.b d3,angle(a0), where d3 is sub_11FD6's mirrored angle.
+        // A flagged angle resolves to flat either way: flat is $00 upright, and the
+        // mirror of a flat ceiling is also $00.
         if ((result.angle() & 0x01) != 0) {
             sprite.setAngle((byte) 0x00);
         } else {
-            sprite.setAngle(result.angle());
+            sprite.setAngle((byte) surfaceAngle(sprite, result));
         }
         landingHandler.accept(sprite);
         updateGroundMode(sprite);
@@ -1186,7 +1189,10 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         }
         moveForSensorResult(sprite, lowestResult);
 
-        int ceilingAngle = lowestResult.angle() & 0xFF;
+        // loc_120C2 (sonic3k.asm:24246-24258) takes sub_11FEE's mirrored d3 for the
+        // landing test, the angle write and the ground_vel sign test below, so all
+        // three read the mirrored value while the flag is set.
+        int ceilingAngle = surfaceAngle(sprite, lowestResult);
         boolean canLandOnCeiling = ((ceilingAngle + 0x20) & 0x40) != 0;
 
         if (canLandOnCeiling) {
@@ -1202,7 +1208,7 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             if ((lowestResult.angle() & 0x01) != 0) {
                 sprite.setAngle((byte) 0x80);
             } else {
-                sprite.setAngle(lowestResult.angle());
+                sprite.setAngle((byte) ceilingAngle);
             }
             updateGroundMode(sprite);
             resetWallCeilingLandingState(sprite, ceilingAngle);
@@ -1572,6 +1578,68 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
             }
             return (d0 + 0x1F) & 0xC0;
         }
+    }
+
+    /** ROM: {@code tst.b (Reverse_gravity_flag).w} ($FFFFF7C6). */
+    private static boolean isReverseGravity(AbstractPlayableSprite sprite) {
+        var gameState = sprite == null ? null : sprite.currentGameStateOrNull();
+        return gameState != null && gameState.isReverseGravityActive();
+    }
+
+    /**
+     * {@code sub_11FD6} (sonic3k.asm:24127-24137): the wrapper every "check the floor"
+     * site in the airborne collision routine calls. With {@code Reverse_gravity_flag}
+     * set it runs {@code Sonic_CheckCeiling} instead — ten callers across the three
+     * characters' {@code DoLevelCollision} routines.
+     *
+     * <p>The push-out sign needs no separate negation here. The ROM carries it as a
+     * {@code neg.w d1} at each of the five call sites ({@code loc_11F6E},
+     * {@code Player_HitCeiling}, {@code loc_120C2}, {@code loc_1211A},
+     * {@code loc_12148}); the engine carries it in the probe's {@link Direction}, which
+     * {@code moveForSensorResult} turns into the matching {@code shiftY}. Swapping the
+     * sensor arrays therefore reproduces all five, in both gravities.
+     */
+    private SensorResult[] floorProbes(AbstractPlayableSprite sprite) {
+        return isReverseGravity(sprite)
+                ? terrainProbes(sprite, floorProbeSensors(sprite), "ceiling")
+                : terrainProbes(sprite, floorProbeSensors(sprite), "ground");
+    }
+
+    /** {@code sub_11FEE} (sonic3k.asm:24141-24151): the opposite wrapper, nine callers. */
+    private SensorResult[] ceilingProbes(AbstractPlayableSprite sprite) {
+        return isReverseGravity(sprite)
+                ? terrainProbes(sprite, ceilingProbeSensors(sprite), "ground")
+                : terrainProbes(sprite, ceilingProbeSensors(sprite), "ceiling");
+    }
+
+    /**
+     * Which sensor array {@code sub_11FD6} scans. Package-private rather than private
+     * so the reverse-gravity seam test can assert the selection itself; it is the
+     * production selector, not a test-only copy.
+     */
+    Sensor[] floorProbeSensors(AbstractPlayableSprite sprite) {
+        return isReverseGravity(sprite) ? sprite.getCeilingSensors() : sprite.getGroundSensors();
+    }
+
+    /** Which sensor array {@code sub_11FEE} scans. */
+    Sensor[] ceilingProbeSensors(AbstractPlayableSprite sprite) {
+        return isReverseGravity(sprite) ? sprite.getGroundSensors() : sprite.getCeilingSensors();
+    }
+
+    /**
+     * The angle {@code sub_11FD6}/{@code sub_11FEE} hand back in {@code d3}, mirrored
+     * about the vertical when the flag is set.
+     *
+     * <p>Only {@code d3} is mirrored. {@code FindFloor} has already written the raw
+     * angle to the shared {@code Primary_Angle}/{@code Secondary_Angle} bytes before the
+     * wrapper's {@code addi.b #$40 / neg.b / subi.b #$40} runs, and it is those raw
+     * registers that the character control tail copies into {@code next_tilt}/{@code tilt}.
+     * So the published angle registers stay unmirrored and only {@code angle(a0)} gets
+     * this value.
+     */
+    private static int surfaceAngle(AbstractPlayableSprite sprite, SensorResult result) {
+        int angle = result.angle() & 0xFF;
+        return isReverseGravity(sprite) ? ReverseGravity.mirrorAngle(angle) : angle;
     }
 
     private SensorResult findLowestSensorResult(SensorResult[] results) {
