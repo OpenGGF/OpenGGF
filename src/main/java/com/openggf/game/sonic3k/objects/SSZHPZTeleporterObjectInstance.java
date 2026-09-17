@@ -96,11 +96,14 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     private TeleporterBeamObjectInstance beam;
     /** {@code routine(a0)}: {@code st} by the ending helper's {@code loc_45C60}. */
     private boolean altarActivated;
+    /** {@code loc_457A2} has cleared Player_1 {@code Status_OnObj} during this charge. */
+    private boolean playerOnObjCleared;
 
     private record RewindExtra(int subtype, boolean initialized, int state, int beamFlag,
                                int lightTimer, int lightIndex, int riseRemaining, int swingSpeed,
                                int swingOffset, boolean swingReversed, int settleBaseY,
-                               ObjectRefId beamId, boolean altarActivated)
+                               ObjectRefId beamId, boolean altarActivated,
+                               boolean playerOnObjCleared)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public SSZHPZTeleporterObjectInstance(ObjectSpawn spawn) {
@@ -195,13 +198,14 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         sprite.setAnimationId(Sonic3kAnimationIds.WAIT);
         state = STATE_CHARGING;
+        playerOnObjCleared = false;
         beamFlag = -0x100;
         services().playSfx(Sonic3kSfx.CHARGING.id);
     }
 
     /** {@code loc_456F4}. */
     private void updateCharging(PlayableEntity player) {
-        resolveSolid(player);
+        resolveTransportSolid(player);
         if (!(player instanceof AbstractPlayableSprite sprite) || beam == null) {
             return;
         }
@@ -212,6 +216,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         }
         if (progress == 8) {
             sprite.setOnObject(false);
+            playerOnObjCleared = true;
             sprite.setRollingFlagPreserveRadii(true);
             sprite.setAnimationId(Sonic3kAnimationIds.ROLL);
             HpzZoneRuntimeState hpz = hpzState();
@@ -249,7 +254,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
 
     /** {@code loc_457BE}. */
     private void updateRising(PlayableEntity player) {
-        resolveSolid(player);
+        resolveTransportSolid(player);
         if (!(player instanceof AbstractPlayableSprite sprite)) {
             return;
         }
@@ -278,7 +283,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
 
     /** {@code loc_4581C}. */
     private void updateSettling(PlayableEntity player) {
-        resolveSolid(player);
+        resolveTransportSolid(player);
         if (!(player instanceof AbstractPlayableSprite sprite)) {
             return;
         }
@@ -289,6 +294,14 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         }
         ObjectControlState.none().applyTo(sprite);
         sprite.setAnimationId(Sonic3kAnimationIds.WALK);
+        // Next frame Player_1 finds no floor under the settled position and sets Status_InAir,
+        // after which SolidObjectTopSloped2_1P clears the standing bit (loc_1E338). Drop the
+        // retained ride now so the grounded player pass does not treat the pad as support.
+        var objectManager = services().objectManager();
+        if (objectManager != null) {
+            objectManager.releaseRidingObject(sprite, this);
+        }
+        playerOnObjCleared = false;
         HpzZoneRuntimeState hpz = hpzState();
         if (hpz != null) {
             hpz.setTeleporterTransportActive(false);
@@ -458,7 +471,8 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
                 .map(table -> table.encodeObject(beam)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 subtype, initialized, state, beamFlag, lightTimer, lightIndex, riseRemaining,
-                swingSpeed, swingOffset, swingReversed, settleBaseY, beamId, altarActivated));
+                swingSpeed, swingOffset, swingReversed, settleBaseY, beamId, altarActivated,
+                playerOnObjCleared));
     }
 
     @Override
@@ -477,6 +491,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
             swingReversed = extra.swingReversed();
             settleBaseY = extra.settleBaseY();
             altarActivated = extra.altarActivated();
+            playerOnObjCleared = extra.playerOnObjCleared();
             beam = extra.beamId() == null ? null
                     : (TeleporterBeamObjectInstance) context.requireIdentityTable()
                     .resolveObject(extra.beamId(), true);
@@ -491,6 +506,34 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     @Override public boolean isTopSolidOnly() { return true; }
     @Override public byte[] getSlopeData() { return HPZ_SLOPE; }
     @Override public boolean isSlopeFlipped() { return false; }
+    // SolidObjCheckSloped2 (sonic3k.asm loc_1E534) lands on y_pos - byte_466E8[d0/2] with no
+    // baseline term, and loc_1E45A admits only overlaps 1..16 (bhi / cmpi.w #-$10 / blo).
+    @Override public int getSlopeBaseline() { return 0; }
+    @Override public Integer getDirectTopLandingOverlapLimit() { return 0x11; }
+    // SolidObjectTopSloped2_1P's standing path has no object_control test, so the pad keeps its
+    // standing bit (and Player_1 stays grounded) after loc_45660 sets object_control = 1.
+    @Override public boolean allowsObjectControlledSolidContacts() {
+        return state == STATE_IDLE || state == STATE_CHARGING;
+    }
+
+    // SolidObjSloped2 only re-seats a rider whose Status_OnObj is set; once loc_457A2 clears it
+    // the standing path keeps the ride without writing y_pos, so the charge lift is not undone.
+    @Override public boolean preservesObjectManagedRideWhileNotSolidFor(PlayableEntity player) {
+        return playerOnObjCleared
+                && (state == STATE_CHARGING || state == STATE_RISING || state == STATE_SETTLING)
+                && tryServices() != null && player == services().playerQuery().mainPlayerOrNull();
+    }
+
+    /**
+     * {@code sub_45856} during the transport: the pad keeps its p1 standing bit and Player_1 stays
+     * grounded, but {@code Status_OnObj} remains clear (the managed ride hook re-marks it).
+     */
+    private void resolveTransportSolid(PlayableEntity player) {
+        resolveSolid(player);
+        if (playerOnObjCleared && player instanceof AbstractPlayableSprite sprite) {
+            sprite.setOnObject(false);
+        }
+    }
     int mappingFrameForTest() { return HPZ_MAPPING_FRAME; }
     int renderPaletteLineForTest() { return HPZ_PALETTE_LINE; }
 

@@ -314,3 +314,36 @@ explicit override triage in `TestRewindArchitectureGuard`, `CAPTURED` field poli
 `DefaultObjectRewindPolicies`, non-final scalar fields, and graph evidence
 `TestS3kHpzCompatibilityMatrix` in `RewindRoundTripHarness`. Result: the four guard classes 33 tests
 and the HPZ teleporter/breadth/lifecycle/route classes 140 tests, 0 failures, 0 skips.
+
+### 2026-09-17 cold Sonic+Tails route matched to native through the first Knuckles hits
+
+Continuous native capture `probe-route` (movie 441758-444437, every frame, from
+`states/0441749.State`) against the cold `$1601` fixture on the recorded input. Engine row
+after step *f* is native movie frame 441759+*f*. Four causes, fixed in order of first error:
+
+1. **441759, camera X -64:** `SpawnLevelMainSprites` loc_6986 places `Obj_LevelIntro_PlayerRun`
+   (sonic3k.asm:89940) for `$1601`, `$B00`, and Knuckles in `$300`/`$900`: held Right plus
+   `Scroll_forced_X_pos` = start X + `$B0` until `x_pos+$10` reaches it. New
+   `LevelIntroPlayerRunInstance`; the target comes from `Sonic_/Knux_Start_Locations`
+   because positioned harness starts otherwise moved it (first attempt used the live
+   player and broke the Knuckles exit and upper-corridor rows).
+2. **443079, Sonic lifted onto the `$B40` pad edge:** `SolidObjCheckSloped2` uses the absolute
+   `byte_466E8` sample and loc_1E45A's 1..16 overlap window; the engine subtracted the
+   table's first byte as a baseline and used the wide window.
+3. **443341/443426, charge and lift:** `SolidObjectTopSloped2_1P`'s standing path ignores
+   `object_control` and only re-seats while `Status_OnObj` is set; loc_457A2 clears it.
+   Native probe `probe-pad` (watch_codes on the teleporter routines) shows player status
+   `$08` then `$04` (Roll, no InAir) and the pad's p1 standing bit held through rise and
+   settle, cleared the frame after release. The engine had set the rider airborne, freezing
+   camera Y through the rise.
+4. **443631, unroll shifted Y -10:** `Sonic_RollSpeed` adds `y_radius - default_y_radius`;
+   the teleporter sets Roll without roll radii, so the shift is 0.
+
+Result: camera, Player_1 and Player_2 match every frame 441761-445002 (players and camera);
+first remaining difference Player_2 at 445002, inside the fight lane's scope. Native camera X is
+`$28` during the load frames (441750-441758, before the intro exists), carried from the
+previous act through the load-time `DeformBgLayer`, so a cold load trails for two frames.
+`TestS3kHpzColdRoutes#recordedInputsMatchNativeCheckpointsThroughTheFirstKnucklesHits` asserts
+11 checkpoints (break-checked with a `$A0` run distance). Traces for the shared unroll change:
+AIZ/CNZ/HCZ/ICZ/LBZ/MGZ/MHZ zone slices, MGZ and SOZ complete-run: identical error totals and
+first errors to `54284527b` without the change (all inherited red). Guards 669/0.

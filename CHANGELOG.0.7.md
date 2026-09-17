@@ -17,6 +17,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Tails now fight Knuckles in Hidden Palace, watch Robotnik's crane steal the Master
   Emerald and zap Knuckles, drop through the collapsing altar floor and leave for Sky
   Sanctuary on the altar teleporter while Knuckles is beamed away.
+  Entering Hidden Palace (and Death Egg Act 1, or Carnival Night and Lava Reef Act 1 as
+  Knuckles) now runs the player in from the left with the camera held ahead, and the
+  Hidden Palace teleporter no longer catches a player running past its edge or drops
+  the camera and rider out of step during the lift.
   Title cards for the shared sub-level slots follow the ROM: Hidden Palace shows its
   own name without an act number, and the Lava Reef and Death Egg boss acts show their
   zone's card.

@@ -3122,9 +3122,18 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				// represents the radius change by widening the top-left sprite box,
 				// so preserve the native centre X across that representation change.
 				short preRollStopCentreX = sprite.getCentreX();
+				short preRollStopCentreY = sprite.getCentreY();
+				// The ROM adds y_radius - default_y_radius to y_pos (sonic3k.asm loc_11578).
+				// A roll status set without the roll radii (e.g. the HPZ/SSZ teleporter's
+				// bset #Status_Roll) therefore unrolls with no Y change.
+				boolean rollRadiiApplied = sprite.getYRadius() != sprite.getStandYRadius();
 				sprite.setRolling(false);
 				sprite.setCentreXPreserveSubpixel(preRollStopCentreX);
-				sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+				if (rollRadiiApplied) {
+					sprite.setY((short) (sprite.getY() - sprite.getRollHeightAdjustment()));
+				} else {
+					sprite.setCentreYPreserveSubpixel(preRollStopCentreY);
+				}
 				applyRollStopAnimationChange();
 			}
 		}

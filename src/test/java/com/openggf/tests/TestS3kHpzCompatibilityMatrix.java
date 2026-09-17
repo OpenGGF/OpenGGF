@@ -124,6 +124,10 @@ class TestS3kHpzCompatibilityMatrix {
             fixture.stepFrame(false, false, false, false, false);
         }
         assertFalse(player.getDead());
+        // Obj_LevelIntro_PlayerRun holds Right until x_pos + $10 reaches start X + $B0.
+        assertFalse(player.isControlLocked(), "the level intro run-in releases Ctrl_1");
+        assertTrue((player.getCentreX() & 0xFFFF) + 0x10 >= (knuckles ? 0x010 : 0x030) + 0xB0,
+                "the level intro run-in carries the player right");
         assertTrue(hpz().paletteControlAllocated(), "HPZ_ScreenEvent allocates palette control after the fade");
         if (knuckles) {
             assertEquals(0xAA0, GameServices.camera().getMaxX() & 0xFFFF, "HPZ_ScreenInit Knuckles right limit");

@@ -85,6 +85,64 @@ class TestS3kHpzColdRoutes {
         }
     }
 
+    /**
+     * Native BizHawk observations of the same movie (capture_hpz_route_reference.lua, plan
+     * {@code route}, 2026-09-17): movie frame, camera X/Y, Player_1 X/Y, Player_2 X/Y. They cover
+     * the Obj_LevelIntro_PlayerRun run-in (camera held at $40 until Sonic passes $E0 - $10), the
+     * lower teleporter approach (no landing on the pad's sloped edge), charge, lift, settle and
+     * unroll, and the first four Knuckles hits. Native camera X is already $28 on the load frames
+     * (history carried from the preceding act through the load-time DeformBgLayer), so a cold load
+     * trails it for two frames; checkpoints start once both reach $40.
+     */
+    static final int[][] NATIVE_CHECKPOINTS = {
+            {441761, 64, 2700, 48, 2796, 16, 2800},
+            {441842, 64, 2700, 215, 2796, 128, 2800},
+            {441850, 88, 2700, 248, 2796, 164, 2800},
+            {443079, 2686, 2129, 2846, 2257, 2750, 2069},
+            {443340, 2734, 2131, 2878, 2227, 2930, 2288},
+            {443431, 2734, 2126, 2878, 2227, 2878, 2232},
+            {443565, 2734, 923, 2880, 1014, 2827, 2166},
+            {443631, 2734, 848, 2880, 949, 2801, 2288},
+            {444437, 4239, 918, 4399, 1068, 4309, 1072},
+            {444883, 4320, 896, 4575, 1068, 4520, 1007},
+            {445001, 4320, 896, 4542, 1066, 4484, 1044},
+    };
+
+    @Test
+    void recordedInputsMatchNativeCheckpointsThroughTheFirstKnucklesHits() throws Exception {
+        var config = SonicConfigurationService.getInstance();
+        config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
+        config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_HPZ, 1)
+                .withFreshLevelStartLifecycle()
+                .withRecording(BK2)
+                .withRecordingStartFrame(FIRST_LEVEL_FRAME)
+                .build();
+        var p1 = fixture.sprite();
+        var p2 = GameServices.sprites().getRegisteredSidekicks().getFirst();
+        int last = NATIVE_CHECKPOINTS[NATIVE_CHECKPOINTS.length - 1][0];
+        int next = 0;
+        // The fixture's first step lands on native movie frame FIRST_LEVEL_FRAME + 1.
+        for (int movieFrame = FIRST_LEVEL_FRAME + 1; movieFrame <= last; movieFrame++) {
+            fixture.stepFrameFromRecording();
+            if (movieFrame == FIRST_LEVEL_FRAME + 1) {
+                assertTrue(p1.isControlLocked(), "Obj_LevelIntro_PlayerRun locks Ctrl_1 from the first frame");
+            }
+            int[] expected = NATIVE_CHECKPOINTS[next];
+            if (movieFrame != expected[0]) {
+                continue;
+            }
+            int[] actual = {movieFrame, GameServices.camera().getX() & 0xFFFF, GameServices.camera().getY() & 0xFFFF,
+                    p1.getCentreX() & 0xFFFF, p1.getCentreY() & 0xFFFF,
+                    p2.getCentreX() & 0xFFFF, p2.getCentreY() & 0xFFFF};
+            assertArrayEquals(expected, actual, "camera, Player_1 and Player_2 at movie frame " + movieFrame);
+            next++;
+        }
+        assertEquals(NATIVE_CHECKPOINTS.length, next);
+        assertFalse(p1.isControlLocked(), "the run-in releases Ctrl_1");
+    }
+
     @Test
     void recordedInputsReachTheKnucklesFightThroughTheLowerTeleporter() throws Exception {
         var config = SonicConfigurationService.getInstance();

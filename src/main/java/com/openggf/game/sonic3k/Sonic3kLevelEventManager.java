@@ -62,6 +62,7 @@ import com.openggf.game.sonic3k.objects.HCZWaterRushObjectInstance;
 import com.openggf.game.sonic3k.objects.IczSnowboardArtLoader;
 import com.openggf.game.sonic3k.objects.IczSnowboardIntroInstance;
 import com.openggf.game.sonic3k.objects.Lbz1GroundLaunchIntroInstance;
+import com.openggf.game.sonic3k.objects.LevelIntroPlayerRunInstance;
 import com.openggf.game.sonic3k.objects.MgzDrillingRobotnikInstance;
 import com.openggf.game.sonic3k.objects.MhzPollenSpawnerInstance;
 import com.openggf.game.sonic3k.objects.bosses.LbzFinalBoss2Instance;
@@ -926,6 +927,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_LBZ && currentAct == 0) {
             spawnLbz1GroundLaunchIntro(false);
         }
+        if (usesLevelIntroPlayerRun()) {
+            spawnLevelIntroPlayerRun();
+        }
         // ROM SpawnLevelMainSprites loc_68D8 (sonic3k.asm:8187-8197): at CNZ Act 1
         // a throwaway Player_2 Tails is spawned to carry solo Sonic in. This runs
         // after the spawnSidekicks load step (which clears temporary sidekicks),
@@ -1139,6 +1143,58 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                 objectManager.createDynamicObject(() -> new Lbz1GroundLaunchIntroInstance(spawn));
         if (intro != null && armImmediately) {
             intro.applyInitialHoldForLevelStart();
+        }
+    }
+
+    /**
+     * SpawnLevelMainSprites loc_6986 (sonic3k.asm:8243-8256): {@code $B00} and {@code $1601} for
+     * every character; {@code $300} and {@code $900} only when {@code Player_mode} is Knuckles.
+     */
+    private boolean usesLevelIntroPlayerRun() {
+        if (currentZone == Sonic3kZoneIds.ZONE_HPZ && currentAct == 1) {
+            return true;
+        }
+        if (currentZone == Sonic3kZoneIds.ZONE_DEZ && currentAct == 0) {
+            return true;
+        }
+        return getPlayerCharacter() == PlayerCharacter.KNUCKLES && currentAct == 0
+                && (currentZone == Sonic3kZoneIds.ZONE_CNZ || currentZone == Sonic3kZoneIds.ZONE_LRZ);
+    }
+
+    /**
+     * {@code Sonic_Start_Locations} / {@code Knux_Start_Locations} for the current act. The ROM only
+     * spawns {@code Obj_LevelIntro_PlayerRun} with Player_1 on that point (loc_1BE7A), so the stored
+     * target does not follow a positioned harness start.
+     */
+    private int[] romPlayerStartLocation() {
+        var level = GameServices.levelOrNull();
+        if (level != null && level.getGame() instanceof com.openggf.game.DynamicStartPositionProvider provider) {
+            try {
+                int[] start = provider.getStartPosition(currentZone, currentAct);
+                if (start != null && start.length >= 2) {
+                    return start;
+                }
+            } catch (java.io.IOException ignored) {
+                // Fall through to the registered player's load position.
+            }
+        }
+        var leader = GameServices.sprites().getMainPlayable();
+        return leader == null ? null : new int[]{leader.getCentreX() & 0xFFFF, leader.getCentreY() & 0xFFFF};
+    }
+
+    private void spawnLevelIntroPlayerRun() {
+        ObjectManager objectManager = GameServices.level().getObjectManager();
+        if (objectManager == null || objectManager.getActiveObjects().stream()
+                .anyMatch(o -> o instanceof LevelIntroPlayerRunInstance intro && !intro.isDestroyed())) {
+            return;
+        }
+        LevelIntroPlayerRunInstance intro = objectManager.createDynamicObject(() -> new LevelIntroPlayerRunInstance(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        if (intro != null) {
+            int[] start = romPlayerStartLocation();
+            if (start != null) {
+                intro.captureStartTarget(start[0], start[1]);
+            }
         }
     }
 
