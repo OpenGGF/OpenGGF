@@ -409,6 +409,35 @@ class TestS3kReverseGravityDezCorridor {
                 "Player_TouchFloor leaves the standing player's feet on the floor");
     }
 
+    /**
+     * The player sprite is drawn upside down while the flag is set. {@code loc_10C62}
+     * (sonic3k.asm:22007-22013) XORs {@code render_flags} bit 1 after {@code Animate_Sonic},
+     * which has just cleared bits 0-1, so the net is that bit 1 equals the flag;
+     * {@code loc_138C8} (:26255) and {@code loc_16614} (:30453) are the Tails and Knuckles
+     * copies. Clearing the flag must put the sprite back the right way up.
+     */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void theInvertedPlayerSpriteIsDrawnMirrored(Character character) {
+        onCorridorCeiling(character, (fixture, sprite) -> {
+            fixture.stepIdleFrames(1);
+            assertTrue(sprite.getRenderVFlip(), "loc_10C62 sets render_flags bit 1");
+            GameServices.gameState().setReverseGravityActive(false);
+            fixture.stepIdleFrames(1);
+            assertFalse(sprite.getRenderVFlip(), "and clears it when the flag goes away");
+        });
+    }
+
+    /** The upright control: the flip bit stays clear throughout. */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void theUprightPlayerSpriteIsNotMirrored(Character character) {
+        onCorridorFloor(character, (fixture, sprite) -> {
+            fixture.stepIdleFrames(2);
+            assertFalse(sprite.getRenderVFlip(), "no flag, no mirror");
+        });
+    }
+
     /** Lands an inverted player on the corridor ceiling, then hands it to the body. */
     private void onCorridorCeiling(Character character,
                                    java.util.function.BiConsumer<HeadlessTestFixture,

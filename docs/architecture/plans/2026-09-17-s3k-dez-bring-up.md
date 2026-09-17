@@ -1208,3 +1208,25 @@ shape the ROM does not have here.
 
 Table: **60 covered, 6 partial, 46 missing, 4 n/a**. 221 focused tests green, `Skipped: 0`;
 `-Pguards` 669/669.
+
+
+### 2026-09-17 — Slice 2, part 8: the sprite render mirror
+
+**Seven rows, one net effect.** `loc_10C62` (:22011), `sub_125E0` (:24716), `loc_138C8` (:26255),
+`sub_15842` (:29336), `loc_15A7A` (:29594), `loc_16614` (:30453) and `sub_17D1E` (:33017) all
+`eori.b #2,render_flags(a0)` right after their animator. The thing that makes them portable is what
+runs immediately before: `Animate_Sonic` clears `render_flags` bits 0-1 and rewrites bit 0 from the
+facing status (:24754-24757), so the XOR's net effect is that the player's Y-flip *equals the flag*
+every frame the animator runs. Porting the XOR literally into an engine whose animator does not
+rewrite the flags would alternate the sprite every frame — the same class of mistake as negating
+`getRollHeightAdjustment()`.
+
+`PlayableSpriteAnimation.applyReverseGravityRenderMirror` writes that net, under the same
+`btst #1,object_control` gate that skips the animator (the engine's `isObjectMappingFrameControl`,
+which already carries the "object mappings keep their paired flags" rule). Disabling the flag read
+fails all three inverted characters; the FBZ wire-cage, rail, chain and propeller tests — the
+engine's existing users of a player Y-flip — stay green, 255 focused tests in one invocation with
+`Skipped: 0`.
+
+Table: **67 covered, 6 partial, 39 missing, 4 n/a**, from 14 / 8 / 90 / 4 at the start of this
+session.

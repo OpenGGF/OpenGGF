@@ -88,7 +88,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
 | 21952 | `Sonic_Control` | `Sonic_Control` debug cheat: button A toggles the flag (`Debug_mode_flag` only) | — (tests use the `GameStateManager` setter) | n/a |
-| 22011 | `loc_10C62` | `loc_10C62`: `eori.b #2,render_flags` after `Animate_Sonic` (vertical mirror) | — | missing |
+| 22011 | `loc_10C62` | `loc_10C62`: `eori.b #2,render_flags` after `Animate_Sonic` (vertical mirror) | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
 | 22623 | `loc_11276` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_112A6`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 22646 | `loc_112B0` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_112E0`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 22988 | `loc_11578` | `Sonic_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
@@ -106,14 +106,14 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 24426 | `loc_12246` | `BubbleShield_Bounce` (`loc_12246`): negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | `PlayableSpriteMovement.applyHurtStopBottomKill` | partial |
 | 24552 | `loc_123DE` | `loc_123DE` (dead/respawn): off-screen test uses `Camera_Y - $10` going up | — | missing |
-| 24716 | `sub_125E0` | `sub_125E0` (hurt/dead animate): vertical mirror | — | missing |
+| 24716 | `sub_125E0` | `sub_125E0` (hurt/dead animate): vertical mirror | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
 
 ### C. Tails routines
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
 | 26166 | `Tails_Control` | `Tails_Control` debug cheat toggle | — | n/a |
-| 26255 | `loc_138C8` | `loc_138C8`: vertical mirror after `Animate_Tails` | — | missing |
+| 26255 | `loc_138C8` | `loc_138C8`: vertical mirror after `Animate_Tails` | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
 | 27868 | `loc_14AA0` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_14AA0`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 27891 | `loc_14ADA` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_14ADA`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 28233 | `loc_14DA2` | `Tails_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
@@ -131,8 +131,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 29104 | `loc_155E2` | `Tails_DoLevelCollision` `loc_155E2`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29143 | `Tails_TouchFloor` | `Tails_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 29220 | `sub_15716` | `sub_15716` (hurt): death-plane test flips to the top | same shared owner as :24475 | partial |
-| 29336 | `sub_15842` | `sub_15842` (hurt/dead animate): vertical mirror | — | missing |
-| 29594 | `loc_15A7A` | `loc_15A7A` (`Animate_Tails` rotation frames): vertical mirror applied inside the animator | — | missing |
+| 29336 | `sub_15842` | `sub_15842` (hurt/dead animate): vertical mirror | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
+| 29594 | `loc_15A7A` | `loc_15A7A` (`Animate_Tails` rotation frames): vertical mirror applied inside the animator | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
 
 ### D. Tails CPU, flight catch-up and carry
 
@@ -149,7 +149,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
 | 30394 | `Knuckles_Control` | `Knuckles_Control` debug cheat toggle | — | n/a |
-| 30453 | `loc_16614` | `loc_16614`: vertical mirror after `Animate_Knuckles` | — | missing |
+| 30453 | `loc_16614` | `loc_16614`: vertical mirror after `Animate_Knuckles` | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
 | 30840 | `Knuckles_Gliding_HitWall` | `Knuckles_Gliding_HitWall`: reverse-gravity ledge probe (`.reverseGravity`) | `GlideWallGrabTerrain.align` via `PlayableSpriteMovement:2557` | covered |
 | 30880 | `Knuckles_Gliding_HitWall` | `Knuckles_Gliding_HitWall` (left wall): same | `GlideWallGrabTerrain.align` | covered |
 | 30921 | `Knuckles_Fall_From_Glide` | `Knuckles_Fall_From_Glide`: negates the radius Y adjustment | — | missing |
@@ -171,7 +171,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 32802 | `loc_17AEC` | `Knux_DoLevelCollision` `loc_17AEC`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32839 | `Knux_TouchFloor` | `Knux_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 32911 | `sub_17C10` | `sub_17C10` (hurt): death-plane test flips to the top | same shared owner as :24475 | partial |
-| 33017 | `sub_17D1E` | `sub_17D1E` (hurt/dead animate): vertical mirror | — | missing |
+| 33017 | `sub_17D1E` | `sub_17D1E` (hurt/dead animate): vertical mirror | `PlayableSpriteAnimation.applyReverseGravityRenderMirror` | covered |
 
 ### F. Dust, Tails' tails, shields, Super Tails birds
 
@@ -252,17 +252,17 @@ is the RAM wipe described above).
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
-| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 15 | 1 | 3 | 1 |
-| C. Tails routines | 21 | 15 | 1 | 4 | 1 |
+| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 17 | 1 | 1 | 1 |
+| C. Tails routines | 21 | 18 | 1 | 1 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
-| E. Knuckles routines | 24 | 15 | 1 | 7 | 1 |
+| E. Knuckles routines | 24 | 17 | 1 | 5 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 2 | 0 | 7 | 0 |
 | G. Lost rings | 2 | 0 | 2 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 0 | 0 | 5 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **60** | **6** | **46** | **4** |
+| **Total** | **116** | **67** | **6** | **39** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
@@ -358,6 +358,17 @@ from `subtype & $F`. Porting either row means first porting the upright branch i
 would change shipped upright behaviour and belongs to those objects' own work, not to this slice.
 Both stay **missing** with that reason recorded rather than being implemented against a structure
 the ROM does not have here.
+
+**The seven render-mirror rows are one net effect, not seven XORs.** `Animate_Sonic` clears
+`render_flags` bits 0-1 and rewrites bit 0 from the facing status (`andi.b #$FC` / `or.b d1`,
+:24754-24757) immediately before each `eori.b #2`, so the player's Y-flip is simply *equal to the
+flag* every frame the animator runs. Porting the XOR literally into an engine whose animator does
+not rewrite the flags would alternate the sprite every frame.
+`PlayableSpriteAnimation.applyReverseGravityRenderMirror` writes the net instead, under the same
+`btst #1,object_control` gate the ROM uses (the engine's `isObjectMappingFrameControl`, which
+already owns "object mappings keep their paired flags"). That single owner covers the ordinary,
+hurt, dead and Tails-rotation animators for all three characters. The FBZ wire-cage, rail, chain
+and propeller tests, which are the engine's existing users of a player Y-flip, stay green.
 
 The nine rows that were already marked covered before this slice are **not** in that position:
 they still have no test that runs them with the flag set, so they remain "verify", not "done".
