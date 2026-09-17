@@ -63,6 +63,7 @@ Entries should include:
 37. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
 38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
 39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
+40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
 
 ---
 
@@ -5857,3 +5858,10 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Symptom** — In `~/Videos/OGGF/ssz-bring-up/raw-03-knuckles-cutscene-bridge-walk` the rising Death Egg draws in the level's own palette line rather than `Pal_KnuxSSZEnd`, so it reads green and grey instead of the ROM's colours; it fires no missiles and has no cloud children; and at the bridge release (frame 1450) cutscene Knuckles is standing beside Player 1 well past the `$2A8` button rather than where the ROM leaves him.
 - **Suspected cause** — `loc_659CC` reseeds `RNG_seed` from `V_int_run_count`, saves `Normal_palette_line_4` to `Target_palette_line_4` and patches it from `Pal_KnuxSSZEnd` (restoring it at `loc_65A4A`), and creates `ChildObjDat_665C4`; `loc_65A4A` calls `sub_66054` for the `ChildObjDat_665F0` missiles on `V_int_run_count+3 & $1F`. None of that is ported: only the rise, the `$2E = $100` gate and the `_unkFAB8` bit 1 handshake the cutscene route depends on are. Knuckles' final X is unverified against native: `loc_658BA`'s `MoveSprite2` and `loc_658F2`'s landing are modelled from the routine text without a native probe of his resting position.
 - **Removal condition** — `Pal_KnuxSSZEnd` is applied and restored through `S3kPaletteWriteSupport`, the missile and cloud children exist, and a native probe or `hpz` fixture window confirms cutscene Knuckles' X at the frame `Events_bg+$08` is written and at his deletion.
+
+## Sky Sanctuary Background Mode Switch Completes a Frame Early
+
+- **Location** — `SwScrlSsz` (`src/main/java/com/openggf/game/sonic3k/scroll/`)
+- **Symptom** — Crossing the wrapped camera-Y `$800`/`$F00` boundary in Sky Sanctuary act 1 swaps between the plain sky and the banded cloud background two frames after the test fires, where the cartridge takes as long as `Draw_PlaneVertBottomUp` needs to refill the 512-pixel background nametable.
+- **Suspected cause** — `SSZ1_BackgroundEvent` routine 4 keeps rendering the framing frozen in `Events_bg+$0C`/`+$0E` until the staged redraw reports done, and routine `$C` does the same on the way back. The engine draws the background from the whole level layout instead of a nametable, so it has nothing to stage: each redraw routine completes in one frame. The framing values, the deform bands and the routine order all match; only the duration of the two transition states does not.
+- **Removal condition** — Either a native probe measures the ROM's redraw length at that crossing and the engine holds routines 4 and `$C` for the same number of frames, or a `hpz` fixture window shows the crossing and the engine matches it frame for frame.

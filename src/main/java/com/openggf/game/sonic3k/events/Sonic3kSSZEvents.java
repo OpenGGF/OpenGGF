@@ -2,6 +2,9 @@ package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.objects.SszArrivalControllerObjectInstance;
+import com.openggf.game.sonic3k.objects.SszCloudOscillatorObjectInstance;
+import com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance;
+import com.openggf.game.sonic3k.objects.SszSolidCloudObjectInstance;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
 import com.openggf.level.objects.ObjectSpawn;
@@ -153,6 +156,41 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
         }
         state.setUnkEE98(0);
         state.setCloudOscillator(0);
+        if (act == 0) {
+            spawnBackgroundClouds();
+        }
+    }
+
+    /**
+     * {@code SSZ1_ScreenInit}'s always-run tail (sonic3k.asm:115846-115890) followed by
+     * {@code SSZ1_BackgroundInit} (116385-116404), in the order the pointer table runs them:
+     * five roaming clouds from {@code word_58758}, each drawing one {@code Random_Number} word
+     * for its bob phase; then the {@code _unkEE9C} oscillator; then ten invisible sloped
+     * platforms from {@code word_5853E}.
+     *
+     * <p>The ROM records the roaming clouds' object slots in {@code HScroll_table+$1F6} so
+     * {@code sub_5758A} can reposition them as a batch. The engine's clouds do that arithmetic
+     * per instance instead, so no slot table is kept; the allocation order, which decides the
+     * RNG draw order, is preserved.
+     */
+    private void spawnBackgroundClouds() {
+        for (int index = 0; index < SszRoamingCloudObjectInstance.CLOUD_COUNT; index++) {
+            int phaseSeed = nextRandomWord();
+            final int row = index;
+            spawnObject(() -> SszRoamingCloudObjectInstance.forRow(row, phaseSeed));
+        }
+        spawnObject(() -> new SszCloudOscillatorObjectInstance(
+                new ObjectSpawn(0, 0, 0, 0, 0, false, 0)));
+        for (int index = 0; index < SszSolidCloudObjectInstance.CLOUD_COUNT; index++) {
+            final int row = index;
+            spawnObject(() -> SszSolidCloudObjectInstance.forRow(row));
+        }
+    }
+
+    /** {@code jsr (Random_Number).l} in {@code loc_57BB2}'s init pass. */
+    private int nextRandomWord() {
+        var rng = rngOrNull();
+        return rng == null ? 0 : rng.nextWord();
     }
 
     /**

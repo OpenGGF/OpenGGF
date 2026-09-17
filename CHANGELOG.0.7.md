@@ -12,8 +12,13 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   back on the settle swing, Tails arrives on her own beam, and the act's dynamic camera bands
   and vertical wrap follow the player. The cutscene Knuckles who opens the route — his beam,
   the Death Egg he watches rise, the grey button and the bridge that extends over the gap,
-  with the checkpoint it leaves behind — is in place. The recreated Green Hill and Metropolis
-  arenas, their bosses and the Death Egg launch are still to come.
+  with the checkpoint it leaves behind — is in place. The act's sky is its own now: the
+  background switches between the plain sanctuary framing and the banded cloud layer as the
+  camera crosses the cloud band, the clouds drift, the whole sky breathes on the act's
+  oscillator, five clouds roam across the screen and ten invisible cloud platforms can be
+  stood on. Sky Sanctuary's animated tiles run in act 1 and, as on the cartridge, not in
+  act 2. The recreated Green Hill and Metropolis arenas, their bosses and the Death Egg
+  launch are still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,

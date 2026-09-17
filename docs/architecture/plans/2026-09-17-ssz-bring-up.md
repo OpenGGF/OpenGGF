@@ -374,11 +374,11 @@ Still open — the named slice must resolve each **before** building on it:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 0, 1 and 1b delivered: placement census, runtime state, screen init, the whole `sub_575EA` bounds machine short of boss allocation, the arrival controller and beam, the Tails helper, and the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost |
+| Implemented | Slices 0, 1, 1b and 2 delivered: placement census, runtime state, screen init, the whole `sub_575EA` bounds machine short of boss allocation, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, and the act-1 background — both modes, the four-routine machine, the cloud oscillator, the five roaming clouds, the ten solid cloud platforms and the six AniPLC scripts |
 | Cold-reachable | Act 1's arrival and cutscene run from a cold load and open the route: the bridge clears `Events_bg+$05` and the camera limits become `0 … $19A0`. Everything from the GHZ arena on is not started. Act 2 still loads with no events |
-| Rewind-verified | Not started. Every new object has a `recreateForRewind` and captured state, and `SszZoneRuntimeState` is captured, but no before/active/after spot has been exercised |
+| Rewind-verified | One spot exercised, in the sky (slice 2): capture mid-swing inside the cloud band, step, restore, compare, replay forward, compare again. It caught two real defects. The arrival and cutscene spots are still owed |
 | Native behaviour matched | Placement/ring decode pinned to the ROM; the arrival's forced camera, player offset and rise arithmetic match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference against fixture `hpz` row 0 recorded as open. No SSZ native probe yet |
-| Visually matched | Arrival and cutscene inspected frame by frame in the captures below; the Death Egg's palette and children are filed as gaps |
+| Visually matched | Arrival and cutscene inspected frame by frame in the captures below; the background is inspected in the slice 2 clips at 320 and wide; the Death Egg's palette and children are filed as gaps |
 
 Out of scope, recorded as dependencies: DEZ presentation/route after `$B00` (DEZ campaign, which
 also owns the mislabelled `ssz*` fixtures); `sub_5B18E`, `Obj_Ending`, credits and the Knuckles
@@ -555,3 +555,98 @@ patch, its missile and cloud children, and cutscene Knuckles' unverified resting
 (`$40 = -$40` added to the `y_vel` longword is 0.25 px/frame, which is ~900 frames from `$C68` to
 above the camera — long, and unconfirmed against native); cutscene Knuckles' resting X; and
 `Super_emerald_count` per movie, carried from slice 0.
+
+### 2026-09-17 — slice 2: act-1 background, cloud objects and animated tiles
+
+Same worktree, ROM and Maven wrapper as slices 0-1b.
+
+**What landed.** `scroll/SwScrlSsz` ports `SSZ1_BackgroundInit`, `SSZ1_BackgroundEvent`'s four
+routines and both parameter subroutines, registered for zone `$0A` in
+`Sonic3kScrollHandlerProvider` (act 2 still falls back to the default handler, slice 9).
+`SszZoneRuntimeState` gained the words the machine needs — `Events_bg+$10`,
+`Camera_X/Y_pos_BG_copy`, `Camera_X_pos_BG_rounded`, the `HScroll_table+$000` drift longword and
+the frame the event last ran for — so a rewind captures the whole background. Objects:
+`SszCloudOscillatorObjectInstance` (`loc_57B6A`, the `_unkEE9C` driver),
+`SszRoamingCloudObjectInstance` (`loc_57BB2` + `sub_5758A`) and `SszSolidCloudObjectInstance`
+(`loc_57B8E`, ten invisible sloped platforms), all allocated by `Sonic3kSSZEvents` in the ROM's
+order. `Sonic3kPatternAnimator` resolves `AniPLC_SSZ` (`$28AA4`) for act 1 only.
+
+**Things the ROM decided that the first reading did not.**
+
+| Question | Answer, from the ROM |
+| --- | --- |
+| Is `Apply_FGVScroll`/`word_577B2` part of ordinary act-1 play? | No. It fills `Vscroll_buffer`, which only reaches VSRAM through `SpecialVInt_VScrollCopy`, and `Special_V_int_routine` is non-zero in Sky Sanctuary only during the Death Egg launch (`SSZ1_ScreenEvent`, sonic3k.asm:115961, 116060). The per-column path is slice 8's, not slice 2's |
+| What are the ten `word_5853E` clouds? | Invisible collision only: the rows carry no `mappings` and `loc_57B8E` never draws. The clouds the player sees are the background plane |
+| Does each solid cloud's slope table fit its half-width? | No. `SolidObjSloped2` indexes `(dx + $2E) >> 1`, so it reads `$2E + 1` bytes; eight of the ten rows ask for more than their own table holds and run on into the next (address arithmetic: only the two `$40` rows fit, and row 1 reaches into `byte_58658`'s ramp). The engine reads those bytes from the ROM rather than clamping |
+| Which clock drives the cloud drift? | `sub_57A60`'s own `addi.l #$500,-4(a1)` on `HScroll_table+$000`, once per `SSZ1_BackgroundEvent`. At `Camera_X $800` the top band's 16.16 value is `$200000`, so it takes 53 calls to carry one pixel — the test pins that arithmetic rather than a frame count |
+| Does the `$1800` switch redraw the plane? | No. `sub_579F0` flips `Events_bg+$10`, re-runs itself and re-rounds `Camera_X_pos_BG_rounded`. Only the wrapped-Y `$800`/`$F00` crossing stages a redraw |
+
+**Two engine-shaped problems, both real.**
+
+- *A once-per-frame ROM routine in a render-time hook.* `SSZ1_BackgroundEvent` has persistent
+  state, but `ParallaxManager` can compose the same frame twice — a rewind restore re-renders the
+  frame it restored. The first version advanced `$500` of drift that no frame paid for, and a
+  capture/restore/capture comparison caught it (`zone-runtime.stateBytes[45]: A=38 B=43`, exactly
+  one frame of drift). The frame the event last ran for now lives in `SszZoneRuntimeState`, so a
+  restore rewinds it too. Worth remembering for any future zone whose scroll handler keeps state.
+- *Load-time allocations that outlive the camera window.* All sixteen sky objects were created and
+  then unloaded on their first frame: `SSZ1_ScreenInit`/`BackgroundInit` are load-time routines
+  whose objects have no `Sprite_OnScreen_Test` at all, but the engine's `MarkObjGone` equivalent
+  unloads any non-persistent dynamic object whose position leaves the window. `isPersistent()`
+  is the correct opt-out and each class now carries it with the routine that justifies it. The
+  diagnostic that settled it printed the constructor results, which showed all ten being created —
+  so the fault was deletion, not allocation.
+- A third, smaller one: the generic rewind schema cannot restore a `final byte[]` whose length
+  differs between instances of the same class. The solid clouds' slope tables are `161` and `385`
+  bytes; the field is `@RewindTransient` and `recreateForRewind` re-reads the row.
+
+**Tests.** `src/test/java/com/openggf/game/sonic3k/scroll/TestS3kSszScrollBands.java` (11 cases),
+`src/test/java/com/openggf/game/sonic3k/TestS3kSszPatternAnimation.java` (3) and
+`src/test/java/com/openggf/tests/TestS3kSszBackgroundClouds.java` (6). Every expectation comes from
+the ROM: the scroll test's band walk was worked out by hand from `SSZ1_BGDeformArray` before the
+code ran, and the cloud test decodes `word_5853E` from the ROM inside the test rather than trusting
+the engine's copy of the table.
+
+- **Broken on purpose.** Four constants were perturbed at once in `SwScrlSsz` — the `$160` near-framing
+  Y offset, the second `SSZ1_BGDeformArray` band, the half-step in `sub_57A60`'s last three bands and
+  the drift increment. Result: `Tests run: 11, Failures: 5, Errors: 0, Skipped: 0`, naming the framing
+  offsets, `HScroll_table word 21` and the accumulator. Restored: 11/11. The band-array perturbation
+  alone did **not** fail the original "the background varies down the screen" assertion, which is why
+  that assertion was replaced with the seven exact per-line bands the walk predicts.
+- The drift test was wrong the first two times and the ROM was right both times: the fan reads the
+  accumulator *before* advancing it, and `$500 * 52 = $10400` is the first value to carry, not
+  `$500 * 32`. Arithmetic errors in a test expectation look exactly like implementation bugs.
+
+| Command (all `-Dmse=off`, absolute `-Ds3k.rom.path`) | Result |
+| --- | --- |
+| `-Dtest=TestS3kSszScrollBands` | 11 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kSszPatternAnimation` | 3 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kSszBackgroundClouds` | 6 tests, 0 failures, 0 skips |
+| `-Dtest=…,TestEveryObjectRewindRoundTrip,TestRewindHarnessCoverageRatchet` with the four SSZ classes | 1158 tests, 0 failures, 0 skips (1121 of them the per-object rewind round trip) |
+
+Zero skips throughout, so the ROM path resolved and the `@RequiresRom` cases really ran.
+This is focused validation, not a suite pass.
+
+**Rewind spot.** `TestS3kSszBackgroundClouds#theSkySurvivesACaptureRestoreAndForwardReplay`
+captures at frame 120 — the arrival rise has already carried the camera into the cloud band and
+the oscillator is mid-swing — steps one frame, restores, compares the whole composite snapshot,
+then replays the same frame forward and compares again. It found both of the engine-shaped
+problems above; neither was visible from the object tests.
+
+**Cold route.** Unchanged from slice 1b: the cold frontier is still the bridge release, because
+slice 2 adds no traversal. What slice 2 does change is that the route now runs under the real
+background — the arrival opens in plain sky, crosses `$F00` into the cloud band during the rise,
+and the ten solid cloud platforms and five roaming clouds are alive for the whole of it.
+
+**What `-Pguards` changed about the design.** The first version of the three cloud classes read
+their ROM tables through `GameServices` in the constructor and carried the decoded row as `final`
+fields with hand-written `captureRewindState`/`restoreRewindState` overrides. Guards rejected all
+of it — object classes must use `services()`, and both new rewind overrides and new `final` scalars
+are baselined growth — and the rework is better shaped anyway: each cloud now reads its own
+`word_5853E`/`word_58758` row lazily on its first frame through `services().rom()`, keyed only by
+the row index the spawn's subtype carries, so a spawn-based rewind recreation rebuilds it with no
+extra state. The overrides are gone: `S3kGradualSwing` is `RewindStateful` and the remaining fields
+are ordinary non-final scalars, so the generic schema captures everything. The lesson worth keeping
+is that "read a ROM table in the constructor" is the wrong shape for an object in this engine:
+the services and the spawn identity are what the constructor has, and the table is what the first
+frame has.

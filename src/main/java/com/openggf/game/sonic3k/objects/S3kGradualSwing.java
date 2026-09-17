@@ -25,6 +25,15 @@ final class S3kGradualSwing implements RewindStateful<S3kGradualSwing.Value> {
     private int offset;
     private boolean reversed;
 
+    /**
+     * Pre-seeds the {@code $2E} speed longword, as {@code loc_57B6A}'s
+     * {@code move.w #$8000,$30(a0)} does before its first call: with a non-zero speed the first
+     * step moves instead of taking the reset branch, so the swing starts in the other direction.
+     */
+    void seedSpeed(int value) {
+        speed = value;
+    }
+
     /** Returns the integer offset for this frame. */
     int step(int initialSpeed, int acceleration) {
         int stepValue = acceleration;

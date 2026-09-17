@@ -38,7 +38,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     /** {@code Events_bg} is sixteen bytes; {@code LevelSetup} clears all of them. */
     public static final int EVENTS_BG_BYTES = 0x10;
 
-    private static final int CAPTURE_BYTES = EVENTS_BG_BYTES + 7 * Short.BYTES + Integer.BYTES + 1;
+    private static final int CAPTURE_BYTES =
+            EVENTS_BG_BYTES + 11 * Short.BYTES + 3 * Integer.BYTES + 2;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -55,6 +56,27 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     private short unkFA84;
     private int unkFAB8;
     private boolean screenInitApplied;
+    /**
+     * {@code Events_bg+$10}: the background-framing toggle {@code sub_579F0} flips at
+     * {@code Camera_X_pos $1800}. It sits outside the sixteen bytes {@code LevelSetup} clears,
+     * so {@code SSZ1_BackgroundInit}'s own {@code clr.w (Events_bg+$10).w} is the only reset.
+     */
+    private short unkEventsBg10;
+    /** {@code Camera_X_pos_BG_copy} / {@code Camera_Y_pos_BG_copy} as the SSZ handler owns them. */
+    private short backgroundCameraX;
+    private short backgroundCameraY;
+    /** {@code Camera_X_pos_BG_rounded}, re-rounded by the {@code $1800} toggle only. */
+    private short backgroundCameraXRounded;
+    /** {@code HScroll_table+$000} as a longword: {@code sub_57A60}'s {@code +$500}/frame drift. */
+    private int cloudDriftAccumulator;
+    /** Whether {@code SSZ1_BackgroundInit} has chosen this load's starting background mode. */
+    private boolean backgroundInitApplied;
+    /**
+     * The parallax frame counter {@code SSZ1_BackgroundEvent} last ran for. The engine can
+     * compose the same frame more than once — a rewind restore re-renders the restored frame —
+     * and the event has persistent state, so it is captured with the rest of it.
+     */
+    private int backgroundScrollFrame = Integer.MIN_VALUE;
 
     public SszZoneRuntimeState(int actIndex, PlayerCharacter playerCharacter) {
         this.actIndex = actIndex;
@@ -137,6 +159,33 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public boolean screenInitApplied() { return screenInitApplied; }
     public void markScreenInitApplied() { screenInitApplied = true; }
 
+    /** {@code Events_bg+$10}: zero below {@code Camera_X_pos $1800}, {@code $FFFF} at or above. */
+    public int backgroundFarFraming() { return unkEventsBg10 & 0xFFFF; }
+    public void setBackgroundFarFraming(int value) { unkEventsBg10 = (short) value; }
+
+    /** {@code Camera_X_pos_BG_copy}. */
+    public int backgroundCameraX() { return backgroundCameraX; }
+    public void setBackgroundCameraX(int value) { backgroundCameraX = (short) value; }
+
+    /** {@code Camera_Y_pos_BG_copy}. */
+    public int backgroundCameraY() { return backgroundCameraY; }
+    public void setBackgroundCameraY(int value) { backgroundCameraY = (short) value; }
+
+    /** {@code Camera_X_pos_BG_rounded}. */
+    public int backgroundCameraXRounded() { return backgroundCameraXRounded; }
+    public void setBackgroundCameraXRounded(int value) { backgroundCameraXRounded = (short) value; }
+
+    /** {@code HScroll_table+$000}: the 16.16 cloud drift {@code sub_57A60} advances by {@code $500}. */
+    public int cloudDrift() { return cloudDriftAccumulator; }
+    public void setCloudDrift(int value) { cloudDriftAccumulator = value; }
+
+    public boolean backgroundInitApplied() { return backgroundInitApplied; }
+    public void markBackgroundInitApplied() { backgroundInitApplied = true; }
+
+    /** The frame {@code SSZ1_BackgroundEvent} last advanced on. */
+    public int backgroundScrollFrame() { return backgroundScrollFrame; }
+    public void setBackgroundScrollFrame(int value) { backgroundScrollFrame = value; }
+
     @Override
     public byte[] captureBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES);
@@ -150,6 +199,13 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putShort(unkFA84);
         buffer.putInt(unkFAB8);
         buffer.put((byte) (screenInitApplied ? 1 : 0));
+        buffer.putShort(unkEventsBg10);
+        buffer.putShort(backgroundCameraX);
+        buffer.putShort(backgroundCameraY);
+        buffer.putShort(backgroundCameraXRounded);
+        buffer.putInt(cloudDriftAccumulator);
+        buffer.put((byte) (backgroundInitApplied ? 1 : 0));
+        buffer.putInt(backgroundScrollFrame);
         return buffer.array();
     }
 
@@ -169,5 +225,12 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         unkFA84 = buffer.getShort();
         unkFAB8 = buffer.getInt();
         screenInitApplied = buffer.get() != 0;
+        unkEventsBg10 = buffer.getShort();
+        backgroundCameraX = buffer.getShort();
+        backgroundCameraY = buffer.getShort();
+        backgroundCameraXRounded = buffer.getShort();
+        cloudDriftAccumulator = buffer.getInt();
+        backgroundInitApplied = buffer.get() != 0;
+        backgroundScrollFrame = buffer.getInt();
     }
 }

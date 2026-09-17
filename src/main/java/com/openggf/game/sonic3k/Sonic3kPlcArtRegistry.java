@@ -2656,6 +2656,13 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_SSZ_MISC + 0x20,
                 2,
                 null));
+        // loc_57BB2: make_art_tile(ArtTile_SSZMisc+$3C,3,1) over Map_SSZRoamingClouds.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_ROAMING_CLOUD,
+                Sonic3kConstants.MAP_SSZ_ROAMING_CLOUDS_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x3C,
+                3,
+                null));
     }
 
     /**

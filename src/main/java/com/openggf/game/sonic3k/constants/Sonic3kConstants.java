@@ -1047,6 +1047,12 @@ public class Sonic3kConstants {
     public static final int ANIPLC_MHZ_ADDR = 0x0289E8;
     /** {@code AniPLC_HPZ} (sonic3k.lst:67357). */
     public static final int ANIPLC_HPZ_ADDR = 0x028C40;
+    /**
+     * {@code AniPLC_SSZ} (sonic3k.lst:66804): six scripts. {@code Offs_AniFunc} pairs it with
+     * {@code AnimateTiles_DoAniPLC} for {@code $A00} and with {@code AnimateTiles_NULL}
+     * (a bare {@code rts}) for {@code $A01}, so act 2 animates nothing.
+     */
+    public static final int ANIPLC_SSZ_ADDR = 0x028AA4;
 
     // ArtUnc_AniAIZ2_FirstTree: Static tree art for AIZ2 near-spawn area (camera X < 0x1C0)
     // 0x460 bytes = 35 tiles, loaded to VRAM tile $0CA
@@ -2013,6 +2019,19 @@ public class Sonic3kConstants {
     public static final int ARTTILE_SSZ_CUTSCENE_BUTTON = 0x048E;
     /** {@code Map_SSZCollapsingBridge}, shared by Obj_SSZCutsceneBridge and the collapsing families. */
     public static final int MAP_SSZ_COLLAPSING_BRIDGE_ADDR = 0x046958;
+    /**
+     * {@code word_5853E} (sonic3k.lst:136479): the count word {@code $A-1} followed by ten
+     * twelve-byte solid-cloud rows that {@code SSZ1_BackgroundInit} builds {@code loc_57B8E} from.
+     */
+    public static final int SSZ_SOLID_CLOUD_TABLE_ADDR = 0x05853E;
+    /**
+     * {@code word_58758} (sonic3k.lst:136603): five four-word roaming-cloud rows
+     * ({@code $38} base Y, {@code $3A} base X, {@code $40} drift speed, {@code mapping_frame})
+     * that {@code SSZ1_ScreenInit} builds {@code loc_57BB2} from.
+     */
+    public static final int SSZ_ROAMING_CLOUD_TABLE_ADDR = 0x058758;
+    /** {@code Map_SSZRoamingClouds} (sonic3k.lst:136614). */
+    public static final int MAP_SSZ_ROAMING_CLOUDS_ADDR = 0x058780;
 
     /**
      * CNZ Act 1 miniboss PLC id.
