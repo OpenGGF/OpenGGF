@@ -50,6 +50,7 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private boolean buttonTriggered;
     private boolean opened;
     private boolean resultsStarted;
+    private boolean sidekickEndPoseWaiting;
     private final List<PlayableEntity> resultsSolidContactPlayers = new ArrayList<>();
     private int postOpenTimer;
     protected S3kBossExplosionController explosionController;
@@ -112,6 +113,12 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
 
         tickExplosionController();
         if (resultsStarted) {
+            if (sidekickEndPoseWaiting && endOfLevelFlagSet()) {
+                // This capsule dispatch is the Check_TailsEndPose pass that first
+                // sees the flag; Player_2 has already moved this frame.
+                sidekickEndPoseWaiting = false;
+                applySidekickEndPosesNow(player);
+            }
             updateAfterResultsStarted(vIntRunCount, player);
             return;
         }
@@ -157,6 +164,14 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     }
 
     @Override
+    public int getPieceBalanceWidthPixels(int pieceIndex) {
+        // Object-edge balance reads width_pixels, not the SolidObjectFull widths:
+        // ObjDat_EggCapsule sets $20 and the button's word_86B3E sets $10
+        // (sonic3k.asm:182155-182162), against solid half-widths $2B and $1B.
+        return pieceIndex == PIECE_BUTTON ? 0x10 : 0x20;
+    }
+
+    @Override
     public SolidObjectParams getPieceParams(int pieceIndex) {
         if (pieceIndex == PIECE_BUTTON) {
             return SolidObjectParams.of(BUTTON_HALF_WIDTH, BUTTON_AIR_HALF_HEIGHT, BUTTON_GROUND_HALF_HEIGHT);
@@ -185,6 +200,15 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
 
     protected int animalYOffset() {
         return -8;
+    }
+
+    /**
+     * ROM {@code _unkFAA8}, which {@code Check_TailsEndPose} requires before it ends
+     * Player_2 (sonic3k.asm:181924-181945). Bosses normally set it before their
+     * capsule opens.
+     */
+    protected boolean endOfLevelFlagSet() {
+        return true;
     }
 
     /** ROM {@code sub_865DE}: every upright route except MGZ sets signed {@code Ctrl_2_locked}. */
@@ -265,15 +289,15 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
             services().gameState().setEndOfLevelActive(true);
         }
         for (PlayableEntity candidate : resultParticipants(player)) {
-            if (candidate instanceof AbstractPlayableSprite sprite) {
-                if (sprite == player || sprite.getCpuController() == null) {
-                    lockForResults(sprite);
-                } else {
-                    // sub_868F8 ends Player_1 immediately; the following
-                    // Check_TailsEndPose dispatch ends Player_2 one SST pass later.
-                    sprite.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
-                }
+            if (candidate instanceof AbstractPlayableSprite sprite
+                    && (sprite == player || sprite.getCpuController() == null)) {
+                lockForResults(sprite);
             }
+        }
+        if (endOfLevelFlagSet()) {
+            queueSidekickEndPoses(player);
+        } else {
+            sidekickEndPoseWaiting = true;
         }
         PlayerCharacter character = resolvePlayerCharacter();
         int currentAct = services().currentAct();
@@ -297,6 +321,33 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     /** Allows a retained post-capsule owner to keep control of its native handoff. */
     protected S3kResultsScreenObjectInstance createResultsScreen(PlayerCharacter character, int act) {
         return new S3kResultsScreenObjectInstance(character, act);
+    }
+
+    private void queueSidekickEndPoses(PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite leader)) {
+            return;
+        }
+        for (PlayableEntity candidate : resultParticipants(leader)) {
+            if (candidate instanceof AbstractPlayableSprite sprite
+                    && sprite != leader && sprite.getCpuController() != null) {
+                // sub_868F8 ends Player_1 immediately; the following
+                // Check_TailsEndPose dispatch ends Player_2 one SST pass later.
+                sprite.getCpuController().queueNativeEndingPoseForNextPlayerSlot();
+            }
+        }
+    }
+
+    private void applySidekickEndPosesNow(PlayableEntity player) {
+        if (!(player instanceof AbstractPlayableSprite leader)) {
+            return;
+        }
+        for (PlayableEntity candidate : resultParticipants(leader)) {
+            if (candidate instanceof AbstractPlayableSprite sprite
+                    && sprite != leader && sprite.getCpuController() != null
+                    && !sprite.getDead() && !sprite.getAir()) {
+                S3kSignpostInstance.applySidekickEndingPose(sprite);
+            }
+        }
     }
 
     private List<PlayableEntity> resultParticipants(AbstractPlayableSprite player) {

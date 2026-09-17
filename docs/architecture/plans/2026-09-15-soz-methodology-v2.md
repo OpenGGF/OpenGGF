@@ -3169,3 +3169,37 @@ above; the boss escape fall is one pixel behind from row 59238 (root subpixel); 
 animation-only spans at rows 5977, 21749, 23637, 40703, 57897, 58616 and 59137. The
 recorded mid-level Knuckles/Tails segment replays still start from standalone bootstrap
 state and diverge from frame 0 (Knuckles SOZ1: 38 errors from row 3193 `camera_y`).
+
+### Replay follow-up: end-boss escape, capsule and residue (2026-09-17)
+
+Branch `bugfix/ai-soz-open-residue` from develop `861a2ac7b`. Errors below were measured
+with the withdrawn camera wrap gate applied locally (it alone takes 65 -> 64 by clearing
+row 51860); the branch as merged, without it, ends at 29.
+
+| Commit | Native cause | Errors |
+|---|---|---|
+| `011803b2d` | `loc_77822` uses `MoveSprite_LightGravity` (+$20, not +$18); `loc_77986` copies only position words so the root keeps its subpixels; `loc_779C0`'s `st Fast_V_scroll_flag` persists | 42 |
+| `de3d37059` | the boss claims its finished ship/pilot KosM jobs (job 326 stayed pending to the end) | 41 |
+| `6e7d88a9f` | balance reads the upright capsule pieces' `width_pixels` ($20 body, $10 button), not their solid widths | 37 |
+| `095a13d70` | `Check_TailsEndPose` waits for `_unkFAA8`, which SOZ sets only when the ship leaves the screen (`loc_778DA`) | 34 |
+| `95e5e2a96` | `sub_78136`/`sub_78178` clear the child's push bits before `sub_24280`, so the next pass does not publish the push-release Walk word over Tails' hurt animation | 32 |
+| `421670909` | `Spring_Horizontal` sets `width_pixels` 8 for balance | 30 |
+| `b9e996a48` | `Anim_Tumble` flip types above 4 use `loc_129F6` ((angle+$B)/$16+$31, mirrored only by facing) | 27 |
+
+Rejected or parked in this round:
+
+- Carrying the boss root fraction alone (64 -> 69): the root's own fraction was wrong
+  because of the +$18 gravity; with +$20 the same carry is exact. The ROM fall rows pin
+  the root `y_sub` to $E000-$E7FF.
+- Narrowing the pre-commit `@ModApi` hook to declaration lines so a body-only `Camera`
+  edit needs no pin change: blocked in this session as a policy-hook change; the camera
+  gate is kept as a patch for the user.
+- Row 23637 (Sonic balances one frame early after a rolling landing, 21 animation
+  errors): the engine's airborne floor probe at x-7 finds no solid tile under either the
+  foot or the extension row, so the zero-height angle write in `FindFloor` (`loc_F282`)
+  does not explain the ROM's Wait frame. The trace records no `next_tilt`/`tilt`, so this
+  needs RAM evidence before a change.
+
+Still open (29 errors, branch as merged): the camera wrap write (rows 51860 and one
+more), the SST-order lost-ring phase (rows 45256-50720), Tails' push blip at rows
+5977-5990, the row-23637 balance above, and one Tails mapping frame at row 45184.

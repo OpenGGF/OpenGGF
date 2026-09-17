@@ -78,7 +78,7 @@ public final class SozEndBossChild extends AbstractObjectInstance
         switch(role) {
             case OVERLAY -> {x=0x5260;y=0x710;}
             case FRONT -> {dy=36;frame=6;return true;}
-            case PILOT -> {dy=-28;follow();visible=true;if(boss.knuckles())boss.queueKosinskiArt(0x15FDDC,0x52E);return true;}
+            case PILOT -> {dy=-28;follow();visible=true;if(boss.knuckles())boss.queuePilotArt(0x15FDDC,0x52E);return true;}
             case SHOULDER,BACK_SHOULDER -> {dy=40;frame=role==SHOULDER?0:3;return true;}
             case ELBOW,BACK_ELBOW -> {frame=role==ELBOW?1:4;return true;}
             case HAND,BACK_HAND -> {frame=role==HAND?2:5;return true;}
@@ -177,6 +177,9 @@ public final class SozEndBossChild extends AbstractObjectInstance
     private void releaseRiders(){var manager=services().objectManager();if(manager==null)return;
         for(var p:players())if(manager.hasObjectStandingBit(p,this)){manager.clearRidingObject(p);p.setOnObject(false);p.setAir(true);}}
     private void hurt(PlayableEntity p,int vIntRunCount){if(p.getDead()||p.getInvulnerable())return;
+        // sub_78136/sub_78178 clear both object push bits (andi.b #$9F,status(a0)) before
+        // sub_24280, so the next SolidObjectFull pass has no push release to publish.
+        var manager=services().objectManager();if(manager!=null)manager.solidContacts().releaseObjectPushLatchForAllPlayers(this);
         if(p instanceof AbstractPlayableSprite a){int pos=(a.getCentreY()<<16|a.getYSubpixelRaw())-(a.getYSpeed()<<8);
             NativePositionOps.writeYPosPreserveSubpixel(a,pos>>16);a.setSubpixelRaw(a.getXSubpixelRaw(),pos&0xFFFF);}
         if(p.isCpuControlled()){p.applyHurt(x,DamageCause.NORMAL);return;}
