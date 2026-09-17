@@ -157,6 +157,51 @@ contains_mod_api_annotation() {
     printf '%s\n' "$1" | grep -Eq '^[[:space:]]*@ModApi([.([:space:]]|$)'
 }
 
+# Declaration text of a Java source that can change the normalized signature pin.
+# Comments are removed. A file whose first type declaration is not a class
+# (interface, record, enum, annotation) keeps all remaining text, because its
+# members are implicitly public. A class keeps annotations, type declaration
+# lines and public/protected declarations, including their parenthesised
+# continuation lines, so method bodies, private members and comments never
+# demand a pin change the snapshot cannot express. TestModApiSignatureSurface
+# remains the exact check; this only decides when the pin must be staged.
+mod_api_surface_text() {
+    printf '%s\n' "$1" | awk '
+    BEGIN { inblock = 0; kind = ""; n = 0 }
+    {
+        line = $0; out = ""
+        while (1) {
+            if (inblock) {
+                e = index(line, "*/")
+                if (e == 0) { line = ""; break }
+                line = substr(line, e + 2); inblock = 0
+            }
+            s = index(line, "/*"); c = index(line, "//")
+            if (c > 0 && (s == 0 || c < s)) { out = out substr(line, 1, c - 1); break }
+            if (s == 0) { out = out line; break }
+            out = out substr(line, 1, s - 1); line = substr(line, s + 2); inblock = 1
+        }
+        lines[++n] = out
+        if (kind == "" && match(out, /(^|[ \t])(class|interface|record|enum|@interface)[ \t]+[A-Za-z_]/)) {
+            t = substr(out, RSTART, RLENGTH); sub(/^[ \t]+/, "", t); split(t, parts, /[ \t]+/); kind = parts[1]
+        }
+    }
+    END {
+        whole = (kind != "class"); depth = 0
+        for (i = 1; i <= n; i++) {
+            l = lines[i]
+            if (l !~ /[^ \t]/) continue
+            if (whole) { print l; continue }
+            if (depth > 0 || l ~ /(^|[^A-Za-z0-9_])(public|protected)[ \t]/ || l ~ /^[ \t]*@/ \
+                    || l ~ /(^|[ \t])(class|interface|record|enum|extends|implements)[ \t]/) {
+                print l
+                t = l; opens = gsub(/\(/, "(", t); closes = gsub(/\)/, ")", t)
+                depth += opens - closes; if (depth < 0) depth = 0
+            }
+        }
+    }'
+}
+
 validate_mod_api_coupling() {
     old_ref=$1
     new_ref=$2
@@ -208,7 +253,7 @@ $second"
                 old_text=$(blob_text "$before" "$path")
                 new_text=$(blob_text "$after" "$path")
                 if contains_mod_api_annotation "$old_text" || contains_mod_api_annotation "$new_text"; then
-                    [ "$old_text" != "$new_text" ] && api_delta=1
+                    [ "$(mod_api_surface_text "$old_text")" != "$(mod_api_surface_text "$new_text")" ] && api_delta=1
                 fi
             esac
         done

@@ -17,6 +17,7 @@ class TestModApiHookPolicy {
     private static final Path POWERSHELL_HOOK = Path.of(".githooks/validate-policy.ps1").toAbsolutePath();
     private static final String API = "src/main/java/com/openggf/mods/Example Api.java";
     private static final String PIN = "src/test/resources/mods/mod-api-signatures-0.7.txt";
+    private static final String CLASS_API = "src/main/java/com/openggf/mods/ExampleClass.java";
     private static final String DESCRIPTOR = "mod-api-release-policy.properties";
     private static final String MESSAGE = """
             test: fixture
@@ -40,6 +41,37 @@ class TestModApiHookPolicy {
         write(repo, PIN, "changed\n");
         git(repo, "add", PIN);
         assertStagedPasses(repo);
+    }
+
+    @Test void annotatedClassBodyAndCommentEditsNeedNoPinChange() throws Exception {
+        Path repo = fixtureWithAnnotatedClass();
+        write(repo, CLASS_API, "import com.openggf.game.ModApi;\n/** Changed documentation. */\n@ModApi\npublic class ExampleClass {\n    public int value(int input) {\n        // a different body\n        return input * 2;\n    }\n    private void helper() { value(3); }\n}\n");
+        git(repo, "add", CLASS_API);
+        assertStagedPasses(repo);
+    }
+
+    @Test void annotatedClassPublicSignatureEditsStillRequireThePin() throws Exception {
+        Path repo = fixtureWithAnnotatedClass();
+        write(repo, CLASS_API, "import com.openggf.game.ModApi;\n/** Example. */\n@ModApi\npublic class ExampleClass {\n    public int value(int input,\n    int extra) {\n        return input;\n    }\n}\n");
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
+        write(repo, PIN, "changed for the new parameter\n");
+        git(repo, "add", PIN);
+        assertStagedPasses(repo);
+    }
+
+    @Test void annotatedClassNewProtectedMemberRequiresThePin() throws Exception {
+        Path repo = fixtureWithAnnotatedClass();
+        write(repo, CLASS_API, "import com.openggf.game.ModApi;\n/** Example. */\n@ModApi\npublic class ExampleClass {\n    public int value(int input) {\n        return input;\n    }\n    protected void added() { }\n}\n");
+        git(repo, "add", CLASS_API);
+        assertStagedFails(repo);
+    }
+
+    @Test void annotatedInterfaceMemberEditsStillRequireThePin() throws Exception {
+        Path repo = fixture();
+        write(repo, API, "@ModApi public interface Example {\n    void implicitlyPublic();\n}\n");
+        git(repo, "add", API);
+        assertStagedFails(repo);
     }
 
     @Test void candidatePinContentCannotChangeByItself() throws Exception {
@@ -196,6 +228,15 @@ class TestModApiHookPolicy {
         write(repo, tooling, "/** Changed tooling mention of @ModApi. */\nclass ModApiSignatureSurface { String text = \"scan @ModApi\"; }\n");
         git(repo, "add", tooling);
         assertStagedPasses(repo);
+    }
+
+    private Path fixtureWithAnnotatedClass() throws Exception {
+        Path repo = fixture();
+        write(repo, CLASS_API, "import com.openggf.game.ModApi;\n/** Example. */\n@ModApi\npublic class ExampleClass {\n    public int value(int input) {\n        return input;\n    }\n}\n");
+        write(repo, PIN, "baseline with class\n");
+        git(repo, "add", ".");
+        commit(repo);
+        return repo;
     }
 
     private Path fixture() throws Exception {

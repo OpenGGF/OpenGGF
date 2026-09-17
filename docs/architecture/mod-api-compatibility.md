@@ -122,6 +122,13 @@ java -cp $cp com.openggf.mods.code.ModApiSignatureSurface --snapshot |
     Set-Content -Encoding utf8NoBOM src/test/resources/mods/mod-api-signatures-0.7.txt
 ```
 
+The pre-commit and CI policy hooks require the candidate pin to be staged whenever a
+`@ModApi` source changes its declaration text: comments are ignored; interfaces,
+records, enums and annotation types compare every remaining line; classes compare
+annotations, type declarations and `public`/`protected` declarations. A body-only
+edit to an annotated class therefore commits without a pin change, and
+`TestModApiSignatureSurface` remains the exact check.
+
 Release packaging generates exact-inventory Javadoc and attaches
 `openggf-mod-sdk` and `openggf-mod-sdk-javadoc` classifier jars beside the engine
 artifact. Architecture guards ignore only the `@ModApi` marker edge and the
