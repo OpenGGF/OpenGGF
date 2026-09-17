@@ -5,6 +5,7 @@ readable and historical versions can be referenced directly.
 
 ## Release files
 
+- [0.6.20260917](CHANGELOG.0.6.md)
 - [0.6.20260911](CHANGELOG.0.6.md)
 - [0.5.20260411](CHANGELOG.0.5.md)
 - [0.4.20260304](CHANGELOG.0.4.md)
