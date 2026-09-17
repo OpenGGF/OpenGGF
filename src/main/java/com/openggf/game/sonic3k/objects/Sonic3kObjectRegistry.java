@@ -1302,6 +1302,9 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     if (subtype == 0x20) {
                         return new CutsceneKnucklesMhz2Instance(spawn);
                     }
+                    if (subtype == 0x28) {
+                        return new CutsceneKnucklesHpzInstance(spawn);
+                    }
                     if (subtype == 0x30) {
                         return new CutsceneKnucklesSkIntroInstance(spawn);
                     }

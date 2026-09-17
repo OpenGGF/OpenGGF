@@ -359,6 +359,9 @@ public final class Sonic3kPlcArtRegistry {
         if (Sonic3kLevelResourceProfile.isHpzSanctuary(zoneIndex, actIndex)
                 || Sonic3kLevelResourceProfile.isHiddenPalace(zoneIndex, actIndex)) {
             addHpzEntries(actIndex, standalone, levelArt);
+            if (Sonic3kLevelResourceProfile.isHiddenPalace(zoneIndex, actIndex)) {
+                addHpzKnucklesFightEntries(standalone, levelArt);
+            }
             return;
         }
         switch (zoneIndex) {
@@ -2723,6 +2726,77 @@ public final class Sonic3kPlcArtRegistry {
                 2,
                 null
         ));
+    }
+
+    /**
+     * CutsceneKnux_HPZ and the Master Emerald theft in the playable act ($1601).
+     * The ROM switches Knuckles between three DPLC sets through {@code $44(a0)}
+     * (sonic3k.asm:131289-131320) and queues the dizzy, crane and ship art as the
+     * cutscene reaches them; standalone sheets keep the same ROM bytes.
+     */
+    private static void addHpzKnucklesFightEntries(List<StandaloneArtEntry> standalone,
+                                                   List<LevelArtEntry> levelArt) {
+        // make_art_tile(ArtTile_CutsceneKnux,1,0) for all three body sheets.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES,
+                Sonic3kConstants.ART_UNC_KNUCKLES_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_KNUCKLES_SIZE,
+                Sonic3kConstants.MAP_KNUCKLES_ADDR, 1,
+                Sonic3kConstants.DPLC_KNUCKLES_ADDR));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES_GRAB,
+                Sonic3kConstants.ART_UNC_HPZ_KNUCKLES_GRAB_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_HPZ_KNUCKLES_GRAB_SIZE,
+                Sonic3kConstants.MAP_HPZ_KNUCKLES_GRAB_ADDR, 1,
+                Sonic3kConstants.DPLC_HPZ_KNUCKLES_GRAB_ADDR));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES_TIRED,
+                Sonic3kConstants.ART_UNC_SSZ_KNUCKLES_TIRED_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_SSZ_KNUCKLES_TIRED_SIZE,
+                Sonic3kConstants.MAP_SSZ_KNUCKLES_TIRED_ADDR, 1,
+                Sonic3kConstants.DPLC_SSZ_KNUCKLES_TIRED_ADDR));
+        // ObjDat3_6654E: make_art_tile(ArtTile_HPZKnuxDizzy,1,0).
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_KNUX_DIZZY_STARS,
+                Sonic3kConstants.ART_KOSM_HPZ_KNUX_DIZZY_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_HPZ_KNUX_DIZZY_STARS_ADDR, 1, -1));
+        // ObjDat3_664E2: Map_DashDust, make_art_tile(ArtTile_HPZKnuxBossDust,0,0),
+        // tiles loaded from ArtUnc_DashDust through DPLC_DashSplashDrown (sub_66236).
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_KNUX_BOSS_DUST,
+                Sonic3kConstants.ART_UNC_DASH_DUST_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_DASH_DUST_SIZE,
+                Sonic3kConstants.MAP_DASH_DUST_ADDR, 0,
+                Sonic3kConstants.DPLC_DASH_DUST_ADDR));
+        // ObjDat3_664FA: make_art_tile(ArtTile_HPZSSZBossCrane,0,1).
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.KNUX_FINAL_BOSS_CRANE,
+                Sonic3kConstants.ART_KOSM_KNUX_FINAL_BOSS_CRANE_ADDR,
+                CompressionType.KOSINSKI_MODULED, 0,
+                Sonic3kConstants.MAP_KNUX_FINAL_BOSS_CRANE_ADDR, 0, -1));
+        // PLC_KnuxHPZCutsceneShip: ArtNem_RobotnikShip at ArtTile_RobotnikShip.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.ROBOTNIK_SHIP,
+                Sonic3kConstants.ART_NEM_ROBOTNIK_SHIP_ADDR,
+                CompressionType.NEMESIS, 0,
+                Sonic3kConstants.MAP_ROBOTNIK_SHIP_ADDR, 0, -1));
+        standalone.add(new StandaloneArtEntry(
+                ObjectArtKeys.BOSS_EXPLOSION,
+                Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR,
+                CompressionType.NEMESIS, Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_SIZE,
+                Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0, -1));
+        // ObjDat3_6653C: Map_LRZ3Platform, make_art_tile($001,2,1).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.HPZ_COLLAPSE_BLOCK,
+                Sonic3kConstants.MAP_LRZ3_PLATFORM_ADDR,
+                1,
+                2,
+                null));
     }
 
     /**

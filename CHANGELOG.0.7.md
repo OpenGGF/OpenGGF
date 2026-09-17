@@ -13,7 +13,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   background layout, switches from its intro palette past the entrance, cycles its
   crystal glow, and animates its waterfall and gem tiles; the sanctuary gains the same
   glow and tile animation. Its teleporters now carry the player between floors with the charging beam, rise and
-  settle, and Knuckles leaves for Sky Sanctuary Act 2 from the upper floor.
+  settle, and Knuckles leaves for Sky Sanctuary Act 2 from the upper floor. Sonic and
+  Tails now fight Knuckles in Hidden Palace, watch Robotnik's crane steal the Master
+  Emerald and zap Knuckles, drop through the collapsing altar floor and leave for Sky
+  Sanctuary on the altar teleporter while Knuckles is beamed away.
 
 - **S3K parity fixes from the discrepancy audit:** Madmole's body is its own object
   in its own slot; the MHZ dragonfly tail enters its return on the same frame as
