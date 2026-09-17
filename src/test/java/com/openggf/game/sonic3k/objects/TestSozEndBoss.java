@@ -140,10 +140,11 @@ class TestSozEndBoss {
         var boss=root();boss.update(0,player);var charge=manager.createDynamicObject(()->new SozEndBossChild(boss,null,12));charge.update(0,player);
         var terminal=(SozEndBossChild)get(charge,"terminal");
         for(int i=0;i<160;i++){terminal.update(i,player);charge.update(i,player);assertEquals(0,integer(charge,"phase"));}
-        for(int i=0;i<32;i++){terminal.update(i,player);charge.update(i,player);assertEquals(0,integer(charge,"phase"));}
-        terminal.update(192,player);assertEquals(true,get(terminal,"retired"));assertFalse(terminal.isDestroyed());
-        charge.update(192,player);assertEquals(7,integer(charge,"timer"));assertNotNull(child(14));assertNotNull(child(15));
-        terminal.update(193,player);assertTrue(terminal.isDestroyed());
+        // byte_78348 publishes $A/$B/$C on passes 161/169/177; the F4 callback is pass 185.
+        for(int i=0;i<24;i++){terminal.update(i,player);charge.update(i,player);assertEquals(0,integer(charge,"phase"));}
+        terminal.update(184,player);assertEquals(true,get(terminal,"retired"));assertFalse(terminal.isDestroyed());
+        charge.update(184,player);assertEquals(7,integer(charge,"timer"));assertNotNull(child(14));assertNotNull(child(15));
+        terminal.update(185,player);assertTrue(terminal.isDestroyed());
     }
     @Test void finalHitSignalsEventThenRetainsRootForExplosionEscapeAndCapsule() {
         var boss=root();boss.update(0,player);set(boss,"hits",1);set(boss,"timer",0);boss.openShell(player);boss.onPlayerAttack(player,null);

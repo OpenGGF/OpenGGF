@@ -59,8 +59,8 @@ class TestSozEndBossInputRoute {
         assertEquals(!donor.equals("s1"),f.sprite().getGameRules().playerCapability().spindashEnabled());
         f.sprite().setRingCount(99);
         var route=character.equals("knuckles")
-                ? (donor.equals("off")?new SozEndBossVictoryRoute(40,4,32):new SozEndBossVictoryRoute(16,4,-48))
-                : character.equals("tails")&&donor.equals("off")?new SozEndBossVictoryRoute(32,20,-32)
+                ? (donor.equals("off")?new SozEndBossVictoryRoute(32,4,-48).targetCapsule():new SozEndBossVictoryRoute(16,4,-48))
+                : character.equals("tails")&&donor.equals("off")?new SozEndBossVictoryRoute(44,14,4,true)
                 : new SozEndBossVictoryRoute();
         var registry=f.gameplayMode().getRewindRegistry();
         var milestones=new java.util.LinkedHashSet<String>();

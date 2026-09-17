@@ -1805,6 +1805,19 @@ public class Sonic3kObjectArtProvider implements ObjectArtProvider,
                             new EnemyKosEntry(
                                     Sonic3kConstants.ART_KOSM_DRAGONFLY_ADDR,
                                     Sonic3kConstants.ARTTILE_DRAGONFLY));
+            // ROM Offs_LoadEnemyArt selects PLCKosM_SOZ for both acts and
+            // queues Skorp, Sandworm and Rockn in this order.
+            // docs/skdisasm/sonic3k.asm:64333-64334, 64417-64421
+            case Sonic3kZoneIds.ZONE_SOZ -> List.of(
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_SKORP_ADDR,
+                            Sonic3kConstants.ARTTILE_SKORP),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_SANDWORM_ADDR,
+                            Sonic3kConstants.ARTTILE_SANDWORM),
+                    new EnemyKosEntry(
+                            Sonic3kConstants.ART_KOSM_ROCKN_ADDR,
+                            Sonic3kConstants.ARTTILE_ROCKN));
             default -> List.of();
         };
     }

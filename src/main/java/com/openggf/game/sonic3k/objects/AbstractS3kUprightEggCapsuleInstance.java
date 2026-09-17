@@ -53,6 +53,21 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     private final List<PlayableEntity> resultsSolidContactPlayers = new ArrayList<>();
     private int postOpenTimer;
     protected S3kBossExplosionController explosionController;
+    // Recreated capsules must resume Obj_CreateBossExplosion's timers; its children draw the
+    // shared Random_Number seed, which the RNG owner restores separately.
+    private final com.openggf.game.rewind.RewindStateful<S3kBossExplosionController.Snapshot> explosionRewind =
+            new com.openggf.game.rewind.RewindStateful<>() {
+                @Override
+                public S3kBossExplosionController.Snapshot captureRewindStateValue() {
+                    return explosionController == null ? null : explosionController.captureSnapshot();
+                }
+
+                @Override
+                public void restoreRewindStateValue(S3kBossExplosionController.Snapshot snapshot) {
+                    explosionController = snapshot == null ? null
+                            : S3kBossExplosionController.fromSnapshot(snapshot, services().rng());
+                }
+            };
 
     protected AbstractS3kUprightEggCapsuleInstance(ObjectSpawn spawn, String name) {
         super(spawn, name);

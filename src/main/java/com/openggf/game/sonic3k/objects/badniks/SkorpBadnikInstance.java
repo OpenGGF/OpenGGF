@@ -15,12 +15,20 @@ public final class SkorpBadnikInstance extends AbstractS3kBadnikInstance impleme
     private int targetX;
     private int targetY;
     private boolean waiting = true;
+    private boolean placeholderSubmitted;
+    private boolean placeholderRenderedOnscreen;
 
     public SkorpBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Skorp", Sonic3kObjectArtKeys.SKORP, 6, 3);
     }
     @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {
-        if (waiting) { if (isOnScreen(0x20)) waiting = false; return; }
+        if (waiting) {
+            // Obj_WaitOffscreen/loc_85AD2 queues a $20-by-$20 placeholder; only the next
+            // pass after Render_Sprites marks it on-screen restores Obj_Skorp (loc_85B02).
+            if (placeholderRenderedOnscreen) { waiting = false; placeholderSubmitted = false; }
+            else placeholderSubmitted = true;
+            return;
+        }
         if (routine == 0) {
             routine = 2;
             xVelocity = facingLeft ? -0x80 : 0x80;
@@ -66,6 +74,9 @@ public final class SkorpBadnikInstance extends AbstractS3kBadnikInstance impleme
                 tail.previous = null;
             }
         }
+    }
+    @Override public void refreshPostCameraRenderState() {
+        if (waiting && placeholderSubmitted) placeholderRenderedOnscreen = isWithinRenderSpriteBounds(0x20, 0x20);
     }
     private void reverse() { xVelocity = -xVelocity; facingLeft = !facingLeft; timer = patrolPeriod; }
     @Override public int getCollisionFlags() { return routine == 0 ? 0 : 6; }

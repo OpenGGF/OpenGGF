@@ -57,7 +57,7 @@ Entries should include:
 31. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
 32. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
 33. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
-34. [SOZ Recording: Kosinski Service Timing and Module FIFO Full Abort](#soz-recording-kosinski-service-timing-and-module-fifo-full-abort)
+34. [SOZ Recording: Remaining Replay Residue and Presentation Certification](#soz-recording-remaining-replay-residue-and-presentation-certification)
 35. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
 36. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
 37. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
@@ -5798,18 +5798,18 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 ## SOZ Act 2 Pushable Rock Puzzle Reachability Unverified
 
 - **Location** — `SozPushableRockObjectInstance`, `SOZPushSwitch.sub_41AA8`; native `Obj_SOZPushableRock` (`$40546`)
-- **Symptom** — At the Act 2 rock (`$4770,$5B5`, subtype `$87`) pushing right from the current fresh positioned entry runs the authored `$5EC -> $47F0 -> $FFFF` track before the switch at (`$4830,$5B0`) is reached, so the positive door coupling has never been observed end to end. The independent recording uses the upper switch (`$4A30,$330`) and never samples this region.
+- **Symptom** — At the Act 2 rock (`$4770,$5B5`, subtype `$87`) pushing right from the current fresh positioned entry runs the authored `$5EC -> $47F0 -> $FFFF` track before the switch at (`$4830,$5B0`) is reached, so the positive door coupling has never been observed end to end in the engine. The independent recording uses the upper switch (`$4A30,$330`) and never samples this region. Native passage is recorded in `runs/s3k-knuckles-complete-superemeralds/soz_2` (Act 2 rows 28758-31456): Knuckles first stands on push switch `$9B` at `$4830` alone while door `$0B` at `$4A0D` stays closed and climbs the wall at `$49F5`; sand cork `$9C` at `$4940` falls from y `$3E8` to `$580` (rows ~29880-30000); on his return the rock is pushed from `$4770` to `$4834` (rows 30268-31240), carrying the switch to `$4850`, and the door is raised (y `$514`) when he walks through (row ~31420). The recording does not establish whether the cork drop is required.
 - **Suspected cause** — Either the required preceding world/route state is missing from the positioned entry or the track/switch coupling is wrong; unit contact tests and the channel-8 switch/door route do not settle it.
 - **Removal condition** — A BK2 route to the Act 2 rock (gameplay-capture) compared against native behaviour, and either the puzzle passing or the defect fixed.
 
 ---
 
-## SOZ Recording: Kosinski Service Timing and Module FIFO Full Abort
+## SOZ Recording: Remaining Replay Residue and Presentation Certification
 
-- **Location** — S3K Kosinski/KosM service timing (`HardwareTimingService`, the FAST load-time manifest), `S3kKosModuleQueue` admission
-- **Symptom** — The independent SOZ recording diverges in Kosinski service timing from frame 34, then replays to a later checkpoint with no compared Sonic movement mismatch before aborting at frame 22525 when bonus-star art submission finds the four-entry module FIFO full. Exact later Nemesis FIFO service timing for the final-boss PLC6D art is a shared service gap. SOZ redraw fidelity has engine A/B visibility checks at widths 320/528/800 but no native pixel certification; the sprite-mask post-processor clips whole tile rows, so sub-tile scanline parity is unverified; live GC stalls are not certified resolved.
-- **Suspected cause** — Service-timing and queue-admission modelling; see the frontier log entries of 2026-09-14/15 for the exact command and remaining companion/animation mismatches.
-- **Removal condition** — The SOZ recording replays to its end without the FIFO abort with queue capacity unchanged, and the pixel and scanline certifications recorded in the SOZ act matrices.
+- **Location** — `Camera.wrapFocusedSpriteYPositionWord` (`@ModApi`); S3K SST slot allocation order and `LostRingObjectInstance` floor phase; `SozEndBossInstance` escape (`loc_77986`); SOZ redraw and sprite-mask presentation
+- **Symptom** — `soz_completerun` replays all 59336 frames (the frame-34 Kosinski divergence and the module FIFO abort were the missing `PLCKosM_SOZ` submission, fixed) with 65 errors. Row 51860 and rows 59289+: an object-held Sonic above `$800` has his `y_pos` masked by the camera's wrap crossing. Row 45256: one SOZ2 lost ring is collected a frame late and the count stays one low. Row 59238: the end-boss escape fall is one pixel behind. Remaining animation-only spans are listed in the frontier log. Exact later Nemesis FIFO service timing for the final-boss PLC6D art is a shared service gap. SOZ redraw fidelity has engine A/B visibility checks at widths 320/528/800 but no native pixel certification; the sprite-mask post-processor clips whole tile rows, so sub-tile scanline parity is unverified; live GC stalls are not certified resolved.
+- **Suspected cause** — S2/S3K `MoveCameraY` masks a local copy (`sonic3k.asm:38440-38446`) while the shared camera writes the S1 LZ3/SBZ2 player mask; the private-body fix is blocked by the `@ModApi` pin hook, which requires a signature change for any `Camera` edit. Lost rings test the floor when `(V_int_run_count + d7) & 7` is zero with `d7` the SST loop counter, and engine slot occupancy differs from Act 1 onward. `loc_77986` copies only position words, keeping the root's earlier subpixels, which the engine does not reproduce. See the SOZ plan section "Replay follow-up: SOZ2 through the end boss".
+- **Removal condition** — `soz_completerun` has no physics errors (camera change accepted through the Mod API policy, SST order parity for the lost-ring phase, boss subpixel carry), and the pixel and scanline certifications recorded in the SOZ act matrices.
 
 ---
 

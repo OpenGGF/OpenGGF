@@ -21,7 +21,15 @@ import java.util.List;
  * <p>
  * ROM reference: sonic3k.asm lines 60199-60372
  */
-public class StillSpriteInstance extends AbstractObjectInstance implements RewindRecreatable {
+public class StillSpriteInstance extends AbstractObjectInstance
+        implements RewindRecreatable, com.openggf.level.objects.RomObjectCodePointerProvider {
+
+    @Override
+    public int romObjectCodePointerHighWord() {
+        // Obj_StillSprite runs from $0002B962; Tails CPU sub_13EFC compares this word when
+        // a stale interact slot is reused by this object (sonic3k.asm:26816-26843).
+        return 0x0002;
+    }
 
     private static final int MAX_SUBTYPE = 50;
 

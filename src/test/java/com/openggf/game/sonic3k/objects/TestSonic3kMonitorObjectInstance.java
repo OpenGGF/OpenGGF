@@ -58,6 +58,15 @@ class TestSonic3kMonitorObjectInstance {
     }
 
     @Test
+    void offscreenCpuTailsStillUsesMonitorSolidity() {
+        // Obj_MonitorMain -> SolidObject_Monitor_Tails -> SolidObject_cont has no
+        // Player_2 render_flags gate (sonic3k.asm:40486-40500, 40588-40596).
+        Sonic3kMonitorObjectInstance monitor = monitor();
+        org.junit.jupiter.api.Assertions.assertTrue(monitor.bypassesOffscreenSolidGate());
+        org.junit.jupiter.api.Assertions.assertTrue(monitor.getSolidRoutineProfile().bypassesOffscreenSolidGate());
+    }
+
+    @Test
     void touchFromAboveRequiresRollAnimationNotJustRollingStatus() {
         Sonic3kMonitorObjectInstance monitor = monitor();
         DummyPlayer player = new DummyPlayer();

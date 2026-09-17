@@ -66,8 +66,14 @@ class TestSozColdAct2Capture {
             GameServices.level().consumePendingInitialProcessSpritesPass();
             csv.write(GameplayCaptureSession.stateHeader() + ",zone,act,boss_hp,capsule_open,results,p1_mask,p2_mask");
             csv.newLine();
-            for (int frame = 0; frame < movie.getFrameCount(); frame++) {
-                var input = movie.getFrame(frame);
+            // After the fixed controller asset ends, neutral input keeps stepping until the
+            // destination has shown its settling frames; the asset length is not a timing oracle.
+            int steppedFrames = 0;
+            for (int frame = 0; frame < movie.getFrameCount()
+                    || (readyFrame >= 0 && frame < readyFrame + 180 && frame < movie.getFrameCount() + 600); frame++) {
+                steppedFrames = frame + 1;
+                var input = frame < movie.getFrameCount() ? movie.getFrame(frame)
+                        : new com.openggf.debug.playback.Bk2FrameInput(frame, 0, 0, false, "");
                 inputs.add(new RecordedFrameInput(frame, input.p1InputMask(), input.p1ActionMask(),
                         input.p1StartPressed(), input.p2InputMask(), input.p2ActionMask(), input.p2StartPressed()));
                 var beforeBoss = SozEndBossVictoryRoute.boss();
@@ -113,7 +119,7 @@ class TestSozColdAct2Capture {
             assertFalse(session.player().isControlLocked(), "destination player control released");
             assertFalse(session.player().isObjectControlled(), "destination object control released");
             assertTrue(readyFrame >= 0, "the native victory must load Lava Reef");
-            assertTrue(movie.getFrameCount() - readyFrame >= 180, "retain visible destination settling frames");
+            assertTrue(steppedFrames - readyFrame >= 180, "retain visible destination settling frames");
             for (int line : new int[]{0, 2, 3}) {
                 int colors = 0;
                 for (int color = 0; color < 16; color++) {

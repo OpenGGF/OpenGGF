@@ -57,8 +57,11 @@ class TestSozAct1VictoryProduction {
         if(!donor.equals("off"))assertEquals(donor,CrossGameFeatureProvider.getInstance().getDonorGameId());
         assertEquals(!donor.equals("s1"),f.sprite().getGameRules().playerCapability().spindashEnabled());
         f.sprite().setRingCount(99);
+        // Test-only controller choice. Once flying Tails lost the Sonic-only
+        // insta-shield invulnerability, native Tails at width 320 died at tick 3202 on
+        // the right-side approach; the left-side approach completes every Tails row.
         var route=new SozAct1VictoryRoute(character.equals("knuckles")
-                || donor.equals("s1") || (character.equals("tails")&&donor.equals("s2")));
+                || donor.equals("s1") || character.equals("tails"));
         var registry=f.gameplayMode().getRewindRegistry();
         var milestones=new java.util.LinkedHashSet<String>();StringBuilder trail=new StringBuilder();
         var previousInput=new com.openggf.debug.playback.Bk2FrameInput(-1,0,0,false,"");

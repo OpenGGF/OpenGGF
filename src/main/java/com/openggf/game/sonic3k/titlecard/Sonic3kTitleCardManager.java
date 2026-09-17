@@ -531,6 +531,14 @@ public class Sonic3kTitleCardManager
     @Override
     public void requestLevelGamestateResetAtInLevelDisplay(
             int additionalDispatches, int phaseOneDispatchOverlap) {
+        if (additionalDispatches == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE) {
+            if (inLevelMode) {
+                resetLevelGamestateOnInLevelDisplay = true;
+                heldLevelCounterDispatchOwned = true;
+                resetLevelGamestateCountdown = com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE;
+            }
+            return;
+        }
         int modulePhase = GameServices.level().getObjectManager().getVblaCounter() & 3;
         requestLevelGamestateResetAtInLevelDisplay();
         if (resetLevelGamestateOnInLevelDisplay) {
@@ -941,6 +949,18 @@ public class Sonic3kTitleCardManager
         if (resetLevelGamestateOnInLevelDisplay && resetLevelGamestateCountdown > 0
                 && --resetLevelGamestateCountdown == 0) {
             consumeLevelGamestateResetRequest();
+        }
+        if (resetLevelGamestateOnInLevelDisplay
+                && resetLevelGamestateCountdown == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE
+                && isExternalInLevelWaitReady()) {
+            // Obj_TitleCardWait clears Timer/Ring_count on the pass after the children
+            // stop publishing movement (sonic3k.asm:62220-62235).
+            resetLevelGamestateCountdown = 0;
+            consumeLevelGamestateResetRequest();
+            // Obj_TitleCardWait2's 90-pass $2E countdown starts at this gate (sonic3k.asm:62162,
+            // 62249-62255), not when the children first stop moving. This manager's EXIT already
+            // carries the child-before-owner pass split, so its hold restarts here.
+            stateTimer = 0;
         }
         switch (state) {
             case SLIDE_IN -> updateSlideIn();

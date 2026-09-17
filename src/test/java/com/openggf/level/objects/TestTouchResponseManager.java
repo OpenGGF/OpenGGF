@@ -12,6 +12,7 @@ import com.openggf.game.rules.GameRules;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.sprites.playable.Knuckles;
+import com.openggf.sprites.playable.SecondaryAbility;
 import com.openggf.game.PlayableEntity;
 import com.openggf.debug.DebugOverlayManager;
 import com.openggf.camera.Camera;
@@ -73,6 +74,7 @@ public class TestTouchResponseManager {
         when(player.getInvulnerable()).thenReturn(false);
         when(player.getDead()).thenReturn(false);
         when(player.getRingCount()).thenReturn(0);
+        when(player.getSecondaryAbility()).thenReturn(SecondaryAbility.INSTA_SHIELD);
     }
 
     @AfterEach
@@ -864,6 +866,30 @@ public class TestTouchResponseManager {
         assertFalse(projectile.wasShieldDeflected,
                 "S3K Insta-Shield temporarily sets Status_Invincible and returns before the shield deflect branch");
         verify(player, never()).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+    }
+
+    @Test
+    public void s3kDoubleJumpFlagOnlyExpandsInstaShieldForInstaShieldCharacters() {
+        // Recorded s3k-tails-full-chain-all-emeralds SOZ1 row 6553: flying Tails
+        // (double_jump_flag=1) is hurt by a Skorp tail. TouchResponse branches to
+        // Touch_NoInstaShield unless character_id is Sonic (sonic3k.asm TouchResponse).
+        for (SecondaryAbility ability : new SecondaryAbility[]{SecondaryAbility.FLY, SecondaryAbility.GLIDE}) {
+            setUp();
+            when(player.getGameRules()).thenReturn(GameRules.SONIC_3K);
+            when(player.getSecondaryAbility()).thenReturn(ability);
+            when(player.getDoubleJumpFlag()).thenReturn(1);
+            when(player.getShieldType()).thenReturn(null);
+            when(player.hasShield()).thenReturn(false);
+
+            MockMultiRegionTouchObject hazard = new MockMultiRegionTouchObject(
+                    new TouchResponseProvider.TouchRegion(160, 112, 0x88, 0));
+            setupTableSize(8, 8, 8);
+            objectManager.addDynamicObject(hazard);
+
+            objectManager.update(0, player, List.of(), 1);
+
+            verify(player).applyHurtOrDeath(anyInt(), any(DamageCause.class), anyBoolean());
+        }
     }
 
     @Test

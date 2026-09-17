@@ -2955,3 +2955,217 @@ entry, a corrected clip with shifted event times, sparse-frame footage and mixed
 viewport sources. Each stays scoped to the requested work; deferred native/visual
 acceptance remains open and the reel never substitutes for a continuous route.
 No engine behavior or executable helper changed, so engine suites are not rerun.
+
+## Recorded-route evidence follow-up (2026-09-16)
+
+Base `develop` / `4a9962069`; worktree `.worktrees/soz-recorded-routes`, branch
+`bugfix/ai-soz-recorded-routes`. Question: do the committed native run segments
+answer the lower subtype-`$87` puzzle, and does the engine follow the recorded
+Knuckles and Tails solo inputs?
+
+### Lower puzzle: native passage found
+
+A position scan of every committed SOZ recording for Act 2 rows inside
+`$4600–$4A80 × $500–$680` found samples only in the Knuckles segment
+`runs/s3k-knuckles-complete-superemeralds/soz_2` (2,450 rows, 28758–31439); both
+Sonic + Tails recordings, `soz_completerun` and the Tails solo segments have none.
+Object codes resolve through `sonic3k.lst`: `loc_405D6` rock, `loc_418E4`
+push switch, `loc_41BE0` door, `loc_41E6A` sand cork. The observed sequence and
+its limits are recorded under "SOZ Pushable Rock: Door Coupling" in the S3K
+known discrepancies. The engine has not yet reproduced it, and the earlier
+positioned attempts do not record whether the cork had already fallen.
+
+### Engine replay of recorded solo inputs
+
+Temporary, uncommitted `AbstractTraceReplayTest` subclasses drove the four solo
+segments with a per-row engine-position logger (comparison only). The two
+segments that start mid-level (`knuckles/soz_2` after a bonus stage, `tails/soz_2`
+in Act 2) never became playable: the player stayed at the bootstrap position with
+control locked, so they are a harness bootstrap limitation and gave no route
+evidence. The two Act 1 segments exposed two engine defects:
+
+- **Knuckles-only breakable wall** (`knuckles/soz` row 1463, wall `$D90,$470`):
+  `loc_21862` breaks on SolidObjectFull's Player_1 side-touch bit, which
+  `loc_1E094` also sets in the air; the engine required `pushingNow`, so a
+  jumping Knuckles stopped at `$D75` instead of continuing at x_vel `$359` from
+  `$D71`. The Player_2 leg (`loc_218B0`) keeps its wall pushing-bit gate.
+  After the fix, errors fell from 256 to 73 and the engine path stayed within
+  32 px through the bonus-stage entry at row 3193.
+- **Tails flight activation frame** (`tails/soz` row 534): `Tails_Stand_Freespace`
+  sets `double_jump_flag` inside `Tails_JumpHeight` but still applies
+  `MoveSprite_TestGravity` (+`$38`) that frame; the engine applied flight gravity
+  (+`$08`) immediately (`$FE20` vs native `$FE50`). One existing assertion in
+  `TestSidekickCpuManualFlight` had encoded the same-frame behavior from the
+  original feature commit `9e20ecff6` and now expects `$0038`. After the fix the
+  first >32 px separation moved from row 709 to 6560 and errors fell from 1219
+  to 1058.
+
+The next Tails separation was a one-frame-early hurt at row 5758 from an
+emerging `Obj_Sandworm` while Tails sinks in quicksand. Engine object logging
+showed the `$22B0` worm initializing on row 5629 against native 5630 (native
+emergence 5758 = initialization + 128 `Obj_Wait` ticks). `Obj_WaitOffscreen`
+(`loc_85AD2`/`loc_85B02`) first queues its placeholder, releases on the next pass
+only from the previous Render_Sprites on-screen bit, and returns; the engine
+released on the first on-screen update. The Sandworm now uses the placeholder
+handshake already used by `IczStalagtiteObjectInstance`; errors fell from 1058
+to 1016.
+
+Validation of `9556dac05`: change-based run against `4a9962069`
+(`run_categories.py --base 4a9962069 --run`, run `20260916T200316Z-254934c1`)
+selected 2672 ordinary classes: 21,616 tests, six failures, zero errors, 27
+opt-in/native skips, 976 s; guards 669 tests, zero failures, 194 s. Five
+failures were native-Tails `TestSozEndBossInputRoute` cases at every width
+(death at tick 366); the same class passes 30/30 on base `4a9962069`, so they are
+caused by the flight-start correction. Those test-only controller parameters were
+authored against the old flight gravity; a bounded search of period/hold/approach
+kept only choices that complete all five widths, and native Tails now uses
+`24/12/-12` (the old `32/20/-32` dies at 366 on every width). The sixth failure,
+`TestSozAct1ArenaAdmission` width 800 ("one pixel before the native gate"), fails
+identically on the base and is not attributed to this work.
+
+Standalone mid-level segments lack native saved-return state: Knuckles `soz_2`
+restarts at the Act 1 star post, where the engine correctly spawns the SOZ1
+falling intro only because no star post is recorded as hit; Tails `soz_2` is
+re-captured by the special-stage ring it had just used. Booting the runs with
+`AbstractRunChainTest.assertChainReplayFromSegment` (segments 57 and 48) instead
+exposed that the engine does not raise the `starpost_bonus` transition at the end
+of Knuckles `soz` (step cap exceeded at BK2 cursor 349659), and that the Tails
+chain loses segment ownership after an engine death that follows the
+undiagnosed row-6553 separation.
+
+### Replay follow-up: enemy art, touch ability and end-sign timing
+
+Continued on `bugfix/ai-soz-recorded-routes` after `939d4a137`.
+
+- `c69f11008`: `scheduleEnemyKosArt` had no SOZ case, so `PLCKosM_SOZ` was never
+  submitted and every later Kosinski ordinal lagged by three. This caused the
+  row-34 queue mismatch in every SOZ replay, the `soz_completerun` KosM FIFO abort,
+  and the stalled star-post bonus art. Measurements are in the trace frontier log.
+  With it, engine Knuckles in `knuckles/soz` touches the bonus stars on row 3193,
+  the native request frame.
+- `c785b8415`: TouchResponse takes the Insta-Shield branch only for Sonic. The
+  engine gave flying Tails and gliding Knuckles the expanded box and temporary
+  invincibility, so the recorded Skorp-tail hurt at `tails/soz` row 6553 never
+  happened. The standalone Tails Act 1 replay then matched to row 17834 (errors
+  1016 -> 527). No other S3K trace replay report changed (61 tests, identical
+  per-class results on the branch before and after).
+- `f5f0f2f83`: `loc_76E48` jumps into `Obj_EndSignControl`, installing the `$77`
+  wait in the golem's final pass; the engine replacement installed one pass later.
+  Obj_EndSign now spawns on native row 16732, and the recorded Tails bumps carry it
+  to the hidden monitor. The Tails Act 1 replay matches to the act handoff at row
+  18108 with no engine death; before 17771 only eight small error groups remain.
+
+Test-only controller consequences (no production rule was fitted): the positioned
+SOZ1 golem route uses the left-side approach for every Tails row (native Tails at
+width 320 died at tick 3202 without flight invulnerability), and native Tails in
+`TestSozEndBossInputRoute` uses the default `48/12/-12` rhythm with presses started
+only on the ground (a bounded 216-combination rhythm search without that option found
+no route once flight became vulnerable).
+
+Change-based run on `f5f0f2f83` against `4a9962069` (run
+`20260916T211907Z-24be7833`): 2672 ordinary classes, 21,619 tests, six failures,
+zero errors, 27 opt-in/native skips, 991 s; guards 669 tests, zero failures, 179 s.
+Failures were the five native-Tails end-boss rows fixed by the grounded-press
+controller (the class then passed 30/30) and the pre-existing width-800
+`TestSozAct1ArenaAdmission` failure. Diagnostics were acknowledged and deleted.
+
+Still open from the recorded routes:
+
+- The engine clears Ring_count when results end (engine row 17771); native
+  `Obj_TitleCardWait` clears it at row 18198 after the Act 2 title card. The
+  generic non-seamless results reset in `S3kResultsScreenObjectInstance` is shared
+  by several zones and needs its own measured change.
+- Standalone mid-level segments lack native saved-return state. Chain replays from
+  segments 57/48 now pass the star-post bonus request but stop in the shared run-chain
+  title-card timing (`duplicate or reordered hardware service boundary at raw_frame=914`,
+  `missing PLC preparation for LEVEL_TITLE_CARD`); this is S3K run-chain
+  infrastructure, not SOZ gameplay.
+- `knuckles/soz` first differs at row 2039 (`player_animation_id` `$00` vs `$20`);
+  not yet investigated.
+
+### Replay follow-up: results exit, quicksand glide and CPU Tails despawns
+
+Commits `de9ba7d79` (SOZ/DEZ results keep rings until the Act 2 title card),
+`dab958c0e` (sand capture ends the engine glide pose), `0b8b2bdca` and `06d52d8dd`
+(still-sprite code words and off-screen monitor solidity for the CPU Tails despawn
+check), `1a1be5f48` (SOZ1 golem owns the post-results camera bounds and the
+lower-slot control restore). Evidence and measurements are in the trace frontier log.
+
+Resulting replay state: the recorded Knuckles Act 1 segment matches every compared
+field to the bonus-stage entry; the recorded Tails Act 1 segment matches physics to the
+act handoff (row 18108, one row late) with rings cleared six rows early by the shared
+in-level title-card timing model; `soz_completerun` falls from 13591 to 9164 errors with
+its first physics divergence at row 29093.
+
+Rejected during this round: a `Knux_TouchFloor` animation tail on the generic object
+landing hook. The ROM rule is real, but the recorded Knuckles case was a quicksand
+capture that never reached that hook, so the unmeasured change was reverted.
+
+Change-based run on `1a1be5f48` against `4a9962069` (run `20260916T225117Z-967920c2`):
+2672 ordinary classes, 21,625 tests, one failure (the pre-existing width-800
+`TestSozAct1ArenaAdmission`), zero errors, 27 opt-in/native skips, 1019 s; guards 669
+tests, zero failures, 186 s. Diagnostics acknowledged and deleted.
+
+Next open replay items:
+
+- `soz_completerun` row 29093: during the post-golem alignment walk (`Ctrl_2_locked`
+  set, CPU input still applied) the ROM CPU Tails applies no input while the engine CPU
+  presses right toward target `$43EA` and brakes (`x_vel` -$14C -> -$CC vs ROM -$140).
+- Row 5977: CPU Tails mapping frame `$08` vs `$07` for three short spans (animation only).
+- Tails Act 1 handoff one row late (row 18108) and the Act 2 route beyond it.
+
+### Replay follow-up: SOZ2 through the end boss (2026-09-17)
+
+Commits after `2e30f3989`, each measured with `TestS3kSozCompleteRunTraceReplay`
+(errors after the commit; first error stays the animation-only row 5977):
+
+| Commit | Native cause | Errors | Physics frontier |
+|---|---|---|---|
+| `0ff2ebf25`..`684cc6555` | SOZ1 alignment clears `Ctrl_1_logical`; SOZ2 reloads inside `SOZ1_BackgroundEvent`; rings clear on the title `Obj_TitleCardWait` gate; the title starts on the pass after `loc_56324`'s allocation | 9164 -> 9010 | 29864 |
+| `95e9a1e39` | `loc_56366` clears `Ctrl_1_locked` with `clr.w`, so `Ctrl_2_locked` also clears and the miniboss P2 hold (`loc_863D6`) stops zeroing `Ctrl_2_logical` | 6969 | 31153 |
+| `7db445c61` | `Obj_TitleCardWait2`'s 90-pass hold counts from the Wait gate | 6961 | 31153 |
+| `2d9a6cfb5` | `loc_1E154` re-reads push-switch `width_pixels` `$30` | 4225 | 40690 |
+| `a64654078` | `sub_2326C` fires for `ground_vel` 0 with half-open windows | 5679 | 43347 |
+| `bcfb20966` | `loc_1B7F2` object-load Y band in 16-bit words with a negative wrapped camera | 4757 | 44748 |
+| `b62909954` | Hyudoro deletion uses the post-camera `Render_Sprites` bit; `Obj_TitleCard` still owns its SST when `loc_2D86E` allocates `Hyudoro_ctr` | 2448 | 45137 |
+| `9ebf30b0f` | `HurtCharacter_Directly` spills rings (Hyudoro, Blastoid) | 2445 | 49197 |
+| `09469a421` | Skorp leaves `Obj_WaitOffscreen` on the pass after a rendered placeholder | 598 | 56959 |
+| `86a76bf8c` | boss limbs' `width_pixels` (`$18`/`$14`/`$28`) | 667 | 57514 |
+| `585c58273` | rewind: upright capsule explosion helper was never captured | n/a | n/a |
+| `2171af853` | `sub_78136` reads the lower shell's standing bit after `SolidObjectFull2` | 664 | 57514 |
+| `27d0d4bc5` | `Animate_RawNoSST` reaches the charge particle's F4 on step 4 | 399 | 58088 |
+| `0c8617b50` | limbs take `loc_1DCF0` for an airborne stale rider; `loc_56A7E` does not carry riders | 73 | 58657 |
+| `8d2b4945b` | SOZ capsule's `Obj_LevelResults` (slot 6) runs after the capsule (slot 8) | 65 | 59238 |
+
+Error totals can rise while the frontier advances (`a64654078`): a later divergence
+compares more of the route.
+
+Test-only consequences: the lower-shell landing hurt made the authored end-boss routes
+lose their rings, so the default rhythm is now `44/14/+4`, native Tails presses only on
+the ground with the same rhythm, and native Knuckles uses `32/4/-48` with full-height
+presses at the unopened capsule (`SozEndBossVictoryRoute.targetCapsule`). The new
+routes exposed two real rewind defects, both fixed: the capsule explosion helper
+(`585c58273`) and boss children retaining a deleted parent reference (`0c8617b50`).
+
+Rejected in this round:
+
+- Masking only for S1 in `Camera.wrapFocusedSpriteYPositionWord`. S2/S3K `MoveCameraY`
+  masks a local copy (`sonic3k.asm:38440-38446`) and never writes the player; the shared
+  camera does. It fixed row 51860 (measured 598 -> 597 at the time); rows 59289+ show
+  the same masked `y` while the boss holds Sonic (not re-measured). `Camera` is `@ModApi` and the policy
+  hook requires a signature-pin change for any edit, while the pin itself cannot
+  change for a private body. The camera commit was withdrawn; see S3K known bugs.
+- Preserving the boss root subpixels in `loc_77986` (65 -> 70 errors): the ROM copies
+  only position words, but the engine root's earlier subpixels do not match ROM either.
+- Deleting orphaned boss particles/projectiles when their parent is removed (73 -> 512):
+  the zeroed parent SST no longer carries bit 7, so the children must keep the parent's
+  last values instead.
+- Queuing the Hyudoro ring spill through the late-producer scheduler: no change to the
+  ring-pickup row; the remaining ring gap is the SST slot phase below.
+
+Still open (65 errors): lost-ring floor checks phase on `d7` and the engine's SST
+occupancy differs from ROM from Act 1 onward (rings rows 45256+); the camera wrap write
+above; the boss escape fall is one pixel behind from row 59238 (root subpixel); and
+animation-only spans at rows 5977, 21749, 23637, 40703, 57897, 58616 and 59137. The
+recorded mid-level Knuckles/Tails segment replays still start from standalone bootstrap
+state and diverge from frame 0 (Knuckles SOZ1: 38 errors from row 3193 `camera_y`).

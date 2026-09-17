@@ -125,7 +125,8 @@ class TestRemainingRewindTailInventory {
         // TestSozBadnikProduction explicitly recreates those child types.
         // MHZ Madmole's body is its own ROM child object; TestMadmoleParentChildRewind
         // recreates it with its cap (graph-covered).
-        return new TailInventory(1064, 839, 225, 0, buckets);
+        // The SOZ event-allocated title-card SST occupant passes the isolated sweep.
+        return new TailInventory(1065, 840, 225, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

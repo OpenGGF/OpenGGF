@@ -32,6 +32,42 @@ class TestS3kHeadlessInLevelTitleCardProgression {
     }
 
     @Test
+    void nativeWaitGateResetClearsRingsOnlyAfterChildrenStopMoving() {
+        // SOZ2's in-level card resets on Obj_TitleCardWait's pass after the children stop
+        // publishing movement; recorded s3k-tails-full-chain-all-emeralds SOZ keeps 88 rings
+        // until row 18198 (engine countdown cleared them at 18192).
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(0, 0)
+                .build();
+        var player = GameServices.camera().getFocusedSprite();
+        var manager = (com.openggf.game.sonic3k.titlecard.Sonic3kTitleCardManager)
+                GameServices.module().getTitleCardProvider();
+        manager.reset();
+        manager.initializeInLevel(8, 1);
+        manager.requestLevelGamestateResetAtInLevelDisplay(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE, 0);
+        player.setRingCount(88);
+
+        boolean reset = false;
+        for (int frame = 0; frame < 200 && !reset; frame++) {
+            boolean gateOpenBeforeStep = manager.isExternalInLevelWaitReady();
+            fixture.stepIdleFrames(1);
+            reset = player.getRingCount() == 0;
+            assertEquals(gateOpenBeforeStep, reset,
+                    "rings clear exactly on the first title update that observes the open wait gate");
+        }
+        assertTrue(reset, "the native wait gate must eventually reset the level gamestate");
+
+        // Obj_TitleCardWait2's 90-pass $2E hold counts from the gate, not from the first
+        // stationary child pass (soz_completerun LoadEnemyArt row 29428).
+        int displayPassesAfterGate = 0;
+        while (manager.isExternalInLevelWaitReady() && displayPassesAfterGate < 200) {
+            fixture.stepIdleFrames(1);
+            displayPassesAfterGate++;
+        }
+        assertEquals(89, displayPassesAfterGate);
+    }
+
+    @Test
     void inLevelGamestateResetReplenishesNativePlayerAir() {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(0, 0)

@@ -14,6 +14,7 @@ import com.openggf.level.objects.ObjectManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectPlayerQuery;
+import com.openggf.level.objects.ObjectSolidContactController;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.tests.TestablePlayableSprite;
@@ -29,6 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class TestS3kBreakableWallPlayerParticipation {
 
@@ -228,6 +230,65 @@ class TestS3kBreakableWallPlayerParticipation {
         assertTrue(wall.isDestroyed(),
                 "ICZ breakable wall should process the update-time primary before queried participants");
         verify(objectManager, times(9)).addDynamicObjectAfterCurrent(any());
+    }
+
+    @Test
+    void knucklesOnlyWallBreaksOnAirborneKnucklesSideContactWithoutPushBit() {
+        // Recorded s3k-knuckles-complete-superemeralds SOZ1 row 1463: jumping
+        // Knuckles reaches the $0D90 wall with x_vel $0359, SolidObjectFull
+        // resolves him to $0D75, and loc_21818 restores x_vel and steps to $0D71.
+        TestablePlayableSprite knuckles = player("knuckles", 0x0D75, 0x0476);
+        knuckles.setAir(true);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        when(objectManager.solidContacts()).thenReturn(mock(ObjectSolidContactController.class));
+        TestableBreakableWallObjectInstance wall = knucklesOnlyWall(Sonic3kZoneIds.ZONE_SOZ, 0x0D90, 0x0470);
+        wall.setCheckpointBatch(new SolidCheckpointBatch(wall, Map.of(
+                knuckles, airborneSideContact(0x0359))));
+        wall.setServices(queryOnlyKnucklesServices(knuckles, List.of(), objectManager));
+
+        wall.update(1, knuckles);
+
+        assertTrue(wall.isDestroyed(),
+                "loc_21862 tests SolidObjectFull's Player_1 side bit, which loc_1E094 sets in the air");
+        assertEquals(0x0359, knuckles.getXSpeed() & 0xFFFF,
+                "sub_218CE restores the x_vel saved before SolidObjectFull");
+        assertEquals(0x0D71, knuckles.getCentreX() & 0xFFFF,
+                "sub_218CE adds 4 then subtracts 8 when the wall is right of the player");
+    }
+
+    @Test
+    void knucklesOnlyWallPlayerTwoLegStillRequiresWallPushBit() {
+        TestablePlayableSprite main = player("knuckles", 0x0B00, 0x0476);
+        TestablePlayableSprite sidekick = player("knuckles", 0x0D75, 0x0476);
+        sidekick.setAir(true);
+        ObjectManager objectManager = mock(ObjectManager.class);
+        TestableBreakableWallObjectInstance wall = knucklesOnlyWall(Sonic3kZoneIds.ZONE_SOZ, 0x0D90, 0x0470);
+        wall.setCheckpointBatch(new SolidCheckpointBatch(wall, Map.of(
+                main, noContact(),
+                sidekick, airborneSideContact(0x0359))));
+        wall.setServices(queryOnlyKnucklesServices(main, List.of(sidekick), objectManager));
+
+        wall.update(1, main);
+
+        assertFalse(wall.isDestroyed(),
+                "loc_218B0 gates Player_2 on the wall's p2_pushing_bit, which airborne contact never sets");
+    }
+
+    private static TestableBreakableWallObjectInstance knucklesOnlyWall(int zone, int x, int y) {
+        TestObjectServices constructionServices = new TestObjectServices() {
+            @Override
+            public int romZoneId() {
+                return zone;
+            }
+        };
+        return ObjectConstructionContext.construct(constructionServices,
+                () -> new TestableBreakableWallObjectInstance(
+                        new ObjectSpawn(x, y, Sonic3kObjectIds.BREAKABLE_WALL, 0, 0, false, 0)));
+    }
+
+    private static PlayerSolidContactResult airborneSideContact(int xSpeed) {
+        return new PlayerSolidContactResult(ContactKind.SIDE, false, false, false, false,
+                new PreContactState((short) xSpeed, (short) 0, true, 2), null, 0);
     }
 
     private static TestablePlayableSprite player(String code, int x, int y) {

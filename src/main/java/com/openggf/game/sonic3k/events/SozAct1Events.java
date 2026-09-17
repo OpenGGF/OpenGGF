@@ -130,7 +130,10 @@ final class SozAct1Events extends Sonic3kZoneEvents {
         var player=spriteManager().getMainPlayable();
         var handoff=seamlessTransitionResourceHandoffs().register(new SozActTransitionHandoff(
                 0x140-(player.getCentreX()&65535),0x3AC-(player.getCentreY()&65535),this));
-        levelManager().requestSeamlessTransition(SeamlessLevelTransitionRequest.builder(
+        // loc_55C84 runs Load_Level and the coordinate rebase inside this background-event
+        // dispatch once Kos_modules_left is clear (sonic3k.asm:113811-113870); deferring
+        // to the next loop iteration leaves one unreloaded frame.
+        levelManager().applySynchronousScreenEventTransition(SeamlessLevelTransitionRequest.builder(
                 SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
                 .targetZoneAct(8,1).deactivateLevelNow(false).preserveMusic(true).preserveLevelGamestate(true)
                 .showInLevelTitleCard(false).runtimeArtAdmissionPolicy(RuntimeArtAdmissionPolicy.TITLE_OWNER)
@@ -139,9 +142,17 @@ final class SozAct1Events extends Sonic3kZoneEvents {
                 .postTransitionMinX(0xA0).postTransitionMaxX(0xA0).postTransitionMinXTarget(0xA0).postTransitionMaxXTarget(0xA0)
                 .postTransitionMinY(0x34C).postTransitionMaxY(0x34C).postTransitionMaxYTarget(0x34C).postTransitionMinYTarget(0x34C)
                 .resourceHandoff(handoff).build());
+        // First legal post-transition rewind state: the synchronous reload has finished.
+        if(hasRuntime())levelManager().markSynchronousSeamlessTransitionBoundary();
     }
     private void updateSeamlessEntry(SozZoneRuntimeState state,int levelFrameCounter){
         var events=state.events();
+        if(events.titleCardAllocationPending()){
+            // loc_56324's AllocateObject gave Obj_TitleCard a later slot; Obj_TitleCardInit
+            // queues its KosM art on the following object pass (sonic3k.asm:62108-62166).
+            events.titleCardAllocationPending(false);
+            levelManager().requestInLevelTitleCard(8,1,true,com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
+        }
         if(events.foregroundRoutine()<8){
             if(events.foregroundRoutine()==0){camera().setVerticalWrapEnabled(true,0x800);events.foregroundRoutine(4);events.redrawRemaining(15);}
             events.redrawRemaining(events.redrawRemaining()-2);
@@ -165,7 +176,13 @@ final class SozAct1Events extends Sonic3kZoneEvents {
     }
     private void fadeEntryFirstLine(SozEventState events,int levelFrameCounter){
         if((levelFrameCounter&1)==0)return;
-        if(events.fadePasses()==5)levelManager().requestInLevelTitleCard(8,1,true);
+        if(events.fadePasses()==5){
+            events.titleCardAllocationPending(true);
+            // loc_56324's AllocateObject: Obj_TitleCard holds this SST until loc_2D86E retires it.
+            var objects=levelManager().getObjectManager();
+            if(objects!=null)objects.createDynamicObject(()->new com.openggf.game.sonic3k.objects.S3kTitleCardOwnerSlotObjectInstance(
+                    new ObjectSpawn(0,0,0,0,0,false,0)));
+        }
         fadePalette(0,1,true);events.fadePasses(events.fadePasses()-1);
         if(events.fadePasses()<0){events.fadePasses(0x15);events.backgroundRoutine(0xC);fadeEntryBackground(events,levelFrameCounter);}
     }
@@ -175,7 +192,10 @@ final class SozAct1Events extends Sonic3kZoneEvents {
         if(events.fadePasses()<0){
             camera().setMinX((short)0);camera().setMaxX((short)0x6000);camera().setMinXTarget((short)0);camera().setMaxXTarget((short)0x6000);
             camera().setMinY((short)-0x100);camera().setMaxY((short)0x800);
+            // loc_56366 clears Ctrl_1_locked with clr.w, so adjacent Ctrl_2_locked is cleared too. That
+            // releases the miniboss loc_863D6 P2 hold, which otherwise zeroes Ctrl_2_logical every frame.
             spriteManager().getMainPlayable().setControlLocked(false);
+            if(objectServices().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite second)second.setControlLocked(false);
             if(paletteRegistryOrNull()!=null)paletteRegistryOrNull().setPaletteRotationDisabled(false);
             events.backgroundRoutine(0x10);events.seamlessEntry(false);
         }

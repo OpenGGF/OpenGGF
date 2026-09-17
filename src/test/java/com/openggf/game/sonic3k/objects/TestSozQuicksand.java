@@ -89,6 +89,21 @@ class TestSozQuicksand {
         org.mockito.Mockito.when(level.getFrameCounter()).thenReturn(8);
         o.update(9,p); assertEquals(-0x81,p.getXSpeed());
     }
+    @Test void waterfallCaptureEndsTheEngineGlidePoseProjection() {
+        // Recorded s3k-knuckles-complete-superemeralds SOZ1 row 2038: gliding Knuckles is
+        // captured by a subtype-$80 sand fall; row 2039 records anim 0, not the glide $20.
+        var o=(AbstractObjectInstance)sand(0x90); var p=player(0x230,0x640);
+        o.setServices(new StubObjectServices() {
+            @Override public ObjectPlayerQuery playerQuery() { return new ObjectPlayerQuery(() -> p, java.util.List::of); }
+        });
+        p.setDoubleJumpFlag(1); p.setAnimationId(0x20); p.setForcedAnimationId(0x20);
+        p.setObjectMappingFrameControl(true);
+        o.update(0,p);
+        assertEquals(0,p.getDoubleJumpFlag());
+        assertEquals(0,p.getAnimationId());
+        assertEquals(-1,p.getForcedAnimationId(),"the retained glide anim must not republish $20");
+        assertFalse(p.isObjectMappingFrameControl(),"Animate owns the mapping after the anim write");
+    }
     @Test void extraFollowersHaveIndependentCaptureAndCooldownState() {
         var o=(AbstractObjectInstance)sand(0x50);
         var leader=player(0x230,0x640); var p2=player(0x230,0x640); var p3=player(0x230,0x640);

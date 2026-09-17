@@ -110626,3 +110626,93 @@ animation2. That production intro, not trace-state seeding, is the next target.
   `TestS3kAizTraceReplay` frontier here was frame 20713, so develop currently
   carries an unattributed AIZ2 reload camera-lock regression; the owning commit
   was not bisected in this task.
+
+### 2026-09-16 — SOZ LoadEnemyArt batch submitted
+
+- Branch `bugfix/ai-soz-recorded-routes` (`.worktrees/soz-recorded-routes`), on top of
+  `939d4a137`, against base `4a9962069` (`.worktrees/soz-base-attrib`). Both trees ran
+  `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3k*TraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" -Dsurefire.failIfNoSpecifiedTests=false test -B`
+  with fresh `target/trace-reports` (61 tests; base 20 failures/2 errors, branch
+  21 failures/1 error, 0 skips). Every non-SOZ report is identical, including the
+  AIZ frames 5497/6302 and zero-error FBZ/bonus/special-stage results.
+- `Sonic3kObjectArtProvider.scheduleEnemyKosArt` had no SOZ case, so the engine never
+  submitted `PLCKosM_SOZ` (Skorp, Sandworm, Rockn; `sonic3k.asm:64333-64334,
+  64417-64421`) that the recording queues at row 34. Every later Kosinski ordinal
+  lagged by three, and the star-post bonus-art job then waited on a recorded
+  completion that could not match.
+- `TestS3kSozCompleteRunTraceReplay`: base aborts after 22525 compared frames
+  (2995 errors, first error frame 34 `queue.s3k_kos_direct.busy`). Branch replays all
+  59336 frames without the `KosM module FIFO is full` abort: 13591 errors, first
+  error frame 5977 `tails_mapping_frame` (expected `$08`, actual `$07`). Inside the
+  base's 22525-frame window error groups fall 2985 -> 2604 (physics 2638 -> 2257,
+  animation unchanged at 347). The full-run total is not comparable with the
+  earlier partial count.
+- Same branch also carries Knuckles-only wall side-contact breaks, the Tails flight
+  activation frame and the Sandworm `Obj_WaitOffscreen` handshake; none moved a
+  non-SOZ S3K replay.
+
+### 2026-09-16 — SOZ results keep Ring_count until the Act 2 title card
+
+- `bugfix/ai-soz-recorded-routes` after `8247c211e`. `loc_2DD06` deletes the Act 1
+  results owner for zones `$08`/`$0B` without `Obj_TitleCard`, so `Ring_count` is not
+  cleared until the later `Obj_TitleCardWait` (`sonic3k.asm:62708-62730, 62220-62235`);
+  the engine reset it when results ended. Recorded Tails SOZ1 kept 88 rings from row
+  17771 to 18198; the engine now clears at 18192 (six rows early, the shared in-level
+  title-card timing model, not changed here).
+- `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestS3kSozCompleteRunTraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" test -B`: 59336 frames, 13244 errors (was 13591),
+  first error unchanged at frame 5977 `tails_mapping_frame`.
+
+### 2026-09-16 — SOZ CPU Tails despawn parity (still sprites, off-screen monitor)
+
+- `bugfix/ai-soz-recorded-routes` after `dab958c0e`, same focused and sweep commands as
+  the SOZ entries above (fresh `target/trace-reports`, 61 S3K replay tests).
+- Row 9046: the sand sets Tails' `Status_OnObj` without updating `interact`; the stale
+  slot now holds `Obj_AnimatedStillSprite` (word `$0002`) against the `$0004`
+  `Tails_CPU_interact` latch, so `sub_13EFC` despawns Tails. `StillSpriteInstance` and
+  `AnimatedStillSpriteInstance` did not publish a code word and were treated as unknown.
+  `TestS3kSozCompleteRunTraceReplay`: 13244 -> 10766 errors; the next Tails despawn
+  separation moved to row 18642.
+- Row 18642: off-screen CPU Tails lands on a monitor. `SolidObject_Monitor_Tails` reaches
+  `SolidObject_cont` without `SolidObjectFull`'s Player_2 render gate
+  (`sonic3k.asm:40486-40500, 40588-40596`); the S3K monitor now bypasses the engine's
+  off-screen full-solid gate as the S2 monitor already did. 10766 -> 10483 errors.
+- First physics divergence is now row 28940 (end of Act 1 results: `camera_x` `$4180` vs
+  `$4198`); first overall error unchanged at 5977 `tails_mapping_frame`. All other S3K
+  replay reports are identical to the previous branch sweep.
+
+### 2026-09-16 — SOZ1 results exit: gradual camera bounds and lower-slot control restore
+
+- `bugfix/ai-soz-recorded-routes` after `06d52d8dd`; same focused and sweep commands.
+- `Obj_LevelResults` never writes camera bounds; SOZ1's golem opens them with
+  `Obj_DecLevStartXGradual`/`Obj_IncLevEndXGradual`. The engine restored level bounds
+  on results exit, so the camera jumped (Tails route rows 17771-17795, `soz_completerun`
+  row 28940). SOZ Act 1 is now a boss-owned gradual expansion.
+- The results owner restored player control in its own pass; SOZ1's
+  `Obj_EndSignControlAwaitStart` is in a lower slot (8 vs 12) and restores on the next
+  pass, so the ROM player never obeys the held input at row 28941. The results owner
+  now defers to any live lower-slot EndSignControl owner. `TestS3kSozCompleteRunTraceReplay`:
+  10483 -> 9164 errors; first physics divergence row 28941 -> 29093 (CPU Tails
+  `x_speed` on the walk to the pyramid). Other S3K replay reports unchanged.
+
+### 2026-09-17 — SOZ2 route through the end boss: 9164 -> 65 errors
+
+- `bugfix/ai-soz-recorded-routes` from `0ff2ebf25` to `8d2b4945b`. Focused command:
+  `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestS3kSozCompleteRunTraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" test -B` (fresh `target/trace-reports`).
+- Per-commit errors, physics frontiers and native causes are tabulated in the SOZ plan
+  ("Replay follow-up: SOZ2 through the end boss"). `soz_completerun` now runs 59336
+  frames with 65 errors; the first error is still the animation-only row 5977
+  `tails_mapping_frame`, and the first physics divergence is row 45256 `rings` (lost-ring
+  floor phase from SST slot order), then row 51860 `y` (camera wrap write, blocked by the
+  `@ModApi` pin policy) and row 59238 (boss escape subpixel).
+- S3K sweep: `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3k*TraceReplay" "-Ds3k.rom.path=<ROM>"
+  -Dsurefire.failIfNoSpecifiedTests=false test -B` on develop `70aa0a0b7` (61 classes:
+  20 failures, 2 errors) and on the branch at `27d0d4bc5` (21 failures, 1 error). The
+  only per-class change was `TestS3kSozCompleteRunTraceReplay` (ERROR -> FAIL with a
+  complete report); every other class kept its status and error total, including the
+  shared spring, object-load band, Blastoid and capsule-rewind changes.
+

@@ -121,6 +121,8 @@ public final class SozPushSwitchObjectInstance extends AbstractObjectInstance
     @Override public void setPlayerPushing(PlayableEntity player,boolean pushing) { participants.flag(participants.slot(player),0,pushing); }
     @Override public int getX() { return x; }
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(23,16,17); }
+    // loc_1E154 re-reads width_pixels=$30 (Obj_SOZPushSwitch), not the caller's d1=$17-$B.
+    @Override public int getTopLandingHalfWidth(PlayableEntity player,int collisionHalfWidth) { return 0x30; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !retained; }
     @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }

@@ -1787,6 +1787,10 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_SANDWORM_ADDR = 0x16B038;
     public static final int MAP_SANDWORM_ADDR = 0x186D10;
     public static final int ART_KOSM_ROCKN_ADDR = 0x16B2BA;
+    // PLCKosM_SOZ VRAM destinations (sonic3k.constants.asm ArtTile_Skorp/Sandworm/Rockn)
+    public static final int ARTTILE_SKORP = 0x0536;
+    public static final int ARTTILE_SANDWORM = 0x0557;
+    public static final int ARTTILE_ROCKN = 0x0500;
     public static final int MAP_ROCKN_ADDR = 0x08F086;
     // Obj_SOZMiniboss absolute LEAs at $76A5E/$76A6E and ObjDat at $773AC/$773CA.
     public static final int ART_KOSM_SOZ_MINIBOSS_ADDR = 0x16CB5C;

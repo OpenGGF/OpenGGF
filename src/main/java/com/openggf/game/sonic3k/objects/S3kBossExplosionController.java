@@ -66,17 +66,22 @@ public class S3kBossExplosionController {
     }
 
     static S3kBossExplosionController fromSnapshot(Snapshot snapshot) {
-        return new S3kBossExplosionController(snapshot);
+        return new S3kBossExplosionController(snapshot, null);
     }
 
-    private S3kBossExplosionController(Snapshot snapshot) {
+    /** Rebinds a helper that draws from an owner-restored shared RNG. */
+    static S3kBossExplosionController fromSnapshot(Snapshot snapshot, GameRng sharedRng) {
+        return new S3kBossExplosionController(snapshot, sharedRng);
+    }
+
+    private S3kBossExplosionController(Snapshot snapshot, GameRng sharedRng) {
         centreX = snapshot.centreX();
         centreY = snapshot.centreY();
         xRange = snapshot.xRange();
         yRange = snapshot.yRange();
         timer = snapshot.timer();
         intervalCounter = snapshot.intervalCounter();
-        rng = new GameRng(snapshot.rng().flavour(), snapshot.rng().seed());
+        rng = sharedRng != null ? sharedRng : new GameRng(snapshot.rng().flavour(), snapshot.rng().seed());
         pendingExplosions.addAll(List.of(snapshot.pending()));
     }
 

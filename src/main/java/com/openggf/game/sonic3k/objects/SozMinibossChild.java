@@ -192,7 +192,9 @@ final class SozMinibossChild extends SozMinibossSprite implements RewindRecreata
             if(!(entity instanceof AbstractPlayableSprite player))return;
             boolean reached=fromRight?player.getCentreX()<=0x43A0:player.getCentreX()>=0x43A0;
             if(!reached){player.setForcedInputMask((fromRight?AbstractPlayableSprite.INPUT_LEFT:AbstractPlayableSprite.INPUT_RIGHT)|(player.getPushing()?AbstractPlayableSprite.INPUT_JUMP:0));return;}
-            NativePositionOps.writeXPosPreserveSubpixel(player,0x43A0);player.clearForcedInputMask();player.setDirection(com.openggf.physics.Direction.RIGHT);
+            // loc_76EE4 clears Ctrl_1_logical; with Ctrl_1_locked set it stays clear, so the
+            // follower's delayed Stat_table copy also reads no input (soz_completerun row 29093).
+            NativePositionOps.writeXPosPreserveSubpixel(player,0x43A0);player.clearForcedInputMask();player.clearLogicalInputState();player.setDirection(com.openggf.physics.Direction.RIGHT);
             player.setXSpeed((short)0);player.setYSpeed((short)0);player.setGSpeed((short)0);
             ((SozZoneRuntimeState)services().zoneRuntimeState()).requestMinibossPostResultsAlignmentComplete();ObjectLifetimeOps.deleteNoRespawn(this);
         }
