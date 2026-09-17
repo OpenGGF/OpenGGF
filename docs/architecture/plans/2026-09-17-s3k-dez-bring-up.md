@@ -1070,3 +1070,30 @@ classes above exercise that.
 left blocked — headroom angle, roll-entry offset, jump roll-radius — are now unblocked: an inverted
 player can be grounded on the corridor ceiling, so a grounded inverted fixture is available to
 assert them against.
+
+**Where slice 2 should resume, and why not further in this session.** The airborne path is done;
+the next row is the **grounded** one, `Call_Player_AnglePos` :22330, and it has to land before
+2a-3's player actions rather than after them. Two findings say so:
+
+1. *2a-3's roll, jump and spindash rows need a grounded inverted player, and the engine cannot
+   produce a correct one yet.* An inverted player now lands on the ceiling, but its `angle` and
+   ground mode come from the airborne path only. The ROM's grounded attachment mirrors `angle(a0)`
+   around `Player_AnglePos` (:22329-22343), so a ceiling-standing player runs `WalkCeiling` with a
+   `$80` terrain angle mirrored back to `$00`. Until that exists, asserting a roll-entry offset on
+   a ceiling-grounded player would be measuring a half-built state, not the ROM.
+2. *The roll rows are a coordinate-convention trap, not a sign flip.* `Player_DoRoll` (:23259-23268)
+   does `addq.w #5,y_pos` and then, under the flag, `subi.w #2*5` — a **centre**-Y delta of −5 where
+   upright is +5. The engine applies the equivalent to **top-left** Y through
+   `getRollHeightAdjustment()`, which returns the full height difference (10 for Sonic) because the
+   roll also shrinks the box; the centre moves 5. Negating that helper would move the centre by −10,
+   not −5. The correct engine top-left delta under the flag is `fullDiff/2 + (−fullDiff/2)` = **0**
+   in GROUND/CEILING mode and `−fullDiff/2` on a wall. `loc_11578` (:22975-22991), `loc_1182E`
+   (:23344) and `loc_11C5E` (:23694) share the same shape with the radius difference in `d0`.
+   Whoever implements these must state the convention in the test, not just flip a sign.
+
+Rows left in slice 2 after this session: group A 22330 and 24156; all of 2a-3 (B 22011,
+22623-23694, 24426 and the C/E twins, including the preserved `Tails_Test_For_Flight` bug at
+28655); 2b (groups F, G, H, I); 2c (group D, the Knuckles glide/slide/climb rows, Super forms).
+No demo clips and no rewind spots were produced: both belong to the finished player groups, and the
+grounded path is still missing. No category run was launched for the same reason — this is a
+partial slice, and its verification is the focused evidence recorded above, not a delivery gate.
