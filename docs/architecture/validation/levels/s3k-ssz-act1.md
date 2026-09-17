@@ -81,6 +81,11 @@ This is focused validation, not a suite pass. Media: `raw-01-arrival-sonic-tails
 - The engine's arrival begins one frame later than fixture `hpz` row 0 implies, because the screen
   init runs from pre-physics of frame 1 rather than inside the level load. Values match exactly;
   the phase is slice 10's to settle.
-- No rewind spot has been exercised on any SSZ object yet.
+- No rewind **spot** has been exercised on any SSZ object yet. Every new class does pass the
+  generic capture/restore round trip in `TestEveryObjectRewindRoundTrip`, and
+  `SszZoneRuntimeState` is captured, but nothing has been captured mid-arrival or mid-cutscene,
+  restored and replayed forward.
+- The pseudo-starpost's other half — die after the bridge and respawn at `($140,$C6C)` — is owed:
+  slice 1b covers the respawn-finds-it-extended case, the death path belongs with slice 4.
 - The Death Egg's `Pal_KnuxSSZEnd` patch, its missile and cloud children, and cutscene Knuckles'
   resting X are filed in [s3k-known-bugs](../../../status/s3k-known-bugs.md).
