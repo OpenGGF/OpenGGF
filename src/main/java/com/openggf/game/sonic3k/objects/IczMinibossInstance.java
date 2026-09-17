@@ -147,6 +147,9 @@ public final class IczMinibossInstance extends AbstractBossInstance
     private boolean arenaGateComplete;
     private boolean bossMusicStarted;
     private boolean shardsReleased;
+    // loc_711EC creates the six shard SSTs (CreateChild1_Normal, sonic3k.asm:149713-149714);
+    // from that dispatch on, loc_71446 draws them every frame (149901-149908).
+    private boolean shardsCreated;
     private boolean orbThrowRight;
     private int mappingFrame;
     private int defeatTimer;
@@ -224,6 +227,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
         arcXVelocityLatch = 0x200;
         parentFlags = 0;
         shardsReleased = false;
+        shardsCreated = false;
         orbThrowRight = true;
         mappingFrame = 0;
         defeatTimer = 0;
@@ -255,6 +259,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
                 // after loc_85CA4 has completed the camera gate.
                 reserveNativeChildSlots();
                 initOrbs(false);
+                shardsCreated = true;
                 state.routine = ROUTINE_DESCEND;
             }
             case ROUTINE_DESCEND -> {
@@ -1150,7 +1155,7 @@ public final class IczMinibossInstance extends AbstractBossInstance
                 mask |= 1 << (orbBucket(orb) - RenderPriority.MIN);
             }
         }
-        if (shardsReleased) {
+        if (shardsCreated) {
             mask |= 1 << (SHARD_BUCKET - RenderPriority.MIN);
         }
         mask &= ~(1 << (PRIORITY_BUCKET - RenderPriority.MIN));
@@ -1217,7 +1222,13 @@ public final class IczMinibossInstance extends AbstractBossInstance
             }
             return;
         }
-        if (bucket == SHARD_BUCKET && shardsReleased && shards != null) {
+        // Shards exist from loc_711EC (149713-149714) and loc_71446 ends every
+        // dispatch in Child_Draw_Sprite2_FlickerMove (149907-149908, 178129-178133):
+        // with parent $38 bit 4 clear that is a plain Draw_Sprite each frame, so
+        // the attached shell is drawn from creation at word_7196C / RawAni_716C2
+        // frames (149918-149921, 150200-150208) without flicker; only the defeat
+        // signal switches the children to Obj_FlickerMove.
+        if (bucket == SHARD_BUCKET && shardsCreated && shards != null) {
             for (int i = shards.length - 1; i >= 0; i--) {
                 ShardState shard = shards[i];
                 renderer.drawFrameIndex(shard.frame, shard.x, shard.y, false, false, BODY_PALETTE_LINE);

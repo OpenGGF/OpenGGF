@@ -1728,11 +1728,13 @@ abstract class AbstractRunChainTest {
                     returnRowsConsumed = framesConsumed;
                     returnCursorArrivedOrganically = true;
                 } else {
-                    // OPTION B (bonus interior): the engine's bonus-exit sequence is
-                    // shorter than the recorded post-catch BONUS_STAGE tail, and ~80 of
-                    // those recorded rows are the ROM's clearRAM/level-reload frames that
-                    // the engine performs synchronously (loadZoneAndAct is one frame) --
-                    // so the cursor cannot organically reach returnOffset (see
+                    // OPTION B (bonus interior): the recorded post-catch tail is the ROM
+                    // Level: re-entry -- 22 Pal_FadeToBlack V-ints (sonic3k.asm:7523-7524,
+                    // 5042-5051), the loc_62CC title-card loop (7737-7748, ~80 rows with
+                    // Obj_TitleCard in slot 8) and the pre-LevelLoop load with its lag
+                    // rows. The engine reproduces the fade and shows the title card, but
+                    // its S3K title-card/load span is not row-matched to that tail, so the
+                    // cursor cannot organically reach returnOffset (see
                     // docs/S3K_KNOWN_DISCREPANCIES.md, gumball exit choreography). The
                     // BONUS->LEVEL title-card-exit fall-through already ran the return
                     // segment's frame 0. Re-anchor the cursor to returnOffset+1 and
@@ -3497,9 +3499,10 @@ abstract class AbstractRunChainTest {
      * 0x1598 for gumball #1) before the first interior frame. The chain instead
      * reaches the interior ORGANICALLY from the preceding level replay, so the
      * shared engine RNG carries whatever state the preceding level left it in --
-     * which is NOT the recorded run's entry seed, because the
-     * engine has no faithful persistent global {@code V_int_run_count} (a
-     * documented deferred gap; see docs/S3K_KNOWN_DISCREPANCIES.md). Without this
+     * which is NOT the recorded run's entry seed: the engine carries a power-on
+     * {@code V_int_run_count} ({@code VIntRunCounter}), but a chain started from a
+     * segment boundary cannot rebuild the recorded pre-trace history that seeded
+     * {@code RNG_seed}. Without this
      * prime the gumball's ball series diverges mid-interior (f442) and dispenses a
      * different reward ball, so the on-return ring carry-over is off by one ball's
      * award (59 vs the recorded 69). Re-establishing the recorded entry seed at
@@ -3511,14 +3514,9 @@ abstract class AbstractRunChainTest {
      * identical to loading a save-state at the interior's BK2 start. No per-frame
      * trace field is ever hydrated into engine state, and it keys purely on
      * manifest metadata, never on zone/route/segment identity (the helper is a
-     * no-op for any interior whose metadata lacks {@code rng_seed}). This is the
-     * gumball-family (RNG_seed reseed) counterpart of the slots-family
-     * {@code primeVIntRunCountForReplay} seam in
-     * {@code TraceReplaySessionBootstrap.applyBonusStageEntry}: both re-establish
-     * the recorded entry-time {@code V_int_run_count}-derived state the organic
-     * chain entry cannot reproduce, each modelling the exact ROM read its machine
-     * performs (gumball reseeds RNG_seed once; slots reads V_int_run_count live per
-     * reel cycle).
+     * no-op for any interior whose metadata lacks {@code rng_seed}). Slots needs no
+     * counterpart: it reads the live object clock, which the replay bootstrap seeds
+     * once from row zero's recorded {@code vblank_counter}.
      */
     private void primeInteriorEntryRngFromMetadata(
             TraceRunSegmentDescriptor interior) {

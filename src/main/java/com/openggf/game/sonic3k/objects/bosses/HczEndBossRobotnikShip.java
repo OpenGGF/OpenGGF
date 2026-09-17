@@ -33,7 +33,9 @@ import java.util.logging.Logger;
  *
  * <p>The Eggman head (Obj_RobotnikHead, line 136028) is rendered inline at
  * offset (0, -0x1C) from the ship position. It animates frames 0–1 at delay 5,
- * shows frame 2 when the boss is hurt, and frame 3 when defeated.
+ * shows frame 2 when the boss is hurt, and frame 3 when defeated. It is drawn
+ * before the ship because its SST slot follows the ship's (see
+ * {@link #appendRenderCommands}).
  */
 public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindRecreatable {
     private static final Logger LOG = Logger.getLogger(HczEndBossRobotnikShip.class.getName());
@@ -310,10 +312,17 @@ public class HczEndBossRobotnikShip extends AbstractBossChild implements RewindR
             return;
         }
 
-        shipRenderer.drawFrameIndex(shipFrame, currentX, currentY, shipFacingRight, false);
-
+        // Obj_RobotnikShipInit allocates the head with Child1_MakeRoboHead /
+        // CreateChild1_Normal (sonic3k.asm:136415-136416, 176924-176929), i.e.
+        // AllocateObjectAfterCurrent: the head lands in a later slot than the
+        // ship. Both use priority $280 (ObjDat_RobotnikShip 136655-136658,
+        // ObjDat_RobotnikHead 136645-136648) and Draw_Sprite appends in
+        // Process_Sprites slot order, where the lower sprite-table entry wins,
+        // so the ship is in front of the head. Painter's order: head, then ship.
         int headX = currentX + HEAD_OFFSET_X;
         int headY = currentY + HEAD_OFFSET_Y;
         shipRenderer.drawFrameIndex(getHeadFrame(), headX, headY, shipFacingRight, false);
+
+        shipRenderer.drawFrameIndex(shipFrame, currentX, currentY, shipFacingRight, false);
     }
 }

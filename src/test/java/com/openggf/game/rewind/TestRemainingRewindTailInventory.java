@@ -123,7 +123,9 @@ class TestRemainingRewindTailInventory {
         // Full SOZ bring-up: 39 additional isolated passes and four graph-covered
         // children. Rockn Shell/Legs and Sandworm Segment require their real owners;
         // TestSozBadnikProduction explicitly recreates those child types.
-        return new TailInventory(1063, 839, 224, 0, buckets);
+        // MHZ Madmole's body is its own ROM child object; TestMadmoleParentChildRewind
+        // recreates it with its cap (graph-covered).
+        return new TailInventory(1064, 839, 225, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

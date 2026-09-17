@@ -101,6 +101,8 @@ public final class RewindRoundTripHarness {
                     "com.openggf.tests.TestSozBadnikProduction"),
             Map.entry("com.openggf.game.sonic3k.objects.badniks.SandwormBadnikInstance$Segment",
                     "com.openggf.tests.TestSozBadnikProduction"),
+            Map.entry("com.openggf.game.sonic3k.objects.badniks.MadmoleBadnikInstance$MadmoleBodyChild",
+                    "com.openggf.game.sonic3k.objects.badniks.TestMadmoleParentChildRewind"),
             Map.entry("com.openggf.game.sonic3k.objects.SozEndBossChild",
                     "com.openggf.game.sonic3k.objects.TestSozEndBossProduction"),
             Map.entry("com.openggf.game.sonic3k.objects.HPZMasterEmeraldGlowObjectInstance",

@@ -6,8 +6,12 @@ import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.boss.AbstractBossChild;
+import com.openggf.level.render.PatternSpriteRenderer;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -16,6 +20,12 @@ import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Each HCZ end-boss child is its own ROM object with its own {@code priority} word
@@ -79,6 +89,41 @@ class TestHczEndBossChildBuckets {
         assertEquals(0, getIntField(middle, "subtype"));
         assertEquals(RenderPriority.fromS3kWord(0x280), middle.getPriorityBucket(),
                 "the new bottom blade takes the subtype-0 word");
+    }
+
+    /**
+     * Obj_RobotnikShipInit creates the head with Child1_MakeRoboHead / CreateChild1_Normal
+     * (sonic3k.asm:136415-136416, 176924-176929), an AllocateObjectAfterCurrent, so
+     * the head occupies a later slot than the ship. Both are priority $280 and
+     * Draw_Sprite appends in slot order with the lower sprite-table entry in
+     * front, so the ship covers the head: the folded renderer paints the head first.
+     */
+    @Test
+    void shipPaintsAfterItsHeadBecauseTheHeadSlotFollowsTheShipSlot() {
+        PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);
+        when(renderer.isReady()).thenReturn(true);
+        ObjectServices services = new TestObjectServices() {
+            @Override
+            public ObjectRenderManager renderManager() {
+                return new ObjectRenderManager(null) {
+                    @Override
+                    public PatternSpriteRenderer getRenderer(String key) {
+                        return Sonic3kObjectArtKeys.ROBOTNIK_SHIP.equals(key) ? renderer : null;
+                    }
+                };
+            }
+        }.withConfiguration(SonicConfigurationService.createStandalone());
+        HczEndBossInstance boss = boss(services);
+        HczEndBossRobotnikShip ship = construct(services, () -> new HczEndBossRobotnikShip(boss));
+        ship.setServices(services);
+        ship.update(1, null);
+
+        ship.appendRenderCommands(new java.util.ArrayList<>());
+
+        InOrder order = inOrder(renderer);
+        // Head frames are 0-3 (Obj_RobotnikHeadMain); the ship body is frame 5.
+        order.verify(renderer).drawFrameIndex(eq(0), anyInt(), anyInt(), anyBoolean(), eq(false));
+        order.verify(renderer).drawFrameIndex(eq(5), anyInt(), anyInt(), anyBoolean(), eq(false));
     }
 
     private static void assertChild(AbstractBossChild child, int priorityWord, boolean highPriority) {

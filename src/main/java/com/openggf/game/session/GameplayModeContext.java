@@ -334,6 +334,9 @@ public final class GameplayModeContext implements ModeContext {
         this.rewindRegistry.register(camera);
         this.rewindRegistry.register(gameStateManager);
         this.rewindRegistry.register(rng);
+        // Power-on V_int_run_count carrier: the ObjectManager snapshot restores the
+        // live object clock; this entry restores the carried value it hands back.
+        this.rewindRegistry.register(EngineServices.current().vIntRunCounter());
         this.rewindRegistry.register(timerManager);
         this.rewindRegistry.register(fadeManager);
         this.rewindRegistry.register(new OscillationStaticAdapter());
@@ -365,6 +368,14 @@ public final class GameplayModeContext implements ModeContext {
         this.spriteManager = Objects.requireNonNull(spriteManager, "spriteManager");
         this.levelManager = Objects.requireNonNull(levelManager, "levelManager");
         maybeCreateBackgroundPlaneCollisionProvider();
+        // ROM V_int_run_count keeps counting through this session: the level's
+        // object clock owns the per-V-blank tick while a level is attached.
+        EngineServices.current().vIntRunCounter().bindObjectClock(() -> {
+            var objects = levelManager.getObjectManager();
+            return objects != null
+                    ? objects.getVblaCounter() & 0xFFFFFFFFL
+                    : com.openggf.game.timing.VIntRunCounter.NO_OBJECT_CLOCK;
+        });
 
         if (rewindRegistry != null) {
             rewindRegistry.deregister("parallax");
@@ -1128,6 +1139,8 @@ public final class GameplayModeContext implements ModeContext {
             return;
         }
         managersTornDown = true;
+        // Hand the session's final V-int count back to the power-on carrier.
+        EngineServices.current().vIntRunCounter().unbindObjectClock();
         installGameplayInputFilter(GameplayInputFilter.IDENTITY);
         RuntimeException replayCloseFailure = null;
         Runnable replayClose = hardwareTimingReplayCloseHook;

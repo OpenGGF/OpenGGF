@@ -47,6 +47,10 @@ public final class S3kRuntimeStates {
         return registry.currentAs(SozZoneRuntimeState.class);
     }
 
+    public static Optional<HpzZoneRuntimeState> currentHpz(ZoneRuntimeRegistry registry) {
+        return registry.currentAs(HpzZoneRuntimeState.class);
+    }
+
     public static PlayerCharacter resolvePlayerCharacter(ZoneRuntimeRegistry registry,
                                                          SonicConfigurationService config) {
         if (registry != null) {

@@ -1656,7 +1656,9 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             // |speed| beyond $200 in either direction, every 4th global frame.
             if (((xVel + 0x200) & 0xFFFF) >= 0x400 && (vIntRunCount & 3) == 0) {
                 LbzEndBossInstance boss = boss();
-                boss.recordChild(boss.spawnChild(() -> new LbzEndBossSmokePuffChild(
+                // ChildObjDat_74198 via CreateChild1_Normal: AllocateObjectAfterCurrent
+                // from the spike ball's own slot (sonic3k.asm:153571-153572,176929).
+                boss.recordChild(boss.spawnChildAfterSlot(getSlotIndex(), () -> new LbzEndBossSmokePuffChild(
                         boss, currentX, currentY + TERRAIN_RADIUS, 0)));
             }
         }
@@ -1678,14 +1680,15 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
                 int flipBits = i & 3;
                 boolean hFlip = (flipBits & 1) != 0;
                 boolean vFlip = (flipBits & 2) != 0;
-                boss.recordChild(boss.spawnChild(() -> new LbzEndBossDebrisChild(
+                // ChildObjDat_741A0 via CreateChild1_Normal from the ball's slot (loc_73B82).
+                boss.recordChild(boss.spawnChildAfterSlot(getSlotIndex(), () -> new LbzEndBossDebrisChild(
                         boss, currentX + ox, currentY + oy, xv, yv, frame, hFlip, vFlip, true)));
             }
             for (int i = 0; i < SPRAY_SMOKE_OFFSETS.length; i++) {
                 int ox = SPRAY_SMOKE_OFFSETS[i][0];
                 int oy = SPRAY_SMOKE_OFFSETS[i][1];
                 int subtype = 0x10 + i * 2;
-                boss.recordChild(boss.spawnChild(() -> new LbzEndBossSmokePuffChild(
+                boss.recordChild(boss.spawnChildAfterSlot(getSlotIndex(), () -> new LbzEndBossSmokePuffChild(
                         boss, currentX + ox, currentY + oy, subtype)));
             }
             ObjectLifetimeOps.expireDynamic(this);
@@ -1697,36 +1700,47 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
     }
 
     /**
-     * Smoke puff: loc_73BA0 / byte_741F8. Subtype 0 rises at -$200; subtypes
-     * $10/$12/$14/$16 wait -2*(subtype-$10) frames before animating. The ROM's
-     * $F4 delete never actually fires (loc_73BDC re-increments $2E every frame),
-     * so the engine implements the intended play-once-then-delete behaviour; see
-     * docs/S3K_KNOWN_DISCREPANCIES.md.
+     * Smoke puff: loc_73BA0 / loc_73BDC / byte_741F8 (sonic3k.asm:153584-153608,
+     * 154206). Subtype 0 rises at -$200; subtypes $10/$12/$14/$16 count $2E up
+     * from -2*(subtype-$10) before moving and animating.
+     *
+     * <p>The puff deletes after one pass of byte_741F8. loc_73BA0 stores
+     * {@code Go_Delete_Sprite} ($000852A0) in $34, and the $F4 command's
+     * {@code AnimateRaw_CustomCode} (ROM $8445A: clr.b $24(a0); movea.l $34(a0),a1;
+     * jmp (a1)) calls it directly, so the $2E counter never gates the delete.
      */
     private static final class LbzEndBossSmokePuffChild extends AbstractBossChild implements LbzEndBossGraphChild {
-        private static final int[] ANIM_FRAMES = {7, 7, 8, 9};
-        private int delayTimer;
+        // byte_741F8: delay 5, frames 7,7,8,9, then $F4. Index 0 is the byte after the delay.
+        private static final int[] ANIM_SCRIPT = {7, 7, 8, 9, -1};
+        private static final int ANIM_DELAY = 5;
+        private int subtype;
+        private boolean initialized;
+        // $2E(a0): signed word counter incremented by loc_73BDC every frame.
+        private int waitCounter;
         private int frame;
+        // anim_frame(a0) and anim_frame_timer(a0); SetUp_ObjAttributes2 leaves both zero.
         private int animIndex;
         private int animTimer;
         private int yVel;
         private int yFixed;
+        // Draw_Sprite only runs when loc_73BDC gets past its bmi and after init.
+        private boolean drawnThisFrame;
+        // Go_Delete_Sprite installed Delete_Current_Sprite; the slot frees on the next pass.
+        private boolean deletePending;
 
         private LbzEndBossSmokePuffChild(LbzEndBossInstance parent, int x, int y, int subtype) {
             super(parent, "LBZEndBossSmoke", 4, 0xCB);
             currentX = x;
             currentY = y;
             yFixed = y << 16;
-            delayTimer = subtype >= 0x10 ? -2 * (subtype - 0x10) : 0;
+            this.subtype = subtype & 0xFF;
+            // word_74130 mapping_frame = 7.
             frame = 7;
-            animIndex = 0;
-            animTimer = 0;
-            yVel = subtype == 0 ? -0x200 : 0;
         }
 
         // The (parent, x, y, subtype) constructor already matches the recreate probe's
-        // (enclosing, int, int, int) signature; all state (position, delay, yVel, frame) is
-        // captured and restored in phase 2, so the probe's placeholder args are safe.
+        // (enclosing, int, int, int) signature; all state (position, counter, yVel, frame,
+        // init/delete latches) is captured and restored in phase 2.
         @Override
         public AbstractBossChild recreateForRewind(RewindRecreateContext ctx) {
             LbzEndBossInstance boss = nearestBossForRewind(ctx);
@@ -1738,26 +1752,71 @@ public final class LbzEndBossInstance extends AbstractBossInstance implements Sp
             if (!beginUpdate(vIntRunCount)) {
                 return;
             }
-            if (delayTimer < 0) {
-                delayTimer++;
+            drawnThisFrame = false;
+            if (deletePending) {
+                // Delete_Current_Sprite runs on the pass after Go_Delete_Sprite.
+                ObjectLifetimeOps.expireDynamic(this);
                 return;
             }
-            yFixed += yVel << 8;
-            currentY = yFixed >> 16;
-            if (--animTimer < 0) {
-                animTimer = 5;
-                animIndex++;
-                if (animIndex > 3) {
-                    ObjectLifetimeOps.expireDynamic(this);
+            if (!initialized) {
+                // loc_73BA0 runs on the allocation pass (AllocateObjectAfterCurrent
+                // gives a higher slot). Subtype 0 sets y_vel and returns without
+                // drawing; other subtypes load $2E and fall through to loc_73BDC.
+                initialized = true;
+                if (subtype == 0) {
+                    yVel = -0x200;
+                    updateDynamicSpawn();
                     return;
                 }
-                frame = ANIM_FRAMES[animIndex];
+                waitCounter = (short) -((subtype - 0x10) * 2);
             }
+            // loc_73BDC: addq.w #1,$2E / bmi.w locret_7399C (no draw while negative).
+            waitCounter = (short) (waitCounter + 1);
+            if (waitCounter < 0) {
+                return;
+            }
+            // MoveSprite2.
+            yFixed += yVel << 8;
+            currentY = yFixed >> 16;
+            animateRaw();
+            // Draw_Sprite also runs on the $F4 frame, still showing mapping frame 9.
+            drawnThisFrame = true;
             updateDynamicSpawn();
+        }
+
+        /** Animate_RawNoSST (sonic3k.asm:177341-177372) over byte_741F8. */
+        private void animateRaw() {
+            animTimer = (byte) (animTimer - 1);
+            if (animTimer >= 0) {
+                return;
+            }
+            animIndex++;
+            int value = ANIM_SCRIPT[animIndex];
+            if (value < 0) {
+                // AnimateRaw_CustomCode: clr.b anim_frame_timer, jmp ($34) =
+                // Go_Delete_Sprite; loc_84428 then clears anim_frame.
+                animTimer = 0;
+                animIndex = 0;
+                deletePending = true;
+                return;
+            }
+            animTimer = ANIM_DELAY;
+            frame = value;
+        }
+
+        boolean isDrawnThisFrameForTests() {
+            return drawnThisFrame;
+        }
+
+        int getFrameForTests() {
+            return frame;
         }
 
         @Override
         public void appendRenderCommands(List<GLCommand> commands) {
+            if (!drawnThisFrame || isDestroyed()) {
+                return;
+            }
             PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LBZ_END_BOSS);
             if (renderer != null && renderer.isReady()) {
                 renderer.drawFrameIndex(frame, currentX, currentY, false, false);

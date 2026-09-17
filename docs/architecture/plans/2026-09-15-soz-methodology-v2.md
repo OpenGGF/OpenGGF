@@ -3154,7 +3154,7 @@ Rejected in this round:
   camera does. It fixed row 51860 (measured 598 -> 597 at the time); rows 59289+ show
   the same masked `y` while the boss holds Sonic (not re-measured). `Camera` is `@ModApi` and the policy
   hook requires a signature-pin change for any edit, while the pin itself cannot
-  change for a private body. The camera commit was withdrawn; see the S3K discrepancy.
+  change for a private body. The camera commit was withdrawn; see S3K known bugs.
 - Preserving the boss root subpixels in `loc_77986` (65 -> 70 errors): the ROM copies
   only position words, but the engine root's earlier subpixels do not match ROM either.
 - Deleting orphaned boss particles/projectiles when their parent is removed (73 -> 512):

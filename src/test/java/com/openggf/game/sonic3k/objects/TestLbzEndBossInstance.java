@@ -391,6 +391,62 @@ class TestLbzEndBossInstance {
                 "spike-ball defeat spray emits 8 debris children and 4 smoke puffs");
     }
 
+    @Test
+    void sprayedSmokePuffsPlayByte741F8OnceThenDeleteOnTheNextPass() throws Exception {
+        LbzEndBossInstance boss = constructBoss(new TestObjectServices().withCamera(cameraAt(0x3A20, 0x05A0)));
+        LbzEndBossInstance.LbzEndBossSpikeBallChild ball = launchFirstSpikeBall(boss);
+        boss.getState().hitCount = 1;
+        boss.onPlayerAttack(null, null);
+        ball.update(0x7000, null);
+        List<?> puffs = boss.getOwnedChildrenForTests().stream()
+                .filter(child -> child.getClass().getSimpleName().equals("LbzEndBossSmokePuffChild"))
+                .toList();
+        assertEquals(4, puffs.size());
+
+        // Subtypes $10,$12,$14,$16: $2E = 0,-4,-8,-12. loc_73BDC increments before
+        // its bmi, so the first drawn pass is 0,3,7,11 (pass 0 is the allocation pass
+        // where loc_73BA0 falls through). byte_741F8 then shows 7,8,9 for six passes
+        // each; the $F4 pass still draws 9 and Go_Delete_Sprite frees the slot on the
+        // following pass.
+        int[] firstDrawn = {0, 3, 7, 11};
+        for (int pass = 0; pass < 40; pass++) {
+            for (int i = 0; i < puffs.size(); i++) {
+                Object puff = puffs.get(i);
+                com.openggf.level.objects.AbstractObjectInstance object =
+                        (com.openggf.level.objects.AbstractObjectInstance) puff;
+                if (object.isDestroyed()) {
+                    assertTrue(pass > firstDrawn[i] + 19, "puff " + i + " deleted early at pass " + pass);
+                    continue;
+                }
+                object.update(0x8000 + pass, null);
+                int rel = pass - firstDrawn[i];
+                boolean drawn = (boolean) invoke(puff, "isDrawnThisFrameForTests");
+                if (rel < 0) {
+                    assertFalse(drawn, "loc_73BDC bmi skips Draw_Sprite while $2E is negative");
+                } else if (rel <= 18) {
+                    assertTrue(drawn, "puff " + i + " draws on pass " + pass);
+                    int expected = rel < 6 ? 7 : rel < 12 ? 8 : 9;
+                    assertEquals(expected, (int) invoke(puff, "getFrameForTests"),
+                            "puff " + i + " mapping frame at relative pass " + rel);
+                    assertFalse(object.isDestroyed(), "Go_Delete_Sprite keeps the slot through the $F4 pass");
+                } else {
+                    assertTrue(object.isDestroyed(),
+                            "Delete_Current_Sprite frees puff " + i + " on the pass after $F4");
+                }
+            }
+        }
+        for (Object puff : puffs) {
+            assertTrue(((com.openggf.level.objects.AbstractObjectInstance) puff).isDestroyed(),
+                    "AnimateRaw_CustomCode jumps straight to $34 = Go_Delete_Sprite; the puff never leaks");
+        }
+    }
+
+    private static Object invoke(Object target, String method) throws Exception {
+        java.lang.reflect.Method m = target.getClass().getDeclaredMethod(method);
+        m.setAccessible(true);
+        return m.invoke(target);
+    }
+
     private static LbzEndBossInstance constructBoss(TestObjectServices services) {
         LbzEndBossInstance boss = ObjectConstructionContext.construct(
                 services,

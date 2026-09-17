@@ -109,14 +109,22 @@ must override it; `TestObjectPriorityBucketGuard` enforces this and a ROM priori
 opts in by returning `bucket(0)` with the citation. `isHighPriority()` is the art
 word's bit 15, a different property. See the
 [sprite priority bucket audit](audits/2026-09-16-sprite-priority-bucket-audit.md).
+**S3K HCZ boss mappings are ROM addresses, never disassembly files.** `Sonic3kObjectArtProvider`
+reads `Map_HCZMiniboss`, `Map_HCZEndBoss` and `Map_HCZWaterWall` through `S3kSpriteDataLoader`
+at `Sonic3kConstants.MAP_HCZ_MINIBOSS_ADDR` (`0x3629E0`, the offset-table base, not the first
+frame body), `MAP_HCZ_END_BOSS_ADDR` (`0x3634D4`) and `MAP_HCZ_WATERWALL_ADDR` (`0x22EE10`);
+an earlier build parsed the `.asm` files under `docs/` at runtime and rendered nothing when
+the submodule was absent. `TestArchitecturalSourceGuard` pins the three constants and this note.
+
 **Inline-drawn ROM children need their own buckets.** When an owner draws its ROM
 child slots from its own render call (boss orbs, panels, box pieces), implement
 `MultiBucketRenderable`: report the parts' buckets through `extraRenderBuckets()`, their
 art-word bit through `isHighPriority(int)`, and draw only the requested bucket in
 `appendRenderCommands(commands, bucket)`. The manager lists the owner in every bucket
-and re-reads part buckets each frame, so runtime `priority` rewrites work; parts share
-the owner's slot for in-bucket order. Splitting into child instances is still the
-better model when the parts need their own slots for allocation or touch order.
+and re-reads part buckets each frame, so runtime `priority` rewrites work. Parts sort
+by `partSlotIndex(bucket, class)`, the owner's slot unless the owner models where the
+ROM allocated the child. Splitting into child instances is still the better model when
+the parts need their own slots for allocation or touch order.
 Resolve relative mapping attributes with the complete native 16-bit art-word
 addition before separating fields. SOZ pillar spikes use `$C49B/$D49B + $4001`,
 which clears priority as palette bits wrap; independent palette addition leaves

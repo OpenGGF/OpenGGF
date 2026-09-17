@@ -50,6 +50,17 @@ Entries should include:
 24. [CNZ F=621 Clamer re-fire — Touch_Special cprop latch landed (round 4, fixed)](#cnz-f621-clamer-re-fire--touch_special-cprop-latch-landed-round-4-fixed)
 25. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
 26. [Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open](#blue-sphere-fm-pickup-onset--automated-parity-complete-listening-gate-open)
+27. [Slot Machine Bonus Stage Is Not Rewindable](#slot-machine-bonus-stage-is-not-rewindable)
+28. [Super Emerald Results: Sanctuary Reveal Not Implemented](#super-emerald-results-sanctuary-reveal-not-implemented)
+29. [AIZ2 Fire Terrain Swap Uses an Invented Decompression Span](#aiz2-fire-terrain-swap-uses-an-invented-decompression-span)
+30. [MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled](#mgz-swinging-platform-endpoint-inherited-d1-high-word-not-modelled)
+31. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
+32. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
+33. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
+34. [SOZ Recording: Remaining Replay Residue and Presentation Certification](#soz-recording-remaining-replay-residue-and-presentation-certification)
+35. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
+36. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
+37. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
 
 ---
 
@@ -5727,3 +5738,102 @@ preserve cross-game parity (no regressions in S1/S2 traces or in the
 existing `TestCnzBumperObjectInstance` tests) and remain ROM-cited
 against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 (sonic3k.asm:68823-68886).
+
+---
+
+## Slot Machine Bonus Stage Is Not Rewindable
+
+- **Location** — `S3kSlotBonusStageRuntime`, `S3kSlotStageState`, `S3kSlotPlayerRuntime`, `S3kSlotRenderBuffers`, `S3kSlotRewindSupport`, `AbstractBonusStageCoordinator.supportsRewind`, `GameLoop.isBonusStageRewindable`
+- **Symptom** — Holding rewind during the S3K Slot Machine bonus stage is a no-op and no keyframes are recorded for it; Gumball and Pachinko rewind normally.
+- **Suspected cause** — The slots runtime keeps its state outside the object/level snapshot model: `S3kSlotStageState` (about 35 scalars, six `int[3]`, two `Deque<int[]>` reward queues), runtime bookkeeping (`continueAwarded`, `exitFadeStarted`, `exitTriggered`, `lastFrameCounter`, `slotFrameCounter`), a swapped-in `slotPlayer` with its own `slotPlayerRuntime`, parallel reward-object lists needing re-resolution, and mutable render buffers. Because its `updateDuringLevelFrame()` is true, held-rewind re-simulation would drive it, so a complete snapshot is mandatory. Sonic 1's Special Stage has the same shape.
+- **Removal condition** — A self-contained runtime snapshot (state object, bookkeeping, swapped player runtime, reward-object re-resolution, render-buffer rebuild) registered for rewind, `supportsRewind()` true for slots, and a capture/restore/re-simulate test. Design it once for slots and the S1 Special Stage.
+
+---
+
+## Super Emerald Results: Sanctuary Reveal Not Implemented
+
+- **Location** — `S3kSpecialStageResultsScreen` (`addEmerald` gate about line 566); ROM `Obj_SpecialStage_Results` routine `$E` (`loc_2E616`), `SpecialStage_Results` HPZ backdrop rebuild, `loc_2EAA6` indicator gate
+- **Symptom** — After a cleared Super Emerald stage the ROM re-hosts HPZ behind the results, pans `Camera_Y_pos` to `$320`, spawns the pedestal sprites and the invincibility-star orbit, and at seven Super Emeralds shows "NOW <name> CAN / BE HYPER <name>" (`ObjDat2_2E984`). The engine keeps the `Pal_Results` backdrop and exits after the tally; the small Chaos Emerald indicators are gated on `hasEmerald(slot)` instead of the ROM's `state == 1`, so they stay visible on this screen.
+- **Suspected cause** — The results screen cannot host a live HPZ level render yet; the indicator gate was left loose so the screen is not empty. `TestS3kSpecialStageResultsReveal` pins only the message suppression, `Super_emerald_count` sourcing (`sub_2ECA8`), the SUPER EMERALD word (`loc_2EB88`) and the S3/S&K reveal selection at `loc_2E540`.
+- **Removal condition** — Host the HPZ backdrop behind the results, implement routine `$E` (pan, pedestals, orbit, message), tighten the indicator gate to `state == 1`, and extend the reveal test to the pan and the hyper message.
+
+---
+
+## AIZ2 Fire Terrain Swap Uses an Invented Decompression Span
+
+- **Location** — `Sonic3kAIZEvents.FIRE_TERRAIN_DECOMPRESS_FRAMES = 20` (marked `KNOWN INVENTED CONSTANT` in code)
+- **Symptom** — The AIZ2 fire terrain is swapped atomically after an invented 20-frame span instead of tracking the ROM's in-place Kosinski decompression progress; the admission frame is therefore fixture-relative. `FIRE_REDRAW_FRAMES` itself is ROM-derived (`Draw_delayed_rowcount`); the earlier `AIZ2_WAIT_FIRE_REDRAW_FRAMES`/`AIZ2_FIRE_REDRAW_FRAMES` fixture constants no longer exist.
+- **Suspected cause** — The engine has no per-frame decompression progress for the in-place terrain decode, so a whole-unit swap stands in for it (runtime invariant 3 exposure). See the frontier log entry of 2026-08-17 (atomicity) and the dated AIZ2 admission audit for the corrected ROM claim about `active_source = 0x36800E`.
+- **Removal condition** — Per-frame decompression progress in the v5 timing stream through `HardwareTimingService`, the swap driven from it, a recapture, and the constant deleted.
+
+---
+
+## MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled
+
+- **Location** — `MGZSwingingPlatformObjectInstance.hasLaterSlotRiderCosineResidue` (fitted angle/slot table, about lines 202-208); ROM `sub_34074` (`sonic3k.asm:70487-70490`), `GetSineCosine` (`:3025`), `Process_Sprites` (`:35983-35988`)
+- **Symptom** — The ROM's `swap d1 / asr.l #4` pushes the high word of `d1`, inherited from the previously executed object, into the per-link X step: `platformX = pivotX + ((20480*C + 5*(H >> 4)) >> 16)`. The engine computes the `H == 0` case plus a fitted table, which is knowingly wrong: it carries at MGZ segment frame 10709 where the ROM does not, and misses the carry at `TestS3kMgzTraceReplay` frame 25770. See the frontier log (2026-07-17 slot-6/slot-7 split) for the current numbers.
+- **Suspected cause** — No model of inter-object register carry through `Process_Sprites`; the table is a runtime-invariant-3 violation kept only because removing it trades one measured red for another.
+- **Removal condition** — Model `d1`'s inherited high word for the SST slots that precede MGZ swinging platforms in execution order, compute the carry from the formula, delete the table. Never extend the table.
+
+---
+
+## Segment Trace Replays Start With an Empty Save-Game Inventory
+
+- **Location** — `AbstractTraceReplayTest` segment bootstrap; `TraceRunManifest` already parses `emeralds_before`/`emeralds_after`; ROM `Obj_SSEntryRing` `loc_6170A` (`sonic3k.asm:128283-128291`)
+- **Symptom** — Per-zone segment fixtures replay with zero Chaos/Super Emeralds and an empty special-ring array whatever the recording had, so objects that branch on inventory take the low arm. Measured: `TestS3kSonicTailsMgzSegmentTraceReplay` frame 17383, where the ROM awards 50 rings (`loc_61794`) and the engine captures the player (`loc_6173A`); 3410 of 3446 errors follow. The object itself is correct (`awardsFiftyRingsInsteadOfCapture`, `isSonic3HalfLevel()`).
+- **Suspected cause** — The fixture carries no inventory field and seeding it from the parent run manifest would be gameplay hydration, which runtime invariant 4 allows only for the hardware-timing port; the pre-trace bootstrap carve-out covers position, RNG seed, oscillator pre-advance and frame counters, not save progress.
+- **Removal condition** — Owner decision on whether starting inventory belongs in the frame-0 bootstrap contract. If yes: derive it from the parent manifest's recorded progression for every game's segment fixtures and measure the blast radius across all segment classes; never key on run id, fixture, zone or frame.
+
+---
+
+## S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open
+
+- **Location** — S3K SMPS driver profile (`REGISTER_SEQUENCE` admission), `AudioManager` ring selection, the S3K three-slot sound mailbox; ROM `Sound/Z80 Sound Driver.asm` `zGetSFXChannelPointers.is_psg` (`:2131-2154`), `zRingSpeaker` (`:547, :1919-1928`)
+- **Symptom** — The committed AIZ1 intro oracle is green through service 2408 and red at service 2409 (`MUS_PSG1.overridden`); the DAC stream is independently red at run 338 byte 0 (`88` versus `7F`). Open items: the stale-IX pre-`FF` PSG writes are not modelled (`zSilencePSGChannel` runs before IX is replaced); there is no production consumer of the three-slot mailbox; ring-speaker selection happens in `AudioManager` rather than at the retail consume point; 1-up and fade mailbox clearing are unverified; a `zDoVolEnv` walk from an `FF` envelope cursor is unverified.
+- **Suspected cause** — The driver models only the guaranteed admission write and the retail dispatch order; the remaining gaps are listed with red-first evidence in the [2026-09-05 validation report](../architecture/validation/audio/2026-09-05-s3k-psg-takeover.md).
+- **Removal condition** — Stale-IX write model, a production mailbox consumer with retail ring-speaker toggling, verified 1-up/fade clearing, and the oracle green across the full window including the DAC stream.
+
+---
+
+## SOZ Act 2 Pushable Rock Puzzle Reachability Unverified
+
+- **Location** — `SozPushableRockObjectInstance`, `SOZPushSwitch.sub_41AA8`; native `Obj_SOZPushableRock` (`$40546`)
+- **Symptom** — At the Act 2 rock (`$4770,$5B5`, subtype `$87`) pushing right from the current fresh positioned entry runs the authored `$5EC -> $47F0 -> $FFFF` track before the switch at (`$4830,$5B0`) is reached, so the positive door coupling has never been observed end to end in the engine. The independent recording uses the upper switch (`$4A30,$330`) and never samples this region. Native passage is recorded in `runs/s3k-knuckles-complete-superemeralds/soz_2` (Act 2 rows 28758-31456): Knuckles first stands on push switch `$9B` at `$4830` alone while door `$0B` at `$4A0D` stays closed and climbs the wall at `$49F5`; sand cork `$9C` at `$4940` falls from y `$3E8` to `$580` (rows ~29880-30000); on his return the rock is pushed from `$4770` to `$4834` (rows 30268-31240), carrying the switch to `$4850`, and the door is raised (y `$514`) when he walks through (row ~31420). The recording does not establish whether the cork drop is required.
+- **Suspected cause** — Either the required preceding world/route state is missing from the positioned entry or the track/switch coupling is wrong; unit contact tests and the channel-8 switch/door route do not settle it.
+- **Removal condition** — A BK2 route to the Act 2 rock (gameplay-capture) compared against native behaviour, and either the puzzle passing or the defect fixed.
+
+---
+
+## SOZ Recording: Remaining Replay Residue and Presentation Certification
+
+- **Location** — `Camera.wrapFocusedSpriteYPositionWord` (`@ModApi`); S3K SST slot allocation order and `LostRingObjectInstance` floor phase; `SozEndBossInstance` escape (`loc_77986`); SOZ redraw and sprite-mask presentation
+- **Symptom** — `soz_completerun` replays all 59336 frames (the frame-34 Kosinski divergence and the module FIFO abort were the missing `PLCKosM_SOZ` submission, fixed) with 65 errors. Row 51860 and rows 59289+: an object-held Sonic above `$800` has his `y_pos` masked by the camera's wrap crossing. Row 45256: one SOZ2 lost ring is collected a frame late and the count stays one low. Row 59238: the end-boss escape fall is one pixel behind. Remaining animation-only spans are listed in the frontier log. Exact later Nemesis FIFO service timing for the final-boss PLC6D art is a shared service gap. SOZ redraw fidelity has engine A/B visibility checks at widths 320/528/800 but no native pixel certification; the sprite-mask post-processor clips whole tile rows, so sub-tile scanline parity is unverified; live GC stalls are not certified resolved.
+- **Suspected cause** — S2/S3K `MoveCameraY` masks a local copy (`sonic3k.asm:38440-38446`) while the shared camera writes the S1 LZ3/SBZ2 player mask; the private-body fix is blocked by the `@ModApi` pin hook, which requires a signature change for any `Camera` edit. Lost rings test the floor when `(V_int_run_count + d7) & 7` is zero with `d7` the SST loop counter, and engine slot occupancy differs from Act 1 onward. `loc_77986` copies only position words, keeping the root's earlier subpixels, which the engine does not reproduce. See the SOZ plan section "Replay follow-up: SOZ2 through the end boss".
+- **Removal condition** — `soz_completerun` has no physics errors (camera change accepted through the Mod API policy, SST order parity for the lost-ring phase, boss subpixel carry), and the pixel and scanline certifications recorded in the SOZ act matrices.
+
+---
+
+## S3K Cheat Flags Have No Consumers Yet
+
+- **Location** — `Sonic3kCheatFlags` (levelSelect, slowMotion, debugCheat; rewind adapter `s3k-cheat-flags`), `MhzPulleyLiftObjectInstance` (writer)
+- **Symptom** — The MHZ pulley-lift button sequence (`sub_3E598`, `sonic3k.asm:82622-82653`) now writes `Debug_cheat_flag` when the level-select word is set, but nothing sets that word or reads any of the flags: the AIZ1 vine cheat (`AIZRideVineHandle_CheckButtonSequence`, `:46560-46586`) that writes `Level_select_flag`/`Slow_motion_flag` is not implemented, the title menu's level-select option is absent, `Debug_cheat_flag` is not read at level start (`:7635-7638`, A held starts debug placement), by `LevelSelect_CheckKnuckles` (`:10174-10175`), or by the sound-test extras (`loc_663A`, `loc_85F4`). In play the pulley sequence therefore always takes the silent no-op branch.
+- **Suspected cause** — The cheat surface was never ported; the flag store landed first so the writers are ROM-faithful.
+- **Removal condition** — AIZ1 vine cheat writer, title-screen level select and slow-motion consumers, debug-placement start, `LevelSelect_CheckKnuckles` and sound-test readers implemented against the ROM, with tests.
+
+---
+
+## Gumball Exit: Title-Card Loop and Load Span Not Row-Matched
+
+- **Location** — `GameLoop.exitBonusStage` / `doExitBonusStage`, `Sonic3kTitleCardManager`, `AbstractRunChainTest` (OPTION B re-anchor, about line 1733)
+- **Symptom** — The ROM return from the Gumball bonus stage is: trigger, `Pal_FadeToBlack` for 22 V-ints (`$15` plus `dbf`, `sonic3k.asm:5042-5051`), the `loc_62CC` title-card loop (recorded rows 1300-1379, `Obj_TitleCard` in slot 8), then the pre-`LevelLoop` load with 20 lag rows (1380-1426). The engine now matches the fade (`TestGameLoop.bonusStageExitHoldsTheStageForPalFadeToBlacksTwentyTwoVints`) and returns through the title card as the ROM does, but the card-loop and load-span lengths have not been compared row for row, so the run chain still re-anchors after the exit.
+- **Suspected cause** — Unmeasured rather than known wrong: the only fixture that reaches the exit is `TestS3kMegaRunChain`, which is red in segment 0 on develop (`duplicate or reordered hardware service boundary at raw_frame=1053: VINT_SERVICE`).
+- **Removal condition** — `TestS3kMegaRunChain` reaches the gumball exit, the card loop and load span match the recorded rows through `HardwareTimingService` (manifest entry if a load span is needed), and the OPTION B re-anchor is deleted.
+
+---
+
+## S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0
+
+- **Location** — hardware-timing service boundary ordering; `TestS3kMegaRunChain`
+- **Symptom** — Segment 0 errors with `duplicate or reordered hardware service boundary at raw_frame=1053: VINT_SERVICE` on develop `4a9962069`, before any change on the discrepancy-cleanup branch, so no later segment of the chain is measured.
+- **Suspected cause** — Not investigated; recorded by the bonus-stage lane while checking the gumball exit.
+- **Removal condition** — Segment 0 passes the boundary-ordering check and the chain reports its first real divergence in the frontier log.

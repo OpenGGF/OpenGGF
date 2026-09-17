@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>The accept-drop {@code AizIntroEmeraldGlowChild} is intentionally NOT
  * listed: it is never a dynamic-object snapshot entry (created via raw
  * {@code new}, held only as a structural sub-object ref, never rendered), so it
- * has no codec and stays documented in {@code docs/S3K_KNOWN_DISCREPANCIES.md}.
+ * has no codec; it is a structural sub-object, not a rewind discrepancy.
  *
  * <p>Pure metadata test: it reads class opt-ins without a ROM, OpenGL, or an
  * active gameplay session. Full session round-trip is handled by the rewind

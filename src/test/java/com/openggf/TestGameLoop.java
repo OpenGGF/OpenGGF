@@ -1479,6 +1479,88 @@ public class TestGameLoop {
         deleteRecursively(saveDir);
     }
 
+    /**
+     * Mocked managers for a bonus-stage return: the saved zone reloads, the
+     * title-card provider is observable, and the fade is the given manager.
+     */
+    private TitleCardProvider installBonusStageReturnMocks(FadeManager fade) throws Exception {
+        GameModule module = neutralGameModule();
+        when(module.rngFlavour()).thenReturn(GameRng.Flavour.S1_S2);
+        GameModuleRegistry.setCurrent(new Sonic2GameModule());
+        SessionManager.openGameplaySession(module, SaveSessionContext.noSave(
+                "test_bonus_stage_exit", new SelectedTeam("sonic", List.of()), 0, 0));
+        gameLoop.setGameplayMode(TestEnvironment.activeGameplayMode());
+
+        com.openggf.level.LevelManager levelManager = mock(com.openggf.level.LevelManager.class);
+        when(levelManager.getCurrentLevelMusicId()).thenReturn(-1);
+        when(levelManager.getCheckpointState()).thenReturn(null);
+        com.openggf.sprites.managers.SpriteManager spriteManager =
+                mock(com.openggf.sprites.managers.SpriteManager.class);
+        when(spriteManager.getSprite(anyString())).thenReturn(null);
+        when(spriteManager.getSidekicks()).thenReturn(List.of());
+        TitleCardProvider titleCard = mock(TitleCardProvider.class);
+
+        setPrivateField(gameLoop, "levelManager", levelManager);
+        setPrivateField(gameLoop, "spriteManager", spriteManager);
+        setPrivateField(gameLoop, "camera", mock(com.openggf.camera.Camera.class));
+        setPrivateField(gameLoop, "fadeManager", fade);
+        setPrivateField(gameLoop, "titleCardProvider", titleCard);
+        return titleCard;
+    }
+
+    private static BonusStageState bonusReturnState(int savedZoneAndAct, int savedApparentZoneAndAct) {
+        return new BonusStageState(
+                savedZoneAndAct, savedApparentZoneAndAct, 0, 0, -1, 0, 0, 0,
+                0, 0, 0, 0, (byte) 0, (byte) 0, 0, 0L, 0);
+    }
+
+    @Test
+    void bonusStageExitHoldsTheStageForPalFadeToBlacksTwentyTwoVints() throws Exception {
+        FadeManager fade = new FadeManager();
+        installBonusStageReturnMocks(fade);
+        BonusStageProvider provider = mock(BonusStageProvider.class);
+        when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
+        when(provider.getSavedState()).thenReturn(bonusReturnState(0x0000, 0x0000));
+        setPrivateField(gameLoop, "activeBonusStageProvider", provider);
+        setPrivateField(gameLoop, "currentGameMode", GameMode.BONUS_STAGE);
+
+        invokePrivateMethod(gameLoop, "exitBonusStage");
+
+        // loc_61076 raises Restart_level_flag; LevelLoop branches to Level:
+        // (sonic3k.asm:7895-7896), whose Pal_FadeToBlack loops $15 + dbf = 22
+        // V-ints before the reload begins (sonic3k.asm:7523-7524, 5042-5051).
+        final int palFadeToBlackVints = 0x15 + 1;
+        for (int vint = 1; vint < palFadeToBlackVints; vint++) {
+            fade.update();
+            assertEquals(GameMode.BONUS_STAGE, gameLoop.getCurrentGameMode(),
+                    "the stage stays held through V-int " + vint);
+            assertTrue((Boolean) getPrivateField(gameLoop, "bonusStageTransitionPending"));
+        }
+        fade.update();
+        assertEquals(GameMode.TITLE_CARD, gameLoop.getCurrentGameMode(),
+                "the reload follows the fade's last V-int");
+        verify(provider).onExit();
+    }
+
+    @Test
+    void bonusStageReturnShowsTheApparentZoneTitleCard() throws Exception {
+        TitleCardProvider titleCard = installBonusStageReturnMocks(mock(FadeManager.class));
+        BonusStageProvider provider = mock(BonusStageProvider.class);
+        when(provider.getRewards()).thenReturn(BonusStageProvider.BonusStageRewards.none());
+        setPrivateField(gameLoop, "currentGameMode", GameMode.BONUS_STAGE);
+
+        invokePrivateMethod(gameLoop, "doExitBonusStage",
+                new Class<?>[] {BonusStageProvider.class, BonusStageState.class},
+                provider, bonusReturnState(0x0001, 0x0000));
+
+        // Level/loc_62B6 installs Obj_TitleCard unless the zone is $1701 or
+        // Act3_flag is set (sonic3k.asm:7730-7735); Obj_TitleCardInit draws the
+        // apparent zone and act (sonic3k.asm:62131-62155). The recorded gumball
+        // exit spawns Obj_TitleCard ($2D690) on its reload.
+        assertEquals(GameMode.TITLE_CARD, gameLoop.getCurrentGameMode());
+        verify(titleCard).initialize(0, 0);
+    }
+
     @Test
     void testDoExitResultsScreenWritesSaveForActiveSlot() throws Exception {
         SessionManager.clear();

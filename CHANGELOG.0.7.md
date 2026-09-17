@@ -34,6 +34,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   them, Blastoid hits scatter rings, and rewinding past an opened egg capsule keeps
   its explosions going.
 
+- **S3K parity fixes from the discrepancy audit:** Madmole's body is its own object
+  in its own slot; the MHZ dragonfly tail enters its return on the same frame as
+  the ROM; the MHZ pulley-lift button sequence writes the debug cheat flag; the HPZ
+  sanctuary shakes its background when the crystal lands; the ICZ miniboss ice shell
+  is drawn from creation; Robotnik's ship is drawn in front of his head; LBZ2 boss
+  smoke puffs keep the ROM's spawn and delete timing; Slot Machine randomness reads a
+  real power-on V-int count; and the Gumball exit fades for the ROM's 22 V-ints.
+
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now
   draw in the display list their ROM `priority` word selects instead of their
@@ -257,7 +265,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The cold sand intro, Egg Golem arena and seamless
   Act 2 entry use native event owners. The golem arena opens at the equivalent
   centered native viewport in widescreen, so the right wall cannot prevent the
-  admission camera gate from firing. The last-checkpoint debug shortcut reloads
+  admission camera gate from firing. Widescreen views of the arena end at the native
+  view's right edge, so the player stops against the screen lock rather than an
+  invisible wall mid-screen. The last-checkpoint debug shortcut reloads
   destination events, so skipping to the SOZ2 boss no longer retains early-room
   darkness or omits the boss background. Arena and laser sprite masks clip later
   sprites, including the opening door and sinking golem beneath the sand.
