@@ -480,3 +480,20 @@ Demos: `32a-hpz-background-full-width-before-after.mp4` (1960-2320),
 `32b-hpz-teleporter-rise-settle-animation-before-after.mp4` (1760-1890),
 `32c-hpz-altar-jump-held-through-lock-before-after.mp4` (5360-5470),
 `28-hpz-sonic-tails-cold-route-full-uncut-final.mp4` (raw `raw-28`, 0-7149; before = `raw-26`).
+
+### 2026-09-17 results exit fade and ship flash phase
+
+- **Results exit (`968ca8694`, Mod API approved).** `SpecialStageProvider.resultsExitFadesToWhite()`
+  defaults to the Sonic 1/2 behaviour (`SS_NormalExit`, S2 `PlaySound` + `Pal_FadeToWhite`); S3K returns
+  `false`: its results object only writes `Game_mode = $C` (`loc_2E5B8`/`loc_2E5EC`) and `Level` fades to
+  black (`loc_5FF6`) with no exit SFX. The return level fades in from the same colour. Pedestal capture:
+  results 255 → 206 → 60 → 19 → level fade-in. The same commit repinned
+  `GameLoop.debugCompleteSpecialStageWithEmerald()`, which `bfe15d493` pushed with a stale pin
+  (fully qualified `@com.openggf.game.ModApi` hid it from the policy hook; both files now use `@ModApi`).
+- **Ship hit flash phase (open, measured).** Native `probe-zapshots2` (every frame, `pal1_c7` = `$FC0E`):
+  `Normal_palette` line 0 colour 7 becomes `$222` at movie 446860, the same logic frame as the engine's
+  `sub_66372` write, but the native screenshot first shows the grey hull at 446861; engine captures show
+  it at 446860. Sprite positions in the same screenshots match same-frame RAM, and a colour-set change
+  comparison over 442400-442460 (palette cycling) shows no consistent one-frame shift, so this is not
+  yet a proven global CRAM-upload lag. Left unchanged; a presentation-timing change needs a probe that
+  isolates CRAM upload from sprite and plane uploads first. The exporter records `pal1_c7`.
