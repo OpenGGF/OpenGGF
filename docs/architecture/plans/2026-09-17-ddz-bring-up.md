@@ -286,3 +286,14 @@ credits (ending campaign, which also owns the mislabelled `ddz` segments); level
   (transformation start installs the Super constants); donor leaders without a powered form soft-locked in
   `loc_8167C` (engine extension: 26-frame release, `$38` bit 7 clear); DDZ culls used a bare `$280` and churned
   objects at 800 px (now `coarseXCullRange`). Result: 37/37 DDZ tests, 1220 shared tests green, 0 skips.
+- **Slice 5 and visual inspection (same day).** `TestS3kDdzLifecycleProduction` (320/800): ring-out ends
+  the form, `loc_8179E` drops Sonic and calls `Kill_Character`; the death arc never ran because the engine's
+  death gravity honoured `object_control` (`loc_8179E` sets `$81`), while Sonic routine 6 (`loc_12390`) calls
+  `MoveSprite_TestGravity` regardless — shared fix in `PlayableSpriteMovement.applyDeathMovement`; the reload
+  then reinstalls one controller. Moving inspection of `GameplayCaptureTool` captures (320, seeded; exact to
+  native on all rows with `--settle 1`) against every-frame native footage (`native/probe-vid-*`) found
+  (1) missing boss explosions: DDZ never registered `PLC_BossExplosion` (`loc_8167C`); (2) phase-2 bombs
+  vanishing on the wrap frame: `loc_81726` rewrites `Camera_X_pos_coarse_back` after the camera subtract,
+  which the latch model had missed (regression check in `TestS3kDdzColdRoutes`, red with the line removed).
+  Residual presentation differences are in `docs/status/s3k-known-bugs.md` (Doomsday entry) plus Master
+  Emerald flicker phase and the white-fade tint/HUD icon, not yet investigated.

@@ -257,6 +257,9 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         if (cameraX >= WRAP_THRESHOLD) {
             camera.setX((short) (cameraX - WRAP_DISTANCE));
             DdzLevelWrap.apply(services(), cameraX - WRAP_DISTANCE);
+            // Camera_X_pos - $80 & $FF80 -> Camera_X_pos_coarse_back, so the shifted objects later in
+            // this pass are range-tested against the wrapped camera.
+            ddz.latchCameraXCoarseBack(cameraX - WRAP_DISTANCE);
             ddz.setWrapOffset(WRAP_DISTANCE);
             xPos -= WRAP_DISTANCE << 16;
         }

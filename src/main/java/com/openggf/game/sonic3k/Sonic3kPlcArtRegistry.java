@@ -2683,6 +2683,10 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 -1
         ));
+        // loc_8167C loads PLC_BossExplosion once the flight starts (defeat, missile and exit blasts).
+        standalone.add(new StandaloneArtEntry(ObjectArtKeys.BOSS_EXPLOSION,
+                Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR, CompressionType.NEMESIS,
+                Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_SIZE, Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0, -1));
         // loc_81554 queues ArtKosM_DDZMisc at ArtTile_DDZMisc; objects add palette 1 or 2.
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.DDZ_MISC,

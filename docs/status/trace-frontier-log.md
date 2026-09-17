@@ -110751,3 +110751,23 @@ animation2. That production intro, not trace-state seeding, is the next target.
   complete report); every other class kept its status and error total, including the
   shared spring, object-load band, Blastoid and capsule-rewind changes.
 
+
+## 2026-09-17 — Doomsday zone0c: seeded route exact to the exit; strict replay blocked at bootstrap
+
+- Worktree `.worktrees/ai-ddz-bring-up`, branch `feature/ai-ddz-bring-up`, `42653d028` plus the
+  uncommitted DDZ lifecycle/explosion-art follow-up.
+- Strict replay: `python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments
+  -Dtest=TestS3kSonicTailsZone0cSegmentTraceReplay -Ds3k.rom.path=<abs>/s3k.gen test`.
+  Result: FAIL, 674 errors, first error frame 0 `y` (expected `$00C0`, actual `$0080`). Before
+  the bring-up the segment had 411 errors from frame 0 `x` (no flight controller). The blocker is
+  the replay bootstrap: it positions Player 1 from metadata start (already moved by the
+  controller's init pass) and derives the camera from it, and seeds neither the camera X fraction
+  nor the full `V_int_run_count` that the movie inherited from Sky Sanctuary.
+- Ordinary-input frontier: `TestS3kDdzColdRoutes` (complete-run BK2 from movie frame 514214,
+  declared `V_int_run_count` 512489 and camera fraction `$2700`, physics rows compared only)
+  matches player x/y, camera x/y and rings on all 10058 gameplay rows through both boss phases,
+  two wraps and the `$D01` request. `GameplayCaptureTool` on the production loop with the same
+  seeds (`--settle 1`) matches the same rows.
+- Fixes that moved it (plan evidence, `docs/architecture/plans/2026-09-17-ddz-bring-up.md`):
+  `Seek_Object_Manager` cursor seek on the wrap (first error 8248 -> 8249), the
+  `Camera_X_pos_coarse_back` latch for DDZ delete checks (slot history probe, row 173 -> exit).

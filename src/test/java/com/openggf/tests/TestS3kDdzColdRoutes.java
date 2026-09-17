@@ -55,6 +55,7 @@ class TestS3kDdzColdRoutes {
     /** Row 10057 is the last gameplay row; the loop leaves the level after {@code loc_81CA4}. */
     static final int LAST_GAMEPLAY_FRAME = 10058;
     static final int DIVERGENT_FRAMES = 45;
+    static final int BOMBS_ACROSS_WRAP_FRAME = 7470;
 
     @AfterEach
     void reset() {
@@ -130,6 +131,13 @@ class TestS3kDdzColdRoutes {
             becameHyper |= player.getSuperStateController() != null
                     && player.getSuperStateController().isHyperFormActive();
             assertFalse(player.getDead(), "died at frame " + frame);
+            if (frame == BOMBS_ACROSS_WRAP_FRAME) {
+                // Native slot history (probe-slots1): the two bombs launched before the first wrap stay
+                // live through rows 7453-7492 because loc_81726 re-latches Camera_X_pos_coarse_back.
+                assertEquals(2, GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .filter(o -> o.getClass().getSimpleName().equals("DdzEndBossBombObjectInstance")).count(),
+                        "bombs survive the first wrap");
+            }
         }
         assertNull(firstMismatch);
         assertTrue(becameHyper, "all Super Emeralds: the controller's transformation ends in Hyper form");
