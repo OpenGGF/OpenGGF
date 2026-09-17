@@ -64,9 +64,40 @@ class TestS3kReverseGravityBoundary {
                 "the flag test branches to loc_11722 before Camera_max_Y_pos is read");
     }
 
+    /**
+     * {@code sub_12318} (sonic3k.asm:24471-24491) is the hurt routine's own kill test,
+     * run before it hands off to the terrain pass. Under the flag it branches to
+     * {@code loc_12336} and reads {@code Camera_min_Y_pos} with no {@code $E0} offset;
+     * {@code sub_15716} (:29220) and {@code sub_17C10} (:32911) are the Tails and
+     * Knuckles copies.
+     *
+     * <p><strong>This pair asserts the outcome, not the owner.</strong> Measured
+     * 2026-09-17 by disabling the {@code applyHurtStopBottomKill} flag branch: both still
+     * pass, because {@code Player_LevelBound}'s own kill plane fires later in the same
+     * frame and the engine has no observable difference between the two. They are kept as
+     * behaviour guards; the hurt-site branch itself stays uncredited in the reference
+     * table for that reason.
+     */
+    @Test
+    void reverseGravityKillsAHurtPlayerAtTheTopBoundary() {
+        assertTrue(fallsPastTheBoundaryAndDies(true, Edge.ABOVE_TOP, true),
+                "loc_12336 kills a hurt player once y_pos reaches Camera_min_Y_pos");
+    }
+
+    /** Upright, the hurt routine's test looks at the bottom only. */
+    @Test
+    void uprightGravitySparesAHurtPlayerAtTheTopBoundary() {
+        assertFalse(fallsPastTheBoundaryAndDies(false, Edge.ABOVE_TOP, true),
+                "sub_12318's upright branch has no top-side test");
+    }
+
     private enum Edge { ABOVE_TOP, BELOW_BOTTOM }
 
     private boolean fallsPastTheBoundaryAndDies(boolean reverseGravity, Edge edge) {
+        return fallsPastTheBoundaryAndDies(reverseGravity, edge, false);
+    }
+
+    private boolean fallsPastTheBoundaryAndDies(boolean reverseGravity, Edge edge, boolean hurt) {
         HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
                 .build();
@@ -82,6 +113,7 @@ class TestS3kReverseGravityBoundary {
             sprite.setCentreY((short) y);
             sprite.setXSpeed((short) 0);
             sprite.setYSpeed((short) 0);
+            sprite.setHurt(hurt);
 
             fixture.stepIdleFrames(1);
             return sprite.getDead();

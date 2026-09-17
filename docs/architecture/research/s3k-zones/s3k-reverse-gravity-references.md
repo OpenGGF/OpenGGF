@@ -104,7 +104,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 24308 | `loc_12148` | level collision (`loc_12148`): negates the push-out distance | `CollisionSystem.doTerrainCollisionAirDirect` (quadrant $C0) | covered |
 | 24350 | `Player_TouchFloor` | `Player_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 24426 | `loc_12246` | `BubbleShield_Bounce` (`loc_12246`): negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
-| 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | — | missing |
+| 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | `PlayableSpriteMovement.applyHurtStopBottomKill` | partial |
 | 24552 | `loc_123DE` | `loc_123DE` (dead/respawn): off-screen test uses `Camera_Y - $10` going up | — | missing |
 | 24716 | `sub_125E0` | `sub_125E0` (hurt/dead animate): vertical mirror | — | missing |
 
@@ -130,7 +130,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 29080 | `loc_155B4` | `Tails_DoLevelCollision` `loc_155B4`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29104 | `loc_155E2` | `Tails_DoLevelCollision` `loc_155E2`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29143 | `Tails_TouchFloor` | `Tails_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
-| 29220 | `sub_15716` | `sub_15716` (hurt): death-plane test flips to the top | — | missing |
+| 29220 | `sub_15716` | `sub_15716` (hurt): death-plane test flips to the top | same shared owner as :24475 | partial |
 | 29336 | `sub_15842` | `sub_15842` (hurt/dead animate): vertical mirror | — | missing |
 | 29594 | `loc_15A7A` | `loc_15A7A` (`Animate_Tails` rotation frames): vertical mirror applied inside the animator | — | missing |
 
@@ -170,7 +170,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 32782 | `loc_17ACA` | `Knux_DoLevelCollision` `loc_17ACA`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32802 | `loc_17AEC` | `Knux_DoLevelCollision` `loc_17AEC`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32839 | `Knux_TouchFloor` | `Knux_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
-| 32911 | `sub_17C10` | `sub_17C10` (hurt): death-plane test flips to the top | — | missing |
+| 32911 | `sub_17C10` | `sub_17C10` (hurt): death-plane test flips to the top | same shared owner as :24475 | partial |
 | 33017 | `sub_17D1E` | `sub_17D1E` (hurt/dead animate): vertical mirror | — | missing |
 
 ### F. Dust, Tails' tails, shields, Super Tails birds
@@ -212,8 +212,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 20802 | `Touch_Monitor` | `Touch_Monitor`: negates `y_vel` before the break-from-below / bounce test (with the monitor Y-flip bit) | `Sonic3kMonitorObjectInstance` (no flag read) | missing |
 | 47577 | `Spring_Down` | `Spring_Down` init: becomes `Spring_Up` | `Sonic3kSpringObjectInstance:425` | covered |
 | 47628 | `Spring_Up` | `Spring_Up` init: becomes `Spring_Down` | `Sonic3kSpringObjectInstance:425` | covered |
-| 47722 | `sub_22F98` | `sub_22F98` (up-spring launch): `+8` becomes `-8` | `Sonic3kSpringObjectInstance` (no flag read at launch) | missing |
-| 48095 | `sub_233CA` | `sub_233CA` (down-spring launch): `-8` becomes `+8` | `Sonic3kSpringObjectInstance` (no flag read at launch) | missing |
+| 47722 | `sub_22F98` | `sub_22F98` (up-spring launch): `+8` becomes `-8` | `Sonic3kSpringObjectInstance.applyUpSpring` / `applyDownSpring` | covered |
+| 48095 | `sub_233CA` | `sub_233CA` (down-spring launch): `-8` becomes `+8` | `Sonic3kSpringObjectInstance.applyUpSpring` / `applyDownSpring` | covered |
 | 48958 | `loc_23FE8` | `Obj_Spikes` init (`loc_23FE8`): toggles the Y-flip bit that selects upright vs upside-down behaviour | `Sonic3kSpikeObjectInstance` (no flag read) | missing |
 
 ### J. DEZ objects
@@ -252,17 +252,17 @@ is the RAM wipe described above).
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
-| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 13 | 0 | 6 | 1 |
-| C. Tails routines | 21 | 13 | 0 | 7 | 1 |
+| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 13 | 1 | 5 | 1 |
+| C. Tails routines | 21 | 13 | 1 | 6 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
-| E. Knuckles routines | 24 | 13 | 0 | 10 | 1 |
+| E. Knuckles routines | 24 | 13 | 1 | 9 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 2 | 0 | 7 | 0 |
 | G. Lost rings | 2 | 0 | 2 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 0 | 0 | 5 | 1 |
-| I. Monitors, springs, spikes | 6 | 2 | 0 | 4 | 0 |
+| I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **52** | **3** | **57** | **4** |
+| **Total** | **116** | **54** | **6** | **52** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
@@ -328,6 +328,25 @@ could not jump at all, because `CalcRoomOverHead` was still probing into the cei
 on. `Sonic_Jump` mirrors the angle it hands to that probe (sonic3k.asm:23290-23300) while the launch
 vector at `loc_1182E` re-reads `angle(a0)` raw — the correction recorded at `b38402c2a`, now
 confirmed line by line for `Tails_Jump` (:28524-28576) and `Knux_Jump` (:32438-32493) as well.
+
+The hurt routines' own death plane (`sub_12318` :24475, `sub_15716` :29220, `sub_17C10` :32911) is
+implemented but stays **partial**, because it cannot be told apart from the sibling row that is
+already covered. `Player_LevelBound`'s kill plane fires later in the same frame at the same
+boundary, so a hurt inverted player dies at the top of the level whether or not the hurt site's own
+branch exists — measured by disabling that branch and watching both new assertions still pass. The
+branch is kept because it is the cited ROM code and it returns before the terrain pass, but the
+reference table does not credit a row whose only test passes without it.
+
+**The spring launches (47722, 48095) needed the init swap read first.** `Spring_Up`'s init jumps
+to the `Obj_Spring_Down` body under the flag and `Spring_Down`'s to `Obj_Spring_Up`'s
+(:47576-47637). Under reverse gravity the player falls *up* the screen and stands on ceilings, so
+the spring underfoot there is the authored **down** spring running the up-spring body — whose
+negative launch velocity integrates through `MoveSprite_TestGravity`'s negated copy into
+down-screen motion, away from the ceiling. Pair each gravity with the *other* authored subtype and
+the init swap and the launch mirror cancel exactly, and the 8 px nudge comes out the same either
+way: a test written that way passes whether or not the launch rows exist.
+`TestS3kReverseGravitySpringLaunch` pairs them the way the ROM does, and disabling the launch
+mirror flips both inverted cases while both upright controls stay green.
 
 The nine rows that were already marked covered before this slice are **not** in that position:
 they still have no test that runs them with the flag set, so they remain "verify", not "done".

@@ -1159,3 +1159,26 @@ and is recorded as such.
 `-Pguards` 669/669; the four-class trace comparison against `f60b3f3e2` identical failure for
 failure for the third time this session (S1 2/2 green, S2 16388 errors at frame 6, S3K AIZ 3/16 red,
 59 errors at frame 5497).
+
+
+### 2026-09-17 — Slice 2, part 6: the hurt death plane and the spring launches
+
+**The hurt routines' death plane is implemented but stays uncredited.** `sub_12318` (:24475) and
+its Tails and Knuckles copies branch to `loc_12336` under the flag and read `Camera_min_Y_pos` with
+no `$E0` offset. The branch is in `applyHurtStopBottomKill`, but the reference table keeps the rows
+**partial**, because the engine has no observable difference: `Player_LevelBound`'s kill plane —
+already covered — fires later in the same frame at the same boundary. Measured by disabling the new
+branch and watching both new assertions still pass. The two tests are kept as behaviour guards with
+that stated in their javadoc, rather than named after a row they do not discriminate.
+
+**The spring launches (47722, 48095) are covered, and the pairing is the whole trick.** The obvious
+test — same authored spring, flag on versus off — cannot disagree: the init swap (:47576-47637,
+already covered) and the launch mirror are both negations of the same 8 px nudge and cancel exactly.
+Under reverse gravity the player falls *up* the screen and stands on ceilings, so the spring
+underfoot is the authored **down** spring running the up-spring body, whose negative launch velocity
+integrates through `MoveSprite_TestGravity`'s negated copy into down-screen motion away from the
+ceiling. `TestS3kReverseGravitySpringLaunch` pairs each gravity with the authored subtype whose body
+it selects; disabling the launch mirror flips both inverted cases and leaves both upright controls
+green.
+
+Table: **54 covered, 6 partial, 52 missing, 4 n/a**. 89 focused tests green, `Skipped: 0`.

@@ -3653,6 +3653,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 			// is set the camera boundaries do not yet describe the level.
 			return false;
 		}
+		// sub_12318 tests Reverse_gravity_flag immediately after Disable_death_plane
+		// and branches to loc_12336 (sonic3k.asm:24477-24491), whose whole body is
+		//   move.w (Camera_min_Y_pos).w,d0 / cmp.w y_pos(a0),d0 / blt.s <alive>
+		// -- the top of the level, with no $E0 offset and no unsigned variant. Tails
+		// sub_15716 (:29220) and Knuckles sub_17C10 (:32911) are the same code.
+		if (isReverseGravityActive()) {
+			int minBoundary = Math.min(camera.getMinY(), camera.getMinYTarget());
+			if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
+				minBoundary = Math.min(minBoundary,
+						sprite.getCpuController().getMinYBound(minBoundary));
+			}
+			return sprite.getCentreY() <= minBoundary && applyHurtStopKill();
+		}
 		// Held mask, shared with doLevelBoundary's kill plane -- see the javadoc above.
 		int boundary = Math.max(camera.getMaxY(), camera.getMaxYTarget());
 		if (sprite.isCpuControlled() && sprite.getCpuController() != null) {
@@ -3668,6 +3681,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		if (!past) {
 			return false;
 		}
+		return applyHurtStopKill();
+	}
+
+	/** The kill half of {@code sub_12318}, shared by its upright and inverted tests. */
+	private boolean applyHurtStopKill() {
 		GameModule module = sprite.currentGameModule();
 		LevelEventProvider levelEvents = module != null ? module.getLevelEventProvider() : null;
 		SidekickCpuController cpuController = sprite.getCpuController();
