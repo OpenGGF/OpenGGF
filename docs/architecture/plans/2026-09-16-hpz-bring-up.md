@@ -444,3 +444,39 @@ Demos (`GameplayCaptureTool --input <sonic-tails bk2> --input-start 441757`, raw
 | `31b-hpz-teleporter-edge-no-landing-before-after.mp4` | Before: Sonic caught on the pad edge; after: runs past as native | 1280-1440 |
 | `31c-hpz-teleporter-grounded-lift-camera-follows.mp4` | Charge, lift with camera following, settle, unroll in place | 1550-1920 |
 | `26-hpz-sonic-tails-cold-route-full-uncut.mp4` | Uncut cold route from `$1601` entry through fight, altar and ending to SSZ | 0-7149 |
+
+### 2026-09-17 route through the ending, background width, rider animation
+
+- **Held jump through `loc_64DAA` (`581855733`).** The ROM lock leaves `Ctrl_1_logical` latched, so a
+  jump held at the lock keeps full height. The theft controller carries the latched held bits as
+  forced input (press suppressed) and rewrites the follower-history slot with the held-only word, so
+  Tails replays what the ROM recorded. First attempt without the history rewrite made Tails jump at
+  447194 instead of 447199 (the forced mask publishes a press); rejected. The shared
+  `controlLockBlocksScriptedMovement` contract is unchanged: 38 of 44 ROM `Ctrl_1_locked` sets also
+  write `Ctrl_1_logical`, and only 6 keep the held word.
+- **Native lag frame 447347.** `loc_64964` sets `Events_fg_4`, starts the shake and spawns the
+  collapse fragments on one frame; the pad is not polled. This CPU overrun is not a registered
+  hardware-timing kind, so the cold route test declares it and skips that movie frame's input.
+  With it, camera and both players match native from 441761 to 448821 (altar, collapse, ending)
+  apart from camera X (sub-pixel history, 25 frames), and Sky Sanctuary act 1 loads.
+- **Background cut off (user report, `581855733`).** The HPZ background was wrapped at 512 px, but
+  its clouds occupy only layout columns 1-6, so background X 513+ showed column 0's empty chunks
+  (black beside the teleporters). The scroll handler now widens the period to the rightmost visible
+  column. First attempt widened by band spread only; no effect at camera Y where all lines are in
+  deform band 0; rejected. Frames 2000-2012 are then pixel-identical to native (threshold 40,
+  HUD excluded).
+- **Rider animation (`b6a9f6d46`).** `object_control` 3 during the rise skips `Animate_Sonic`:
+  mapping frame 0, and the roll resumes mid-script at the settle. Native `probe-anim` matches every
+  frame 443540-443640.
+- **Remaining visual difference:** the Robotnik ship hit flash alternates one frame earlier than
+  native (engine grey on even capture frames, native on odd). The flash state and timer match; the
+  phase question (palette upload versus sprite publication) is open.
+
+Whole-route pixel diff (`raw-27`, 4872 frames with native screenshots): outside the title card,
+residual differences are the lift animation (fixed above), the flash phase, the camera sub-pixel
+offset, and positions after 447347 in a capture that cannot skip the lag frame.
+
+Demos: `32a-hpz-background-full-width-before-after.mp4` (1960-2320),
+`32b-hpz-teleporter-rise-settle-animation-before-after.mp4` (1760-1890),
+`32c-hpz-altar-jump-held-through-lock-before-after.mp4` (5360-5470),
+`28-hpz-sonic-tails-cold-route-full-uncut-final.mp4` (raw `raw-28`, 0-7149; before = `raw-26`).
