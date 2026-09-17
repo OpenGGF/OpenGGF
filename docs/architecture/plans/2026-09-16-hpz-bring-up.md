@@ -63,9 +63,9 @@ events and remains a recorded gap, not a reason to position the player.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 1-3 (identity; screen/background events; AnPal, AniPLC and palette control) |
+| Implemented | Slices 1-3; slice 5 (Knuckles fight, Master Emerald theft, collapse); slice 6 (teleporters, Knuckles `$A01` exit, Sonic/Tails altar ending to `$A00`) |
 | Cold-reachable | Level load only; no traversal verified |
-| Rewind-verified | Not started for `$1601` |
+| Rewind-verified | Fight, crane grab, spark chains, altar beam and ending hold (restore + forward replay, `TestS3kHpzKnucklesFightHeadless`); dust child and cold routes pending |
 | Native behaviour matched | Not started |
 | Visually matched | Not started |
 
@@ -132,6 +132,47 @@ roughly `131264-133503`; decompose it into fight, ship/emerald theft and collaps
 children before implementation. Engine subtype `$28` still falls back to
 `CutsceneKnucklesAiz2Instance`.
 
+### 2026-09-17 slices 5-6b — Knuckles fight, theft, collapse and altar ending
+
+Commits `020611217` (port) and `1cb447aab` (rewind sidecars, guard baselines) on
+`feature/ai-hpz-knuckles-fight`. `CutsceneKnux_HPZ` copies itself into SST slot 48
+(`Dynamic_object_RAM+object_size*45`) and runs all 47 routines; the theft adds
+`loc_64C70`, the `loc_64E88` ship with head, flame, crane, emerald debris and both
+`loc_6531E` spark chains, the gradual camera workers, `Obj_CreateBossExplosion` `$14`
+and the `loc_655B2` block; the altar teleporter becomes `loc_45AD6` and its helper runs
+`loc_45BF4`. `S3kRawAnimation` interprets `Animate_Raw*` scripts read from the ROM.
+
+Measured against the Sonic + Tails complete-run segment `hpz22_2` (comparison only):
+camera `$1580` to Knuckles releasing the player 294 frames (ROM `$2F2E`-`$3054`), which
+needs Knuckles in slot 48 after the low-slot controller (295 before the slot copy);
+last stage-2 camera shake to Player 1 `x_vel -$100` 279 frames (ROM `$37A1`-`$38B8`);
+pad to `StartNewLevel` 120 frames (ROM `Level_frame_counter` `$1ADC`-`$1B54`); player
+falls to Y `$64C`, Player 1 is held at `$1628` and lands on the pad at `($15C0,$562)`
+as in the recording.
+
+Findings: Knuckles' body and the boss dust use the player DPLC layout (count word,
+count-1 in the top nibble), not `Perform_DPLC`'s, so their standalone sheets load through
+`S3kSpriteDataLoader.loadDplcFrames`. `ChildObjDat_6664A` asks for 32 fragments but
+`CreateChild6_Simple` stops at the first allocation failure, so the block's slot bounds the
+count (30 in the scripted route). Generic rewind capture did not restore object links in
+these children, and a class without a probe-compatible constructor was silently dropped on
+restore (the spark orbiters); both surfaced only once restore windows ran while those
+objects were alive.
+
+Deferred or approximated: `Current_music+1` writes, the `Target_palette_line_2` copy,
+`Player_Load_PLC`/`Queue_Kos_Module` timing and the shared VRAM ranges (ship over the
+teleporter, dizzy stars over the dust) use standalone sheets; the slot-48 copy keeps an
+existing occupant instead of overwriting it; the `loc_64D5C` camera fraction starts at
+zero; `loc_64DAA` locks controller 1 without the ROM's stale logical word. Not verified:
+reload of the copy after `Delete_Sprite_If_Not_In_Range`, the dust child under rewind,
+Tails-alone and widescreen routes, and a cold route into the fight.
+
+Evidence (worktree, all ROMs by absolute path, `maven_queue.py -Dmse=off`): focused HPZ
+and required S3K set 119 tests, 0 failures, 0 skips; `-Pguards` 669 tests, 0 failures,
+0 skips on `1cb447aab`. The first guard run on `020611217` failed 5 guards (rewind
+override/annotation, coverage, parent-dependent, raw `addDynamicObject`, static state),
+including inherited teleporter entries; all were resolved in `1cb447aab`.
+
 ## Demo captures
 
 | Clip | Shows | Setup | Moment |
@@ -143,6 +184,15 @@ children before implementation. Engine subtype `$28` still falls back to
 | `04-hpz-knuckles-background-patch-before-after.mp4` | `HPZ_BackgroundInit` Knuckles row patch removes the Master Emerald backdrop | `--main knuckles`, same input, frames 385-660 | Backdrop enters at ~423 |
 | `05-hpz-teleporter-lower-to-upper-pad.mp4` | `Obj_SSZHPZTeleporter` + `Obj_TeleporterBeam`: charge, rise `$4A0`, settle on the upper pad | Teleport `$AF0,$8B0`, `inputs/jump-onto-pad.txt`, frames 80-480 | Lands ~118, rise 260-340, released ~440 |
 | `06-hpz-knuckles-teleporter-exit-to-ssz2.mp4` | Knuckles' forced `$4A` upper pad lifts him above camera Y `$240`; `loc_45B94` saves and starts `$A01` | `--main knuckles`, teleport `$AF0,$400`, `inputs/jump-onto-pad.txt`, frames 80-460 | Exit request frame 286, SSZ act 2 loaded at 298 (SSZ presentation itself is unimplemented) |
+| `10-hpz-knuckles-fight-start.mp4` | Knuckles in slot 48, camera locks to `$10E0` (music plays off-camera; captures have no audio) | `raw-10-knuckles-fight-route`: `--x 0x1080 --y 0x42C`, `inputs/10-bot.txt` (scripted bot, no invincibility), frames 0-240 | Lock at 121 |
+| `11-hpz-knuckles-fight-hit.mp4` | First hit, Knuckles knocked back | same raw, 140-260 | Hit at 188 |
+| `12-hpz-knuckles-defeat-dizzy-runs-off.mp4` | Eighth hit, defeat, room shake and explosions, "!" stars, Knuckles runs off | 1320-1780 | Defeat 1358, stars 1598 |
+| `13a-hpz-emerald-theft-crane-grab.mp4` | Camera pan, Knuckles hugs the emerald, crane grabs it with sparkles and chips | 2150-2600 | Pan done 2204 |
+| `13b-hpz-ship-sparks-zap-knuckles.mp4` | Knuckles hangs on the carried emerald, spark chains, zap, fall | 2640-3260 | Zap 3108, lands 3211 |
+| `14-hpz-altar-floor-collapse.mp4` | Explosions and `Events_fg_4` collapse, player falls to Y `$64C` | 3340-3540 | Collapse 3402 |
+| `15-hpz-knuckles-punches-collapse-block.mp4` | Knuckles punches the `loc_655B2` block into fragments | 3990-4110 | Break ~4061 |
+| `16-hpz-ending-hold-knuckles-beamed-away.mp4` | Player held at `$1628`, camera shake, Knuckles jumps to the pad, beam lifts and removes him | 4400-4740 | Knuckles deleted 4701 |
+| `17-hpz-sonic-teleports-exit-to-ssz.mp4` | Player walks onto the pad, vanishes, `$A00` load (SSZ presentation unimplemented) | 4690-4859 | SSZ act 1 at 4826 |
 
 Not demonstrable at width 320: the `$AA0` camera limits (Knuckles right, Sonic/Tails
 upper-route left). On the reachable routes a wall stops the player before the camera
