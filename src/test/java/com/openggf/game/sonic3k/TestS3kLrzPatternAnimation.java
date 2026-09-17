@@ -17,6 +17,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 /**
  * {@code Offs_AniFunc} holds a {@code (AnimateTiles, AniPLC)} pair per act
@@ -175,6 +176,54 @@ class TestS3kLrzPatternAnimation {
         animator.updateLrzBackgroundLayer1ForGraph();
         assertFalse(java.util.Arrays.equals(before, tileBytes(level, 0x320, 0x24)),
                 "the next differing phase does upload");
+    }
+
+    /**
+     * The production pass, not the channel methods directly: {@code Animate_Tiles} runs once a
+     * frame from {@code LevelLoop}, and the phase it reads comes from whatever {@code LRZ1_Deform}
+     * published that frame. Moving the camera has to change the destination art through
+     * {@code update()} alone.
+     */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(ints = {0, 1})
+    void productionUpdatePassAnimatesBothDestinationsAsTheCameraMoves(int act) {
+        var fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_LRZ, act).build();
+        Level level = GameServices.level().getCurrentLevel();
+        Sonic3kPatternAnimator animator = animatorOrThrow();
+        var handler = GameServices.parallax().getHandler(GameServices.level().getFeatureZoneId());
+        assertNotNull(handler, "both acts must resolve SwScrlLrz for the deformation words");
+
+        int[] lines = new int[224];
+        boolean channel0Changed = false;
+        boolean channel1Changed = false;
+        byte[] previousChannel0 = null;
+        byte[] previousChannel1 = null;
+
+        for (int step = 0; step < 64; step++) {
+            int cameraX = 0x0800 + step * 0x20;
+            fixture.camera().setX((short) cameraX);
+            fixture.camera().setXCopy((short) cameraX);
+            fixture.camera().setYCopy((short) 0x0320);
+            handler.update(lines, cameraX, 0x0320, step, act);
+            animator.update();
+
+            byte[] channel0 = tileBytes(level, 0x320, 0x24);
+            byte[] channel1 = tileBytes(level, 0x344, 0x0C);
+            if (previousChannel0 != null && !java.util.Arrays.equals(previousChannel0, channel0)) {
+                channel0Changed = true;
+            }
+            if (previousChannel1 != null && !java.util.Arrays.equals(previousChannel1, channel1)) {
+                channel1Changed = true;
+            }
+            previousChannel0 = channel0;
+            previousChannel1 = channel1;
+        }
+
+        org.junit.jupiter.api.Assertions.assertTrue(channel0Changed,
+                "loc_282D0 must reupload $320-$343 as the background phase moves, act " + (act + 1));
+        org.junit.jupiter.api.Assertions.assertTrue(channel1Changed,
+                "loc_28364 must reupload $344-$34F as the background phase moves, act " + (act + 1));
     }
 
     private static void assertSplitChannel(int phaseCount, int frameBytes, int bandBytes,

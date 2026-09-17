@@ -366,11 +366,11 @@ Still open:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 0-1 (placeholder baseline now 205 / 277 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2` and the `$6E` lava blocks. Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
+| Implemented | Slices 0-2 (placeholder baseline still 205 / 277 / 8 of 609 / 455 / 35 placements; slice 2 adds no placed classes): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, and the `Draw_LRZ_Special_Rock_Sprites` renderer. Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
 | Cold-reachable | Not started |
-| Rewind-verified | `LrzZoneRuntimeState` capture/restore round trip only (`TestS3kLrzScrollRegistrationHeadless`); no route spots yet |
+| Rewind-verified | `LrzZoneRuntimeState` capture/restore round trips only (`TestS3kLrzScrollRegistrationHeadless`, and the rock window pointers in `TestLrzRockSpriteRenderer`) plus the animator's counter blob; no route spots yet |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
-| Visually matched | Act 1 parallax and the act-1 lava block inspected as before/after clips; act 2's background is blocked by the direct-`$901` art gap |
+| Visually matched | Act 1 parallax, the act-1 lava block, the act-1 rock sprites (320 and 400) and the act-1 animated background lava inspected as before/after clips; act 2's background is still blocked by the direct-`$901` art gap, which slice 2 proved is not the animated-tile DMA |
 
 Out of scope, recorded as dependencies: SSZ after HPZ (SSZ campaign); Knuckles replay classes and
 fixtures' harness work beyond recording frontiers; the `lrz_completerun` hardware-timing compile
@@ -513,4 +513,111 @@ at, not just encoded: act-1 side-by-side frame 260, the lava side-by-side frame 
 
 **Open issue raised.** Lava Reef act 2 background art on a direct `$901` load (known-bugs entry).
 
+### 2026-09-17 - Slice 2: animated tiles and rock sprites (commits `1ef1256ca`, `fbbb793f7`)
 
+Worktree `.worktrees/ai-lrz-bring-up`. All Maven through `maven_queue.py -Dmse=off` with
+`-Ds3k.rom.path=<worktree>/s3k.gen`; every run below reports 0 skips.
+
+**Delivered.** `loc_282D0`'s two custom background channels for both playable acts, installed in
+`Sonic3kPatternAnimator` ahead of the AniPLC scripts, with the `Anim_Counters+1/+3` seed and both
+counters in the animator's rewind blob; and `LrzRockSpriteRenderer`, a ROM-backed renderer for
+`Draw_LRZ_Special_Rock_Sprites` / `sub_1CB68` spliced into the end of priority level 0 through a new
+engine-internal `PriorityBucketSpriteSource`, with the two placement pointers in
+`LrzZoneRuntimeState`.
+
+**ROM re-read for this slice** (independently of the Verified ROM values table, which it confirms
+in full): `AnimateTiles_LRZ1/2/3` 55045-55054, `loc_282D0` 55055-55095, `word_2834C` 55107-55119,
+`loc_2833C` 55096-55099, `loc_28364` 55121-55167, `word_283D2` 55177-55184, `Animate_Tiles`
+53825-53834, `Animate_Init` 56411-56414 and 56458-56461, `Draw_LRZ_Special_Rock_Sprites`
+39556-39647, `sub_1CB68` 39656-39694, `Render_Sprites` 36318-36324 and
+`Render_Sprites_NextLevel` 36386-36390, `LevelLoop` 7899-7903. Addresses from `sonic3k.lst`:
+`ArtUnc_AniLRZ__BG` `$C0300` ($2400 bytes, eight $480 frames), `ArtUnc_AniLRZ__BG2` `$C2700` ($C00,
+eight $180 frames), `LRZ1_Rock_Placement` `$CAD00`, `LRZ2_Rock_Placement` `$CB81A`,
+`LRZ_Rock_SpriteData` `$1CBBE` (240 bytes, 30 entries).
+
+Four details worth carrying forward:
+
+1. Each placement list is a leading `dc.w 0,0,0` record, then the binary include (472 records in
+   act 1, 10 in act 2), then a four-byte `$FFFF,$FFFF` terminator - which is what stops both scans,
+   since its X compares above every camera key. The leading record is never drawn: the front key is
+   at least 1 and the sentinel's X is 0.
+2. `sub_1CB68` reads `Camera_X_pos_copy`/`Camera_Y_pos_copy` (`a3` in `Render_Sprites`), while the
+   window scan reads `Camera_X_pos`. The engine keeps that split.
+3. Priority level 0 is the **front** of the sprite table, and the players sit in a later level, so
+   the rocks are drawn over Sonic and Tails. That is the ROM's composition, not a bug, and it is
+   the most visible thing in clip `06`.
+4. `loc_2833C` skips channel 1 for `Current_zone` `$16`, i.e. the boss act. Zone 9 always runs
+   both. `AnimateTiles_LRZ3`'s own destinations (`$170`/`$194`) are slice 9 and are not registered.
+
+**Tests.** `TestS3kLrzPatternAnimation` grows to 11: both channels compared pixel by pixel against
+the ROM art bytes at the ROM-derived split offsets for **all** 48 channel-0 and 32 channel-1 phases,
+the unsigned wrap (`$FFFF mod $30 = 15`, not the 47 a signed modulo gives), the `-1`/cleared counter
+seeds per act, the channel order before the scripts, the skipped phase-0 first upload on `$901`,
+and - added after the first capture showed nothing - a **production-pass** test for both acts that
+drives the real scroll handler and `animator.update()` and requires both destinations to change.
+`TestLrzRockSpriteRenderer` (7) covers the list identity against the ROM bytes, the attribute-table
+decode, the window keys including the `Camera_X <= 8` forcing, the incremental walk agreeing with a
+full scan at every step in both directions, the capture/restore round trip of the two pointers, and
+the visible set at 320x224 against an independently computed one (with the widened back key at 424).
+
+Broken on purpose twice, both reverted immediately: swapping the last `word_2834C` pair turned
+`channel0UploadsTheRotatedFrameForEveryPhase` red at `phase=40 pixel=392`, and narrowing the rock
+window to `$140` turned `routineZeroScanMatchesTheWindowKeys` red at `back at 0 ==> expected: <11>
+but was: <9>`.
+
+Batch at `fbbb793f7` plus the test additions: 1400 tests, 0 failures, 0 skips (the four mandatory
+S3K classes, the LRZ, HPZ and SOZ pattern suites, `TestEveryObjectRewindRoundTrip`,
+`TestRewindHarnessCoverageRatchet`). `-Pguards`: 669 tests, 0 failures. The first guards run was red
+on one row - the audio architecture guard reads `sink.accept(` as a speaker-packet hand-off - so the
+rock visitor interface was renamed to `RockRecordVisitor.visitRock`.
+
+**Census.** Unchanged at 205 / 277 / 8: slice 2 adds no placed object classes.
+
+**Two findings that change later slices.**
+
+- *Act 1's background lava was HUD font tiles.* With the channels disabled, a direct `$900` load
+  draws the HUD font and digit art in the background rows that use VRAM `$320-$34F`; the channels
+  replace it with the ROM lava art. This is the act-1 twin of the recorded act-2 background defect
+  and it is now closed for act 1.
+- *...but it is not the act-2 defect.* At the act-2 known bug's own reproduction
+  `(0x2438,0x0629)`, a 240-frame capture with the LRZ channels disabled and one with them enabled
+  are **byte-identical in every frame**, while the production-pass test proves both channels do
+  animate in act 2. The animated-tile DMA is therefore ruled out as that bug's cause; the
+  known-bugs entry records the kill.
+
+**Where the animated tiles actually are.** A temporary probe over the decoded level (deleted after
+use) found 19 chunks per act referencing `$320-$34F`, and they appear only in the background layer:
+act 1 in the background rows at `y = $100-$17F` (visible around camera Y `$860`), act 2 at
+`y = $80-$FF`. Three earlier sample positions showed no difference at all because those rows were
+off screen - a reminder that "the capture looks the same" is a fact about the capture.
+
+**Clips** (`~/Videos/OGGF/lrz-bring-up/`, 3x nearest-neighbour, 60 fps, 360 frames each, before on
+the left):
+
+| Clip | Shows | Raw |
+| --- | --- | --- |
+| `06-lrz1-rock-sprites-before-after.mp4` | Act 1 at `($1560,$520)`, camera `($14C5,$539)` running right through the densest rock screen; right, eight to thirteen `Draw_LRZ_Special_Rock_Sprites` rocks fill the gaps between terrain chunks and pass in front of Sonic | `raw-06-lrz1-rocks-before`, `raw-06-lrz1-slice2-after` |
+| `07-lrz1-animated-lava-before-after.mp4` | Act 1 at `($1800,$8C0)`, camera Y `$86C`, where the background uses the animated rows; left the HUD font tiles, right the flowing lava art | `raw-07-lrz1-animated-tiles-{before,after}` |
+
+Each "before" build disabled only the demonstrated registration in an uncommitted edit, reverted and
+recompiled immediately (`git status` clean, verified after each). Frames were extracted and looked
+at, not just encoded: the rock side-by-side at frame 209 (the largest diff, 455 pixels) and the
+animated-tile side-by-side at frame 150 (up to 8876 pixels over 358 of 360 frames).
+
+**Width.** A 400-wide capture of the rock screen (`raw-06-lrz1-rocks-after-400`, frame 209 inspected)
+shows rocks to the right edge with no cut-off. `GameplayCaptureTool` rejects `--width 640`; the
+supported set is the named aspect ratios, so the wide row used 400. The widened back key itself is
+asserted in the unit test, not on video.
+
+**Not delivered, with reasons.**
+- *Route rewind spot.* Slice 2 adds no route; the rock window's capture/restore and the animator's
+  counter blob are covered by unit round trips. A before/active/after spot belongs to the first
+  slice that has a cold route (slice 3).
+- *Native comparison.* No LRZ native probe was run for this slice; the oracle is the ROM art bytes
+  and the routine constants, which is stronger for a DMA than a screenshot would be.
+- *Donor row.* Both features are presentation and donor-independent; no S1/S2 donor capture was made.
+
+**Plan corrections.** None needed in the Verified ROM values for slice 2 - the channel-0 unsigned
+wrap, the channel-1 mask and zone-`$16` skip, the `-1` seed for `$900`/`$1600` only, the rock window
+keys and the vertical test were all confirmed as written. The demo numbering in the plan is already
+superseded: slice 1 delivered the parallax clip as `02`, so slice 2 used `06` and `07`.
