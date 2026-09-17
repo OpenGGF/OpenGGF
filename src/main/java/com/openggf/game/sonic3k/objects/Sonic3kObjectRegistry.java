@@ -1423,8 +1423,10 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                         context -> context.zoneSet() == S3kZoneSet.S3KL
                                 || (context.source() == S3kObjectCreationContext.Source.STOCK
                                 && context.zoneSet() == S3kZoneSet.SKL
-                                && context.stockRomZoneId().orElse(-1)
-                                == Sonic3kZoneIds.ZONE_HPZ)));
+                                && (context.stockRomZoneId().orElse(-1)
+                                        == Sonic3kZoneIds.ZONE_HPZ
+                                || context.stockRomZoneId().orElse(-1)
+                                        == Sonic3kZoneIds.ZONE_SSZ))));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SCREW_DOOR, S3kZoneSet.S3KL,
                 (spawn, registry) -> new FbzScrewDoorObjectInstance(spawn));
         registerZoneSetBound(Sonic3kObjectIds.FBZ_SPINNING_POLE, S3kZoneSet.S3KL,
@@ -1471,6 +1473,12 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.ICZ_CRUSHING_COLUMN,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
                 (spawn, registry) -> new SszCutsceneButtonObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_FLOATING_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszFloatingPlatformObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.SSZ_COLLAPSING_COLUMN,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCollapsingColumnObjectInstance(spawn));
 
         // The Doomsday Zone's SKL object set.
         registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,

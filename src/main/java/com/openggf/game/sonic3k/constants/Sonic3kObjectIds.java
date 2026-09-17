@@ -302,6 +302,18 @@ public final class Sonic3kObjectIds {
     public static final int STAR_POINTER = 0xAE;
     // S3KL object table: Obj_ICZCrushingColumn.
     public static final int ICZ_CRUSHING_COLUMN = 0xAF;
+    // Sky Sanctuary's SKL pointer-table identities (Object pointers - SK Set 2.asm). The same
+    // numeric IDs carry the S3KL FBZ_* names above; the factories are set- and zone-bound.
+    public static final int SSZ_RETRACTING_SPRING = 0x74;
+    public static final int SSZ_SWINGING_CARRIER = 0x75;
+    public static final int SSZ_ROTATING_PLATFORM = 0x76;
+    public static final int SSZ_ELEVATOR_BAR = 0x7A;
+    public static final int SSZ_COLLAPSING_BRIDGE_DIAGONAL = 0x7B;
+    public static final int SSZ_COLLAPSING_BRIDGE = 0x7C;
+    public static final int SSZ_BOUNCY_CLOUD = 0x7D;
+    public static final int SSZ_COLLAPSING_COLUMN = 0x7E;
+    public static final int SSZ_FLOATING_PLATFORM = 0x7F;
+    public static final int SSZ_EGG_ROBO = 0xA0;
     // HPZ uses the SKL pointer-table identities below.
     public static final int SSZ_HPZ_TELEPORTER = 0x79;
     public static final int HPZ_MASTER_EMERALD = 0xB0;

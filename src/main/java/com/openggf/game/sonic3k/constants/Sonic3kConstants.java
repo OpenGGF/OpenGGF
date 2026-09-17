@@ -2020,6 +2020,12 @@ public class Sonic3kConstants {
     /** {@code Map_SSZCollapsingBridge}, shared by Obj_SSZCutsceneBridge and the collapsing families. */
     public static final int MAP_SSZ_COLLAPSING_BRIDGE_ADDR = 0x046958;
     /**
+     * {@code Map_SSZFloatingPlatform} (sonic3k.lst:109039), shared by
+     * {@code Obj_SSZFloatingPlatform} (frame 1), {@code Obj_SSZCollapsingColumn} (frame 2) and
+     * the column's debris.
+     */
+    public static final int MAP_SSZ_FLOATING_PLATFORM_ADDR = 0x046900;
+    /**
      * {@code word_5853E} (sonic3k.lst:136479): the count word {@code $A-1} followed by ten
      * twelve-byte solid-cloud rows that {@code SSZ1_BackgroundInit} builds {@code loc_57B8E} from.
      */

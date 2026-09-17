@@ -309,6 +309,9 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     /** Sky Sanctuary's own SKL registrations (the S3KL names at these ids are different objects). */
     private static final Set<Integer> SSZ_ONLY_IDS = Set.of(
             0x77, // SSZCutsceneBridge
+            0x79, // SSZHPZTeleporter's Sky Sanctuary branch (HPZ shares the id and the class)
+            0x7E, // SSZCollapsingColumn
+            0x7F, // SSZFloatingPlatform
             0xAF // SSZCutsceneButton
     );
 

@@ -51,6 +51,13 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszDeathEggSmallObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneBridgeObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneBridgeObjectInstance.java#restoreRewindState", 1),
+            // Obj_SSZCollapsingColumn's debris keeps the same cross-object SST link: loc_44BF8
+            // reads its parent through $2E(a0) every frame, both to hang from it and to report
+            // back with subq.b #1,routine(a1), so the reference must survive a restore as an
+            // ObjectRefId. Restore equality is covered by TestS3kSszTraversalPlatforms and the
+            // per-object round trip in TestEveryObjectRewindRoundTrip.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCollapsingColumnDebrisObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCollapsingColumnDebrisObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#captureRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#restoreRewindState", 2),
             // Explosion construction factories cannot be derived from placement or services.

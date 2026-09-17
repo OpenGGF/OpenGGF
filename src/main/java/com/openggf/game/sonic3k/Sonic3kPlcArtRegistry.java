@@ -2627,6 +2627,21 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_SSZ_MISC + 0x88,
                 3,
                 null));
+        // Obj_SSZFloatingPlatform draws Map_SSZFloatingPlatform over
+        // make_art_tile(ArtTile_SSZMisc,2,0), i.e. the level's own ArtNem_SSZMisc tiles.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_FLOATING_PLATFORM,
+                Sonic3kConstants.MAP_SSZ_FLOATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC,
+                2,
+                null));
+        // Obj_SSZCollapsingColumn and its debris use the same mappings at ArtTile_SSZMisc+$10.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_COLLAPSING_COLUMN,
+                Sonic3kConstants.MAP_SSZ_FLOATING_PLATFORM_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x10,
+                3,
+                null));
         // ChildObjDat_665F6 -> loc_659CC: ObjDat3_664AA draws Map_SSZDeathEggSmall over
         // ArtKosM_SSZDeathEggSmall at make_art_tile(ArtTile_SSZDeathEggSmall,3,0).
         standalone.add(new StandaloneArtEntry(

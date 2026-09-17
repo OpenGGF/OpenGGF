@@ -173,6 +173,10 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance", "beam"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HpzTeleporterRouteHelperObjectInstance", "teleporter"), RewindFieldPolicy.CAPTURED),
+            // loc_44BF8 reads its collapsing column through $2E(a0) every frame, both to hang
+            // from it and to report back with subq.b #1,routine(a1); the debris captures it as a
+            // typed ObjectRefId sidecar. TestS3kSszTraversalPlatforms drives the whole collapse.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszCollapsingColumnDebrisObjectInstance", "column"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             // Boss childComponents is an identity-bearing live graph. The compact collection
             // codec retains its exact managed children and their roles for restore/relink.

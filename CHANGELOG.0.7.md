@@ -17,8 +17,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   camera crosses the cloud band, the clouds drift, the whole sky breathes on the act's
   oscillator, five clouds roam across the screen and ten invisible cloud platforms can be
   stood on. Sky Sanctuary's animated tiles run in act 1 and, as on the cartridge, not in
-  act 2. The recreated Green Hill and Metropolis arenas, their bosses and the Death Egg
-  launch are still to come.
+  act 2. The act's teleporter pads are real now: they draw, they can be stood on, they lift
+  the player and the camera the distance their placement asks for, and the two that wait on
+  a defeated boss sit sunk in the floor until it is beaten and then rise back into place.
+  The small floating platforms dip under a standing player and the tall columns break into
+  eight falling pieces when one is stood on. The recreated Green Hill and Metropolis arenas,
+  their bosses and the Death Egg launch are still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,

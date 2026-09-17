@@ -395,6 +395,13 @@ public final class Sonic3kObjectArtKeys {
     public static final String SSZ_CUTSCENE_BRIDGE = "ssz_cutscene_bridge";
     /** loc_57BB2: Map_SSZRoamingClouds over make_art_tile(ArtTile_SSZMisc+$3C,3,1). */
     public static final String SSZ_ROAMING_CLOUD = "ssz_roaming_cloud";
+    /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */
+    public static final String SSZ_FLOATING_PLATFORM = "ssz_floating_platform";
+    /**
+     * Obj_SSZCollapsingColumn and its loc_44BCC debris: the same Map_SSZFloatingPlatform over
+     * make_art_tile(ArtTile_SSZMisc+$10,3,1), a different tile base and palette line.
+     */
+    public static final String SSZ_COLLAPSING_COLUMN = "ssz_collapsing_column";
 
     // DEZ badniks
     public static final String SPIKEBONKER = "dez_spikebonker";
