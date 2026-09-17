@@ -356,6 +356,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Seamless act handoffs retain fixed object owners without duplicates, avoiding
   a rewind-capture crash after the MHZ signpost.
   Complete routes, finales, and continuous replay chains remain gates.
+- **S3K Lava Reef:** rings no longer appear at the top-left corner of every S3K act.
+  Each ROM ring list opens with a `(0,0)` record that the ring manager always steps
+  over, and the engine was spawning it as a real ring.
 
 ## ROM images
 
