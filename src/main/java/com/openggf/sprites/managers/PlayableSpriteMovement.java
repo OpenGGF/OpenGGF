@@ -4614,7 +4614,11 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 
 		// Crouch check - only if not balancing
 		// ROM: You can't crouch while balancing (balance animation takes priority)
-		boolean crouching = inputDown && !inputLeft && !inputRight
+		// The duck test follows MoveLeft/MoveRight in the same routine, so a held
+		// direction whose brake reached ground_vel 0 still ducks, exactly like the
+		// balance branch above (S3K Tails_InputAcceleration_Path
+		// sonic3k.asm:27797-27850; Sonic_Move equivalent).
+		boolean crouching = inputDown && ((!inputLeft && !inputRight) || directionalBrakeReachedZero)
 				&& standingStill && !sprite.isBalancing();
 		sprite.setCrouching(crouching);
 	}
