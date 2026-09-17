@@ -57,6 +57,10 @@ public class GraphicsManager {
 	// Last palette handed to cachePaletteTexture per line, so a palette fade change
 	// can re-upload the affected lines without asking their owners to write again.
 	private PaletteView[] lastCachedPaletteLines = new PaletteView[0];
+	private boolean paletteUploadLatched;
+	private Palette[] pendingUnderwaterPalettes;
+	private Palette pendingUnderwaterLine0;
+	private final boolean[] pendingPaletteUploads = new boolean[64];
 	private final PaletteFadePresentation paletteFadePresentation = new PaletteFadePresentation();
 	private Integer combinedPaletteTextureId;
 	private int currentPaletteTextureHeight = 0;
@@ -708,7 +712,59 @@ public class GraphicsManager {
 
 	public void cachePaletteTexture(Palette palette, int paletteId) {
 		rememberCachedPaletteLine(palette, paletteId);
+		if (paletteId >= 0 && paletteId < pendingPaletteUploads.length) {
+			pendingPaletteUploads[paletteId] = false;
+		}
 		uploadPaletteLine(palette, paletteId);
+	}
+
+	/** Level-pipeline palette write: deferred to the next V-int publication while latched. */
+	void cacheLatchablePaletteTexture(Palette palette, int paletteId) {
+		if (paletteUploadLatched && paletteId >= 0 && paletteId < pendingPaletteUploads.length) {
+			rememberCachedPaletteLine(palette, paletteId);
+			pendingPaletteUploads[paletteId] = true;
+			return;
+		}
+		cachePaletteTexture(palette, paletteId);
+	}
+
+	/**
+	 * Hardware CRAM is written from {@code Normal_palette} in V-int, together with the sprite
+	 * table and scroll buffers. While latched, palette line writes wait for the next publication
+	 * instead of reaching the GPU on the frame the game logic wrote them.
+	 */
+	void setPaletteUploadLatched(boolean latched) {
+		flushPendingPaletteUploads();
+		paletteUploadLatched = latched;
+	}
+
+	boolean isPaletteUploadLatched() {
+		return paletteUploadLatched;
+	}
+
+	void flushPendingPaletteUploads() {
+		if (pendingUnderwaterPalettes != null) {
+			Palette[] palettes = pendingUnderwaterPalettes;
+			Palette line0 = pendingUnderwaterLine0;
+			pendingUnderwaterPalettes = null;
+			pendingUnderwaterLine0 = null;
+			boolean latched = paletteUploadLatched;
+			paletteUploadLatched = false;
+			try {
+				cacheUnderwaterPaletteTexture(palettes, line0);
+			} finally {
+				paletteUploadLatched = latched;
+			}
+		}
+		for (int id = 0; id < pendingPaletteUploads.length; id++) {
+			if (!pendingPaletteUploads[id]) {
+				continue;
+			}
+			pendingPaletteUploads[id] = false;
+			if (id < lastCachedPaletteLines.length && lastCachedPaletteLines[id] != null) {
+				uploadPaletteLine(lastCachedPaletteLines[id], id);
+			}
+		}
 	}
 
 	private void uploadPaletteLine(PaletteView palette, int paletteId) {
@@ -1373,6 +1429,12 @@ public class GraphicsManager {
 	public Integer cacheUnderwaterPaletteTexture(Palette[] palettes, Palette normalLine0) {
 		if (headlessMode && underwaterPaletteUploadOps == OPEN_GL_UNDERWATER_PALETTE_UPLOAD_OPS) {
 			return null;
+		}
+		if (paletteUploadLatched && underwaterPaletteTextureId != null) {
+			// Water_palette reaches CRAM in the same V-int as Normal_palette.
+			pendingUnderwaterPalettes = palettes;
+			pendingUnderwaterLine0 = normalLine0;
+			return underwaterPaletteTextureId;
 		}
 		int totalLines = RenderContext.getTotalPaletteLines();
 		Palette underwaterLine0 = (palettes != null && palettes.length > 0) ? palettes[0] : null;

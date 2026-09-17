@@ -497,3 +497,28 @@ Demos: `32a-hpz-background-full-width-before-after.mp4` (1960-2320),
   comparison over 442400-442460 (palette cycling) shows no consistent one-frame shift, so this is not
   yet a proven global CRAM-upload lag. Left unchanged; a presentation-timing change needs a probe that
   isolates CRAM upload from sprite and plane uploads first. The exporter records `pal1_c7`.
+
+### 2026-09-17 V-int palette latch (ship flash solution)
+
+- **Mechanism.** S3K `VInt_8` uploads `Normal_palette` (or `Water_palette`) to CRAM in the same V-int as
+  the sprite table and H-scroll buffer. The engine already publishes the sprite table and scroll at V-int
+  (`LevelSpritePresentation`), but level palette writes reached the GPU immediately, one frame early.
+- **Native proof.** CNZ1 (`probe-cnzpal`, full palette per frame): in all 400 frames where palette RAM
+  changed, the screenshot shows the previous frame's RAM, none the current frame. BizHawk maps each colour
+  nibble to `n*17`.
+- **Change.** Level palette pipelines (ownership resolution, palette write supports, S3K cycler) upload
+  through `PaletteUploadPresentation.cacheLevelPalette`; while an S3K sprite-table publication phase is
+  active those lines (and the underwater texture) wait for the next publication. Direct
+  `cachePaletteTexture` callers (special stages, menus, loads) stay immediate even if a latch is left
+  armed; a non-publishing phase, the sanctuary results scene publication or a rewind restore releases
+  and flushes. Only S3K's level init profile publishes, so S1, S2 and KiS2 never latch.
+- **Evidence.** HPZ whole route (`raw-29` vs `raw-28`, 4872 frames with native screenshots): 144 frames
+  closer to native, 0 further; over-200px frames 1127 → 1085; ship flash grey on native frames
+  446861/863/865. Pedestal → special stage → results → level capture: frames identical with and
+  without the latch. CNZ1 capture comparison got worse (843 frames): the pre-existing cycle start phase
+  (`s3k-known-bugs.md`: Palette Cycles Run During the Level Fade-In), which the immediate upload masked.
+- **Rejected.** (1) Latching every `cachePaletteTexture` call and releasing at `GameLoop` mode boundaries:
+  `GameLoop` now carries the imported `@ModApi` spelling, so the policy hook requires a pin change for any
+  edit; also a stale latch would hold special-stage palettes. (2) A `FadeManager.isActive()` gate on
+  `Sonic3kPaletteCycler`: no measurable effect (headless fixture and capture tool do not run the ROM
+  fade before level frames), reverted.

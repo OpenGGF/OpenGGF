@@ -378,7 +378,7 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                                                     Level level,
                                                     int paletteIndex) {
         if (registry == null && graphics != null && graphics.isGlInitialized()) {
-            graphics.cachePaletteTexture(level.getPalette(paletteIndex), paletteIndex);
+            com.openggf.graphics.PaletteUploadPresentation.cacheLevelPalette(graphics, level.getPalette(paletteIndex), paletteIndex);
         }
     }
 

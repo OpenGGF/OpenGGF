@@ -4,6 +4,7 @@ import com.openggf.game.internal.SpriteTablePublication;
 import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.game.rewind.RewindRegistry;
 import com.openggf.game.rewind.RewindSnapshottable;
+import com.openggf.graphics.PaletteUploadPresentation;
 import com.openggf.graphics.SpritePresentation;
 import com.openggf.sprites.managers.SpriteManager;
 
@@ -44,6 +45,11 @@ public final class LevelSpritePresentation {
         @Override public String key() { return "level-sprite-presentation"; }
         @Override public State capture() { return new State(prepared, published, counters, preparedScroll, publishedScroll); }
         @Override public void restore(State state) {
+            // A restore redraws without a V-int publication: upload any latched palette
+            // lines now; the next ordinary publication resumes latching.
+            if (com.openggf.game.GameServices.hasRuntime()) {
+                PaletteUploadPresentation.release(com.openggf.game.GameServices.graphics());
+            }
             prepared = state.prepared();
             published = state.published();
             counters = state.counters();
@@ -67,9 +73,12 @@ public final class LevelSpritePresentation {
                 .publishesSpriteTable(phase)) {
             var profile = (SpriteTablePublication) level.gameModule.getLevelInitProfile();
             level.spritePresentationRenderer().spriteTables.publish();
+            PaletteUploadPresentation.publishAndLatch(level.graphicsManager);
             if (profile.updatesHudCounters(phase)) {
                 level.spritePresentationRenderer().publishHudCounters(profile.advancesHudTimer(phase));
             }
+        } else if (level != null) {
+            PaletteUploadPresentation.release(level.graphicsManager);
         }
     }
 
@@ -81,6 +90,9 @@ public final class LevelSpritePresentation {
      */
     public static void publishPreparedScene(LevelManager level) {
         if (enabled(level)) level.spritePresentationRenderer().spriteTables.publish();
+        if (level != null) {
+            PaletteUploadPresentation.release(level.graphicsManager);
+        }
     }
 
     public static void register(LevelManager level, RewindRegistry registry) {

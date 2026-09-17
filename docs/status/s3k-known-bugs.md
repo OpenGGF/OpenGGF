@@ -60,6 +60,7 @@ Entries should include:
 34. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
 35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
 36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
+37. [Palette Cycles Run During the Level Fade-In](#palette-cycles-run-during-the-level-fade-in)
 
 ---
 
@@ -5827,3 +5828,13 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Symptom** — Segment 0 errors with `duplicate or reordered hardware service boundary at raw_frame=1053: VINT_SERVICE` on develop `4a9962069`, before any change on the discrepancy-cleanup branch, so no later segment of the chain is measured.
 - **Suspected cause** — Not investigated; recorded by the bonus-stage lane while checking the gumball exit.
 - **Removal condition** — Segment 0 passes the boundary-ordering check and the chain reports its first real divergence in the frontier log.
+
+---
+
+## Palette Cycles Run During the Level Fade-In
+
+- **Location** — `Sonic3kPaletteCycler.update`, the level fade presentation (`FadeManager`), headless and capture level starts
+- **Symptom** — Native CNZ1 (Sonic + Tails complete run, movie 131870) writes its first `AnPal_CNZ` colours at `Level_frame_counter` 23, after `Pal_FromBlack`. The engine starts ticking the cycles on the first level frame, so every counter-gated cycle runs from a different phase: the 4-frame bumper cycle (`Normal_palette_line_4+$12`) changes two frames after native for the rest of the act. With the V-int palette latch (displayed palette is the previous frame's RAM, as native), the colour on screen is therefore off by two frames of a four-frame cycle.
+- **Suspected cause** — `Animate_Palette` (`sonic3k.asm:5018`) runs `Pal_FromBlack`/`Pal_FromWhite` instead of `AnPal_Load` while `Palette_fade_timer` is non-zero. The engine fades through a shader, the headless fixture skips the fade, and the capture tool's title-card path fades during its own title-card mode, so no engine start currently reproduces the ROM's 22-frame gate. A `FadeManager.isActive()` gate in the cycler (as FBZ uses for `AnPal_FBZ`) was tried and could not be verified end to end, so it was not kept.
+- **Removal condition** — The level start models `Palette_fade_timer` (22 frames of fade before `AnPal_Load`) on the production path, and a native CNZ1 palette-RAM comparison shows the line-3/line-4 cycle writes on the same frames.
+

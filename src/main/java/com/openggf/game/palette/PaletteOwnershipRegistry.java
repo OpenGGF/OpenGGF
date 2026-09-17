@@ -111,7 +111,7 @@ public final class PaletteOwnershipRegistry implements RewindSnapshottable<Palet
         if (graphics != null && graphics.isGlInitialized()) {
             for (int line = 0; line < normalDirty.length; line++) {
                 if (normalDirty[line]) {
-                    graphics.cachePaletteTexture(normal[line], line);
+                    com.openggf.graphics.PaletteUploadPresentation.cacheLevelPalette(graphics, normal[line], line);
                 }
             }
             if (underwater != null && hasUnderwaterOwner() && normalLine0 != null) {
