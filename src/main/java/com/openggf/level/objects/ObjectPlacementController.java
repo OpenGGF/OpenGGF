@@ -300,23 +300,62 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         if (spawn == null || currentYCoarse == previousYCoarse) {
             return false;
         }
-        int bandTop = currentYCoarse > previousYCoarse
-                ? currentYCoarse + 0x180
-                : currentYCoarse - 0x80;
-        int bandBottom = currentYCoarse > previousYCoarse ? bandTop + 0x80 : currentYCoarse;
-        int spawnY = spawn.rawYWord() & 0x0FFF;
-        int wrapRange = camera != null && camera.isVerticalWrapEnabled()
-                ? camera.getVerticalWrapRange()
-                : 0;
-        if (wrapRange > 0 && (short) (camera != null ? camera.getMinY() : 0) < 0) {
-            int wrapMask = wrapRange - 1;
-            bandTop &= wrapMask;
-            bandBottom &= wrapMask;
-            return bandTop <= bandBottom
-                    ? spawnY >= bandTop && spawnY <= bandBottom
-                    : spawnY >= bandTop || spawnY <= bandBottom;
+        boolean wrapping = camera != null && (short) camera.getMinY() < 0;
+        int wrapValue = camera != null && camera.isVerticalWrapEnabled()
+                ? camera.getVerticalWrapRange() - 1
+                : 0xFFFF;
+        int bandTop = twoAxisYPassStripTop(previousYCoarse, currentYCoarse, wrapping, wrapValue);
+        if (bandTop < 0) {
+            return false;
         }
-        return bandTop >= 0 && spawnY >= bandTop && spawnY <= bandBottom;
+        // loc_1B9A4 masks the layout Y word with $FFF, then rejects y < d3 and
+        // y > d3+$80 (sonic3k.asm:37744-37751).
+        int spawnY = spawn.rawYWord() & 0x0FFF;
+        return spawnY >= bandTop && spawnY <= bandTop + 0x80;
+    }
+
+    /**
+     * Load_Sprites' Camera_Y strip start d3 (sonic3k.asm:37679-37723), or -1 when
+     * the pass loads nothing. The coarse words compare signed ({@code bge}), so a
+     * wrapped camera moving from $FF00 to $0680 counts as moving down.
+     */
+    static int twoAxisYPassStripTop(int previousYCoarse, int currentYCoarse,
+            boolean wrapping, int wrapValue) {
+        int d6 = currentYCoarse & 0xFFFF;
+        int old = previousYCoarse & 0xFFFF;
+        boolean down = (short) d6 >= (short) old;
+        if (down) {
+            if (!wrapping) {
+                // loc_1B978
+                int d3 = (d6 + 0x180) & 0xFFFF;
+                return d3 > wrapValue ? -1 : d3;
+            }
+            if (old != 0 || d6 == 0x80) {
+                return stripBelowWrapped(d6, wrapValue);
+            }
+            return stripAboveWrapped(d6, wrapValue);
+        }
+        if (!wrapping) {
+            // loc_1B94C
+            int d3 = (short) (d6 - 0x80);
+            return d3 < 0 ? -1 : d3;
+        }
+        if (d6 != 0 || old == 0x80) {
+            return stripAboveWrapped(d6, wrapValue);
+        }
+        return stripBelowWrapped(d6, wrapValue);
+    }
+
+    private static int stripAboveWrapped(int d6, int wrapValue) {
+        // loc_1B940
+        int d3 = (d6 - 0x80) & 0xFFFF;
+        return (short) d3 >= 0 ? d3 : d3 & wrapValue;
+    }
+
+    private static int stripBelowWrapped(int d6, int wrapValue) {
+        // loc_1B968
+        int d3 = (d6 + 0x180) & 0xFFFF;
+        return d3 < wrapValue ? d3 : d3 & wrapValue;
     }
 
     static boolean isNonCounterSpawnVerticallyEligible(ObjectSpawn spawn,
@@ -1234,8 +1273,11 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
 
     List<ObjectSpawn> getDeferredVerticalLoadSpawns() {
         ArrayList<ObjectSpawn> result = new ArrayList<>();
-        for (int index = deferredVerticalLoad.nextSetBit(0);
-             index >= 0;
+        // loc_1B982 scans only the entries between Object_load_addr_back and
+        // Object_load_addr_front (sonic3k.asm:37723-37762); a deferred entry the
+        // X cursors have since left behind is not part of that scan.
+        for (int index = deferredVerticalLoad.nextSetBit(leftCursorIndex);
+             index >= 0 && index < cursorIndex;
              index = deferredVerticalLoad.nextSetBit(index + 1)) {
             if (index < spawns.size()) {
                 result.add(spawns.get(index));
