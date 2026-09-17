@@ -110710,6 +110710,22 @@ animation2. That production intro, not trace-state seeding, is the next target.
   10483 -> 9164 errors; first physics divergence row 28941 -> 29093 (CPU Tails
   `x_speed` on the walk to the pyramid). Other S3K replay reports unchanged.
 
+### 2026-09-17 — SOZ2 SST slot parity: 3 -> 0 errors (soz_completerun green)
+
+- `bugfix/ai-soz2-sst-parity` from develop `88ee4775f` to `bddbce125`: Camera_Y object
+  strip scan (`3a4858127`), first-free starpost children and bonus-star range delete
+  (`ed964eea5`), push switch own-checkpoint rider unseat (`3bdd0a2a8`), attracted-ring slot
+  order around the object load and spark release (`bddbce125`). `soz_completerun` 3 -> 0;
+  `TestS3kSozCompleteRunTraceReplay` passes.
+- Sweep: `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.**.Test*TraceReplay" <S1/S2/S3K ROM paths>
+  -Dsurefire.failIfNoSpecifiedTests=false test -B` on develop `88ee4775f` and the branch:
+  only `TestS3kSozCompleteRunTraceReplay` changed status (FAIL -> PASS). Report totals that
+  moved: `s3k_soz1-single-c203004eb0b074c1` 3 -> 0, `s3k_mhz1-single-ec1a83b31fa42bc3`
+  3132 -> 3199 (first error unchanged at row 6958 `rings`; new divergence row 11644 Tails
+  hurt, from the first-free starpost children) and `s3k_soz1-single-83fff36367af0f2e`
+  553 -> 554 (first error unchanged at row 0 `camera_y`).
+
 ### 2026-09-17 — SOZ last animation residue: 27 -> 3 errors
 
 - `bugfix/ai-soz-last-residue` from develop `832554260` to `581000f11`: headroom check

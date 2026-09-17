@@ -3224,8 +3224,34 @@ moving latch key. Probe lessons: never `print()` per frame on Linux (the Lua con
 redraw slows emulation progressively), arm memory hooks only inside the window, and save
 a state near the window when more passes are expected.
 
-Still open (3 errors): the lost-ring floor phase (rows 45256-50720). Before the spill
+Still open after `581000f11` (3 errors, closed in the next section): the lost-ring floor phase (rows 45256-50720). Before the spill
 the engine keeps objects the ROM has unloaded (a still sprite at y $7A8, a quicksand) and
 lacks others, and the starpost children take different slots (ROM `AllocateObject` puts
 the first one in slot 5, before the post); the layouts last match at row 41317. This is
 SOZ2 object load/unload and allocation parity, not a ring change.
+
+### Replay follow-up: SOZ2 SST slot parity (2026-09-17)
+
+Branch `bugfix/ai-soz2-sst-parity` from develop `88ee4775f`. `soz_completerun` 3 -> 0 errors.
+
+| Commit | Native cause |
+|---|---|
+| `3a4858127` | the vertical object-load pass scans only the Camera_Y strip `Load_Sprites` loads (`loc_1B940`-`loc_1B982`: 0x80 above or 0x180 below the old coarse Y, with the wrap mask, signed word compare), and only records from the back cursor up to the front cursor |
+| `ed964eea5` | the starpost star and bonus-star children use `AllocateObject` (first free slot, `sub_2D028`/`sub_2D3C8`), and a bonus star deletes itself through `Sprite_CheckDeleteTouch3` on its own orbit X |
+| `3bdd0a2a8` | with slot parity restored a later object ran the SOZ push switch's airborne-rider unseat; only the switch's own solid checkpoint may unseat its rider |
+| `bddbce125` | attracted rings take their SST slot after the object load in the frame they are attracted (the ROM allocates in `Obj_Attracted_Ring` setup, after `Load_Sprites`), and a lightning-shield spark or ring deleting in this pass releases its slot before the pass's new dynamic objects are placed |
+
+Evidence came from `OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1` slot dumps compared against a
+BizHawk 2.11 SST probe over the SOZ2 lost-ring window (layouts last matched at row 41317;
+after `3a4858127` the still sprite at y $7A8 and the quicksand unload on the ROM frame).
+Rejected: releasing destroyed dynamic objects before the dynamic-spawn flush in
+`ObjectManager` (no slot moved; the sparks and rings are owned by `RingManager`), and a
+bonus-star range check on `getX()` (the spawn position, not the orbit).
+
+All-game trace sweep on develop `88ee4775f` and the branch: the only class to change status
+was `TestS3kSozCompleteRunTraceReplay` (FAIL -> PASS). Two already-failing reports moved
+after their first error: `s3k_mhz1-single-ec1a83b31fa42bc3` 3132 -> 3199 (first error
+unchanged at row 6958; bisected to the first-free starpost children, which put the MHZ
+children in slots 8/10/11/13/20 against ROM 7/10/12/15/16 where the engine had used 20-24,
+and a later Tails hurt at row 11644 now differs) and `s3k_soz1-single-83fff36367af0f2e`
+553 -> 554 (first error row 0 `camera_y`; one extra mapping-frame error at row 17772).
