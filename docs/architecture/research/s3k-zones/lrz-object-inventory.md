@@ -151,6 +151,7 @@ Baseline placeholder count: **239 act 1 / 281 act 2 / 14 boss act** (534 of 1099
 | `$1C` | `$0C` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1C` | `$0D` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1C` | `$0F` | `Obj_LRZButtonHorizontal` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
+| `$1D` | `$A0` | `Obj_LRZShootingTrigger` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1D` | `$C2` | `Obj_LRZShootingTrigger` | 1 | 0 | 0 | unregistered (default placeholder) | 3 |
 | `$1E` | `$1A` | `Obj_LRZDashElevator` | 1 | 0 | 0 | placeholder (SKL branch) | 3 |
 | `$1E` | `$1D` | `Obj_LRZDashElevator` | 1 | 0 | 0 | placeholder (SKL branch) | 3 |

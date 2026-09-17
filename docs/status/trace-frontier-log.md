@@ -110800,3 +110800,38 @@ animation2. That production intro, not trace-state seeding, is the next target.
 - Fixes that moved it (plan evidence, `docs/architecture/plans/2026-09-17-ddz-bring-up.md`):
   `Seek_Object_Manager` cursor seek on the wrap (first error 8248 -> 8249), the
   `Camera_X_pos_coarse_back` latch for DDZ delete checks (slot history probe, row 173 -> exit).
+
+## 2026-09-17 — S3K complete-run segment identities and the LRZ frontier
+
+Recorded once for the parallel LRZ, SSZ and Death Egg campaigns (LRZ campaign, slice 0).
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, commit `3418eba6e`.
+
+**Segment directory names in `src/test/resources/traces/s3k/runs/` are one zone off; the
+`zone_id` in each `metadata.json` is correct, and each segment's real content is its
+`zone_act_state` aux rows.** Always select by `zone_act_state`, never by directory name.
+Measured by walking every `zone_act_state` row of each segment:
+
+| Run | Segment | `bk2_frame_offset` | Rows | Contents (row → `actual_zone` / `actual_act`) |
+| --- | --- | ---: | ---: | --- |
+| Sonic + Tails | `lrz` | 389982 | 38885 | 0 `$09`/0; 25557 `$09`/1 (apparent act at 26272); 38817 `$16`/0 |
+| Sonic + Tails | `hpz22` | 428868 | 2132 | 0 `$16`/0 (LRZ3 autoscroll); 1981 leaves for `$14` Glowing Spheres |
+| Sonic + Tails | `hpz22_2` | 434069 | 14850 | 0 `$16`/0 (LRZ3 boss); 7558 `$16`/1 Hidden Palace; 14685 leaves for `$0A` SSZ |
+| Sonic + Tails | `hpz`, `hpz_2`, `hpz_3` | 448920 / 460334 / 465044 | 7638 / 4352 / 3937 | `$0A` Sky Sanctuary; `hpz_3` leaves for `$0B` at 3773 |
+| Sonic + Tails | `ssz` | 468982 | 40049 | `$0B` Death Egg act 1; act 2 at 18670; leaves for `$17` at 39983 |
+| Tails | `lrz`, `lrz_2` | 370581 / 377638 | 4546 / 9552 | `$09`/0 with bonus-stage exits (`$13`, `$14`) |
+| Tails | `lrz_3` | 389691 | 15233 | 0 `$09`/0; 2661 `$09`/1 (apparent at 3312); 15165 `$16`/0 |
+| Tails | `hpz22` | 404925 | 12956 | 0 `$16`/0 (all of LRZ3); 8619 `$16`/1 Hidden Palace; 12847 leaves for `$13` |
+| Tails | `hpz22_2` | 419298 | 4604 | 0 `$16`/1 Hidden Palace; 4439 leaves for `$0A` SSZ |
+| Knuckles | `lrz`, `lrz_2` | 387121 / 393340 | 3337 / 8945 | `$09`; act 2 at 5985 in `lrz_2`; bonus exits |
+| Knuckles | `lrz_3` | 404495 | 7000 | 0 `$09`/1; 6870 `$16`/1 Hidden Palace directly (no LRZ3) |
+| Knuckles | `hpz22` | 411496 | 1004 | `$16`/1 Hidden Palace; 859 leaves for `$0A` SSZ |
+
+Corrections to the LRZ plan's first reading: Tails `hpz22` runs LRZ3 **and** the Hidden
+Palace arrival (8619 is the `$1601` entry row, not the segment length), and Tails `hpz22_2`
+starts already inside `$1601`. `zone0c` is the Doomsday segment and `ddz` the ending.
+
+Frontier re-measurement, `maven_queue.py -Dmse=off -Ptrace-segments
+-Ds3k.rom.path=<worktree>/s3k.gen -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay test` at
+`3418eba6e`: **red, unchanged**. Totals 11909 errors, 0 warnings; first error frame 208,
+`tails_y_speed` (expected `0x07BD`, actual `0x0000`) — the S3K `SolidObjectTop`
+zero-distance boundary recorded on 2026-08-15. No fixture was changed or consumed.

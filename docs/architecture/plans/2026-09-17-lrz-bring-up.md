@@ -1,7 +1,8 @@
 # Lava Reef Zone: methodology v2 bring-up plan
 
 Date: 2026-09-17. Planned branch `feature/ai-lrz-bring-up` in `.worktrees/ai-lrz-bring-up`;
-execution base develop `9cba6dbb6` (pin this SHA for the combined change-based validation). Applies
+execution base develop `035e48a58` (pin this SHA for the combined change-based validation; it is
+`9cba6dbb6` plus the merge of this plan and its SSZ/DEZ siblings). Applies
 [methodology v2](../designs/2026-09-15-zone-methodology-v2.md) with the refinements from the
 [SOZ](2026-09-15-soz-methodology-v2.md), [HPZ](2026-09-16-hpz-bring-up.md) and
 [DDZ](2026-09-17-ddz-bring-up.md) campaigns to LRZ1 (`$900`), LRZ2 (`$901`) and the boss act LRZ3
@@ -11,7 +12,7 @@ and execution by Opus, as for HPZ and DDZ. Entry skill:
 [lrz-analysis.md](../research/s3k-zones/lrz-analysis.md) (line citations re-resolved by label and four
 content errors corrected on 2026-09-17; labels stay authoritative) and the per-subtype
 [placement inventory](../research/s3k-zones/lrz-object-inventory.md) (1099 objects, 251 rows,
-byte-matched to the ROM). `loc_` labels are ROM addresses, never line numbers.
+byte-matched to the ROM; the `$1D`/`$A0` row was restored on 2026-09-17, see the evidence log). `loc_` labels are ROM addresses, never line numbers.
 
 ## Goal and delivery rule
 
@@ -59,7 +60,9 @@ act-ordered highlights reel like the HPZ and DDZ ones.
 - **Known frontiers.** `TestS3kSonicTailsLrzSegmentTraceReplay`: first error frame 208
   `tails_y_speed` (S3K `SolidObjectTop` zero-distance boundary, found not landed, frontier log
   2026-08-15). `lrz_completerun` stops compiling its hardware-timing rows
-  (`unsupported-held-row-POST`, raw frame 38719). Re-measure both at `9cba6dbb6` before briefing.
+  (`unsupported-held-row-POST`, raw frame 38719). Re-measured at `3418eba6e` in slice 0: the
+  `lrz` frontier is unchanged (11909 errors; first error frame 208 `tails_y_speed`
+  expected `0x07BD`, actual `0x0000`).
 - **LRZ has no events, no scroll handler and no zone objects.** No `Sonic3kLRZEvents`; zone 9 gets
   `SwScrlS3kDefault`; every `Obj_LRZ*` id is a name-only `PlaceholderObjectInstance`. Present:
   `AnPal_LRZ1/2` (`Sonic3kPaletteCycler`), the falling intro (`TestS3kLrzFallingIntroBootstrap`),
@@ -151,7 +154,7 @@ families (3, 4, 7) share one each.
 | 9. LRZ3 entry, flash and autoscroll | `LRZ3_ScreenInit` (incl. respawn branch X ≥ `$480`), screen stages 0-`$C`, BG stages 0-`$10` (five), Death Egg flash sequence, `Obj_LRZ3Autoscroll` (`$9E`), `$14` autoscroll (7 stages, push and crush-kill), `Obj_LRZ3Platform` (`$AD`), chunk `$17` writes, `AnimateTiles_LRZ3`, `AnPal_LRZ3`, `SwScrlLrz3` shimmer, `loc_68A6` falling intro for `$1600` | Star-post respawn enters mid-machine (`Events_bg+$00 = $10`, delay `$2D`): test it, the native movie does exactly this. Kill needs `Status_Push` at the left edge; wide viewport vs `+$120` right cap |
 | 10. LRZ3 end boss and handoff | BG stage 4 lock (needs `Camera_Y ≥ $500`, `Camera_X == $A00` exactly and `Camera_Y == Camera_max_Y_pos`; then `+8` → stage `$C`), `Obj_LRZEndBoss` (14 hits, six routines), `Obj_59FC4` sloped lava surface (`SolidObjectTopSloped2`, push `Events_bg+$14`), per-column VScroll (`Special_V_int_routine 4/$C`), defeat → capsule → `mus_LRZ2` fade → `$EC0` gradual → `StartNewLevel $2D` → `$1601` | The surface slope, BG columns and solid share one table (`HScroll_table+$110`): one owner. Cold arrival in HPZ with correct carry-over |
 | 11. Routes and acceptance | Cold routes from the movies (Sonic + Tails 389982, Tails 370581, Knuckles 387121; the capture path runs one frame behind the headless fixture; skip movie input on repeated `lfc`), authored inputs where a movie detours into a bonus stage, matrix breadth, rewind spots, strict replay frontiers, moving inspection at 320 and wide | A positioned boss success does not advance the cold frontier. Wide full routes likely need independent input (SOZ precedent) |
-| 12. Media and delivery | Reel, archive index, change-based validation against `9cba6dbb6`, docs, integration | See below |
+| 12. Media and delivery | Reel, archive index, change-based validation against `035e48a58`, docs, integration | See below |
 
 ### Slice work orders
 
@@ -291,7 +294,7 @@ Focused tests and `run_categories.py --category NAME --run` during slices, throu
 Mandatory S3K checks stay green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
 `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`; plus `TestS3kLrzFallingIntroBootstrap`,
 `TestS3kLrzPaletteCycling`, the HPZ and SOZ suites (shared scroll provider, shimmer table, cutscene
-Knuckles). One combined `run_categories.py --base 9cba6dbb6 --run` at the final delivery, after focused
+Knuckles). One combined `run_categories.py --base 035e48a58 --run` at the final delivery, after focused
 fixes and docs, with class count, cost and stopping rule stated first; no tree edits during the run;
 acknowledge the run. Shared-owner changes (scroll provider, pattern animator, seamless executor,
 hurt block, `StartNewLevel`) make this normal change-based validation. Attribute any red to a matched
@@ -346,26 +349,26 @@ Resolved on 2026-09-17 from the disassembly (details in Findings):
 | Region table row 1 (min > max)? | Transcription error: 5-word rows, corrected |
 | Miniboss/end-boss counts, autoscroll stages, `$480` respawn, `AnPal_LRZ3` gate, slice 7 decodes | Verified independently: see Verified ROM values |
 | Which exit gates on character? | Only `$AE` (deletes for `character_id 2`; Tails alone gets the cutscene). `$B3` has no gate; `SaveGame` needs `Player_mode 3` |
+| Does `Sonic3kRingPlacement` spawn the `(0,0)` sentinel as a ring? | Yes, it did, in every S3K act. Fixed in `3418eba6e`; the ROM never makes record 0 live (`loc_EB52` counts from `+4`, and `loc_E8BE`/`loc_E904` clamp the window key to 1) |
+| `TestS3kSonicTailsLrzSegmentTraceReplay` frame 208 still the first error? | Yes, unchanged at `3418eba6e`: 11909 errors, first error frame 208 `tails_y_speed` (expected `0x07BD`, actual `0x0000`) |
 
 Still open:
 
 | Question | Kill condition | Must resolve before |
 | --- | --- | --- |
 | Can Sonic/Tails pass X `$38B0` outside `$AE`'s Y window (`y − $240 … y`, i.e. `0 … $240`) and reach `$B3` at `($3FE0,$E0)`; can Knuckles's route miss `$B3`? | Cold routes for all three characters plus the act 2 collision map around X `$38A0-$3FF0`; if Sonic can reach `$B3`, record the ROM result (`$1601` without LRZ3), do not block it | Slice 8 done-condition |
-| Does `Sonic3kRingPlacement` spawn the `(0,0)` sentinel as a ring? | Census assertion in slice 0 | Slice 0 |
 | `$8B` sprite mask under SKL is `SozSpriteMaskObjectInstance`: any SOZ-only assumption? | Read the class against `Obj_SpriteMask`; test the three LRZ subtypes `$44 $84 $F1` | Slice 9 (boss act uses two) |
 | Does `$1600` art at the `$0F` bridge tile match `Map_HPZCollapsingBridge` frames? | Moving capture of the `($60,$4D0)` bridge vs native | Slice 9 |
 | Death Egg sprite draw path (`x = 0` suppression, `$1FF` wrap); autoscroll stage ↔ velocity pairing; which of `$29`'s `$30/$32` is the on and which the off timer | Slice owner traces `loc_5711E`, `loc_59E5E`-`loc_59F3C`, `loc_43DDC` before writing the test | Slices 7, 9, 7 |
-| `TestS3kSonicTailsLrzSegmentTraceReplay` frame 208 (`SolidObjectTop` zero-distance boundary) still the first error at `9cba6dbb6`? | Re-measure in slice 0 (clean build, `-Dmse=off`, check `errorCount`) | Slice 11; earlier only if it blocks the cold route |
 
 ## Status
 
 | Claim | State |
 | --- | --- |
-| Implemented | Not started (placeholder baseline 239 / 281 / 14 of 609 / 455 / 35 placements). Present at `9cba6dbb6`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
+| Implemented | Not started (placeholder baseline 239 / 281 / 14 of 609 / 455 / 35 placements). Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
 | Cold-reachable | Not started |
 | Rewind-verified | Not started |
-| Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited) |
+| Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
 | Visually matched | Not started |
 
 Out of scope, recorded as dependencies: SSZ after HPZ (SSZ campaign); Knuckles replay classes and
@@ -374,4 +377,67 @@ blocker unless it blocks a named slice.
 
 ## Evidence log
 
-(empty)
+### 2026-09-17 - Slice 0: baseline and identity (commit `3418eba6e`)
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, base `035e48a58`.
+All Maven through `maven_queue.py -Dmse=off` with
+`-Ds3k.rom.path=<worktree>/s3k.gen`
+(symlink resolves to SHA-1 `cfbf98c3...d2761d6`; every run below reports 0 skips).
+
+**Census.** `TestS3kLrzPlacementCensus` decodes `LRZ1/2/3_Sprites` and `LRZ1/2/3_Rings`
+straight from the ROM pointer tables and builds every placed record through the production
+`Sonic3kObjectRegistry`. Baseline pinned: 609 / 455 / 35 placements, **239 / 281 / 14**
+placeholders by exact `(id, subtype)` map, 331 / 281 / 52 live rings.
+Broken on purpose once (`$6E`/`$31` expected 8 instead of 7): the run reported exactly that
+one row, `expected: <... $6E/$31=8 ...> but was: <... $6E/$31=7 ...>`, and nothing else.
+Reverted; the baseline is green.
+
+**Two defects found by the census.**
+
+1. *Ring sentinel (engine).* Every S3K ring list but the Pachinko one opens with a `(0,0)`
+   record. The ROM never makes it live: `loc_EB52` counts `Perfect_rings_left` from
+   `Ring_start_addr_ROM + 4`, and both window searches (`loc_E8BE` X-ordered, `loc_E904`
+   Pachinko Y-ordered) build their key as `camera - 8` clamped up to 1 (`moveq #1,d4`) and
+   then step past every record below it. `Sonic3kRingPlacement` was spawning it as a real
+   ring in the top-left corner of **every S3K act**. Fixed in `3418eba6e`; surviving rings
+   keep their record index as `placementId`, which is the index the ROM's `Ring_status_table`
+   walks in lockstep. Re-checked `TestRingManager`, `TestS3kAiz2BigRingCollision`,
+   `TestS3kAiz2BigRingFormation`, `TestS3kCnzLateSSEntryRingPlacement`, `TestRingSparkleDelay`,
+   `TestSonic3kRingPlacement` and the four mandatory S3K classes: 59 tests, 0 failures, 0 skips.
+2. *Inventory row (document).* The placement inventory's main table was missing `$1D`/`$A0`
+   (1 act-1 placement), so it summed to 250 rows / 608 act-1 placements against its own stated
+   251 / 609. Row restored; the table now reconciles exactly, and the unregistered class is
+   20 rows / 27 placements / 13 in act 1 as the summary already claimed.
+
+**Trace identity.** Measured by walking every `zone_act_state` aux row of the LRZ-adjacent
+segments in all three runs and recorded once in
+[trace-frontier-log.md](../../status/trace-frontier-log.md). Confirms the plan's reading for
+Sonic + Tails (`lrz` act 2 at 25557, apparent at 26272, `$1600` at 38817; `hpz22` autoscroll to
+1981; `hpz22_2` `$1601` at 7558, SSZ at 14685) and Knuckles (`lrz_2` act 2 at 5985, `lrz_3`
+`$1601` at 6870). **Two plan corrections:** Tails `hpz22` is 12956 rows covering LRZ3 *and* the
+Hidden Palace arrival (8619 is the `$1601` entry row, not the segment length), and Tails
+`hpz22_2` starts already inside `$1601` and leaves for SSZ at 4439 - it is not a second LRZ3
+segment. Also: each segment's `metadata.json` `zone_id` is correct (22 = `$16`); only the
+directory names are one zone off.
+
+**Frontier.** `-Ptrace-segments -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay` at `3418eba6e`:
+red, 11909 errors, 0 warnings, first error frame 208 `tails_y_speed` (expected `0x07BD`, actual
+`0x0000`). Unchanged from the 2026-08-15 record. No fixture changed or consumed.
+
+**Matrices.** [Act 1](../validation/levels/s3k-lrz-act1.md),
+[Act 2](../validation/levels/s3k-lrz-act2.md), [boss act](../validation/levels/s3k-lrz-boss.md),
+with the three coverage-backlog rows repointed. The five claims are tracked separately in each.
+
+**Media.** `~/Videos/OGGF/lrz-bring-up/` laid out as HPZ's (`inputs/`, `native/`, `reel/`,
+`make_clip.sh`, `make_clips.sh`, `side_by_side.sh` copied from the DDZ and HPZ roots).
+Baseline captures at 320, Sonic + Tails, title cards on, 360 frames each
+(`--input target/capture/lrz-idle-right.txt`, 120 idle + 180 right + 60 idle):
+`raw-00-lrz1-before/`, `raw-00-lrz2-before/`, `raw-00-lrz3-before/`. Inspected frames 40/120/350
+of act 1 (falling intro, "LAVA REEF ZONE ACT 1" card, rocks and both players on the ledge), frame
+300 of act 2 (crystal wall, tube floor) and frame 300 of the boss act (crystal arena over lava).
+All three render; none is blank. These are the "before" state with no scroll handler, no events
+and no LRZ objects.
+
+**Open issues from this slice.** None blocking. The `lrz_completerun` hardware-timing compile
+blocker was not re-measured (no named slice depends on it yet).
+

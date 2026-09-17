@@ -129,8 +129,8 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_MUSHROOM_HILL_2` | [Source inventory](../architecture/audits/2026-09-13-level-test-coverage-inventory.md#sonic-3--knuckles--mhz-delivered-scope-others-conditional); matrix pending |
 | S3K | `S3K_SANDOPOLIS_1` | [Act 1 matrix](../architecture/validation/levels/s3k-soz-act1.md) — v2 bring-up; concrete objects, bosses, coupled events and recreation tracked; full-route/native and transient redraw gaps remain |
 | S3K | `S3K_SANDOPOLIS_2` | [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md) — v2 bring-up; concrete objects, bosses, coupled events and recreation tracked; full-route/native and transient redraw gaps remain |
-| S3K | `S3K_LAVA_REEF_1` | Audit pending |
-| S3K | `S3K_LAVA_REEF_2` | Audit pending |
+| S3K | `S3K_LAVA_REEF_1` | [Act 1 matrix](../architecture/validation/levels/s3k-lrz-act1.md) - v2 bring-up, slice 0 baseline: 609 placements with 239 still placeholders, 331 live rings, census ratchet in place; scroll, events, objects, badniks, miniboss and the seamless handover are open |
+| S3K | `S3K_LAVA_REEF_2` | [Act 2 matrix](../architecture/validation/levels/s3k-lrz-act2.md) - v2 bring-up, slice 0 baseline: 455 placements with 281 still placeholders, 281 live rings; scroll, animated tiles, objects, the Death Egg background sprite and both exits are open |
 | S3K | `S3K_SKY_SANCTUARY_1` | Audit pending |
 | S3K | `S3K_SKY_SANCTUARY_2` | Audit pending |
 | S3K | `S3K_DEATH_EGG_1` | Audit pending |
@@ -155,7 +155,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_GLOWING_SPHERE_2` | Audit pending |
 | S3K | `S3K_SLOT_MACHINE` | Audit pending; bonus-loop player priority and native glass overlap covered by `TestGameLoopBonusPlayerPriority` and `TestS3kSlotsGlassNative` ([scope and evidence](../architecture/validation/2026-09-14-slots-glass-layering.md)). Donor/team and rewind visual breadth remain open. |
 | S3K | `S3K_SLOT_MACHINE_2` | Audit pending |
-| S3K | `S3K_LRZ_BOSS` | Audit pending |
+| S3K | `S3K_LRZ_BOSS` | [Boss-act matrix](../architecture/validation/levels/s3k-lrz-boss.md) - v2 bring-up, slice 0 baseline: 35 placements with 14 still placeholders, 52 live rings; Act 3 carry, flash, autoscroll, end boss and the `$1601` handoff are open |
 | S3K | `S3K_HIDDEN_PALACE` | [Act matrix](../architecture/validation/levels/s3k-hpz-act.md) — in progress; entry, events, animation and teleporter breadth covered; Knuckles fight and Sonic/Tails exit open |
 | S3K | `S3K_DEZ_BOSS` | Audit pending |
 | S3K | `S3K_SPECIAL_STAGE_ARENA` | [Sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md) — partial; results-return reveal missing |
