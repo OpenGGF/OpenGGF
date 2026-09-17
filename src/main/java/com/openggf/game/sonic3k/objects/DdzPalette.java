@@ -56,6 +56,14 @@ final class DdzPalette {
             S3kPaletteWriteSupport.applyContiguousPatch(services.paletteOwnershipRegistryOrNull(),
                     services.currentLevel(), services.graphicsManager(), OWNER,
                     S3kPaletteOwners.PRIORITY_OBJECT_OVERRIDE, 2, 0, bytes);
+            // The ROM writes Normal_palette_line_3 in RAM before loc_819EA copies Normal_palette to
+            // Target_palette. Resolve now so that copy (and the flash fading back to it) sees the reloaded
+            // line instead of the three DecColor_Obj passes from the fall.
+            var registry = services.paletteOwnershipRegistryOrNull();
+            if (registry != null) {
+                S3kPaletteWriteSupport.resolvePendingWritesNow(registry, services.currentLevel(),
+                        services.graphicsManager());
+            }
         } catch (IOException ex) {
             throw new IllegalStateException("Pal_DDZ", ex);
         }

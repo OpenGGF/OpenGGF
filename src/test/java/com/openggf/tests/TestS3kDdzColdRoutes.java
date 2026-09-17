@@ -8,6 +8,7 @@ import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindRegistry;
+import com.openggf.level.Palette;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
@@ -56,6 +57,8 @@ class TestS3kDdzColdRoutes {
     static final int LAST_GAMEPLAY_FRAME = 10058;
     static final int DIVERGENT_FRAMES = 45;
     static final int BOMBS_ACROSS_WRAP_FRAME = 7470;
+    static final int IDLE_PLANE_FRAME = 480;
+    static final int PHASE_TWO_PALETTE_FRAME = 7000;
 
     @AfterEach
     void reset() {
@@ -131,6 +134,22 @@ class TestS3kDdzColdRoutes {
             becameHyper |= player.getSuperStateController() != null
                     && player.getSuperStateController().isHyperFormActive();
             assertFalse(player.getDead(), "died at frame " + frame);
+            if (frame == IDLE_PLANE_FRAME) {
+                // Native row 480: Events_routine_fg 0, _unkEE98 $9B8. Plane A still holds only
+                // DDZ_ScreenInit's Refresh_PlaneFull draw at (0,0), wrapped at 512x256.
+                assertEquals(0, ddz.foregroundRoutine(), "DDZ_ScreenEvent routine before the boss window");
+                assertEquals(ddz.foregroundX() & 0x1FF, ddz.displayedForegroundX(), "plane A X wraps at 512");
+                assertEquals(ddz.foregroundY() & 0xFF, ddz.displayedForegroundY(), "plane A Y wraps at 256");
+            }
+            if (frame == PHASE_TWO_PALETTE_FRAME) {
+                // Native palette dump: loc_819CE reloads Pal_DDZ+$20 into line 3 before the Target copy, so the
+                // phase-2 flash does not fade back to the three DecColor_Obj passes of the fall ($888).
+                Palette.Color restored = new Palette.Color();
+                restored.fromSegaFormat(new byte[]{0x0E, (byte) 0xEE}, 0);
+                Palette.Color line3 = GameServices.level().getCurrentLevel().getPalette(2).getColor(1);
+                assertEquals(List.of(restored.r, restored.g, restored.b), List.of(line3.r, line3.g, line3.b),
+                        "Normal_palette_line_3 colour 1 in phase 2");
+            }
             if (frame == BOMBS_ACROSS_WRAP_FRAME) {
                 // Native slot history (probe-slots1): the two bombs launched before the first wrap stay
                 // live through rows 7453-7492 because loc_81726 re-latches Camera_X_pos_coarse_back.

@@ -147,6 +147,16 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     /** {@code _unkEE98}/{@code _unkEE9C}. */
     public int foregroundX() { return foregroundX; }
     public int foregroundY() { return foregroundY; }
+
+    /**
+     * The plane A position actually shown. Until {@code DDZ_ScreenEvent} leaves routine 0 the VDP
+     * nametable holds only {@code DDZ_ScreenInit}'s {@code Refresh_PlaneFull} draw of layout (0,0),
+     * and the 64x32-cell plane wraps every 512x256 pixels, so the scroll words address that region
+     * rather than the boss chunks further along the layout. Later routines draw the window they
+     * scroll to ({@code Draw_TileColumn/Row}, {@code Draw_PlaneVertBottomUp}).
+     */
+    public int displayedForegroundX() { return foregroundRoutine == 0 ? foregroundX & 0x1FF : foregroundX; }
+    public int displayedForegroundY() { return foregroundRoutine == 0 ? foregroundY & 0xFF : foregroundY; }
     public void setForeground(int x, int y) {
         foregroundX = (short) x;
         foregroundY = (short) y;

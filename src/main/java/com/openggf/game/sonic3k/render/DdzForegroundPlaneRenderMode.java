@@ -40,6 +40,6 @@ public final class DdzForegroundPlaneRenderMode implements AdvancedRenderMode {
             return;
         }
         builder.enablePerLineForegroundScroll()
-                .setForegroundVScrollOverride((short) state.foregroundY());
+                .setForegroundVScrollOverride((short) state.displayedForegroundY());
     }
 }
