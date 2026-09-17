@@ -21,7 +21,18 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Act 2 title card, as in the ROM. Knuckles caught by Sandopolis falling sand while
   gliding now drops his glide pose instead of keeping it. After the Sandopolis Act 1
   results the camera opens gradually and the walk to the pyramid starts on the ROM
-  frame instead of briefly obeying held input.
+  frame instead of briefly obeying held input. CPU Tails can jump off Sandopolis
+  light switches again after the Act 1 golem, and the Act 2 title card holds for its
+  full ROM time. In Sandopolis Act 2, rising players are lifted onto push switches,
+  objects below the looping level's seam (such as breakable sand rocks) load when
+  the camera wraps, Hyudoro ghosts appear, attack and vanish on the ROM frames and
+  scatter rings when they hit, and Skorps wake a frame later so they patrol in step.
+  During the final boss, Sonic lands on its arms, is hurt on the frame he lands on
+  its lower shell, is no longer carried by the moving arena wall, and its laser
+  fires on the ROM frame; the capsule's results appear a frame later, as in the ROM.
+  Across S3K, horizontal springs now launch a player who comes to rest in front of
+  them, Blastoid hits scatter rings, and rewinding past an opened egg capsule keeps
+  its explosions going.
 
 - **Boss parts in their own sprite layers:** ICZ miniboss orbs and shards, ICZ end
   boss body parts, LBZ miniboss panels and box pieces, and HCZ end boss children now

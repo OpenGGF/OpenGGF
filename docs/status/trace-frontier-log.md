@@ -110696,3 +110696,23 @@ animation2. That production intro, not trace-state seeding, is the next target.
   now defers to any live lower-slot EndSignControl owner. `TestS3kSozCompleteRunTraceReplay`:
   10483 -> 9164 errors; first physics divergence row 28941 -> 29093 (CPU Tails
   `x_speed` on the walk to the pyramid). Other S3K replay reports unchanged.
+
+### 2026-09-17 — SOZ2 route through the end boss: 9164 -> 65 errors
+
+- `bugfix/ai-soz-recorded-routes` from `0ff2ebf25` to `8d2b4945b`. Focused command:
+  `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=TestS3kSozCompleteRunTraceReplay"
+  "-Ds3k.rom.path=<absolute S3K ROM>" test -B` (fresh `target/trace-reports`).
+- Per-commit errors, physics frontiers and native causes are tabulated in the SOZ plan
+  ("Replay follow-up: SOZ2 through the end boss"). `soz_completerun` now runs 59336
+  frames with 65 errors; the first error is still the animation-only row 5977
+  `tails_mapping_frame`, and the first physics divergence is row 45256 `rings` (lost-ring
+  floor phase from SST slot order), then row 51860 `y` (camera wrap write, blocked by the
+  `@ModApi` pin policy) and row 59238 (boss escape subpixel).
+- S3K sweep: `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.s3k.TestS3k*TraceReplay" "-Ds3k.rom.path=<ROM>"
+  -Dsurefire.failIfNoSpecifiedTests=false test -B` on develop `70aa0a0b7` (61 classes:
+  20 failures, 2 errors) and on the branch at `27d0d4bc5` (21 failures, 1 error). The
+  only per-class change was `TestS3kSozCompleteRunTraceReplay` (ERROR -> FAIL with a
+  complete report); every other class kept its status and error total, including the
+  shared spring, object-load band, Blastoid and capsule-rewind changes.
+

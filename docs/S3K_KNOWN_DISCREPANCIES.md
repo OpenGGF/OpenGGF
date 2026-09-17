@@ -1913,13 +1913,23 @@ Known SOZ terminal states are represented, but no arbitrary SST-byte service is
 invented to reproduce unrelated memory contents. Final-boss PLC6D art loads from
 the ROM; exact later Nemesis FIFO service timing remains a shared service gap.
 
-The independent SOZ recording also retains a Kosinski service-timing divergence
-from frame34. With the corrected vine landing, replay reaches a later checkpoint
-without a compared Sonic movement mismatch, then aborts when bonus-star art
-submission finds the four-entry module FIFO full. The partial22525-frame result
-is incomplete trace coverage; queue capacity/admission have not been relaxed.
-See the frontier log for the exact command and remaining companion/animation
+The independent SOZ recording now replays all 59336 frames: the frame-34 Kosinski
+divergence and the later full module FIFO were the missing `PLCKosM_SOZ` submission
+(fixed). See the frontier log for the exact command and remaining companion/animation
 mismatches. Ordinary controller route evidence is recorded separately.
+
+**Replay residue (`soz_completerun`, 65 errors):** three native behaviours remain
+unmodelled. (1) S2/S3K `MoveCameraY` masks only a local copy of the player `y_pos`
+(`sonic3k.asm:38440-38446`), but the shared camera writes the S1 LZ3/SBZ2 wrap mask
+into the focused player on a wrap crossing; an object-held Sonic above `$800` is masked
+for a frame (row 51860) and while the escaping end boss carries him (rows 59289+). The
+fix is a private `Camera` body change, which the current `@ModApi` pin hook cannot
+accept without a surface change. (2) Lost rings test the floor when
+`(V_int_run_count + d7) & 7` is zero, with `d7` the SST loop counter; engine slot
+occupancy differs from the recording from Act 1 onward, so one SOZ2 ring is collected a
+frame late (row 45256) and the count stays one low. (3) The end boss root keeps its
+earlier subpixels when `loc_77986` copies the player position words; the engine root's
+subpixels differ, so the escape fall is one pixel behind from row 59238.
 
 See the [SOZ plan](architecture/plans/2026-09-15-soz-methodology-v2.md) and per-act
 matrices for current route, rewind and compatibility evidence.

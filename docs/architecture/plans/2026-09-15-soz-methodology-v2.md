@@ -3113,3 +3113,59 @@ Next open replay items:
   presses right toward target `$43EA` and brakes (`x_vel` -$14C -> -$CC vs ROM -$140).
 - Row 5977: CPU Tails mapping frame `$08` vs `$07` for three short spans (animation only).
 - Tails Act 1 handoff one row late (row 18108) and the Act 2 route beyond it.
+
+### Replay follow-up: SOZ2 through the end boss (2026-09-17)
+
+Commits after `2e30f3989`, each measured with `TestS3kSozCompleteRunTraceReplay`
+(errors after the commit; first error stays the animation-only row 5977):
+
+| Commit | Native cause | Errors | Physics frontier |
+|---|---|---|---|
+| `0ff2ebf25`..`684cc6555` | SOZ1 alignment clears `Ctrl_1_logical`; SOZ2 reloads inside `SOZ1_BackgroundEvent`; rings clear on the title `Obj_TitleCardWait` gate; the title starts on the pass after `loc_56324`'s allocation | 9164 -> 9010 | 29864 |
+| `95e9a1e39` | `loc_56366` clears `Ctrl_1_locked` with `clr.w`, so `Ctrl_2_locked` also clears and the miniboss P2 hold (`loc_863D6`) stops zeroing `Ctrl_2_logical` | 6969 | 31153 |
+| `7db445c61` | `Obj_TitleCardWait2`'s 90-pass hold counts from the Wait gate | 6961 | 31153 |
+| `2d9a6cfb5` | `loc_1E154` re-reads push-switch `width_pixels` `$30` | 4225 | 40690 |
+| `a64654078` | `sub_2326C` fires for `ground_vel` 0 with half-open windows | 5679 | 43347 |
+| `bcfb20966` | `loc_1B7F2` object-load Y band in 16-bit words with a negative wrapped camera | 4757 | 44748 |
+| `b62909954` | Hyudoro deletion uses the post-camera `Render_Sprites` bit; `Obj_TitleCard` still owns its SST when `loc_2D86E` allocates `Hyudoro_ctr` | 2448 | 45137 |
+| `9ebf30b0f` | `HurtCharacter_Directly` spills rings (Hyudoro, Blastoid) | 2445 | 49197 |
+| `09469a421` | Skorp leaves `Obj_WaitOffscreen` on the pass after a rendered placeholder | 598 | 56959 |
+| `86a76bf8c` | boss limbs' `width_pixels` (`$18`/`$14`/`$28`) | 667 | 57514 |
+| `585c58273` | rewind: upright capsule explosion helper was never captured | n/a | n/a |
+| `2171af853` | `sub_78136` reads the lower shell's standing bit after `SolidObjectFull2` | 664 | 57514 |
+| `27d0d4bc5` | `Animate_RawNoSST` reaches the charge particle's F4 on step 4 | 399 | 58088 |
+| `0c8617b50` | limbs take `loc_1DCF0` for an airborne stale rider; `loc_56A7E` does not carry riders | 73 | 58657 |
+| `8d2b4945b` | SOZ capsule's `Obj_LevelResults` (slot 6) runs after the capsule (slot 8) | 65 | 59238 |
+
+Error totals can rise while the frontier advances (`a64654078`): a later divergence
+compares more of the route.
+
+Test-only consequences: the lower-shell landing hurt made the authored end-boss routes
+lose their rings, so the default rhythm is now `44/14/+4`, native Tails presses only on
+the ground with the same rhythm, and native Knuckles uses `32/4/-48` with full-height
+presses at the unopened capsule (`SozEndBossVictoryRoute.targetCapsule`). The new
+routes exposed two real rewind defects, both fixed: the capsule explosion helper
+(`585c58273`) and boss children retaining a deleted parent reference (`0c8617b50`).
+
+Rejected in this round:
+
+- Masking only for S1 in `Camera.wrapFocusedSpriteYPositionWord`. S2/S3K `MoveCameraY`
+  masks a local copy (`sonic3k.asm:38440-38446`) and never writes the player; the shared
+  camera does. It fixed row 51860 (measured 598 -> 597 at the time); rows 59289+ show
+  the same masked `y` while the boss holds Sonic (not re-measured). `Camera` is `@ModApi` and the policy
+  hook requires a signature-pin change for any edit, while the pin itself cannot
+  change for a private body. The camera commit was withdrawn; see the S3K discrepancy.
+- Preserving the boss root subpixels in `loc_77986` (65 -> 70 errors): the ROM copies
+  only position words, but the engine root's earlier subpixels do not match ROM either.
+- Deleting orphaned boss particles/projectiles when their parent is removed (73 -> 512):
+  the zeroed parent SST no longer carries bit 7, so the children must keep the parent's
+  last values instead.
+- Queuing the Hyudoro ring spill through the late-producer scheduler: no change to the
+  ring-pickup row; the remaining ring gap is the SST slot phase below.
+
+Still open (65 errors): lost-ring floor checks phase on `d7` and the engine's SST
+occupancy differs from ROM from Act 1 onward (rings rows 45256+); the camera wrap write
+above; the boss escape fall is one pixel behind from row 59238 (root subpixel); and
+animation-only spans at rows 5977, 21749, 23637, 40703, 57897, 58616 and 59137. The
+recorded mid-level Knuckles/Tails segment replays still start from standalone bootstrap
+state and diverge from frame 0 (Knuckles SOZ1: 38 errors from row 3193 `camera_y`).
