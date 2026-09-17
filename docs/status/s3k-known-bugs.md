@@ -5797,7 +5797,7 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 ## SOZ Recording: Presentation Certification
 
 - **Location** — SOZ redraw and sprite-mask presentation; Nemesis FIFO service timing for the final-boss PLC6D art
-- **Symptom** — `soz_completerun` replays all 59336 frames with no errors (the SOZ2 lost-ring slot phase closed on 2026-09-17; see the SOZ plan section "Replay follow-up: SOZ2 SST slot parity"). Exact later Nemesis FIFO service timing for the final-boss PLC6D art is a shared service gap. SOZ redraw fidelity has engine A/B visibility checks at widths 320/528/800 but no native pixel certification; the sprite-mask post-processor clips whole tile rows, so sub-tile scanline parity is unverified; live GC stalls are not certified resolved.
+- **Symptom** — `soz_completerun` replays all 59336 frames with no errors (the SOZ2 lost-ring slot phase closed on 2026-09-17; see the SOZ plan section "Replay follow-up: SOZ2 SST slot parity"). Exact later Nemesis FIFO service timing for the final-boss PLC6D art is a shared service gap. SOZ redraw fidelity has engine A/B visibility checks at widths 320/528/800 but no native pixel certification; the sprite mask now hides exact scanlines (Genesis Plus GX `render_obj_m5` rule, 2026-09-17), but that is unit-tested, not compared against native frames, and the 20-sprite/320-pixel line limits and the previous-line overflow arming are not modelled; live GC stalls are not certified resolved.
 - **Suspected cause** — No native pixel or scanline oracle has been recorded for SOZ redraw and the sprite mask; the PLC6D service timing is not observed by the trace.
 - **Removal condition** — the pixel and scanline certifications recorded in the SOZ act matrices, and PLC6D service timing observed and matched.
 

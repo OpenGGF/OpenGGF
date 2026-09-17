@@ -57,7 +57,7 @@ class TestSozSpriteMaskPresentation {
                     .toList();
             assertTrue(tiles.stream().anyMatch(t -> t.y() + camera.getY() < 0xA00),
                     "the opening door must submit visible art above the mask");
-            assertTrue(tiles.stream().noneMatch(t -> t.y() + camera.getY() + t.height() > 0xA00),
+            assertTrue(tiles.stream().noneMatch(t -> t.y() + camera.getY() + t.rowEnd() > 0xA00),
                     "loc_55F98's mask must remove door pixels below the sand surface");
             return;
         }

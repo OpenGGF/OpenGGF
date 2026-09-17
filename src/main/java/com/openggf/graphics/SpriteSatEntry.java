@@ -24,8 +24,14 @@ public record SpriteSatEntry(
         int colCountTiles,
         int startRowTile,
         int rowCountTiles,
-        String debugSource
+        String debugSource,
+        int visibleTopY,
+        int visibleBottomY
 ) {
+    /** Visible-scanline bound meaning "no sprite-mask clip on this side". */
+    public static final int UNCLIPPED_TOP = Integer.MIN_VALUE;
+    public static final int UNCLIPPED_BOTTOM = Integer.MAX_VALUE;
+
     public SpriteSatEntry {
         if (priorityBucket < RenderPriority.MIN || priorityBucket > RenderPriority.MAX) {
             throw new IllegalArgumentException("Priority bucket out of range");
@@ -39,6 +45,19 @@ public record SpriteSatEntry(
         if (startRowTile < 0 || rowCountTiles < 0 || startRowTile + rowCountTiles > heightTiles) {
             throw new IllegalArgumentException("Clipped rows must stay within the piece height");
         }
+        if (visibleTopY > visibleBottomY) {
+            throw new IllegalArgumentException("Visible scanlines must not be inverted");
+        }
+    }
+
+    /** Pre-scanline-clip shape, kept for producers that never clip. */
+    public SpriteSatEntry(int priorityBucket, int x, int y, int widthTiles, int heightTiles,
+            int firstPatternIndex, int rawTileWordLow11, int paletteIndex, boolean hFlip, boolean vFlip,
+            boolean piecePriority, boolean globalHighPriority, SpriteMaskReplayRole maskReplayRole,
+            int startColTile, int colCountTiles, int startRowTile, int rowCountTiles, String debugSource) {
+        this(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex, rawTileWordLow11, paletteIndex,
+                hFlip, vFlip, piecePriority, globalHighPriority, maskReplayRole, startColTile, colCountTiles,
+                startRowTile, rowCountTiles, debugSource, UNCLIPPED_TOP, UNCLIPPED_BOTTOM);
     }
 
     public static SpriteSatEntry of(
@@ -174,7 +193,9 @@ public record SpriteSatEntry(
                 clippedColCountTiles,
                 clippedStartRowTile,
                 clippedRowCountTiles,
-                debugSource);
+                debugSource,
+                visibleTopY,
+                visibleBottomY);
     }
 
     public SpriteSatEntry clipRows(int clippedStartRowTile, int clippedRowCountTiles) {
@@ -200,6 +221,31 @@ public record SpriteSatEntry(
                 colCountTiles,
                 startRowTile,
                 rowCountTiles,
-                debugSource);
-        }
+                debugSource,
+                visibleTopY,
+                visibleBottomY);
+    }
+
+    /** Copy restricted to screen scanlines {@code [top, bottom)}; tile rows are left whole. */
+    public SpriteSatEntry withVisibleScanlines(int top, int bottom) {
+        return new SpriteSatEntry(priorityBucket, x, y, widthTiles, heightTiles, firstPatternIndex,
+                rawTileWordLow11, paletteIndex, hFlip, vFlip, piecePriority, globalHighPriority,
+                maskReplayRole, startColTile, colCountTiles, startRowTile, rowCountTiles, debugSource,
+                top, bottom);
+    }
+
+    /**
+     * First visible pixel row (0-8) of an 8x8 tile drawn with its top at {@code drawY}.
+     * Returns 8 when the tile is entirely hidden by a sprite-mask clip.
+     */
+    public int visibleTileRowStart(int drawY) {
+        long start = (long) visibleTopY - drawY;
+        return (int) Math.max(0, Math.min(8, start));
+    }
+
+    /** Exclusive last visible pixel row (0-8) of an 8x8 tile drawn with its top at {@code drawY}. */
+    public int visibleTileRowEnd(int drawY) {
+        long end = (long) visibleBottomY - drawY;
+        return (int) Math.max(0, Math.min(8, end));
+    }
 }

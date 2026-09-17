@@ -3255,3 +3255,32 @@ unchanged at row 6958; bisected to the first-free starpost children, which put t
 children in slots 8/10/11/13/20 against ROM 7/10/12/15/16 where the engine had used 20-24,
 and a later Tails hurt at row 11644 now differs) and `s3k_soz1-single-83fff36367af0f2e`
 553 -> 554 (first error row 0 `camera_y`; one extra mapping-frame error at row 17772).
+
+### Presentation follow-up: scanline-exact sprite mask (2026-09-17)
+
+Branch `bugfix/ai-s3k-sprite-mask-scanlines` from develop `4569e5406`.
+
+ROM: `Render_Sprites` (loc_1AE34) gives each SAT entry whose whole word is `$07C0` X=1
+and the next entry X=0. The masking rule was read from Genesis Plus GX
+`render_obj_m5` (`vdp_render.c`): per scanline, in SAT order, any sprite with
+xpos != 0 arms `spr_ovr`; a later xpos == 0 sprite sets `masked`, hiding itself and every
+remaining sprite on that line across the full width. Any earlier sprite on the line
+arms it, not only the `$7C0` marker. The ROM words were checked in the S3K image: the
+SOZ1 end-door frame at `$56122` (four `$07C0`/`$0000` pairs), `Map_SpriteMask` frame 4 and
+Gumball frame `$17` all use exactly `$07C0`.
+
+Before: `SpriteSatMaskPostProcessor` intersected the pair's Y ranges and removed whole
+8-pixel tile rows (floor/ceil), hiding up to 7 extra lines on each side of the band. Its
+removed rows were screen rows stored as source rows, so a V-flipped piece lost the
+mirrored rows. After: each marker's band is the companion's lines on which an earlier
+non-companion entry is present; later entries carry a visible scanline window and every
+replay path crops tiles to it (instanced batch `addPatternRows`, direct
+`PatternRenderCommand.obtainRows`, and the `SpritePresentation` builder/renderer via
+`Tile.rowStart/rowEnd`). Tile rows are no longer clipped, which removes the V-flip
+mirroring. The marker test now also requires no flip, palette or mapping-priority bits.
+Not modelled: the 20-sprite and 320-pixel line limits, and GPGX's arming from the
+previous line's pixel overflow.
+
+Rejected on the way: passing `PatternDesc` into the new graphics-layer crop methods
+tripped `TestArchUnitRules.low_level_layers_do_not_depend_on_runtime_layers` (10 new
+graphics -> level edges); the crop methods take primitive tile attributes instead.

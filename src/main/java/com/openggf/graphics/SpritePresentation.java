@@ -13,9 +13,26 @@ public final class SpritePresentation {
         public boolean isHud() { return this == HUD || this == HUD_COUNTERS; }
     }
 
+    /**
+     * One prepared tile. {@code rowStart}/{@code rowEnd} are the visible pixel rows of an
+     * 8x8 tile in screen order ({@code 0}/{@code 8} when whole): a VDP sprite mask can
+     * hide single scanlines.
+     */
     public record Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
                        boolean priority, float x, float y, float width, float height,
-                       boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha) { }
+                       boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha,
+                       int rowStart, int rowEnd) {
+        public Tile(Layer layer, int patternId, int palette, boolean hFlip, boolean vFlip,
+                    boolean priority, float x, float y, float width, float height,
+                    boolean priorityShader, int occlusionMask, boolean ghost, float ghostAlpha) {
+            this(layer, patternId, palette, hFlip, vFlip, priority, x, y, width, height,
+                    priorityShader, occlusionMask, ghost, ghostAlpha, 0, 8);
+        }
+
+        public boolean rowClipped() {
+            return rowStart > 0 || rowEnd < 8;
+        }
+    }
 
     /** A version of a mutable virtual DPLC slot, packed as four immutable groups of sixteen pixels. */
     public record PatternVersion(long a, long b, long c, long d) { }
@@ -52,6 +69,14 @@ public final class SpritePresentation {
                     desc.priority(), x - cameraX, y - cameraY, width, height,
                     graphics.isUseSpritePriorityShader(), graphics.getCurrentSpriteTileOcclusionPaletteMask(),
                     graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha()));
+        }
+        void addRows(GraphicsManager graphics, int id, Object descriptor,
+                     int x, int y, int rowStart, int rowEnd) {
+            Attributes desc = descriptorDecoder.apply(descriptor);
+            tiles.add(new Tile(layer, id, desc.palette(), desc.hFlip(), desc.vFlip(),
+                    desc.priority(), x - cameraX, y - cameraY, 8, 8,
+                    graphics.isUseSpritePriorityShader(), graphics.getCurrentSpriteTileOcclusionPaletteMask(),
+                    graphics.isGhostRenderEffectActive(), graphics.getGhostRenderAlpha(), rowStart, rowEnd));
         }
     }
 
@@ -90,6 +115,12 @@ public final class SpritePresentation {
             graphics.setUseSpritePriorityShader(priority);
             graphics.setCurrentSpriteTileOcclusionPaletteMask(mask);
         }
+    }
+
+    /** Draws the visible pixel rows of a prepared 8x8 tile whose top is at {@code y}. */
+    public static void renderTileRows(GraphicsManager graphics, Tile tile, Object descriptor, int x, int y) {
+        graphics.renderPatternRowsWithId(tile.patternId(), descriptor, tile.palette(), tile.hFlip(), tile.vFlip(),
+                tile.priority(), x, y, tile.rowStart(), tile.rowEnd());
     }
 
     public static boolean isPreparing(GraphicsManager graphics) {

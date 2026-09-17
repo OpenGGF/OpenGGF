@@ -908,14 +908,7 @@ public class GraphicsManager {
 		// When enabled, wraps the world Y to the nearest equivalent position within
 		// VERTICAL_WRAP_RANGE of the camera, so objects on the "wrong side" of a
 		// wrap boundary render at the correct screen position.
-		if (verticalWrapAdjustEnabled && verticalWrapRange > 0) {
-			int diff = y - verticalWrapCameraY;
-			diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
-			if (diff > verticalWrapRange / 2) {
-				diff -= verticalWrapRange;
-			}
-			y = verticalWrapCameraY + diff;
-		}
+		y = adjustVerticalWrapY(y);
 
 		if (spritePresentationBuilder != null) {
 			spritePresentationBuilder.add(this, patternId, desc, x, y, 8, 8);
@@ -965,6 +958,67 @@ public class GraphicsManager {
 				restartPatternBatch(false, true, 0);
 			}
 		}
+	}
+
+	private int adjustVerticalWrapY(int y) {
+		if (verticalWrapAdjustEnabled && verticalWrapRange > 0) {
+			int diff = y - verticalWrapCameraY;
+			diff = ((diff % verticalWrapRange) + verticalWrapRange) % verticalWrapRange;
+			if (diff > verticalWrapRange / 2) {
+				diff -= verticalWrapRange;
+			}
+			y = verticalWrapCameraY + diff;
+		}
+		return y;
+	}
+
+	/**
+	 * Renders pixel rows {@code [rowStart, rowEnd)} (screen order, 0 = tile top) of
+	 * an 8x8 pattern whose top is at {@code y}, for a VDP sprite mask that hides
+	 * single scanlines. Callers pass whole tiles through {@link #renderPatternWithId}.
+	 * {@code descriptor} is only handed to the presentation builder's decoder.
+	 */
+	void renderPatternRowsWithId(int patternId, Object descriptor, int paletteIndex, boolean hFlip, boolean vFlip,
+			boolean priority, int x, int y, int rowStart, int rowEnd) {
+		rowStart = Math.max(0, rowStart);
+		rowEnd = Math.min(8, rowEnd);
+		if (rowStart >= rowEnd) {
+			return;
+		}
+		y = adjustVerticalWrapY(y);
+		if (spritePresentationBuilder != null) {
+			spritePresentationBuilder.addRows(this, patternId, descriptor, x, y, rowStart, rowEnd);
+			return;
+		}
+		if (headlessMode) return;
+
+		ensurePatternAtlas();
+		PatternAtlas.Entry entry = patternAtlas != null ? patternAtlas.getEntry(patternId) : null;
+		Integer paletteTextureId = resolveEffectivePatternPaletteTextureId();
+		if (entry == null || paletteTextureId == null) {
+			return;
+		}
+		boolean restartInstancedAfterDirect = false;
+		boolean restartBatchedAfterDirect = false;
+		if (batchingEnabled && instancedBatchActive && instancedPatternRenderer != null) {
+			if (instancedPatternRenderer.addPatternRows(entry, paletteIndex, hFlip, vFlip, priority, x, y, rowStart, rowEnd)) {
+				return;
+			}
+			flushPatternBatch();
+			restartPatternBatch(true, false, entry.atlasIndex());
+			if (instancedPatternRenderer.addPatternRows(entry, paletteIndex, hFlip, vFlip, priority, x, y, rowStart, rowEnd)) {
+				return;
+			}
+			flushPatternBatch();
+			restartInstancedAfterDirect = true;
+		} else if (batchingEnabled && batchedRenderer != null && batchedRenderer.isBatchActive()) {
+			// The page-0 batcher only draws whole tiles; keep order by flushing first.
+			flushPatternBatch();
+			restartBatchedAfterDirect = true;
+		}
+		registerCommand(PatternRenderCommand.obtainRows(entry, paletteTextureId, paletteIndex, hFlip, vFlip, priority,
+				x, y, rowStart, rowEnd, this));
+		restartPatternBatch(restartInstancedAfterDirect, restartBatchedAfterDirect, entry.atlasIndex());
 	}
 
 	public void beginGhostRenderEffect(float alpha) {
@@ -2185,9 +2239,20 @@ public class GraphicsManager {
 		SpritePieceRenderer.renderPreparedPiece(entry.toPreparedPiece(),
 				(patternIndex, pieceHFlip, pieceVFlip, paletteIndex, drawX, drawY) -> {
 					// CPU preparation uses this same tile decoder before any atlas lookup.
+					// A sprite-mask band can hide single scanlines of this tile.
+					int rowStart = entry.visibleTileRowStart(drawY);
+					int rowEnd = entry.visibleTileRowEnd(drawY);
+					if (rowStart >= rowEnd) {
+						return;
+					}
 					if (spritePresentationBuilder != null) {
 						prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-						renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
+						if (rowStart == 0 && rowEnd == 8) {
+							renderPatternWithId(patternIndex, reusableReplayDesc, drawX, drawY);
+						} else {
+							renderPatternRowsWithId(patternIndex, reusableReplayDesc, paletteIndex, pieceHFlip, pieceVFlip,
+									entry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+						}
 						return;
 					}
 					PatternAtlas.Entry atlasEntry = patternAtlas != null ? patternAtlas.getEntry(patternIndex) : null;
@@ -2195,29 +2260,50 @@ public class GraphicsManager {
 						return;
 					}
 					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-					if (addToSatReplayBatch(atlasEntry, paletteIndex, drawX, drawY)) {
+					if (addToSatReplayBatch(entry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY,
+							rowStart, rowEnd)) {
 						return;
 					}
 					// Unsupported state: flush first so draw order is preserved, then draw direct.
 					flushSatReplayBatch();
-					registerCommand(PatternRenderCommand.obtain(atlasEntry, paletteTextureId,
-							reusableReplayDesc, drawX, drawY, this));
+					registerCommand(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
+							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
 				});
 	}
 
-	private boolean addToSatReplayBatch(PatternAtlas.Entry atlasEntry, int paletteIndex, int drawX, int drawY) {
+	private boolean addToSatReplayBatch(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,
+			boolean pieceHFlip, boolean pieceVFlip, int drawX, int drawY, int rowStart, int rowEnd) {
 		if (!satReplayBatchOpen) {
 			instancedPatternRenderer.beginBatch(atlasEntry.atlasIndex());
 			satReplayBatchOpen = true;
 		}
-		if (instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY)) {
+		if (addSatReplayTile(satEntry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd)) {
 			return true;
 		}
 		// Batch full: flush and retry once in a fresh batch.
 		flushSatReplayBatch();
 		instancedPatternRenderer.beginBatch(atlasEntry.atlasIndex());
 		satReplayBatchOpen = true;
-		return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
+		return addSatReplayTile(satEntry, atlasEntry, paletteIndex, pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd);
+	}
+
+	private boolean addSatReplayTile(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry, int paletteIndex,
+			boolean pieceHFlip, boolean pieceVFlip, int drawX, int drawY, int rowStart, int rowEnd) {
+		if (rowStart == 0 && rowEnd == 8) {
+			return instancedPatternRenderer.addPattern(atlasEntry, paletteIndex, reusableReplayDesc, drawX, drawY);
+		}
+		return instancedPatternRenderer.addPatternRows(atlasEntry, paletteIndex, pieceHFlip, pieceVFlip,
+				satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd);
+	}
+
+	private PatternRenderCommand obtainReplayCommand(SpriteSatEntry satEntry, PatternAtlas.Entry atlasEntry,
+			int paletteTextureId, int paletteIndex, boolean pieceHFlip, boolean pieceVFlip,
+			int drawX, int drawY, int rowStart, int rowEnd) {
+		if (rowStart == 0 && rowEnd == 8) {
+			return PatternRenderCommand.obtain(atlasEntry, paletteTextureId, reusableReplayDesc, drawX, drawY, this);
+		}
+		return PatternRenderCommand.obtainRows(atlasEntry, paletteTextureId, paletteIndex, pieceHFlip, pieceVFlip,
+				satEntry.effectiveHighPriority(), drawX, drawY, rowStart, rowEnd, this);
 	}
 
 	private void flushSatReplayBatch() {
@@ -2278,8 +2364,14 @@ public class GraphicsManager {
 					if (atlasEntry == null) {
 						return;
 					}
+					int rowStart = entry.visibleTileRowStart(drawY);
+					int rowEnd = entry.visibleTileRowEnd(drawY);
+					if (rowStart >= rowEnd) {
+						return;
+					}
 					prepareReplayDesc(entry, patternIndex, pieceHFlip, pieceVFlip, paletteIndex);
-					replayCommands.add(PatternRenderCommand.obtain(atlasEntry, paletteTextureId, reusableReplayDesc, drawX, drawY, this));
+					replayCommands.add(obtainReplayCommand(entry, atlasEntry, paletteTextureId, paletteIndex,
+							pieceHFlip, pieceVFlip, drawX, drawY, rowStart, rowEnd));
 				});
 	}
 

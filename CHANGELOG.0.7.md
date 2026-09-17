@@ -302,7 +302,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the arena floor instead of into the golem's sand pit. The last-checkpoint debug shortcut reloads
   destination events, so skipping to the SOZ2 boss no longer retains early-room
   darkness or omits the boss background. Arena and laser sprite masks clip later
-  sprites, including the opening door and sinking golem beneath the sand.
+  sprites, including the opening door and sinking golem beneath the sand, hiding
+  exactly the masked scanlines rather than whole 8-pixel tile rows.
   Sprite overlap follows bucket and native slot order independently of terrain
   priority, and golem dust keeps its own priority across the sand boundary.
   Detached golem parts retain their priority, Rockn eyes follow its walking direction,
