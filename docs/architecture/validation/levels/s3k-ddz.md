@@ -52,3 +52,8 @@ Donor rows (S1/S2 Sonic, S2 Tails) have no S3K powered form. As an engine extens
 the Sonic palette-fade schedule and leaves `$38` bit 7 clear, so they fly un-powered (no asteroid shattering,
 ordinary hurt). Wide viewports widen the DDZ `Sprite_OnScreen_Test` window with the viewport
 (`coarseXCullRange`), as FBZ does.
+
+Start locations (`loc_1BE5E`): every breadth row asserts frame-1 y from the ROM table — `$C0` for Sonic and Tails
+(`Sonic_Start_Locations` `$0,$100`), `$20` for Knuckles (`Knux_Start_Locations` `$140,$20`). A capture-tool donor
+session started S2 Tails at (69,656); the production fixture does not, so the donor clip was discarded and the
+pitfall recorded in the `gameplay-capture` skill.

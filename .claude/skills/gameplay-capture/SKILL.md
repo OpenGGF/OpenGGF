@@ -74,6 +74,9 @@ user the MP4 plus one or two stills, with the frame numbers and what they show.
 - Donation: the boot resets the cross-game provider, so the session re-initialises it
   after boot and refuses to continue if it does not report active. If a donor run
   shows native behaviour (spindash with `--donor s1`), the donor ROM path is wrong.
+- Donor re-registration after boot does not reapply the zone start location: an S2-donor
+  Tails capture of S3K Doomsday started at (69,656) while the production fixture starts at the
+  ROM's (0,$100). Do not use donor captures as start-position or route evidence.
 - Teleporting with `--x/--y` skips plane switchers and level events between the act
   start and that point; priority, water and camera bounds reflect a fresh load.
 - One capture per JVM is the supported shape. A second `GameplayCaptureSession` in

@@ -126,6 +126,11 @@ class TestS3kDdzCompatibilityMatrix {
         var ddz = S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry()).orElseThrow();
 
         fixture.stepIdleFrames(1);
+        // loc_1BE5E: Sonic_Start_Locations DDZ act 1 ($0,$100) unless Player_mode 3, which reads
+        // Knux_Start_Locations ($140,$20); loc_81554 then places the controller (and Player 1) at
+        // Camera_Y + $20, so frame 1 reads y $C0 (native pass 1) or $20.
+        assertEquals(row.main().equals("knuckles") ? 0x20 : 0xC0, player.getCentreY() & 0xFFFF,
+                "frame-1 y from the DDZ start location");
         assertTrue(GameServices.sprites().getSidekicks().isEmpty(), "loc_81554 clears Player_2");
         assertTrue(player.isObjectControlled(), "loc_81554 object_control $81");
         assertTrue(liveController(), "ScreenInit allocates the flight controller");
