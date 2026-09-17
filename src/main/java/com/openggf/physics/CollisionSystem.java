@@ -622,10 +622,44 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         resolveGroundAttachment(FrameCollisionPlan.terrainOnly(), sprite, positiveThreshold, hasObjectSupport);
     }
 
+    /**
+     * {@code Call_Player_AnglePos} (sonic3k.asm:22329-22343). With
+     * {@code Reverse_gravity_flag} set the ROM mirrors {@code angle(a0)} with
+     * {@code addi.b #$40 / neg.b / subi.b #$40}, runs {@code Player_AnglePos}, and mirrors
+     * the result back. {@code Player_AnglePos} then dispatches on the <em>raw</em> terrain
+     * angle, so a player standing on a flat ceiling (raw $80, stored mirrored as $00) runs
+     * {@code Player_WalkCeiling} and probes upward, and {@code angle(a0)} is left holding
+     * the mirrored value the rest of the character code expects.
+     *
+     * <p>All ten main-game callers of {@code Player_AnglePos} go through this wrapper. The
+     * four that do not ({@code Sonic2P_Index} :21629-21846 and {@code Tails2P_Index}
+     * :25748-26050) are competition mode, where the flag is never set — and the engine
+     * gates on the flag, so they are unaffected either way.
+     */
     public void resolveGroundAttachment(FrameCollisionPlan plan,
                                         AbstractPlayableSprite sprite,
                                         int positiveThreshold,
                                         BooleanSupplier hasObjectSupport) {
+        if (!isReverseGravity(sprite)) {
+            resolveGroundAttachmentAtRawAngle(plan, sprite, positiveThreshold, hasObjectSupport);
+            return;
+        }
+        mirrorSpriteAngle(sprite);
+        try {
+            resolveGroundAttachmentAtRawAngle(plan, sprite, positiveThreshold, hasObjectSupport);
+        } finally {
+            mirrorSpriteAngle(sprite);
+        }
+    }
+
+    private static void mirrorSpriteAngle(AbstractPlayableSprite sprite) {
+        sprite.setAngle((byte) ReverseGravity.mirrorAngle(sprite.getAngle() & 0xFF));
+    }
+
+    private void resolveGroundAttachmentAtRawAngle(FrameCollisionPlan plan,
+                                                   AbstractPlayableSprite sprite,
+                                                   int positiveThreshold,
+                                                   BooleanSupplier hasObjectSupport) {
         requireTerrainOnlyPlan(plan, "resolveGroundAttachment");
         // ROM: btst #0,object_control(a0) at sonic3k.asm:21555-21561 skips the
         // entire status-based dispatch (which includes terrain probes and

@@ -1097,3 +1097,31 @@ Rows left in slice 2 after this session: group A 22330 and 24156; all of 2a-3 (B
 No demo clips and no rewind spots were produced: both belong to the finished player groups, and the
 grounded path is still missing. No category run was launched for the same reason — this is a
 partial slice, and its verification is the focused evidence recorded above, not a delivery gate.
+
+
+### 2026-09-17 — Slice 2, part 4: the grounded inverted path
+
+**What landed.** `Call_Player_AnglePos` (:22329-22343) as a wrapper around
+`CollisionSystem.resolveGroundAttachment`, the engine's single `Player_AnglePos` owner: mirror
+`angle(a0)`, run the attachment against the raw terrain angle, mirror back. Nothing else changed;
+with the flag clear the wrapper is not entered at all.
+
+**RED → GREEN, and what the first RED did not catch.** The first test — an inverted player settling
+on the corridor ceiling for four frames — failed only on ground mode (`GROUND`, expected `CEILING`);
+it stayed attached at the right y and angle anyway, because a stationary player on a flat surface
+does not need a correct probe direction to sit still. That is a comparison that nearly could not
+disagree, so a second case was added before implementing: give the landed player ground speed and
+run it along the ceiling. That one fails hard without the wrapper — `air=true`, the player walks off
+its own surface — and passes with it. Both run as Sonic, Tails and Knuckles.
+
+**`ChooseChkFloorEdge` :24156 stays partial, deliberately.** Its seven callers are all the three
+`Balance` routines, and `PlayableSpriteMovement.checkTerrainEdgeBalance` probes through the ground
+sensors, which rotate with the CEILING ground mode and therefore reach the same tiles as
+`ChkFloorEdge_ReverseGravity` on a flat ceiling. But the ROM selects the reverse-gravity variant
+from the *flag*, ignoring ground mode, so the two models diverge on a wall — and the upright engine
+already has the same divergence against `ChkFloorEdge_Part2`. Crediting the row would mean crediting
+a coincidence. Asserting it properly needs a ceiling *edge* fixture, which act 2 does not obviously
+provide near the measured corridor (the ceiling steps down at x=$1AE0 rather than ending).
+
+**Verification.** 105 focused collision and reverse-gravity tests green, `Skipped: 0`, one
+invocation. Reference table: **35 covered, 6 partial, 71 missing, 4 n/a**.

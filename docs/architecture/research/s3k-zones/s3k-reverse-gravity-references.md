@@ -75,11 +75,11 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
 | 19696 | `loc_F638` | `sub_F61C` (CalcRoomInFront): negates the projected `y_vel` before the wall probe | `CollisionSystem.resolveGroundWallCollision` predicted Y | covered |
-| 22330 | `Call_Player_AnglePos` | `Call_Player_AnglePos`: mirrors `angle` (`+$40, neg, -$40`) around `Player_AnglePos`, which then uses ceiling sensors | — | missing |
+| 22330 | `Call_Player_AnglePos` | `Call_Player_AnglePos`: mirrors `angle` (`+$40, neg, -$40`) around `Player_AnglePos`, which then uses ceiling sensors | `CollisionSystem.resolveGroundAttachment` wrapper | covered |
 | 23191 | `Player_Boundary_CheckBottom` | `Player_Boundary_CheckBottom`: death plane becomes the **top** (`loc_11722`) | `PlayableSpriteMovement.doLevelBoundary` | covered |
 | 24128 | `sub_11FD6` | `sub_11FD6`: floor check becomes `Sonic_CheckCeiling` with mirrored angle (10 callers) | `CollisionSystem.floorProbeSensors` + `surfaceAngle`, with the matching activation swap in `AbstractPlayableSprite.updateSensors` | covered |
 | 24142 | `sub_11FEE` | `sub_11FEE`: ceiling check becomes `Sonic_CheckFloor` with mirrored angle (9 callers) | `CollisionSystem.ceilingProbeSensors` + `surfaceAngle`, with the matching activation swap in `AbstractPlayableSprite.updateSensors` | covered |
-| 24156 | `ChooseChkFloorEdge` | `ChooseChkFloorEdge`: selects `ChkFloorEdge_ReverseGravity` (7 callers: balance, glide, climb) | `GlideWallGrabTerrain.align` only | partial |
+| 24156 | `ChooseChkFloorEdge` | `ChooseChkFloorEdge`: selects `ChkFloorEdge_ReverseGravity` (7 callers, all of them the three `Balance` routines) | `GlideWallGrabTerrain.align`; `PlayableSpriteMovement.checkTerrainEdgeBalance` probes through the ground sensors, whose CEILING rotation coincides with the reverse-gravity variant on a flat ceiling | partial |
 | 36069 | `MoveSprite_TestGravity` | `MoveSprite_TestGravity`: `y_vel += $38` as usual, **position** integrates `-y_vel` (9 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
 | 36089 | `MoveSprite_TestGravity2` | `MoveSprite_TestGravity2`: position integrates `-y_vel` (16 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
 
@@ -251,7 +251,7 @@ is the RAM wipe described above).
 
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| A. Shared integration and sensor wrappers | 8 | 6 | 1 | 1 | 0 |
+| A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
 | B. Sonic (and Sonic/Knuckles shared) routines | 20 | 6 | 1 | 12 | 1 |
 | C. Tails routines | 21 | 7 | 1 | 12 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
@@ -262,7 +262,7 @@ is the RAM wipe described above).
 | I. Monitors, springs, spikes | 6 | 2 | 0 | 4 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **34** | **6** | **72** | **4** |
+| **Total** | **116** | **35** | **6** | **71** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
@@ -294,6 +294,23 @@ three characters' `DoLevelCollision` routines, so the Tails and Knuckles rows ar
 same parameterised test running as those characters, not by analogy. The ROM's `neg.w d1` at each
 site falls out of the engine encoding the push-out sign in the probe's `Direction`; with the flag
 clear every one of these assertions still holds for the upright control.
+
+The grounded path landed with it. `CollisionSystem.resolveGroundAttachment` is the engine's
+`Player_AnglePos`, and it is now wrapped exactly as `Call_Player_AnglePos` wraps its ten main-game
+callers: mirror `angle(a0)`, run the attachment against the raw terrain angle so a ceiling-standing
+player dispatches `Player_WalkCeiling`, mirror back. `TestS3kReverseGravityDezCorridor` asserts that
+an inverted Sonic, Tails or Knuckles stays attached to the corridor ceiling at angle $00 in ground
+mode CEILING, and — the case that actually fails without the wrapper — that it stays attached while
+running along the ceiling instead of walking off its own surface. The four ROM callers that skip the
+wrapper (`Sonic2P_Index` :21629-21846, `Tails2P_Index` :25748-26050) are competition mode, where the
+flag is never set.
+
+`ChooseChkFloorEdge` :24156 stays **partial** rather than being credited with it. Its seven callers
+are all `Sonic_Balance`/`Tails`/`Knuckles` edge probes, and the engine's
+`checkTerrainEdgeBalance` reaches the same tiles on a flat ceiling only because the ground sensors
+rotate with the CEILING ground mode. The ROM selects the reverse-gravity variant from the *flag*,
+not the angle, so the two models differ on a wall — unmeasured, and the upright engine has the same
+difference, so it is recorded rather than changed.
 
 The nine rows that were already marked covered before this slice are **not** in that position:
 they still have no test that runs them with the flag set, so they remain "verify", not "done".

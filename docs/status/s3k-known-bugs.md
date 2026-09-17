@@ -158,11 +158,13 @@ branch is unreachable outside tests and the upright game is unaffected.
 `TestS3kReverseGravityDezCorridor` drives an inverted Sonic, Tails and Knuckles into the measured
 Death Egg act 2 corridor in all four movement quadrants and asserts each rest position against an
 upright control measured in the same corridor. All six push-out and snap sites of the three
-`DoLevelCollision` routines are covered. What remains missing is the **grounded** path
-(`Call_Player_AnglePos` :22330, `ChooseChkFloorEdge` :24156) and groups B, C, E, F, G, H and I
-outside collision: player actions, solid objects, springs, spikes, monitors, rings and companions.
+`DoLevelCollision` routines are covered, and so is the grounded path: `Call_Player_AnglePos`
+:22330 now wraps `CollisionSystem.resolveGroundAttachment`, and an inverted player stands and runs
+along the corridor ceiling in ground mode CEILING. What remains missing is groups B, C, E, F, G, H
+and I outside collision: player actions, solid objects, springs, spikes, monitors, rings and
+companions.
 
-**Suspected cause.** Not a defect — steps 2a-1 and 2a-2 of a deliberately sliced port. 72 of the 116
+**Suspected cause.** Not a defect — steps 2a-1 and 2a-2 of a deliberately sliced port. 71 of the 116
 `Reverse_gravity_flag` references in the disassembly are still unimplemented; the row-by-row
 inventory is
 [s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).

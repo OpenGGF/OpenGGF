@@ -3,6 +3,7 @@ package com.openggf.tests;
 import com.openggf.configuration.SonicConfiguration;
 import com.openggf.configuration.SonicConfigurationService;
 import com.openggf.game.GameServices;
+import com.openggf.game.GroundMode;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.physics.ObjectTerrainUtils;
@@ -236,6 +237,62 @@ class TestS3kReverseGravityDezCorridor {
         assertEquals(floorRest, left.centreY, "Player_HitCeiling push-out");
     }
 
+    /**
+     * The grounded path. {@code Call_Player_AnglePos} (sonic3k.asm:22329-22343) mirrors
+     * {@code angle(a0)} with {@code +$40 / neg / -$40} around {@code Player_AnglePos},
+     * so a player standing on a ceiling runs {@code Player_WalkCeiling} against the raw
+     * $80 terrain angle and keeps the mirrored $00 in {@code angle(a0)} afterwards.
+     * Without it the ground probe scans away from the surface and the player detaches.
+     */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void anInvertedPlayerStaysAttachedToTheCeiling(Character character) {
+        int ceilingRest = CEILING_CLEAR_Y + radiusOf(character);
+        Outcome outcome = run(character, true, ceilingRest + 12, 0x0400, 0,
+                s -> !s.getAir(), 4);
+        assertFalse(outcome.air, "the inverted player must stay attached across later frames");
+        assertEquals(ceilingRest, outcome.centreY, "and must not drift off the ceiling");
+        assertEquals(0x00, outcome.angle,
+                "angle(a0) holds the mirrored angle: flat ceiling $80 mirrors to $00");
+        assertEquals(GroundMode.CEILING, outcome.groundMode,
+                "Player_AnglePos sees the raw $80 and dispatches Player_WalkCeiling");
+    }
+
+    /**
+     * The same attachment while moving. {@code Player_WalkCeiling}'s probe follows the
+     * ceiling as the player runs along it; the floor-facing probe does not, so without
+     * the mirror the player walks off its own surface.
+     */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void anInvertedPlayerWalksAlongTheCeiling(Character character) {
+        int ceilingRest = CEILING_CLEAR_Y + radiusOf(character);
+        Outcome outcome = walkAfterLanding(character, true, ceilingRest + 12, 0x0400, 0x0400, 6);
+        assertFalse(outcome.air, "running along the ceiling must not detach the player");
+        assertEquals(ceilingRest, outcome.centreY, "and must not drift off it");
+        assertEquals(GroundMode.CEILING, outcome.groundMode, "Player_WalkCeiling stays selected");
+    }
+
+    /** The upright control: the same settle on the corridor floor is unchanged. */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void anUprightPlayerStaysAttachedToTheFloor(Character character) {
+        int floorRest = FLOOR_SURFACE_Y - radiusOf(character);
+        Outcome outcome = run(character, false, floorRest - 12, 0x0400, 0,
+                s -> !s.getAir(), 4);
+        assertFalse(outcome.air, "the upright control must stay grounded");
+        assertEquals(floorRest, outcome.centreY, "and must not drift off the floor");
+        assertEquals(0x00, outcome.angle, "a flat floor is angle $00");
+        assertEquals(GroundMode.GROUND, outcome.groundMode, "and ground mode GROUND");
+    }
+
+    /** Lands the player, then gives it ground speed and steps on. */
+    private Outcome walkAfterLanding(Character character, boolean reverseGravity, int startCentreY,
+                                     int yVel, int gSpeed, int frames) {
+        return run(character, reverseGravity, startCentreY, yVel, 0,
+                s -> !s.getAir(), frames, gSpeed);
+    }
+
     private int radiusOf(Character character) {
         HeadlessTestFixture fixture = fixtureFor(character);
         try {
@@ -245,7 +302,7 @@ class TestS3kReverseGravityDezCorridor {
         }
     }
 
-    private record Outcome(boolean air, int yVel, int centreY) { }
+    private record Outcome(boolean air, int yVel, int centreY, int angle, GroundMode groundMode) { }
 
     /** Steps until the player's downward-in-its-own-frame velocity stops being negative. */
     private Outcome rise(Character character, boolean reverseGravity, int startCentreY, int yVel) {
@@ -285,6 +342,20 @@ class TestS3kReverseGravityDezCorridor {
     private Outcome run(Character character, boolean reverseGravity, int startCentreY, int yVel,
                         int xVel,
                         java.util.function.Predicate<AbstractPlayableSprite> done) {
+        return run(character, reverseGravity, startCentreY, yVel, xVel, done, 0);
+    }
+
+    private Outcome run(Character character, boolean reverseGravity, int startCentreY, int yVel,
+                        int xVel,
+                        java.util.function.Predicate<AbstractPlayableSprite> done,
+                        int settleFrames) {
+        return run(character, reverseGravity, startCentreY, yVel, xVel, done, settleFrames, 0);
+    }
+
+    private Outcome run(Character character, boolean reverseGravity, int startCentreY, int yVel,
+                        int xVel,
+                        java.util.function.Predicate<AbstractPlayableSprite> done,
+                        int settleFrames, int settleGSpeed) {
         HeadlessTestFixture fixture = fixtureFor(character);
         try {
             AbstractPlayableSprite sprite = fixture.sprite();
@@ -303,7 +374,14 @@ class TestS3kReverseGravityDezCorridor {
             for (int frame = 0; frame < 8 && !done.test(sprite); frame++) {
                 fixture.stepIdleFrames(1);
             }
-            return new Outcome(sprite.getAir(), sprite.getYSpeed(), sprite.getCentreY());
+            for (int frame = 0; frame < settleFrames; frame++) {
+                if (settleGSpeed != 0) {
+                    sprite.setGSpeed((short) settleGSpeed);
+                }
+                fixture.stepIdleFrames(1);
+            }
+            return new Outcome(sprite.getAir(), sprite.getYSpeed(), sprite.getCentreY(),
+                    sprite.getAngle() & 0xFF, sprite.getGroundMode());
         } finally {
             SessionManager.clear();
         }
