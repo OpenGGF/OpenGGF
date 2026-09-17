@@ -64,6 +64,7 @@ Entries should include:
 38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
 39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
 40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
+41. [Sky Sanctuary Background Plane Renders Flat Sky in Both Modes](#sky-sanctuary-background-plane-renders-flat-sky-in-both-modes)
 
 ---
 
@@ -5865,3 +5866,10 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Symptom** — Crossing the wrapped camera-Y `$800`/`$F00` boundary in Sky Sanctuary act 1 swaps between the plain sky and the banded cloud background two frames after the test fires, where the cartridge takes as long as `Draw_PlaneVertBottomUp` needs to refill the 512-pixel background nametable.
 - **Suspected cause** — `SSZ1_BackgroundEvent` routine 4 keeps rendering the framing frozen in `Events_bg+$0C`/`+$0E` until the staged redraw reports done, and routine `$C` does the same on the way back. The engine draws the background from the whole level layout instead of a nametable, so it has nothing to stage: each redraw routine completes in one frame. The framing values, the deform bands and the routine order all match; only the duration of the two transition states does not.
 - **Removal condition** — Either a native probe measures the ROM's redraw length at that crossing and the engine holds routines 4 and `$C` for the same number of frames, or a `hpz` fixture window shows the crossing and the engine matches it frame for frame.
+
+## Sky Sanctuary Background Plane Renders Flat Sky in Both Modes
+
+- **Location** — `SwScrlSsz` and the S3K background renderer (`src/main/java/com/openggf/game/sonic3k/scroll/`)
+- **Symptom** — In `~/Videos/OGGF/ssz-bring-up/raw-04-ssz1-sky-320` and `raw-05-ssz1-sky-800` the background behind Sky Sanctuary act 1 is flat blue at every frame, in the plain-sky framing and inside the cloud band alike. Only the five roaming cloud sprites move against it.
+- **Suspected cause** — Unknown, and deliberately not guessed. The scroll words `sub_57A60` produces, the `SSZ1_BGDeformArray` band expansion and both modes' `Camera_Y_pos_BG_copy` are asserted against the ROM in `TestS3kSszScrollBands`, so the handler's output is right. What is unverified is whether the background layout has anything at the rows that output selects: Sky Sanctuary's background layer may genuinely be plain sky over this stretch, or the layer may not be reaching the screen at all. The pre-campaign baseline `raw-00-ssz1-before` is also flat blue, so the capture does not separate the two.
+- **Removal condition** — Decode the SSZ background layout rows that `Camera_Y_pos_BG_copy` selects in each mode from the ROM and compare them with what the renderer draws, or capture the same camera position natively in BizHawk. Either the layout is empty there, in which case this entry is closed as correct behaviour, or the background layer is not being sampled and that is the defect.

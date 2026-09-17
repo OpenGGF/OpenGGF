@@ -650,3 +650,28 @@ are ordinary non-final scalars, so the generic schema captures everything. The l
 is that "read a ROM table in the constructor" is the wrong shape for an object in this engine:
 the services and the spawn identity are what the constructor has, and the table is what the first
 frame has.
+
+**Media and what the frames actually show.** `~/Videos/OGGF/ssz-bring-up/raw-04-ssz1-sky-320` and
+`raw-05-ssz1-sky-800` (Sonic, 420 neutral frames from a cold `$A00` load), cut to
+`04a-ssz-sky-and-roaming-clouds-320.mp4` and `04b-ssz-sky-and-roaming-clouds-wide.mp4`. Frames
+inspected: 5 (the five roaming clouds are up before the camera has left the plain-sky band), 200
+(they have drifted left and bobbed, the sanctuary terrain and the rising Death Egg are in frame).
+Against slice 0's `raw-00-ssz1-before` frame 5, which is flat blue with no cloud at all, the
+difference is unmistakable.
+
+Two honest limits on that comparison. First, `raw-00-ssz1-before` predates slices 1 and 1b as well,
+so it is the campaign baseline rather than the slice-2-only "before" build the method asks for;
+a build with only the scroll registration and `spawnBackgroundClouds` disabled is still owed.
+Second — and this is an **open question, not a finding** — the background *plane* renders flat sky
+in both builds, at both camera framings. The scroll words, the band expansion and the background Y
+are all asserted against the ROM and the roaming cloud sprites are plainly there, but nothing in
+these frames proves the background layout is being sampled at the new rows at all: it may be that
+Sky Sanctuary's background layer really is plain sky over this stretch, or that the layer is not
+reaching the screen. Kill condition: read the SSZ background layout rows that
+`Camera_Y_pos_BG_copy` selects in each mode straight out of the ROM and compare them with what the
+renderer draws, or capture the same camera in BizHawk. Until that is done, "BG: cloud band" is
+scroll-verified and not visually verified.
+
+At 800 px the roaming clouds occupy only the left ~460 px, because `sub_5758A`'s `& $1FF` puts every
+cloud within 512 screen pixels of the camera regardless of viewport. That is the recorded
+presentation consequence of a screen-space ROM constant on a wide viewport; the geometry is native.
