@@ -35,6 +35,8 @@ per-task decisions and evidence. Highlights do not certify uninterrupted routes.
 
 - `FbzVisualCaptureTool` also records actual tilemap GPU uniforms and hash-bound descriptor, lookup and atlas readbacks, so camera-state acceptance can be separated from shader sampling defects. See [FBZ GPU sampling evidence](../architecture/research/s3k-zones/fbz-validation.md#gpu-sampling-and-retained-background-history-2026-09-14).
 
+- [Movie checkpoint exporter](../../tools/bizhawk/capture_movie_checkpoints.lua) and [trace checkpoint pixel comparator](../../tools/bizhawk/compare_trace_checkpoint_pixels.py) capture native PNG/VDP checkpoints (with a reusable zone-entry state) and compare them with a full-run trace capture in 3-bit colour, skipping lag rows (2026-09-17 SOZ pixel checkpoints).
+
 - [SOZ pushable-rock probe](../../tools/bizhawk/capture_soz_pushable_rock.lua) finishes the native entry jump, then records the positioned push/fall/track/stop sequence with the shared host (2026-09-15 SOZ methodology v2).
 
 - [Native reference capture](../../tools/bizhawk/README.md) runs explicit zone-owned Lua exporters/plans with an isolated BizHawk 2.11 configuration, source hashes and failed-export detection. The FBZ command remains a compatibility profile (2026-09-15 SOZ methodology v2).

@@ -31,6 +31,10 @@ the repository for durable captures; `target/trace-videos` is disposable output.
 | `--clip frames:START:END` | None | Fast-forward from the original start, then capture the inclusive zero-based trace-row window, retaining elapsed-VBlank title/lag frames; explicit windows do not add `--tail-frames` |
 | `--no-ghosts` / `--ghosts` | `TRACE_SHOW_DESYNC_GHOSTS=true` | Desync ghost visibility |
 
+A full-run capture presents no frame on trace lag rows (`lag_counter` != 0): MKV frame
+n is row n only until the first lag row, then row minus the lag rows before it (measured
+on `soz_completerun`, 2026-09-17).
+
 HUD visibility uses config rather than CLI flags:
 `TRACE_SHOW_GAME_HUD=true`, `TRACE_SHOW_DEBUG_HUD=false`; enabled debug panels
 also obey `DebugOverlayToggle`. These visibility flags apply to active trace

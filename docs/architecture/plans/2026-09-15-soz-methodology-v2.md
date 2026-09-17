@@ -3255,3 +3255,49 @@ unchanged at row 6958; bisected to the first-free starpost children, which put t
 children in slots 8/10/11/13/20 against ROM 7/10/12/15/16 where the engine had used 20-24,
 and a later Tails hurt at row 11644 now differs) and `s3k_soz1-single-83fff36367af0f2e`
 553 -> 554 (first error row 0 `camera_y`; one extra mapping-frame error at row 17772).
+
+### Presentation follow-up: native pixel checkpoint survey (2026-09-17)
+
+Branch `feature/ai-soz-pixel-checkpoints` from develop `4569e5406`. Scoping only; no engine
+change. The question was whether native pixel certification of SOZ is practical now that
+`soz_completerun` replays with no physics errors.
+
+**Method.**
+- Native: `tools/bizhawk/capture_movie_checkpoints.lua` under the common host saves the
+  348x240 framebuffer plus whole VRAM/CRAM/VSRAM at planned BK2 frames. A state saved at
+  BK2 frame 282190 (six frames before SOZ row 0) replaces the ~2-minute replay from frame
+  0; loading it reproduced the frame-0 run byte for byte (row 3000 PNG and VRAM; all 239
+  survey PNGs), and the 239-frame survey took 31 s.
+- Engine: `TraceCaptureTool --trace soz_completerun --scale 1 --width 320 --no-ghosts`
+  (FFV1, 7.1 GB, 59317 frames).
+- Comparison: `tools/bizhawk/compare_trace_checkpoint_pixels.py`, 3-bit Genesis channels
+  on both sides, HUD score (56,0)-(127,23) and lives (40,200)-(71,223) masked because the
+  segment does not carry campaign score and lives.
+
+**Row mapping (measured).** Native frame = `bk2_frame_offset` + `pre_trace_osc_frames` +
+row (282195 + 1 + row): at row 3000 the neighbouring frames differ by 1830-9934 pixels,
+the mapped frame by 273, all HUD but ~20. The full-run MKV presents no frame on lag rows
+(`lag_counter` != 0), so MKV frame = row - lag rows before it: offsets 0 at row 10000,
+-44 at 30000, -48 at 50000, matching the trace's lag counts.
+
+**Survey, every 250 rows (237 compared; row 13250 and 59500 have no engine frame).**
+- 56 rows differ by at most 2 pixels. The residue is two pixels near (22,45) in the RINGS
+  line, not yet explained; it is present on most rows.
+- Row 0 differs everywhere (title-card fade phase).
+- The other 180 rows show content differences. Hypotheses from the survey, to be confirmed per
+  category with dense windows and VRAM/SAT attribution before any fix:
+
+| Category | Example rows | Survey evidence |
+|---|---|---|
+| Sprite visibility phase | 2250, 7500, 30250, 52750 | Tails absent in engine where native shows him; invincibility sparkles and shield frames in different positions |
+| SOZ1 pyramid interior plane | 24500-29000 | background wall bands; a +2 px vertical shift removes most of row 24500's difference |
+| SOZ2 dark sand hills | 45250 | colour pairs swap symmetrically; a -5 px vertical shift explains most of it |
+| Animated sand content | 30250, 50500 | whole sand floor or wall region differs; no shift within 8 px explains it (AniPLC or palette-cycle phase) |
+| End-boss background | 58250 | staircase region; best shift is 5 px horizontal |
+| SOZ2 large regions | 30000-36750, 47250, 50250 | not yet classified |
+
+**Proposed order.** Sprite visibility first (smallest regions, gameplay-adjacent), then
+the plane offsets (camera/scroll owners), then animated sand, then the end-boss
+background. A category is accepted when its checkpoint rows fall to the HUD floor, not
+when the whole run does. The remaining unmodelled VDP behaviour (per-line sprite limits,
+previous-line mask arming) stays out of scope unless a checkpoint needs it.
