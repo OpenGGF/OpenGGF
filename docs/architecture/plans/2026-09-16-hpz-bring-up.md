@@ -510,8 +510,9 @@ Demos: `32a-hpz-background-full-width-before-after.mp4` (1960-2320),
   through `PaletteUploadPresentation.cacheLevelPalette`; while an S3K sprite-table publication phase is
   active those lines (and the underwater texture) wait for the next publication. Direct
   `cachePaletteTexture` callers (special stages, menus, loads) stay immediate even if a latch is left
-  armed; a non-publishing phase, the sanctuary results scene publication or a rewind restore releases
-  and flushes. Only S3K's level init profile publishes, so S1, S2 and KiS2 never latch.
+  armed; the rewind palette recache (`PaletteColorStateAdapter`) stays immediate because a restore redraws
+  without a V-int. A non-publishing phase, the sanctuary results scene publication or a rewind restore
+  releases and flushes. The latch state uses graphics-layer `PaletteView` types (ArchUnit layer rule). Only S3K's level init profile publishes, so S1, S2 and KiS2 never latch.
 - **Evidence.** HPZ whole route (`raw-29` vs `raw-28`, 4872 frames with native screenshots): 144 frames
   closer to native, 0 further; over-200px frames 1127 → 1085; ship flash grey on native frames
   446861/863/865. Pedestal → special stage → results → level capture: frames identical with and

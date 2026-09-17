@@ -14,7 +14,7 @@ public final class PaletteUploadPresentation {
      * scenes (special stages, menus, loads) keep calling {@link GraphicsManager#cachePaletteTexture}
      * directly and upload immediately.
      */
-    public static void cacheLevelPalette(GraphicsManager graphics, com.openggf.level.Palette palette, int line) {
+    public static void cacheLevelPalette(GraphicsManager graphics, PaletteView palette, int line) {
         if (graphics != null) {
             graphics.cacheLatchablePaletteTexture(palette, line);
         }

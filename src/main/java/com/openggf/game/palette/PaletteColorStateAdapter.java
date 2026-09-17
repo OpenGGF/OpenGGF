@@ -112,7 +112,7 @@ public final class PaletteColorStateAdapter implements RewindSnapshottable<Palet
         if (normal != null) {
             for (int line = 0; line < normal.length; line++) {
                 if (normal[line] != null) {
-                    com.openggf.graphics.PaletteUploadPresentation.cacheLevelPalette(g, normal[line], line);
+                    g.cachePaletteTexture(normal[line], line);
                 }
             }
         }
