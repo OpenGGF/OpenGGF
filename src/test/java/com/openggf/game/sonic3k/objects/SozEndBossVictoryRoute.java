@@ -10,6 +10,7 @@ public final class SozEndBossVictoryRoute {
     private final int jumpHold;
     private final int approachOffset;
     private final boolean pressOnlyWhenGrounded;
+    private boolean capsuleTargeting;
     private int holdUntil=-1;
 
     // The lower shell hurts on the landing pass itself (sub_78136 after SolidObjectFull2), so
@@ -31,13 +32,20 @@ public final class SozEndBossVictoryRoute {
         this.approachOffset=approachOffset;
         this.pressOnlyWhenGrounded=pressOnlyWhenGrounded;
     }
+    /** Walks to an unopened egg capsule instead of holding the boss-relative approach. */
+    SozEndBossVictoryRoute targetCapsule() { capsuleTargeting=true; return this; }
+
     public Bk2FrameInput input(int tick, AbstractPlayableSprite player) {
         var boss=boss();
         int target=boss==null?0x5230:boss.getX()+approachOffset;
         if(boss!=null&&boss.ownsPostResultsTransition())target=0x5360;
         int x=player.getCentreX()&65535;
         boolean left=x>target+8,right=x<target-8,jump;
-        if(pressOnlyWhenGrounded) {
+        var capsules=GameServices.level().getObjectManager().activeObjectsOfType(SozEndBossEggCapsule.class);
+        if(capsuleTargeting&&!capsules.isEmpty()&&!capsules.getFirst().isOpened()) {
+            // Full-height presses clear the capsule body to reach its button.
+            jump=tick%48<24;
+        } else if(pressOnlyWhenGrounded) {
             if(tick>=holdUntil && !player.getAir() && tick%jumpPeriod==0)holdUntil=tick+jumpHold;
             jump=tick<holdUntil;
         } else {

@@ -42,6 +42,8 @@ public final class SozBossWallObjectInstance extends AbstractObjectInstance
     @Override public int getY() { return y; }
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(0x4B, 8, 8); }
     @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
+    // loc_56A7E loads d4 with the already-updated x_pos, so MvSonicOnPtfm moves riders by zero.
+    @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }
     @Override public void onSolidContact(PlayableEntity player, SolidContact contact, int frame) {
         // loc_56A7E: d6 bits16/17 are side contacts (standing bit + $D).
         if (contact.touchSide() && player instanceof AbstractPlayableSprite playable) {

@@ -25,7 +25,8 @@ public final class SozEndBossChild extends AbstractObjectInstance
     private int role, subtype, x, y, xFraction, yFraction, dx, dy, vx, vy;
     private int terminalSlot=-1;
     private int phase, timer, frame, animationTimer, animationCursor;
-    private boolean initialized, dying, retired, visible, yCentered, shellWaiting;
+    private boolean initialized, dying, retired, visible, yCentered, shellWaiting, detached, detachedDying;
+    private int detachedX, detachedY;
 
     SozEndBossChild(SozEndBossInstance boss, SozEndBossChild parent, int role) {
         this(new ObjectSpawn(boss.getX(),boss.getY(),0x98,role,0,false,0));
@@ -105,8 +106,18 @@ public final class SozEndBossChild extends AbstractObjectInstance
         }
         return false;
     }
-    private void follow(){x=((parent==null?boss.getX():parent.x)+(byte)dx)&0xFFFF;
-        y=((parent==null?boss.getY():parent.y)+(byte)dy)&0xFFFF;}
+    @Override protected void onRemovedFromObjectManager() {
+        // A removed SST is not a rewind identity. Children keep reading the values it last published.
+        var manager=services().objectManager();
+        if(manager!=null)for(var child:manager.activeObjectsOfType(SozEndBossChild.class))
+            if(child.parent==this){child.detachedX=x;child.detachedY=y;child.detachedDying=dying;child.detached=true;child.parent=null;}
+    }
+    private boolean hasParent(){return parent!=null||detached;}
+    private int parentX(){return parent!=null?parent.x:detachedX;}
+    private int parentY(){return parent!=null?parent.y:detachedY;}
+    private boolean parentDying(){return parent!=null?parent.dying:detachedDying;}
+    private void follow(){x=((hasParent()?parentX():boss.getX())+(byte)dx)&0xFFFF;
+        y=((hasParent()?parentY():boss.getY())+(byte)dy)&0xFFFF;}
     private void limb(int vIntRunCount) {
         if(role==SHOULDER||role==BACK_SHOULDER){dx=role==SHOULDER?boss.limbAngle()>>2:0;follow();}
         else {
@@ -115,8 +126,8 @@ public final class SozEndBossChild extends AbstractObjectInstance
             int i=angle&63,a=boss.byteAt(address+i),b=boss.byteAt(address+63-i);
             int ox=switch(angle>>>6){case 0->a;case 1->b;case 2->-a;default->-b;};
             int oy=switch(angle>>>6){case 0->b;case 1->-a;case 2->-b;default->a;};
-            x=((parent==null?boss.getX():parent.x)+ox)&0xFFFF;
-            y=((parent==null?boss.getY():parent.y)+oy)&0xFFFF;
+            x=((hasParent()?parentX():boss.getX())+ox)&0xFFFF;
+            y=((hasParent()?parentY():boss.getY())+oy)&0xFFFF;
             if(role==HAND||role==BACK_HAND){x=(x-28)&0xFFFF;y=(y-4)&0xFFFF;}
         }
         visible=role!=BACK_SHOULDER;
@@ -125,7 +136,7 @@ public final class SozEndBossChild extends AbstractObjectInstance
                 // sub_78178 reads the player's $34 invulnerability timer.
                 if(c.kind()==ContactKind.SIDE&&p.getCentreX()<=x&&!p.getInvulnerable())hurt(p,vIntRunCount);
             });}
-        if((role==SHOULDER||role==BACK_SHOULDER)?boss.dismantling():parent!=null&&parent.dying) {
+        if((role==SHOULDER||role==BACK_SHOULDER)?boss.dismantling():hasParent()&&parentDying()) {
             releaseRiders();startFlicker();
         }
     }
@@ -171,7 +182,7 @@ public final class SozEndBossChild extends AbstractObjectInstance
         if(p.isCpuControlled()){p.applyHurt(x,DamageCause.NORMAL);return;}
         boolean rings=p.getRingCount()>0;if(rings&&!p.hasShield())services().spawnLostRings(p,vIntRunCount);
         p.applyHurtOrDeath(x,DamageCause.NORMAL,rings);}
-    private void startFlicker(){parent=null;dying=true;visible=true;vx=boss.word(0x852F4+subtype*2);vy=boss.word(0x852F6+subtype*2);}
+    private void startFlicker(){parent=null;detached=false;dying=true;visible=true;vx=boss.word(0x852F4+subtype*2);vy=boss.word(0x852F6+subtype*2);}
     private void pilot(){follow();visible=true;
         if(boss.hidden()){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(phase==1&&boss.defeated()){frame=3;return;}
@@ -202,7 +213,7 @@ public final class SozEndBossChild extends AbstractObjectInstance
         visible=(vIntRunCount&1)==0;
     }
     private void particle(){
-        if(phase==0){if(--timer>=0){if(parent.dying||boss.shellOpen())ObjectLifetimeOps.deleteNoRespawn(this);return;}phase=1;}
+        if(phase==0){if(--timer>=0){if(parentDying()||boss.shellOpen())ObjectLifetimeOps.deleteNoRespawn(this);return;}phase=1;}
         // Animate_RawNoSST pre-increments anim_frame and reads 1(a1,d0): byte_78348's first pass
         // shows byte 2, so the F4 retire is the fourth step, not the fifth.
         if(--animationTimer<0){animationTimer=7;
@@ -210,13 +221,13 @@ public final class SozEndBossChild extends AbstractObjectInstance
         vx=(short)(vx+0x10);dx=(short)(dx+vx);
         if(!yCentered){vy=(short)(vy+(dy<0?0x10:-0x10));int next=(short)(dy+vy);
             if((next^dy)<0){next=0;yCentered=true;}dy=next;}
-        x=(parent.x+(byte)(dx>>>8))&0xFFFF;y=(parent.y+(byte)(dy>>>8))&0xFFFF;
-        if(parent.dying||boss.shellOpen()){dying=true;ObjectLifetimeOps.deleteNoRespawn(this);}visible=true;
+        x=(parentX()+(byte)(dx>>>8))&0xFFFF;y=(parentY()+(byte)(dy>>>8))&0xFFFF;
+        if(parentDying()||boss.shellOpen()){dying=true;ObjectLifetimeOps.deleteNoRespawn(this);}visible=true;
     }
     private void projectile(){visible=true;
         if(phase==0&&--timer>=0){dx=(byte)(dx+(vx>>8));dy=(byte)(dy+(vy>>8));follow();
-            if(parent.dying)ObjectLifetimeOps.deleteNoRespawn(this);return;}
-        phase=1;parent=null;move();if(isCoarseXOutOfRange(x,services().camera().getX(),0x280))ObjectLifetimeOps.deleteNoRespawn(this);
+            if(parentDying())ObjectLifetimeOps.deleteNoRespawn(this);return;}
+        phase=1;parent=null;detached=false;move();if(isCoarseXOutOfRange(x,services().camera().getX(),0x280))ObjectLifetimeOps.deleteNoRespawn(this);
     }
     /** loc_77A6E/77A98 is an independently allocated owner, later than the root. */
     private void followFallingPlayer(){
@@ -245,6 +256,8 @@ public final class SozEndBossChild extends AbstractObjectInstance
     // loc_1E154 re-reads the SetUp_ObjAttributes3 width_pixels (word_782AE/BA/C6), not d1-$B.
     @Override public int getTopLandingHalfWidth(PlayableEntity player,int collisionHalfWidth){return switch(role){
         case SHOULDER->0x18;case ELBOW->0x14;case HAND->0x28;default->SolidObjectProvider.super.getTopLandingHalfWidth(player,collisionHalfWidth);};}
+    // Limbs call SolidObjectFull: a set standing bit with Status_InAir takes loc_1DCF0 and returns.
+    @Override public boolean airborneStaleStandingBitReturnsNoContact(PlayableEntity player){return role>=SHOULDER&&role<=HAND;}
     @Override public SolidExecutionMode solidExecutionMode(){return SolidExecutionMode.MANUAL_CHECKPOINT;}
     @Override public boolean bypassesOffscreenSolidGate(){return role<=REAR;}
     @Override public boolean usesInstanceSolidStateLatchKey(){return true;}
