@@ -70,6 +70,20 @@ public final class Sonic3kObjectArtKeys {
     public static final String HPZ_GRAY_EMERALD = "hpz_gray_emerald";
     public static final String HPZ_SMALL_EMERALDS = "hpz_small_emeralds";
     public static final String HPZ_ENTRY_TELEPORTER = "hpz_entry_teleporter";
+    /** CutsceneKnux_HPZ {@code $44(a0)=0}: Map_Knuckles through PLC_Knuckles. */
+    public static final String HPZ_CUTSCENE_KNUCKLES = "hpz_cutscene_knuckles";
+    /** CutsceneKnux_HPZ {@code $44(a0)=2}: Map_HPZKnucklesGrab. */
+    public static final String HPZ_CUTSCENE_KNUCKLES_GRAB = "hpz_cutscene_knuckles_grab";
+    /** CutsceneKnux_HPZ {@code $44(a0)=4}: Map_SSZKnucklesTired. */
+    public static final String HPZ_CUTSCENE_KNUCKLES_TIRED = "hpz_cutscene_knuckles_tired";
+    /** ObjDat3_6654E: Map_HPZKnuxDizzyStars over ArtKosM_HPZKnuxDizzy. */
+    public static final String HPZ_KNUX_DIZZY_STARS = "hpz_knux_dizzy_stars";
+    /** ObjDat3_664E2: Map_DashDust over ArtTile_HPZKnuxBossDust. */
+    public static final String HPZ_KNUX_BOSS_DUST = "hpz_knux_boss_dust";
+    /** ObjDat3_664FA / ObjDat3_6652A: Map_KnuxFinalBossCrane over ArtKosM_KnuxFinalBossCrane. */
+    public static final String KNUX_FINAL_BOSS_CRANE = "knux_final_boss_crane";
+    /** ObjDat3_6653C: Map_LRZ3Platform over level tiles, palette 2. */
+    public static final String HPZ_COLLAPSE_BLOCK = "hpz_collapse_block";
     public static final String END_SIGN = "EndSign";
     public static final String SIGNPOST_STUB = "SignpostStub";
 

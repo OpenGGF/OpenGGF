@@ -91,6 +91,27 @@ public class Sonic3kConstants {
     public static final int ARTTILE_HPZ_SMALL_EMERALDS = 0x04AC;
     public static final int ARTTILE_HPZ_TELEPORTER = 0x052E;
 
+    // CutsceneKnux_HPZ ($82 subtype $28) fight and Master Emerald theft (sonic3k.lst).
+    // $44(a0) selects the DPLC set: 0 Map_Knuckles/PLC_Knuckles, 2 HPZ grab, 4 SSZ tired.
+    public static final int ART_UNC_HPZ_KNUCKLES_GRAB_ADDR = 0x172406;
+    public static final int ART_UNC_HPZ_KNUCKLES_GRAB_SIZE = 0x2680;
+    public static final int MAP_HPZ_KNUCKLES_GRAB_ADDR = 0x066F36;
+    public static final int DPLC_HPZ_KNUCKLES_GRAB_ADDR = 0x067078;
+    public static final int ART_UNC_SSZ_KNUCKLES_TIRED_ADDR = 0x17E274;
+    public static final int ART_UNC_SSZ_KNUCKLES_TIRED_SIZE = 0x0B40;
+    public static final int MAP_SSZ_KNUCKLES_TIRED_ADDR = 0x066B6A;
+    public static final int DPLC_SSZ_KNUCKLES_TIRED_ADDR = 0x066BDA;
+    public static final int ART_KOSM_HPZ_KNUX_DIZZY_ADDR = 0x174A86;
+    public static final int MAP_HPZ_KNUX_DIZZY_STARS_ADDR = 0x06731C;
+    public static final int ART_KOSM_KNUX_FINAL_BOSS_CRANE_ADDR = 0x1607D8;
+    public static final int MAP_KNUX_FINAL_BOSS_CRANE_ADDR = 0x067116;
+    public static final int MAP_LRZ3_PLATFORM_ADDR = 0x1874B4;
+    /** {@code byte_6669A}-{@code byte_668C7}: CutsceneKnuckles raw animation scripts. */
+    public static final int CUTSCENE_KNUX_RAW_SCRIPTS_ADDR = 0x06669A;
+    public static final int CUTSCENE_KNUX_RAW_SCRIPTS_SIZE = 0x668D0 - 0x6669A;
+    /** {@code AngleLookup_1}: 64-byte table read by {@code MoveSprite_AtAngleLookup}. */
+    public static final int ANGLE_LOOKUP_1_ADDR = 0x184D9C;
+
     // ===== Level sizes table =====
     // 8 bytes per act: dc.w xstart, xend, ystart, yend
     // Sequential: AIZ1, AIZ2, HCZ1, HCZ2, ...

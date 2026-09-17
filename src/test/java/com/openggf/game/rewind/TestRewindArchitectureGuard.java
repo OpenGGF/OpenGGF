@@ -85,15 +85,24 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#restoreRewindState", 1),
-            // HPZ teleporter transport links a live beam and route helper; generic capture does not
-            // restore the beam link (the charge step diverged on replay), so typed ObjectRefId
-            // sidecars are used. TestS3kHpzCompatibilityMatrix proves restore and forward replay.
+            // HPZ ($1601) teleporter graph and Knuckles-fight children keep object links in
+            // ObjectRefId sidecars: generic capture lost the teleporter's beam link on replay.
+            // TestS3kHpzCompatibilityMatrix and TestS3kHpzKnucklesFightHeadless prove restore
+            // and forward replay.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SSZHPZTeleporterObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SSZHPZTeleporterObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/TeleporterBeamObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/TeleporterBeamObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzTeleporterRouteHelperObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzTeleporterRouteHelperObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzShipSparkOrbiterObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzShipSparkOrbiterObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzKnucklesDustObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzKnucklesDustObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzBossExplosionSpawnerObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzBossExplosionSpawnerObjectInstance.java#restoreRewindState", 1),
             // Hyper stars keep player identity in a typed sidecar; the focused
             // player-reference graph test swaps the live main player on restore.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#captureRewindState", 1),
@@ -108,6 +117,11 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/level/objects/ShieldObjectInstance.java#@RewindTransient", 3),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesAiz1Instance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1),
+            // HPZ Knuckles-fight object links are restored by ObjectRefId sidecars.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzBossExplosionSpawnerObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzKnucklesDustObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzShipSparkOrbiterObjectInstance.java#@RewindTransient", 2),
             // Structural parent pointers on inner particle/support child classes: the parent
             // reference is object-graph structure rebuilt when the parent re-spawns its
             // children, not rewindable state. Same triage precedent as the entries above.

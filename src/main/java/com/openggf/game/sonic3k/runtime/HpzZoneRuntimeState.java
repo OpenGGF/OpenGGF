@@ -21,7 +21,7 @@ import java.util.Objects;
  */
 public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + Integer.BYTES + 2 * Short.BYTES + 4;
+            S3kScreenShake.captureBytes() + Integer.BYTES + 6 * Short.BYTES + 7;
     /** {@code AnPal_HPZ}: {@code Palette_cycle_counter0} steps by 4 and wraps at {@code $28}. */
     private static final int PALETTE_CYCLE_STEP = 4;
     private static final int PALETTE_CYCLE_WRAP = 0x28;
@@ -38,6 +38,13 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
     private boolean paletteControlAllocated;
     private boolean foregroundCollapsePending;
     private boolean teleporterTransportActive;
+    private int knucklesCutsceneFlags;
+    private boolean playerReachedEmeraldAltar;
+    private boolean collapseBlockBreak;
+    private short cameraStoredMinX;
+    private short cameraStoredMaxX;
+    private short cameraStoredMinY;
+    private short cameraStoredMaxY;
 
     public HpzZoneRuntimeState(int zoneIndex, int actIndex, PlayerCharacter playerCharacter) {
         this.zoneIndex = zoneIndex;
@@ -139,6 +146,70 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
         teleporterTransportActive = active;
     }
 
+    /**
+     * {@code _unkFAB8}: the Knuckles fight and Master Emerald theft coordination byte. Bit 0
+     * music/camera lock done (then camera pan done), 1 Knuckles releases the player, 2-3 the two
+     * orbiting spark chains are in place, 4 the ship zaps Knuckles, 5 Knuckles landed, 6 the
+     * ending sends Knuckles to the teleporter, 7 the altar beam reached progress 8.
+     */
+    public int knucklesCutsceneFlags() {
+        return knucklesCutsceneFlags;
+    }
+
+    public boolean knucklesCutsceneFlag(int bit) {
+        return (knucklesCutsceneFlags & (1 << bit)) != 0;
+    }
+
+    /** {@code bset #bit,(_unkFAB8).w}. */
+    public void setKnucklesCutsceneFlag(int bit) {
+        knucklesCutsceneFlags |= 1 << bit;
+    }
+
+    /** {@code clr.b (_unkFAB8).w}. */
+    public void clearKnucklesCutsceneFlags() {
+        knucklesCutsceneFlags = 0;
+    }
+
+    /** {@code _unkFAAC}: {@code loc_64DE0} walked Player 1 onto the collapsing altar floor. */
+    public boolean playerReachedEmeraldAltar() {
+        return playerReachedEmeraldAltar;
+    }
+
+    public void markPlayerReachedEmeraldAltar() {
+        playerReachedEmeraldAltar = true;
+    }
+
+    /** {@code _unkFAA2}: Knuckles' punch breaks the {@code loc_655B2} block. */
+    public boolean collapseBlockBreak() {
+        return collapseBlockBreak;
+    }
+
+    public void markCollapseBlockBreak() {
+        collapseBlockBreak = true;
+    }
+
+    /**
+     * {@code Camera_stored_min_X_pos}, {@code Camera_stored_max_X_pos},
+     * {@code Camera_stored_min_Y_pos} and {@code Camera_stored_max_Y_pos}: saved by
+     * {@code sub_85D6A} when the fight starts and read by the gradual camera workers the
+     * cutscene allocates. They have no engine-wide owner, so the only HPZ writers and readers
+     * share them here.
+     */
+    public int cameraStoredMinX() { return cameraStoredMinX & 0xFFFF; }
+    public int cameraStoredMaxX() { return cameraStoredMaxX & 0xFFFF; }
+    public int cameraStoredMinY() { return cameraStoredMinY; }
+    public int cameraStoredMaxY() { return cameraStoredMaxY; }
+
+    public void storeCameraBounds(int minX, int maxX, int minY, int maxY) {
+        cameraStoredMinX = (short) minX;
+        cameraStoredMaxX = (short) maxX;
+        cameraStoredMinY = (short) minY;
+        cameraStoredMaxY = (short) maxY;
+    }
+
+    public void setCameraStoredMinX(int value) { cameraStoredMinX = (short) value; }
+    public void setCameraStoredMaxY(int value) { cameraStoredMaxY = (short) value; }
+
     @Override
     public byte[] captureBytes() {
         ByteBuffer buffer = ByteBuffer.allocate(CAPTURE_BYTES);
@@ -150,6 +221,13 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.put((byte) (paletteControlAllocated ? 1 : 0));
         buffer.put((byte) (foregroundCollapsePending ? 1 : 0));
         buffer.put((byte) (teleporterTransportActive ? 1 : 0));
+        buffer.put((byte) knucklesCutsceneFlags);
+        buffer.put((byte) (playerReachedEmeraldAltar ? 1 : 0));
+        buffer.put((byte) (collapseBlockBreak ? 1 : 0));
+        buffer.putShort(cameraStoredMinX);
+        buffer.putShort(cameraStoredMaxX);
+        buffer.putShort(cameraStoredMinY);
+        buffer.putShort(cameraStoredMaxY);
         return buffer.array();
     }
 
@@ -167,5 +245,12 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
         paletteControlAllocated = buffer.get() != 0;
         foregroundCollapsePending = buffer.get() != 0;
         teleporterTransportActive = buffer.get() != 0;
+        knucklesCutsceneFlags = buffer.get() & 0xFF;
+        playerReachedEmeraldAltar = buffer.get() != 0;
+        collapseBlockBreak = buffer.get() != 0;
+        cameraStoredMinX = buffer.getShort();
+        cameraStoredMaxX = buffer.getShort();
+        cameraStoredMinY = buffer.getShort();
+        cameraStoredMaxY = buffer.getShort();
     }
 }

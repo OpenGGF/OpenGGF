@@ -70,6 +70,10 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     static final int STATE_CHARGING = 1;
     static final int STATE_RISING = 2;
     static final int STATE_SETTLING = 3;
+    /** {@code loc_45AD6}, {@code loc_45B1C} and {@code loc_45B8A}: the Sonic/Tails altar ending. */
+    static final int STATE_ALTAR_WAIT = 4;
+    static final int STATE_ALTAR_BEAM = 5;
+    static final int STATE_ALTAR_DONE = 6;
 
     private int x;
     private int y;
@@ -90,11 +94,13 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     /** {@code $3E(a0)}: player Y at the top of the rise. */
     private int settleBaseY;
     private TeleporterBeamObjectInstance beam;
+    /** {@code routine(a0)}: {@code st} by the ending helper's {@code loc_45C60}. */
+    private boolean altarActivated;
 
     private record RewindExtra(int subtype, boolean initialized, int state, int beamFlag,
                                int lightTimer, int lightIndex, int riseRemaining, int swingSpeed,
                                int swingOffset, boolean swingReversed, int settleBaseY,
-                               ObjectRefId beamId)
+                               ObjectRefId beamId, boolean altarActivated)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public SSZHPZTeleporterObjectInstance(ObjectSpawn spawn) {
@@ -126,6 +132,9 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
             case STATE_CHARGING -> updateCharging(player);
             case STATE_RISING -> updateRising(player);
             case STATE_SETTLING -> updateSettling(player);
+            case STATE_ALTAR_WAIT -> updateAltarWait();
+            case STATE_ALTAR_BEAM -> updateAltarBeam();
+            case STATE_ALTAR_DONE -> advanceLight();
             default -> updateIdle(player);
         }
     }
@@ -287,6 +296,76 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         state = STATE_IDLE;
     }
 
+    /**
+     * {@code loc_45BDA}: the Sonic/Tails route helper replaces this teleporter's code with
+     * {@code loc_45AD6}. From here on it is no longer solid and only runs its light cycle.
+     */
+    void convertToAltarEnding() {
+        state = STATE_ALTAR_WAIT;
+    }
+
+    /** {@code st routine(a1)} from {@code loc_45C60}. */
+    void activateAltarBeam() {
+        altarActivated = true;
+    }
+
+    /** {@code loc_45AD6}. */
+    private void updateAltarWait() {
+        advanceLight();
+        if (!altarActivated) {
+            return;
+        }
+        beam = spawnChild(() -> new TeleporterBeamObjectInstance(
+                new ObjectSpawn(x, y, 0, 0, 0, false, 0), this));
+        if (beam == null) {
+            return;
+        }
+        state = STATE_ALTAR_BEAM;
+        beamFlag = -0x100;
+        services().playSfx(Sonic3kSfx.CHARGING.id);
+    }
+
+    /** {@code loc_45B1C}: carry the Knuckles object ({@code _unkFAA4}) up into the beam. */
+    private void updateAltarBeam() {
+        advanceLight();
+        if (beam == null) {
+            return;
+        }
+        CutsceneKnucklesHpzInstance knuckles = HpzKnucklesCutsceneSupport.knuckles(services());
+        int progress = beam.progress();
+        // cmpi.b #8,$46(a2) / blt.w: the spawn phase toggles the byte between 0 and -1.
+        if (progress < 8) {
+            return;
+        }
+        if (progress == 8) {
+            HpzZoneRuntimeState hpz = hpzState();
+            if (hpz != null) {
+                hpz.setKnucklesCutsceneFlag(HpzKnucklesCutsceneSupport.FLAG_BEAM_READY);
+            }
+            return;
+        }
+        if (progress >= 0x18) {
+            if (knuckles != null) {
+                knuckles.clearCodePointer();
+            }
+            services().playSfx(Sonic3kSfx.TRANSPORTER.id);
+            state = STATE_ALTAR_DONE;
+            return;
+        }
+        int frameCounter = services().levelManager().getFrameCounter();
+        if ((frameCounter & 1) == 0 || knuckles == null) {
+            return;
+        }
+        knuckles.nativeAddY(-1);
+        if ((frameCounter & 2) == 0) {
+            return;
+        }
+        int knucklesX = knuckles.getX() & 0xFFFF;
+        if (knucklesX != x) {
+            knuckles.nativeAddX(knucklesX < x ? 1 : -1);
+        }
+    }
+
     /** {@code Gradual_SwingOffset} (sonic3k.asm:92484-92515); returns the offset's high word. */
     int gradualSwingOffset(int speed, int acceleration) {
         int step = acceleration;
@@ -379,7 +458,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
                 .map(table -> table.encodeObject(beam)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
                 subtype, initialized, state, beamFlag, lightTimer, lightIndex, riseRemaining,
-                swingSpeed, swingOffset, swingReversed, settleBaseY, beamId));
+                swingSpeed, swingOffset, swingReversed, settleBaseY, beamId, altarActivated));
     }
 
     @Override
@@ -397,6 +476,7 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
             swingOffset = extra.swingOffset();
             swingReversed = extra.swingReversed();
             settleBaseY = extra.settleBaseY();
+            altarActivated = extra.altarActivated();
             beam = extra.beamId() == null ? null
                     : (TeleporterBeamObjectInstance) context.requireIdentityTable()
                     .resolveObject(extra.beamId(), true);

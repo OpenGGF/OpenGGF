@@ -925,7 +925,12 @@ public class Sonic3kObjectArt {
         }
 
         if (entry.dplcAddr() > 0) {
-            List<SpriteDplcFrame> dplcFrames = loadObjectDplcFrames(reader, entry.dplcAddr());
+            // Knuckles_Load_PLC_661E0 and sub_66236 read the player DPLC layout (count word,
+            // then count-1 in the top nibble over a 12-bit tile), not Perform_DPLC's.
+            List<SpriteDplcFrame> dplcFrames = Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES.equals(entry.key())
+                    || Sonic3kObjectArtKeys.HPZ_KNUX_BOSS_DUST.equals(entry.key())
+                    ? S3kSpriteDataLoader.loadDplcFrames(reader, entry.dplcAddr())
+                    : loadObjectDplcFrames(reader, entry.dplcAddr());
             mappings = DplcStaticFlattener.applyDplcRemap(mappings, dplcFrames);
         } else {
             if (entry.mappingTileOffset() != 0) {
