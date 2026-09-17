@@ -56,10 +56,10 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
 
     /** {@code loc_44FBA}: the bounds the bridge hands back to the act. */
-    static final int CAMERA_MIN_X = 0;
-    static final int CAMERA_MAX_X = 0x19A0;
-    static final int CAMERA_MIN_Y = -0x100;
-    static final int CAMERA_MAX_Y = 0x1000;
+    public static final int CAMERA_MIN_X = 0;
+    public static final int CAMERA_MAX_X = 0x19A0;
+    public static final int CAMERA_MIN_Y = -0x100;
+    public static final int CAMERA_MAX_Y = 0x1000;
     /** The pseudo-starpost, shared with {@code loc_65976}. */
     static final int SAVED_X = 0x140;
     static final int SAVED_Y = 0xC6C;
@@ -149,8 +149,8 @@ public final class SszCutsceneBridgeObjectInstance extends AbstractObjectInstanc
         return S3kRuntimeStates.currentSsz(services().zoneRuntimeRegistry()).orElse(null);
     }
 
-    int offsetForTest() { return offset; }
-    boolean extendedForTest() { return extended; }
+    public int offsetForTest() { return offset; }
+    public boolean extendedForTest() { return extended; }
 
     @Override public int getX() { return (baseX + offset) & 0xFFFF; }
     @Override public int getY() { return y; }

@@ -62,6 +62,7 @@ Entries should include:
 36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
 37. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
 38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
+39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
 
 ---
 
@@ -5847,3 +5848,12 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Symptom** — SSZ1's ring list (`SSZ1_Rings $1F9616`) opens with a `(0,0)` record; SSZ2's list is that record alone. `TestS3kSszPlacementCensus#ringRecordsMatchTheRomIncludingTheLeadingZeroRecord` pins the decode. The engine's raw ring window starts at `max(cameraX - 8, 0)`, so at `Camera_X <= 8` the record enters the window and a collectible ring can exist at world `(0,0)`. SSZ1 reaches `Camera_min_X = 0` once the cutscene bridge retracts (`loc_44FBA`), so the camera can get there.
 - **Suspected cause** — `Load_Rings` `loc_E8BE` computes `d4 = Camera_X - 8` and, when that is not above zero, forces `d4 = 1` before advancing the cursor while `d4 > recordX`. With a floor of 1 the `(0,0)` record is always stepped over; with the engine's floor of 0 it is not. The margin constant is shared with S2's `RingsManager_Main`, so the fix is a shared-owner change, not an SSZ-local one.
 - **Removal condition** — The raw ring-window floor matches `loc_E8BE` (and the S2 equivalent is checked against `RingsManager_Main`), with a regression test that a `(0,0)` record is never renderable or collectible at `Camera_X <= 8`, and no S1/S2/S3K ring test regresses.
+
+---
+
+## Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position
+
+- **Location** — `SszDeathEggSmallObjectInstance`, `CutsceneKnucklesSszInstance` (`src/main/java/com/openggf/game/sonic3k/objects/`)
+- **Symptom** — In `~/Videos/OGGF/ssz-bring-up/raw-03-knuckles-cutscene-bridge-walk` the rising Death Egg draws in the level's own palette line rather than `Pal_KnuxSSZEnd`, so it reads green and grey instead of the ROM's colours; it fires no missiles and has no cloud children; and at the bridge release (frame 1450) cutscene Knuckles is standing beside Player 1 well past the `$2A8` button rather than where the ROM leaves him.
+- **Suspected cause** — `loc_659CC` reseeds `RNG_seed` from `V_int_run_count`, saves `Normal_palette_line_4` to `Target_palette_line_4` and patches it from `Pal_KnuxSSZEnd` (restoring it at `loc_65A4A`), and creates `ChildObjDat_665C4`; `loc_65A4A` calls `sub_66054` for the `ChildObjDat_665F0` missiles on `V_int_run_count+3 & $1F`. None of that is ported: only the rise, the `$2E = $100` gate and the `_unkFAB8` bit 1 handshake the cutscene route depends on are. Knuckles' final X is unverified against native: `loc_658BA`'s `MoveSprite2` and `loc_658F2`'s landing are modelled from the routine text without a native probe of his resting position.
+- **Removal condition** — `Pal_KnuxSSZEnd` is applied and restored through `S3kPaletteWriteSupport`, the missile and cloud children exist, and a native probe or `hpz` fixture window confirms cutscene Knuckles' X at the frame `Events_bg+$08` is written and at his deletion.

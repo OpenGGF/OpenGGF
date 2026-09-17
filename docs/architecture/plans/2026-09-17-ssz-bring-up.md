@@ -374,11 +374,11 @@ Still open — the named slice must resolve each **before** building on it:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slice 0 delivered (placement census, matrices, baselines). Otherwise: level load, music, title card, EggRobo art entry, HPZ-branch teleporter/beam, HPZ exit requests |
-| Cold-reachable | Both acts load cold with default scroll, no events and no objects (`raw-00` baselines). No SSZ mechanic is cold-reachable yet |
-| Rewind-verified | Not started |
-| Native behaviour matched | Placement/ring decode pinned to the ROM; the six fixtures are identified and their starts explained from `SSZ1/2_ScreenInit` + `Obj_57C1E`. No SSZ native probe yet |
-| Visually matched | Only the `raw-00` "before" baselines exist |
+| Implemented | Slices 0, 1 and 1b delivered: placement census, runtime state, screen init, the whole `sub_575EA` bounds machine short of boss allocation, the arrival controller and beam, the Tails helper, and the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost |
+| Cold-reachable | Act 1's arrival and cutscene run from a cold load and open the route: the bridge clears `Events_bg+$05` and the camera limits become `0 … $19A0`. Everything from the GHZ arena on is not started. Act 2 still loads with no events |
+| Rewind-verified | Not started. Every new object has a `recreateForRewind` and captured state, and `SszZoneRuntimeState` is captured, but no before/active/after spot has been exercised |
+| Native behaviour matched | Placement/ring decode pinned to the ROM; the arrival's forced camera, player offset and rise arithmetic match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference against fixture `hpz` row 0 recorded as open. No SSZ native probe yet |
+| Visually matched | Arrival and cutscene inspected frame by frame in the captures below; the Death Egg's palette and children are filed as gaps |
 
 Out of scope, recorded as dependencies: DEZ presentation/route after `$B00` (DEZ campaign, which
 also owns the mislabelled `ssz*` fixtures); `sub_5B18E`, `Obj_Ending`, credits and the Knuckles
@@ -462,3 +462,96 @@ the five claims kept in separate columns, and both backlog rows updated in
 
 **Correction to this plan.** The execution base is `035e48a58`, not `9cba6dbb6` (updated above).
 `loc_13A10`'s starpost gate reads `Tails_CPU_star_post_flag`, not `Last_star_post_hit`.
+
+### 2026-09-17 — slices 1 and 1b: runtime state, arrival, act-1 bounds, cutscene
+
+Commit `686824e73` on `feature/ai-ssz-bring-up`. Same worktree, ROM and Maven wrapper as slice 0.
+
+**What landed.** `runtime/SszZoneRuntimeState` (the sixteen `Events_bg` bytes with byte and word
+accessors, `Events_fg_4`, both routine words, `_unkEE98`/`_unkEE9C`, `_unkFA84`, `_unkFAA4`,
+`_unkFAB8`, and the screen-init latch), registered in `S3kRuntimeStates`, installed by
+`Sonic3kLevelEventManager` and added to `currentRuntimeStateUsesThisEventInstance` so a reinstall
+cannot zero the bytes or replay the init. `events/Sonic3kSSZEvents` ports `SSZ1_ScreenInit`,
+`SSZ2_ScreenInit` and the whole of `sub_575EA`, including the `word_5778A`/`word_5779A` bands and
+both arena branches up to (not including) boss allocation. Objects: `SszArrivalControllerObjectInstance`
+(`Obj_57C1E`…`loc_57DA2`), `SszTailsArrivalHelperObjectInstance` (`Obj_57DCC`),
+`SszCutsceneKnucklesSpawnerObjectInstance` (`Obj_57E34`), `CutsceneKnucklesSszInstance`
+(`CutsceneKnux_SSZ`, all eleven routines), `SszDeathEggSmallObjectInstance` (`loc_659CC`…`loc_65A4A`),
+`SszCutsceneButtonObjectInstance` (`$AF`) and `SszCutsceneBridgeObjectInstance` (`$77`), plus the
+shared `S3kGradualSwing` (`Gradual_SwingOffset`) and `SszCheckpointOps` (the pseudo-starpost).
+Art: an `ArtNem_SSZMisc` level entry for the beam and the bridge, `ArtNem_GrayButton` for the
+button, `ArtKosM_SSZDeathEggSmall` and the two shared cutscene-Knuckles body sheets.
+
+**Where the screen init runs, and why.** `SSZ1_ScreenInit` is a load-time routine that precedes the
+first `Load_Sprites`/`Process_Sprites` pass. Calling it from `installZoneRuntimeState` (the
+Doomsday hook) was tried first and **rejected**: the engine's level load positions the camera
+*after* the runtime state is installed, so the forced `($60,$F49)` was overwritten and `Obj_57C1E`
+placed Player 1 at `Camera_Y + $65` off the level-start camera `$BA0` — the capture read
+`(256,3077)` instead of `$100,$FAE`. It now runs from `updatePrePhysics` of the first frame, which
+is the earliest hook after the camera is settled and still before the object pass. Consequence,
+recorded rather than fitted: frame 1 is `Obj_57C1E`'s init pass (player `$FAE`, camera `$F49`,
+`Events_bg+$04`/`+$05` set, no rise step) and frame 2 is the first `loc_57D50` step. The native
+fixture's row 0 reads camera `$60,$F41` / player `$100,$FA6`, i.e. one rise step already taken, so
+the engine's arrival is **one frame later** than the recorded segment's phase. That is a cold-route
+phase question for slice 10, not a bounds or arithmetic difference: every value matches.
+
+**Tests.** `src/test/java/com/openggf/tests/TestS3kSszArrivalHeadless.java` (6 cases, 320 and 800)
+and `TestS3kSszKnucklesBridgeHeadless.java` (3 cases). Both were seen red before the code was
+right, on real defects rather than on a placeholder: the arrival test caught the missing
+`Events_bg+$04`, the un-cleared `Scroll_lock`, a two-frame rise offset and the load-time camera
+problem above; the cutscene test caught the spawner's off-by-one allocation frame and the fact that
+the bridge never loads while the player stands on the arrival column (`Load_Sprites` only reaches
+X `$320` once the camera has moved). Final runs, zero skips throughout:
+
+| Command | Result |
+| --- | --- |
+| `-Dtest=TestS3kSszArrivalHeadless` | 6 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kSszKnucklesBridgeHeadless` | 3 tests, 0 failures, 0 skips |
+| `-Dtest=TestS3kAiz1SkipHeadless,TestSonic3kLevelLoading,TestSonic3kBootstrapResolver,TestSonic3kDecodingUtils,TestS3kHpz*,TestS3kDdz*,TestEveryObjectRewindRoundTrip,TestS3kSsz*` | 1391 tests, 0 failures, 0 skips |
+| `-Pguards test -B` | 669 tests, 0 failures, 0 skips |
+
+This is focused validation, not a suite pass.
+
+**One real regression, caught and fixed.** Giving `Obj_TeleporterBeamExpand`'s `parent2` word a
+`TeleporterBeamOwner` interface so the arrival controller could own a beam broke 35 HPZ tests with
+`Missing required object reference` on restore. The rewind identity table only registers
+`ObjectInstance`s; making the interface extend `ObjectInstance` restored it. A beam owner is an
+object, so this is the right shape as well as the working one — but the failure mode (a typed field
+narrowing to an interface silently leaving the rewind graph) is worth remembering.
+
+**Guards.** `Sonic3kObjectProfile` needed `SSZ_ONLY_IDS` (`$77`, `$AF`) for zone 10 once the SKL
+registrations existed. Two guard baselines were extended with triage: the new per-object
+capture/restore overrides (each exists for a cross-object SST link or a `RewindStateful` holder the
+generic schema cannot reach) and the `@RewindTransient` spawn decodes. `S3kGradualSwing` was made
+`RewindStateful` rather than baselined, because the helper-state baseline is deliberately empty.
+`ObjectLifetimeOps.deleteNoRespawn` replaced six raw `setDestroyed` calls and the sidekick lookups
+went through `playerQuery().nativeP2OrNull()`.
+
+**Media.** `~/Videos/OGGF/ssz-bring-up/`:
+`raw-01-arrival-sonic-tails` → `01-ssz-arrival-beam-sonic-tails.mp4` (frames 0-300);
+`raw-03-knuckles-cutscene-bridge-walk` → `02a-ssz-knuckles-beam-and-death-egg.mp4` (60-460) and
+`02b-ssz-bridge-releases-the-route.mp4` (1330-1560). `raw-02-knuckles-cutscene-bridge` is the first
+attempt, kept: its input stopped holding right, so the player never walked to the bridge.
+Frames inspected: arrival 60 (the beam columns), 175 (Knuckles beamed in over the release point),
+250 (both on the ledge); cutscene 350 (the Death Egg rising behind the player), 1200 (the camera
+pinned at `Camera_max_X $200` with Player 1 held at X `$328`), 1400 and 1450 (the bridge retracts
+and the route opens). `state.csv` confirms the bound: the camera sits at `512` from frame ~600 to
+1406 and releases at 1407, which is the bridge's `clr.b (Events_bg+$05)`.
+
+**Gaps filed** in [s3k-known-bugs](../../status/s3k-known-bugs.md): the Death Egg's `Pal_KnuxSSZEnd`
+patch, its missile and cloud children, and cutscene Knuckles' unverified resting position.
+
+**Corrections to this plan.**
+
+| Plan said | Actual |
+| --- | --- |
+| Slice 1 edits `Sonic3kSidekickCpuInitializationPolicy` | Wrong owner. `loc_13AB4`'s `$A00` branch is the one AIZ1 (`$0000`) takes: `sub_13ECA`, routine `$A`, `object_control $83`. The engine models that as `SidekickCpuController.State.DORMANT_MARKER` behind `LevelEventProvider.shouldEnterSidekickDormantMarker`, so SSZ adds a predicate there. `preservesSpawnState` is the *other* branch (`loc_13B18`, SOZ1 and zone `$17`) and SSZ does not use it |
+| `Obj_57DCC` ends with `Tails_CPU_routine = 6` | Confirmed, but the existing `releaseDormantMarkerForLevelEvent()` writes routine 2 (catch-up flight). Routine 6 needed a new package-private `releaseDormantMarkerToNormalFollow()` reached through the non-API `SidekickLevelEventRelease`, because `SidekickCpuController` is a `@ModApi` type |
+| `loc_13A10` gates on `Last_star_post_hit` | It reads `Tails_CPU_star_post_flag`, which `Tails_Init` copies from it |
+| `Obj_57E34` spawns after `$60` frames | Its counter starts on the frame `Obj_57C1E` allocates it (`CreateNewSprite4` runs it in the same pass), so Knuckles appears on frame `$60`, not `$60 + 1` |
+| Slice 1b's done-condition "cold route walks off the arrival ledge over the bridge" | Reached, with a caveat: while `Events_bg+$05` is set the camera is capped at `Camera_max_X $200`, so Player 1 runs ahead of the camera and waits at X `$328` for ~800 frames of Death Egg rise before the bridge releases him. That is what the routines say; whether the native movie spends the same time there is unmeasured |
+
+**Still open.** The one-frame arrival phase against fixture `hpz` row 0; the Death Egg's rise rate
+(`$40 = -$40` added to the `y_vel` longword is 0.25 px/frame, which is ~900 frames from `$C68` to
+above the camera — long, and unconfirmed against native); cutscene Knuckles' resting X; and
+`Super_emerald_count` per movie, carried from slice 0.

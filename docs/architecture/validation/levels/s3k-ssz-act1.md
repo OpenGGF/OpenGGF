@@ -31,10 +31,10 @@ green label, and "implemented" alone never closes a row.
 | CENSUS: placed objects and rings | `SSZ1_Sprites $1F90EE` (213 records, 66 rows), `SSZ1_Rings $1F9616` (180 records, first `(0,0)`); `sub_1BA0C`/`loc_1BA4A`; `Load_Rings` `loc_E8BE` | ROM decode | `TestS3kSszPlacementCensus` | yes | n/a | n/a | yes (decode pinned to the ROM) | n/a | Concrete-class assertions arrive in slice 3 |
 | CENSUS: wrap-seam cloud records | Two `$7D` records store Y `$103C`/`$104C`; the `& $FFF` mask puts them at `$03C`/`$04C` | ROM decode | `TestS3kSszPlacementCensus#theTwoWrapSeamCloudRecordsMaskAcrossTheSeam` | yes | n/a | n/a | yes | n/a | Their in-level behaviour is slice 3 |
 | CENSUS: leading `(0,0)` ring record | `loc_E8BE` starts the scan at `max(Camera_X - 8, 1)`, so the record is always stepped over | ROM decode | `TestS3kSszPlacementCensus#ringRecordsMatchTheRomIncludingTheLeadingZeroRecord` | yes | n/a | n/a | yes | n/a | Engine window floor is `max(cameraX - 8, 0)`; gap filed in [s3k-known-bugs](../../../status/s3k-known-bugs.md) |
-| ARRIVAL: no-starpost screen init and controller | `SSZ1_ScreenInit`, `Obj_57C1E`/`loc_57CAC`/`loc_57CD2`/`loc_57D3C`, `Obj_57D64`, `loc_57DA2` | 320 + one wide; Sonic, Sonic + Tails, Tails | slice 1 | open | open | open | open | open | Slice 1 |
-| ARRIVAL: Tails helper and CPU routine | `Obj_57DCC`, `loc_13AB4` (`sub_13ECA`, `Tails_CPU_routine $A`, `object_control $83`) | Sonic + Tails | slice 1 | open | open | open | open | open | Slice 1 |
-| BOUNDS: act-1 dynamic Y bounds and Y-wrap | `sub_575EA` `word_5778A`/`word_5779A`; wrap `-$100 … $1000` | 320 + one wide | slice 1 | open | open | open | open | open | Slice 1 |
-| CUTSCENE: Knuckles spawner, button `$AF`, bridge `$77`, pseudo-starpost | `Obj_57E34` → `CutsceneKnux_SSZ` (11 routines `0..$14`), `loc_658F2`, `loc_65976`, `Obj_SSZCutsceneBridge` `loc_44FA2`/`loc_44FBA`/`loc_4501A` | 320 + one wide; every player mode | slice 1b | open | open | open | open | open | Slice 1b |
+| ARRIVAL: no-starpost screen init and controller | `SSZ1_ScreenInit`, `Obj_57C1E`/`loc_57CAC`/`loc_57CD2`/`loc_57D3C`, `Obj_57D64`, `loc_57DA2` | 320 + 800; Sonic, Sonic + Tails | `TestS3kSszArrivalHeadless` | yes | yes (cold load) | not exercised | forced camera, `Camera_Y + $65`, the 8 px rise and the skipped final camera step all match; one-frame phase against `hpz` row 0 open | `01-ssz-arrival-beam-sonic-tails.mp4` | Tails-solo row and the wide rewind spot open |
+| ARRIVAL: Tails helper and CPU routine | `Obj_57DCC`, `loc_13AB4` (`sub_13ECA`, `Tails_CPU_routine $A`, `object_control $83`) | Sonic + Tails, 320 | `TestS3kSszArrivalHeadless#theSidekickParksOffScreenUntilTheArrivalHelperReleasesHer` | yes | yes | not exercised | `($7F00,0)` park and in-air status match the fixture's row-0 sidekick sentinel | `01-ssz-arrival-beam-sonic-tails.mp4` | Her swing arc is not compared to native |
+| BOUNDS: act-1 dynamic Y bounds and Y-wrap | `sub_575EA` `word_5778A`/`word_5779A`; wrap `-$100 … $1000` | 320 | `TestS3kSszKnucklesBridgeHeadless#theCutsceneReleasesTheBridgeAndOpensTheAct` | yes | yes (the band is asserted at the bridge release) | not exercised | band values asserted from the tables | — | The GHZ/MTZ lock branches are implemented but unreached until their bosses exist; wrap crossing is slice 4 |
+| CUTSCENE: Knuckles spawner, button `$AF`, bridge `$77`, pseudo-starpost | `Obj_57E34` → `CutsceneKnux_SSZ` (11 routines `0..$14`), `loc_658F2`, `loc_65976`, `Obj_SSZCutsceneBridge` `loc_44FA2`/`loc_44FBA`/`loc_4501A` | 320 | `TestS3kSszKnucklesBridgeHeadless` | yes | yes: the bridge retracts 2 px/frame and clears `Events_bg+$05`, and a pre-set star post starts it extended with no arrival | not exercised | flag order, retract rate and the `($140,$C6C)` checkpoint match the routines; no native probe | `02a`/`02b` clips | Death Egg palette and children, and Knuckles' resting X, filed in s3k-known-bugs |
 | BG: sky, cloud band, mode transitions, cloud sprites, solid clouds | `SSZ1_BackgroundInit/Event`, `sub_579F0`, `sub_57A60`, `SSZ1_BGDeformArray`, `loc_57BB2`, `loc_57B6A`, `loc_57B8E` | — | slice 2 | open | open | open | open | open | Slice 2 |
 | ANIM: AniPLC (6 scripts) | `AniPLC_SSZ`, `Offs_AniFunc` | — | slice 2 | open | open | open | open | open | Slice 2 |
 | OBJECT: `$74 $75 $76 $7A $7B $7C $7D $7E $7F`, `$79` pads, EggRobo `$A0` | per-object inits | — | slice 3 | open (placeholders) | open | open | open | open | Slice 3 |
@@ -63,8 +63,24 @@ frames; level start `(128,32)` = `$80,$20` from `Knux_Start_Locations`). Frames 
 inspected: act 1 renders the sanctuary terrain against a flat blue sky with no cloud background;
 act 2 renders the static cloud layout. Neither is a fact about final behaviour.
 
+Slices 1 and 1b, 2026-09-17, commit `686824e73`. `-Dtest=TestS3kSszArrivalHeadless` 6 tests and
+`-Dtest=TestS3kSszKnucklesBridgeHeadless` 3 tests, both 0 failures and 0 skips, both seen red on
+real defects first. Shared checks in the same tree
+(`TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`, `TestS3kHpz*`, `TestS3kDdz*`, `TestEveryObjectRewindRoundTrip`,
+`TestS3kSsz*`): 1391 tests, 0 failures, 0 skips. `-Pguards test -B`: 669 tests, 0 failures, 0 skips.
+This is focused validation, not a suite pass. Media: `raw-01-arrival-sonic-tails`,
+`raw-02-knuckles-cutscene-bridge` (first attempt, kept) and
+`raw-03-knuckles-cutscene-bridge-walk`, with clips `01`, `02a` and `02b`.
+
 ## Open items carried into later slices
 
 - Engine ring-window floor admits the `(0,0)` record at `Camera_X <= 8` where the ROM does not.
-- The act-1 `LevelData` start `$100,$C00` differs from the ROM-forced arrival camera `$60,$F49` /
-  player `Camera_Y + $65`; slice 1 must explain the difference from `SSZ1_ScreenInit` before coding.
+- The act-1 `LevelData` start `$100,$C00` is never used on the no-starpost path: `SSZ1_ScreenInit`
+  overwrites the camera and `Obj_57C1E` the player. Resolved in slice 1.
+- The engine's arrival begins one frame later than fixture `hpz` row 0 implies, because the screen
+  init runs from pre-physics of frame 1 rather than inside the level load. Values match exactly;
+  the phase is slice 10's to settle.
+- No rewind spot has been exercised on any SSZ object yet.
+- The Death Egg's `Pal_KnuxSSZEnd` patch, its missile and cloud children, and cutscene Knuckles'
+  resting X are filed in [s3k-known-bugs](../../../status/s3k-known-bugs.md).
