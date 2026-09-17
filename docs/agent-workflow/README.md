@@ -13,6 +13,9 @@ checks. Its first target is the [Sandopolis plan](../architecture/plans/2026-09-
   compatibility and rewind, current acceptance status, media and integration.
 - [Gameplay capture](../../.agents/skills/gameplay-capture/SKILL.md) records an
   individual ordinary gameplay scenario.
+- [BizHawk native reference capture](../../.agents/skills/bizhawk-native-reference-capture/SKILL.md)
+  runs a zone-specific Lua exporter in BizHawk for native screenshots and state
+  observations used as ROM corroboration or visual references.
 - [Gameplay highlights](../../.agents/skills/gameplay-highlights/SKILL.md) maintains
   the unified source archive and curates a reproducible, act-ordered moving reel.
   It also replaces outdated excerpts after follow-up fixes.
