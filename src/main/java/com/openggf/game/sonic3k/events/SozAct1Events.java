@@ -180,7 +180,10 @@ final class SozAct1Events extends Sonic3kZoneEvents {
         if(events.fadePasses()<0){
             camera().setMinX((short)0);camera().setMaxX((short)0x6000);camera().setMinXTarget((short)0);camera().setMaxXTarget((short)0x6000);
             camera().setMinY((short)-0x100);camera().setMaxY((short)0x800);
+            // loc_56366 clears Ctrl_1_locked with clr.w, so adjacent Ctrl_2_locked is cleared too. That
+            // releases the miniboss loc_863D6 P2 hold, which otherwise zeroes Ctrl_2_logical every frame.
             spriteManager().getMainPlayable().setControlLocked(false);
+            if(objectServices().playerQuery().nativeP2OrNull() instanceof AbstractPlayableSprite second)second.setControlLocked(false);
             if(paletteRegistryOrNull()!=null)paletteRegistryOrNull().setPaletteRotationDisabled(false);
             events.backgroundRoutine(0x10);events.seamlessEntry(false);
         }
