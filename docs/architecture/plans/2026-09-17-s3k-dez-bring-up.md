@@ -977,3 +977,21 @@ should start there and not with more reference-table rows.
    plausible and still unmeasured — it cannot be measured until the upward sensors work, which is
    exactly why those five rows stay `missing` in the reference table rather than being credited.
 
+**A reference-table error found while starting 2a-3, and why 2a-3 was then left alone.**
+The table describes row 23294 as "`Sonic_Jump`: mirrors the launch angle". Reading the whole
+routine (sonic3k.asm:23286-23351) shows it does not. The mirrored copy of `angle(a0)` is consumed
+by `loc_117FC`'s `addi.b #$80,d0` / `CalcRoomOverHead` — the **headroom check**. The jump vector
+at `loc_1182E` (:23314-23317) then re-reads `angle(a0)` raw with no flag test at all. Implementing
+the row as written would have mirrored the wrong thing. Rows 28525 and 32441 carry the same
+description for Tails and Knuckles and are now flagged "verify before implementing"; they were not
+re-read line by line here.
+
+The three 2a-3 changes this made concrete — the headroom angle, the roll-entry offset
+(`Player_DoRoll` `addq.w #5` then `subi.w #2*5`, net −5, shared with Tails' `+1`/`−1` at :28500)
+and the jump roll-radius negation at :23344-23351 — were **deliberately not implemented**. None of
+them can be asserted while the upward sensors are dead: the roll-entry offset is erased within the
+same frame by the `AnglePos` re-snap, and the jump cases need a grounded inverted player. Having
+already been wrong three times in this slice about how this code behaves (the `Direction`-encoding
+assumption, the solidity-bit hypothesis, and this row description), implementing shared player
+physics blind is the worse risk. They are the first rows to land once the sensor blocker clears.
+

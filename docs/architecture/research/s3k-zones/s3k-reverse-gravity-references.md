@@ -93,7 +93,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 22646 | `loc_112B0` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_112E0`) | — | missing |
 | 22988 | `loc_11578` | `Sonic_RollSpeed` unroll: negates the radius Y adjustment | — | missing |
 | 23265 | `Player_DoRoll` | `Player_DoRoll`: `+5` becomes `-5` (`subi.w #2*5`) | — | missing |
-| 23294 | `Sonic_Jump` | `Sonic_Jump`: mirrors the launch angle | — | missing |
+| 23294 | `Sonic_Jump` | **Description corrected 2026-09-17.** `Sonic_Jump` mirrors the angle it hands to `CalcRoomOverHead` — the headroom check (`loc_117FC`, :23298-23304). It does **not** mirror the launch angle: the jump vector at `loc_1182E` (:23314-23317) re-reads `angle(a0)` raw, with no flag test | — | missing |
 | 23346 | `loc_1182E` | `Sonic_Jump` (`loc_1182E`): negates the roll-radius Y adjustment | — | missing |
 | 23694 | `loc_11C5E` | `SonicKnux_Spindash` release: `+5` becomes `-5` | — | missing |
 | 24081 | `loc_11F6E` | `SonicKnux_DoLevelCollision` `loc_11F6E`: negates the floor snap distance | — | missing |
@@ -119,7 +119,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 28233 | `loc_14DA2` | `Tails_RollSpeed` unroll: negates the radius Y adjustment | — | missing |
 | 28426 | `loc_14F30` | `Tails_Check_Screen_Boundaries` (`loc_14F30`): death plane at the top | `PlayableSpriteMovement.doLevelBoundary` (one shared owner with :23191) | covered |
 | 28500 | `loc_14FC4` | `Tails_Roll` (`loc_14FC4`): `+1` becomes `-1` (`subq.w #2`) | — | missing |
-| 28525 | `Tails_Jump` | `Tails_Jump`: mirrors the launch angle | — | missing |
+| 28525 | `Tails_Jump` | `Tails_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | — | missing |
 | 28572 | `loc_1504C` | `Tails_Jump` (`loc_1504C`): negates the roll-radius Y adjustment | — | missing |
 | 28655 | `loc_1515C` | `Tails_Test_For_Flight` (`loc_1515C`): **shipped bug** — `neg.w d0` negates the wrong register, so the unroll adjustment in `d1` is *not* inverted. Model `FixBugs = 0`: no inversion | — | missing |
 | 28748 | `loc_1527C` | `Tails_Spindash` release: `+1` becomes `-1` (`subq.w #2`) | — | missing |
@@ -161,7 +161,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 31896 | `loc_172A8` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_172A8`) | — | missing |
 | 31919 | `loc_172E2` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_172E2`) | — | missing |
 | 32261 | `loc_175AA` | `Knux_RollSpeed` unroll: negates the radius Y adjustment | — | missing |
-| 32441 | `Knux_Jump` | `Knux_Jump`: mirrors the launch angle | — | missing |
+| 32441 | `Knux_Jump` | `Knux_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | — | missing |
 | 32488 | `loc_1775C` | `Knux_Jump` (`loc_1775C`): negates the roll-radius Y adjustment | — | missing |
 | 32663 | `loc_179B4` | `Knux_DoLevelCollision` `loc_179B4`: negates the floor snap | — | missing |
 | 32692 | `loc_179F2` | `Knux_DoLevelCollision` `loc_179F2`: negates the push-out | — | missing |
@@ -293,7 +293,7 @@ branch must be inert with the flag clear.
 | --- | --- | --- | --- |
 | 2a-1 | A: 36069, 36089, 19696 | `TestS3kReverseGravityIntegration`: airborne Sonic with `y_vel = +$400` moves **up** 4 px/frame while `y_vel` still grows by `$38`; subpixel preserved | `MoveSprite_TestGravity` |
 | 2a-2 | A: 22330, 24128, 24142, 24156, 23191; B: 24081-24350, 24475-24716; matching C and E collision, touch-floor, hurt and death rows | `TestS3kReverseGravityTerrain`: lands on a ceiling, walks a ceiling slope with the mirrored angle, is pushed out of a floor when jumping "up" into it, dies at the top boundary and not at the bottom | `Call_Player_AnglePos`, `sub_11FD6/11FEE`, `Player_Boundary_CheckBottom` |
-| 2a-3 | B: 22011, 22623-23694, 24426; matching C and E rows including 28655 (bug) and 29594 | `TestS3kReverseGravityPlayerActions`: jump launch vector on flat and on a `$20` slope, roll/unroll/spindash Y offsets (`±5`, Tails `±1`), look up/down bias direction, `render_flags` bit 1, bubble bounce, and Tails' flight start **not** inverted | `Sonic_Jump`, `Player_DoRoll`, `loc_1515C` |
+| 2a-3 | B: 22011, 22623-23694, 24426; matching C and E rows including 28655 (bug) and 29594 | `TestS3kReverseGravityPlayerActions`: **headroom** probe direction (not the launch vector — see the corrected 23294 row), roll/unroll/spindash Y offsets (`±5`, Tails `±1`), look up/down bias direction, `render_flags` bit 1, bubble bounce, and Tails' flight start **not** inverted | `Sonic_Jump`, `Player_DoRoll`, `loc_1515C` |
 | 2b | H, I, G, F | `TestS3kReverseGravityObjects`: stand under a solid and ride a moving platform from below, up-spring placed on a ceiling launches down-screen with `-8`, spikes hurt from their mirrored face, a Y-flipped monitor breaks from the new "below", ring spill launches away from the ceiling-floor and bounces on it (expect this to fail against today's `LostRingObjectInstance`), shields/dust/tails mirrored | `SolidObject_cont`, `MvSonicOnPtfm`, `sub_22F98`, `loc_23FE8`, `Touch_Monitor` |
 | 2c | D, E glide/slide/climb rows, F birds, Super forms | `TestS3kReverseGravityCompanions`: CPU Tails respawns from the bottom (`+$C0`), carry offset `-$1C`, release `-$38` with mirror, Knuckles glide → wall grab → climb → ledge climb on an inverted wall, slide landing | `loc_13B50`, `sub_1459E`, `Knuckles_Wall_Climb` |
 | 3 | J | per-object tests in the DEZ object slice | each object's routine |
