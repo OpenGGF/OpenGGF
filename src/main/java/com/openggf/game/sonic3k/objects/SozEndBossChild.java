@@ -203,8 +203,10 @@ public final class SozEndBossChild extends AbstractObjectInstance
     }
     private void particle(){
         if(phase==0){if(--timer>=0){if(parent.dying||boss.shellOpen())ObjectLifetimeOps.deleteNoRespawn(this);return;}phase=1;}
+        // Animate_RawNoSST pre-increments anim_frame and reads 1(a1,d0): byte_78348's first pass
+        // shows byte 2, so the F4 retire is the fourth step, not the fifth.
         if(--animationTimer<0){animationTimer=7;
-            if(animationCursor==4){retired=true;}else frame=boss.byteAt(0x78349+animationCursor++);}
+            if(animationCursor==3){retired=true;}else frame=boss.byteAt(0x7834A+animationCursor++);}
         vx=(short)(vx+0x10);dx=(short)(dx+vx);
         if(!yCentered){vy=(short)(vy+(dy<0?0x10:-0x10));int next=(short)(dy+vy);
             if((next^dy)<0){next=0;yCentered=true;}dy=next;}
