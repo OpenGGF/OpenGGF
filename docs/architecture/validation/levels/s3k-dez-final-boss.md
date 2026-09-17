@@ -32,7 +32,7 @@ level and dies at frame 98. No title card is drawn. Capture:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Not started (standard level load only; no `$1700` resource profile, no events, no objects, and the scroll handler is HPZ's because `Sonic3kScrollHandlerProvider` keys zone `$17` without the act) |
+| Implemented | Not started (standard level load only; no `$1700` resource profile, no events, no objects, and the scroll handler is HPZ's because `Sonic3kScrollHandlerProvider` keys zone `$17` without the act — slice 1's new `ZONE_DEZ` case is zone `$0B` only and does not touch `$17`) |
 | Cold-reachable | Not started |
 | Rewind-verified | Not started |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` below |

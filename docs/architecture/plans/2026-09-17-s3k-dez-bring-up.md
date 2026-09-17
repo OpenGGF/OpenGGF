@@ -529,16 +529,16 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 
 ## Status
 
-Slice 0 delivered 2026-09-17 at base `035e48a58` (matrices, coverage rows, trace identity and
-frontiers, placement census, `raw-00` captures); see the evidence log. Slice 1 in progress.
+Slices 0 and 1 delivered 2026-09-17 on base `035e48a58` (`0d9a4f3ea`, `4e7655bf9`); see the
+evidence log. Slice 2 (reverse gravity) is the next dependency.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Not started. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art, reverse-gravity flag with 9 of 116 ROM references covered and no level-load clear |
+| Implemented | Slice 1 only: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art, reverse-gravity flag with 9 of 116 ROM references covered and no level-load clear |
 | Cold-reachable | Not started |
-| Rewind-verified | Not started (the flag itself is already snapshotted) |
+| Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` (slice 0), all six classes red from frame 0 |
-| Visually matched | Not started |
+| Visually matched | Slice 1 presentation inspected at 320 and 800 px with before/after clips; no native pixel comparison |
 
 Out of scope, recorded as dependencies: `$D01` ending and credits (ending campaign); the SSZ
 launch cutscene if SSZ lands second.
@@ -629,3 +629,98 @@ pending".
 
 **Open issues from this slice.** The `$78` duplicate (known-bugs); the reverse-gravity trace-field
 question (TraceChaser submodule not initialised); nothing blocking slice 1.
+
+### 2026-09-17 — Slice 1: presentation foundation
+
+Commit `4e7655bf9` on top of slice 0's `0d9a4f3ea`. RED→GREEN for every comparison: each of the
+four new tests was written before its implementation and failed against the unimplemented engine,
+and after going green each was **broken on purpose once** and produced exactly the perturbed
+failure, then restored.
+
+**What the ROM says, re-read here rather than taken from the plan.**
+
+- *Scroll.* `DEZ1_BackgroundInit` (sonic3k.asm:118641) and `DEZ2_BackgroundInit` (:118770) both
+  `clr.w` `Camera_X_pos_BG_copy` and `Camera_Y_pos_BG_copy` and then run `PlainDeformation`
+  (:103598), which reads both and writes neither. A grep of every reference to those two words
+  shows they are only ever written by a zone's own deformation routine, so for the whole of both
+  acts the background horizontal scroll word is 0 and `V_scroll_value_BG` — copied from
+  `Camera_Y_pos_BG_copy` at the end of `ScreenEvents` (:102254) — is 0 with it. The plan's claim
+  that the default handler is wrong is confirmed: `SwScrlS3kDefault` was scrolling the background
+  at camera/4, which the `raw-00` baseline shows tearing away from the foreground.
+- *Palette.* Re-read `AnPal_DEZ1`/`AnPal_DEZ2` (:3661-3718). The Verified ROM values table is
+  right about all three channels' periods, steps and limits, and **incomplete about channel A's
+  destination**: it names `Normal_palette_line_4+$18`, but the routine writes two longwords,
+  `(a0,d0.w)` to `+$18` and `4(a0,d0.w)` to `+$1C`, so eight contiguous bytes — palette index 3
+  colours 12 to 15, not two colours. Tables: `AnPal_PalDEZ12_1` `$3444` (`$30` bytes),
+  `AnPal_PalDEZ12_2` `$3474` (`$28`), `AnPal_PalDEZ1` `$349C` (`$30`), all from `sonic3k.lst` and
+  contiguous in that order. Two tables repeat frames — `AnPal_PalDEZ12_2` frames 1 and 3 are
+  byte-identical, and so are `AnPal_PalDEZ1` frames 1/5 and 2/4 — which the first version of the
+  test tripped over; the check now tries every alignment a matching colour set allows.
+- *Animated tiles.* `AniPLC_DEZ` is at `$28AEE`, and it is data, not a function: `Offs_AniFunc`
+  and `Offs_AniPLC` are one interleaved table (:53841), and Death Egg's entries 22 and 23 pair
+  `AnimateTiles_DoAniPLC` with `AniPLC_DEZ`. Nothing gates the eight scripts. Durations
+  `0,1,3,-1,4,4,1,0` as the plan says; script 7 really is `$84` = 132 one-byte frames, every odd
+  one tile `$2D` and the even ones stepping `0,5,$A,$F,$14,$19,$1E,$23` six frames each before
+  holding `$28` for the last eighteen. Entry 46 (`$1700`) is `AnimateTiles_NULL`, asserted too.
+- *Screen events.* `ScreenEvents` (:102233) enters the foreground handler with
+  `a3 = Level_layout_main`, whose first `$40` words interleave foreground row `n` at offset `4n`
+  with background row `n` at `4n + 2` (constants.asm:288; HPZ's existing `$1C(a3)` = row 7 is the
+  cross-check). So the plan's unresolved offsets resolve to: `DEZ1` chunk `$BD` at **foreground
+  row 5, column `$6E`**; `DEZ2` stage 0 `$D7,$DC,$D7` at **row 14, columns 1-3**; `DEZ2` stage 1
+  `$BC` at **row 6, column `$6B`**. Stage 2 (`loc_594F8`) neither consumes `Events_fg_4` nor
+  advances, and `DEZ1_ScreenEvent` has no routine index at all, so it repeats on every raise.
+
+**Files.** New `scroll/SwScrlS3kDez.java` (registered as `Sonic3kZoneConstants.ZONE_DEZ` only —
+zone `$17` is left on the default for the LRZ campaign's act-keying edit),
+`runtime/S3kDezZoneRuntimeState.java` (+ `S3kRuntimeStates.currentDez`),
+`events/Sonic3kDEZEvents.java`; `Sonic3kLevelEventManager` gains the construction, dispatch,
+runtime-state install and `currentRuntimeStateUsesThisEventInstance` case; `Sonic3kPaletteCycler`
+gains `case 0x0B` and a `DezCycle`; `Sonic3kPatternAnimator` gains one `resolveAniPlcAddr` case;
+`Sonic3kConstants` and `S3kPaletteOwners` gain the addresses and the owner key. No `@ModApi` type
+was touched and `GameRules` was not changed. Every shared-file edit is a single additive case.
+
+**Tests.** `python3 tools/testing/maven_queue.py -Dmse=off -Ds3k.rom.path=<abs>/s3k.gen -Dtest=… test`:
+
+| Class | Tests | Result |
+| --- | ---: | --- |
+| `TestS3kDezScrollHeadless` | 6 | pass |
+| `TestS3kDezPaletteCycling` | 4 | pass |
+| `TestS3kDezAnimatedTiles` | 7 | pass |
+| `TestS3kDezScreenEvents` | 6 | pass |
+| `TestS3kDezPresentationRewind` | 2 | pass |
+| `TestS3kDezPlacementCensus` | 4 | pass |
+
+Combined with the four mandatory S3K classes (`TestS3kAiz1SkipHeadless`,
+`TestSonic3kLevelLoading` — both of them, `TestSonic3kBootstrapResolver`,
+`TestSonic3kDecodingUtils`): **86 tests, 0 failures, 0 errors, 0 skipped**. This is focused
+validation, not a suite pass; no category run was made and the trace profiles were not re-run,
+because slice 1 changes only presentation registrations for one zone that had none.
+
+Deliberate breaks, each producing exactly the perturbed failure and nothing else: background
+scroll word 0 → 1 (4 failures, one per camera case); channel B period 5 → 6 (`pass 72 was
+[3598, 0] instead of [0, 3584]`); script 0 duration 0 → 1; chunk `$BD` → `$BE` (`expected: <190>
+but was: <189>`); and, for the rewind test, deleting both `rewind().restore(...)` calls (both
+cases failed). All reverted and re-run green.
+
+**Media.** `raw-01-presentation-320` and `raw-02-presentation-800` at `4e7655bf9`, then three
+"before" builds each disabling exactly one registration in an uncommitted edit, reverted and
+recompiled immediately (`git status` clean after each). Clips, 300 frames each:
+`01a-dez-static-background-before-after.mp4`, `01b-dez-anpal-console-cycles-before-after.mp4`,
+`01c-dez-aniplc-machinery-tiles-before-after.mp4`, `01d-dez-presentation-800-wide.mp4`. Frames
+extracted and inspected: the before/after background pair shows the old handler dragging the
+backdrop left and leaving a black gap at the right edge while the new one holds it in register;
+the palette pair shows frozen versus cycling console colours; the tile pair shows the static
+placeholder machinery versus the animated art. The 800 px capture fills the wide viewport with no
+background edge gap.
+
+**Open issues from this slice.**
+
+- `$1700` still resolves to `SwScrlHpz`: the provider keys zone `$17` without the act. That is the
+  LRZ campaign's shared edit, deliberately not duplicated here; slice 9 adds the real handler.
+- Everything above is engine-side inspection. No native pixel or probe comparison has been made
+  for the background, the palette phase or the tile DMA order, so "native behaviour matched" stays
+  open for all of it.
+- The `DEZ1` and `DEZ2` chunk writes have no production trigger yet; the tests drive
+  `Events_fg_4` from the runtime state. The miniboss (slice 6) and end boss (slice 8) supply it.
+- `DEZ2_ScreenEvent` stage 0 is unreachable on a direct load by design, so its test drives
+  `Events_routine_fg` back to 0. It becomes cold-reachable with the seamless change in slice 7.

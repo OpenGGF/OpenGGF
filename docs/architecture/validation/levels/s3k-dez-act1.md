@@ -4,7 +4,7 @@ Game / canonical zone / act: S3K `S3K_DEATH_EGG_1`, engine zone `$0B` act index 
 ROM `Current_zone_and_act = $B00`, SKL object set. **Not Sonic 2's Death Egg**: the
 `TestDEZ*`/`TestS2Dez*` classes and the `*dez-boss-fixes*` documents are Sonic 2.
 Owning plan: [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
-Status: not started. Nothing below certifies the act.
+Status: slice 1 (presentation foundation) delivered at `4e7655bf9`. Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38119): x `0`-`$6000`, y `0`-`$B20`. Start location `$30,$9AC`
 (measured: the engine's cold `$B00` load places Sonic at centre `$30,$9AC`).
@@ -27,11 +27,11 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Not started (level load, music, intro run, slope-angle rule and shared objects only) |
+| Implemented | Presentation foundation only: static background, the three `AnPal_DEZ1` channels, the eight `AniPLC_DEZ` scripts, the `DEZ1_ScreenEvent` chunk write and the runtime event words. Objects, miniboss, act change and reverse gravity are not started |
 | Cold-reachable | Not started |
-| Rewind-verified | Not started |
+| Rewind-verified | Palette cycle counters and the event routine words only (`TestS3kDezPresentationRewind`); every other spot not started |
 | Native behaviour matched | Not started; replay frontier measured at `035e48a58`, see the row below |
-| Visually matched | Not started; `raw-00-baseline-before-work/b00-act1` is the "before" capture |
+| Visually matched | Engine inspection only, at 320 and 800 px (`raw-01-presentation-320`, `raw-02-presentation-800`, clips `01a`-`01d`); no native pixel comparison yet |
 
 ## Obligations
 
@@ -39,16 +39,16 @@ play and invert correctly, but owes no cold chain and no trace frontier.
 | --- | --- | --- | --- | --- | --- | --- |
 | ENTRY: `$B00` resources, bounds, object set | LevelSizes `$6000`x`$B20`, `levartptrs $36/$36/$20`, SKL set | — | — | present before this campaign | unrun | Slice 0 records it; no assertion yet |
 | ENTRY: title card, intro run | `Obj_LevelIntro_PlayerRun` `loc_6986` | — | — | implemented (shared) | unrun | Slice 6 |
-| PRESENT: background scroll | `DEZ1_BackgroundInit` clears `Camera_X/Y_pos_BG_copy`; `PlainDeformation` never rewrites them, so both BG scroll words stay 0 | 320 + one wide | `TestS3kDezScrollHeadless` | missing (`SwScrlS3kDefault` gives camera/4) | unrun | Slice 1 |
-| PRESENT: `AnPal_DEZ1` channel A | counter `Palette_cycle_counters+$0A` reload `$F`, index `+$04` step 8 limit `$30`, `AnPal_PalDEZ1` ($349C, $30 bytes) → palette line 4 colours 12-15 | 320 | `TestS3kDezPaletteCycling` | missing | unrun | Slice 1 |
-| PRESENT: shared AnPal channels B and C | B: `Palette_cycle_counter1` reload 4, `counter0` step 4 limit `$30`, `AnPal_PalDEZ12_1` ($3444) → line 3 colours 13-14. C: `counters+$08` reload `$13`, `counters+$02` step `$A` limit `$28`, `AnPal_PalDEZ12_2` ($3474) → line 3 colours 8-12 | 320 | `TestS3kDezPaletteCycling` | missing | unrun | Slice 1 |
-| PRESENT: `AniPLC_DEZ` 8 scripts | `AniPLC_DEZ` ($28AEE), durations `0,1,3,-1,4,4,1,0`, script 7 = 132 frames; generic `AnimateTiles_DoAniPLC`, no gate | 320 | `TestS3kDezAnimatedTiles` | missing | unrun | Slice 1 |
-| EVENT: `DEZ1_ScreenEvent` chunk `$BD` | `Events_fg_4` → `movea.w $14(a3),a1; move.b #$BD,$6E(a1)` = FG layout row 5, column `$6E` | 320 | `TestS3kDezScreenEvents` | missing | unrun | Slice 1; production trigger is the miniboss (slice 6) |
+| PRESENT: background scroll | `DEZ1_BackgroundInit` clears `Camera_X/Y_pos_BG_copy`; `PlainDeformation` never rewrites them, so both BG scroll words stay 0 | 320 + one wide | `TestS3kDezScrollHeadless` (6 tests) | implemented (`SwScrlS3kDez`) | pass, `4e7655bf9`; clips `01a`, `01d` | Native pixel comparison open |
+| PRESENT: `AnPal_DEZ1` channel A | counter `Palette_cycle_counters+$0A` reload `$F`, index `+$04` step 8 limit `$30`, `AnPal_PalDEZ1` ($349C, $30 bytes) → palette line 4 colours 12-15 | 320 | `TestS3kDezPaletteCycling` (4 tests) | implemented | pass, `4e7655bf9`; clip `01b` | Table frames 1/5 and 2/4 are byte-identical, so the test accepts either alignment; native comparison open |
+| PRESENT: shared AnPal channels B and C | B: `Palette_cycle_counter1` reload 4, `counter0` step 4 limit `$30`, `AnPal_PalDEZ12_1` ($3444) → line 3 colours 13-14. C: `counters+$08` reload `$13`, `counters+$02` step `$A` limit `$28`, `AnPal_PalDEZ12_2` ($3474) → line 3 colours 8-12 | 320 | `TestS3kDezPaletteCycling` | implemented | pass, `4e7655bf9`; clip `01b` | `AnPal_PalDEZ12_2` frames 1 and 3 are byte-identical; native comparison open |
+| PRESENT: `AniPLC_DEZ` 8 scripts | `AniPLC_DEZ` ($28AEE), durations `0,1,3,-1,4,4,1,0`, script 7 = 132 frames; generic `AnimateTiles_DoAniPLC`, no gate | 320 | `TestS3kDezAnimatedTiles` (7 tests) | implemented | pass, `4e7655bf9`; clip `01c` | Per-frame DMA order not compared against native |
+| EVENT: `DEZ1_ScreenEvent` chunk `$BD` | `Events_fg_4` → `movea.w $14(a3),a1; move.b #$BD,$6E(a1)` = FG layout row 5, column `$6E` | 320 | `TestS3kDezScreenEvents` (6 tests) | implemented (`Sonic3kDEZEvents`) | pass, `4e7655bf9`, driven from the runtime state | Production trigger is the miniboss (slice 6); not yet reachable cold |
 | PLACEMENT: 365 act 1 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | placeholder baseline recorded | unrun | Slices 3-6 |
 | BOSS: `$A6` miniboss | `word_7DDA4` range Y `$18C`-`$38C` X `$3400`-`$3780`; arena `$28C,$28C,$3680,$36C0`; 8 hits | — | `TestS3kDezMinibossHeadless` | missing | unrun | Slice 6 |
 | ROUTE (Sonic + Tails cold): `$B00` entry → results | Complete-run BK2 from movie frame 468982 (segment directory `ssz`, `zone_id 11`) | native 320 | `TestS3kDezColdRoutes` | missing | unrun | Slice 6 |
 | ROUTE (Tails cold) | `runs/s3k-tails-full-chain-all-emeralds` `ssz`, offset 444059 | native 320 | `TestS3kDezColdRoutes` | missing | unrun | Slice 6 |
-| REWIND: entry, cycle counters, event routine words | Registry restore equals capture plus forward replay | — | slice 1 tests | missing | unrun | Slice 1 onwards |
+| REWIND: cycle counters, event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` (2 tests) | implemented | pass, `4e7655bf9` | Entry, object and load-boundary spots not started |
 | ORACLE: route timing | `runs/s3k-sonic-tails-complete-emeralds/ssz` (DEZ, `zone_id 11`, 40,049 rows, offset 468982; both acts and the handover) | — | `TestS3kSonicTailsSszSegmentTraceReplay` (expected red) | — | blocked: 7005 errors, first error frame 0 `camera_x` expected `0x0040` actual `0x0000` (`035e48a58`, `-Ptrace-replay-r7`) | Whole campaign |
 | ORACLE: Tails route timing | `runs/s3k-tails-full-chain-all-emeralds/ssz` (act 1, 23,249 rows, offset 444059) | — | `TestS3kTailsFullChainSszSegmentTraceReplay` (expected red) | — | blocked: 1661 errors, first error frame 0 `camera_x` expected `0x0040` actual `0x0018` (`035e48a58`) | Whole campaign |
 
