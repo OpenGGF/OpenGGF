@@ -555,7 +555,7 @@ asserted against anything real.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slice 1: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Slice 2 part 1: inverted position integration (`MoveSprite_TestGravity`/`2` and `CalcRoomInFront`), the death plane at the top of the level, the level-load clear and the seamless act change's preserve. Slice 2 part 2: the `sub_11FD6`/`sub_11FEE` probe swap and its angle mirror. Reverse gravity now stands at 14 of 116 ROM references covered, 8 partial, 90 missing — and the two wrapper rows are partial because the selector and mirror are asserted while an inverted landing on real ceiling terrain is not. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art |
+| Implemented | Slice 1: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Slice 2 part 1: inverted position integration (`MoveSprite_TestGravity`/`2` and `CalcRoomInFront`), the death plane at the top of the level, the level-load clear and the seamless act change's preserve. Slice 2 part 2: the `sub_11FD6`/`sub_11FEE` probe swap and its angle mirror. Slice 2 part 3: the ceiling-sensor activation swap that the probe swap needed, and the six airborne push-out and snap sites measured for all three characters against real Death Egg act 2 terrain. Reverse gravity now stands at 34 of 116 ROM references covered, 6 partial, 72 missing. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art |
 | Cold-reachable | Not started |
 | Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted. Capture/restore across an *inverted physics state* is not verified and cannot be until step 2a-2 |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` (slice 0), all six classes red from frame 0 |
@@ -995,3 +995,78 @@ already been wrong three times in this slice about how this code behaves (the `D
 assumption, the solidity-bit hypothesis, and this row description), implementing shared player
 physics blind is the worse risk. They are the first rows to land once the sensor blocker clears.
 
+
+
+### 2026-09-17 — Slice 2, part 3: the sensor blocker was a harness artefact plus one real gap
+
+**Root cause of "upward sensors never fire", in one experiment.** `Sensor.doScan` returns `null`
+when `active` is false, and `AbstractPlayableSprite.updateSensors` (:4977) deactivates the ceiling
+pair whenever the player is grounded *or* airborne moving mostly downward. The 4161-point sweep
+probed `getCeilingSensors()` on a grounded/falling sprite, so every sample returned `null` for that
+reason alone — in any zone, not just Death Egg. The control: one probe at the corridor point
+(x=$1ACC, centre y=$053A) printed `active=false result=null`, then the same sensor after
+`setActive(true)` printed `dist=7 angle=1`. The ceiling data was there the whole time. Both
+hypotheses the previous entry recorded as "killed by the bit table" were killed against a
+measurement that could not have produced a hit under any bit.
+
+**The real engine gap underneath it.** The ROM has no per-sensor enable: `sub_11FD6` simply calls
+`Sonic_CheckCeiling` instead of `Sonic_CheckFloor` when the flag is set (sonic3k.asm:24127-24137).
+The engine models the same quadrant dispatch twice — once as `CollisionSystem`'s switch and once as
+`updateSensors`' activation — and only the first had been swapped, so under reverse gravity the
+quadrant switched off exactly the array the swapped probe was about to scan. `updateSensors` now
+picks the floor/ceiling pair through the same swap and the grounded branch is deliberately left
+alone (`Call_Player_AnglePos` :22329 mirrors `angle(a0)` instead, so ground attachment keeps using
+the ground sensors with a ceiling ground mode).
+
+**RED → GREEN.** `TestS3kReverseGravityDezCorridor.invertedGravityLandsOnTheCorridorCeiling` was
+written first and failed with `air=true` — the player fell through the ceiling for eight frames.
+After the activation swap it lands. The whole class was then re-run with the fix disabled
+(`boolean reverseGravity = false && …`): 9 of the 16 tests fail, every one of them an inverted
+assertion, and the upright controls stay green. The two horizontal-quadrant push-out cases pass
+either way, because those quadrants already activate both pairs; they are credited by the probe
+swap and the push-out arithmetic, not by the activation fix.
+
+**A one-pixel disagreement that cost a round.** The fixture's `RESTING_ON_CEILING_Y` was derived
+from `ObjectTerrainUtils.checkCeilingDist`, which puts the corridor ceiling's zero-distance row at
+$051F. The ceiling *sensor* puts it at $0520, and an upright head-bonk comes to rest there
+(measured: head $0520 on frames 2-4 of a rising probe). Shipped play runs through the sensor, so
+every expected position in the fixture is now taken from an upright control measured in the same
+corridor rather than from either helper's constant. Recorded in the pitfall catalogue together with
+the inactive-sensor hazard.
+
+**What is now measured, not argued.** Six push-out and snap sites × three characters = 18 rows,
+plus the two wrapper rows. Quadrant $00 floor snap (`loc_11F6E` :24081 / `loc_15444` :28917 /
+`loc_179B4` :32663), quadrant $80 push-out (`loc_120C2` :24246 / `loc_1555C` :29042 / `loc_17A94`
+:32758), and both horizontal quadrants' ceiling push-out and floor snap (`Player_HitCeiling` :24178,
+`loc_1211A` :24284, `loc_12074` :24213, `loc_12148` :24308 and the Tails/Knuckles twins). The
+engine has one `resolveAirCollision` owner for all three `DoLevelCollision` routines, and the test
+is parameterised over the three characters through
+`SonicConfiguration.MAIN_CHARACTER_CODE`, so the Tails and Knuckles rows are run as those
+characters rather than credited by analogy. Reference table: **34 covered, 6 partial, 72 missing,
+4 n/a** (was 14 / 8 / 90 / 4).
+
+**Non-regression.** Four-class trace comparison against the slice base `f60b3f3e2`, `clean test`
+with `-Ptrace-replay` in this worktree, ROM paths passed absolutely:
+
+| Class | `f60b3f3e2` (recorded in the part-2 entry) | this change |
+| --- | --- | --- |
+| `TestS1Ghz1TraceReplay` | 1/1 green | 1/1 green |
+| `TestS1Mz1TraceReplay` | 1/1 green | 1/1 green |
+| `TestS2Ehz1TraceReplay` | red, 16388 errors, frame 6 `dynamic_art.outstanding_transfer_ids` (expected=[2], actual=[]) | red, 16388 errors, frame 6, same field and values |
+| `TestS3kAizTraceReplay` | 3/16 red, 59 errors, frame 5497 `camera_x` expected `0x0010` actual `0x0012` | 3/16 red, 59 errors, frame 5497, same values |
+
+Failure for failure identical; both reds stay **baseline-attributed**. This is the same four-class
+subset as the part-2 entry, not the trace profiles, and it is not evidence about any other class.
+
+Focused collision suites, one invocation, `Skipped: 0`: `TestS3kReverseGravity*`,
+`TestCollisionSystemAirLanding`, `TestGroundSensor`, `TestCollisionLogic`, `TestObjectTerrainUtils`,
+`TestS1Ghz3BridgeTerrainCollision`, `TestS3kHcz2RaisedFloorWallCollisionHeadless`,
+`TestTodo2_DualCollisionAddresses`, `TestGlideWallGrabTerrain`, `TestTerrainCollisionManager` —
+87 tests, 0 failures. With the flag clear the activation swap is the identity, and the S1 and S2
+classes above exercise that.
+
+**Still open in slice 2.** The grounded path (`Call_Player_AnglePos` :22330,
+`ChooseChkFloorEdge` :24156) and all of 2a-3, 2b and 2c. The three 2a-3 changes the previous entry
+left blocked — headroom angle, roll-entry offset, jump roll-radius — are now unblocked: an inverted
+player can be grounded on the corridor ceiling, so a grounded inverted fixture is available to
+assert them against.

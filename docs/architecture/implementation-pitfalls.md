@@ -32,6 +32,25 @@ and writing the ROM animation word changes both current and previous animation.
 The [KiS2 wall investigation](research/trace/2026-09-14-kis2-chain-frontier.md#wall-contact-continuation-2026-09-15-base-b8d0ae91b)
 records independent geometry, position-word and animation-restart regressions.
 
+**A player sensor is not a terrain oracle.** `Sensor.doScan` returns `null` when the
+sensor is inactive, and `AbstractPlayableSprite.updateSensors` deactivates the pair the
+current movement quadrant does not use — ceiling sensors whenever the player is grounded
+or moving mostly downward, ground sensors while moving mostly upward. A sweep that probes
+`getCeilingSensors()` without activating them therefore reports zero hits at every sample
+point, in every zone, which reads exactly like missing collision data. Activate the sensor
+(or drive the sprite into the quadrant that uses it) before believing a negative result,
+and prefer a control in a zone where the same probe is known to hit. Measured 2026-09-17:
+a 4161-point Death Egg act 2 sweep reported 0 upward hits and was recorded as an engine
+defect; forcing `setActive(true)` at one of those points returned the ceiling at distance 7.
+
+**The two vertical terrain helpers disagree by one pixel.** For the same column,
+`ObjectTerrainUtils.checkCeilingDist` reports zero distance one row higher than the ceiling
+sensor does — `checkCeilingDist` says the Death Egg act 2 corridor ceiling ends at y=$051F,
+the sensor's first clear row is $0520, and an upright head-bonk comes to rest against $0520.
+Shipped player collision runs through the sensor (`Sonic_CheckCeiling`'s `eori.w #$F,d2`
+form of `FindFloor`, sonic3k.asm:20242-20256), so derive expected player positions from the
+sensor or from a measured upright control, never from the convenience helper.
+
 **Object clocks.** `ObjectInstance.update(int vIntRunCount, ...)` receives the
 object-visible ROM `V_int_run_count`, stored by `ObjectManager` as `vblaCounter`. It is not
 the manager's executed-frame counter or the ROM `Level_frame_counter`; lag frames can

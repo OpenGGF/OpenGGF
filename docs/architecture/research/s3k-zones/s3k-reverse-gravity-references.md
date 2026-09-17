@@ -77,8 +77,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 19696 | `loc_F638` | `sub_F61C` (CalcRoomInFront): negates the projected `y_vel` before the wall probe | `CollisionSystem.resolveGroundWallCollision` predicted Y | covered |
 | 22330 | `Call_Player_AnglePos` | `Call_Player_AnglePos`: mirrors `angle` (`+$40, neg, -$40`) around `Player_AnglePos`, which then uses ceiling sensors | — | missing |
 | 23191 | `Player_Boundary_CheckBottom` | `Player_Boundary_CheckBottom`: death plane becomes the **top** (`loc_11722`) | `PlayableSpriteMovement.doLevelBoundary` | covered |
-| 24128 | `sub_11FD6` | `sub_11FD6`: floor check becomes `Sonic_CheckCeiling` with mirrored angle (10 callers) | `CollisionSystem.floorProbeSensors` + `surfaceAngle` | partial |
-| 24142 | `sub_11FEE` | `sub_11FEE`: ceiling check becomes `Sonic_CheckFloor` with mirrored angle (9 callers) | `CollisionSystem.ceilingProbeSensors` + `surfaceAngle` | partial |
+| 24128 | `sub_11FD6` | `sub_11FD6`: floor check becomes `Sonic_CheckCeiling` with mirrored angle (10 callers) | `CollisionSystem.floorProbeSensors` + `surfaceAngle`, with the matching activation swap in `AbstractPlayableSprite.updateSensors` | covered |
+| 24142 | `sub_11FEE` | `sub_11FEE`: ceiling check becomes `Sonic_CheckFloor` with mirrored angle (9 callers) | `CollisionSystem.ceilingProbeSensors` + `surfaceAngle`, with the matching activation swap in `AbstractPlayableSprite.updateSensors` | covered |
 | 24156 | `ChooseChkFloorEdge` | `ChooseChkFloorEdge`: selects `ChkFloorEdge_ReverseGravity` (7 callers: balance, glide, climb) | `GlideWallGrabTerrain.align` only | partial |
 | 36069 | `MoveSprite_TestGravity` | `MoveSprite_TestGravity`: `y_vel += $38` as usual, **position** integrates `-y_vel` (9 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
 | 36089 | `MoveSprite_TestGravity2` | `MoveSprite_TestGravity2`: position integrates `-y_vel` (16 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
@@ -96,12 +96,12 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 23294 | `Sonic_Jump` | **Description corrected 2026-09-17.** `Sonic_Jump` mirrors the angle it hands to `CalcRoomOverHead` — the headroom check (`loc_117FC`, :23298-23304). It does **not** mirror the launch angle: the jump vector at `loc_1182E` (:23314-23317) re-reads `angle(a0)` raw, with no flag test | — | missing |
 | 23346 | `loc_1182E` | `Sonic_Jump` (`loc_1182E`): negates the roll-radius Y adjustment | — | missing |
 | 23694 | `loc_11C5E` | `SonicKnux_Spindash` release: `+5` becomes `-5` | — | missing |
-| 24081 | `loc_11F6E` | `SonicKnux_DoLevelCollision` `loc_11F6E`: negates the floor snap distance | — | missing |
-| 24178 | `Player_HitCeiling` | level collision, ceiling hit: negates the push-out distance | — | missing |
-| 24213 | `loc_12074` | level collision (`loc_12074`): floor landing through `sub_11FD6`; negates the snap distance, then sets `angle` and zeroes `y_vel` | — | missing |
-| 24246 | `loc_120C2` | level collision (`loc_120C2`): negates the push-out distance | — | missing |
-| 24284 | `loc_1211A` | level collision (`loc_1211A`): negates the push-out distance | — | missing |
-| 24308 | `loc_12148` | level collision (`loc_12148`): negates the push-out distance | — | missing |
+| 24081 | `loc_11F6E` | `SonicKnux_DoLevelCollision` `loc_11F6E`: negates the floor snap distance | `CollisionSystem.landOnFloor` via the swapped probe's `Direction` | covered |
+| 24178 | `Player_HitCeiling` | level collision, ceiling hit: negates the push-out distance | `CollisionSystem.doCeilingCollisionInternal` via the swapped probe | covered |
+| 24213 | `loc_12074` | level collision (`loc_12074`): floor landing through `sub_11FD6`; negates the snap distance, then sets `angle` and zeroes `y_vel` | `CollisionSystem.doTerrainCollisionAirDirect` (quadrant $40) | covered |
+| 24246 | `loc_120C2` | level collision (`loc_120C2`): negates the push-out distance | `CollisionSystem.doCeilingCollision` (quadrant $80) | covered |
+| 24284 | `loc_1211A` | level collision (`loc_1211A`): negates the push-out distance | `CollisionSystem.doCeilingCollisionInternal` (quadrant $C0) | covered |
+| 24308 | `loc_12148` | level collision (`loc_12148`): negates the push-out distance | `CollisionSystem.doTerrainCollisionAirDirect` (quadrant $C0) | covered |
 | 24350 | `Player_TouchFloor` | `Player_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableHurtRadiusTransition:32` | partial |
 | 24426 | `loc_12246` | `BubbleShield_Bounce` (`loc_12246`): negates the radius Y adjustment | — | missing |
 | 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | — | missing |
@@ -123,12 +123,12 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 28572 | `loc_1504C` | `Tails_Jump` (`loc_1504C`): negates the roll-radius Y adjustment | — | missing |
 | 28655 | `loc_1515C` | `Tails_Test_For_Flight` (`loc_1515C`): **shipped bug** — `neg.w d0` negates the wrong register, so the unroll adjustment in `d1` is *not* inverted. Model `FixBugs = 0`: no inversion | — | missing |
 | 28748 | `loc_1527C` | `Tails_Spindash` release: `+1` becomes `-1` (`subq.w #2`) | — | missing |
-| 28917 | `loc_15444` | `Tails_DoLevelCollision` `loc_15444`: negates the floor snap | — | missing |
-| 28974 | `loc_154C4` | `Tails_DoLevelCollision` `loc_154C4`: negates the push-out | — | missing |
-| 29009 | `loc_1550E` | `Tails_DoLevelCollision` `loc_1550E`: negates the push-out | — | missing |
-| 29042 | `loc_1555C` | `Tails_DoLevelCollision` `loc_1555C`: negates the push-out | — | missing |
-| 29080 | `loc_155B4` | `Tails_DoLevelCollision` `loc_155B4`: negates the push-out | — | missing |
-| 29104 | `loc_155E2` | `Tails_DoLevelCollision` `loc_155E2`: negates the push-out | — | missing |
+| 28917 | `loc_15444` | `Tails_DoLevelCollision` `loc_15444`: negates the floor snap | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 28974 | `loc_154C4` | `Tails_DoLevelCollision` `loc_154C4`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 29009 | `loc_1550E` | `Tails_DoLevelCollision` `loc_1550E`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 29042 | `loc_1555C` | `Tails_DoLevelCollision` `loc_1555C`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 29080 | `loc_155B4` | `Tails_DoLevelCollision` `loc_155B4`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 29104 | `loc_155E2` | `Tails_DoLevelCollision` `loc_155E2`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29143 | `Tails_TouchFloor` | `Tails_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableHurtRadiusTransition:32` (verify it runs for Tails) | partial |
 | 29220 | `sub_15716` | `sub_15716` (hurt): death-plane test flips to the top | — | missing |
 | 29336 | `sub_15842` | `sub_15842` (hurt/dead animate): vertical mirror | — | missing |
@@ -163,12 +163,12 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 32261 | `loc_175AA` | `Knux_RollSpeed` unroll: negates the radius Y adjustment | — | missing |
 | 32441 | `Knux_Jump` | `Knux_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | — | missing |
 | 32488 | `loc_1775C` | `Knux_Jump` (`loc_1775C`): negates the roll-radius Y adjustment | — | missing |
-| 32663 | `loc_179B4` | `Knux_DoLevelCollision` `loc_179B4`: negates the floor snap | — | missing |
-| 32692 | `loc_179F2` | `Knux_DoLevelCollision` `loc_179F2`: negates the push-out | — | missing |
-| 32724 | `loc_17A36` | `Knux_DoLevelCollision` `loc_17A36`: floor landing through the floor wrapper; negates the snap distance, sets `angle`, zeroes `y_vel` | — | missing |
-| 32758 | `loc_17A94` | `Knux_DoLevelCollision` `loc_17A94`: negates the push-out | — | missing |
-| 32782 | `loc_17ACA` | `Knux_DoLevelCollision` `loc_17ACA`: negates the push-out | — | missing |
-| 32802 | `loc_17AEC` | `Knux_DoLevelCollision` `loc_17AEC`: negates the push-out | — | missing |
+| 32663 | `loc_179B4` | `Knux_DoLevelCollision` `loc_179B4`: negates the floor snap | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 32692 | `loc_179F2` | `Knux_DoLevelCollision` `loc_179F2`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 32724 | `loc_17A36` | `Knux_DoLevelCollision` `loc_17A36`: floor landing through the floor wrapper; negates the snap distance, sets `angle`, zeroes `y_vel` | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 32758 | `loc_17A94` | `Knux_DoLevelCollision` `loc_17A94`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 32782 | `loc_17ACA` | `Knux_DoLevelCollision` `loc_17ACA`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
+| 32802 | `loc_17AEC` | `Knux_DoLevelCollision` `loc_17AEC`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32839 | `Knux_TouchFloor` | `Knux_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableHurtRadiusTransition:32` (verify it runs for Knuckles) | partial |
 | 32911 | `sub_17C10` | `sub_17C10` (hurt): death-plane test flips to the top | — | missing |
 | 33017 | `sub_17D1E` | `sub_17D1E` (hurt/dead animate): vertical mirror | — | missing |
@@ -251,36 +251,52 @@ is the RAM wipe described above).
 
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| A. Shared integration and sensor wrappers | 8 | 4 | 3 | 1 | 0 |
-| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 0 | 1 | 18 | 1 |
-| C. Tails routines | 21 | 1 | 1 | 18 | 1 |
+| A. Shared integration and sensor wrappers | 8 | 6 | 1 | 1 | 0 |
+| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 6 | 1 | 12 | 1 |
+| C. Tails routines | 21 | 7 | 1 | 12 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
-| E. Knuckles routines | 24 | 3 | 1 | 19 | 1 |
+| E. Knuckles routines | 24 | 9 | 1 | 13 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 2 | 0 | 7 | 0 |
 | G. Lost rings | 2 | 0 | 2 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 0 | 0 | 5 | 1 |
 | I. Monitors, springs, spikes | 6 | 2 | 0 | 4 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **14** | **8** | **90** | **4** |
+| **Total** | **116** | **34** | **6** | **72** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
 
-Updated 2026-09-17 for slice 2 step 2a-1, the flag's lifecycle, and the first half of 2a-2.
+Updated 2026-09-17 for slice 2 steps 2a-1 and 2a-2 (both halves).
 
-`sub_11FD6` and `sub_11FEE` are **partial, not covered**: the wrapper selects the opposite sensor
-array and mirrors the angle it returns, and both are asserted
-(`TestS3kReverseGravityProbeSelection`, `TestS3kReverseGravityTerrain`). What is not asserted is an
-inverted player actually landing on a real ceiling. The five push-out sites those wrappers feed
-(`loc_11F6E` :24081, `Player_HitCeiling` :24178, `loc_120C2` :24246, `loc_1211A` :24284,
-`loc_12148` :24308) stay **missing** for that reason: each was worked through by hand and the
-ROM's `neg.w d1` appears to fall out of the engine encoding the push-out sign in the probe's
-`Direction`, but an argument is not a measurement and none of them has been run. The five rows that moved to
-covered (19696, 23191, 28426, 36069, 36089) are each exercised with the flag forced set, from a
-real S3K level, by `TestS3kReverseGravityIntegration` and `TestS3kReverseGravityBoundary`. The
-nine rows that were already marked covered before this slice are **not** in that position: they
-still have no test that runs them with the flag set, so they remain "verify", not "done".
+`sub_11FD6` and `sub_11FEE` are now **covered**. The wrapper selects the opposite sensor array and
+mirrors the angle it returns (`TestS3kReverseGravityProbeSelection`,
+`TestS3kReverseGravityTerrain`), and an inverted player now demonstrably lands on real ceiling
+terrain: `TestS3kReverseGravityDezCorridor` runs an inverted Sonic, Tails and Knuckles into the
+measured Death Egg act 2 corridor in all four movement quadrants and asserts the rest position
+against an upright control measured in the same corridor.
+
+Making that measurable needed one engine fix. The wrappers swap which *routine* each probe runs,
+but `AbstractPlayableSprite.updateSensors` was still deactivating the ceiling sensors in exactly
+the quadrants (grounded, and airborne moving mostly downward) where the swapped floor probe needs
+them — so the probe scanned an array the engine had switched off and found nothing. The ROM has no
+per-sensor enable; it simply calls the other routine. The activation now follows the same swap.
+This is why the earlier sweep measured "0 upward hits at 4161 points": see the sensor entries in
+[implementation pitfalls](../../implementation-pitfalls.md).
+
+All six push-out and snap sites the wrappers feed are now **covered for all three characters**,
+measured rather than argued: `loc_11F6E` :24081 / `loc_15444` :28917 / `loc_179B4` :32663 (quadrant
+$00 floor snap), `Player_HitCeiling` :24178 / :28974 / :32692 and `loc_1211A` :24284 / :29080 /
+:32782 (the two horizontal quadrants' ceiling push-out), `loc_12074` :24213 / :29009 / :32724 and
+`loc_12148` :24308 / :29104 / :32802 (their floor snap), and `loc_120C2` :24246 / :29042 / :32758
+(quadrant $80 push-out). The engine has one `CollisionSystem.resolveAirCollision` owner for all
+three characters' `DoLevelCollision` routines, so the Tails and Knuckles rows are credited by the
+same parameterised test running as those characters, not by analogy. The ROM's `neg.w d1` at each
+site falls out of the engine encoding the push-out sign in the probe's `Direction`; with the flag
+clear every one of these assertions still holds for the upright control.
+
+The nine rows that were already marked covered before this slice are **not** in that position:
+they still have no test that runs them with the flag set, so they remain "verify", not "done".
 
 ## Implementation order and the test that proves each step
 

@@ -24,7 +24,6 @@ Entries should include:
 
 ## Table of Contents
 
-0. [Upward Player Sensors Never Fire in Death Egg Act 2 (OPEN — blocks every reverse-gravity landing)](#upward-player-sensors-never-fire-in-death-egg-act-2-open--blocks-every-reverse-gravity-landing)
 0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
 0. [Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)](#reverse-gravity--position-integration-inverted-collision-probes-not-yet-open--blocks-the-death-egg-gravity-objects)
 1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
@@ -114,49 +113,6 @@ repeatable onset defect within the scenarios above.
 
 ---
 
-## Upward Player Sensors Never Fire in Death Egg Act 2 (OPEN — blocks every reverse-gravity landing)
-
-**Location.** `com.openggf.physics.GroundSensor` / `Sensor` upward scan path, as reached by
-`AbstractPlayableSprite.getCeilingSensors()`.
-
-**Symptom.** In Death Egg act 2 (`$B01`) the player's ceiling sensors return `null` from every
-probe, everywhere. Measured 2026-09-17 by sweeping the whole playable region — x `$0E00`-`$2000`
-step 64, y `$0300`-`$0A00` step 32, 4161 sample points — with the sprite's solidity bit forced to
-each candidate value:
-
-| solidity bit | downward hits | upward hits |
-| --- | ---: | ---: |
-| `$C` (`top_solid_bit`) | 4161 | **0** |
-| `$D` (`lrb_solid_bit`) | 4161 | **0** |
-| `$E` | 4161 | **0** |
-
-The downward probe finds terrain in abundance; the upward probe finds none. Two hypotheses are
-**killed** by that table: it is not the ceiling data (a ceiling is there —
-`ObjectTerrainUtils.checkCeilingDist` reports the surface at y=`$051F` for x=`$1ACC`, and the
-corridor guard in `TestS3kReverseGravityDezCorridor` asserts it), and it is not the solidity bit
-(all three bits give identical downward counts, so that path is not discriminating on the bit at
-all). The remaining suspect is the upward scan itself — stride, sensor activation, or the
-empty-tile default.
-
-**Why it matters now.** `sub_11FD6` (sonic3k.asm:24127) makes the ceiling probe the *floor* probe
-under `Reverse_gravity_flag`. While the upward sensors return nothing, an inverted player cannot
-land on anything, so every reverse-gravity landing, push-out and ground-attachment row of Death Egg
-slice 2 is unassertable. This is the single blocker for the rest of that slice.
-
-**One ROM fact to carry into the diagnosis.** `Sonic_CheckCeiling` (sonic3k.asm) never loads `d5`
-itself — it inherits the solidity bit from its caller, and the airborne collision routine
-`loc_11F00` (:24042) loads `lrb_solid_bit` once for the whole routine, floor branch included. Any
-fix must keep that inheritance rather than hard-coding a bit per direction.
-
-**Kill condition.** Probe one known ceiling tile (x=`$1ACC`, ceiling surface y=`$051F`, act 2)
-directly through `Sensor.scan()` with the sensor forced active, and compare against `FindFloor`'s
-upward form (`movea.w #-$10,a3`, `move.w #$800,d6`, sonic3k.asm:19998-20002 and the
-`Sonic_CheckCeiling` body). If the raw scan finds the tile, the defect is in sensor activation or
-configuration; if it does not, it is in the upward stride or the `eori.w #$F,d2` row flip. Either
-way this entry is replaced by the specific defect.
-
----
-
 ## AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)
 
 **Location.** `com.openggf.physics.Sensor` / `GroundSensor` stride versus
@@ -198,17 +154,20 @@ E, F, G, H and I: player actions, solid objects, springs, spikes, monitors, ring
 Nothing in the shipped game reaches this state today: no object writes the flag yet, so the whole
 branch is unreachable outside tests and the upright game is unaffected.
 
-**Verification gap.** The probe swap is asserted at its selector, not behaviourally: there is no
-test of an inverted player landing on real ceiling terrain, because no fixture with a known flat
-ceiling exists. Treat "the wrappers swap" as established and "an inverted player lands correctly"
-as unverified.
+**Verified as of 2026-09-17.** The airborne path is no longer a selector-only claim:
+`TestS3kReverseGravityDezCorridor` drives an inverted Sonic, Tails and Knuckles into the measured
+Death Egg act 2 corridor in all four movement quadrants and asserts each rest position against an
+upright control measured in the same corridor. All six push-out and snap sites of the three
+`DoLevelCollision` routines are covered. What remains missing is the **grounded** path
+(`Call_Player_AnglePos` :22330, `ChooseChkFloorEdge` :24156) and groups B, C, E, F, G, H and I
+outside collision: player actions, solid objects, springs, spikes, monitors, rings and companions.
 
-**Suspected cause.** Not a defect — steps 2a-1 and part of 2a-2 of a deliberately sliced port. 90 of the 116
+**Suspected cause.** Not a defect — steps 2a-1 and 2a-2 of a deliberately sliced port. 72 of the 116
 `Reverse_gravity_flag` references in the disassembly are still unimplemented; the row-by-row
 inventory is
 [s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
 
-**Removal condition.** Steps 2a-2, 2a-3, 2b and 2c of the
+**Removal condition.** Steps 2a-3, 2b and 2c of the
 [Death Egg bring-up plan](../architecture/plans/2026-09-17-s3k-dez-bring-up.md) land, with the
 probe swap and angle mirror in place, and the reference table reaches zero missing rows for
 groups A-I. **This entry must be resolved before slice 3 ships the `$58`/`$59`/`$5B` objects**,
