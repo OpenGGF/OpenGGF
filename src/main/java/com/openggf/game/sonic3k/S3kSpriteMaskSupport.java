@@ -20,9 +20,12 @@ public final class S3kSpriteMaskSupport {
 
     /** Package-visible native mapping model so exact control words can be tested without renderer reflection. */
     static List<ControlEntry> frame4Entries(int originX, int originY) {
+        // Map_SpriteMask frame 4: dc.b $F0,3,7,$C0,0,8 / dc.b $F0,3,0,0,0,0.
+        // Size byte 3 = width ((3>>2)+1) 1 tile, height ((3&3)+1) 4 tiles: a
+        // 32-line mask.
         return List.of(
-                new ControlEntry(originX + 8, originY - 16, 4, 1, 0x7C0),
-                new ControlEntry(originX, originY - 16, 4, 1, 0));
+                new ControlEntry(originX + 8, originY - 16, 1, 4, 0x7C0),
+                new ControlEntry(originX, originY - 16, 1, 4, 0));
     }
 
     record ControlEntry(int x, int y, int widthTiles, int heightTiles, int rawTileWordLow11) { }

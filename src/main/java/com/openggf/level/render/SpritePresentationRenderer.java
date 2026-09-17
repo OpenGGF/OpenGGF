@@ -127,7 +127,9 @@ public final class SpritePresentationRenderer {
                 desc.setVFlip(tile.vFlip());
                 desc.setPriority(tile.priority());
                 float x = tile.x() + cameraX, y = tile.y() + cameraY;
-                if (tile.width() == 8 && tile.height() == 8 && x == (int) x && y == (int) y) {
+                if (tile.rowClipped()) {
+                    SpritePresentation.renderTileRows(graphics, tile, desc, (int) x, (int) y);
+                } else if (tile.width() == 8 && tile.height() == 8 && x == (int) x && y == (int) y) {
                     graphics.renderPatternWithId(tile.patternId(), desc, (int) x, (int) y);
                 } else {
                     graphics.renderPatternWithIdScaled(tile.patternId(), desc, x, y, tile.width(), tile.height());

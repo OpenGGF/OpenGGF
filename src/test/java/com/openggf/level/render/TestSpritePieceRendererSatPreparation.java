@@ -75,10 +75,10 @@ class TestSpritePieceRendererSatPreparation {
         assertEquals(0x200, processed.get(1).rawTileWordLow11());
         assertEquals(0, processed.get(1).startColTile());
         assertEquals(4, processed.get(1).colCountTiles());
-        assertEquals(0, processed.get(1).startRowTile());
-        assertEquals(1, processed.get(1).rowCountTiles());
-        assertEquals(3, processed.get(2).startRowTile());
-        assertEquals(1, processed.get(2).rowCountTiles());
+        assertEquals(16, processed.get(1).visibleTopY());
+        assertEquals(24, processed.get(1).visibleBottomY());
+        assertEquals(40, processed.get(2).visibleTopY());
+        assertEquals(48, processed.get(2).visibleBottomY());
     }
 
     private static SpriteFramePiece piece(int xOffset, int yOffset, int widthTiles, int heightTiles,

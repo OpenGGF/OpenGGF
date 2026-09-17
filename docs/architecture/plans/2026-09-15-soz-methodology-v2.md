@@ -3301,3 +3301,49 @@ the plane offsets (camera/scroll owners), then animated sand, then the end-boss
 background. A category is accepted when its checkpoint rows fall to the HUD floor, not
 when the whole run does. The remaining unmodelled VDP behaviour (per-line sprite limits,
 previous-line mask arming) stays out of scope unless a checkpoint needs it.
+
+### Presentation follow-up: scanline-exact sprite mask (2026-09-17)
+
+Branch `bugfix/ai-s3k-sprite-mask-scanlines` from develop `4569e5406`.
+
+ROM: `Render_Sprites` (loc_1AE34) gives each SAT entry whose whole word is `$07C0` X=1
+and the next entry X=0. The masking rule was read from Genesis Plus GX
+`render_obj_m5` (`vdp_render.c`): per scanline, in SAT order, any sprite with
+xpos != 0 arms `spr_ovr`; a later xpos == 0 sprite sets `masked`, hiding itself and every
+remaining sprite on that line across the full width. Any earlier sprite on the line
+arms it, not only the `$7C0` marker. The ROM words were checked in the S3K image: the
+SOZ1 end-door frame at `$56122` (four `$07C0`/`$0000` pairs), `Map_SpriteMask` frame 4 and
+Gumball frame `$17` all use exactly `$07C0`.
+
+Before: `SpriteSatMaskPostProcessor` intersected the pair's Y ranges and removed whole
+8-pixel tile rows (floor/ceil), hiding up to 7 extra lines on each side of the band. Its
+removed rows were screen rows stored as source rows, so a V-flipped piece lost the
+mirrored rows. After: each marker's band is the companion's lines on which an earlier
+non-companion entry is present; later entries carry a visible scanline window and every
+replay path crops tiles to it (instanced batch `addPatternRows`, direct
+`PatternRenderCommand.obtainRows`, and the `SpritePresentation` builder/renderer via
+`Tile.rowStart/rowEnd`). Tile rows are no longer clipped, which removes the V-flip
+mirroring. The marker test now also requires no flip, palette or mapping-priority bits.
+Not modelled: the 20-sprite and 320-pixel line limits, and GPGX's arming from the
+previous line's pixel overflow.
+
+Rejected on the way: passing `PatternDesc` into the new graphics-layer crop methods
+tripped `TestArchUnitRules.low_level_layers_do_not_depend_on_runtime_layers` (10 new
+graphics -> level edges); the crop methods take primitive tile attributes instead.
+
+Native pixel check of `0590c42b7` (coordinator, `tools/bizhawk/compare_trace_checkpoint_pixels.py`,
+every 20 rows where the native SAT holds a mask pair): pyramid window 72 rows better / 0
+worse than develop `4569e5406`; end-boss window 14 better / 3 worse (rows 56820-56860).
+Cause of the three: `S3kSpriteMaskSupport.frame4Entries` had width and height swapped.
+`Map_SpriteMask` frame 4 is `$F0,3,7,$C0,0,8` / `$F0,3,0,0,0,0`; size byte 3 is one tile
+wide and four tall, so the native mask covers 32 lines (VRAM SAT at BK2 frame 339036:
+pair at y 192, 8x32), while the engine submitted 32x8 and masked only lines 192-199. The
+old whole-tile clip happened to hide the boss rows 200-203 too. The pair is now 1x4 tiles;
+the native SAT from that frame is a unit test. This also applies to the FBZ2 subboss and
+the SOZ sprite-mask object, which share frame 4.
+
+After `cf4622183` (same rows and native frames, fresh full-run capture): pyramid window 72
+better / 0 worse, end-boss window 17 better / 0 worse; rows within 2 pixels (the HUD floor)
+22 -> 26 in the end-boss window and 2 -> 2 in the pyramid, where the remaining difference is
+mostly the plane offset from the survey. Broad category run against `4569e5406`: ordinary
+21887 tests and guards 669, no failures. The FBZ2 subboss mask was not natively compared.
