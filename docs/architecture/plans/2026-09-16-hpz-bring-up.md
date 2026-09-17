@@ -415,3 +415,32 @@ previous act through the load-time `DeformBgLayer`, so a cold load trails for tw
 11 checkpoints (break-checked with a `$A0` run distance). Traces for the shared unroll change:
 AIZ/CNZ/HCZ/ICZ/LBZ/MGZ/MHZ zone slices, MGZ and SOZ complete-run: identical error totals and
 first errors to `54284527b` without the change (all inherited red). Guards 669/0.
+
+### 2026-09-17 merged lanes: cold route matches native through the fight
+
+Merges `8d14d2591` (fight lane to `6bb3aed8e`; parent-dependent baseline conflict resolved to the
+fight lane's covered dust row) and `d507bcf22` (reveal lane `b1a9896c8`). After `mvn clean`, the
+HPZ/results/required-S3K set is 357 tests, 0 failures. The cold Sonic+Tails route on recorded input
+now matches native camera and both players every frame from 441761 through the whole fight window
+(`probe-fight` 444437-445845, all hits and defeat). Remaining differences:
+
+- From 446448: camera X 1 px (the fight lane's camera low-word finding; native value is history).
+- **From 447157 (row `$331E`): Sonic's jump is capped.** Instrumented: the latched logical word
+  holds jump, `handleMovement` receives jump, but `PlayableSpriteMovement.handleMovementDispatch`
+  clears it because `controlLockBlocksScriptedMovement` treats `Ctrl_1_locked` like
+  `object_control`. The ROM lock only stops the `Ctrl_1` to `Ctrl_1_logical` copy (loc_10760), so
+  movement keeps the latched jump. Rejected quick fix: reading the latched word in `SpriteManager`
+  alone (no effect, because the movement gate still clears it); changing that gate changes the
+  shared contract behind 58 S3K `setControlLocked(true)` sites that expect an immobile player, so
+  it needs a per-site ROM audit, not a route fix.
+- The engine loads SSZ act 1 at 448777 against native 448755.
+
+Demos (`GameplayCaptureTool --input <sonic-tails bk2> --input-start 441757`, raw
+`raw-26-sonic-tails-cold-route-full`, frames 0-7149; before = `raw-21`):
+
+| Clip | Shows | Frames |
+| --- | --- | --- |
+| `31a-hpz-level-intro-run-in-before-after.mp4` | Level intro run-in: camera held at `$40` while Sonic is walked right | 0-150 |
+| `31b-hpz-teleporter-edge-no-landing-before-after.mp4` | Before: Sonic caught on the pad edge; after: runs past as native | 1280-1440 |
+| `31c-hpz-teleporter-grounded-lift-camera-follows.mp4` | Charge, lift with camera following, settle, unroll in place | 1550-1920 |
+| `26-hpz-sonic-tails-cold-route-full-uncut.mp4` | Uncut cold route from `$1601` entry through fight, altar and ending to SSZ | 0-7149 |
