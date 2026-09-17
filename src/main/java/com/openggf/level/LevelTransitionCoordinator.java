@@ -529,7 +529,7 @@ public class LevelTransitionCoordinator {
         this.inLevelTitleCardAct = act;
         this.inLevelTitleCardLevelGamestateResetRequested = resetLevelGamestateAtDisplay;
         this.inLevelTitleCardResetAdditionalDispatches =
-                resetAdditionalDispatches == com.openggf.game.TitleCardProvider.RESET_AT_NATIVE_WAIT_GATE
+                resetAdditionalDispatches == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE
                         ? resetAdditionalDispatches : Math.max(0, resetAdditionalDispatches);
         this.inLevelTitleCardResetPhaseOneDispatchOverlap =
                 Math.max(0, resetPhaseOneDispatchOverlap);

@@ -44,7 +44,7 @@ class TestS3kHeadlessInLevelTitleCardProgression {
                 GameServices.module().getTitleCardProvider();
         manager.reset();
         manager.initializeInLevel(8, 1);
-        manager.requestLevelGamestateResetAtInLevelDisplay(TitleCardProvider.RESET_AT_NATIVE_WAIT_GATE, 0);
+        manager.requestLevelGamestateResetAtInLevelDisplay(com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE, 0);
         player.setRingCount(88);
 
         boolean reset = false;

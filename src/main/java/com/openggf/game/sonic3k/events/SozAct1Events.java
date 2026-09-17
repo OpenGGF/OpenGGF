@@ -151,7 +151,7 @@ final class SozAct1Events extends Sonic3kZoneEvents {
             // loc_56324's AllocateObject gave Obj_TitleCard a later slot; Obj_TitleCardInit
             // queues its KosM art on the following object pass (sonic3k.asm:62108-62166).
             events.titleCardAllocationPending(false);
-            levelManager().requestInLevelTitleCard(8,1,true,com.openggf.game.TitleCardProvider.RESET_AT_NATIVE_WAIT_GATE);
+            levelManager().requestInLevelTitleCard(8,1,true,com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE);
         }
         if(events.foregroundRoutine()<8){
             if(events.foregroundRoutine()==0){camera().setVerticalWrapEnabled(true,0x800);events.foregroundRoutine(4);events.redrawRemaining(15);}

@@ -531,11 +531,11 @@ public class Sonic3kTitleCardManager
     @Override
     public void requestLevelGamestateResetAtInLevelDisplay(
             int additionalDispatches, int phaseOneDispatchOverlap) {
-        if (additionalDispatches == RESET_AT_NATIVE_WAIT_GATE) {
+        if (additionalDispatches == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE) {
             if (inLevelMode) {
                 resetLevelGamestateOnInLevelDisplay = true;
                 heldLevelCounterDispatchOwned = true;
-                resetLevelGamestateCountdown = RESET_AT_NATIVE_WAIT_GATE;
+                resetLevelGamestateCountdown = com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE;
             }
             return;
         }
@@ -951,7 +951,7 @@ public class Sonic3kTitleCardManager
             consumeLevelGamestateResetRequest();
         }
         if (resetLevelGamestateOnInLevelDisplay
-                && resetLevelGamestateCountdown == RESET_AT_NATIVE_WAIT_GATE
+                && resetLevelGamestateCountdown == com.openggf.game.TitleCardResetGates.NATIVE_WAIT_GATE
                 && isExternalInLevelWaitReady()) {
             // Obj_TitleCardWait clears Timer/Ring_count on the pass after the children
             // stop publishing movement (sonic3k.asm:62220-62235).
