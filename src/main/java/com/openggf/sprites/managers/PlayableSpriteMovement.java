@@ -5153,7 +5153,9 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		// as a sidekick (Tails CPU) facing latch in CPZ2.
 		int objectWidth;
 		if (useMultiPieceWidth) {
-			objectWidth = params.halfWidth();
+			MultiPieceSolidProvider multiPiece = (MultiPieceSolidProvider) ridingObject;
+			objectWidth = com.openggf.level.objects.ObjectCallbackDispatch.call(
+					objectManager, ridingObject, () -> multiPiece.getPieceBalanceWidthPixels(ridingPieceIndex));
 		} else if (ridingObject instanceof com.openggf.level.objects.AbstractObjectInstance objectInstance) {
 			objectWidth = objectInstance.getBalanceWidthPixels();
 		} else {

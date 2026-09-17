@@ -157,6 +157,14 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
     }
 
     @Override
+    public int getPieceBalanceWidthPixels(int pieceIndex) {
+        // Object-edge balance reads width_pixels, not the SolidObjectFull widths:
+        // ObjDat_EggCapsule sets $20 and the button's word_86B3E sets $10
+        // (sonic3k.asm:182155-182162), against solid half-widths $2B and $1B.
+        return pieceIndex == PIECE_BUTTON ? 0x10 : 0x20;
+    }
+
+    @Override
     public SolidObjectParams getPieceParams(int pieceIndex) {
         if (pieceIndex == PIECE_BUTTON) {
             return SolidObjectParams.of(BUTTON_HALF_WIDTH, BUTTON_AIR_HALF_HEIGHT, BUTTON_GROUND_HALF_HEIGHT);

@@ -99,6 +99,17 @@ public interface MultiPieceSolidProvider extends SolidObjectProvider {
     }
 
     /**
+     * Returns the piece's SST {@code width_pixels}, which the player's object-edge
+     * balance check reads (sonic3k.asm:22461-22466). Defaults to the solid
+     * half-width for providers whose pieces use the same value for both.
+     *
+     * @param pieceIndex 0-based index of the piece
+     */
+    default int getPieceBalanceWidthPixels(int pieceIndex) {
+        return getPieceParams(pieceIndex).halfWidth();
+    }
+
+    /**
      * Gives a provider that folds separately executed ROM child slots into one
      * engine instance a chance to defer a newly detected sloped landing until
      * the virtual child's dispatch. The resolver calls this only for a fresh
