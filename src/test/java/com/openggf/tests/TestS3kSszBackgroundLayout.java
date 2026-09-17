@@ -23,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Closes s3k-known-bugs #41 — "the Sky Sanctuary background plane renders flat sky in both BG
- * modes" — by deciding it from the ROM's own act-1 background layout rather than from a frame.
+ * The Sky Sanctuary act-1 background layout, decoded from the ROM, and the two different things it
+ * says about the two background modes.
  *
  * <p>The layout for {@code $A00} lives at {@code LevelPtrs} index {@code $0A * 2 + 0}
  * ({@code $9D5C0 + $50}) and is uncompressed: a four-word header
@@ -32,19 +32,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * per-row pointers into the same {@code $1000}-byte block, based at {@code $8000} in RAM. Act 1's
  * background is 60 columns by 22 rows of 128-pixel chunks, so it covers Y {@code $000}-{@code $AFF}.
  *
- * <p>Decoded here, rows 0-2 ({@code Y $000}-{@code $17F}) and rows 18-21
- * ({@code Y $900}-{@code $AFF}) are a <em>single repeated chunk id</em> across all sixty columns,
- * while rows 3-17 carry between three and fifteen distinct ids each. The background layer is
- * therefore genuinely featureless over the top and bottom bands of the layout and structured only
- * in the middle.
+ * <p><b>Plain mode is correct.</b> {@code sub_57A60}'s plain framing puts the background at
+ * {@code Camera_Y + $160}; the arrival camera {@code SSZ1_ScreenInit} forces is {@code $F49}, and
+ * the Y wrap Sky Sanctuary runs makes that {@code $10A9 mod $1000 = $A9} — background row 1, one of
+ * the rows that is a single repeated chunk across all sixty columns. Flat sky at the arrival is the
+ * shipped layout, not a sampling fault.
  *
- * <p>{@code sub_57A60}'s plain mode puts the background at {@code Camera_Y + $160}. The arrival
- * camera that {@code SSZ1_ScreenInit} forces is {@code $F49}, and the Y wrap Sky Sanctuary runs
- * ({@code -$100}..{@code $1000}) makes that {@code $10A9 mod $1000 = $A9} — background row 1, one
- * of the single-chunk rows. Flat sky at the arrival is the shipped layout, not a sampling fault.
- *
- * <p>What the cases below actually check is the thing that was open: that the engine's background
- * layer holds the ROM's rows at all, so the structured band is reachable.
+ * <p><b>Cloud mode is not.</b> {@code loc_5786A}, {@code loc_57946} and {@code loc_5799A} each load
+ * a literal {@code move.w #$1C00,d1} before {@code Refresh_PlaneFull} / {@code Draw_TileRow}, and
+ * {@code loc_5799A} passes {@code moveq #$20,d6} (32 cells, the full 512-pixel plane width). So
+ * cloud mode reads layout columns 56-59 every frame regardless of the camera, and those are exactly
+ * the columns that hold the cloud band. The engine derives its columns from the camera and so draws
+ * sky. That is s3k-known-bugs #41; the case below pins the window a fix has to target.
  */
 @RequiresRom(SonicGame.SONIC_3K)
 class TestS3kSszBackgroundLayout {
@@ -56,6 +55,10 @@ class TestS3kSszBackgroundLayout {
     /** The SSZ camera wrap {@code loc_45744} opens and {@code Camera#setVerticalWrapEnabled} owns. */
     private static final int Y_WRAP = 0x1000;
     private static final int CHUNK_PIXELS = 128;
+    /** {@code move.w #$1C00,d1}: {@code $1C00 >> 7}. */
+    private static final int CLOUD_WINDOW_FIRST_COLUMN = 56;
+    /** {@code moveq #$20,d6}: 32 cells is four 128-pixel chunks. */
+    private static final int CLOUD_WINDOW_COLUMNS = 4;
 
     @AfterEach
     void reset() {
@@ -112,6 +115,41 @@ class TestS3kSszBackgroundLayout {
         }
         assertEquals(15, structuredRows,
                 "every BG row from 3 to 17 carries at least three distinct chunk ids");
+    }
+
+    /**
+     * {@code loc_5799A}'s {@code move.w #$1C00,d1} with {@code moveq #$20,d6} pins the cloud-mode
+     * plane to layout columns {@code $1C00 >> 7 = 56} through 59, four chunks tiling the whole
+     * 512-pixel plane. Those four columns carry the cloud band in rows 3-7 and nothing anywhere
+     * else, which is why sampling them from the camera instead produces flat sky: at those rows,
+     * columns 0-22 and 43-55 are entirely the single sky chunk.
+     */
+    @Test
+    void theCloudBandLivesOnlyInTheFourColumnsTheRomPinsTheCloudPlaneTo() throws IOException {
+        int[][] layout = romBackgroundLayout();
+        Set<Integer> skyAndBlank = new LinkedHashSet<>();
+        for (int row = 0; row < layout.length; row++) {
+            for (int column = CLOUD_WINDOW_FIRST_COLUMN;
+                    column < CLOUD_WINDOW_FIRST_COLUMN + CLOUD_WINDOW_COLUMNS; column++) {
+                int id = layout[row][column];
+                if (row >= 3 && row <= 7) {
+                    assertTrue(id != 0x00 && id != 0x02,
+                            "cloud-window row " + row + " column " + column + " carries cloud art");
+                } else {
+                    skyAndBlank.add(id);
+                }
+            }
+        }
+        assertEquals(Set.of(0x00, 0x02), skyAndBlank,
+                "outside rows 3-7 the cloud window is only the sky and blank chunks");
+
+        // The camera-derived columns the engine uses instead, at the same rows.
+        for (int row = 1; row <= 8; row++) {
+            for (int column = 0; column <= 22; column++) {
+                assertEquals(0x02, layout[row][column],
+                        "row " + row + " column " + column + " is the flat sky chunk");
+            }
+        }
     }
 
     /**

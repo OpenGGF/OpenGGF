@@ -391,8 +391,8 @@ Still open — the named slice must resolve each **before** building on it:
 | Implemented | Slices 0, 1, 1b and 2 delivered, and 43 of slice 3's 154 placements (the ten `$79` pads, the eight `$7F` floating platforms and the twenty-five `$7E` collapsing columns with their debris): placement census, runtime state, screen init, the whole `sub_575EA` bounds machine short of boss allocation, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, and the act-1 background — both modes, the four-routine machine, the cloud oscillator, the five roaming clouds, the ten solid cloud platforms and the six AniPLC scripts |
 | Cold-reachable | Unchanged by slice 3 so far: the new objects all sit past the bridge and no route reaches them yet, so they are exercised from star-post checkpoint entries. Act 1's arrival and cutscene run from a cold load and open the route: the bridge clears `Events_bg+$05` and the camera limits become `0 … $19A0`. Everything from the GHZ arena on is not started. Act 2 still loads with no events |
 | Rewind-verified | One spot exercised, in the sky (slice 2): capture mid-swing inside the cloud band, step, restore, compare, replay forward, compare again. It caught two real defects. The arrival and cutscene spots are still owed |
-| Native behaviour matched | The act-1 background layout is decoded from the ROM and matched against the engine's layer, which closes the flat-sky question (rows 0-2 and 18-21 are one repeated chunk; the arrival camera selects row 1). Placement/ring decode pinned to the ROM; the arrival's forced camera, player offset and rise arithmetic match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference against fixture `hpz` row 0 recorded as open. No SSZ native probe yet |
-| Visually matched | No new capture for slice 3 yet: the pad, platform and column art is registered and asserted but has not been photographed, and the structured background band (layout rows 3-17) has still never had a camera in it. Arrival and cutscene inspected frame by frame in the captures below; the background is inspected in the slice 2 clips at 320 and wide; the Death Egg's palette and children are filed as gaps |
+| Native behaviour matched | The act-1 background layout is decoded from the ROM and matched against the engine's layer. That settles plain mode (rows 0-2 are one repeated chunk; the arrival camera selects row 1) and exposes a cloud-mode defect: the ROM pins that plane to layout columns 56-59 and the engine reads camera-derived ones (s3k-known-bugs #41). Placement/ring decode pinned to the ROM; the arrival's forced camera, player offset and rise arithmetic match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference against fixture `hpz` row 0 recorded as open. No SSZ native probe yet |
+| Visually matched | No new capture for slice 3 yet: the pad, platform and column art is registered and asserted but has not been photographed, and the cloud band has still never had a camera in it — and would render wrong if it did. Arrival and cutscene inspected frame by frame in the captures below; the background is inspected in the slice 2 clips at 320 and wide; the Death Egg's palette and children are filed as gaps |
 
 Out of scope, recorded as dependencies: DEZ presentation/route after `$B00` (DEZ campaign, which
 also owns the mislabelled `ssz*` fixtures); `sub_5B18E`, `Obj_Ending`, credits and the Knuckles
@@ -705,8 +705,8 @@ Same worktree, ROM and Maven wrapper as slices 0-2. This entry covers the two ca
 the first three inventory families of slice 3; the rest of slice 3 is **not** done and is listed at
 the end.
 
-**Carry-over (i): s3k-known-bugs #41, the flat background plane — answered from the ROM, no probe
-needed.** The `$A00` level layout (`LevelPtrs` index `$0A * 2`, ROM `$A458E`) is uncompressed: a
+**Carry-over (i): s3k-known-bugs #41, the flat background plane — answered from the ROM, and the
+answer is split.** The `$A00` level layout (`LevelPtrs` index `$0A * 2`, ROM `$A458E`) is uncompressed: a
 four-word header (`FG cols`, `BG cols`, `FG rows`, `BG rows`) then interleaved per-row pointers
 based at `$8000`. Act 1's background is **60 columns by 22 rows** of 128-pixel chunks, so it covers
 `Y $000`-`$AFF`. Decoded:
@@ -724,10 +724,34 @@ for the bottom of the level. `TestS3kSszBackgroundLayout` decodes all of this fr
 the case that could have disagreed, compares the engine's background layer with the ROM rows column
 for column — 22 × 60 cells. It matches, so the layer is loaded and addressed correctly.
 
-The bug entry is rewritten rather than deleted, because half of it survives: nothing has yet put a
-camera inside `Y $180`-`$8FF`, so the part of the background that is *not* plain sky has still never
-been inspected on a moving frame. That is a missing observation, not a suspected defect, and the
-matrix's "BG: cloud band" visual claim stays open on those terms.
+**But that only covers plain mode, and cloud mode has a real defect.** This was corrected after the
+entry was first written, from a disassembly reading that was then verified here against
+`sonic3k.asm` and the ROM. `SSZ1_BackgroundInit`'s cloud branch (`loc_5786A`), `loc_57946` and
+`loc_5799A` each load a literal `move.w #$1C00,d1` before `Refresh_PlaneFull` / `Draw_TileRow`, and
+`loc_5799A` passes `moveq #$20,d6` — 32 cells, the full 512-pixel plane B width. `$1C00 >> 7 = 56`
+and four chunks tile the plane, so **cloud mode reads layout columns 56-59 every frame regardless of
+the camera**; `sub_57A60` never writes `Camera_X_pos_BG_copy`, so that word is stale and all
+horizontal motion comes from the `HScroll_table` fan. Decoding those four columns confirms it: rows
+3-7 carry chunks `$7A $7B $7C $7D $7E $7F $80 $81 $82 $83 $84 $86`, and every other row of that
+window is the sky chunk `$02` or blank `$00`. The engine derives its columns from the camera
+(SSZ1's camera X range `0`-`$19A0` is columns 0-52), and at background rows 1-8 columns 0-22 and
+43-55 are entirely chunk `$02` — so it draws the right pixels from the wrong columns, and the whole
+ascent from about `Camera_Y $E80` down to `Camera_max_Y_pos $BC0` is flat when it should be cloud.
+
+So s3k-known-bugs #41 is **not** closed: it is rewritten as the wrong-column defect, with the fix
+shape (pin the cloud plane's layout X to `$1C00`; leave plain mode camera-derived, where
+`Reset_TileOffsetPositionEff` really does load `Camera_X_pos_BG_copy`). `TestS3kSszBackgroundLayout`
+gained a case pinning the four-column window a fix has to target. The exact renderer site that picks
+BG columns is not yet identified, so no fix is attempted in this entry. A second, independent
+question is also still open: whether plain mode below `Camera_Y $800` renders the separate temple
+cluster at columns ~9-52, rows 4-17 — no capture has had a camera there either.
+
+**Method note.** The first version of this entry closed #41 outright as "correct behaviour plus a
+missing observation". That was wrong, and it was wrong in the direction that retires a defect. The
+decode that produced it was real and is unchanged; what it could not see is that the two BG modes
+index the layout by different rules, so evidence about the row the arrival selects says nothing
+about the columns the cloud path reads. A decode that explains the symptom is not yet a verdict on
+the routine that produces it.
 
 **Carry-over (ii): the overlapping Sonic and Knuckles at ~3 s of
 `04a-ssz-sky-and-roaming-clouds-320.mp4` — ROM behaviour; the box below them was the real defect.**
@@ -842,8 +866,40 @@ starting point that must be re-read against the ASM before coding:
 Also owed for this slice: the census test's concrete-class assertions (the file was being edited by
 another lane while this work ran, so it was left alone); the rewind spot; the 320-plus-wide and
 donor breadth rows; a cold route that actually reaches a pad past the bridge; and the demo clips.
-Open question 9 (`$75`/`$76`/`$7B`/`$7C` subtype bits) and open question 10 (EggRobo
-`Perform_Art_Scaling`) are untouched and must still be decoded from the routines first.
+**Open questions 9 and 10 are answered** by two disassembly readings delivered after this entry's
+implementation work, relayed through the lead. They are secondhand: re-read each cited line before
+writing a test from them. They have not been used to write any code in this entry.
+
+- **9, subtype bits.** `$7C` and `$7B` read **only bit 7** (`tst.b subtype / bmi`), and set means
+  *never collapses*; bits 0-6 are unread. `$75` reads bit 7 (clear = a `$30`-wide pendulum bar on
+  `Gradual_SwingOffset(#$20000,#$821)` + `$41`; set = a width-8 hub rotating ±1 per frame by status
+  bit 0, which also forces the player's facing on grab and enables a `SonicOnObjHitFloor` release at
+  `x_vel ±$800`) **and bits 0-1** as the arc's chain length, `6 + (subtype & 3)`. `$76` reads
+  **only bit 0**, and only inside its invisible carrier child, selecting `width_pixels $60` or
+  `$A0` (solid half-width `$6B` or `$AB`). `$74` and `$7A` read no subtype at all. The only ROM
+  clock in that whole set is `(Level_frame_counter+1)` bit 0, gating `$74`'s proximity scan to
+  alternate frames.
+- **10, `Perform_Art_Scaling`.** Inputs are `$40(a0)` (the scale byte, clamped to `$1C` by
+  `sub_2468A` and written into `mapping_frame`), `anim(a0)` (source `+= anim * $1000` in
+  `sub_246DA`), `$42(a0)` (the scaled-art base, `ArtScaled_EggRoboFly` `$17B6E0`), `art_tile(a0)`
+  (offset by the running VRAM slot `_unkF740`) and `$3A(a0)` (the DMA destination). `word_2464A`
+  (`$2464A`, 32 words) is the per-level VRAM cell budget; over `$80` the object is skipped for the
+  frame. The fly-by's scale falls `$7F, $7C, $79, …` three per frame and sticks at 4.
+
+**Two corrections to this plan's EggRobo summary, from the same reading.** The plan's rules box and
+slice-3 row say low nibble 4 is "the shooter, gate `V_int_run_count+3 & $F`". Both halves are wrong:
+low nibble **4 is the animal releaser** (`loc_918FC` → `loc_915F6` → `loc_917C0` → `Obj_Animal`),
+which releases one animal every sixteen frames — *that* is what the `V_int_run_count+3 & $F` gate
+times — and converts into an ordinary fighter after five releases. The laser belongs to the
+fighter's gun child and is gated on `|y_pos(EggRobo) - y_pos(Player_1)| <= 8` (`cmpi.w #8,d3 /
+bhi`), with a `$5F`-frame cooldown and a `$38` bit-1 handshake; there is no shot object id, the shot
+is the bare code pointer `loc_91756`. `_unkFA82` is confirmed: a word bitmask at `$FFFFFA82`, bit
+index `subtype >> 4`, set by the fly-by at `loc_91570` and read only by the fighter's `sub_91914`,
+never cleared by EggRobo code — so the engine must clear it at level load. The `$79` spawner
+condition `x_pos >= $1A00 && y_pos < $680` is confirmed as this entry implemented it.
+
+`src/test/java/com/openggf/tests/TestS3kSszPlacementCensus.java` carries the same wrong "4 shooter"
+comment on its `$A0` rows; it is corrected here, without touching the assertions.
 
 | Command (all `-Dmse=off`, absolute `-Ds3k.rom.path`) | Result |
 | --- | --- |

@@ -100,9 +100,11 @@ class TestS3kSszPlacementCensus {
         rows.put("$7D:$00", 27);
         rows.put("$7E:$00", 25);
         rows.put("$7F:$00", 8);
-        // Obj_EggRobo: 24 subtype rows. Low nibble selects the behaviour
-        // (0 fly-by, 2 fighter, 4 shooter); the high nibble is the _unkFA82
-        // pairing bit index (loc_91570 / sub_91914 / loc_915F6).
+        // Obj_EggRobo: 24 subtype rows. off_9186E dispatches on the low nibble:
+        // 0 = the scaled fly-by, 2 = the fighter, 4 = the animal releaser
+        // (loc_918FC -> loc_915F6 -> loc_917C0), which turns into a fighter after
+        // five releases. The high nibble is the _unkFA82 pairing bit index that
+        // loc_91570 sets and sub_91914 reads.
         rows.put("$A0:$00", 1);
         rows.put("$A0:$02", 1);
         rows.put("$A0:$04", 3);
