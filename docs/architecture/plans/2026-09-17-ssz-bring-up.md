@@ -333,6 +333,20 @@ Written together with the [LRZ](2026-09-17-lrz-bring-up.md), [SSZ](2026-09-17-ss
   DEZ lands first. SSZ does not use it.
 - **Clock-seeded RNG/aim** (`V_int_run_count`: Mecha Sonic, DEZ turrets as in DDZ) needs a declared
   seed for movie-route matching until the full cold chain supplies it; label such evidence seeded.
+- **Shared ring-sentinel fix, owned by LRZ (`3418eba6e`).** Every S3K ring list begins with a
+  `(0,0)` record that `Load_Rings` (`loc_E8BE`) always steps over, because its scan starts at
+  `max(Camera_X - 8, 1)`; the engine's window floor is `max(cameraX - 8, 0)` and so spawned it as a
+  real ring wherever the camera reaches X 0 — which SSZ1 does once the cutscene bridge retracts.
+  The LRZ branch fixes it in shared `Sonic3kRingPlacement` and it reaches this branch at merge
+  time, dropping one ring from every SSZ act's live set. **SSZ does not make this edit** (it would
+  duplicate the fix). The SSZ obligation is that no test pins the sentinel-inclusive number
+  silently: `TestS3kSszPlacementCensus#ringRecordsMatchTheRomIncludingTheLeadingZeroRecord` now
+  decodes `SSZ1_Rings`/`SSZ2_Rings` from the ROM itself, asserts the collectible totals the ROM
+  allows (**179** act 1, **0** act 2), and accepts the loader either matching those already or
+  carrying exactly one leading `(0,0)` sentinel, which it asserts *as* a sentinel with the message
+  naming `3418eba6e`. The test is correct on both sides of the merge and turns red if the extra
+  record is ever anything but that sentinel. The slice 0 gap entry in
+  [s3k-known-bugs](../../status/s3k-known-bugs.md) closes when the merge lands.
 - **Knuckles trace testing is out of scope (user decision 2026-09-17).** One Knuckles replay class
   exists (`TestS3kKnucklesLbz2BigArmTraceReplay`); the `s3k-knuckles-complete-superemeralds` run has no
   segment classes. A campaign may add one where cheap, but owes no Knuckles replay frontier; Knuckles
@@ -675,3 +689,12 @@ scroll-verified and not visually verified.
 At 800 px the roaming clouds occupy only the left ~460 px, because `sub_5758A`'s `& $1FF` puts every
 cloud within 512 screen pixels of the camera regardless of viewport. That is the recorded
 presentation consequence of a screen-space ROM constant on a wide viewport; the geometry is native.
+
+**Ring-sentinel expectation, checked on both sides of the LRZ merge (2026-09-17).** The census
+ring test now decodes `SSZ1_Rings`/`SSZ2_Rings` from the ROM and asserts the totals `loc_E8BE` can
+reach — 179 and 0 — then compares the loader against them, accepting exactly one leading `(0,0)`
+sentinel while LRZ `3418eba6e` is in flight. Both branches were exercised: as written it is
+`7 tests, 0 failures, 0 skips` against today's loader (sentinel present), and with the loader's
+first record temporarily trimmed away in the test to stand in for the post-merge shape it is again
+`7 tests, 0 failures, 0 skips`. The simulation was reverted immediately. SSZ makes no edit to
+`Sonic3kRingPlacement`.

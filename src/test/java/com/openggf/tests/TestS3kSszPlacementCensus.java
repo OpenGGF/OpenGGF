@@ -191,27 +191,69 @@ class TestS3kSszPlacementCensus {
     }
 
     /**
-     * Ring lists: SSZ1 holds 180 four-byte records, the first of which is {@code (0,0)}; SSZ2 holds
-     * only that record. {@code loc_E8BE} starts its scan at {@code max(Camera_X - 8, 1)} and
-     * advances while the cursor X is below it, so the {@code (0,0)} record is always stepped over:
-     * the ROM never makes it collectible. The engine's window floor is {@code max(cameraX - 8, 0)}
-     * (RingManager.RingPlacement#ringWindowStart), which admits it at {@code Camera_X <= 8}; SSZ1
-     * reaches {@code Camera_min_X = 0} after the cutscene bridge, so this is recorded as a gap.
+     * Ring lists. The ROM's {@code SSZ1_Rings} holds 180 four-byte records, the first of which is
+     * {@code (0,0)}, and {@code SSZ2_Rings} holds only that record. {@code loc_E8BE} starts its
+     * scan at {@code max(Camera_X - 8, 1)} and advances while the cursor X is below it, so the
+     * {@code (0,0)} record is always stepped over: the ROM never makes it collectible. The
+     * collectible totals are therefore 179 and 0.
+     *
+     * <p>The expectations below are decoded from the ROM bytes here, independently of
+     * {@code Sonic3kRingPlacement}, and the loader is then compared against them. The loader is
+     * allowed to still carry the sentinel while the shared fix is in flight: the LRZ campaign's
+     * {@code 3418eba6e} drops it from {@code Sonic3kRingPlacement} for every S3K act and reaches
+     * this branch at merge time. Until then the extra record is asserted as exactly that — a
+     * sentinel the ROM skips — rather than as a ring, so the numbers here stay correct on both
+     * sides of the merge. See the plan's cross-campaign section.
      */
     @Test
     void ringRecordsMatchTheRomIncludingTheLeadingZeroRecord() throws IOException {
-        Sonic3kRingPlacement placement = new Sonic3kRingPlacement(rom());
-        List<RingSpawn> act1 = placement.load(SSZ, 0);
-        assertEquals(180, act1.size(), "SSZ1 ring records");
-        assertEquals(0, act1.get(0).x());
-        assertEquals(0, act1.get(0).y());
-        assertEquals(179, act1.stream().filter(ring -> ring.x() != 0 || ring.y() != 0).count(),
-                "positioned SSZ1 rings");
+        List<int[]> act1Records = ringRecords(0x1F9616);
+        List<int[]> act2Records = ringRecords(0x1F98E8);
+        assertEquals(180, act1Records.size(), "SSZ1_Rings records in the ROM");
+        assertEquals(0, act1Records.get(0)[0]);
+        assertEquals(0, act1Records.get(0)[1]);
+        assertEquals(1, act2Records.size(), "SSZ2_Rings records in the ROM");
+        assertEquals(0, act2Records.get(0)[0]);
+        assertEquals(0, act2Records.get(0)[1]);
 
-        List<RingSpawn> act2 = placement.load(SSZ, 1);
-        assertEquals(1, act2.size(), "SSZ2 ring records");
-        assertEquals(0, act2.get(0).x());
-        assertEquals(0, act2.get(0).y());
+        long act1Collectible = act1Records.stream().filter(r -> r[0] != 0 || r[1] != 0).count();
+        long act2Collectible = act2Records.stream().filter(r -> r[0] != 0 || r[1] != 0).count();
+        assertEquals(179, act1Collectible, "rings loc_E8BE can reach in SSZ1");
+        assertEquals(0, act2Collectible, "rings loc_E8BE can reach in SSZ2");
+
+        Sonic3kRingPlacement placement = new Sonic3kRingPlacement(rom());
+        assertRingsMatchRom(placement.load(SSZ, 0), act1Collectible, "SSZ1");
+        assertRingsMatchRom(placement.load(SSZ, 1), act2Collectible, "SSZ2");
+    }
+
+    /**
+     * The loader either already matches the ROM's collectible total, or still carries the single
+     * leading {@code (0,0)} sentinel that LRZ {@code 3418eba6e} removes. Anything else is wrong.
+     */
+    private static void assertRingsMatchRom(List<RingSpawn> loaded, long romCollectible, String act) {
+        long positioned = loaded.stream().filter(ring -> ring.x() != 0 || ring.y() != 0).count();
+        assertEquals(romCollectible, positioned, act + " positioned rings");
+        if (loaded.size() == romCollectible) {
+            return;
+        }
+        assertEquals(romCollectible + 1, loaded.size(),
+                act + " ring spawns: expected the ROM's " + romCollectible
+                        + ", or that plus the leading (0,0) sentinel pending LRZ 3418eba6e");
+        assertEquals(0, loaded.get(0).x(), act + " sentinel X");
+        assertEquals(0, loaded.get(0).y(), act + " sentinel Y");
+    }
+
+    /** Four-byte {@code (X, Y)} records up to the {@code $FFFF} terminator. */
+    private static List<int[]> ringRecords(int address) throws IOException {
+        RomByteReader reader = rom();
+        List<int[]> records = new java.util.ArrayList<>();
+        for (int offset = 0; ; offset += 4) {
+            int x = reader.readU16BE(address + offset);
+            if (x == 0xFFFF) {
+                return records;
+            }
+            records.add(new int[] {x, reader.readU16BE(address + offset + 2)});
+        }
     }
 
     /**
