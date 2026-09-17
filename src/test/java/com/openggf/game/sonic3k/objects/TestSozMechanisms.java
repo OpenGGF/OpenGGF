@@ -113,6 +113,13 @@ class TestSozMechanisms {
         restored.restoreRewindState(state);Sonic3kLevelTriggerManager.restore(signals);
         restored.update(1,p);assertEquals(2,SozZoneRuntimeState.trigger(1));
     }
+    @Test void landingGateUsesNativeWidthPixelsInsteadOfTheSolidCallerWidth() {
+        // Obj_SOZPushSwitch passes d1=$17 but sets width_pixels=$30; loc_1E154 lifts a rising
+        // player at dx=$17 (soz_completerun row 31153), which the d1-$B default would reject.
+        var o=new SozPushSwitchObjectInstance(new ObjectSpawn(300,100,0x45,1,0,false,0));
+        assertEquals(0x30,o.getTopLandingHalfWidth(null,o.getSolidParams().halfWidth()));
+    }
+
     @Test void cnzAndSozKeepSeparateOwnersForAllThreePointerSlots() {
         var cnz=new Sonic3kObjectRegistry() { @Override protected int currentRomZoneId() { return 3; } };
         var soz=new Sonic3kObjectRegistry() { @Override protected int currentRomZoneId() { return 8; } };
