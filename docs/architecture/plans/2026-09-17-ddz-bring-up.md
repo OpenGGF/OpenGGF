@@ -174,11 +174,11 @@ when the cold route reaches the exit, then push and remove the worktree.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Nothing DDZ-specific (data-only zone at `832554260`) |
-| Cold-reachable | Level load only |
-| Rewind-verified | Not started |
-| Native behaviour matched | Not started |
-| Visually matched | Not started |
+| Implemented | Controller, transformation, scroll/FG plane, asteroids, missiles, end boss both phases, wrap, defeat, exit request, ring-out death (2026-09-17) |
+| Cold-reachable | Seeded Sonic route from level start to the `$D01` request (`TestS3kDdzColdRoutes`, production-loop capture `raw-14`); unseeded entry diverges at 4178 |
+| Rewind-verified | Boss fight, first wrap and exit fade on the native route; mid-transformation and mid-flight on 34 breadth rows |
+| Native behaviour matched | Player x/y, camera and rings on all 10058 gameplay rows; boss exit routines on the native frames; slot load order around wraps |
+| Visually matched | Moving side-by-sides at entry, boss arrival, first wrap and exit; residual gaps in `s3k-known-bugs.md` (Doomsday entry) |
 
 Out of scope, recorded as dependencies: DEZ final boss → `$C00` (DEZ campaign); `$D01` ending and
 credits (ending campaign, which also owns the mislabelled `ddz` segments); level-select `$1700`.
