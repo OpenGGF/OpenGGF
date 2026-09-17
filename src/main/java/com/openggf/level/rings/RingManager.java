@@ -450,6 +450,16 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         placement.collected.or(BitSet.valueOf(bits));
     }
 
+    /**
+     * Wipes the collected and sparkle state of every placed ring, as a native loop that clears
+     * {@code Ring_status_table} does. Package-private: reached through {@link RingStatusTableWipe}
+     * so the Mod API surface is unchanged.
+     */
+    void wipeRingStatusTable() {
+        placement.collected.clear();
+        Arrays.fill(placement.sparkleStartFrames, -1);
+    }
+
     private static boolean cannotCollectRings(AbstractPlayableSprite player) {
         if (player == null || player.getDead()) {
             return true;

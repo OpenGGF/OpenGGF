@@ -19,7 +19,7 @@ import java.util.Objects;
  * {@link #appliedScreenShakeOffset()} is the word both events read this frame
  * and {@link #screenShake()} already holds the next one.
  */
-public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
+public final class HpzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
             S3kScreenShake.captureBytes() + Integer.BYTES + 6 * Short.BYTES + 7;
     /** {@code AnPal_HPZ}: {@code Palette_cycle_counter0} steps by 4 and wraps at {@code $28}. */
@@ -195,10 +195,10 @@ public final class HpzZoneRuntimeState implements S3kZoneRuntimeState {
      * cutscene allocates. They have no engine-wide owner, so the only HPZ writers and readers
      * share them here.
      */
-    public int cameraStoredMinX() { return cameraStoredMinX & 0xFFFF; }
-    public int cameraStoredMaxX() { return cameraStoredMaxX & 0xFFFF; }
-    public int cameraStoredMinY() { return cameraStoredMinY; }
-    public int cameraStoredMaxY() { return cameraStoredMaxY; }
+    @Override public int cameraStoredMinX() { return cameraStoredMinX & 0xFFFF; }
+    @Override public int cameraStoredMaxX() { return cameraStoredMaxX & 0xFFFF; }
+    @Override public int cameraStoredMinY() { return cameraStoredMinY; }
+    @Override public int cameraStoredMaxY() { return cameraStoredMaxY; }
 
     public void storeCameraBounds(int minX, int maxX, int minY, int maxY) {
         cameraStoredMinX = (short) minX;

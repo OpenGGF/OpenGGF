@@ -540,6 +540,16 @@ public class Sonic3kGameModule implements GameModule {
         return true;
     }
 
+    /**
+     * The Doomsday flight controller's init ({@code loc_81554}, sonic3k.asm:173281-173286) zeroes
+     * the whole Player 2 object before the first level frame, so a Sonic and Tails game plays the
+     * zone as Sonic alone.
+     */
+    @Override
+    public boolean isSidekickSuppressedForZone(int zoneId) {
+        return zoneId == com.openggf.game.sonic3k.constants.Sonic3kZoneIds.ZONE_DDZ;
+    }
+
     @Override
     public java.util.function.Function<com.openggf.game.PlayableEntity,
             com.openggf.level.objects.AbstractObjectInstance> getInvincibilityStarsFactory() {

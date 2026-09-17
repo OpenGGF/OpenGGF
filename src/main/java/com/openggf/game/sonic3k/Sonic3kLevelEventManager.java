@@ -487,12 +487,29 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new SozZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
+        } else if (zone == Sonic3kZoneIds.ZONE_DDZ) {
+            registry.install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(act, playerCharacter));
+            allocateDdzFlightController();
         } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)
                 || Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
             registry.install(new HpzZoneRuntimeState(zone, act, playerCharacter));
         } else {
             registry.clear();
         }
+    }
+
+    /**
+     * {@code DDZ_ScreenInit} (sonic3k.asm:118813-118826): {@code AllocateObject} the flight controller
+     * {@code loc_81492} before the level's first object pass; the {@code _unkEE98..EEA2} words start at
+     * zero in the fresh runtime state.
+     */
+    private void allocateDdzFlightController() {
+        if (!GameServices.hasRuntime() || GameServices.level() == null
+                || GameServices.level().getObjectManager() == null) {
+            return;
+        }
+        GameServices.level().getObjectManager().createDynamicObject(
+                com.openggf.game.sonic3k.objects.DdzFlightControllerObjectInstance::new);
     }
 
     private void installFixedDynamicObjects(int zone) {
