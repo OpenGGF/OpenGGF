@@ -440,6 +440,15 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 		if (focusedSprite == null) {
 			return;
 		}
+		// S2/S3K MoveCameraY masks only a local copy of y_pos
+		// (sonic3k.asm:38440-38446); their player control paths own the write
+		// (applyScreenYWrapValue). An object-held player skips those paths, so the
+		// camera crossing must not mask it. S1 LZ3/SBZ2 has no control-path mask
+		// and ScrollVertical writes Sonic on the crossing frame.
+		CameraRules rules = cameraRulesFor(focusedSprite);
+		if (rules != null && rules.playerControlAppliesVerticalWrapMask()) {
+			return;
+		}
 		// ROM masks only the y_pos word when Screen_Y_wrap_value is active
 		// (sonic3k.asm:21989-21992, 26233-26236; MGZ sets #$FFF at
 		// sonic3k.asm:102200). Preserve y_sub just like a 68000 word write.

@@ -3192,14 +3192,15 @@ Rejected or parked in this round:
   because of the +$18 gravity; with +$20 the same carry is exact. The ROM fall rows pin
   the root `y_sub` to $E000-$E7FF.
 - Narrowing the pre-commit `@ModApi` hook to declaration lines so a body-only `Camera`
-  edit needs no pin change: blocked in this session as a policy-hook change; the camera
-  gate is kept as a patch for the user.
+  edit needs no pin change: first blocked as a policy-hook change, then approved by the
+  user and landed as `32fcfffe6`; the camera gate followed as `ca2b99220`
+  (`soz_completerun` 29 -> 27 on develop, row 51860 cleared, S1 LZ3/SBZ2 and S3K MGZ
+  traces unchanged, signature pin unchanged).
 - Row 23637 (Sonic balances one frame early after a rolling landing, 21 animation
   errors): the engine's airborne floor probe at x-7 finds no solid tile under either the
   foot or the extension row, so the zero-height angle write in `FindFloor` (`loc_F282`)
   does not explain the ROM's Wait frame. The trace records no `next_tilt`/`tilt`, so this
   needs RAM evidence before a change.
 
-Still open (29 errors, branch as merged): the camera wrap write (rows 51860 and one
-more), the SST-order lost-ring phase (rows 45256-50720), Tails' push blip at rows
+Still open (27 errors after `ca2b99220`): the SST-order lost-ring phase (rows 45256-50720), Tails' push blip at rows
 5977-5990, the row-23637 balance above, and one Tails mapping frame at row 45184.
