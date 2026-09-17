@@ -101,7 +101,7 @@ final class SozConnectedMechanismRoute {
                     jump = false;
                 }
             }
-            case ROCK -> { right = true; jump = frame < 30; }
+            case ROCK -> { right = true; jump = false; }
             case SWITCH -> {
                 right = true;
                 if (chargedFrame < 0 && SozZoneRuntimeState.trigger(11) == 128) chargedFrame = frame;
