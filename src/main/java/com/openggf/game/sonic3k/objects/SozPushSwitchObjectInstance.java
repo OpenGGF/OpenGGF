@@ -123,6 +123,9 @@ public final class SozPushSwitchObjectInstance extends AbstractObjectInstance
     @Override public SolidObjectParams getSolidParams() { return new SolidObjectParams(23,16,17); }
     // loc_1E154 re-reads width_pixels=$30 (Obj_SOZPushSwitch), not the caller's d1=$17-$B.
     @Override public int getTopLandingHalfWidth(PlayableEntity player,int collisionHalfWidth) { return 0x30; }
+    // The switch's SolidObjectFull consumes its own a0.d6 standing bit for an airborne rider;
+    // a later object's solid call must not clear that rider on its behalf (sonic3k.asm:41070-41084).
+    @Override public boolean airborneRiderUnseatRequiresOwnCheckpoint(PlayableEntity player) { return true; }
     @Override public boolean isSolidFor(PlayableEntity player) { return !retained; }
     @Override public boolean carriesRiderOnHorizontalMove(PlayableEntity player) { return false; }
     @Override public SolidExecutionMode solidExecutionMode() { return SolidExecutionMode.MANUAL_CHECKPOINT; }

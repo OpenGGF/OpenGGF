@@ -125,6 +125,9 @@ public final class RocknBadnikInstance extends AbstractS3kBadnikInstance impleme
         }
         @Override public SolidObjectParams getSolidParams() { return SolidObjectParams.of(0x23, 0x10, 0x11); }
         @Override public boolean isSolidFor(PlayableEntity player) { return !isDestroyed(); }
+        // The shell's status(a0) push/standing bits live in its own SST; its engine spawn follows
+        // the walking body, so a spawn key would drop and re-find a push bit as it moves.
+        @Override public boolean usesInstanceSolidStateLatchKey() { return true; }
         @Override public boolean usesInclusiveRightEdge() { return true; }
         @Override public int getTopLandingHalfWidth(PlayableEntity player, int collisionHalfWidth) { return 0x18; }
         @Override public int getOnScreenHalfWidth() { return 24; }

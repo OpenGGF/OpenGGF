@@ -315,7 +315,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
      */
     private void spawnStarChild() {
         if (services().objectManager() != null) {
-            spawnChild(() -> new Sonic3kStarPostStarChild(this));
+            spawnFreeChild(() -> new Sonic3kStarPostStarChild(this));
         }
     }
 
@@ -360,7 +360,7 @@ public class Sonic3kStarPostObjectInstance extends AbstractObjectInstance
         // ROM: moveq #4-1,d1 / moveq #0,d2 / ... / addi.w #$40,d2 / dbf d1,...
         for (int i = 0; i < 4; i++) {
             int angleOffset = i * 0x40;
-            spawnChild(() -> new Sonic3kStarPostBonusStarChild(this, angleOffset, variant));
+            spawnFreeChild(() -> new Sonic3kStarPostBonusStarChild(this, angleOffset, variant));
         }
         ObjectRenderManager renderManager = services().renderManager();
         if (renderManager != null

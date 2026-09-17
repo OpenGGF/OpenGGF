@@ -1,5 +1,6 @@
 package com.openggf.level.rings;
 
+import com.openggf.game.ModApi;
 import com.openggf.audio.AudioManager;
 import com.openggf.audio.GameSound;
 import com.openggf.game.GameModule;
@@ -38,7 +39,7 @@ import java.util.List;
 /**
  * Handles ring collection state, sparkle animation, rendering, and lost-ring behavior.
  */
-@com.openggf.game.ModApi
+@ModApi
 public class RingManager implements RewindSnapshottable<RingSnapshot> {
     private static final System.Logger LOG = System.getLogger(RingManager.class.getName());
     private static final int MAX_ATTRACTED_RINGS = 32;
@@ -865,10 +866,22 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         for (AttractedRing ar : attractedRings) {
             if (!ar.active) {
                 ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
-                int objectSlotIndex = objectManager != null ? objectManager.allocateDynamicSlot() : -1;
-                if (objectManager != null && objectSlotIndex < 0) {
+                // Test_Ring_Collisions_AttractRing runs from the player's SST inside
+                // Process_Sprites, after Load_Sprites has filled first-free slots
+                // (sonic3k.asm:7884-7894). When the engine runs the player before the
+                // object load, reserve the SST after that load instead.
+                boolean deferSlot = objectManager != null
+                        && levelManager.objectsExecuteAfterPlayerPhysics();
+                int objectSlotIndex = objectManager != null && !deferSlot
+                        ? objectManager.allocateDynamicSlot() : -1;
+                if (objectManager != null && !deferSlot && objectSlotIndex < 0) {
                     return false;
                 }
+                if (deferSlot && !objectManager.hasFreeDynamicSlotForDeferredAllocation(
+                        pendingAttractedRingSlotCount())) {
+                    return false;
+                }
+                ar.slotAllocationPending = deferSlot;
                 ar.sourceIndex = sourceIndex;
                 ar.x = x;
                 ar.y = y;
@@ -1084,6 +1097,54 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         return false;
     }
 
+    /**
+     * Frees attracted rings whose sparkle finished on an earlier pass, so their
+     * {@code loc_1A934} {@code Delete_Current_Sprite} has already cleared the SST
+     * by the time a later fixed slot (the lightning shield after
+     * {@code Dynamic_object_RAM}) calls {@code AllocateObject} in the same frame
+     * (sonic3k.asm:35780-35790). The ring manager otherwise advances attracted
+     * rings after the object pass.
+     */
+    public void releaseAttractedRingsDeletingThisPass() {
+        if (renderer == null || renderer.getSparkleFrameCount() <= 0) {
+            return;
+        }
+        for (AttractedRing ar : attractedRings) {
+            if (ar.active && ar.collected
+                    && ar.sparkleAnimationFrame > renderer.getSparkleFrameCount()) {
+                deactivateAttractedRing(ar);
+            }
+        }
+    }
+
+    private int pendingAttractedRingSlotCount() {
+        int count = 0;
+        for (AttractedRing ar : attractedRings) {
+            if (ar.active && ar.slotAllocationPending) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Reserves the SSTs of rings attracted during this frame's player step, in
+     * attraction order, once the object load has taken its first-free slots.
+     */
+    public void assignPendingAttractedRingSlots() {
+        ObjectManager objectManager = levelManager != null ? levelManager.getObjectManager() : null;
+        if (objectManager == null) {
+            return;
+        }
+        for (AttractedRing ar : attractedRings) {
+            if (!ar.active || !ar.slotAllocationPending) {
+                continue;
+            }
+            ar.slotAllocationPending = false;
+            ar.objectSlotIndex = objectManager.allocateDynamicSlot();
+        }
+    }
+
     private void releaseAttractedRingSlots() {
         for (AttractedRing ar : attractedRings) {
             deactivateAttractedRing(ar);
@@ -1111,6 +1172,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         ar.xVel = 0;
         ar.yVel = 0;
         ar.objectSlotIndex = -1;
+        ar.slotAllocationPending = false;
         ar.collected = false;
         ar.sparkleStartFrame = -1;
         ar.mappingFrame = 0;
@@ -1246,6 +1308,7 @@ public class RingManager implements RewindSnapshottable<RingSnapshot> {
         int xSub, ySub;    // subpixel fraction (ROM: x_sub/y_sub, lower word of position long)
         int xVel, yVel;    // velocity in subpixels/frame (ROM: x_vel/y_vel, 16-bit signed)
         int objectSlotIndex = -1;
+        boolean slotAllocationPending;
         boolean collected;
         int sparkleStartFrame = -1;
         int mappingFrame;

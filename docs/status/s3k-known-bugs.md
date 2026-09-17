@@ -56,7 +56,7 @@ Entries should include:
 30. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
 31. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
 32. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
-33. [SOZ Recording: Remaining Replay Residue and Presentation Certification](#soz-recording-remaining-replay-residue-and-presentation-certification)
+33. [SOZ Recording: Presentation Certification](#soz-recording-presentation-certification)
 34. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
 35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
 36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
@@ -5795,12 +5795,12 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 
 ---
 
-## SOZ Recording: Remaining Replay Residue and Presentation Certification
+## SOZ Recording: Presentation Certification
 
-- **Location** — S3K SST slot allocation order and `LostRingObjectInstance` floor phase; S3K airborne landing tilt bytes; SOZ redraw and sprite-mask presentation
-- **Symptom** — `soz_completerun` replays all 59336 frames (the frame-34 Kosinski divergence and the module FIFO abort were the missing `PLCKosM_SOZ` submission, fixed) with 27 errors. Row 45256: one SOZ2 lost ring is collected a frame late and the count stays one low. Row 23637: Sonic balances one frame early after a rolling landing (21 animation rows). Rows 5977-5990 and 45184: Tails animation blips. Exact later Nemesis FIFO service timing for the final-boss PLC6D art is a shared service gap. SOZ redraw fidelity has engine A/B visibility checks at widths 320/528/800 but no native pixel certification; the sprite-mask post-processor clips whole tile rows, so sub-tile scanline parity is unverified; live GC stalls are not certified resolved.
-- **Suspected cause** — Lost rings test the floor when `(V_int_run_count + d7) & 7` is zero with `d7` the SST loop counter, and engine slot occupancy differs from Act 1 onward: at the row-45136 spill the ROM places the 32 rings in slots 6, 8, 9, 11, 12, 15, 26 and 29-53, the engine in 9-11, 13, 14, 16, 28 and 30-54, because the engine still holds objects in 6/8/12/15/26/29 (Hyudoro bodies, a floating pillar, still sprites) while the ROM holds a fading Hyudoro body, pillar, platform and sand rock in 10/13/14/16/28. The drift accumulates through SOZ2 lightning-shield sparks, attracted rings and Hyudoro fade-out bodies, so it is an SST-order programme rather than a ring fix (measured 2026-09-17 with `OGGF_SLOT_PROBE=1 OGGF_SLOT_PROBE_FULL=1`). For row 23637 the engine's airborne floor probe at x-7 finds no solid tile in the foot or extension row, so the cause is unconfirmed without `next_tilt`/`tilt` RAM evidence. The tails_mapping_frame blips at 5977-5990 restart Tails' walk script on alternating frames after the facing flip; from row 5979 the engine also sets Tails' push bit where the ROM status stays `$01`, so the residue is a solid-contact difference, not the animation table. See the SOZ plan sections "Replay follow-up: SOZ2 through the end boss" and "Replay follow-up: end-boss escape, capsule and residue".
-- **Removal condition** — `soz_completerun` has no physics errors (SST order parity for the lost-ring phase, landing tilt evidence for row 23637), and the pixel and scanline certifications recorded in the SOZ act matrices.
+- **Location** — SOZ redraw and sprite-mask presentation; Nemesis FIFO service timing for the final-boss PLC6D art
+- **Symptom** — `soz_completerun` replays all 59336 frames with no errors (the SOZ2 lost-ring slot phase closed on 2026-09-17; see the SOZ plan section "Replay follow-up: SOZ2 SST slot parity"). Exact later Nemesis FIFO service timing for the final-boss PLC6D art is a shared service gap. SOZ redraw fidelity has engine A/B visibility checks at widths 320/528/800 but no native pixel certification; the sprite-mask post-processor clips whole tile rows, so sub-tile scanline parity is unverified; live GC stalls are not certified resolved.
+- **Suspected cause** — No native pixel or scanline oracle has been recorded for SOZ redraw and the sprite mask; the PLC6D service timing is not observed by the trace.
+- **Removal condition** — the pixel and scanline certifications recorded in the SOZ act matrices, and PLC6D service timing observed and matched.
 
 ---
 

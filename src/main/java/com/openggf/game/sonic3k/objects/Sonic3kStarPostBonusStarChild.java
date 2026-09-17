@@ -7,6 +7,7 @@ import com.openggf.game.sonic3k.objects.Sonic3kStarPostObjectInstance.BonusStarV
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectRenderManager;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
@@ -183,6 +184,17 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
 
         // Update animation
         updateAnimation();
+
+        // loc_2D5B6 tail-calls Sprite_CheckDeleteTouch3 with the star's own x_pos
+        // against Camera_X_pos_coarse_back (sonic3k.asm:37359-37372), so an
+        // orbiting star leaves on its own once its side of the orbit scrolls out.
+        var camera = services().camera();
+        if (camera != null) {
+            int coarseBack = ((camera.getX() & 0xFFFF) - 0x80) & 0xFF80;
+            if ((((currentX & 0xFF80) - coarseBack) & 0xFFFF) > 0x280) {
+                ObjectLifetimeOps.expireDynamic(this);
+            }
+        }
     }
 
     /**
