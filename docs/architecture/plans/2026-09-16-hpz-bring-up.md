@@ -164,14 +164,82 @@ Deferred or approximated: `Current_music+1` writes, the `Target_palette_line_2` 
 teleporter, dizzy stars over the dust) use standalone sheets; the slot-48 copy keeps an
 existing occupant instead of overwriting it; the `loc_64D5C` camera fraction starts at
 zero; `loc_64DAA` locks controller 1 without the ROM's stale logical word. Not verified:
-reload of the copy after `Delete_Sprite_If_Not_In_Range`, the dust child under rewind,
-Tails-alone and widescreen routes, and a cold route into the fight.
+reload of the copy after `Delete_Sprite_If_Not_In_Range`, Tails-alone and widescreen
+routes, and a cold route into the fight (the dust child is covered since `a69c34437`).
 
 Evidence (worktree, all ROMs by absolute path, `maven_queue.py -Dmse=off`): focused HPZ
 and required S3K set 119 tests, 0 failures, 0 skips; `-Pguards` 669 tests, 0 failures,
 0 skips on `1cb447aab`. The first guard run on `020611217` failed 5 guards (rewind
 override/annotation, coverage, parent-dependent, raw `addDynamicObject`, static state),
 including inherited teleporter entries; all were resolved in `1cb447aab`.
+
+### 2026-09-17 native fight sequence and review fixes
+
+Commit `a69c34437`. `TestS3kHpzKnucklesFightNativeSequence` seeds the state of `hpz22_2` row
+`$287F` (movie frame 444437) after the level's first frame and plays the complete-run BK2.
+Its expected values are the native slot-48 observations (`native/probe-fight`) and the
+`_unkFAB8` column of `probe-fight`/`probe-altar`/`probe-ending`; movie frame N is row
+N - 434070.
+
+The first seeded probe diverged at rows `$2925` (glide end one frame early), `$294E`
+(routine 4 instead of 0) and `$29B7` (Player 1 "falls through the floor"). None of these was
+fight logic. A per-frame comparison against the trace's player rows showed three seed defects:
+the level's first frame (initial player assembly) put Tails back at Player 1 - `$20` with zero
+speed after the seed was written; the fixture had no rings, so Knuckles' `HurtCharacter` killed
+the players (the "floor" fall at `$29B7` was Sonic's death arc); and `Level_frame_counter` was
+unseeded, so Tails' auto-jump gate fired on other frames. With the seed written after the first
+frame, Player 1's 64-entry position record, `Ring_count $27`, `Level_frame_counter $A77`,
+`Camera_max_Y_pos $394` and the `loc_85CA4` wait word at 92 (created at row `$2863`), the engine
+matched every Player 1/Player 2 position and speed and every Knuckles value until row `$29CD`.
+That row was a real bug: `loc_64090` used the jump's all-hurt table instead of `off_640CC`, so
+Tails beside the glide was hurt instead of hitting Knuckles. After the fix, every compared
+field matches through row `$331D` except camera X from `$305A`.
+
+| Row | Routine | HP | Knuckles | Engine |
+| --- | --- | --- | --- | --- |
+| `$28A5` | 2 | 8 | `$11F0,$42C` | same row |
+| `$28B2`, `$2969`, `$29CD`, `$2A3D`, `$2AE9`, `$2B4C`, `$2BBE` | `$16` | 7, 6, 5, 4, 3, 2, 1 | per hit | same rows and positions |
+| `$2A69` / `$2AA5` | `$12` / `$14` | 4 | `$1122,$42C` / `$1122,$430` | same; dust created `$2A79`, deleted `$2AA5` |
+| `$2C2F` | `$18` | 0 | `$11B0,$3E3` | same |
+| `$2C5B`, `$2CA8`, `$2D28`, `$2D38`, `$2D40` | `$1A`-`$22` | 0 | `$112C,$42C` | same |
+| `$2DAE` | `$24` | 0 | `$1620,$3AC` | same |
+| `_unkFAB8` | `$28DC`=1, `$2DAE`=0, `$2F2E`=1, `$3054`=3, `$32B5`=`$F`, `$32B6`=`$1F`, `$331D`=`$3F` | | | same rows |
+
+All 41 routine/HP transitions between `$287F` and `$2DAE` match row and position. Later
+comparison (scratch probe, not asserted): `$37DC`=`$7F` matches; bit 7 is set at `$386C`
+against native `$386D`, and the ending then stays one frame ahead.
+
+Remaining differences are not in the fight objects:
+
+- **Camera X from `$305A`, 1 px late.** `loc_64D5C` adds speed into the `Camera_X_pos`
+  longword. The native low word is `$6400`-`$67FF`, left by an earlier zone, since only the
+  title screen clears `Camera_RAM`. The engine camera has no low word, and a cold level-select
+  start would also have 0.
+- **Player 1's jump at `$331F`.** `loc_64DAA` sets `Ctrl_1_locked` while `Ctrl_1_logical`
+  still holds the jump button. The engine latches the logical word but movement reads the
+  unlocked effective input, so the jump is cut short (shared input path, not changed here).
+- **Lag frame at `$33DD`.** `Level_frame_counter` does not advance for one frame, which puts
+  every later native event one frame behind. The seeded fixture does not model hardware timing.
+
+The same pass applied the review fixes:
+
+- **Hurt.** `HurtCharacter` reads `Ring_count` only for Player 1, so a sidekick is knocked
+  back and never killed. Player 1 with rings drops them.
+- **Explosions.** `CreateBossExp14` is `Obj_Wait` + `Obj_NormalExpControl`: normal explosions
+  stay at `($1880,$3D0)`, outlive Knuckles, and draw `Random_Number` only after a child exists.
+  `Obj_Explosion` routine 2 animates and draws on its first pass, including the ceiling
+  explosions. The native altar frames show the same normal-explosion puffs.
+- **Slot 48.** The copy runs on its creation frame; a probe saw slot 4 placed and slot 48
+  initialised after one frame. The occupied-slot fallback now logs a warning.
+- **Art and ROM reads.** The player DPLC layout is a `StandaloneArtEntry` field, and ROM
+  script slices are cached per instance.
+- **Bot-route assertions.** The pan now asserts the exact `$1581` (this route's pan starts from
+  an odd camera X) and exactly 30 fragments.
+
+Evidence on `a69c34437` (`maven_queue.py -Dmse=off`, ROM by absolute path): focused set
+`TestS3kHpz*`, `TestHpz*`, `TestSonic3kTitleCardSublevelMappings`, `TestSonic3kObjectArtProvider`
+and the four required S3K classes, 21 classes, 273 tests, 0 failures, 0 skips; `-Pguards`
+669 tests, 0 failures, 0 skips. The sequence test fails when the `off_640CC` fix is reverted.
 
 ## Demo captures
 
@@ -191,10 +259,10 @@ including inherited teleporter entries; all were resolved in `1cb447aab`.
 | `21-hpz-sonic-tails-cold-route-to-fight-uncut.mp4` | Uncut cold Sonic + Tails route from `$1601` entry to the fight floor (current frontier) | `--input <sonic-tails complete-run bk2> --input-start 441757`, frames 0-2999 | Teleporter ~1500-1750 |
 | `10-hpz-knuckles-fight-start.mp4` | Knuckles in slot 48, camera locks to `$10E0` (music plays off-camera; captures have no audio) | `raw-10-knuckles-fight-route`: `--x 0x1080 --y 0x42C`, `inputs/10-bot.txt` (scripted bot, no invincibility), frames 0-240 | Lock at 121 |
 | `11-hpz-knuckles-fight-hit.mp4` | First hit, Knuckles knocked back | same raw, 140-260 | Hit at 188 |
-| `12-hpz-knuckles-defeat-dizzy-runs-off.mp4` | Eighth hit, defeat, room shake and explosions, "!" stars, Knuckles runs off | 1320-1780 | Defeat 1358, stars 1598 |
+| `12-hpz-knuckles-defeat-dizzy-runs-off.mp4` | Eighth hit, defeat, room shake and explosions, "!" stars, Knuckles runs off (re-cut after `a69c34437`: explosions draw on their first frame) | 1320-1780 | Defeat 1358, first explosion 1471, stars 1598 |
 | `13a-hpz-emerald-theft-crane-grab.mp4` | Camera pan, Knuckles hugs the emerald, crane grabs it with sparkles and chips | 2150-2600 | Pan done 2204 |
 | `13b-hpz-ship-sparks-zap-knuckles.mp4` | Knuckles hangs on the carried emerald, spark chains, zap, fall | 2640-3260 | Zap 3108, lands 3211 |
-| `14-hpz-altar-floor-collapse.mp4` | Explosions and `Events_fg_4` collapse, player falls to Y `$64C` | 3340-3540 | Collapse 3402 |
+| `14-hpz-altar-floor-collapse.mp4` | `Obj_NormalExpControl` explosions around `($1880,$3D0)` and `Events_fg_4` collapse, player falls to Y `$64C` (re-cut after `a69c34437`) | 3340-3540 | Explosions 3385-3437, collapse 3402 |
 | `15-hpz-knuckles-punches-collapse-block.mp4` | Knuckles punches the `loc_655B2` block into fragments | 3990-4110 | Break ~4061 |
 | `16-hpz-ending-hold-knuckles-beamed-away.mp4` | Player held at `$1628`, camera shake, Knuckles jumps to the pad, beam lifts and removes him | 4400-4740 | Knuckles deleted 4701 |
 | `17-hpz-sonic-teleports-exit-to-ssz.mp4` | Player walks onto the pad, vanishes, `$A00` load (SSZ presentation unimplemented) | 4690-4859 | SSZ act 1 at 4826 |

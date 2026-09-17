@@ -109,6 +109,9 @@ public final class HpzKnucklesBossMusicObjectInstance extends AbstractObjectInst
 
     public int bitsForTest() { return bits; }
 
+    /** Declared test seeds only: {@code $2E(a0)} of an object created before the seeded frame. */
+    public void setWaitWordForTest(int value) { waitWord = value; }
+
     @Override public boolean isPersistent() { return true; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
 }

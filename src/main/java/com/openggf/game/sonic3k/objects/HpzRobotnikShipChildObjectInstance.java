@@ -21,6 +21,16 @@ import java.util.List;
  * bit 4. Both are {@code Map_RobotnikShip} over {@code ArtTile_RobotnikShip}.
  */
 public final class HpzRobotnikShipChildObjectInstance extends AbstractHpzCutsceneChildObjectInstance {
+    /** {@code AniRaw_RobotnikHead}, read once per instance; ROM bytes, not state. */
+    private transient S3kRawAnimation headScript;
+
+    private S3kRawAnimation headScript() {
+        if (headScript == null) {
+            headScript = HpzKnucklesCutsceneSupport.robotnikHeadScript(services());
+        }
+        return headScript;
+    }
+
     static final int KIND_HEAD = 0;
     static final int KIND_FLAME = 1;
     private static final int FLAME_FRAME = 6;
@@ -73,7 +83,7 @@ public final class HpzRobotnikShipChildObjectInstance extends AbstractHpzCutscen
             anim.mappingFrame = 0;
         } else {
             // Obj_RobotnikHead3Main: Animate_Raw
-            HpzKnucklesCutsceneSupport.robotnikHeadScript(services()).animateNoSst(
+            headScript().animateNoSst(
                     anim, HpzKnucklesCutsceneSupport.ANI_RAW_ROBOTNIK_HEAD, () -> { });
             if (ship.hitFlag()) {
                 anim.mappingFrame = 2;

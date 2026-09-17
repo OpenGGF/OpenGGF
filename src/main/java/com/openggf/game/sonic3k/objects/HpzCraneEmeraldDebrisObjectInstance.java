@@ -24,6 +24,16 @@ import java.util.List;
  * through {@code Sprite_CheckDeleteXY}.
  */
 public final class HpzCraneEmeraldDebrisObjectInstance extends AbstractHpzCutsceneChildObjectInstance {
+    /** {@code byte_6669A} scripts, read once per instance; ROM bytes, not state. */
+    private transient S3kRawAnimation rawScripts;
+
+    private S3kRawAnimation rawScripts() {
+        if (rawScripts == null) {
+            rawScripts = HpzKnucklesCutsceneSupport.scripts(services());
+        }
+        return rawScripts;
+    }
+
     static final int KIND_SPARKLE = 0;
     static final int KIND_CHIP = 1;
     private static final int SPARKLE_SCRIPT = 0x66843;
@@ -119,7 +129,7 @@ public final class HpzCraneEmeraldDebrisObjectInstance extends AbstractHpzCutsce
 
     private void animate(int script) {
         int before = phase;
-        HpzKnucklesCutsceneSupport.scripts(services()).animateNoSst(anim, script, () -> {
+        rawScripts().animateNoSst(anim, script, () -> {
             if (before == PHASE_ANIMATE) {
                 // loc_651F2
                 phase = PHASE_RISE;

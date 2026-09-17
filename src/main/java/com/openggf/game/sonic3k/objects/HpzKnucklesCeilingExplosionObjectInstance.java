@@ -19,7 +19,12 @@ import java.util.List;
  * Palace Knuckles lands, each copy places itself at {@code Camera + ($140,$C0)} plus its
  * {@code byte_652DE} offset, waits {@code subtype * 4} frames ({@code loc_652FE}) and then turns
  * into {@code Obj_Explosion} at routine 2 (no animal): {@code sfx_Break}, then
- * {@code Map_Explosion} frames 0-4 with the high-priority bit set.
+ * {@code Map_Explosion} frames 0-4 with the high-priority bit set. {@code loc_1E626} falls
+ * into {@code loc_1E66E}, so the first animation step and {@code Draw_Sprite} happen on the
+ * frame the object becomes an explosion.
+ *
+ * <p>{@link #normalExplosion} is the same {@code Obj_Explosion} routine 2 object as created by
+ * {@code Obj_NormalExpControl} ({@code Child6_MakeNormalExplosion}, sonic3k.asm:176782).
  */
 public final class HpzKnucklesCeilingExplosionObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
@@ -47,6 +52,17 @@ public final class HpzKnucklesCeilingExplosionObjectInstance extends AbstractObj
         y = spawn.y();
     }
 
+    /**
+     * {@code Obj_Explosion} created at routine 2 at {@code (x,y)} with {@code art_tile} bit 7 set;
+     * its first update plays {@code sfx_Break}.
+     */
+    static HpzKnucklesCeilingExplosionObjectInstance normalExplosion(int x, int y) {
+        var explosion = new HpzKnucklesCeilingExplosionObjectInstance(
+                new ObjectSpawn(x, y, 0, 0, 0, false, 0));
+        explosion.phase = 1;
+        return explosion;
+    }
+
     @Override
     public HpzKnucklesCeilingExplosionObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new HpzKnucklesCeilingExplosionObjectInstance(ctx.spawn());
@@ -54,7 +70,7 @@ public final class HpzKnucklesCeilingExplosionObjectInstance extends AbstractObj
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        visible = phase == 2;
+        visible = false;
         switch (phase) {
             case 0 -> {
                 int subtype = spawn.subtype() & 0xFF;
@@ -69,26 +85,43 @@ public final class HpzKnucklesCeilingExplosionObjectInstance extends AbstractObj
                 if (timer >= 0) {
                     return;
                 }
-                // Obj_Explosion routine 2 (loc_1E61A) falls into loc_1E626.
+                // Obj_Explosion routine 2 (loc_1E61A) falls into loc_1E626 and loc_1E66E.
                 services().playSfx(Sonic3kSfx.BREAK.id);
                 animTimer = 3;
                 mappingFrame = 0;
                 phase = 2;
+                if (!animate()) {
+                    return;
+                }
             }
             default -> {
-                // loc_1E66E
-                animTimer = (animTimer - 1) & 0xFF;
-                if ((byte) animTimer >= 0) {
-                    break;
-                }
-                animTimer = 7;
-                mappingFrame++;
-                if (mappingFrame == 5) {
-                    ObjectLifetimeOps.expireDynamic(this);
+                if (!animate()) {
                     return;
                 }
             }
         }
+        updateDynamicSpawn(x, y);
+    }
+
+    /** {@code loc_1E66E}; false once {@code Delete_Current_Sprite} ran. */
+    private boolean animate() {
+        animTimer = (animTimer - 1) & 0xFF;
+        if ((byte) animTimer < 0) {
+            animTimer = 7;
+            mappingFrame++;
+            if (mappingFrame == 5) {
+                ObjectLifetimeOps.expireDynamic(this);
+                return false;
+            }
+        }
+        visible = true;
+        return true;
+    }
+
+    /** {@code add.w d0,x_pos(a1)} / {@code add.w d0,y_pos(a1)} from {@code loc_83E90}. */
+    void moveTo(int newX, int newY) {
+        x = newX;
+        y = newY;
         updateDynamicSpawn(x, y);
     }
 

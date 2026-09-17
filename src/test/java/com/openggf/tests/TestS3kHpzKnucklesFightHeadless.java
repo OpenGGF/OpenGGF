@@ -255,8 +255,9 @@ class TestS3kHpzKnucklesFightHeadless {
                     k -> k.routineForTest() >= 0x24).orElse(false)) {
                 cameraReadyFrame = frame;
                 int cameraX = GameServices.camera().getX() & 0xFFFF;
-                // addq.w #2 / cmpi.w #$1580 / blo: an odd start stops one pixel past $1580.
-                assertTrue(cameraX == 0x1580 || cameraX == 0x1581, "loc_64D1A pans to $1580");
+                // addq.w #2 / cmpi.w #$1580 / blo: this route's pan starts from an odd camera X
+                // and stops one pixel past $1580 (the native sequence test covers the even case).
+                assertEquals(0x1581, cameraX, "loc_64D1A pans past $1580");
             }
             if (releaseFrame < 0 && hpz.knucklesCutsceneFlag(1)) {
                 releaseFrame = frame;
@@ -297,7 +298,7 @@ class TestS3kHpzKnucklesFightHeadless {
         assertTrue(lowestFloorY >= 0x64C, "the player falls through the collapse (ROM Y $64C)");
         // ChildObjDat_6664A asks for $20 pieces; CreateChild6_Simple stops at the first
         // AllocateObjectAfterCurrent failure, so the block's slot bounds the count.
-        assertTrue(fragments > 0 && fragments <= 32, "ChildObjDat_6664A fragments: " + fragments);
+        assertEquals(30, fragments, "ChildObjDat_6664A fragments");
         assertTrue(tiredSeen && holdSeen);
         assertEquals(0x15C0, beamReadyKnucklesX, "loc_64BC6 lands Knuckles on the pad");
         assertEquals(0x600, beamReadyKnucklesY);
@@ -512,7 +513,7 @@ class TestS3kHpzKnucklesFightHeadless {
         return S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry()).orElseThrow();
     }
 
-    private static void assertSnapshotsEqual(CompositeSnapshot expected, CompositeSnapshot actual,
+    static void assertSnapshotsEqual(CompositeSnapshot expected, CompositeSnapshot actual,
                                              String boundary) {
         assertEquals(expected.entries().keySet(), actual.entries().keySet(), boundary);
         List<String> differences = new ArrayList<>();
