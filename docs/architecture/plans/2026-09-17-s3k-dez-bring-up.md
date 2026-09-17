@@ -927,3 +927,53 @@ printing both shows the ceiling results twice. Clone the array before the next c
 collision layout, or a verified coordinate pair (flat floor, flat ceiling above it) in one act — is
 the first task of the next session, not more per-zone archaeology.
 
+
+### 2026-09-17 — Slice 2, part 3: the Death Egg act 2 fixture, and the blocker it found
+
+**The fixture exists now.** `$58`/`$5B` placements were decoded straight from the ROM rather than
+through the engine: `DEZ2_Sprites` at `$1FA188`, 495 six-byte records (x word, y word with the
+render-flag nibble in the top four bits, object id, subtype). The decode self-checks against the
+placement inventory — exactly 5 `$58` and 11 `$5B`, an `FFFF` terminator, and the `$5B` flag split
+6 unflipped / 5 flipped — so the record layout is confirmed rather than assumed.
+
+| `$58` | x | y |  | `$5B` | x | y |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `$0E30` | `$08D8` |  | 1-11 | `$0700`-`$3100` | `$0340`-`$0940` |
+| 2 | `$0FA8` | `$0748` |  |  | (all in open corridor, no terrain within ±32 px) | |
+| 3 | `$1AAC` | `$0588` |  |  | | |
+| 4 | `$1C40` | `$06B8` |  |  | | |
+| 5 | `$1F54` | `$0848` |  |  | | |
+
+Terrain was then measured around each. The `$5B` sites are all in open space. Site 3 has a usable
+corridor 32 px to its right: **x=`$1ACC`, floor surface y=`$055F`, ceiling surface y=`$051F`** — a
+64 px gap, both terrain rather than objects. That is the fixture, and
+`TestS3kReverseGravityDezCorridor` re-derives all four numbers from the level data so it fails
+loudly if the level changes.
+
+**The upright control passes there**: a falling player lands on the corridor floor at exactly
+`$054C` with `y_vel` zeroed, which is `loc_11F9C`. So the fixture works and the probe route is live.
+
+**The inverted cases do not, and the cause is not reverse gravity.** Instrumenting the fall showed
+the ceiling-sensor array coming back empty on every frame. Sweeping the whole act 2 region (4161
+points, x `$0E00`-`$2000` × y `$0300`-`$0A00`) with the solidity bit forced to `$C`, `$D` and `$E`
+in turn gave **4161 downward hits and 0 upward hits at every bit**. That table kills two
+hypotheses at once: it is not the ceiling data, and it is not the solidity bit — identical
+downward counts across all three means that path is not discriminating on the bit. The upward
+scan itself never fires. Written up as its own entry in `s3k-known-bugs.md` with a kill condition.
+
+This is the blocker for the remainder of slice 2. Nothing in 2a-2's push-out sites, 2a-3, 2b or 2c
+can be asserted against terrain until an inverted player can land on something, so the next session
+should start there and not with more reference-table rows.
+
+**Two hypotheses I held and had to drop, recorded so they are not re-run.**
+
+1. *"The DEZ ceilings are top-solid one-way platforms, so the lrb probe correctly misses them."*
+   Killed by the bit table above. It also rested on a misreading worth flagging:
+   `Sonic_CheckCeiling` never loads `d5` at all — it inherits the solidity bit from its caller, and
+   `loc_11F00` (:24042) loads `lrb_solid_bit` once for the entire airborne routine, floor branch
+   included. The engine's `GroundSensor` comment that a downward probe uses `top_solid_bit` "in ALL
+   modes" cites the *grounded* `Player_AnglePos`, which is a different caller.
+2. *"The engine's `Direction` encoding already reproduces the ROM's five `neg.w d1` sites."* Still
+   plausible and still unmeasured — it cannot be measured until the upward sensors work, which is
+   exactly why those five rows stay `missing` in the reference table rather than being credited.
+

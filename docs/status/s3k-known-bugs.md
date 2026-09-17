@@ -24,6 +24,8 @@ Entries should include:
 
 ## Table of Contents
 
+0. [Upward Player Sensors Never Fire in Death Egg Act 2 (OPEN — blocks every reverse-gravity landing)](#upward-player-sensors-never-fire-in-death-egg-act-2-open--blocks-every-reverse-gravity-landing)
+0. [AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)](#aiz1-ledge--ground-sensors-and-checkfloordist-disagree-about-solidity-open--question-not-yet-a-diagnosis)
 0. [Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)](#reverse-gravity--position-integration-inverted-collision-probes-not-yet-open--blocks-the-death-egg-gravity-objects)
 1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
 2. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
@@ -109,6 +111,75 @@ FM5 SFX, rings, and special-stage speed-shoes entry.
 Remove this entry after a positive listen and integration of the exact verified
 handoff commit. Reopen source-timing investigation if the listen identifies a
 repeatable onset defect within the scenarios above.
+
+---
+
+## Upward Player Sensors Never Fire in Death Egg Act 2 (OPEN — blocks every reverse-gravity landing)
+
+**Location.** `com.openggf.physics.GroundSensor` / `Sensor` upward scan path, as reached by
+`AbstractPlayableSprite.getCeilingSensors()`.
+
+**Symptom.** In Death Egg act 2 (`$B01`) the player's ceiling sensors return `null` from every
+probe, everywhere. Measured 2026-09-17 by sweeping the whole playable region — x `$0E00`-`$2000`
+step 64, y `$0300`-`$0A00` step 32, 4161 sample points — with the sprite's solidity bit forced to
+each candidate value:
+
+| solidity bit | downward hits | upward hits |
+| --- | ---: | ---: |
+| `$C` (`top_solid_bit`) | 4161 | **0** |
+| `$D` (`lrb_solid_bit`) | 4161 | **0** |
+| `$E` | 4161 | **0** |
+
+The downward probe finds terrain in abundance; the upward probe finds none. Two hypotheses are
+**killed** by that table: it is not the ceiling data (a ceiling is there —
+`ObjectTerrainUtils.checkCeilingDist` reports the surface at y=`$051F` for x=`$1ACC`, and the
+corridor guard in `TestS3kReverseGravityDezCorridor` asserts it), and it is not the solidity bit
+(all three bits give identical downward counts, so that path is not discriminating on the bit at
+all). The remaining suspect is the upward scan itself — stride, sensor activation, or the
+empty-tile default.
+
+**Why it matters now.** `sub_11FD6` (sonic3k.asm:24127) makes the ceiling probe the *floor* probe
+under `Reverse_gravity_flag`. While the upward sensors return nothing, an inverted player cannot
+land on anything, so every reverse-gravity landing, push-out and ground-attachment row of Death Egg
+slice 2 is unassertable. This is the single blocker for the rest of that slice.
+
+**One ROM fact to carry into the diagnosis.** `Sonic_CheckCeiling` (sonic3k.asm) never loads `d5`
+itself — it inherits the solidity bit from its caller, and the airborne collision routine
+`loc_11F00` (:24042) loads `lrb_solid_bit` once for the whole routine, floor branch included. Any
+fix must keep that inheritance rather than hard-coding a bit per direction.
+
+**Kill condition.** Probe one known ceiling tile (x=`$1ACC`, ceiling surface y=`$051F`, act 2)
+directly through `Sensor.scan()` with the sensor forced active, and compare against `FindFloor`'s
+upward form (`movea.w #-$10,a3`, `move.w #$800,d6`, sonic3k.asm:19998-20002 and the
+`Sonic_CheckCeiling` body). If the raw scan finds the tile, the defect is in sensor activation or
+configuration; if it does not, it is in the upward stride or the `eori.w #$F,d2` row flip. Either
+way this entry is replaced by the specific defect.
+
+---
+
+## AIZ1 Ledge — Ground Sensors and `checkFloorDist` Disagree About Solidity (OPEN — question, not yet a diagnosis)
+
+**Location.** `com.openggf.physics.Sensor` / `GroundSensor` stride versus
+`ObjectTerrainUtils.checkFloorDist`.
+
+**Symptom.** At the Angel Island act 1 spawn with the zone intro skipped, an airborne player
+standing on the spawn ledge gets `null` from both ground sensors on every frame — no solid tile
+found — while `ObjectTerrainUtils.checkFloorDist(x, y, 19)` at the same x reports a hit at
+distance 0. Observed 2026-09-17 while looking for a reverse-gravity fixture (Death Egg slice 2);
+the two probes were sampled in the same frame from the same sprite.
+
+**Why it is only a question.** Nothing here is known to be wrong yet. The two probes have
+different strides and different extension-search rules, so the disagreement may be correct
+behaviour for a 16 px tile boundary rather than a defect, and no ROM comparison has been made.
+It is recorded because it cost a fixture and will mislead the next agent who uses a sensor probe
+as a terrain oracle.
+
+**Kill condition.** Sample both probes across a 16 px sweep of y at that x and compare against
+`FindFloor`'s own stride (`movea.w #$10,a3`, sonic3k.asm:19998-20002). If the sensor result
+matches `FindFloor` and `checkFloorDist` is the outlier, this is a `checkFloorDist` convenience-API
+note, not an engine bug, and the entry is deleted. Explicitly **not** in scope for Death Egg
+slice 2: the slice uses measured Death Egg act 2 terrain instead
+(`TestS3kReverseGravityDezCorridor`).
 
 ---
 
