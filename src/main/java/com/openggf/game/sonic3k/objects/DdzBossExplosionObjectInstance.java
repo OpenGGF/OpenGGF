@@ -35,6 +35,11 @@ final class DdzBossExplosionObjectInstance extends AbstractDdzObjectInstance {
         S3kRawAnimation.set(animation, Sonic3kConstants.ANI_RAW_BOSS_EXPLOSION_ADDR);
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzBossExplosionObjectInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), 0, spawn.subtype() != 0);
+    }
+
     @Override
     public DdzBossExplosionObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzBossExplosionObjectInstance(ctx.spawn().x(), ctx.spawn().y(), 0, ctx.spawn().subtype() != 0);

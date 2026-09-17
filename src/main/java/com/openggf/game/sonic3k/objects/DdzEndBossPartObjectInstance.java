@@ -42,6 +42,11 @@ final class DdzEndBossPartObjectInstance extends AbstractDdzObjectInstance {
         this.subtype = subtype;
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzEndBossPartObjectInstance(ObjectSpawn spawn) {
+        this(null, spawn.subtype() >> 4, spawn.subtype() & 0xF);
+    }
+
     @Override
     public DdzEndBossPartObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         int packed = ctx.spawn().subtype();

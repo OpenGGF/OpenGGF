@@ -46,6 +46,11 @@ final class DdzEndBossBombObjectInstance extends AbstractDdzObjectInstance {
         }
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzEndBossBombObjectInstance(ObjectSpawn spawn) {
+        this(null, spawn.subtype());
+    }
+
     @Override
     public DdzEndBossBombObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzEndBossBombObjectInstance(null, ctx.spawn().subtype());
@@ -126,7 +131,7 @@ final class DdzEndBossBombObjectInstance extends AbstractDdzObjectInstance {
 
     private void checkDelete() {
         // Sprite_CheckDeleteXY
-        if (DdzObjectSupport.outOfRangeX(services(), getX()) || DdzObjectSupport.outOfRangeY(services(), getY())) {
+        if (outOfRangeX(getX()) || DdzObjectSupport.outOfRangeY(services(), getY())) {
             goDelete();
         }
     }

@@ -5,6 +5,8 @@
 -- returning {windows={{label=..., first=<movie frame>, last=<movie frame>, every=<n>}, ...}}.
 -- Optional plan.save_states={<movie frame>,...} writes states/<frame>.State while the movie
 -- plays; later probes pass one as --fixture-state (with plan.fixture_frame/fixture_zone checks).
+-- Optional plan.slots=<n>: slots.csv gets one line whenever the code pointer in SST slots 0..n-1
+-- changes, listing every occupied slot as slot:code:x:y (answers load/allocation order questions).
 -- Outputs: observations.csv (every frame inside any window), <label>/<frame>.png every
 -- `every` frames, and done.txt once the last window or save has been reached.
 -- RAM (sonic3k.lst): Camera_X/Y_pos $EE78/$EE7C (longwords), _unkEE98/_unkEE9C foreground
@@ -16,7 +18,7 @@
 -- Level_frame_counter $FE04, Current_zone_and_act $FE10, Player_1 SST $B000.
 -- Object offsets (sonic3k.constants.asm): routine 5, x 10, y 14, x_vel 18, y_vel 1A, anim 20,
 -- mapping_frame 22, angle 26, collision_flags 28, collision_property 29, status 2A,
--- object_control 2E, invulnerability_timer 34. Obj_DDZEndBoss code $817DA.
+-- object_control 2E, invulnerability_timer 34, $38 flags. Obj_DDZEndBoss code $817DA.
 local out=assert(os.getenv('OGGF_NATIVE_OUTPUT'))
 local plan=dofile(assert(os.getenv('OGGF_NATIVE_PLAN')))
 local windows=plan.windows or {}
@@ -37,7 +39,8 @@ if fixture then
   assert(plan.fixture_zone==nil or mainmemory.read_u16_be(0xFE10)==plan.fixture_zone,
     string.format('fixture zone %04X', mainmemory.read_u16_be(0xFE10)))
 end
-local BOSS=0x817DA
+-- plan.boss_code overrides the boss columns target (the exit runs from $81BBE).
+local BOSS=plan.boss_code or 0x817DA
 local function findCode(code)
   for slot=0,129 do
     local a=0xB000+slot*0x4A
@@ -46,12 +49,12 @@ local function findCode(code)
   return nil
 end
 local function obj(a)
-  if a==nil or a==0 then return '0,0,0,0,0,0,0,0' end
-  return string.format('%06X,%d,%d,%d,%d,%d,%02X,%d',
+  if a==nil or a==0 then return '0,0,0,0,0,0,0,0,0' end
+  return string.format('%06X,%d,%d,%d,%d,%d,%02X,%d,%02X',
     mainmemory.read_u32_be(a) & 0xFFFFFF, mainmemory.read_u8(a+5),
     mainmemory.read_u16_be(a+0x10), mainmemory.read_u16_be(a+0x14),
     mainmemory.read_s16_be(a+0x18), mainmemory.read_s16_be(a+0x1A),
-    mainmemory.read_u8(a+0x28), mainmemory.read_u8(a+0x29))
+    mainmemory.read_u8(a+0x28), mainmemory.read_u8(a+0x29), mainmemory.read_u8(a+0x38))
 end
 local function word_addr(ptr)
   local v=mainmemory.read_u16_be(ptr)
@@ -60,8 +63,26 @@ local function word_addr(ptr)
 end
 local log=assert(io.open(out..'/observations.csv','w'))
 log:write('movie_frame,label,zone_act,lfc,vint,cam_x,cam_xsub,cam_y,p1_x,p1_y,p1_xvel,p1_yvel,p1_gvel,p1_anim,p1_mapping,p1_angle,p1_objctl,p1_invuln,p1_status,rings,super_flag,super_frames,super_emeralds,ctrl1,fa82,fa86,fa8a,fa90,faae,fab8,ee98,ee9c,fg_routine,bg0,bg2,bg4,bg6,cam_minx,cam_maxx,')
-log:write('ctl_code,ctl_routine,ctl_x,ctl_y,ctl_xvel,ctl_yvel,ctl_cf,ctl_cp,boss_code,boss_routine,boss_x,boss_y,boss_xvel,boss_yvel,boss_cf,boss_cp,body_code,body_routine,body_x,body_y,body_xvel,body_yvel,body_cf,body_cp,palette\n')
+log:write('ctl_code,ctl_routine,ctl_x,ctl_y,ctl_xvel,ctl_yvel,ctl_cf,ctl_cp,ctl_38,boss_code,boss_routine,boss_x,boss_y,boss_xvel,boss_yvel,boss_cf,boss_cp,boss_38,body_code,body_routine,body_x,body_y,body_xvel,body_yvel,body_cf,body_cp,body_38,palette\n')
 client.speedmode(6400)
+local slotLog=nil
+local lastSlots=''
+if plan.slots then
+  slotLog=assert(io.open(out..'/slots.csv','w'))
+  slotLog:write('movie_frame,occupied\n')
+end
+local function slotLine()
+  local keys,full={},{}
+  for slot=0,plan.slots-1 do
+    local a=0xB000+slot*0x4A
+    local code=mainmemory.read_u32_be(a) & 0xFFFFFF
+    if code~=0 then
+      keys[#keys+1]=string.format('%d:%X',slot,code)
+      full[#full+1]=string.format('%d:%X:%X:%X',slot,code,mainmemory.read_u16_be(a+0x10),mainmemory.read_u16_be(a+0x14))
+    end
+  end
+  return table.concat(keys,' '),table.concat(full,' ')
+end
 local function paletteHex()
   local t={}
   for i=0,63 do t[#t+1]=string.format('%04X',mainmemory.read_u16_be(0xFC00+i*2)) end
@@ -80,6 +101,13 @@ while true do
   local cw=nil
   for _,x in ipairs(windows) do
     if frame>=x.first and frame<=x.last then cw=x break end
+  end
+  if cw and slotLog then
+    local key,full=slotLine()
+    if key~=lastSlots then
+      slotLog:write(frame..','..full..'\n')
+      lastSlots=key
+    end
   end
   if cw then
     local ctl=word_addr(0xFA8E)
@@ -106,5 +134,6 @@ while true do
   if frame>=lastFrame then break end
 end
 log:close()
+if slotLog then slotLog:close() end
 local done=assert(io.open(out..'/done.txt','w'));done:write('last_frame='..lastFrame..'\n');done:close()
 client.exit()

@@ -40,6 +40,11 @@ final class DdzMissilePuffObjectInstance extends AbstractDdzObjectInstance {
         animation.mappingFrame = 0x18;
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzMissilePuffObjectInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), 0, 0);
+    }
+
     @Override
     public DdzMissilePuffObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzMissilePuffObjectInstance(ctx.spawn().x(), ctx.spawn().y(), 0, 0);
@@ -67,7 +72,7 @@ final class DdzMissilePuffObjectInstance extends AbstractDdzObjectInstance {
         }
         xPos += xVel << 8;
         yPos += yVel << 8;
-        if (DdzObjectSupport.outOfRangeX(services(), getX())) {
+        if (outOfRangeX(getX())) {
             deleteNow();
         }
     }

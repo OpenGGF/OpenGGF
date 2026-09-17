@@ -1072,6 +1072,29 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_FBZ && fbzEvents != null) {
             fbzEvents.restoreOutdoorMotionAfterPlacementReset();
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_DDZ) {
+            restoreDdzFlightControllerAfterPlacementReset();
+        }
+    }
+
+    /**
+     * A placement reset cleared the {@code DDZ_ScreenInit} allocation before its first dispatch:
+     * restart the Doomsday runtime words and allocate the flight controller again.
+     */
+    private void restoreDdzFlightControllerAfterPlacementReset() {
+        if (!GameServices.hasRuntime() || GameServices.level() == null
+                || GameServices.level().getObjectManager() == null) {
+            return;
+        }
+        boolean present = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .anyMatch(object -> object instanceof com.openggf.game.sonic3k.objects.DdzFlightControllerObjectInstance
+                        && !object.isDestroyed());
+        if (present) {
+            return;
+        }
+        GameServices.zoneRuntimeRegistry().install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(
+                currentAct, getPlayerCharacter()));
+        allocateDdzFlightController();
     }
 
     private void releaseIczStartupObjectControlAfterTitleCard() {
@@ -1623,6 +1646,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     state instanceof MhzZoneRuntimeState mhzState && mhzState.isBackedBy(mhzEvents);
             case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState;
             case Sonic3kZoneIds.ZONE_SOZ -> state instanceof SozZoneRuntimeState;
+            // Reinstalling would zero the Doomsday words and allocate a second flight controller.
+            case Sonic3kZoneIds.ZONE_DDZ -> state instanceof com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
             case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
                     state instanceof HpzZoneRuntimeState hpzState
                             && hpzState.zoneIndex() == currentZone

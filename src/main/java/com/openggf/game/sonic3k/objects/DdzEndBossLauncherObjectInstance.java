@@ -35,9 +35,14 @@ final class DdzEndBossLauncherObjectInstance extends AbstractDdzObjectInstance
                 "DDZEndBossLauncher", boss);
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzEndBossLauncherObjectInstance(ObjectSpawn spawn) {
+        this((DdzEndBossObjectInstance) null);
+    }
+
     @Override
     public DdzEndBossLauncherObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzEndBossLauncherObjectInstance(null);
+        return new DdzEndBossLauncherObjectInstance((DdzEndBossObjectInstance) null);
     }
 
     @Override
@@ -93,10 +98,6 @@ final class DdzEndBossLauncherObjectInstance extends AbstractDdzObjectInstance
         count = (count - 1) & 0xFF;
     }
 
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

@@ -57,6 +57,11 @@ final class DdzEndBossTurretObjectInstance extends AbstractDdzObjectInstance {
         }
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzEndBossTurretObjectInstance(ObjectSpawn spawn) {
+        this(null, spawn.subtype());
+    }
+
     @Override
     public DdzEndBossTurretObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzEndBossTurretObjectInstance(null, ctx.spawn().subtype());
@@ -131,7 +136,7 @@ final class DdzEndBossTurretObjectInstance extends AbstractDdzObjectInstance {
         xPos += xVel << 8;
         yPos += yVel << 8;
         yVel = (short) (yVel + 0x38);
-        if (DdzObjectSupport.outOfRangeX(services(), getX()) || DdzObjectSupport.outOfRangeY(services(), getY())) {
+        if (outOfRangeX(getX()) || DdzObjectSupport.outOfRangeY(services(), getY())) {
             goDelete();
             return;
         }

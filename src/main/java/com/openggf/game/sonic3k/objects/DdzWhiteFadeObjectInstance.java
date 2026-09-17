@@ -40,9 +40,18 @@ final class DdzWhiteFadeObjectInstance extends AbstractDdzObjectInstance {
         steps = mode == Mode.DDZ_FLASH ? 4 : 7;
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzWhiteFadeObjectInstance(ObjectSpawn spawn) {
+        this(Mode.values()[spawn.subtype()]);
+    }
+
     @Override
     public DdzWhiteFadeObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzWhiteFadeObjectInstance(Mode.values()[ctx.spawn().subtype()]);
+    }
+
+    boolean holdsWhite() {
+        return mode == Mode.TO_WHITE_HOLD;
     }
 
     /** {@code btst #7,status(a1)} on the fade object. */
@@ -99,10 +108,6 @@ final class DdzWhiteFadeObjectInstance extends AbstractDdzObjectInstance {
         goDelete();
     }
 
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

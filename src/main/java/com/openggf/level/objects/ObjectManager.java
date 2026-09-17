@@ -2443,6 +2443,11 @@ public class ObjectManager {
         placement.enablePermanentDestroyLatch();
     }
 
+    /** Package-private: {@code Seek_Object_Manager}, reached through {@link ObjectPlacementSeek}. */
+    void seekPlacementCursors(int cameraX) {
+        placement.seekCursors(cameraX);
+    }
+
     /**
      * Adjusts the ObjectPlacementController system's tracking state after a camera wrap-back.
      * <p>

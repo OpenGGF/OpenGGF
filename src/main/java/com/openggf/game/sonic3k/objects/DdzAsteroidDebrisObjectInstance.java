@@ -44,6 +44,11 @@ public final class DdzAsteroidDebrisObjectInstance extends AbstractDdzObjectInst
         animation.mappingFrame = 0x29;
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzAsteroidDebrisObjectInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), spawn.subtype(), 0, 0);
+    }
+
     @Override
     public DdzAsteroidDebrisObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzAsteroidDebrisObjectInstance(ctx.spawn().x(), ctx.spawn().y(), ctx.spawn().subtype(), 0, 0);
@@ -65,7 +70,7 @@ public final class DdzAsteroidDebrisObjectInstance extends AbstractDdzObjectInst
         DdzObjectSupport.rawAnimations(services()).animateNoSst(animation, animation.script, () -> { });
         xPos += xVel << 8;
         yPos += yVel << 8;
-        if (DdzObjectSupport.outOfRangeX(services(), getX())) {
+        if (outOfRangeX(getX())) {
             deleteNow();
         }
     }

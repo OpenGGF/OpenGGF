@@ -82,6 +82,24 @@ abstract class AbstractDdzObjectInstance extends AbstractObjectInstance implemen
         return !isDestroyed() && !deletePending;
     }
 
+    /**
+     * Every Doomsday object retires itself through its own ROM tail ({@code Sprite_OnScreen_Test},
+     * {@code Sprite_CheckDelete}, {@code Obj_FlickerMove}, parent checks) using its current position,
+     * so the engine's spawn-position out-of-range unload must not delete it first.
+     */
+    @Override
+    public boolean isPersistent() {
+        return true;
+    }
+
+    /**
+     * {@code Sprite_OnScreen_Test}: the {@code $280} coarse window ({@code $80} + screen + {@code $C0}),
+     * widened with the viewport so widescreen placement does not load and cull on the same frame.
+     */
+    protected final boolean outOfRangeX(int x) {
+        return DdzObjectSupport.outOfRangeX(services(), x, coarseXCullRange());
+    }
+
     protected final boolean parentGone() {
         return parent == null || parent.isDestroyed()
                 || (parent instanceof AbstractDdzObjectInstance ddz && ddz.deletePending);

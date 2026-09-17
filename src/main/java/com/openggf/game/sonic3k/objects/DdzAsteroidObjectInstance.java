@@ -112,7 +112,7 @@ public final class DdzAsteroidObjectInstance extends AbstractDdzObjectInstance {
             shatter(player);
             return;
         }
-        if (DdzObjectSupport.outOfRangeX(services(), getX())) {
+        if (outOfRangeX(getX())) {
             deleteClearingRespawn();
         }
     }

@@ -1,5 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.level.objects.ObjectPlacementSeek;
 import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.rings.RingStatusTableWipe;
 
@@ -9,19 +10,17 @@ import com.openggf.level.rings.RingStatusTableWipe;
  * {@code Seek_Object_Manager} and clears {@code Ring_status_table}. Live DDZ objects subtract
  * {@code _unkFAAE} from their own positions.
  *
- * <p>Placement seek: {@code Seek_Object_Manager} moves the load cursors to the new camera window
- * without allocating. The engine placement tracker is shifted by the wrap distance so it does not
- * treat the jump as a fresh window; the exact cursor equivalence is verified by the phase-2 slice.
+ * <p>The seek places the load cursors around {@code (Camera_X_pos + $400) & $FF80}; the following
+ * frame's {@code Load_Sprites} then runs its backward step and loads the entries left of that point
+ * right to left, which decides the slots they occupy. The native movie shows the three asteroids at
+ * {@code $5590-$55FF} loading into consecutive slots in descending X on the frame after the wrap.
  */
 public final class DdzLevelWrap {
     private DdzLevelWrap() {
     }
 
-    public static void apply(ObjectServices services, int distance) {
-        var objectManager = services.objectManager();
-        if (objectManager != null) {
-            objectManager.adjustPlacementTrackingForWrap(distance);
-        }
+    public static void apply(ObjectServices services, int cameraX) {
+        ObjectPlacementSeek.seek(services.objectManager(), cameraX);
         RingStatusTableWipe.wipe(services.ringManager());
     }
 }

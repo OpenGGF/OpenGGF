@@ -29,7 +29,7 @@ import java.util.Objects;
  * camera holds only the integer word.
  */
 public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
-    private static final int CAPTURE_BYTES = 4 * Integer.BYTES + 21 * Short.BYTES + 2;
+    private static final int CAPTURE_BYTES = 4 * Integer.BYTES + 22 * Short.BYTES + 2;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -40,6 +40,7 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short cameraXFraction;
     private short cameraDelta;
     private short wrapOffset;
+    private short cameraXCoarseBack;
     private short boxMinY = 0x20;
     private short boxMaxY = 0xC0;
     private short boxMinX = 0x20;
@@ -95,6 +96,14 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     /** {@code _unkFAAE}. */
     public int wrapOffset() { return wrapOffset; }
     public void setWrapOffset(int value) { wrapOffset = (short) value; }
+
+    /**
+     * {@code Camera_X_pos_coarse_back}: {@code (Camera_X_pos - $80) & $FF80}, latched by
+     * {@code Load_Sprites} before {@code Process_Sprites}. The flight controller moves the camera
+     * during the object pass, so later DDZ objects still compare against the frame-start value.
+     */
+    public int cameraXCoarseBack() { return cameraXCoarseBack & 0xFFFF; }
+    public void latchCameraXCoarseBack(int cameraX) { cameraXCoarseBack = (short) ((cameraX - 0x80) & 0xFF80); }
 
     /** {@code _unkFAB0}/{@code _unkFAB2}: vertical flight box, camera relative. */
     public int boxMinY() { return boxMinY; }
@@ -178,6 +187,7 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(cameraXFraction);
         buffer.putShort(cameraDelta);
         buffer.putShort(wrapOffset);
+        buffer.putShort(cameraXCoarseBack);
         buffer.putShort(boxMinY);
         buffer.putShort(boxMaxY);
         buffer.putShort(boxMinX);
@@ -214,6 +224,7 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         cameraXFraction = buffer.getShort();
         cameraDelta = buffer.getShort();
         wrapOffset = buffer.getShort();
+        cameraXCoarseBack = buffer.getShort();
         boxMinY = buffer.getShort();
         boxMaxY = buffer.getShort();
         boxMinX = buffer.getShort();

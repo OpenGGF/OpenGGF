@@ -185,5 +185,104 @@ credits (ending campaign, which also owns the mislabelled `ddz` segments); level
 
 ## Evidence log
 
-(Executor: append dated entries per slice — RED/GREEN summary, commands and counts, commits,
-native probe table, rejected approaches with their kill evidence, clip table.)
+### 2026-09-17 slice 0 — baseline, identity and native state
+
+- Media root `~/Videos/OGGF/ddz-bring-up/` created (`inputs/`, `native/`, `reel/`, clip helpers copied from HPZ).
+- `raw-00-baseline-before-work`: base `832554260`, `GameplayCaptureTool --zone ddz --act 1 --sidekick tails`, movie
+  input from 514213: Sonic and Tails stand on nothing, fall and die at frame 196. No controller, no autoscroll.
+- Native pass 1 (`native/run-pass1.sh`, exporter `tools/bizhawk/capture_ddz_route_reference.lua`, BizHawk 2.11,
+  ROM SHA-1 `CFBF98C3…61D6`, movie SHA-256 `AD40FB0B…3C0`, host exit 0, 502 s): seven savestates at
+  movie frames 514214, 514914, 517798, 519846, 521382, 522918, 523942 and windows `entry`, `boss_arrival`,
+  `phase_change`, `wrap1`, `exit`.
+- **The native save holds seven Super Emeralds** (`Super_emerald_count = 7`): the movie route is Hyper Sonic
+  (`Super_Sonic_Knux_flag = -1` from frame 50). Super-form native evidence needs a seeded probe.
+- Native entry facts (exporter frame numbering, frame 0 = `loc_81554` ran): controller routine 2 at frame 0,
+  transformation at frame 24 (+50 rings, `Super_Sonic_Knux_flag = 1`), release at frame 50 (`object_control = 1`,
+  `Super_Sonic_Knux_flag = -1`), 26 palette passes. The camera X low word is `$2700` before the level starts
+  (inherited from the Death Egg); a level-select entry starts at 0, so camera X can read one pixel lower.
+  `V_int_run_count` at frame 0 is 512489.
+- Native HUD shows 0 rings after the +50: `loc_8160A` does not flag a HUD ring update. Engine shows 50 (open).
+- Chunk geometry: the phase-1 plane body is layout chunks `6,7/9,8` at FG columns 4-5, rows 2-3 (X `$200-$3FF`,
+  Y `$100-$1FF`); native `_unkEE98` near `$18A` puts it on screen without any nametable wrap.
+- Trace segment identity: `zone0c` (`zone_id 12`) is Doomsday; the `ddz` directory (`zone_id 13`) is the ending.
+  Physics row `r` of `zone0c` is exporter/capture frame `r + 1`.
+
+### 2026-09-17 slices 1-3 — controller, transformation, scroll, plane (`6145ccce3`, `3f5a01184`)
+
+- `DdzZoneRuntimeState`, `SwScrlDdz` (`DDZ_ScreenEvent` state machine + `sub_596EA` bands), the
+  `DdzForegroundPlaneRenderMode` (per-line FG scroll + FG V-scroll override, the FBZ2 boss mechanism, no Mod API
+  change), `DdzFlightControllerObjectInstance` (all `loc_81492` modes), `DdzMusicTempoObjectInstance`, sidekick
+  suppression for zone `$0C`, `Sonic3kSuperStateController.startDoomsdayTransformation` /
+  `upgradeDoomsdayFormToHyper`. `HpzCameraGradualObjectInstance` became `S3kCameraGradualObjectInstance`
+  reading `S3kCameraStoredBounds`.
+- **Shared fix:** S3K transformations released `object_control` after a fixed 30 frames (Tails/Knuckles after one
+  pass). ROM `SuperHyper_PalCycle` (sonic3k.asm:4608-4660) runs `Palette_timer $F` then six 2-frame fade steps for
+  Sonic and finishes on the first expiry for Tails/Knuckles. RED: `TestS3kDdzFlightControllerHeadless` release at
+  frame 54 instead of 50 (diagnostic run before the fix). GREEN after. `TestSonic3kSuperStateRewind` updated
+  (its one-tick pop was not trace-backed, commit `a1c45eb38`).
+- Focused: `TestS3kDdzFlightControllerHeadless` 1/1; Super/Hyper tests (18 classes) green after the test update;
+  rewind guards `TestEveryObjectRewindRoundTrip` 1090, `TestRewindHarnessCoverageRatchet`, construction tests green.
+- Engine vs native entry window (`native/compare_entry.py`): positions and camera identical frames 0-128 except
+  the inherited camera fraction (1 px on 16 frames).
+
+### 2026-09-17 slices 4-8 — asteroids, missiles, end boss (`2e0067d9a` and working tree)
+
+- Objects: asteroid/debris, missile/exhaust/puff, `Obj_CreateBossExplosion` sets 0/8, boss phases 1-2 and exit,
+  body, parts, turrets and shots, launcher, ship parts, Master Emerald with `word_8141E`, bombs, rockets and
+  flames, defeat/exit explosion chains, white flash and fade, `DdzPalette`.
+- Cold route with movie input (`native/run_route_compare.sh`, `native/compare_trace.py`): engine matches the native
+  trace positions and camera (within the inherited fraction) for **4178 frames**, through the asteroid field, boss
+  arrival, the first two missile hits on the body (engine 3920/4083 vs native 3919/4082) and a homing missile hit
+  on Player 1.
+- Divergences found and fixed with ROM evidence: (1) split asteroid children ran the same frame because
+  `Go_Delete_Sprite` / `Sprite_CheckDelete` objects left their slot immediately; native keeps the slot one more
+  frame (`Delete_Current_Sprite` code `$1ABB6` visible in aux slot dumps) — `AbstractDdzObjectInstance.goDelete`.
+  (2) launcher missile ride timer is `index * 16` (`add.w d0,d0` then `lsl.w #3`), not `* 8`.
+- Remaining divergence at frame 4179: turret aim reads `V_int_run_count & $F`; native 512489 vs engine 1 at
+  frame 0 changes turret shot directions. A cold level-select entry legitimately has another counter value, so
+  full-route native matching needs a declared clock seed or the trace replay bootstrap.
+- Strict replay `TestS3kSonicTailsZone0cSegmentTraceReplay` (`-Ptrace-segments`): before the work 411 errors, first
+  frame 0 `x`; the controller was absent because the replay's placement reset cleared the ScreenInit allocation.
+  Added the DDZ case to `restoreEventOwnedObjectsAfterPlacementReset`: now 699 errors, first frame 0 `camera_y`
+  `$A0` vs `$60`. Cause: the bootstrap places Player 1 at metadata start (`$FFE1,$C0`, already moved by the
+  controller's init pass) and derives the camera from it, so replay Sonic flies `$40` higher and clips asteroids
+  native missed (the 15-frame `x_speed -$3C0` spans are asteroid pushback decay). Also seeded: none of the camera
+  fraction; the V-int phase seed is only 3 bits. Harness-level; recorded for the strict-replay slice.
+
+
+### 2026-09-17 slices 7-9 — wraps, load order and the exit (working tree)
+
+- Seeded comparison (`TestS3kDdzColdRoutes`, declared `V_int_run_count` 512489 and camera fraction `$2700`):
+  exact player/camera/rings to 7631, then within 1 px to 8626 after making every DDZ object persistent (the
+  engine's spawn-window unload deleted a rocket waiting off-screen) and allocating `Obj_CreateBossExplosion`
+  children after the current slot.
+- **Wrap seek.** The first post-wrap design called `adjustPlacementTrackingForWrap` (AIZ's cursor shift) and loaded
+  nothing afterwards; removing it made the engine's big-jump refresh load ascending into low slots. ROM
+  `loc_81726` calls `Seek_Object_Manager` (sonic3k.asm:37986): cursors move around `(Camera_X + $400) & $FF80`
+  without loading, and the next `Load_Sprites` backward branch loads right to left. Added package-private
+  `ObjectPlacementController.seekCursors` behind the non-API `ObjectPlacementSeek`. First divergence moved from
+  8248 (1 px) to 8249 exact / 8627 ring phase.
+- **Slot history probe.** `capture_ddz_route_reference.lua` gained `plan.slots` (slot-code change log) and
+  `plan.boss_code`. Engine vs native slot logs (`native/probe-slots0`, `probe-slots1`) diverged at row 173: native
+  loaded asteroid `$490` into slot 8 while the offscreen asteroid in slot 6 was still alive; the engine deleted it a
+  frame earlier. `Sprite_OnScreen_Test` compares against `Camera_X_pos_coarse_back`, latched by `Load_Sprites`
+  before `Process_Sprites`; the DDZ controller scrolls the camera inside the object pass, so later objects must
+  use the frame-start value. `DdzZoneRuntimeState.latchCameraXCoarseBack` (set by the slot-4 controller) now feeds
+  `DdzObjectSupport.outOfRangeX`. The Y test uses live `Camera_Y_pos` (`Sprite_CheckDeleteXY`) and is unchanged.
+- **Result: exact position, camera and ring parity for all 10058 gameplay rows** (two wraps, both phases, the
+  defeat, exit routines 2/4/6 at native frames 9903/9968/10025) and the `$D01` request on the native frame.
+  Native freezes during the fade; the recording frame driver keeps stepping gameplay until the load at 10080
+  (both reach `$D01` on the same frame). `GameLoop` applies the freeze (`isNonRewindableTransitionPending`),
+  so this is a harness gap, not runtime behaviour.
+- Remaining native slot differences: slots 8-10 `$2D690`/`$2D95C` for frames 0-34 (the Super/Hyper transformation
+  stars, not implemented), which do not change later allocation.
+- **Rewind and breadth (same tree).** `TestS3kDdzColdRoutes#rewindAtBossWrapAndExitRestoresTheNativeRoute`
+  (capture at 4000/7420/9990, 45 idle frames, restore, route continues) and `TestS3kDdzCompatibilityMatrix`
+  (34 rows) found and fixed: `currentRuntimeStateUsesThisEventInstance` lacked DDZ, so every
+  `ensureZoneRuntimeStateInstalled` during restore zeroed the state and allocated a second controller; DDZ
+  children had no probe constructor for `genericRecreate` (turrets vanished on restore; private
+  `(ObjectSpawn)` probes added); the boss's transient `exitFade` reference was null after restore (now a live
+  lookup of the hold fade, `$44(a0)`); `Sonic3kSuperStateController` restored TRANSFORMING with normal physics
+  (transformation start installs the Super constants); donor leaders without a powered form soft-locked in
+  `loc_8167C` (engine extension: 26-frame release, `$38` bit 7 clear); DDZ culls used a bare `$280` and churned
+  objects at 800 px (now `coarseXCullRange`). Result: 37/37 DDZ tests, 1220 shared tests green, 0 skips.

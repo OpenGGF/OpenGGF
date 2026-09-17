@@ -62,6 +62,11 @@ final class DdzCreateBossExplosionObjectInstance extends AbstractDdzObjectInstan
         this.timer = parameters.timer();
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzCreateBossExplosionObjectInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), spawn.subtype(), null);
+    }
+
     @Override
     public DdzCreateBossExplosionObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzCreateBossExplosionObjectInstance(ctx.spawn().x(), ctx.spawn().y(), ctx.spawn().subtype(), null);
@@ -105,7 +110,8 @@ final class DdzCreateBossExplosionObjectInstance extends AbstractDdzObjectInstan
         wait = 2;
         int baseX = x;
         int baseY = y;
-        S3kBossExplosionChild child = spawnFreeChild(() -> S3kBossExplosionChild.createWithNativeInitSfx(baseX, baseY));
+        // CreateChild6_Simple: AllocateObjectAfterCurrent.
+        S3kBossExplosionChild child = spawnChild(() -> S3kBossExplosionChild.createWithNativeInitSfx(baseX, baseY));
         if (child == null) {
             return;
         }
@@ -128,10 +134,6 @@ final class DdzCreateBossExplosionObjectInstance extends AbstractDdzObjectInstan
 
 
 
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

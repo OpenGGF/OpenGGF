@@ -33,6 +33,11 @@ final class DdzEndBossExplosionAnchorObjectInstance extends AbstractDdzObjectIns
         this.kind = kind;
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzEndBossExplosionAnchorObjectInstance(ObjectSpawn spawn) {
+        this(null, spawn.subtype());
+    }
+
     @Override
     public DdzEndBossExplosionAnchorObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzEndBossExplosionAnchorObjectInstance(null, ctx.spawn().subtype());
@@ -81,10 +86,6 @@ final class DdzEndBossExplosionAnchorObjectInstance extends AbstractDdzObjectIns
         y = (boss.getY() + offsetY) & 0xFFFF;
     }
 
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

@@ -37,9 +37,14 @@ final class DdzMissileExhaustObjectInstance extends AbstractDdzObjectInstance {
                 0, 0, 0, false, 0), "DDZMissileExhaust", missile);
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzMissileExhaustObjectInstance(ObjectSpawn spawn) {
+        this((DdzMissileObjectInstance) null);
+    }
+
     @Override
     public DdzMissileExhaustObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzMissileExhaustObjectInstance(null);
+        return new DdzMissileExhaustObjectInstance((DdzMissileObjectInstance) null);
     }
 
     @Override

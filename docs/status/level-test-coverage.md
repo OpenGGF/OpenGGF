@@ -135,7 +135,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_SKY_SANCTUARY_2` | Audit pending |
 | S3K | `S3K_DEATH_EGG_1` | Audit pending |
 | S3K | `S3K_DEATH_EGG_2` | Audit pending |
-| S3K | `S3K_DOOMSDAY` | Audit pending |
+| S3K | `S3K_DOOMSDAY` | [Zone matrix](../architecture/validation/levels/s3k-ddz.md) — in progress; seeded Sonic route matches native to the `$D01` request, breadth and rewind spots covered; death/restart, native pixels and incoming DEZ open |
 | S3K | `S3K_DOOMSDAY_2` | Audit pending |
 | S3K | `S3K_AIZ_INTRO` | Audit pending |
 | S3K | `S3K_ENDING_SCENE` | Audit pending |

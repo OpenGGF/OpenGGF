@@ -78,7 +78,6 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
     private int hitPoints;
     private int flashTimer;
     private boolean initialized;
-    private transient DdzWhiteFadeObjectInstance exitFade;
 
 
     public DdzEndBossObjectInstance(ObjectSpawn spawn) {
@@ -456,6 +455,19 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
         spawnFreeChild(() -> DdzBossExplosionClusterObjectInstance.exit(this, x, y));
     }
 
+    private DdzWhiteFadeObjectInstance findExitFade() {
+        var manager = services().objectManager();
+        if (manager == null) {
+            return null;
+        }
+        for (var object : manager.getActiveObjects()) {
+            if (object instanceof DdzWhiteFadeObjectInstance fade && fade.holdsWhite()) {
+                return fade;
+            }
+        }
+        return null;
+    }
+
     /** {@code loc_81BBE}. */
     private void updateExit(DdzZoneRuntimeState ddz, int vIntRunCount) {
         Camera camera = services().camera();
@@ -484,7 +496,7 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
                     return;
                 }
                 routine = 4;
-                exitFade = spawnFreeChild(() -> new DdzWhiteFadeObjectInstance(DdzWhiteFadeObjectInstance.Mode.TO_WHITE_HOLD));
+                spawnFreeChild(() -> new DdzWhiteFadeObjectInstance(DdzWhiteFadeObjectInstance.Mode.TO_WHITE_HOLD));
             }
             case 4 -> {
                 // loc_81C70
@@ -494,7 +506,10 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
                 }
                 yVel = (short) (yVel + 0x10);
                 moveSprite2();
-                if (exitFade == null || !exitFade.finished()) {
+                // movea.w $44(a0),a1 / btst #7,status(a1): looked up live so a rewind restore
+                // finds the recreated fade.
+                DdzWhiteFadeObjectInstance exitFade = findExitFade();
+                if (exitFade != null && !exitFade.finished()) {
                     return;
                 }
                 routine = 6;
@@ -594,10 +609,6 @@ public final class DdzEndBossObjectInstance extends AbstractDdzObjectInstance
         xVel = (short) (xVel + delta);
     }
 
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

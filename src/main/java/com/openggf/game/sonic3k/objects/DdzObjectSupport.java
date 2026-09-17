@@ -92,9 +92,17 @@ final class DdzObjectSupport {
         return inMyRange(targetX, targetY, x, y, box);
     }
 
-    /** {@code Sprite_OnScreen_Test} / {@code Sprite_CheckDelete}: the coarse X delete window. */
-    static boolean outOfRangeX(ObjectServices services, int x) {
-        return ObjectRangeOps.outOfRangeX(x & 0xFFFF, services.camera().getX() & 0xFFFF);
+    /**
+     * {@code Sprite_OnScreen_Test} / {@code Sprite_CheckDelete}: the coarse X delete window against
+     * {@code Camera_X_pos_coarse_back} as latched at frame start, not the camera the controller has
+     * already scrolled this frame.
+     */
+    static boolean outOfRangeX(ObjectServices services, int x, int range) {
+        DdzZoneRuntimeState state = ddz(services);
+        int coarseBack = state == null || !state.controllerPresent()
+                ? ObjectRangeOps.coarseCameraX(services.camera().getX() & 0xFFFF)
+                : state.cameraXCoarseBack();
+        return (((x & 0xFF80) - coarseBack) & 0xFFFF) > range;
     }
 
     /** {@code Sprite_CheckDeleteXY}'s extra Y test: {@code y - Camera_Y + $80 > $200}, unsigned. */

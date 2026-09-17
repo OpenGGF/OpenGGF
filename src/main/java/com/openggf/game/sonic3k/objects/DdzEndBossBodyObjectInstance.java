@@ -48,9 +48,14 @@ public final class DdzEndBossBodyObjectInstance extends AbstractDdzObjectInstanc
         follow();
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzEndBossBodyObjectInstance(ObjectSpawn spawn) {
+        this((DdzEndBossObjectInstance) null);
+    }
+
     @Override
     public DdzEndBossBodyObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzEndBossBodyObjectInstance(null);
+        return new DdzEndBossBodyObjectInstance((DdzEndBossObjectInstance) null);
     }
 
     static DdzEndBossBodyObjectInstance find(ObjectServices services) {

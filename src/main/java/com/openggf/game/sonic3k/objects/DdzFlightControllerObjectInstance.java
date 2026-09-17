@@ -70,6 +70,8 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
     static final int WRAP_DISTANCE = 0x2000;
 
     private int mode;
+    private static final int FORMLESS_RELEASE_FRAMES = 26;
+
     private int routine;
     /** {@code x_pos}/{@code y_pos} longwords (16.16). */
     private int xPos;
@@ -80,6 +82,8 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
     private int timer;
     /** {@code $38(a0)}: bit 1 at the right edge of the flight box, 2 follow Y, 3 follow X, 7 transformed. */
     private int flags;
+    /** Engine donor fallback: frames until object_control clears when no powered form started. */
+    private int formlessReleaseTimer;
     /** {@code $3C(a0)}: {@code Camera_max_X_pos} offset from {@code Camera_min_X_pos}. */
     private int maxXOffset;
 
@@ -104,6 +108,8 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         if (ddz == null || player == null) {
             return;
         }
+        // Slot 4 runs first in Process_Sprites, so the camera here is the one Load_Sprites latched.
+        ddz.latchCameraXCoarseBack(services().camera().getX() & 0xFFFF);
         switch (mode) {
             case MODE_MAIN -> updateMain(ddz, player);
             case MODE_LOCKED -> updateLocked(ddz, player);
@@ -185,12 +191,19 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
             return;
         }
         routine = 4;
-        flags |= 1 << 7;
         // move.b #$81,object_control / anim $1F / Max_speed... / invincibility / sfx_Whistle.
         if (player.getSuperStateController() instanceof Sonic3kSuperStateController superState) {
             superState.startDoomsdayTransformation();
-        } else {
+        }
+        if (player.getSuperStateController() == null || !player.getSuperStateController().isSuper()) {
+            // Engine extension for donor characters without an S3K powered form: the ROM only reaches
+            // here with Sonic, whose SuperHyper_PalCycle clears object_control after Palette_timer $F
+            // and five 2-frame fade steps (26 frames). Keep that schedule so loc_8167C still releases.
+            // $38 bit 7 stays clear so checkFormEnded does not send a formless leader to loc_8179E.
             player.addRings(50);
+            formlessReleaseTimer = FORMLESS_RELEASE_FRAMES;
+        } else {
+            flags |= 1 << 7;
         }
         player.setInvincibleFrames(0);
     }
@@ -200,6 +213,9 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         yVel = (short) (yVel - 0x20);
         xPos += xVel << 8;
         yPos += yVel << 8;
+        if (formlessReleaseTimer > 0 && --formlessReleaseTimer == 0) {
+            ObjectControlState.none().applyTo(player);
+        }
         if (player.isObjectControlled()) {
             return;
         }
@@ -240,7 +256,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
         int cameraX = camera.getX() & 0xFFFF;
         if (cameraX >= WRAP_THRESHOLD) {
             camera.setX((short) (cameraX - WRAP_DISTANCE));
-            DdzLevelWrap.apply(services(), WRAP_DISTANCE);
+            DdzLevelWrap.apply(services(), cameraX - WRAP_DISTANCE);
             ddz.setWrapOffset(WRAP_DISTANCE);
             xPos -= WRAP_DISTANCE << 16;
         }
@@ -513,10 +529,6 @@ public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectIn
 
 
 
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

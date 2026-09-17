@@ -58,9 +58,14 @@ final class DdzBossMasterEmeraldObjectInstance extends AbstractDdzObjectInstance
         }
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzBossMasterEmeraldObjectInstance(ObjectSpawn spawn) {
+        this((DdzEndBossShipPartObjectInstance) null);
+    }
+
     @Override
     public DdzBossMasterEmeraldObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new DdzBossMasterEmeraldObjectInstance(null);
+        return new DdzBossMasterEmeraldObjectInstance((DdzEndBossShipPartObjectInstance) null);
     }
 
     @Override

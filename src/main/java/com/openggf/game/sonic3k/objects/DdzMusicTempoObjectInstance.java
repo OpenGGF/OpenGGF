@@ -56,10 +56,6 @@ public final class DdzMusicTempoObjectInstance extends AbstractDdzObjectInstance
 
 
 
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

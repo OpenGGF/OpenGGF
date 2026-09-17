@@ -186,7 +186,7 @@ public final class DdzMissileObjectInstance extends AbstractDdzObjectInstance {
             return;
         }
         // Sprite_CheckDelete
-        if (DdzObjectSupport.outOfRangeX(services(), getX())) {
+        if (outOfRangeX(getX())) {
             goDeleteClearingRespawn();
         }
     }

@@ -67,6 +67,11 @@ final class DdzBossExplosionClusterObjectInstance extends AbstractDdzObjectInsta
         return new DdzBossExplosionClusterObjectInstance(Kind.EXIT, boss, 0, 0, false, x, y);
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzBossExplosionClusterObjectInstance(ObjectSpawn spawn) {
+        this(Kind.values()[spawn.subtype()], null, 0, 0, false, spawn.x(), spawn.y());
+    }
+
     @Override
     public DdzBossExplosionClusterObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzBossExplosionClusterObjectInstance(Kind.values()[ctx.spawn().subtype()], null,
@@ -140,10 +145,6 @@ final class DdzBossExplosionClusterObjectInstance extends AbstractDdzObjectInsta
         spawnFreeChild(() -> new DdzBossExplosionObjectInstance(ex, ey, offset[1] >> 4, followCamera));
     }
 
-    @Override
-    public boolean isPersistent() {
-        return true;
-    }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {

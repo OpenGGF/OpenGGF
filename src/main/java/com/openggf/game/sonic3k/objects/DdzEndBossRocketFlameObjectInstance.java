@@ -47,6 +47,11 @@ final class DdzEndBossRocketFlameObjectInstance extends AbstractDdzObjectInstanc
         animation.mappingFrame = kind == KIND_FLAME ? 0x33 : 0x12;
     }
 
+    /** Rewind probe for {@code ObjectRewindDynamicCodecs}; mirrors {@link #recreateForRewind}. */
+    private DdzEndBossRocketFlameObjectInstance(ObjectSpawn spawn) {
+        this(null, spawn.subtype());
+    }
+
     @Override
     public DdzEndBossRocketFlameObjectInstance recreateForRewind(RewindRecreateContext ctx) {
         return new DdzEndBossRocketFlameObjectInstance(null, ctx.spawn().subtype());

@@ -843,6 +843,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private void reconcileRewindPresentation(SuperState restoredState) {
         boolean activeSuper = restoredState == SuperState.SUPER;
         reconcileRewindPhysicsAndAnimationProfile(activeSuper);
+        if (restoredState == SuperState.TRANSFORMING) {
+            // startTransformation installs the Super constants on the transformation frame; the
+            // animation profile and powered presentation only switch once SUPER is reached.
+            player.applyExternalPhysicsProfile(getSuperProfile());
+        }
         if (activeSuper) {
             if (usesSonicFormPresentation() && superAnimSet != null) {
                 player.setAnimationSet(superAnimSet);
