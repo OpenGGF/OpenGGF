@@ -84,3 +84,9 @@ user the MP4 plus one or two stills, with the frame numbers and what they show.
 - The input log is held state per frame; a jump is one frame of `A` then release.
   Scripted timing is fixed, so anything keyed to object phases (elevators, polarity
   cycles) needs the `--settle` count tuned from `state.csv`, not guessed.
+- A byte-identical before/after capture is not evidence that the change is inert: the
+  affected plane may not be visible at that position. A Lava Reef Act 2 background change
+  produced zero differing frames over 420 frames at two positions, then differed at two of
+  eight positions swept across the act, because the foreground is opaque almost everywhere.
+  Sweep several positions before concluding either way, and confirm the plane is on screen
+  at the one you film.
