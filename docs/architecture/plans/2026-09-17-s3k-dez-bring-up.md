@@ -1182,3 +1182,29 @@ it selects; disabling the launch mirror flips both inverted cases and leaves bot
 green.
 
 Table: **54 covered, 6 partial, 52 missing, 4 n/a**. 89 focused tests green, `Skipped: 0`.
+
+
+### 2026-09-17 — Slice 2, part 7: the camera look pans, and two rows that are not ours to port
+
+**Six rows from one owner.** The look-up and look-down pans reverse both their direction and their
+limit under the flag: `loc_11276`/`loc_112A6` (:22615-22637) walks the bias up to `$D8` instead of
+down to 8, and `loc_112B0`/`loc_112E0` (:22638-22660) down to `$18` instead of up to `$C8`. Tails
+(:27868, :27891) and Knuckles (:31896, :31919) repeat the code verbatim and the engine has one
+`Camera`, so `decrementLookDownBias`/`incrementLookUpBias` own all six.
+`TestS3kReverseGravityCameraLook` walks 120 frames from the `$60` default in each combination;
+disabling the flag branch sends both inverted cases to the upright targets (8 and 200 instead of
+216 and 24). `Camera` is `@ModApi`, so the change is body-only plus two private constants, and
+`-Pguards` (669/669) was run before committing.
+
+**Two rows stay missing on purpose.** `Touch_Monitor` :20802 negates the `y_vel` copy feeding the
+monitor's "is the player moving into me" test — the `render_flags` bit 1 upside-down branch at
+:20800-20830 — and the engine has no such test: `Sonic3kMonitorObjectInstance.onTouchResponse`
+breaks on the roll animation and negates `y_vel` unconditionally. `Obj_Spikes` :48958 toggles the
+status Y-flip bit that selects `loc_2413E`, while `Sonic3kSpikeObjectInstance` picks its movement
+from `subtype & $F`. Both rows modify upright structure the engine does not model; porting them
+means porting that structure first, which would change shipped upright behaviour and belongs to
+those objects' own work. Recorded in the table with the reason rather than implemented against a
+shape the ROM does not have here.
+
+Table: **60 covered, 6 partial, 46 missing, 4 n/a**. 221 focused tests green, `Skipped: 0`;
+`-Pguards` 669/669.

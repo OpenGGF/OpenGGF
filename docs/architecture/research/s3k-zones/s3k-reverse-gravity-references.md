@@ -89,8 +89,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | ---: | --- | --- | --- | --- |
 | 21952 | `Sonic_Control` | `Sonic_Control` debug cheat: button A toggles the flag (`Debug_mode_flag` only) | — (tests use the `GameStateManager` setter) | n/a |
 | 22011 | `loc_10C62` | `loc_10C62`: `eori.b #2,render_flags` after `Animate_Sonic` (vertical mirror) | — | missing |
-| 22623 | `loc_11276` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_112A6`) | — | missing |
-| 22646 | `loc_112B0` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_112E0`) | — | missing |
+| 22623 | `loc_11276` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_112A6`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
+| 22646 | `loc_112B0` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_112E0`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 22988 | `loc_11578` | `Sonic_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 23265 | `Player_DoRoll` | `Player_DoRoll`: `+5` becomes `-5` (`subi.w #2*5`) | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 23294 | `Sonic_Jump` | **Description corrected 2026-09-17.** `Sonic_Jump` mirrors the angle it hands to `CalcRoomOverHead` — the headroom check (`loc_117FC`, :23298-23304). It does **not** mirror the launch angle: the jump vector at `loc_1182E` (:23314-23317) re-reads `angle(a0)` raw, with no flag test | `PlayableSpriteMovement.doJump` headroom angle | covered |
@@ -114,8 +114,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | ---: | --- | --- | --- | --- |
 | 26166 | `Tails_Control` | `Tails_Control` debug cheat toggle | — | n/a |
 | 26255 | `loc_138C8` | `loc_138C8`: vertical mirror after `Animate_Tails` | — | missing |
-| 27868 | `loc_14AA0` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_14AA0`) | — | missing |
-| 27891 | `loc_14ADA` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_14ADA`) | — | missing |
+| 27868 | `loc_14AA0` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_14AA0`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
+| 27891 | `loc_14ADA` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_14ADA`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 28233 | `loc_14DA2` | `Tails_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 28426 | `loc_14F30` | `Tails_Check_Screen_Boundaries` (`loc_14F30`): death plane at the top | `PlayableSpriteMovement.doLevelBoundary` (one shared owner with :23191) | covered |
 | 28500 | `loc_14FC4` | `Tails_Roll` (`loc_14FC4`): `+1` becomes `-1` (`subq.w #2`) | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
@@ -158,8 +158,8 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 31068 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` up: `.climbingUp_ReverseGravity` probes | — | missing |
 | 31205 | `Knuckles_Wall_Climb` | `Knuckles_Wall_Climb` down: `.climbingDown_ReverseGravity` probes | — | missing |
 | 31485 | `Knuckles_DoLedgeClimbingAnimation` | `Knuckles_DoLedgeClimbingAnimation`: negates the table Y delta | `PlayableSpriteMovement:2387` | covered |
-| 31896 | `loc_172A8` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_172A8`) | — | missing |
-| 31919 | `loc_172E2` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_172E2`) | — | missing |
+| 31896 | `loc_172A8` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_172A8`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
+| 31919 | `loc_172E2` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_172E2`) | `Camera.decrementLookDownBias` / `incrementLookUpBias` | covered |
 | 32261 | `loc_175AA` | `Knux_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 32441 | `Knux_Jump` | `Knux_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | `PlayableSpriteMovement.doJump` headroom angle | covered |
 | 32488 | `loc_1775C` | `Knux_Jump` (`loc_1775C`): negates the roll-radius Y adjustment | `PlayableSpriteMovement.doJump` radius delta | covered |
@@ -209,12 +209,12 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 20802 | `Touch_Monitor` | `Touch_Monitor`: negates `y_vel` before the break-from-below / bounce test (with the monitor Y-flip bit) | `Sonic3kMonitorObjectInstance` (no flag read) | missing |
+| 20802 | `Touch_Monitor` | `Touch_Monitor`: negates `y_vel` before the break-from-below / bounce test (with the monitor Y-flip bit) | `Sonic3kMonitorObjectInstance.onTouchResponse` has no `render_flags` bit 1 direction test to mirror — see the note below | missing |
 | 47577 | `Spring_Down` | `Spring_Down` init: becomes `Spring_Up` | `Sonic3kSpringObjectInstance:425` | covered |
 | 47628 | `Spring_Up` | `Spring_Up` init: becomes `Spring_Down` | `Sonic3kSpringObjectInstance:425` | covered |
 | 47722 | `sub_22F98` | `sub_22F98` (up-spring launch): `+8` becomes `-8` | `Sonic3kSpringObjectInstance.applyUpSpring` / `applyDownSpring` | covered |
 | 48095 | `sub_233CA` | `sub_233CA` (down-spring launch): `-8` becomes `+8` | `Sonic3kSpringObjectInstance.applyUpSpring` / `applyDownSpring` | covered |
-| 48958 | `loc_23FE8` | `Obj_Spikes` init (`loc_23FE8`): toggles the Y-flip bit that selects upright vs upside-down behaviour | `Sonic3kSpikeObjectInstance` (no flag read) | missing |
+| 48958 | `loc_23FE8` | `Obj_Spikes` init (`loc_23FE8`): toggles the Y-flip bit that selects upright vs upside-down behaviour | `Sonic3kSpikeObjectInstance` selects its behaviour from the subtype, not the status Y-flip bit the flag toggles — see the note below | missing |
 
 ### J. DEZ objects
 
@@ -252,17 +252,17 @@ is the RAM wipe described above).
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
-| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 13 | 1 | 5 | 1 |
-| C. Tails routines | 21 | 13 | 1 | 6 | 1 |
+| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 15 | 1 | 3 | 1 |
+| C. Tails routines | 21 | 15 | 1 | 4 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
-| E. Knuckles routines | 24 | 13 | 1 | 9 | 1 |
+| E. Knuckles routines | 24 | 15 | 1 | 7 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 2 | 0 | 7 | 0 |
 | G. Lost rings | 2 | 0 | 2 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 0 | 0 | 5 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **54** | **6** | **52** | **4** |
+| **Total** | **116** | **60** | **6** | **46** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
@@ -347,6 +347,17 @@ the init swap and the launch mirror cancel exactly, and the 8 px nudge comes out
 way: a test written that way passes whether or not the launch rows exist.
 `TestS3kReverseGravitySpringLaunch` pairs them the way the ROM does, and disabling the launch
 mirror flips both inverted cases while both upright controls stay green.
+
+**Two rows are blocked by upright behaviour the engine does not model, not by reverse gravity.**
+`Touch_Monitor` :20802 negates the `y_vel` copy that feeds the monitor's "is the player moving into
+me" test, and that test — the `render_flags` bit 1 upside-down branch and its `.checkfall` path
+(sonic3k.asm:20800-20830) — has no engine equivalent: `Sonic3kMonitorObjectInstance.onTouchResponse`
+breaks on the roll animation and negates `y_vel` unconditionally. `Obj_Spikes` :48958 toggles the
+status Y-flip bit that selects `loc_2413E`, while `Sonic3kSpikeObjectInstance` selects its movement
+from `subtype & $F`. Porting either row means first porting the upright branch it modifies, which
+would change shipped upright behaviour and belongs to those objects' own work, not to this slice.
+Both stay **missing** with that reason recorded rather than being implemented against a structure
+the ROM does not have here.
 
 The nine rows that were already marked covered before this slice are **not** in that position:
 they still have no test that runs them with the flag set, so they remain "verify", not "done".

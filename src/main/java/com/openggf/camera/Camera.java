@@ -106,6 +106,12 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	// ROM: Look down target bias: 8 - shifts camera down to show more below Sonic
 	private static final short LOOK_DOWN_BIAS = 8;
 
+	/** {@code loc_112E0}'s look-up target while {@code Reverse_gravity_flag} is set. */
+	private static final short LOOK_UP_BIAS_REVERSED = 0x18;
+
+	/** {@code loc_112A6}'s look-down target while the flag is set. */
+	private static final short LOOK_DOWN_BIAS_REVERSED = (short) 0xD8;
+
 	// ROM: Camera_Y_pos_bias - dynamic bias that can change during gameplay
 	// (looking up/down, spindash, etc). Starts at 96.
 	private short yPosBias = DEFAULT_Y_BIAS;
@@ -1278,6 +1284,22 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Call this each frame while looking up AND look delay counter has elapsed.
 	 */
 	public void incrementLookUpBias() {
+		// S3K loc_112B0 (docs/skdisasm/sonic3k.asm:22638-22660) tests
+		// Reverse_gravity_flag before the pan and branches to loc_112E0, whose
+		// target is $18 and whose step is subq.w #2: looking up moves the camera
+		// the other way, because "up" for an inverted player is down the screen.
+		// Tails loc_14ADA (:27891) and Knuckles loc_172E2 (:31919) are the same
+		// code, and the engine has one camera, so this owns all three rows.
+		var reverseGravityState = GameServices.gameStateOrNull();
+		if (reverseGravityState != null && reverseGravityState.isReverseGravityActive()) {
+			if (yPosBias > LOOK_UP_BIAS_REVERSED) {
+				yPosBias -= 2;
+				if (yPosBias < LOOK_UP_BIAS_REVERSED) {
+					yPosBias = LOOK_UP_BIAS_REVERSED;
+				}
+			}
+			return;
+		}
 		if (yPosBias < LOOK_UP_BIAS) {
 			yPosBias += 2;
 			if (yPosBias > LOOK_UP_BIAS) {
@@ -1292,6 +1314,19 @@ public class Camera implements RewindSnapshottable<CameraSnapshot> {
 	 * Call this each frame while looking down AND look delay counter has elapsed.
 	 */
 	public void decrementLookDownBias() {
+		// S3K loc_11276 (docs/skdisasm/sonic3k.asm:22615-22637) branches to
+		// loc_112A6 under the flag: target $D8, step addq.w #2. Tails loc_14AA0
+		// (:27868) and Knuckles loc_172A8 (:31896) repeat it.
+		var reverseGravityState = GameServices.gameStateOrNull();
+		if (reverseGravityState != null && reverseGravityState.isReverseGravityActive()) {
+			if (yPosBias < LOOK_DOWN_BIAS_REVERSED) {
+				yPosBias += 2;
+				if (yPosBias > LOOK_DOWN_BIAS_REVERSED) {
+					yPosBias = LOOK_DOWN_BIAS_REVERSED;
+				}
+			}
+			return;
+		}
 		if (yPosBias > LOOK_DOWN_BIAS) {
 			yPosBias -= 2;
 			if (yPosBias < LOOK_DOWN_BIAS) {
