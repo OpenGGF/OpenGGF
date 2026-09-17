@@ -201,6 +201,8 @@ public final class SozEndBossInstance extends AbstractObjectInstance
     private void nextZone(){services().requestZoneAndAct(9,0,true);ObjectLifetimeOps.deleteNoRespawn(this);}
     public boolean ownsPostResultsTransition(){return escapePhase!=0&&!isDestroyed();}
     boolean fallingIntoNextZone(){return escapePhase==8;}
+    /** loc_778DA has set _unkFAA8. */
+    boolean escapedOffscreen(){return escapePhase>=5;}
     boolean flipped(){return flipped;} int xVelocity(){return xVelocity;}
     @Override public boolean isHighPriority(){return escapePhase>=2;}
     boolean defeated(){return defeated;} boolean dismantling(){return dismantling;} boolean hidden(){return hidden;}
