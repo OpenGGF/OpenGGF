@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
+import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.render.LrzRockSpriteRenderer;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 
@@ -56,6 +59,34 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     public void update(int act, int frameCounter) {
         // loc_56B5E / LRZ2_ScreenEvent with no pending chunk edit: DrawTilesAsYouMove only, which
         // the engine's own tile streaming already does. The stage machines arrive with their slices.
+        advanceRockSpriteWindow();
+    }
+
+    /**
+     * {@code LevelLoop} calls {@code Draw_LRZ_Special_Rock_Sprites} once a frame, right after
+     * {@code ScreenEvents} and {@code Load_Rings} and only while {@code Current_zone} is 9
+     * (sonic3k.asm:7899-7903). It reads {@code Camera_X_pos}, not the copy the renderer later
+     * subtracts, and leaves the two placement pointers in the runtime state for
+     * {@code sub_1CB68} to walk during {@code Render_Sprites}.
+     */
+    private void advanceRockSpriteWindow() {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ) {
+            return;
+        }
+        LrzRockSpriteRenderer renderer = rockSpriteRenderer();
+        if (renderer == null) {
+            return;
+        }
+        renderer.advanceWindow(lrz, camera().getX());
+    }
+
+    private LrzRockSpriteRenderer rockSpriteRenderer() {
+        return levelManager() != null
+                && levelManager().getZoneFeatureProvider()
+                        instanceof Sonic3kZoneFeatureProvider provider
+                ? provider.lrzRockSpriteRenderer()
+                : null;
     }
 
     private LrzZoneRuntimeState state() {

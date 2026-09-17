@@ -361,7 +361,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   rather than Act 1's, and the invisible lava blocks that carry every lava-floor hit
   in the zone now hurt, with a fire shield making the player immune to them.
   Both acts also run Lava Reef's own scroll-driven lava animation, two background
-  channels whose frames rotate with the parallax instead of a fixed cycle.
+  channels whose frames rotate with the parallax instead of a fixed cycle, and the
+  zone's scattered background rocks - hardware sprites the ROM draws itself, with no
+  object behind them - are drawn again, behind the players and in front of the
+  terrain layer, with a wider viewport simply showing more of them.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list

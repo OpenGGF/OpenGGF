@@ -29,8 +29,12 @@ import java.util.Objects;
  *       {@code LRZ1_Deform} and {@code sub_57082} publish for the animated-tile channels.</li>
  *   <li>{@code Camera_X_pos_BG_copy}/{@code Camera_Y_pos_BG_copy}: this frame's background camera,
  *       which the animated-tile phase subtracts from the two fractions above.</li>
- *   <li>{@code LRZ_rocks_routine}: the act-1 rock-sprite renderer's state, cleared by the seamless
+ *   <li>{@code LRZ_rocks_routine}: the rock-sprite renderer's state, cleared by the seamless
  *       act change at {@code loc_56CAA} (115349).</li>
+ *   <li>{@code LRZ_rocks_addr_front}/{@code LRZ_rocks_addr_back}: the two placement-list pointers
+ *       {@code Draw_LRZ_Special_Rock_Sprites} walks (sonic3k.asm:39574-39619), kept here as record
+ *       indices into the act's list. The ROM carries them frame to frame and only nudges them, so
+ *       a restore that did not bring them back would resume the walk from the wrong record.</li>
  * </ul>
  *
  * <p>Words owned by later slices (the dome-region index, the LRZ3 machine, boss state) join this
@@ -38,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + Integer.BYTES + 11 * Short.BYTES;
+            S3kScreenShake.captureBytes() + Integer.BYTES + 13 * Short.BYTES;
 
     private final int zoneIndex;
     private final int actIndex;
@@ -53,6 +57,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short animationPhaseX0;
     private short animationPhaseX1;
     private short rocksRoutine;
+    private short rocksFrontIndex;
+    private short rocksBackIndex;
     private short cameraStoredMinX;
     private short cameraStoredMaxX;
     private short cameraStoredMinY;
@@ -137,6 +143,15 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         rocksRoutine = (short) value;
     }
 
+    /** {@code LRZ_rocks_addr_front} / {@code LRZ_rocks_addr_back} as placement-record indices. */
+    public int rocksFrontIndex() { return rocksFrontIndex & 0xFFFF; }
+    public int rocksBackIndex() { return rocksBackIndex & 0xFFFF; }
+
+    public void setRocksWindow(int frontIndex, int backIndex) {
+        rocksFrontIndex = (short) frontIndex;
+        rocksBackIndex = (short) backIndex;
+    }
+
     /**
      * {@code Camera_stored_min_X_pos} and friends, saved and restored around the rock crusher's
      * camera resize and the boss arenas. They have no engine-wide owner.
@@ -165,6 +180,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(animationPhaseX0);
         buffer.putShort(animationPhaseX1);
         buffer.putShort(rocksRoutine);
+        buffer.putShort(rocksFrontIndex);
+        buffer.putShort(rocksBackIndex);
         buffer.putShort(cameraStoredMinX);
         buffer.putShort(cameraStoredMaxX);
         buffer.putShort(cameraStoredMinY);
@@ -187,6 +204,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         animationPhaseX0 = buffer.getShort();
         animationPhaseX1 = buffer.getShort();
         rocksRoutine = buffer.getShort();
+        rocksFrontIndex = buffer.getShort();
+        rocksBackIndex = buffer.getShort();
         cameraStoredMinX = buffer.getShort();
         cameraStoredMaxX = buffer.getShort();
         cameraStoredMinY = buffer.getShort();
