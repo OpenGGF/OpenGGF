@@ -64,7 +64,8 @@ Entries should include:
 38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
 39. [Sky Sanctuary Act 1 Cutscene: Death Egg Palette, Children and Knuckles' Resting Position](#sky-sanctuary-act-1-cutscene-death-egg-palette-children-and-knuckles-resting-position)
 40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
-41. [Sky Sanctuary Background Plane Renders Flat Sky in Both Modes](#sky-sanctuary-background-plane-renders-flat-sky-in-both-modes)
+41. [Sky Sanctuary's Structured Background Band Has Not Been Seen On Screen](#sky-sanctuarys-structured-background-band-has-not-been-seen-on-screen)
+42. [Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss](#sky-sanctuary-mecha-sonic-spawner-pad-allocates-no-boss)
 
 ---
 
@@ -5868,9 +5869,41 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Suspected cause** — `SSZ1_BackgroundEvent` routine 4 keeps rendering the framing frozen in `Events_bg+$0C`/`+$0E` until the staged redraw reports done, and routine `$C` does the same on the way back. The engine draws the background from the whole level layout instead of a nametable, so it has nothing to stage: each redraw routine completes in one frame. The framing values, the deform bands and the routine order all match; only the duration of the two transition states does not.
 - **Removal condition** — Either a native probe measures the ROM's redraw length at that crossing and the engine holds routines 4 and `$C` for the same number of frames, or a `hpz` fixture window shows the crossing and the engine matches it frame for frame.
 
-## Sky Sanctuary Background Plane Renders Flat Sky in Both Modes
+## Sky Sanctuary's Structured Background Band Has Not Been Seen On Screen
+
+Supersedes "Sky Sanctuary Background Plane Renders Flat Sky in Both Modes", whose flat-sky half is
+now answered: **it is the ROM's layout, not a sampling fault.** The `$A00` background layout
+(`LevelPtrs` index `$0A * 2`, ROM `$A458E`, uncompressed) is 60 columns by 22 rows of 128-pixel
+chunks. Rows 0-2 (`Y $000`-`$17F`) are a single repeated chunk id across all sixty columns and rows
+18-21 (`Y $900`-`$AFF`) are at most two; only rows 3-17 (`Y $180`-`$8FF`) carry structure, between
+three and fifteen distinct ids each. `sub_57A60`'s plain mode frames the background at
+`Camera_Y + $160`, and the arrival camera `SSZ1_ScreenInit` forces is `$F49`, which the `$1000` Y
+wrap makes `$A9` — background row 1, one of the single-chunk rows. `TestS3kSszBackgroundLayout`
+decodes all of that from the ROM and also checks the engine's background layer holds the ROM's rows
+column for column, so the layer is loaded and addressed correctly.
 
 - **Location** — `SwScrlSsz` and the S3K background renderer (`src/main/java/com/openggf/game/sonic3k/scroll/`)
-- **Symptom** — In `~/Videos/OGGF/ssz-bring-up/raw-04-ssz1-sky-320` and `raw-05-ssz1-sky-800` the background behind Sky Sanctuary act 1 is flat blue at every frame, in the plain-sky framing and inside the cloud band alike. Only the five roaming cloud sprites move against it.
-- **Suspected cause** — Unknown, and deliberately not guessed. The scroll words `sub_57A60` produces, the `SSZ1_BGDeformArray` band expansion and both modes' `Camera_Y_pos_BG_copy` are asserted against the ROM in `TestS3kSszScrollBands`, so the handler's output is right. What is unverified is whether the background layout has anything at the rows that output selects: Sky Sanctuary's background layer may genuinely be plain sky over this stretch, or the layer may not be reaching the screen at all. The pre-campaign baseline `raw-00-ssz1-before` is also flat blue, so the capture does not separate the two.
-- **Removal condition** — Decode the SSZ background layout rows that `Camera_Y_pos_BG_copy` selects in each mode from the ROM and compare them with what the renderer draws, or capture the same camera position natively in BizHawk. Either the layout is empty there, in which case this entry is closed as correct behaviour, or the background layer is not being sampled and that is the defect.
+- **Symptom** — No capture yet puts the camera inside `Y $180`-`$8FF`, so the part of the background
+  that is not plain sky has never been inspected on a moving frame. `raw-04-ssz1-sky-320` and
+  `raw-05-ssz1-sky-800` both sit in the arrival band and are correctly flat blue.
+- **Suspected cause** — None; this is a missing observation, not a suspected defect. It is filed so
+  the visual claim for "BG: cloud band" stays honest: that row is scroll-verified and
+  layout-verified, not visually verified.
+- **Removal condition** — A `GameplayCaptureTool` clip (or a native BizHawk frame) with the camera
+  inside `Y $180`-`$8FF` shows the background chunks the layout holds there, at 320 and at a wide
+  viewport, and the act-1 matrix's background rows carry the frame numbers.
+
+## Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss
+
+- **Location** — `SSZHPZTeleporterObjectInstance` (`src/main/java/com/openggf/game/sonic3k/objects/`)
+- **Symptom** — The `$79:$00` placement at `($1A40,$670)` takes the ROM's `loc_455BA` branch and
+  installs `loc_45A72` instead of the teleporter routine, so it is correctly never solid and never
+  launches the player, but it never allocates `Obj_SSZEndBoss` into `_unkFAA4` and never explodes.
+  Reaching the final arena therefore produces no Mecha Sonic.
+- **Suspected cause** — Not a defect: `loc_45A84`'s `AllocateObject` needs `Obj_SSZEndBoss`, which
+  slice 7 of the [SSZ bring-up plan](../architecture/plans/2026-09-17-ssz-bring-up.md) owns. The
+  branch detection, the `Camera_Y == Camera_max_Y` condition and the no-solid behaviour are in
+  place; only the allocation, the `$30(a0)` boss handle, the `x_pos` comparison at `loc_45AB0` and
+  the `Child6_CreateBossExplosion` child are missing.
+- **Removal condition** — Slice 7 lands `Obj_SSZEndBoss`, `loc_45A84` allocates it and writes
+  `_unkFAA4`, and `loc_45AB0` explodes the pad once the boss passes its X.
