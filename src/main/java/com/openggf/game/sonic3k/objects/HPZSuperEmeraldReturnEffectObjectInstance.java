@@ -32,12 +32,6 @@ import java.util.List;
  */
 public final class HPZSuperEmeraldReturnEffectObjectInstance
         extends AbstractObjectInstance implements RewindRecreatable {
-    /** {@code word_2E398}: the results camera X for each Super Emerald stage. */
-    static final int[] CAMERA_X =
-            {0x15A0, 0x1540, 0x1600, 0x1500, 0x1640, 0x14B0, 0x1690};
-    /** {@code word_2E398+$10}: the matching pedestal Y ({@code loc_2ECD0} reads it as the centre). */
-    static final int[] PEDESTAL_Y =
-            {0x368, 0x3A0, 0x3A0, 0x350, 0x350, 0x390, 0x390};
     private static final int LANES = 8;
     /** {@code loc_2ECD0} with {@code $36} set: the expanding ring is centred on the Master Emerald. */
     private static final int EXPANDING_X = 0x1640;
@@ -77,9 +71,7 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
             HPZSSEntryControlObjectInstance parent, int stageIndex, boolean expanding) {
         super(new ObjectSpawn(0, 0, 0xB5, 0, 0, false, 0),
                 "HPZSuperEmeraldReturnEffect");
-        if (stageIndex < 0 || stageIndex >= CAMERA_X.length) {
-            throw new IllegalArgumentException("stageIndex");
-        }
+        S3kSanctuaryRuntimeState.resultsCameraX(stageIndex); // validates the stage
         parentRef = parent;
         this.stageIndex = stageIndex;
         this.expanding = expanding;
@@ -226,10 +218,10 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
     }
 
     @Override public int getX() {
-        return expanding ? EXPANDING_X : CAMERA_X[stageIndex] + 0xA0;
+        return expanding ? EXPANDING_X : S3kSanctuaryRuntimeState.resultsCameraX(stageIndex) + 0xA0;
     }
     @Override public int getY() {
-        return expanding ? EXPANDING_Y : PEDESTAL_Y[stageIndex];
+        return expanding ? EXPANDING_Y : S3kSanctuaryRuntimeState.resultsPedestalY(stageIndex);
     }
     @Override public int getOutOfRangeReferenceX() { return getX(); }
 

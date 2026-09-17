@@ -267,6 +267,41 @@ class TestS3kSpecialStageResultsReveal {
         assertTrue(screen.isComplete(), "routine $A counts the 6*60 message hold");
     }
 
+    /**
+     * Native reference: the complete-run's seventh Super Emerald stage (ss_14, stage 5, at
+     * least 50 rings), probed every frame over movie frames 292900-295460. Loop pass u is
+     * {@code Level_frame_counter - 6210}; native Camera_Y_pos first leaves $240 on u=1042,
+     * reads $2A0 on u=1137 and $320 on u=1265, Camera_X_pos leaves $14B0 on u=1521 and
+     * reaches $15A0 on u=1760, and the results loop exits (zone 0701) on u=2243.
+     */
+    @Test
+    void timelineMatchesTheNativeSeventhSuperEmeraldStage() {
+        collectAllChaosEmeraldsAndSuperEmeraldsExcept(5);
+        gameState.markSuperEmeraldCollected(5);
+        var screen = new S3kSpecialStageResultsScreen(50, true, 5, gameState.getEmeraldCount(),
+                PlayerCharacter.SONIC_AND_TAILS, true, true);
+
+        runTo(screen, 1, 1041);
+        assertEquals(0x240, screen.sanctuaryCameraYForTest());
+        runTo(screen, 1042, 1042);
+        assertEquals(0x241, screen.sanctuaryCameraYForTest());
+        runTo(screen, 1043, 1137);
+        assertEquals(0x2A0, screen.sanctuaryCameraYForTest());
+        runTo(screen, 1138, 1264);
+        assertEquals(0x31F, screen.sanctuaryCameraYForTest());
+        runTo(screen, 1265, 1520);
+        assertEquals(0x320, screen.sanctuaryCameraYForTest());
+        assertEquals(0x14B0, screen.sanctuaryCameraXForTest());
+        runTo(screen, 1521, 1521);
+        assertEquals(0x14B1, screen.sanctuaryCameraXForTest());
+        runTo(screen, 1522, 1760);
+        assertEquals(0x15A0, screen.sanctuaryCameraXForTest());
+        runTo(screen, 1761, 2242);
+        assertFalse(screen.isComplete());
+        runTo(screen, 2243, 2243);
+        assertTrue(screen.isComplete());
+    }
+
     @Test
     void knucklesHyperMessageUsesHisNameFrame() {
         collectAllChaosEmeraldsAndSuperEmeraldsExcept(6);
@@ -298,6 +333,12 @@ class TestS3kSpecialStageResultsReveal {
         runTo(screen, e + 1, e + 155);
         assertEquals(0x2A0, screen.sanctuaryCameraYForTest());
         assertTrue(screen.phase1SlidingOutForTest(5), "slot 35 joins the slide-out with 50 rings");
+        // loc_2EC4A decrements its $2E = 20 on the $2A0 frame itself (19 left), so the
+        // icon holds through e+174 and first moves on e+175.
+        runTo(screen, e + 156, e + 174);
+        assertEquals(0x17C, screen.continueIconXForTest());
+        runTo(screen, e + 175, e + 175);
+        assertEquals(0x19C, screen.continueIconXForTest());
     }
 
     // ---- sub_2ECA8/loc_2EB88: the Super Emerald stage counts Super Emeralds ----
@@ -333,6 +374,33 @@ class TestS3kSpecialStageResultsReveal {
         var screen = advanceToReveal(screen(false, false, PlayerCharacter.SONIC_AND_TAILS));
 
         assertEquals(FRAME_CHAOS_EMERALD, screen.emeraldWordFrameForTest());
+        assertEquals(SUPER_FORM_FRAMES, screen.revealFramesForTest());
+    }
+
+    @Test
+    void chaosRevealSlidesOutTheEmeraldRowsNotTheTallyAndWaitsAFrameForTheLastDeletion() {
+        collectAllChaosEmeralds();
+        var screen = screen(false, false, PlayerCharacter.SONIC_AND_TAILS);
+
+        int frame = 1;
+        while (!screen.phase1SlidingOutForTest(14)) {
+            screen.update(frame++, null);
+            assertTrue(frame < 2000, "loc_2E58C never started");
+        }
+        assertFalse(screen.phase1SlidingOutForTest(0), "slots 30-35 (the tally) stay on screen");
+        int emeraldWordX = screen.phase1XForTest(16);
+        int plainX = screen.phase1XForTest(14);
+        runTo(screen, frame, frame + 2);
+        assertEquals(emeraldWordX, screen.phase1XForTest(16), "slot 46 holds $2E = 4");
+        assertEquals(plainX + 3 * 0x20, screen.phase1XForTest(14),
+                "slot 44 already moved on its creation frame and moves on each of the next three");
+        frame += 3;
+        while (!screen.cleanupSlidersDeletedForTest()) {
+            screen.update(frame++, null);
+        }
+        assertEquals(List.of(), screen.revealFramesForTest(),
+                "loc_2E5C0 reads $30 before this frame's sliders ran");
+        screen.update(frame, null);
         assertEquals(SUPER_FORM_FRAMES, screen.revealFramesForTest());
     }
 

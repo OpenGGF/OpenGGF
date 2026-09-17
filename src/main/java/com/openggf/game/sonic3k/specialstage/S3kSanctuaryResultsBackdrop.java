@@ -3,10 +3,10 @@ package com.openggf.game.sonic3k.specialstage;
 import com.openggf.camera.Camera;
 import com.openggf.game.GameServices;
 import com.openggf.game.palette.PaletteOwnershipRegistry;
+import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
 import com.openggf.game.sonic3k.Sonic3kLevelResourceProfile;
 import com.openggf.game.sonic3k.objects.HPZSSEntryControlObjectInstance;
 import com.openggf.game.sonic3k.objects.HPZSuperEmeraldReturnEffectObjectInstance;
-import com.openggf.game.resources.PlcLifecyclePhase;
 import com.openggf.level.LevelManager;
 import com.openggf.level.LevelSpritePresentation;
 import com.openggf.level.objects.ObjectManager;
@@ -35,8 +35,7 @@ final class S3kSanctuaryResultsBackdrop {
 
     /** {@code move.w #$240,(Camera_Y_pos).w} before {@code Load_Sprites}. */
     static final int START_CAMERA_Y = 0x240;
-    /** {@code word_2E398}: results camera X by {@code Current_special_stage_2}. */
-    static final int[] STAGE_CAMERA_X = {0x15A0, 0x1540, 0x1600, 0x1500, 0x1640, 0x14B0, 0x1690};
+    static final int STAGE_COUNT = 7;
 
     private final LevelManager level;
     private final HPZSSEntryControlObjectInstance controller;
@@ -54,7 +53,7 @@ final class S3kSanctuaryResultsBackdrop {
     static S3kSanctuaryResultsBackdrop host(int stageIndex, boolean succeeded) {
         LevelManager level = GameServices.levelOrNull();
         if (level == null || level.getCurrentLevel() == null
-                || stageIndex < 0 || stageIndex >= STAGE_CAMERA_X.length
+                || stageIndex < 0 || stageIndex >= STAGE_COUNT
                 || !Sonic3kLevelResourceProfile.isHpzSanctuary(
                         level.getCurrentZone(), level.getCurrentAct())) {
             return null;
@@ -72,15 +71,19 @@ final class S3kSanctuaryResultsBackdrop {
         }
         controller.hostSpecialStageResults(stageIndex, succeeded);
         Camera camera = GameServices.camera();
-        camera.setX((short) STAGE_CAMERA_X[stageIndex]);
+        camera.setX((short) S3kSanctuaryRuntimeState.resultsCameraX(stageIndex));
         camera.setY((short) START_CAMERA_Y);
         S3kSanctuaryResultsBackdrop backdrop = new S3kSanctuaryResultsBackdrop(level, controller);
-        backdrop.publishFrame();
+        // The rebuilt screen is fully drawn before the first loop pass.
+        backdrop.prepareFrame();
+        LevelSpritePresentation.publishPreparedScene(level);
         return backdrop;
     }
 
     /** loc_2E24C's {@code Process_Sprites} for the level objects, with no player slots. */
     void runObjects(S3kSanctuaryResultsPalette palette) {
+        // VInt 8 at the top of this loop pass uploads the table the last pass prepared.
+        LevelSpritePresentation.publishPreparedScene(level);
         PaletteOwnershipRegistry registry = GameServices.paletteOwnershipRegistryOrNull();
         if (registry != null) {
             registry.beginFrame();
@@ -95,15 +98,14 @@ final class S3kSanctuaryResultsBackdrop {
     }
 
     /**
-     * loc_2E24C's {@code ScreenEvents}, {@code Render_Sprites} and the VInt 8 upload after the
-     * results object has moved the camera: the level renderer draws the published table and scroll.
+     * loc_2E24C's {@code ScreenEvents} and {@code Render_Sprites} after the results object has
+     * moved the camera; the next pass's VInt publishes what this prepares.
      */
-    void publishFrame() {
+    void prepareFrame() {
         // ScreenEvents: publish the camera copy and this frame's plane scroll.
         GameServices.camera().captureRenderCopy();
         level.recomputeParallaxOnlyForCurrentFrame();
         LevelSpritePresentation.prepare(level, GameServices.sprites());
-        LevelSpritePresentation.publish(level, PlcLifecyclePhase.SPECIAL_STAGE_RESULTS);
     }
 
     HPZSuperEmeraldReturnEffectObjectInstance spawnStars(int stageIndex, boolean expanding) {

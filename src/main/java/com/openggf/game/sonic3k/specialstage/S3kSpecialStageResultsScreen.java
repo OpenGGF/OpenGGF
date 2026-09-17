@@ -8,6 +8,7 @@ import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
 import com.openggf.game.LevelBackdropResultsScreen;
 import com.openggf.game.sonic3k.S3kEmeraldProgression;
+import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
@@ -187,7 +188,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     // ---- Elements ----
     private final List<ResultsElement> phase1Elements = new ArrayList<>();
     private final List<ResultsElement> phase2Elements = new ArrayList<>();
-    private final List<CleanupSlider> cleanupSliders = new ArrayList<>();
+    /** loc_2E58C: {@code $2E} of slots 44-48. */
+    private static final int[] CLEANUP_DELAYS = {0, 0, 4, 0, 4};
+    private boolean cleanupStarted;
+    private boolean cleanupDeletionSeen;
     private final com.openggf.level.PatternDesc reusablePatternDesc = new com.openggf.level.PatternDesc();
 
     // ---- Continue icon ----
@@ -244,8 +248,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         // SpecialStage_Results rebuilds the sanctuary before allocating this object.
         this.backdrop = superEmeraldStage
                 ? S3kSanctuaryResultsBackdrop.host(stageIndex, gotEmerald) : null;
-        this.detachedCameraX = S3kSanctuaryResultsBackdrop.STAGE_CAMERA_X[
-                Math.floorMod(stageIndex, S3kSanctuaryResultsBackdrop.STAGE_CAMERA_X.length)];
+        this.detachedCameraX = S3kSanctuaryRuntimeState.resultsCameraX(
+                Math.floorMod(stageIndex, S3kSanctuaryResultsBackdrop.STAGE_COUNT));
         this.detachedCameraY = S3kSanctuaryResultsBackdrop.START_CAMERA_Y;
 
         // Load art
@@ -302,7 +306,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         }
 
         if (backdrop != null) {
-            backdrop.publishFrame();
+            backdrop.prepareFrame();
         }
         if (sanctuaryPalette != null) {
             sanctuaryPalette.endOfFrame();
@@ -434,30 +438,30 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
             return;
         }
 
-        // Create cleanup objects to slide bonus text off-screen (ROM lines 63468-63478)
-        if (cleanupSliders.isEmpty()) {
+        if (!cleanupStarted) {
+            cleanupStarted = true;
             createCleanupSliders();
         }
 
-        // Update cleanup sliders
-        var iter = cleanupSliders.iterator();
-        while (iter.hasNext()) {
-            CleanupSlider slider = iter.next();
-            if (slider.timer > 0) {
-                slider.timer--;
-            } else {
-                slider.x += SLIDE_OUT_SPEED;
-                if (slider.x > 576) {
-                    iter.remove();
-                }
-            }
+        // loc_2E5C0: tst.w $30(a0) runs in slot 29, before the sliders of this frame, so it
+        // sees the last deletion one frame after it happened.
+        boolean allDeleted = true;
+        for (int i = 0; i < CLEANUP_DELAYS.length; i++) {
+            allDeleted &= phase1Elements.get(CHAR_NAME_INDEX + i).deleted;
         }
-
-        // When all cleanup objects are done, advance (ROM: tst.w $30(a0) / beq.s)
-        if (cleanupSliders.isEmpty()) {
-            state = STATE_EMERALD_REVEAL;
-            stateTimer = 0;
-            createPhase2Elements();
+        if (!allDeleted) {
+            return;
+        }
+        if (!cleanupDeletionSeen) {
+            cleanupDeletionSeen = true;
+            return;
+        }
+        state = STATE_EMERALD_REVEAL;
+        stateTimer = 0;
+        createPhase2Elements();
+        // sub_2E802 fills slots 44-49, after this object: they move this frame.
+        for (ResultsElement element : phase2Elements) {
+            element.slideIn();
         }
     }
 
@@ -520,12 +524,15 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         phase1Elements.get(2).digitsCleared = true;
         phase1Elements.get(4).digitsCleared = true;
         if (showContinueIcon) {
+            // loc_2E622 (sonic3k.asm:63555-63560): the icon SST sits after this object, so loc_2EC4A's first
+            // decrement is this frame, like the sliders below.
             continueIconExitDelay = 20;
+            updateContinueIconExit();
         }
-        int[] rewardDelays = {0, 0, 4, 0, 4};
+        // Same slots and $2E values as loc_2E58C.
         int rewardRows = rewardEmeraldCount >= 7 ? 5 : 3;
         for (int i = 0; i < rewardRows; i++) {
-            startSlideOut(phase1Elements.get(CHAR_NAME_INDEX + i), rewardDelays[i]);
+            startSlideOut(phase1Elements.get(CHAR_NAME_INDEX + i), CLEANUP_DELAYS[i]);
         }
     }
 
@@ -650,7 +657,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     }
 
     private HPZSuperEmeraldReturnEffectObjectInstance spawnStars(boolean expanding) {
-        int stage = Math.floorMod(stageIndex, S3kSanctuaryResultsBackdrop.STAGE_CAMERA_X.length);
+        int stage = Math.floorMod(stageIndex, S3kSanctuaryResultsBackdrop.STAGE_COUNT);
         return backdrop != null
                 ? backdrop.spawnStars(stage, expanding)
                 : new HPZSuperEmeraldReturnEffectObjectInstance(null, stage, expanding);
@@ -860,6 +867,19 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         return phase1Elements.get(index).currentX;
     }
 
+    int continueIconXForTest() {
+        return continueIconX;
+    }
+
+    boolean cleanupSlidersDeletedForTest() {
+        for (int i = 0; i < CLEANUP_DELAYS.length; i++) {
+            if (!phase1Elements.get(CHAR_NAME_INDEX + i).deleted) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     boolean continueIconShownForTest() {
         return showContinueIcon;
     }
@@ -1022,25 +1042,14 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
     }
 
     /**
-     * Creates cleanup "slide-out" objects that push bonus text off-screen.
-     * ROM: 5 objects at loc_2EC1E (lines 63468-63477 / 54026-54035).
-     * Timer values: 0, 0, 4, 0, 4 for staggered exit.
-     * Slider X initialized from the current position of the elements they represent.
+     * loc_2E58C (sonic3k.asm:63472-63484): slots 44-48, the "&lt;name&gt; GOT ALL CHAOS EMERALDS"
+     * rows (elements 14-18), become loc_2EC1E sliders, with {@code $2E = 4} written to slots
+     * 46 and 48 and {@code $30 = 5}. The tally rows stay. The sliders run after this object,
+     * so their first pass is this frame.
      */
     private void createCleanupSliders() {
-        int[] timers = {0, 0, 4, 0, 4};
-        for (int i = 0; i < timers.length; i++) {
-            // Initialize slider X from the corresponding phase1 element's current position
-            int startX = (i < phase1Elements.size()) ? phase1Elements.get(i).currentX : 0;
-            cleanupSliders.add(new CleanupSlider(startX, timers[i]));
-        }
-
-        // Mark the first 6 phase1 elements (score/bonus labels) for slide-out
-        for (int i = 0; i < Math.min(6, phase1Elements.size()); i++) {
-            ResultsElement elem = phase1Elements.get(i);
-            if (elem.type != ElemType.EMERALD) {
-                elem.sliding_out = true;
-            }
+        for (int i = 0; i < CLEANUP_DELAYS.length; i++) {
+            startSlideOut(phase1Elements.get(CHAR_NAME_INDEX + i), CLEANUP_DELAYS[i]);
         }
     }
 
@@ -1523,6 +1532,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
         boolean sliding_out;
         /** loc_2EC1E's {@code $2E}: frames to hold before sliding out. */
         int slideOutDelay;
+        boolean deleted;
         /** loc_2E6C8: {@code mainspr_childsprites} cleared, so no bonus digits are drawn. */
         boolean digitsCleared;
 
@@ -1552,29 +1562,35 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdro
             }
         }
 
-        /** loc_2EC1E: hold for {@code $2E} frames, then move right $20 per frame. */
+        /**
+         * loc_2EC1E: hold for {@code $2E} frames, then move right $20 per frame while the last
+         * Render_Sprites left the on-screen bit set; once it did not, delete (and, in the ROM,
+         * {@code subq.w #1,$30(parent)}).
+         */
         void slideOut() {
+            if (deleted) {
+                return;
+            }
             if (slideOutDelay > 0) {
                 slideOutDelay--;
                 return;
             }
-            currentX += SLIDE_OUT_SPEED;
-            if (currentX > 576) {
+            if (!onScreen()) {
+                deleted = true;
                 visible = false;
+                return;
             }
+            currentX += SLIDE_OUT_SPEED;
+        }
+
+        /** Render_Sprites loc_1AE58 X test for a screen-space multi-sprite object. */
+        boolean onScreen() {
+            int left = currentX - VDP_OFFSET;
+            return left + widthPixels >= 0 && left - widthPixels < 320;
         }
 
         int screenX() { return currentX - VDP_OFFSET + viewportXOffset; }
         int screenY() { return y - VDP_OFFSET; }
     }
 
-    private static class CleanupSlider {
-        int x;
-        int timer;
-
-        CleanupSlider(int x, int timer) {
-            this.x = x;
-            this.timer = timer;
-        }
-    }
 }

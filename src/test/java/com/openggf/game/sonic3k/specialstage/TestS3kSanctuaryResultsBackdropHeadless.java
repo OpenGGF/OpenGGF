@@ -177,7 +177,20 @@ class TestS3kSanctuaryResultsBackdropHeadless {
         runTo(screen, s + 176, s + 176);
         assertFalse(controller.resultsReturnTransformationActive(),
                 "loc_2E9D8 clears _unkFAC1");
-        runTo(screen, s + 177, s + 482);
+        S3kSanctuaryResultsPalette palette = screen.sanctuaryPaletteForTest();
+        assertEquals(0x06A0, palette.normalColor(3, 1));
+        // Native complete-run ss_14 (movie frames 295000-295020): the Master Emerald's
+        // off_914CE rotation writes $8C0/$680 on the pass after the message lands, then
+        // $AC0/$680 ten passes later and $CE0/$880 ten after that.
+        runTo(screen, s + 177, s + 177);
+        assertEquals(0x08C0, palette.normalColor(3, 1));
+        assertEquals(0x0680, palette.normalColor(3, 2));
+        runTo(screen, s + 178, s + 187);
+        assertEquals(0x0AC0, palette.normalColor(3, 1));
+        runTo(screen, s + 188, s + 197);
+        assertEquals(0x0CE0, palette.normalColor(3, 1));
+        assertEquals(0x0880, palette.normalColor(3, 2));
+        runTo(screen, s + 198, s + 482);
         assertTrue(screen.isComplete());
     }
 

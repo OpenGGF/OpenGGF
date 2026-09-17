@@ -26,6 +26,8 @@ final class S3kSanctuaryResultsPalette {
      * {@code Pal_fade_delay2} is not written by the results setup. Every fade that reaches
      * this screen ({@code Pal_FadeFromWhite}, or the {@code Pal_FillWhite} + $16-call
      * {@code Animate_Palette} entry of $1701) starts it from 0 and runs 22 calls, ending at 2.
+     * Native complete-run ss_14 confirms it: the first step lands on the third call (loop pass
+     * 363) and the seven steps on passes 363-381.
      */
     private static final int INHERITED_FADE_DELAY = 2;
     /** loc_2E410: offsets $42,$44,$4C,$62,$66,$6E,$70,$7C,$7E of Normal_palette. */

@@ -73,6 +73,16 @@ public final class LevelSpritePresentation {
         }
     }
 
+    /**
+     * Publishes the prepared table for a scene that runs the level's VInt outside the ordinary
+     * level phases (S3K {@code SpecialStage_Results} over the rebuilt HPZ sanctuary). Phase-gated
+     * {@link #publish} deliberately never publishes for a special-stage results screen, whose
+     * parked level table is stale.
+     */
+    public static void publishPreparedScene(LevelManager level) {
+        if (enabled(level)) level.spritePresentationRenderer().spriteTables.publish();
+    }
+
     public static void register(LevelManager level, RewindRegistry registry) {
         registry.deregister("level-sprite-presentation");
         if (enabled(level)) registry.register(level.spritePresentationRenderer().spriteTables);
