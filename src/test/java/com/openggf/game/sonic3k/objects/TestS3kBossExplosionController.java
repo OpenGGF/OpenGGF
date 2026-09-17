@@ -6,6 +6,23 @@ import static org.junit.jupiter.api.Assertions.*;
 public class TestS3kBossExplosionController {
 
     @Test
+    public void sharedRngSnapshotRestoreKeepsTimersAndDrawsTheSharedSeed() {
+        // A recreated upright egg capsule resumes its explosion timers and keeps drawing Random_Number
+        // from the shared owner (soz_completerun end-boss route "results" rewind replay).
+        var shared = new com.openggf.game.GameRng(com.openggf.game.GameRng.Flavour.S3K);
+        var original = new S3kBossExplosionController(160, 112, 3, shared);
+        original.tick();
+        original.tick();
+        var snapshot = original.captureSnapshot();
+
+        var restored = S3kBossExplosionController.fromSnapshot(snapshot, shared);
+        long seedBefore = shared.getSeed();
+        restored.tick();
+        assertEquals(1, restored.drainPendingExplosions().size(), "the third pass spawns");
+        assertNotEquals(seedBefore, shared.getSeed(), "the spawn advances the shared seed");
+    }
+
+    @Test
     public void controllerSpawnsExplosionsEveryThreeFrames() {
         // subtype 2: timer=$28 (40), xRange=$80, yRange=$80
         // ROM: 3-frame initial wait, then 1 explosion every 3 frames
