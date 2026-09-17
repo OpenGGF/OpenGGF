@@ -66,10 +66,18 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
 
     @Override
     public void update() {
+        update(true);
+    }
+
+    /**
+     * @param animate false while {@code Palette_fade_timer} spends the frame on the fade: no
+     *                AnPal cycle advances, but other palette owners still resolve
+     */
+    void update(boolean animate) {
         if (localPaletteRegistry) {
             paletteRegistry.beginFrame();
         }
-        if (cycles != null && !cycles.isEmpty()) {
+        if (animate && cycles != null && !cycles.isEmpty()) {
             // ROM: AnimatePalettes dispatches to AnPal_* every frame unconditionally,
             // regardless of fire transition state. Never suspend palette cycling.
             for (PaletteCycle cycle : cycles) {

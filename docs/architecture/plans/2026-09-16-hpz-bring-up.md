@@ -523,3 +523,23 @@ Demos: `32a-hpz-background-full-width-before-after.mp4` (1960-2320),
   edit; also a stale latch would hold special-stage palettes. (2) A `FadeManager.isActive()` gate on
   `Sonic3kPaletteCycler`: no measurable effect (headless fixture and capture tool do not run the ROM
   fade before level frames), reverted.
+
+### 2026-09-17 Palette_fade_timer model (palette cycle start phase)
+
+- **Instrumentation.** Native `probe-cnzfade` adds `Palette_fade_timer` (`$EE50`) and `Game_mode` to the
+  exporter: the title-card loop holds `Game_mode $8C` with the frame counter at 0; LevelLoop starts at
+  movie 131870 with the timer at 22, reading 21 at counter 1 and 0 at counter 22; the first `AnPal_CNZ`
+  write is at counter 23. An engine log in `Sonic3kPaletteCycler` (removed) showed ticks from counter 1
+  and `FadeManager` never active on the production path: the engine plays its fade during its own
+  title-card mode, so the fade manager cannot stand in for the ROM timer.
+- **Fix.** `Sonic3kGlobalAnimationState` models `Palette_fade_timer`: armed to `$16` in the fresh-level
+  init step that already resets the ring clock (`Level/loc_64DC`; seamless reloads skip it), consumed
+  once per level-frame animation update, and appended to the rewind snapshot tail. While it runs the
+  cycler resolves palette owners but advances no AnPal cycle. `Sonic3kZoneEvents.paletteFadeActive()`
+  (HPZ palette control allocation) reads the timer before the fade manager.
+- **Evidence.** Headless CNZ1: line-3/line-4 change frames and colour values equal native palette RAM
+  (`TestS3kPaletteFadeTimerGatesPaletteCycles`, break-checked: without the arm the writes start at 1).
+  CNZ1 capture vs native (3330 position-matched frames): 3329 closer, 0 further, differing pixels
+  17.0M → 2.9M. HPZ route capture unchanged. `TestS3kHpzActEventsHeadless`'s AnPal budget gained the
+  22 fade frames. FBZ's `AnPal_FBZ` gate still uses `FadeManager` (no behaviour change inside the first
+  22 frames: its edge needs counter & $FF == 0).

@@ -51,7 +51,7 @@ if fixture then
     string.format('fixture zone %04X', mainmemory.read_u16_be(0xFE10)))
 end
 local log=assert(io.open(out..'/observations.csv','w'))
-log:write('movie_frame,label,zone_act,lfc,cam_x,cam_y,p1_x,p1_y,p2_x,p2_y,bg_routine,fg4,shake,cycle0,fab8,pal4_c1,pal4_c2,pal2_c0,chaos,super,emeralds,watch_code,watch_routine,watch_x,watch_y,watch_hp,watch_status,watch_yvel,p1_status,p1_anim,p1_mapping,p1_objctl,pal1_c7,palette\n')
+log:write('movie_frame,label,zone_act,lfc,cam_x,cam_y,p1_x,p1_y,p2_x,p2_y,bg_routine,fg4,shake,cycle0,fab8,pal4_c1,pal4_c2,pal2_c0,chaos,super,emeralds,watch_code,watch_routine,watch_x,watch_y,watch_hp,watch_status,watch_yvel,p1_status,p1_anim,p1_mapping,p1_objctl,pal1_c7,palette,pal_fade_timer,game_mode\n')
 client.speedmode(6400)
 local function paletteHex()
   local t={}
@@ -82,7 +82,7 @@ while true do
   end
   if cw then
     local watch=watchAddress()
-    log:write(string.format('%d,%s,%04X,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%04X,%04X,%04X,%d,%d,%s,%08X,%d,%d,%d,%d,%02X,%d,%02X,%d,%d,%02X,%04X,%s\n',
+    log:write(string.format('%d,%s,%04X,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%04X,%04X,%04X,%d,%d,%s,%08X,%d,%d,%d,%d,%02X,%d,%02X,%d,%d,%02X,%04X,%s,%d,%02X\n',
       frame,cw.label,mainmemory.read_u16_be(0xFE10),mainmemory.read_u16_be(0xFE04),
       mainmemory.read_u16_be(0xEE78),mainmemory.read_u16_be(0xEE7C),
       mainmemory.read_u16_be(0xB010),mainmemory.read_u16_be(0xB014),
@@ -94,7 +94,7 @@ while true do
       mainmemory.read_u32_be(watch),mainmemory.read_u8(watch+5),mainmemory.read_u16_be(watch+0x10),
       mainmemory.read_u16_be(watch+0x14),mainmemory.read_u8(watch+0x29),
       mainmemory.read_u8(watch+0x2A),mainmemory.read_s16_be(watch+0x1A),mainmemory.read_u8(0xB02A),
-      mainmemory.read_u8(0xB020),mainmemory.read_u8(0xB022),mainmemory.read_u8(0xB02E),mainmemory.read_u16_be(0xFC0E),paletteHex()))
+      mainmemory.read_u8(0xB020),mainmemory.read_u8(0xB022),mainmemory.read_u8(0xB02E),mainmemory.read_u16_be(0xFC0E),paletteHex(),mainmemory.read_s16_be(0xEE50),mainmemory.read_u8(0xF600)))
     if (frame-cw.first)%cw.every==0 then
       client.screenshot(string.format('%s/%s/%07d.png',out,cw.label,frame))
     end

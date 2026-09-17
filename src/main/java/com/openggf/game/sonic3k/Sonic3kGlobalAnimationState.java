@@ -9,6 +9,8 @@ final class Sonic3kGlobalAnimationState {
     private int aizVineAngle;
     private int ringTimer;
     private int ringFrame;
+    /** {@code Palette_fade_timer}: level frames left before {@code Animate_Palette} reaches AnPal. */
+    private int paletteFadeTimer;
 
     void advanceChangeRingFrame() {
         // ChangeRingFrame: byte SUBQ/BPL; initial zero expires on the first
@@ -32,6 +34,31 @@ final class Sonic3kGlobalAnimationState {
         // Ring timer/frame lie inside this range; seamless reload skips it.
         restoreRingAnimation(0, 0);
     }
+
+    /**
+     * {@code Level/loc_64DC}: {@code move.w #$16,(Palette_fade_timer).w} before LevelLoop
+     * (sonic3k.asm:7877). Seamless reloads never reach it.
+     */
+    void armFreshLevelPaletteFade() {
+        paletteFadeTimer = 0x16;
+    }
+
+    /**
+     * {@code Animate_Palette} (sonic3k.asm:5018): while the timer is non-zero the frame runs
+     * Pal_FromBlack/Pal_FromWhite and decrements it instead of calling AnPal_Load.
+     *
+     * @return true when this level frame spends the fade instead of animating palettes
+     */
+    boolean consumePaletteFadeFrame() {
+        if (paletteFadeTimer <= 0) {
+            return false;
+        }
+        paletteFadeTimer--;
+        return true;
+    }
+
+    int paletteFadeTimer() { return paletteFadeTimer; }
+    void restorePaletteFadeTimer(int value) { paletteFadeTimer = Math.max(0, value); }
 
     int aizVineAngleWord() {
         return aizVineAngle;

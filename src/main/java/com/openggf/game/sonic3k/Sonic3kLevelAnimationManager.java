@@ -67,12 +67,20 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
     @Override
     public int stageRingAnimationFrame() { return globalAnimationState.ringFrame(); }
 
-    void resetFreshLevelRingAnimation() { globalAnimationState.resetFreshLevelRingAnimation(); }
+    /** ROM {@code Palette_fade_timer} is still counting down the fresh-level fade. */
+    public boolean paletteFadeTimerRunning() {
+        return globalAnimationState.paletteFadeTimer() > 0;
+    }
+
+    void resetFreshLevelRingAnimation() {
+        globalAnimationState.resetFreshLevelRingAnimation();
+        globalAnimationState.armFreshLevelPaletteFade();
+    }
 
     @Override
     public void update() {
         patternAnimator.update();
-        paletteCycler.update();
+        paletteCycler.update(!globalAnimationState.consumePaletteFadeFrame());
         applyPoweredFormPaletteUploadVInt();
         // LevelLoop runs Process_Sprites before ChangeRingFrame
         // (sonic3k.asm:7888-7910). LevelFrameRuntimeUpdater calls this combined
@@ -138,7 +146,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         byte[] innerExtra = inner.extra() != null ? inner.extra() : new byte[0];
         byte[] cyclerState = paletteCycler.captureCyclerState();
         ByteBuffer wrapped = ByteBuffer.allocate(
-                1 + 4 + innerExtra.length + 4 + cyclerState.length + 4);
+                1 + 4 + innerExtra.length + 4 + cyclerState.length + 4 + 2);
         wrapped.put(COMBINED_EXTRA_WITH_RING_CLOCK_MAGIC);
         wrapped.putInt(innerExtra.length);
         wrapped.put(innerExtra);
@@ -147,6 +155,7 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         wrapped.putShort((short) globalAnimationState.aizVineAngleWord());
         wrapped.put((byte) globalAnimationState.ringTimer());
         wrapped.put((byte) globalAnimationState.ringFrame());
+        wrapped.putShort((short) globalAnimationState.paletteFadeTimer());
         return new PatternAnimatorSnapshot(inner.scriptCounters(), inner.handlerCounters(),
                 wrapped.array());
     }
@@ -190,6 +199,9 @@ public final class Sonic3kLevelAnimationManager implements AnimatedPatternManage
         }
         if (hasRingClock && buf.remaining() >= 2) {
             globalAnimationState.restoreRingAnimation(buf.get() & 0xFF, buf.get() & 0xFF);
+        }
+        if (hasRingClock && buf.remaining() >= 2) {
+            globalAnimationState.restorePaletteFadeTimer(buf.getShort());
         }
     }
 }

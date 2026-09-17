@@ -113,14 +113,15 @@ class TestS3kHpzActEventsHeadless {
         Level level = GameServices.level().getCurrentLevel();
 
         // AnPal_PalHPZ frames 0-3 are ($E,$A); frame 4 at byte offset 16 is ($C,$8).
+        // Animate_Palette spends the first $16 level frames on the fresh-level fade.
         boolean reachedFrameFour = false;
-        for (int i = 0; i < 8 * 6 && !reachedFrameFour; i++) {
+        for (int i = 0; i < 0x16 + 8 * 6 && !reachedFrameFour; i++) {
             fixture.stepIdleFrames(1);
             reachedFrameFour = colorWord(level.getPalette(3).getColor(1)) == 0x000C
                     && colorWord(level.getPalette(3).getColor(2)) == 0x0008;
         }
 
-        assertTrue(reachedFrameFour, "AnPal_HPZ must reach its fifth frame within 40 passes");
+        assertTrue(reachedFrameFour, "AnPal_HPZ must reach its fifth frame within 48 passes after the fade");
     }
 
     private static int colorWord(com.openggf.level.Palette.Color color) {
