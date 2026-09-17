@@ -110697,6 +110697,19 @@ animation2. That production intro, not trace-state seeding, is the next target.
   10483 -> 9164 errors; first physics divergence row 28941 -> 29093 (CPU Tails
   `x_speed` on the walk to the pyramid). Other S3K replay reports unchanged.
 
+### 2026-09-17 — SOZ end-boss escape, capsule and residue: 65 -> 29 errors
+
+- `bugfix/ai-soz-open-residue` from develop `861a2ac7b` to `b9e996a48`, same focused
+  command as below. `soz_completerun` 65 -> 29 errors; per-commit table and rejected
+  attempts in the SOZ plan ("Replay follow-up: end-boss escape, capsule and residue").
+  First error still row 5977 `tails_mapping_frame`; first physics error row 45256
+  `rings` (SST slot phase), then row 51860 `y` (camera wrap gate, not merged). No
+  physics error remains after row 50720.
+- S3K sweep on develop `861a2ac7b` (worktree at `8da176b27`) and on the branch at
+  `b9e996a48`: the only per-class change was `TestS3kSozCompleteRunTraceReplay`
+  (FAIL/65 -> FAIL/29); CNZ, ICZ, MGZ and MHZ capsule and spring traces kept their
+  totals.
+
 ### 2026-09-17 — SOZ2 route through the end boss: 9164 -> 65 errors
 
 - `bugfix/ai-soz-recorded-routes` from `0ff2ebf25` to `8d2b4945b`. Focused command:
