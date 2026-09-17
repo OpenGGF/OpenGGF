@@ -280,7 +280,7 @@ class TestSonic3kSuperStateRewind {
     }
 
     @Test
-    void tailsAndKnucklesPublishPoweredPaletteOnFirstTransformationTick() {
+    void tailsAndKnucklesPublishPoweredPaletteWhenTheTransformPaletteTimerExpires() {
         for (int i = 0; i < 7; i++) {
             GameServices.gameState().markSuperEmeraldCollected(i);
         }
@@ -292,6 +292,12 @@ class TestSonic3kSuperStateRewind {
         Sonic3kSuperStateController tailsController = new Sonic3kSuperStateController(tails);
         tails.setSuperStateController(tailsController);
         assertTrue(tailsController.activateFromAirAbility());
+        // Tails_Transform writes Palette_timer $F; SuperHyper_PalCycle's non-Sonic branch
+        // finishes on the pass that takes it below zero (sonic3k.asm:4617-4630).
+        for (int pass = 0; pass < 15; pass++) {
+            tailsController.update();
+        }
+        assertEquals(SuperState.TRANSFORMING, tailsController.getState());
         tailsController.update();
         assertEquals(SuperState.SUPER, tailsController.getState());
         assertEquals(0xB, tailsController.activePaletteReloadForTest());
@@ -315,6 +321,10 @@ class TestSonic3kSuperStateRewind {
         Sonic3kSuperStateController knucklesController = new Sonic3kSuperStateController(knuckles);
         knuckles.setSuperStateController(knucklesController);
         assertTrue(knucklesController.activateFromAirAbility());
+        for (int pass = 0; pass < 15; pass++) {
+            knucklesController.update();
+        }
+        assertEquals(SuperState.TRANSFORMING, knucklesController.getState());
         knucklesController.update();
         assertEquals(SuperState.SUPER, knucklesController.getState());
         assertEquals(2, knucklesController.activePaletteReloadForTest());
