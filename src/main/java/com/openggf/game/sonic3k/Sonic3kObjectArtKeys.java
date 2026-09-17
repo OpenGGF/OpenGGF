@@ -278,6 +278,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String HCZ_BUTTON = "hcz_button";
     public static final String CNZ_BUTTON = "cnz_button";
     public static final String LRZ_BUTTON = "lrz_button";
+    /** {@code Obj_LRZDashElevator}: {@code Map_LRZDashElevator} over {@code ArtTile_LRZMisc}. */
+    public static final String LRZ_DASH_ELEVATOR = "lrz_dash_elevator";
     public static final String LRZ2_BUTTON = "lrz2_button";
 
     // FBZ badniks

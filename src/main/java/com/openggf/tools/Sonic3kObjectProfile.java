@@ -300,6 +300,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x93 // MHZEndBoss
     );
 
+    // LRZ-only implementations from SKL ids gated on ZONE_LRZ.
+    private static final Set<Integer> LRZ_ONLY_IDS = Set.of(
+            0x1E // LRZDashElevator
+    );
+
     // DDZ-only implementations from SKL ids gated on ZONE_DDZ.
     private static final Set<Integer> DDZ_ONLY_IDS = Set.of(
             0xB6, // DDZEndBoss
@@ -317,8 +322,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             if (zoneId == Sonic3kZoneIds.ZONE_MHZ) {
                 return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS);
             }
-            return zoneId == Sonic3kZoneIds.ZONE_DDZ
-                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS)
+            if (zoneId == Sonic3kZoneIds.ZONE_DDZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS);
+            }
+            return zoneId == Sonic3kZoneIds.ZONE_LRZ
+                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, LRZ_ONLY_IDS)
                     : union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS);
         }
         if (zoneId == Sonic3kZoneIds.ZONE_CNZ) {

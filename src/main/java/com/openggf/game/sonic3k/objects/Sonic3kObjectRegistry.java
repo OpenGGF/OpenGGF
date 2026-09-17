@@ -1456,6 +1456,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.FBZ_MAGNETIC_PENDULUM,
                 S3kZoneSet.S3KL, Sonic3kZoneIds.ZONE_FBZ,
                 (spawn, registry) -> new FbzMagneticPendulumObjectInstance(spawn));
+        // Lava Reef's SKL object set reuses ids the S3KL set spends on Launch Base.
+        // Id $1E is Obj_LRZDashElevator there (sonic3k.asm:88381).
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_SPIN_LAUNCHER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzDashElevatorObjectInstance(spawn));
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZMasterEmeraldObjectInstance(spawn));

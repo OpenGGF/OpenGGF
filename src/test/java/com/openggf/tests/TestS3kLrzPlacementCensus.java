@@ -62,14 +62,15 @@ class TestS3kLrzPlacementCensus {
      * {@code id:subtype=count[,subtype=count...];...} with hexadecimal ids and subtypes.
      * Transcribed from the inventory's "placeholder (SKL branch)" and "unregistered" rows, then
      * ratcheted down as slices land. Slice 1 removed {@code $6E} {@code Obj_InvisibleLavaBlock}
-     * (34 / 4 / 6), taking the totals from 239 / 281 / 14 to 205 / 277 / 8.
+     * (34 / 4 / 6), taking the totals from 239 / 281 / 14 to 205 / 277 / 8; slice 3a removed
+     * {@code $1E} {@code Obj_LRZDashElevator} (6 / 0 / 0), taking act 1 to 199.
      */
     private static final Map<String, String> PLACEHOLDER_BASELINE = Map.of(
             "LRZ1", "15:00=1;16:00=1;17:00=11;18:01=4,02=5,03=2,04=3,05=1;"
                     + "19:00=1,01=1,02=1,03=1,04=1,05=1,06=1,07=1,09=1,0A=1,0B=1,0C=1,0D=1,0E=1,0F=1;"
                     + "1A:00=1;1B:10=4,14=1,16=4,18=5,1A=2,1C=3,20=2,24=1,28=3,30=1,38=1;"
                     + "1C:01=1,04=1,05=1,06=1,07=1,09=1,0B=1,0C=1,0D=1,0F=1;1D:A0=1,C2=1;"
-                    + "1E:1A=1,1D=1,20=1,46=1,B6=1,B9=1;1F:50=2,60=3,70=2;20:02=2,03=4,04=5;"
+                    + "1F:50=2,60=3,70=2;20:02=2,03=4,04=5;"
                     + "21:09=3,0B=1,0F=1,10=1,11=1,14=2,19=2,1A=2,1C=1,1D=1;22:00=5,C0=1;"
                     + "99:00=20;9A:00=32;9B:00=22;9C:00=1,02=1;9D:00=1",
             "LRZ2", "16:00=1;19:01=1,02=1,03=1,04=1,05=1,06=1,07=1,08=1,09=1,0A=1,0B=1;"
@@ -103,7 +104,7 @@ class TestS3kLrzPlacementCensus {
 
     @Test
     void act1PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 205);
+        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 199);
     }
 
     @Test

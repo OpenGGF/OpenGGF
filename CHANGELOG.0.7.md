@@ -365,6 +365,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   zone's scattered background rocks - hardware sprites the ROM draws itself, with no
   object behind them - are drawn again, behind the players and in front of the
   terrain layer, with a wider viewport simply showing more of them.
+  Act 1's dash elevators work: charge a spindash on one and it carries you along
+  its shaft, in whichever direction you are facing, and stops at the end.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list

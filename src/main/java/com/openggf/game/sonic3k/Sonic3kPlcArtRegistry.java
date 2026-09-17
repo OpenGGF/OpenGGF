@@ -2560,6 +2560,16 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
 
+        // Dash elevator (SKL object $1E): make_art_tile(ArtTile_LRZMisc,0,0)
+        // (sonic3k.asm:88383). Act 1 only; act 2 places none.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_DASH_ELEVATOR,
+                Sonic3kConstants.MAP_LRZ_DASH_ELEVATOR_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                0,
+                null
+        ));
+
         // Button: act-specific art tile and palette
         if (actIndex == 0) {
             // LRZ Act 1: ArtTile_LRZMisc, palette 3

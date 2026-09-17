@@ -1697,6 +1697,8 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_FBZ_BUTTON_ADDR = 0x165E80;
     public static final int MAP_BUTTON_ADDR = 0x02C71E;
     public static final int MAP_LRZ_BUTTON_ADDR = 0x02C748;
+    /** {@code Map_LRZDashElevator} (sonic3k.lst: $43096). */
+    public static final int MAP_LRZ_DASH_ELEVATOR_ADDR = 0x043096;
     public static final int MAP_HCZ_BUTTON_ADDR = 0x22BD1A;
     public static final int MAP_CNZ_BUTTON_ADDR = 0x22BD4A;
     public static final int ARTTILE_MHZ1_CUTSCENE_BUTTON = 0x0341;
