@@ -551,6 +551,15 @@ public class PlayableSpriteAnimation {
             sprite.setAnimationTick(0);
             return;
         }
+        if (flipType >= 5 && profile != null && profile.getTumbleTypeFrameBase(1) >= 0) {
+            // S3K Anim_Tumble loc_129F6: flip types above 4 ignore the flip-type
+            // sign and use (flip_angle+$B)/$16+$31, mirrored horizontally only by
+            // Status_Facing (sonic3k.asm:25133-25148).
+            sprite.setRenderFlips(facingLeft, false);
+            sprite.setMappingFrame((((d0 + 0x0B) & 0xFF) / 0x16) + base);
+            sprite.setAnimationTick(0);
+            return;
+        }
         var levelManager = sprite.currentLevelManagerIfAvailable();
         var zoneFeatures = levelManager != null ? levelManager.getZoneFeatureProvider() : null;
         boolean unreflectedNegative = negativeFlipType

@@ -24,10 +24,13 @@ public final class SozEndBossInstance extends AbstractObjectInstance
     private int chargeTimer = 0xC0, hits = 8, flashTimer;
     private boolean collisionEnabled, hitPending, defeated, dismantling, hidden, flipped;
     private int escapePhase, swingVelocity, swingDirection, forcedJumpTimer;
+    // Timing-ledger KosM jobs this boss submitted and has not yet claimed.
+    private long shipArtOrdinal=-1, pilotArtOrdinal=-1;
     public SozEndBossInstance(ObjectSpawn spawn) {
         super(spawn,"SOZEndBoss");xFixed=spawn.x()<<16;yFixed=spawn.y()<<16;baseY=spawn.y();
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
+        shipArtOrdinal=claimReadyArt(shipArtOrdinal);pilotArtOrdinal=claimReadyArt(pilotArtOrdinal);
         if(escapePhase!=0) { escape(player);return; }
         switch(routine) {
             case 0 -> initialize();
@@ -77,18 +80,30 @@ public final class SozEndBossInstance extends AbstractObjectInstance
                 var modified=Sonic3kPlcLoader.applyToLevel(plc,level,services().rom());
                 Sonic3kPlcLoader.refreshAffectedRenderers(modified,services().levelManager());
             }
-            queueKosinskiArt(0x16E1B0,0x3A4);
+            shipArtOrdinal=queueKosinskiArt(0x16E1B0,0x3A4);
         } catch(IOException e){throw new UncheckedIOException(e);}
     }
-    void queueKosinskiArt(int source,int tile) {
+    void queuePilotArt(int source,int tile){pilotArtOrdinal=queueKosinskiArt(source,tile);}
+    private long queueKosinskiArt(int source,int tile) {
         try {
             var queue=services().kosinskiModuleQueue();
-            if(queue==null)return;
+            if(queue==null)return -1;
             Sonic3kPlcLoader.bindRuntimePatternDmaTarget(queue,services());
             queue.enqueue(services().rom(),source,tile*32);
-            com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services())
-                    .moduleQueue().queue(services().rom(),source,tile);
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services())
+                    .moduleQueue().queue(services().rom(),source,tile).ordinal();
         } catch(IOException e){throw new UncheckedIOException(e);}
+    }
+    /** Claims a finished Queue_Kos_Module job so the timing ledger retires it. */
+    private long claimReadyArt(long ordinal) {
+        if(ordinal<0)return ordinal;
+        var queue=com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        var handle=services().hardwareTiming().pendingHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,ordinal)
+                .orElseThrow(()->new IllegalStateException("SOZ end boss lost its submitted KosM job"));
+        if(!queue.isReady(handle))return ordinal;
+        queue.claim(handle);
+        return -1;
     }
     private void loadWalk(boolean returnRight) {
         int address=returnRight?0x78060:knuckles()?0x77766:0x7775A;
@@ -141,7 +156,7 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         switch(escapePhase) {
             case 1 -> {if(--timer<0){timer=119;spawnFreeChild(SongFadeTransitionInstance::toCurrentLevelMusic);
                 dismantling=true;flipped=false;xVelocity=0;escapePhase=2;}}
-            case 2 -> {move();yVelocity=(short)(yVelocity+0x18);if(yVelocity>=0x200){escapePhase=3;defeated=false;flipped=true;}}
+            case 2 -> {move();yVelocity=(short)(yVelocity+0x20);if(yVelocity>=0x200){escapePhase=3;defeated=false;flipped=true;}}
             case 3 -> {yVelocity=(short)(yVelocity-0x40);move();if(yVelocity<=-0x100){
                 escapePhase=4;swingVelocity=0xC0;yVelocity=0xC0;swingDirection=0;
                 spawnFreeChild(()->new SozEndBossEggCapsule(0x5360,0x720));
@@ -167,7 +182,7 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         if(entity instanceof AbstractPlayableSprite p){ObjectControlState.none().applyTo(p);p.setControlLocked(false);p.clearAirForNativeControlRestore();p.setAnimationId(5);p.setForcedAnimationId(-1);}
         if(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p){p.clearLogicalInputState();p.setForcedInputMask(0);p.setControlLocked(true);}}
     private void forcedWalk(PlayableEntity entity){if((services().camera().getMaxYTarget()&65535)>=0x700)services().camera().setMaxY((short)0x800);if(!(entity instanceof AbstractPlayableSprite p))return;
-        if((p.getCentreX()&0xFFFF)>=0x5468){xFixed=p.getCentreX()<<16;yFixed=p.getCentreY()<<16;xVelocity=p.getXSpeed();yVelocity=0;
+        if((p.getCentreX()&0xFFFF)>=0x5468){xFixed=p.getCentreX()<<16|(xFixed&0xFFFF);yFixed=p.getCentreY()<<16|(yFixed&0xFFFF);xVelocity=p.getXSpeed();yVelocity=0;
             escapePhase=7;if(!knuckles()){ObjectControlState.nativeBit7FullControl().applyTo(p);p.setAnimationId(0x1A);}return;}
         boolean jump=p.getPushing()||forcedJumpTimer!=0;if(p.getPushing())forcedJumpTimer=0x1F;else if(forcedJumpTimer!=0)forcedJumpTimer--;
         p.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT|(jump?AbstractPlayableSprite.INPUT_JUMP:0));
@@ -176,12 +191,18 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         if(!knuckles()&&getX()>=0x54C0){xVelocity=0;yVelocity=0;timer=0x7F;escapePhase=8;runtime().events().endBossFallStarted(true);services().camera().requestFastVerticalScroll();}
         NativePositionOps.writeXPosPreserveSubpixel(p,!knuckles()&&escapePhase==8?0x54C0:getX());NativePositionOps.writeYPosPreserveSubpixel(p,getY());
         if(knuckles()&&getX()>=0x5560)nextZone();}
-    private void exitFall(PlayableEntity entity){if(!(entity instanceof AbstractPlayableSprite p))return;yVelocity=Math.min(yVelocity,0x1000);move();yVelocity+=0x38;
+    private void exitFall(PlayableEntity entity){
+        // loc_779C0 sets Fast_V_scroll_flag with st; nothing clears it before the level
+        // change, while Camera consumes its fast-scroll request every frame.
+        services().camera().requestFastVerticalScroll();
+        if(!(entity instanceof AbstractPlayableSprite p))return;yVelocity=Math.min(yVelocity,0x1000);move();yVelocity+=0x38;
         NativePositionOps.writeXPosPreserveSubpixel(p,getX());NativePositionOps.writeYPosPreserveSubpixel(p,getY());
         if(--timer<0)nextZone();}
     private void nextZone(){services().requestZoneAndAct(9,0,true);ObjectLifetimeOps.deleteNoRespawn(this);}
     public boolean ownsPostResultsTransition(){return escapePhase!=0&&!isDestroyed();}
     boolean fallingIntoNextZone(){return escapePhase==8;}
+    /** loc_778DA has set _unkFAA8. */
+    boolean escapedOffscreen(){return escapePhase>=5;}
     boolean flipped(){return flipped;} int xVelocity(){return xVelocity;}
     @Override public boolean isHighPriority(){return escapePhase>=2;}
     boolean defeated(){return defeated;} boolean dismantling(){return dismantling;} boolean hidden(){return hidden;}

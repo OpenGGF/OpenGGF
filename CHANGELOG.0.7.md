@@ -54,9 +54,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   During the final boss, Sonic lands on its arms, is hurt on the frame he lands on
   its lower shell, is no longer carried by the moving arena wall, and its laser
   fires on the ROM frame; the capsule's results appear a frame later, as in the ROM.
+  After the final boss, the escaping ship falls and the camera follows at the ROM
+  speed, Tails strikes his victory pose only once the ship has left the screen, and
+  Tails keeps his hurt pose when a boss arm hits him.
   Across S3K, horizontal springs now launch a player who comes to rest in front of
   them, Blastoid hits scatter rings, and rewinding past an opened egg capsule keeps
-  its explosions going.
+  its explosions going. Players balance at the ROM distance from the edges of egg
+  capsules and horizontal springs, and corkscrew ramps draw the tumble frames the ROM
+  shows for left-facing players.
 
 - **S3K parity fixes from the discrepancy audit:** Madmole's body is its own object
   in its own slot; the MHZ dragonfly tail enters its return on the same frame as

@@ -743,6 +743,13 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
                 && horizontalApproachSpeed(player, true) > 0;
     }
 
+    @Override
+    public int getBalanceWidthPixels() {
+        // Spring_Horizontal overwrites width_pixels with 8 (sonic3k.asm:47562-47567);
+        // the other orientations keep Obj_Spring's $10. Player object-edge balance reads it.
+        return springType == TYPE_HORIZONTAL ? 8 : super.getBalanceWidthPixels();
+    }
+
     /**
      * ROM collision params:
      * Up/Down: D1=$1B (27), D2=8, D3=$10 (16)
