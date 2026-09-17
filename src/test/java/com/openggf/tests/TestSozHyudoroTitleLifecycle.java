@@ -45,6 +45,19 @@ class TestSozHyudoroTitleLifecycle {
         assertEquals(0,count());awaitBirth(f,false);assertTrue(title.isComplete());
         for(int i=0;i<10;i++)title.update();assertEquals(1,count());
     }
+    @Test void retiringTitleOwnerAllocatesControllerPastItsOwnSlotThenFreesIt() {
+        // loc_2D86E runs inside Obj_TitleCard, so AllocateObject skips the owner's SST before
+        // Delete_Current_Sprite frees it (soz_completerun: owner slot 6, Hyudoro_ctr slot 7).
+        HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();
+        var objects=GameServices.level().getObjectManager();
+        var owner=objects.createDynamicObject(()->new com.openggf.game.sonic3k.objects.S3kTitleCardOwnerSlotObjectInstance(
+                new com.openggf.level.objects.ObjectSpawn(0,0,0,0,0,false,0)));
+        int ownerSlot=((com.openggf.level.objects.AbstractObjectInstance)owner).getSlotIndex();
+        ((com.openggf.game.sonic3k.Sonic3kLevelEventManager)GameServices.module().getLevelEventProvider()).onTitleCardOwnerRetired();
+        assertEquals(1,count());
+        assertTrue(controller().getSlotIndex()>ownerSlot,"controller must not reuse the live title owner's slot");
+        assertTrue(owner.isDestroyed());
+    }
     @Test void checkpointDeathReloadRecreatesControllerWithoutSeamlessDarkness() {
         var f=HeadlessTestFixture.builder().withSkippedZoneIntro().withZoneAndAct(8,1).withFreshLevelStartLifecycle().build();awaitBirth(f,false);
         var old=controller();((CheckpointState)GameServices.level().getCheckpointState()).saveCheckpoint(1,0x140,0x3AC,false);

@@ -62,11 +62,14 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
             case 16 -> {animate();move();}
             default -> throw new IllegalStateException("Hyudoro routine "+routine);
         }
-        boolean previousVisible=renderOnScreen;
-        renderOnScreen=isWithinRenderSpriteBounds(0x10,0x14);
-        if(!previousVisible){deleteGhost();return;}
+        // tst.b render_flags(a0) reads the bit written by the previous Render_Sprites pass.
+        if(!renderOnScreen){deleteGhost();return;}
         if(dark==0){fade();return;}
         resolvePendingContacts();
+    }
+    /** Render_Sprites runs after the camera update; screen-positioned ghosts are always marked on-screen. */
+    @Override public void refreshPostCameraRenderState(){
+        if(!deletePending)renderOnScreen=!worldPosition||isWithinRenderSpriteBounds(0x10,0x14);
     }
     private void resolvePendingContacts() {
         int property = collisionProperty;

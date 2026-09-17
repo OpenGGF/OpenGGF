@@ -170,7 +170,13 @@ final class SozAct1Events extends Sonic3kZoneEvents {
     }
     private void fadeEntryFirstLine(SozEventState events,int levelFrameCounter){
         if((levelFrameCounter&1)==0)return;
-        if(events.fadePasses()==5)events.titleCardAllocationPending(true);
+        if(events.fadePasses()==5){
+            events.titleCardAllocationPending(true);
+            // loc_56324's AllocateObject: Obj_TitleCard holds this SST until loc_2D86E retires it.
+            var objects=levelManager().getObjectManager();
+            if(objects!=null)objects.createDynamicObject(()->new com.openggf.game.sonic3k.objects.S3kTitleCardOwnerSlotObjectInstance(
+                    new ObjectSpawn(0,0,0,0,0,false,0)));
+        }
         fadePalette(0,1,true);events.fadePasses(events.fadePasses()-1);
         if(events.fadePasses()<0){events.fadePasses(0x15);events.backgroundRoutine(0xC);fadeEntryBackground(events,levelFrameCounter);}
     }

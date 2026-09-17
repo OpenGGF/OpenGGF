@@ -951,13 +951,23 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             return;
         }
         var objectManager = GameServices.level().getObjectManager();
-        if (objectManager == null || objectManager.getActiveObjects().stream()
-                .anyMatch(com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance.class::isInstance)) {
+        if (objectManager == null) {
             return;
         }
-        objectManager.createDynamicObject(() ->
-                new com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance(
-                        new com.openggf.level.objects.ObjectSpawn(0x120, 0xA0, 0xAA, 0, 0, false, 0)));
+        var titleOwnerSlot = objectManager.getActiveObjects().stream()
+                .filter(com.openggf.game.sonic3k.objects.S3kTitleCardOwnerSlotObjectInstance.class::isInstance)
+                .findFirst().orElse(null);
+        if (objectManager.getActiveObjects().stream()
+                .noneMatch(com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance.class::isInstance)) {
+            // The owner is still in its SST here, so AllocateObject skips that slot.
+            objectManager.createDynamicObject(() ->
+                    new com.openggf.game.sonic3k.objects.SozHyudoroControllerObjectInstance(
+                            new com.openggf.level.objects.ObjectSpawn(0x120, 0xA0, 0xAA, 0, 0, false, 0)));
+        }
+        if (titleOwnerSlot instanceof com.openggf.level.objects.AbstractObjectInstance owner) {
+            // loc_2D8DC: Delete_Current_Sprite.
+            com.openggf.level.objects.ObjectLifetimeOps.deleteNoRespawn(owner);
+        }
     }
 
     public void applyZonePlayerStateAfterTitleCard() {
