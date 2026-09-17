@@ -27,6 +27,8 @@ local lastSave=0
 for _,f in ipairs(plan.save_states or {}) do saves[f]=true if f>lastSave then lastSave=f end end
 if next(saves) then os.execute('mkdir -p "'..out..'/states"') end
 if lastSave>lastFrame then lastFrame=lastSave end
+-- plan.watch_slot: SST slot to record (code pointer, routine, x, y, collision_property); default 48.
+local watch=0xB000+(plan.watch_slot or 48)*0x4A
 local fixture=os.getenv('OGGF_NATIVE_FIXTURE_STATE')
 if fixture then
   assert(savestate.load(fixture),'fixture state failed to load: '..fixture)
@@ -36,7 +38,7 @@ if fixture then
     string.format('fixture zone %04X', mainmemory.read_u16_be(0xFE10)))
 end
 local log=assert(io.open(out..'/observations.csv','w'))
-log:write('movie_frame,label,zone_act,lfc,cam_x,cam_y,p1_x,p1_y,p2_x,p2_y,bg_routine,fg4,shake,cycle0,fab8,pal4_c1,pal4_c2,pal2_c0,chaos,super,emeralds\n')
+log:write('movie_frame,label,zone_act,lfc,cam_x,cam_y,p1_x,p1_y,p2_x,p2_y,bg_routine,fg4,shake,cycle0,fab8,pal4_c1,pal4_c2,pal2_c0,chaos,super,emeralds,watch_code,watch_routine,watch_x,watch_y,watch_hp\n')
 client.speedmode(6400)
 local function emeralds()
   local t={}
@@ -61,7 +63,7 @@ while true do
     if frame>=x.first and frame<=x.last then cw=x break end
   end
   if cw then
-    log:write(string.format('%d,%s,%04X,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%04X,%04X,%04X,%d,%d,%s\n',
+    log:write(string.format('%d,%s,%04X,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%04X,%04X,%04X,%d,%d,%s,%08X,%d,%d,%d,%d\n',
       frame,cw.label,mainmemory.read_u16_be(0xFE10),mainmemory.read_u16_be(0xFE04),
       mainmemory.read_u16_be(0xEE78),mainmemory.read_u16_be(0xEE7C),
       mainmemory.read_u16_be(0xB010),mainmemory.read_u16_be(0xB014),
@@ -69,7 +71,9 @@ while true do
       mainmemory.read_u16_be(0xEEC2),mainmemory.read_u16_be(0xEEC4),mainmemory.read_s16_be(0xEECE),
       mainmemory.read_u8(0xF650),mainmemory.read_u8(0xFAB8),
       mainmemory.read_u16_be(0xFC62),mainmemory.read_u16_be(0xFC64),mainmemory.read_u16_be(0xFC20),
-      mainmemory.read_u8(0xFFB0),mainmemory.read_u8(0xFFB1),emeralds()))
+      mainmemory.read_u8(0xFFB0),mainmemory.read_u8(0xFFB1),emeralds(),
+      mainmemory.read_u32_be(watch),mainmemory.read_u8(watch+5),mainmemory.read_u16_be(watch+0x10),
+      mainmemory.read_u16_be(watch+0x14),mainmemory.read_u8(watch+0x29)))
     if (frame-cw.first)%cw.every==0 then
       client.screenshot(string.format('%s/%s/%07d.png',out,cw.label,frame))
     end
