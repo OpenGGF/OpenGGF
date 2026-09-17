@@ -165,6 +165,10 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 loadLrzCycles(reader, list, actIndex);
                 break;
 
+            case 0x0B: // DEZ — AnPal_DEZ1 (act 1: channels A+B+C) / AnPal_DEZ2 (act 2: B+C)
+                loadDezCycles(reader, list, actIndex);
+                break;
+
             // Competition-zone ids follow the ROM's OffsAnPal table, which is
             // 48 entries indexed zone*2 + act (skdisasm/sonic3k.asm:3110-3165):
             // BPZ occupies entries 30/31, CGZ 34/35 and EMZ 36/37.
@@ -311,6 +315,30 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                 list.add(new Lrz2Cycle(sharedData1, sharedData2, lrz2Data3));
             }
         }
+    }
+
+    /**
+     * {@code AnPal_DEZ1} (sonic3k.asm:3661) runs channel A and then falls through into
+     * {@code AnPal_DEZ2} (:3676); the act 2 dispatch entry is the {@code AnPal_DEZ2} label
+     * itself, below channel A's timer, so act 2 never touches palette line 4.
+     */
+    private void loadDezCycles(RomByteReader reader, List<PaletteCycle> list, int actIndex) {
+        byte[] sharedB = safeSlice(reader, Sonic3kConstants.ANPAL_DEZ12_1_ADDR,
+                Sonic3kConstants.ANPAL_DEZ12_1_SIZE);
+        byte[] sharedC = safeSlice(reader, Sonic3kConstants.ANPAL_DEZ12_2_ADDR,
+                Sonic3kConstants.ANPAL_DEZ12_2_SIZE);
+        if (sharedB.length < Sonic3kConstants.ANPAL_DEZ12_1_SIZE
+                || sharedC.length < Sonic3kConstants.ANPAL_DEZ12_2_SIZE) {
+            return;
+        }
+        byte[] act1A = null;
+        if (actIndex == 0) {
+            act1A = safeSlice(reader, Sonic3kConstants.ANPAL_DEZ1_ADDR, Sonic3kConstants.ANPAL_DEZ1_SIZE);
+            if (act1A.length < Sonic3kConstants.ANPAL_DEZ1_SIZE) {
+                return;
+            }
+        }
+        list.add(new DezCycle(act1A, sharedB, sharedC));
     }
 
     private void loadBpzCycles(RomByteReader reader, List<PaletteCycle> list) {
@@ -1328,6 +1356,116 @@ class Sonic3kPaletteCycler implements AnimatedPaletteManager {
                         2,
                         11,
                         slice(lrz1Data3, d0, 2));
+                dirty2 = true;
+            }
+
+            if (dirty2) {
+                cacheFallbackPaletteTexture(registry, gm, level, 2);
+                dirty2 = false;
+            }
+            if (dirty3) {
+                cacheFallbackPaletteTexture(registry, gm, level, 3);
+                dirty3 = false;
+            }
+        }
+    }
+
+    // ========== DEZ (Death Egg) Cycle ==========
+    // ROM: AnPal_DEZ1 (sonic3k.asm:3661) falls through into AnPal_DEZ2 (:3676).
+    // This is Sonic 3 & Knuckles Death Egg, not Sonic 2's.
+    //
+    // Channel A — act 1 only, because act 2's dispatch entry is the AnPal_DEZ2 label,
+    //   below channel A's timer:
+    //   timer Palette_cycle_counters+$0A reload $F (period 16),
+    //   index Palette_cycle_counters+$04 step +8, wraps at $30,
+    //   AnPal_PalDEZ1 -> Normal_palette_line_4+$18 and +$1C, i.e. palette 3 colours 12-15.
+    // Channel B — both acts:
+    //   timer Palette_cycle_counter1 reload 4 (period 5),
+    //   index Palette_cycle_counter0 step +4, wraps at $30,
+    //   AnPal_PalDEZ12_1 -> Normal_palette_line_3+$1A, i.e. palette 2 colours 13-14.
+    // Channel C — both acts:
+    //   timer Palette_cycle_counters+$08 reload $13 (period 20),
+    //   index Palette_cycle_counters+$02 step +$A, wraps at $28,
+    //   AnPal_PalDEZ12_2 -> Normal_palette_line_3+$10 (long, long, word),
+    //   i.e. palette 2 colours 8-12.
+    //
+    // Each channel has its own timer; the ROM's bpl branch past channel A only skips A.
+    private static class DezCycle extends PaletteCycle {
+        /** {@code AnPal_PalDEZ1}, 48 bytes; null in act 2, where channel A never runs. */
+        private final byte[] act1DataA;
+        private final byte[] sharedDataB; // AnPal_PalDEZ12_1: 48 bytes
+        private final byte[] sharedDataC; // AnPal_PalDEZ12_2: 40 bytes
+
+        private int timerA;    // Palette_cycle_counters+$0A
+        private int counterA;  // Palette_cycle_counters+$04
+        private int timerB;    // Palette_cycle_counter1
+        private int counterB;  // Palette_cycle_counter0
+        private int timerC;    // Palette_cycle_counters+$08
+        private int counterC;  // Palette_cycle_counters+$02
+
+        private boolean dirty2;
+        private boolean dirty3;
+
+        DezCycle(byte[] act1DataA, byte[] sharedDataB, byte[] sharedDataC) {
+            this.act1DataA = act1DataA;
+            this.sharedDataB = sharedDataB;
+            this.sharedDataC = sharedDataC;
+        }
+
+        @Override
+        void tick(Level level, PaletteOwnershipRegistry registry) {
+            GraphicsManager gm = GameServices.graphics();
+
+            if (act1DataA != null) {
+                if (timerA > 0) {
+                    timerA--;
+                } else {
+                    timerA = 0xF;
+                    int d0 = counterA;
+                    counterA += 8;
+                    if (counterA >= 0x30) {
+                        counterA = 0;
+                    }
+                    S3kPaletteWriteSupport.applyContiguousPatch(
+                            registry, level, gm,
+                            S3kPaletteOwners.DEZ_ZONE_CYCLE,
+                            S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                            3, 12, slice(act1DataA, d0, 8));
+                    dirty3 = true;
+                }
+            }
+
+            if (timerB > 0) {
+                timerB--;
+            } else {
+                timerB = 4;
+                int d0 = counterB;
+                counterB += 4;
+                if (counterB >= 0x30) {
+                    counterB = 0;
+                }
+                S3kPaletteWriteSupport.applyContiguousPatch(
+                        registry, level, gm,
+                        S3kPaletteOwners.DEZ_ZONE_CYCLE,
+                        S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        2, 13, slice(sharedDataB, d0, 4));
+                dirty2 = true;
+            }
+
+            if (timerC > 0) {
+                timerC--;
+            } else {
+                timerC = 0x13;
+                int d0 = counterC;
+                counterC += 0xA;
+                if (counterC >= 0x28) {
+                    counterC = 0;
+                }
+                S3kPaletteWriteSupport.applyContiguousPatch(
+                        registry, level, gm,
+                        S3kPaletteOwners.DEZ_ZONE_CYCLE,
+                        S3kPaletteOwners.PRIORITY_ZONE_CYCLE,
+                        2, 8, slice(sharedDataC, d0, 10));
                 dirty2 = true;
             }
 

@@ -28,6 +28,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   emerald and, once all seven are held, announces "NOW SONIC CAN BE HYPER SONIC"; the
   small Chaos Emerald indicators only show emeralds that have not been converted. Leaving any S3K special-stage results screen now fades to black without the stage
   transition sound, as in the ROM, instead of fading to white.
+- **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it
+  at a quarter of the camera speed, cycle their console and panel colours, and animate their
+  machinery tiles.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

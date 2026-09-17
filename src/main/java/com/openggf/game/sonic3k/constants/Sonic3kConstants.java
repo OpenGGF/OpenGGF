@@ -976,6 +976,20 @@ public class Sonic3kConstants {
     public static final int ANPAL_LRZ2_3_SIZE = 256;
     // BPZ balloons (palette 2, colors 13-15): 3 frames x 6 bytes = 18 bytes
     // Verified by ROM binary search for pattern 00EE 00AE 006C 00AE 006E 00EE 006E 00EE 00AE
+    // Death Egg. AnPal_DEZ1 (sonic3k.asm:3661) runs channel A and then falls through into
+    // AnPal_DEZ2 (:3676); act 2 enters at the AnPal_DEZ2 label, so it runs only B and C.
+    // Channel B (both acts): AnPal_PalDEZ12_1, palette line 3 colours 13-14 (1 longword),
+    // 12 frames x 4 bytes = 48 bytes; counter step +4, wraps at $30 (sonic3k.lst: $3444).
+    public static final int ANPAL_DEZ12_1_ADDR = 0x003444;
+    public static final int ANPAL_DEZ12_1_SIZE = 0x30;
+    // Channel C (both acts): AnPal_PalDEZ12_2, palette line 3 colours 8-12 (long, long, word),
+    // 4 frames x 10 bytes = 40 bytes; counter step +$A, wraps at $28 (sonic3k.lst: $3474).
+    public static final int ANPAL_DEZ12_2_ADDR = 0x003474;
+    public static final int ANPAL_DEZ12_2_SIZE = 0x28;
+    // Channel A (act 1 only): AnPal_PalDEZ1, palette line 4 colours 12-15 (2 longwords),
+    // 6 frames x 8 bytes = 48 bytes; counter step +8, wraps at $30 (sonic3k.lst: $349C).
+    public static final int ANPAL_DEZ1_ADDR = 0x00349C;
+    public static final int ANPAL_DEZ1_SIZE = 0x30;
     public static final int ANPAL_BPZ_1_ADDR = 0x0034CC;
     public static final int ANPAL_BPZ_1_SIZE = 18;
     // BPZ background (palette 3, colors 2-4): 21 frames x 6 bytes = 126 bytes
@@ -1045,6 +1059,12 @@ public class Sonic3kConstants {
     // AniPLC_MHZ: 4 scripts (mushroom caps and foreground foliage, both acts)
     // Verified by table position immediately before AniPLC_LRZ1 at 0x028A6A.
     public static final int ANIPLC_MHZ_ADDR = 0x0289E8;
+    /**
+     * {@code AniPLC_DEZ} (sonic3k.asm:56079, sonic3k.lst: $28AEE): eight always-running scripts
+     * shared by both Death Egg acts. {@code Offs_AniFunc} pairs both acts with the generic
+     * {@code AnimateTiles_DoAniPLC}, so nothing gates them.
+     */
+    public static final int ANIPLC_DEZ_ADDR = 0x028AEE;
     /** {@code AniPLC_HPZ} (sonic3k.lst:67357). */
     public static final int ANIPLC_HPZ_ADDR = 0x028C40;
 
