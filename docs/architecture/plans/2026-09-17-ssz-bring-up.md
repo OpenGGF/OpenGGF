@@ -25,8 +25,7 @@ ending handoff. Every slice is demonstrated on video, with a final act-ordered r
   an uncommitted edit, reverted and recompiled immediately (`git status` clean).
 - Track five claims separately per matrix row: implemented, cold-reachable, rewind-verified,
   native behaviour matched, visually matched. No aggregate green label.
-- Work stays on the branch until a cold route reaches an exit (major gain); no per-increment
-  develop merges. Gaps go to `docs/status/s3k-known-bugs.md`, not the discrepancies file.
+- Work stays on the local branch until the campaign is complete; one develop merge at the end. Gaps go to `docs/status/s3k-known-bugs.md`, not the discrepancies file.
 
 ## Scope decisions (HPZ/DDZ precedents)
 
@@ -201,7 +200,7 @@ Docs at delivery: both matrices and the coverage backlog, this plan's status/evi
 `CHANGELOG.0.7.md`, `s3k-known-bugs.md` for gaps, agent-workflow README for promoted probes,
 lessons into existing catalogues, ssz-analysis corrections. Seven trailers per commit; no
 `--no-verify`; never `git stash`; start git chains with an explicit `cd`; check `git log -1` after
-each commit. Integrate to develop when a cold route reaches its exit, then push and remove the
+each commit. Integrate to develop once when the campaign is complete (both acts), then push and remove the
 worktree.
 
 ## Cross-campaign coordination
@@ -224,8 +223,10 @@ Written together with the [LRZ](2026-09-17-lrz-bring-up.md), [SSZ](2026-09-17-ss
   attempt, and by the receiving side from a cold chain once both exist.
 - **Clock-seeded RNG/aim** (`V_int_run_count`: Mecha Sonic, DEZ turrets as in DDZ) needs a declared
   seed for movie-route matching until the full cold chain supplies it; label such evidence seeded.
-- **No Knuckles replay classes exist for any zone.** Each plan treats Knuckles native rows as probe and
-  authored-route evidence; adding Knuckles segment replay classes is one shared follow-up, not three.
+- **Knuckles trace testing is out of scope (user decision 2026-09-17).** One Knuckles replay class
+  exists (`TestS3kKnucklesLbz2BigArmTraceReplay`); the `s3k-knuckles-complete-superemeralds` run has no
+  segment classes. A campaign may add one where cheap, but owes no Knuckles replay frontier; Knuckles
+  rows rest on authored routes and native probes from that movie.
 
 ## Open questions (with kill conditions)
 

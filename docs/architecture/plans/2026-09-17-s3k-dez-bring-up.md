@@ -30,8 +30,8 @@ slice demonstrated on video and a final act-ordered highlights reel.
 - Track five claims separately per matrix row: implemented, cold-reachable, rewind-verified,
   native behaviour matched, visually matched. No aggregate green label.
 - Work stays on the branch until a major gain (at minimum: cold `$B00` → `$B01` boss → `$1700`
-  load). No per-increment develop merges. Reverse gravity may merge on its own once its shared
-  validation is green, because SSZ/other campaigns do not need it but S1/S2 must not regress.
+  load). No per-increment develop merges. Reverse gravity ships with DEZ in the same merge (user
+  decision 2026-09-17); its shared validation and S1/S2 non-regression still run before that merge.
 
 ## Scope decisions (HPZ/DDZ precedents)
 
@@ -40,7 +40,7 @@ slice demonstrated on video and a final act-ordered highlights reel.
 | Cold entry | Level-select/direct `$B00` load. The SSZ → DEZ launch cutscene belongs to whichever of the SSZ and DEZ campaigns lands second | `usesLevelIntroPlayerRun()` already covers `$B00` (`Obj_LevelIntro_PlayerRun`, `loc_6986`). Never position past the intro |
 | `$1700` entry | Through the `Obj_DEZEndBoss` exit (`Act3_flag`, `Act3_ring_count`, `Act3_timer`, `StartNewLevel $1700`), plus an independent direct `$1700` load for short checks | ROM level select lists `$1700` as "DDZ act 2" (`sonic3k.asm:10161`); the engine level select has no such entry (`Sonic3kLevelSelectConstants:96-97`). Adding it is in scope |
 | Exit | Implement `loc_803D6` in full: `SaveGame`, then `$C00` when `Player_mode < 2` and `Chaos_emerald_count == 7`, else `$D01`, else (`Player_mode == 3`) `Game_mode 0` | Closes DDZ's recorded dependency. After it lands, DDZ's cold entry inherits the camera fraction and `V_int_run_count` from a real chain: re-measure and remove the DDZ seeded-entry caveat. `$D01` stays the ending campaign; record what the engine does after the request |
-| Roster | Mandatory: Sonic + Tails, Sonic alone, Tails alone. Knuckles: `$B00`/`$B01` compatibility rows only | `LaunchProfile.sanitizedFor` allows native S3K Knuckles and ROM level select does **not** deny Knuckles `$B00`/`$B01` (`LevelSelect_CheckKnuckles` denies `$A00`, `$C00`, `$1600`, `$1700`). His story never reaches DEZ, but the ROM carries Knuckles reverse-gravity code (glide, slide, wall climb). No Knuckles `$1700` row from level select; the chained `$1700` with Knuckles is recorded, not mandatory |
+| Roster | Mandatory: Sonic + Tails, Sonic alone, Tails alone. Knuckles: level-select access to `$B00`/`$B01` only (user decision 2026-09-17): he must load and play both acts from level select with correct reverse-gravity behaviour, but no Knuckles story route advances into DEZ and no Knuckles cold-chain, `$1700` or trace obligation exists | `LaunchProfile.sanitizedFor` allows native S3K Knuckles and ROM level select does **not** deny Knuckles `$B00`/`$B01` (`LevelSelect_CheckKnuckles` denies `$A00`, `$C00`, `$1600`, `$1700`). His story never reaches DEZ, but the ROM carries Knuckles reverse-gravity code (glide, slide, wall climb). No Knuckles `$1700` row from level select; the chained `$1700` with Knuckles is recorded, not mandatory |
 | Tails differences | Own rows | Miniboss landing Y `$3B0` vs `$3AC` (`loc_7E44C`), `$D01` exit, flight and carry under reverse gravity (`Tails_Carry_Sonic`, `Tails_Test_For_Flight`) |
 | Widths and donors | 320 plus one wide viewport on every mandatory mechanic from the first slice; donors per the level test standard | The `$1700` arena wraps `Camera_X & $1FF` and redraws planes from camera-relative words; bosses lock the camera. Gameplay geometry stays native |
 | Traces | Strict replay late; movies supply cold routes and native states from slice 1 | v2 |
@@ -239,8 +239,10 @@ Written together with the [LRZ](2026-09-17-lrz-bring-up.md), [SSZ](2026-09-17-ss
   attempt, and by the receiving side from a cold chain once both exist.
 - **Clock-seeded RNG/aim** (`V_int_run_count`: Mecha Sonic, DEZ turrets as in DDZ) needs a declared
   seed for movie-route matching until the full cold chain supplies it; label such evidence seeded.
-- **No Knuckles replay classes exist for any zone.** Each plan treats Knuckles native rows as probe and
-  authored-route evidence; adding Knuckles segment replay classes is one shared follow-up, not three.
+- **Knuckles trace testing is out of scope (user decision 2026-09-17).** One Knuckles replay class
+  exists (`TestS3kKnucklesLbz2BigArmTraceReplay`); the `s3k-knuckles-complete-superemeralds` run has no
+  segment classes. A campaign may add one where cheap, but owes no Knuckles replay frontier; Knuckles
+  rows rest on authored routes and native probes from that movie.
 
 ## Open questions and kill conditions
 

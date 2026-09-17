@@ -27,8 +27,9 @@ act-ordered highlights reel like the HPZ and DDZ ones.
 - Track five claims separately per matrix row: implemented, cold-reachable, rewind-verified, native
   behaviour matched, visually matched. No aggregate green label.
 - LRZ is three times the size of HPZ or DDZ (609 + 455 + 35 placements, about 30 new object
-  classes, three bosses). Work stays on the branch; merge to develop only at a major gain: act 1
-  cold-complete, act 2 cold-complete, LRZ3 → `$1601` cold-complete. No per-increment merges.
+  classes, three bosses). Work stays on the local branch until the whole campaign is complete (user decision
+  2026-09-17): one develop merge at the end, none per act. Act 1, act 2 and LRZ3 → `$1601`
+  cold-complete are internal milestones only.
 
 ## Scope decisions (HPZ/DDZ precedents)
 
@@ -52,7 +53,7 @@ act-ordered highlights reel like the HPZ and DDZ ones.
   HPZ), `hpz22_2`. Knuckles: `lrz`, `lrz_2` (act 2 at 5985), `lrz_3` (`$901` → `$1601` directly at
   6870), `hpz22`. `lrz_completerun` (38,755 rows) duplicates the Sonic + Tails shape. Replay classes
   exist for Sonic + Tails (`…SonicTailsLrz…`, `…Hpz22…`, `…Hpz222…`) and Tails (`…Lrz…`, `…Lrz2…`,
-  `…Lrz3…`, `…Hpz22…`, `…Hpz222…`); **no Knuckles replay classes exist**.
+  `…Lrz3…`, `…Hpz22…`, `…Hpz222…`); no Knuckles segment classes exist (Knuckles trace testing is out of scope).
 - **Known frontiers.** `TestS3kSonicTailsLrzSegmentTraceReplay`: first error frame 208
   `tails_y_speed` (S3K `SolidObjectTop` zero-distance boundary, found not landed, frontier log
   2026-08-15). `lrz_completerun` stops compiling its hardware-timing rows
@@ -190,7 +191,7 @@ Focused tests and `run_categories.py --category NAME --run` during slices, throu
 Mandatory S3K checks stay green: `TestS3kAiz1SkipHeadless`, `TestSonic3kLevelLoading`,
 `TestSonic3kBootstrapResolver`, `TestSonic3kDecodingUtils`; plus `TestS3kLrzFallingIntroBootstrap`,
 `TestS3kLrzPaletteCycling`, the HPZ and SOZ suites (shared scroll provider, shimmer table, cutscene
-Knuckles). One combined `run_categories.py --base 9cba6dbb6 --run` per develop merge, after focused
+Knuckles). One combined `run_categories.py --base 9cba6dbb6 --run` at the final delivery, after focused
 fixes and docs, with class count, cost and stopping rule stated first; no tree edits during the run;
 acknowledge the run. Shared-owner changes (scroll provider, pattern animator, seamless executor,
 hurt block, `StartNewLevel`) make this normal change-based validation. Attribute any red to a matched
@@ -224,8 +225,10 @@ Written together with the [LRZ](2026-09-17-lrz-bring-up.md), [SSZ](2026-09-17-ss
   attempt, and by the receiving side from a cold chain once both exist.
 - **Clock-seeded RNG/aim** (`V_int_run_count`: Mecha Sonic, DEZ turrets as in DDZ) needs a declared
   seed for movie-route matching until the full cold chain supplies it; label such evidence seeded.
-- **No Knuckles replay classes exist for any zone.** Each plan treats Knuckles native rows as probe and
-  authored-route evidence; adding Knuckles segment replay classes is one shared follow-up, not three.
+- **Knuckles trace testing is out of scope (user decision 2026-09-17).** One Knuckles replay class
+  exists (`TestS3kKnucklesLbz2BigArmTraceReplay`); the `s3k-knuckles-complete-superemeralds` run has no
+  segment classes. A campaign may add one where cheap, but owes no Knuckles replay frontier; Knuckles
+  rows rest on authored routes and native probes from that movie.
 
 ## Open questions (each with its kill condition)
 
