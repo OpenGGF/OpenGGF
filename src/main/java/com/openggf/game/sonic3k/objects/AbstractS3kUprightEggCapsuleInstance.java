@@ -318,6 +318,11 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
         }
     }
 
+    /** Allows a retained post-capsule owner to keep control of its native handoff. */
+    protected S3kResultsScreenObjectInstance createResultsScreen(PlayerCharacter character, int act) {
+        return new S3kResultsScreenObjectInstance(character, act);
+    }
+
     private void queueSidekickEndPoses(PlayableEntity player) {
         if (!(player instanceof AbstractPlayableSprite leader)) {
             return;
@@ -343,11 +348,6 @@ public abstract class AbstractS3kUprightEggCapsuleInstance extends AbstractObjec
                 S3kSignpostInstance.applySidekickEndingPose(sprite);
             }
         }
-    }
-
-    /** Allows a retained post-capsule owner to keep control of its native handoff. */
-    protected S3kResultsScreenObjectInstance createResultsScreen(PlayerCharacter character, int act) {
-        return new S3kResultsScreenObjectInstance(character, act);
     }
 
     private List<PlayableEntity> resultParticipants(AbstractPlayableSprite player) {
