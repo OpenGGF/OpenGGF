@@ -67,7 +67,7 @@ class TestS3kHpzGraphRewind {
         HPZSanctuarySmallEmeraldCeremonyObjectInstance ceremony = objects.createDynamicObject(
                 () -> new HPZSanctuarySmallEmeraldCeremonyObjectInstance(progression));
         HPZSuperEmeraldReturnEffectObjectInstance effect = objects.createDynamicObject(
-                () -> new HPZSuperEmeraldReturnEffectObjectInstance(controller));
+                () -> new HPZSuperEmeraldReturnEffectObjectInstance(controller, 3, false));
 
         RewindRegistry registry = registryFor(objects);
         CompositeSnapshot snapshot = registry.capture();

@@ -6,9 +6,12 @@ import com.openggf.data.PaletteLoader;
 import com.openggf.game.GameServices;
 import com.openggf.game.PlayerCharacter;
 import com.openggf.game.ResultsScreen;
+import com.openggf.game.LevelBackdropResultsScreen;
+import com.openggf.game.sonic3k.S3kEmeraldProgression;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
+import com.openggf.game.sonic3k.objects.HPZSuperEmeraldReturnEffectObjectInstance;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.PatternAtlasRange;
@@ -38,7 +41,10 @@ import java.util.logging.Logger;
  * because {@code loc_2E512} hands it to the sanctuary reveal first.
  * <p>
  * ROM: {@code Obj_SpecialStage_Results} (sonic3k.asm lines 63296-64164).
- * Implements 6-state machine matching ROM routines 0, 2, 4, 6, 8, A.
+ * Implements the ROM routines 0-$12. Routines $E-$12 run only for a cleared Super Emerald
+ * stage: they pan the rebuilt Hidden Palace sanctuary ({@link S3kSanctuaryResultsBackdrop})
+ * down to its pedestals, close a ring of invincibility stars on the new Super Emerald and,
+ * once all seven are held, announce the Hyper form.
  * <p>
  * Key differences from level results ({@code S3kResultsScreenObjectInstance}):
  * <ul>
@@ -49,7 +55,7 @@ import java.util.logging.Logger;
  *   <li>Two-phase display: initial elements, then emerald reveal text</li>
  * </ul>
  */
-public class S3kSpecialStageResultsScreen implements ResultsScreen {
+public class S3kSpecialStageResultsScreen implements ResultsScreen, LevelBackdropResultsScreen {
     private static final Logger LOG = Logger.getLogger(S3kSpecialStageResultsScreen.class.getName());
 
     // ---- State machine ----
@@ -59,6 +65,16 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private static final int STATE_EMERALD_CHECK = 3;
     private static final int STATE_EMERALD_REVEAL = 4;
     private static final int STATE_EXIT = 5;
+    /** Routine 4 with a Super Emerald stage cleared on 50 rings: the continue-icon wait. */
+    private static final int STATE_SANCTUARY_CONTINUE_WAIT = 6;
+    /** Routine $E ({@code loc_2E616}): wait, then pan {@code Camera_Y_pos} to $320. */
+    private static final int STATE_SANCTUARY_PAN = 7;
+    /** Routine $10 ({@code loc_2E746}): wait for the converging stars, then the Hyper check. */
+    private static final int STATE_SANCTUARY_CONVERGE = 8;
+    /** Routine $12 ({@code loc_2E7DA}): wait, then spawn the Hyper message. */
+    private static final int STATE_SANCTUARY_MESSAGE_WAIT = 9;
+    /** Routine $A ({@code loc_2E5E0}) with its own countdown: exit when it reaches 0. */
+    private static final int STATE_SANCTUARY_EXIT_WAIT = 10;
 
     // ---- ROM-accurate timing ----
     private static final int PRE_TALLY_WAIT = 360;       // 6*60 frames (ROM line 63329)
@@ -67,6 +83,24 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private static final int CONTINUE_WAIT = 270;         // 270 frames if >= 50 rings (ROM line 54005/63414)
     private static final int EMERALD_REVEAL_WAIT = 240;   // 4*60 frames (ROM line 63494/54064)
     private static final int EXIT_WAIT = 240;             // 4*60 frames (same as reveal)
+    /** loc_2E512: {@code move.w #60,$2E(a0)} before routine $E. */
+    private static final int SANCTUARY_PAN_DELAY = 60;
+    /** loc_2E622: {@code cmpi.w #$320,d0}. */
+    private static final int SANCTUARY_PAN_END_Y = 0x320;
+    /** loc_2E622: {@code cmpi.w #$2A0,d0} starts the text slide-out. */
+    private static final int SANCTUARY_SLIDE_OUT_Y = 0x2A0;
+    /** loc_2E72E: {@code move.w #30,$2E(a0)}. */
+    private static final int SANCTUARY_HYPER_DELAY = 30;
+    /** loc_2E75C: {@code move.w #60,$2E(a0)}. */
+    private static final int SANCTUARY_SUPER_EXIT_WAIT = 60;
+    /** loc_2E77E: the Hyper pan's camera X target. */
+    private static final int SANCTUARY_HYPER_CAMERA_X = 0x15A0;
+    /** loc_2E7C6: {@code move.w #2*60,$2E(a0)}. */
+    private static final int SANCTUARY_MESSAGE_DELAY = 120;
+    /** loc_2E7DA: {@code move.w #6*60,$2E(a0)}. */
+    private static final int SANCTUARY_HYPER_EXIT_WAIT = 360;
+    /** loc_2EC4A: the continue icon leaves once its X reaches $1CC. */
+    private static final int CONTINUE_ICON_EXIT_X = 0x1CC;
 
     // ---- Slide speeds ----
     private static final int SLIDE_IN_SPEED = 16;    // moveq #$10,d1 (ROM line 63848/62847)
@@ -113,6 +147,31 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private final int rewardEmeraldCount;
     /** Which reveal message the ROM would spawn, once one is due. */
     private RevealVariant revealVariant = RevealVariant.SUPER_FORM;
+    /** {@code Current_special_stage_2}. */
+    private final int stageIndex;
+    /** loc_2E512: {@code SK_special_stage_flag} set and {@code Special_stage_spheres_left} zero. */
+    private final boolean sanctuaryReveal;
+    /** The $1701 level rebuilt behind the screen, or null when no sanctuary was loaded. */
+    private final S3kSanctuaryResultsBackdrop backdrop;
+    /** Normal/Target palette model of a Super Emerald stage, or null otherwise. */
+    private S3kSanctuaryResultsPalette sanctuaryPalette;
+    private int[] sanctuaryCharacterTarget;
+    private int[][] sanctuaryHpzMainPalette;
+    private boolean sanctuaryControllerTargetsApplied;
+    /** Routine $E-$12 {@code $2E} countdown. */
+    private int romTimer;
+    /** Camera position when no backdrop owns the camera. */
+    private int detachedCameraX;
+    private int detachedCameraY;
+    private HPZSuperEmeraldReturnEffectObjectInstance convergingStars;
+    private HPZSuperEmeraldReturnEffectObjectInstance expandingStars;
+    /** loc_2E746: {@code st $30(a0)} after the Super Emerald sound. */
+    private boolean superEmeraldSoundPlayed;
+    /** loc_2E9D8 has seen the message arrive. */
+    private boolean hyperMessageArrived;
+    private int continueIconX = 0x17C;
+    /** loc_2EC4A's {@code $2E}; negative until routine $E retires the icon. */
+    private int continueIconExitDelay = -1;
 
     // ---- Tally ----
     private int ringBonus;
@@ -134,7 +193,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     // ---- Continue icon ----
     private boolean showContinueIcon;
     private final int continueFrame;
-    private final int continueX;
     private final int continueY;
 
     // ---- Emerald flicker ----
@@ -164,6 +222,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
                                          boolean superEmeraldStage, boolean skSideOrigin) {
         this.ringsCollected = ringsCollected;
         this.gotEmerald = gotEmerald;
+        this.stageIndex = stageIndex;
+        this.sanctuaryReveal = superEmeraldStage && gotEmerald;
         this.totalEmeraldCount = totalEmeraldCount;
         this.character = character;
         this.superEmeraldStage = superEmeraldStage;
@@ -181,6 +241,13 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         // Fade out music immediately (ROM line 63011)
         fadeOutMusic();
 
+        // SpecialStage_Results rebuilds the sanctuary before allocating this object.
+        this.backdrop = superEmeraldStage
+                ? S3kSanctuaryResultsBackdrop.host(stageIndex, gotEmerald) : null;
+        this.detachedCameraX = S3kSanctuaryResultsBackdrop.STAGE_CAMERA_X[
+                Math.floorMod(stageIndex, S3kSanctuaryResultsBackdrop.STAGE_CAMERA_X.length)];
+        this.detachedCameraY = S3kSanctuaryResultsBackdrop.START_CAMERA_Y;
+
         // Load art
         loadArt();
 
@@ -189,7 +256,6 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
 
         // Continue icon: mapping frame based on Player_mode (ROM lines 64042-64048)
         this.continueFrame = getContinueFrame();
-        this.continueX = 0x17C - VDP_OFFSET;
         this.continueY = 0x14C - VDP_OFFSET;
 
         LOG.fine(() -> String.format("S3K SS results: rings=%d gotEmerald=%b totalEmeralds=%d ringBonus=%d timeBonus=%d",
@@ -211,9 +277,15 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             emeraldFlickerCounter = 0;
         }
 
+        // Process_Sprites: the sanctuary objects and the star SSTs sit in lower slots than
+        // this object (slot 29), so they run first.
+        runSanctuaryObjects();
+
         // Slide all active elements toward their targets
         slideElements(phase1Elements);
         slideElements(phase2Elements);
+        updateContinueIconExit();
+        checkHyperMessageArrival();
 
         switch (state) {
             case STATE_INIT -> updateInit();
@@ -222,6 +294,39 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             case STATE_EMERALD_CHECK -> updateEmeraldCheck();
             case STATE_EMERALD_REVEAL -> updateEmeraldReveal();
             case STATE_EXIT -> updateExit();
+            case STATE_SANCTUARY_CONTINUE_WAIT -> updateSanctuaryContinueWait();
+            case STATE_SANCTUARY_PAN -> updateSanctuaryPan();
+            case STATE_SANCTUARY_CONVERGE -> updateSanctuaryConverge();
+            case STATE_SANCTUARY_MESSAGE_WAIT -> updateSanctuaryMessageWait();
+            case STATE_SANCTUARY_EXIT_WAIT -> updateSanctuaryExitWait();
+        }
+
+        if (backdrop != null) {
+            backdrop.publishFrame();
+        }
+        if (sanctuaryPalette != null) {
+            sanctuaryPalette.endOfFrame();
+        }
+    }
+
+    private void runSanctuaryObjects() {
+        if (backdrop != null) {
+            backdrop.runObjects(sanctuaryPalette);
+            if (!sanctuaryControllerTargetsApplied && sanctuaryPalette != null
+                    && sanctuaryCharacterTarget != null && sanctuaryHpzMainPalette != null) {
+                // Obj_HPZSSEntryControl's init ran in this pass.
+                sanctuaryControllerTargetsApplied = true;
+                sanctuaryPalette.applyControllerTargets(
+                        sanctuaryCharacterTarget, sanctuaryHpzMainPalette);
+            }
+            return;
+        }
+        // Without a rebuilt level the star groups still keep their ROM lifetimes.
+        if (convergingStars != null && !convergingStars.isFinished()) {
+            convergingStars.update(frameCounter, null);
+        }
+        if (expandingStars != null && !expandingStars.isFinished()) {
+            expandingStars.update(frameCounter, null);
         }
     }
 
@@ -238,7 +343,13 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private void updatePreTally() {
         int countdown = PRE_TALLY_WAIT - stateTimer;
 
-        if (countdown > 0) {
+        // loc_2E410: the frame that decrements $2E to 0 still returns; the tally starts on
+        // the next frame ({@code tst.w $2E(a0) / beq.s loc_2E484}).
+        if (countdown >= 0) {
+            if (countdown == 0 && sanctuaryReveal && sanctuaryPalette != null) {
+                // loc_2E410: the cleared Super Emerald stage fades the sanctuary in.
+                sanctuaryPalette.beginFadeFromWhite();
+            }
             // Still in pre-tally wait
             if (!musicPlayed && countdown == MUSIC_TRIGGER_COUNTER) {
                 musicPlayed = true;
@@ -271,6 +382,16 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             playSfx(Sonic3kSfx.REGISTER.id);
             state = STATE_POST_TALLY;
             stateTimer = 0;
+            if (sanctuaryReveal) {
+                if (ringsCollected >= CONTINUE_RING_THRESHOLD) {
+                    // loc_2E4C4 sets $2E = 120 and loc_2E4D6 decrements it the same frame.
+                    state = STATE_SANCTUARY_CONTINUE_WAIT;
+                    romTimer = POST_TALLY_WAIT - 1;
+                } else {
+                    // loc_2E4D6 -> loc_2E50E -> loc_2E512 in the tally's final frame.
+                    enterSanctuaryPan();
+                }
+            }
         }
     }
 
@@ -337,6 +458,236 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             state = STATE_EMERALD_REVEAL;
             stateTimer = 0;
             createPhase2Elements();
+        }
+    }
+
+    /** loc_2E4D6/loc_2E4EA with 50 rings: count down, spawn the continue icon, then loc_2E512. */
+    private void updateSanctuaryContinueWait() {
+        if (romTimer != 0) {
+            romTimer--;
+            return;
+        }
+        showContinueIcon = true;
+        playSfx(Sonic3kSfx.CONTINUE.id);
+        enterSanctuaryPan();
+    }
+
+    /**
+     * loc_2E512: a cleared Super Emerald stage replaces the 270-frame continue wait with
+     * {@code $2E = 60}, switches to routine $E and branches straight into it.
+     */
+    private void enterSanctuaryPan() {
+        state = STATE_SANCTUARY_PAN;
+        romTimer = SANCTUARY_PAN_DELAY;
+        updateSanctuaryPan();
+    }
+
+    /** Routine $E, {@code loc_2E616}. */
+    private void updateSanctuaryPan() {
+        if (romTimer != 0) {
+            romTimer--;
+            return;
+        }
+        int y = sanctuaryCameraY();
+        if (y >= SANCTUARY_PAN_END_Y) {
+            // loc_2E6EA: queue the invincibility art, allocate the eight star SSTs.
+            convergingStars = spawnStars(false);
+            romTimer = SANCTUARY_HYPER_DELAY;
+            superEmeraldSoundPlayed = false;
+            state = STATE_SANCTUARY_CONVERGE;
+            playSfx(Sonic3kSfx.SIGNPOST.id);
+            return;
+        }
+        y++;
+        setSanctuaryCameraY(y);
+        if (y == SANCTUARY_SLIDE_OUT_Y) {
+            beginSanctuarySlideOut();
+        }
+    }
+
+    /**
+     * loc_2E622 at {@code Camera_Y_pos == $2A0}: the tally rows (slots 30-35) and the
+     * "GOT A SUPER EMERALD" rows (slots 44-48) become {@code loc_2EC1E} sliders with
+     * staggered {@code $2E} delays; the bonus digit children are cleared, and the continue
+     * icon becomes {@code loc_2EC4A} with a 20-frame delay.
+     */
+    private void beginSanctuarySlideOut() {
+        int[] tallyDelays = {8, 12, 12, 16, 16, 20};
+        int tallyRows = ringsCollected >= CONTINUE_RING_THRESHOLD ? 6 : 5;
+        for (int i = 0; i < tallyRows; i++) {
+            startSlideOut(phase1Elements.get(i), tallyDelays[i]);
+        }
+        phase1Elements.get(2).digitsCleared = true;
+        phase1Elements.get(4).digitsCleared = true;
+        if (showContinueIcon) {
+            continueIconExitDelay = 20;
+        }
+        int[] rewardDelays = {0, 0, 4, 0, 4};
+        int rewardRows = rewardEmeraldCount >= 7 ? 5 : 3;
+        for (int i = 0; i < rewardRows; i++) {
+            startSlideOut(phase1Elements.get(CHAR_NAME_INDEX + i), rewardDelays[i]);
+        }
+    }
+
+    /** The slider SSTs sit after this object, so their first loc_2EC1E pass is this frame. */
+    private void startSlideOut(ResultsElement element, int delay) {
+        element.sliding_out = true;
+        element.slideOutDelay = delay;
+        element.slideOut();
+    }
+
+    /** loc_2EC4A. */
+    private void updateContinueIconExit() {
+        if (!showContinueIcon || continueIconExitDelay < 0) {
+            return;
+        }
+        if (continueIconExitDelay > 0) {
+            continueIconExitDelay--;
+        } else if (continueIconX >= CONTINUE_ICON_EXIT_X) {
+            showContinueIcon = false;
+        } else {
+            continueIconX += SLIDE_OUT_SPEED;
+        }
+    }
+
+    /** Routine $10, {@code loc_2E746}. */
+    private void updateSanctuaryConverge() {
+        if (!superEmeraldSoundPlayed) {
+            if (convergingStars == null || !convergingStars.hasCollapsed()) {
+                return;
+            }
+            superEmeraldSoundPlayed = true;
+            playSfx(Sonic3kSfx.SUPER_EMERALD.id);
+        }
+        if (rewardEmeraldCount < 7) {
+            romTimer = SANCTUARY_SUPER_EXIT_WAIT;
+            state = STATE_SANCTUARY_EXIT_WAIT;
+            return;
+        }
+        if (romTimer != 0) {
+            romTimer--;
+            return;
+        }
+        int x = sanctuaryCameraX();
+        if (x != SANCTUARY_HYPER_CAMERA_X) {
+            setSanctuaryCameraX(x + (x < SANCTUARY_HYPER_CAMERA_X ? 1 : -1));
+            return;
+        }
+        expandingStars = spawnStars(true);
+        romTimer = SANCTUARY_MESSAGE_DELAY;
+        state = STATE_SANCTUARY_MESSAGE_WAIT;
+        playSfx(Sonic3kSfx.SIGNPOST.id);
+    }
+
+    /** Routine $12, {@code loc_2E7DA}. */
+    private void updateSanctuaryMessageWait() {
+        if (romTimer != 0) {
+            romTimer--;
+            return;
+        }
+        createHyperMessageElements();
+        // The message SSTs (slots 61-67) run after this object in the same frame.
+        for (ResultsElement element : phase2Elements) {
+            element.slideIn();
+        }
+        romTimer = SANCTUARY_HYPER_EXIT_WAIT;
+        state = STATE_SANCTUARY_EXIT_WAIT;
+        checkHyperMessageArrival();
+    }
+
+    /** Routine $A, {@code loc_2E5E0}. */
+    private void updateSanctuaryExitWait() {
+        if (romTimer != 0) {
+            romTimer--;
+            return;
+        }
+        complete = true;
+    }
+
+    /**
+     * ObjDat2_2E984: "NOW &lt;name&gt; CAN / BE HYPER &lt;name&gt;" on the lower rows. Frame $12 is
+     * the word art loaded at $50F, HYPER once Super_emerald_count reaches 7.
+     */
+    private void createHyperMessageElements() {
+        int charXOffset = getCharXOffset();
+        int charFrameAdj = getCharFrameAdj();
+        int charNamePalAdd = charNamePaletteAdd();
+        phase2Elements.add(new ResultsElement(ElemType.LABEL, // "NOW", loc_2EA10
+                0xC0 + charXOffset, 0x3C0 + charXOffset, 0x124, 0x2C, 0x38));
+        phase2Elements.add(new ResultsElement(ElemType.LABEL, // name, loc_2EAF6
+                0x100 + charXOffset, 0x400 + charXOffset, 0x124, 0x13 + charFrameAdj, 0x48,
+                charNamePalAdd));
+        phase2Elements.add(new ResultsElement(ElemType.LABEL, // "CAN", loc_2EA3E
+                0x150 - charXOffset, 0x450 - charXOffset, 0x124, 0x2D, 0x30));
+        phase2Elements.add(new ResultsElement(ElemType.LABEL, // "BE", loc_2EA10
+                0xC0 + charXOffset, 0x440 + charXOffset, 0x13C, 0x35, 0x20));
+        phase2Elements.add(new ResultsElement(ElemType.LABEL, // HYPER, loc_2E9F6 -> loc_2EA10
+                0xE8 + charXOffset, 0x468 + charXOffset, 0x13C, 0x12, 0x50, charNamePalAdd));
+        phase2Elements.add(new ResultsElement(ElemType.LABEL, // name, loc_2EAF6
+                0x138 + charXOffset, 0x4B8 + charXOffset, 0x13C, 0x13 + charFrameAdj, 0x48,
+                charNamePalAdd));
+    }
+
+    /**
+     * loc_2E9D8, the seventh message SST: once the last name has reached its target it
+     * clears {@code _unkFAC1} (releasing the Master Emerald's palette rotation) and plays
+     * the Perfect sound.
+     */
+    private void checkHyperMessageArrival() {
+        if (hyperMessageArrived || phase2Elements.size() != 6
+                || state != STATE_SANCTUARY_EXIT_WAIT) {
+            return;
+        }
+        ResultsElement lastName = phase2Elements.get(5);
+        if (lastName.currentX != lastName.targetX) {
+            return;
+        }
+        hyperMessageArrived = true;
+        if (backdrop != null) {
+            backdrop.controller().completeResultsReturnTransformation();
+        }
+        playSfx(Sonic3kSfx.PERFECT.id);
+    }
+
+    private HPZSuperEmeraldReturnEffectObjectInstance spawnStars(boolean expanding) {
+        int stage = Math.floorMod(stageIndex, S3kSanctuaryResultsBackdrop.STAGE_CAMERA_X.length);
+        return backdrop != null
+                ? backdrop.spawnStars(stage, expanding)
+                : new HPZSuperEmeraldReturnEffectObjectInstance(null, stage, expanding);
+    }
+
+    private int sanctuaryCameraX() {
+        return backdrop != null ? backdrop.cameraX() : detachedCameraX;
+    }
+
+    private int sanctuaryCameraY() {
+        return backdrop != null ? backdrop.cameraY() : detachedCameraY;
+    }
+
+    private void setSanctuaryCameraX(int x) {
+        detachedCameraX = x;
+        if (backdrop != null) {
+            backdrop.setCameraX(x);
+        }
+    }
+
+    private void setSanctuaryCameraY(int y) {
+        detachedCameraY = y;
+        if (backdrop != null) {
+            backdrop.setCameraY(y);
+        }
+    }
+
+    @Override
+    public boolean drawsLevelBackdrop() {
+        return backdrop != null;
+    }
+
+    /** The level tiles sample the palette when the backdrop pass is flushed, before the results. */
+    @Override
+    public void prepareLevelBackdropDraw() {
+        if (sanctuaryPalette != null) {
+            sanctuaryPalette.upload(GameServices.graphics());
         }
     }
 
@@ -462,6 +813,61 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         return phase2Elements.stream().map(elem -> elem.mappingFrame).toList();
     }
 
+    /** Whether the small Chaos Emerald indicator for {@code slot} survived loc_2EAA6. */
+    boolean emeraldIndicatorVisibleForTest(int slot) {
+        return phase1ElementVisible(EMERALD_INDICATOR_START_INDEX + slot);
+    }
+
+    /** Phase-1 element index of the first emerald indicator (loc_2EAA6 elements 6-12). */
+    private static final int EMERALD_INDICATOR_START_INDEX = 6;
+
+    int sanctuaryCameraXForTest() {
+        return sanctuaryCameraX();
+    }
+
+    int sanctuaryCameraYForTest() {
+        return sanctuaryCameraY();
+    }
+
+    /** ROM routine this screen is in: $E pan, $10 stars, $12 message wait, $A exit wait; else -1. */
+    int sanctuaryRoutineForTest() {
+        return switch (state) {
+            case STATE_SANCTUARY_PAN -> 0xE;
+            case STATE_SANCTUARY_CONVERGE -> 0x10;
+            case STATE_SANCTUARY_MESSAGE_WAIT -> 0x12;
+            case STATE_SANCTUARY_EXIT_WAIT -> 0xA;
+            default -> -1;
+        };
+    }
+
+    HPZSuperEmeraldReturnEffectObjectInstance convergingStarsForTest() {
+        return convergingStars;
+    }
+
+    HPZSuperEmeraldReturnEffectObjectInstance expandingStarsForTest() {
+        return expandingStars;
+    }
+
+    boolean hyperMessageArrivedForTest() {
+        return hyperMessageArrived;
+    }
+
+    boolean phase1SlidingOutForTest(int index) {
+        return phase1Elements.get(index).sliding_out;
+    }
+
+    int phase1XForTest(int index) {
+        return phase1Elements.get(index).currentX;
+    }
+
+    boolean continueIconShownForTest() {
+        return showContinueIcon;
+    }
+
+    S3kSanctuaryResultsPalette sanctuaryPaletteForTest() {
+        return sanctuaryPalette;
+    }
+
     private boolean phase1ElementVisible(int index) {
         return index >= 0 && index < phase1Elements.size() && phase1Elements.get(index).visible;
     }
@@ -563,9 +969,15 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         phase1Elements.add(superText);
     }
 
+    /**
+     * loc_2EAA6: {@code cmpi.b #1,(Collected_emeralds_array,d0.w) / bne loc_2EC7A}. Only a
+     * Chaos Emerald (state 1) keeps its indicator; converted grey or lit Super Emeralds
+     * (states 2 and 3) delete it, so the sanctuary results show none.
+     */
     private void addEmerald(int x, int y, int frame, int slot) {
         ResultsElement elem = new ResultsElement(ElemType.EMERALD, x, x, y, frame, slot);
-        elem.visible = GameServices.gameState().hasEmerald(slot);
+        elem.visible = S3kEmeraldProgression.from(GameServices.gameState()).state(slot)
+                == S3kEmeraldProgression.EmeraldState.CHAOS;
         phase1Elements.add(elem);
     }
 
@@ -601,8 +1013,9 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
                 0x150 - charXOffset, 0x450 - charXOffset, 0x98, 0x3A, 0x30));
         phase2Elements.add(new ResultsElement(ElemType.LABEL,
                 0xC0 + charXOffset, 0x440 + charXOffset, 0xB0, 0x28, 0x20));
+        // loc_2E9F6 falls into loc_2EA10, which applies the sub_2EC80 X offset.
         phase2Elements.add(new ResultsElement(ElemType.LABEL,
-                0xE8, 0x468, 0xB0, 0x12, 0x50, charNamePalAdd));
+                0xE8 + charXOffset, 0x468 + charXOffset, 0xB0, 0x12, 0x50, charNamePalAdd));
         phase2Elements.add(new ResultsElement(ElemType.LABEL, // char name = orange
                 0x138 + charXOffset, 0x4B8 + charXOffset, 0xB0, 0x13 + charFrameAdj, 0x48,
                 charNamePalAdd));
@@ -645,10 +1058,7 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
                 elem.slideIn();
             }
             if (elem.sliding_out) {
-                elem.currentX += SLIDE_OUT_SPEED;
-                if (elem.currentX > 576) {
-                    elem.visible = false;
-                }
+                elem.slideOut();
             }
         }
     }
@@ -689,6 +1099,9 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         if (!artLoaded || renderer == null) return;
         updateDynamicScorePatterns();
         if (!artCached) ensureArtCached();
+        if (sanctuaryPalette != null && backdrop == null) {
+            sanctuaryPalette.upload(GameServices.graphics());
+        }
         if (!artCached || !renderer.isReady()) return;
 
         for (ResultsElement elem : phase1Elements) {
@@ -705,8 +1118,8 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             // ROM: btst #3,(Level_frame_counter+1).w — 8-frame-on, 8-frame-off blink
             if (((frameCounter >> 3) & 1) != 0) {
                 // Continue icon: no art_tile override, uses piece palette
-                renderMappingFrameWithTileOffset(continueFrame, continueX + viewportXOffset,
-                        continueY, 0, -1);
+                renderMappingFrameWithTileOffset(continueFrame,
+                        continueIconX - VDP_OFFSET + viewportXOffset, continueY, 0, -1);
             }
         }
     }
@@ -714,8 +1127,12 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
     private void renderElement(ResultsElement elem) {
         switch (elem.type) {
             case SCORE_ROW -> renderScoreRow(elem);
-            case RING_BONUS -> renderBonusDigits(elem, ringBonus);
-            case TIME_BONUS -> renderBonusDigits(elem, timeBonus);
+            case RING_BONUS -> {
+                if (!elem.digitsCleared) renderBonusDigits(elem, ringBonus);
+            }
+            case TIME_BONUS -> {
+                if (!elem.digitsCleared) renderBonusDigits(elem, timeBonus);
+            }
             case EMERALD -> renderEmerald(elem);
             default -> {
                 int tileOffset = isCharNameFrame(elem.mappingFrame) ? CHAR_NAME_TILE_OFFSET : 0;
@@ -1009,9 +1426,27 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             byte[] paletteData = rom.readBytes(Sonic3kConstants.PAL_RESULTS_ADDR, 128);
             resultsPalettes = PaletteLoader.fromBytes(paletteData);
             paletteLoaded = true;
+            if (superEmeraldStage) {
+                loadSanctuaryPalette(rom, paletteData);
+            }
         } catch (Exception e) {
             LOG.warning("Failed to load SS results palette: " + e.getMessage());
         }
+    }
+
+    /** Pal_Results plus the HPZ palettes {@code SpecialStage_Results} and loc_90998 read. */
+    private void loadSanctuaryPalette(com.openggf.data.Rom rom, byte[] resultsData) throws Exception {
+        int[][] results = S3kSanctuaryResultsPalette.linesFromSegaBytes(resultsData, 4);
+        int[][] hpzIntro = S3kSanctuaryResultsPalette.linesFromSegaBytes(
+                rom.readBytes(Sonic3kConstants.HPZ_INTRO_PALETTE_ADDR, 0x60), 3);
+        sanctuaryPalette = new S3kSanctuaryResultsPalette(results, hpzIntro, character);
+        sanctuaryHpzMainPalette = S3kSanctuaryResultsPalette.linesFromSegaBytes(
+                rom.readBytes(Sonic3kConstants.HPZ_MAIN_PALETTE_ADDR, 0x60), 3);
+        // loc_90998: Pal_CutsceneKnux, except Pal_SonicTails when Player_mode is Knuckles.
+        int characterAddr = character == PlayerCharacter.KNUCKLES
+                ? Sonic3kConstants.PAL_SONIC_TAILS_ADDR : Sonic3kConstants.PAL_CUTSCENE_KNUX_ADDR;
+        sanctuaryCharacterTarget = S3kSanctuaryResultsPalette.linesFromSegaBytes(
+                rom.readBytes(characterAddr, 0x20), 1)[0];
     }
 
     /**
@@ -1029,8 +1464,9 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
             renderer.ensurePatternsCached(gm, PATTERN_BASE);
         }
 
-        // Cache palettes (ROM line 63110: Pal_Results → all 4 palette lines)
-        if (paletteLoaded && resultsPalettes != null) {
+        // Cache palettes (ROM line 63110: Pal_Results → all 4 palette lines). A Super
+        // Emerald stage uploads its Normal_palette model every frame instead.
+        if (sanctuaryPalette == null && paletteLoaded && resultsPalettes != null) {
             Sonic3kSpecialStagePaletteUploader.cacheAll(gm, resultsPalettes);
         }
 
@@ -1085,6 +1521,10 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
         int currentX;
         boolean visible = true;
         boolean sliding_out;
+        /** loc_2EC1E's {@code $2E}: frames to hold before sliding out. */
+        int slideOutDelay;
+        /** loc_2E6C8: {@code mainspr_childsprites} cleared, so no bonus digits are drawn. */
+        boolean digitsCleared;
 
         ResultsElement(ElemType type, int targetX, int startX, int y,
                        int mappingFrame, int widthPixels) {
@@ -1109,6 +1549,18 @@ public class S3kSpecialStageResultsScreen implements ResultsScreen {
                 currentX = Math.min(currentX + SLIDE_IN_SPEED, targetX);
             } else {
                 currentX = Math.max(currentX - SLIDE_IN_SPEED, targetX);
+            }
+        }
+
+        /** loc_2EC1E: hold for {@code $2E} frames, then move right $20 per frame. */
+        void slideOut() {
+            if (slideOutDelay > 0) {
+                slideOutDelay--;
+                return;
+            }
+            currentX += SLIDE_OUT_SPEED;
+            if (currentX > 576) {
+                visible = false;
             }
         }
 

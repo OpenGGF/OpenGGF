@@ -3996,8 +3996,14 @@ public class Engine {
 		if (resultsScreen == null) {
 			return;
 		}
-		camera.setX((short) 0);
-		camera.setY((short) 0);
+		if (resultsScreen instanceof LevelBackdropResultsScreen backdrop && backdrop.drawsLevelBackdrop()) {
+			backdrop.prepareLevelBackdropDraw();
+			levelManager.drawWithRenderOptions(spriteManager, LevelManager.LevelRenderOptions.previewCapture());
+			graphicsManager.flush();
+		} else {
+			camera.setX((short) 0);
+			camera.setY((short) 0);
+		}
 		applyViewportWidth(resultsScreen, (int) projectionWidth);
 
 		graphicsManager.beginPatternBatch();

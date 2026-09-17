@@ -184,10 +184,14 @@ class TestS3kSpecialStageResultsTally {
     @Test
     void tallyDecrement_ringBonusDecreasesByTenPerTallyFrame() {
         S3kSpecialStageResultsScreen screen = screen(50, false, 0);
-        // Step exactly through the pre-tally wait, then one tally frame.
-        for (int frame = 0; frame <= 360; frame++) {
+        // Routine 0 on update 1, then loc_2E410 counts $2E from 360: the update that
+        // reaches 0 (361) still returns, so the first tally frame is update 362.
+        for (int frame = 1; frame <= 361; frame++) {
             screen.update(frame, null);
         }
+        assertEquals(500, screen.ringBonusForTest(),
+                "The update that decrements $2E to 0 does not tally");
+        screen.update(362, null);
         assertEquals(490, screen.ringBonusForTest(),
                 "First tally frame removes 10 from the 500 ring bonus");
     }

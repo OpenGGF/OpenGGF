@@ -15,7 +15,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   glow and tile animation. Its teleporters now carry the player between floors with the charging beam, rise and
   settle, and Knuckles leaves for Sky Sanctuary Act 2 from the upper floor. Title cards for the shared sub-level slots follow the ROM: Hidden Palace shows its
   own name without an act number, and the Lava Reef and Death Egg boss acts show their
-  zone's card.
+  zone's card. A cleared Super Emerald stage now tallies over the rebuilt sanctuary as it
+  fades in from white, pans down to the pedestals, closes a ring of stars on the new
+  emerald and, once all seven are held, announces "NOW SONIC CAN BE HYPER SONIC"; the
+  small Chaos Emerald indicators only show emeralds that have not been converted.
 
 - **S3K parity fixes from the discrepancy audit:** Madmole's body is its own object
   in its own slot; the MHZ dragonfly tail enters its return on the same frame as

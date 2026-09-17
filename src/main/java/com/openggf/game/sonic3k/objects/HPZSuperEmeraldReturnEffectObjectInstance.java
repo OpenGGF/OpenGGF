@@ -4,7 +4,6 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.S3kSanctuaryRuntimeState;
-import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
@@ -20,42 +19,72 @@ import com.openggf.physics.TrigLookupTable;
 import java.util.List;
 
 /**
- * Successful HPZ special-stage return transformation.
- * ROM: {@code loc_2ECD0}-{@code loc_2EDCA}.
+ * Invincibility-star ring of the Super Emerald results reveal.
+ * ROM: {@code loc_2ECD0}-{@code loc_2EDCA} (sonic3k.asm:64173-64274).
+ *
+ * <p>{@code Obj_SpecialStage_Results} allocates eight of these SSTs at once
+ * ({@code loc_2E70C} converging onto the cleared pedestal, {@code loc_2E7A0}
+ * expanding from the Master Emerald once all seven Super Emeralds are held). They share
+ * one radius word and one creation frame, and each SST draws two mirrored child sprites,
+ * so one instance stands for the whole group: lane {@code i} starts at angle
+ * {@code i*$10} and mapping counter {@code i}. The group plays no sound; the results
+ * object owns the Signpost, Super Emerald and Perfect effects.
  */
 public final class HPZSuperEmeraldReturnEffectObjectInstance
         extends AbstractObjectInstance implements RewindRecreatable {
-    private static final int[] CAMERA_X =
+    /** {@code word_2E398}: the results camera X for each Super Emerald stage. */
+    static final int[] CAMERA_X =
             {0x15A0, 0x1540, 0x1600, 0x1500, 0x1640, 0x14B0, 0x1690};
-    private static final int[] PEDESTAL_Y =
+    /** {@code word_2E398+$10}: the matching pedestal Y ({@code loc_2ECD0} reads it as the centre). */
+    static final int[] PEDESTAL_Y =
             {0x368, 0x3A0, 0x3A0, 0x350, 0x350, 0x390, 0x390};
+    private static final int LANES = 8;
+    /** {@code loc_2ECD0} with {@code $36} set: the expanding ring is centred on the Master Emerald. */
+    private static final int EXPANDING_X = 0x1640;
+    private static final int EXPANDING_Y = 0x340;
 
     private HPZSSEntryControlObjectInstance parentRef;
+    private int stageIndex;
+    private boolean expanding;
     private int angle;
-    private int displayAngle;
-    private int radius = 0xE000;
-    private int displayRadius;
+    /** {@code $32}: unsigned radius word, $E000 converging / 0 expanding. */
+    private int radius;
     private final int[] laneMappingFrames = {0, 1, 2, 3, 4, 5, 6, 7};
+    private final int[] laneOffsetX = new int[LANES];
+    private final int[] laneOffsetY = new int[LANES];
     private boolean drawCurrentFrame;
-    private boolean startSoundPlayed;
     private boolean collapsed;
     private boolean completed;
 
     private record RewindExtra(
-            ObjectRefId parentId, int angle, int displayAngle, int radius, int displayRadius,
-            int[] laneMappingFrames, boolean drawCurrentFrame, boolean startSoundPlayed,
-            boolean collapsed, boolean completed)
+            ObjectRefId parentId, int stageIndex, boolean expanding, int angle, int radius,
+            int[] laneMappingFrames, int[] laneOffsetX, int[] laneOffsetY,
+            boolean drawCurrentFrame, boolean collapsed, boolean completed)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {
         private RewindExtra {
             laneMappingFrames = laneMappingFrames.clone();
+            laneOffsetX = laneOffsetX.clone();
+            laneOffsetY = laneOffsetY.clone();
         }
     }
 
+    /**
+     * @param parent    the sanctuary controller whose runtime carries {@code _unkFAC0}
+     * @param stageIndex {@code Current_special_stage_2}
+     * @param expanding {@code $36}: set by {@code loc_2E7A0} for the seven-emerald ring
+     */
     public HPZSuperEmeraldReturnEffectObjectInstance(
-            HPZSSEntryControlObjectInstance parent) {
+            HPZSSEntryControlObjectInstance parent, int stageIndex, boolean expanding) {
         super(new ObjectSpawn(0, 0, 0xB5, 0, 0, false, 0),
                 "HPZSuperEmeraldReturnEffect");
+        if (stageIndex < 0 || stageIndex >= CAMERA_X.length) {
+            throw new IllegalArgumentException("stageIndex");
+        }
         parentRef = parent;
+        this.stageIndex = stageIndex;
+        this.expanding = expanding;
+        // loc_2ECD0: move.w #-$2000,$32(a0), then clr.w $32(a0) when $36 is set.
+        radius = expanding ? 0 : 0xE000;
     }
 
     private HPZSuperEmeraldReturnEffectObjectInstance(ObjectSpawn spawn) {
@@ -68,66 +97,88 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
         return new HPZSuperEmeraldReturnEffectObjectInstance(ctx.spawn());
     }
 
+    @Override
+    public void update(int vIntRunCount, PlayableEntity player) {
+        if (completed) {
+            return;
+        }
+        // loc_2ED2A: every lane uses the radius from before this frame's step.
+        for (int lane = 0; lane < LANES; lane++) {
+            int laneAngle = (angle + lane * 0x10) & 0xFF;
+            laneOffsetX[lane] = scale(TrigLookupTable.cosHex(laneAngle), radius);
+            laneOffsetY[lane] = scale(TrigLookupTable.sinHex(laneAngle), radius);
+            // loc_2ED5C: addq.w #1 / cmpi.w #8 / bls, else moveq #0.
+            laneMappingFrames[lane] = laneMappingFrames[lane] >= 8
+                    ? 0 : laneMappingFrames[lane] + 1;
+        }
+        angle = (angle + 2) & 0xFF;
+        if (expanding) {
+            // loc_2EDBC: addi.w #$100,$32 / bcs delete.
+            radius += 0x100;
+            if (radius > 0xFFFF) {
+                finish();
+                return;
+            }
+        } else {
+            // subi.w #$100,$32 / bcs loc_2EDAE: the borrow frame deletes without
+            // drawing, sets the results object's $31 and clears _unkFAC0.
+            radius -= 0x100;
+            if (radius < 0) {
+                collapsed = true;
+                S3kSanctuaryRuntimeState runtime = runtime();
+                if (runtime != null) {
+                    runtime.completePedestalTransformation();
+                }
+                finish();
+                return;
+            }
+        }
+        drawCurrentFrame = true;
+    }
+
+    private void finish() {
+        drawCurrentFrame = false;
+        completed = true;
+        ObjectLifetimeOps.expireDynamic(this);
+    }
+
+    /** {@code mulu.w d2,d1 / swap d1} on the magnitude, sign restored with {@code neg.w}. */
+    static int scale(int trig, int radiusWord) {
+        int magnitude = (Math.abs(trig) * (radiusWord & 0xFFFF)) >>> 16;
+        return trig < 0 ? -magnitude : magnitude;
+    }
+
     private S3kSanctuaryRuntimeState runtime() {
         return parentRef == null ? null : parentRef.runtimeForChild();
     }
 
-    @Override
-    public void update(int vIntRunCount, PlayableEntity player) {
-        S3kSanctuaryRuntimeState runtime = runtime();
-        if (completed || runtime == null) {
-            return;
-        }
-        if (!startSoundPlayed) {
-            startSoundPlayed = true;
-            if (tryServices() != null) {
-                services().playSfx(Sonic3kSfx.SIGNPOST.id);
-            }
-        }
-        if (collapsed) {
-            completed = true;
-            runtime.completeReturnTransformation();
-            if (tryServices() != null) {
-                services().playSfx(Sonic3kSfx.PERFECT.id);
-            }
-            ObjectLifetimeOps.expireDynamic(this);
-            return;
-        }
-        runtime.updateEmeraldFlicker();
-        if (radius == 0) {
-            drawCurrentFrame = false;
-            collapsed = true;
-            runtime.completePedestalTransformation();
-            if (tryServices() != null) {
-                services().playSfx(Sonic3kSfx.SUPER_EMERALD.id);
-            }
-            return;
-        }
-        drawCurrentFrame = true;
-        displayAngle = angle;
-        displayRadius = radius;
-        angle = (angle + 2) & 0xFF;
-        for (int lane = 0; lane < laneMappingFrames.length; lane++) {
-            laneMappingFrames[lane] = laneMappingFrames[lane] == 8
-                    ? 0 : laneMappingFrames[lane] + 1;
-        }
-        radius = (radius - 0x100) & 0xFFFF;
+    /** {@code st $31(a1)} reached the results object: the converging ring has closed. */
+    public boolean hasCollapsed() {
+        return collapsed;
+    }
+
+    public boolean isFinished() {
+        return completed;
+    }
+
+    public boolean isExpanding() {
+        return expanding;
     }
 
     int radiusForTest() {
         return radius;
     }
 
-    int mappingFrameForTest() {
-        return laneMappingFrames[0];
-    }
-
     int mappingFrameForTest(int lane) {
         return laneMappingFrames[lane];
     }
 
-    int displayRadiusForTest() {
-        return displayRadius;
+    int offsetXForTest(int lane) {
+        return laneOffsetX[lane];
+    }
+
+    int offsetYForTest(int lane) {
+        return laneOffsetY[lane];
     }
 
     boolean drawsCurrentFrameForTest() {
@@ -149,41 +200,36 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
         return true;
     }
 
+    /** The results objects are never unloaded by camera range while they run. */
+    @Override
+    public boolean isPersistent() {
+        return true;
+    }
+
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        S3kSanctuaryRuntimeState runtime = runtime();
-        if (completed || !drawCurrentFrame
-                || runtime == null || runtime.returnStage() < 0) {
+        if (completed || !drawCurrentFrame) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(ObjectArtKeys.INVINCIBILITY_STARS);
         if (renderer == null) {
             return;
         }
-        int stage = runtime.returnStage();
-        int centreX = CAMERA_X[stage] + 0xA0;
-        int centreY = PEDESTAL_Y[stage];
-        int pixelRadius = displayRadius >>> 8;
-        for (int i = 0; i < 8; i++) {
-            int childAngle = (displayAngle + i * 0x10) & 0xFF;
-            int dx = TrigLookupTable.cosHex(childAngle) * pixelRadius >> 8;
-            int dy = TrigLookupTable.sinHex(childAngle) * pixelRadius >> 8;
-            renderer.drawFrameIndex(laneMappingFrames[i], centreX + dx, centreY + dy,
-                    false, false, 0);
-            renderer.drawFrameIndex(laneMappingFrames[i], centreX - dx, centreY - dy,
-                    false, false, 0);
+        int centreX = getX();
+        int centreY = getY();
+        for (int lane = 0; lane < LANES; lane++) {
+            renderer.drawFrameIndex(laneMappingFrames[lane],
+                    centreX + laneOffsetX[lane], centreY + laneOffsetY[lane], false, false, 0);
+            renderer.drawFrameIndex(laneMappingFrames[lane],
+                    centreX - laneOffsetX[lane], centreY - laneOffsetY[lane], false, false, 0);
         }
     }
 
     @Override public int getX() {
-        S3kSanctuaryRuntimeState runtime = runtime();
-        return runtime == null || runtime.returnStage() < 0
-                ? 0x1640 : CAMERA_X[runtime.returnStage()] + 0xA0;
+        return expanding ? EXPANDING_X : CAMERA_X[stageIndex] + 0xA0;
     }
     @Override public int getY() {
-        S3kSanctuaryRuntimeState runtime = runtime();
-        return runtime == null || runtime.returnStage() < 0
-                ? 0x368 : PEDESTAL_Y[runtime.returnStage()];
+        return expanding ? EXPANDING_Y : PEDESTAL_Y[stageIndex];
     }
     @Override public int getOutOfRangeReferenceX() { return getX(); }
 
@@ -192,8 +238,8 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
         ObjectRefId parentId = context.identityTable()
                 .map(table -> table.encodeObject(parentRef)).orElse(null);
         return super.captureRewindState(context).withObjectSubclassExtra(
-                new RewindExtra(parentId, angle, displayAngle, radius, displayRadius,
-                        laneMappingFrames, drawCurrentFrame, startSoundPlayed,
+                new RewindExtra(parentId, stageIndex, expanding, angle, radius,
+                        laneMappingFrames, laneOffsetX, laneOffsetY, drawCurrentFrame,
                         collapsed, completed));
     }
 
@@ -205,14 +251,14 @@ public final class HPZSuperEmeraldReturnEffectObjectInstance
             parentRef = extra.parentId() == null ? null
                     : (HPZSSEntryControlObjectInstance) context.requireIdentityTable()
                     .resolveObject(extra.parentId(), true);
+            stageIndex = extra.stageIndex();
+            expanding = extra.expanding();
             angle = extra.angle();
-            displayAngle = extra.displayAngle();
             radius = extra.radius();
-            displayRadius = extra.displayRadius();
-            System.arraycopy(extra.laneMappingFrames(), 0, laneMappingFrames, 0,
-                    laneMappingFrames.length);
+            System.arraycopy(extra.laneMappingFrames(), 0, laneMappingFrames, 0, LANES);
+            System.arraycopy(extra.laneOffsetX(), 0, laneOffsetX, 0, LANES);
+            System.arraycopy(extra.laneOffsetY(), 0, laneOffsetY, 0, LANES);
             drawCurrentFrame = extra.drawCurrentFrame();
-            startSoundPlayed = extra.startSoundPlayed();
             collapsed = extra.collapsed();
             completed = extra.completed();
         }

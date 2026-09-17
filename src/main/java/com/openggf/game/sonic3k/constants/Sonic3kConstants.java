@@ -1290,6 +1290,10 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_SS_RESULTS_ADDR = 0x15BABE;          // SS results text art (149 tiles, 4768 bytes decompressed)
     public static final int ART_KOSM_SS_RESULTS_SUPER_ADDR = 0x15B374;    // Super form art (Sonic)
     public static final int ART_KOSM_SS_RESULTS_SUPER_K_ADDR = 0x15B4F6;  // Super form art (Knuckles)
+    public static final int ART_KOSM_SS_RESULTS_HYPER_ADDR = 0x15B678;    // Hyper form art (Sonic)
+    public static final int ART_KOSM_SS_RESULTS_HYPER_K_ADDR = 0x15B7EA;  // Hyper form art (Knuckles)
+    /** Pal_SonicTails (sonic3k.asm:200557), one line; Obj_HPZSSEntryControl's Knuckles target line 2. */
+    public static final int PAL_SONIC_TAILS_ADDR = 0x0A8A3C;
 
     // ===== Special Stage Results VRAM Layout =====
     // Different from level results: character name at $4F1, Super art at $50F, text at $523, general at $5B8

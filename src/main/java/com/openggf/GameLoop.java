@@ -3263,8 +3263,7 @@ public class GameLoop {
         levelManager.setResultsReturnCardOwnedByCaller(true);
         try {
             sanctuaryReturn = SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
-                    levelManager, activeSpecialStageRewardKind, ssStageIndex,
-                    ssEmeraldCollected);
+                    levelManager, activeSpecialStageRewardKind, ssStageIndex);
         } finally {
             levelManager.setResultsReturnCardOwnedByCaller(false);
         }

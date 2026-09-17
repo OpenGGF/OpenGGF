@@ -39,9 +39,10 @@ public class Sonic3kLevelInitProfile extends AbstractLevelInitProfile
         // Shipped single-player VInt8/C/10 and Do_ControllerPal upload Sprite_table.
         // VInt0's single-player lag branch deliberately leaves VDP SAT untouched.
         // Special-stage tables and competition page flipping have separate scene owners.
+        // SpecialStage_Results runs VInt 8 over the rebuilt HPZ sanctuary (loc_2E24C).
         return phase != null && switch (phase) {
             case ORDINARY_LEVEL, CREDITS_DEMO, LEVEL_TITLE_CARD, NORMAL_PAUSE,
-                    PALETTE_FADE, CREDITS_DEMO_FADE -> true;
+                    PALETTE_FADE, CREDITS_DEMO_FADE, SPECIAL_STAGE_RESULTS -> true;
             default -> false;
         };
     }
