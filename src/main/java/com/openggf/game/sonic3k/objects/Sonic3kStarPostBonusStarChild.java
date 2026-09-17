@@ -183,6 +183,17 @@ public class Sonic3kStarPostBonusStarChild extends AbstractObjectInstance implem
 
         // Update animation
         updateAnimation();
+
+        // loc_2D5B6 tail-calls Sprite_CheckDeleteTouch3 with the star's own x_pos
+        // against Camera_X_pos_coarse_back (sonic3k.asm:37359-37372), so an
+        // orbiting star leaves on its own once its side of the orbit scrolls out.
+        var camera = services().camera();
+        if (camera != null) {
+            int coarseBack = ((camera.getX() & 0xFFFF) - 0x80) & 0xFF80;
+            if ((((currentX & 0xFF80) - coarseBack) & 0xFFFF) > 0x280) {
+                setDestroyed(true);
+            }
+        }
     }
 
     /**
