@@ -41,6 +41,11 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * {@code Camera_X_pos_BG_copy} from. They are published into {@link LrzZoneRuntimeState} for the
  * animated-tile channels, which own them from slice 2 on.
  *
+ * <p>Both Lava Reef background layouts repeat every four 128 px chunks, so the engine's default
+ * 512 px plane period is the ROM's nametable. Act 2 confirms it from the other side: its plane is
+ * refilled with {@code moveq #0,d1} ({@code LRZ2_BackgroundInit}, {@code loc_57044},
+ * {@code loc_5705C}), i.e. always from layout column 0, and only the scroll words move it.
+ *
  * <p>Not modelled here, by slice: the locked dome background ({@code sub_56DAC}, reached when
  * {@code Events_bg+$02} is non-zero and {@code PlainDeformation} replaces this routine), the act-2
  * Death Egg background sprite at the tail of {@code sub_57082}, and the boss act {@code $1600},
@@ -130,6 +135,7 @@ public class SwScrlLrz extends SwScrlS3kDefault {
     public short getVscrollFactorFG() {
         return foregroundVscroll;
     }
+
 
     /**
      * {@code Camera_Y_pos_BG_copy}. Act 1 ({@code LRZ1_Deform}, 115390-115395) works in words:

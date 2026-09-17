@@ -20,9 +20,9 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline at `035e48a58` (`TestS3kLrzPlacementCensus`): 455 placed objects, of which
-**281 still build a `PlaceholderObjectInstance`**; 281 live rings (282 records minus the leading
-`(0,0)` sentinel).
+Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, of which **277 still build a
+`PlaceholderObjectInstance`** after slice 1 (281 at `035e48a58`); 281 live rings (282 records minus
+the leading `(0,0)` sentinel).
 
 ## Obligations
 
@@ -30,11 +30,11 @@ Placement baseline at `035e48a58` (`TestS3kLrzPlacementCensus`): 455 placed obje
 | --- | --- | --- | --- | --- | --- | --- |
 | BASELINE: placed object and ring census | `LRZ2_Sprites` `$1F7C9C` (455), `LRZ2_Rings` `$1F8C7E` (282 records, 281 live) | native | `TestS3kLrzPlacementCensus` | implemented | pass, `3418eba6e` | Ratchet target 0 placeholders |
 | ENTRY: `$901` resources, bounds, object set | Registry/sprite/screen-event tables | native | `TestSonic3kLevelLoading` | implemented (inherited) | pass | Not re-verified for this campaign |
-| PRESENT: parallax, bands and shake | `sub_57082`, `LRZ2_BGDeformArray` `$20,$20,$20,$10x4,$F0,$10x3,$20`, `ApplyDeformation` at `HScroll_table` | 320 + one wide | `SwScrlLrzTest` | slice 1 | open | — |
-| PRESENT: animated tiles and `AniPLC_LRZ2` | `AnimateTiles_LRZ2` / `loc_282D0`; `Offs_AniFunc` pairs `$901` with `AniPLC_LRZ2` `$28A84` | native | `TestS3kLrzPatternAnimation` | slice 1 (AniPLC selection) / slice 2 (split DMA) | open | `$901` used `AniPLC_LRZ1` before slice 1 |
+| PRESENT: parallax, bands and shake | `sub_57082`, `LRZ2_BGDeformArray` `$20,$20,$20,$10x4,$F0,$10x3,$20`, `ApplyDeformation` at `HScroll_table`; `Camera_Y_pos_BG_copy` = `3Y/32` | 320 and 640 | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented | pass, `bbd156d37` | **Not visually matched**: a direct `$901` load draws HUD font tiles in the upper background rows ([known bug](../../../status/s3k-known-bugs.md)); the clip waits for the seamless entry |
+| PRESENT: animated tiles and `AniPLC_LRZ2` | `AnimateTiles_LRZ2` / `loc_282D0`; `Offs_AniFunc` pairs `$901` with `AniPLC_LRZ2` `$28A84` | native | `TestS3kLrzPatternAnimation` | AniPLC selection implemented; split DMA slice 2 | pass, `bbd156d37` | `$901` used `AniPLC_LRZ1` before slice 1 |
 | PRESENT: palette cycles | `AnPal_LRZ2` (channel D keeps the `FixBugs = 0` duplicated pair) | native | `TestS3kLrzPaletteCycling` | implemented (inherited) | pass | Not re-verified |
 | PRESENT: Death Egg background sprite | End of `sub_57082`: `x = $678 - HScroll_table+$004`, kept when `x <= -$7E0`, else `0`; `y = $C0 - Camera_Y_pos_BG_copy`; `loc_5711E` deletes for `Player_mode 3` | native + wide | — | not implemented | open | Slice 7; draw path untraced |
-| OBJECT: lava blocks `$6E` (4 placements) | `Obj_InvisibleLavaBlock`; `sub_1F58C` | native + fire shield | `TestSonic3kInvisibleHurtBlockHObjectInstance` | slice 1 | open | — |
+| OBJECT: lava blocks `$6E` (4 placements) | `Obj_InvisibleLavaBlock`; `sub_1F58C` | native, all five shield states | `TestSonic3kInvisibleHurtBlockHObjectInstance` | implemented | pass, `bbd156d37` | Act-2 placements not exercised on a route |
 | OBJECT: traversal families `$25 $29 $2B $2C $2D $32 $37` (186 placements) | `Obj_LRZFlameThrower`, `Obj_LRZOrbitingSpikeBall*`, `Obj_LRZSolidMovingPlatforms` (`off_258BC`, `byte_25826`) | native | — | not implemented | open | Slice 7 |
 | OBJECT: badniks `$99 $9A $9B` (52 placements) | `Obj_Fireworm`, `Obj_Iwamodoki`, `Obj_Toxomister` | native | — | not implemented | open | Slice 4 |
 | OBJECT: `$0F` collapsing bridges (25) and `$24` tunnel (10) | `Obj_CollapsingBridge` zone-9 mappings; `Obj_AutomaticTunnel` subtypes `$55-$59`, `$D5-$D9` | native | `TestS3kLrzPlacementCensus` (classification only) | implemented | classification pass | Per-subtype behaviour unverified |

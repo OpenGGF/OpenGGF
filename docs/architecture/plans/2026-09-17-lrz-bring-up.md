@@ -359,17 +359,18 @@ Still open:
 | Can Sonic/Tails pass X `$38B0` outside `$AE`'s Y window (`y − $240 … y`, i.e. `0 … $240`) and reach `$B3` at `($3FE0,$E0)`; can Knuckles's route miss `$B3`? | Cold routes for all three characters plus the act 2 collision map around X `$38A0-$3FF0`; if Sonic can reach `$B3`, record the ROM result (`$1601` without LRZ3), do not block it | Slice 8 done-condition |
 | `$8B` sprite mask under SKL is `SozSpriteMaskObjectInstance`: any SOZ-only assumption? | Read the class against `Obj_SpriteMask`; test the three LRZ subtypes `$44 $84 $F1` | Slice 9 (boss act uses two) |
 | Does `$1600` art at the `$0F` bridge tile match `Map_HPZCollapsingBridge` frames? | Moving capture of the `($60,$4D0)` bridge vs native | Slice 9 |
+| Why does a direct `$901` load draw HUD font tiles in the upper background rows, when the layout is a clean four-chunk repeat and the plane is refilled from column 0? | Native `$901` reference capture of the same rows, or identifying the art the seamless entry's `loc_56BD2` queue supplies | Slice 6/7; recorded in `s3k-known-bugs.md` |
 | Death Egg sprite draw path (`x = 0` suppression, `$1FF` wrap); autoscroll stage ↔ velocity pairing; which of `$29`'s `$30/$32` is the on and which the off timer | Slice owner traces `loc_5711E`, `loc_59E5E`-`loc_59F3C`, `loc_43DDC` before writing the test | Slices 7, 9, 7 |
 
 ## Status
 
 | Claim | State |
 | --- | --- |
-| Implemented | Not started (placeholder baseline 239 / 281 / 14 of 609 / 455 / 35 placements). Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
+| Implemented | Slices 0-1 (placeholder baseline now 205 / 277 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2` and the `$6E` lava blocks. Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
 | Cold-reachable | Not started |
-| Rewind-verified | Not started |
+| Rewind-verified | `LrzZoneRuntimeState` capture/restore round trip only (`TestS3kLrzScrollRegistrationHeadless`); no route spots yet |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
-| Visually matched | Not started |
+| Visually matched | Act 1 parallax and the act-1 lava block inspected as before/after clips; act 2's background is blocked by the direct-`$901` art gap |
 
 Out of scope, recorded as dependencies: SSZ after HPZ (SSZ campaign); Knuckles replay classes and
 fixtures' harness work beyond recording frontiers; the `lrz_completerun` hardware-timing compile
@@ -440,4 +441,76 @@ and no LRZ objects.
 
 **Open issues from this slice.** None blocking. The `lrz_completerun` hardware-timing compile
 blocker was not re-measured (no named slice depends on it yet).
+
+### 2026-09-17 - Slice 1: runtime state, scroll, registration fixes (commit `bbd156d37` + follow-up)
+
+Worktree `.worktrees/ai-lrz-bring-up`. All Maven through `maven_queue.py -Dmse=off` with
+`-Ds3k.rom.path=<worktree>/s3k.gen`; every run below reports 0 skips.
+
+**Delivered.** `SwScrlLrz` (both acts), `LrzZoneRuntimeState` with its rewind capture,
+`Sonic3kLRZEvents` registered in `Sonic3kLevelEventManager` (including
+`currentRuntimeStateUsesThisEventInstance`, keyed so zone `$16` act 0 takes the Lava Reef state and
+act 1 Hidden Palace's), an act-keyed `Sonic3kScrollHandlerProvider` for zones `$16` and `$17`,
+`AniPLC_LRZ2` (`$28A84`) for `$901`, and `$6E` `Obj_InvisibleLavaBlock` on the shared H hurt block
+with the `sub_1F58C` reaction mask.
+
+**ROM re-read for this slice** (independently of the plan's verified-values table, which it
+confirms): `LRZ1_Deform` 115389-115435, `sub_57082` 115739-115820, the deform arrays at 115643 and
+115845, `LRZ1_ScreenEvent` 115199, `LRZ2_ScreenEvent` 115670, `Offs_AniFunc` 53842-53881 (the table
+is `(AnimateTiles, AniPLC)` pairs; counting pairs from its head, entry 18 is LRZ1 and 19 LRZ2),
+`AniPLC_LRZ1`/`AniPLC_LRZ2` 56007/56022, `Obj_InvisibleLavaBlock` 43270, `sub_1F58C` 43427,
+`sub_24280` 49205. `shield_reaction` and `status_secondary` are the same SST byte (`$2B`), which is
+why the object's bit 4 answers `Status_FireShield`.
+
+**Tests.** `SwScrlLrzTest` (10) asserts both scatter runs word by word, both vertical ratios, and
+the 224 background words as hand-walked band runs for camera `($800,$320)`, plus the provider act
+keys. `TestS3kLrzScrollRegistrationHeadless` (7) checks what a real load resolves - both playable
+acts get `SwScrlLrz` and an `LrzZoneRuntimeState`, `$1600` gets neither `SwScrlHpz` nor a Hidden
+Palace state, `$1601` keeps both - plus 320 against 640 and a capture/restore round trip.
+`TestS3kLrzPatternAnimation` (2) pins the two AniPLC lists by tiles-per-frame and destination tile.
+`TestSonic3kInvisibleHurtBlockHObjectInstance` gains four lava-block cases, including that the
+immunity runs before the ring spawn and that the plain `$6A` block ignores a fire shield.
+Batch at `bbd156d37`: 1263 tests, 0 failures, 0 skips (the four mandatory S3K classes, the LRZ and
+HPZ suites, `TestEveryObjectRewindRoundTrip`, `TestRewindHarnessCoverageRatchet`). `-Pguards`: 669
+tests, 0 failures, after updating `Sonic3kObjectProfile` for `$6E` and making `shieldReactionBits`
+non-final for the rewind coverage guard.
+
+**Census ratchet.** 239 / 281 / 14 placeholders to **205 / 277 / 8**; the census went red on exactly
+the `$6E` rows first.
+
+**Rejected: widening the background plane period.** The act-2 capture showed HUD font tiles in the
+background, and the first hypothesis was the Hidden Palace fix - `getBgPeriodWidth()` widened to the
+rightmost visible column. It was implemented, measured and removed: it changed **zero** pixels, and
+a dump of both background layouts killed the premise. Act 1 is `E9 E8 E9 E8 ...` and act 2
+`D5 D6 D7 D8 D5 D6 D7 D8 ...` - both repeat every four 128 px chunks, so 512 px already is the
+period, and act 2 refills its plane with `moveq #0,d1` (always layout column 0). The real cause is
+art readiness on a direct `$901` load, recorded in
+[s3k-known-bugs.md](../../status/s3k-known-bugs.md).
+
+**Clips** (`~/Videos/OGGF/lrz-bring-up/`, 3x nearest-neighbour, 60 fps):
+
+| Clip | Shows | Raw |
+| --- | --- | --- |
+| `00a/00b/00c-lrz{1,2,3}-baseline-before-work.mp4` | The three acts as they were at `035e48a58` | `raw-00-lrz{1,2,3}-before` |
+| `02-lrz1-parallax-before-after.mp4` | Act 1 running right at `($2385,$160)`, 420 frames, generic fallback left and `LRZ1_Deform` right; the cave-ceiling background moves at a visibly different rate, no seams or artefacts | `raw-02-lrz1-parallax-{before,after}` |
+| `05-lrz1-lava-block-before-after.mp4` | Standing on the act-1 lava slab at `($F40,$3E3)`; left the placeholder leaves the player unharmed, right `Obj_InvisibleLavaBlock` kills him and the act reloads | `raw-03-lrz1-lavablock-{before,after}` |
+
+Each "before" build disabled only the demonstrated registration in an uncommitted edit, reverted and
+recompiled immediately (`git status` clean, verified after each). Frames were extracted and looked
+at, not just encoded: act-1 side-by-side frame 260, the lava side-by-side frame 70, and frames
+40/120/350 of each baseline.
+
+**Not delivered, with reasons.**
+- *Act-2 parallax clip.* The act-2 background is only visible at two of eight sampled positions and
+  both show the missing-art defect above, so there is no honest "after" frame to show yet. The act-2
+  scroll is numerically asserted in `SwScrlLrzTest` and the clip belongs to slice 6/7, after the
+  seamless entry supplies the art.
+- *Fire-shield lava clip.* Getting a fire shield into a capture needs a route from a `$05` monitor to
+  a `$6E` placement; the three act-1 fire monitors are each walled off from the nearest lava block on
+  a teleport-and-walk input (verified at `($B98,$472)` and `($1B0F,$AB0)`; the second does break the
+  monitor and the shield renders). Deferred to slice 3, which owns act-1 traversal. The immunity
+  itself is asserted over all five shield states in the unit test.
+
+**Open issue raised.** Lava Reef act 2 background art on a direct `$901` load (known-bugs entry).
+
 
