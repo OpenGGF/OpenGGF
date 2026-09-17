@@ -25,7 +25,8 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * {@code Draw_PlaneVertBottomUp} redraws the plane. {@code ApplyDeformation2} writes
  * {@code -_unkEE98} as the foreground word of every line and {@code V_scroll_value} is
  * {@code _unkEE9C}. The engine draws the foreground from the whole layout rather than a 512-pixel
- * nametable, so the Draw_Tile* calls have no counterpart.
+ * nametable: once routine 4 starts the drawn window equals the layout at the scroll words, and
+ * before that {@link DdzZoneRuntimeState#displayedForegroundX()} wraps into the initial draw.
  *
  * <p><b>Background.</b> {@code Camera_Y_pos_BG_copy} is half the camera Y. {@code sub_596EA} writes
  * six words downward from {@code HScroll_table+$00C}: {@code Events_bg+$06 / 16}, then each next
@@ -62,13 +63,14 @@ public class SwScrlDdz extends SwScrlS3kDefault {
         composer.reset();
 
         applyScreenEvent(ddz, cameraX, cameraY);
+        ddz.setInitialPlaneBlank(initialPlaneBlank());
 
         short bgY = (short) (((short) cameraY) >> 1);
         composer.setVscrollFactorBG(bgY);
         buildSpeedTable(hScrollTable, ddz.backgroundScroll());
-        DeformationPlan.applyTableBands(composer, bgY, (short) negWord(ddz.foregroundX()),
+        DeformationPlan.applyTableBands(composer, bgY, (short) negWord(ddz.displayedForegroundX()),
                 hScrollTable, DDZ_BG_DEFORM, 0, NEGATE_WORD);
-        foregroundVscroll = (short) ddz.foregroundY();
+        foregroundVscroll = (short) ddz.displayedForegroundY();
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
         vscrollFactorBG = composer.getVscrollFactorBG();
@@ -134,6 +136,26 @@ public class SwScrlDdz extends SwScrlS3kDefault {
     /** {@code sub_59672} and the {@code Draw_TileColumn/Row} tracking words. */
     private static void roundForDraw(DdzZoneRuntimeState ddz) {
         ddz.setForegroundRounded(ddz.foregroundX() & 0xFFF0, ddz.foregroundY());
+    }
+
+    /** Whether layout layer 0 is empty across {@code Refresh_PlaneFull}'s 512x256 draw at (0,0). */
+    private static boolean initialPlaneBlank() {
+        var levelManager = GameServices.levelOrNull();
+        var level = levelManager == null ? null : levelManager.getCurrentLevel();
+        if (level == null || level.getMap() == null) {
+            return false;
+        }
+        int size = level.getBlockPixelSize();
+        int columns = Math.min((0x200 + size - 1) / size, level.getLayerWidthBlocks(0));
+        int rows = Math.min((0x100 + size - 1) / size, level.getLayerHeightBlocks(0));
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < columns; x++) {
+                if ((level.getMap().getValue(0, x, y) & 0xFF) != 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /** {@code sub_596EA}. */

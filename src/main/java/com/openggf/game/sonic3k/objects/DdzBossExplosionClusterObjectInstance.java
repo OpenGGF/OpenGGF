@@ -92,8 +92,10 @@ final class DdzBossExplosionClusterObjectInstance extends AbstractDdzObjectInsta
     protected void updateObject(int vIntRunCount, PlayableEntity player) {
         // sub_82C86: follow the parent at $42/$44.
         if (parent != null) {
-            x = (parent.getX() + offsetX) & 0xFFFF;
-            y = (parent.getY() + offsetY) & 0xFFFF;
+            // The defeated boss is deleted before the last bursts: its cleared slot reads (0,0), which
+            // puts those bursts off-screen near the level origin (native slot history, row 5477).
+            x = (parentXPos() + offsetX) & 0xFFFF;
+            y = (parentYPos() + offsetY) & 0xFFFF;
         }
         switch (kind) {
             case DEFEAT -> updateSpawner(DEFEAT_OFFSETS, true);
