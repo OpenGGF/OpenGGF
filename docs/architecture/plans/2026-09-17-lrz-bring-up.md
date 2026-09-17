@@ -366,11 +366,11 @@ Still open:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 0-2 (placeholder baseline still 205 / 277 / 8 of 609 / 455 / 35 placements; slice 2 adds no placed classes): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, and the `Draw_LRZ_Special_Rock_Sprites` renderer. Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
+| Implemented | Slices 0-2 complete and slice 3a started (placeholder baseline 199 / 277 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, and `Obj_LRZDashElevator` (`$1E`, 6 placements). **Slice 3a remains open on `$15` corkscrew and `$16` wall ride; 3b, 3c and 3d are untouched.** Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: events, scroll, custom animated tiles, rock sprites, all other `Obj_LRZ*`, badniks, three bosses, cutscenes, `StartNewLevel` |
 | Cold-reachable | Not started |
 | Rewind-verified | `LrzZoneRuntimeState` capture/restore round trips only (`TestS3kLrzScrollRegistrationHeadless`, and the rock window pointers in `TestLrzRockSpriteRenderer`) plus the animator's counter blob; no route spots yet |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
-| Visually matched | Act 1 parallax, the act-1 lava block, the act-1 rock sprites (320 and 400) and the act-1 animated background lava inspected as before/after clips; act 2's background is still blocked by the direct-`$901` art gap, which slice 2 proved is not the animated-tile DMA |
+| Visually matched | Act 1 parallax, the act-1 lava block, the act-1 rock sprites (320 and 400), the act-1 animated background lava and the act-1 dash elevator inspected as before/after clips; act 2's background is still blocked by the direct-`$901` art gap, which slice 2 proved is not the animated-tile DMA |
 
 Out of scope, recorded as dependencies: SSZ after HPZ (SSZ campaign); Knuckles replay classes and
 fixtures' harness work beyond recording frontiers; the `lrz_completerun` hardware-timing compile
@@ -621,3 +621,57 @@ asserted in the unit test, not on video.
 wrap, the channel-1 mask and zone-`$16` skip, the `-1` seed for `$900`/`$1600` only, the rock window
 keys and the vertical test were all confirmed as written. The demo numbering in the plan is already
 superseded: slice 1 delivered the parallax clip as `02`, so slice 2 used `06` and `07`.
+
+### 2026-09-17 - Slice 3a (partial): the dash elevator (commit `1e01edaa0`)
+
+Worktree `.worktrees/ai-lrz-bring-up`. All Maven through `maven_queue.py -Dmse=off` with
+`-Ds3k.rom.path=<worktree>/s3k.gen`; every run below reports 0 skips.
+
+**Delivered.** `LrzDashElevatorObjectInstance` for `$1E` (six act-1 placements), registered under
+`S3kZoneSet.SKL` + `ZONE_LRZ` on the id the S3KL set spends on `Obj_LBZSpinLauncher`, with its
+`Map_LRZDashElevator` level art (`$43096` over `ArtTile_LRZMisc`, palette 0) and a
+`Sonic3kObjectProfile` `LRZ_ONLY_IDS` entry.
+
+**ROM read for this object**: `Obj_LRZDashElevator` 88381-88467, `sub_4301C` 88469-88494,
+`Map_LRZDashElevator` `$43096` (sonic3k.lst). Four things worth carrying to the rest of slice 3a:
+
+1. `$30(a0)` and `$34(a0)` are longwords written as words by Init, so they are 16.16 accumulators
+   whose high word is the pixel offset. The per-frame delta is a **word** accumulator swapped into
+   the high half and shifted right by three - eight units of push is one pixel a frame.
+2. The latch is `cmpi.b #9,anim(a1)`, the spindash animation. A character with no spindash can
+   never start a ride, which is the plan's S1-donor row: it needs no donor-specific code.
+3. `add.b spin_dash_counter(a1),d0` after `moveq #8,d0` is a byte add into a cleared register, so
+   the push is `(8 + counter) & $FF`.
+4. `addi.w`/`subi.w #$40` followed by `bcc` is what clamps `ground_vel` at zero: the carry out of
+   the 16-bit operation, not a sign test.
+
+**Tests.** `TestLrzDashElevatorObjectInstance` (7): the Init decode for all six placed subtypes plus
+both bit-7 and flip combinations, the `ground_vel` drain at every clamp edge, that only `anim 9`
+starts a ride, the one-pixel-per-eight-units push with a charged counter, both clamps, the release
+paths, and the `SolidObjectFull` arguments. Broken on purpose once: `RIDER_BASE_PUSH` 8 to 4 turned
+`aLatchedRiderDrivesThePlatformOnePixelPerEightUnitsOfPush` red at `expected: <65536> but was:
+<32768>`; reverted.
+
+The census went red on exactly the six `$1E` rows before the baseline was ratcheted, and act 1's
+placeholder total moved 205 to **199**. Batch: 1185 tests, 0 failures, 0 skips (census, the object
+test, `TestEveryObjectRewindRoundTrip`, `TestRewindHarnessCoverageRatchet` and the four mandatory
+S3K classes). `-Pguards`: 669 tests, 0 failures, after adding the profile entry and making
+`maxPosition`/`baseY` non-final for the rewind coverage guard.
+
+**Independent confirmation.** A capture of the `($8A0,$50C)` placement (subtype `$B6`, unflipped)
+with a spindash charged facing left descends from y `$510` to `$6A0`: exactly 400 pixels, which is
+its `$1B0` range less the `$20` the high subtype bit starts it at. That number was not used to build
+the class.
+
+**Clip** `08-lrz1-dash-elevator-before-after.mp4` (`raw-08-lrz1-dash-elevator-{before,after}`, 351
+frames, before on the left): left the player falls straight through the placeholder to the floor
+below, right he lands on the elevator, charges a spindash and rides it down the shaft. The "before"
+build disabled only this registration in an uncommitted edit, reverted and recompiled immediately.
+Input preserved as `target/capture/lrz-dash-elevator.txt`
+(`40 -; 3 L; 34 -; 8 D; 1 D+C; 20 D; 1 D+C; 20 D; 1 D+C; 200 D; 30 -`); the first attempt gave the
+player left-speed before Down and produced a roll rather than a spindash, so it has to be
+stationary first.
+
+**Not delivered.** `$15` corkscrew and `$16` wall ride, the other two classes of sub-slice 3a, and
+all of 3b, 3c and 3d. No wide-viewport or donor row for the elevator, and no mid-ride rewind spot:
+both belong with the rest of the sub-slice's review.

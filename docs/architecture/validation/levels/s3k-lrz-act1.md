@@ -21,8 +21,8 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 609 placed objects, of which **205 still build a
-`PlaceholderObjectInstance`** after slice 1 (239 at `035e48a58`); 331 live rings (332 records minus
+Placement baseline (`TestS3kLrzPlacementCensus`): 609 placed objects, of which **199 still build a
+`PlaceholderObjectInstance`** after slice 3a's dash elevator (239 at `035e48a58`, 205 after slice 1); 331 live rings (332 records minus
 the leading `(0,0)` sentinel). The baseline only ratchets down.
 
 ## Obligations
@@ -40,7 +40,8 @@ the leading `(0,0)` sentinel). The baseline only ratchets down.
 | EVENT: screen-event chunk edits and rock crusher | `LRZ1_ScreenEvent` `Events_bg+$0C` both signs; `loc_90512`/`loc_9056E` | native | — | not implemented | open | Slice 3d |
 | EVENT: dome regions and locked background | `sub_56DCA`/`word_56F88` (three 5-word rows), `sub_56DAC`, `Obj_56EA0` | native + wide | — | not implemented | open | Slice 5 |
 | OBJECT: lava blocks `$6E` (34 placements, 4 subtypes) | `Obj_InvisibleLavaBlock` -> `bset #4,shield_reaction` -> `Obj_InvisibleHurtBlockHorizontal`; `sub_1F58C` mask `$73` | native, all five shield states | `TestSonic3kInvisibleHurtBlockHObjectInstance` | implemented | pass, `bbd156d37` | Fire-shield clip deferred to slice 3 (no teleport-and-walk route from a `$05` monitor to a `$6E`); clip `05` shows the hurt |
-| OBJECT: traversal families `$15 $16 $17 $18 $19 $1A $1B $1C $1D $1E $1F $20 $21 $22 $9C` | Per-id `Obj_LRZ*` routines and tables | native | — | not implemented (placeholders) | open | Slice 3 |
+| OBJECT: dash elevator `$1E` (6 placements, 6 subtypes) | `Obj_LRZDashElevator` / `sub_4301C`: latch on `anim == 9`, ride on `anim` 2 or 9, push `8 + spin_dash_counter` negated when facing right, position clamped to `(subtype & $7F) * 8` | native 320, Sonic + Tails | `TestLrzDashElevatorObjectInstance` | implemented | pass, `1e01edaa0` | Clip `08` and a capture of the `($8A0,$50C)` placement travelling exactly 400 px; no wide or donor row yet, and no rewind spot mid-ride |
+| OBJECT: traversal families `$15 $16 $17 $18 $19 $1A $1B $1C $1D $1F $20 $21 $22 $9C` | Per-id `Obj_LRZ*` routines and tables | native | — | not implemented (placeholders) | open | Slice 3; `$1E` done |
 | OBJECT: badniks `$99 $9A $9B` (74 placements) | `Obj_Fireworm`, `Obj_Iwamodoki`, `Obj_Toxomister`; `PLCKosM_LRZ` | native | — | not implemented | open | Slice 4 |
 | OBJECT: shared families already concrete (105 rows, 340 placements) | SK Set 2 pointer table | native | `TestS3kLrzPlacementCensus` (classification only) | implemented | classification pass | Per-subtype behaviour unverified |
 | BOSS: miniboss `$9D` at `($2CA0,$880)` | `Obj_LRZMiniboss`, `off_7854C` 11 slots, `collision_property` 6 | native | — | not implemented | open | Slice 6 |
