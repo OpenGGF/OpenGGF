@@ -58,6 +58,7 @@ class TestS3kDdzColdRoutes {
     static final int DIVERGENT_FRAMES = 45;
     static final int BOMBS_ACROSS_WRAP_FRAME = 7470;
     static final int IDLE_PLANE_FRAME = 480;
+    static final int ORPHAN_BURST_FRAME = 5495;
     static final int PHASE_TWO_PALETTE_FRAME = 7000;
 
     @AfterEach
@@ -138,8 +139,10 @@ class TestS3kDdzColdRoutes {
                 // Native row 480: Events_routine_fg 0, _unkEE98 $9B8. Plane A still holds only
                 // DDZ_ScreenInit's Refresh_PlaneFull draw at (0,0), wrapped at 512x256.
                 assertEquals(0, ddz.foregroundRoutine(), "DDZ_ScreenEvent routine before the boss window");
-                assertEquals(ddz.foregroundX() & 0x1FF, ddz.displayedForegroundX(), "plane A X wraps at 512");
-                assertEquals(ddz.foregroundY() & 0xFF, ddz.displayedForegroundY(), "plane A Y wraps at 256");
+                // Layout (0,0)-(512,256) is empty in the stock DDZ layout, so the shown window is that blank
+                // draw rather than the boss chunks at X $200 that the unwrapped words would address.
+                assertEquals(0, ddz.displayedForegroundX(), "plane A shows the blank initial draw");
+                assertEquals(0, ddz.displayedForegroundY(), "plane A shows the blank initial draw");
             }
             if (frame == PHASE_TWO_PALETTE_FRAME) {
                 // Native palette dump: loc_819CE reloads Pal_DDZ+$20 into line 3 before the Target copy, so the
@@ -149,6 +152,13 @@ class TestS3kDdzColdRoutes {
                 Palette.Color line3 = GameServices.level().getCurrentLevel().getPalette(2).getColor(1);
                 assertEquals(List.of(restored.r, restored.g, restored.b), List.of(line3.r, line3.g, line3.b),
                         "Normal_palette_line_3 colour 1 in phase 2");
+            }
+            if (frame == ORPHAN_BURST_FRAME) {
+                // Native slot history rows 5477-5500: once the defeat spawner is deleted its cleared slot reads
+                // (0,0), so the remaining loc_82F78 bursts appear near the level origin, off-screen.
+                assertTrue(GameServices.level().getObjectManager().getActiveObjects().stream()
+                        .filter(o -> o.getClass().getSimpleName().equals("DdzBossExplosionObjectInstance"))
+                        .anyMatch(o -> (o.getX() & 0xFFFF) < 0x100), "orphaned defeat bursts spawn from (0,0)");
             }
             if (frame == BOMBS_ACROSS_WRAP_FRAME) {
                 // Native slot history (probe-slots1): the two bombs launched before the first wrap stay

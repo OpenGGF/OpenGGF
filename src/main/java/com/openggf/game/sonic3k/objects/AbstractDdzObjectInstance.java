@@ -100,6 +100,20 @@ abstract class AbstractDdzObjectInstance extends AbstractObjectInstance implemen
         return DdzObjectSupport.outOfRangeX(services(), x, coarseXCullRange());
     }
 
+    /**
+     * {@code x_pos(parent3)} as an unchecked read. {@code Delete_Referenced_Sprite} clears the whole slot, so
+     * once the parent is deleted (not merely pending {@code Go_Delete_Sprite}) the ROM reads zero. A later
+     * occupant of the freed slot is not modelled.
+     */
+    protected final int parentXPos() {
+        return parent == null || parent.isDestroyed() ? 0 : parent.getX() & 0xFFFF;
+    }
+
+    /** {@code y_pos(parent3)}; see {@link #parentXPos()}. */
+    protected final int parentYPos() {
+        return parent == null || parent.isDestroyed() ? 0 : parent.getY() & 0xFFFF;
+    }
+
     protected final boolean parentGone() {
         return parent == null || parent.isDestroyed()
                 || (parent instanceof AbstractDdzObjectInstance ddz && ddz.deletePending);

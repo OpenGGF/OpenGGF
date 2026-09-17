@@ -63,6 +63,7 @@ public class SwScrlDdz extends SwScrlS3kDefault {
         composer.reset();
 
         applyScreenEvent(ddz, cameraX, cameraY);
+        ddz.setInitialPlaneBlank(initialPlaneBlank());
 
         short bgY = (short) (((short) cameraY) >> 1);
         composer.setVscrollFactorBG(bgY);
@@ -135,6 +136,26 @@ public class SwScrlDdz extends SwScrlS3kDefault {
     /** {@code sub_59672} and the {@code Draw_TileColumn/Row} tracking words. */
     private static void roundForDraw(DdzZoneRuntimeState ddz) {
         ddz.setForegroundRounded(ddz.foregroundX() & 0xFFF0, ddz.foregroundY());
+    }
+
+    /** Whether layout layer 0 is empty across {@code Refresh_PlaneFull}'s 512x256 draw at (0,0). */
+    private static boolean initialPlaneBlank() {
+        var levelManager = GameServices.levelOrNull();
+        var level = levelManager == null ? null : levelManager.getCurrentLevel();
+        if (level == null || level.getMap() == null) {
+            return false;
+        }
+        int size = level.getBlockPixelSize();
+        int columns = Math.min((0x200 + size - 1) / size, level.getLayerWidthBlocks(0));
+        int rows = Math.min((0x100 + size - 1) / size, level.getLayerHeightBlocks(0));
+        for (int y = 0; y < rows; y++) {
+            for (int x = 0; x < columns; x++) {
+                if ((level.getMap().getValue(0, x, y) & 0xFF) != 0) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     /** {@code sub_596EA}. */

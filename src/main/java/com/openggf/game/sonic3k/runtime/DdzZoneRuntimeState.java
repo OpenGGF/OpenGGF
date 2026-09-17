@@ -40,6 +40,7 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short cameraXFraction;
     private short cameraDelta;
     private short wrapOffset;
+    private boolean initialPlaneBlank;
     private short cameraXCoarseBack;
     private short boxMinY = 0x20;
     private short boxMaxY = 0xC0;
@@ -150,13 +151,28 @@ public final class DdzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
 
     /**
      * The plane A position actually shown. Until {@code DDZ_ScreenEvent} leaves routine 0 the VDP
-     * nametable holds only {@code DDZ_ScreenInit}'s {@code Refresh_PlaneFull} draw of layout (0,0),
-     * and the 64x32-cell plane wraps every 512x256 pixels, so the scroll words address that region
-     * rather than the boss chunks further along the layout. Later routines draw the window they
-     * scroll to ({@code Draw_TileColumn/Row}, {@code Draw_PlaneVertBottomUp}).
+     * nametable holds only {@code DDZ_ScreenInit}'s {@code Refresh_PlaneFull} draw: $20 16-pixel columns by
+     * 16 rows of layout from (0,0), the whole 512x256 plane, wrapped by the scroll words. The engine
+     * plane does not wrap, so when that region of the layout is empty (the stock DDZ layout) the shown
+     * window is the draw itself at (0,0); otherwise the words are wrapped into the region. Later
+     * routines draw the window they scroll to ({@code Draw_TileColumn/Row}, {@code Draw_PlaneVertBottomUp}).
      */
-    public int displayedForegroundX() { return foregroundRoutine == 0 ? foregroundX & 0x1FF : foregroundX; }
-    public int displayedForegroundY() { return foregroundRoutine == 0 ? foregroundY & 0xFF : foregroundY; }
+    public int displayedForegroundX() {
+        if (foregroundRoutine != 0) {
+            return foregroundX;
+        }
+        return initialPlaneBlank ? 0 : foregroundX & 0x1FF;
+    }
+
+    public int displayedForegroundY() {
+        if (foregroundRoutine != 0) {
+            return foregroundY;
+        }
+        return initialPlaneBlank ? 0 : foregroundY & 0xFF;
+    }
+
+    /** Derived each frame from the level layout by {@code SwScrlDdz}; not rewind state. */
+    public void setInitialPlaneBlank(boolean blank) { initialPlaneBlank = blank; }
     public void setForeground(int x, int y) {
         foregroundX = (short) x;
         foregroundY = (short) y;
