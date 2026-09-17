@@ -540,6 +540,40 @@ class TestSonic3kSpringObjectInstance {
     }
 
     @Test
+    void horizontalApproachFiresForStationaryPlayerInsideHalfOpenYWindow() throws Exception {
+        // sub_2326C only rejects a negative (flipped: positive) ground_vel, so a player that
+        // friction brings to rest in front of the spring fires it (soz_completerun row 40690).
+        Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x1C86, 0x03B0, Sonic3kObjectIds.SPRING, 0x12, 0, false, 0));
+        spring.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
+        invoke(spring, "ensureInitialized");
+
+        TestableSprite player = new TestableSprite("sonic");
+        player.setCentreX((short) 0x1C9D);
+        player.setCentreY((short) 0x03C8); // springY + $18: bhs rejects.
+        player.setGSpeed((short) 0);
+        invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, player);
+        assertEquals(0, player.getXSpeed(), "sub_2326C rejects the exclusive +$18 Y edge");
+
+        player.setCentreY((short) 0x03AC);
+        invoke(spring, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, player);
+        assertEquals(0x1C95, player.getCentreX() & 0xFFFF);
+        assertEquals(0x0A00, player.getXSpeed() & 0xFFFF);
+
+        Sonic3kSpringObjectInstance flipped = new Sonic3kSpringObjectInstance(
+                new ObjectSpawn(0x1C86, 0x03B0, Sonic3kObjectIds.SPRING, 0x12, 1, false, 0));
+        flipped.setServices(new TestObjectServices().withGameState(new GameStateManager())
+                .withIsolatedObjectManager());
+        invoke(flipped, "ensureInitialized");
+        TestableSprite atEdge = new TestableSprite("sonic");
+        atEdge.setCentreX((short) 0x1C86); // flipped window is [x-$28, x).
+        atEdge.setCentreY((short) 0x03AC);
+        invoke(flipped, "checkHorizontalApproach", new Class<?>[]{AbstractPlayableSprite.class}, atEdge);
+        assertEquals(0, atEdge.getXSpeed(), "flipped sub_2326C rejects x_pos(a1) == x_pos(a0)");
+    }
+
+    @Test
     void underwaterAirborneHorizontalSpringApproachDoesNotUseLandingHandoff() throws Exception {
         Sonic3kSpringObjectInstance spring = new Sonic3kSpringObjectInstance(
                 new ObjectSpawn(0x031A, 0x0610, Sonic3kObjectIds.SPRING, 0x10, 1, true, 0));
