@@ -202,26 +202,5 @@ public final class HpzCraneEmeraldDebrisObjectInstance extends AbstractHpzCutsce
         }
     }
 
-    @Override
-    protected int[] captureState() {
-        return new int[]{kind, phase, x, y, xSub, ySub, yVel, timer, bool(highPriority),
-                bool(visible), anim.animFrame, anim.animFrameTimer, anim.mappingFrame};
-    }
 
-    @Override
-    protected void restoreState(int[] s) {
-        kind = s[0];
-        phase = s[1];
-        x = s[2];
-        y = s[3];
-        xSub = s[4];
-        ySub = s[5];
-        yVel = s[6];
-        timer = s[7];
-        highPriority = s[8] != 0;
-        visible = s[9] != 0;
-        anim.animFrame = s[10];
-        anim.animFrameTimer = s[11];
-        anim.mappingFrame = s[12];
-    }
 }

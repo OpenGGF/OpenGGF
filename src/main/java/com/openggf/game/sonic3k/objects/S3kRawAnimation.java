@@ -1,6 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.data.RomByteReader;
+import com.openggf.game.rewind.RewindStateful;
 
 import java.io.IOException;
 
@@ -31,7 +32,9 @@ public final class S3kRawAnimation {
     private static final int CMD_CALLBACK = 0xF4;
 
     /** Mutable SST fields the interpreters read and write. */
-    public static final class State {
+    public static final class State implements RewindStateful<State.Value> {
+        public record Value(int script, int animFrame, int animFrameTimer, int mappingFrame) {}
+
         /** {@code $30(a0)}: ROM address of the current script. */
         public int script;
         /** {@code anim_frame(a0)}. */
@@ -40,6 +43,19 @@ public final class S3kRawAnimation {
         public int animFrameTimer;
         /** {@code mapping_frame(a0)}. */
         public int mappingFrame;
+
+        @Override
+        public Value captureRewindStateValue() {
+            return new Value(script, animFrame, animFrameTimer, mappingFrame);
+        }
+
+        @Override
+        public void restoreRewindStateValue(Value value) {
+            script = value.script();
+            animFrame = value.animFrame();
+            animFrameTimer = value.animFrameTimer();
+            mappingFrame = value.mappingFrame();
+        }
 
         public State copy() {
             State copy = new State();

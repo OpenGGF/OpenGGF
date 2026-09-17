@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -11,7 +10,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -80,8 +78,6 @@ public final class HpzRobotnikShipObjectInstance extends AbstractObjectInstance
     private int collisionProperty;
     private boolean touchListed;
 
-    private record RewindExtra(int[] state)
-            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HpzRobotnikShipObjectInstance(ObjectSpawn spawn) {
         super(spawn, "HpzRobotnikShip");
@@ -375,33 +371,4 @@ public final class HpzRobotnikShipObjectInstance extends AbstractObjectInstance
         }
     }
 
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(new int[]{
-                phase, x, y, xSub, ySub, xVel, yVel, timer, flags, hitFlag ? 1 : 0, flashTimer,
-                collisionFlags, savedCollisionFlags, collisionProperty, touchListed ? 1 : 0}));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra e) {
-            int[] s = e.state();
-            phase = s[0];
-            x = s[1];
-            y = s[2];
-            xSub = s[3];
-            ySub = s[4];
-            xVel = s[5];
-            yVel = s[6];
-            timer = s[7];
-            flags = s[8];
-            hitFlag = s[9] != 0;
-            flashTimer = s[10];
-            collisionFlags = s[11];
-            savedCollisionFlags = s[12];
-            collisionProperty = s[13];
-            touchListed = s[14] != 0;
-        }
-    }
 }

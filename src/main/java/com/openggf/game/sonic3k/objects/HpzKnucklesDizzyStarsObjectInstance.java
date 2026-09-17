@@ -1,14 +1,12 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.graphics.GLCommand;
 import com.openggf.graphics.RenderPriority;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -40,9 +38,6 @@ public final class HpzKnucklesDizzyStarsObjectInstance extends AbstractObjectIns
     private int timer;
     private boolean visible;
 
-    private record RewindExtra(int animFrame, int animTimer, int mappingFrame, int phase,
-                               int timer, boolean visible)
-            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HpzKnucklesDizzyStarsObjectInstance(ObjectSpawn spawn) {
         super(spawn, "HpzKnucklesDizzyStars");
@@ -119,22 +114,4 @@ public final class HpzKnucklesDizzyStarsObjectInstance extends AbstractObjectIns
         }
     }
 
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                anim.animFrame, anim.animFrameTimer, anim.mappingFrame, phase, timer, visible));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra e) {
-            anim.animFrame = e.animFrame();
-            anim.animFrameTimer = e.animTimer();
-            anim.mappingFrame = e.mappingFrame();
-            phase = e.phase();
-            timer = e.timer();
-            visible = e.visible();
-        }
-    }
 }

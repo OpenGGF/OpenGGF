@@ -100,18 +100,5 @@ public final class HpzShipSparkEmitterObjectInstance extends AbstractHpzCutscene
         }
     }
 
-    @Override
-    protected int[] captureState() {
-        return new int[]{x, y, timer, bool(initialized), bool(released), bool(visible)};
-    }
 
-    @Override
-    protected void restoreState(int[] s) {
-        x = s[0];
-        y = s[1];
-        timer = s[2];
-        initialized = s[3] != 0;
-        released = s[4] != 0;
-        visible = s[5] != 0;
-    }
 }

@@ -1,12 +1,13 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
@@ -28,6 +29,7 @@ public final class HpzBossExplosionSpawnerObjectInstance extends AbstractObjectI
     private static final int X_RANGE = 0x80;
     private static final int Y_RANGE = 0x20;
 
+    @RewindTransient(reason = "object link restored by ObjectRefId in restoreRewindState")
     private AbstractObjectInstance parent;
     private int x;
     private int y;
@@ -35,9 +37,6 @@ public final class HpzBossExplosionSpawnerObjectInstance extends AbstractObjectI
     private int wait;
     private boolean deletePending;
 
-    private record RewindExtra(int x, int y, int counter, int waitWord, boolean deletePending,
-                               ObjectRefId parentId)
-            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public HpzBossExplosionSpawnerObjectInstance(ObjectSpawn spawn, AbstractObjectInstance parent) {
         super(spawn, "HpzBossExplosionSpawner");
@@ -84,26 +83,20 @@ public final class HpzBossExplosionSpawnerObjectInstance extends AbstractObjectI
     @Override public boolean isPersistent() { return true; }
     @Override public void appendRenderCommands(List<GLCommand> commands) { }
 
+    private record Links(ObjectRefId parentId) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
+
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        ObjectRefId parentId = context.identityTable()
-                .map(table -> table.encodeObject(parent)).orElse(null);
-        return super.captureRewindState(context).withObjectSubclassExtra(
-                new RewindExtra(x, y, counter, wait, deletePending, parentId));
+        ObjectRefId parentId = context.identityTable().map(table -> table.encodeObject(parent)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new Links(parentId));
     }
 
     @Override
     public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
         super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra e) {
-            x = e.x();
-            y = e.y();
-            counter = e.counter();
-            wait = e.waitWord();
-            deletePending = e.deletePending();
-            parent = e.parentId() == null ? null
-                    : (AbstractObjectInstance) context.requireIdentityTable()
-                    .resolveObject(e.parentId(), true);
+        if (snapshot.objectSubclassExtra() instanceof Links links) {
+            parent = links.parentId() == null ? null
+                    : (AbstractObjectInstance) context.requireIdentityTable().resolveObject(links.parentId(), true);
         }
     }
 }

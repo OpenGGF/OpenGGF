@@ -208,6 +208,13 @@ class TestS3kHpzKnucklesFightHeadless {
         CompositeSnapshot endingHold = null;
         List<boolean[]> endingInputs = new ArrayList<>();
         CompositeSnapshot endingAfter = null;
+        // Rewind spots across the parent-linked graph: crane and ship children, spark
+        // chains and the altar beam carrying Knuckles.
+        List<RewindWindow> windows = List.of(
+                new RewindWindow("crane grab", () -> active(com.openggf.game.sonic3k.objects.HpzCraneEmeraldDebrisObjectInstance.class).isPresent()),
+                new RewindWindow("spark chains", () -> active(HpzShipSparkOrbiterObjectInstance.class).map(o -> o.phaseForTest() >= 3).orElse(false)),
+                new RewindWindow("altar beam", () -> active(com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance.class).isPresent()
+                        && knuckles().isPresent()));
         int exitFrame = -1;
         for (int frame = 0; frame < 5200; frame++) {
             Optional<HpzZoneRuntimeState> state = S3kRuntimeStates.currentHpz(GameServices.zoneRuntimeRegistry());
@@ -226,7 +233,13 @@ class TestS3kHpzKnucklesFightHeadless {
             if (endingHold != null && endingAfter == null) {
                 endingInputs.add(input);
             }
+            for (RewindWindow window : windows) {
+                window.beforeStep(registry, input);
+            }
             step(fixture, input);
+            for (RewindWindow window : windows) {
+                window.afterStep(fixture, registry);
+            }
             if (endingHold != null && endingAfter == null && endingInputs.size() == 150) {
                 endingAfter = registry.capture();
                 for (int cycle = 0; cycle < 2; cycle++) {
@@ -289,6 +302,9 @@ class TestS3kHpzKnucklesFightHeadless {
         assertEquals(0x15C0, beamReadyKnucklesX, "loc_64BC6 lands Knuckles on the pad");
         assertEquals(0x600, beamReadyKnucklesY);
         assertTrue(endingAfter != null, "the ending hold was rewound and replayed");
+        for (RewindWindow window : windows) {
+            assertTrue(window.done(), "rewind window " + window.name + " ran");
+        }
         assertTrue(exitFrame > 0, "StartNewLevel ended Hidden Palace");
         assertEquals(Sonic3kZoneIds.ZONE_SSZ, GameServices.level().getCurrentZone());
         assertEquals(0, GameServices.level().getCurrentAct(), "StartNewLevel $A00");
@@ -431,6 +447,52 @@ class TestS3kHpzKnucklesFightHeadless {
             }
             jumpHeld = jump;
             return new boolean[]{false, false, left, right, jump};
+        }
+    }
+
+    /** Capture at the first frame a condition holds, then restore twice and replay 60 frames. */
+    private static final class RewindWindow {
+        private static final int LENGTH = 60;
+        private final String name;
+        private final java.util.function.BooleanSupplier trigger;
+        private CompositeSnapshot start;
+        private final List<boolean[]> inputs = new ArrayList<>();
+        private boolean done;
+
+        RewindWindow(String name, java.util.function.BooleanSupplier trigger) {
+            this.name = name;
+            this.trigger = trigger;
+        }
+
+        void beforeStep(com.openggf.game.rewind.RewindRegistry registry, boolean[] input) {
+            if (done) {
+                return;
+            }
+            if (start == null && trigger.getAsBoolean()) {
+                start = registry.capture();
+            }
+            if (start != null) {
+                inputs.add(input);
+            }
+        }
+
+        void afterStep(HeadlessTestFixture fixture, com.openggf.game.rewind.RewindRegistry registry) {
+            if (done || inputs.size() < LENGTH) {
+                return;
+            }
+            done = true;
+            CompositeSnapshot expected = registry.capture();
+            for (int cycle = 0; cycle < 2; cycle++) {
+                registry.restore(start);
+                for (boolean[] input : inputs) {
+                    step(fixture, input);
+                }
+                assertSnapshotsEqual(expected, registry.capture(), name + " replay " + cycle);
+            }
+        }
+
+        boolean done() {
+            return done;
         }
     }
 

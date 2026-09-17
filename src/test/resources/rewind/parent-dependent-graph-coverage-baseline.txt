@@ -4,3 +4,8 @@
 # All formerly parent-dependent rows are now classified as graph-covered by
 # RewindRoundTripHarness.GRAPH_COVERED_ISOLATED_PROBE_CLASSES and guarded by
 # TestGraphCoveredIsolatedProbeClassification.
+covered|com.openggf.game.sonic3k.objects.HpzRobotnikShipChildObjectInstance|com.openggf.tests.TestS3kHpzKnucklesFightHeadless
+covered|com.openggf.game.sonic3k.objects.HpzShipCraneObjectInstance|com.openggf.tests.TestS3kHpzKnucklesFightHeadless
+covered|com.openggf.game.sonic3k.objects.HpzShipSparkEmitterObjectInstance|com.openggf.tests.TestS3kHpzKnucklesFightHeadless
+covered|com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance|com.openggf.tests.TestS3kHpzKnucklesFightHeadless
+session-tail|com.openggf.game.sonic3k.objects.HpzKnucklesDustObjectInstance|the scripted fight route never reaches Knuckles' spin-dash charge; needs a restore window while the dust is alive

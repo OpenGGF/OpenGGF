@@ -1,8 +1,10 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.rewind.RewindTransient;
 import com.openggf.game.rewind.identity.ObjectRefId;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
@@ -10,7 +12,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.render.PatternSpriteRenderer;
@@ -55,9 +56,9 @@ public final class HpzShipSparkOrbiterObjectInstance extends AbstractObjectInsta
     private static final int PHASE_RETURN = 8;
     private static final int PHASE_RESUME = 9;
 
-    private static byte[] angleLookup;
-
+    @RewindTransient(reason = "object link restored by ObjectRefId in restoreRewindState")
     private AbstractObjectInstance link;
+    @RewindTransient(reason = "object link restored by ObjectRefId in restoreRewindState")
     private HpzShipSparkEmitterObjectInstance emitter;
     private int phase;
     /** 16.16 {@code x_pos}/{@code y_pos} longwords. */
@@ -77,8 +78,11 @@ public final class HpzShipSparkOrbiterObjectInstance extends AbstractObjectInsta
     private int mappingFrame = 0x12;
     private boolean visible;
 
-    private record RewindExtra(int[] state, ObjectRefId linkId, ObjectRefId emitterId)
-            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
+
+    /** Rewind probe; the links are restored by object id. */
+    private HpzShipSparkOrbiterObjectInstance(ObjectSpawn spawn) {
+        this(spawn, null, null);
+    }
 
     public HpzShipSparkOrbiterObjectInstance(ObjectSpawn spawn, AbstractObjectInstance link,
                                              HpzShipSparkEmitterObjectInstance emitter) {
@@ -91,7 +95,7 @@ public final class HpzShipSparkOrbiterObjectInstance extends AbstractObjectInsta
 
     @Override
     public HpzShipSparkOrbiterObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new HpzShipSparkOrbiterObjectInstance(ctx.spawn(), null, null);
+        return new HpzShipSparkOrbiterObjectInstance(ctx.spawn());
     }
 
     @Override
@@ -335,16 +339,11 @@ public final class HpzShipSparkOrbiterObjectInstance extends AbstractObjectInsta
     }
 
     private byte[] angleLookup() {
-        byte[] table = angleLookup;
-        if (table == null) {
-            try {
-                table = services().romReader().slice(Sonic3kConstants.ANGLE_LOOKUP_1_ADDR, 0x40);
-            } catch (IOException ex) {
-                throw new IllegalStateException("AngleLookup_1", ex);
-            }
-            angleLookup = table;
+        try {
+            return services().romReader().slice(Sonic3kConstants.ANGLE_LOOKUP_1_ADDR, 0x40);
+        } catch (IOException ex) {
+            throw new IllegalStateException("AngleLookup_1", ex);
         }
-        return table;
     }
 
     private void writeX(int x) {
@@ -379,7 +378,7 @@ public final class HpzShipSparkOrbiterObjectInstance extends AbstractObjectInsta
     @Override public int getOnScreenHalfWidth() { return 8; }
     @Override public int getOnScreenHalfHeight() { return 8; }
     @Override public boolean isPersistent() { return true; }
-    int phaseForTest() { return phase; }
+    public int phaseForTest() { return phase; }
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
@@ -392,41 +391,23 @@ public final class HpzShipSparkOrbiterObjectInstance extends AbstractObjectInsta
         }
     }
 
+    private record Links(ObjectRefId linkId, ObjectRefId emitterId) implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
+
     @Override
     public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        ObjectRefId linkId = context.identityTable().map(t -> t.encodeObject(link)).orElse(null);
-        ObjectRefId emitterId = context.identityTable().map(t -> t.encodeObject(emitter)).orElse(null);
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(new int[]{
-                phase, xLong, yLong, flags, startAngle, targetAngle, angle, angleStep,
-                swingCounter, swingPeriod, radius, timer, timerReload, mappingFrame,
-                visible ? 1 : 0}, linkId, emitterId));
+        ObjectRefId linkId = context.identityTable().map(table -> table.encodeObject(link)).orElse(null);
+        ObjectRefId emitterId = context.identityTable().map(table -> table.encodeObject(emitter)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new Links(linkId, emitterId));
     }
 
     @Override
     public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
         super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra e) {
-            int[] s = e.state();
-            phase = s[0];
-            xLong = s[1];
-            yLong = s[2];
-            flags = s[3];
-            startAngle = s[4];
-            targetAngle = s[5];
-            angle = s[6];
-            angleStep = s[7];
-            swingCounter = s[8];
-            swingPeriod = s[9];
-            radius = s[10];
-            timer = s[11];
-            timerReload = s[12];
-            mappingFrame = s[13];
-            visible = s[14] != 0;
-            link = e.linkId() == null ? null
-                    : (AbstractObjectInstance) context.requireIdentityTable().resolveObject(e.linkId(), true);
-            emitter = e.emitterId() == null ? null
-                    : (HpzShipSparkEmitterObjectInstance) context.requireIdentityTable()
-                    .resolveObject(e.emitterId(), true);
+        if (snapshot.objectSubclassExtra() instanceof Links links) {
+            link = links.linkId() == null ? null
+                    : (AbstractObjectInstance) context.requireIdentityTable().resolveObject(links.linkId(), true);
+            emitter = links.emitterId() == null ? null
+                    : (HpzShipSparkEmitterObjectInstance) context.requireIdentityTable().resolveObject(links.emitterId(), true);
         }
     }
 }

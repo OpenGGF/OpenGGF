@@ -128,22 +128,5 @@ public final class HpzRobotnikShipChildObjectInstance extends AbstractHpzCutscen
         }
     }
 
-    @Override
-    protected int[] captureState() {
-        return new int[]{kind, x, y, bool(flipX), bool(initialized), bool(visible),
-                anim.animFrame, anim.animFrameTimer, anim.mappingFrame};
-    }
 
-    @Override
-    protected void restoreState(int[] s) {
-        kind = s[0];
-        x = s[1];
-        y = s[2];
-        flipX = s[3] != 0;
-        initialized = s[4] != 0;
-        visible = s[5] != 0;
-        anim.animFrame = s[6];
-        anim.animFrameTimer = s[7];
-        anim.mappingFrame = s[8];
-    }
 }

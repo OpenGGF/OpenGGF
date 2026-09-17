@@ -1,7 +1,6 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.S3kPaletteOwners;
 import com.openggf.game.sonic3k.S3kPaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
@@ -15,7 +14,6 @@ import com.openggf.game.AbstractLevelEventManager;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.SubpixelMotion;
@@ -145,12 +143,6 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
     private int acceleration;
     private int collisionProperty;
 
-    private record RewindExtra(boolean copied, boolean initialized, int routine, int x, int y, int xSub, int ySub,
-                               int xVel, int yVel, boolean flipX, boolean highPriority,
-                               int mappingSet, int animScript, int animFrame, int animTimer,
-                               int mappingFrame, int timer, int callback, int flags,
-                               int loopCount, int acceleration, int collisionProperty)
-            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public CutsceneKnucklesHpzInstance(ObjectSpawn spawn) {
         this(spawn, false);
@@ -199,7 +191,7 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
             } else {
                 // The ROM overwrites whatever occupies the slot; the engine keeps the occupant
                 // and takes the lowest free slot instead.
-                manager.addDynamicObject(copy);
+                spawnFreeChild(() -> new CutsceneKnucklesHpzInstance(spawn, true));
             }
         }
         ObjectLifetimeOps.deleteNoRespawn(this);
@@ -1511,40 +1503,4 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
         }
     }
 
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                copied, initialized, routine, x, y, xSub, ySub, xVel, yVel, flipX, highPriority,
-                mappingSet, anim.script, anim.animFrame, anim.animFrameTimer, anim.mappingFrame,
-                timer, callback, flags, loopCount, acceleration, collisionProperty));
-    }
-
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra e) {
-            copied = e.copied();
-            initialized = e.initialized();
-            routine = e.routine();
-            x = e.x();
-            y = e.y();
-            xSub = e.xSub();
-            ySub = e.ySub();
-            xVel = e.xVel();
-            yVel = e.yVel();
-            flipX = e.flipX();
-            highPriority = e.highPriority();
-            mappingSet = e.mappingSet();
-            anim.script = e.animScript();
-            anim.animFrame = e.animFrame();
-            anim.animFrameTimer = e.animTimer();
-            anim.mappingFrame = e.mappingFrame();
-            timer = e.timer();
-            callback = e.callback();
-            flags = e.flags();
-            loopCount = e.loopCount();
-            acceleration = e.acceleration();
-            collisionProperty = e.collisionProperty();
-        }
-    }
 }

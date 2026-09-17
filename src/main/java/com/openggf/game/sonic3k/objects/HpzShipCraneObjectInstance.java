@@ -206,20 +206,5 @@ public final class HpzShipCraneObjectInstance extends AbstractHpzCutsceneChildOb
         }
     }
 
-    @Override
-    protected int[] captureState() {
-        return new int[]{phase, x, y, childDy, baseDy, yVel, mappingFrame, bool(visible)};
-    }
 
-    @Override
-    protected void restoreState(int[] s) {
-        phase = s[0];
-        x = s[1];
-        y = s[2];
-        childDy = s[3];
-        baseDy = s[4];
-        yVel = s[5];
-        mappingFrame = s[6];
-        visible = s[7] != 0;
-    }
 }

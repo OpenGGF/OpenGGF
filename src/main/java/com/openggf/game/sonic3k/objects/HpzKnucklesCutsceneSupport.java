@@ -34,8 +34,6 @@ final class HpzKnucklesCutsceneSupport {
     static final int ANI_RAW_ROBOTNIK_HEAD = 0x681CC;
     private static final int ANI_RAW_ROBOTNIK_HEAD_SIZE = 4;
 
-    private static S3kRawAnimation scripts;
-    private static S3kRawAnimation robotnikHead;
 
     private HpzKnucklesCutsceneSupport() {
     }
@@ -45,35 +43,23 @@ final class HpzKnucklesCutsceneSupport {
         return registry == null ? null : S3kRuntimeStates.currentHpz(registry).orElse(null);
     }
 
-    /** Raw animation scripts {@code byte_6669A}-{@code byte_668C7}, read once from the ROM. */
+    /** Raw animation scripts {@code byte_6669A}-{@code byte_668C7}, sliced from the ROM. */
     static S3kRawAnimation scripts(ObjectServices services) {
-        S3kRawAnimation loaded = scripts;
-        if (loaded == null) {
-            try {
-                loaded = S3kRawAnimation.load(services.romReader(),
-                        Sonic3kConstants.CUTSCENE_KNUX_RAW_SCRIPTS_ADDR,
-                        Sonic3kConstants.CUTSCENE_KNUX_RAW_SCRIPTS_SIZE);
-            } catch (IOException ex) {
-                throw new IllegalStateException("CutsceneKnux raw animation scripts", ex);
-            }
-            scripts = loaded;
-        }
-        return loaded;
+        return load(services, Sonic3kConstants.CUTSCENE_KNUX_RAW_SCRIPTS_ADDR,
+                Sonic3kConstants.CUTSCENE_KNUX_RAW_SCRIPTS_SIZE);
     }
 
-    /** {@code AniRaw_RobotnikHead}, read once from the ROM. */
+    /** {@code AniRaw_RobotnikHead}. */
     static S3kRawAnimation robotnikHeadScript(ObjectServices services) {
-        S3kRawAnimation loaded = robotnikHead;
-        if (loaded == null) {
-            try {
-                loaded = S3kRawAnimation.load(services.romReader(), ANI_RAW_ROBOTNIK_HEAD,
-                        ANI_RAW_ROBOTNIK_HEAD_SIZE);
-            } catch (IOException ex) {
-                throw new IllegalStateException("AniRaw_RobotnikHead", ex);
-            }
-            robotnikHead = loaded;
+        return load(services, ANI_RAW_ROBOTNIK_HEAD, ANI_RAW_ROBOTNIK_HEAD_SIZE);
+    }
+
+    private static S3kRawAnimation load(ObjectServices services, int address, int size) {
+        try {
+            return S3kRawAnimation.load(services.romReader(), address, size);
+        } catch (IOException ex) {
+            throw new IllegalStateException("raw animation script at 0x" + Integer.toHexString(address), ex);
         }
-        return loaded;
     }
 
     static <T> T findActive(ObjectServices services, Class<T> type) {
