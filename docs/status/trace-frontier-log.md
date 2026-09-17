@@ -110710,6 +110710,19 @@ animation2. That production intro, not trace-state seeding, is the next target.
   10483 -> 9164 errors; first physics divergence row 28941 -> 29093 (CPU Tails
   `x_speed` on the walk to the pyramid). Other S3K replay reports unchanged.
 
+### 2026-09-17 — SOZ last animation residue: 27 -> 3 errors
+
+- `bugfix/ai-soz-last-residue` from develop `832554260` to `581000f11`: headroom check
+  preloads the angle registers (`a13af0437`), Rock'n shell instance latch key
+  (`85bcdbc19`), duck after a brake to zero (`581000f11`). `soz_completerun` 27 -> 3; the
+  first error is now row 45256 `rings` (SOZ2 SST load/allocation parity).
+- Sweep: `python3 tools/testing/maven_queue.py -Dmse=off
+  "-Dtest=com.openggf.tests.trace.**.Test*TraceReplay" <S1/S2/S3K ROM paths>
+  -Dsurefire.failIfNoSpecifiedTests=false test -B` on develop `832554260` and the branch:
+  no class changed status; the only report totals that moved were
+  `s3k_soz1-single-c203004eb0b074c1` (27 -> 3) and `s3k_soz1-single-bed5e8410f08c843`
+  (2906 -> 2746, first error unchanged at row 4868).
+
 ### 2026-09-17 — SOZ camera wrap gate: 29 -> 27 errors
 
 - `bugfix/ai-modapi-body-edit-hook`: `32fcfffe6` lets the policy hooks accept body-only

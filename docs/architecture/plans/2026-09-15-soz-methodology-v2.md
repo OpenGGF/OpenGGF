@@ -3199,8 +3199,33 @@ Rejected or parked in this round:
 - Row 23637 (Sonic balances one frame early after a rolling landing, 21 animation
   errors): the engine's airborne floor probe at x-7 finds no solid tile under either the
   foot or the extension row, so the zero-height angle write in `FindFloor` (`loc_F282`)
-  does not explain the ROM's Wait frame. The trace records no `next_tilt`/`tilt`, so this
-  needs RAM evidence before a change.
+  does not explain the ROM's Wait frame. Resolved in the next section with RAM evidence.
 
-Still open (27 errors after `ca2b99220`): the SST-order lost-ring phase (rows 45256-50720), Tails' push blip at rows
-5977-5990, the row-23637 balance above, and one Tails mapping frame at row 45184.
+Still open (27 errors after `ca2b99220`): see the next section.
+
+### Replay follow-up: last animation residue (2026-09-17)
+
+Branch `bugfix/ai-soz-last-residue` from develop `832554260`:
+
+| Commit | Native cause | Errors |
+|---|---|---|
+| `a13af0437` | `CalcRoomOverHead` / `Sonic_CalcHeadroom` preload both angle registers with the overhead angle; an empty ceiling leaves $80, so a jump from a ledge does not carry `tilt` 3 into the landing | 7 |
+| `85bcdbc19` | the Rock'n shell's push/standing bits are keyed to the shell, not to a spawn record that follows the walking body | 4 |
+| `581000f11` | a held direction that brakes `ground_vel` to 0 still ducks (the duck test follows MoveLeft/MoveRight) | 3 |
+
+Evidence for `a13af0437` came from a BizHawk 2.11 RAM probe over
+`s3k-complete-sonic-tails.bk2` (BK2 frame = `bk2_frame_offset` 282195 + row): Player_1
+`next_tilt`/`tilt` ($FFB03A/$FFB03B) and writes to `Primary_Angle`/`Secondary_Angle`
+($FFF768/$FFF76A). ROM `tilt` is $80 from the jump frame (write inside
+`CalcRoomOverHead`, PC after $F74A) through the landing. The first probe also showed the
+row-5977 diagnosis above was wrong: the engine `push=` field in the CPU diagnostics is the
+leader's recorded push-bypass status, not Tails' push bit; the real cause was the shell's
+moving latch key. Probe lessons: never `print()` per frame on Linux (the Lua console
+redraw slows emulation progressively), arm memory hooks only inside the window, and save
+a state near the window when more passes are expected.
+
+Still open (3 errors): the lost-ring floor phase (rows 45256-50720). Before the spill
+the engine keeps objects the ROM has unloaded (a still sprite at y $7A8, a quicksand) and
+lacks others, and the starpost children take different slots (ROM `AllocateObject` puts
+the first one in slot 5, before the post); the layouts last match at row 41317. This is
+SOZ2 object load/unload and allocation parity, not a ring change.
