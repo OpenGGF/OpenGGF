@@ -131,8 +131,8 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_SANDOPOLIS_2` | [Act 2 matrix](../architecture/validation/levels/s3k-soz-act2.md) — v2 bring-up; concrete objects, bosses, coupled events and recreation tracked; full-route/native and transient redraw gaps remain |
 | S3K | `S3K_LAVA_REEF_1` | Audit pending |
 | S3K | `S3K_LAVA_REEF_2` | Audit pending |
-| S3K | `S3K_SKY_SANCTUARY_1` | Audit pending |
-| S3K | `S3K_SKY_SANCTUARY_2` | Audit pending |
+| S3K | `S3K_SKY_SANCTUARY_1` | [Act 1 matrix](../architecture/validation/levels/s3k-ssz-act1.md) — v2 bring-up in progress; placement census pinned to the ROM and baseline captures recorded; arrival, bounds, cutscene, background, objects, bosses and the Death Egg launch open |
+| S3K | `S3K_SKY_SANCTUARY_2` | [Act 2 matrix](../architecture/validation/levels/s3k-ssz-act2.md) — v2 bring-up in progress; placement census pinned to the ROM and baseline capture recorded; arrival, camera controller, crane cutscene and both boss phases open |
 | S3K | `S3K_DEATH_EGG_1` | Audit pending |
 | S3K | `S3K_DEATH_EGG_2` | Audit pending |
 | S3K | `S3K_DOOMSDAY` | [Zone matrix](../architecture/validation/levels/s3k-ddz.md) — in progress; seeded Sonic route matches native to the `$D01` request, breadth and rewind spots covered; death/restart, native pixels and incoming DEZ open |

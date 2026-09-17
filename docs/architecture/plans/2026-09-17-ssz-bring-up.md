@@ -1,8 +1,9 @@
 # Sky Sanctuary Zone: methodology v2 bring-up plan
 
 Date: 2026-09-17. Planned branch `feature/ai-ssz-bring-up` in `.worktrees/ai-ssz-bring-up`;
-execution base develop `9cba6dbb6` (pin this SHA for the combined change-based validation; re-pin
-and re-measure if the branch is cut later). Applies
+execution base develop `035e48a58` (pin this SHA for the combined change-based validation; the
+branch was cut one commit after the `9cba6dbb6` the first draft named — the difference is the docs
+merge that added this plan). Applies
 [methodology v2](../designs/2026-09-15-zone-methodology-v2.md) with the refinements from the
 [SOZ](2026-09-15-soz-methodology-v2.md), [HPZ](2026-09-16-hpz-bring-up.md) and
 [DDZ](2026-09-17-ddz-bring-up.md) campaigns to SSZ (`$A00` Sonic/Tails, `$A01` Knuckles). Design
@@ -373,11 +374,11 @@ Still open — the named slice must resolve each **before** building on it:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Not started. Exists: level load, music, title card, EggRobo art entry, HPZ-branch teleporter/beam, HPZ exit requests |
-| Cold-reachable | Not started. SSZ1 loads from the HPZ route with default scroll, no events, no objects |
+| Implemented | Slice 0 delivered (placement census, matrices, baselines). Otherwise: level load, music, title card, EggRobo art entry, HPZ-branch teleporter/beam, HPZ exit requests |
+| Cold-reachable | Both acts load cold with default scroll, no events and no objects (`raw-00` baselines). No SSZ mechanic is cold-reachable yet |
 | Rewind-verified | Not started |
-| Native behaviour matched | Not started. Fixtures identified (table above); no SSZ native probes yet |
-| Visually matched | Not started |
+| Native behaviour matched | Placement/ring decode pinned to the ROM; the six fixtures are identified and their starts explained from `SSZ1/2_ScreenInit` + `Obj_57C1E`. No SSZ native probe yet |
+| Visually matched | Only the `raw-00` "before" baselines exist |
 
 Out of scope, recorded as dependencies: DEZ presentation/route after `$B00` (DEZ campaign, which
 also owns the mislabelled `ssz*` fixtures); `sub_5B18E`, `Obj_Ending`, credits and the Knuckles
@@ -385,4 +386,79 @@ good/bad ending (ending campaign); Sonic's post-credits Mecha/EggRobo scenes.
 
 ## Evidence log
 
-(empty — first entry is slice 0)
+### 2026-09-17 — slice 0: baseline and identity
+
+Worktree `.worktrees/ai-ssz-bring-up`, branch `feature/ai-ssz-bring-up`, base develop `035e48a58`.
+ROM by absolute path: `.worktrees/ai-ssz-bring-up/s3k.gen` (symlink, SHA-1
+`CFBF98C36C776677290A872547AC47C53D2761D6`). All Maven through
+`python3 tools/testing/maven_queue.py -Dmse=off …`.
+
+**Placement census.** New `src/test/java/com/openggf/tests/TestS3kSszPlacementCensus.java`.
+Expectations were derived by decoding the ROM directly (a throwaway Python walk of
+`SpriteLocPtrs`/`RingLocPtrs` index `zone * 2 + act`, zone `$0A`) before writing the Java, and they
+reproduce the [inventory](../research/s3k-zones/ssz-object-inventory.md) exactly: act 1 213 records
+in 66 (ID, subtype) rows, act 2 5 records in 3 rows, union 68 rows (`$79:$00` is the shared row);
+pointer targets `$1F90EE`, `$1F95F2`, `$1F9616`, `$1F98E8`; 180 ring records in act 1 (first
+`(0,0)`, 179 positioned) and the `(0,0)` record alone in act 2; no record sets Y-word bit 15; the
+two wrap-seam `$7D` records store `$103C`/`$104C` and mask to `$03C`/`$04C` at X `$C70`/`$C94`.
+All 22 placed IDs resolve to their SKL (SK Set 2) names, not the S3KL `FBZ_*`/`ICZ_*` names the same
+numeric IDs carry for zones 0-6 — so the early check "SKL object table resolves `$74-$B2` for zone
+`$0A`" passes.
+
+- **Broken on purpose first.** With the act-1 count set to 214:
+  `-Dtest=TestS3kSszPlacementCensus` → `Tests run: 7, Failures: 1, Errors: 0, Skipped: 0`,
+  `SSZ1 live object records ==> expected: <214> but was: <213>`. Restored:
+  `Tests run: 7, Failures: 0, Errors: 0, Skipped: 0`. Zero skips both times, so the ROM path
+  resolved and the comparison is live rather than silently absent.
+
+**Media root.** `~/Videos/OGGF/ssz-bring-up/` created with `inputs/`, `native/`, `reel/` and the
+DDZ `make_clip.sh`, `make_clips.sh`, `side_by_side.sh`. `raw-00` baselines captured with
+`GameplayCaptureTool` on a neutral/right script (`90 -; 180 R; 90 -`), 320 px, 360 frames each,
+never to be overwritten:
+
+| Capture | Configuration | Start | Observed |
+| --- | --- | --- | --- |
+| `raw-00-ssz1-before` | `$A00`, Sonic | `LevelData` `(256,3072)` = `$100,$C00`, camera `(96,2976)` | Sanctuary terrain against a flat blue sky; no cloud background, no arrival, no events (frame 200 inspected) |
+| `raw-00-ssz2-before` | `$A01`, Knuckles | `Knux_Start_Locations` `(128,32)` = `$80,$20`, camera `(0,0)` | Static cloud layout; no arrival controller, camera controller or crane (frame 200 inspected) |
+
+**Fixture identity.** The plan's fixture table is confirmed from the committed metadata:
+`zone_id 10` with acts 1,1,1 for `s3k-sonic-tails-complete-emeralds/hpz{,_2,_3}` (offsets 448920 /
+460334 / 465044, starts `$100,$FAE`, `$14C0,$E8`, `$1880,$968`), acts 1,1 for
+`s3k-tails-full-chain-all-emeralds/hpz{,_2}` (423903 / 433476), act 2 for
+`s3k-knuckles-complete-superemeralds/hpz` (412501, `$80,$6AE`). The one-time trace-directory
+identity table in [trace frontier log](../../status/trace-frontier-log.md) is the **LRZ campaign's**
+edit; it is referenced here, not duplicated.
+
+`$100,$FAE` is not a start-location table value: `SSZ1_ScreenInit` forces camera `($60,$F49)` and
+`Obj_57C1E` sets Player 1 Y to `Camera_Y + $65` = `$FAE`. Row 0 of the fixture reads camera
+`$60,$F41` and player `$100,$FA6` — both exactly 8 px lower, i.e. one `loc_57D50` rise step, which
+matches the recorder sampling rows after the frame. The same explains the Knuckles `$80,$6AE`
+(`SSZ2_ScreenInit` camera Y `$649` + `$65`). This answers slice 1's "explain the `$100,$C00` vs
+ROM-forced camera difference from the ROM before coding": the level-start table is never used on
+the no-starpost path, because `SSZ1_ScreenInit` overwrites the camera and the controller overwrites
+the player.
+
+**Open question 8 (leading `(0,0)` ring record) — resolved on the ROM side, gap on the engine side.**
+`Load_Rings` `loc_E8BE` sets `d4 = Camera_X - 8` and forces `d4 = 1` when that is not above zero,
+then advances the cursor while `d4 > recordX`. With a floor of 1 the `X = 0` record is always
+stepped over, so the ROM never makes it collectible; it is a list head, not a ring. The engine's
+`RingManager.RingPlacement#ringWindowStart` floors at 0, so at `Camera_X <= 8` the record enters
+the window — and SSZ1 does reach `Camera_min_X = 0` once the cutscene bridge retracts
+(`loc_44FBA`). The margin is shared with the S2 raw window, so this is filed as a shared-owner gap
+in [s3k-known-bugs](../../status/s3k-known-bugs.md) rather than patched here. The census test
+records the decode either way.
+
+**Deferred from slice 0, with kill conditions.**
+
+| Item | Why deferred | Kill condition |
+| --- | --- | --- |
+| Native pass-1 savestates and `tools/bizhawk/capture_ssz_route_reference.lua` | The arrival window's native question is already answered by the committed fixture rows above, which are cheaper and stronger than a fresh probe. The probe is built by the first slice that asks it a question the traces cannot answer | A slice needs a field the physics/aux rows do not carry (palette lines, object slots, `_unkFAxx`); then the probe is written and pass 1 saves a state near every window |
+| Chaos vs Super emeralds in each movie | The committed manifests carry `emeralds_after` (7 before every SSZ segment in all three runs) but no Chaos/Super distinction and no `Super_emerald_count`; the run *names* claim Super Emeralds for the Knuckles run and Chaos for the others, which is a label, not a measurement. Slices 0, 1 and 1b are form-independent: the arrival and the cutscene run under `object_control 3`/`$83` scripts | Read `Collected_emeralds_array` / `Super_emerald_count` at the SSZ entry frame from a native probe or savestate. Required before any route row claims a form |
+
+**Docs.** Both matrices created
+([act 1](../validation/levels/s3k-ssz-act1.md), [act 2](../validation/levels/s3k-ssz-act2.md)) with
+the five claims kept in separate columns, and both backlog rows updated in
+[level test coverage](../../status/level-test-coverage.md).
+
+**Correction to this plan.** The execution base is `035e48a58`, not `9cba6dbb6` (updated above).
+`loc_13A10`'s starpost gate reads `Tails_CPU_star_post_flag`, not `Last_star_post_hit`.

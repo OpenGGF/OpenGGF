@@ -1,0 +1,70 @@
+# S3K Sky Sanctuary Zone act 1 coverage matrix
+
+Game / canonical zone / act: S3K `S3K_SKY_SANCTUARY_1`, engine zone `$0A` act index 0,
+ROM `Current_zone_and_act = $A00`, SKL object set.
+Character routes: Sonic, Sonic + Tails, Tails (`LevelSelect_CheckKnuckles` denies Knuckles except
+with `Debug_cheat_flag != 0`, and no Knuckles art or route exists for act 1).
+Owning plan: [SSZ bring-up](../../plans/2026-09-17-ssz-bring-up.md).
+Status: in progress (slices 0, 1, 1b). Nothing below certifies the act.
+
+Incoming: HPZ teleporter altar ending → `$A00` (`HpzTeleporterRouteHelperObjectInstance`), level
+select, save progression. Outgoing: `StartNewLevel $B00` from the Death Egg launch (`loc_581D2`);
+DEZ presentation and route belong to the DEZ campaign.
+
+Native fixtures (SSZ is filed under `hpz`; `zone_id 10` is the ROM zone. The one-time trace
+directory identity table is owned by the LRZ campaign's edit to
+[trace frontier log](../../../status/trace-frontier-log.md); it is referenced, not duplicated here):
+`runs/s3k-sonic-tails-complete-emeralds/hpz` (7638 rows, `bk2_frame_offset` 448920, start
+`$100,$FAE`), `…/hpz_2` (4352, 460334), `…/hpz_3` (3937, 465044);
+`runs/s3k-tails-full-chain-all-emeralds/hpz` (6023, 423903), `…/hpz_2` (10582, 433476);
+`hpz_completerun` (18641, 396720).
+
+Five claims are tracked separately per row: **implemented**, **cold-reachable**,
+**rewind-verified**, **native behaviour matched**, **visually matched**. There is no aggregate
+green label, and "implemented" alone never closes a row.
+
+## Obligations
+
+| Obligation + spot | Contract / oracle (ROM owner) | Config cases | Test binding | Implemented | Cold-reachable | Rewind-verified | Native matched | Visually matched | Gap / action |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| LOAD: identity, resources, music, title card (no act number) | `Sonic3kZoneRegistry` zone 10; `ArtKosM_SSZTitleCard $15C7FA`; `Pal_SSZ1` `$32`, collision `$1E/$1F` | 320 | — | pre-existing | yes (cold load) | — | — | baseline capture `raw-00-ssz1-before` | Resource identity not yet asserted by a test |
+| CENSUS: placed objects and rings | `SSZ1_Sprites $1F90EE` (213 records, 66 rows), `SSZ1_Rings $1F9616` (180 records, first `(0,0)`); `sub_1BA0C`/`loc_1BA4A`; `Load_Rings` `loc_E8BE` | ROM decode | `TestS3kSszPlacementCensus` | yes | n/a | n/a | yes (decode pinned to the ROM) | n/a | Concrete-class assertions arrive in slice 3 |
+| CENSUS: wrap-seam cloud records | Two `$7D` records store Y `$103C`/`$104C`; the `& $FFF` mask puts them at `$03C`/`$04C` | ROM decode | `TestS3kSszPlacementCensus#theTwoWrapSeamCloudRecordsMaskAcrossTheSeam` | yes | n/a | n/a | yes | n/a | Their in-level behaviour is slice 3 |
+| CENSUS: leading `(0,0)` ring record | `loc_E8BE` starts the scan at `max(Camera_X - 8, 1)`, so the record is always stepped over | ROM decode | `TestS3kSszPlacementCensus#ringRecordsMatchTheRomIncludingTheLeadingZeroRecord` | yes | n/a | n/a | yes | n/a | Engine window floor is `max(cameraX - 8, 0)`; gap filed in [s3k-known-bugs](../../../status/s3k-known-bugs.md) |
+| ARRIVAL: no-starpost screen init and controller | `SSZ1_ScreenInit`, `Obj_57C1E`/`loc_57CAC`/`loc_57CD2`/`loc_57D3C`, `Obj_57D64`, `loc_57DA2` | 320 + one wide; Sonic, Sonic + Tails, Tails | slice 1 | open | open | open | open | open | Slice 1 |
+| ARRIVAL: Tails helper and CPU routine | `Obj_57DCC`, `loc_13AB4` (`sub_13ECA`, `Tails_CPU_routine $A`, `object_control $83`) | Sonic + Tails | slice 1 | open | open | open | open | open | Slice 1 |
+| BOUNDS: act-1 dynamic Y bounds and Y-wrap | `sub_575EA` `word_5778A`/`word_5779A`; wrap `-$100 … $1000` | 320 + one wide | slice 1 | open | open | open | open | open | Slice 1 |
+| CUTSCENE: Knuckles spawner, button `$AF`, bridge `$77`, pseudo-starpost | `Obj_57E34` → `CutsceneKnux_SSZ` (11 routines `0..$14`), `loc_658F2`, `loc_65976`, `Obj_SSZCutsceneBridge` `loc_44FA2`/`loc_44FBA`/`loc_4501A` | 320 + one wide; every player mode | slice 1b | open | open | open | open | open | Slice 1b |
+| BG: sky, cloud band, mode transitions, cloud sprites, solid clouds | `SSZ1_BackgroundInit/Event`, `sub_579F0`, `sub_57A60`, `SSZ1_BGDeformArray`, `loc_57BB2`, `loc_57B6A`, `loc_57B8E` | — | slice 2 | open | open | open | open | open | Slice 2 |
+| ANIM: AniPLC (6 scripts) | `AniPLC_SSZ`, `Offs_AniFunc` | — | slice 2 | open | open | open | open | open | Slice 2 |
+| OBJECT: `$74 $75 $76 $7A $7B $7C $7D $7E $7F`, `$79` pads, EggRobo `$A0` | per-object inits | — | slice 3 | open (placeholders) | open | open | open | open | Slice 3 |
+| LIFE: death, starposts `$34:$02/$03/$04`, respawn, Y seam | `LevelSetup` clears `Events_bg+$00..$0F`; `SSZ1_ScreenInit` starpost path | — | slice 4 | open | open | open | open | open | Slice 4 |
+| BOSS: GHZ recreation lock / fight / defeat / pad `$79:$AA` | `sub_575EA` `loc_57686`-`loc_576E8`, `Obj_SSZGHZBoss` | — | slice 5 | open | open | open | open | open | Slice 5 |
+| BOSS: MTZ recreation lock / fight / defeat / pad `$79:$F6` | `loc_5770C`-`loc_5775C`, `Obj_SSZMTZBoss` | — | slice 6 | open | open | open | open | open | Slice 6 |
+| BOSS: Mecha Sonic spawn / fight / defeat, results + save | `loc_45A84`, `loc_7B2DC`, `loc_7B308`, `loc_2DCA0` | — | slice 7 | open | open | open | open | open | Slice 7 |
+| EVENT: crumble, hot-swap, Death Egg BG, debris, ramp script, `$B00` request | `SSZ1_ScreenEvent` stages 0/4/8, `Obj_57E96`, `sub_5750C`, `sub_574DC`, `loc_58192`, `loc_581D2` | — | slice 8 | open | open | open | open | open | Slice 8 |
+| LOAD: `$B00` (DEZ) presentation after the request | DEZ campaign | — | — | blocked | blocked | blocked | blocked | blocked | Out of scope; record what the engine does after the request |
+| ORACLE: strict segment replay | `TestS3kSonicTailsHpz{,2,3}SegmentTraceReplay`, `TestS3kTailsFullChainHpz{,2}SegmentTraceReplay` | `-Ptrace-segments` | — | — | — | — | not measured | — | Slice 10 records each frontier |
+
+## Execution evidence
+
+Worktree `.worktrees/ai-ssz-bring-up`, branch `feature/ai-ssz-bring-up`, base develop `035e48a58`.
+All Maven through `python3 tools/testing/maven_queue.py -Dmse=off …` with
+`-Ds3k.rom.path=<absolute path to the worktree>/s3k.gen` (a symlink
+to the locked-on ROM, SHA-1 `CFBF98C36C776677290A872547AC47C53D2761D6`).
+
+Slice 0, 2026-09-17. `-Dtest=TestS3kSszPlacementCensus`: **7 tests, 0 failures, 0 errors, 0 skips**.
+The comparison was broken on purpose first (expected 214 records) and reported
+`expected: <214> but was: <213>` at the same skip count, so the census is live rather than absent.
+Baseline captures (no SSZ events, scroll or objects yet):
+`~/Videos/OGGF/ssz-bring-up/raw-00-ssz1-before` (Sonic, 320, 360 frames; level start `(256,3072)`
+= `$100,$C00` from `LevelData`, camera `(96,2976)`) and `raw-00-ssz2-before` (Knuckles, 320, 360
+frames; level start `(128,32)` = `$80,$20` from `Knux_Start_Locations`). Frames 200 of each were
+inspected: act 1 renders the sanctuary terrain against a flat blue sky with no cloud background;
+act 2 renders the static cloud layout. Neither is a fact about final behaviour.
+
+## Open items carried into later slices
+
+- Engine ring-window floor admits the `(0,0)` record at `Camera_X <= 8` where the ROM does not.
+- The act-1 `LevelData` start `$100,$C00` differs from the ROM-forced arrival camera `$60,$F49` /
+  player `Camera_Y + $65`; slice 1 must explain the difference from `SSZ1_ScreenInit` before coding.

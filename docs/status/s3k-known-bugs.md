@@ -61,6 +61,7 @@ Entries should include:
 35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
 36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
 37. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
+38. [Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips](#ring-window-floor-admits-a-leading-00-ring-record-the-rom-always-skips)
 
 ---
 
@@ -5837,3 +5838,12 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Symptom** — (1) With fewer than seven Super Emeralds `loc_8167C` installs the Doomsday Super stars `loc_8242A` (`ArtUnc_SuperSonic_Stars`, six frames trailing Player 1); the engine draws none. (2) On the native all-Super route the Hyper sparkles are smaller than the engine's at the same rows (native pass-1 `boss_arrival`/`phase_change` screenshots against `raw-10-seeded-route-320`), an animation phase or frame-selection difference in the shared Hyper stars. (3) Native HUD keeps showing 0 rings after `loc_8160A` adds 50 until the next HUD ring update; the engine shows 50 at once. (4) The recording frame driver keeps stepping gameplay for the 21 frames of the `StartNewLevel $D01` fade (rows 10059-10079) that native and `GameLoop` freeze. (5) Strict `TestS3kSonicTailsZone0cSegmentTraceReplay` is red from frame 0 (`camera_y`): the replay bootstrap derives the camera from the metadata start position and seeds neither the camera X fraction nor the full `V_int_run_count`.
 - **Suspected cause** — (1) not ported; (2) unmeasured; (3) HUD ring redraw flag not modelled for direct `Ring_count` writes; (4) and (5) harness bootstrap/driver limits, not runtime behaviour: `TestS3kDdzColdRoutes` declares the two inherited clocks and matches every gameplay row.
 - **Removal condition** — `loc_8242A` implemented with a capture; a native probe of `Obj_HyperSonic_Stars` frames matched; HUD ring display matches native at DDZ entry; the recording driver honours the zone-fade freeze; the zone0c replay bootstrap reproduces the native entry state and the strict replay reports its first real divergence.
+
+---
+
+## Ring Window Floor Admits a Leading `(0,0)` Ring Record the ROM Always Skips
+
+- **Location** — `RingManager.RingPlacement#ringWindowStart` (`src/main/java/com/openggf/level/rings/RingManager.java`)
+- **Symptom** — SSZ1's ring list (`SSZ1_Rings $1F9616`) opens with a `(0,0)` record; SSZ2's list is that record alone. `TestS3kSszPlacementCensus#ringRecordsMatchTheRomIncludingTheLeadingZeroRecord` pins the decode. The engine's raw ring window starts at `max(cameraX - 8, 0)`, so at `Camera_X <= 8` the record enters the window and a collectible ring can exist at world `(0,0)`. SSZ1 reaches `Camera_min_X = 0` once the cutscene bridge retracts (`loc_44FBA`), so the camera can get there.
+- **Suspected cause** — `Load_Rings` `loc_E8BE` computes `d4 = Camera_X - 8` and, when that is not above zero, forces `d4 = 1` before advancing the cursor while `d4 > recordX`. With a floor of 1 the `(0,0)` record is always stepped over; with the engine's floor of 0 it is not. The margin constant is shared with S2's `RingsManager_Main`, so the fix is a shared-owner change, not an SSZ-local one.
+- **Removal condition** — The raw ring-window floor matches `loc_E8BE` (and the S2 equivalent is checked against `RingsManager_Main`), with a regression test that a `(0,0)` record is never renderable or collectible at `Camera_X <= 8`, and no S1/S2/S3K ring test regresses.
