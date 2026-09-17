@@ -36,6 +36,9 @@ import java.util.List;
  */
 public final class HpzShipSparkOrbiterObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+    /** {@code AngleLookup_1}, read once per instance; ROM bytes, not state. */
+    private transient byte[] angleLookup;
+
     private static final int LAST_SUBTYPE = 0x12;
     /** {@code byte_653DE}. */
     private static final int[] TARGET_ANGLES = {
@@ -339,8 +342,12 @@ public final class HpzShipSparkOrbiterObjectInstance extends AbstractObjectInsta
     }
 
     private byte[] angleLookup() {
+        if (angleLookup != null) {
+            return angleLookup;
+        }
         try {
-            return services().romReader().slice(Sonic3kConstants.ANGLE_LOOKUP_1_ADDR, 0x40);
+            angleLookup = services().romReader().slice(Sonic3kConstants.ANGLE_LOOKUP_1_ADDR, 0x40);
+            return angleLookup;
         } catch (IOException ex) {
             throw new IllegalStateException("AngleLookup_1", ex);
         }

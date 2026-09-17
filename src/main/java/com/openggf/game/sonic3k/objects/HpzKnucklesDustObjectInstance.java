@@ -26,6 +26,16 @@ import java.util.List;
  */
 public final class HpzKnucklesDustObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+    /** {@code byte_6669A} scripts, read once per instance; ROM bytes, not state. */
+    private transient S3kRawAnimation rawScripts;
+
+    private S3kRawAnimation rawScripts() {
+        if (rawScripts == null) {
+            rawScripts = HpzKnucklesCutsceneSupport.scripts(services());
+        }
+        return rawScripts;
+    }
+
     private static final int SCRIPT = 0x6683A;
     private static final int BASE_FRAME = 0xA;
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x80);
@@ -60,7 +70,7 @@ public final class HpzKnucklesDustObjectInstance extends AbstractObjectInstance
         x = parent.getX();
         y = parent.getY();
         flipX = parent.renderFlipX();
-        HpzKnucklesCutsceneSupport.scripts(services()).animateNoSst(anim, SCRIPT, () -> { });
+        rawScripts().animateNoSst(anim, SCRIPT, () -> { });
         updateDynamicSpawn(x, y);
     }
 

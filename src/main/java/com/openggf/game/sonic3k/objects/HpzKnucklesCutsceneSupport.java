@@ -124,12 +124,28 @@ final class HpzKnucklesCutsceneSupport {
         return sprite == null ? 0 : sprite.getInvulnerableFrames() & 0xFF;
     }
 
-    /** {@code HurtCharacter_Directly}: {@code HurtCharacter} with no invulnerability test. */
-    static void hurtDirectly(AbstractPlayableSprite sprite, int sourceX) {
+    /**
+     * {@code HurtCharacter_Directly}: {@code HurtCharacter} with no invulnerability test.
+     *
+     * <p>{@code HurtCharacter} (sonic3k.asm:21580) reads {@code Ring_count} only for
+     * {@code Player_1}; outside competition mode any other player branches straight to
+     * {@code loc_102E0}, so a sidekick is always knocked back and never killed or stripped of
+     * rings. {@code Player_1} with rings and no shield allocates {@code Obj_Bouncing_Ring};
+     * with no rings and no shield it dies ({@code loc_10350}).
+     */
+    static void hurtDirectly(ObjectServices services, AbstractPlayableSprite sprite, int sourceX,
+                             int vIntRunCount) {
         if (sprite == null || sprite.getDead()) {
             return;
         }
+        if (sprite != player1(services)) {
+            sprite.applyHurtOrDeathIgnoringIFrames(sourceX, false, true);
+            return;
+        }
         boolean hadRings = sprite.getRingCount() > 0;
+        if (hadRings && !sprite.hasShield()) {
+            services.spawnLostRings(sprite, vIntRunCount);
+        }
         sprite.applyHurtOrDeathIgnoringIFrames(sourceX, false, hadRings);
     }
 

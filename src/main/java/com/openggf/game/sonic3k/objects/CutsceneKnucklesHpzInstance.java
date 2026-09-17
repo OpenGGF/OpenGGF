@@ -24,6 +24,7 @@ import com.openggf.sprites.playable.Knuckles;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.logging.Logger;
 
 import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
 
@@ -46,6 +47,17 @@ import static com.openggf.game.sonic3k.objects.HpzKnucklesCutsceneSupport.*;
  */
 public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+    /** {@code byte_6669A} scripts, read once per instance; ROM bytes, not state. */
+    private transient S3kRawAnimation rawScripts;
+
+    private S3kRawAnimation rawScripts() {
+        if (rawScripts == null) {
+            rawScripts = scripts(services());
+        }
+        return rawScripts;
+    }
+
+    private static final Logger LOG = Logger.getLogger(CutsceneKnucklesHpzInstance.class.getName());
     /** {@code word_63CEC}: camera Y range, X range, then the lock words for {@code sub_85D6A}. */
     private static final int CAMERA_MIN_Y = 0x180;
     private static final int CAMERA_MAX_Y = 0x480;
@@ -106,6 +118,8 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
     private static final int[] OFF_63F6A = {H_63F7A, H_660A6, H_6429E, H_660A6};
     private static final int[] OFF_63FE8 = {H_660A6, H_660A6, H_6429E, H_660A6};
     private static final int[] OFF_64056 = {H_660A6, H_660A6, H_660A6, H_660A6};
+    /** {@code off_640CC}: unlike the jump's all-hurt table, a player behind or beside the glide hits Knuckles. */
+    private static final int[] OFF_640CC = {H_660A6, H_660A6, H_6429E, H_660A6};
     private static final int[] OFF_64122 = {H_6429E, H_660A6, H_6429E, H_660A6};
     /** {@code word_66152}. */
     private static final int RANGE_OFFSET = -0x18;
@@ -142,6 +156,8 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
     /** {@code $40(a0)}. */
     private int acceleration;
     private int collisionProperty;
+    /** {@code V_int_run_count} of the current update, for the lost-ring spawn in {@code HurtCharacter}. */
+    private int frameVInt;
 
 
     public CutsceneKnucklesHpzInstance(ObjectSpawn spawn) {
@@ -190,7 +206,9 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
                 ObjectLifetimeOps.addDynamicAtReservedSlot(manager, copy, COPY_SST_SLOT);
             } else {
                 // The ROM overwrites whatever occupies the slot; the engine keeps the occupant
-                // and takes the lowest free slot instead.
+                // and takes the lowest free slot instead, which changes the fight's execution order.
+                LOG.warning("CutsceneKnux_HPZ: SST slot " + COPY_SST_SLOT
+                        + " is occupied; Knuckles runs from the lowest free slot instead");
                 spawnFreeChild(() -> new CutsceneKnucklesHpzInstance(spawn, true));
             }
         }
@@ -262,6 +280,7 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
     }
 
     private void dispatch(HpzZoneRuntimeState hpz, int vInt) {
+        frameVInt = vInt;
         switch (routine) {
             case 0x00 -> loc63E7C(hpz);
             case 0x02 -> loc63EDA();
@@ -473,7 +492,7 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
                 return;
             }
         }
-        loc660BE(OFF_64056);
+        loc660BE(OFF_640CC);
     }
 
     /** {@code loc_640DC}. */
@@ -1043,8 +1062,8 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
                 HpzCameraGradualObjectInstance.INC_END_Y));
         // bsr.w loc_64930 then fall into it: two Child6_CreateBossExplosion subtype $14.
         for (int i = 0; i < 2; i++) {
-            spawnChild(() -> new HpzBossExplosionSpawnerObjectInstance(
-                    new ObjectSpawn(0x1880, 0x3D0, 0, 0x14, 0, false, 0), this));
+            spawnAfterCurrentSibling(() -> new HpzBossExplosionSpawnerObjectInstance(
+                    new ObjectSpawn(0x1880, 0x3D0, 0, 0x14, 0, false, 0)));
         }
     }
 
@@ -1258,15 +1277,15 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
     }
 
     private int animateCheckResult() {
-        return scripts(services()).animateCheckResult(anim, this::runCallback);
+        return rawScripts().animateCheckResult(anim, this::runCallback);
     }
 
     private int animateRaw2() {
-        return scripts(services()).animateRaw2MultiDelay(anim, this::runCallback);
+        return rawScripts().animateRaw2MultiDelay(anim, this::runCallback);
     }
 
     private int animateMultiDelay() {
-        return scripts(services()).animateMultiDelay(anim, this::runCallback);
+        return rawScripts().animateMultiDelay(anim, this::runCallback);
     }
 
     private void runCallback() {
@@ -1358,7 +1377,7 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
         if (statusInvincible(target)) {
             return;
         }
-        hurtDirectly(target, x);
+        hurtDirectly(services(), target, x, frameVInt);
     }
 
     /** {@code sub_66094}: face the nearest player. */

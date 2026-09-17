@@ -25,6 +25,16 @@ import java.util.List;
  */
 public final class HpzKnucklesDizzyStarsObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
+    /** {@code byte_6669A} scripts, read once per instance; ROM bytes, not state. */
+    private transient S3kRawAnimation rawScripts;
+
+    private S3kRawAnimation rawScripts() {
+        if (rawScripts == null) {
+            rawScripts = HpzKnucklesCutsceneSupport.scripts(services());
+        }
+        return rawScripts;
+    }
+
     private static final int SCRIPT = 0x66875;
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x180);
     private static final int PHASE_INIT = 0;
@@ -70,7 +80,7 @@ public final class HpzKnucklesDizzyStarsObjectInstance extends AbstractObjectIns
                     timer = 0x3F;
                     return;
                 }
-                HpzKnucklesCutsceneSupport.scripts(services()).animateNoSst(anim, SCRIPT, () -> { });
+                rawScripts().animateNoSst(anim, SCRIPT, () -> { });
                 visible = true;
             }
             case PHASE_HOLD -> {

@@ -46,6 +46,7 @@ public final class Sonic3kPlcArtRegistry {
      * @param dplcAddr     ROM address of DPLC table, or -1 if no DPLCs
      * @param mappingFrameCount explicit mapping frame count, or -1 to auto-detect
      * @param mappingTileOffset tile offset to add after ROM mapping parse
+     * @param dplcLayout   which loader's table layout {@code dplcAddr} uses
      */
     public record StandaloneArtEntry(
             String key,
@@ -57,8 +58,16 @@ public final class Sonic3kPlcArtRegistry {
             int dplcAddr,
             S3kSpriteDataLoader.MappingFormat mappingFormat,
             int mappingFrameCount,
-            int mappingTileOffset
+            int mappingTileOffset,
+            DplcLayout dplcLayout
     ) {
+        public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
+                int mappingAddr, int palette, int dplcAddr, S3kSpriteDataLoader.MappingFormat mappingFormat,
+                int mappingFrameCount, int mappingTileOffset) {
+            this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
+                    mappingFormat, mappingFrameCount, mappingTileOffset, DplcLayout.OBJECT);
+        }
+
         public StandaloneArtEntry(String key, int artAddr, CompressionType compression, int artSize,
                 int mappingAddr, int palette, int dplcAddr) {
             this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
@@ -82,6 +91,17 @@ public final class Sonic3kPlcArtRegistry {
             this(key, artAddr, compression, artSize, mappingAddr, palette, dplcAddr,
                     S3kSpriteDataLoader.MappingFormat.STANDARD, mappingFrameCount, mappingTileOffset);
         }
+    }
+
+    /** DPLC table layouts. */
+    public enum DplcLayout {
+        /** {@code Perform_DPLC}: count word, then tile word and count byte pairs. */
+        OBJECT,
+        /**
+         * Player loaders such as {@code Knuckles_Load_PLC_661E0}: count word, then words holding
+         * count-1 in the top nibble over a 12-bit tile.
+         */
+        PLAYER
     }
 
     /**
@@ -2743,7 +2763,8 @@ public final class Sonic3kPlcArtRegistry {
                 CompressionType.UNCOMPRESSED,
                 Sonic3kConstants.ART_UNC_KNUCKLES_SIZE,
                 Sonic3kConstants.MAP_KNUCKLES_ADDR, 1,
-                Sonic3kConstants.DPLC_KNUCKLES_ADDR));
+                Sonic3kConstants.DPLC_KNUCKLES_ADDR,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, -1, 0, DplcLayout.PLAYER));
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES_GRAB,
                 Sonic3kConstants.ART_UNC_HPZ_KNUCKLES_GRAB_ADDR,
@@ -2772,7 +2793,8 @@ public final class Sonic3kPlcArtRegistry {
                 CompressionType.UNCOMPRESSED,
                 Sonic3kConstants.ART_UNC_DASH_DUST_SIZE,
                 Sonic3kConstants.MAP_DASH_DUST_ADDR, 0,
-                Sonic3kConstants.DPLC_DASH_DUST_ADDR));
+                Sonic3kConstants.DPLC_DASH_DUST_ADDR,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, -1, 0, DplcLayout.PLAYER));
         // ObjDat3_664FA: make_art_tile(ArtTile_HPZSSZBossCrane,0,1).
         standalone.add(new StandaloneArtEntry(
                 Sonic3kObjectArtKeys.KNUX_FINAL_BOSS_CRANE,
