@@ -25,12 +25,14 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     private int routine,darkness,frame,animationAddress,animationIndex,animationTimer,attackTimer,collisionProperty;
     private boolean initialized,worldPosition,facingLeft,directionDown,fading;
     private boolean renderOnScreen=true,deletePending;
+    private int lastVIntRunCount;
     private byte[] animations;
     public SozHyudoroBodyObjectInstance(ObjectSpawn spawn){this(spawn,null);}
     public SozHyudoroBodyObjectInstance(ObjectSpawn spawn,SozHyudoroControllerObjectInstance controller){
         super(spawn,"SOZHyudoro");this.controller=controller;xFixed=spawn.x()<<16;yFixed=spawn.y()<<16;
     }
     @Override public void update(int vIntRunCount,PlayableEntity leader){
+        lastVIntRunCount=vIntRunCount;
         if(deletePending){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(controller==null){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(!initialized){initialize();}
@@ -91,7 +93,11 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     private boolean resolveContact(AbstractPlayableSprite player) {
         if (attacking(player)) { fade(); return true; }
         if (!player.getInvulnerable()) {
-            player.applyHurtOrDeath(getX(), DamageCause.NORMAL, player.getRingCount() > 0);
+            // HurtCharacter_Directly runs HurtCharacter, which spills Player_1's rings.
+            if (player.isCpuControlled()) { player.applyHurt(getX(), DamageCause.NORMAL); return false; }
+            boolean rings = player.getRingCount() > 0;
+            if (rings && !player.hasShield()) services().spawnLostRings(player, lastVIntRunCount);
+            player.applyHurtOrDeath(getX(), DamageCause.NORMAL, rings);
         }
         return false;
     }
