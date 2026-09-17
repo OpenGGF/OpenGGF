@@ -144,6 +144,29 @@ class TestSpriteSatMaskPostProcessor {
     }
 
     @Test
+    void sozEndBossNativeSat_masksBossPiecesThroughLine203() {
+        // soz_completerun row 56840 (BK2 frame 339036), native SAT in link order.
+        List<SpriteSatEntry> sat = List.of(
+                SpriteSatEntry.of(16, 200, 2, 2, 0x7D4, 0, false, false, true, false),   // idx 6
+                SpriteSatEntry.of(32, 200, 4, 2, 0x7D8, 1, false, false, true, false),   // idx 7 HUD lives
+                SpriteSatEntry.of(-127, 192, 1, 4, 0x7C0, 0, false, false, false, false), // idx 8 marker
+                SpriteSatEntry.of(-128, 192, 1, 4, 0, 0, false, false, false, false),     // idx 9 X=0
+                SpriteSatEntry.of(212, 172, 4, 4, 0x3DC, 3, false, false, true, false),  // idx 19 boss
+                SpriteSatEntry.of(244, 172, 4, 4, 0x3EC, 3, false, false, true, false),  // idx 20 boss
+                SpriteSatEntry.of(276, 172, 1, 4, 0x3FC, 3, false, false, true, false)); // idx 21 boss
+
+        List<SpriteSatEntry> processed = SpriteSatMaskPostProcessor.process(sat, true);
+
+        assertEquals(5, processed.size());
+        assertSame(sat.get(0), processed.get(0));
+        assertSame(sat.get(1), processed.get(1));
+        for (SpriteSatEntry boss : processed.subList(2, 5)) {
+            assertEquals(rows(172, 192), visibleScanlines(List.of(boss)).keySet(),
+                    "lines 192-223 are masked, so the boss's bottom rows 200-203 must not draw");
+        }
+    }
+
+    @Test
     void tileWordWithFlipOrPaletteBitsIsNotAMaskMarker() {
         SpriteSatEntry flippedMarker = SpriteSatEntry.of(108, 24, 1, 1, 0x7C0, 0,
                 true, false, false, false);

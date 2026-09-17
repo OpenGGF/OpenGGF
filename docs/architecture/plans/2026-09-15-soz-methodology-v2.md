@@ -3284,3 +3284,14 @@ previous line's pixel overflow.
 Rejected on the way: passing `PatternDesc` into the new graphics-layer crop methods
 tripped `TestArchUnitRules.low_level_layers_do_not_depend_on_runtime_layers` (10 new
 graphics -> level edges); the crop methods take primitive tile attributes instead.
+
+Native pixel check of `0590c42b7` (coordinator, `tools/bizhawk/compare_trace_checkpoint_pixels.py`,
+every 20 rows where the native SAT holds a mask pair): pyramid window 72 rows better / 0
+worse than develop `4569e5406`; end-boss window 14 better / 3 worse (rows 56820-56860).
+Cause of the three: `S3kSpriteMaskSupport.frame4Entries` had width and height swapped.
+`Map_SpriteMask` frame 4 is `$F0,3,7,$C0,0,8` / `$F0,3,0,0,0,0`; size byte 3 is one tile
+wide and four tall, so the native mask covers 32 lines (VRAM SAT at BK2 frame 339036:
+pair at y 192, 8x32), while the engine submitted 32x8 and masked only lines 192-199. The
+old whole-tile clip happened to hide the boss rows 200-203 too. The pair is now 1x4 tiles;
+the native SAT from that frame is a unit test. This also applies to the FBZ2 subboss and
+the SOZ sprite-mask object, which share frame 4.
