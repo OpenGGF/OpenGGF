@@ -5837,3 +5837,21 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Symptom** — (1) With fewer than seven Super Emeralds `loc_8167C` installs the Doomsday Super stars `loc_8242A` (`ArtUnc_SuperSonic_Stars`, six frames trailing Player 1); the engine draws none. (2) On the native all-Super route the Hyper sparkles are smaller than the engine's at the same rows (native pass-1 `boss_arrival`/`phase_change` screenshots against `raw-10-seeded-route-320`), an animation phase or frame-selection difference in the shared Hyper stars. (3) Native HUD keeps showing 0 rings after `loc_8160A` adds 50 until the next HUD ring update; the engine shows 50 at once. (4) The recording frame driver keeps stepping gameplay for the 21 frames of the `StartNewLevel $D01` fade (rows 10059-10079) that native and `GameLoop` freeze. (5) Strict `TestS3kSonicTailsZone0cSegmentTraceReplay` is red from frame 0 (`camera_y`): the replay bootstrap derives the camera from the metadata start position and seeds neither the camera X fraction nor the full `V_int_run_count`.
 - **Suspected cause** — (1) not ported; (2) unmeasured; (3) HUD ring redraw flag not modelled for direct `Ring_count` writes; (4) and (5) harness bootstrap/driver limits, not runtime behaviour: `TestS3kDdzColdRoutes` declares the two inherited clocks and matches every gameplay row.
 - **Removal condition** — `loc_8242A` implemented with a capture; a native probe of `Obj_HyperSonic_Stars` frames matched; HUD ring display matches native at DDZ entry; the recording driver honours the zone-fade freeze; the zone0c replay bootstrap reproduces the native entry state and the strict replay reports its first real divergence.
+
+---
+
+## Object `$78` Is Registered Twice; the First Implementation Is Dead Code
+
+- **Location** — `Sonic3kObjectRegistry.registerDefaultFactories`, lines 217-218 and 1411-1412; `FbzDezPlayerLauncherInstance` (303 lines) and `FbzDezPlayerLauncherObjectInstance` (95 lines)
+- **Symptom** — `Sonic3kObjectIds.FBZ_DEZ_PLAYER_LAUNCHER` (`$78`, `Obj_FBZDEZPlayerLauncher`) is `factories.put(...)` twice in the same method. The later call wins, so every `$78` placement — 10 of them in Death Egg act 1, plus the Flying Battery ones — resolves to `FbzDezPlayerLauncherObjectInstance`, and `FbzDezPlayerLauncherInstance` never runs. Both are full implementations of the same ROM object and they differ in detail (only the dead one implements `SolidRoutineProfile` and plays a `Sonic3kSfx`), so the shadowing is silent behaviour selection, not a harmless duplicate.
+- **Suspected cause** — Two independent ports of the same ROM object landed without either noticing the other; no test asserts that a given id has exactly one factory.
+- **Removal condition** — One class owns `$78`, with the behavioural difference between the two resolved against `sonic3k.asm $3B942-$3BA8A`; the other is deleted; a registry test asserts no id is registered twice.
+
+---
+
+## Death Egg `$1700` Has No Resource Profile, Events or Arena
+
+- **Location** — `Sonic3kLevelResourceProfile` (only `$1701` has a custom profile), `Sonic3kScrollHandlerProvider` (zone `$17` is keyed without the act), `Sonic3kLevelSelectConstants`
+- **Symptom** — A direct `$1700` load boots the real DEZ3 layout, art and palette but places the players from the Start Location file at centre `$60,$70` instead of `loc_7FD9E`'s `$30,$CD`/`$10,$CD`; there is no `Obj_5A7C8` arena floor, so the player falls out of the level and dies within about 100 frames. The zone also inherits `SwScrlHpz` because the provider maps `$17` to the HPZ handler without checking the act, and the engine level select has no `$1700` entry. Measured 2026-09-17 at `035e48a58`; capture `~/Videos/OGGF/s3k-dez-bring-up/raw-00-baseline-before-work/1700-final-boss`.
+- **Suspected cause** — The zone was never implemented; only its level data is registered.
+- **Removal condition** — The S3K DEZ bring-up's slices 9 and 10 land: `$1700` resource profile, `SwScrlS3kDezFinalBoss`, the `DEZ3_*` events and arena objects, `Obj_DEZ3_Boss` and the `loc_803D6` exit, with the final-boss matrix's five claims recorded.

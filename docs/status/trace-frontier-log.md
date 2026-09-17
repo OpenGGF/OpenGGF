@@ -72522,11 +72522,21 @@ Not one defect across the eight-row table -- **three**:
 1. **The seven act-2 `dez23*` classes (550 errors) are one cause**: the missing
    `Obj_HPZSSEntryControl` above. Same ten fields, same values, same routine.
 2. **`Dez238` (621) is a different segment and a different cause.** Its metadata
-   is zone 23 **act 1** = Hidden Palace Zone proper (level-size row
-   `sonic3k.asm:38142`), 5118 rows, and its frame 0 is a running act-entry:
-   `x` 0x0036/0x0030, `x_speed` 0x0600/0x000C, `camera_x` 0x0080/0x0000,
-   `rings` 163/0. The rings term is the known save/run-inventory boundary; the
-   running-entry term is separate. Neither is the arena controller.
+   is zone 23 act 1 (1-based) = **act index 0 = `$1700`, the Death Egg final-boss
+   arena** (level-size row `sonic3k.asm:38143` `dc.w 0, $6000, $20, $20 ; DEZ Boss`),
+   5118 rows, and its frame 0 is a running act-entry: `x` 0x0036/0x0030,
+   `x_speed` 0x0600/0x000C, `camera_x` 0x0080/0x0000, `rings` 163/0. Neither is the
+   arena controller.
+
+   **Corrected 2026-09-17 (S3K DEZ campaign, `035e48a58`).** The original text above
+   read "act 1 = Hidden Palace Zone proper (level-size row `sonic3k.asm:38142`)".
+   That was wrong. `dez23_8/metadata.json` is `zone_id 23`, `act 1` (the fixtures
+   number acts from 1), `bk2_frame_offset` 509032, `start_x 0x0030`, `start_y 0x00CD`
+   — exactly `loc_7FD9E`'s `$1700` Player 1 start. The `camera_x` `$80` is
+   `DEZ3_ScreenInit` and the 163 rings are `Act3_ring_count` carried across
+   `loc_7F310`'s `StartNewLevel $1700`, not a save/run-inventory boundary. Hidden
+   Palace proper is `$1601`, whose segments live in the `hpz*` directories. The
+   directory names in this run are shifted one zone throughout; select by `zone_id`.
 3. **`Aiz3` (1567) is a third cause.** `tails_x` 0x0220/**0x7F00** -- the actual is
    the `sub_13ECA` off-screen respawn sentinel (P64), with
    `tails_cpu_routine` 0x0006/0x000A and `rings` 75/0. A sidekick-lifetime plus
@@ -110800,3 +110810,40 @@ animation2. That production intro, not trace-state seeding, is the next target.
 - Fixes that moved it (plan evidence, `docs/architecture/plans/2026-09-17-ddz-bring-up.md`):
   `Seek_Object_Manager` cursor seek on the wrap (first error 8248 -> 8249), the
   `Camera_X_pos_coarse_back` latch for DDZ delete checks (slot history probe, row 173 -> exit).
+
+
+## 2026-09-17 — S3K Death Egg (`$B00`/`$B01`) and `$1700`: campaign baseline frontiers
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, base
+develop `035e48a58`. Slice 0 of the
+[S3K DEZ bring-up](../architecture/plans/2026-09-17-s3k-dez-bring-up.md). No production
+code existed for either zone when these were measured; every class is expected red.
+
+Command (one invocation, all six classes, 0 skips — the ROM path resolved):
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen -Ptrace-replay-r7 \
+  "-Dtest=TestS3kSonicTailsSszSegmentTraceReplay,TestS3kSonicTailsDez238SegmentTraceReplay,\
+TestS3kTailsFullChainSszSegmentTraceReplay,TestS3kTailsFullChainSsz2SegmentTraceReplay,\
+TestS3kTailsFullChainSsz3SegmentTraceReplay,TestS3kTailsFullChainDez238SegmentTraceReplay" \
+  -DfailIfNoSpecifiedTests=false test
+```
+
+Result: 6 tests, 6 failures, 0 errors, 0 skipped.
+
+| Class | Fixture (select by `zone_id`, not name) | Errors | First error |
+| --- | --- | --- | --- |
+| `TestS3kSonicTailsSszSegmentTraceReplay` | `s3k-sonic-tails-complete-emeralds/ssz` — `zone_id 11` = **DEZ**, both acts and the handover, offset 468982, start `$0030,$09AC` | 7005 | frame 0 `camera_x` expected `0x0040`, actual `0x0000` |
+| `TestS3kSonicTailsDez238SegmentTraceReplay` | `…/dez23_8` — `zone_id 23` act index 0 = **`$1700`**, offset 509032, start `$0030,$00CD` | 621 | frame 0 `x_sub` expected `0x0000`, actual `0x0C00` |
+| `TestS3kTailsFullChainSszSegmentTraceReplay` | `s3k-tails-full-chain-all-emeralds/ssz` — DEZ act 1, offset 444059 | 1661 | frame 0 `camera_x` expected `0x0040`, actual `0x0018` |
+| `TestS3kTailsFullChainSsz2SegmentTraceReplay` | `…/ssz_2` — DEZ act 2 | 229 | frame 0 `camera_y` expected `0x080E`, actual `0x0810` |
+| `TestS3kTailsFullChainSsz3SegmentTraceReplay` | `…/ssz_3` — DEZ act 2 restart (lifecycle evidence) | 200 | frame 0 `camera_y` expected `0x044E`, actual `0x0450` |
+| `TestS3kTailsFullChainDez238SegmentTraceReplay` | `…/dez23_8` — `$1700` | 339 | frame 0 `camera_y` expected `0x0010`, actual `0x0020` |
+
+Every class diverges on its first compared row, so these are bootstrap/initial-state
+numbers, not route depth. None of them is a frontier that moved; they are the
+campaign's starting measurement, stamped at `035e48a58`.
+
+The stale `Dez238` identification earlier in this log (2026-08-15, "act 1 = Hidden
+Palace Zone proper") is corrected in place above from `dez23_8/metadata.json`.

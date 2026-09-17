@@ -529,12 +529,15 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 
 ## Status
 
+Slice 0 delivered 2026-09-17 at base `035e48a58` (matrices, coverage rows, trace identity and
+frontiers, placement census, `raw-00` captures); see the evidence log. Slice 1 in progress.
+
 | Claim | State |
 | --- | --- |
 | Implemented | Not started. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art, reverse-gravity flag with 9 of 116 ROM references covered and no level-load clear |
 | Cold-reachable | Not started |
 | Rewind-verified | Not started (the flag itself is already snapshotted) |
-| Native behaviour matched | Not started; replay frontiers unmeasured at `9cba6dbb6` |
+| Native behaviour matched | Not started; replay frontiers measured at `035e48a58` (slice 0), all six classes red from frame 0 |
 | Visually matched | Not started |
 
 Out of scope, recorded as dependencies: `$D01` ending and credits (ending campaign); the SSZ
@@ -542,4 +545,87 @@ launch cutscene if SSZ lands second.
 
 ## Evidence log
 
-(empty)
+### 2026-09-17 — Slice 0: baseline and identity
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, base develop
+**`035e48a58`** (the plan's header says `9cba6dbb6`; the only difference is the docs merge that
+brought the three bring-up plans in — the execution base is re-pinned to `035e48a58` and all
+slice-0 numbers are stamped with it). No production code changed in this slice.
+
+**Replay frontiers.** One invocation, six classes, 6 failures, 0 errors, **0 skipped** (the ROM
+path resolved; a wrong path would have skipped silently):
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen -Ptrace-replay-r7 \
+  "-Dtest=TestS3kSonicTailsSszSegmentTraceReplay,TestS3kSonicTailsDez238SegmentTraceReplay,\
+TestS3kTailsFullChainSszSegmentTraceReplay,TestS3kTailsFullChainSsz2SegmentTraceReplay,\
+TestS3kTailsFullChainSsz3SegmentTraceReplay,TestS3kTailsFullChainDez238SegmentTraceReplay" \
+  -DfailIfNoSpecifiedTests=false test
+```
+
+`-Ptrace-segments` covers only `tests/trace/s3k/sonictails`, so it cannot run the four
+`tailsfullchain` classes the plan lists; `-Ptrace-replay-r7` includes both directories and was
+used instead. Every class diverges on its first compared row, so these are bootstrap numbers,
+not route depth. Full table in `docs/status/trace-frontier-log.md` (2026-09-17 entry) and in each
+matrix's ORACLE rows.
+
+**Trace identity, settled from the fixtures, not from names.** `dez23_8/metadata.json` is
+`zone_id 23`, `act 1` (the fixtures number acts from 1, so act index 0), `bk2_frame_offset`
+509032, `start_x 0x0030`, `start_y 0x00CD` — exactly `loc_7FD9E`'s `$1700` Player 1 start. The
+2026-08-15 frontier-log entry calling `Dez238` "Hidden Palace Zone proper (level-size row
+`sonic3k.asm:38142`)" is wrong and is corrected in place; the right row is `:38143`
+(`dc.w 0, $6000, $20, $20 ; DEZ Boss`), and the segment's `camera_x` `$80` and 163 rings are
+`DEZ3_ScreenInit` and `Act3_ring_count`, not a save/run-inventory boundary. `ssz` is `zone_id 11`
+act 1, start `$0030,$09AC`, which matches the engine's own cold `$B00` start. The campaign-wide
+one-zone-off directory table is the LRZ campaign's single edit and is not duplicated here.
+
+**Placement census.** New `TestS3kDezPlacementCensus` (4 tests, 0 failures, 0 skipped, 0.34 s).
+It separates ROM facts (`DEZ1_Sprites` `$1F98F4` 366 records / 365 live, `DEZ2_Sprites` `$1FA188`
+495 / 494, `DEZ3_Sprites` `$1FCEE8` terminator only / 0, each with the full six-byte
+`$FFFF,0,0,0,0` terminator asserted) from a recorded engine baseline (concrete 140 / 157,
+placeholder 225 / 337; exactly `$01 $02 $07 $08 $28 $2F $34 $3C $6A $6B $78` resolve to a real
+factory under SKL). Broken on purpose once — `PLACEHOLDER_ACT_1` 225 → 224 produced
+`act 1 placeholder placements ==> expected: <224> but was: <225>` and exactly that one failure,
+with the other three tests still green — then restored and re-run green. The `$1700` address
+`$1FCEE8` is from `sonic3k.lst`; the inventory document does not carry it.
+
+**Slice-0 checks the work card asks for.**
+
+- `$78` duplicate registration: `Sonic3kObjectRegistry.registerDefaultFactories` calls
+  `factories.put(FBZ_DEZ_PLAYER_LAUNCHER, ...)` at line 218 (`FbzDezPlayerLauncherInstance`, 303
+  lines) and again at line 1412 (`FbzDezPlayerLauncherObjectInstance`, 95 lines). Both are in the
+  same method, so the later call wins and the 303-line class is dead code for every zone. The two
+  differ (only the dead one implements `SolidRoutineProfile` and plays a `Sonic3kSfx`), so this is
+  silent behaviour selection. Pinned by the census test and recorded in
+  `docs/status/s3k-known-bugs.md`.
+- What `$1700` loads today: the standard profile (`Sonic3kLevelResourceProfile.resolve` gives a
+  custom profile only for `$1701`), so the real DEZ3 layout, art and palette `$40` load and the
+  Earth backdrop renders. The players come from the Start Location file at centre `$60,$70`
+  instead of `loc_7FD9E`'s `$30,$CD` / `$10,$CD`, there is no `Obj_5A7C8` arena floor, and Sonic
+  falls out of the level and dies at frame 98. No title card. Recorded in the final-boss matrix
+  and in `s3k-known-bugs.md`.
+- Resources: act 1 `levartptrs $36,$36,$20`, act 2 `$38,$38,$21`, `$1700` `$4C,$4C,$40`
+  (sonic3k.asm:199455, 199456, 199483). `PLCKosM_DEZ` is the shared enemy-art list for both acts
+  (`Offs_LoadEnemyArt` entries, :64339-64340). Music `Sonic3kMusic.DEZ1`/`DEZ2`
+  (`Sonic3kZoneRegistry`), `$1700` reuses `DEZ2`. LevelSizes `0,$6000,0,$B20` / `0,$6000,0,$F10`
+  / `0,$6000,$20,$20` (:38119, :38120, :38143).
+- V5 aux rows and the reverse-gravity flag: `tools/tracechaser` is still uninitialised in this
+  worktree, so the open question stays open. No trace field is being added either way, so it does
+  not block any slice.
+
+**Media.** `~/Videos/OGGF/s3k-dez-bring-up/` laid out like DDZ's (`inputs/`, `native/`, `reel/`,
+`make_clip.sh`, `make_clips.sh`, `side_by_side.sh`, `INDEX.md`), with
+`raw-00-baseline-before-work/{b00-act1,b01-act2,1700-final-boss}` — 320 px, Sonic + Tails, cold
+loads, `inputs/baseline-run-right.txt`. Frames inspected: `b00-act1/frames/00300.png` (machine
+room, HUD, background visibly scrolling at camera/4 — the defect slice 1 fixes) and
+`1700-final-boss/frames/00040.png` (Earth backdrop, Sonic already falling). These three are never
+overwritten.
+
+**Matrices and backlog.** `docs/architecture/validation/levels/s3k-dez-act1.md`,
+`s3k-dez-act2.md`, `s3k-dez-final-boss.md` seeded with the five claims kept separate and every
+obligation "not started"/"unrun"; the three `level-test-coverage.md` rows moved off "Audit
+pending".
+
+**Open issues from this slice.** The `$78` duplicate (known-bugs); the reverse-gravity trace-field
+question (TraceChaser submodule not initialised); nothing blocking slice 1.

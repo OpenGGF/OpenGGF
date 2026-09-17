@@ -133,8 +133,8 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_LAVA_REEF_2` | Audit pending |
 | S3K | `S3K_SKY_SANCTUARY_1` | Audit pending |
 | S3K | `S3K_SKY_SANCTUARY_2` | Audit pending |
-| S3K | `S3K_DEATH_EGG_1` | Audit pending |
-| S3K | `S3K_DEATH_EGG_2` | Audit pending |
+| S3K | `S3K_DEATH_EGG_1` | [Act 1 matrix](../architecture/validation/levels/s3k-dez-act1.md) — v2 bring-up started; baseline only: level load, music, intro run and shared objects. Presentation, objects, miniboss, cold route, rewind and native all open |
+| S3K | `S3K_DEATH_EGG_2` | [Act 2 matrix](../architecture/validation/levels/s3k-dez-act2.md) — v2 bring-up started; baseline only. Reverse gravity, gravity objects, seamless act change and the end boss all open |
 | S3K | `S3K_DOOMSDAY` | [Zone matrix](../architecture/validation/levels/s3k-ddz.md) — in progress; seeded Sonic route matches native to the `$D01` request, breadth and rewind spots covered; death/restart, native pixels and incoming DEZ open |
 | S3K | `S3K_DOOMSDAY_2` | Audit pending |
 | S3K | `S3K_AIZ_INTRO` | Audit pending |
@@ -157,7 +157,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_SLOT_MACHINE_2` | Audit pending |
 | S3K | `S3K_LRZ_BOSS` | Audit pending |
 | S3K | `S3K_HIDDEN_PALACE` | [Act matrix](../architecture/validation/levels/s3k-hpz-act.md) — in progress; entry, events, animation and teleporter breadth covered; Knuckles fight and Sonic/Tails exit open |
-| S3K | `S3K_DEZ_BOSS` | Audit pending |
+| S3K | `S3K_DEZ_BOSS` | [Final boss matrix](../architecture/validation/levels/s3k-dez-final-boss.md) — v2 bring-up started; `$1700` currently loads the DEZ3 layout with no arena floor and the player falls out and dies. Resource profile, scroll, arena, boss and exit all open |
 | S3K | `S3K_SPECIAL_STAGE_ARENA` | [Sanctuary matrix](../architecture/validation/levels/s3k-hpz-sanctuary.md) — partial; results-return reveal missing |
 
 Initial inventory: S1: 21 slots, S2: 20 slots, S3K: 48 slots; 89 total. These are inventory counts, not coverage percentages.
