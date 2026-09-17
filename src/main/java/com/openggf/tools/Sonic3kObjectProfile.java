@@ -306,6 +306,12 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0xB8 // DDZMissile
     );
 
+    /** Sky Sanctuary's own SKL registrations (the S3KL names at these ids are different objects). */
+    private static final Set<Integer> SSZ_ONLY_IDS = Set.of(
+            0x77, // SSZCutsceneBridge
+            0xAF // SSZCutsceneButton
+    );
+
     /** Every id implemented in at least one S3KL zone. */
     private static final Set<Integer> S3KL_IMPLEMENTED_IDS = union(
             SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS, CNZ_ONLY_IDS, FBZ_ONLY_IDS, LBZ_ONLY_IDS);
@@ -316,9 +322,13 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             if (zoneId == Sonic3kZoneIds.ZONE_MHZ) {
                 return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS);
             }
-            return zoneId == Sonic3kZoneIds.ZONE_DDZ
-                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS)
-                    : union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS);
+            if (zoneId == Sonic3kZoneIds.ZONE_DDZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS);
+            }
+            if (zoneId == Sonic3kZoneIds.ZONE_SSZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, SSZ_ONLY_IDS);
+            }
+            return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS);
         }
         if (zoneId == Sonic3kZoneIds.ZONE_CNZ) {
             return union(SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS, CNZ_ONLY_IDS);

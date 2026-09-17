@@ -6,6 +6,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
 
 ## Gameplay and presentation
 
+- **S3K Sky Sanctuary:** Sky Sanctuary act 1 now plays its teleporter arrival instead of
+  dropping the player in at the level-start position. The screen init forces the arrival
+  camera and bounds, the controller beams Player 1 up the sanctuary column and hands control
+  back on the settle swing, Tails arrives on her own beam, and the act's dynamic camera bands
+  and vertical wrap follow the player. The cutscene Knuckles who opens the route — his beam,
+  the Death Egg he watches rise, the grey button and the bridge that extends over the gap,
+  with the checkpoint it leaves behind — is in place. The recreated Green Hill and Metropolis
+  arenas, their bosses and the Death Egg launch are still to come.
+
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,
   instead of the Super Emerald sanctuary (`$1701`), which remains reachable from the

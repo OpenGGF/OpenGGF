@@ -1462,6 +1462,16 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
 
+        // Sky Sanctuary's SKL object set. The same numeric IDs carry S3KL names
+        // (FBZ_ROTATING_PLATFORM $77, ICZ_CRUSHING_COLUMN $AF) whose factories are
+        // S3KL-bound, so these are additional stock-zone entries rather than edits.
+        registerStockRomZoneBound(Sonic3kObjectIds.FBZ_ROTATING_PLATFORM,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCutsceneBridgeObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.ICZ_CRUSHING_COLUMN,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_SSZ,
+                (spawn, registry) -> new SszCutsceneButtonObjectInstance(spawn));
+
         // The Doomsday Zone's SKL object set.
         registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DDZ,

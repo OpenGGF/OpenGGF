@@ -2617,6 +2617,45 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 -1
         ));
+        // Obj_57C1E's arrival beam and the SSZ branch of Obj_SSZHPZTeleporter render
+        // Map_SSZHPZTeleporter from the level's own tiles: PLC_32_33_34_35 loads
+        // ArtNem_SSZMisc at ArtTile_SSZMisc, and the beam uses
+        // make_art_tile(ArtTile_SSZMisc+$88,3,1) (sonic3k.asm:116781).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_TELEPORTER,
+                Sonic3kConstants.MAP_SSZ_HPZ_TELEPORTER_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x88,
+                3,
+                null));
+        // ChildObjDat_665F6 -> loc_659CC: ObjDat3_664AA draws Map_SSZDeathEggSmall over
+        // ArtKosM_SSZDeathEggSmall at make_art_tile(ArtTile_SSZDeathEggSmall,3,0).
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.SSZ_DEATH_EGG_SMALL,
+                Sonic3kConstants.ART_KOSM_SSZ_DEATH_EGG_SMALL_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_SSZ_DEATH_EGG_SMALL_ADDR,
+                3,
+                -1
+        ));
+        // CutsceneKnux_SSZ shares CutsceneKnux_HPZ's body sheets: Map_Knuckles DPLC'd from
+        // ArtUnc_Knux into ArtTile_CutsceneKnux, and Map_SSZKnucklesTired for $38 bit 6.
+        addCutsceneKnucklesBodySheets(standalone);
+        // ObjDat_SSZCutsceneButton: make_art_tile(ArtTile_SSZCutsceneButton,0,0); the tiles come
+        // from PLC_32_33_34_35's second entry, ArtNem_GrayButton.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_CUTSCENE_BUTTON,
+                Sonic3kConstants.MAP_BUTTON_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_CUTSCENE_BUTTON,
+                0,
+                null));
+        // Obj_SSZCutsceneBridge: make_art_tile(ArtTile_SSZMisc+$20,2,1).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.SSZ_CUTSCENE_BRIDGE,
+                Sonic3kConstants.MAP_SSZ_COLLAPSING_BRIDGE_ADDR,
+                Sonic3kConstants.ARTTILE_SSZ_MISC + 0x20,
+                2,
+                null));
     }
 
     /**
@@ -2770,6 +2809,31 @@ public final class Sonic3kPlcArtRegistry {
                 2,
                 null
         ));
+    }
+
+    /**
+     * The two {@code Obj_CutsceneKnuckles} body sheets both {@code CutsceneKnux_HPZ} and
+     * {@code CutsceneKnux_SSZ} draw: {@code Map_Knuckles} DPLC'd from {@code ArtUnc_Knux} into
+     * {@code ArtTile_CutsceneKnux}, and {@code Map_SSZKnucklesTired} for {@code $38} bit 6. The
+     * key names keep their HPZ spelling because HPZ registered them first; the tired sheet is the
+     * ROM's own {@code SSZ} art.
+     */
+    private static void addCutsceneKnucklesBodySheets(List<StandaloneArtEntry> standalone) {
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES,
+                Sonic3kConstants.ART_UNC_KNUCKLES_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_KNUCKLES_SIZE,
+                Sonic3kConstants.MAP_KNUCKLES_ADDR, 1,
+                Sonic3kConstants.DPLC_KNUCKLES_ADDR,
+                S3kSpriteDataLoader.MappingFormat.STANDARD, -1, 0, DplcLayout.PLAYER));
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.HPZ_CUTSCENE_KNUCKLES_TIRED,
+                Sonic3kConstants.ART_UNC_SSZ_KNUCKLES_TIRED_ADDR,
+                CompressionType.UNCOMPRESSED,
+                Sonic3kConstants.ART_UNC_SSZ_KNUCKLES_TIRED_SIZE,
+                Sonic3kConstants.MAP_SSZ_KNUCKLES_TIRED_ADDR, 1,
+                Sonic3kConstants.DPLC_SSZ_KNUCKLES_TIRED_ADDR));
     }
 
     /**

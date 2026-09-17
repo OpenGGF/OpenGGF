@@ -385,6 +385,14 @@ public final class Sonic3kObjectArtKeys {
 
     // SSZ badniks
     public static final String SSZ_EGG_ROBO = "ssz_egg_robo";
+    /** Obj_57C1E's arrival beam and the SSZ teleporter pads: make_art_tile(ArtTile_SSZMisc+$88,3,1). */
+    public static final String SSZ_TELEPORTER = "ssz_teleporter";
+    /** ObjDat3_664AA: Map_SSZDeathEggSmall over ArtKosM_SSZDeathEggSmall, palette 3. */
+    public static final String SSZ_DEATH_EGG_SMALL = "ssz_death_egg_small";
+    /** ObjDat_SSZCutsceneButton: Map_Button over ArtTile_SSZCutsceneButton (ArtNem_GrayButton). */
+    public static final String SSZ_CUTSCENE_BUTTON = "ssz_cutscene_button";
+    /** Obj_SSZCutsceneBridge: Map_SSZCollapsingBridge over ArtTile_SSZMisc+$20, palette 2. */
+    public static final String SSZ_CUTSCENE_BRIDGE = "ssz_cutscene_bridge";
 
     // DEZ badniks
     public static final String SPIKEBONKER = "dez_spikebonker";

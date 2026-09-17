@@ -47,7 +47,7 @@ import java.util.List;
  * {@code sub_45866} cycles those colours from {@code word_4670C} while a transport is active.
  */
 public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable, SlopedSolidProvider {
+        implements RewindRecreatable, SlopedSolidProvider, TeleporterBeamOwner {
     private static final int HPZ_MAPPING_FRAME = 0xA;
     private static final int HPZ_PALETTE_LINE = 0;
     /** {@code byte_466E8}. */
@@ -412,7 +412,8 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     }
 
     /** Beam {@code clr.b $38(a1)} on deletion. */
-    void onBeamFinished() {
+    @Override
+    public void onBeamFinished() {
         beamFlag = 0;
         beam = null;
     }

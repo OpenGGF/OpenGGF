@@ -44,7 +44,8 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
             {0, 7, 0, 8}, {0, 7, 0, 8}, {0, 7, 0, 8}, {0, 7, 0, 8}, {0, 7, 0, 8}
     };
 
-    private SSZHPZTeleporterObjectInstance parent;
+    private TeleporterBeamOwner parent;
+    private final String artKey;
     private int x;
     private int spawnY;
     private int y;
@@ -67,19 +68,45 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
                                int[] childX, int[] childY, int[] childFrame, ObjectRefId parentId)
             implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
-    public TeleporterBeamObjectInstance(ObjectSpawn spawn, SSZHPZTeleporterObjectInstance parent) {
+    public TeleporterBeamObjectInstance(ObjectSpawn spawn, TeleporterBeamOwner parent) {
+        this(spawn, parent, Sonic3kObjectArtKeys.HPZ_ENTRY_TELEPORTER, false);
+    }
+
+    private TeleporterBeamObjectInstance(ObjectSpawn spawn, TeleporterBeamOwner parent,
+                                         String artKey, boolean startExpanded) {
         super(spawn, "TeleporterBeam");
         this.parent = parent;
+        this.artKey = artKey;
         this.x = spawn.x();
         this.spawnY = spawn.y();
         this.y = spawn.y();
         // move.w y_pos(a0),$44(a0) / subi.w #$88,$44(a0)
         this.expandBaseY = spawn.y() - 0x88;
+        if (startExpanded) {
+            // Obj_57C1E (sonic3k.asm:116775-116786) installs Obj_TeleporterBeamExpand directly
+            // with mainspr_childsprites = 2 and $46 = $18, so the Sky Sanctuary arrival beam
+            // begins fully expanded instead of stacking segments.
+            this.phase = PHASE_EXPAND;
+            this.progress = MAX_PROGRESS;
+            this.segmentCount = 2;
+            this.timer = 0;
+        }
+    }
+
+    /**
+     * {@code Obj_57C1E}: the Sky Sanctuary arrival beam, entered at
+     * {@code Obj_TeleporterBeamExpand} and drawn from the level's {@code ArtNem_SSZMisc} tiles at
+     * {@code make_art_tile(ArtTile_SSZMisc+$88,3,1)} rather than HPZ's queued module.
+     */
+    public static TeleporterBeamObjectInstance sszArrivalBeam(ObjectSpawn spawn,
+                                                              TeleporterBeamOwner parent) {
+        return new TeleporterBeamObjectInstance(spawn, parent,
+                Sonic3kObjectArtKeys.SSZ_TELEPORTER, true);
     }
 
     @Override
     public TeleporterBeamObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new TeleporterBeamObjectInstance(ctx.spawn(), null);
+        return new TeleporterBeamObjectInstance(ctx.spawn(), null, artKey, false);
     }
 
     @Override
@@ -106,7 +133,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
             System.arraycopy(extra.childY(), 0, childY, 0, MAX_SEGMENTS);
             System.arraycopy(extra.childFrame(), 0, childFrame, 0, MAX_SEGMENTS);
             if (extra.parentId() != null) {
-                parent = (SSZHPZTeleporterObjectInstance) context.requireIdentityTable()
+                parent = (TeleporterBeamOwner) context.requireIdentityTable()
                         .resolveObject(extra.parentId(), true);
             }
         }
@@ -229,7 +256,7 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
         if (!visibleThisFrame) {
             return;
         }
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.HPZ_ENTRY_TELEPORTER);
+        PatternSpriteRenderer renderer = getRenderer(artKey);
         if (renderer == null) {
             return;
         }

@@ -2002,6 +2002,18 @@ public class Sonic3kConstants {
     // 22 bytes earlier at 0x046B3C.
     public static final int MAP_SSZ_HPZ_TELEPORTER_ADDR = 0x046B3C;
 
+    /** {@code ArtTile_SSZMisc} (sonic3k.constants.asm:1341): PLC_32_33_34_35 loads ArtNem_SSZMisc here. */
+    public static final int ARTTILE_SSZ_MISC = 0x02D4;
+
+    /** {@code ArtKosM_SSZDeathEggSmall}, queued by CutsceneKnux_SSZ routine 2. */
+    public static final int ART_KOSM_SSZ_DEATH_EGG_SMALL_ADDR = 0x17DBC2;
+    /** {@code Map_SSZDeathEggSmall} (ObjDat3_664AA). */
+    public static final int MAP_SSZ_DEATH_EGG_SMALL_ADDR = 0x066C12;
+    /** {@code ArtTile_SSZCutsceneButton} (sonic3k.constants.asm:1347): ArtNem_GrayButton. */
+    public static final int ARTTILE_SSZ_CUTSCENE_BUTTON = 0x048E;
+    /** {@code Map_SSZCollapsingBridge}, shared by Obj_SSZCutsceneBridge and the collapsing families. */
+    public static final int MAP_SSZ_COLLAPSING_BRIDGE_ADDR = 0x046958;
+
     /**
      * CNZ Act 1 miniboss PLC id.
      *

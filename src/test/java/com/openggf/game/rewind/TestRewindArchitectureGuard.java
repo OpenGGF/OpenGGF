@@ -33,6 +33,24 @@ class TestRewindArchitectureGuard {
             "\\bpublic\\s+void\\s+restoreRewindState\\s*\\(");
 
     private static final Map<String, Integer> OBJECT_REWIND_OVERRIDE_BASELINE = Map.ofEntries(
+            // Sky Sanctuary arrival and cutscene graph. Each override exists for one of two
+            // reasons the generic schema cannot cover: a cross-object SST link the ROM keeps as
+            // a word ($3C the beam, $20 the cutscene Knuckles) which must survive as an
+            // ObjectRefId, or a Gradual_SwingOffset/raw-animation holder whose RewindStateful
+            // value is captured as a typed extra. Restore equality and forward replay are
+            // covered by TestS3kSszArrivalHeadless and TestS3kSszKnucklesBridgeHeadless.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszArrivalControllerObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszArrivalControllerObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszTailsArrivalHelperObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszTailsArrivalHelperObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneKnucklesSpawnerObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneKnucklesSpawnerObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesSszInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/CutsceneKnucklesSszInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszDeathEggSmallObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszDeathEggSmallObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneBridgeObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneBridgeObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#captureRewindState", 2),
             Map.entry("src/main/java/com/openggf/level/objects/AbstractObjectInstance.java#restoreRewindState", 2),
             // Explosion construction factories cannot be derived from placement or services.
@@ -190,7 +208,15 @@ class TestRewindArchitectureGuard {
             // SOZ quicksand halfExtent/variant are immutable subtype decodes.
             // Spawn recreation reconstructs both; cooldown/ownership remains captured
             // by the participant table and cold-route rewind checks.
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SozQuicksandObjectInstance.java#@RewindTransient", 2)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SozQuicksandObjectInstance.java#@RewindTransient", 2),
+            // Sky Sanctuary arrival and cutscene objects: the annotated fields are the placement
+            // X and the release/base Y each object is constructed with. recreateForRewind rebuilds
+            // every one from the same ObjectSpawn, so they are immutable spawn decodes rather than
+            // uncaptured frame state.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszArrivalControllerObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneKnucklesSpawnerObjectInstance.java#@RewindTransient", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszTailsArrivalHelperObjectInstance.java#@RewindTransient", 2),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCutsceneBridgeObjectInstance.java#@RewindTransient", 2)
     );
 
     private static final Set<String> REWIND_REGISTRY_PRODUCTION_ALLOWLIST = Set.of(

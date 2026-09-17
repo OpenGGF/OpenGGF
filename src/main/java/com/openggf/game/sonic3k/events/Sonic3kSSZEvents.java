@@ -1,0 +1,318 @@
+package com.openggf.game.sonic3k.events;
+
+import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.objects.SszArrivalControllerObjectInstance;
+import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
+import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
+
+/**
+ * Sky Sanctuary ({@code $A00}/{@code $A01}) screen events: {@code SSZ1_ScreenInit},
+ * {@code SSZ2_ScreenInit} and the bounds machine {@code sub_575EA} that {@code SSZ1_ScreenEvent}
+ * stage 0 runs every frame (sonic3k.asm:115851-115910, 116198-116290, 117724).
+ *
+ * <p>Persistent event words live in {@link SszZoneRuntimeState} so rewind captures them; the
+ * arrival objects and the four bosses read the same state.
+ */
+public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
+    /** {@code SSZ1_ScreenInit}. */
+    static final int ACT1_CONTROLLER_X = 0x100;
+    static final int ACT1_CONTROLLER_RISE_FRAMES = 0x6C;
+    static final int ACT1_CAMERA_MAX_X = 0x200;
+    static final int ACT1_CAMERA_MAX_Y = 0xBC0;
+    static final int ACT1_CAMERA_X = 0x60;
+    static final int ACT1_CAMERA_Y = 0xF49;
+    /** {@code SSZ2_ScreenInit}. */
+    static final int ACT2_CONTROLLER_X = 0xA0;
+    static final int ACT2_CONTROLLER_RISE_FRAMES = 0x44;
+    static final int ACT2_CAMERA_X = 0;
+    static final int ACT2_CAMERA_Y = 0x649;
+
+    /** The act's full vertical range once an event releases the bounds; also the wrap period. */
+    static final int LEVEL_MIN_Y = -0x100;
+    static final int LEVEL_MAX_Y = 0x1000;
+    /** {@code sub_575EA}: the dynamic-bounds band is only consulted inside this camera Y range. */
+    private static final int DYNAMIC_BOUNDS_MIN_Y = 0x100;
+    private static final int DYNAMIC_BOUNDS_MAX_Y = 0xE00;
+
+    /** {@code word_5778A}: player X limit, then the {@code Camera_min_Y} for everything below it. */
+    private static final int[][] MIN_Y_BAND = {
+            {0x0EE0, 0x0D00}, {0x11E0, 0x0CC0}, {0x1340, 0x0B20}, {0x7FFF, 0x0000}
+    };
+    /** {@code word_5779A}: player X limit, then the {@code Camera_max_Y}. */
+    private static final int[][] MAX_Y_BAND = {
+            {0x0640, 0x0C60}, {0x0880, 0x0CA0}, {0x1200, 0x0C60}, {0x1380, 0x0A80},
+            {0x13C0, 0x0660}, {0x7FFF, 0x03E0}
+    };
+
+    /** {@code loc_57686}: the GHZ recreation band, {@code [$440,$880)} in Player 1's Y. */
+    static final int GHZ_BAND_MIN_Y = 0x440;
+    static final int GHZ_BAND_MAX_Y = 0x880;
+    static final int GHZ_PRE_LOCK_MIN_X = 0x160;
+    static final int GHZ_PRE_LOCK_MAX_X = 0x19A0;
+    static final int GHZ_LOCK_PLAYER_Y = 0x7C0;
+    static final int GHZ_LOCK_CAMERA_X = 0x160;
+    static final int GHZ_ARENA_Y = 0x7C0;
+    /** {@code loc_5770C}: the MTZ recreation, below {@code $440}. */
+    static final int MTZ_PRE_LOCK_MAX_X = 0x1660;
+    static final int MTZ_LOCK_PLAYER_Y = 0x420;
+    static final int MTZ_LOCK_CAMERA_X = 0x1660;
+    static final int MTZ_ARENA_Y = 0x380;
+    /** The head of {@code sub_575EA}: the Mecha Sonic arena. */
+    static final int FINAL_ARENA_CAMERA_X = 0x19A0;
+    static final int FINAL_ARENA_PLAYER_Y = 0x680;
+    static final int FINAL_ARENA_Y = 0x5C0;
+    /** {@code loc_5777E}: a beaten boss opens the act back up. */
+    static final int BEATEN_MIN_X = 0;
+    static final int BEATEN_MAX_X = 0x19A0;
+
+    /** {@code Events_bg} byte offsets. */
+    static final int EV_GHZ_BOSS = 0x00;
+    static final int EV_GHZ_LOCK = 0x01;
+    static final int EV_MTZ_BOSS = 0x02;
+    static final int EV_MTZ_LOCK = 0x03;
+    static final int EV_ARRIVAL_CONTROL = 0x04;
+    static final int EV_EVENT_OWNS_BOUNDS = 0x05;
+    static final int EV_FINAL_ARENA = 0x06;
+    static final int EV_CUTSCENE_BUTTON = 0x08;
+
+    @Override
+    public void update(int act, int frameCounter) {
+        if (!hasRuntime()) {
+            return;
+        }
+        SszZoneRuntimeState state =
+                S3kRuntimeStates.currentSsz(zoneRuntimeRegistry()).orElse(null);
+        if (state == null) {
+            return;
+        }
+        if (!state.screenInitApplied()) {
+            // The load-time call is the owner; this is the fallback for a runtime installed
+            // without one (partial harnesses).
+            state.markScreenInitApplied();
+            applyScreenInit(act, state);
+        }
+        if (act == 0) {
+            // SSZ1_ScreenEvent stage 0 (loc_572BA) runs sub_575EA every frame until
+            // End_of_level_flag starts the launch.
+            dynamicResize(state);
+        }
+    }
+
+    /**
+     * {@code SSZ1_ScreenInit} / {@code SSZ2_ScreenInit} run inside the level load, before the
+     * first {@code Load_Sprites}/{@code Process_Sprites} pass, so the arrival controller's own
+     * init pass is frame 1 and its first {@code loc_57D50} rise step is frame 2. The event
+     * manager calls this from {@code installZoneRuntimeState}, as Doomsday does for its flight
+     * controller.
+     */
+    public void applyScreenInitAtLoad(int act) {
+        if (!hasRuntime()) {
+            return;
+        }
+        SszZoneRuntimeState state =
+                S3kRuntimeStates.currentSsz(zoneRuntimeRegistry()).orElse(null);
+        if (state == null || state.screenInitApplied()) {
+            return;
+        }
+        state.markScreenInitApplied();
+        applyScreenInit(act, state);
+    }
+
+    /**
+     * {@code SSZ1_ScreenInit} / {@code SSZ2_ScreenInit}. The controller, forced camera and
+     * {@code Scroll_lock} are on the no-starpost path only ({@code tst.b (Last_star_post_hit).w});
+     * clearing {@code _unkEE98}/{@code _unkEE9C} happens either way.
+     */
+    private void applyScreenInit(int act, SszZoneRuntimeState state) {
+        Camera camera = camera();
+        // Levels_1000_High: SSZ1 wraps vertically over $1000 and the dynamic bounds reach -$100.
+        camera.setVerticalWrapEnabled(true, LEVEL_MAX_Y);
+        if (!startsAtStarPost()) {
+            int controllerX = act == 0 ? ACT1_CONTROLLER_X : ACT2_CONTROLLER_X;
+            int riseFrames = act == 0 ? ACT1_CONTROLLER_RISE_FRAMES : ACT2_CONTROLLER_RISE_FRAMES;
+            spawnObject(() -> new SszArrivalControllerObjectInstance(
+                    new ObjectSpawn(controllerX, 0x1000, 0, riseFrames, 0, false, 0)));
+            state.setEventsBgByte(EV_EVENT_OWNS_BOUNDS, 0xFF);
+            if (act == 0) {
+                camera.setMaxX((short) ACT1_CAMERA_MAX_X);
+                camera.setMaxY((short) ACT1_CAMERA_MAX_Y);
+                camera.setMaxYTarget((short) ACT1_CAMERA_MAX_Y);
+                camera.setX((short) ACT1_CAMERA_X);
+                camera.setXCopy((short) ACT1_CAMERA_X);
+                camera.setY((short) ACT1_CAMERA_Y);
+                camera.setYCopy((short) ACT1_CAMERA_Y);
+            } else {
+                camera.setX((short) ACT2_CAMERA_X);
+                camera.setXCopy((short) ACT2_CAMERA_X);
+                camera.setY((short) ACT2_CAMERA_Y);
+                camera.setYCopy((short) ACT2_CAMERA_Y);
+            }
+            camera.setScrollLocked(true);
+        }
+        state.setUnkEE98(0);
+        state.setCloudOscillator(0);
+    }
+
+    /**
+     * {@code loc_13AB4} (sonic3k.asm:26439-26449): {@code Current_zone_and_act == $A00} with
+     * {@code Tails_CPU_star_post_flag} clear runs {@code sub_13ECA}, then writes
+     * {@code Tails_CPU_routine = $A} and {@code object_control = $83} — the same branch AIZ1's
+     * intro takes, so Player 2 waits parked at {@code ($7F00,0)} until
+     * {@code Obj_57DCC} beams her in and writes routine 6.
+     *
+     * <p>This is the branch the engine models as the sidekick dormant marker. The ROM's separate
+     * {@code loc_13B18} branch (SOZ1, zone {@code $17}) is a different question and belongs to
+     * {@code SidekickCpuInitializationPolicy}; SSZ does not use it.
+     */
+    public boolean shouldEnterArrivalSidekickDormantMarker(AbstractPlayableSprite sidekick) {
+        return sidekick != null && !startsAtStarPost();
+    }
+
+    /** {@code tst.b (Last_star_post_hit).w}. */
+    private boolean startsAtStarPost() {
+        var levelManager = levelManager();
+        if (levelManager == null) {
+            return false;
+        }
+        var checkpoint = levelManager.getCheckpointState();
+        return checkpoint != null && checkpoint.getStarPostActivationMark() > 0;
+    }
+
+    /**
+     * {@code sub_575EA} (sonic3k.asm:116198-116290): the whole act-1 bounds machine. Boss
+     * allocation at {@code loc_576E8}, {@code loc_5775C} and the final arena belongs to the boss
+     * slices; this reproduces every bounds write and flag test around them.
+     */
+    void dynamicResize(SszZoneRuntimeState state) {
+        if (state.eventsBgByte(EV_FINAL_ARENA) != 0) {
+            return;
+        }
+        Camera camera = camera();
+        AbstractPlayableSprite player = spriteManager().getMainPlayable();
+        if (player == null) {
+            return;
+        }
+        int cameraX = camera.getX() & 0xFFFF;
+        int playerY = player.getCentreY() & 0xFFFF;
+        if (cameraX >= FINAL_ARENA_CAMERA_X && playerY < FINAL_ARENA_PLAYER_Y) {
+            camera.setMinX((short) FINAL_ARENA_CAMERA_X);
+            camera.setMinY((short) FINAL_ARENA_Y);
+            camera.setMaxYTarget((short) FINAL_ARENA_Y);
+            state.setEventsBgByte(EV_FINAL_ARENA, 0xFF);
+            return;
+        }
+        // loc_5761C: while an event owns the bounds (the arrival, a live boss) nothing below runs.
+        if (state.eventsBgByte(EV_EVENT_OWNS_BOUNDS) != 0) {
+            return;
+        }
+        if ((state.eventsBgByte(EV_GHZ_LOCK) | state.eventsBgByte(EV_MTZ_LOCK)) == 0) {
+            applyDynamicYBands(camera, player);
+        }
+        if (playerY >= GHZ_BAND_MIN_Y) {
+            if (playerY >= GHZ_BAND_MAX_Y) {
+                openBounds(camera);
+                return;
+            }
+            ghzBand(state, camera, player, playerY);
+            return;
+        }
+        mtzBand(state, camera, player, playerY);
+    }
+
+    /** {@code loc_5761C}-{@code loc_57674}: the {@code word_5778A}/{@code word_5779A} bands. */
+    private void applyDynamicYBands(Camera camera, AbstractPlayableSprite player) {
+        int cameraY = camera.getY() & 0xFFFF;
+        if (cameraY < DYNAMIC_BOUNDS_MIN_Y || cameraY >= DYNAMIC_BOUNDS_MAX_Y) {
+            // loc_57674: outside the band range the act uses its full height.
+            camera.setMinY((short) LEVEL_MIN_Y);
+            camera.setMaxY((short) LEVEL_MAX_Y);
+            camera.setMaxYTarget((short) LEVEL_MAX_Y);
+            return;
+        }
+        int playerX = player.getCentreX() & 0xFFFF;
+        int minY = bandValue(MIN_Y_BAND, playerX);
+        // cmp.w d0,d2 / bhi: the band only pulls Camera_min_Y down to or below the camera.
+        if (minY <= cameraY) {
+            camera.setMinY((short) minY);
+        }
+        int maxY = bandValue(MAX_Y_BAND, playerX);
+        if (maxY >= cameraY) {
+            camera.setMaxY((short) maxY);
+            camera.setMaxYTarget((short) maxY);
+        }
+    }
+
+    /** The table walk: the first row whose X limit is above the player's X. */
+    private static int bandValue(int[][] table, int playerX) {
+        for (int[] row : table) {
+            if (playerX < row[0]) {
+                return row[1];
+            }
+        }
+        return table[table.length - 1][1];
+    }
+
+    /** {@code loc_57686}-{@code loc_576E8}. */
+    private void ghzBand(SszZoneRuntimeState state, Camera camera,
+                         AbstractPlayableSprite player, int playerY) {
+        int flag = state.eventsBgByte(EV_GHZ_BOSS);
+        if (flag < 0) {
+            openBounds(camera);
+            return;
+        }
+        if (flag != 0) {
+            return;
+        }
+        if (state.eventsBgByte(EV_GHZ_LOCK) == 0) {
+            camera.setMinX((short) GHZ_PRE_LOCK_MIN_X);
+            camera.setMaxX((short) GHZ_PRE_LOCK_MAX_X);
+            if (playerY < GHZ_LOCK_PLAYER_Y
+                    || (camera.getX() & 0xFFFF) != GHZ_LOCK_CAMERA_X
+                    || player.getAir()) {
+                return;
+            }
+            camera.setMaxX((short) GHZ_LOCK_CAMERA_X);
+            camera.setMinY((short) GHZ_ARENA_Y);
+            camera.setMaxYTarget((short) GHZ_ARENA_Y);
+            state.setEventsBgByte(EV_GHZ_LOCK, 0xFF);
+        }
+        // loc_576E8: Obj_SSZGHZBoss and Events_bg+$00 = $7F00 are the GHZ boss slice.
+    }
+
+    /** {@code loc_5770C}-{@code loc_5775C}. */
+    private void mtzBand(SszZoneRuntimeState state, Camera camera,
+                         AbstractPlayableSprite player, int playerY) {
+        int flag = state.eventsBgByte(EV_MTZ_BOSS);
+        if (flag < 0) {
+            openBounds(camera);
+            return;
+        }
+        if (flag != 0) {
+            return;
+        }
+        if (state.eventsBgByte(EV_MTZ_LOCK) == 0) {
+            camera.setMaxX((short) MTZ_PRE_LOCK_MAX_X);
+            // tst.w (Events_bg+$00).w: once the GHZ word is non-zero the left limit opens to 0.
+            int minX = state.eventsBgWord(EV_GHZ_BOSS) != 0 ? 0 : GHZ_PRE_LOCK_MIN_X;
+            camera.setMinX((short) minX);
+            if (playerY < MTZ_LOCK_PLAYER_Y
+                    || (camera.getX() & 0xFFFF) != MTZ_LOCK_CAMERA_X
+                    || player.getAir()) {
+                return;
+            }
+            camera.setMinX((short) MTZ_LOCK_CAMERA_X);
+            camera.setMinY((short) MTZ_ARENA_Y);
+            camera.setMaxYTarget((short) MTZ_ARENA_Y);
+            state.setEventsBgByte(EV_MTZ_LOCK, 0xFF);
+        }
+        // loc_5775C: Obj_SSZMTZBoss and Events_bg+$02 = $7F00 are the MTZ boss slice.
+    }
+
+    /** {@code loc_5777E}. */
+    private void openBounds(Camera camera) {
+        camera.setMinX((short) BEATEN_MIN_X);
+        camera.setMaxX((short) BEATEN_MAX_X);
+    }
+}
