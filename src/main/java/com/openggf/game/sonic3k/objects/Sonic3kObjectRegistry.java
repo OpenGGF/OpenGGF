@@ -819,7 +819,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczStalagtiteObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_ICE_CUBE,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_ICE_CUBE, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -827,7 +827,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczIceCubeObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_ICE_SPIKES,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_ICE_SPIKES, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {
@@ -835,7 +835,7 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                     }
                     return new IczIceSpikesObjectInstance(spawn);
                 });
-        factories.put(Sonic3kObjectIds.ICZ_HARMFUL_ICE,
+        registerZoneSetBound(Sonic3kObjectIds.ICZ_HARMFUL_ICE, S3kZoneSet.S3KL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
                     if (zoneSet != S3kZoneSet.S3KL) {

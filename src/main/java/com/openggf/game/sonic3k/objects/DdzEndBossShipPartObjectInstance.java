@@ -32,7 +32,7 @@ final class DdzEndBossShipPartObjectInstance extends AbstractDdzObjectInstance
     private static final int[][] BREAK_VELOCITIES = {{0x80, -0x200}, {-0x100, -0x100}, {-0x200, -0x300}};
     private static final int PALETTE = 2;
 
-    private final int subtype;
+    private int subtype;
     private int xPos;
     private int yPos;
     private short xVel;

@@ -36,7 +36,7 @@ final class DdzEndBossRocketObjectInstance extends AbstractDdzObjectInstance {
     static final int STATE_FLY = 2;
     static final int STATE_EXPLODING = 3;
 
-    private final int subtype;
+    private int subtype;
     private int xPos;
     private int yPos;
     private short xVel = 0x400;

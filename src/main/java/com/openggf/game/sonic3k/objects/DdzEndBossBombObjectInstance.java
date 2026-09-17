@@ -24,7 +24,7 @@ import java.util.List;
 final class DdzEndBossBombObjectInstance extends AbstractDdzObjectInstance {
     private static final int PALETTE = 2;
 
-    private final int subtype;
+    private int subtype;
     private int xPos;
     private int yPos;
     private short xVel = 0x200;

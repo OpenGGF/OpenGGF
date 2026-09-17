@@ -22,7 +22,7 @@ final class DdzBossExplosionObjectInstance extends AbstractDdzObjectInstance {
     private int yPos;
     private short xVel = 0x100;
     private short yVel;
-    private final boolean followCamera;
+    private boolean followCamera;
     private final S3kRawAnimation.State animation = new S3kRawAnimation.State();
 
 

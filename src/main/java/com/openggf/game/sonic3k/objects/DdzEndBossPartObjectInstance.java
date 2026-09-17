@@ -28,8 +28,8 @@ final class DdzEndBossPartObjectInstance extends AbstractDdzObjectInstance {
     private static final int[][] REAR_OFFSETS = {{-0x20, 0x24}, {-0x10, 0x44}};
     private static final int PALETTE = 2;
 
-    private final int kind;
-    private final int subtype;
+    private int kind;
+    private int subtype;
     private int x;
     private int y;
     private boolean visible;

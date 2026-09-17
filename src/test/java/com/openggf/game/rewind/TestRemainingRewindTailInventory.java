@@ -130,7 +130,9 @@ class TestRemainingRewindTailInventory {
         // real owners or scripted arguments (teleporter beam and route helper, ship child, crane,
         // crane parts, sparks, debris, camera gradual, boss music, Knuckles dust), recreated by the
         // HPZ compatibility, fight and native-sequence graph tests.
-        return new TailInventory(1086, 851, 235, 0, buckets);
+        // Doomsday bring-up: 23 object classes, all passing the isolated sweep through their
+        // private ObjectSpawn probe constructors.
+        return new TailInventory(1109, 874, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

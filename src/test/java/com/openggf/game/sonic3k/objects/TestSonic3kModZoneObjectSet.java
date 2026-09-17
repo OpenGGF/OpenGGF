@@ -243,6 +243,9 @@ class TestSonic3kModZoneObjectSet {
                 Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 Sonic3kObjectIds.HPZ_SUPER_EMERALD,
                 Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
+                Sonic3kObjectIds.DDZ_END_BOSS,
+                Sonic3kObjectIds.DDZ_ASTEROID,
+                Sonic3kObjectIds.DDZ_MISSILE,
                 Sonic3kObjectIds.PACHINKO_ENERGY_TRAP,
                 Sonic3kObjectIds.PACHINKO_FLIPPER,
                 Sonic3kObjectIds.PACHINKO_ITEM_ORB,
@@ -260,7 +263,11 @@ class TestSonic3kModZoneObjectSet {
         Set<Integer> pointerTableCollisionIds = Set.of(
                 Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 Sonic3kObjectIds.HPZ_SUPER_EMERALD,
-                Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL);
+                Sonic3kObjectIds.HPZ_SS_ENTRY_CONTROL,
+                // S3KL's ICZ ice cube, spikes and harmful ice share $B6-$B8.
+                Sonic3kObjectIds.DDZ_END_BOSS,
+                Sonic3kObjectIds.DDZ_ASTEROID,
+                Sonic3kObjectIds.DDZ_MISSILE);
 
         for (int objectId : registry.stockZoneBoundFactoryIds()) {
             if (pointerTableCollisionIds.contains(objectId)) {

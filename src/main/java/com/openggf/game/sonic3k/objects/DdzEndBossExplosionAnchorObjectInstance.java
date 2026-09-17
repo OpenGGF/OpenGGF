@@ -21,7 +21,7 @@ final class DdzEndBossExplosionAnchorObjectInstance extends AbstractDdzObjectIns
     static final int KIND_FALL = 0;
     static final int KIND_EXIT = 1;
 
-    private final int kind;
+    private int kind;
     private int x;
     private int y;
     private boolean initialized;

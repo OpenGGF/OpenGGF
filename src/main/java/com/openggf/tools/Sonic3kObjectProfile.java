@@ -299,6 +299,13 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x93 // MHZEndBoss
     );
 
+    // DDZ-only implementations from SKL ids gated on ZONE_DDZ.
+    private static final Set<Integer> DDZ_ONLY_IDS = Set.of(
+            0xB6, // DDZEndBoss
+            0xB7, // DDZAsteroid
+            0xB8 // DDZMissile
+    );
+
     /** Every id implemented in at least one S3KL zone. */
     private static final Set<Integer> S3KL_IMPLEMENTED_IDS = union(
             SHARED_IMPLEMENTED_IDS, S3KL_ONLY_IDS, CNZ_ONLY_IDS, FBZ_ONLY_IDS, LBZ_ONLY_IDS);
@@ -306,8 +313,11 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
     /** Implemented ids for one ROM zone id, resolved through the same gates as the registry. */
     public static Set<Integer> implementedIdsForZone(int zoneId) {
         if (S3kZoneSet.forZone(zoneId) == S3kZoneSet.SKL) {
-            return zoneId == Sonic3kZoneIds.ZONE_MHZ
-                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS)
+            if (zoneId == Sonic3kZoneIds.ZONE_MHZ) {
+                return union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, MHZ_ONLY_IDS);
+            }
+            return zoneId == Sonic3kZoneIds.ZONE_DDZ
+                    ? union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS, DDZ_ONLY_IDS)
                     : union(SHARED_IMPLEMENTED_IDS, SKL_ONLY_IDS);
         }
         if (zoneId == Sonic3kZoneIds.ZONE_CNZ) {

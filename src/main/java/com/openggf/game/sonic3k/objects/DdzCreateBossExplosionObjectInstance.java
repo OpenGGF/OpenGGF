@@ -41,7 +41,7 @@ final class DdzCreateBossExplosionObjectInstance extends AbstractDdzObjectInstan
         PARAMETERS[subtype] = new Parameters(subtype, timer, xRange, yRange, followParent);
     }
 
-    private final int subtype;
+    private int subtype;
     private int x;
     private int y;
     /** {@code $39}. */

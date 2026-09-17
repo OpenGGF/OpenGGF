@@ -504,8 +504,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * zero in the fresh runtime state.
      */
     private void allocateDdzFlightController() {
-        if (!GameServices.hasRuntime() || GameServices.level() == null
-                || GameServices.level().getObjectManager() == null) {
+        if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null
+                || GameServices.levelOrNull().getObjectManager() == null) {
             return;
         }
         GameServices.level().getObjectManager().createDynamicObject(
@@ -1082,8 +1082,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
      * restart the Doomsday runtime words and allocate the flight controller again.
      */
     private void restoreDdzFlightControllerAfterPlacementReset() {
-        if (!GameServices.hasRuntime() || GameServices.level() == null
-                || GameServices.level().getObjectManager() == null) {
+        if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null
+                || GameServices.levelOrNull().getObjectManager() == null) {
             return;
         }
         boolean present = GameServices.level().getObjectManager().getActiveObjects().stream()

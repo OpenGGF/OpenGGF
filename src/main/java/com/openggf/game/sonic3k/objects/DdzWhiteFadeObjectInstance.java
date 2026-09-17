@@ -25,7 +25,7 @@ import java.util.List;
 final class DdzWhiteFadeObjectInstance extends AbstractDdzObjectInstance {
     enum Mode { DDZ_FLASH, TO_WHITE_HOLD }
 
-    private final Mode mode;
+    private Mode mode;
     private boolean restoring;
     /** {@code $2E}, {@code $39}. */
     private int wait;

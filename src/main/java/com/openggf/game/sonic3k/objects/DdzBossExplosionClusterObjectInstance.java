@@ -37,7 +37,7 @@ final class DdzBossExplosionClusterObjectInstance extends AbstractDdzObjectInsta
             {8, 0x18}, {-0x18, -0x20}, {-0x20, 0x10}, {0x20, -0x10}, {0x20, 0x10}, {0x18, -0x28},
             {-0x28, -8}, {-0x10, 0x20}, {0x28, 0}};
 
-    private final Kind kind;
+    private Kind kind;
     private int offsetX;
     private int offsetY;
     /** Set by {@code loc_82F1C}: {@code st subtype(a1)}. */

@@ -27,7 +27,7 @@ final class DdzEndBossRocketFlameObjectInstance extends AbstractDdzObjectInstanc
     static final int KIND_EXHAUST = 1;
     private static final int PALETTE = 2;
 
-    private final int kind;
+    private int kind;
     private int x;
     private int y;
     private boolean visible;

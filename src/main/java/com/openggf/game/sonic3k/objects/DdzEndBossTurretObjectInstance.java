@@ -32,7 +32,7 @@ final class DdzEndBossTurretObjectInstance extends AbstractDdzObjectInstance {
     private static final int[][] FLICKER_VELOCITIES = {{-0x100, -0x100}, {0x100, -0x100}, {-0x200, -0x200}};
     private static final int PALETTE = 2;
 
-    private final int subtype;
+    private int subtype;
     private boolean armed;
     private int timer;
     /** {@code angle(a0)} word: 0, 2, ... $E. */

@@ -57,3 +57,14 @@ Start locations (`loc_1BE5E`): every breadth row asserts frame-1 y from the ROM 
 (`Sonic_Start_Locations` `$0,$100`), `$20` for Knuckles (`Knux_Start_Locations` `$140,$20`). A capture-tool donor
 session started S2 Tails at (69,656); the production fixture does not, so the donor clip was discarded and the
 pitfall recorded in the `gameplay-capture` skill.
+
+Delivery validation (`run_categories.py --base 4569e5406 --run` on merge `9fd6f65dd`, full selection 2695 classes):
+ordinary 21942 tests, 4 failures, 27 skips (all opt-in capture/measurement/GL-surface properties); guards 669 tests,
+5 failures. All nine failures were inventories and ratchets that the DDZ additions had to update — rewind tail
+inventory (+23 classes, all passing the isolated sweep), DDZ PLC plan size, stock zone-bound object inventory
+(S3KL/SKL `$B6-$B8` pointer-table collisions; ICZ's ice factories now use the same S3KL set binding as their
+neighbours), object profile ids for zone 12, strict `GameServices` null checks, rewind architecture baselines for
+the `AbstractDdzObjectInstance` parent link, and 14 final-scalar coverage gaps (fields made non-final). Rerun:
+the four ordinary classes with the DDZ suites and `TestEveryObjectRewindRoundTrip` (1243 tests) and the four guard
+classes under `-Pguards` (8 tests) pass. Four ICZ trace replays swept in by a `*Icz*` filter are red identically with
+and without the registry change (inherited).

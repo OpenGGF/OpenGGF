@@ -33,8 +33,8 @@ final class DdzEndBossTurretShotObjectInstance extends AbstractDdzObjectInstance
 
     private int xPos;
     private int yPos;
-    private final short xVel;
-    private final short yVel;
+    private short xVel;
+    private short yVel;
 
 
     DdzEndBossTurretShotObjectInstance(DdzEndBossTurretObjectInstance turret, int x, int y, int direction) {
