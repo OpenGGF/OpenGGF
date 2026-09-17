@@ -1,5 +1,6 @@
 package com.openggf.level.objects;
 
+import com.openggf.game.ModApi;
 import com.openggf.game.session.EngineServices;
 import static org.lwjgl.opengl.GL11.GL_LINES;
 import com.openggf.camera.Camera;
@@ -61,7 +62,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
-@com.openggf.game.ModApi
+@ModApi
 public class ObjectManager {
     private static final int BUCKET_COUNT = RenderPriority.MAX - RenderPriority.MIN + 1;
     static final int ANIM_ROLL = 0x02;
@@ -725,6 +726,7 @@ public class ObjectManager {
                     // S3K stays load-then-exec.
                     runTwoAxisLoadThenExecutePlacement(cameraX, false);
                 }
+                assignPendingPlayerSlotAllocations();
                 // S2: NO pre-exec load. ROM S2 is RunObjects (s2.asm:5095) then
                 // exactly one ObjectsManager (s2.asm:5112) = exec -> one load.
                 // The single S2 load runs in the post-block below
@@ -737,6 +739,7 @@ public class ObjectManager {
                 syncActiveSpawnsUnload();
                 cleanupDestroyedDynamicObjects();
                 syncActiveSpawnsLoad(true);
+                assignPendingPlayerSlotAllocations();
                 runExecLoop(cameraX, player, activeSidekicks, inlineSolidResolution, solidPostMovement);
             }
             flushPostExecDynamicSpawns();
@@ -1544,7 +1547,7 @@ public class ObjectManager {
      * Callback interface for unified object drawing.
      * Called before each object is drawn to allow setting up shader uniforms.
      */
-    @com.openggf.game.ModApi
+    @ModApi
     public interface ObjectDrawCallback {
         /**
          * Called before drawing an object.
@@ -2017,8 +2020,35 @@ public class ObjectManager {
         initialDispatch.processFixedObject(object);
     }
 
+    /**
+     * Reserves SSTs that the player's own slot allocated during a player step the
+     * engine runs before the object load (lightning-shield attracted rings).
+     */
+    private void assignPendingPlayerSlotAllocations() {
+        var rings = objectServices.ringManager();
+        if (rings != null) {
+            rings.assignPendingAttractedRingSlots();
+        }
+    }
+
+    /** ROM {@code AllocateObject} availability for allocations deferred past the object load. */
+    public boolean hasFreeDynamicSlotForDeferredAllocation(int alreadyDeferred) {
+        return slotAllocator.freeSlotCount() > alreadyDeferred;
+    }
+
     void flushPostExecDynamicSpawns() {
-        runtimeState.drainPostExecDynamicSpawns().forEach(this::addDynamicObjectNextFrame);
+        var spawns = runtimeState.drainPostExecDynamicSpawns();
+        if (spawns.isEmpty()) {
+            return;
+        }
+        // These spawns model AllocateObject calls from fixed SSTs after
+        // Dynamic_object_RAM; attracted rings deleted earlier in the pass have
+        // already cleared their SSTs.
+        var rings = objectServices.ringManager();
+        if (rings != null) {
+            rings.releaseAttractedRingsDeletingThisPass();
+        }
+        spawns.forEach(this::addDynamicObjectNextFrame);
     }
 
     /**
