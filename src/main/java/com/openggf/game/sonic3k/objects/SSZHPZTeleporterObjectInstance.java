@@ -245,6 +245,9 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
         sprite.setAnimationId(Sonic3kAnimationIds.WALK);
         sprite.setMappingFrame(0);
+        // object_control = 3: bit 1 skips Animate_Sonic, so mapping_frame stays 0 through the rise
+        // and prev_anim keeps the charge's roll.
+        sprite.setObjectMappingFrameControl(true);
         if (isHiddenPalace()) {
             services().camera().setMinX((short) 0xAA0);
         }
@@ -268,6 +271,9 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
             return;
         }
         ObjectControlState.nativeBits0To6CpuAllowedMovementSuppressed().applyTo(sprite);
+        // loc_457BE: object_control = 1 re-enables Animate_Sonic; anim 2 equals prev_anim, so the
+        // roll script resumes where the charge left it instead of restarting.
+        sprite.setObjectMappingFrameControl(false);
         sprite.setAnimationId(Sonic3kAnimationIds.ROLL);
         sprite.setRollingFlagPreserveRadii(true);
         settleBaseY = sprite.getCentreY() & 0xFFFF;

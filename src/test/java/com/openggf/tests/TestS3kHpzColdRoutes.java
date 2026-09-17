@@ -124,6 +124,15 @@ class TestS3kHpzColdRoutes {
      */
     static final int[] NATIVE_LAG_FRAMES = {447347};
 
+    /**
+     * Native Player_1 {@code anim}/{@code mapping_frame} ({@code probe-anim}): the rise holds frame 0
+     * ({@code object_control} bit 1 skips Animate_Sonic), and the settle's roll resumes mid-script
+     * because {@code prev_anim} kept the charge's roll.
+     */
+    static final int[][] NATIVE_ANIMATION_CHECKPOINTS = {
+            {443560, 0, 0}, {443567, 2, 153}, {443572, 2, 150}, {443577, 2, 154}, {443632, 5, 186},
+    };
+
     @Test
     void recordedInputsMatchNativeCheckpointsThroughTheEndingToSkySanctuary() throws Exception {
         var config = SonicConfigurationService.getInstance();
@@ -146,6 +155,12 @@ class TestS3kHpzColdRoutes {
                 continue;
             }
             fixture.stepFrameFromRecording();
+            for (int[] anim : NATIVE_ANIMATION_CHECKPOINTS) {
+                if (anim[0] == movieFrame) {
+                    assertArrayEquals(anim, new int[]{movieFrame, p1.getAnimationId(), p1.getMappingFrame()},
+                            "Player_1 anim/mapping_frame at movie frame " + movieFrame);
+                }
+            }
             if (movieFrame == FIRST_LEVEL_FRAME + 1) {
                 assertTrue(p1.isControlLocked(), "Obj_LevelIntro_PlayerRun locks Ctrl_1 from the first frame");
             }
