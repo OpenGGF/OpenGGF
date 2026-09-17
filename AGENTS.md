@@ -316,6 +316,8 @@ never preserved.
   `s3k-disasm-guide` skill.
 - Trace failures: `trace-replay-bug-fixing`; multiple independent traces:
   `trace-green-fleet`; video: `trace-capture`; recording: `bizhawk-headless-trace`.
+- Native BizHawk screenshots or state observations for ROM corroboration:
+  `bizhawk-native-reference-capture`.
 - Picture or movie of any gameplay section: `gameplay-capture`; scripted
   controller input for it or for a probe: `bk2-input-authoring`.
 - PLC/art queues: `plc-system`, plus `s3k-plc-system` for S3K.
