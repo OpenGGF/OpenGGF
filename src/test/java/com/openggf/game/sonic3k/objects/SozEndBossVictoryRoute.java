@@ -12,7 +12,9 @@ public final class SozEndBossVictoryRoute {
     private final boolean pressOnlyWhenGrounded;
     private int holdUntil=-1;
 
-    public SozEndBossVictoryRoute() { this(48,12,-12); }
+    // The lower shell hurts on the landing pass itself (sub_78136 after SolidObjectFull2), so
+    // the default rhythm lands a little to the right of the pilot instead of on that shell.
+    public SozEndBossVictoryRoute() { this(44,14,4); }
 
     /** Authored controller choices, never runtime boss or physics parameters. */
     SozEndBossVictoryRoute(int jumpPeriod,int jumpHold,int approachOffset) {

@@ -135,8 +135,6 @@ public final class SozEndBossChild extends AbstractObjectInstance
         if(role==LOWER&&boss.shellOpen()){releaseRiders();shellWaiting=true;
             if(boss.defeated())ObjectLifetimeOps.deleteNoRespawn(this);return;}
         shellWaiting=false;dx=role==REAR?32:0;dy=role==UPPER?-20:role==LOWER?68:0;follow();
-        var standing=new IdentityHashMap<PlayableEntity,Boolean>();
-        for(var p:players())standing.put(p,services().objectManager().hasObjectStandingBit(p,this));
         var contacts=checkpointAll();
         if(contacts!=null)contacts.perPlayer().forEach((p,c)->{
             if(role==UPPER&&c.kind()==ContactKind.SIDE){
@@ -144,10 +142,21 @@ public final class SozEndBossChild extends AbstractObjectInstance
                 else if(!isKnuckles(p)||p.getAnimationId()==2
                         ||p instanceof AbstractPlayableSprite a&&a.getDoubleJumpFlag()==1){
                     boss.openShell(p);shellWaiting=true;releaseRiders();}
-            } else if(role==LOWER&&(c.kind()==ContactKind.SIDE||Boolean.TRUE.equals(standing.get(p)))) {
-                p.setOnObject(false);if(!p.getInvulnerable())hurt(p,vIntRunCount);
             }
         });
+        if(role==LOWER){
+            // sub_78120/sub_78136 run after SolidObjectFull2: a side push, or the standing bit it
+            // just set on landing, clears Status_OnObj and that standing bit before sub_24280.
+            var manager=services().objectManager();
+            for(var p:players()){
+                var c=contacts==null?null:contacts.perPlayer().get(p);
+                boolean side=c!=null&&c.kind()==ContactKind.SIDE;
+                boolean nowStanding=manager!=null&&manager.hasObjectStandingBit(p,this);
+                if(!side&&!nowStanding)continue;
+                if(!side)manager.clearRidingObject(p);
+                p.setOnObject(false);if(!p.getInvulnerable())hurt(p,vIntRunCount);
+            }
+        }
         if(role==REAR?boss.dismantling():boss.defeated()){releaseRiders();ObjectLifetimeOps.deleteNoRespawn(this);}
     }
     private boolean isKnuckles(PlayableEntity p){return p instanceof AbstractPlayableSprite a
