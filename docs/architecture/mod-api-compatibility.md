@@ -56,6 +56,11 @@ is also exposed by `ObjectManager` for children that retain a parent's layout
 entry. These update the mutable `0.7` pin; the descriptor's candidate version
 remains `0.7.0` and no published baseline is created.
 
+The Hidden Palace completion adds `SpecialStageProvider.resultsExitFadesToWhite()` (default
+`true`: the Sonic 1/2 exit SFX and white fade; Sonic 3&K leaves silently through black) and
+`GameLoop.debugCompleteSpecialStageWithEmerald()`, the debug completion that capture tools
+request without reading a key binding. Both update the mutable `0.7` pin.
+
 ## What the 0.7 candidate includes
 
 The candidate exposes the accumulated creator capabilities together:

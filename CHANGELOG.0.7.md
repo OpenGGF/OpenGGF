@@ -26,7 +26,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   zone's card. A cleared Super Emerald stage now tallies over the rebuilt sanctuary as it
   fades in from white, pans down to the pedestals, closes a ring of stars on the new
   emerald and, once all seven are held, announces "NOW SONIC CAN BE HYPER SONIC"; the
-  small Chaos Emerald indicators only show emeralds that have not been converted.
+  small Chaos Emerald indicators only show emeralds that have not been converted. Leaving any S3K special-stage results screen now fades to black without the stage
+  transition sound, as in the ROM, instead of fading to white.
 - **S3K player abilities and Sandopolis timing:** Knuckles now breaks the
   Knuckles-only walls (HCZ, MGZ, CNZ, LBZ, MHZ and SOZ variants) when he hits them
   in mid-air, keeping his speed as the ROM does, instead of stopping against them.

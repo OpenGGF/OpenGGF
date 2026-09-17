@@ -1,5 +1,6 @@
 package com.openggf;
 
+import com.openggf.game.ModApi;
 import com.openggf.game.GameOverExit;
 import com.openggf.game.ContinueScreenProvider;
 import com.openggf.game.session.EngineContext;
@@ -112,7 +113,7 @@ import java.util.logging.Logger;
  * For headless testing, create a GameLoop with a mock InputHandler
  * and call {@link #step()} to advance one frame.
  */
-@com.openggf.game.ModApi
+@ModApi
 public class GameLoop {
     static final int STATUS_FIRE_SHIELD_BIT = 4;
     static final int STATUS_LIGHTNING_SHIELD_BIT = 5;
@@ -265,6 +266,7 @@ public class GameLoop {
     private boolean bonusStageTransitionPending;
     /** The results-exit fade completed this iteration; the exit body waits one more. */
     private boolean resultsExitFadeCompleted;
+    private boolean resultsExitToWhite = true;
     /** The results-exit body runs at the start of this iteration's mode update. */
     private boolean resultsExitReady;
     /** Remaining game-owned pre-level fade frames; -1 while no exit is in flight. */
@@ -400,7 +402,7 @@ public class GameLoop {
 
     /** @deprecated use {@link com.openggf.GameModeChangeListener}. */
     @Deprecated
-    @com.openggf.game.ModApi
+    @ModApi
     public interface GameModeChangeListener extends com.openggf.GameModeChangeListener {
     }
 
@@ -3163,19 +3165,19 @@ public class GameLoop {
             return;
         }
 
-        // Play the special stage exit sound (same as entry sound)
-        playSpecialStageTransitionSfx(getActiveSpecialStageProvider());
-
-        // Start fade-to-white, then show title card when complete. The
-        // completion only latches the exit: the fade update that completes it
-        // runs at the start of the results screen's last whiteout frame, and
-        // the exit body (the returning level's load) must not run until the
+        // Fade out, then show title card when complete. The completion only latches the exit:
+        // the fade update that completes it runs at the start of the results screen's last
+        // faded frame, and the exit body (the returning level's load) must not run until the
         // iteration after that frame's V-int sample.
-        GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager, () -> {
-            resultsExitFadeCompleted = true;
-        });
-
-        LOGGER.info("Starting fade-to-white to exit Results Screen");
+        resultsExitToWhite = getActiveSpecialStageProvider().resultsExitFadesToWhite();
+        if (resultsExitToWhite) {
+            playSpecialStageTransitionSfx(getActiveSpecialStageProvider());
+            GameLoopPlcLifecycle.startToWhite(resolveGameplayModeContext(), fadeManager,
+                    () -> resultsExitFadeCompleted = true);
+        } else {
+            GameLoopPlcLifecycle.startToBlack(resolveGameplayModeContext(), fadeManager,
+                    () -> resultsExitFadeCompleted = true);
+        }
     }
 
     /**
@@ -3205,7 +3207,7 @@ public class GameLoop {
                 gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
             }
 
-            GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
+            startResultsReturnFadeIn();
 
             LOGGER.info("Exited Results Screen, loaded starting level (no previous level)");
             return;
@@ -3289,7 +3291,7 @@ public class GameLoop {
             if (gameModeChangeListener != null) {
                 gameModeChangeListener.onGameModeChanged(oldMode, currentGameMode);
             }
-            fadeManager.startFadeFromWhite(null);
+            startResultsReturnFadeIn();
             requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
             LOGGER.info("Exited Results Screen directly into the HPZ sanctuary hub"
                     + " (stage=" + ssStageIndex + ", success=" + ssEmeraldCollected + ")");
@@ -3315,13 +3317,20 @@ public class GameLoop {
         int actIndex = levelManager.getApparentAct();
         enterTitleCardFromResults(zoneIndex, actIndex);
 
-        // Reveal the title card by fading from white (the screen is currently white
-        // from exitResultsScreen()'s fade-to-white). Without this, the white overlay
+        // Reveal the title card from the exit fade's colour. Without this, the overlay
         // persists indefinitely because completeFade() sees no new fade was started.
-        GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
+        startResultsReturnFadeIn();
         requestSessionSave(SaveReason.SPECIAL_STAGE_SAVE);
 
         LOGGER.info("Exited Results Screen, entering Title Card for zone " + zoneIndex + " act " + actIndex);
+    }
+
+    private void startResultsReturnFadeIn() {
+        if (resultsExitToWhite) {
+            GameLoopPlcLifecycle.startFromWhite(resolveGameplayModeContext(), fadeManager, null);
+        } else {
+            GameLoopPlcLifecycle.startFromBlack(resolveGameplayModeContext(), fadeManager, null);
+        }
     }
 
     /**
