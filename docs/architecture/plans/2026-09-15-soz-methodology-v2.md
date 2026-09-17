@@ -3295,3 +3295,9 @@ pair at y 192, 8x32), while the engine submitted 32x8 and masked only lines 192-
 old whole-tile clip happened to hide the boss rows 200-203 too. The pair is now 1x4 tiles;
 the native SAT from that frame is a unit test. This also applies to the FBZ2 subboss and
 the SOZ sprite-mask object, which share frame 4.
+
+After `cf4622183` (same rows and native frames, fresh full-run capture): pyramid window 72
+better / 0 worse, end-boss window 17 better / 0 worse; rows within 2 pixels (the HUD floor)
+22 -> 26 in the end-boss window and 2 -> 2 in the pyramid, where the remaining difference is
+mostly the plane offset from the survey. Broad category run against `4569e5406`: ordinary
+21887 tests and guards 669, no failures. The FBZ2 subboss mask was not natively compared.
