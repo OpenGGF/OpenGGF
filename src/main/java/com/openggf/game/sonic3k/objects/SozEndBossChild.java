@@ -78,7 +78,7 @@ public final class SozEndBossChild extends AbstractObjectInstance
         switch(role) {
             case OVERLAY -> {x=0x5260;y=0x710;}
             case FRONT -> {dy=36;frame=6;return true;}
-            case PILOT -> {dy=-28;follow();visible=true;if(boss.knuckles())boss.queueKosinskiArt(0x15FDDC,0x52E);return true;}
+            case PILOT -> {dy=-28;follow();visible=true;if(boss.knuckles())boss.queuePilotArt(0x15FDDC,0x52E);return true;}
             case SHOULDER,BACK_SHOULDER -> {dy=40;frame=role==SHOULDER?0:3;return true;}
             case ELBOW,BACK_ELBOW -> {frame=role==ELBOW?1:4;return true;}
             case HAND,BACK_HAND -> {frame=role==HAND?2:5;return true;}

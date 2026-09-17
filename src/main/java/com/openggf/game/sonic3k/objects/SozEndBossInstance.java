@@ -24,10 +24,13 @@ public final class SozEndBossInstance extends AbstractObjectInstance
     private int chargeTimer = 0xC0, hits = 8, flashTimer;
     private boolean collisionEnabled, hitPending, defeated, dismantling, hidden, flipped;
     private int escapePhase, swingVelocity, swingDirection, forcedJumpTimer;
+    // Timing-ledger KosM jobs this boss submitted and has not yet claimed.
+    private long shipArtOrdinal=-1, pilotArtOrdinal=-1;
     public SozEndBossInstance(ObjectSpawn spawn) {
         super(spawn,"SOZEndBoss");xFixed=spawn.x()<<16;yFixed=spawn.y()<<16;baseY=spawn.y();
     }
     @Override public void update(int vIntRunCount, PlayableEntity player) {
+        shipArtOrdinal=claimReadyArt(shipArtOrdinal);pilotArtOrdinal=claimReadyArt(pilotArtOrdinal);
         if(escapePhase!=0) { escape(player);return; }
         switch(routine) {
             case 0 -> initialize();
@@ -77,18 +80,30 @@ public final class SozEndBossInstance extends AbstractObjectInstance
                 var modified=Sonic3kPlcLoader.applyToLevel(plc,level,services().rom());
                 Sonic3kPlcLoader.refreshAffectedRenderers(modified,services().levelManager());
             }
-            queueKosinskiArt(0x16E1B0,0x3A4);
+            shipArtOrdinal=queueKosinskiArt(0x16E1B0,0x3A4);
         } catch(IOException e){throw new UncheckedIOException(e);}
     }
-    void queueKosinskiArt(int source,int tile) {
+    void queuePilotArt(int source,int tile){pilotArtOrdinal=queueKosinskiArt(source,tile);}
+    private long queueKosinskiArt(int source,int tile) {
         try {
             var queue=services().kosinskiModuleQueue();
-            if(queue==null)return;
+            if(queue==null)return -1;
             Sonic3kPlcLoader.bindRuntimePatternDmaTarget(queue,services());
             queue.enqueue(services().rom(),source,tile*32);
-            com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services())
-                    .moduleQueue().queue(services().rom(),source,tile);
+            return com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services())
+                    .moduleQueue().queue(services().rom(),source,tile).ordinal();
         } catch(IOException e){throw new UncheckedIOException(e);}
+    }
+    /** Claims a finished Queue_Kos_Module job so the timing ledger retires it. */
+    private long claimReadyArt(long ordinal) {
+        if(ordinal<0)return ordinal;
+        var queue=com.openggf.game.sonic3k.resources.S3kRuntimeArtCoordinator.from(services()).moduleQueue();
+        var handle=services().hardwareTiming().pendingHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,ordinal)
+                .orElseThrow(()->new IllegalStateException("SOZ end boss lost its submitted KosM job"));
+        if(!queue.isReady(handle))return ordinal;
+        queue.claim(handle);
+        return -1;
     }
     private void loadWalk(boolean returnRight) {
         int address=returnRight?0x78060:knuckles()?0x77766:0x7775A;
