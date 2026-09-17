@@ -1,6 +1,0 @@
-com.openggf.game.sonic3k.objects.HpzTeleporterRouteHelperObjectInstance#objectRef#teleporter
-com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance#finalScalar#x
-com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance#finalScalar#y
-com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance#finalScalar#expandBaseY
-com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance#finalScalar#spawnY
-com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance#finalScalar#x
