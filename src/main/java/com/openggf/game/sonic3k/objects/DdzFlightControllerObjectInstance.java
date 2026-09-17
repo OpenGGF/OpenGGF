@@ -2,7 +2,6 @@ package com.openggf.game.sonic3k.objects;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.sonic3k.Sonic3kSuperStateController;
 import com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -10,9 +9,7 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.ObjectSpawn;
-import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.physics.Direction;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -43,8 +40,7 @@ import java.util.List;
  * <p>Debug placement mode ({@code sub_8151C}) is not modelled: the engine debug mode does not use the
  * ROM's object placement flow, so the controller treats {@code Debug_placement_mode} as zero.
  */
-public final class DdzFlightControllerObjectInstance extends AbstractObjectInstance
-        implements RewindRecreatable {
+public final class DdzFlightControllerObjectInstance extends AbstractDdzObjectInstance {
     static final int MODE_MAIN = 0;
     static final int MODE_LOCKED = 1;
     static final int MODE_WRAP = 2;
@@ -87,16 +83,13 @@ public final class DdzFlightControllerObjectInstance extends AbstractObjectInsta
     /** {@code $3C(a0)}: {@code Camera_max_X_pos} offset from {@code Camera_min_X_pos}. */
     private int maxXOffset;
 
-    private record RewindExtra(int mode, int routine, int xPos, int yPos, short xVel, short yVel,
-                               int timer, int flags, int maxXOffset)
-            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
 
     public DdzFlightControllerObjectInstance() {
         this(new ObjectSpawn(0, 0, 0, 0, 0, false, 0));
     }
 
     public DdzFlightControllerObjectInstance(ObjectSpawn spawn) {
-        super(spawn, "DdzFlightController");
+        super(spawn, "DdzFlightController", null);
     }
 
     @Override
@@ -105,7 +98,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractObjectInsta
     }
 
     @Override
-    public void update(int vIntRunCount, PlayableEntity playerEntity) {
+    protected void updateObject(int vIntRunCount, PlayableEntity playerEntity) {
         DdzZoneRuntimeState ddz = ddz();
         AbstractPlayableSprite player = services().spriteManager().getMainPlayable();
         if (ddz == null || player == null) {
@@ -272,7 +265,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractObjectInsta
             return;
         }
         player.applyCrushDeath();
-        ObjectLifetimeOps.deleteNoRespawn(this);
+        deleteNow();
     }
 
     /** {@code sub_82742}. */
@@ -487,6 +480,11 @@ public final class DdzFlightControllerObjectInstance extends AbstractObjectInsta
         xVel = (short) velocity;
     }
 
+    /** {@code clr.w y_vel(a1)} from the end boss exit. */
+    public void setYVelocity(int velocity) {
+        yVel = (short) velocity;
+    }
+
     /** {@code bclr/bset #2,$38(a1)} from the end boss. */
     public void setFollowY(boolean follow) {
         flags = follow ? flags | (1 << 2) : flags & ~(1 << 2);
@@ -513,27 +511,7 @@ public final class DdzFlightControllerObjectInstance extends AbstractObjectInsta
         return registry == null ? null : S3kRuntimeStates.currentDdz(registry).orElse(null);
     }
 
-    @Override
-    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
-        return super.captureRewindState(context).withObjectSubclassExtra(new RewindExtra(
-                mode, routine, xPos, yPos, xVel, yVel, timer, flags, maxXOffset));
-    }
 
-    @Override
-    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
-        super.restoreRewindState(snapshot, context);
-        if (snapshot.objectSubclassExtra() instanceof RewindExtra extra) {
-            mode = extra.mode();
-            routine = extra.routine();
-            xPos = extra.xPos();
-            yPos = extra.yPos();
-            xVel = extra.xVel();
-            yVel = extra.yVel();
-            timer = extra.timer();
-            flags = extra.flags();
-            maxXOffset = extra.maxXOffset();
-        }
-    }
 
     @Override
     public boolean isPersistent() {

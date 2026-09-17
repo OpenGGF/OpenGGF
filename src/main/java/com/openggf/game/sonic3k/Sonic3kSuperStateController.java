@@ -209,6 +209,19 @@ public class Sonic3kSuperStateController extends SuperStateController {
         ensureHyperSonicStars(levelManager != null ? levelManager.getObjectManager() : null);
     }
 
+    /** {@code move.w #$7FFF,(Super_frame_count).w} in the Doomsday exit ({@code loc_82E2C}). */
+    public void holdDoomsdayRingDrain() {
+        RewindState current = captureRewindState();
+        restoreCoreRewindState(new RewindState(current.state(), 0x7FFF, current.paletteState(), current.paletteFrame(),
+                current.paletteTimer(), current.transformFramesRemaining(), current.presentationTier(),
+                current.savedNormalPalette(), current.savedNormalUnderwaterPalette()));
+    }
+
+    /** {@code clr.b (Super_palette_status).w} in the Doomsday exit ({@code loc_81C70}): the cycle stops. */
+    public void clearDoomsdayPalette() {
+        paletteState = 0;
+    }
+
     @Override
     public RewindState captureRewindState() {
         int companionState = ((superTailsCompanionPaletteFrame / BYTES_PER_FRAME) & 0xF)

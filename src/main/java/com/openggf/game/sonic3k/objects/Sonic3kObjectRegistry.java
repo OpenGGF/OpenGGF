@@ -1462,6 +1462,17 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZSSEntryControlObjectInstance(spawn));
 
+        // The Doomsday Zone's SKL object set.
+        registerStockRomZoneBound(Sonic3kObjectIds.DDZ_END_BOSS,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DDZ,
+                (spawn, registry) -> new DdzEndBossObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DDZ_ASTEROID,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DDZ,
+                (spawn, registry) -> new DdzAsteroidObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.DDZ_MISSILE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_DDZ,
+                (spawn, registry) -> new DdzMissileObjectInstance(spawn));
+
         // Obj_HPZSSEntryControl and its children belong to the $1701
         // sanctuary reached by SSEntryFlash_GoSS, as well as its engine alias.
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,

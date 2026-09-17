@@ -392,6 +392,10 @@ public final class Sonic3kObjectArtKeys {
 
     // DDZ badniks
     public static final String DDZ_EGG_ROBO = "ddz_egg_robo";
+    /** {@code Map_DDZMissileAsteroid} over {@code ArtKosM_DDZMisc}. */
+    public static final String DDZ_MISC = "ddz_misc";
+    /** {@code Map_BossMasterEmerald} over {@code ArtKosM_BossMasterEmerald}. */
+    public static final String DDZ_MASTER_EMERALD = "ddz_master_emerald";
 
     // StillSprite per-zone art sheet keys (grouped by artTileBase)
     public static final String STILL_AIZ_MISC2 = "still_aiz_misc2";       // base 0x2E9
