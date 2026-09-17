@@ -75,8 +75,8 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
     static final int STATE_ALTAR_BEAM = 5;
     static final int STATE_ALTAR_DONE = 6;
 
-    private final int x;
-    private final int y;
+    private int x;
+    private int y;
     private int subtype;
     private boolean initialized;
     private int state;

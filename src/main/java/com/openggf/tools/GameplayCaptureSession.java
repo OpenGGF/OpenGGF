@@ -93,6 +93,8 @@ public final class GameplayCaptureSession implements AutoCloseable {
         config.resolveDisplayAspect();
     }
 
+    private boolean showTitleCard;
+
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
     public void boot(Path romPath, int zone, int act, Settings settings) throws IOException {
         if (loop != null) {
@@ -100,10 +102,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
         }
         loop = boot.boot(romPath, zone, act);
         LevelManager level = GameServices.level();
+        showTitleCard = settings.showTitleCard();
         // Omit only presentation. The native title owner must still retire its
         // children/admission lease and publish any title-owned level objects.
-        level.skipPendingInitialTitleCardPresentation();
-        if (loop.getCurrentGameMode() != GameMode.LEVEL) {
+        if (!showTitleCard) {
+            level.skipPendingInitialTitleCardPresentation();
+        }
+        if (loop.getCurrentGameMode() != GameMode.LEVEL
+                && !(showTitleCard && loop.getCurrentGameMode() == GameMode.TITLE_CARD)) {
             throw new IllegalStateException("capture did not boot into LEVEL mode: " + loop.getCurrentGameMode());
         }
         if (settings.donorActive()) {
@@ -119,6 +125,16 @@ public final class GameplayCaptureSession implements AutoCloseable {
                 throw new IllegalStateException("donor '" + settings.donor()
                         + "' did not activate; check the donor ROM configuration");
             }
+        }
+        if (settings.emeraldStates() != null) {
+            // Declared capture setup: seven ROM Collected_emeralds_array values (0-3).
+            java.util.List<Integer> states = settings.emeraldStates().chars()
+                    .map(c -> c - '0').boxed().toList();
+            if (states.size() != 7 || states.stream().anyMatch(v -> v < 0 || v > 3)) {
+                throw new IllegalArgumentException("--emeralds needs seven digits 0-3");
+            }
+            GameServices.gameState().restoreS3kEmeraldProgress(states,
+                    states.stream().anyMatch(v -> v >= 2));
         }
         player = GameServices.camera().getFocusedSprite();
         if (player == null) {
@@ -147,7 +163,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
         previousInput = current;
         // A later level load has the same native omitted-title boundary as
         // boot; consuming only its request would discard the owner's teardown.
-        GameServices.level().skipPendingInitialTitleCardPresentation();
+        if (!showTitleCard) {
+            GameServices.level().skipPendingInitialTitleCardPresentation();
+        }
         UiRenderPipeline ui = GameServices.graphics().getUiRenderPipeline();
         if (ui != null) {
             ui.updateFade();
@@ -170,6 +188,14 @@ public final class GameplayCaptureSession implements AutoCloseable {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
         graphics.flush();
+        var titleCard = showTitleCard ? loop.getTitleCardProvider() : null;
+        if (titleCard != null && (loop.getCurrentGameMode() == GameMode.TITLE_CARD
+                || titleCard.isOverlayActive())) {
+            // Engine.drawTitleCardMode / drawActiveLevelTitleCardOverlay.
+            graphics.resetForFixedFunction();
+            titleCard.draw();
+            graphics.flushScreenSpace();
+        }
         UiRenderPipeline ui = graphics.getUiRenderPipeline();
         if (ui != null) {
             ui.renderFadePass();
@@ -253,7 +279,13 @@ public final class GameplayCaptureSession implements AutoCloseable {
      * ROM path when non-null; {@code sidekickCharacter} is blank for solo.
      */
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
-                           Path donorRom, Integer startX, Integer startY) {
+                           Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                           boolean showTitleCard) {
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false);
+        }
+
         public Settings {
             Objects.requireNonNull(mainCharacter, "mainCharacter");
             sidekickCharacter = sidekickCharacter == null ? "" : sidekickCharacter;

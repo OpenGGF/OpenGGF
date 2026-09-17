@@ -333,25 +333,42 @@ public final class Sonic3kTitleCardMappings {
     }
 
     /**
-     * Maps zone index to mapping frame index.
-     * Zones 0-12 map directly (zone + 4). HPZ is a special case.
+     * Zone-name mapping frame for a zone/act. {@code Obj_TitleCardName} adds
+     * {@code Apparent_zone} to the base frame, then overrides {@code $1600} (LRZ name),
+     * {@code $1601} (Hidden Palace) and {@code $1700} (Death Egg) (sonic3k.asm:62336-62349).
      */
-    public static int getZoneFrame(int zoneIndex) {
+    public static int getZoneFrame(int zoneIndex, int actIndex) {
+        if (zoneIndex == 22) {
+            return actIndex == 0 ? FRAME_LRZ : FRAME_HPZ;
+        }
+        if (zoneIndex == 23 && actIndex == 0) {
+            return FRAME_DEZ;
+        }
         if (zoneIndex >= 0 && zoneIndex <= 12) {
             return zoneIndex + FRAME_AIZ;  // zone 0 → frame 4, zone 12 → frame 16
-        }
-        // Special zone mappings (HPZ = zone 22 in S3K addressing)
-        if (zoneIndex == 22) {
-            return FRAME_HPZ;
         }
         return FRAME_AIZ;  // Fallback to AIZ
     }
 
     /**
-     * Returns whether the zone shows only 1 act (no act number displayed).
-     * SSZ (zone 10), DDZ (zone 12), HPZ (zone 22) are single-act.
+     * {@code TitleCard_LevelGfx} index: {@code $1600} → LRZ, {@code $1601} → HPZ,
+     * {@code $1700} → DEZ, otherwise {@code Apparent_zone} (sonic3k.asm:62141-62146).
      */
-    public static boolean isSingleActZone(int zoneIndex) {
-        return zoneIndex == 10 || zoneIndex == 12 || zoneIndex == 22;
+    public static int zoneArtIndex(int zoneIndex, int actIndex) {
+        if (zoneIndex == 22) {
+            return actIndex == 0 ? 9 : 13;
+        }
+        if (zoneIndex == 23 && actIndex == 0) {
+            return 11;
+        }
+        return zoneIndex;
+    }
+
+    /**
+     * Whether the act number is hidden. {@code Obj_TitleCardAct} deletes itself for Sky
+     * Sanctuary, Doomsday and {@code $1601} Hidden Palace only (sonic3k.asm:62385-62396).
+     */
+    public static boolean isSingleActZone(int zoneIndex, int actIndex) {
+        return zoneIndex == 10 || zoneIndex == 12 || (zoneIndex == 22 && actIndex == 1);
     }
 }

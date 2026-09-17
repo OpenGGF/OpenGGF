@@ -184,6 +184,11 @@ including inherited teleporter entries; all were resolved in `1cb447aab`.
 | `04-hpz-knuckles-background-patch-before-after.mp4` | `HPZ_BackgroundInit` Knuckles row patch removes the Master Emerald backdrop | `--main knuckles`, same input, frames 385-660 | Backdrop enters at ~423 |
 | `05-hpz-teleporter-lower-to-upper-pad.mp4` | `Obj_SSZHPZTeleporter` + `Obj_TeleporterBeam`: charge, rise `$4A0`, settle on the upper pad | Teleport `$AF0,$8B0`, `inputs/jump-onto-pad.txt`, frames 80-480 | Lands ~118, rise 260-340, released ~440 |
 | `06-hpz-knuckles-teleporter-exit-to-ssz2.mp4` | Knuckles' forced `$4A` upper pad lifts him above camera Y `$240`; `loc_45B94` saves and starts `$A01` | `--main knuckles`, teleport `$AF0,$400`, `inputs/jump-onto-pad.txt`, frames 80-460 | Exit request frame 286, SSZ act 2 loaded at 298 (SSZ presentation itself is unimplemented) |
+| `07-hpz-chaos-pedestal-enters-super-emerald-stage.mp4` | `365ac485b`: a Chaos Emerald (state 1) pedestal in `$1601` arms and starts the Super Emerald stage | `--emeralds 1111111`, teleport `$1520,$3AC`, `inputs/jump-onto-pedestal.txt`, frames 40-200 | Lands ~95, stage entry at 112 (15-frame `loc_90926` timer) |
+| `08a-hpz-title-card-hidden-palace-no-act.mp4` | `bc8e5be6e`: `$1601` title card reads HIDDEN PALACE ZONE without an act number | `--title-card`, cold load, frames 0-200 | Card frames ~20-140 |
+| `08b-lrz-boss-slot-title-card.mp4` | Same fix: engine zone 22 act 0 (`$1600`) shows the Lava Reef card instead of Hidden Palace | `--zone 22 --act 1 --title-card`, frames 0-180 | Act number reflects a direct load's apparent act (LRZ-owned, not verified here) |
+| `20-hpz-knuckles-cold-route-uncut.mp4` | Uncut cold Knuckles route to SSZ act 2 from his movie input | `--main knuckles --input <knuckles complete-run bk2> --input-start 411496`, frames 0-999 | Exit ~880 |
+| `21-hpz-sonic-tails-cold-route-to-fight-uncut.mp4` | Uncut cold Sonic + Tails route from `$1601` entry to the fight floor (current frontier) | `--input <sonic-tails complete-run bk2> --input-start 441757`, frames 0-2999 | Teleporter ~1500-1750 |
 | `10-hpz-knuckles-fight-start.mp4` | Knuckles in slot 48, camera locks to `$10E0` (music plays off-camera; captures have no audio) | `raw-10-knuckles-fight-route`: `--x 0x1080 --y 0x42C`, `inputs/10-bot.txt` (scripted bot, no invincibility), frames 0-240 | Lock at 121 |
 | `11-hpz-knuckles-fight-hit.mp4` | First hit, Knuckles knocked back | same raw, 140-260 | Hit at 188 |
 | `12-hpz-knuckles-defeat-dizzy-runs-off.mp4` | Eighth hit, defeat, room shake and explosions, "!" stars, Knuckles runs off | 1320-1780 | Defeat 1358, stars 1598 |
@@ -226,3 +231,86 @@ stand-in, not a port; CNZ keeps it until that route is revisited.
 
 Evidence: `TestS3kHpzTeleporterHeadless` (new) plus `TestHpzSanctuaryObjects`,
 `TestS3kHpzSanctuaryHeadless`, `TestS3kHpzGraphRewind`: 32 tests, 0 failures, 0 skips.
+
+## Remaining acceptance work (2026-09-17)
+
+User direction: tackle every open item, following methodology v2 as applied in the FBZ and
+SOZ campaigns. Ordered so shared evidence precedes consumers; each row carries its own
+evidence columns in the act matrix (implemented / reachable / rewind / native / visual).
+
+| # | Work | Evidence target |
+| --- | --- | --- |
+| 1 | Knuckles fight, emerald theft, collapse, altar teleporter ending to `$A00` (lane `feature/ai-hpz-knuckles-fight`) | Focused ROM-derived tests, rewind at fight/ending spots, demo clips, independent boundary review |
+| 2 | Cold controller routes from `$1601` entry: Sonic + Tails to `$A00`, Sonic solo, Tails, Knuckles to `$A01`; inputs preserved as authored logs, first blocker recorded | Route tests with actual resolved roster/width/donor; full uncut capture per route |
+| 3 | Question-led native probes with the shared BizHawk capture host: `$EC0` background redraw visibility; `$1601` altar Master/Super Emerald presentation; teleporter beam/light cadence; palette-control switch | Declared question, ROM identity, entry recipe, fields and interval; engine vs native comparison recorded |
+| 4 | Port `HPZ_BackgroundEvent`'s redraw machine only if probe 3 shows a visible difference; otherwise record the rejected change with evidence (SOZ precedent) | Native vs engine frames around `$EC0` |
+| 5 | Verify `$1601` altar emerald object branches against the ROM and native capture | Focused tests + native frame |
+| 6 | Remaining rewind spots: teleporter settle and beam deletion, fight/ending states, `$A00`/`$A01` load timeline isolation | Restore equality + forward replay |
+| 7 | Breadth gaps: Knuckles exit and palette control at every width/donor; upper-route left limit wide rows; team shapes through the fight and exit | Matrix rows with case counts |
+| 8 | Strict trace: `TestS3kSonicTailsHpz2SegmentTraceReplay` and the Knuckles `hpz22` segment; record frontier, fix HPZ-owned divergences from ROM evidence; LRZ3-owned prefix recorded as a dependency | Trace frontier log entry with command/commit/first error |
+| 9 | Title card and sanctuary regression: assert the Hidden Palace card; add `$1701` sanctuary matrix rows for the AnPal/AniPLC change | Tests + matrix |
+| 10 | Media: act-ordered highlights reel from verified captures, archive kept separate | `gameplay-highlights` skill |
+| 11 | Delivery: change-based validation against `70aa0a0b7`, guards, docs/changelog reconciliation, integration to develop, push, worktree cleanup | Recorded commands and counts |
+
+Out of HPZ scope and recorded as dependencies: LRZ3 → `$1601` incoming transition (needs LRZ
+events); SSZ presentation after the exits (SSZ bring-up); replacing the CNZ beam stand-in.
+
+### 2026-09-17 pedestal selectability and inherited run-chain failure
+
+`365ac485b`: `Obj_HPZSuperEmerald` arms states 1 and 2 (`loc_907A8`, `$38` bit 0); the engine
+armed only state 2, and `TestHpzSanctuaryObjects` asserted that engine choice. Corrected with the
+ROM citation. Sanctuary set (`TestHpzSanctuaryObjects,TestS3kHpzSanctuaryHeadless,TestS3kHpzGraphRewind,*SuperEmerald*,*Sanctuary*`):
+7 classes, 44 tests, 1 failure, 0 skips. The failure,
+`TestS3kKnucklesSuperEmeraldRunChain#aiz1ToDoomsdayAcrossEverySpecialAndBonusStage` ("Segment 0 (aiz)
+exit boundary (giant_ring) was never observed"), reproduces with the same message on the base commit
+`70aa0a0b7` in `.worktrees/hpz-baseline-verify` (1 test, 1 failure): inherited, not attributed to HPZ work.
+
+Native evidence note: the first complete-run capture replayed from movie frame 0 and had not reached
+HPZ after seven minutes, so it was stopped. `capture_hpz_route_reference.lua` now saves native states
+at planned movie frames on one pass; later probes load the nearest state (user recommendation).
+
+### 2026-09-17 cold routes, capture alignment and native states
+
+- `TestS3kHpzColdRoutes`: Sonic + Tails movie input from frame 441758 (row `$1E09`) reaches the
+  fight floor via the `$B40` teleporter; Knuckles movie input from frame 411496 meets the `$A01`
+  exit condition within 60 frames of the ROM's row `$35C` and loads SSZ act 2. 2 tests, 0 skips.
+- `GameplayCaptureTool --input-start` plays a late movie section. The capture path runs one frame
+  behind `HeadlessTestFixture` on the same input (per-frame comparison: first position difference
+  at frame 6, a constant one-frame lag), so route captures use start frame - 1. Recorded as a
+  harness difference, not a gameplay divergence.
+- Native states for probes (host exit 0, 436 s, BK2 SHA-256 `AD40FB0B…3C0`, ROM SHA-1 verified):
+  `native/sonic-tails-states/states/{0441749,0442965,0444117,0444373,0445781,0447381}.State`
+  = rows `$1E00` (entry), `$22C0` (before lower teleporter), `$2740` and `$2840` (seam),
+  `$2DC0` (after the fight, before the altar), `$3400` (collapse and ending).
+
+### 2026-09-17 native probes from saved states
+
+Six probes (`native/run-probes.sh`, exporter `capture_hpz_route_reference.lua`, BizHawk 2.11,
+ROM SHA-1 `CFBF98C3…61D6`, movie SHA-256 `AD40FB0B…3C0`, host exit 0, 2-5 s each) answered:
+
+| Question | Native evidence | Engine comparison | Conclusion |
+| --- | --- | --- | --- |
+| Palette control at camera X `$460` | Pink `Pal_HPZIntro` gem colours on screen before movie frame 442050 (camera `$45D`→`$463`), green `Pal_HPZ` colours after | Same threshold from source; demo `03` | Corroborated; first visible switched frame not isolable (tiles off screen at the crossing) |
+| Teleporter light, gate, charge, rise, settle | `$040C/$0408` + gate while on screen; AnPal resumes at 8-frame cadence off screen; `word_4670C` every 4 frames with colour 1 = second word; drift start → first `$10` rise step 60 frames; 74 steps; settle offsets over the first 24 frames `0,0,0,-2,-4,…,-36` | Engine capture `raw-06`: drift → rise 60 frames, 74 steps, identical 24-frame settle offsets | Native behaviour matched for the sampled fields and interval |
+| `$EC0` background redraw | `Events_routine_bg` 0→4 at movie frame 444308 (P1 X `$EC2`), →8 at 444315; the brick background stays continuous across all frames | Engine keeps continuous parallax without the redraw machine | Redraw machine port rejected: no visible native effect at this boundary |
+| `$1601` altar pedestals | Save holds all Super Emeralds (`3333333`); coloured pedestals at the ROM positions, red/orange/blue/cyan colours | `--emeralds 3333333` capture at `$15A8,$3AC`: same colours and positions, frame-7 flicker on alternate frames | Presentation matches by inspection; camera Y differs only because the engine view was positioned |
+
+Measurement hazard found and fixed: the first probe read palette line 4 at `$FC32`; palette lines
+are `$20` bytes (`Normal_palette_line_4 = $FC60`), so those columns were wrong until the exporter fix.
+The palette and teleporter conclusions above use the corrected re-run.
+
+### 2026-09-17 rewind guard repair for the teleporter objects
+
+The sanctuary-reveal lane's `-Pguards` run on `c7b890672` reported three failures owned by
+`1000dc342` (not by that lane): `TestParentDependentGraphCoverageGuard` (new parent-dependent
+`TeleporterBeamObjectInstance`), `TestRewindArchitectureGuard` (untriaged capture/restore overrides
+in the teleporter, beam and route helper) and `TestRewindCoverageGuard` (final scalar fields and the
+helper's `teleporter` reference).
+
+Rejected: switching the three objects to generic capture. `TestS3kHpzCompatibilityMatrix` failed
+34/34 teleporter rows at the "beam progress 8 roll" forward replay (restored teleporter lost its beam
+link, so the replayed frame kept animation 5 instead of 2). Kept: typed `ObjectRefId` sidecars, with
+explicit override triage in `TestRewindArchitectureGuard`, `CAPTURED` field policies in
+`DefaultObjectRewindPolicies`, non-final scalar fields, and graph evidence
+`TestS3kHpzCompatibilityMatrix` in `RewindRoundTripHarness`. Result: the four guard classes 33 tests
+and the HPZ teleporter/breadth/lifecycle/route classes 140 tests, 0 failures, 0 skips.

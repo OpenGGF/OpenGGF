@@ -85,15 +85,18 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#restoreRewindState", 1),
-            // Playable HPZ ($1601) teleporter graph and Knuckles-fight children keep object
-            // links in ObjectRefId sidecars (scalars stay generic); TestS3kHpzKnucklesFightHeadless
-            // restores and replays the crane, spark-chain, altar-beam and ending graphs.
+            // HPZ teleporter transport links a live beam and route helper; generic capture does not
+            // restore the beam link (the charge step diverged on replay), so typed ObjectRefId
+            // sidecars are used. TestS3kHpzCompatibilityMatrix proves restore and forward replay;
+            // TestS3kHpzKnucklesFightHeadless restores and replays the altar-beam and ending graphs.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SSZHPZTeleporterObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SSZHPZTeleporterObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/TeleporterBeamObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/TeleporterBeamObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzTeleporterRouteHelperObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzTeleporterRouteHelperObjectInstance.java#restoreRewindState", 1),
+            // Knuckles-fight children keep parent/orbit links in typed ObjectRefId sidecars;
+            // TestS3kHpzKnucklesFightHeadless restores and replays the crane, spark-chain and fight graphs.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzShipSparkOrbiterObjectInstance.java#captureRewindState", 1),

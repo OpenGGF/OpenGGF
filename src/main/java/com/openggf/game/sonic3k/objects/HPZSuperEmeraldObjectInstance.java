@@ -140,7 +140,18 @@ public final class HPZSuperEmeraldObjectInstance extends AbstractObjectInstance
 
     public boolean isSelectable() {
         ensureState();
-        return progression.state(subtype) == S3kEmeraldProgression.EmeraldState.GRAY_SUPER;
+        return isRomSelectableState(progression.state(subtype));
+    }
+
+    /**
+     * {@code Obj_HPZSuperEmerald} jumps through {@code off_9079A} on the collected state:
+     * states 1 and 2 both reach {@code loc_907A8}, which sets {@code $38} bit 0, the
+     * selection gate {@code loc_908DE} tests (sonic3k.asm:197550-197582, 197713). Nothing
+     * clears that bit, so a Chaos Emerald pedestal placed in {@code $1601} is selectable too.
+     */
+    public static boolean isRomSelectableState(S3kEmeraldProgression.EmeraldState state) {
+        return state == S3kEmeraldProgression.EmeraldState.CHAOS
+                || state == S3kEmeraldProgression.EmeraldState.GRAY_SUPER;
     }
 
     public Display display() {

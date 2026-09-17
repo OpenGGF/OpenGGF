@@ -13,7 +13,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   background layout, switches from its intro palette past the entrance, cycles its
   crystal glow, and animates its waterfall and gem tiles; the sanctuary gains the same
   glow and tile animation. Its teleporters now carry the player between floors with the charging beam, rise and
-  settle, and Knuckles leaves for Sky Sanctuary Act 2 from the upper floor. Sonic and
+  settle, and Knuckles leaves for Sky Sanctuary Act 2 from the upper floor. Title cards for the shared sub-level slots follow the ROM: Hidden Palace shows its
+  own name without an act number, and the Lava Reef and Death Egg boss acts show their
+  zone's card. Sonic and
   Tails now fight Knuckles in Hidden Palace, watch Robotnik's crane steal the Master
   Emerald and zap Knuckles, drop through the collapsing altar floor and leave for Sky
   Sanctuary on the altar teleporter while Knuckles is beamed away.

@@ -144,8 +144,11 @@ public final class S3kSanctuaryRuntimeState {
     }
 
     public boolean beginPedestalSelection(int stageIndex) {
+        S3kEmeraldProgression.EmeraldState state = progression.state(stageIndex);
+        // loc_907A8 arms both state 1 and state 2 pedestals (sonic3k.asm:197577).
         if (phase != Phase.READY
-                || progression.state(stageIndex) != S3kEmeraldProgression.EmeraldState.GRAY_SUPER) {
+                || (state != S3kEmeraldProgression.EmeraldState.CHAOS
+                && state != S3kEmeraldProgression.EmeraldState.GRAY_SUPER)) {
             return false;
         }
         selectedStage = stageIndex;

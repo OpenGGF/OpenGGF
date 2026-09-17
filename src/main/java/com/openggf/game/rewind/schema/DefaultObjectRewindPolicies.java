@@ -168,6 +168,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance", "progression"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HPZSuperEmeraldObjectInstance", "runtime"), RewindFieldPolicy.DEFERRED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance", "owner"), RewindFieldPolicy.CAPTURED),
+            // HPZ teleporter, beam and route helper relink through typed ObjectRefId sidecars;
+            // TestS3kHpzCompatibilityMatrix replays restore across charge, rise, settle and beam deletion.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance", "beam"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance", "parent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.HpzTeleporterRouteHelperObjectInstance", "teleporter"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             // Boss childComponents is an identity-bearing live graph. The compact collection
             // codec retains its exact managed children and their roles for restore/relink.
