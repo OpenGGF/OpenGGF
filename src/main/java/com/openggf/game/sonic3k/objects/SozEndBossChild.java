@@ -231,6 +231,9 @@ public final class SozEndBossChild extends AbstractObjectInstance
         case UPPER->new SolidObjectParams(0x2B,0x28,0x28);case LOWER->new SolidObjectParams(0x3B,0x30,0x30);
         case REAR->new SolidObjectParams(0x2B,0x200,0x200);case SHOULDER->new SolidObjectParams(0x1F,0x14,0x14);
         case ELBOW->new SolidObjectParams(0x1B,0x10,0x10);default->new SolidObjectParams(0x2B,0x14,0xC);};}
+    // loc_1E154 re-reads the SetUp_ObjAttributes3 width_pixels (word_782AE/BA/C6), not d1-$B.
+    @Override public int getTopLandingHalfWidth(PlayableEntity player,int collisionHalfWidth){return switch(role){
+        case SHOULDER->0x18;case ELBOW->0x14;case HAND->0x28;default->SolidObjectProvider.super.getTopLandingHalfWidth(player,collisionHalfWidth);};}
     @Override public SolidExecutionMode solidExecutionMode(){return SolidExecutionMode.MANUAL_CHECKPOINT;}
     @Override public boolean bypassesOffscreenSolidGate(){return role<=REAR;}
     @Override public boolean usesInstanceSolidStateLatchKey(){return true;}
