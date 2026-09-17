@@ -4647,7 +4647,10 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 		}
 
 		short oldYSpeed = sprite.getYSpeed();
-		applyGravity();  // Gated on isObjectControlled(); a controlled sprite never enters the death routine anyway but keep gates consistent
+		// S3K Sonic routine 6 (loc_12390, sonic3k.asm:24518-24533) calls MoveSprite_TestGravity without
+		// reading object_control, and Kill_Character does not clear it: an object that kills a
+		// controlled player (DDZ loc_8179E sets $81 before the fall) still sees the death arc.
+		sprite.setYSpeed((short) (sprite.getYSpeed() + sprite.getGravity()));
 		sprite.setGSpeed((short) 0);
 		sprite.setXSpeed((short) 0);
 		return oldYSpeed;

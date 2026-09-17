@@ -1512,7 +1512,8 @@ public class TestSonic3kPlcArtRegistry {
     public void ddzPlanHasEggRobo() {
         Sonic3kPlcArtRegistry.ZoneArtPlan plan = Sonic3kPlcArtRegistry.getPlan(0x0C, 0);
         assertNotNull(plan);
-        assertEquals(7, plan.standaloneArt().size());
+        // + PLC_BossExplosion, ArtKosM_DDZMisc and the boss Master Emerald.
+        assertEquals(10, plan.standaloneArt().size());
         assertTrue(plan.standaloneArt().stream().anyMatch(e -> e.key().equals(Sonic3kObjectArtKeys.DDZ_EGG_ROBO)));
         Sonic3kPlcArtRegistry.StandaloneArtEntry ddzEggRobo = plan.standaloneArt().stream()
                 .filter(e -> e.key().equals(Sonic3kObjectArtKeys.DDZ_EGG_ROBO))

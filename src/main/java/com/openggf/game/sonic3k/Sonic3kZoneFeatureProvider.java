@@ -21,6 +21,7 @@ import com.openggf.game.sonic3k.features.AizTransitionRenderFeature;
 import com.openggf.game.sonic3k.render.HczBgHighPriorityForegroundOverlayEffect;
 import com.openggf.game.sonic3k.render.HczWallChaseBgOverlayEffect;
 import com.openggf.game.sonic3k.render.FbzBossPlaneRenderMode;
+import com.openggf.game.sonic3k.render.DdzForegroundPlaneRenderMode;
 import com.openggf.game.sonic3k.bonusstage.slots.S3kSlotMachinePanelAnimator;
 import com.openggf.game.sonic3k.features.HCZWaterSkimHandler;
 import com.openggf.game.sonic3k.features.HCZWaterTunnelHandler;
@@ -74,6 +75,7 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
     private final SpecialRenderEffect iczBigSnowPileBackgroundEffect = new IczBigSnowPileBackgroundEffect();
     private final SpecialRenderEffect iczBigSnowPilePriorityMaskEffect = new IczBigSnowPilePriorityMaskEffect();
     private final AdvancedRenderMode fbzBossPlaneRenderMode = new FbzBossPlaneRenderMode();
+    private final AdvancedRenderMode ddzForegroundPlaneRenderMode = new DdzForegroundPlaneRenderMode();
     private final AdvancedRenderMode sozForegroundHeatHazeMode = new AdvancedRenderMode() {
         @Override
         public String id() {
@@ -708,6 +710,9 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
         }
         if (zoneIndex == Sonic3kZoneIds.ZONE_FBZ && actIndex == 1) {
             controller.register(fbzBossPlaneRenderMode);
+        }
+        if (zoneIndex == Sonic3kZoneIds.ZONE_DDZ) {
+            controller.register(ddzForegroundPlaneRenderMode);
         }
     }
 

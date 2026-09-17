@@ -1,7 +1,7 @@
 package com.openggf.game.sonic3k.objects;
 
 import com.openggf.game.PlayableEntity;
-import com.openggf.game.sonic3k.runtime.HpzZoneRuntimeState;
+import com.openggf.game.sonic3k.runtime.S3kCameraStoredBounds;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.ObjectLifetimeOps;
@@ -14,16 +14,16 @@ import java.util.List;
 /**
  * ROM {@code Obj_IncLevEndXGradual}, {@code Obj_DecLevStartXGradual},
  * {@code Obj_DecLevStartYGradual} and {@code Obj_IncLevEndYGradual} (sonic3k.asm:178159-178233)
- * as allocated by the Hidden Palace Knuckles cutscene. Each pass adds {@code $4000}
- * ({@code $8000} for the Y end) to a 16.16 accumulator and moves the boundary by its integer
- * part until it reaches the matching {@code Camera_stored_*} word held in
- * {@link HpzZoneRuntimeState}, then snaps and deletes itself.
+ * as allocated by the Hidden Palace Knuckles cutscene and the Doomsday flight controller and end
+ * boss. Each pass adds {@code $4000} ({@code $8000} for the Y end) to a 16.16 accumulator and moves
+ * the boundary by its integer part until it reaches the matching {@code Camera_stored_*} word held
+ * in the current zone's {@link S3kCameraStoredBounds} runtime state, then snaps and deletes itself.
  *
  * <p>The ROM has no boundary easing for the X limits or the Y start, so those writes set the
  * engine's current and target words together. {@code Camera_max_Y_pos} keeps the target the
  * cutscene wrote to {@code Camera_target_max_Y_pos}.
  */
-public final class HpzCameraGradualObjectInstance extends AbstractObjectInstance
+public final class S3kCameraGradualObjectInstance extends AbstractObjectInstance
         implements RewindRecreatable {
     static final int INC_END_X = 0;
     static final int DEC_START_X = 1;
@@ -33,20 +33,20 @@ public final class HpzCameraGradualObjectInstance extends AbstractObjectInstance
     private int kind;
     private int accumulator;
 
-    public HpzCameraGradualObjectInstance(int kind) {
-        super(new ObjectSpawn(0, 0, 0, kind, 0, false, 0), "HpzCameraGradual");
+    public S3kCameraGradualObjectInstance(int kind) {
+        super(new ObjectSpawn(0, 0, 0, kind, 0, false, 0), "S3kCameraGradual");
         this.kind = kind;
     }
 
     @Override
-    public HpzCameraGradualObjectInstance recreateForRewind(RewindRecreateContext ctx) {
-        return new HpzCameraGradualObjectInstance(ctx.spawn().subtype());
+    public S3kCameraGradualObjectInstance recreateForRewind(RewindRecreateContext ctx) {
+        return new S3kCameraGradualObjectInstance(ctx.spawn().subtype());
     }
 
     @Override
     public void update(int vIntRunCount, PlayableEntity player) {
-        HpzZoneRuntimeState hpz = HpzKnucklesCutsceneSupport.hpz(services());
-        if (hpz == null) {
+        var registry = services().zoneRuntimeRegistry();
+        if (registry == null || !(registry.current() instanceof S3kCameraStoredBounds hpz)) {
             return;
         }
         var camera = services().camera();

@@ -186,6 +186,56 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         }
     }
 
+    /**
+     * S3K {@code Seek_Object_Manager} (sonic3k.asm:37986-38063): after a direct camera X write, moves
+     * the two load cursors to the window around {@code (Camera_X_pos + $400) & $FF80} without loading
+     * or unloading anything, and makes that the stored coarse camera. The next {@link #update(int)} then
+     * sees the real camera behind (or ahead of) the stored one and runs the ordinary backward (or
+     * forward) load step, exactly as {@code Load_Sprites} does on the following frame. Live objects keep
+     * their active entries, as the ROM keeps their respawn bits.
+     */
+    void seekCursors(int cameraX) {
+        if (spawns.isEmpty() || counterBasedRespawn) {
+            return;
+        }
+        int d6 = (cameraX + 0x400) & CHUNK_MASK & 0xFFFF;
+        int stored = lastCameraX == Integer.MIN_VALUE ? Integer.MIN_VALUE : toCoarseChunk(lastCameraX);
+        if (d6 == stored) {
+            return;
+        }
+        if (stored != Integer.MIN_VALUE && d6 < stored) {
+            // loc_1BBD0: back cursor retreats while the previous entry lies right of d6 - $80.
+            int backEdge = d6 - 0x80;
+            if (backEdge >= 0) {
+                while (leftCursorIndex > 0 && spawns.get(leftCursorIndex - 1).x() > backEdge) {
+                    leftCursorIndex--;
+                }
+            }
+            // Front cursor retreats while the previous entry is at or right of d6 - $80 + $300.
+            int frontEdge = d6 - 0x80 + 0x300;
+            while (cursorIndex > 0 && spawns.get(cursorIndex - 1).x() >= frontEdge) {
+                cursorIndex--;
+            }
+        } else {
+            // loc_1BC1C: front cursor advances over entries left of d6 + $280, back over d6 - $80.
+            int frontEdge = d6 + 0x280;
+            while (cursorIndex < spawns.size() && spawns.get(cursorIndex).x() < frontEdge) {
+                cursorIndex++;
+            }
+            int backEdge = frontEdge - 0x300;
+            if (backEdge >= 0) {
+                while (leftCursorIndex < spawns.size() && spawns.get(leftCursorIndex).x() < backEdge) {
+                    leftCursorIndex++;
+                }
+            }
+        }
+        if (leftCursorIndex > cursorIndex) {
+            leftCursorIndex = cursorIndex;
+        }
+        lastCameraX = d6;
+        lastCameraChunk = d6;
+    }
+
     void enableCounterBasedRespawn() {
         this.counterBasedRespawn = true;
         this.execThenLoadPlacement = true;

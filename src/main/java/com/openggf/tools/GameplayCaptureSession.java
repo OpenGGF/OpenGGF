@@ -140,6 +140,19 @@ public final class GameplayCaptureSession implements AutoCloseable {
             GameServices.gameState().restoreS3kEmeraldProgress(states,
                     states.stream().anyMatch(v -> v >= 2));
         }
+        if (settings.vIntRunCount() != null) {
+            // Declared capture setup: an inherited V_int_run_count (for example a movie's
+            // level entry after a long run), read by objects that gate on its low bits.
+            level.getObjectManager().initVblaCounter(settings.vIntRunCount());
+        }
+        if (settings.cameraXSub() != null) {
+            // Declared capture setup: the inherited Camera_X_pos low word. Only zones that keep
+            // a camera fraction honour it (S3K Doomsday autoscroll, sub_82920).
+            com.openggf.game.sonic3k.runtime.S3kRuntimeStates.currentDdz(GameServices.zoneRuntimeRegistry())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "--camera-x-sub needs a zone that keeps a camera fraction"))
+                    .setCameraXFraction(settings.cameraXSub());
+        }
         player = GameServices.camera().getFocusedSprite();
         if (player == null) {
             throw new IllegalStateException("no focused playable sprite after boot");
@@ -322,11 +335,19 @@ public final class GameplayCaptureSession implements AutoCloseable {
      */
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
-                           boolean showTitleCard, boolean completeSpecialStage) {
+                           boolean showTitleCard, boolean completeSpecialStage, Integer vIntRunCount,
+                           Integer cameraXSub) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
             this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
                     false);
+        }
+
+        public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
+                        Path donorRom, Integer startX, Integer startY, String emeraldStates,
+                        boolean showTitleCard, boolean completeSpecialStage) {
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, emeraldStates,
+                    showTitleCard, completeSpecialStage, null, null);
         }
 
         public Settings {

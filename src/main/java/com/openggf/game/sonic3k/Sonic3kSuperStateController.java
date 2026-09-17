@@ -53,8 +53,6 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private int paletteFrame;
     /** Countdown timer between palette frame advances. */
     private int paletteTimer;
-    /** Frames remaining in the transformation animation. */
-    private int transformFramesRemaining;
 
     /** Raw ROM palette data (60 bytes: 10 frames x 3 colors x 2 bytes). */
     private byte[] paletteData;
@@ -94,6 +92,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private S3kFormTier activeFormTier = S3kFormTier.NORMAL;
     /** Debug activation selects the character's strongest form without changing progression. */
     private boolean debugFormActivation;
+    /** The transformation being started now was forced by the Doomsday controller ({@code loc_8160A}). */
+    private boolean doomsdayActivation;
+    /**
+     * The active form came from {@code loc_8160A}, which starts no music. Captured in the rewind
+     * snapshot's transformation word as {@link #DOOMSDAY_FORM_SNAPSHOT_BIT}.
+     */
+    private boolean doomsdayForm;
+    private static final int DOOMSDAY_FORM_SNAPSHOT_BIT = 0x100;
     private final HyperKnucklesWallQuake wallQuake = new HyperKnucklesWallQuake();
     private int hyperFlashFrames;
     private boolean hyperFlashRestorePending;
@@ -110,6 +116,8 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private static final int FADE_COMPLETE_OFFSET = 0x24;
     /** Byte offset at which cycling wraps ($36 = 9 frames x 6 bytes). */
     private static final int CYCLE_WRAP_OFFSET = 0x36;
+    /** {@code move.b #$F,(Palette_timer).w} in every transformation routine. */
+    private static final int TRANSFORM_PALETTE_TIMER = 0xF;
 
     public Sonic3kSuperStateController(AbstractPlayableSprite player) {
         super(player);
@@ -121,10 +129,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
             restoreCharacterPresentationImmediately();
         }
         super.reset();
+        doomsdayForm = false;
         paletteState = 0;
         paletteFrame = 0;
         paletteTimer = 0;
-        transformFramesRemaining = 0;
         superTailsCompanionPaletteFrame = 0;
         superTailsCompanionPaletteTimer = 0;
         transformationPaletteAdvancedThisFrame = false;
@@ -160,11 +168,66 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
     }
 
+    /**
+     * ROM {@code loc_8160A} (sonic3k.asm:173296-173312): the Doomsday flight controller turns Player 1
+     * Super without {@code Sonic_Transform}. It adds 50 rings and writes the same
+     * {@code Super_palette_status}, {@code Palette_timer}, {@code Super_Sonic_Knux_flag = 1},
+     * {@code Super_frame_count = 60}, mappings, transformation animation, top speed and
+     * invincibility fields, then plays {@code sfx_Whistle} instead of {@code sfx_SuperTransform} and
+     * starts no music. The form is always Super here: {@code loc_8167C} upgrades it to Hyper after the
+     * palette fade releases {@code object_control}, when all seven Super Emeralds are held.
+     *
+     * <p>The shared debug entry is the engine's only public path into the common transformation
+     * start; it performs exactly the ring award and state writes this routine needs, and
+     * {@link #onTransformationStarted()} applies the Doomsday differences.
+     */
+    public void startDoomsdayTransformation() {
+        doomsdayActivation = true;
+        try {
+            super.debugActivate();
+        } finally {
+            doomsdayActivation = false;
+        }
+    }
+
+    /**
+     * ROM {@code sub_5FCCE} (sonic3k.asm:126664-126668) as {@code loc_8167C} calls it: set
+     * {@code Super_Sonic_Knux_flag} to -1, restart {@code Palette_frame} at 0 with the fade marked
+     * done and {@code Palette_timer} 0, then install {@code Obj_HyperSonic_Stars} and the after-image
+     * trail.
+     */
+    public void upgradeDoomsdayFormToHyper() {
+        if (!isSuper() || player instanceof Tails || player instanceof Knuckles) {
+            return;
+        }
+        activeFormTier = S3kFormTier.HYPER;
+        configurePaletteForActiveTier();
+        paletteState = -1;
+        paletteFrame = 0;
+        paletteTimer = 0;
+        LevelManager levelManager = player.currentLevelManagerIfAvailable();
+        ensureHyperSonicStars(levelManager != null ? levelManager.getObjectManager() : null);
+    }
+
+    /** {@code move.w #$7FFF,(Super_frame_count).w} in the Doomsday exit ({@code loc_82E2C}). */
+    public void holdDoomsdayRingDrain() {
+        RewindState current = captureRewindState();
+        restoreCoreRewindState(new RewindState(current.state(), 0x7FFF, current.paletteState(), current.paletteFrame(),
+                current.paletteTimer(), current.transformFramesRemaining(), current.presentationTier(),
+                current.savedNormalPalette(), current.savedNormalUnderwaterPalette()));
+    }
+
+    /** {@code clr.b (Super_palette_status).w} in the Doomsday exit ({@code loc_81C70}): the cycle stops. */
+    public void clearDoomsdayPalette() {
+        paletteState = 0;
+    }
+
     @Override
     public RewindState captureRewindState() {
         int companionState = ((superTailsCompanionPaletteFrame / BYTES_PER_FRAME) & 0xF)
                 | ((superTailsCompanionPaletteTimer & 0xF) << 4);
-        return createRewindState(paletteState, paletteFrame, paletteTimer, transformFramesRemaining,
+        return createRewindState(paletteState, paletteFrame, paletteTimer,
+                doomsdayForm ? DOOMSDAY_FORM_SNAPSHOT_BIT : 0,
                 activeFormTier.ordinal()
                         | (wallQuake.capture().framesRemaining() << 8)
                         | ((hyperFlashFrames | (hyperFlashRestorePending ? 0x80 : 0)) << 16)
@@ -181,7 +244,7 @@ public class Sonic3kSuperStateController extends SuperStateController {
         restoreCoreRewindState(rewindState);
         paletteState = rewindState.paletteState();
         paletteTimer = rewindState.paletteTimer();
-        transformFramesRemaining = rewindState.transformFramesRemaining();
+        doomsdayForm = (rewindState.transformFramesRemaining() & DOOMSDAY_FORM_SNAPSHOT_BIT) != 0;
         savedNormalPalette = unpackPalette(rewindState.savedNormalPalette());
         savedNormalUnderwaterPalette = unpackPalette(rewindState.savedNormalUnderwaterPalette());
         activeFormTier = formTierFromSnapshot(rewindState.presentationTier() & 0xFF);
@@ -483,7 +546,10 @@ public class Sonic3kSuperStateController extends SuperStateController {
 
     @Override
     protected void onTransformationStarted() {
-        activeFormTier = debugFormActivation ? getDebugFormTier() : getEligibleFormTier();
+        doomsdayForm = doomsdayActivation;
+        activeFormTier = doomsdayActivation
+                ? S3kFormTier.SUPER
+                : debugFormActivation ? getDebugFormTier() : getEligibleFormTier();
         if (activeFormTier == S3kFormTier.HYPER && !(player instanceof Knuckles)) {
             LevelManager levelManager = player.currentLevelManagerIfAvailable();
             ensureHyperSonicStars(levelManager != null ? levelManager.getObjectManager() : null);
@@ -501,14 +567,21 @@ public class Sonic3kSuperStateController extends SuperStateController {
         }
         captureNormalPalette();
         configurePaletteForActiveTier();
-        paletteState = usesSonicFormPresentation() ? 1 : -1;
+        // Sonic_Transform, Tails_Transform, Knux_Transform and loc_8160A all write
+        // Super_palette_status = 1 and Palette_timer = $F (sonic3k.asm:23487-23489,
+        // 28673-28674, 32592-32593, 173302-173303).
+        paletteState = 1;
         paletteFrame = 0;
-        paletteTimer = paletteState == 1 ? 1 : activeCycleTimer;
+        paletteTimer = TRANSFORM_PALETTE_TIMER;
         superTailsCompanionPaletteFrame = 0;
         // The non-Sonic fade-in branch leaves Palette_timer at one before
         // NormalTails falls through to the shared Super-Sonic cycle.
         superTailsCompanionPaletteTimer = 1;
-        transformFramesRemaining = 30;
+        if (doomsdayActivation) {
+            // loc_8160A: "This is not the normal Super transformation SFX".
+            playDoomsdaySfx();
+            return;
+        }
         // Play transformation SFX
         try {
             if (CrossGameFeatureProvider.isActive()) {
@@ -520,6 +593,14 @@ public class Sonic3kSuperStateController extends SuperStateController {
             }
         } catch (Exception e) {
             LOGGER.fine("Could not play transformation SFX: " + e.getMessage());
+        }
+    }
+
+    private void playDoomsdaySfx() {
+        try {
+            GameServices.audio().playSfx(Sonic3kSfx.WHISTLE.id);
+        } catch (Exception e) {
+            LOGGER.fine("Could not play Doomsday transformation SFX: " + e.getMessage());
         }
     }
 
@@ -550,6 +631,15 @@ public class Sonic3kSuperStateController extends SuperStateController {
                 && GameServices.sprites().getMainPlayable() == player;
     }
 
+    /**
+     * {@code SuperHyper_PalCycle}'s fading branch (sonic3k.asm:4608-4660), the pass that releases
+     * {@code object_control}. {@code Palette_timer} counts down from {@code $F}; each expiry reloads
+     * it with 1. Tails and Knuckles (Player_mode 2 and 3) finish on the first expiry. Sonic applies
+     * one {@code PalCycle_SuperSonic} fade frame per expiry and finishes on the one that brings
+     * {@code Palette_frame} to {@code $24}. The engine runs this pass in the player's tick, which
+     * precedes the object pass; the ROM runs it after {@code Process_Sprites}. Either way the
+     * release is first visible to the next object and player updates.
+     */
     @Override
     protected boolean updateTransformationAnimation() {
         // SuperHyper_PalCycle is a separate ROM routine from
@@ -558,13 +648,17 @@ public class Sonic3kSuperStateController extends SuperStateController {
         // the base controller advances TRANSFORMING to SUPER.
         transformationPaletteAdvancedThisFrame = true;
         if (!usesSonicFormPresentation()) {
+            paletteTimer--;
+            if (paletteTimer >= 0) {
+                return false;
+            }
+            paletteTimer = 1;
             applyPaletteFrame(paletteFrame);
             advanceActivePaletteFrame();
             return true;
         }
         updatePaletteFade();
-        transformFramesRemaining--;
-        return transformFramesRemaining <= 0;
+        return paletteState == -1;
     }
 
     @Override
@@ -574,17 +668,20 @@ public class Sonic3kSuperStateController extends SuperStateController {
         if (usesSonicFormPresentation()) {
             paletteFrame = activeCycleStart;
         }
-        // Play invincibility music (S3K Super Sonic uses mus_Invincibility)
-        try {
-            if (CrossGameFeatureProvider.isActive()) {
-                GameServices.audio().playDonorMusic(
-                        GameServices.crossGameFeatures().getDonorGameId(),
-                        GameMusic.SUPER);
-            } else {
-                GameServices.audio().playMusic(GameMusic.SUPER);
+        // Play invincibility music (S3K Super Sonic uses mus_Invincibility).
+        // loc_8160A does not call Sonic_Transform, so a Doomsday form keeps mus_DDZ.
+        if (!doomsdayForm) {
+            try {
+                if (CrossGameFeatureProvider.isActive()) {
+                    GameServices.audio().playDonorMusic(
+                            GameServices.crossGameFeatures().getDonorGameId(),
+                            GameMusic.SUPER);
+                } else {
+                    GameServices.audio().playMusic(GameMusic.SUPER);
+                }
+            } catch (Exception e) {
+                LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
             }
-        } catch (Exception e) {
-            LOGGER.fine("Could not play Super Sonic music: " + e.getMessage());
         }
         player.setInvincibleFrames(0);
         if (usesSonicFormPresentation() && superAnimSet != null) {
@@ -746,6 +843,11 @@ public class Sonic3kSuperStateController extends SuperStateController {
     private void reconcileRewindPresentation(SuperState restoredState) {
         boolean activeSuper = restoredState == SuperState.SUPER;
         reconcileRewindPhysicsAndAnimationProfile(activeSuper);
+        if (restoredState == SuperState.TRANSFORMING) {
+            // startTransformation installs the Super constants on the transformation frame; the
+            // animation profile and powered presentation only switch once SUPER is reached.
+            player.applyExternalPhysicsProfile(getSuperProfile());
+        }
         if (activeSuper) {
             if (usesSonicFormPresentation() && superAnimSet != null) {
                 player.setAnimationSet(superAnimSet);

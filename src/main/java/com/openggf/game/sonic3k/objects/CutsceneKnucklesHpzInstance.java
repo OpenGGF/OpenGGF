@@ -773,14 +773,14 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
         spawnDynamicObjectLowestFreeSlot(new HpzRobotnikShipObjectInstance(
                 new ObjectSpawn(HpzRobotnikShipObjectInstance.START_X,
                         HpzRobotnikShipObjectInstance.START_Y, 0, 0, 0, false, 0)));
-        spawnDynamicObjectLowestFreeSlot(new HpzCameraGradualObjectInstance(
-                HpzCameraGradualObjectInstance.INC_END_X));
-        spawnDynamicObjectLowestFreeSlot(new HpzCameraGradualObjectInstance(
-                HpzCameraGradualObjectInstance.DEC_START_Y));
+        spawnDynamicObjectLowestFreeSlot(new S3kCameraGradualObjectInstance(
+                S3kCameraGradualObjectInstance.INC_END_X));
+        spawnDynamicObjectLowestFreeSlot(new S3kCameraGradualObjectInstance(
+                S3kCameraGradualObjectInstance.DEC_START_Y));
         // move.w (Camera_stored_max_Y_pos).w,(Camera_target_max_Y_pos).w
         services().camera().setMaxYTarget((short) hpz.cameraStoredMaxY());
-        spawnDynamicObjectLowestFreeSlot(new HpzCameraGradualObjectInstance(
-                HpzCameraGradualObjectInstance.INC_END_Y));
+        spawnDynamicObjectLowestFreeSlot(new S3kCameraGradualObjectInstance(
+                S3kCameraGradualObjectInstance.INC_END_Y));
         // Queue_Kos_Module ArtKosM_KnuxFinalBossCrane / Load_PLC_Raw PLC_KnuxHPZCutsceneShip:
         // the standalone sheets are already loaded.
     }
@@ -1058,8 +1058,8 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
         camera.setMaxYTarget((short) 0x5C0);
         hpz.setCameraStoredMaxY(0x5C0);
         services().playSfx(Sonic3kSfx.BIG_RUMBLE.id);
-        spawnDynamicObjectLowestFreeSlot(new HpzCameraGradualObjectInstance(
-                HpzCameraGradualObjectInstance.INC_END_Y));
+        spawnDynamicObjectLowestFreeSlot(new S3kCameraGradualObjectInstance(
+                S3kCameraGradualObjectInstance.INC_END_Y));
         // bsr.w loc_64930 then fall into it: two Child6_CreateBossExplosion subtype $14.
         for (int i = 0; i < 2; i++) {
             spawnAfterCurrentSibling(() -> new HpzBossExplosionSpawnerObjectInstance(
@@ -1202,8 +1202,8 @@ public final class CutsceneKnucklesHpzInstance extends AbstractObjectInstance
         x = 0x161C;
         y = 0x62C;
         hpz.setCameraStoredMinX(0x1520);
-        spawnDynamicObjectLowestFreeSlot(new HpzCameraGradualObjectInstance(
-                HpzCameraGradualObjectInstance.DEC_START_X));
+        spawnDynamicObjectLowestFreeSlot(new S3kCameraGradualObjectInstance(
+                S3kCameraGradualObjectInstance.DEC_START_X));
         setAnimation(ANI_6671F);
     }
 

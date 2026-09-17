@@ -2683,6 +2683,30 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 -1
         ));
+        // loc_8167C loads PLC_BossExplosion once the flight starts (defeat, missile and exit blasts).
+        standalone.add(new StandaloneArtEntry(ObjectArtKeys.BOSS_EXPLOSION,
+                Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_ADDR, CompressionType.NEMESIS,
+                Sonic3kConstants.ART_NEM_BOSS_EXPLOSION_SIZE, Sonic3kConstants.MAP_BOSS_EXPLOSION_ADDR, 0, -1));
+        // loc_81554 queues ArtKosM_DDZMisc at ArtTile_DDZMisc; objects add palette 1 or 2.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DDZ_MISC,
+                Sonic3kConstants.ART_KOSM_DDZ_MISC_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_DDZ_MISSILE_ASTEROID_ADDR,
+                0,
+                -1
+        ));
+        // loc_819CE queues ArtKosM_BossMasterEmerald for the phase-2 Master Emerald (palette 3).
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.DDZ_MASTER_EMERALD,
+                Sonic3kConstants.ART_KOSM_BOSS_MASTER_EMERALD_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_BOSS_MASTER_EMERALD_ADDR,
+                3,
+                -1
+        ));
     }
 
     /**

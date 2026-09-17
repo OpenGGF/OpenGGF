@@ -103,6 +103,10 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzKnucklesDustObjectInstance.java#restoreRewindState", 1),
             // Hyper stars keep player identity in a typed sidecar; the focused
             // player-reference graph test swaps the live main player on restore.
+            // DDZ parent3 links travel as ObjectRefId sidecars (same triage as the HPZ cutscene children);
+            // TestS3kDdzColdRoutes restores the boss graph mid-fight, at the wrap and during the exit.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HyperSonicStarsObjectInstance.java#restoreRewindState", 1)
     );
@@ -117,6 +121,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/StarPointerBadnikInstance.java#@RewindTransient", 1),
             // HPZ Knuckles-fight object links are restored by ObjectRefId sidecars.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractHpzCutsceneChildObjectInstance.java#@RewindTransient", 1),
+            // DDZ parent3 link, restored by the ObjectRefId sidecar in AbstractDdzObjectInstance.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/AbstractDdzObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzKnucklesDustObjectInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HpzShipSparkOrbiterObjectInstance.java#@RewindTransient", 2),
             // Structural parent pointers on inner particle/support child classes: the parent

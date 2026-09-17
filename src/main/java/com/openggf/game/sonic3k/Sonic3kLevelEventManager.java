@@ -487,12 +487,29 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
             registry.install(new SozZoneRuntimeState(act, playerCharacter));
         } else if (zone == Sonic3kZoneIds.ZONE_LBZ) {
             registry.install(new LbzZoneRuntimeState(act, playerCharacter));
+        } else if (zone == Sonic3kZoneIds.ZONE_DDZ) {
+            registry.install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(act, playerCharacter));
+            allocateDdzFlightController();
         } else if (Sonic3kLevelResourceProfile.isHpzSanctuary(zone, act)
                 || Sonic3kLevelResourceProfile.isHiddenPalace(zone, act)) {
             registry.install(new HpzZoneRuntimeState(zone, act, playerCharacter));
         } else {
             registry.clear();
         }
+    }
+
+    /**
+     * {@code DDZ_ScreenInit} (sonic3k.asm:118813-118826): {@code AllocateObject} the flight controller
+     * {@code loc_81492} before the level's first object pass; the {@code _unkEE98..EEA2} words start at
+     * zero in the fresh runtime state.
+     */
+    private void allocateDdzFlightController() {
+        if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null
+                || GameServices.levelOrNull().getObjectManager() == null) {
+            return;
+        }
+        GameServices.level().getObjectManager().createDynamicObject(
+                com.openggf.game.sonic3k.objects.DdzFlightControllerObjectInstance::new);
     }
 
     private void installFixedDynamicObjects(int zone) {
@@ -1055,6 +1072,29 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (currentZone == Sonic3kZoneIds.ZONE_FBZ && fbzEvents != null) {
             fbzEvents.restoreOutdoorMotionAfterPlacementReset();
         }
+        if (currentZone == Sonic3kZoneIds.ZONE_DDZ) {
+            restoreDdzFlightControllerAfterPlacementReset();
+        }
+    }
+
+    /**
+     * A placement reset cleared the {@code DDZ_ScreenInit} allocation before its first dispatch:
+     * restart the Doomsday runtime words and allocate the flight controller again.
+     */
+    private void restoreDdzFlightControllerAfterPlacementReset() {
+        if (!GameServices.hasRuntime() || GameServices.levelOrNull() == null
+                || GameServices.levelOrNull().getObjectManager() == null) {
+            return;
+        }
+        boolean present = GameServices.level().getObjectManager().getActiveObjects().stream()
+                .anyMatch(object -> object instanceof com.openggf.game.sonic3k.objects.DdzFlightControllerObjectInstance
+                        && !object.isDestroyed());
+        if (present) {
+            return;
+        }
+        GameServices.zoneRuntimeRegistry().install(new com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState(
+                currentAct, getPlayerCharacter()));
+        allocateDdzFlightController();
     }
 
     private void releaseIczStartupObjectControlAfterTitleCard() {
@@ -1606,6 +1646,8 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
                     state instanceof MhzZoneRuntimeState mhzState && mhzState.isBackedBy(mhzEvents);
             case Sonic3kZoneIds.ZONE_LBZ -> state instanceof LbzZoneRuntimeState;
             case Sonic3kZoneIds.ZONE_SOZ -> state instanceof SozZoneRuntimeState;
+            // Reinstalling would zero the Doomsday words and allocate a second flight controller.
+            case Sonic3kZoneIds.ZONE_DDZ -> state instanceof com.openggf.game.sonic3k.runtime.DdzZoneRuntimeState;
             case Sonic3kZoneIds.ZONE_HPZ, Sonic3kZoneIds.ZONE_DEZ_BOSS_SS_ARENA ->
                     state instanceof HpzZoneRuntimeState hpzState
                             && hpzState.zoneIndex() == currentZone

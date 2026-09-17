@@ -1846,6 +1846,31 @@ public class Sonic3kConstants {
     public static final int ART_KOSM_EGG_ROBO_BADNIK_ADDR = 0x17B17E;
     public static final int MAP_EGG_ROBO_ADDR = 0x184F34;
 
+    // ===== DDZ (Doomsday) =====
+    /** {@code ArtKosM_DDZMisc}: missiles, asteroids, boss parts (queued at {@code ArtTile_DDZMisc}). */
+    public static final int ART_KOSM_DDZ_MISC_ADDR = 0x18322A;
+    /** {@code Map_DDZMissileAsteroid}. */
+    public static final int MAP_DDZ_MISSILE_ASTEROID_ADDR = 0x0832E2;
+    public static final int ARTTILE_DDZ_MISC = 0x02DB;
+    /** {@code ArtKosM_BossMasterEmerald} / {@code Map_BossMasterEmerald}. */
+    public static final int ART_KOSM_BOSS_MASTER_EMERALD_ADDR = 0x182BE6;
+    public static final int MAP_BOSS_MASTER_EMERALD_ADDR = 0x187B34;
+    /** {@code byte_832BF}: rocket body frames; {@code byte_832C3}: rocket flame; {@code byte_832D0}/{@code byte_832D9}: ship parts. */
+    public static final int DDZ_ANIM_ROCKET_ADDR = 0x0832BF;
+    public static final int DDZ_ANIM_ROCKET_FLAME_ADDR = 0x0832C3;
+    public static final int DDZ_ANIM_SHIP_PART_0_ADDR = 0x0832D0;
+    public static final int DDZ_ANIM_SHIP_PART_2_ADDR = 0x0832D9;
+    /** {@code Pal_DDZ}: palette lines 2-4 (96 bytes). */
+    public static final int PAL_DDZ_ADDR = 0x0A997C;
+    /** {@code byte_832A8}/{@code byte_832AE}: asteroid debris raw animations. */
+    public static final int DDZ_ANIM_DEBRIS_SMALL_ADDR = 0x0832A8;
+    public static final int DDZ_ANIM_DEBRIS_LARGE_ADDR = 0x0832AE;
+    /** {@code byte_832B4}: missile exhaust puff raw multi-delay animation. */
+    public static final int DDZ_ANIM_MISSILE_PUFF_ADDR = 0x0832B4;
+    /** Raw animation bytes {@code byte_832A8} through {@code byte_832E1}. */
+    public static final int DDZ_RAW_ANIM_BASE_ADDR = 0x0832A8;
+    public static final int DDZ_RAW_ANIM_SIZE = 0x3A;
+
     // ===== DEZ Badnik Art =====
     public static final int ART_KOSM_SPIKEBONKER_ADDR = 0x18008C;
     public static final int MAP_SPIKEBONKER_ADDR = 0x184E5C;

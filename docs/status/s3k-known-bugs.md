@@ -60,6 +60,7 @@ Entries should include:
 34. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
 35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
 36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
+37. [Doomsday: Presentation Gaps and Unseeded Entry](#doomsday-presentation-gaps-and-unseeded-entry)
 
 ---
 
@@ -5828,3 +5829,11 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Suspected cause** — Not investigated; recorded by the bonus-stage lane while checking the gumball exit.
 - **Removal condition** — Segment 0 passes the boundary-ordering check and the chain reports its first real divergence in the frontier log.
 
+---
+
+## Doomsday: Presentation Gaps and Unseeded Entry
+
+- **Location** — `DdzFlightControllerObjectInstance` (`loc_8167C`), `Sonic3kSuperStateController` Hyper stars, S3K HUD ring refresh, `RecordingFrameDriver`, `TraceReplaySessionBootstrap`
+- **Symptom** — (1) With fewer than seven Super Emeralds `loc_8167C` installs the Doomsday Super stars `loc_8242A` (`ArtUnc_SuperSonic_Stars`, six frames trailing Player 1); the engine draws none. (2) On the native all-Super route the Hyper sparkles are smaller than the engine's at the same rows (native pass-1 `boss_arrival`/`phase_change` screenshots against `raw-10-seeded-route-320`), an animation phase or frame-selection difference in the shared Hyper stars. (3) Native HUD keeps showing 0 rings after `loc_8160A` adds 50 until the next HUD ring update; the engine shows 50 at once. (4) The recording frame driver keeps stepping gameplay for the 21 frames of the `StartNewLevel $D01` fade (rows 10059-10079) that native and `GameLoop` freeze. (5) Strict `TestS3kSonicTailsZone0cSegmentTraceReplay` is red from frame 0 (`camera_y`): the replay bootstrap derives the camera from the metadata start position and seeds neither the camera X fraction nor the full `V_int_run_count`.
+- **Suspected cause** — (1) not ported; (2) unmeasured; (3) HUD ring redraw flag not modelled for direct `Ring_count` writes; (4) and (5) harness bootstrap/driver limits, not runtime behaviour: `TestS3kDdzColdRoutes` declares the two inherited clocks and matches every gameplay row.
+- **Removal condition** — `loc_8242A` implemented with a capture; a native probe of `Obj_HyperSonic_Stars` frames matched; HUD ring display matches native at DDZ entry; the recording driver honours the zone-fade freeze; the zone0c replay bootstrap reproduces the native entry state and the strict replay reports its first real divergence.
