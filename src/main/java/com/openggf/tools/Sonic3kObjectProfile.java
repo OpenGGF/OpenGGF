@@ -115,6 +115,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x6A, // InvisibleHurtBlockHorizontal
             0x6B, // InvisibleHurtBlockVertical
             0x6C, // TensionBridge
+            0x6E, // HCZWaterDrop (S3KL) / InvisibleLavaBlock (SKL)
             0x78, // FBZDEZPlayerLauncher
             0x80, // HiddenMonitor
             0x82, // CutsceneKnuckles

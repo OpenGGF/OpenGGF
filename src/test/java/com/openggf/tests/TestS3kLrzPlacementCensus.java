@@ -60,7 +60,9 @@ class TestS3kLrzPlacementCensus {
     /**
      * Placements that still build a {@link PlaceholderObjectInstance}, per act, as
      * {@code id:subtype=count[,subtype=count...];...} with hexadecimal ids and subtypes.
-     * Transcribed from the inventory's "placeholder (SKL branch)" and "unregistered" rows.
+     * Transcribed from the inventory's "placeholder (SKL branch)" and "unregistered" rows, then
+     * ratcheted down as slices land. Slice 1 removed {@code $6E} {@code Obj_InvisibleLavaBlock}
+     * (34 / 4 / 6), taking the totals from 239 / 281 / 14 to 205 / 277 / 8.
      */
     private static final Map<String, String> PLACEHOLDER_BASELINE = Map.of(
             "LRZ1", "15:00=1;16:00=1;17:00=11;18:01=4,02=5,03=2,04=3,05=1;"
@@ -69,7 +71,7 @@ class TestS3kLrzPlacementCensus {
                     + "1C:01=1,04=1,05=1,06=1,07=1,09=1,0B=1,0C=1,0D=1,0F=1;1D:A0=1,C2=1;"
                     + "1E:1A=1,1D=1,20=1,46=1,B6=1,B9=1;1F:50=2,60=3,70=2;20:02=2,03=4,04=5;"
                     + "21:09=3,0B=1,0F=1,10=1,11=1,14=2,19=2,1A=2,1C=1,1D=1;22:00=5,C0=1;"
-                    + "6E:31=7,71=8,B1=1,F1=18;99:00=20;9A:00=32;9B:00=22;9C:00=1,02=1;9D:00=1",
+                    + "99:00=20;9A:00=32;9B:00=22;9C:00=1,02=1;9D:00=1",
             "LRZ2", "16:00=1;19:01=1,02=1,03=1,04=1,05=1,06=1,07=1,08=1,09=1,0A=1,0B=1;"
                     + "1C:01=1,02=1,03=1,04=1,05=1,06=1,07=1,08=1,09=1,0A=1,0B=1;20:02=10,03=4;"
                     + "25:80=1,81=1,82=1;"
@@ -77,8 +79,8 @@ class TestS3kLrzPlacementCensus {
                     + "2B:00=8,80=4;"
                     + "2C:00=2,10=2,20=2,30=2,40=2,50=2,60=3,70=3,80=3,90=3,A0=3,B0=3,C0=3,D0=3,E0=3,F0=1;"
                     + "2D:00=8,01=9,02=12,04=3,05=4,06=1,10=10,12=2,13=1,15=2;32:00=7,01=11;"
-                    + "37:50=2,60=5,70=2;6E:71=4;99:00=9;9A:00=34;9B:00=9;AE:00=1;B3:2D=1",
-            "LRZ3", "6E:F1=6;9E:00=1;AD:00=1,01=1,02=2,04=3");
+                    + "37:50=2,60=5,70=2;99:00=9;9A:00=34;9B:00=9;AE:00=1;B3:2D=1",
+            "LRZ3", "9E:00=1;AD:00=1,01=1,02=2,04=3");
 
     private static RomByteReader rom;
 
@@ -101,17 +103,17 @@ class TestS3kLrzPlacementCensus {
 
     @Test
     void act1PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 239);
+        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 205);
     }
 
     @Test
     void act2PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 281);
+        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 277);
     }
 
     @Test
     void bossActPlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ3", Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ, 0, 14);
+        assertPlaceholderBaseline("LRZ3", Sonic3kZoneIds.ZONE_LRZ_BOSS_HPZ, 0, 8);
     }
 
     /**

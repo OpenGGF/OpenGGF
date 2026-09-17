@@ -356,9 +356,15 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Seamless act handoffs retain fixed object owners without duplicates, avoiding
   a rewind-capture crash after the MHZ signpost.
   Complete routes, finales, and continuous replay chains remain gates.
-- **S3K Lava Reef:** rings no longer appear at the top-left corner of every S3K act.
-  Each ROM ring list opens with a `(0,0)` record that the ring manager always steps
-  over, and the engine was spawning it as a real ring.
+- **S3K Lava Reef:** Lava Reef Acts 1 and 2 now scroll their own layered background
+  instead of the generic quarter-speed fallback, Act 2 animates its own lava tiles
+  rather than Act 1's, and the invisible lava blocks that carry every lava-floor hit
+  in the zone now hurt, with a fire shield making the player immune to them.
+  The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
+  scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
+  Rings no longer appear at the top-left corner of every S3K act: each ROM ring list
+  opens with a `(0,0)` record that the ring manager always steps over, and the engine
+  was spawning it as a real ring.
 
 ## ROM images
 

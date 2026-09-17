@@ -122,6 +122,8 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
             0x050, 0x0F0
     };
     private static final int ANIPLC_LRZ1_ADDR = 0x028A6A;
+    /** {@code AniPLC_LRZ2} (sonic3k.asm:56022); {@code Offs_AniFunc} pairs it with {@code $901}. */
+    private static final int ANIPLC_LRZ2_ADDR = 0x028A84;
     private static final int ART_UNC_ANI_SOZ1_BG_ADDR = 0x0BD9C0;
     private static final int ART_UNC_ANI_SOZ1_BG_SIZE = 0x0C00;
     private static final int ART_UNC_ANI_SOZ1_BG2_ADDR = 0x0BE5C0;
@@ -2090,7 +2092,10 @@ class Sonic3kPatternAnimator implements AnimatedPatternManager,
                     ? Sonic3kConstants.ANIPLC_LBZ1_ADDR
                     : Sonic3kConstants.ANIPLC_LBZ2_ADDR;
             case 0x07 -> Sonic3kConstants.ANIPLC_MHZ_ADDR;
-            case 0x08, Sonic3kZoneIds.ZONE_LRZ -> ANIPLC_LRZ1_ADDR;
+            // Offs_AniFunc pairs (AnimateTiles, AniPLC) per act: both Sandopolis acts and LRZ1
+            // take AniPLC_LRZ1, LRZ2 takes AniPLC_LRZ2 (sonic3k.asm:53873-53880).
+            case 0x08 -> ANIPLC_LRZ1_ADDR;
+            case Sonic3kZoneIds.ZONE_LRZ -> actIndex == 0 ? ANIPLC_LRZ1_ADDR : ANIPLC_LRZ2_ADDR;
             case 0x14 -> Sonic3kConstants.ANIPLC_PACHINKO_ADDR;
             // Offs_AniFunc pairs for $1601 (Hidden Palace) and $1701 (sanctuary) are
             // AnimateTiles_DoAniPLC / AniPLC_HPZ; $1600 and $1700 have no AniPLC
