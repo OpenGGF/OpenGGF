@@ -1125,3 +1125,37 @@ provide near the measured corridor (the ceiling steps down at x=$1AE0 rather tha
 
 **Verification.** 105 focused collision and reverse-gravity tests green, `Skipped: 0`, one
 invocation. Reference table: **35 covered, 6 partial, 71 missing, 4 n/a**.
+
+
+### 2026-09-17 — Slice 2, part 5: step 2a-3's radius and jump rows
+
+**Seventeen rows, all three characters.** Roll entry (`Player_DoRoll` :23265, `loc_14FC4` :28500),
+unroll (`loc_11578` :22988, `loc_14DA2` :28233, `loc_175AA` :32261), spindash release (`loc_11C5E`
+:23694, `loc_1527C` :28748), bubble-shield bounce (`loc_12246` :24426), the jump's headroom angle
+(:23294, :28525, :32441) and its radius delta (`loc_1182E` :23346, `loc_1504C` :28572, `loc_1775C`
+:32488), and touch-floor roll clear (:24350, :29143, :32839). Table: **52 covered, 3 partial,
+57 missing, 4 n/a**.
+
+**The coordinate trap, confirmed by the RED.** The prediction recorded at `fe7b43eb3` held exactly:
+the inverted head sat 10 px clear of the ceiling (Sonic and Knuckles) and 2 px (Tails) — the full
+height difference, not the radius difference. `PlayableSpriteMovement.applyRollRadiusShift` now
+writes the mirrored ROM *centre* under the flag and leaves the upright top-left arithmetic alone.
+
+**A row the plan did not predict.** With the radius rows done, the inverted jump test still failed —
+`air=false`, the player never left the ceiling. The cause is row 23294: `Sonic_Jump` mirrors the
+angle it hands to `CalcRoomOverHead` (sonic3k.asm:23290-23300), and without it the headroom probe
+measured into the ceiling the player was standing on and refused the jump every frame. `Tails_Jump`
+(:28524-28576) and `Knux_Jump` (:32438-32493) were then read line by line and confirm both halves of
+the `b38402c2a` correction: the headroom angle is mirrored, the launch vector at `loc_1182E` re-reads
+`angle(a0)` raw. That closes the "verify before implementing" flag on 28525 and 32441.
+
+**How each assertion was made able to disagree.** The roll, unroll and jump tests were written
+first and failed. The two touch-floor tests were written after the change, so they were validated
+the other way: the flag test in the landing roll-clear branch was disabled and all three characters
+failed with the predicted 10/10/2 px error, then restored. That is a weaker sequence than RED-first
+and is recorded as such.
+
+**Verification.** 215 focused collision, physics, roll and spindash tests green, `Skipped: 0`;
+`-Pguards` 669/669; the four-class trace comparison against `f60b3f3e2` identical failure for
+failure for the third time this session (S1 2/2 green, S2 16388 errors at frame 6, S3K AIZ 3/16 red,
+59 errors at frame 5497).

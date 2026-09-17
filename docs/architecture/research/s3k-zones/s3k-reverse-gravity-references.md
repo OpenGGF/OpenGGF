@@ -91,19 +91,19 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 22011 | `loc_10C62` | `loc_10C62`: `eori.b #2,render_flags` after `Animate_Sonic` (vertical mirror) | — | missing |
 | 22623 | `loc_11276` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_112A6`) | — | missing |
 | 22646 | `loc_112B0` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_112E0`) | — | missing |
-| 22988 | `loc_11578` | `Sonic_RollSpeed` unroll: negates the radius Y adjustment | — | missing |
-| 23265 | `Player_DoRoll` | `Player_DoRoll`: `+5` becomes `-5` (`subi.w #2*5`) | — | missing |
-| 23294 | `Sonic_Jump` | **Description corrected 2026-09-17.** `Sonic_Jump` mirrors the angle it hands to `CalcRoomOverHead` — the headroom check (`loc_117FC`, :23298-23304). It does **not** mirror the launch angle: the jump vector at `loc_1182E` (:23314-23317) re-reads `angle(a0)` raw, with no flag test | — | missing |
-| 23346 | `loc_1182E` | `Sonic_Jump` (`loc_1182E`): negates the roll-radius Y adjustment | — | missing |
-| 23694 | `loc_11C5E` | `SonicKnux_Spindash` release: `+5` becomes `-5` | — | missing |
+| 22988 | `loc_11578` | `Sonic_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
+| 23265 | `Player_DoRoll` | `Player_DoRoll`: `+5` becomes `-5` (`subi.w #2*5`) | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
+| 23294 | `Sonic_Jump` | **Description corrected 2026-09-17.** `Sonic_Jump` mirrors the angle it hands to `CalcRoomOverHead` — the headroom check (`loc_117FC`, :23298-23304). It does **not** mirror the launch angle: the jump vector at `loc_1182E` (:23314-23317) re-reads `angle(a0)` raw, with no flag test | `PlayableSpriteMovement.doJump` headroom angle | covered |
+| 23346 | `loc_1182E` | `Sonic_Jump` (`loc_1182E`): negates the roll-radius Y adjustment | `PlayableSpriteMovement.doJump` radius delta | covered |
+| 23694 | `loc_11C5E` | `SonicKnux_Spindash` release: `+5` becomes `-5` | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 24081 | `loc_11F6E` | `SonicKnux_DoLevelCollision` `loc_11F6E`: negates the floor snap distance | `CollisionSystem.landOnFloor` via the swapped probe's `Direction` | covered |
 | 24178 | `Player_HitCeiling` | level collision, ceiling hit: negates the push-out distance | `CollisionSystem.doCeilingCollisionInternal` via the swapped probe | covered |
 | 24213 | `loc_12074` | level collision (`loc_12074`): floor landing through `sub_11FD6`; negates the snap distance, then sets `angle` and zeroes `y_vel` | `CollisionSystem.doTerrainCollisionAirDirect` (quadrant $40) | covered |
 | 24246 | `loc_120C2` | level collision (`loc_120C2`): negates the push-out distance | `CollisionSystem.doCeilingCollision` (quadrant $80) | covered |
 | 24284 | `loc_1211A` | level collision (`loc_1211A`): negates the push-out distance | `CollisionSystem.doCeilingCollisionInternal` (quadrant $C0) | covered |
 | 24308 | `loc_12148` | level collision (`loc_12148`): negates the push-out distance | `CollisionSystem.doTerrainCollisionAirDirect` (quadrant $C0) | covered |
-| 24350 | `Player_TouchFloor` | `Player_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableHurtRadiusTransition:32` | partial |
-| 24426 | `loc_12246` | `BubbleShield_Bounce` (`loc_12246`): negates the radius Y adjustment | — | missing |
+| 24350 | `Player_TouchFloor` | `Player_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
+| 24426 | `loc_12246` | `BubbleShield_Bounce` (`loc_12246`): negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | — | missing |
 | 24552 | `loc_123DE` | `loc_123DE` (dead/respawn): off-screen test uses `Camera_Y - $10` going up | — | missing |
 | 24716 | `sub_125E0` | `sub_125E0` (hurt/dead animate): vertical mirror | — | missing |
@@ -116,20 +116,20 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 26255 | `loc_138C8` | `loc_138C8`: vertical mirror after `Animate_Tails` | — | missing |
 | 27868 | `loc_14AA0` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_14AA0`) | — | missing |
 | 27891 | `loc_14ADA` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_14ADA`) | — | missing |
-| 28233 | `loc_14DA2` | `Tails_RollSpeed` unroll: negates the radius Y adjustment | — | missing |
+| 28233 | `loc_14DA2` | `Tails_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 28426 | `loc_14F30` | `Tails_Check_Screen_Boundaries` (`loc_14F30`): death plane at the top | `PlayableSpriteMovement.doLevelBoundary` (one shared owner with :23191) | covered |
-| 28500 | `loc_14FC4` | `Tails_Roll` (`loc_14FC4`): `+1` becomes `-1` (`subq.w #2`) | — | missing |
-| 28525 | `Tails_Jump` | `Tails_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | — | missing |
-| 28572 | `loc_1504C` | `Tails_Jump` (`loc_1504C`): negates the roll-radius Y adjustment | — | missing |
+| 28500 | `loc_14FC4` | `Tails_Roll` (`loc_14FC4`): `+1` becomes `-1` (`subq.w #2`) | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
+| 28525 | `Tails_Jump` | `Tails_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | `PlayableSpriteMovement.doJump` headroom angle | covered |
+| 28572 | `loc_1504C` | `Tails_Jump` (`loc_1504C`): negates the roll-radius Y adjustment | `PlayableSpriteMovement.doJump` radius delta | covered |
 | 28655 | `loc_1515C` | `Tails_Test_For_Flight` (`loc_1515C`): **shipped bug** — `neg.w d0` negates the wrong register, so the unroll adjustment in `d1` is *not* inverted. Model `FixBugs = 0`: no inversion | — | missing |
-| 28748 | `loc_1527C` | `Tails_Spindash` release: `+1` becomes `-1` (`subq.w #2`) | — | missing |
+| 28748 | `loc_1527C` | `Tails_Spindash` release: `+1` becomes `-1` (`subq.w #2`) | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 28917 | `loc_15444` | `Tails_DoLevelCollision` `loc_15444`: negates the floor snap | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 28974 | `loc_154C4` | `Tails_DoLevelCollision` `loc_154C4`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29009 | `loc_1550E` | `Tails_DoLevelCollision` `loc_1550E`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29042 | `loc_1555C` | `Tails_DoLevelCollision` `loc_1555C`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29080 | `loc_155B4` | `Tails_DoLevelCollision` `loc_155B4`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 29104 | `loc_155E2` | `Tails_DoLevelCollision` `loc_155E2`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
-| 29143 | `Tails_TouchFloor` | `Tails_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableHurtRadiusTransition:32` (verify it runs for Tails) | partial |
+| 29143 | `Tails_TouchFloor` | `Tails_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 29220 | `sub_15716` | `sub_15716` (hurt): death-plane test flips to the top | — | missing |
 | 29336 | `sub_15842` | `sub_15842` (hurt/dead animate): vertical mirror | — | missing |
 | 29594 | `loc_15A7A` | `loc_15A7A` (`Animate_Tails` rotation frames): vertical mirror applied inside the animator | — | missing |
@@ -160,16 +160,16 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 31485 | `Knuckles_DoLedgeClimbingAnimation` | `Knuckles_DoLedgeClimbingAnimation`: negates the table Y delta | `PlayableSpriteMovement:2387` | covered |
 | 31896 | `loc_172A8` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_172A8`) | — | missing |
 | 31919 | `loc_172E2` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_172E2`) | — | missing |
-| 32261 | `loc_175AA` | `Knux_RollSpeed` unroll: negates the radius Y adjustment | — | missing |
-| 32441 | `Knux_Jump` | `Knux_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | — | missing |
-| 32488 | `loc_1775C` | `Knux_Jump` (`loc_1775C`): negates the roll-radius Y adjustment | — | missing |
+| 32261 | `loc_175AA` | `Knux_RollSpeed` unroll: negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
+| 32441 | `Knux_Jump` | `Knux_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | `PlayableSpriteMovement.doJump` headroom angle | covered |
+| 32488 | `loc_1775C` | `Knux_Jump` (`loc_1775C`): negates the roll-radius Y adjustment | `PlayableSpriteMovement.doJump` radius delta | covered |
 | 32663 | `loc_179B4` | `Knux_DoLevelCollision` `loc_179B4`: negates the floor snap | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32692 | `loc_179F2` | `Knux_DoLevelCollision` `loc_179F2`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32724 | `loc_17A36` | `Knux_DoLevelCollision` `loc_17A36`: floor landing through the floor wrapper; negates the snap distance, sets `angle`, zeroes `y_vel` | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32758 | `loc_17A94` | `Knux_DoLevelCollision` `loc_17A94`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32782 | `loc_17ACA` | `Knux_DoLevelCollision` `loc_17ACA`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 32802 | `loc_17AEC` | `Knux_DoLevelCollision` `loc_17AEC`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
-| 32839 | `Knux_TouchFloor` | `Knux_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableHurtRadiusTransition:32` (verify it runs for Knuckles) | partial |
+| 32839 | `Knux_TouchFloor` | `Knux_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 32911 | `sub_17C10` | `sub_17C10` (hurt): death-plane test flips to the top | — | missing |
 | 33017 | `sub_17D1E` | `sub_17D1E` (hurt/dead animate): vertical mirror | — | missing |
 
@@ -252,17 +252,17 @@ is the RAM wipe described above).
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
-| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 6 | 1 | 12 | 1 |
-| C. Tails routines | 21 | 7 | 1 | 12 | 1 |
+| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 13 | 0 | 6 | 1 |
+| C. Tails routines | 21 | 13 | 0 | 7 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
-| E. Knuckles routines | 24 | 9 | 1 | 13 | 1 |
+| E. Knuckles routines | 24 | 13 | 0 | 10 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 2 | 0 | 7 | 0 |
 | G. Lost rings | 2 | 0 | 2 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 0 | 0 | 5 | 1 |
 | I. Monitors, springs, spikes | 6 | 2 | 0 | 4 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **35** | **6** | **71** | **4** |
+| **Total** | **116** | **52** | **3** | **57** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.
@@ -311,6 +311,23 @@ are all `Sonic_Balance`/`Tails`/`Knuckles` edge probes, and the engine's
 rotate with the CEILING ground mode. The ROM selects the reverse-gravity variant from the *flag*,
 not the angle, so the two models differ on a wall — unmeasured, and the upright engine has the same
 difference, so it is recorded rather than changed.
+
+**2a-3's radius rows, and the coordinate trap in them.** Every roll, unroll, jump, spindash-release
+and touch-floor site writes {@code y_pos} by the standing/rolling `y_radius` difference and negates
+that write under the flag. The engine expresses the same move as a *top-left* shift, because
+changing the rolling state also changes the sprite box height — `getRollHeightAdjustment()` returns
+the full height difference for exactly that reason. **Negating that helper moves the centre by
+twice the ROM's amount.** `PlayableSpriteMovement.applyRollRadiusShift` therefore writes the
+mirrored ROM centre directly under the flag, the form `PlayableHurtRadiusTransition` already used
+for the hurt path, and leaves the upright arithmetic untouched. The jump sites already worked in
+centre coordinates and only needed the negation.
+
+The jump also needed its **headroom** row (23294 / 28525 / 32441) in the same change, and that was
+discovered by measurement rather than planned: with only the radius rows done, an inverted player
+could not jump at all, because `CalcRoomOverHead` was still probing into the ceiling it was standing
+on. `Sonic_Jump` mirrors the angle it hands to that probe (sonic3k.asm:23290-23300) while the launch
+vector at `loc_1182E` re-reads `angle(a0)` raw — the correction recorded at `b38402c2a`, now
+confirmed line by line for `Tails_Jump` (:28524-28576) and `Knux_Jump` (:32438-32493) as well.
 
 The nine rows that were already marked covered before this slice are **not** in that position:
 they still have no test that runs them with the flag set, so they remain "verify", not "done".

@@ -293,6 +293,160 @@ class TestS3kReverseGravityDezCorridor {
                 s -> !s.getAir(), frames, gSpeed);
     }
 
+    /**
+     * Roll entry keeps the contact point planted. {@code Player_DoRoll} (sonic3k.asm:23259-23268)
+     * does {@code addq.w #5,y_pos} and, under the flag, {@code subi.w #2*5} — a centre-Y delta of
+     * −5 against upright's +5, which is exactly what keeps the head against the ceiling while the
+     * y_radius drops from standing to rolling. Tails' twin {@code loc_14FC4} (:28500) is the same
+     * shape with ±1.
+     */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void rollingOnTheCeilingKeepsTheHeadPlanted(Character character) {
+        onCorridorCeiling(character, (fixture, sprite) -> {
+            sprite.setGSpeed((short) 0x0400);
+            fixture.stepFrame(false, true, false, false, false);
+            assertTrue(sprite.getRolling(), "holding down at speed must start a roll");
+            assertEquals(CEILING_CLEAR_Y, sprite.getCentreY() - sprite.getYRadius(),
+                    "the rolling player's head stays against the ceiling");
+        });
+    }
+
+    /**
+     * And unrolling restores it. {@code loc_11578} (sonic3k.asm:22975-22991) puts the
+     * standing/rolling {@code y_radius} difference in {@code d0}, negates it under the flag, and
+     * adds it to {@code y_pos}; the Tails and Knuckles twins are {@code loc_14DA2} (:28233) and
+     * {@code loc_175AA} (:32261).
+     */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void unrollingOnTheCeilingKeepsTheHeadPlanted(Character character) {
+        onCorridorCeiling(character, (fixture, sprite) -> {
+            sprite.setGSpeed((short) 0x0400);
+            fixture.stepFrame(false, true, false, false, false);
+            assertTrue(sprite.getRolling(), "precondition: the player is rolling");
+            sprite.setGSpeed((short) 0x0040);
+            fixture.stepFrame(false, false, false, false, false);
+            assertFalse(sprite.getRolling(), "below min_roll_speed the player unrolls");
+            assertEquals(CEILING_CLEAR_Y, sprite.getCentreY() - sprite.getYRadius(),
+                    "the standing player's head is back against the ceiling");
+        });
+    }
+
+    /** The upright control for both: the same two transitions on the corridor floor. */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void rollingAndUnrollingOnTheFloorKeepTheFeetPlanted(Character character) {
+        onCorridorFloor(character, (fixture, sprite) -> {
+            sprite.setGSpeed((short) 0x0400);
+            fixture.stepFrame(false, true, false, false, false);
+            assertTrue(sprite.getRolling(), "holding down at speed must start a roll");
+            assertEquals(FLOOR_SURFACE_Y, sprite.getCentreY() + sprite.getYRadius(),
+                    "the rolling player's feet stay on the floor");
+            sprite.setGSpeed((short) 0x0040);
+            fixture.stepFrame(false, false, false, false, false);
+            assertFalse(sprite.getRolling(), "below min_roll_speed the player unrolls");
+            assertEquals(FLOOR_SURFACE_Y, sprite.getCentreY() + sprite.getYRadius(),
+                    "and the standing player's feet are still on it");
+        });
+    }
+
+    /**
+     * The jump's roll-radius adjustment. {@code Sonic_Jump} {@code loc_1182E}
+     * (sonic3k.asm:23343-23351) puts {@code y_radius - default_y_radius} in {@code d0},
+     * negates it under the flag, and subtracts it from {@code y_pos}; Tails
+     * {@code loc_1504C} (:28572) and Knuckles {@code loc_1775C} (:32488) are the same.
+     * The whole first jump frame — radius adjustment plus the launch integration — must
+     * therefore be the exact mirror of the upright one.
+     */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void theInvertedJumpFrameMirrorsTheUprightOne(Character character) {
+        int[] upright = new int[1];
+        onCorridorFloor(character, (fixture, sprite) -> {
+            int before = sprite.getCentreY();
+            fixture.stepFrame(false, false, false, false, true);
+            assertTrue(sprite.getAir(), "precondition: the upright control must leave the ground");
+            upright[0] = sprite.getCentreY() - before;
+        });
+
+        int[] inverted = new int[1];
+        onCorridorCeiling(character, (fixture, sprite) -> {
+            int before = sprite.getCentreY();
+            fixture.stepFrame(false, false, false, false, true);
+            assertTrue(sprite.getAir(), "the inverted player must leave the ceiling");
+            inverted[0] = sprite.getCentreY() - before;
+        });
+
+        assertEquals(-upright[0], inverted[0],
+                "the inverted jump frame is the mirror of the upright jump frame");
+    }
+
+    /**
+     * Landing out of a roll. {@code Player_TouchFloor} (sonic3k.asm:24346-24354) restores the
+     * standing radii and negates the compensating {@code y_pos} write under the flag;
+     * {@code Tails_TouchFloor} (:29143) and {@code Knux_TouchFloor} (:32839) are the same.
+     * A player that lands rolled on the ceiling must end standing with its head still on it.
+     */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void landingOutOfARollOnTheCeilingKeepsTheHeadPlanted(Character character) {
+        int ceilingRest = CEILING_CLEAR_Y + radiusOf(character);
+        Outcome outcome = rolledFall(character, true, ceilingRest + 16, 0x0400);
+        assertFalse(outcome.air, "the rolled player must land on the ceiling");
+        assertEquals(CEILING_CLEAR_Y, outcome.centreY - outcome.yRadius,
+                "Player_TouchFloor leaves the standing player's head against the ceiling");
+    }
+
+    /** The upright control for the same landing. */
+    @ParameterizedTest
+    @EnumSource(Character.class)
+    void landingOutOfARollOnTheFloorKeepsTheFeetPlanted(Character character) {
+        int floorRest = FLOOR_SURFACE_Y - radiusOf(character);
+        Outcome outcome = rolledFall(character, false, floorRest - 16, 0x0400);
+        assertFalse(outcome.air, "the rolled player must land on the floor");
+        assertEquals(FLOOR_SURFACE_Y, outcome.centreY + outcome.yRadius,
+                "Player_TouchFloor leaves the standing player's feet on the floor");
+    }
+
+    /** Lands an inverted player on the corridor ceiling, then hands it to the body. */
+    private void onCorridorCeiling(Character character,
+                                   java.util.function.BiConsumer<HeadlessTestFixture,
+                                           AbstractPlayableSprite> body) {
+        standing(character, true, CEILING_CLEAR_Y + radiusOf(character) + 12, 0x0400, body);
+    }
+
+    /** The upright control: lands a player on the corridor floor. */
+    private void onCorridorFloor(Character character,
+                                 java.util.function.BiConsumer<HeadlessTestFixture,
+                                         AbstractPlayableSprite> body) {
+        standing(character, false, FLOOR_SURFACE_Y - radiusOf(character) - 12, 0x0400, body);
+    }
+
+    private void standing(Character character, boolean reverseGravity, int startCentreY, int yVel,
+                          java.util.function.BiConsumer<HeadlessTestFixture,
+                                  AbstractPlayableSprite> body) {
+        HeadlessTestFixture fixture = fixtureFor(character);
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(reverseGravity);
+            NativePositionOps.writeXPosResetSubpixel(sprite, CORRIDOR_X);
+            NativePositionOps.writeYPosResetSubpixel(sprite, startCentreY);
+            sprite.setAir(true);
+            sprite.setOnObject(false);
+            sprite.setXSpeed((short) 0);
+            sprite.setGSpeed((short) 0);
+            sprite.setYSpeed((short) yVel);
+            for (int frame = 0; frame < 8 && sprite.getAir(); frame++) {
+                fixture.stepIdleFrames(1);
+            }
+            assertFalse(sprite.getAir(), "precondition: the player must be standing on the surface");
+            body.accept(fixture, sprite);
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
     private int radiusOf(Character character) {
         HeadlessTestFixture fixture = fixtureFor(character);
         try {
@@ -302,7 +456,14 @@ class TestS3kReverseGravityDezCorridor {
         }
     }
 
-    private record Outcome(boolean air, int yVel, int centreY, int angle, GroundMode groundMode) { }
+    private record Outcome(boolean air, int yVel, int centreY, int angle, GroundMode groundMode,
+                           int yRadius) { }
+
+    /** Drops a player that is already curled, so the landing runs the roll-clear branch. */
+    private Outcome rolledFall(Character character, boolean reverseGravity, int startCentreY,
+                               int yVel) {
+        return run(character, reverseGravity, startCentreY, yVel, 0, s -> !s.getAir(), 0, 0, true);
+    }
 
     /** Steps until the player's downward-in-its-own-frame velocity stops being negative. */
     private Outcome rise(Character character, boolean reverseGravity, int startCentreY, int yVel) {
@@ -356,6 +517,14 @@ class TestS3kReverseGravityDezCorridor {
                         int xVel,
                         java.util.function.Predicate<AbstractPlayableSprite> done,
                         int settleFrames, int settleGSpeed) {
+        return run(character, reverseGravity, startCentreY, yVel, xVel, done,
+                settleFrames, settleGSpeed, false);
+    }
+
+    private Outcome run(Character character, boolean reverseGravity, int startCentreY, int yVel,
+                        int xVel,
+                        java.util.function.Predicate<AbstractPlayableSprite> done,
+                        int settleFrames, int settleGSpeed, boolean startRolled) {
         HeadlessTestFixture fixture = fixtureFor(character);
         try {
             AbstractPlayableSprite sprite = fixture.sprite();
@@ -368,6 +537,10 @@ class TestS3kReverseGravityDezCorridor {
             sprite.setXSpeed((short) xVel);
             sprite.setGSpeed((short) 0);
             sprite.setYSpeed((short) yVel);
+            if (startRolled) {
+                sprite.applyRollingRadii(true);
+                sprite.setRolling(true);
+            }
             assertFalse(sprite.isObjectControlSuppressesMovement(),
                     "the corridor probe must own the player's movement");
 
@@ -381,7 +554,7 @@ class TestS3kReverseGravityDezCorridor {
                 fixture.stepIdleFrames(1);
             }
             return new Outcome(sprite.getAir(), sprite.getYSpeed(), sprite.getCentreY(),
-                    sprite.getAngle() & 0xFF, sprite.getGroundMode());
+                    sprite.getAngle() & 0xFF, sprite.getGroundMode(), sprite.getYRadius());
         } finally {
             SessionManager.clear();
         }
