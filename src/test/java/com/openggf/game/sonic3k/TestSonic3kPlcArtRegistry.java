@@ -57,7 +57,9 @@ public class TestSonic3kPlcArtRegistry {
         Sonic3kPlcArtRegistry.ZoneArtPlan aiz = Sonic3kPlcArtRegistry.getPlan(0, 0);
         assertTrue(plan.standaloneArt().size() <= aiz.standaloneArt().size());
         assertTrue(plan.levelArt().size() <= aiz.levelArt().size());
-        assertTrue(Sonic3kLevelResourceProfile.isHpzSanctuary(0x16, 1));
+        // $1601 is the playable Hidden Palace act; only $1701 is the Super Emerald sanctuary.
+        assertTrue(Sonic3kLevelResourceProfile.isHiddenPalace(0x16, 1));
+        assertTrue(!Sonic3kLevelResourceProfile.isHpzSanctuary(0x16, 1));
         assertTrue(Sonic3kLevelResourceProfile.isHpzSanctuary(0x17, 1));
         assertTrue(!Sonic3kLevelResourceProfile.isHpzSanctuary(64, 1024));
     }

@@ -126,7 +126,11 @@ class TestRemainingRewindTailInventory {
         // MHZ Madmole's body is its own ROM child object; TestMadmoleParentChildRewind
         // recreates it with its cap (graph-covered).
         // The SOZ event-allocated title-card SST occupant passes the isolated sweep.
-        return new TailInventory(1065, 840, 225, 0, buckets);
+        // Hidden Palace bring-up: 21 object classes; 11 pass the isolated sweep and ten need their
+        // real owners or scripted arguments (teleporter beam and route helper, ship child, crane,
+        // crane parts, sparks, debris, camera gradual, boss music, Knuckles dust), recreated by the
+        // HPZ compatibility, fight and native-sequence graph tests.
+        return new TailInventory(1086, 851, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {

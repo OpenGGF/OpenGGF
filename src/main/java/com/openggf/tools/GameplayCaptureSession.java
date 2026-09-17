@@ -174,25 +174,15 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (ui != null) {
             ui.updateFade();
         }
-        // Declared setup: the special-stage debug completion key, pressed on alternate frames
-        // (a fresh edge each time) until the stage hands over to its results screen.
+        // Declared setup: the special-stage debug completion, requested on alternate frames
+        // until the stage hands over to its results screen.
         boolean pressComplete = completeSpecialStage
                 && loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE
                 && (previousInput == null || (previousInput.frameIndex() & 1) == 0);
-        SonicConfigurationService config = GameServices.configuration();
-        int completeKey = config.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY);
         if (pressComplete) {
-            config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
-            loop.getInputHandler().handleKeyEvent(completeKey, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+            loop.debugCompleteSpecialStageWithEmerald();
         }
-        try {
-            loop.step();
-        } finally {
-            if (pressComplete) {
-                loop.getInputHandler().handleKeyEvent(completeKey, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
-                config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
-            }
-        }
+        loop.step();
     }
 
     /** Renders the current frame through the gameplay renderer and reads it back. */

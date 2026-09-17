@@ -4,7 +4,3 @@
 # All formerly parent-dependent rows are now classified as graph-covered by
 # RewindRoundTripHarness.GRAPH_COVERED_ISOLATED_PROBE_CLASSES and guarded by
 # TestGraphCoveredIsolatedProbeClassification.
-covered|com.openggf.game.sonic3k.objects.HpzRobotnikShipChildObjectInstance|com.openggf.tests.TestS3kHpzKnucklesFightHeadless
-covered|com.openggf.game.sonic3k.objects.HpzShipCraneObjectInstance|com.openggf.tests.TestS3kHpzKnucklesFightHeadless
-covered|com.openggf.game.sonic3k.objects.HpzShipSparkEmitterObjectInstance|com.openggf.tests.TestS3kHpzKnucklesFightHeadless
-covered|com.openggf.game.sonic3k.objects.HpzKnucklesDustObjectInstance|com.openggf.tests.TestS3kHpzKnucklesFightNativeSequence

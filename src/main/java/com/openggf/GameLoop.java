@@ -4546,6 +4546,11 @@ public class GameLoop {
         return resultsScreen;
     }
 
+    /** Declared-setup hook for capture tools: the special-stage debug completion without a key read. */
+    public void debugCompleteSpecialStageWithEmerald() {
+        debugShortcuts.debugCompleteSpecialStageWithEmerald();
+    }
+
     public SpecialStageProvider getActiveSpecialStageProvider() {
         if (currentGameMode == GameMode.SPECIAL_STAGE || currentGameMode == GameMode.SPECIAL_STAGE_RESULTS) {
             return activeSpecialStageProvider != null ? activeSpecialStageProvider : NoOpSpecialStageProvider.INSTANCE;
