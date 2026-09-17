@@ -103,6 +103,21 @@ class TestSozLightAndGhosts {
         assertEquals(0,ghost.getCollisionFlags());assertTrue((Boolean)get(ghost,"fading"));assertEquals(1,children.size());
         for(int i=0;i<40&&!ghost.isDestroyed();i++)ghost.update(i,player);assertTrue(ghost.isDestroyed());assertEquals(0,c.ghostCount());
     }
+    @Test void ghostDeletesOnPassAfterPostCameraRenderClearsOnScreenBit(){
+        // Hyudoro_body tests render_flags from the previous Render_Sprites, which uses the moved camera
+        // (soz_completerun row 44145 frees the count one pass before the pre-camera bounds would).
+        when(checkpoint.getLastCheckpointIndex()).thenReturn(1);dark(5);var c=controller();c.update(0,player);
+        var ghost=assertInstanceOf(SozHyudoroBodyObjectInstance.class,children.getFirst());
+        AbstractObjectInstance.updateCameraBounds(0x4000,0x4000,0x4140,0x40E0,0);
+        ghost.refreshPostCameraRenderState();ghost.update(0,player);
+        assertEquals(1,c.ghostCount(),"screen-positioned routines are always marked on-screen");
+        AbstractObjectInstance.updateCameraBounds(0,0,320,224,0);
+        for(int i=0;i<500&&ghost.getCollisionFlags()==0;i++)ghost.update(i,player);
+        assertEquals(16,value(ghost,"routine"));
+        AbstractObjectInstance.updateCameraBounds(0x4000,0x4000,0x4140,0x40E0,0);
+        ghost.update(1,player);assertEquals(1,c.ghostCount(),"the moved camera is not visible until Render_Sprites");
+        ghost.refreshPostCameraRenderState();ghost.update(2,player);assertEquals(0,c.ghostCount());
+    }
     @Test void apparitionPatrolAndDarknessMorphReplayWithRealRomAnimationPrograms(){
         when(checkpoint.getLastCheckpointIndex()).thenReturn(1);dark(1);var c=controller();c.update(0,player);
         var ghost=assertInstanceOf(SozHyudoroBodyObjectInstance.class,children.getFirst());

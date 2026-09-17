@@ -324,21 +324,26 @@ final class ObjectPlacementController extends AbstractPlacementManager<ObjectSpa
         if ((spawn.rawYWord() & 0x8000) != 0) {
             return true;
         }
-        int windowTop = (cameraY & 0xFF80) - 0x80;
-        int windowBottom = (cameraY & 0xFF80) + 0x200;
         int spawnY = spawn.rawYWord() & 0x0FFF;
         if ((short) cameraMinY < 0) {
+            // loc_1B7F2 works in 16-bit words: a wrapped camera at $FF09 gives d3=$FE80,
+            // whose sign selects the split loc_1BA40 band after masking with Screen_Y_wrap_value.
             int wrapRange = verticalWrapRange > 0 ? verticalWrapRange : 0x1000;
             int wrapMask = wrapRange - 1;
-            if (windowTop < 0) {
-                return spawnY >= (windowTop & wrapMask) || spawnY <= windowBottom;
+            int coarse = cameraY & 0xFF80;
+            int top = (coarse - 0x80) & 0xFFFF;
+            int bottom = (coarse + 0x200) & 0xFFFF;
+            if ((short) top < 0) {
+                return spawnY >= (top & wrapMask) || spawnY <= bottom;
             }
-            if (windowBottom > wrapRange) {
-                return spawnY >= windowTop || spawnY <= (windowBottom & wrapMask);
+            if (bottom > wrapRange) {
+                return spawnY >= top || spawnY <= (bottom & wrapMask);
             }
-        } else {
-            windowTop = Math.max(0, windowTop);
+            return spawnY >= top && spawnY <= bottom;
         }
+        // loc_1B84A clamps a negative d3 to zero when the level does not wrap.
+        int windowTop = Math.max(0, (cameraY & 0xFF80) - 0x80);
+        int windowBottom = (cameraY & 0xFF80) + 0x200;
         return spawnY >= windowTop && spawnY <= windowBottom;
     }
 

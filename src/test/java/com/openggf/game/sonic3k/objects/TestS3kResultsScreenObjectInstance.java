@@ -186,6 +186,36 @@ class TestS3kResultsScreenObjectInstance {
     }
 
     @Test
+    void lowerSlotEndSignControlRestoresControlOnTheNextPass() throws Exception {
+        // soz_completerun rows 28940-28942: Obj_LevelResults (slot 12) retires on row
+        // 28940, the lower-slot Obj_EndSignControlAwaitStart (slot 8) calls
+        // Restore_PlayerControl on row 28941, so Sonic never moves under held input.
+        ActTransitionRecordingServices services = new ActTransitionRecordingServices(0x08, 0);
+        S3kResultsScreenObjectInstance results = transitionShell(
+                services, PlayerCharacter.SONIC_AND_TAILS, 0);
+        results.setServices(services);
+        services.withIsolatedObjectManager();
+        prepareFinalExitDispatch(results);
+
+        S3kBossDefeatSignpostFlow controlOwner =
+                new S3kBossDefeatSignpostFlow(0x4220, 0, S3kBossDefeatSignpostFlow.CleanupAction.NONE);
+        controlOwner.setServices(services);
+        setPrivate(controlOwner, "initialized", true);
+        setPrivateEnum(controlOwner, "phase", "AWAIT_RESULTS");
+        services.objectManager().addDynamicObject(controlOwner);
+        controlOwner.setSlotIndex(8);
+        results.setSlotIndex(12);
+
+        TestablePlayableSprite player = new TestablePlayableSprite("sonic", (short) 0, (short) 0);
+        ObjectControlState.nativeBit7FullControl().applyTo(player);
+
+        results.update(0, player);
+
+        assertTrue(player.isObjectControlled(),
+                "the results owner must not restore control for a lower-slot EndSignControl owner");
+    }
+
+    @Test
     void aizBossFlowDoesNotRepeatDisplacedOwnerEntriesInResultsWait()
             throws Exception {
         ActTransitionRecordingServices services =
@@ -258,6 +288,28 @@ class TestS3kResultsScreenObjectInstance {
         assertEquals(List.of("3:1"), services.titleCard.calls,
                 "The retained results SST mutates into the native in-level Act 2 title card");
         verify(services.levelManager, never()).resetLevelGamestate(org.mockito.ArgumentMatchers.any(LevelState.class));
+    }
+
+    @Test
+    void sandopolisAndDeathEggActOneResultsLeaveRingsForTheLaterTitleCard() throws Exception {
+        // loc_2DD06 deletes the results SST for zones $08/$0B without Obj_TitleCard, so
+        // Ring_count survives until the later title card's Obj_TitleCardWait. Recorded
+        // s3k-tails-full-chain-all-emeralds SOZ1 keeps 88 rings from row 17771 to 18198.
+        for (int zone : new int[]{0x08, 0x0B}) {
+            ActTransitionRecordingServices services = new ActTransitionRecordingServices(zone, 0);
+            S3kResultsScreenObjectInstance results = transitionShell(
+                    services, PlayerCharacter.SONIC_AND_TAILS, 0);
+            results.setServices(services);
+
+            Method onExitReady = S3kResultsScreenObjectInstance.class.getDeclaredMethod("onExitReady");
+            onExitReady.setAccessible(true);
+            onExitReady.invoke(results);
+            onExitReady.invoke(results);
+
+            assertEquals(List.of(), services.titleCard.calls,
+                    "loc_2DD38 shows no immediate title card for zone " + zone);
+            verify(services.levelManager, never()).resetLevelGamestate(org.mockito.ArgumentMatchers.any(LevelState.class));
+        }
     }
 
     @Test

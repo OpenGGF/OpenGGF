@@ -89,6 +89,17 @@ class TestStillSpriteInstance {
     }
 
     @Test
+    void stillSpritesPublishTheirRomCodePointerHighWordForTailsInteract() {
+        // soz_completerun row 9046: Tails' stale interact slot now holds
+        // Obj_AnimatedStillSprite ($0002BF5A), whose word 0 differs from the $0004
+        // Tails_CPU_interact latch, so sub_13EFC despawns him (sonic3k.asm:26816-26843).
+        assertEquals(0x0002, new StillSpriteInstance(new ObjectSpawn(0, 0, 0x2F, 0, 0, false, 0))
+                .romObjectCodePointerHighWord());
+        assertEquals(0x0002, new AnimatedStillSpriteInstance(new ObjectSpawn(0, 0, 0x30, 0, 0, false, 0))
+                .romObjectCodePointerHighWord());
+    }
+
+    @Test
     void mhzStillSpriteForcesRomArtTilePriorityBitWhenRendering() {
         ObjectRenderManager renderManager = mock(ObjectRenderManager.class);
         PatternSpriteRenderer renderer = mock(PatternSpriteRenderer.class);

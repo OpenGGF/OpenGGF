@@ -9,21 +9,48 @@ public final class SozEndBossVictoryRoute {
     private final int jumpPeriod;
     private final int jumpHold;
     private final int approachOffset;
+    private final boolean pressOnlyWhenGrounded;
+    private boolean capsuleTargeting;
+    private int holdUntil=-1;
 
-    public SozEndBossVictoryRoute() { this(48,12,-12); }
+    // The lower shell hurts on the landing pass itself (sub_78136 after SolidObjectFull2), so
+    // the default rhythm lands a little to the right of the pilot instead of on that shell.
+    public SozEndBossVictoryRoute() { this(44,14,4); }
 
     /** Authored controller choices, never runtime boss or physics parameters. */
     SozEndBossVictoryRoute(int jumpPeriod,int jumpHold,int approachOffset) {
+        this(jumpPeriod,jumpHold,approachOffset,false);
+    }
+
+    /**
+     * With {@code pressOnlyWhenGrounded}, a new jump press starts only on the ground, so an
+     * airborne repress never starts an ability such as Tails flight.
+     */
+    SozEndBossVictoryRoute(int jumpPeriod,int jumpHold,int approachOffset,boolean pressOnlyWhenGrounded) {
         this.jumpPeriod=jumpPeriod;
         this.jumpHold=jumpHold;
         this.approachOffset=approachOffset;
+        this.pressOnlyWhenGrounded=pressOnlyWhenGrounded;
     }
+    /** Walks to an unopened egg capsule instead of holding the boss-relative approach. */
+    SozEndBossVictoryRoute targetCapsule() { capsuleTargeting=true; return this; }
+
     public Bk2FrameInput input(int tick, AbstractPlayableSprite player) {
         var boss=boss();
         int target=boss==null?0x5230:boss.getX()+approachOffset;
         if(boss!=null&&boss.ownsPostResultsTransition())target=0x5360;
         int x=player.getCentreX()&65535;
-        boolean left=x>target+8,right=x<target-8,jump=tick%jumpPeriod<jumpHold;
+        boolean left=x>target+8,right=x<target-8,jump;
+        var capsules=GameServices.level().getObjectManager().activeObjectsOfType(SozEndBossEggCapsule.class);
+        if(capsuleTargeting&&!capsules.isEmpty()&&!capsules.getFirst().isOpened()) {
+            // Full-height presses clear the capsule body to reach its button.
+            jump=tick%48<24;
+        } else if(pressOnlyWhenGrounded) {
+            if(tick>=holdUntil && !player.getAir() && tick%jumpPeriod==0)holdUntil=tick+jumpHold;
+            jump=tick<holdUntil;
+        } else {
+            jump=tick%jumpPeriod<jumpHold;
+        }
         return new Bk2FrameInput(tick,(left?4:0)|(right?8:0)|(jump?16:0),jump?1:0,false,"");
     }
     static SozEndBossInstance boss(){

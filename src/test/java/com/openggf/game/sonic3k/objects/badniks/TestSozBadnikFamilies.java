@@ -29,8 +29,21 @@ class TestSozBadnikFamilies {
     private void init(AbstractS3kBadnikInstance badnik) { badnik.setServices(services); badnik.update(0, null); badnik.update(1, null); }
     private void childrenTick(int clock, PlayableEntity player) { for (var child : List.copyOf(children)) { child.setServices(services); child.update(clock, player); } }
 
+    /** Obj_WaitOffscreen: the placeholder pass is published by Render_Sprites before loc_85B02 restores. */
+    private void renderPlaceholder(AbstractS3kBadnikInstance badnik) {
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        badnik.setServices(services); badnik.update(-1, null); badnik.refreshPostCameraRenderState();
+    }
+    @Test void skorpWaitsForRenderedPlaceholderBeforeInitializing() {
+        var skorp = new SkorpBadnikInstance(spawn(0x94, 8, 0)); skorp.setServices(services);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        skorp.update(0, null); assertEquals(0, children.size(), "first pass only queues Map_Offscreen");
+        skorp.refreshPostCameraRenderState();
+        skorp.update(1, null); assertEquals(0, children.size(), "loc_85B02 restores Obj_Skorp and returns");
+        skorp.update(2, null); assertEquals(6, children.size(), "loc_8E670 links the tail on the following pass");
+    }
     @Test void skorpHasSixLinkedSlotsAndOnlyLastIsHarmful() {
-        var skorp = new SkorpBadnikInstance(spawn(0x94, 8, 0)); init(skorp);
+        var skorp = new SkorpBadnikInstance(spawn(0x94, 8, 0)); renderPlaceholder(skorp); init(skorp);
         assertEquals(6, children.size()); childrenTick(1, null);
         for (int i=0;i<6;i++) assertEquals(i==5 ? 0x87:0, ((TouchResponseProvider)children.get(i)).getCollisionFlags());
         assertEquals(208, children.getFirst().getX());
@@ -39,7 +52,7 @@ class TestSozBadnikFamilies {
         assertTrue(children.stream().allMatch(AbstractObjectInstance::isDestroyed));
     }
     @Test void skorpAttackFreezesBodyThenCompletesTailReturn() {
-        var skorp = new SkorpBadnikInstance(spawn(0x94, 8, 0)); init(skorp); childrenTick(1,null);
+        var skorp = new SkorpBadnikInstance(spawn(0x94, 8, 0)); renderPlaceholder(skorp); init(skorp); childrenTick(1,null);
         PlayableEntity target = mock(PlayableEntity.class);
         when(target.getCentreX()).thenReturn((short)140); when(target.getCentreY()).thenReturn((short)200);
         skorp.update(2, target); childrenTick(2, target);
@@ -50,8 +63,24 @@ class TestSozBadnikFamilies {
         }
         assertTrue(movingAgain,"tip completion releases parent's attack latch");
     }
+    @Test void sandwormInitializesTwoPassesAfterItsPlaceholderFirstRendersOnscreen() {
+        // Recorded s3k-tails-full-chain-all-emeralds SOZ1: the worm at $22B0 initializes
+        // on row 5630 and emerges 128 ticks later on 5758. Obj_WaitOffscreen must draw
+        // its placeholder once, observe the resulting render bit on the next pass
+        // (loc_85B02 then returns), and run loc_8EA88 only on the pass after that.
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        var worm = new SandwormBadnikInstance(spawn(0x95,0,0)); worm.setServices(services);
+        worm.update(0, null); worm.refreshPostCameraRenderState();
+        assertEquals(0, children.size(), "first pass only queues Map_Offscreen");
+        worm.update(1, null); worm.refreshPostCameraRenderState();
+        assertEquals(0, children.size(), "loc_85B02 restores the entry and returns without initializing");
+        worm.update(2, null);
+        assertEquals(13, children.size(), "loc_8EA88 creates segments and warnings on the following pass");
+    }
     @Test void sandwormEmergesAfter128WaitTicksAndFiveSegmentsLagBySixTicks() {
-        var worm = new SandwormBadnikInstance(spawn(0x95,0,0)); init(worm);
+        AbstractObjectInstance.updateCameraBounds(0, 0, 320, 224, 0);
+        var worm = new SandwormBadnikInstance(spawn(0x95,0,0)); worm.setServices(services);
+        worm.update(-1, null); worm.refreshPostCameraRenderState(); init(worm);
         assertEquals(13,children.size()); childrenTick(1,null);
         for(int f=2;f<129;f++) {worm.update(f,null);childrenTick(f,null);}
         assertEquals(0,worm.getCollisionFlags());

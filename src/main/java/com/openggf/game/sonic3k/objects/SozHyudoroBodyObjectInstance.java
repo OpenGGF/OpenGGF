@@ -25,12 +25,14 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     private int routine,darkness,frame,animationAddress,animationIndex,animationTimer,attackTimer,collisionProperty;
     private boolean initialized,worldPosition,facingLeft,directionDown,fading;
     private boolean renderOnScreen=true,deletePending;
+    private int lastVIntRunCount;
     private byte[] animations;
     public SozHyudoroBodyObjectInstance(ObjectSpawn spawn){this(spawn,null);}
     public SozHyudoroBodyObjectInstance(ObjectSpawn spawn,SozHyudoroControllerObjectInstance controller){
         super(spawn,"SOZHyudoro");this.controller=controller;xFixed=spawn.x()<<16;yFixed=spawn.y()<<16;
     }
     @Override public void update(int vIntRunCount,PlayableEntity leader){
+        lastVIntRunCount=vIntRunCount;
         if(deletePending){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(controller==null){ObjectLifetimeOps.deleteNoRespawn(this);return;}
         if(!initialized){initialize();}
@@ -62,11 +64,14 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
             case 16 -> {animate();move();}
             default -> throw new IllegalStateException("Hyudoro routine "+routine);
         }
-        boolean previousVisible=renderOnScreen;
-        renderOnScreen=isWithinRenderSpriteBounds(0x10,0x14);
-        if(!previousVisible){deleteGhost();return;}
+        // tst.b render_flags(a0) reads the bit written by the previous Render_Sprites pass.
+        if(!renderOnScreen){deleteGhost();return;}
         if(dark==0){fade();return;}
         resolvePendingContacts();
+    }
+    /** Render_Sprites runs after the camera update; screen-positioned ghosts are always marked on-screen. */
+    @Override public void refreshPostCameraRenderState(){
+        if(!deletePending)renderOnScreen=!worldPosition||isWithinRenderSpriteBounds(0x10,0x14);
     }
     private void resolvePendingContacts() {
         int property = collisionProperty;
@@ -88,7 +93,11 @@ public final class SozHyudoroBodyObjectInstance extends AbstractObjectInstance
     private boolean resolveContact(AbstractPlayableSprite player) {
         if (attacking(player)) { fade(); return true; }
         if (!player.getInvulnerable()) {
-            player.applyHurtOrDeath(getX(), DamageCause.NORMAL, player.getRingCount() > 0);
+            // HurtCharacter_Directly runs HurtCharacter, which spills Player_1's rings.
+            if (player.isCpuControlled()) { player.applyHurt(getX(), DamageCause.NORMAL); return false; }
+            boolean rings = player.getRingCount() > 0;
+            if (rings && !player.hasShield()) services().spawnLostRings(player, lastVIntRunCount);
+            player.applyHurtOrDeath(getX(), DamageCause.NORMAL, rings);
         }
         return false;
     }

@@ -81,8 +81,9 @@ class TestSidekickCpuManualFlight {
         assertTrue(cpu.isUnderManualControl(),
                 "manual ownership remains visible through movement on the frame that applied P2 input");
         assertTrue(tails.getTailsFlightController().isActive());
-        assertEquals((short) 0x0008, tails.getYSpeed(),
-                "the final-frame repress activates and updates flight exactly once");
+        assertEquals((short) 0x0038, tails.getYSpeed(),
+                "the final-frame repress activates flight; Tails_Stand_Freespace still applies "
+                        + "MoveSprite_TestGravity's +$38 that frame (sonic3k.asm:27553-27559)");
 
         cpu.setController2Input(0, 0);
         cpu.update(2);

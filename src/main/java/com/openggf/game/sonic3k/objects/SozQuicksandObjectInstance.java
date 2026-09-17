@@ -111,6 +111,12 @@ public final class SozQuicksandObjectInstance extends AbstractObjectInstance
         p.setOnObject(true);
         p.setRollingJump(false);
         p.setDoubleJumpFlag(0);
+        // The engine projects glide/climb poses as a retained anim write plus direct
+        // mapping control. Clearing double_jump_flag ends that pose, and the anim this
+        // capture writes below must reach Animate on the next frame (recorded Knuckles
+        // SOZ1 row 2039: anim 0, mapping $31 after a gliding capture).
+        p.setForcedAnimationId(-1);
+        p.setObjectMappingFrameControl(false);
         p.setJumping(false);
         if (variant == 0x80) {
             p.setAir(true);

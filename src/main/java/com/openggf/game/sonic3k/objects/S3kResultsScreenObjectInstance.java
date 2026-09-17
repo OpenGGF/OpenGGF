@@ -11,6 +11,7 @@ import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.game.save.SaveReason;
 import com.openggf.game.timing.HardwareWorkHandle;
 import com.openggf.game.timing.HardwareWorkKind;
+import com.openggf.level.objects.AbstractObjectInstance;
 import com.openggf.level.objects.AbstractResultsScreen;
 import com.openggf.game.sonic3k.Sonic3kObjectArt;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
@@ -1003,8 +1004,12 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
             // request above, where it becomes visible after the title children
             // reach their display positions (sonic3k.asm:62708-62720,
             // 62214-62235).
+            // loc_2DD06 deletes the results owner for Sandopolis 1 and Death Egg 1
+            // without creating Obj_TitleCard, so nothing clears Timer/Ring_count
+            // here; the later act title card's Obj_TitleCardWait owns that reset
+            // (sonic3k.asm:62708-62730, 62220-62235).
             if (!hasSeamlessTransition && !retainedReloadState
-                    && !aizAct1MinibossTitleHandoff) {
+                    && !aizAct1MinibossTitleHandoff && !skipTitleCard) {
                 resetLevelGamestateForActTransition();
             }
         }
@@ -1125,10 +1130,37 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         for (S3kBossDefeatSignpostFlow flow :
                 objectManager.activeObjectsOfType(S3kBossDefeatSignpostFlow.class)) {
             if (!flow.isDestroyed()) {
+                if (isRunBeforeThisResultsOwner(flow)) {
+                    return;
+                }
                 flow.restoreNativeControlAtResultsPublication(playerRef);
                 return;
             }
         }
+    }
+
+    /**
+     * A live EndSignControl owner in a lower SST slot has already run in this
+     * Process_Sprites pass. Its Obj_EndSignControlAwaitStart poll observes the
+     * cleared _unkFAA8 and calls Restore_PlayerControl on the next pass
+     * (sonic3k.asm:180398-180403), so this results owner must not restore early.
+     */
+    private boolean lowerSlotEndSignControlOwnsRestore() {
+        var objectManager = services().objectManager();
+        if (objectManager == null) {
+            return false;
+        }
+        for (S3kBossDefeatSignpostFlow flow :
+                objectManager.activeObjectsOfType(S3kBossDefeatSignpostFlow.class)) {
+            if (!flow.isDestroyed() && isRunBeforeThisResultsOwner(flow)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isRunBeforeThisResultsOwner(AbstractObjectInstance owner) {
+        return owner.getSlotIndex() >= 0 && getSlotIndex() >= 0 && owner.getSlotIndex() < getSlotIndex();
     }
 
     private void completePostResultsEventHandoff() {
@@ -1185,7 +1217,8 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // Results loc_2DCF8 only clears _unkFAA8; releasing here lets the next
         // player slot move/animate one dispatch before the boss restores it.
         boolean retainedAct2PostBossHandoff = act == 1 && (zone == 0x04 || zone == 0x06);
-        if (!hasSeamlessTransition && !retainedAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()) {
+        if (!hasSeamlessTransition && !retainedAct2PostBossHandoff && shouldRestorePlayerControlsOnExit()
+                && !lowerSlotEndSignControlOwnsRestore()) {
             for (PlayableEntity candidate : playerQuery()
                     .playersFor(ObjectPlayerParticipationPolicy.ALL_ENGINE_PLAYERS)) {
                 if (candidate instanceof AbstractPlayableSprite sprite) {
@@ -1220,7 +1253,13 @@ public class S3kResultsScreenObjectInstance extends AbstractResultsScreen implem
         // Obj_LevelResults loc_2DCF8 leaves FBZ2's arena words intact.
         // The surviving boss's loc_708AA owns its later gradual expansion.
         boolean actTwoPostBossHandoff = act == 1 && (zone == 0x04 || zone == 0x06);
-        return !actOneInLevelTitleHandoff && !actTwoPostBossHandoff;
+        // Obj_LevelResults never writes the camera bounds. After SOZ1's golem,
+        // loc_76E5C spawns Obj_DecLevStartXGradual and Obj_EndSignControlDoStart
+        // spawns Obj_IncLevEndXGradual, which open the arena words gradually
+        // (sonic3k.asm:158186-158200, 158701-158704).
+        boolean actOneBossOwnedGradualExpansion = act == 0 && zone == 0x08;
+        return !actOneInLevelTitleHandoff && !actTwoPostBossHandoff
+                && !actOneBossOwnedGradualExpansion;
     }
 
     static boolean isPreloadedNextActHandoff(int resultsAct, int currentAct) {

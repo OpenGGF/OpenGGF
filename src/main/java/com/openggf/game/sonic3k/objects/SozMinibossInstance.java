@@ -27,6 +27,7 @@ public final class SozMinibossInstance extends SozMinibossSprite implements Spaw
     private boolean collapsing;
     private boolean pendingCollapse;
     private int attackerSlot;
+    private static final int NATIVE_ARENA_MIN_X=0x4180;
     private int savedMinX;
     private int savedMaxX;
     private long bodyArtOrdinal=-1;
@@ -162,13 +163,20 @@ public final class SozMinibossInstance extends SozMinibossSprite implements Spaw
     }
     private void finishSinking(){
         phase=4;visible=false;
-        x=(services().camera().getX()&65535)+0xA0;
+        // loc_76E48 places the sign at Camera_X_pos+$A0. The arena gate writes
+        // Camera_min_X_pos=$4180 (sonic3k.asm:113989), so the native camera never sits
+        // left of it here. A view wider than the 720px arena gives up that left edge for
+        // presentation; anchoring to it would drop the sign into the golem's sand pit.
+        x=Math.max(services().camera().getX()&65535,NATIVE_ARENA_MIN_X)+0xA0;
         spawnFreeChild(() -> new SozMinibossChild.Alignment(getSpawn(),savedMinX,savedMaxX));
         // loc_76E48 converts the existing SST to EndSignControl even when allocation is full.
+        // It jumps into Obj_EndSignControl, which installs the $77 wait in this same
+        // pass; the replacement's own install pass runs one pass later, so its wait
+        // starts one entry through (sonic3k.asm:158168-158174, 180377-180383).
         int slot=ObjectLifetimeOps.detachSlotForTransfer(this);
         ObjectLifetimeOps.deleteNoRespawn(this);
         ObjectLifetimeOps.addReplacementAtTransferredSlot(services().objectManager(),
-                new S3kBossDefeatSignpostFlow(x,0,S3kBossDefeatSignpostFlow.CleanupAction.NONE)
+                new S3kBossDefeatSignpostFlow(x,0,S3kBossDefeatSignpostFlow.CleanupAction.NONE,1,0,0,0)
                         .withNativeControlSlot(slot),slot);
     }
     void hitBy(AbstractPlayableSprite player){attackerSlot=player==services().playerQuery().mainPlayerOrNull()?1:2;collapsing=true;pendingCollapse=true;}

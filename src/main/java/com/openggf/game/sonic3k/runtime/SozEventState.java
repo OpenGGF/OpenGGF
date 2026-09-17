@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 
 /** Native SOZ screen-event RAM; one captured owner shared with arena objects and scroll. */
 public final class SozEventState {
-    static final int SNAPSHOT_BYTES = 23 * Integer.BYTES + SozBossWallState.SNAPSHOT_BYTES + SozPostBossPlaneState.SNAPSHOT_BYTES + 2 * Long.BYTES;
+    static final int SNAPSHOT_BYTES = 24 * Integer.BYTES + SozBossWallState.SNAPSHOT_BYTES + SozPostBossPlaneState.SNAPSHOT_BYTES + 2 * Long.BYTES;
     private long blockJobOrdinal = -1;
     private long artJobOrdinal = -1;
     private final SozPostBossPlaneState postBossPlane = new SozPostBossPlaneState();
@@ -32,6 +32,7 @@ public final class SozEventState {
     private boolean backgroundCollision;
     private boolean seamlessEntry;
     private boolean endBossFallStarted;
+    private boolean titleCardAllocationPending;
 
     public long blockJobOrdinal() { return blockJobOrdinal; }
     public void blockJobOrdinal(long value) { blockJobOrdinal = value; }
@@ -88,6 +89,9 @@ public final class SozEventState {
     /** Native _unkFAB8 bit0, set by loc_779C0 and read by loc_77A6E. */
     public boolean endBossFallStarted() { return endBossFallStarted; }
     public void endBossFallStarted(boolean value) { endBossFallStarted = value; }
+    /** SOZ2 entry allocated Obj_TitleCard this pass; its init runs on the next object pass. */
+    public boolean titleCardAllocationPending() { return titleCardAllocationPending; }
+    public void titleCardAllocationPending(boolean value) { titleCardAllocationPending = value; }
 
     void capture(ByteBuffer buffer) {
         buffer.putInt(initialized ? 1 : 0).putInt(foregroundRoutine).putInt(backgroundRoutine)
@@ -99,7 +103,8 @@ public final class SozEventState {
                 .putInt(backgroundCollision ? 1 : 0).putInt(seamlessEntry ? 1 : 0);
         bossWall.capture(buffer);
         postBossPlane.capture(buffer);
-        buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal).putInt(endBossFallStarted ? 1 : 0);
+        buffer.putLong(blockJobOrdinal).putLong(artJobOrdinal).putInt(endBossFallStarted ? 1 : 0)
+                .putInt(titleCardAllocationPending ? 1 : 0);
     }
 
     void restore(ByteBuffer buffer) {
@@ -130,6 +135,7 @@ public final class SozEventState {
         blockJobOrdinal = buffer.getLong();
         artJobOrdinal = buffer.getLong();
         endBossFallStarted = buffer.getInt() != 0;
+        titleCardAllocationPending = buffer.getInt() != 0;
         if (!initialized) { blockJobOrdinal = -1; artJobOrdinal = -1; }
     }
 }

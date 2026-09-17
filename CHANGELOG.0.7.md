@@ -27,6 +27,33 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   fades in from white, pans down to the pedestals, closes a ring of stars on the new
   emerald and, once all seven are held, announces "NOW SONIC CAN BE HYPER SONIC"; the
   small Chaos Emerald indicators only show emeralds that have not been converted.
+- **S3K player abilities and Sandopolis timing:** Knuckles now breaks the
+  Knuckles-only walls (HCZ, MGZ, CNZ, LBZ, MHZ and SOZ variants) when he hits them
+  in mid-air, keeping his speed as the ROM does, instead of stopping against them.
+  Player-controlled Tails keeps normal air gravity on the frame flight starts, so the
+  climb out of a jump matches the ROM from the first flying frame. Sandopolis
+  Sandworms wait one more frame after first appearing on screen before starting
+  their emerge timer, so they surface on the ROM frame. Sandopolis now queues its
+  Skorp, Sandworm and Rockn art at level start like the ROM, keeping later art
+  loading in step. Flying Tails and gliding Knuckles no longer borrow Sonic's
+  Insta-Shield invincibility and wider touch box, so hazards hurt them as in the ROM.
+  The Sandopolis Act 1 signpost now drops on the ROM frame after the golem sinks,
+  and Sandopolis and Death Egg keep their ring count after Act 1 results until the
+  Act 2 title card, as in the ROM. Knuckles caught by Sandopolis falling sand while
+  gliding now drops his glide pose instead of keeping it. After the Sandopolis Act 1
+  results the camera opens gradually and the walk to the pyramid starts on the ROM
+  frame instead of briefly obeying held input. CPU Tails can jump off Sandopolis
+  light switches again after the Act 1 golem, and the Act 2 title card holds for its
+  full ROM time. In Sandopolis Act 2, rising players are lifted onto push switches,
+  objects below the looping level's seam (such as breakable sand rocks) load when
+  the camera wraps, Hyudoro ghosts appear, attack and vanish on the ROM frames and
+  scatter rings when they hit, and Skorps wake a frame later so they patrol in step.
+  During the final boss, Sonic lands on its arms, is hurt on the frame he lands on
+  its lower shell, is no longer carried by the moving arena wall, and its laser
+  fires on the ROM frame; the capsule's results appear a frame later, as in the ROM.
+  Across S3K, horizontal springs now launch a player who comes to rest in front of
+  them, Blastoid hits scatter rings, and rewinding past an opened egg capsule keeps
+  its explosions going.
 
 - **S3K parity fixes from the discrepancy audit:** Madmole's body is its own object
   in its own slot; the MHZ dragonfly tail enters its return on the same frame as
@@ -261,7 +288,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   centered native viewport in widescreen, so the right wall cannot prevent the
   admission camera gate from firing. Widescreen views of the arena end at the native
   view's right edge, so the player stops against the screen lock rather than an
-  invisible wall mid-screen. The last-checkpoint debug shortcut reloads
+  invisible wall mid-screen; at widths above 720 pixels the signpost still drops onto
+  the arena floor instead of into the golem's sand pit. The last-checkpoint debug shortcut reloads
   destination events, so skipping to the SOZ2 boss no longer retains early-room
   darkness or omits the boss background. Arena and laser sprite masks clip later
   sprites, including the opening door and sinking golem beneath the sand.

@@ -13,11 +13,20 @@ public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance impl
     private int timer;
     private int homeY;
     private boolean waiting = true;
+    private boolean placeholderSubmitted;
+    private boolean placeholderRenderedOnscreen;
     public SandwormBadnikInstance(ObjectSpawn spawn) {
         super(spawn, "Sandworm", Sonic3kObjectArtKeys.SANDWORM, 0, 5);
     }
     @Override protected void updateMovement(int vIntRunCount, PlayableEntity player) {
-        if (waiting) { if (isOnScreen(0x20)) waiting = false; return; }
+        if (waiting) {
+            // Obj_WaitOffscreen/loc_85AD2 queues a $20-by-$20 placeholder; only the
+            // previous Render_Sprites on-screen bit releases the saved entry
+            // (loc_85B02), which returns so loc_8EA88 first runs on the next pass.
+            if (placeholderRenderedOnscreen) { waiting = false; placeholderSubmitted = false; }
+            else placeholderSubmitted = true;
+            return;
+        }
         if (routine == 0) {
             routine = 2; timer = 0x7F;
             for (int i = 0; i < 5; i++) {
@@ -36,6 +45,9 @@ public final class SandwormBadnikInstance extends AbstractS3kBadnikInstance impl
         if ((currentY & 0xFFFF) >= (homeY & 0xFFFF)) {
             currentY = homeY; routine = 6; timer = 0x3F; splash();
         }
+    }
+    @Override public void refreshPostCameraRenderState() {
+        if (waiting && placeholderSubmitted) placeholderRenderedOnscreen = isWithinRenderSpriteBounds(0x20, 0x20);
     }
     private void emerge() {
         routine = 4; homeY = currentY; yVelocity = -0x400;

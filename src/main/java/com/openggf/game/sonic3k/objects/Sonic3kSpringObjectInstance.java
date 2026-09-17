@@ -584,27 +584,28 @@ public class Sonic3kSpringObjectInstance extends AbstractObjectInstance
         // Check Y range: ±$18. The compatibility landing handoff retains its
         // existing endpoint behavior; the native upper-X edge below is what
         // governs ordinary grounded proactive launches.
-        if (dy < -HORIZ_DETECT_Y || dy > HORIZ_DETECT_Y) {
+        // loc_2328E: y_pos(a1) in [y-$18, y+$18) (blo/bhs).
+        if (dy < -HORIZ_DETECT_Y || dy >= HORIZ_DETECT_Y) {
             return;
         }
 
         // Check X range: spring face side only
         if (flipped) {
-            // Flipped spring faces left: player must be to the left (negative dx)
-            if (dx < -HORIZ_DETECT_X || dx > 0) {
+            // Flipped spring faces left: x_pos(a1) in [x-$28, x).
+            if (dx < -HORIZ_DETECT_X || dx >= 0) {
                 return;
             }
-            // Player must be moving left (negative gSpeed)
-            if (horizontalApproachSpeed(player, landingHandoff) >= 0) {
+            // neg.w d4 / bmi.s: a stationary player (ground_vel 0) still fires.
+            if (horizontalApproachSpeed(player, landingHandoff) > 0) {
                 return;
             }
         } else {
-            // Unflipped spring faces right: player must be to the right (positive dx)
+            // Unflipped spring faces right: x_pos(a1) in [x, x+$28).
             if (dx >= HORIZ_DETECT_X || dx < 0) {
                 return;
             }
-            // Player must be moving right (positive gSpeed)
-            if (horizontalApproachSpeed(player, landingHandoff) <= 0) {
+            // tst.w d4 / bmi.s: a stationary player (ground_vel 0) still fires.
+            if (horizontalApproachSpeed(player, landingHandoff) < 0) {
                 return;
             }
         }
