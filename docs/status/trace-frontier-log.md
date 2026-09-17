@@ -110710,6 +110710,15 @@ animation2. That production intro, not trace-state seeding, is the next target.
   10483 -> 9164 errors; first physics divergence row 28941 -> 29093 (CPU Tails
   `x_speed` on the walk to the pyramid). Other S3K replay reports unchanged.
 
+### 2026-09-17 — SOZ camera wrap gate: 29 -> 27 errors
+
+- `bugfix/ai-modapi-body-edit-hook`: `32fcfffe6` lets the policy hooks accept body-only
+  edits to `@ModApi` classes; `ca2b99220` gates `Camera`'s wrap-crossing player write on
+  `CameraRules.playerControlAppliesVerticalWrapMask`. `soz_completerun` 29 -> 27; row
+  51860 `y` cleared, so the first physics error is row 45256 `rings` (SST slot phase).
+  `TestS1Lz3CompleteRunTraceReplay`, `TestS1Credits03Lz3TraceReplay` and
+  `TestS1Credits06Sbz2TraceReplay` stay green; both MGZ traces keep their totals.
+
 ### 2026-09-17 — SOZ end-boss escape, capsule and residue: 65 -> 29 errors
 
 - `bugfix/ai-soz-open-residue` from develop `861a2ac7b` to `b9e996a48`, same focused
