@@ -379,7 +379,14 @@ public class CollisionSystem implements RewindSnapshottable<CollisionSystemSnaps
         int xPos32 = (sprite.getX() << 16) | (sprite.getXSubpixelRaw());
         int yPos32 = (sprite.getY() << 16) | (sprite.getYSubpixelRaw());
         int predictedX = (xPos32 + ((int) sprite.getXSpeed() << 8)) >> 16;
-        int predictedY = (yPos32 + ((int) sprite.getYSpeed() << 8)) >> 16;
+        // CalcRoomInFront loc_F638 (sonic3k.asm:19688-19700): the projected Y uses
+        // `neg.w d1` on y_vel while Reverse_gravity_flag ($FFFFF7C6) is set, exactly
+        // as MoveSprite_TestGravity does, so the wall probe looks where the player
+        // will actually be. x_vel is never negated.
+        var gameState = sprite.currentGameStateOrNull();
+        short integrationYSpeed = ReverseGravity.integrationYSpeed(
+                gameState != null && gameState.isReverseGravityActive(), sprite.getYSpeed());
+        int predictedY = (yPos32 + ((int) integrationYSpeed << 8)) >> 16;
         short predictedDx = (short) (predictedX - sprite.getX());
         short predictedDy = (short) (predictedY - sprite.getY());
         CalcRoomInFrontProbe probe = describeCalcRoomInFrontProbe(angle, gSpeed);

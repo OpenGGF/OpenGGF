@@ -521,7 +521,7 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 | Question | Kill condition | Slice |
 | --- | --- | --- |
 | Does gravity ever reverse in act 1 (no `$58/$59/$5B` placed there)? | Native watch of `$F7C6` over the act 1 rows of the DEZ segment | 3 (pass 1 probe in 0) |
-| Does `LevelActTransitionExecutor:117` (`resetForLevel`) run on the seamless DEZ path? | Read the executor's callers before adding the flag clear | 2 |
+| ~~Does `LevelActTransitionExecutor:117` (`resetForLevel`) run on the seamless DEZ path?~~ **Answered 2026-09-17: yes.** `executeClaimed` is the in-place act-change path and calls it, so the executor saves and restores the flag around the call | Read the executor's callers before adding the flag clear | 2 (closed) |
 | Does the TraceChaser recorder carry `Reverse_gravity_flag` in V5 aux rows? | `tools/tracechaser` was not initialised in the planning worktree; inspect `aux_state` keys. No new trace field in this campaign either way | 0 |
 | Does `PlayableHurtRadiusTransition` run for Tails and Knuckles (`Tails_/Knux_TouchFloor`)? | Read its callers; test 2a-2 covers all three characters | 2 |
 | Knuckles chained into `$1700` | Record what happens after slice 8; not mandatory (ROM denies only the level-select path) | 8 |
@@ -530,13 +530,16 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 ## Status
 
 Slices 0 and 1 delivered 2026-09-17 on base `035e48a58` (`0d9a4f3ea`, `4e7655bf9`); see the
-evidence log. Slice 2 (reverse gravity) is the next dependency.
+evidence log. **Slice 2 is part-delivered**: step 2a-1 (position integration), the death plane and
+the flag's level-load lifecycle. Steps 2a-2, 2a-3, 2b and 2c remain, and 2a-2 is the next
+dependency for everything else in the slice — until the collision probes swap, an inverted player
+integrates upward into terrain the sensors still read as floor below.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slice 1 only: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art, reverse-gravity flag with 9 of 116 ROM references covered and no level-load clear |
+| Implemented | Slice 1: static background, `AnPal_DEZ1`/`DEZ2`, `AniPLC_DEZ`, the runtime event words and the screen-event chunk writes. Slice 2 part 1: inverted position integration (`MoveSprite_TestGravity`/`2` and `CalcRoomInFront`), the death plane at the top of the level, the level-load clear and the seamless act change's preserve. Reverse gravity now stands at 14 of 116 ROM references covered, 6 partial, 92 missing. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art |
 | Cold-reachable | Not started |
-| Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted |
+| Rewind-verified | Palette cycle counters and event routine words (`TestS3kDezPresentationRewind`); the flag itself was already snapshotted. Capture/restore across an *inverted physics state* is not verified and cannot be until step 2a-2 |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` (slice 0), all six classes red from frame 0 |
 | Visually matched | Slice 1 presentation inspected at 320 and 800 px with before/after clips; no native pixel comparison |
 
@@ -729,3 +732,116 @@ background edge gap.
   `Events_fg_4` from the runtime state. The miniboss (slice 6) and end boss (slice 8) supply it.
 - `DEZ2_ScreenEvent` stage 0 is unreachable on a direct load by design, so its test drives
   `Events_routine_fg` back to 0. It becomes cold-reachable with the seamless change in slice 7.
+
+### 2026-09-17 — Slice 2, part 1: the reverse-gravity integration and the flag's lifecycle
+
+**Partial slice. Steps 2a-2, 2a-3, 2b and 2c were not started.** What landed is the integration
+step (2a-1), the death plane, and the flag's level-load lifecycle; 92 of the 116 reference rows
+remain missing. The remaining rows and why they were left are at the end of this entry.
+
+Worktree `.worktrees/ai-s3k-dez-bring-up`, branch `feature/ai-s3k-dez-bring-up`, base
+`f60b3f3e2`. Disassembly read at submodule `1a454a0e`.
+
+**What the ROM actually says, re-read row by row rather than taken from the table.**
+
+- `MoveSprite_TestGravity` (sonic3k.asm:36068-36083) and `MoveSprite_TestGravity2` (:36088-36101):
+  with the flag set, `x_vel` integrates normally, `addi.w #$38,y_vel(a0)` still runs unchanged, and
+  only the copy of `y_vel` that feeds `add.l d0,y_pos(a0)` is negated. The stored velocity keeps
+  its sign.
+- Which routines reach those wrappers was settled by listing the call sites and resolving each to
+  its enclosing label, not by grepping for the flag (the flag test is inside the wrapper, so
+  callers do not grep). Nine `MoveSprite_TestGravity` callers: `Sonic_MdAir`, `Sonic_MdJump`,
+  `loc_123AA` (dead), `Tails_Stand_Freespace`, `loc_149BA`, `loc_157C8`, `Knux_Stand_Freespace`,
+  `Knux_Spin_Freespace`, `loc_17CA2`. Sixteen `MoveSprite_TestGravity2` callers: `Sonic_MdNormal`,
+  `loc_10FEA`, `loc_122D8` (hurt), `loc_125C6` (drown sink), `loc_14760`, `Tails_FlyingSwimming`,
+  `loc_14956`, `loc_156D6`, `loc_15828`, `Knux_Stand_Path`, `Knux_Glide_Freespace`, `loc_170CC`,
+  `loc_17BD0`, `loc_17D04`, `loc_1A7E8` (the bouncing ring) and `loc_49E0A` (a Death Egg object,
+  slice 3). Every other object in the game calls plain `MoveSprite`/`MoveSprite2` and never
+  inverts — that is why the inversion is at the player movement call sites and **not** inside
+  `AbstractSprite.move`, which every object shares.
+- `loc_125C6` (:24702-24704) is the drowning pre-death sink: `MoveSprite_TestGravity2` **then**
+  `addi.w #$10,y_vel`. It does invert. Noted separately: the engine's drowning branch adds the
+  `$10` *before* moving, so it integrates the post-add velocity where the ROM integrates the
+  pre-add one. That is a pre-existing one-frame ordering difference unrelated to this slice and was
+  deliberately left alone — changing it would not be inert with the flag clear.
+- `sub_F61C` `loc_F638` (:19688-19700) applies the same `neg.w` to the projected `y_vel` before the
+  wall probe, so `CalcRoomInFront` looks where the player will actually be.
+- `Player_Boundary_CheckBottom` (:23188-23206). The reverse branch `loc_11722` is
+  `move.w (Camera_min_Y_pos).w,d0 / cmp.w y_pos(a0),d0 / blt.s <alive>`, i.e. **alive while
+  `Camera_min_Y_pos < y_pos`**, dead at or above it, with no `$E0` offset — the `$E0` belongs to
+  the upright branch alone. `Disable_death_plane` gates both. `Tails_Check_Screen_Boundaries`
+  `loc_14F30`/`loc_14F4C` (:28423-28441) is byte-for-byte the same pair, so the engine's single
+  shared boundary owner closes both table rows at once.
+- The open question "does `LevelActTransitionExecutor:117` run on the seamless DEZ path?" is
+  **answered: yes.** `executeClaimed` is the in-place act-change path and calls
+  `gameState.resetForLevel()`. Since `loc_593EC` (:118724) runs `Load_Level`/`LoadSolids` with no
+  RAM wipe, the executor now saves and restores the flag around that call. The clear itself lives
+  in `resetForLevel()` next to the other RAM-wipe fields, citing
+  `clearRAM Tails_CPU_interact,$100` (:7621).
+- `GameStateManager`'s Javadoc cited `$FFFFF768` (which is `Primary_Angle`). Corrected to `$F7C6`
+  on the field and the getter, as the reference document asked.
+
+**Owners.** One new engine-internal helper, `com.openggf.physics.ReverseGravity`
+(`integrationYSpeed`, `mirrorAngle`, `mirrorYDelta`). It is deliberately **not** a `GameRules`
+member and carries no annotation: `GameRules`, `CollisionSystem` and `GameStateManager` are all
+`@com.openggf.game.ModApi` and a new component or public member would break the 0.7 signature pin.
+Both spellings were grepped before the class was added. No public member was added to any
+`@ModApi` type: the `CollisionSystem` and `GameStateManager` edits are a comment, two local
+variables, a Javadoc correction and one field assignment inside an existing method. Nothing is
+zone- or game-keyed; every branch reads the flag itself through `GameStateManager`.
+
+**RED → GREEN, per group.**
+
+| Step | Test | RED | GREEN |
+| --- | --- | --- | --- |
+| 2a-1 (A: 36069, 36089, 19696) | `TestS3kReverseGravityIntegration` | `inverted: y_pos += -old y_vel ==> expected: <-4> but was: <4>` | 2/2 |
+| A: 23191 + C: 28426 | `TestS3kReverseGravityBoundary` | `reverseGravityKillsAtTheTopBoundary ==> expected: <true> but was: <false>`; `reverseGravitySparesTheBottomBoundary ==> expected: <false> but was: <true>` | 4/4 |
+| flag lifecycle | `TestS3kReverseGravityFlagLifecycle` | `aLevelLoadClearsTheFlag ==> expected: <false> but was: <true>` | 3/3 |
+
+Both boundary positive controls (upright kill below the bottom, upright survival above the top)
+passed in the RED run, which is what proves the gate under test was live rather than unreachable.
+`theSeamlessActChangeKeepsTheFlag` also passed in the RED run — it had to, because nothing cleared
+the flag yet. It earns its keep only now that `resetForLevel()` does clear it, as the guard that
+the executor's restore is what keeps Death Egg act 2 inverted.
+
+**Two measurement mistakes made and corrected here, both worth the next agent's attention.**
+
+1. The first version of the integration test asserted that the *pixel* delta mirrors on every
+   frame. It does not, and the ROM does not claim it does: `add.l d0,y_pos(a0)` carries through the
+   16 subpixel bits, so a `$438` step reads as `+4` pixels with a `$38` fraction one way and `-5`
+   with a `$C8` fraction the other. The expectation had come from Java intuition rather than the
+   cited routine. The test now asserts the 32-bit `y_pos` step, which *is* the exact negation.
+2. `-Dtest=A+B` is not a surefire selector. That run reported `BUILD FAILURE` with
+   `No tests matching pattern` — it executed **zero** tests, and had the message been any less
+   explicit it would have looked like a clean result. The separator is a comma.
+
+**Commands.** All through `maven_queue.py` from this worktree with
+`-Ds3k.rom.path=<worktree>/s3k.gen`; the queue waited behind the LRZ and SSZ lanes several times,
+which is normal. Every run reported `Skipped: 0`, so the ROM path was right.
+
+**Exactly what remains of slice 2.** The reference table's totals are now 14 covered, 6 partial,
+92 missing, 4 n/a. Covered rows added here: A 19696, 23191, 36069, 36089 and C 28426. Everything
+else in the table is untouched by this entry, and in particular:
+
+- **Step 2a-2 is not started.** Group A rows 22330 (`Call_Player_AnglePos`), 24128 (`sub_11FD6`),
+  24142 (`sub_11FEE`) and 24156 (`ChooseChkFloorEdge`), plus every collision, touch-floor, hurt
+  and death row of groups B, C and E. This is the large one: it rewrites "which probe is the
+  floor" inside `CollisionSystem`, and a half-finished version is worse than none, because the
+  position integration now inverts while the probes still look down. `ReverseGravity.mirrorAngle`
+  is already written and unit-tested for it (`addi.b #$40 / neg.b / subi.b #$40`, which fixes both
+  walls and swaps floor with ceiling); nothing calls it yet.
+- **Steps 2a-3, 2b and 2c are not started** (player actions, solid objects/springs/spikes/monitors/
+  rings, companions and Knuckles).
+- **No demo clips were produced, deliberately.** With 2a-2 missing, a seeded clip would show the
+  player integrating upward while the collision probes still find the floor below — a picture of a
+  half-implemented slice, not of the feature. The clip obligation belongs to the finished slice.
+- **No rewind spot was added for an active flip.** The flag byte itself was already snapshotted
+  before this slice; what is not yet verifiable is a capture/restore across an inverted *physics*
+  state, which needs 2a-2.
+
+**One finding that contradicts the reference document.** It says the engine "clears the field only
+in `resetSession()` (line 252), not in `resetForLevel()` (line 275)" and proposes adding the clear
+there "after checking its two callers … If the seamless `$B00` → `$B01` path goes through the
+second, the clear must not run there." It does go through the second, so the clear alone would have
+been wrong: the executor needed the matching save/restore. Both halves landed together.
+

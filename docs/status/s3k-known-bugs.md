@@ -24,6 +24,7 @@ Entries should include:
 
 ## Table of Contents
 
+0. [Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)](#reverse-gravity--position-integration-inverted-collision-probes-not-yet-open--blocks-the-death-egg-gravity-objects)
 1. [Knuckles LBZ Big Arm — ROM Port (IMPLEMENTED; TRACE BOUNDARY OPEN)](#knuckles-lbz-big-arm--rom-port-implemented-trace-boundary-open)
 2. [CNZ1 Miniboss Arena Entry — Music Play-In Missing](#cnz1-miniboss-arena-entry--music-play-in-missing)
 3. [AIZ1 Trace F4679 — Sidekick Despawn Velocity & Position Semantic Gap (FIXED)](#aiz1-trace-f4679--sidekick-despawn-velocity--position-semantic-gap-fixed)
@@ -108,6 +109,34 @@ FM5 SFX, rings, and special-stage speed-shoes entry.
 Remove this entry after a positive listen and integration of the exact verified
 handoff commit. Reopen source-timing investigation if the listen identifies a
 repeatable onset defect within the scenarios above.
+
+---
+
+## Reverse Gravity — Position Integration Inverted, Collision Probes Not Yet (OPEN — blocks the Death Egg gravity objects)
+
+**Location.** `src/main/java/com/openggf/physics/ReverseGravity.java`,
+`PlayableSpriteMovement.moveSpriteTestGravity` / `doLevelBoundary`,
+`CollisionSystem.resolveGroundWallCollision`.
+
+**Symptom.** With `Reverse_gravity_flag` forced set, a player now integrates position upward
+(`MoveSprite_TestGravity`, sonic3k.asm:36068) and dies at the top of the level
+(`loc_11722`, :23202) — but the terrain sensors still treat the surface below as the floor,
+because `sub_11FD6`/`sub_11FEE` (:24127-24149), `Call_Player_AnglePos` (:22329) and
+`ChooseChkFloorEdge` (:24156) are not ported. An inverted player therefore rises into the
+ceiling without landing on it and is not pushed out of the floor correctly. Nothing in the
+shipped game reaches this state today: no object writes the flag yet, so the whole branch is
+unreachable outside tests and the upright game is unaffected.
+
+**Suspected cause.** Not a defect — step 2a-1 of a deliberately sliced port. 92 of the 116
+`Reverse_gravity_flag` references in the disassembly are still unimplemented; the row-by-row
+inventory is
+[s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
+
+**Removal condition.** Steps 2a-2, 2a-3, 2b and 2c of the
+[Death Egg bring-up plan](../architecture/plans/2026-09-17-s3k-dez-bring-up.md) land, with the
+probe swap and angle mirror in place, and the reference table reaches zero missing rows for
+groups A-I. **This entry must be resolved before slice 3 ships the `$58`/`$59`/`$5B` objects**,
+which are the writers that would make the state reachable in normal play.
 
 ---
 

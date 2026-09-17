@@ -74,14 +74,14 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
-| 19696 | `loc_F638` | `sub_F61C` (CalcRoomInFront): negates the projected `y_vel` before the wall probe | — | missing |
+| 19696 | `loc_F638` | `sub_F61C` (CalcRoomInFront): negates the projected `y_vel` before the wall probe | `CollisionSystem.resolveGroundWallCollision` predicted Y | covered |
 | 22330 | `Call_Player_AnglePos` | `Call_Player_AnglePos`: mirrors `angle` (`+$40, neg, -$40`) around `Player_AnglePos`, which then uses ceiling sensors | — | missing |
-| 23191 | `Player_Boundary_CheckBottom` | `Player_Boundary_CheckBottom`: death plane becomes the **top** (`loc_11722`) | — | missing |
+| 23191 | `Player_Boundary_CheckBottom` | `Player_Boundary_CheckBottom`: death plane becomes the **top** (`loc_11722`) | `PlayableSpriteMovement.doLevelBoundary` | covered |
 | 24128 | `sub_11FD6` | `sub_11FD6`: floor check becomes `Sonic_CheckCeiling` with mirrored angle (10 callers) | — | missing |
 | 24142 | `sub_11FEE` | `sub_11FEE`: ceiling check becomes `Sonic_CheckFloor` with mirrored angle (9 callers) | — | missing |
 | 24156 | `ChooseChkFloorEdge` | `ChooseChkFloorEdge`: selects `ChkFloorEdge_ReverseGravity` (7 callers: balance, glide, climb) | `GlideWallGrabTerrain.align` only | partial |
-| 36069 | `MoveSprite_TestGravity` | `MoveSprite_TestGravity`: `y_vel += $38` as usual, **position** integrates `-y_vel` (9 callers) | — | missing |
-| 36089 | `MoveSprite_TestGravity2` | `MoveSprite_TestGravity2`: position integrates `-y_vel` (16 callers) | — (`SidekickCpuController:4991` documents the clear-flag case) | missing |
+| 36069 | `MoveSprite_TestGravity` | `MoveSprite_TestGravity`: `y_vel += $38` as usual, **position** integrates `-y_vel` (9 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
+| 36089 | `MoveSprite_TestGravity2` | `MoveSprite_TestGravity2`: position integrates `-y_vel` (16 callers) | `PlayableSpriteMovement.moveSpriteTestGravity` → `ReverseGravity.integrationYSpeed` | covered |
 
 ### B. Sonic (and Sonic/Knuckles shared) routines
 
@@ -117,7 +117,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 27868 | `loc_14AA0` | look-down camera bias: moves the opposite way **and** the limit changes from 8 to `$D8` (`loc_14AA0`) | — | missing |
 | 27891 | `loc_14ADA` | look-up camera bias: moves the opposite way **and** the limit changes from `$C8` to `$18` (`loc_14ADA`) | — | missing |
 | 28233 | `loc_14DA2` | `Tails_RollSpeed` unroll: negates the radius Y adjustment | — | missing |
-| 28426 | `loc_14F30` | `Tails_Check_Screen_Boundaries` (`loc_14F30`): death plane at the top | — | missing |
+| 28426 | `loc_14F30` | `Tails_Check_Screen_Boundaries` (`loc_14F30`): death plane at the top | `PlayableSpriteMovement.doLevelBoundary` (one shared owner with :23191) | covered |
 | 28500 | `loc_14FC4` | `Tails_Roll` (`loc_14FC4`): `+1` becomes `-1` (`subq.w #2`) | — | missing |
 | 28525 | `Tails_Jump` | `Tails_Jump`: mirrors the launch angle | — | missing |
 | 28572 | `loc_1504C` | `Tails_Jump` (`loc_1504C`): negates the roll-radius Y adjustment | — | missing |
@@ -251,9 +251,9 @@ is the RAM wipe described above).
 
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| A. Shared integration and sensor wrappers | 8 | 0 | 1 | 7 | 0 |
+| A. Shared integration and sensor wrappers | 8 | 4 | 1 | 3 | 0 |
 | B. Sonic (and Sonic/Knuckles shared) routines | 20 | 0 | 1 | 18 | 1 |
-| C. Tails routines | 21 | 0 | 1 | 19 | 1 |
+| C. Tails routines | 21 | 1 | 1 | 18 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 2 | 0 | 3 | 0 |
 | E. Knuckles routines | 24 | 3 | 1 | 19 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 2 | 0 | 7 | 0 |
@@ -262,11 +262,16 @@ is the RAM wipe described above).
 | I. Monitors, springs, spikes | 6 | 2 | 0 | 4 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **9** | **6** | **97** | **4** |
+| **Total** | **116** | **14** | **6** | **92** | **4** |
 
-"Covered" means a flag-reading branch exists at the cited engine line; none of it has been
-exercised with the flag set in a level, because nothing sets the flag today. Treat covered rows as
-"verify", not "done". `n/a` rows are the three debug-cheat toggles and one unreachable S1 leftover.
+"Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
+debug-cheat toggles and one unreachable S1 leftover.
+
+Updated 2026-09-17 for slice 2 step 2a-1 and the flag's lifecycle. The five rows that moved to
+covered (19696, 23191, 28426, 36069, 36089) are each exercised with the flag forced set, from a
+real S3K level, by `TestS3kReverseGravityIntegration` and `TestS3kReverseGravityBoundary`. The
+nine rows that were already marked covered before this slice are **not** in that position: they
+still have no test that runs them with the flag set, so they remain "verify", not "done".
 
 ## Implementation order and the test that proves each step
 
