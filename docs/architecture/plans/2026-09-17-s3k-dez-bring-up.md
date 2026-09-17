@@ -692,7 +692,12 @@ was touched and `GameRules` was not changed. Every shared-file edit is a single 
 
 Combined with the four mandatory S3K classes (`TestS3kAiz1SkipHeadless`,
 `TestSonic3kLevelLoading` — both of them, `TestSonic3kBootstrapResolver`,
-`TestSonic3kDecodingUtils`): **86 tests, 0 failures, 0 errors, 0 skipped**. This is focused
+`TestSonic3kDecodingUtils`): **86 tests, 0 failures, 0 errors, 0 skipped**.
+`maven_queue.py -Dmse=off -Pguards test -B` also ran green (**669 tests, 0 failures, 0 errors,
+0 skipped**). `GameLoop` and `Engine.draw` were not touched, and reading
+`TestArchitecturalSourceGuard` first confirmed that none of its budgets — the embedded-runtime-data
+list is entirely Sonic 1 files, and the concrete-reference and dispatch-method budgets are
+`Engine` and `GameLoop` only — covers anything this slice edited. This is focused
 validation, not a suite pass; no category run was made and the trace profiles were not re-run,
 because slice 1 changes only presentation registrations for one zone that had none.
 
