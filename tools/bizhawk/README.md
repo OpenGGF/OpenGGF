@@ -65,6 +65,18 @@ names and the historical `OGGF_FBZ_*` aliases for old external exporters.
 Repository FBZ Lua exporters now use `OGGF_NATIVE_*`. The old command remains
 valid for [recorded FBZ validation recipes](../../docs/architecture/research/s3k-zones/fbz-validation.md#reproducible-linux-native-capture).
 
+## Trace checkpoint pixels
+
+[`capture_movie_checkpoints.lua`](capture_movie_checkpoints.lua) saves framebuffer PNGs
+and whole VRAM/CRAM/VSRAM dumps at planned BK2 frames during movie playback. Its plan can
+save a state on a first pass (`save_state_frame`, `save_state_path`); later passes supply
+it with `--fixture-state` and `state_frame`. For trace row r the frame is
+`bk2_frame_offset + pre_trace_osc_frames + r`.
+[`compare_trace_checkpoint_pixels.py`](compare_trace_checkpoint_pixels.py) pairs those
+frames with a full-run `TraceCaptureTool` MKV at scale 1, skipping lag rows (the MKV has
+no frame for them), and compares 3-bit Genesis colour with optional masked rectangles.
+See the SOZ plan section "Presentation follow-up: native pixel checkpoint survey".
+
 ## Focused checks
 
 ```bash
