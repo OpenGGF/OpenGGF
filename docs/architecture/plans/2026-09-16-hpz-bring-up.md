@@ -248,3 +248,19 @@ ROM SHA-1 `CFBF98C3…61D6`, movie SHA-256 `AD40FB0B…3C0`, host exit 0, 2-5 s 
 Measurement hazard found and fixed: the first probe read palette line 4 at `$FC32`; palette lines
 are `$20` bytes (`Normal_palette_line_4 = $FC60`), so those columns were wrong until the exporter fix.
 The palette and teleporter conclusions above use the corrected re-run.
+
+### 2026-09-17 rewind guard repair for the teleporter objects
+
+The sanctuary-reveal lane's `-Pguards` run on `c7b890672` reported three failures owned by
+`1000dc342` (not by that lane): `TestParentDependentGraphCoverageGuard` (new parent-dependent
+`TeleporterBeamObjectInstance`), `TestRewindArchitectureGuard` (untriaged capture/restore overrides
+in the teleporter, beam and route helper) and `TestRewindCoverageGuard` (final scalar fields and the
+helper's `teleporter` reference).
+
+Rejected: switching the three objects to generic capture. `TestS3kHpzCompatibilityMatrix` failed
+34/34 teleporter rows at the "beam progress 8 roll" forward replay (restored teleporter lost its beam
+link, so the replayed frame kept animation 5 instead of 2). Kept: typed `ObjectRefId` sidecars, with
+explicit override triage in `TestRewindArchitectureGuard`, `CAPTURED` field policies in
+`DefaultObjectRewindPolicies`, non-final scalar fields, and graph evidence
+`TestS3kHpzCompatibilityMatrix` in `RewindRoundTripHarness`. Result: the four guard classes 33 tests
+and the HPZ teleporter/breadth/lifecycle/route classes 140 tests, 0 failures, 0 skips.

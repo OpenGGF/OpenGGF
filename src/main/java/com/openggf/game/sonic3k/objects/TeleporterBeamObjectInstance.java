@@ -45,10 +45,10 @@ public final class TeleporterBeamObjectInstance extends AbstractObjectInstance i
     };
 
     private SSZHPZTeleporterObjectInstance parent;
-    private final int x;
-    private final int spawnY;
+    private int x;
+    private int spawnY;
     private int y;
-    private final int expandBaseY;
+    private int expandBaseY;
     private int phase;
     /** {@code $46(a0)} as a signed byte. */
     private int progress;

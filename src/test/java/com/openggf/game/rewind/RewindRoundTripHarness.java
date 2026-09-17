@@ -119,6 +119,8 @@ public final class RewindRoundTripHarness {
                     "TestS3kHpzGraphRewind"),
             Map.entry("com.openggf.game.sonic3k.objects.HPZSuperEmeraldReturnEffectObjectInstance",
                     "TestS3kHpzGraphRewind"),
+            Map.entry("com.openggf.game.sonic3k.objects.TeleporterBeamObjectInstance",
+                    "TestS3kHpzCompatibilityMatrix"),
             Map.entry("com.openggf.game.sonic3k.objects.HyperSonicStarsObjectInstance",
                     "TestPlayerReferenceGraphRewind"),
             Map.entry("com.openggf.game.sonic3k.objects.SuperTailsFlickyFlockObjectInstance",
