@@ -44,12 +44,13 @@ import static com.openggf.level.scroll.M68KMath.negWord;
  * <p>{@code HPZ_BGDrawArray} fills the background nametable in two bands split at
  * plane Y {@code $200}: rows below it from {@code HScroll_table} word 2 (equal to
  * the scroll word 13, so the ring buffer matches this handler's infinite plane),
- * rows above it from word 0. This handler does not model the split because it is
- * pixel-identical at every reachable camera: the sanctuary pins camera Y to
+ * rows above it from word 0. In the sanctuary the split is pixel-identical: camera Y is pinned to
  * {@code $320}, so BG Y is {@code $1E6} and only plane rows {@code $1E6-$1FF} (lines
  * 0-25) use the upper band; they lie in BG layout row 3, whose chunks repeat
  * every 512 px, and the upper-band origin differs from the scroll by {@code $400},
- * two whole periods.
+ * two whole periods. On the playable act the visible rows sit in deform band 0 and the layout's
+ * clouds are not 512-periodic, so {@link #getBgPeriodWidth()} widens the engine window to the
+ * rightmost visible column instead of modelling the nametable ring.
  */
 public class SwScrlHpz extends SwScrlS3kDefault {
 
@@ -92,6 +93,10 @@ public class SwScrlHpz extends SwScrlS3kDefault {
      */
     private short foregroundVscroll;
 
+    private static final int DEFAULT_BG_PERIOD_WIDTH = 512;
+    private static final int MAX_BG_PERIOD_WIDTH = 8192;
+    private int currentBgPeriodWidth = DEFAULT_BG_PERIOD_WIDTH;
+
     @Override
     public void update(int[] horizScrollBuf,
                        int cameraX,
@@ -132,6 +137,7 @@ public class SwScrlHpz extends SwScrlS3kDefault {
                 NEGATE_WORD);
 
         composer.copyPackedScrollWordsTo(horizScrollBuf);
+        currentBgPeriodWidth = requiredBgPeriodWidth(horizScrollBuf, viewportWidth());
         vscrollFactorBG = composer.getVscrollFactorBG();
         minScrollOffset = composer.getMinScrollOffset();
         maxScrollOffset = composer.getMaxScrollOffset();
@@ -155,6 +161,37 @@ public class SwScrlHpz extends SwScrlS3kDefault {
             return null;
         }
         return GameServices.sprites().getMainPlayable();
+    }
+
+    /**
+     * {@code Draw_BG} keeps the 512 px nametable filled with the layout columns the camera is over,
+     * and the Hidden Palace background is not periodic at 512 px (the clouds only occupy layout
+     * columns 1-6). The engine samples its prebuilt plane modulo this width, so the width must reach
+     * the rightmost visible background column (and cover every deform band at once), or the view
+     * past X 512 wraps onto the empty chunks at column 0.
+     */
+    @Override
+    public int getBgPeriodWidth() {
+        return currentBgPeriodWidth;
+    }
+
+    static int requiredBgPeriodWidth(int[] packedHScroll, int viewportWidth) {
+        int maxRight = Integer.MIN_VALUE;
+        for (int packed : packedHScroll) {
+            // Packed low word is the negated background scroll: background X = -word.
+            int bgX = -(short) packed;
+            maxRight = Math.max(maxRight, bgX + Math.max(320, viewportWidth));
+        }
+        int width = DEFAULT_BG_PERIOD_WIDTH;
+        while (width < maxRight && width < MAX_BG_PERIOD_WIDTH) {
+            width <<= 1;
+        }
+        return width;
+    }
+
+    private static int viewportWidth() {
+        return GameServices.hasRuntime() && GameServices.cameraOrNull() != null
+                ? GameServices.camera().getWidth() & 0xFFFF : 320;
     }
 
     @Override

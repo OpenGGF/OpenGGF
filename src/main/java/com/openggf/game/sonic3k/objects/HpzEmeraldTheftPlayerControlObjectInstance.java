@@ -60,6 +60,8 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
     private int timer;
     /** Low word of {@code Camera_X_pos}'s longword, which {@code loc_64D5C} adds speed into. */
     private int cameraFraction;
+    /** Held bits of {@code Ctrl_1_logical} latched by {@code loc_64DAA}'s lock. */
+    private int latchedHeld;
 
     public HpzEmeraldTheftPlayerControlObjectInstance() {
         super(new ObjectSpawn(0, 0, 0, 0, 0, false, 0), "HpzEmeraldTheftPlayerControl");
@@ -139,12 +141,20 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
                 }
                 phase = PHASE_WAIT_GROUNDED;
                 p1.setControlLocked(true);
+                // st (Ctrl_1_locked) without a Ctrl_1_logical write: Sonic_Control stops copying
+                // the pad, so the held bits latched this frame (e.g. a jump still held) keep
+                // driving movement until loc_64DE0 writes the walk input. The press byte latched
+                // with them is clear, so the held jump must not re-press.
+                latchedHeld = p1.getLogicalInputState();
+                holdLatchedInput(p1);
                 spawnDynamicObjectLowestFreeSlot(new S3kNativeP2LockInstance());
             }
             case PHASE_WAIT_GROUNDED -> {
+                // loc_64DCC
                 if (!p1.getAir()) {
                     phase = PHASE_WALK_TO_FLOOR;
                 }
+                holdLatchedInput(p1);
             }
             case PHASE_WALK_TO_FLOOR -> {
                 // loc_64DE0
@@ -221,6 +231,16 @@ public final class HpzEmeraldTheftPlayerControlObjectInstance extends AbstractOb
         p1.setControlLocked(false);
         p1.setForcedInputMask(0);
         unlockPlayer2();
+    }
+
+    private void holdLatchedInput(AbstractPlayableSprite p1) {
+        p1.setForcedInputMask(latchedHeld);
+        if ((latchedHeld & AbstractPlayableSprite.INPUT_JUMP) != 0) {
+            p1.suppressNextJumpPress();
+        }
+        // The forced mask also publishes a press bit; the latched Ctrl_1_logical word the ROM
+        // records into Stat_table (and Tails' CPU replays) has the held bits only.
+        p1.writeLogicalInputAndCurrentFollowerHistory(latchedHeld, false);
     }
 
     /** {@code st (Ctrl_1_locked).w} with {@code Ctrl_1_logical} held bits. */

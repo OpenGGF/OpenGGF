@@ -195,4 +195,18 @@ class SwScrlHpzTest {
             return shake.offset();
         }
     }
+
+    @Test
+    void playableActBackgroundPeriodReachesTheRightmostVisibleColumn() {
+        // Teleporter corridor (camera $AD9,$389): every line scrolls at 3/16 of (X - $348), BG X 363.
+        SwScrlHpz handler = new SwScrlHpz();
+        int[] buffer = new int[VISIBLE_LINES];
+        handler.update(buffer, 0xAD9, 0x389, 0, 1);
+        assertEquals(363, -(short) unpackBG(buffer[0]));
+        // The layout is not periodic at 512 px (clouds only in columns 1-6), so the window must cover
+        // BG X 363..682 instead of wrapping X 512+ back onto column 0.
+        assertEquals(1024, handler.getBgPeriodWidth());
+        assertEquals(512, SwScrlHpz.requiredBgPeriodWidth(new int[]{(short) -100 & 0xFFFF}, 320));
+        assertEquals(4096, SwScrlHpz.requiredBgPeriodWidth(new int[]{(short) -1400 & 0xFFFF}, 800));
+    }
 }

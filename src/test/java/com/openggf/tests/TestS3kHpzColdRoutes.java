@@ -90,7 +90,8 @@ class TestS3kHpzColdRoutes {
      * {@code route}, 2026-09-17): movie frame, camera X/Y, Player_1 X/Y, Player_2 X/Y. They cover
      * the Obj_LevelIntro_PlayerRun run-in (camera held at $40 until Sonic passes $E0 - $10), the
      * lower teleporter approach (no landing on the pad's sloped edge), charge, lift, settle and
-     * unroll, and the first four Knuckles hits. Native camera X is already $28 on the load frames
+     * unroll, the Knuckles fight, the altar theft (Player_1's jump held through {@code loc_64DAA}'s
+     * control lock at 447157), the floor collapse and the ending. Native camera X is already $28 on the load frames
      * (history carried from the preceding act through the load-time DeformBgLayer), so a cold load
      * trails it for two frames; checkpoints start once both reach $40.
      */
@@ -106,10 +107,25 @@ class TestS3kHpzColdRoutes {
             {444437, 4239, 918, 4399, 1068, 4309, 1072},
             {444883, 4320, 896, 4575, 1068, 4520, 1007},
             {445001, 4320, 896, 4542, 1066, 4484, 1044},
+            {445845, 4600, 972, 4760, 1054, 4714, 1072},
+            {446400, 5504, 768, 5544, 940, 5558, 944},
+            {447160, 6096, 768, 6317, 889, 6292, 846},
+            {447352, 6096, 844, 6292, 942, 6237, 945},
+            {447800, 6096, 1472, 6292, 1612, 6237, 1552},
+            {448200, 5968, 1472, 6002, 1649, 6091, 1648},
+            {448700, 5456, 1436, 5568, 1378, 5568, 1392},
     };
 
+    /**
+     * Native lag frames inside the checked span: {@code Level_frame_counter} does not advance and
+     * the pad is not read. 447347 is the frame {@code loc_64964} sets {@code Events_fg_4}, starts the
+     * shake and spawns the collapse fragments (a CPU overrun, not a registered hardware-timing
+     * kind), so its movie input is skipped rather than replayed on the next engine frame.
+     */
+    static final int[] NATIVE_LAG_FRAMES = {447347};
+
     @Test
-    void recordedInputsMatchNativeCheckpointsThroughTheFirstKnucklesHits() throws Exception {
+    void recordedInputsMatchNativeCheckpointsThroughTheEndingToSkySanctuary() throws Exception {
         var config = SonicConfigurationService.getInstance();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
         config.setSessionOverride(SonicConfiguration.SIDEKICK_CHARACTER_CODE, "tails");
@@ -125,6 +141,10 @@ class TestS3kHpzColdRoutes {
         int next = 0;
         // The fixture's first step lands on native movie frame FIRST_LEVEL_FRAME + 1.
         for (int movieFrame = FIRST_LEVEL_FRAME + 1; movieFrame <= last; movieFrame++) {
+            if (java.util.Arrays.binarySearch(NATIVE_LAG_FRAMES, movieFrame) >= 0) {
+                fixture.advanceRecordingCursor(1);
+                continue;
+            }
             fixture.stepFrameFromRecording();
             if (movieFrame == FIRST_LEVEL_FRAME + 1) {
                 assertTrue(p1.isControlLocked(), "Obj_LevelIntro_PlayerRun locks Ctrl_1 from the first frame");
@@ -140,7 +160,14 @@ class TestS3kHpzColdRoutes {
             next++;
         }
         assertEquals(NATIVE_CHECKPOINTS.length, next);
-        assertFalse(p1.isControlLocked(), "the run-in releases Ctrl_1");
+        // The altar teleporter then starts Sky Sanctuary act 1 (native Current_zone_and_act $A00 at 448755).
+        boolean skySanctuary = false;
+        for (int i = 0; i < 300 && !skySanctuary; i++) {
+            fixture.stepFrameFromRecording();
+            skySanctuary = GameServices.level().getCurrentZone() == Sonic3kZoneIds.ZONE_SSZ;
+        }
+        assertTrue(skySanctuary, "the altar teleporter must load Sky Sanctuary");
+        assertEquals(0, GameServices.level().getCurrentAct());
     }
 
     @Test
