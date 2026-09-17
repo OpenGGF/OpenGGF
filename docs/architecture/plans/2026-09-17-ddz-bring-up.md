@@ -297,3 +297,22 @@ credits (ending campaign, which also owns the mislabelled `ddz` segments); level
   which the latch model had missed (regression check in `TestS3kDdzColdRoutes`, red with the line removed).
   Residual presentation differences are in `docs/status/s3k-known-bugs.md` (Doomsday entry) plus Master
   Emerald flicker phase and the white-fade tint/HUD icon, not yet investigated.
+
+### 2026-09-17 follow-up — user-reported visual defects (`c1fab4cf8`, `92c1abba0`)
+
+- **Boss pieces in the asteroid field.** `DDZ_ScreenInit` `Refresh_PlaneFull` fills the 512x256 nametable from
+  layout (0,0), which is empty; plane A shows only that until `DDZ_ScreenEvent` leaves routine 0. The engine sampled
+  the layout at `_unkEE98` (Camera X) and drew the body chunks (X `$200`) and the phase-2 chunk (`$600`). A first
+  attempt wrapped the words at 512x256 (`c1fab4cf8`) and made it worse, because the engine plane does not wrap
+  and `$1B8 + 320` still reaches `$200`. Final: while routine 0 is active and that layout region is empty, show the
+  draw at (0,0) (`92c1abba0`; `@ModApi` `AdvancedRenderFrameState` has no blank-plane option).
+- **Phase-1 defeat explosions.** Frame-count comparison against native every-frame footage found an extra
+  cluster on the ship from row 5484. Native slot history: after the defeat spawner (`$82E9A`) is deleted at row
+  5476, its `loc_82F78` children keep spawning bursts from `sub_82C86`'s unchecked `parent3` read of the cleared
+  slot, i.e. near (0,0), off-screen. `AbstractDdzObjectInstance.parentXPos/parentYPos` model the cleared slot.
+- **Dark phase-2 ship.** Native palette dumps: line 3 colours 1/2/5 (jets and highlights) are `$EEE/$06E/$0EE` in
+  phase 2; the engine kept `$888/$008/$088` (three `DecColor_Obj` passes from the phase-1 fall). `loc_819CE` reloads
+  `Pal_DDZ+$20` in RAM before copying Normal to Target; the engine's palette-ownership write was deferred, so the
+  flash faded back to the darkened target. `DdzPalette.loadDdzLine3` now resolves pending writes.
+- Each fix has a `TestS3kDdzColdRoutes` check shown red without its change (palette, bursts; the plane check pins
+  the displayed words). Tools: every-frame native probes `native/probe-vis-*` and `cmp.sh`-style side-by-sides.
