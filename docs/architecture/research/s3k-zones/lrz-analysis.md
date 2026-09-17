@@ -1,5 +1,24 @@
 # S3K LRZ Zone Analysis
 
+> **Corrections 2026-09-17** (LRZ plan hardening, disassembly `1a454a0e`, engine `9cba6dbb6`):
+> - Every `sonic3k.asm` line citation in "Disassembly location" lines, the zone-object table and the
+>   rock-routine note was re-resolved **by label** (`grep '^Label:'`), not shifted. Most had drifted by
+>   +5; the autoscroll entry is `loc_59E46` (line 119703), while `loc_59F3C` is only its camera-apply tail, and the `LevelResizeArray` LRZ
+>   entries are lines 38832-38833, not 38823-38824. Labels stay authoritative; line numbers are a convenience.
+> - `word_56F88` was transcribed as three 4-word rows plus three trailing thresholds. It is three
+>   **5-word** rows; the table in "Act 1 Layout Region System" is rewritten from the ROM words.
+> - `Obj_LRZRockCrusher` is an **act 1** object (two placements), and it is the writer of both signs of
+>   `Events_bg+$0C` (`st` on the high byte vs the low byte). "Likely collapsing terrain or doors" removed.
+> - `Obj_LRZMiniboss` (`$9D`) is a **placed** act 1 object at `($2CA0,$880)`, not event-spawned.
+> - Placement counts, subtypes and factory state now live in
+>   [lrz-object-inventory.md](lrz-object-inventory.md); the "Zone Objects" table here lists only
+>   LRZ-named objects and omits the badniks, bosses, `$6E`, `$AD`, `$AE`, `$B3`.
+>   Second pass (independent verifier, each re-read): LRZ3 runs animated-tile channel 0 only and no
+>   AniPLC; channel 0 is a `mod $30` with unsigned wrap; rock sprites render between bucket 0 and
+>   bucket 1, zone 9 only; rock window back edge is `Camera_X + $148`; `word_78EAA` is a post-defeat
+>   rotation shared with the end boss, not a fight palette; `loc_56CAA` also calls `Clear_Switches`.
+> - The "Current Engine Status (2026-08-08)" section predates this pass; the plan's findings are current.
+
 ## Summary
 
 - **Zone:** Lava Reef Zone (LRZ)
@@ -42,19 +61,19 @@ by this remediation.
 
 ### Act 1 (Dynamic_Resize)
 
-**Disassembly location:** `sonic3k.asm` line 38823 (LevelResizeArray entry)
+**Disassembly location:** `sonic3k.asm` line 38832 (LevelResizeArray entry)
 
 LRZ1 maps to `No_Resize` in the LevelResizeArray. There is no Dynamic_Resize routine for Act 1.
 
 ### Act 2 (Dynamic_Resize)
 
-**Disassembly location:** `sonic3k.asm` line 38824 (LevelResizeArray entry)
+**Disassembly location:** `sonic3k.asm` line 38833 (LevelResizeArray entry)
 
 LRZ2 also maps to `No_Resize`. There is no Dynamic_Resize routine for Act 2.
 
 ### Act 1 Screen Events (LRZ1_ScreenInit / LRZ1_ScreenEvent)
 
-**Disassembly location:** `sonic3k.asm` line 115189 (init), line 115194 (event)
+**Disassembly location:** `sonic3k.asm` line 115194 (init), line 115199 (event)
 
 **LRZ1_ScreenInit:**
 1. Calls `Reset_TileOffsetPositionActual`
@@ -68,13 +87,13 @@ LRZ2 also maps to `No_Resize`. There is no Dynamic_Resize routine for Act 2.
    - If negative: writes chunk bytes $44/$00/$4A at `$38(a3)+$1D` and $3E/$00/$4B at `$3C(a3)+$1D`, clears flag, refreshes screen
    - If zero: normal operation via `DrawTilesAsYouMove`
 
-**Purpose:** The `Events_bg+$0C` mechanism handles dynamic layout chunk replacement triggered by external objects (likely collapsing terrain or doors). The positive/negative value determines which set of chunks to write.
+**Purpose:** The writer is `Obj_LRZRockCrusher`'s timer child (`loc_90502` → `loc_90512`, 3×60 frames of screen shake). Subtype 0 runs `st (Events_bg+$0C).w`: the **high** byte becomes `$FF`, the word is negative, and the `$44/$00/$4A` + `$3E/$00/$4B` chunk edits run. Subtype ≠ 0 runs `st (Events_bg+$0D).w`: the **low** byte becomes `$FF`, the word is `$00FF` (positive), and the single `$9C` chunk edit runs. Both subtypes are placed in act 1. Each branch also spawns `Obj_LRZCollapsingBridge` objects with `$32 = 1` (see the object inventory).
 
 **Confidence:** HIGH -- simple screen event with conditional chunk writes.
 
 ### Act 2 Screen Events (LRZ2_ScreenInit / LRZ2_ScreenEvent)
 
-**Disassembly location:** `sonic3k.asm` line 115647 (init), line 115652 (event)
+**Disassembly location:** `sonic3k.asm` line 115652 (init), line 115657 (event)
 
 **LRZ2_ScreenInit:**
 1. Calls `Reset_TileOffsetPositionActual`
@@ -90,7 +109,7 @@ LRZ2 also maps to `No_Resize`. There is no Dynamic_Resize routine for Act 2.
 
 ### Act 1 Background Events (LRZ1_BackgroundInit / LRZ1_BackgroundEvent)
 
-**Disassembly location:** `sonic3k.asm` line 115226 (init), line 115254 (event)
+**Disassembly location:** `sonic3k.asm` line 115231 (init), line 115259 (event)
 
 **LRZ1_BackgroundInit:**
 1. Copies Camera_X_pos_BG_copy value from `(a3)` to 25 longword entries at `HScroll_table+$1C` through `HScroll_table+$7C` (fills deform entries with base value)
@@ -109,7 +128,7 @@ LRZ2 also maps to `No_Resize`. There is no Dynamic_Resize routine for Act 2.
 | 0 | $00 | loc_56BD2 | Check `Events_fg_5`: if set, queue LRZ2 secondary art (128x128, 16x16, 8x8 KosM), load PLC $30, advance to stage 12. Otherwise: run sub_56DCA (layout region check), LRZ1_Deform, Draw_BG, apply deformation, ShakeScreen_Setup | Normal scrolling + seamless transition trigger |
 | 4 | $04 | loc_56C6E | Run sub_56DCA, sub_56DAC, DrawBGAsYouMove, PlainDeformation, ShakeScreen_Setup | Locked BG scrolling for lava dome interior regions |
 | 8 | $08 | loc_56C88 | Run LRZ1_Deform, Draw_PlaneVertBottomUpComplex. When complete: clear Events_bg+$02, reset Events_routine_bg to 0, continue normal drawing | BG refresh (returning from locked region) |
-| 12 | $0C | loc_56CAA | **Seamless transition to Act 2.** Wait for Kos_modules_left == 0, then: set zone to $901, clear routines, Load_Level, LoadSolids, offset all by -$2C00 X, reset tile positions, clear Events_routine_bg | Full seamless transition |
+| 12 | $0C | loc_56CAA | **Seamless transition to Act 2.** Wait for Kos_modules_left == 0, then: set zone to $901, clear routines, Load_Level, LoadSolids, `Clear_Switches` (zeroes `Level_trigger_array`), offset all by -$2C00 X (X only), reset tile positions, clear Events_routine_bg | Full seamless transition |
 
 **Post-transition drawing (loc_56D16):**
 Runs every frame during and after transition: LRZ1_Deform, Draw_BG with LRZ1_BGDrawArray, ApplyDeformation with LRZ1_BGDeformArray, ShakeScreen_Setup.
@@ -126,19 +145,21 @@ Runs every frame during and after transition: LRZ1_Deform, Draw_BG with LRZ1_BGD
 
 ### Act 1 Layout Region System (sub_56DCA)
 
-**Disassembly location:** `sonic3k.asm` line 115452
+**Disassembly location:** `sonic3k.asm` line 115457
 
 Checks Player 1 position against 3 rectangular regions. When the player enters or exits a region, transitions the BG to/from a locked parallax mode.
 
 **Region table (word_56F88):**
 
-| Region | X Min | X Max | Y Min | Y Max | Direction Check | Exit Threshold |
-|--------|-------|-------|-------|-------|-----------------|----------------|
-| 0 | $1AC0 | $1B40 | $840 | $8C0 | X >= threshold to enter | X to exit |
-| 1 | $1B00 | $2240 | $2340 | $840 | X < threshold to enter | X to exit |
-| 2 | $880 | $22C0 | $20C0 | $2180 | Y >= threshold to enter | Y to exit |
+| Region | X Min | X Max (inclusive) | Y Min | Y Max (exclusive) | Threshold | Enter when (flag clear) | Exit when (flag set) |
+|--------|-------|-------|-------|-------|-----------|-------------------------|----------------------|
+| 0 | $1AC0 | $1B40 | $840 | $8C0 | X $1B00 | X >= $1B00 | X < $1B00 |
+| 1 | $2240 | $2340 | $840 | $880 | X $22C0 | X < $22C0 | X >= $22C0 |
+| 2 | $20C0 | $2180 | $740 | $800 | Y $7A0 | Y >= $7A0 | Y < $7A0 |
 
-Extra data after: `$740, $800, $7A0` (exit thresholds for each region).
+Each entry is **five** words (`adda.w #$A,a1` per iteration): X min, X max, Y min, Y max, threshold. The
+box test is `blo`/`bhi` on X and `blo`/`blo` on Y, so X max is inclusive and Y max exclusive. The test
+only runs while Player 1 is inside the box; outside every box nothing changes.
 
 **Region entry (loc_56E40):**
 1. Sets `Events_bg+$00` flag
@@ -167,7 +188,7 @@ This positions the BG to show a specific large lava dome/cave interior when the 
 
 ### Lava Platform Object (Obj_56EA0)
 
-**Disassembly location:** `sonic3k.asm` line 115563
+**Disassembly location:** `sonic3k.asm` line 115568
 
 Allocated when entering a BG layout region. Acts as a solid platform that oscillates vertically.
 
@@ -187,7 +208,7 @@ Allocated when entering a BG layout region. Acts as a solid platform that oscill
 
 ### Act 2 Background Events (LRZ2_BackgroundInit / LRZ2_BackgroundEvent)
 
-**Disassembly location:** `sonic3k.asm` line 115658 (init), line 115675 (event)
+**Disassembly location:** `sonic3k.asm` line 115663 (init), line 115680 (event)
 
 **LRZ2_BackgroundInit:**
 1. Allocates `loc_5711E` object (Death Egg BG sprite), stores address at `Events_bg+$06`
@@ -209,7 +230,7 @@ Allocated when entering a BG layout region. Acts as a solid platform that oscill
 
 ### Death Egg BG Object (loc_5711E)
 
-**Disassembly location:** `sonic3k.asm` line 115806
+**Disassembly location:** `sonic3k.asm` line 115811
 
 A background sprite object that renders the Death Egg in LRZ2's BG layer.
 
@@ -223,7 +244,7 @@ A background sprite object that renders the Death Egg in LRZ2's BG layer.
 
 ### LRZ3 Screen Events (LRZ3_ScreenInit / LRZ3_ScreenEvent)
 
-**Disassembly location:** `sonic3k.asm` line 119305 (init), line 119344 (event)
+**Disassembly location:** `sonic3k.asm` line 119310 (init), line 119349 (event)
 
 **LRZ3_ScreenInit:**
 1. Clears `Camera_max_X_pos`
@@ -256,7 +277,7 @@ A background sprite object that renders the Death Egg in LRZ2's BG layer.
 
 ### LRZ3 Background Events (LRZ3_BackgroundInit / LRZ3_BackgroundEvent)
 
-**Disassembly location:** `sonic3k.asm` line 119441 (init), line 119468 (event)
+**Disassembly location:** `sonic3k.asm` line 119446 (init), line 119473 (event)
 
 **LRZ3_BackgroundInit:**
 1. Allocates `Obj_59FC4` (lava rising platform object for boss arena)
@@ -272,7 +293,7 @@ A background sprite object that renders the Death Egg in LRZ2's BG layer.
 | Stage | Offset | Label | Action | Notes |
 |-------|--------|-------|--------|-------|
 | 0 | $00 | loc_59C60 | Wait for Camera Y >= $500, then advance to stage 4. Otherwise: run sub_59D82, DrawBGAsYouMove, apply Events_bg+$04/$06 override if set, sub_59DDE | Pre-boss BG scrolling |
-| 4 | $04 | loc_59C8C | When Camera Y >= $500 AND Camera X == $A00 AND Camera Y at max: lock camera (max X = $A00, min Y = Camera Y), spawn Obj_LRZEndBoss, set Special_V_int_routine = $04 (VScroll On), advance to stage 12. If Camera Y < $500: save BG pos, run sub_59D82, set up top-down BG refresh, advance to stage 8. Otherwise: run sub_59DA2, DrawBGAsYouMove, sub_59DDE | Boss spawn trigger + BG transition |
+| 4 | $04 | loc_59C8C | When Camera Y >= $500 AND Camera X == $A00 (exact equality) AND Camera Y == Camera_max_Y_pos: lock camera (max X = $A00, min Y = Camera Y), spawn Obj_LRZEndBoss, set Special_V_int_routine = $04 (VScroll On), advance to stage 12. If Camera Y < $500: save BG pos, run sub_59D82, set up top-down BG refresh, advance to stage 8. Otherwise: run sub_59DA2, DrawBGAsYouMove, sub_59DDE | Boss spawn trigger + BG transition |
 | 8 | $08 | loc_59D02 | Run sub_59D82, draw BG rows top-down until complete, then reset Events_bg+$04, reset to stage 0 | BG refresh returning from boss area |
 | 12 | $0C | loc_59D24 | **Boss arena mode.** Check Events_fg_5 AND Events_bg+$0A: if both set, transition to stage 16 (clear VScroll). Otherwise: run sub_59DBC (boss arena BG calc), DrawTilesVDeform2 with word_5A106 (VScroll array), sub_59DDE (heat shimmer), copy VScroll buffer to VSRAM | Cell-based VScroll boss arena |
 | 16 | $10 | loc_59D74 | Clear Events_fg_5, set Special_V_int_routine = $0C (VScroll Off), advance to stage 20. Run sub_59DA2, DrawBGAsYouMove, sub_59DDE | Post-boss BG restoration |
@@ -294,7 +315,7 @@ Starting at X=$310, 19 columns of $10 pixels each (304 pixels total). Covers the
 
 ### LRZ3 Auto-Scroll System (Special_events_routine $14)
 
-**Disassembly location:** `sonic3k.asm` line 119698
+**Disassembly location:** `sonic3k.asm` line 119703 (`loc_59E46`, the `$14` entry of the special-events table; `loc_59F3C` at 119794 is only its camera-apply tail)
 
 Activated by `Special_events_routine = $14`. This is a 7-stage forced-scroll state machine that moves the camera through the boss act level.
 
@@ -322,7 +343,7 @@ Each frame during auto-scroll:
 
 ### LRZ3 Lava Rising Platform (Obj_59FC4)
 
-**Disassembly location:** `sonic3k.asm` line 119846
+**Disassembly location:** `sonic3k.asm` line 119851
 
 The main solid platform object in the LRZ3 boss arena. Acts as a rising/falling lava surface that the player stands on.
 
@@ -348,7 +369,7 @@ The main solid platform object in the LRZ3 boss arena. Acts as a rising/falling 
 
 ### Act 1 Miniboss (Obj_LRZMiniboss)
 
-- **Object:** `Obj_LRZMiniboss` at `sonic3k.asm` line 159996
+- **Object:** `Obj_LRZMiniboss` at `sonic3k.asm` line 160001
 - **Spawn:** `Check_CameraInRange` with bounds Y=$610-$810, X=$2B00-$2D00
 - **Arena boundaries:** Y=$710, X=$2C00 (locked at arena center)
 - **Music:** `mus_Miniboss`
@@ -364,12 +385,12 @@ The main solid platform object in the LRZ3 boss arena. Acts as a rising/falling 
   - After timer expires ($BF frames of swinging), transitions to attack phase
   - Sets collision_flags = $B5 during attack
 - **Child objects:** `ChildObjDat_78D84` (12 children), `ChildObjDat_78D8A` (12 children)
-- **Palette script (word_78EAA):** 13-frame palette fade sequence on palette line 3 colors 1-5, transitioning through warm colors ($0EE/$0AE/$06E) down to dark ($222/$222/$224)
+- **Palette script (word_78EAA):** post-defeat only (started at `loc_78AA8` once `End_of_level_flag` is set; reused by the end boss at `loc_7A100`), not a fight palette. 13-frame palette fade sequence on palette line 3 colors 1-5, transitioning through warm colors ($0EE/$0AE/$06E) down to dark ($222/$222/$224)
 - **Confidence:** MEDIUM -- attack pattern and child objects need deeper reading for full implementation
 
 ### LRZ3 Boss (Obj_LRZEndBoss)
 
-- **Object:** `Obj_LRZEndBoss` at `sonic3k.asm` line 161563
+- **Object:** `Obj_LRZEndBoss` at `sonic3k.asm` line 161568
 - **Spawn:** Created by LRZ3_BackgroundEvent stage 4 when Camera reaches X=$A00, Y at max
 - **Arena boundaries:** Camera locked by LRZ3_ScreenInit (X=$920, Y=$2F0) and boss event (max X=$A00)
 - **Music:** `mus_EndBoss` (set via Current_music+1)
@@ -392,7 +413,7 @@ The main solid platform object in the LRZ3 boss arena. Acts as a rising/falling 
 
 ### LRZ3 Autoscroll Boss (Obj_LRZ3Autoscroll)
 
-- **Object:** `Obj_LRZ3Autoscroll` at `sonic3k.asm` line 160901
+- **Object:** `Obj_LRZ3Autoscroll` at `sonic3k.asm` line 160906
 - **Spawn:** During LRZ3 cutscene sequence after Death Egg flash
 - **PLC load:** `ArtKosM_LRZ3DeathEggFlash` -> `ArtTile_LRZ3DeathEggFlash`; `ArtKosM_LRZ3PlatformDebris` -> `ArtTile_LRZ3PlatformDebris`
 - **Setup sequence:**
@@ -409,7 +430,7 @@ The main solid platform object in the LRZ3 boss arena. Acts as a rising/falling 
 
 ### LRZ3 Cutscene Sequence
 
-**Disassembly location:** `sonic3k.asm` line 161280 (Death Egg flash sequence)
+**Disassembly location:** `sonic3k.asm` line 161285 (Death Egg flash sequence)
 
 The sequence before the LRZ3 boss fight:
 1. Sets `Palette_cycle_counters+$00 = $80` (disables AnPal_LRZ3 channel B)
@@ -428,7 +449,7 @@ The sequence before the LRZ3 boss fight:
 
 ### Act 1 (LRZ1_Deform)
 
-**Disassembly location:** `sonic3k.asm` line 115384
+**Disassembly location:** `sonic3k.asm` line 115389
 
 This is a multi-band BG parallax for the lava cavern background.
 
@@ -486,7 +507,7 @@ $40, $20, $10, $10, $10, $10, $10, $100, $10, $10, $10, $20, $7FFF
 
 ### Act 2 (sub_57082)
 
-**Disassembly location:** `sonic3k.asm` line 115734
+**Disassembly location:** `sonic3k.asm` line 115739
 
 Nearly identical structure to LRZ1_Deform but with slightly different HScroll_table offsets.
 
@@ -525,7 +546,7 @@ $20, $20, $20, $10, $10, $10, $10, $F0, $10, $10, $10, $20, $7FFF
 
 ### LRZ3 Boss Act (sub_59D82 / sub_59DA2 / sub_59DDE)
 
-**Disassembly location:** `sonic3k.asm` line 119598 (sub_59D82), line 119615 (sub_59DA2), line 119652 (sub_59DDE)
+**Disassembly location:** `sonic3k.asm` line 119603 (sub_59D82), line 119620 (sub_59DA2), line 119657 (sub_59DDE)
 
 **Standard BG position (sub_59D82):**
 ```
@@ -563,7 +584,7 @@ This is the signature LRZ visual effect -- per-scanline horizontal displacement 
 
 ### Custom: Shared BG Tile Animation (AnimateTiles_LRZ1 / AnimateTiles_LRZ2 / AnimateTiles_LRZ3)
 
-**Disassembly location:** `sonic3k.asm` line 55040 (LRZ1), line 55046 (LRZ2), line 55034 (LRZ3)
+**Disassembly location:** `sonic3k.asm` line 55045 (LRZ1), line 55051 (LRZ2), line 55039 (LRZ3)
 
 All three share the same core routine at `loc_282D0`. The only difference is the VRAM destination:
 
@@ -575,7 +596,7 @@ All three share the same core routine at `loc_282D0`. The only difference is the
 
 **Channel 0 (BG position-dependent animation):**
 
-Tracks `(Events_bg+$12 - Camera_X_pos_BG_copy - 1) / $30` as the animation state.
+Tracks `(Events_bg+$12 - Camera_X_pos_BG_copy - 1) mod $30` as the animation state (`divu.w #$30` on the zero-extended 16-bit difference, remainder taken by `swap`; a negative difference wraps unsigned).
 
 - Only updates when position changes (compares against `Anim_Counters+$01`)
 - Computes art offset from position within a $30-pixel cycle:
@@ -609,13 +630,13 @@ Tracks `(Events_bg+$10 - Camera_X_pos_BG_copy) & $1F` as animation state.
 
 **Channel 2 (standard AniPLC):**
 
-After Channel 1 (or directly for LRZ3): advances Anim_Counters pointer by 2, then falls through to `loc_286E8` which is the standard `zoneanimdecl`-based animation runner.
+After Channel 1 (zone 9 only): advances the Anim_Counters pointer by 2, then runs the standard `zoneanimdecl`-based runner. **LRZ3 does not reach it**: `loc_2833C` returns when `Current_zone == $16`, and the `$1600` AniPLC table entry is `AniPLC_NULL`, so the boss act has channel 0 only.
 
 **Confidence:** MEDIUM -- the position-dependent split-DMA is complex. Channel 0 and 1 use the same algorithm with different lookup tables and art sources. The visual effect is lava/rock textures that shift as the BG scrolls.
 
 ### Script: Act 1 (AniPLC_LRZ1)
 
-**Disassembly location:** `sonic3k.asm` line 56002
+**Disassembly location:** `sonic3k.asm` line 56007
 
 Two channels:
 
@@ -641,7 +662,7 @@ Two channels:
 
 ### Script: Act 2 (AniPLC_LRZ2)
 
-**Disassembly location:** `sonic3k.asm` line 56017
+**Disassembly location:** `sonic3k.asm` line 56022
 
 Two channels:
 
@@ -671,19 +692,19 @@ Two channels:
 
 ### Enemy Art PLC
 
-**PLCKosM_LRZ** (shared both acts, `sonic3k.asm` line 64418):
+**PLCKosM_LRZ** (shared both acts, `sonic3k.asm` line 64423):
 - Fireworm Segments: `ArtKosM_FirewormSegments` -> `ArtTile_FirewormSegments`
 - Iwamodoki: `ArtKosM_Iwamodoki` -> `ArtTile_Iwamodoki`
 - Toxomister: `ArtKosM_Toxomister` -> `ArtTile_Toxomister`
 
 ### Level PLCs
 
-**PLC_2E_2F** (LRZ1, `sonic3k.asm` line 199793):
+**PLC_2E_2F** (LRZ1, `sonic3k.asm` line 199798):
 - `ArtNem_LRZMisc` -> `ArtTile_LRZMisc`
 - `ArtNem_LRZSpikes` -> `ArtTile_LRZ2Misc+$2B`
 - `ArtNem_LRZBigSpike` -> `ArtTile_LRZBigSpike`
 
-**PLC_30_31** (LRZ2, `sonic3k.asm` line 199799):
+**PLC_30_31** (LRZ2, `sonic3k.asm` line 199804):
 - `ArtNem_LRZ2Misc` -> `ArtTile_LRZ2Misc`
 - `ArtNem_LRZ2Drum` -> `ArtTile_LRZ2Drum`
 
@@ -869,7 +890,7 @@ LRZ has **no water** in any act. The `DynamicWaterHeight_Index` maps LRZ (indice
 
 ### Draw_LRZ_Special_Rock_Sprites
 
-**Disassembly location:** `sonic3k.asm` line 39551 (S&K), `s3.asm` line 32705 (S3)
+**Disassembly location:** `sonic3k.asm` line 39556 (S&K), `s3.asm` line 32705 (S3)
 
 LRZ has a unique foreground rock decoration system that renders sprites from binary placement data, independent of the normal object system.
 
@@ -893,19 +914,21 @@ LRZ has a unique foreground rock decoration system that renders sprites from bin
 - Used to compose VDP sprite table entries directly
 
 **Windowing:**
-- State 0 (init): Scans forward through placement data to find front pointer (Camera_X - 8) and back pointer (Camera_X + $150)
+- State 0 (init): Scans forward through placement data to find front pointer (Camera_X - 8, forced to 1 when Camera_X <= 8) and back pointer (front + $150 = Camera_X + $148)
 - State 1 (update): Adjusts front/back pointers as camera scrolls, scanning forward and backward as needed
 
 **Rendering (sub_1CB68):**
+- Called from `Render_Sprites_NextLevel` when `a5 == Sprite_table_input` and `Current_zone == 9`: after the HUD, rings and all bucket-0 objects, before bucket 1. Never in `$1600`
 - Iterates from front to back pointer
 - For each entry within screen bounds (Y within 240px of camera, X within 240+120 of camera):
   - Looks up rock type in LRZ_Rock_SpriteData
   - Computes screen-relative X/Y
   - Writes directly to sprite attribute table entries (via a6)
-  - Decrements d7 (sprite count limit)
+  - Decrements d7 (sprite count limit) with no exhaustion test
+- Y test is exactly `0 <= y - Camera_Y + 8 < 240` (unsigned)
 
 **Transition handling:**
-- `LRZ_rocks_routine` is cleared during the seamless Act 1 -> Act 2 transition (line 115352)
+- `LRZ_rocks_routine` is cleared during the seamless Act 1 -> Act 2 transition (line 115357)
 - This forces re-initialization with Act 2's placement data
 
 **Confidence:** HIGH -- unique to LRZ, well-understood windowed sprite rendering system.
@@ -914,7 +937,7 @@ LRZ has a unique foreground rock decoration system that renders sprites from bin
 
 ### CutsceneKnux_LRZ2
 
-**Disassembly location:** `sonic3k.asm` line 131053
+**Disassembly location:** `sonic3k.asm` line 131058
 
 5 routine stages. Triggers for Sonic/Tails only (skips for Knuckles via character_id check).
 
@@ -928,7 +951,7 @@ LRZ has a unique foreground rock decoration system that renders sprites from bin
 
 ### Obj_LRZ2CutsceneKnuckles
 
-**Disassembly location:** `sonic3k.asm` line 131115
+**Disassembly location:** `sonic3k.asm` line 131120
 
 Extended cutscene for Sonic's path in LRZ2. Skips for Knuckles. Includes:
 
@@ -1023,30 +1046,30 @@ Extended cutscene for Sonic's path in LRZ2. Skips for Knuckles. Includes:
 ### Unique to LRZ
 | Object | Line | Description |
 |--------|------|-------------|
-| `Obj_LRZSolidMovingPlatforms` | 51007 | Moving solid platforms |
-| `Obj_LRZCollapsingBridge` | 77379 | Breakable bridge sections |
-| `Obj_LRZCorkscrew` | 87489 | Corkscrew loop handler |
-| `Obj_LRZWallRide` | 87688 | Wall ride mechanic |
-| `Obj_LRZSinkingRock` | 87893 | Rocks that sink in lava |
-| `Obj_LRZFallingSpike` | 87941 | Ceiling spikes that fall |
-| `Obj_LRZDoor` | 88010 | Doors |
-| `Obj_LRZBigDoor` | 88065 | Large doors |
-| `Obj_LRZFireballLauncher` | 88146 | Fireball projectile launcher |
-| `Obj_LRZButtonHorizontal` | 88216 | Horizontal button switch |
-| `Obj_LRZShootingTrigger` | 88274 | Trigger-activated shooter |
-| `Obj_LRZDashElevator` | 88376 | Elevator activated by dash |
-| `Obj_LRZSmashingSpikePlatform` | 88533 | Descending spike crusher |
-| `Obj_LRZSwingingSpikeBall` | 88647 | Pendulum spike ball |
-| `Obj_LRZLavaFall` | 88765 | Lava waterfall visual |
-| `Obj_LRZSpikeBall` | 88833 | Static/moving spike ball |
-| `Obj_LRZOrbitingSpikeBallHorizontal` | 89072 | Horizontally orbiting spike ball |
-| `Obj_LRZOrbitingSpikeBallVertical` | 89144 | Vertically orbiting spike ball |
-| `Obj_LRZFlameThrower` | 89222 | Flame jet hazard |
-| `Obj_LRZSolidRock` | 89448 | Solid rock terrain |
-| `Obj_LRZTurbineSprites` | 89606 | Turbine visual sprites |
-| `Obj_LRZSpikeBallLauncher` | 89843 | Launches spike balls |
-| `Obj_LRZChainedPlatforms` | 97134 | Chain-linked platform system |
-| `Obj_LRZRockCrusher` | 196983 | Rock crushing machine (Act 2) |
+| `Obj_LRZSolidMovingPlatforms` | 51012 | Moving solid platforms |
+| `Obj_LRZCollapsingBridge` | 77384 | Breakable bridge sections |
+| `Obj_LRZCorkscrew` | 87494 | Corkscrew loop handler |
+| `Obj_LRZWallRide` | 87693 | Wall ride mechanic |
+| `Obj_LRZSinkingRock` | 87898 | Rocks that sink in lava |
+| `Obj_LRZFallingSpike` | 87946 | Ceiling spikes that fall |
+| `Obj_LRZDoor` | 88015 | Doors |
+| `Obj_LRZBigDoor` | 88070 | Large doors |
+| `Obj_LRZFireballLauncher` | 88151 | Fireball projectile launcher |
+| `Obj_LRZButtonHorizontal` | 88221 | Horizontal button switch |
+| `Obj_LRZShootingTrigger` | 88279 | Trigger-activated shooter |
+| `Obj_LRZDashElevator` | 88381 | Elevator activated by dash |
+| `Obj_LRZSmashingSpikePlatform` | 88538 | Descending spike crusher |
+| `Obj_LRZSwingingSpikeBall` | 88652 | Pendulum spike ball |
+| `Obj_LRZLavaFall` | 88770 | Lava waterfall visual |
+| `Obj_LRZSpikeBall` | 88838 | Static/moving spike ball |
+| `Obj_LRZOrbitingSpikeBallHorizontal` | 89077 | Horizontally orbiting spike ball |
+| `Obj_LRZOrbitingSpikeBallVertical` | 89149 | Vertically orbiting spike ball |
+| `Obj_LRZFlameThrower` | 89227 | Flame jet hazard |
+| `Obj_LRZSolidRock` | 89453 | Solid rock terrain |
+| `Obj_LRZTurbineSprites` | 89611 | Turbine visual sprites |
+| `Obj_LRZSpikeBallLauncher` | 89848 | Launches spike balls |
+| `Obj_LRZChainedPlatforms` | 97139 | Chain-linked platform system |
+| `Obj_LRZRockCrusher` | 196988 | Rock crushing machine (**Act 1**, 2 placements: subtype 0 at `$FA0,$71C`, subtype 2 at `$5A0,$81C`) |
 
 ## Implementation Priority
 

@@ -7,8 +7,13 @@ and re-measure if the branch is cut later). Applies
 [SOZ](2026-09-15-soz-methodology-v2.md), [HPZ](2026-09-16-hpz-bring-up.md) and
 [DDZ](2026-09-17-ddz-bring-up.md) campaigns to **Sonic 3 & Knuckles** Death Egg: `$B00`, `$B01` and
 the final-boss act `$1700` (zone `$17` act 0). Entry skill:
-[s3k-zone-bring-up](../../../.agents/skills/s3k-zone-bring-up/SKILL.md). Starting inventory:
-[dez-analysis.md](../research/s3k-zones/dez-analysis.md).
+[s3k-zone-bring-up](../../../.agents/skills/s3k-zone-bring-up/SKILL.md). Inputs, all checked against
+the disassembly on 2026-09-17: [placement inventory](../research/s3k-zones/dez-object-inventory.md)
+(every placed ID and subtype with its current factory),
+[reverse-gravity reference table](../research/s3k-zones/s3k-reverse-gravity-references.md) (all 116
+ROM references with engine consumers) and the corrected
+[dez-analysis.md](../research/s3k-zones/dez-analysis.md) (read its corrections box first; its line
+numbers run about 5 low, so find labels, not numbers).
 
 This is not Sonic 2 DEZ. The `*dez-boss-fixes*` and `cpz2-dez-trace-regressions` documents, and
 `TestDEZ*`/`TestS2Dez*`, are Sonic 2. New S3K names carry an explicit prefix: `Sonic3kDEZEvents`,
@@ -29,9 +34,41 @@ slice demonstrated on video and a final act-ordered highlights reel.
   uncommitted edit, reverted and recompiled immediately (`git status` clean).
 - Track five claims separately per matrix row: implemented, cold-reachable, rewind-verified,
   native behaviour matched, visually matched. No aggregate green label.
-- Work stays on the branch until a major gain (at minimum: cold `$B00` → `$B01` boss → `$1700`
-  load). No per-increment develop merges. Reverse gravity ships with DEZ in the same merge (user
-  decision 2026-09-17); its shared validation and S1/S2 non-regression still run before that merge.
+- Work stays on the local branch until the campaign is complete: **one develop merge at the end**
+  (user decision 2026-09-17), no per-increment or per-act merges. Cold `$B00` → `$B01` boss →
+  `$1700` load is an internal milestone, not a merge point. Reverse gravity ships with DEZ in that
+  same merge (user decision 2026-09-17); its shared validation and S1/S2 non-regression still run
+  before it.
+
+## Rules for the implementer
+
+Read before every slice. Each line is a past failure, not a style preference.
+
+- **ROM, not fixtures.** Expected values come from a cited routine or table or an independent native
+  capture, never from the Java under test, a trace row, a frame index or a fitted number. See each
+  test fail for the right reason before implementing. Model `FixBugs = 0` and comment the branch.
+- **Owners.** Objects use injected `services()`, never `getInstance()`. No zone-name or game-name
+  checks in shared code: reverse gravity is gated by the flag alone (below). Gameplay tile edits go
+  through `ZoneLayoutMutationPipeline`/`LevelMutationSurface`. Player position writes use
+  `NativePositionOps` (`x_pos`/`y_pos` are centre coordinates). Name the ROM clock each gate reads.
+- **Mod API.** `GameRules` and its rule records are `@com.openggf.game.ModApi`. Add no public member
+  to any `@ModApi` type (grep both `@ModApi` and `@com.openggf.game.ModApi`); keep helpers in
+  non-API classes. A surface change needs the descriptor, `ModApiVersion` and pins together and the
+  user's explicit agreement; this campaign plans none.
+- **Ratchets.** `GameLoop` (3072 effective lines) and `Engine.draw` (3 lines) are size-ratcheted:
+  put logic in managers and run `-Pguards` before committing near them.
+- **Rewind.** Every new object needs recreation (a probe constructor for `genericRecreate`) and
+  captured state; zone state needs a `RewindSnapshottable` adapter and an entry in
+  `currentRuntimeStateUsesThisEventInstance`; no transient object references across a restore.
+- **Builds and tests.** `python3 tools/testing/maven_queue.py -Dmse=off "-Dtest=…" -Ds3k.rom.path=<absolute path> test`.
+  Wrong ROM paths skip silently: read the skip count. Never build in another worktree, never edit
+  the tree during a category run, never `git stash`, never `--no-verify`, start git chains with an
+  explicit `cd`, check `git log -1` after each commit, all seven commit trailers.
+- **Evidence.** One demo clip per feature or fix (≥ 30 frames lead-in and lead-out). Five separate
+  claims per matrix row. Break every new comparison on purpose once. Gaps go to
+  `docs/status/s3k-known-bugs.md`; the discrepancies file is intentional-only.
+- **Names.** Everything new says S3K: `Sonic3kDEZEvents`, `S3kDez…`, `TestS3kDez…`. Sonic 2 has its own
+  `DEZ` classes and tests; do not touch or reuse them.
 
 ## Scope decisions (HPZ/DDZ precedents)
 
@@ -41,7 +78,7 @@ slice demonstrated on video and a final act-ordered highlights reel.
 | `$1700` entry | Through the `Obj_DEZEndBoss` exit (`Act3_flag`, `Act3_ring_count`, `Act3_timer`, `StartNewLevel $1700`), plus an independent direct `$1700` load for short checks | ROM level select lists `$1700` as "DDZ act 2" (`sonic3k.asm:10161`); the engine level select has no such entry (`Sonic3kLevelSelectConstants:96-97`). Adding it is in scope |
 | Exit | Implement `loc_803D6` in full: `SaveGame`, then `$C00` when `Player_mode < 2` and `Chaos_emerald_count == 7`, else `$D01`, else (`Player_mode == 3`) `Game_mode 0` | Closes DDZ's recorded dependency. After it lands, DDZ's cold entry inherits the camera fraction and `V_int_run_count` from a real chain: re-measure and remove the DDZ seeded-entry caveat. `$D01` stays the ending campaign; record what the engine does after the request |
 | Roster | Mandatory: Sonic + Tails, Sonic alone, Tails alone. Knuckles: level-select access to `$B00`/`$B01` only (user decision 2026-09-17): he must load and play both acts from level select with correct reverse-gravity behaviour, but no Knuckles story route advances into DEZ and no Knuckles cold-chain, `$1700` or trace obligation exists | `LaunchProfile.sanitizedFor` allows native S3K Knuckles and ROM level select does **not** deny Knuckles `$B00`/`$B01` (`LevelSelect_CheckKnuckles` denies `$A00`, `$C00`, `$1600`, `$1700`). His story never reaches DEZ, but the ROM carries Knuckles reverse-gravity code (glide, slide, wall climb). No Knuckles `$1700` row from level select; the chained `$1700` with Knuckles is recorded, not mandatory |
-| Tails differences | Own rows | Miniboss landing Y `$3B0` vs `$3AC` (`loc_7E44C`), `$D01` exit, flight and carry under reverse gravity (`Tails_Carry_Sonic`, `Tails_Test_For_Flight`) |
+| Tails differences | Own rows | Post-act-change transport landing Y `$3B0` vs `$3AC` (`loc_7E44C`, act 2 coordinates; not the miniboss landing), `$D01` exit, flight and carry under reverse gravity (`Tails_Carry_Sonic`, `Tails_Test_For_Flight`) |
 | Widths and donors | 320 plus one wide viewport on every mandatory mechanic from the first slice; donors per the level test standard | The `$1700` arena wraps `Camera_X & $1FF` and redraws planes from camera-relative words; bosses lock the camera. Gameplay geometry stays native |
 | Traces | Strict replay late; movies supply cold routes and native states from slice 1 | v2 |
 
@@ -61,20 +98,36 @@ slice demonstrated on video and a final act-ordered highlights reel.
   (5,550 rows), then `ddz` (`zone_id 13`) with no `zone_id 12`. The Sonic + Tails movie has seven
   emeralds and takes `$C00`. Only Sonic with fewer than seven emeralds needs seeded evidence.
 - **Reverse gravity is a flag with no player physics.** `GameStateManager.reverseGravityActive`
-  exists, is cleared at level load and is snapshotted. Consumers today: springs, `SolidObjectProvider`,
-  `ObjectTerrainUtils`, lost rings/`RingManager`, `GlideWallGrabTerrain`, `TailsCarryController`,
-  `SidekickCpuController`, `PlayableHurtRadiusTransition`, Super Tails flickies, FBZ wire cage, and
-  two lines in `PlayableSpriteMovement`. The ROM has **116** `Reverse_gravity_flag` references (the
-  analysis says "~20+"): `MoveSprite_TestGravity(2)`, `Player_TouchFloor`, `Player_HitCeiling(AndWalls)`,
+  exists and is snapshotted, but is cleared only in `resetSession()`, **not** in `resetForLevel()`:
+  the level-load clear is missing (ROM: `clearRAM Tails_CPU_interact,$100` covers the flag at
+  `$F7C6`; the seamless act change does not clear it). Consumers that really branch on it today
+  (verified by grep at `9cba6dbb6`): spring init swap, lost rings/`ObjectTerrainUtils`,
+  `GlideWallGrabTerrain`, `TailsCarryController`, `PlayableHurtRadiusTransition`, Super Tails
+  flickies, FBZ wire cage, and two Knuckles lines in `PlayableSpriteMovement`. `SolidObjectProvider`
+  and `SidekickCpuController` do **not** (the latter only mentions it in a comment). Of the ROM's
+  **116** references, 9 are covered, 6 partial (lost rings look mirrored the wrong way), 97 missing, 4 n/a: see the
+  [reference table](../research/s3k-zones/s3k-reverse-gravity-references.md), which also states the
+  model (velocity keeps its sign, position integration and probes invert). The references include: `MoveSprite_TestGravity(2)`, `Player_TouchFloor`, `Player_HitCeiling(AndWalls)`,
   `Tails_/Knux_DoLevelCollision`, `Sonic_/Tails_/Knux_Jump`, `Player_JumpFlipSet`, `Player_DoRoll`,
   `Sonic_Balance`, `*_RollSpeed`, `*_InputAcceleration_Path`, `Call_Player_AnglePos`,
   `ChooseChkFloorEdge`, `Player_Boundary_CheckBottom`, `MvSonicOnPtfm`, `SolidObject_cont`,
   `SolidObjectTopSloped_1P`, `Touch_Monitor`, `Obj_Spikes`, `Obj_DashDust`, `Obj_Tails_Tail`, all
   four shields, `Tails_Catch_Up_Flying`, `Tails_Check_Screen_Boundaries`, and the render flip
   (`eori.b #2,render_flags` after `Animate_Sonic`, `loc_10C62`). This is the campaign's largest
-  shared change.
+  shared change. One shipped bug must be preserved: `Tails_Test_For_Flight` (`loc_1515C`) negates
+  the wrong register, so that adjustment is not inverted.
+- **Only three objects write the flag:** `$58` switch (pressed solid, toggles 4 frames later), `$59`
+  teleporter (subtype bit 7) and `$5B` swap (crossing, `render_flags` bit 0; it also zeroes the flag by name
+  before its conditional set), plus the debug cheat and the boss's clearer object. **Every writer
+  acts for Player 1 only** (`$58`: `d6 & $14`; `$5B`: `sub_49228` called for `Player_1`; `$59`:
+  `cmpa.w #Player_1`), so Player 2 can never change gravity. `$5A` tube reads it; `$5C` hub, `$5F` room and `$61` puzzle
+  never reference it. Act 1 places **no writer** (`$58/$59/$5B` are act 2 only): establish in slice
+  3 whether gravity ever reverses in act 1 (kill condition: native flag watch over the act 1 part of
+  the DEZ segment). If it does not, act 1's `$5A`/`$5F`/`$61` are plain movers there.
 - **The act 2 boss is a gravity boss.** `Obj_DEZEndBoss` reads the flag (`sub_7F8A0` inverts its
-  `$38` gravity, `sub_7F8CA`) and clears it on exit (`loc_7FC3E`). Slice order follows.
+  `$38` acceleration and integrates normally, an exception to the player model; `sub_7F8CA`). At
+  **defeat** `loc_7FBD6` spawns a persistent object `loc_7FC3E` that clears the flag every frame
+  until the `$1700` load; it is not an exit hook. Slice order follows.
 - **No S3K DEZ production code beyond loading.** Present: level data and music
   (`Sonic3kZoneRegistry` 11 and 23), `$B00` intro run, slope-angle rule
   (`Sonic3kZoneFeatureProvider:63`), results-screen DEZ title-card exception, PLC art for
@@ -84,17 +137,41 @@ slice demonstrated on video and a final act-ordered highlights reel.
   the default; **`$1700` currently gets `hpzHandler`** because the provider keys zone `$17` without
   the act), `AnPal_DEZ1/2`, `AniPLC_DEZ`, every SKL object `$4A-$61`, badniks `$A4/$A5` (the
   S3KL ids are Sparkle/Batbot), `$A6/$A7` bosses, `Obj_DEZ3_Boss`, the `$1700` resource profile
-  (only `$1701` has one), `InvisibleShockBlock` (`$6D` SKL; verify), level-select `$1700`.
+  (only `$1701` has one), `InvisibleShockBlock` (`$6D` SKL: confirmed placeholder, 78 placements), `$5D-$61` (no factory at
+  all), level-select `$1700`.
   No `TestS3kDez*` and no matrix; coverage backlog rows are "Audit pending".
 - **Placements** (decoded from `Levels/DEZ/Object Pos`): act 1 has 365 objects, act 2 has 494,
   `$1700` none. Gravity switch `$58`, teleporter `$59`, gravity swap `$5B`, hub `$5C`, retracting
   spring `$5D` and floating platform `$4A` are act 2 only; hover machine `$5E`, gravity room
-  `$5F`, bumper wall `$60`, puzzle `$61`, lift pad `$4E` and launcher `$78` are act 1 only. Act 1
-  still flips gravity through `$5A` tubes and `$5F`. Lightning `$52` (48/94) and torpedo launchers
-  `$4D` (36/38) dominate.
-- **The act 1 → 2 signal is the results object.** No DEZ boss sets `Events_fg_5` before line
-  171700; the seamless change is driven by the shared results/end-sign path. Verify the engine's
-  results object raises the event for DEZ before building the transition.
+  `$5F`, bumper wall `$60`, puzzle `$61`, lift pad `$4E` and launcher `$78` are act 1 only.
+  (An earlier draft said act 1 flips gravity through `$5A` and `$5F`; the disassembly shows neither
+  writes the flag, see above.) Lightning `$52` (48/94), shock blocks `$6D` (22/56) and torpedo
+  launchers `$4D` (36/38) dominate. Rings: 278 / 198 / 0. Both bosses (`$A6`, `$A7`) are placed
+  objects. Factory state: 297 placements already concrete, 526 behind S3KL-only factories, 36 with
+  no factory at all (`$5D-$61`). Full table: [inventory](../research/s3k-zones/dez-object-inventory.md).
+- **The act 1 → 2 signal is the results object (resolved).** ROM: `Obj_LevelResultsCreate` sets
+  `Events_fg_5` for every act 1 except AIZ and ICZ (sonic3k.asm:62615-62621). Engine:
+  `S3kResultsScreenObjectInstance.signalActTransitionIfNeeded` already calls
+  `S3kTransitionWriteSupport.signalActTransition` for DEZ; only the consumer (`Sonic3kDEZEvents`) is
+  missing.
+- **`Events_fg_4` has three writers (resolved from the disassembly).** Write 1 (`loc_7DFB8`,
+  installed by `loc_7EE42` when the hit counter `$42` reaches 8) fires mid-fight in act 1 →
+  `DEZ1_ScreenEvent` chunk `$BD`. Write 2 (`loc_7E342`) fires after results **and after the act
+  change**: its cutscene walks Player 1 to x `$140` and places explosions at `$100/$180,$760`, act 2
+  coordinates → `DEZ2_ScreenEvent` stage 0 (`$D7,$DC,$D7`). `loc_593EC` leaves `Events_routine_fg`
+  at 0, which is why stage 0 is reachable only seamlessly (a direct load starts at stage 1). Write
+  3 is the act 2 boss (asm 169742) → stage 1 (`$BC`). The native log in slice 7 confirms, not decides.
+- **The miniboss object outlives act 1.** After write 2 its helper chain `loc_7E3EC` → `loc_7E420` →
+  `loc_7E44C` carries Player 1 up (`y_vel −$1000`), lands them at Y `$3AC` (`$3B0` when
+  `Player_mode == 2`), spawns the act 2 `Obj_TitleCard` (`$3E` set) and 120 frames later
+  (`loc_7E4A2`) loads `Pal_DEZMiniboss2` to line 2 and releases control. All of this is slice 7.
+- **`AniPLC_DEZ` has no trigger gating.** The first `zoneanimdecl` field is the frame duration, not
+  a `Level_trigger_array` index (the analysis was wrong; corrected). All eight scripts always run
+  through the generic `AnimateTiles_DoAniPLC`; script 7 really has 132 one-byte frames. `$1700` uses
+  `AnimateTiles_NULL`.
+- **The `$1700` carry is three values plus the shield.** `loc_7F310` saves `Act3_ring_count`,
+  `Act3_timer` and `Saved2_status_secondary` (shield bits) before `StartNewLevel $1700`; `Act3_flag`
+  also suppresses the title card (`loc_62B6`) and is cleared at `loc_62FE`.
 
 ## Design: who owns what
 
@@ -102,14 +179,14 @@ Resolve these owners before any consumer.
 
 | State | ROM | Engine owner |
 | --- | --- | --- |
-| `Reverse_gravity_flag` | Global byte `$F768`; set by `$58/$5A/$5B/$5C/$5F`, teleporter, act 2 boss, debug A | Stays in `GameStateManager` (already rewound). All writers go through one setter; add the level-load clear test. A semantic capability on the S3K physics/feature provider (`GameRules`-level: "game supports reverse gravity") gates the shared branches; **no zone check**, matching the ROM, which tests only the flag. S1/S2 never set it |
+| `Reverse_gravity_flag` | Global byte `$F7C6` (`$F768` is `Primary_Angle`; fix the `GameStateManager` Javadoc). Written by `$58`, `$59`, `$5B` (all Player 1 only), the debug cheat and the boss-defeat clearer object `loc_7FC3E` (every frame until the `$1700` load); cleared by the level-load RAM wipe, not by the seamless act change | Stays in `GameStateManager` (already rewound). All writers use `setReverseGravityActive`; add the level-load clear to `resetForLevel()` only after checking that `LevelActTransitionExecutor:117` is not the seamless DEZ path. **The gate is the flag itself**, exactly as in the ROM: no zone check and **no new `GameRules` member** (`GameRules` is `@ModApi`; a new component breaks the pin). S1/S2 never set it, so their branches stay inert |
 | Inverted player physics | The 116-reference set above | `PlayableSpriteMovement`, collision probes and `AbstractPlayableSprite` render flip, each branch citing its routine and commented for `FixBugs = 0`. Position writes through `NativePositionOps`. One owner for "effective floor sensor direction" so ground, air, roll and Knuckles glide/climb read the same answer |
 | Event words `Events_fg_4/5`, `Events_routine_fg/bg`, `Events_bg+$00..$16`, `Act3_*` | `DEZ1/2/3_Screen/BackgroundEvent`, `Obj_DEZEndBoss`, `Obj_DEZ3_Boss` | New `S3kDezZoneRuntimeState` (pattern `DdzZoneRuntimeState`) with a `RewindSnapshottable` adapter, added to `currentRuntimeStateUsesThisEventInstance` (the DDZ restore bug). `Act3_*` carry is a game-state field, not zone state: it crosses a level load |
 | Events, camera locks, seamless act change | `DEZ1_BackgroundEvent` stages 0-1 (queue DEZ2 blocks/patterns, PLC `$38`, wait `Kos_modules_left == 0`, reload `$B01`, offset X −`$3600` Y +`$400`, `Offset_ObjectsDuringTransition`, `Pal_DEZ2+$20`), boss gradual bounds | New `Sonic3kDEZEvents`, registered in `Sonic3kLevelEventManager`; reuse the AIZ/ICZ/MHZ seamless-transition owner and `S3kCameraGradualObjectInstance`/`S3kCameraStoredBounds` |
 | Layout mutation | DEZ1 `$BD` at `$14(a3)+$6E`; DEZ2 `$D7,$DC,$D7` and `$BC`; `$1700` chunk pairs `$603/$903/$603/$807`, BG layout clear | `ZoneLayoutMutationPipeline`/`LevelMutationSurface`, then targeted redraw. A full tilemap rebuild is a ~25 ms hitch and reverts direct Plane A writes |
-| Scroll | `PlainDeformation` with BG camera forced to 0,0 (acts 1-2); `$1700`: `sub_5A508`, `sub_5A76C`, `loc_5A734`, `ApplyDeformation2`, `ShakeScreen_Setup`, FG drawn through the BG event, `Draw_PlaneVertBottomUp` stages | New `SwScrlS3kDez` (acts 1-2: confirm the default handler really produces a static BG, do not assume) and `SwScrlS3kDezFinalBoss`; provider keys `$17` on act. Plane swap reuses the DDZ/FBZ2 FG-plane render mode, no `@ModApi` change |
+| Scroll | `PlainDeformation` with BG camera forced to 0,0 (acts 1-2; `SwScrlS3kDefault` scrolls the BG at 1/4 speed on both axes, so it is wrong here); `$1700`: `sub_5A508`, `sub_5A76C`, `loc_5A734`, `ApplyDeformation2`, `ShakeScreen_Setup`, FG drawn through the BG event, `Draw_PlaneVertBottomUp` stages | New `SwScrlS3kDez` (acts 1-2) and `SwScrlS3kDezFinalBoss`; provider keys `$17` on act. Plane swap reuses the DDZ/FBZ2 FG-plane render mode, no `@ModApi` change |
 | Palette | `AnPal_DEZ1` (3 channels) / `AnPal_DEZ2` (2), boss lines `Pal_DEZMiniboss1/2`, `Pal_DEZEndBoss`, `$1700` palette `$40`, boss flashes | `Sonic3kPaletteCycler` cases for `$0B` and `$17` act 0; boss writes through `S3kPaletteOwners`/`S3kPaletteWriteSupport` so cycles and flashes do not fight over line 2/3 |
-| Animated art | `AniPLC_DEZ` (8 scripts, five gated on `Level_trigger_array[0,1,3,4]`), `$1700` laser DMA `sub_5A79E` (`ArtUnc_DEZFBLaser` → tile `$208`) | `Sonic3kPatternAnimator` plus a trigger-array reader; the laser is a direct upload owned by the final-boss events. Script 7's `$84` frame count is unresolved (see open questions) |
+| Animated art | `AniPLC_DEZ`: 8 always-running scripts, global durations `0,1,3,-1,4,4,1,0` (frame held duration + 1 passes; `-1` = per-frame pairs), script 7 = 132 one-byte frames; `$1700`: `AnimateTiles_NULL` plus the laser DMA `sub_5A79E` (`ArtUnc_DEZFBLaser` → tile `$208`) | `Sonic3kPatternAnimator` registration for zone `$0B` both acts, no trigger reader; the laser is a direct upload owned by the final-boss events |
 | Light tunnels, teleporters, tubes, hover machine | `Obj_DEZTunnelLauncher/Control`, `DEZTunnelPaths`, `Obj_DEZTeleporter`, `Obj_DEZGravityTube`, `Obj_DEZHoverMachine` | Objects using the generic `object_control` path and `services()`; path tables read from ROM. Compare with `AutomaticTunnelObjectInstance` and `SSZHPZTeleporterObjectInstance` before writing new movers |
 | Object registration | SKL pointer set | Zone-set-aware factories as SOZ/HPZ did; `$A4-$A7` and `$6D` collide with S3KL names |
 
@@ -124,24 +201,179 @@ Grep both `@ModApi` spellings before adding a public member anywhere near player
 Each slice: reverify its inventory rows in the disassembly → discriminating failing test with
 ROM-derived expectations → implementation → cold-route extension with preserved inputs → short
 native comparison on a named question → 320 + wide + donor + team check → rewind spot → demo clip →
-boundary review → evidence entry. Independent review for 1, 2, 5, 8, 9, 10; families 3, 4, 6 share
-one each.
+boundary review → evidence entry. Independent review for 1, 2, 5, 7, 8, 9, 10; families 3, 4, 6
+share one each. Order is a dependency order: 2 before 3, 3 before the act 2 parts of 4 and before 8;
+1 before 7 and 9; 4-6 before the cold act 1 route; 7 before the cold act 2 route.
+
+Paths below are under `src/main/java/com/openggf/game/sonic3k/` (`…/`) and
+`src/test/java/com/openggf/tests/` (tests). "Rows" are
+[inventory](../research/s3k-zones/dez-object-inventory.md) IDs with act 1 / act 2 counts; every
+placed ID appears in exactly one slice or is marked verify-only. "Done" lists what the slice must
+show for each of the five claims; a claim it cannot reach is recorded as open, never implied.
 
 | Slice | Scope and ROM owners | Early check and principal risk |
 | --- | --- | --- |
-| 0. Baseline and identity | Three matrices and coverage-backlog rows; trace identity table above committed to the frontier log; current replay frontier of the DEZ and `$1700` classes (command, commit, first error); placement histogram per act with registered/unregistered split; resources (`Pal_DEZ1/2`, PLC `$36/$38/$4C`, `PLCKosM_DEZ`, title cards, music); `raw-00` captures of all three acts as they are today | The "before" footage exists first. Confirm what `$1700` loads at all without a resource profile |
-| 1. Presentation foundation | `S3kDezZoneRuntimeState`, `Sonic3kDEZEvents` shell, `SwScrlS3kDez`, `AnPal_DEZ1/2`, `AniPLC_DEZ` with trigger-array gating, DEZ1/DEZ2 screen-event chunk writes | Counter/step/limit and timer reload values from the tables; act 1 runs channel 0 then falls into act 2's; who sets each `Level_trigger_array` entry; wide-viewport BG edges |
-| 2. Reverse gravity core | The shared player set listed in Findings, in three reviewed steps: (a) air/ground movement, floor/ceiling sensor swap, jump, roll, balance, render flip, bottom boundary; (b) solids, platforms, springs, spikes, monitors, rings, dust, shields; (c) Tails flight/carry/CPU catch-up, Tails' tails, Knuckles glide/slide/climb, Super forms | Driven by a test-only flag write and the ROM's debug-A toggle before any DEZ object exists. Adjacent phases: flip while airborne, while rolling, while standing on an object, while hurt, on a slope; flip back. Every branch must be inert with the flag clear: S1/S2/S3K trace non-regression is the gate |
-| 3. Gravity objects | `$58` switch, `$5B` swap, `$5C` hub, `$5A` tube, `$5F` room, `$61` puzzle, `$59` teleporter (four flag references) | Crossing direction and `render_flags` bit 0 select set vs clear; sidekick crossing; which participant owns the global flag when P1 and P2 are on opposite sides |
-| 4. Traversal objects | `$4A` platform, `$4B` tilting bridge and `$4F` staircase (shared mappings), `$4C` hang carrier, `$4D` torpedo launcher, `$4E` lift pad, `$50` conveyor belt, `$52` lightning, `$53` conveyor pad (flag-aware), `$55/$56` energy bridges, `$5D` retracting spring, `$5E` hover machine, `$60` bumper wall, `$6D` shock block, Spikebonker, Chainspike, still sprites and door verification | Art from `ArtTile_DEZMisc/Misc2/2Extra` bases; act 1 PLC `$36` puts miniboss art at `Misc2`, act 2 PLC `$38` replaces it with `DEZ2Extra`: art keys differ per act. Slot and allocator order for children |
-| 5. Light tunnels | `$57` launcher, `Obj_DEZTunnelControl`, `DEZTunnelPaths`, modes Normal/CircleLarge/CircleSmall/SineDown/SineUp, scale and wait tables, `Obj_DEZTransRingSpawner`/`TransRing` | Path parsing and fixed-point; sidekick capture; release velocity; camera follow; rewind mid-tunnel |
-| 6. Act 1 cold route and miniboss | Cold `$B00` route; `Obj_DEZMiniboss` (`$A6`): `Check_CameraInRange word_7DDA4`, PLC `$7B`, `ArtKosM_DEZMinibossMisc`, `Pal_DEZMiniboss1/2`, landing Y by `Player_mode`, `Obj_EndSignControl`, gradual Y bounds | `s3k-implement-boss`; sprite-composition audit; palette line 1 ownership; first blocker recorded per roster |
-| 7. Seamless `$B00` → `$B01` | Results signal, `DEZ1_BackgroundEvent` stages, art queue readiness, offsets, `DEZ2_ScreenEvent` stage 0 and `DEZ2_BackgroundEvent` stages 0-1 (reached only through the transition) | Timeline isolation if the reload clears history; objects and rings offset together; direct `$B01` load starts at the other stages and must differ observably |
-| 8. Act 2 route and boss | Cold route to the arena; `Obj_DEZEndBoss` (`$A7`): range `word_7F0BE`, arena `word_7F0C6`, PLC `$76`, `ArtKosM_DEZEndBoss`, 8 hits, six routines, gravity interaction, `loc_7FC3E` clear, music restore, `Obj_IncLevEndXGradual $3620`, Robotnik run, `Act3_*` save, `StartNewLevel $1700` | Boss under both gravity states; player hit while inverted; carry values across the load; rewind across the exit |
-| 9. `$1700` arena | Resource profile, scroll/plane swap, `DEZ3_ScreenInit` spawns (`Obj_5A7C8`, `Obj_5A8E6`, `Obj_DEZ3_Boss` at `$3C0,$F8`), ring/timer restore, BG event stages 0-8, arena `$6C0 → $2C0 → 0`, `$1FF` wrap, shake, laser DMA, level-select entry | Build the arena with a stub boss driving the event words first. Plane redraw stages against retained history; wide viewport against the `$1FF` wrap |
-| 10. Final boss and exit | `Obj_DEZ3_Boss` 12 routines, fireball, crane/debris art swaps, Master Emerald chase (`loc_80382`), `loc_803D6` three-way exit, `SaveGame` | The longest coupled graph: split by phase with a rewind spot each. Seeded no-emerald Sonic run for the `$D01` branch; Tails native for `$D01`; record post-request engine behaviour |
-| 11. Routes and acceptance | Cold Sonic + Tails chain `$B00` → exit from movie input (`--input-start` 468982; capture runs one frame behind the headless fixture; skip movie input on repeated native `lfc`), Tails chain from 444059, authored Sonic-alone route, full matrix, rewind spots, strict replay frontiers, DDZ entry re-measure | A positioned boss success does not advance the cold frontier |
-| 12. Media and delivery | Reel, archive index, change-based validation against the pinned base, docs, integration | Below |
+| 0. Baseline and identity | Matrices, coverage rows, trace identity, replay frontiers, resources, `raw-00` captures | The "before" footage exists first |
+| 1. Presentation foundation | Runtime state, events shell, scroll, `AnPal_DEZ1/2`, `AniPLC_DEZ`, screen-event chunk writes | Counter/step/limit values from the tables; wide-viewport BG edges |
+| 2. Reverse gravity core | Reference-table groups A-I in steps 2a-1, 2a-2, 2a-3, 2b, 2c | Inert with the flag clear; S1/S2/S3K trace non-regression is the gate |
+| 3. Gravity objects | `$58 $59 $5A $5B $5C $5F $61` | Writers respond to Player 1 only; Player 2 inverts with the global flag wherever it is |
+| 4. Traversal objects | `$4A-$56`, `$5D`, `$5E`, `$60`, `$6D`, badniks, shared-object verification | Per-act art bases; child slot/allocator order |
+| 5. Light tunnels | `$57`, tunnel control, paths, trans rings | Path fixed-point; sidekick capture; rewind mid-tunnel |
+| 6. Act 1 cold route and miniboss | Cold `$B00`, `$A6` | Sprite composition (mask child); palette line ownership |
+| 7. Seamless `$B00` → `$B01` | `DEZ1_BackgroundEvent`, `DEZ2_*Event` transition-only stages | Flag and objects survive; timeline isolation |
+| 8. Act 2 route and boss | Cold `$B01`, `$A7`, `$1700` request | Boss under both gravity states; carry across the load |
+| 9. `$1700` arena | Resource profile, scroll/plane, `DEZ3_ScreenInit` spawns, BG stages | Plane redraw vs retained history; `$1FF` wrap when wide |
+| 10. Final boss and exit | `Obj_DEZ3_Boss`, chase, `loc_803D6` | Longest coupled graph; per-branch exit evidence |
+| 11. Routes and acceptance | Cold chains, matrix breadth, rewind spots, strict replay, DDZ re-measure | Positioned success does not advance the cold frontier |
+| 12. Media and delivery | Reel, validation, docs, the single develop merge | Below |
+
+### Slice work cards
+
+**0. Baseline and identity.** Skills: `s3k-zone-bring-up`, `gameplay-capture`.
+Files: `docs/architecture/validation/levels/s3k-dez-act1.md`, `s3k-dez-act2.md`,
+`s3k-dez-final-boss.md`; `docs/status/level-test-coverage.md` (`S3K_DEATH_EGG_1/2`, `S3K_DEZ_BOSS`
+rows); `docs/status/trace-frontier-log.md` (identity table, the stale `Dez238` line, first-error
+frame/field of `TestS3kSonicTailsSszSegmentTraceReplay`, `…Dez238…`,
+`TestS3kTailsFullChainSsz/Ssz2/Ssz3/Dez238SegmentTraceReplay` with `-Ptrace-segments`).
+Check: which class `$78` resolves to (duplicate registration); what `$1700` loads without a resource
+profile; `Pal_DEZ1/2`, PLC `$36/$38/$4C`, `PLCKosM_DEZ`, title cards, music. No production code.
+Done: three matrices with every row "not started" and its products; `raw-00-*` for all three acts.
+
+**1. Presentation foundation.** Skills: `s3k-zone-events`, `s3k-parallax`, `s3k-palette-cycling`,
+`s3k-animated-tiles`. Rows: none placed. Files: new `…/runtime/S3kDezZoneRuntimeState.java`,
+`…/events/Sonic3kDEZEvents.java` (register in `Sonic3kLevelEventManager`, including the
+`currentRuntimeStateUsesThisEventInstance` switch near line 1650), `…/scroll/SwScrlS3kDez.java`
+(+ `Sonic3kScrollHandlerProvider`, act-keyed for `$17`; see the cross-campaign note),
+`Sonic3kPaletteCycler` cases, `Sonic3kPatternAnimator` registration. First failing tests:
+`TestS3kDezScrollHeadless` (BG H/V scroll words are 0 at two camera positions: `DEZ1_BackgroundInit`
+clears `Camera_X/Y_pos_BG_copy` and nothing rewrites them; today `SwScrlS3kDefault` gives camera/4),
+`TestS3kDezPaletteCycling` (counters, steps, limits and colour words from `AnPal_DEZ1/2`, act 1
+running channel 0 then act 2's channels), `TestS3kDezAnimatedTiles` (destination tiles, tiles per
+frame, durations `0,1,3,-1,4,4,1,0`, script 7's 132-entry order, from `AniPLC_DEZ`),
+`TestS3kDezScreenEvents` (`Events_fg_4` → chunk `$BD` at layout row `$14(a3)` offset `$6E`; act 2
+direct load starts at stage 1). Done: implemented + focused tests; native BG and palette compared at
+entry; moving 320 and wide capture inspected; rewind of cycle counters and event routine words.
+
+**2. Reverse gravity core.** Skills: `s3k-disasm-guide`; read
+[implementation pitfalls](../implementation-pitfalls.md) (collision, rewind). Rows: exercises
+`$01` (19/22, 9 Y-flipped in act 2), `$07` (20/15), `$08` (31/60) among shared objects. Work and
+tests are defined row by row in the
+[reference table](../research/s3k-zones/s3k-reverse-gravity-references.md#implementation-order-and-the-test-that-proves-each-step):
+step **2a-1** group A integration (`MoveSprite_TestGravity(2)`, `sub_F61C`); **2a-2** group A
+probes/angle/boundary plus every collision, touch-floor, hurt and death row of groups B, C, E;
+**2a-3** the action rows of B, C, E (jump, roll, spindash, look bias, render mirror, bubble bounce,
+the preserved `loc_1515C` bug, `loc_15A7A`); **2b** groups H, I, G, F; **2c** group D, Knuckles
+glide/slide/climb, Super forms. Also: the level-load clear in `GameStateManager.resetForLevel()` and
+the Javadoc address fix. Files: `sprites/managers/PlayableSpriteMovement.java`, the collision probe
+owners it calls (one new non-API helper owns "which probe is the floor" and the angle mirror, so
+ground, air, roll and Knuckles code share one answer), `AbstractPlayableSprite` render path,
+`SolidObject` contact code, `Sonic3kSpringObjectInstance`, `Sonic3kSpikeObjectInstance`,
+`Sonic3kMonitorObjectInstance`, shields, dash dust, Tails' tails, `SidekickCpuController`,
+`TailsCarryController`. No `GameRules` change. Gate: tests drive the flag with
+`setReverseGravityActive(true)` in an existing S3K level; each step is reviewed independently; after
+2c run the normal change-based validation and matched before/after S1, S2 and S3K trace profiles
+(clean build first; measure the baseline in the same tree). Done: implemented + rewind with the flag
+set; "cold-reachable" and native claims stay open until slices 3 and 8 provide a ROM route.
+
+**3. Gravity objects.** Skill: `s3k-implement-object`. Rows: `$58` (0/5), `$59` (0/21), `$5A`
+(24/17), `$5B` (0/11), `$5C` (0/3), `$5F` (1/0), `$61` (1/0). Files: `…/objects/S3kDezGravitySwitchObjectInstance`,
+`S3kDezTeleporterObjectInstance`, `S3kDezGravityTubeObjectInstance`, `S3kDezGravitySwapObjectInstance`,
+`S3kDezGravityHubObjectInstance`, `S3kDezGravityRoomObjectInstance`, `S3kDezGravityPuzzleObjectInstance`;
+SKL-bound registrations in `Sonic3kObjectRegistry`, constants in `Sonic3kObjectIds`,
+`Sonic3kObjectProfile` sets, `Sonic3kPlcArtRegistry`/art keys. First failing test:
+`TestS3kDezGravityObjectsHeadless`: `$5B` sets on one crossing direction and clears on the other,
+selected by `render_flags` bit 0 (`sub_49228`), ignores debug placement and **ignores Player 2**; `$58` toggles exactly 4
+frames after a top or bottom press and rearms after 20 (`loc_48AD6`/`loc_48B7E`); `$59` writes
+subtype bit 7 for Player 1 only (`loc_48DCA`); `$5A` mirrors `flip_angle` on exit (`loc_48FBA`).
+Done: all seven concrete; act 2 cold route reaches its first flip; native comparison of the first
+flip's same-frame order (flag, velocity, probe swap, mirror, sidekick); rewind mid-tube and
+mid-teleport; act 1 "no writer" question closed from the native flag watch.
+
+**4. Traversal objects.** Skills: `s3k-implement-object`, `s3k-plc-system`. Rows: `$4A` (0/10),
+`$4B` (1/3), `$4C` (3/1), `$4D` (36/38), `$4E` (7/0), `$4F` (18/15), `$50` (8/5), `$52` (48/94),
+`$53` (4/5, reads the flag), `$55` (13/12), `$56` (1/0), `$5D` (0/13), `$5E` (11/0), `$60` (10/0),
+`$6D` (22/56), `$A4` (7/11), `$A5` (6/12). Verify-only, already concrete: `$2F` (19/20, DEZ frames),
+`$3C` (11/6), `$78` (10/0), `$02` (1/0), `$28` (26/24), `$34` (3/4), `$6A` (0/1), `$6B` (0/5).
+Files: one `…/objects/S3kDez<Name>ObjectInstance` per owner, badniks under `…/objects/badniks/`
+(`SpikebonkerBadnikInstance`, `ChainspikeBadnikInstance`, SKL-bound: S3KL `$A4/$A5` are
+Sparkle/Batbot); `$6D` as the existing hurt-block class with a shield-reaction parameter (lightning,
+`bset #5,shield_reaction`), shared with LRZ's `$6E` (fire, bit 4). Order by placement weight:
+`$52`, `$6D`, `$4D`, `$4F`, `$55`, then the rest. First failing test per family
+(`TestS3kDez<Name>Headless`) takes sizes, timers, velocities and art bases from the owner routine;
+for `$6D`: lightning shield immune, other shields hurt, face chosen by `status` bits 0/1. Done: zero
+placeholders for both acts (assert with the `Sonic3kObjectProfile` guard and a DEZ registry test);
+children listed in the inventory's dynamic table accounted for; per-act art keys (PLC `$36` vs `$38`).
+
+**5. Light tunnels.** Skill: `s3k-implement-object`. Rows: `$57` (3/4); dynamic
+`Obj_DEZTunnelControl`, `Obj_DEZTransRingSpawner`, `Obj_DEZTransRing`. Files:
+`…/objects/S3kDezTunnelLauncherObjectInstance`, `S3kDezTunnelControlObjectInstance`,
+`S3kDezTransRingObjectInstance`; path tables read from ROM (`DEZTunnelPaths`,
+`DEZTunnelControl_ScaleFactors`, `_WaitTimers`). Compare with `AutomaticTunnelObjectInstance` first.
+First failing test: `TestS3kDezLightTunnelHeadless` (countdown length, per-mode position sequence
+for Normal, CircleLarge, CircleSmall, SineDown, SineUp, release velocity, from the control routine).
+Done: all seven placements traversable cold; sidekick capture; rewind mid-tunnel; native cadence per mode.
+
+**6. Act 1 cold route and miniboss.** Skills: `s3k-implement-boss`, `bk2-input-authoring`,
+`gameplay-capture`. Rows: `$A6` (1/0, placed; `Check_CameraInRange word_7DDA4`). Files:
+`…/objects/bosses/S3kDezMinibossInstance` and children (inventory dynamic table, including the
+`Obj_SpriteMask` child), `Pal_DEZMiniboss1/2` through `S3kPaletteOwners`, PLC `$7B`,
+`ArtKosM_DEZMinibossMisc`. First failing test: `TestS3kDezMinibossHeadless` (arena bounds, landing Y
+hit count 8 → `loc_7EE42` installs `loc_7DFB8` and `Events_fg_4` write 1, gradual Y
+bounds, `Obj_EndSignControl`). Cold route: `TestS3kDezColdRoutes` from the Sonic + Tails movie input
+(`--input-start` 468982) and the Tails movie (444059); record the first blocker per roster.
+Done: cold `$B00` entry → results for Sonic + Tails and Tails alone; sprite-composition audit.
+
+**7. Seamless `$B00` → `$B01`.** Skill: `s3k-zone-events`. Files: `Sonic3kDEZEvents`, the shared
+seamless owner (`S3kSeamlessMutationExecutor`, `S3kTransitionWriteSupport`). First failing test:
+`TestS3kDezActTransitionHeadless`: signal → queue `DEZ2_16x16_Secondary_Kos`, `ArtKosM_DEZ2_Secondary`
+at tile `$292`, PLC `$38` → wait `Kos_modules_left == 0` → zone/act `$B01`, players, objects and
+camera (position, copy, min/max, target max Y) offset X −`$3600`, Y +`$400`, `Pal_DEZ2+$20` to
+lines 3-4, `Boss_flag`/`Respawn_table_keep` cleared, `Reverse_gravity_flag` **kept**; afterwards
+`DEZ2_ScreenEvent` is at stage 0 and `DEZ2_BackgroundEvent` redraws bottom-up (stages 0-1), while a
+direct `$B01` load starts at stages 1 and 2. Then the surviving miniboss chain: `Events_fg_4`
+write 2 (`loc_7E342`) → stage 0 chunks `$D7,$DC,$D7`, transport landing Y `$3AC`/`$3B0` by
+`Player_mode` (`loc_7E44C`), act 2 title card, `Pal_DEZMiniboss2` and control release 120 frames
+later. Done: continuous scenery on a moving capture;
+timeline isolation if the reload clears history; native frame counts between signal and offset.
+
+**8. Act 2 route and boss.** Skill: `s3k-implement-boss`. Rows: `$A7` (0/1, placed; range
+`word_7F0BE`, arena `word_7F0C6`). Files: `…/objects/bosses/S3kDezEndBossInstance` and children, PLC
+`$76`, `ArtKosM_DEZEndBoss`, `Pal_DEZEndBoss`; the **shared act-3 carry owner** (game state, not zone
+state; see Cross-campaign coordination: build it here unless LRZ already landed it, then reuse it)
+including `Saved2_status_secondary`. First failing test: `TestS3kDezAct2BossHeadless` (8
+hits, six routine-table entries with four distinct handlers, `sub_7F8A0` acceleration sign and
+`sub_7F8CA` inverted test under both flag states, the `loc_7FC3E` clearer object from defeat
+(`loc_7FBD6`) undoing a later `$5B` write on its next update, `Events_fg_4` → chunk `$BC`, `Obj_IncLevEndXGradual $3620`, request when
+`Player_1 x ≥ Camera_X + $160`, saved rings/timer/shield). Done: cold `$B01` → `$1700` request for
+both mandatory rosters; Knuckles level-select rows for both acts (load, play, invert, glide/climb
+inverted; no cold chain); rewind across the exit.
+
+**9. `$1700` arena.** Skills: `s3k-zone-events`, `s3k-parallax`, `s3k-animated-tiles`. Files:
+`$1700` resource profile beside the `$1701` one, `…/scroll/SwScrlS3kDezFinalBoss.java`, level-select
+entry in `Sonic3kLevelSelectConstants` (ROM lists `$1700` after `$C00`; Knuckles denied),
+`Sonic3kDEZEvents` act-3 part, `…/objects/S3kDezArenaFloorObjectInstance` (`Obj_5A7C8`, falling
+blocks `Obj_5A872`), `Obj_5A8E6`, `Obj_5A922`, `Obj_5A94C`. First failing test:
+`TestS3kDezFinalArenaHeadless`: camera X `$80`, scroll lock, `Events_bg+$00 = $6C0`, boss spawn
+`$3C0,$F8`, rings/timer/shield restored, no title card (`Act3_flag`), BG layout cleared, stub boss
+drives `$6C0 → $2C0 → $6C0 → 0` (Verified ROM values), players placed by `loc_7FD9E`; stage 0
+restores rings/timer through the shared act-3 carry owner. Done: arena stages against native plane captures; wide viewport vs the
+`$1FF` wrap recorded as a presentation decision; laser DMA phase.
+
+**10. Final boss and exit.** Skill: `s3k-implement-boss`. Files: `…/objects/bosses/S3kDezFinalBossInstance`
+and children (dynamic table), fireball, `loc_803D6` exit. First failing test:
+`TestS3kDezFinalBossHeadless` per phase, then `TestS3kDezExitBranches`: `SaveGame`, `$C00` when
+`Player_mode < 2` and 7 Chaos Emeralds, else `$D01`, `Player_mode == 3` → `Game_mode 0`. Done: cold
+Sonic + Tails → `$C00` (native), Tails → `$D01` (native), seeded Sonic < 7 emeralds → `$D01`
+(labelled seeded); a rewind spot per phase; post-request engine behaviour recorded.
+
+**11. Routes and acceptance.** Skills: `gameplay-capture`, `trace-replay-bug-fixing`,
+`bizhawk-native-reference-capture`. Cold chains `$B00` → exit for Sonic + Tails, Tails alone,
+authored Sonic alone; matrix breadth (widths, donors, teams); every rewind spot; strict replay
+frontiers logged; DDZ entry re-measured from the real chain and its seeded caveat removed or kept
+with evidence. Skip movie input on repeated native `lfc`; capture runs one frame behind the fixture.
+
+**12. Media and delivery.** Skill: `gameplay-highlights`. Reel, archive index, combined validation,
+docs, then the single develop merge.
 
 ## Native probes
 
@@ -155,10 +387,10 @@ by guessed rows:
 | State | Locator | Question |
 | --- | --- | --- |
 | `$B00` entry | segment row 0 | Intro run release frame, first-frame art/palette, AnPal phases |
-| First gravity flip (act 1) | first `Reverse_gravity_flag` 0 → 1 | Same-frame order of flag write, velocity, sensor swap and render flip; sidekick lag |
+| First gravity flip | first `Reverse_gravity_flag` (`$F7C6`) 0 → 1 anywhere in the DEZ segment; also report whether it ever changes before the `$B01` handover | Same-frame order of flag write, velocity, sensor swap and render flip; sidekick lag; closes the "act 1 has no writer" question |
 | Light tunnel | first `object_control` capture by `$57` | Per-mode path cadence, release velocity |
-| Miniboss | `Boss_flag` set in act 1 | Landing Y per character, palette swap frame, defeat → results |
-| Act change | `Current_zone_and_act` `$B00` → `$B01` | Frames between the signal, `Kos_modules_left == 0` and the offset; plane rebuild |
+| Miniboss | `Boss_flag` set in act 1 | `Events_fg_4` write 1 frame, palette swap frame, defeat → results |
+| Act change | `Current_zone_and_act` `$B00` → `$B01` | Frames between the signal, `Kos_modules_left == 0` and the offset; plane rebuild; then `Events_fg_4` write 2, transport landing Y per character, title card and control release |
 | Act 2 boss | `Boss_flag` set in act 2 | Gravity cadence, flag clear on exit, `$1700` request frame, carried rings/timer |
 | `$1700` entry and each arena shrink | `Events_bg+$00` changes | Plane redraw stages, wrap, shake offset, laser tile phase |
 | Chase and exit | `Obj_DEZ3_Boss` routine changes; `loc_803D6` | Chase camera, save, request frame and destination per movie |
@@ -186,7 +418,7 @@ integer scaling, labels stating positioned vs cold. Re-read state CSVs after eve
 ## Acceptance matrix (seed)
 
 `s3k-dez-act1.md`, `s3k-dez-act2.md`, `s3k-dez-final-boss.md`. Rows: load/identity, title card,
-intro run, scroll, each AnPal channel, each AniPLC script and its trigger, each screen-event chunk
+intro run, scroll, each AnPal channel, each AniPLC script (duration and frame order), each screen-event chunk
 write, reverse gravity (one row per ROM routine family in slice 2, per character), each gravity
 object, each traversal object and badnik, light tunnel per mode, checkpoint respawn under each
 gravity state (the flag clears at load: assert the respawn side), death/restart, miniboss,
@@ -237,6 +469,13 @@ Written together with the [LRZ](2026-09-17-lrz-bring-up.md), [SSZ](2026-09-17-ss
   `loc_803D6` → `$C00`/`$D01` branch (closes DDZ's seeded-entry caveat). `$D01` and the Knuckles ending
   stay with the ending campaign. A handoff is verified by the requesting side as a request plus load
   attempt, and by the receiving side from a cold chain once both exist.
+- **The act-3 carry is one shared engine owner.** LRZ2 → `$1600` (`loc_63C14`, restored by
+  `LRZ3_ScreenEvent` stage 0 `loc_59B1C`) and DEZ2 → `$1700` (`loc_7F310`, restored by
+  `DEZ3_ScreenEvent` stage 0 `loc_5A49A`) run identical code: `Act3_flag` skips the title card
+  (`loc_62B6`) and is cleared at `loc_62FE`; the load zeroes rings/timer but keeps
+  `Saved2_status_secondary`; stage 0 restores `Act3_ring_count` and `Act3_timer` when non-zero and
+  flags the HUD. Whichever of LRZ and DEZ lands first builds it as a game-state owner with a rewind
+  adapter; the other reuses it. In this plan that is slice 8 (save) and slice 9 (restore).
 - **Clock-seeded RNG/aim** (`V_int_run_count`: Mecha Sonic, DEZ turrets as in DDZ) needs a declared
   seed for movie-route matching until the full cold chain supplies it; label such evidence seeded.
 - **Knuckles trace testing is out of scope (user decision 2026-09-17).** One Knuckles replay class
@@ -244,24 +483,55 @@ Written together with the [LRZ](2026-09-17-lrz-bring-up.md), [SSZ](2026-09-17-ss
   segment classes. A campaign may add one where cheap, but owes no Knuckles replay frontier; Knuckles
   rows rest on authored routes and native probes from that movie.
 
+## Verified ROM values
+
+Re-read in the disassembly on 2026-09-17 by the planner and an independent verifier (lines are
+`sonic3k.asm` at submodule `1a454a0e`). Use these; do not re-derive them by measurement.
+
+| Item | Value | Source |
+| --- | --- | --- |
+| `Reverse_gravity_flag` | `$F7C6`; writers `$58`, `$59`, `$5B`, debug cheat, `loc_7FC3E`; all player-triggered writers are Player 1 only | constants 684; 94874, 95075-95080, 95486-95539 |
+| Miniboss trigger / arena | range Y `$18C-$38C`, X `$3400-$3780`; arena `$28C,$28C,$3680,$36C0` (min Y, max Y, min X, max X) | `word_7DDA4`, 167659-167661 |
+| Miniboss `Events_fg_4` write 1 | hit counter `$42` reaches 8 → `loc_7DFB8` | `loc_7EE42`, 169357-169367 |
+| Post-change transport | `y_vel −$1000`, land Y `$3AC` (`$3B0` Tails), title card, 120 frames, `Pal_DEZMiniboss2` → line 2 | `loc_7E3EC`-`loc_7E4A2`, 168223-168290 |
+| Act change | X −`$3600`, Y +`$400`; `Pal_DEZ2+$20` `$40` bytes → lines 3-4; direct `$B01`: `Events_routine_fg = 4`, `_bg = 8` | `loc_593EC`; 118724, 118770 |
+| `AnPal_DEZ1`-only channel | counter+`$0A` period `$10`, step 8, limit `$30` → line 4 + `$18` | 3661-3714 |
+| Shared AnPal channels | period 5, step 4, limit `$30` → line 3 + `$1A`; period `$14`, step `$A`, limit `$28` → line 3 + `$10` | same |
+| `AniPLC_DEZ` | durations `0,1,3,-1,4,4,1,0`; script 7 = 132 entries; `$1700` = `AnimateTiles_NULL` | 56079-56260, 53933 |
+| Act 2 boss trigger / arena | range Y `$198-$498`, X `$33E0-$3480`; arena `$218,$288,$3400,$34E0`; 8 hits; 6 table entries, 4 handlers | `word_7F0BE`, `word_7F0C6`, 169567-169611 |
+| Act 2 boss gravity | acceleration `$38` → `-$38`, normal integration; clearer object from defeat | `sub_7F8A0`; `loc_7FBD6`/`loc_7FC3E` |
+| `$1700` request | `Player_1 x ≥ Camera_X + $160`; saves rings, timer, `Saved2_status_secondary`; max X grows to `$3620` | 169772-169787, 169754 |
+| `$1700` player start | P1 `$30,$CD`, P2 `$10,$CD`, `object_control $81`, `x_vel = ground_vel = $600`, +4 Y for Tails; released in `loc_7FE96` on `_unkFAB8` bit 1 (the Start Location file is overwritten) | `loc_7FD9E`/`sub_7FE06`, 170939-170978 |
+| `$1700` arena word `Events_bg+$00` | `$6C0` (init) → `$2C0` (`loc_810A0`, Camera X ≥ `$520`) → `$6C0` (`loc_80058`, boss routine `$12 → $14`) → 0 (`loc_8011E`). `loc_5A61A` advances on `≠ $2C0` and spawns `Obj_5A94C`; `loc_5A676` waits for 0; `Obj_5A8E6` (x `$40`, y `$F0`) deletes itself once the word is not `$6C0`. `Events_bg+$16` separately receives `$2C0` | 120287, 172782, 171228, 171290, 120463 |
+| `$1700` scroll | `Camera_Y_copy = $20 + shake`; BG X = `Camera_X_copy − Events_bg+$02 + Events_bg+$00`; BG Y = `Camera_Y_copy − Events_bg+$04 + $180`; FG wrap `Camera_X_copy & $1FF`; laser DMA `$40` words to tile `$208` when `Events_bg+$10 ≠ +$12` | `sub_5A508`, `sub_5A76C`, `sub_5A79E` |
+| Light tunnel | modes Done, Setup, Normal, CircleLarge, CircleSmall, SineDown, SineUp; scale `-$80,-$40,-$80,-$80`; wait `1,0,1,1`; setup `ground_vel $800`, `object_control $81`; waypoint speed `$C00`; subtype `& $1F` | `off_48524`, 94420-94630 |
+| Exit | `SaveGame`; `Player_mode < 2` and `Chaos_emerald_count == 7` → `$C00`; else `Player_mode ≠ 3` → `$D01`; else `Game_mode 0` | `loc_803D6`, 171516-171538 |
+
+Rows for the miniboss/boss arenas, AnPal, `$1700` scroll and tunnel tables come from the verifier's
+reading and were not re-read line by line by the planner; every other row was read by both.
+
 ## Open questions and kill conditions
 
-| Question | Kill condition |
-| --- | --- |
-| Does the default scroll handler give acts 1-2 a static BG at 0,0? | Native vs engine BG plane at two camera positions in slice 1 |
-| AniPLC script 7 frame count `$84` vs 1,600 bytes of art | Read `zoneanimdecl` expansion and the byte table at `AniPLC_DEZ`; native VRAM `$26D` over one cycle |
-| Does the engine results object raise the DEZ act-change signal? | Trace `Events_fg_5` writers in the ROM results path and the engine equivalent before slice 7 |
-| `$1700` start: metadata `$0030,$00CD` with `x_speed $600` vs start file `$0060,$0070` | Explain from `SpawnLevelMainSprites`/`Act3_flag` before coding slice 9 |
-| Is `$6D` `InvisibleShockBlock` implemented for SKL? | Registry factory lookup in slice 0 (56 placements in act 2) |
-| Do V5 aux rows carry `Reverse_gravity_flag`? | Inspect `aux_state` keys in slice 0 |
-| Knuckles chained into `$1700` | Decide after slice 8 whether to record or block; ROM only denies the level-select path |
-| Which campaign owns SSZ → DEZ | Settled by landing order; record in both plans |
+Resolved on 2026-09-17 from the disassembly and code (details in Findings and the research docs):
+default scroll is wrong for acts 1-2 (BG must be static); `AniPLC_DEZ` script 7 has 132 real
+frames and nothing is trigger-gated; the engine results object already raises the act-change
+signal; `$6D` is unimplemented (placeholder); the engine trace code has no reverse-gravity field;
+the `Events_fg_4` write order and the `$1700` start position (both in Verified ROM values).
+
+| Question | Kill condition | Slice |
+| --- | --- | --- |
+| Does gravity ever reverse in act 1 (no `$58/$59/$5B` placed there)? | Native watch of `$F7C6` over the act 1 rows of the DEZ segment | 3 (pass 1 probe in 0) |
+| Does `LevelActTransitionExecutor:117` (`resetForLevel`) run on the seamless DEZ path? | Read the executor's callers before adding the flag clear | 2 |
+| Does the TraceChaser recorder carry `Reverse_gravity_flag` in V5 aux rows? | `tools/tracechaser` was not initialised in the planning worktree; inspect `aux_state` keys. No new trace field in this campaign either way | 0 |
+| Does `PlayableHurtRadiusTransition` run for Tails and Knuckles (`Tails_/Knux_TouchFloor`)? | Read its callers; test 2a-2 covers all three characters | 2 |
+| Knuckles chained into `$1700` | Record what happens after slice 8; not mandatory (ROM denies only the level-select path) | 8 |
+| Which campaign owns SSZ → DEZ | Settled by landing order; record in both plans | 12 |
 
 ## Status
 
 | Claim | State |
 | --- | --- |
-| Implemented | Not started. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects, partial PLC art, inert reverse-gravity flag with scattered consumers |
+| Implemented | Not started. Present before work: level load, music, `$B00` intro run, slope-angle rule, shared objects (297 of 859 placements concrete), partial PLC art, reverse-gravity flag with 9 of 116 ROM references covered and no level-load clear |
 | Cold-reachable | Not started |
 | Rewind-verified | Not started (the flag itself is already snapshotted) |
 | Native behaviour matched | Not started; replay frontiers unmeasured at `9cba6dbb6` |
