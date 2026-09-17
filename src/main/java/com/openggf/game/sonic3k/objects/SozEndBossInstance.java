@@ -141,7 +141,7 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         switch(escapePhase) {
             case 1 -> {if(--timer<0){timer=119;spawnFreeChild(SongFadeTransitionInstance::toCurrentLevelMusic);
                 dismantling=true;flipped=false;xVelocity=0;escapePhase=2;}}
-            case 2 -> {move();yVelocity=(short)(yVelocity+0x18);if(yVelocity>=0x200){escapePhase=3;defeated=false;flipped=true;}}
+            case 2 -> {move();yVelocity=(short)(yVelocity+0x20);if(yVelocity>=0x200){escapePhase=3;defeated=false;flipped=true;}}
             case 3 -> {yVelocity=(short)(yVelocity-0x40);move();if(yVelocity<=-0x100){
                 escapePhase=4;swingVelocity=0xC0;yVelocity=0xC0;swingDirection=0;
                 spawnFreeChild(()->new SozEndBossEggCapsule(0x5360,0x720));
@@ -167,7 +167,7 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         if(entity instanceof AbstractPlayableSprite p){ObjectControlState.none().applyTo(p);p.setControlLocked(false);p.clearAirForNativeControlRestore();p.setAnimationId(5);p.setForcedAnimationId(-1);}
         if(services().playerQuery().mainPlayerOrNull() instanceof AbstractPlayableSprite p){p.clearLogicalInputState();p.setForcedInputMask(0);p.setControlLocked(true);}}
     private void forcedWalk(PlayableEntity entity){if((services().camera().getMaxYTarget()&65535)>=0x700)services().camera().setMaxY((short)0x800);if(!(entity instanceof AbstractPlayableSprite p))return;
-        if((p.getCentreX()&0xFFFF)>=0x5468){xFixed=p.getCentreX()<<16;yFixed=p.getCentreY()<<16;xVelocity=p.getXSpeed();yVelocity=0;
+        if((p.getCentreX()&0xFFFF)>=0x5468){xFixed=p.getCentreX()<<16|(xFixed&0xFFFF);yFixed=p.getCentreY()<<16|(yFixed&0xFFFF);xVelocity=p.getXSpeed();yVelocity=0;
             escapePhase=7;if(!knuckles()){ObjectControlState.nativeBit7FullControl().applyTo(p);p.setAnimationId(0x1A);}return;}
         boolean jump=p.getPushing()||forcedJumpTimer!=0;if(p.getPushing())forcedJumpTimer=0x1F;else if(forcedJumpTimer!=0)forcedJumpTimer--;
         p.setForcedInputMask(AbstractPlayableSprite.INPUT_RIGHT|(jump?AbstractPlayableSprite.INPUT_JUMP:0));
@@ -176,7 +176,11 @@ public final class SozEndBossInstance extends AbstractObjectInstance
         if(!knuckles()&&getX()>=0x54C0){xVelocity=0;yVelocity=0;timer=0x7F;escapePhase=8;runtime().events().endBossFallStarted(true);services().camera().requestFastVerticalScroll();}
         NativePositionOps.writeXPosPreserveSubpixel(p,!knuckles()&&escapePhase==8?0x54C0:getX());NativePositionOps.writeYPosPreserveSubpixel(p,getY());
         if(knuckles()&&getX()>=0x5560)nextZone();}
-    private void exitFall(PlayableEntity entity){if(!(entity instanceof AbstractPlayableSprite p))return;yVelocity=Math.min(yVelocity,0x1000);move();yVelocity+=0x38;
+    private void exitFall(PlayableEntity entity){
+        // loc_779C0 sets Fast_V_scroll_flag with st; nothing clears it before the level
+        // change, while Camera consumes its fast-scroll request every frame.
+        services().camera().requestFastVerticalScroll();
+        if(!(entity instanceof AbstractPlayableSprite p))return;yVelocity=Math.min(yVelocity,0x1000);move();yVelocity+=0x38;
         NativePositionOps.writeXPosPreserveSubpixel(p,getX());NativePositionOps.writeYPosPreserveSubpixel(p,getY());
         if(--timer<0)nextZone();}
     private void nextZone(){services().requestZoneAndAct(9,0,true);ObjectLifetimeOps.deleteNoRespawn(this);}
