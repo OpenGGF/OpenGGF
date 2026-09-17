@@ -957,6 +957,10 @@ public class Sonic3kTitleCardManager
             // stop publishing movement (sonic3k.asm:62220-62235).
             resetLevelGamestateCountdown = 0;
             consumeLevelGamestateResetRequest();
+            // Obj_TitleCardWait2's 90-pass $2E countdown starts at this gate (sonic3k.asm:62162,
+            // 62249-62255), not when the children first stop moving. This manager's EXIT already
+            // carries the child-before-owner pass split, so its hold restarts here.
+            stateTimer = 0;
         }
         switch (state) {
             case SLIDE_IN -> updateSlideIn();

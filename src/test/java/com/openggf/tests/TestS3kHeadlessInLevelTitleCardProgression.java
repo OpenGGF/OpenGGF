@@ -56,6 +56,15 @@ class TestS3kHeadlessInLevelTitleCardProgression {
                     "rings clear exactly on the first title update that observes the open wait gate");
         }
         assertTrue(reset, "the native wait gate must eventually reset the level gamestate");
+
+        // Obj_TitleCardWait2's 90-pass $2E hold counts from the gate, not from the first
+        // stationary child pass (soz_completerun LoadEnemyArt row 29428).
+        int displayPassesAfterGate = 0;
+        while (manager.isExternalInLevelWaitReady() && displayPassesAfterGate < 200) {
+            fixture.stepIdleFrames(1);
+            displayPassesAfterGate++;
+        }
+        assertEquals(89, displayPassesAfterGate);
     }
 
     @Test
