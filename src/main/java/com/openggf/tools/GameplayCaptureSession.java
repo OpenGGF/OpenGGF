@@ -9,6 +9,8 @@ import com.openggf.debug.playback.Bk2FrameInput;
 import com.openggf.debug.playback.RecordedInputSnapshots;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
+import com.openggf.game.LevelBackdropResultsScreen;
+import com.openggf.game.ResultsScreen;
 import com.openggf.game.session.GameplayTeamBootstrap;
 import com.openggf.graphics.GraphicsManager;
 import com.openggf.graphics.RgbaImage;
@@ -94,6 +96,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
     }
 
     private boolean showTitleCard;
+    private boolean completeSpecialStage;
 
     /** Boots the level, consumes the title card, and optionally teleports the leader. */
     public void boot(Path romPath, int zone, int act, Settings settings) throws IOException {
@@ -103,6 +106,7 @@ public final class GameplayCaptureSession implements AutoCloseable {
         loop = boot.boot(romPath, zone, act);
         LevelManager level = GameServices.level();
         showTitleCard = settings.showTitleCard();
+        completeSpecialStage = settings.completeSpecialStage();
         // Omit only presentation. The native title owner must still retire its
         // children/admission lease and publish any title-owned level objects.
         if (!showTitleCard) {
@@ -170,7 +174,25 @@ public final class GameplayCaptureSession implements AutoCloseable {
         if (ui != null) {
             ui.updateFade();
         }
-        loop.step();
+        // Declared setup: the special-stage debug completion key, pressed on alternate frames
+        // (a fresh edge each time) until the stage hands over to its results screen.
+        boolean pressComplete = completeSpecialStage
+                && loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE
+                && (previousInput == null || (previousInput.frameIndex() & 1) == 0);
+        SonicConfigurationService config = GameServices.configuration();
+        int completeKey = config.getInt(SonicConfiguration.SPECIAL_STAGE_COMPLETE_KEY);
+        if (pressComplete) {
+            config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, true);
+            loop.getInputHandler().handleKeyEvent(completeKey, org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        }
+        try {
+            loop.step();
+        } finally {
+            if (pressComplete) {
+                loop.getInputHandler().handleKeyEvent(completeKey, org.lwjgl.glfw.GLFW.GLFW_RELEASE);
+                config.setSessionOverride(SonicConfiguration.DEBUG_VIEW_ENABLED, false);
+            }
+        }
     }
 
     /** Renders the current frame through the gameplay renderer and reads it back. */
@@ -184,6 +206,9 @@ public final class GameplayCaptureSession implements AutoCloseable {
         GraphicsManager graphics = GameServices.graphics();
         LevelManager level = GameServices.level();
         graphics.runPendingRenderThreadTasks();
+        if (loop.getCurrentGameMode() == GameMode.SPECIAL_STAGE_RESULTS) {
+            return renderSpecialStageResults(graphics, level);
+        }
         level.setClearColor();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         level.drawWithSpritePriority(GameServices.sprites(), includeSprites);
@@ -194,6 +219,33 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // Engine.drawTitleCardMode / drawActiveLevelTitleCardOverlay.
             graphics.resetForFixedFunction();
             titleCard.draw();
+            graphics.flushScreenSpace();
+        }
+        UiRenderPipeline ui = graphics.getUiRenderPipeline();
+        if (ui != null) {
+            ui.renderFadePass();
+        }
+        glFinish();
+        return ScreenshotCapture.captureFramebuffer(width, HEIGHT);
+    }
+
+    /** Engine.drawSpecialStageResults: optional level backdrop, then the results sprites. */
+    private RgbaImage renderSpecialStageResults(GraphicsManager graphics, LevelManager level) {
+        org.lwjgl.opengl.GL11.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        ResultsScreen results = loop.getResultsScreen();
+        if (results != null) {
+            if (results instanceof LevelBackdropResultsScreen backdrop && backdrop.drawsLevelBackdrop()) {
+                backdrop.prepareLevelBackdropDraw();
+                level.drawWithRenderOptions(GameServices.sprites(),
+                        LevelManager.LevelRenderOptions.previewCapture());
+                graphics.flush();
+            }
+            results.setViewportWidth(width);
+            graphics.beginPatternBatch();
+            java.util.List<com.openggf.graphics.GLCommand> commands = new java.util.ArrayList<>();
+            results.appendRenderCommands(commands);
+            graphics.flushPatternBatch();
             graphics.flushScreenSpace();
         }
         UiRenderPipeline ui = graphics.getUiRenderPipeline();
@@ -280,10 +332,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
      */
     public record Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                            Path donorRom, Integer startX, Integer startY, String emeraldStates,
-                           boolean showTitleCard) {
+                           boolean showTitleCard, boolean completeSpecialStage) {
         public Settings(int width, String mainCharacter, String sidekickCharacter, String donor,
                         Path donorRom, Integer startX, Integer startY) {
-            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false);
+            this(width, mainCharacter, sidekickCharacter, donor, donorRom, startX, startY, null, false,
+                    false);
         }
 
         public Settings {

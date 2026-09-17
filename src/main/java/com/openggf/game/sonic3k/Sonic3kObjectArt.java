@@ -1327,6 +1327,10 @@ public class Sonic3kObjectArt {
             Pattern empty = new Pattern();
             Arrays.fill(patterns, empty);
 
+            // 0. SUPER/HYPER word → VRAM $50F, queued before the name (loc_2E04E-loc_2E06A)
+            loadKosmArtInto(rom, getSsResultsFormWordArtAddr(character), patterns,
+                    Sonic3kConstants.VRAM_SS_RESULTS_SUPER - base);
+
             // 1. Character name → VRAM $4F1 (index 0)
             loadKosmArtInto(rom, getCharacterNameArtAddr(character), patterns,
                     Sonic3kConstants.VRAM_SS_RESULTS_CHAR_NAME - base);
@@ -1352,6 +1356,22 @@ public class Sonic3kObjectArt {
             LOG.warning("Failed to load SS results screen art: " + e.getMessage());
             return null;
         }
+    }
+
+    /**
+     * ROM {@code SpecialStage_Results} (sonic3k.asm:63063-63082): Knuckles takes the
+     * {@code k} variants; everyone except Tails alone reads HYPER once
+     * {@code Super_emerald_count} reaches 7, on either kind of stage.
+     */
+    static int getSsResultsFormWordArtAddr(PlayerCharacter character) {
+        boolean hyper = GameServices.gameState().getCollectedSuperEmeraldIndices().size() >= 7;
+        if (character == PlayerCharacter.KNUCKLES) {
+            return hyper ? Sonic3kConstants.ART_KOSM_SS_RESULTS_HYPER_K_ADDR
+                    : Sonic3kConstants.ART_KOSM_SS_RESULTS_SUPER_K_ADDR;
+        }
+        return hyper && character != PlayerCharacter.TAILS_ALONE
+                ? Sonic3kConstants.ART_KOSM_SS_RESULTS_HYPER_ADDR
+                : Sonic3kConstants.ART_KOSM_SS_RESULTS_SUPER_ADDR;
     }
 
     // ROM: HUD_DrawInitial reads HUD_Initial_Parts then HUD_Zero_Rings,

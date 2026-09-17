@@ -51,16 +51,15 @@ Entries should include:
 25. [AIZ Trace F8927 — Sonic Air-Roll x_speed Not Cleared by Wall Collision (OPEN — diagnosis only)](#aiz-trace-f8927--sonic-air-roll-x_speed-not-cleared-by-wall-collision-open--diagnosis-only)
 26. [Blue Sphere FM Pickup Onset — Automated Parity Complete, Listening Gate Open](#blue-sphere-fm-pickup-onset--automated-parity-complete-listening-gate-open)
 27. [Slot Machine Bonus Stage Is Not Rewindable](#slot-machine-bonus-stage-is-not-rewindable)
-28. [Super Emerald Results: Sanctuary Reveal Not Implemented](#super-emerald-results-sanctuary-reveal-not-implemented)
-29. [AIZ2 Fire Terrain Swap Uses an Invented Decompression Span](#aiz2-fire-terrain-swap-uses-an-invented-decompression-span)
-30. [MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled](#mgz-swinging-platform-endpoint-inherited-d1-high-word-not-modelled)
-31. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
-32. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
-33. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
-34. [SOZ Recording: Kosinski Service Timing and Module FIFO Full Abort](#soz-recording-kosinski-service-timing-and-module-fifo-full-abort)
-35. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
-36. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
-37. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
+28. [AIZ2 Fire Terrain Swap Uses an Invented Decompression Span](#aiz2-fire-terrain-swap-uses-an-invented-decompression-span)
+29. [MGZ Swinging Platform Endpoint: Inherited `d1` High Word Not Modelled](#mgz-swinging-platform-endpoint-inherited-d1-high-word-not-modelled)
+30. [Segment Trace Replays Start With an Empty Save-Game Inventory](#segment-trace-replays-start-with-an-empty-save-game-inventory)
+31. [S3K Sound Driver: PSG Stale-IX Writes and Mailbox Items Still Open](#s3k-sound-driver-psg-stale-ix-writes-and-mailbox-items-still-open)
+32. [SOZ Act 2 Pushable Rock Puzzle Reachability Unverified](#soz-act-2-pushable-rock-puzzle-reachability-unverified)
+33. [SOZ Recording: Kosinski Service Timing and Module FIFO Full Abort](#soz-recording-kosinski-service-timing-and-module-fifo-full-abort)
+34. [S3K Cheat Flags Have No Consumers Yet](#s3k-cheat-flags-have-no-consumers-yet)
+35. [Gumball Exit: Title-Card Loop and Load Span Not Row-Matched](#gumball-exit-title-card-loop-and-load-span-not-row-matched)
+36. [S3K Mega Run Chain: Duplicate VINT_SERVICE Boundary in Segment 0](#s3k-mega-run-chain-duplicate-vint_service-boundary-in-segment-0)
 
 ---
 
@@ -5747,15 +5746,6 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 - **Symptom** — Holding rewind during the S3K Slot Machine bonus stage is a no-op and no keyframes are recorded for it; Gumball and Pachinko rewind normally.
 - **Suspected cause** — The slots runtime keeps its state outside the object/level snapshot model: `S3kSlotStageState` (about 35 scalars, six `int[3]`, two `Deque<int[]>` reward queues), runtime bookkeeping (`continueAwarded`, `exitFadeStarted`, `exitTriggered`, `lastFrameCounter`, `slotFrameCounter`), a swapped-in `slotPlayer` with its own `slotPlayerRuntime`, parallel reward-object lists needing re-resolution, and mutable render buffers. Because its `updateDuringLevelFrame()` is true, held-rewind re-simulation would drive it, so a complete snapshot is mandatory. Sonic 1's Special Stage has the same shape.
 - **Removal condition** — A self-contained runtime snapshot (state object, bookkeeping, swapped player runtime, reward-object re-resolution, render-buffer rebuild) registered for rewind, `supportsRewind()` true for slots, and a capture/restore/re-simulate test. Design it once for slots and the S1 Special Stage.
-
----
-
-## Super Emerald Results: Sanctuary Reveal Not Implemented
-
-- **Location** — `S3kSpecialStageResultsScreen` (`addEmerald` gate about line 566); ROM `Obj_SpecialStage_Results` routine `$E` (`loc_2E616`), `SpecialStage_Results` HPZ backdrop rebuild, `loc_2EAA6` indicator gate
-- **Symptom** — After a cleared Super Emerald stage the ROM re-hosts HPZ behind the results, pans `Camera_Y_pos` to `$320`, spawns the pedestal sprites and the invincibility-star orbit, and at seven Super Emeralds shows "NOW <name> CAN / BE HYPER <name>" (`ObjDat2_2E984`). The engine keeps the `Pal_Results` backdrop and exits after the tally; the small Chaos Emerald indicators are gated on `hasEmerald(slot)` instead of the ROM's `state == 1`, so they stay visible on this screen.
-- **Suspected cause** — The results screen cannot host a live HPZ level render yet; the indicator gate was left loose so the screen is not empty. `TestS3kSpecialStageResultsReveal` pins only the message suppression, `Super_emerald_count` sourcing (`sub_2ECA8`), the SUPER EMERALD word (`loc_2EB88`) and the S3/S&K reveal selection at `loc_2E540`.
-- **Removal condition** — Host the HPZ backdrop behind the results, implement routine `$E` (pan, pedestals, orbit, message), tighten the indicator gate to `state == 1`, and extend the reveal test to the pan and the hyper message.
 
 ---
 

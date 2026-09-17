@@ -53,13 +53,16 @@ final class SpecialStageTransitionSupport {
      * sanctuary-launched stage restores {@code Saved2_*} and resumes in the zone the
      * Big Ring was collected in. Only a sanctuary visit with no saved origin (level
      * select) falls back to rebuilding the hub in place, which needs its re-entry
-     * context recorded before the load spawns the controller.
+     * context recorded before the load spawns the controller. That context never
+     * replays the success reveal: {@code Obj_SpecialStage_Results} routines $E-$12 already
+     * ran it behind the results screen, and {@code LevelSetup} clears
+     * {@code HPZ_special_stage_completed} and {@code _unkFAC0} on any later level load
+     * (sonic3k.asm:102197-102198).
      */
     static boolean loadSpecialStageReturnLevel(
             LevelManager levelManager,
             EmeraldRewardKind rewardKind,
-            int stageIndex,
-            boolean succeeded) {
+            int stageIndex) {
         // Publish the cause before the synchronous load completes. The receipt
         // observes production's new level identity; it supplies no trace state.
         TraceSessionLauncher.markNextRunInteriorReturnLoad();
@@ -67,7 +70,7 @@ final class SpecialStageTransitionSupport {
             if (loadSanctuaryOriginLevel(levelManager)) {
                 return false;
             }
-            levelManager.markSanctuaryReentry(stageIndex, succeeded);
+            levelManager.markSanctuaryReentry(stageIndex, false);
         }
         levelManager.consumeSpecialStageReturnLevelReloadRequest();
         levelManager.loadCurrentLevel();

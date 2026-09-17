@@ -23,7 +23,7 @@ class TestSpecialStageReturnLoadReceipt {
         long generation = level.getCompletedProductionLoadGeneration();
 
         assertFalse(SpecialStageTransitionSupport.loadSpecialStageReturnLevel(
-                level, EmeraldRewardKind.CHAOS_EMERALD, 0, true));
+                level, EmeraldRewardKind.CHAOS_EMERALD, 0));
 
         var receipt = tracker.latest().orElseThrow();
         assertEquals(RunLevelLoadCause.INTERIOR_RETURN, receipt.cause());

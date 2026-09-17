@@ -38,6 +38,9 @@ class TestLevelSpritePresentation {
         var tables = new LevelSpritePresentation.Tables();
         assertFalse(profile.publishesSpriteTable(PlcLifecyclePhase.SPECIAL_STAGE));
         assertFalse(profile.publishesSpriteTable(PlcLifecyclePhase.SPECIAL_STAGE_PAUSE));
+        // A Chaos Emerald results screen parks a stale level table; only the sanctuary
+        // backdrop publishes, through publishPreparedScene.
+        assertFalse(profile.publishesSpriteTable(PlcLifecyclePhase.SPECIAL_STAGE_RESULTS));
         assertFalse(profile.updatesHudCounters(PlcLifecyclePhase.LEVEL_TITLE_CARD));
         assertFalse(profile.updatesHudCounters(PlcLifecyclePhase.LAG));
         assertTrue(profile.updatesHudCounters(PlcLifecyclePhase.NORMAL_PAUSE));
