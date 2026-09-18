@@ -82,10 +82,15 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     /** {@code dc.w 0}: priority 0, so bucket 0. */
     private static final int PRIORITY_BUCKET = 0;
     /**
-     * {@code SolidObjectFull} is called with {@code d1=$33}, so Touch/Solid size index $33 while
-     * slamming. The shared boss touch path takes a size index, not a pixel radius.
+     * The drill's <b>touch</b> size index, which is not its solid width. {@code loc_786EA} writes
+     * {@code collision_flags 6}, so the low six bits select {@code Touch_Sizes} entry 6
+     * (sonic3k.asm:20713-20720, {@code dc.b $10,$10}): a 32x32 box centred on {@code x_pos} and
+     * {@code y_pos}. {@code loc_7871A}'s {@code SolidObjectFull d1=$33} is a pixel half-width for
+     * the push-out box and nothing to do with the touch table -- a drill 102 px wide to stand on
+     * and 32 px wide to hit. Reading {@code $33} as a size index is how a near miss gets read as
+     * a swallowed hit.
      */
-    private static final int COLLISION_SIZE = 0x33;
+    private static final int COLLISION_SIZE = 0x06;
 
     /**
      * {@code move.w #$7A8,(_unkFAB0).w} at {@code loc_78562}: the <b>top</b> of the drill's
@@ -1037,6 +1042,16 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     /** True once {@code loc_85D48} has handed control to {@code loc_78528}. */
     public boolean isArenaGateComplete() {
         return arenaGateComplete;
+    }
+
+    /** {@code routine(a0)}: the {@code off_7854C} index, stepping by two. */
+    int getRoutineByte() {
+        return state.routine & 0xFF;
+    }
+
+    /** {@code loc_7871A}: the slam, the only routine that is both solid and hittable. */
+    static int slamRoutineByte() {
+        return ROUTINE_SLAM;
     }
 
     /** {@code DEFEAT_NONE} / {@code DEFEAT_WAIT_FADE} / {@code DEFEAT_HANDED_OFF}. */
