@@ -2588,6 +2588,15 @@ public final class Sonic3kPlcArtRegistry {
                 3,
                 null
         ));
+        // The shot shares Map_LRZShootingTrigger but is drawn on palette line 0
+        // (make_art_tile(ArtTile_LRZMisc,0,0), sonic3k.asm:88307).
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_SHOOTING_TRIGGER_SHOT,
+                Sonic3kConstants.MAP_LRZ_SHOOTING_TRIGGER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                0,
+                null
+        ));
         if (actIndex == 0) {
             // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:88017).
             levelArt.add(new LevelArtEntry(

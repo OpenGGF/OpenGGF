@@ -802,6 +802,40 @@ was started. Act 2's door and button skins are registered but have no act-2 unit
 spot. No rewind spot for any slice 3b object beyond the generic
 `TestEveryObjectRewindRoundTrip` coverage.
 
+**Independent cross-check of the 3b read (2026-09-18).** A research subagent's full disassembly
+pass on the same five routines was recovered after the fact and compared line by line against what
+had shipped. It agreed on every behavioural point above and turned up four things worth keeping:
+
+1. **A real defect, fixed.** The shot copies its parent's `mappings` but *not* its `art_tile`: the
+   parent writes `make_art_tile(ArtTile_LRZMisc,0,0)` into the child (:88307), so the same
+   `Map_LRZShootingTrigger` data is drawn on **palette line 0**, not the parent's line 3. The first
+   implementation reused the parent's art key and would have drawn the shot in the wrong palette.
+   It now has its own `LRZ_SHOOTING_TRIGGER_SHOT` key and `LevelArtEntry`.
+2. **`Clear_Switches` clears `$20` bytes, not `$10`** (sonic3k.asm:104284-104290: `moveq
+   #bytesToLcnt($20),d0` then eight `clr.l`), so it wipes `Level_trigger_array` **and** the
+   `Anim_Counters` block that immediately follows it at `$FFFFF7F0`. The LRZ call site is
+   `loc_56CAA` line 115356, right before `Load_Level`. Slice 6 must clear both, and
+   `Sonic3kLevelTriggerManager.reset()` covers only the 16 trigger bytes.
+3. **The big door is not deletable while it is moving.** `loc_42AEC` ends with
+   `jmp (Draw_Sprite).l`, while the waiting and settled states end with `Sprite_OnScreen_Test`
+   (:88136 vs :88145). Scrolling away mid-descent cannot unload it. Not modelled: the engine's
+   off-screen handling is generic, and no route reaches the door and leaves inside 64 frames.
+4. **`d6` is a documented out-parameter of the whole solid family**, not just the side-push pair:
+   `addi.b #$D` gives the side-push bits (16/17), `addi.b #$F` the ceiling bits (18/19) and
+   `addi.b #$11` the standing bits (20/21) (:41501-41512, :41583-41606, :41633-41635). Only the
+   side-push pair is needed here, but a later object wanting a ceiling hit reads bits 2 and 3 of the
+   same swapped word.
+
+Also confirmed rather than assumed: `$33 Obj_Button` already carries its own zone-9 branch
+(`Map_LRZButton`, `ArtTile_LRZMisc` palette 3 in act 1, `ArtTile_LRZ2Misc+$1C` palette 1 in act 2,
+:60748-60754) and both solidity modes, which is why the census classifies it `V`; and the two
+object-pointer listings both map `$33` to `Obj_Button`, so the set choice does not matter for it.
+
+**Gap not closed.** The shot sets `bset #3,$2B(a1)` - the shield-reaction bit that makes a shield
+bounce it (:88312). The engine can only express that through a canonical `TouchResponseProfile`
+whose remaining fields were not traced, so the shot is a plain harmful `$98` object and a shielded
+player absorbs it instead of deflecting it. Recorded here rather than guessed at.
+
 **Read ahead for 3a's remainder, so the next agent does not re-derive it.** `Obj_LRZCorkscrew`
 (sonic3k.asm:87494-87513, ROM `$4224E`) and `Obj_LRZWallRide` (:87693-87712, ROM `$4254A`) are both
 much larger than anything in 3b: each takes full control of the player through

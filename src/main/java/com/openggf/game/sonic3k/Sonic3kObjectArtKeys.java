@@ -291,8 +291,14 @@ public final class Sonic3kObjectArtKeys {
     public static final String LRZ_BUTTON_HORIZONTAL = "lrz_button_horizontal";
     /** Act 2's {@code Map_LRZButtonHorizontal2} over {@code ArtTile_LRZ2Misc}, palette 1. */
     public static final String LRZ2_BUTTON_HORIZONTAL = "lrz2_button_horizontal";
-    /** {@code Obj_LRZShootingTrigger} and its shot: {@code Map_LRZShootingTrigger}, palette 3. */
+    /** {@code Obj_LRZShootingTrigger}: {@code Map_LRZShootingTrigger} frame 0, palette 3. */
     public static final String LRZ_SHOOTING_TRIGGER = "lrz_shooting_trigger";
+    /**
+     * The shot the trigger allocates. It copies its parent's mappings but is given
+     * {@code make_art_tile(ArtTile_LRZMisc,0,0)} (sonic3k.asm:88307), so the same map frame is
+     * drawn on palette line 0 rather than the parent's 3.
+     */
+    public static final String LRZ_SHOOTING_TRIGGER_SHOT = "lrz_shooting_trigger_shot";
 
     // FBZ badniks
     public static final String FBZ_BLASTER = "fbz_blaster";

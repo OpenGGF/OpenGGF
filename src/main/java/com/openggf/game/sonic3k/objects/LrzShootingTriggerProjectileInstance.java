@@ -24,6 +24,12 @@ import java.util.List;
  * every two frames on each axis. The parent's {@code status} bit 0 - the placement's flip flag -
  * negates only {@code x_vel} (:88327-88330).
  *
+ * <p>It copies the trigger's {@code mappings} but not its {@code art_tile}: the parent writes
+ * {@code make_art_tile(ArtTile_LRZMisc,0,0)} into the child (:88307), so the same
+ * {@code Map_LRZShootingTrigger} data is drawn on palette line 0 rather than the parent's line 3.
+ * Frame 1 of that map is a single 8x8 piece at {@code (-4,-4)}, which is why the child's
+ * {@code width_pixels}/{@code height_pixels} are 4.
+ *
  * <p>{@code tst.b render_flags(a0) / bpl} deletes it the first frame the previous render pass left
  * it off-screen (:88337-88338, :88345).
  */
@@ -133,7 +139,7 @@ public final class LrzShootingTriggerProjectileInstance extends AbstractObjectIn
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LRZ_SHOOTING_TRIGGER);
+        PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LRZ_SHOOTING_TRIGGER_SHOT);
         if (renderer == null) {
             return;
         }
