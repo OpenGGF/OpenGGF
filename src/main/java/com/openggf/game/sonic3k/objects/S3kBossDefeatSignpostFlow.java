@@ -87,7 +87,26 @@ public class S3kBossDefeatSignpostFlow extends AbstractObjectInstance
      * @param cleanupAction action to run after spawning the signpost (e.g. palette restore)
      */
     public S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction) {
-        this(signpostX, apparentAct, cleanupAction, 0, 0, 0, 0, false, false, false);
+        this(signpostX, apparentAct, cleanupAction, false);
+    }
+
+    /**
+     * The same flow, with {@code Obj_EndSignControlDoStart}'s {@code Change_Act2Sizes} call
+     * (sonic3k.asm:180420-180424).
+     *
+     * <p>{@code Change_Act2Sizes} (sonic3k.asm:180580-180596) returns early for two zones only --
+     * Sandopolis ({@code cmpi.b #8,d0}, whose own event leads to act 2) and Hydrocity
+     * ({@code cmpi.b #$10,d0}, the zone index shifted left by four) -- so every other act 1 boss
+     * reaches it and takes act 2's stored camera bounds plus {@code Make_LevelSizeObj}'s gradual
+     * workers. A zone that arrives at its results with an arena camera lock still installed
+     * <b>needs</b> it: nothing else replaces the arena's {@code Camera_max_X_pos}.
+     *
+     * @param changeAct2SizesOnTitleComplete whether this boss's zone runs {@code Change_Act2Sizes}
+     */
+    public S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,
+            boolean changeAct2SizesOnTitleComplete) {
+        this(signpostX, apparentAct, cleanupAction, 0, 0, 0, 0, false, false,
+                changeAct2SizesOnTitleComplete);
     }
 
     S3kBossDefeatSignpostFlow(int signpostX, int apparentAct, CleanupAction cleanupAction,

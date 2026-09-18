@@ -513,6 +513,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   to for the whole fight. Before this the drill built its arms and began its cycle the moment it
   loaded, with the camera still free to walk out of the arena. The two camera releases that follow
   the act change are still to come.
+  Act 2 is now playable straight out of the change: the arena's right-hand camera limit, which the
+  act change carried across with everything else, is replaced by Act 2's own once the results are
+  over, so the player walks on instead of standing against an invisible wall where the arena used
+  to end.
 
 - **Gameplay capture tool:** a capture can now declare the ring count its route carried in
   (`--rings`). A boss filmed from a positioned start otherwise begins on no rings, where the

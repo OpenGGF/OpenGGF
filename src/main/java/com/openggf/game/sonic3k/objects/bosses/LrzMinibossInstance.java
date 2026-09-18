@@ -954,8 +954,13 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         // Obj_Results reads Apparent_act, not the loaded act, and the two differ across a
         // seamless change (sonic3k.asm:62615-62622).
         final int apparentAct = services().apparentAct();
+        // Obj_EndSignControlDoStart calls Change_Act2Sizes (sonic3k.asm:180420-180424), which
+        // skips only Sandopolis and Hydrocity (:180580-180596). Lava Reef needs it more than most:
+        // loc_56CAA carries the arena's Camera_max_X_pos across the seamless change with $2C00
+        // subtracted (:115368-115369), so without this the act 2 player stands against the act 1
+        // arena's right wall. Measured 2026-09-19 on inputs/lrz1-act-change-walk-v14.txt.
         spawnChild(() -> new S3kBossDefeatSignpostFlow(
-                signpostX, apparentAct, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
+                signpostX, apparentAct, S3kBossDefeatSignpostFlow.CleanupAction.NONE, true));
     }
 
     /**
