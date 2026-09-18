@@ -409,6 +409,45 @@ class TestS3kReverseGravityDezCorridor {
                 "Player_TouchFloor leaves the standing player's feet on the floor");
     }
 
+    /**
+     * The one reverse-gravity row the ROM gets <em>wrong</em>, preserved.
+     * {@code Tails_Test_For_Flight} {@code loc_1515C} (sonic3k.asm:28655-28672) unrolls
+     * Tails when flight starts: it puts {@code y_radius - default_y_radius} in
+     * <strong>{@code d1}</strong>, tests the flag, and on the set side runs
+     * {@code neg.w <strong>d0</strong>} — a different register, holding nothing this site
+     * uses — before {@code add.w d1,y_pos(a0)}. The unroll adjustment is therefore
+     * <em>not</em> inverted under reverse gravity, unlike every other unroll site
+     * ({@code loc_14DA2} :28233, {@code loc_14FC4} :28500, {@code loc_1527C} :28748).
+     *
+     * <p>This build is {@code FixBugs = 0}: the shipped behaviour is modelled as shipped.
+     * The fixed branch would negate {@code d1} and keep Tails' head against the ceiling;
+     * the shipped branch moves him by the upright amount instead, so an inverted Tails
+     * who starts flying out of a roll shifts by twice the radius difference.
+     */
+    @Test
+    void tailsFlightStartIsNotInvertedBecauseTheRomNegatesTheWrongRegister() {
+        int[] upright = new int[1];
+        onCorridorFloor(Character.TAILS, (fixture, sprite) -> upright[0] = flightStartCentreYDelta(sprite));
+
+        int[] inverted = new int[1];
+        onCorridorCeiling(Character.TAILS, (fixture, sprite) -> inverted[0] = flightStartCentreYDelta(sprite));
+
+        assertEquals(upright[0], inverted[0],
+                "loc_1515C negates d0, not d1: the flight-start unroll is the same either way");
+        assertTrue(upright[0] != 0,
+                "the control must actually move, or the assertion above cannot fail");
+    }
+
+    /** Curls the sprite, starts flight, and returns the {@code y_pos} delta {@code loc_1515C} wrote. */
+    private int flightStartCentreYDelta(AbstractPlayableSprite sprite) {
+        sprite.applyRollingRadii(true);
+        sprite.setRolling(true);
+        sprite.setAir(true);
+        int before = sprite.getCentreY();
+        sprite.getTailsFlightController().activate();
+        return sprite.getCentreY() - before;
+    }
+
     /** Lands an inverted player on the corridor ceiling, then hands it to the body. */
     private void onCorridorCeiling(Character character,
                                    java.util.function.BiConsumer<HeadlessTestFixture,

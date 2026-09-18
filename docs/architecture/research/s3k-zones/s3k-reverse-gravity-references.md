@@ -105,7 +105,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 24350 | `Player_TouchFloor` | `Player_TouchFloor`: negates the roll-clear radius Y adjustment | `PlayableSpriteMovement` landing roll-clear + `PlayableHurtRadiusTransition:32` | covered |
 | 24426 | `loc_12246` | `BubbleShield_Bounce` (`loc_12246`): negates the radius Y adjustment | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 24475 | `sub_12318` | `sub_12318` (hurt): death-plane test flips to the top | `PlayableSpriteMovement.applyHurtStopBottomKill` | partial |
-| 24552 | `loc_123DE` | `loc_123DE` (dead/respawn): off-screen test uses `Camera_Y - $10` going up | — | missing |
+| 24552 | `loc_123DE` | `loc_123DE` (dead/respawn): off-screen test uses `Camera_Y - $10` going up | `PlayableSpriteMovement.hasFallenPastDeathRestartRow` | covered |
 | 24716 | `sub_125E0` | `sub_125E0` (hurt/dead animate): vertical mirror | `AbstractPlayableSprite.renderVFlipForDraw` | covered |
 
 ### C. Tails routines
@@ -121,7 +121,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 28500 | `loc_14FC4` | `Tails_Roll` (`loc_14FC4`): `+1` becomes `-1` (`subq.w #2`) | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 28525 | `Tails_Jump` | `Tails_Jump`: the headroom-probe angle, as `Sonic_Jump` :23294 — verify the launch vector is raw there too before implementing | `PlayableSpriteMovement.doJump` headroom angle | covered |
 | 28572 | `loc_1504C` | `Tails_Jump` (`loc_1504C`): negates the roll-radius Y adjustment | `PlayableSpriteMovement.doJump` radius delta | covered |
-| 28655 | `loc_1515C` | `Tails_Test_For_Flight` (`loc_1515C`): **shipped bug** — `neg.w d0` negates the wrong register, so the unroll adjustment in `d1` is *not* inverted. Model `FixBugs = 0`: no inversion | — | missing |
+| 28655 | `loc_1515C` | `Tails_Test_For_Flight` (`loc_1515C`): **shipped bug** — `neg.w d0` negates the wrong register, so the unroll adjustment in `d1` is *not* inverted. Model `FixBugs = 0`: no inversion | `TailsFlightController.activate` (unconditional write, `FixBugs = 0` comment) | covered |
 | 28748 | `loc_1527C` | `Tails_Spindash` release: `+1` becomes `-1` (`subq.w #2`) | `PlayableSpriteMovement.applyRollRadiusShift` | covered |
 | 28917 | `loc_15444` | `Tails_DoLevelCollision` `loc_15444`: negates the floor snap | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
 | 28974 | `loc_154C4` | `Tails_DoLevelCollision` `loc_154C4`: negates the push-out | one shared `CollisionSystem.resolveAirCollision` owner with the Sonic row above | covered |
@@ -252,8 +252,8 @@ is the RAM wipe described above).
 | Group | References | Covered | Partial | Missing | n/a |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | A. Shared integration and sensor wrappers | 8 | 7 | 1 | 0 | 0 |
-| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 17 | 1 | 1 | 1 |
-| C. Tails routines | 21 | 18 | 1 | 1 | 1 |
+| B. Sonic (and Sonic/Knuckles shared) routines | 20 | 18 | 1 | 0 | 1 |
+| C. Tails routines | 21 | 19 | 1 | 0 | 1 |
 | D. Tails CPU, flight catch-up and carry | 5 | 5 | 0 | 0 | 0 |
 | E. Knuckles routines | 24 | 17 | 1 | 5 | 1 |
 | F. Dust, Tails' tails, shields, Super Tails birds | 9 | 6 | 0 | 3 | 0 |
@@ -262,7 +262,7 @@ is the RAM wipe described above).
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
 | J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **80** | **4** | **28** | **4** |
+| **Total** | **116** | **82** | **4** | **26** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.

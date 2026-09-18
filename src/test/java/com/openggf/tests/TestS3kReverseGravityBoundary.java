@@ -121,4 +121,78 @@ class TestS3kReverseGravityBoundary {
             SessionManager.clear();
         }
     }
+
+    /**
+     * {@code loc_123DE} (sonic3k.asm:24549-24560) is the <em>dead</em> player's own
+     * off-screen test, the one that spends the life and restarts the act. Upright it is
+     * {@code addi.w #$100,d0 / cmp.w y_pos(a0),d0 / bge locret}: the restart waits until
+     * the corpse has fallen {@code $100} <em>below</em> {@code Camera_Y_pos}. Under the
+     * flag the ROM branches first and rebuilds it as {@code subi.w #$10,d0 / cmp.w
+     * y_pos(a0),d0 / bge loc_12410}, so the restart fires once the corpse has risen to
+     * {@code Camera_Y_pos - $10} — off the <em>top</em> of the screen, which is the only
+     * direction an inverted corpse can leave, because {@code MoveSprite_TestGravity}
+     * integrates its growing positive {@code y_vel} upward.
+     *
+     * <p>Note the offsets are not mirrors of each other: {@code $100} against {@code $10}.
+     * The reverse-gravity side has no competition-mode {@code $70} adjustment either.
+     */
+    @Test
+    void reverseGravityRestartsOnceTheCorpseLeavesTheTopOfTheScreen() {
+        assertTrue(corpseTriggersTheRestart(true, Corner.ABOVE_CAMERA),
+                "loc_123DE: Camera_Y_pos - $10 is the inverted restart row");
+    }
+
+    /** And the bottom row stops triggering it: the flag branch returns before {@code $100}. */
+    @Test
+    void reverseGravityDoesNotRestartFromTheBottomOfTheScreen() {
+        assertFalse(corpseTriggersTheRestart(true, Corner.BELOW_CAMERA),
+                "the flag test branches away before addi.w #$100,d0");
+    }
+
+    /** Positive control: upright the corpse still has to fall {@code $100} below the camera. */
+    @Test
+    void uprightGravityRestartsOnceTheCorpseLeavesTheBottomOfTheScreen() {
+        assertTrue(corpseTriggersTheRestart(false, Corner.BELOW_CAMERA),
+                "Camera_Y_pos + $100 is the upright restart row");
+    }
+
+    /** And upright, a corpse above the camera is not off-screen in the ROM's sense. */
+    @Test
+    void uprightGravityDoesNotRestartFromTheTopOfTheScreen() {
+        assertFalse(corpseTriggersTheRestart(false, Corner.ABOVE_CAMERA),
+                "loc_123DE's upright branch only looks downward");
+    }
+
+    private enum Corner { ABOVE_CAMERA, BELOW_CAMERA }
+
+    /**
+     * Places an already-dead player one pixel past the row under test and steps one frame.
+     * The restart routine is the observable: {@code isInDeathRestartRoutine()} is what
+     * {@code enterDeathRestartRoutine} sets after {@code loseLife}.
+     */
+    private boolean corpseTriggersTheRestart(boolean reverseGravity, Corner corner) {
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
+                .withZoneAndAct(Sonic3kZoneIds.ZONE_DEZ, 0)
+                .build();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            Camera camera = fixture.camera();
+            GameServices.gameState().setReverseGravityActive(reverseGravity);
+
+            sprite.applyPitDeath();
+            assertTrue(sprite.getDead(), "precondition: the player must be in routine 6");
+
+            int reference = camera.getY();
+            int y = corner == Corner.ABOVE_CAMERA
+                    ? reference - 0x10 - 1
+                    : reference + 0x100 + 1;
+            sprite.setCentreY((short) y);
+            sprite.setYSpeed((short) 0);
+
+            fixture.stepIdleFrames(1);
+            return sprite.isInDeathRestartRoutine();
+        } finally {
+            SessionManager.clear();
+        }
+    }
 }

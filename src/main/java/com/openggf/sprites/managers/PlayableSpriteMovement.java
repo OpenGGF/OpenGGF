@@ -4799,6 +4799,19 @@ public class PlayableSpriteMovement extends AbstractSpriteMovementManager<Abstra
 				&& boundaryRules.deathFallBottomReferenceIsCameraBottomBoundary()
 				? camera.getMaxY()
 				: camera.getY();
+		if (isReverseGravityActive()) {
+			// S3K loc_123DE (sonic3k.asm:24549-24556): the dead player's off-screen
+			// test is rebuilt, not mirrored. The flag branch is
+			//   subi.w #$10,d0 / cmp.w y_pos(a0),d0 / bge.w loc_12410
+			// against the upright
+			//   addi.w #$100,d0 / cmp.w y_pos(a0),d0 / bge.w locret
+			// so the restart fires once the corpse has risen to Camera_Y_pos - $10,
+			// off the top of the screen -- the only way out for a corpse whose growing
+			// positive y_vel MoveSprite_TestGravity integrates upward. The two offsets
+			// are $10 and $100, not mirrors of each other, and the reverse side carries
+			// no competition-mode $70 adjustment (that subi.w sits on the upright path).
+			return sprite.getCentreY() <= reference - 0x10;
+		}
 		return sprite.getCentreY() > reference + 0x100;
 	}
 
