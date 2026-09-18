@@ -407,6 +407,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Lava Reef's bomb badniks are in, 66 of them across the two acts: each one is a solid block you
   can stand on until a player comes within a few steps, when its fuse lights, flickers faster and
   faster, and it blows itself apart into four fragments that arc away and fall.
+  Three places in act 1 now lock the background to the dome the way the ROM does: cross the line
+  inside one of the three regions and the background stops following the camera, a lava surface
+  rises and falls under you across the width of the room, and crossing back the other way releases
+  it again. Standing on that lava burns, and a fire shield saves the lead character only -- the
+  ROM checks the shield for Player 1 and not for Player 2, and the engine keeps that.
   Act 1's two rock crushers work end to end: reach one and the camera locks to its own limits, the
   crusher rumbles overhead with the screen shaking for three seconds, then the rock underneath is
   cut away, collapsing slabs drop into the gap, the crusher falls through and explodes, and the

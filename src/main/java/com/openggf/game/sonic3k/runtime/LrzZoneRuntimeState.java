@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + Integer.BYTES + 14 * Short.BYTES;
+            S3kScreenShake.captureBytes() + Integer.BYTES + 16 * Short.BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -63,6 +63,10 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short rocksFrontIndex;
     private short rocksBackIndex;
     private short openedBigDoorX;
+    /** ROM {@code Events_bg+$00}: non-zero while a dome region holds the background locked. */
+    private short domeRegionLocked;
+    /** ROM {@code _unkEE9C}: the dome lava platform's published phase, and the locked BG's Y term. */
+    private short domePlatformPhase;
     private short cameraStoredMinX;
     private short cameraStoredMaxX;
     private short cameraStoredMinY;
@@ -176,6 +180,28 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
      * {@code Camera_stored_min_X_pos} and friends, saved and restored around the rock crusher's
      * camera resize and the boss arenas. They have no engine-wide owner.
      */
+    /** ROM {@code Events_bg+$00} as {@code tst.w} reads it. */
+    public boolean domeRegionLocked() {
+        return domeRegionLocked != 0;
+    }
+
+    /**
+     * {@code st (Events_bg+$00).w} writes {@code $FF} into the high byte of that word, so the
+     * locked state reads back as {@code $FF00} and never as 1.
+     */
+    public void setDomeRegionLocked(boolean locked) {
+        domeRegionLocked = (short) (locked ? 0xFF00 : 0);
+    }
+
+    /** ROM {@code _unkEE9C}. */
+    public int domePlatformPhase() {
+        return domePlatformPhase & 0xFFFF;
+    }
+
+    public void setDomePlatformPhase(int value) {
+        domePlatformPhase = (short) value;
+    }
+
     @Override public int cameraStoredMinX() { return cameraStoredMinX & 0xFFFF; }
     @Override public int cameraStoredMaxX() { return cameraStoredMaxX & 0xFFFF; }
     @Override public int cameraStoredMinY() { return cameraStoredMinY; }
@@ -203,6 +229,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(rocksFrontIndex);
         buffer.putShort(rocksBackIndex);
         buffer.putShort(openedBigDoorX);
+        buffer.putShort(domeRegionLocked);
+        buffer.putShort(domePlatformPhase);
         buffer.putShort(cameraStoredMinX);
         buffer.putShort(cameraStoredMaxX);
         buffer.putShort(cameraStoredMinY);
@@ -228,6 +256,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         rocksFrontIndex = buffer.getShort();
         rocksBackIndex = buffer.getShort();
         openedBigDoorX = buffer.getShort();
+        domeRegionLocked = buffer.getShort();
+        domePlatformPhase = buffer.getShort();
         cameraStoredMinX = buffer.getShort();
         cameraStoredMaxX = buffer.getShort();
         cameraStoredMinY = buffer.getShort();

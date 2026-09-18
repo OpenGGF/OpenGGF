@@ -1,6 +1,10 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.objects.LrzDomeLavaPlatformObjectInstance;
+import com.openggf.level.objects.ObjectManager;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.mutation.LayoutMutationContext;
 import com.openggf.game.mutation.LevelMutationSurface;
 import com.openggf.game.sonic3k.Sonic3kZoneFeatureProvider;
@@ -90,7 +94,61 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         // no pending edit it is loc_56B5E, DrawTilesAsYouMove only, which the engine's own tile
         // streaming already does. The stage machines arrive with their slices.
         applyPendingChunkEdit(act);
+        advanceDomeRegions(act);
         advanceRockSpriteWindow();
+    }
+
+    /**
+     * {@code sub_56DCA} (sonic3k.asm:115457-115497), which {@code LRZ1_BackgroundEvent} runs from
+     * both its stage 0 ({@code loc_56C28}) and its stage 4 ({@code loc_56C6E}).
+     *
+     * <p>What lands here is the state half: {@code Events_bg+$00} and {@code Obj_56EA0}. The
+     * background half of {@code loc_56E40}/{@code loc_56E66} -- {@code Events_routine_bg}
+     * stepping to 4 and then 8, {@code Reset_TileOffsetPositionEff}, the saved
+     * {@code Events_bg+$02/$04} camera copies and the {@code Draw_delayed_rowcount $F} bottom-up
+     * refresh on the way out -- is not wired yet and is recorded as owed in the plan.
+     */
+    private void advanceDomeRegions(int act) {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ || act != 0) {
+            return;
+        }
+        AbstractPlayableSprite player1 = spriteManager() != null
+                ? spriteManager().getMainPlayable() : null;
+        if (player1 == null) {
+            return;
+        }
+        LrzDomeRegions.Transition transition = LrzDomeRegions.evaluate(
+                player1.getCentreX(), player1.getCentreY(), lrz.domeRegionLocked());
+        switch (transition) {
+            case LOCK -> {
+                // loc_56E40: st (Events_bg+$00) then AllocateObject -> Obj_56EA0.
+                lrz.setDomeRegionLocked(true);
+                lrz.setDomePlatformPhase(0);
+                spawnDomeLavaPlatform();
+            }
+            case RELEASE ->
+                // loc_56E66: clr.w (Events_bg+$00). loc_56EC2 deletes the platform on its own
+                // next dispatch, exactly as the ROM does.
+                lrz.setDomeRegionLocked(false);
+            case NONE -> { }
+        }
+    }
+
+    private void spawnDomeLavaPlatform() {
+        ObjectManager objects = levelManager() != null ? levelManager().getObjectManager() : null;
+        if (objects == null) {
+            return;
+        }
+        boolean alreadyLive = objects.getActiveObjects().stream()
+                .anyMatch(o -> o instanceof LrzDomeLavaPlatformObjectInstance);
+        if (alreadyLive) {
+            return;
+        }
+        objects.createDynamicObject(() -> new LrzDomeLavaPlatformObjectInstance(
+                new ObjectSpawn(LrzDomeLavaPlatformObjectInstance.FIXED_X,
+                        LrzDomeLavaPlatformObjectInstance.SURFACE_BASE_Y,
+                        0, 0, 0, false, 0)));
     }
 
     /**
