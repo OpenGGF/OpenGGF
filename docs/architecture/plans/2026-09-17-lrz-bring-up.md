@@ -2314,6 +2314,32 @@ it -- that capture took no damage at all through the whole first cycle (`lrz-are
 landed was not measured**: the instrumented re-run of that input was still waiting on the Maven
 queue when this round ended. That measurement is the next round's first step, and it is one
 capture.
+### 2026-09-18 - Measured: the slamming drill takes no hit, and that is the next round's first bug
+
+The instrumented re-run the previous entry left owed has now been made
+(`inputs`/`lrz-arena-fight-timed-v3`, drill state printed against `V_int_run_count`). **The hit
+count never moves: `hits` is `6` on every one of the 1947 dispatches.** And the player was
+demonstrably inside the box:
+
+- Window 1 is `v 936`-`1082` with the drill resting at **`x 11392`**, `y 1975`, `cf 06`.
+- Over capture frames 990-1050 Player 1 goes `x 11341 -> 11419` at `y 1923`-`1959`, airborne the
+  whole way (`state.csv`). The drill's own solid half-width is `$33` = 51, so its box is
+  `11341`-`11443`, and `SolidObjectFull`'s `d2 = 4` puts its top at `1971`. The player crosses
+  that box, in the air, for about sixty frames.
+- **Nothing happens either way**: no hit dealt, and no ring lost, for the whole first cycle.
+
+So this is not a timing miss and not an input-authoring problem -- the two earlier hypotheses. The
+drill is `isSolidFor` during `ROUTINE_SLAM` *and* publishes `collision_flags 06` in the same frames,
+and the shared touch pass appears to be resolving the overlap as the solid and never reaching the
+enemy box. `loc_7871A` calls `SolidObjectFull` with `d1=$33 / d2=4 / d3=0` and `loc_786EA` sets
+`collision_flags` to `6` (sonic3k.asm, `loc_786EA`/`loc_7871A`); in the ROM both are live at once
+and an airborne player still damages it.
+
+**Next round's first step, before any clip work:** a headless test that puts an airborne Player 1
+inside `SolidObjectParams.of($33,4,0)` while `state.routine == ROUTINE_SLAM` and asserts
+`collision_property` decrements -- then fix whichever of the solid path or the touch path is
+swallowing it. That test is also the RED test for clip `30`, because a fight where the boss cannot
+be hit cannot be filmed. **Clips `30`, `31` and `32` are blocked on it**, not on input authoring.
 ## Handover, 2026-09-18 (eighth)
 
 **Where the work is.** Branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. This round
@@ -2495,6 +2521,10 @@ single hit on the drill. What the captures show:
 **A hazard worth more than the captures.** `maven_queue.py ... exec:java` **does not compile**.
 Two captures ran against classes left by an earlier `-Dtest=` run and their camera numbers were
 read as engine behaviour. Every capture command in this campaign now runs `compile exec:java`.
+
+**Correction to this handover, measured after it was written:** clips `30`-`32` are not blocked on
+input authoring. The drill takes no hit at all while it slams, with the player measurably inside
+its box; see the entry above. That is the next round's first item.
 
 **Carried forward unchanged from the eighth handover**: the `$1D`/`sub_42EC0` route exercise,
 cold-route rewind spots and a route spot for `$99`, act 2 placements on an act 2 route, native row
