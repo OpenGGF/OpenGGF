@@ -194,6 +194,14 @@ public final class LrzCorkscrewObjectInstance extends AbstractObjectInstance
         player.setXSpeed((short) 0);
         player.setYSpeed((short) 0);
         player.applyStandingRadii(false);
+        // andi.b #$89,status(a1) (sonic3k.asm:87563): the capture keeps only bits 0, 3 and 7 --
+        // the facing bit, Status_OnObj and bit 7 -- and clears Status_InAir, Status_Roll and
+        // Status_Push with them. The roll clear is the one the cold act 1 route measures: the
+        // rider reaches this corkscrew rolling, native row 3394 has rolling 0 with anim 0 from
+        // the capture frame on, and a rider the engine left rolling carries the 14-pixel
+        // y_radius into the slope the ride ends on, where the route first diverged.
+        player.setRollingFlagPreserveRadii(false);
+        player.setPushing(false);
         player.setOnObject(true);
         player.setJumping(false);
         player.setFlipAngle(0);

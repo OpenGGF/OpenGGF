@@ -111128,6 +111128,43 @@ number that matters and it has not moved: the `tails_y_speed` mismatch at frame 
 No sweep target selected from this measurement; the LRZ campaign's next target is the slice 6
 defeat chain, which this trace does not reach.
 
+## 2026-09-18 - LRZ1 cold route: the horizontal button is solid, frontier at row 3558
+
+- Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at the
+  commit that carries this entry (base develop `035e48a58`).
+- Command: `GameplayCaptureTool --game s3k --zone lrz --act 1 --main sonic --sidekick tails
+  --settle 1 --frames 12000 --no-video --input
+  ~/Videos/OGGF/lrz-bring-up/inputs/lrz1-native-input-route.txt`, run off the built classes
+  rather than through Maven (the shared queue was saturated); compared against
+  `s3k-sonic-tails-complete-emeralds/lrz` `physics.csv` Player 1 `(x, y)` with the capture's
+  one-frame boot offset (engine frame `f` against native row `f - 1`). The capture produced
+  12000 frames and **11999 of them compare**; 3558 match.
+- **The row-3154 divergence is closed and the frontier moved 404 rows.** Cause and fix:
+  `Obj_LRZButtonHorizontal` is a full solid whose landing x test the engine was computing from
+  the wrong width. `loc_1E154` (sonic3k.asm:41608-41616) re-reads `width_pixels(a0)`, and the
+  shared default reconstructs that byte as `d1 - $B` because most full-solid callers pass
+  `d1 = width_pixels + $B`. `loc_42D16` (sonic3k.asm:88236-88240) breaks the idiom: it passes
+  `d1 = $10` with `width_pixels` also `$10` (:88225). The reconstruction gave `5`, a ten-pixel
+  landing strip instead of thirty-two, and the route's own landing -- `x $10B2` against the
+  placement at `x $10C2`, which is `relX 0`, the first pixel of the span -- fell through it.
+  `TestS3kLrzButtonHorizontalLandingHeadless` is the regression, red on its own assertion when
+  the override is replaced by the `- $B` reconstruction.
+- **New first divergence: engine frame 3559 = native row 3558.** Engine `(4662,1404)` with
+  `y_speed -1739`; native `(4661,1404)` with `y_speed 0` and `angle $F8`. One pixel in x, at
+  the frame the player leaves `Obj_LRZCorkscrew`'s ride (native row 3394 is the capture: the
+  rider's `stand_on_obj` becomes `$0A`, `ground_vel` is floored to `$600` and then climbs `$10`
+  a frame) and meets the slope the ride ends on.
+- **A second defect was found and fixed on the way, and it was NOT the cause.** The engine left
+  the rider rolling through the whole corkscrew ride where native clears it:
+  `andi.b #$89,status(a1)` (sonic3k.asm:87563) keeps only bits 0, 3 and 7. The engine now
+  clears `Status_Roll` and `Status_Push` there, its `rolling` matches native from the capture
+  frame on, and **the frontier did not move**: 3558 before the fix and 3558 after. Recorded so
+  the next round does not re-derive it or mistake it for the remaining pixel.
+- **Kill condition for the next round:** replay from native row 3550 with the rider on the
+  corkscrew and assert `x` at row 3558. The engine is one pixel right of native with a non-zero
+  `y_speed` where native has zero, so look at the corkscrew's exit hand-off into
+  `ObjCheckFloorDist` on the `$F8` slope, not at the capture.
+
 ## 2026-09-18 - LRZ1 cold route: the toxomister rebound closed, frontier at row 3154
 
 - Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, measured at

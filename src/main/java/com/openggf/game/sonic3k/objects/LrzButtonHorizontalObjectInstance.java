@@ -173,6 +173,22 @@ public final class LrzButtonHorizontalObjectInstance extends AbstractObjectInsta
         return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_HEIGHT_AIR, SOLID_HEIGHT_GROUND);
     }
 
+    /**
+     * {@code loc_1E154} (sonic3k.asm:41608-41616) re-reads {@code width_pixels(a0)} for the
+     * landing's own x test, not the {@code d1} the caller passed. Most full-solid callers set
+     * {@code d1 = width_pixels + $B}, which is why the shared default reconstructs the width byte
+     * by subtracting {@code $B}. This object breaks that idiom: {@code loc_42D16}
+     * (sonic3k.asm:88236-88240) passes {@code d1 = $10} while {@code width_pixels} is also
+     * {@code $10} (:88225). Reconstructing gives {@code 5}, a landing strip ten pixels wide
+     * instead of thirty-two, and the cold act 1 route's own landing -- at
+     * {@code x $10B2} against the placement at {@code x $10C2}, which is {@code relX 0}, the
+     * first pixel of the span -- fell straight through it.
+     */
+    @Override
+    public int getTopLandingHalfWidth(PlayableEntity playerEntity, int collisionHalfWidth) {
+        return WIDTH_PIXELS;
+    }
+
     @Override
     public SolidRoutineProfile getSolidRoutineProfile() {
         return SolidRoutineProfile.fullSolid(false);
