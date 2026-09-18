@@ -1031,7 +1031,7 @@ the located divergences. Tree clean; nothing pushed or merged.
 | Sub-slice | Rows | Placements |
 | --- | --- | ---: |
 | 3a remainder | `$16` wall ride | 1 + 1 act 2 |
-| 3c | `$17` (11), `$18` five subtypes (15), `$1B` eleven subtypes (27), `$1F` three (7), `$20` three (2+10 act 2... see inventory), `$21` ten (15), `$22` two (6) | 81 act 1 |
+| 3c | `$17` (11), `$18` five subtypes (15), `$1B` eleven subtypes (27), `$1F` three subtypes (7), `$20` three subtypes (11 act 1, 14 act 2), `$21` ten subtypes (15), `$22` two subtypes (6) | 92 act 1, 14 act 2 |
 | 3d | `$9C` subtypes 0 and 2 | 2 |
 
 `$16 Obj_LRZWallRide` is the cheapest next class: it shares `sub_42636` and the whole
