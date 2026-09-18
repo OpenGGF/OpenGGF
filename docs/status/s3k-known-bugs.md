@@ -5859,3 +5859,13 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 
 ---
 
+
+## Lava Reef Act 1 Dome: The Background Plane Draws No Visible Pixels
+
+- **Location** — `SwScrlLrz`'s locked dome mode (`sub_56DAC`, sonic3k.asm:115442-115452) and the act 1 background plane generally; observed through `GameplayCaptureTool`
+- **Symptom** — The dome background lock is implemented and demonstrably runs (`LrzBackgroundStageMachine` reaches stage 4 as Player 1 crosses `$1B00`, and `SwScrlLrz` takes its locked branch and writes the right words: at `($1B05,$8AD)` `Camera_X_pos_BG_copy` is `$561` against the unlocked `$34C`, `Camera_Y_pos_BG_copy` `$C5` against `$109`), but the rendered frame does not change by a single pixel. Two 420-frame captures of the same input, one built with the lock and one with the two files reverted to `73f78efb2`, are byte-identical at every sampled frame, including deep inside the dome at `($1E00,$900)` where the crystal wall fills most of the screen.
+- **Ablation that settles it** — Forcing the locked background camera to the absurd `($123,$45)` and capturing the same route again also produces a byte-identical frame `320`. The background plane therefore contributes no visible pixels anywhere on that screen: what looks like the crystal wall there is foreground art. That is a statement about the engine's Lava Reef act 1 plane composition, not about the dome lock.
+- **Not established** — Whether the ROM draws plane B at those coordinates at all. No native capture was taken.
+- **Removal condition** — A native BizHawk capture at `($1E00,$900)` in Lava Reef act 1 with plane B disabled and enabled, showing which of the visible pixels the ROM owns on that plane; then either a matching engine frame, or this entry rewritten as the real defect the comparison finds. Until then the dome lock's only evidence is `TestLrzBackgroundStageMachine`, `SwScrlLrzTest` and `TestS3kLrzDomeBackgroundHeadless`, and no demo clip can show it.
+
+---

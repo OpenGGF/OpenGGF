@@ -111040,3 +111040,34 @@ zone or game can be affected by it.
 No `$17`-family placement lies there, so the owner is terrain or a dynamically spawned object and
 it has not been identified yet. The open-loop reach is unchanged and, as recorded before, is not a
 progress measure.
+
+## 2026-09-18 - LRZ1: the row-857 divergence is a Fireworm kill the engine misses
+
+**Identified, from the fixture's own aux rows.** The owner of the `player_y_speed` sign flip at
+native row 856 is `$99 Obj_Fireworm`, and the flip is an ordinary rolling-kill bounce, not terrain
+and not a negation of the previous row's value.
+
+`src/test/resources/traces/s3k/runs/s3k-sonic-tails-complete-emeralds/lrz` rows 850-870 show
+Player 1 rolling and airborne throughout (`player_air 1`, `player_rolling 1`, `player_angle 0`),
+with `player_y_speed` climbing by `$38` a frame, the rolling gravity. Row 855 is `+$98`; row 856 is
+`-$D0`. `+$98 + $38 = +$D0`, so the frame applied gravity first and then negated: the bounce is the
+standard rolling-kill reversal of the post-gravity velocity, `+208` to `-208`.
+
+The `aux_state` object rows name the victim outright. At row 855 the Fireworm is whole: slot 24 is
+`Obj_Fireworm`'s head (`$8F7A4`) at `($674,$4E2)`, slot 25 a segment (`$8F8F0`) at `($680,$4E3)`,
+slot 29 its flame (`$8F95C`). At row 856 all three change object code in the same frame: slot 24
+becomes `loc_1E66E`, which is inside `Obj_Explosion` (sonic3k.asm:42162, ROM `$1E66E`), slot 25
+becomes `Obj_FlickerMove` (`$85102`) and slot 29 `Delete_Current_Sprite` (`$1ABB6`). Player 1 was
+at `($661,$4CD)` with the head 21 px right and 21 px below.
+
+**Not fixed, and not yet attributed inside the engine.** The engine's `FirewormHeadInstance`
+already carries `collision_flags $1A`, so the head is killable there; what has not been measured is
+where the engine's head *is* on that frame. The worm's swim phase starts when its spawner's
+`Find_SonicTails` reports under `$80`, so a one-frame difference in that gate moves the whole chain
+several pixels and the rolling player passes over it instead of through it.
+
+**Kill condition.** Log the engine's Fireworm head position at the frame matching native row 856.
+If it is within a rolling Player 1's hitbox of `($674,$4E2)` and still no kill is registered, the
+cause is the touch contract, not the head's phase, and this reading is wrong. If it is not, the
+next measurement is the frame the spawner releases the head, against the fixture's own slot-24
+creation frame.
