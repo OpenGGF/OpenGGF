@@ -2778,6 +2778,64 @@ swaps `Pal_LRZ2` into line 2 with `Pal_LRZMiniboss3` into line 3; `Camera_X_pos 
 and 4 (`loc_5700C`/`loc_57040`, :115693-115722), timeline isolation across the change, rewind
 spots either side of it, clip `33`, and the matrix rows. Clips `31` and `32` are untouched.
 
+### 2026-09-18 - The fight cycle measured, and why `--rings` is not survivability
+
+**The cycle is exactly 857 frames.** A temporary `LRZ_DRILL_PROBE` print in
+`LrzMinibossInstance.updateBossLogic` (reverted before this commit) over
+`inputs/lrz1-miniboss-fight-v7.txt` gives the whole fight:
+
+| `V_int_run_count` | routine | `collision_flags` | what |
+| --- | --- | --- | --- |
+| 51 | 0 | 0 | arrival, gate not complete |
+| 174-655 | 2-10 | 0 | the gate, then the hover |
+| 709 | 12 | 0 | the drill leaves `y $880` and comes down |
+| 901 | 14 | 0 | it has tracked to the player's `v 901` x |
+| 933 | 16 | `$B5` | the drop: this **hurts** |
+| **936** | 18 | **6** | the slam: the only hittable window, about 96 frames |
+| 1032 | 20 | 0 | it climbs back to `y $880` |
+
+and then again at **v 1793** and **v 2650**. `1793 - 936 = 857`, `2650 - 1793 = 857`.
+
+**The eleventh handover's "v7 lands one hit" is wrong.** It lands **three**: `hits` goes 6 to 5 at
+v 972, 5 to 4 at v 1010, and 4 to 3 at v 1887. Two hits fit in one window.
+
+**Alignment, so the next round does not re-derive it.** With `--settle 1`, capture frame
+`f = v - 1`, and input body line `i` plays on `v = i + 2`. So the slam windows open at input
+lines 934, 1791 and 2648.
+
+**The periodic input does not finish the fight, and the reason is not the input.**
+`inputs/lrz1-miniboss-fight-v8.txt` is v7's prefix through the end of the first cycle plus five
+repeats of the 857-line cycle that landed two hits (6076 frames). The run dies at capture frame
+2828 with `hits` still at 3.
+
+**What kills it: a hit zeroes the ring count, so `--rings` buys exactly one hit.** Measured on the
+`--rings 999` run: rings go **999 to 0** on the first hit taken at frame 523, and the player picks
+up only one to four of the scattered ones before the next. Every later hit repeats it -- 1789,
+1992, 2241, 2646 -- and the hit at 2828 lands on zero rings and kills. This is `Touch_ChkHurt`'s
+ordinary ring scatter, not a Lava Reef rule, and it means **the ninth handover's `--rings` flag
+does not make the fight survivable**: it makes exactly one hit survivable. The fight has to be
+authored so that almost no hit is taken at all.
+
+**And the first hit arrives before the fight does.** Frame 523 is `v 524`, routine 6 -- the hover,
+long before the first slam at v 936. The drill is not the hurt: the two arms are out by then and
+their hands are firing. So the authoring problem for clips `31` and `32` is **dodging the hands'
+shots for the ~5000 frames six hits need**, and the drill's own 96-frame window is the easy part.
+That reframes the ninth handover's conclusion, which blamed the slam window.
+
+**What this means for clip `33`.** The transition clip needs results, results need the boss dead,
+and the boss needs six hits, so `33` is blocked behind `31`/`32` and not behind the act change.
+The act change itself **is** proven in production from the real publication -- `Obj_Results` ->
+`signalActTransition()` -> `setEventsFg5ForActTransition()` -> stage 0 -> stage `$C` -- by
+`TestS3kLrzSeamlessActChangeHeadless`, which drives that chain and nothing else. What is not yet
+proven is the whole chain from a real boss defeat, and that is an honest distinction: no clip, no
+matrix row.
+
+**The suggestion for the next round, from these numbers rather than from a guess.** Kill a hand
+first. Clip `31` needs one killed anyway (`sub_78CF4`, `collision_property 4`), each hand takes
+four hits, and a dead hand is one fewer source of the shots that end every attempt. Author against
+the hands' own firing cadence, measured the same way this cycle was, before attempting the drill's
+six.
+
 ## Handover, 2026-09-18 (eleventh)
 
 **Head `4509d4f25`**, branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. Tree clean;
