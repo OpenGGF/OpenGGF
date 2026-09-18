@@ -1932,3 +1932,68 @@ reader in the Death Egg object set is implemented. What remains:
    filming and is invisible to all 41 of its focused tests. A green focused suite is not
    evidence about frame-to-frame engine state around an object.
 
+
+### 2026-09-18 — The `$5A` rider alternation: a production-loop regression, and the real cause
+
+**The previous session's fix was inert, and is reverted.** `e9b54292b` renewed the engine's
+per-frame object support for the whole ride (`holdRide`) and recorded honestly that re-filming
+produced a byte-identical `state.csv`. A headless production-loop test settles why: the
+alternation is byte-identical with `holdRide` present and with both of its call sites ablated,
+frame for frame over sixteen frames. It changed nothing because it is not the mechanism —
+support marking is consulted by `finalizeInlinePlayer`, which was never what dropped the rider.
+
+**The regression test.** `TestS3kDezGravityTubeRouteHeadless` drives the act's own
+`DEZ2_Sprites` record 264 tube at `$1A40,$08C0` through `HeadlessTestFixture.stepFrame`, so
+every frame runs real player physics, the object pass and the solid-contact sweep in their
+production order. It asserts the ROM invariant rather than the observed engine behaviour:
+`Player_AnglePos` (sonic3k.asm:18735-18741) opens `btst #Status_OnObj,status(a0) / beq.s
+loc_EC5A` and, on the set branch, writes 0 to both shared angle outputs and returns — **a
+grounded player standing on an object runs no terrain probe at all**, so terrain can never hand
+them `Status_InAir`. Only the tube's own exits (`loc_48FBA` :95273, `loc_49142` :95420) clear
+`Status_OnObj`, and both need the rider already airborne or already out of the span. So a rider
+held inside the span keeps `Status_OnObj` set and `Status_InAir` clear for every frame, and the
+ride angle advances by `moveq #8,d3` (:95300) each frame. Both gravity states are asserted; the
+reverse-gravity one is the state the `$5B` beside it leaves the act in.
+
+Red before the fix, in both tests, with the alternation printed frame by frame:
+
+```
+f1 air=1 onObj=0 x=1A40 y=08D0 angle=08 riding=false
+f2 air=0 onObj=1 x=1A40 y=08D0 angle=00 riding=true
+f3 air=1 onObj=0 x=1A40 y=08D0 angle=00 riding=false
+... 1/0 for all sixteen frames
+```
+
+The stalled `angle=00` is the tell the capture could not show: each cycle is a fresh **mount**,
+which re-seeds the angle from `byte_48F90` for the same `dy`, so the cosine lift is recomputed
+to the same `$10` and `y` is pinned at `$08D0`. "`y` pinned" was never a stuck ride; it was a
+ride restarting from the same table entry every other frame.
+
+**The cause, instrumented rather than argued.** A temporary throwing hook on
+`AbstractPlayableSprite.setAir` named the writer on the first attempt:
+`PlayableSpriteMovement.doAnglePos` → `CollisionSystem.resolveGroundAttachment` →
+`detachFromTerrain`. The engine's `doAnglePos` makes the ROM's `Status_OnObj` early return
+conditional on `hasObjectSupport`, deliberately — "stale latches must fall through to terrain
+walk-off so the player cannot stand in mid-air". `hasObjectSupport` is satisfied by a riding
+state (solid objects), a standing contact, or an **active latch**. The tube is a non-solid
+latch-and-own controller like the CNZ wire cage and barber pole, and it never took the latch,
+so every frame the player physics walked it off terrain into the air and the tube's `loc_48FA4`
+air test (:95262) dropped it on the next object pass.
+
+**The fix is the ROM's own word.** `RideObject_SetRide` (`sub_33C34`, :70172) writes
+`move.w a0,interact(a1)`: the rider's interact word points at the tube for the whole ride. The
+engine models that ownership as `setLatchedSolidObject`, which is exactly what
+`hasActiveLatchedObjectSupport` reads (and what `finalizeInlinePlayer` honours). `setRide` now
+takes the latch and both exits drop it where the ROM clears `Status_OnObj`. Two lines of
+mechanism where seventeen lines of support-marking did nothing.
+
+**Method note, which is the durable part.** The earlier session's honest record — "the fix did
+not fix it, kept for ROM reasons" — was the right call and still left a wrong mechanism in the
+tree. A change that measurably does nothing is not a neutral change: it is a claim about the
+cause that the measurement has already refused. The cheapest instrument available (a hook on
+the setter, run once) named the real writer in one run, after two sessions of reading routines.
+
+89 focused tests green, **Skipped: 0**: `TestS3kDezGravityTubeRouteHeadless` (2),
+`TestS3kDezGravityTubeHeadless` (11), `TestS3kDezGravityObjectsHeadless` (20),
+`TestS3kDezTeleporterHeadless` (10), `TestS3kReverseGravityDezCorridor` (44),
+`TestS3kDezPresentationRewind` (2).

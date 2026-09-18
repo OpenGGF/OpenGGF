@@ -210,7 +210,6 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         if (!player.isOnObject()) {
             return;
         }
-        holdRide(player);
         int amplitude = isWide() ? LIFT_AMPLITUDE_WIDE : LIFT_AMPLITUDE;
         int step = isWide() ? ANGLE_STEP_WIDE : ANGLE_STEP;
         // GetSineCosine returns the cosine in d1 (:3025); muls.w d0,d1 / swap d1 keeps the
@@ -236,6 +235,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
      */
     private void horizontalExit(AbstractPlayableSprite player, RiderState state) {
         player.setOnObject(false);
+        releaseRide(player);
         state.riding = false;
         player.setFlipsRemaining(0);
         player.setFlipSpeed(EXIT_FLIP_SPEED);
@@ -295,6 +295,7 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
             ObjectControlState.none().applyTo(player);
             player.setObjectMappingFrameControl(false);
             player.setOnObject(false);
+            releaseRide(player);
             state.riding = false;
             player.setFlipAngle(1);
             player.setFlipsRemaining(0);
@@ -305,7 +306,6 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         if (!player.isOnObject()) {
             return;
         }
-        holdRide(player);
         int swing = (TrigLookupTable.cosHex(state.angle) * SWING_AMPLITUDE) >> 16;
         NativePositionOps.writeXPosPreserveSubpixel(player, (getX() + swing) & 0xFFFF);
         int frameIndex = (state.angle & 0xFF) / SWING_FRAME_DIVISOR;
@@ -322,18 +322,15 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
     }
 
     /**
-     * The ROM's standing bit stays set for the whole ride, so the engine's per-frame object
-     * support has to be renewed for the whole ride too. Marking it only at the mount let the
-     * engine drop the rider the next frame, which showed up in a capture as nineteen frames of
-     * {@code air} flickering 1/0 beside the {@code $1A40} tube.
+     * The ROM clears {@code Status_OnObj} at both exits ({@code loc_48FBA} :95273 and
+     * {@code loc_49142}'s :95420) and leaves {@code interact(a1)} pointing at the last
+     * support, which the next {@code RideObject_SetRide} overwrites. The engine's latch is
+     * read together with {@code Status_OnObj}, so it is dropped here rather than left stale.
      */
-    private void holdRide(AbstractPlayableSprite player) {
-        ObjectServices objectServices = tryServices();
-        if (objectServices != null && objectServices.objectManager() != null) {
-            objectServices.objectManager().markObjectSupportThisFrame(player);
+    private void releaseRide(AbstractPlayableSprite player) {
+        if (player.getLatchedSolidObjectInstance() == this) {
+            player.setLatchedSolidObject(0, null);
         }
-        player.setOnObject(true);
-        player.setAir(false);
     }
 
     /** {@code sub_33C34} (:70167-70187), the ROM's {@code RideObject_SetRide}. */
@@ -356,6 +353,13 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
         }
         player.setOnObject(true);
         player.setAir(false);
+        // move.w a0,interact(a1) (:70172). The rider's interact word points at the tube for
+        // the whole ride, which is what keeps Player_AnglePos (:18736-18741) out of the
+        // terrain probe: it returns on Status_OnObj before any FindFloor. The engine models
+        // that non-solid ownership as a latch, the same way the CNZ wire cage and barber pole
+        // do; without it the terrain walk-off detaches the rider every frame and the tube
+        // re-mounts it the next one.
+        player.setLatchedSolidObject(spawn.objectId(), this);
     }
 
     /**
@@ -395,6 +399,10 @@ public final class S3kDezGravityTubeObjectInstance extends AbstractObjectInstanc
 
     public boolean isVerticalForTest() {
         return isVertical();
+    }
+
+    public boolean isWideForTest() {
+        return isWide();
     }
 
     @Override
