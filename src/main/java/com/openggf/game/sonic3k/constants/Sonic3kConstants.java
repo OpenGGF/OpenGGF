@@ -1757,6 +1757,14 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_SWINGING_SPIKE_BALL2_ADDR = 0x04367E;
     /** {@code Map_LRZOrbitingSpikeBall} (sonic3k.lst, ROM {@code $43D24}). */
     public static final int MAP_LRZ_ORBITING_SPIKE_BALL_ADDR = 0x043D24;
+    /** {@code Map_LRZFlameThrower} (sonic3k.lst, ROM {@code $4408A}). */
+    public static final int MAP_LRZ_FLAME_THROWER_ADDR = 0x04408A;
+    /**
+     * {@code make_art_tile($090,1,0)}: the flame thrower's tile base (sonic3k.asm:89228). It is
+     * act 2's secondary art, the same base the act 2 sinking rock and door use; named separately
+     * so no owner reads as another's.
+     */
+    public static final int ARTTILE_LRZ2_FLAME_THROWER = 0x0090;
     /**
      * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87910).
      * The same base the act 2 door uses; named separately so neither owner reads as the other's.

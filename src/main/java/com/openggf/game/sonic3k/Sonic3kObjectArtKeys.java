@@ -340,6 +340,18 @@ public final class Sonic3kObjectArtKeys {
      * orbiting ids are act 2 only.
      */
     public static final String LRZ2_ORBITING_SPIKE_BALL = "lrz2_orbiting_spike_ball";
+    /**
+     * {@code Obj_LRZFlameThrower}'s body: {@code Map_LRZFlameThrower} (ROM {@code $4408A}) over
+     * tile {@code $090}, palette 1 ({@code make_art_tile($090,1,0)}, sonic3k.asm:89228-89229).
+     * That base is act 2's secondary art, which is why the thrower is an act 2 object.
+     */
+    public static final String LRZ2_FLAME_THROWER = "lrz2_flame_thrower";
+    /**
+     * The flames it allocates: the same mappings on {@code ArtTile_LRZ2Misc}, palette 1
+     * ({@code make_art_tile(ArtTile_LRZ2Misc,1,0)}, sonic3k.asm:89299, :89408). The parent copies
+     * its own {@code mappings} pointer into the child (:89297) and only the tile base differs.
+     */
+    public static final String LRZ2_FLAME = "lrz2_flame";
     public static final String LRZ2_BUTTON = "lrz2_button";
     /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_DOOR = "lrz_door";

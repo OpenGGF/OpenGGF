@@ -82,13 +82,13 @@ class TestS3kLrzPlacementCensus {
      * (20 / 9) to 1 / 188, and slice 6's {@code $9D} {@code Obj_LRZMiniboss} (1 / 0) took act 1
      * to 0. Slice 7's {@code $2B} {@code Obj_LRZOrbitingSpikeBallHorizontal} (0 / 12) and
      * {@code $2C} {@code Obj_LRZOrbitingSpikeBallVertical} (0 / 40) took act 2 from 188 to
-     * <b>136</b>; the sentence below is kept as it was written for act 1
+     * 136, and {@code $29} {@code Obj_LRZFlameThrower} (0 / 52) to <b>84</b>; the sentence below
+     * is kept as it was written for act 1
      * to <b>0</b>: every act 1 placement now builds a concrete class.
      */
     private static final Map<String, String> PLACEHOLDER_BASELINE = Map.of(
             "LRZ1", "",
             "LRZ2", "25:80=1,81=1,82=1;"
-                    + "29:08=1,10=1,13=15,14=4,15=2,16=6,18=1,93=4,94=4,95=2,96=12;"
                     + "2D:00=8,01=9,02=12,04=3,05=4,06=1,10=10,12=2,13=1,15=2;32:00=7,01=11;"
                     + "37:50=2,60=5,70=2;AE:00=1;B3:2D=1",
             "LRZ3", "9E:00=1;AD:00=1,01=1,02=2,04=3");
@@ -119,7 +119,7 @@ class TestS3kLrzPlacementCensus {
 
     @Test
     void act2PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 136);
+        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 84);
     }
 
     @Test

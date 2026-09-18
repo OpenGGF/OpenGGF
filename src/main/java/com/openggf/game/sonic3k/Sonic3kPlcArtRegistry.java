@@ -2731,6 +2731,23 @@ public final class Sonic3kPlcArtRegistry {
                     1,
                     null
             ));
+            // make_art_tile($090,1,0) for the body (sonic3k.asm:89228-89229) and
+            // make_art_tile(ArtTile_LRZ2Misc,1,0) for the flames the parent allocates (:89299,
+            // :89408). Both read Map_LRZFlameThrower; only the tile base differs.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_FLAME_THROWER,
+                    Sonic3kConstants.MAP_LRZ_FLAME_THROWER_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_FLAME_THROWER,
+                    1,
+                    null
+            ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_FLAME,
+                    Sonic3kConstants.MAP_LRZ_FLAME_THROWER_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
         }
 
         if (actIndex == 0) {

@@ -517,6 +517,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   act change carried across with everything else, is replaced by Act 2's own once the results are
   over, so the player walks on instead of standing against an invisible wall where the arena used
   to end.
+  Act 2's flame throwers are in, 52 of them: each one is a solid block that fires a jet of flame
+  for two seconds, pauses for a length its own placement chooses, and fires again, sweeping the jet
+  through a narrow fan as it goes. They come in the wall-mounted and floor-mounted kinds, either
+  can be mirrored, and the flames themselves hurt, drift without slowing, and burn out.
 
 - **Gameplay capture tool:** a capture can now declare the ring count its route carried in
   (`--rings`). A boss filmed from a positioned start otherwise begins on no rings, where the

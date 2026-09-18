@@ -1558,6 +1558,12 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzOrbitingSpikeBallObjectInstance(
                         spawn, LrzOrbitingSpikeBallObjectInstance.Axis.VERTICAL));
+        // Id $29 is Obj_LRZFlameThrower in the SKL set (sonic3k.asm:89227); the S3KL set spends
+        // it on Obj_AIZDisappearingFloor, which is the name the id constant carries. Its own
+        // subtype bit 7 picks the variant, exactly as bpl.s loc_43DC4 does (:89235).
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_DISAPPEARING_FLOOR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzFlameThrowerObjectInstance(spawn));
         // Id $22 is Obj_LRZSpikeBall in the SKL set (sonic3k.asm:88838); the S3KL set spends it
         // on Obj_LBZAlarm.
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_ALARM,
