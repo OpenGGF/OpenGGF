@@ -403,6 +403,10 @@ public final class Sonic3kObjectArtKeys {
     public static final String SSZ_ROTATING_PLATFORM = "ssz_rotating_platform";
     /** Obj_SSZRetractingSpring: make_art_tile(ArtTile_SSZMisc+$CE,0,0). */
     public static final String SSZ_RETRACTING_SPRING = "ssz_retracting_spring";
+    /** {@code ArtKosM_SSZGHZMisc} over {@code Map_SSZGHZMisc}: the GHZ boss ball and chain. */
+    public static final String SSZ_GHZ_BOSS_MISC = "ssz_ghz_boss_misc";
+    /** {@code ArtKosM_MechaSonicHead} over {@code Map_MechaSonicHead}. */
+    public static final String MECHA_SONIC_HEAD = "mecha_sonic_head";
     /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */
     public static final String SSZ_FLOATING_PLATFORM = "ssz_floating_platform";
     /**

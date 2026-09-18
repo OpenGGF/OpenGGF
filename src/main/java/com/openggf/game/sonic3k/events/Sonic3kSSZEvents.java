@@ -1,6 +1,9 @@
 package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
+import com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance;
+import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.camera.DeadzoneGeometry;
 import com.openggf.game.sonic3k.objects.SszArrivalControllerObjectInstance;
 import com.openggf.game.sonic3k.objects.SszCloudOscillatorObjectInstance;
 import com.openggf.game.sonic3k.objects.SszRoamingCloudObjectInstance;
@@ -49,6 +52,8 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             {0x13C0, 0x0660}, {0x7FFF, 0x03E0}
     };
 
+    /** The ROM's own screen width, which the camera-X gates below are written against. */
+    private static final int NATIVE_SCREEN_WIDTH = 320;
     /** {@code loc_57686}: the GHZ recreation band, {@code [$440,$880)} in Player 1's Y. */
     static final int GHZ_BAND_MIN_Y = 0x440;
     static final int GHZ_BAND_MAX_Y = 0x880;
@@ -57,6 +62,8 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
     static final int GHZ_LOCK_PLAYER_Y = 0x7C0;
     static final int GHZ_LOCK_CAMERA_X = 0x160;
     static final int GHZ_ARENA_Y = 0x7C0;
+    /** {@code move.w #$7F00,(Events_bg+$00).w}: fighting, and the lock byte cleared with it. */
+    static final int GHZ_BOSS_FIGHTING_WORD = 0x7F00;
     /** {@code loc_5770C}: the MTZ recreation, below {@code $440}. */
     static final int MTZ_PRE_LOCK_MAX_X = 0x1660;
     static final int MTZ_LOCK_PLAYER_Y = 0x420;
@@ -232,7 +239,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
         if (player == null) {
             return;
         }
-        int cameraX = camera.getX() & 0xFFFF;
+        int cameraX = nativeFramedCameraX(camera);
         int playerY = player.getCentreY() & 0xFFFF;
         if (cameraX >= FINAL_ARENA_CAMERA_X && playerY < FINAL_ARENA_PLAYER_Y) {
             camera.setMinX((short) FINAL_ARENA_CAMERA_X);
@@ -257,6 +264,22 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             return;
         }
         mtzBand(state, camera, player, playerY);
+    }
+
+    /**
+     * {@code sub_575EA} tests {@code Camera_X_pos} against three literals — {@code $19A0} for the
+     * Mecha Sonic arena, {@code $160} for Green Hill and {@code $1660} for Metropolis — and two of
+     * the three are equality tests. On the cartridge the camera trails the leader by 160 px, half
+     * of a 320-pixel screen; a wider viewport trails by half of its own width, so the same world
+     * position gives a smaller {@code Camera_X_pos} and the equality can never hold. This reframes
+     * the value the gates read into the ROM's own 320-wide framing and leaves every bounds
+     * <em>write</em> in world coordinates, because moving the arena would move its terrain.
+     * Same treatment, same reason, as {@code HczMinibossInstance.nativeFramedCameraX}.
+     */
+    private int nativeFramedCameraX(Camera camera) {
+        int focusExcess = Math.max(0, DeadzoneGeometry.rightEdge(camera.getWidth())
+                - DeadzoneGeometry.rightEdge(NATIVE_SCREEN_WIDTH));
+        return (camera.getX() + focusExcess) & 0xFFFF;
     }
 
     /** {@code loc_5761C}-{@code loc_57674}: the {@code word_5778A}/{@code word_5779A} bands. */
@@ -307,7 +330,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             camera.setMinX((short) GHZ_PRE_LOCK_MIN_X);
             camera.setMaxX((short) GHZ_PRE_LOCK_MAX_X);
             if (playerY < GHZ_LOCK_PLAYER_Y
-                    || (camera.getX() & 0xFFFF) != GHZ_LOCK_CAMERA_X
+                    || nativeFramedCameraX(camera) != GHZ_LOCK_CAMERA_X
                     || player.getAir()) {
                 return;
             }
@@ -316,7 +339,33 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             camera.setMaxYTarget((short) GHZ_ARENA_Y);
             state.setEventsBgByte(EV_GHZ_LOCK, 0xFF);
         }
-        // loc_576E8: Obj_SSZGHZBoss and Events_bg+$00 = $7F00 are the GHZ boss slice.
+        allocateGhzBoss(state, camera);
+    }
+
+    /**
+     * {@code loc_576E8}. The allocation is a second gate, not part of the lock: the lock only
+     * publishes {@code Camera_target_max_Y_pos = $7C0}, and the camera then eases down to it at
+     * two pixels a frame, so the fight starts when the arena has actually framed itself. The word
+     * write is {@code move.w #$7F00,(Events_bg+$00).w}, which sets the fighting byte and clears
+     * the lock byte beside it in the same instruction — {@code Events_bg+$01} is the low half of
+     * that word, which is why nothing clears it separately.
+     */
+    private void allocateGhzBoss(SszZoneRuntimeState state, Camera camera) {
+        if ((camera.getY() & 0xFFFF) != GHZ_ARENA_Y) {
+            return;
+        }
+        SszGhzBossObjectInstance boss = spawnObject(() -> new SszGhzBossObjectInstance(
+                new ObjectSpawn(
+                        (camera.getX() + SszGhzBossObjectInstance.SPAWN_CAMERA_X_OFFSET) & 0xFFFF,
+                        (camera.getY() + SszGhzBossObjectInstance.SPAWN_CAMERA_Y_OFFSET) & 0xFFFF,
+                        0, 0, 0, false, 0)));
+        if (boss == null) {
+            // jsr (AllocateObject).l / bne.s loc_5770A: a failed allocation writes no flags and
+            // the gate is simply retried on the next frame the camera is still at $7C0.
+            return;
+        }
+        state.setEventsBgByte(EV_EVENT_OWNS_BOUNDS, 0xFF);
+        state.setEventsBgWord(EV_GHZ_BOSS, GHZ_BOSS_FIGHTING_WORD);
     }
 
     /** {@code loc_5770C}-{@code loc_5775C}. */
@@ -336,7 +385,7 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             int minX = state.eventsBgWord(EV_GHZ_BOSS) != 0 ? 0 : GHZ_PRE_LOCK_MIN_X;
             camera.setMinX((short) minX);
             if (playerY < MTZ_LOCK_PLAYER_Y
-                    || (camera.getX() & 0xFFFF) != MTZ_LOCK_CAMERA_X
+                    || nativeFramedCameraX(camera) != MTZ_LOCK_CAMERA_X
                     || player.getAir()) {
                 return;
             }

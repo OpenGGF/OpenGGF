@@ -177,6 +177,13 @@ final class DefaultObjectRewindPolicies {
             // from it and to report back with subq.b #1,routine(a1); the debris captures it as a
             // typed ObjectRefId sidecar. TestS3kSszTraversalPlatforms drives the whole collapse.
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.SszCollapsingColumnDebrisObjectInstance", "column"), RewindFieldPolicy.CAPTURED),
+            // Obj_SSZGHZBoss's ball and chain is a CreateChild9_TreeList: each link's parent3 is
+            // the link before it, not the ship, and the ship keeps the emitter and the whole list.
+            // All three are captured as typed ObjectRefId sidecars and relinked on restore;
+            // TestS3kSszGhzArenaHeadless drives the drop, the swing and the defeat across it.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossChainLinkChild", "chainParent"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance", "shield"), RewindFieldPolicy.CAPTURED),
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             // Boss childComponents is an identity-bearing live graph. The compact collection
             // codec retains its exact managed children and their roles for restore/relink.

@@ -36,8 +36,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   levels its arm and fires a laser once it has them lined up; and the one that lets four
   animals go before it takes off and joins the others — and which, until it takes off, is the
   harmless invisible marker the cartridge makes it rather than something that hurts a player
-  falling past, as the distant sky-crossing one is too. The recreated Green Hill and
-  Metropolis arenas, their bosses and the Death Egg launch are still to come.
+  falling past, as the distant sky-crossing one is too. The first of the act's rebuilt boss
+  fights is in: walk into the lower arena and the camera closes behind you, the Green Hill ship
+  drops out of the sky with Mecha Sonic's head on it, runs the arena and pays out a six-piece
+  ball and chain that sweeps the floor and turns the ship around at each end. Eight hits send it
+  away and open the way on. The Metropolis arena, its boss and the Death Egg launch are still to
+  come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,

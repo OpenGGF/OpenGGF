@@ -1356,3 +1356,88 @@ fix — the pre-fix hitbox was killing players the cartridge would not have.
 **Owed by slice 4:** a `$34:$02`/`$34:$04` restart case (only `$34:$03` is driven), a wide-viewport
 row, and a capture of a star post being physically touched, which needs a route rather than a
 declared setup.
+
+### 2026-09-18 — slice 5: the Green Hill recreation
+
+`SszGhzBossObjectInstance` plus three child classes, the `loc_576E8` allocation in
+`Sonic3kSSZEvents`, and `TestS3kSszGhzArenaHeadless` (5 cases).
+
+**The arena is two gates, not one, and the second one is a camera.** `loc_57686` locks when Player
+1 is at or below `$7C0` with `Camera_X_pos == $160` and not in the air, and all it publishes is
+`Camera_max_X = $160` and `Camera_min_Y = Camera_target_max_Y = $7C0`. `loc_576E8` then waits for
+`Camera_Y_pos == $7C0` **exactly** — and because only the *target* moved, the boundary eases down
+from `$1000` at two pixels a frame, so about 1050 frames pass between the lock and the boss. The
+first version of the test gave that 240 frames and read the failure as a missing allocation.
+
+**A width bug the wide-viewport row found.** Two of `sub_575EA`'s three camera-X gates are equality
+tests against literals, and `Camera_X_pos` is the leader's X minus half the screen. At 800 the same
+world position gives `$70`, not `$160`, so the Green Hill lock could never fire and the arena was
+unreachable on every wide viewport. `Sonic3kSSZEvents.nativeFramedCameraX` reframes the value the
+gates read into the ROM's 320-wide framing — the same treatment, for the same reason, as
+`HczMinibossInstance.nativeFramedCameraX` — and leaves every bounds *write* in world coordinates,
+because moving the arena would move its terrain. Both viewport rows lock and spawn now.
+
+**A word that is two flags.** `move.w #$7F00,(Events_bg+$00).w` writes the fighting byte and clears
+the lock byte beside it in one instruction: `Events_bg+$01` is the low half of that word, which is
+why nothing ever clears it separately. The first version of the test polled `eventsBgWord(0)` for
+the spawn and saw `$00FF` — the lock byte alone — so it "detected" a spawn that had not happened.
+The test reads the byte now, and says why in a comment.
+
+**`SetUp_ObjAttributes` is the routine counter.** It ends `addq.b #2,routine(a0)`, which is the
+only thing that advances `routine` through `off_7A2B4`; the routine bodies never write it
+themselves except where they jump the sequence. Reading the table without that fact makes routine 0
+look like an infinite loop.
+
+**Persistence, found by a test that stalled.** The escape stopped 104 frames in and never wrote its
+flag: the ship leaves the locked arena's right edge and the engine's out-of-range unload stops
+updating it. The ROM has no `Obj_WaitOffscreen` anywhere in `loc_7A29C`'s chain, so the object is
+simply never unloaded; the boss and all three child classes now answer `isPersistent()` true. The
+diagnosis was a measurement — the escape's own `$2E` frozen at 15 with the ship at X `$380` — not a
+guess.
+
+**The defeat is three routines deep and none of them is the killing hit.** `sub_7A5A0`'s zero
+branch installs `Wait_FadeToLevelMusic` with `$34 = loc_7A3CE` and leaves `$2E` holding whatever
+the last routine left, so the ship hangs where it died; `loc_85674` then arms `(2*60)-1`, allocates
+`Obj_Song_Fade_ToLevelMusic` and hands to `loc_7A3CE`, which turns the ship right at `x_vel $400`;
+only `loc_7A3F8`, at the end of those 119 frames, writes `st (_unkFA89).w` (which deletes the head)
+and `st (Events_bg+$00).w` (which `sub_575EA` reads as beaten and the `$79:$AA` pad reads as its
+release), restores palette line 2 and reloads PLC `$32`. The test asserts the flag is still
+positive immediately after the eighth hit, which is the half that would otherwise be invisible.
+
+**The chain is a tree, not a list.** `CreateChild9_TreeList` sets each link's `parent3` to the link
+before it and only the first link's to the ship; `$44` is the ship for all six. The links pay out
+at two pixels a frame for `word_7A642`'s per-subtype counts, and the last one to finish — subtype
+`$A`, the ball — is what sets the ship's `$38` bit 2. The root then owns the angle: `$3C` steps by
+`$3A` and reverses whenever `($3C - $40)` is below `$80` unsigned, a pendulum between `$40` and
+`$BF` the long way round through zero, and at the end of the sweep that lies in the ship's
+direction of travel it sets bit 3, which is what turns the ship around. Which end that is comes
+from `sls`'s `$3C <= $40` answer combined with the ship's X-flip through a `not.b`.
+
+**Rewind.** Four cross-object SST links that no spawn can rebuild — each link's `parent3`, the
+ship's list, its emitter and the head's parent — so all four classes capture typed `ObjectRefId`
+sidecars and relink on restore, with `DefaultObjectRewindPolicies` entries and the architecture
+guard's override baseline triaged the same way slice 3's debris was. The spot is taken mid-swing
+with all six links out; nulling the links' `chainParent` restore fails it on five of the six.
+
+**Art.** `ArtKosM_SSZGHZMisc` (`$17EDB4`) over `Map_SSZGHZMisc` (`$186E7C`) on palette line 1 —
+`ObjDat3_7A660` and `_7A66C` carry a `FixBugs` comment calling that line wrong and the shipped ROM
+uses it — plus `ArtKosM_MechaSonicHead` (`$17C6E0`) over `Map_MechaSonicHead` (`$681FC`). Both are
+registered in `addSszEntries`: the engine has no runtime decompression queue for object art, so the
+ROM's `Load_PLC $7B` is served by the zone's art plan. `Pal_SSZGHZMisc` is `$07D850`.
+
+**Tests.** `TestS3kSszGhzArenaHeadless` 5 (two viewport rows plus the routine walk, the defeat and
+the rewind spot). Broken on purpose three times, each caught: suppressing `dropChain()`
+("dropped the chain when Camera_X + $A0 reached the ship"), suppressing the beaten flag
+("st (Events_bg+$00).w after the escape") and nulling the chain link restore (five links'
+compact state differing). The four mandatory S3K classes with the SSZ, HPZ and DDZ suites and the
+rewind harness: 1520 tests, 0 failures, 0 skips. `-Pguards`: 669, 0 failures, 0 skips, after two
+baseline moves the guards exist to force (the four `ObjectRefId` policy entries and the eight
+override rows).
+
+**Not delivered by slice 5, and owed.** `sub_7A5A0`'s hit flash writes three specific
+`Normal_palette` entries from `word_7A628` rather than a whole line; this uses the shared boss
+flasher instead, and the exact three-colour flash is unported. The `$79:$AA` gated pad's rise after
+the defeat is implemented but not driven end to end in a test. No capture yet. No native row
+comparison for the fight: the `hpz` fixture's Green Hill arena window (camera `$160,$7C0`, 1142
+rows) is the obvious next evidence and nothing here is compared against it, so "native behaviour
+matched" is not claimed for any of these rows.

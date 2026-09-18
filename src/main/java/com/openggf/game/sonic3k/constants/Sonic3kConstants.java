@@ -2060,6 +2060,17 @@ public class Sonic3kConstants {
     /** {@code byte_468DC}: the retracting spring's 36-byte {@code sub_1DD0E} height map. */
     public static final int SSZ_RETRACTING_SPRING_HEIGHT_TABLE_ADDR = 0x0468DC;
 
+    /** {@code ArtKosM_SSZGHZMisc} ($17EDB4): the Green Hill recreation's ball and chain. */
+    public static final int ART_KOSM_SSZ_GHZ_MISC_ADDR = 0x17EDB4;
+    /** {@code Map_SSZGHZMisc} ($186E7C). */
+    public static final int MAP_SSZ_GHZ_MISC_ADDR = 0x186E7C;
+    /** {@code Pal_SSZGHZMisc} ($07D850): loaded over palette line 1 by {@code PalLoad_Line1}. */
+    public static final int PAL_SSZ_GHZ_MISC_ADDR = 0x07D850;
+    /** {@code ArtKosM_MechaSonicHead} ($17C6E0), queued into {@code ArtTile_RobotnikShip}. */
+    public static final int ART_KOSM_MECHA_SONIC_HEAD_ADDR = 0x17C6E0;
+    /** {@code Map_MechaSonicHead} ($0681FC). */
+    public static final int MAP_MECHA_SONIC_HEAD_ADDR = 0x0681FC;
+
     /**
      * CNZ Act 1 miniboss PLC id.
      *

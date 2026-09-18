@@ -2707,6 +2707,30 @@ public final class Sonic3kPlcArtRegistry {
                 Sonic3kConstants.ARTTILE_SSZ_MISC + 0xCE,
                 0,
                 null));
+        // Obj_SSZGHZBoss (loc_7A268) queues ArtKosM_SSZGHZMisc into ArtTile_SSZGHZMisc as the
+        // fight starts. ObjDat3_7A660/_7A66C/_7A678 all draw Map_SSZGHZMisc on palette line 1:
+        // the first two carry a FixBugs=0 comment calling that line wrong, and the shipped ROM
+        // uses it, so line 1 is what this registers.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.SSZ_GHZ_BOSS_MISC,
+                Sonic3kConstants.ART_KOSM_SSZ_GHZ_MISC_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_SSZ_GHZ_MISC_ADDR,
+                1,
+                -1
+        ));
+        // Obj_MechaSonicHead queues ArtKosM_MechaSonicHead into ArtTile_RobotnikShip and draws
+        // Map_MechaSonicHead on line 1 (ObjDat_MechaSonicHead).
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.MECHA_SONIC_HEAD,
+                Sonic3kConstants.ART_KOSM_MECHA_SONIC_HEAD_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_MECHA_SONIC_HEAD_ADDR,
+                1,
+                -1
+        ));
     }
 
     /**

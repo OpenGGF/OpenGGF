@@ -58,6 +58,21 @@ class TestRewindArchitectureGuard {
             // per-object round trip in TestEveryObjectRewindRoundTrip.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCollapsingColumnDebrisObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/SszCollapsingColumnDebrisObjectInstance.java#restoreRewindState", 1),
+            // Obj_SSZGHZBoss and its three child shapes. Same triage, four more cross-object SST
+            // links: CreateChild9_TreeList parents each chain link to the link before it rather
+            // than to the ship, the ship keeps that list plus the ChildObjDat_7A69E emitter, and
+            // Child1_MakeMechaHead's head reads the ship every frame through
+            // Refresh_ChildPositionAdjusted. None of them can be rebuilt from the spawn alone, so
+            // each captures its references as typed ObjectRefId sidecars. Restore equality is
+            // covered by TestS3kSszGhzArenaHeadless and the per-object round trip.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossChainLinkChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossChainLinkChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossShieldChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossShieldChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicHeadChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicHeadChild.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboJetFlameChildInstance.java#captureRewindState", 1),
