@@ -111098,3 +111098,32 @@ retired segment a velocity from `Obj_VelocityIndex` (sonic3k.asm:179163-179183) 
 `d0 + 2*subtype`, and `d0` at that branch is whatever the segment's own routine last left in it,
 which the disassembly does not settle. The engine's retired segments therefore stay where they are
 instead of flying off as debris. A native capture of a killed worm would settle it.
+
+## 2026-09-18 - LRZ1: frontier re-measured at the miniboss review head, unchanged
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, commit `51474c172`
+(base develop `035e48a58`). Re-measured because the last quoted numbers were stamped to older
+commits and a measured fact expires at the next commit, not because a fix was expected to move
+this frontier -- the miniboss sits thousands of frames past it.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off -Ptrace-segments \
+  "-Dtest=TestS3kSonicTailsLrzSegmentTraceReplay" \
+  -Ds3k.rom.path=<worktree>/s3k.gen test
+```
+
+| | |
+| --- | --- |
+| First error | frame 208, `tails_y_speed`, expected `0x07BD`, actual `0x0000` -- **unchanged** since the 2026-08-15 entry |
+| Totals | 6835 errors, 0 warnings. 1 test run, 1 failure, **0 skips** |
+| Cross-check | `-Ptraces` gives byte-identical totals and the same first error, so the two profiles are comparable for this class |
+
+**The error count is down from 7703 and that is not attributable to this round.** 7703 was
+measured at the frame-637 fix; between it and `51474c172` the branch landed slice 4's badniks,
+slice 5's dome background and stage machine, and slice 6's miniboss object. The 868-error drop
+belongs to that span as a whole, and no attempt was made to split it. The frontier itself is the
+number that matters and it has not moved: the `tails_y_speed` mismatch at frame 208 is the S3K
+`SolidObjectTop` zero-distance boundary recorded on 2026-08-15, which is still not landed.
+
+No sweep target selected from this measurement; the LRZ campaign's next target is the slice 6
+defeat chain, which this trace does not reach.
