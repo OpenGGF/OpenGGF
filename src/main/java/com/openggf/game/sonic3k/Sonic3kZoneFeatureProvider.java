@@ -17,6 +17,7 @@ import com.openggf.game.render.SpecialRenderEffect;
 import com.openggf.game.render.SpecialRenderEffectRegistry;
 import com.openggf.game.sonic3k.features.AizBattleshipRenderFeature;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
+import com.openggf.game.sonic3k.scroll.SwScrlSsz;
 import com.openggf.game.sonic3k.features.AizTransitionRenderFeature;
 import com.openggf.game.sonic3k.render.HczBgHighPriorityForegroundOverlayEffect;
 import com.openggf.game.sonic3k.render.HczWallChaseBgOverlayEffect;
@@ -195,7 +196,22 @@ public class Sonic3kZoneFeatureProvider implements com.openggf.game.internal.Bac
                 || zoneId == Sonic3kZoneIds.ZONE_ICZ
                 || isHcz2BackgroundPlaneWindowActive(zoneId)
                 || isCnzBossBackgroundWindowActive(zoneId)
-                || isSozEventBackgroundWindowActive(zoneId);
+                || isSozEventBackgroundWindowActive(zoneId)
+                || isSszCloudBackgroundWindowActive(zoneId);
+    }
+
+    /**
+     * Sky Sanctuary act 1's cloud background is the same shape as MGZ state 8 and the ICZ1
+     * opening: {@code loc_5786A}, {@code loc_57946} and {@code loc_5799A} refresh the plane from a
+     * literal {@code move.w #$1C00,d1} instead of {@code Camera_X_pos_BG_copy}, which
+     * {@code sub_57A60} never writes. The wrap model has to be on for
+     * {@code SwScrlSsz.getBgCameraX()} to be able to relocate the 512-pixel window onto layout
+     * columns 56-59, where the cloud chunks live. Plain mode is excluded: it is camera-derived on
+     * the cartridge too.
+     */
+    private boolean isSszCloudBackgroundWindowActive(int zoneId) {
+        return zoneId == Sonic3kZoneIds.ZONE_SSZ && GameServices.hasRuntime()
+                && SwScrlSsz.cloudWindowActive();
     }
 
     @Override public long backgroundDescriptorRevision() {

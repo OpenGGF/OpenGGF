@@ -738,13 +738,24 @@ window is the sky chunk `$02` or blank `$00`. The engine derives its columns fro
 43-55 are entirely chunk `$02` — so it draws the right pixels from the wrong columns, and the whole
 ascent from about `Camera_Y $E80` down to `Camera_max_Y_pos $BC0` is flat when it should be cloud.
 
-So s3k-known-bugs #41 is **not** closed: it is rewritten as the wrong-column defect, with the fix
-shape (pin the cloud plane's layout X to `$1C00`; leave plain mode camera-derived, where
-`Reset_TileOffsetPositionEff` really does load `Camera_X_pos_BG_copy`). `TestS3kSszBackgroundLayout`
-gained a case pinning the four-column window a fix has to target. The exact renderer site that picks
-BG columns is not yet identified, so no fix is attempted in this entry. A second, independent
-question is also still open: whether plain mode below `Camera_Y $800` renders the separate temple
-cluster at columns ~9-52, rows 4-17 — no capture has had a camera there either.
+**Fixed.** The renderer site is `LevelManager.applyBackgroundTilemapWindowSelection`, which takes
+its window base from `ParallaxManager.getBgCameraX()` — i.e. from the active scroll handler. `SwScrlSsz`
+returned the `Integer.MIN_VALUE` "no override", so the window stayed at base 0. It now returns
+`$1C00` while the cloud mode is active (both `BG_ENTERING_CLOUDS` and `BG_CLOUDS`, because
+`loc_57946` loads the literal too, not just `loc_5799A`) and reports a 512-pixel period there; and
+`Sonic3kZoneFeatureProvider.bgWrapsHorizontally()` gained `isSszCloudBackgroundWindowActive`, which
+the branch requires before it will relocate the window at all. This is the mechanism that class's
+own Javadoc already describes for `SwScrlMgz` state 8, and it names ICZ1's `d1 = $1880` as the other
+zone that pins its plane this way — SSZ's `$1C00` is the third. Plain mode keeps `MIN_VALUE`: there
+the ROM is camera-derived too (`Reset_TileOffsetPositionEff`).
+
+The red test was seen red on the real defect — `expected: <7168> but was: <-2147483648>` — and the
+first attempt was still red because it only matched `BG_CLOUDS`; the entering routine draws with the
+same literal, which is what the ROM says and what the second attempt models.
+
+s3k-known-bugs #41 is now narrowed to what genuinely remains: whether plain mode below wrapped
+`Camera_Y $800` reaches the separate sanctuary structures the layout holds at columns ~9-52, rows
+4-17. No capture has had a camera there, and it may well be correct already.
 
 **Method note.** The first version of this entry closed #41 outright as "correct behaviour plus a
 missing observation". That was wrong, and it was wrong in the direction that retires a defect. The
@@ -837,7 +848,17 @@ unchanged and the launch case could not see the change. A case was added for exa
 before the pad's init (so `loc_4556A` skips the sink and it is solid from the first frame) and
 asserts `$2A0` of lift, not `$AA0`.
 
-**Media inspected, and what is still owed.** No new capture was taken for this entry. The evidence
+**Media.** `raw-06-ssz1-cloud-window-after` (Sonic, 420 neutral frames from a cold `$A00` load, 320
+px), cut to `05b-ssz-cloud-band-after.mp4`, with slice 2's `raw-04-ssz1-sky-320` — the same cold
+load at the same width, before the fix — as `05a-ssz-cloud-band-before.mp4` and the labelled
+`05-ssz-cloud-band-before-after.mp4`. Frames inspected: 250 and 400 (the layered cloud band fills
+the plane, and the `$79` arrival pad draws as a pad where slice 2's capture had the magenta
+placeholder box), 60 and 120 (the white column is `Obj_TeleporterBeamExpand` drawn over the cloud
+band, not a wrap seam — checked precisely because it looked like one). The honest limit: `raw-04` is
+the campaign's slice-2 capture, so it is "before" for the background *and* for the pad, not a
+build with only the scroll override disabled.
+
+**Earlier media, and what is still owed.** The evidence
 for carry-over (ii) is `~/Videos/OGGF/ssz-bring-up/raw-04-ssz1-sky-320/frames`, re-read frame by
 frame against `state.csv`: frame 160 (Player 1 rolling at `(256,3097)`, one red ball on screen —
 cutscene Knuckles at priority `$80` covering the player's own ball), frame 180 (`(256,3085)`, the

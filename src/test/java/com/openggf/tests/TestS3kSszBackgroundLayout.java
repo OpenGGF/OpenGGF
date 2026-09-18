@@ -59,6 +59,11 @@ class TestS3kSszBackgroundLayout {
     private static final int CLOUD_WINDOW_FIRST_COLUMN = 56;
     /** {@code moveq #$20,d6}: 32 cells is four 128-pixel chunks. */
     private static final int CLOUD_WINDOW_COLUMNS = 4;
+    /** The literal {@code d1} the three cloud-path draw calls load. */
+    private static final int CLOUD_WINDOW_LAYOUT_X = 0x1C00;
+    /** {@code loc_57960}: wrapped {@code Camera_Y} in {@code [$800,$F00)} is cloud mode. */
+    private static final int CLOUD_BAND_LOW = 0x800;
+    private static final int CLOUD_BAND_HIGH = 0xF00;
 
     @AfterEach
     void reset() {
@@ -167,6 +172,35 @@ class TestS3kSszBackgroundLayout {
     }
 
     /**
+     * s3k-known-bugs #41. Cloud mode must source the background plane from the fixed
+     * {@code $1C00} window, exactly as {@code loc_5786A}, {@code loc_57946} and {@code loc_5799A}
+     * do with their literal {@code move.w #$1C00,d1} (and {@code loc_5799A}'s
+     * {@code moveq #$20,d6}, the full 512-pixel plane width). The arrival rise carries the camera
+     * out of the plain framing and into the cloud band, so a cold load reaches the mode on its
+     * own; the handler must then report the window origin rather than leaving the tilemap window
+     * at the camera-derived default, which lands on columns 0-3 — all sky at these rows.
+     *
+     * <p>This is the assertion the earlier "flat sky is correct" reading missed: the two modes
+     * index the layout by different rules, so the arrival's row selection says nothing about the
+     * columns the cloud path reads.
+     */
+    @Test
+    void cloudModeSourcesThePlaneFromTheFixedWindowAndNotTheCamera() {
+        HeadlessTestFixture fixture = boot(320);
+        var parallax = GameServices.parallax();
+        boolean reachedCloudBand = false;
+        for (int frame = 0; frame < 400 && !reachedCloudBand; frame++) {
+            fixture.stepIdleFrames(1);
+            int wrappedCameraY = GameServices.camera().getY() & (Y_WRAP - 1);
+            reachedCloudBand = wrappedCameraY >= CLOUD_BAND_LOW && wrappedCameraY < CLOUD_BAND_HIGH;
+        }
+        assertTrue(reachedCloudBand,
+                "the arrival rise carries the camera into the cloud band [$800,$F00)");
+        assertEquals(CLOUD_WINDOW_LAYOUT_X, parallax.getBgCameraX(),
+                "cloud mode pins the background plane's layout X to $1C00 (loc_5799A)");
+    }
+
+    /**
      * The engine loads the ROM's background rows. This is the case that could have disagreed: if
      * the layer were empty, truncated, or offset, flat sky would be an engine fault instead.
      */
@@ -191,7 +225,7 @@ class TestS3kSszBackgroundLayout {
         return ids;
     }
 
-    private static void boot(int width) {
+    private static HeadlessTestFixture boot(int width) {
         var config = SonicConfigurationService.getInstance();
         config.clearSessionOverrides();
         config.setSessionOverride(SonicConfiguration.MAIN_CHARACTER_CODE, "sonic");
@@ -204,10 +238,11 @@ class TestS3kSszBackgroundLayout {
         CrossGameFeatureProvider.getInstance().resetState();
         SessionManager.clear();
         TestEnvironment.activeGameplayMode();
-        HeadlessTestFixture.builder()
+        HeadlessTestFixture fixture = HeadlessTestFixture.builder()
                 .withZoneAndAct(Sonic3kZoneIds.ZONE_SSZ, 0)
                 .withFreshLevelStartLifecycle()
-                .build()
-                .stepIdleFrames(2);
+                .build();
+        fixture.stepIdleFrames(2);
+        return fixture;
     }
 }

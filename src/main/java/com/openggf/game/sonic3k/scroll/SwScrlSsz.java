@@ -111,6 +111,10 @@ public class SwScrlSsz extends SwScrlS3kDefault {
     private final ScrollValueTable hScrollTable = ScrollValueTable.ofLength(SCROLL_WORD_COUNT);
 
     private int currentBgPeriodWidth = 512;
+    /** The VDP plane B width the cloud path fills whole ({@code moveq #$20,d6}). */
+    private static final int VDP_PLANE_WIDTH_PX = 512;
+    /** {@code move.w #$1C00,d1}: background layout column 56, four chunks wide. */
+    private static final int CLOUD_WINDOW_LAYOUT_X = 0x1C00;
     /** Whether the frame this handler last advanced rendered the cloud bands. */
     private boolean lastFrameUsedCloudBands;
 
@@ -344,7 +348,52 @@ public class SwScrlSsz extends SwScrlS3kDefault {
 
     @Override
     public int getBgPeriodWidth() {
-        return currentBgPeriodWidth;
+        // Cloud mode fills the whole 512-pixel plane from four chunks (loc_5799A's moveq #$20,d6)
+        // and moves it only with the HScroll bands, so its period is the plane, not the fan width.
+        return cloudWindowActive() ? VDP_PLANE_WIDTH_PX : currentBgPeriodWidth;
+    }
+
+    /**
+     * {@code loc_5786A}, {@code loc_57946} and {@code loc_5799A} each draw the cloud-mode plane
+     * with a literal {@code move.w #$1C00,d1} — a fixed background-layout X, not a camera-derived
+     * one. {@code sub_57A60} never writes {@code Camera_X_pos_BG_copy} at all, so that word is
+     * stale throughout cloud mode and every pixel of horizontal motion comes from the
+     * {@code HScroll_table} fan it builds instead.
+     *
+     * <p>{@code $1C00 >> 7} is background layout column 56, and {@code loc_5799A}'s
+     * {@code moveq #$20,d6} is 32 cells — four 128-pixel chunks, exactly the 512-pixel plane
+     * width. So the cloud band the player climbs past is layout columns 56-59, which is where the
+     * ROM puts it: rows 3-7 of those four columns carry the cloud chunks and nothing else does.
+     *
+     * <p>Without this override the tilemap window stays at the camera-derived default, which over
+     * this stretch is layout columns 0-22 — all the flat sky chunk — so the plane rendered as
+     * empty blue for the whole ascent (s3k-known-bugs #41). Plain mode keeps returning
+     * {@code MIN_VALUE}: there the ROM really does use {@code Camera_X_pos_BG_copy}
+     * ({@code Reset_TileOffsetPositionEff}), which is a separate question.
+     *
+     * <p>This is the same mechanism {@code SwScrlMgz} state 8 uses, and the ICZ1 opening
+     * ({@code d1 = $1880}) is the other zone that pins its plane this way.
+     */
+    @Override
+    public int getBgCameraX() {
+        return cloudWindowActive() ? CLOUD_WINDOW_LAYOUT_X : Integer.MIN_VALUE;
+    }
+
+    /**
+     * Whether the background plane is currently sourced from the fixed cloud window. Read by
+     * {@link #getBgCameraX()} and by {@code Sonic3kZoneFeatureProvider.bgWrapsHorizontally()},
+     * which has to agree with it for the window relocation to be applied at all.
+     */
+    public static boolean cloudWindowActive() {
+        SszZoneRuntimeState state = state();
+        if (state == null || state.actIndex() != 0) {
+            return false;
+        }
+        // Both cloud-path routines load #$1C00: loc_57946 (the entering redraw, which still
+        // renders the saved plain framing that frame) and loc_5799A (the steady state). So the
+        // plane source moves to the window on the frame the redraw starts, not a frame later.
+        int routine = state.backgroundRoutine();
+        return routine == BG_ENTERING_CLOUDS || routine == BG_CLOUDS;
     }
 
     private static int viewportWidth() {
