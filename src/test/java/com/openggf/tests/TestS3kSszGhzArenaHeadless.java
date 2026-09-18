@@ -196,6 +196,13 @@ class TestS3kSszGhzArenaHeadless {
             fixture.stepIdleFrames(1);
         }
         assertTrue(boss.routineForTest() >= 4, "the ship is flying before the first hit");
+        // The eight hits below are delivered by calling onPlayerAttack directly, which bypasses
+        // the collision pass, so the box itself is asserted here rather than assumed:
+        // ObjDat_SSZGHZBoss's dc.b $1C,$20,$A,$F is collision_flags $F, category BOSS.
+        assertEquals(0xC0 | 0x0F, boss.getCollisionFlags(),
+                "the ship is hittable while the fight runs");
+        assertEquals(8, boss.getCollisionProperty(),
+                "collision_property is the hit counter the touch response decrements");
         assertEquals(0x7F, state.eventsBgByte(EV_GHZ_BOSS) & 0xFF, "still $7F00's high byte");
 
         var player = fixture.sprite();
@@ -208,6 +215,7 @@ class TestS3kSszGhzArenaHeadless {
             }
         }
         assertEquals(0, boss.hitsRemainingForTest(), "collision_property reached zero");
+        assertEquals(0, boss.getCollisionFlags(), "a defeated ship is no longer hittable");
         assertTrue(state.eventsBgByte(EV_GHZ_BOSS) > 0,
                 "loc_7A5EC writes no flag: the killing hit only starts the escape");
 
