@@ -2094,3 +2094,32 @@ and falls into the shared launcher `loc_49850`: `x_vel = ±$C00` away from the o
 `SolidObjectFull2` binding, a six-piece child sprite with its own mappings and art
 (`Map_DEZGravityPuzzle`, `ArtTile_DEZMisc2+$31`), and a rewind-visible home for the
 `MHZ_pollen_counter` panel bitfield.
+
+### 2026-09-18 — The act 2 route: a cold start that cannot be compared, and a 390-frame frontier
+
+`TestS3kDezColdRoutes` (new) drives Death Egg act 2 on the committed Sonic + Tails run's own
+controller input. The full measurement, both routes and the camera-lock false alarm, is in
+[the frontier log](../../status/trace-frontier-log.md#2026-09-18--death-egg-act-2-has-a-route-frontier-390-frames);
+what belongs here is what it changes about the plan.
+
+1. **A cold `$B01` route is not the right instrument for this movie.** The act 2 entrance is a
+   scripted ride — `x` pinned at `$0140`, `y` moving `$10` a frame with `y_vel` zero, the
+   sidekick parked at `$7F00,$FFF9` — and it *ends* at `$0140,$03AC`, which is exactly the
+   position the engine's own cold act 2 boot starts from. The ROM's act 2 start position is the
+   entrance's terminus. Comparing a cold boot against this movie means implementing the
+   entrance first; until then the route to run is the seeded one.
+2. **The seeded route is the campaign's act 2 instrument.** 390 frames of exact player x, y,
+   camera and rings, from the first frame of free play, pinned as a ratchet in the test. It
+   covers the opening walk left, the drop, the climb back and the run right to `$0363` — real
+   terrain, real camera easing, no seeded state after frame 0.
+3. **The next act 2 target is an object, not a rounding difference.** At the first divergent row
+   the player is airborne and rolling and `y_vel` flips from `$003F` to `$FF89` with no jump
+   available. Something is pushing them up. Identify it before touching physics.
+4. **A camera lock is not a boundary.** `LevelSizes`' DEZ2 row gives minimum camera X `0`, the
+   engine loads it correctly, and the native `$0080` pin is a lock the entrance leaves behind.
+   Seeding it moved the frontier from 39 frames to 390. The two-pixel version of this would have
+   been a plausible, wrong bug report.
+
+The act 1 cold start (`$B00`, `loc_6986` → `Obj_LevelIntro_PlayerRun`) is **not started**: act 1
+has its own intro sequence and the same question applies to it, so it wants the same two-route
+treatment rather than an assumption that a cold start is comparable.

@@ -110847,3 +110847,46 @@ campaign's starting measurement, stamped at `035e48a58`.
 
 The stale `Dez238` identification earlier in this log (2026-08-15, "act 1 = Hidden
 Palace Zone proper") is corrected in place above from `dez23_8/metadata.json`.
+
+## 2026-09-18 — Death Egg act 2 has a route frontier: 390 frames
+
+Commit `040022c3e`, worktree `.worktrees/ai-s3k-dez-bring-up`, branch
+`feature/ai-s3k-dez-bring-up`.
+
+```
+python3 tools/testing/maven_queue.py -Dmse=off \
+  -Ds3k.rom.path=<abs>/.worktrees/ai-s3k-dez-bring-up/s3k.gen \
+  "-Dtest=TestS3kDezColdRoutes" test
+```
+
+`TestS3kDezColdRoutes` drives Death Egg act 2 on the controller input of the committed
+Sonic + Tails complete run (`…/ssz`, `zone_id 11`) and compares player position, camera and
+rings row for row. Two routes, and the difference between them is the finding:
+
+| Route | Frontier | First divergence |
+| --- | --- | --- |
+| Cold `$B01` from the engine's own level start | 0 frames | frame 1 (native row 18670): expected `x=01E8 y=072C cam=00C0,068C rings=123`, actual `x=0140 y=03AC cam=00A0,034C rings=0` |
+| Seeded at the first frame of act 2 free play (native row 19772) | **390 frames** | frame 391 (native row 20163): `player_y` expected `$039E`, actual `$039F`; `x`, camera and rings all exact |
+
+**The cold route's divergence is not a defect.** The movie enters act 2 through the act 1
+handover: `zone_act_state` puts `actual_act` at 1 from row 18670, `apparent_act` follows 582
+frames later, and rows 19509-19548 then carry the player up the entrance at a flat `$10` px a
+frame with `x` pinned at `$0140` and `y_vel` zero — a scripted ride, not physics. It ends with
+the player standing at `$0140,$03AC`, which is **exactly where the engine's own cold act 2 boot
+puts them**. A cold `$B01` start begins at the end of a sequence the movie plays through, so the
+two can only be compared once the entrance is implemented, or from the frame it hands control
+back. That frame is native row 19772 (first non-zero `x_speed` at 19770, first grounded row at
+19772), and it is where the seeded route starts.
+
+**A camera lock nearly read as an engine defect.** The seeded route first stopped at 39 frames
+on `camera_x` `$0080` against `$007E` — the native camera stops dead at `$0080` while the player
+keeps walking left to `$00CA`. `LevelSizes`' DEZ2 row gives a minimum camera X of `0` and the
+engine loads that faithfully, so the pin is a camera lock the entrance sequence leaves behind,
+not a boundary the engine gets wrong. Seeding the lock as declared setup moved the frontier from
+39 to 390 frames. Recorded because the two-pixel version would have been reported as a defect.
+
+The frontier is pinned in the test as a ratchet (`SEEDED_ROUTE_FRONTIER = 390`), so it cannot
+move backwards silently. The next target is the first divergence itself: at native row 20163 the
+player is airborne and rolling, and `y_vel` flips from `$003F` to `$FF89` between rows 20161 and
+20162 — an upward impulse mid-air with no jump available, so an object is most likely giving it.
+Identify that object before treating the pixel as a physics rounding difference.
