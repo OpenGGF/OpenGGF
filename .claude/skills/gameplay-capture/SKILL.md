@@ -39,6 +39,7 @@ Use a task directory outside the repository for captures the user should keep.
 | `--zone <name\|n>` | required | Zone constant name (`aiz`, `fbz`, `ghz`, `ehz`) or number |
 | `--act <n>` | required | One-based act |
 | `--x`, `--y` | level start | Teleport the leader (ROM `x_pos`/`y_pos`, hex `0x`/`$` ok) |
+| `--star-post` | off | Save a checkpoint at `--x/--y` and restart from it, instead of teleporting. Required wherever the act's `ScreenInit` runs a scripted intro that overrides `--x/--y` outright (S3K SSZ act 1) |
 | `--width <px>` | `320` | 320, 352, 400, 528 or 800; height is always 224 |
 | `--main`, `--sidekick` | `sonic`, `none` | Characters; `--sidekick tails` for a team |
 | `--donor off\|s1\|s2` | `off` | Cross-game donation; ROM from configuration unless `--donor-rom` |
@@ -79,6 +80,12 @@ user the MP4 plus one or two stills, with the frame numbers and what they show.
   ROM's (0,$100). Do not use donor captures as start-position or route evidence.
 - Teleporting with `--x/--y` skips plane switchers and level events between the act
   start and that point; priority, water and camera bounds reflect a fresh load.
+- `--x/--y` is not always the leader's start. `SSZ1_ScreenInit` runs a scripted arrival that
+  overrides it and `Obj_57C1E` then pins Player 1 to `Camera_Y + $65`, so a Sky Sanctuary act 1
+  capture aimed at the arena floor drops through it and settles at `($100,$C4C)`. `--star-post`
+  is the flag for that: it saves a checkpoint at the requested position and restarts from it,
+  the way `TestS3kSszGhzArenaHeadless.bootAtCheckpoint` does. Read the tool's own arguments
+  before concluding a zone's collision is broken.
 - One capture per JVM is the supported shape. A second `GameplayCaptureSession` in
   the same process works only because `close()` releases the graphics singleton.
 - The input log is held state per frame; a jump is one frame of `A` then release.
