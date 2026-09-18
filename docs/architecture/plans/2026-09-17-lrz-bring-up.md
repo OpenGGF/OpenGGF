@@ -904,6 +904,15 @@ Three things worth keeping from this:
    is controller input, not gameplay state: nothing physics or aux is read, so it stays inside the
    comparison-only rule, and it is the same shape as the DDZ seeded-route captures.
 
+**Clip 13** `13-lrz1-cold-route-door-opened.mp4` (`raw-21-lrz1-cold-route-v5-full`, frames 340-520
+of a 620-frame full-rate re-capture; the route captures themselves use `--every 4` or `--every 8`,
+which is why the clip needed its own pass). No before/after halves: this one is the cold route
+itself, from the level start with no teleport. Sonic arrives at the shut door at frame 380, turns
+and jumps up-left onto the `$1C` button at frame 400, lands at 430, and is through the doorway at
+frame 460. Frames 385 and 450 were extracted and compared before publishing: in the first the
+sandstone column is down and blocking him, in the second it has risen into the ceiling with only
+its bottom edge showing.
+
 **The open-loop limit, measured.** Replaying the native input is not a trace replay and drifts: the
 engine is 44 px behind native by frame 400, 202 by 663, 582 by 1000 and 1833 by 2200, and dies at
 frame 4659. The first 460 frames track within about 40 px, which covers the rock and the door. Do
