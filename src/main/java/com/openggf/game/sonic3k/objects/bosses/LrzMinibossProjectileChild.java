@@ -78,19 +78,39 @@ final class LrzMinibossProjectileChild extends AbstractObjectInstance
         // loc_78A1C: MoveSprite2 then Sprite_CheckDeleteTouchXY. No gravity.
         xFixed += xVelocity;
         yFixed += yVelocity;
-        var services = tryServices();
-        if (services != null && services.camera() != null) {
-            int cameraX = Short.toUnsignedInt(services.camera().getX());
-            int cameraY = Short.toUnsignedInt(services.camera().getY());
-            int x = getCentreX();
-            int y = getCentreY();
-            if (x < cameraX - 0x80 || x > cameraX + 0x180
-                    || y < cameraY - 0x80 || y > cameraY + 0x140) {
-                ObjectLifetimeOps.expireDynamic(this);
-                return;
-            }
+        if (!spriteCheckDeleteTouchXYKeepsAlive()) {
+            ObjectLifetimeOps.expireDynamic(this);
+            return;
         }
         updateDynamicSpawn(getCentreX(), getCentreY());
+    }
+
+    /**
+     * {@code Sprite_CheckDeleteTouchXY} (sonic3k.asm:179032-179043), literally: the X test is on
+     * the <b>coarse</b> position against {@code Camera_X_pos_coarse_back} with a {@code $280}
+     * window, and the Y test is {@code y_pos - Camera_Y_pos + $80} against {@code $200}. Both are
+     * {@code bhi}, i.e. unsigned and exclusive, so a value exactly on the bound survives.
+     * {@code Camera_X_pos_coarse_back} is refreshed by {@code Load_Sprites} as
+     * {@code (Camera_X_pos - $80) & $FF80} (sonic3k.asm:37545-37553).
+     *
+     * <p>The window is deliberately not symmetric and deliberately coarse: a shot can sit up to
+     * {@code $7F} pixels further left than an eyeballed box would allow, and the Y half reaches
+     * {@code $180} below the camera rather than {@code $140}.
+     */
+    private boolean spriteCheckDeleteTouchXYKeepsAlive() {
+        var services = tryServices();
+        if (services == null || services.camera() == null) {
+            return true;
+        }
+        int cameraX = Short.toUnsignedInt(services.camera().getX());
+        int cameraY = Short.toUnsignedInt(services.camera().getY());
+        int coarseBack = (cameraX - 0x80) & 0xFF80;
+        int xDistance = ((getCentreX() & 0xFF80) - coarseBack) & 0xFFFF;
+        if (xDistance > 0x280) {
+            return false;
+        }
+        int yDistance = (getCentreY() - cameraY + 0x80) & 0xFFFF;
+        return yDistance <= 0x200;
     }
 
     int getCentreX() { return xFixed >> SUBPIXEL_SHIFT; }

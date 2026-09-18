@@ -1943,3 +1943,83 @@ here. A later slice should re-spawn the review before the transition lands.
 
 **Media.** Clips `09`-`28` unchanged; no new clip. `raw-38`/`raw-39` dome captures retained as
 evidence for the foreground-opacity finding.
+
+### 2026-09-18 - The independent review applied: seven shape defects, and ten deliberate breaks
+
+**Items 1 and the chain-predecessor identity re-verified, not taken on trust.** `loc_78628`'s
+`cmp.w y_pos(a0),d0 / blo.w` (sonic3k.asm:160109-160110) and `loc_7878C`'s `cmp.w y_pos(a0),d0 /
+bhi.s` (sonic3k.asm:160220-160222) both match what `17ccb4e72` landed, and
+`CreateChild8_TreeListRepeated`'s `move.w a3,parent3(a1)` with `movea.l a1,a3` at the tail of each
+iteration (sonic3k.asm:177188-177191) confirms `parent3` is the previously created child, which is
+what `8121b3dee` resolves by `(ring, subtype - 2)`.
+
+**The other seven were all real, and all of one kind: the fight had the right endpoints and the
+wrong shape.** Nothing was mis-timed by a whole phase; everything was collapsed, phase-shifted or
+anchored to the wrong object -- which is exactly the class of defect an endpoint assertion cannot
+see, and why every test added here watches a value across frames.
+
+| Item | ROM | What was wrong |
+| --- | --- | --- |
+| 2 hand motion | `loc_7897A` (sonic3k.asm:160422-160446) positions the hand with `MoveSprite_AtAngleLookup` over `AngleLookup_2` anchored on `parent3` = the subtype-`$14` link; `$3C` stays `$80` so `AtAngle_80_BF` at `lo = 0` gives `(0, -$18)` | The hand inherited the shared sync-to-parent, so it rode the drill body and its shots left the drill instead of the arm |
+| 3 child stagger | `sub_78BD6` (sonic3k.asm:160642-160648) parks each link and hand on `Wait_Draw` for the `$2E` `loc_7880A` gave it: `(mirrored ? $10 : 0) + subtype * 2` (sonic3k.asm:160258-160261, 160276-160279) | Absent. Both arms snapped out fully formed on one frame instead of unrolling |
+| 4 raw animation phase | `Animate_RawMultiDelay`'s `addq.w #2,d0` runs *before* the read, on an `anim_frame` `Set_Raw_Animation` cleared (sonic3k.asm:177563-177579), so the first pair played is index 2 and index 0/1 is only `loc_845F2`'s restart target | The walk started at index 0, stretching every script by one pair: `byte_78DF1`'s drop was four frames and 16 px instead of three and 12 |
+| 5 orbiter angle | `loc_788F4`'s out-of-window branch negates `$40` and then *falls through* to the same `move.b d0,$3C(a0)` at `loc_7890C` (sonic3k.asm:160361-160377) | The angle was recomputed after the flip, so it never reached `$6F`/`$91` and the sway was two units short at each end |
+| 6 link offsets | `MoveSprite_CircularSimple` (sonic3k.asm:178424-178441): ROM sine table, `asr.l #4`, anchor read and written as longwords | `Math.sin` and a rounded pixel. The table disagrees with `Math.sin` by up to 1/16 px per joint, and truncating to pixels shortened a ten-joint chain |
+| 7 projectile cull | `Sprite_CheckDeleteTouchXY` (sonic3k.asm:179032-179043): `(x & $FF80) - Camera_X_pos_coarse_back > $280` and `y - Camera_Y_pos + $80 > $200`, both `bhi` | An eyeballed `cameraX + $180` / `cameraY + $140` box, which retires shots the ROM keeps -- by up to `$7F` px in X and `$40` in Y |
+| 8/9 dead state | `collision_flags` `$B5`/`6`, `SolidObjectFull d1=$33 d2=4 d3=0` at `loc_7871A`, `Displace_PlayerOffObject` at `loc_7873A` | The `$B5`/`6` transitions had no reader, the solid pass and the displace were stubs, and the hand rendered a constant frame 6 |
+
+**The hit path, which is what the fight was missing.** `sub_78C14` (sonic3k.asm:160641-160670) is
+gated on `collision_flags(a0)` being *zero*: the shared touch pass zeroes it (stowing the old value
+in `$25`) and decrements `collision_property`, and only then does the object do the sound, the
+`$20`-frame flash and the `$25` restore. `loc_78768` splits on `cmpi.b #6,anim_frame(a0)`, so only
+the first three pairs of `byte_78DF8` keep the boss hittable on the way back down. The boss now
+overrides `getCollisionFlags()` with the ROM byte and `usesBaseHitHandler()` with `false`; the
+base class's unconditional `$C0 | size` had made the drill hittable for its whole cycle.
+
+**`FixBugs = 0`, and this one is visible.** Both flash routines take `addi.w #2*2,d0` where the
+`FixBugs` branch takes `addi.w #2*6,d0` (sonic3k.asm:160659-160664, 160707-160712), so
+`sub_78C98` copies `word_78CB2` from word **2** -- `2, $644, $422, 0, $888, $AAA`, a window
+straddling the boss's own colours and the white flash -- rather than the six white words at word 6.
+The shipped ROM does not flash the miniboss white at all. Modelled as shipped and commented.
+
+**Census fallback.** `loc_78562` creates the 24 children once, in `ROUTINE_INIT`, behind a
+`childrenCreated` latch that a rewind capture carries as true. `afterRewindRestoreSettled()` now
+rebuilds any child the restore did not return, from the same deterministic (ring, subtype) loop.
+
+**Ten deliberate breaks, ten failures, each with the right diagnosis.** Nine breaks were applied
+at once (stagger to zero, animation index to 0, angle recomputed after the flip, `Math.sin` for the
+table, hand synced to parent, the eyeballed cull box, the base-class collision flags, the census
+fallback short-circuited) and produced exactly nine failures, one per test. The tenth --
+`FLASH_WORD_OFFSET_SHIPPED` set to the `FixBugs` value 6 -- needed its own run, because under the
+combined break the flash test failed on the collision-flags break first and never reached its own
+assertion. **A break that another break masks is not evidence.** That is worth more than the
+result: a combined break run proves a test can fail, not that it fails *for its own reason*, and
+the only way to tell is to check that each failure's message is the one that test exists to
+produce.
+
+**Two of the first eight tests failed against correct code, and the reason is a property of these
+objects.** The stagger and the hand tests both sampled the frame on which `Obj_Wait` runs `$34(a0)`
+-- and `$34` for both only *installs* the live routine, so nothing moves until the frame after.
+Objects built as a `(a0)`/`$34(a0)` continuation chain are one frame later than their state flag
+suggests, every time. A third failure was arithmetic in the test (the two rings' start frames
+overlap on six of fourteen distinct frames, not zero), and only the fourth -- the hand sitting at
+`(0,0)` because `syncPositionWithParent()` had been made a no-op without replacing the create
+loop's position copy -- was a defect in the code under test.
+
+**The idle hand is not drawn.** `loc_78946` does no positional work and ends `bra.w sub_78B46`
+with no `Draw_Sprite` after it, so the hand is invisible between volleys and simply reappears
+where the arm's end has reached. Easy to read as a missing draw call and "fix".
+
+**The seamless transition's trigger chain, decoded but not implemented.** `Obj_Results`
+(sonic3k.asm:62621) sets `Events_fg_5` at the tail of its routine 2, but only when
+`Apparent_act == 0` and the zone is neither Angel Island nor Ice Cap. `LRZ1_BackgroundEvent`
+stage 0 (`loc_56BD2`, sonic3k.asm:115274-115289) sees it, clears it, queues
+`LRZ2_128x128_Secondary_Kos`, `LRZ2_16x16_Secondary_Kos`, `ArtKosM_LRZ2_Secondary` at tile `$090`
+and PLC `$30`, and sets `Events_routine_bg = $C`. Stage `$C` (`loc_56CAA`,
+sonic3k.asm:115347-115375) waits on `Kos_modules_left`, then does the act change in one frame.
+`Clear_Switches` (sonic3k.asm:104284-104291) clears **`$20` bytes** from `Level_trigger_array`, and
+the constants file puts `Anim_Counters ds.b $10` immediately after `Level_trigger_array ds.b $10`
+(sonic3k.constants.asm:699-700) -- so the act change wipes the animated-tile phase counters too,
+which is the same cleared-counter state the Verified ROM values row for `loc_282D0` already
+describes for a direct `$901` load. `Sonic3kLevelEventManager`'s existing CNZ1 -> CNZ2 retained
+`Obj_EndSignControl` and results path is the closest precedent in the engine.

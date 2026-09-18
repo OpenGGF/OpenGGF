@@ -475,10 +475,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   uses a shared host with explicit zone plans, input hashes and failed-export
   detection; existing FBZ commands remain compatible.
 - **S3K Lava Reef:** the Act 1 miniboss arrives as an object -- the hovering drill with its
-  descend, swing, drop, slam and rise cycle, its player tracking, and both of its articulated
+  climb, swing, drop, slam and fall-back cycle, its player tracking, and both of its articulated
   arms with their firing hands and shots. Every Act 1 placement in the zone now builds a real
-  class. The fight does not yet end: taking damage, the defeat sequence, the results and the
-  seamless change into Act 2 are still to come.
+  class. The two arms unroll link by link from the bottom of the screen rather than snapping out
+  whole, each hand rides the end of its own arm so its shots leave the arm and not the drill, and
+  the drill's slam is solid to stand on, carries the only hit box in the cycle, and takes damage:
+  six hits, each followed by the palette flicker the shipped ROM actually produces, which is not
+  the white flash its own data was written for. The fight still does not end: the defeat
+  sequence, the results and the seamless change into Act 2 are to come.
 
 - **Plane opacity probe:** a development tool answers, from the decoded ROM layout
   alone, whether the plane behind another can show through at a coordinate. Where a

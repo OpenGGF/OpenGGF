@@ -1,12 +1,19 @@
 package com.openggf.game.sonic3k.objects.bosses;
 
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
+import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
+import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
+import com.openggf.level.objects.ObjectPlayerQuery;
 import com.openggf.level.objects.ObjectSpawn;
+import com.openggf.level.objects.SolidObjectParams;
+import com.openggf.level.objects.SolidObjectProvider;
 import com.openggf.level.objects.SpawnRewindRecreatable;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -34,10 +41,15 @@ import java.util.List;
  * {@code End_of_level_flag} is set, as the post-defeat rotation, and the end boss reuses it at
  * {@code loc_7A100}.
  */
-public final class LrzMinibossInstance extends AbstractBossInstance implements SpawnRewindRecreatable {
+public final class LrzMinibossInstance extends AbstractBossInstance
+        implements SpawnRewindRecreatable, SolidObjectProvider {
 
     /** {@code move.b #6,collision_property(a0)} at {@code loc_78562} (sonic3k.asm:160049). */
     private static final int HIT_COUNT = 6;
+    /** {@code CreateChild8_TreeListRepeated}'s {@code addq.w #2,d2} (sonic3k.asm:177199). */
+    private static final int CHILD_SUBTYPE_STEP = 2;
+    /** {@code ChildObjDat_78D84}'s {@code dc.w $C-1}: twelve children, so the last subtype is $16. */
+    private static final int LAST_CHILD_SUBTYPE = 0x16;
     /** {@code ObjDat_LRZMiniboss}: {@code dc.b $30,$80,1,0} - width, height, frame, collision. */
     private static final int RENDER_WIDTH_PIXELS = 0x30;
     private static final int RENDER_HEIGHT_PIXELS = 0x80;
@@ -106,6 +118,38 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
     private static final int SLAM_MAPPING_FRAME = 5;        // loc_786EA
     private static final int TRACKING_PERIOD_MASK = 0x0F;   // sub_7867C on V_int_run_count+3
     private static final int TRACKING_DEADBAND = 8;         // sub_7867C: cmpi.w #8,d2 / bls
+    /** {@code move.b #$20,$20(a0)} at {@code sub_78C14}: the post-hit flash window. */
+    private static final int HIT_FLASH_FRAMES = 0x20;
+    /** {@code loc_78768}: {@code cmpi.b #6,anim_frame(a0) / bhs} drops the hit box. */
+    private static final int RECOVERY_INVULNERABLE_ANIM_FRAME = 6;
+    /** {@code loc_7871A}: {@code moveq #$33,d1 / moveq #4,d2 / moveq #0,d3}. */
+    private static final int SOLID_HALF_WIDTH = 0x33;
+    private static final int SOLID_AIR_HALF_HEIGHT = 4;
+    private static final int SOLID_GROUND_HALF_HEIGHT = 0;
+
+    /**
+     * {@code word_78CA6}: six {@code Normal_palette_line_2} byte offsets, i.e. colour indices
+     * {@code $06/2}, {@code $08/2}, {@code $10/2}, {@code $18/2}, {@code $1A/2}, {@code $1C/2}.
+     */
+    private static final int FLASH_PALETTE_LINE = 2;
+    private static final int[] FLASH_COLOUR_INDICES = {3, 4, 8, 12, 13, 14};
+    /** {@code word_78CB2}, twelve words; {@code CopyWordData_6} takes a six-word window of it. */
+    private static final int[] FLASH_SOURCE_WORDS = {
+        0x02A, 0x006, 0x002, 0x644, 0x422, 0x000,
+        0x888, 0xAAA, 0xCCC, 0xAAA, 0xCCC, 0xEEE,
+    };
+    /**
+     * {@code FixBugs = 0}. {@code sub_78C14} and {@code sub_78CCA} both take
+     * {@code addi.w #2*2,d0} where the {@code FixBugs} branch takes {@code addi.w #2*6,d0}
+     * (sonic3k.asm:160659-160664, 160707-160712), so the flash half of the alternation reads
+     * {@code word_78CB2} from word <b>2</b> -- {@code 2, $644, $422, 0, $888, $AAA}, a window
+     * straddling the boss's normal colours and the white flash -- rather than the six white
+     * words at word 6. The shipped ROM therefore does not flash white at all, and this is what
+     * a player sees. Modelling the fixed branch would be a gameplay change, not a fix.
+     */
+    private static final int FLASH_WORD_OFFSET_SHIPPED = (2 * 2) / 2;
+    private static final String FLASH_PALETTE_OWNER = "lrz.miniboss.flash";
+    private static final int FLASH_PALETTE_PRIORITY = 200;
     /** {@code word_786A2}: {@code dc.w -$200,$200}, selected by {@code Find_OtherObject}'s d0. */
     private static final int TRACKING_SPEED = 0x200;
     /** {@code Swing_Setup1}: {@code $3E=$C0}, {@code y_vel=$C0}, {@code $40=$10}. */
@@ -125,12 +169,25 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
     private int flags38;
     private int mappingFrame = INITIAL_MAPPING_FRAME;
     private int collisionFlagsByte;
+    /** {@code $25(a0)}: the {@code collision_flags} the touch code stowed when the hit landed. */
+    private int savedCollisionFlags;
+    /** {@code $20(a0)}: the post-hit flash/invulnerability counter. */
+    private int hitInvulnTimer;
+    /**
+     * The word index into {@code word_78CB2} that the last {@code sub_78C98} call copied from,
+     * i.e. {@code d0 / 2}. Readable so a test can hold the {@code FixBugs = 0} selection -- the
+     * alternation between {@code 0} and {@code 2}, never {@code 6} -- without reaching into a
+     * palette.
+     */
+    private int lastFlashWindow = -1;
     private int travelBottomY;
     private int swingMaxVelocity;
     private int swingAcceleration;
     private int[] animation = ANIM_RISE;
-    private int animationIndex;
-    private int animationDelay;
+    /** {@code anim_frame(a0)}: a byte offset into the raw script, stepped by two. */
+    private int animFrame;
+    /** {@code anim_frame_timer(a0)}. */
+    private int animTimer;
     private boolean childrenCreated;
 
     public LrzMinibossInstance(ObjectSpawn spawn) {
@@ -149,6 +206,8 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
         travelBottomY = spawn.y();
         mappingFrame = INITIAL_MAPPING_FRAME;
         collisionFlagsByte = 0;
+        savedCollisionFlags = 0;
+        hitInvulnTimer = 0;
         continuation = CONTINUATION_NONE;
         childrenCreated = false;
     }
@@ -179,7 +238,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
             case ROUTINE_RISE_TO_TOP -> riseToTravelTop(vIntRunCount, player);
             case ROUTINE_SWING -> swing(vIntRunCount, player);
             case ROUTINE_DROP -> drop();
-            case ROUTINE_SLAM -> objWait();
+            case ROUTINE_SLAM -> slam();
             case ROUTINE_RETURN_TO_BOTTOM -> returnToTravelBottom();
             default -> { }
         }
@@ -201,16 +260,56 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
     private void createChildRing(boolean mirrored) {
         // parent3(a1) in CreateChild8_TreeListRepeated is the PREVIOUS child, which is what
         // MoveSprite_CircularSimple anchors each link to, so the ring is a chain, not a fan.
-        for (int subtype = 0; subtype <= 0x16; subtype += 2) {
-            final int childSubtype = subtype;
-            com.openggf.level.objects.boss.AbstractBossChild created;
-            if (childSubtype == 0) {
-                created = spawnChild(() -> new LrzMinibossArmSegmentChild(this, childSubtype, mirrored));
-            } else if (childSubtype == 0x16) {
-                created = spawnChild(() -> new LrzMinibossHandChild(this, childSubtype, mirrored));
-            } else {
-                created = spawnChild(() -> new LrzMinibossOrbiterChild(this, childSubtype, mirrored));
+        for (int subtype = 0; subtype <= LAST_CHILD_SUBTYPE; subtype += CHILD_SUBTYPE_STEP) {
+            var created = createRingChild(subtype, mirrored);
+            if (created != null) {
+                childComponents.add(created);
             }
+        }
+    }
+
+    /** {@code loc_7880A}'s dispatch: {@code 0} segment, {@code $16} hand, anything else a link. */
+    private com.openggf.level.objects.boss.AbstractBossChild createRingChild(int subtype, boolean mirrored) {
+        final int childSubtype = subtype;
+        if (childSubtype == 0) {
+            return spawnChild(() -> new LrzMinibossArmSegmentChild(this, childSubtype, mirrored));
+        }
+        if (childSubtype == LAST_CHILD_SUBTYPE) {
+            return spawnChild(() -> new LrzMinibossHandChild(this, childSubtype, mirrored));
+        }
+        return spawnChild(() -> new LrzMinibossOrbiterChild(this, childSubtype, mirrored));
+    }
+
+    /**
+     * A restore that lands after {@code ROUTINE_INIT} never replays the create loop, because
+     * {@code childrenCreated} was captured true. The rewind framework re-adopts the captured
+     * children, but if any of the 24 did not come back -- a capture taken before every child's
+     * own state was settled, or a ring the pruning pass had already emptied -- the boss would run
+     * the rest of the fight with a short arm and nothing would say so. Rebuild the missing ones
+     * from the same {@code loc_78562} loop, which is deterministic in subtype and ring, rather
+     * than leaving a census the ROM cannot produce.
+     */
+    @Override
+    protected void afterRewindRestoreSettled() {
+        super.afterRewindRestoreSettled();
+        if (!childrenCreated || state.defeated) {
+            return;
+        }
+        restoreMissingRing(false);
+        restoreMissingRing(true);
+    }
+
+    private void restoreMissingRing(boolean mirrored) {
+        for (int subtype = 0; subtype <= LAST_CHILD_SUBTYPE; subtype += CHILD_SUBTYPE_STEP) {
+            final int childSubtype = subtype;
+            boolean present = childComponents.stream()
+                    .anyMatch(child -> child instanceof LrzMinibossRingChild ring
+                            && ring.ringMirrored() == mirrored
+                            && ring.ringSubtype() == childSubtype);
+            if (present) {
+                continue;
+            }
+            var created = createRingChild(childSubtype, mirrored);
             if (created != null) {
                 childComponents.add(created);
             }
@@ -354,6 +453,18 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
      */
     private void returnToTravelBottom() {
         advanceRawAnimation();
+        // loc_78768: cmpi.b #6,anim_frame(a0) / bhs.s loc_78784. The first three pairs of
+        // byte_78DF8 keep the boss hittable; after that sub_78CCA finishes any flash in progress
+        // and collision_flags is cleared outright.
+        if (getAnimFrame() < RECOVERY_INVULNERABLE_ANIM_FRAME) {
+            sub78C14();
+        } else {
+            sub78CCA();
+            collisionFlagsByte = 0;
+        }
+        if (state.defeated) {
+            return;
+        }
         moveSprite2();
         objWait();
         if (Integer.compareUnsigned(travelBottomY, state.y) > 0) {
@@ -423,10 +534,11 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
         state.updatePositionFromFixed();
     }
 
+    /** {@code Set_Raw_Animation} (sonic3k.asm:177541-177545): clears both anim bytes. */
     private void setRawAnimation(int[] script) {
         animation = script;
-        animationIndex = 0;
-        animationDelay = 0;
+        animFrame = 0;
+        animTimer = 0;
     }
 
     /**
@@ -441,30 +553,36 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
      * object's three scripts.
      */
     private void advanceRawAnimation() {
-        if (animationDelay > 0) {
-            animationDelay--;
+        animTimer--;
+        if (animTimer >= 0) {
             return;
         }
-        if (animationIndex >= animation.length) {
-            animationIndex = 0;
-        }
-        int frame = animation[animationIndex];
-        if (frame == 0xFC) {
-            animationIndex = 0;
-            frame = animation[0];
-        }
-        if (frame == 0xF4) {
-            // loc_84600: clear the frame timer, then call $34(a0). loc_845CC clears anim_frame
-            // after the callback returns, so the script restarts from its base if it runs again.
-            animationDelay = 0;
-            animationIndex = 0;
-            runContinuation();
+        // addq.w #2,d0 BEFORE the read, on an anim_frame that Set_Raw_Animation cleared: the
+        // first pair the script plays is index 2, and index 0/1 is only what loc_845F2 emits
+        // when $FC restarts it. Starting at index 0 stretches every script by one pair, which
+        // for byte_78DF1 means a four-frame, 16-pixel drop instead of three frames and 12.
+        animFrame += 2;
+        int value = animFrame < animation.length ? animation[animFrame] : 0xFC;
+        if (value >= 0x80) {
+            animFrame = 0;                          // clr.b anim_frame(a0) at loc_845CC
+            if (value == 0xF4) {
+                // loc_84600: clear the frame timer, then call $34(a0).
+                animTimer = 0;
+                runContinuation();
+                return;
+            }
+            // $FC -> loc_845F2: emit the script's base frame and reload the timer from index 1.
+            mappingFrame = animation[0];
+            animTimer = animation[1];
             return;
         }
-        mappingFrame = frame;
-        animationIndex++;
-        animationDelay = animationIndex < animation.length ? animation[animationIndex] : 0;
-        animationIndex++;
+        mappingFrame = value;
+        animTimer = animFrame + 1 < animation.length ? animation[animFrame + 1] : 0;
+    }
+
+    /** {@code anim_frame(a0)}, which {@code loc_78768} tests against {@code 6}. */
+    int getAnimFrame() {
+        return animFrame;
     }
 
     // ===== children read these =====
@@ -496,6 +614,16 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
 
     int getCollisionFlagsByte() {
         return collisionFlagsByte;
+    }
+
+    /** See {@link #lastFlashWindow}. */
+    int getLastFlashWindow() {
+        return lastFlashWindow;
+    }
+
+    /** {@code $20(a0)}. */
+    int getHitInvulnTimer() {
+        return hitInvulnTimer;
     }
 
     @Override
@@ -542,11 +670,179 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
     }
 
     /**
-     * {@code Displace_PlayerOffObject} at {@code loc_7873A}. Deliberately empty for now: it is
-     * one half of a pair, and its partner -- {@code SolidObjectFull d1=$33 d2=4 d3=0} at
-     * {@code loc_7871A} -- is not implemented either, so no player can be standing on the boss to
-     * displace. Both land together with the hit path; the plan's slice 6 table owns them.
+     * {@code loc_7871A} (sonic3k.asm:160189-160196): the slam frame is solid
+     * ({@code SolidObjectFull d1=$33 d2=4 d3=0}), takes hits through {@code sub_78C14}, and only
+     * then runs {@code Obj_Wait}. The solid pass itself is the engine's, driven by
+     * {@link #getSolidParams()} and gated by {@link #isSolidFor}.
+     */
+    private void slam() {
+        sub78C14();
+        if (state.defeated) {
+            return;
+        }
+        objWait();
+    }
+
+    /**
+     * {@code sub_78C14} (sonic3k.asm:160641-160670). The gate is {@code collision_flags(a0)}:
+     * the shared touch code zeroes it (stowing the old value in {@code $25}) when a hit lands, so
+     * a non-zero value here means nothing has been hit and there is nothing to do.
+     */
+    private void sub78C14() {
+        if (collisionFlagsByte != 0) {
+            return;
+        }
+        if (state.hitCount == 0) {
+            loc78C60();
+            return;
+        }
+        if (hitInvulnTimer == 0) {
+            hitInvulnTimer = HIT_FLASH_FRAMES;
+            playSfx(Sonic3kSfx.BOSS_HIT.id);
+            state.invulnerable = true;               // bset #6,status(a0)
+        }
+        applyHitFlash();
+        hitInvulnTimer = (hitInvulnTimer - 1) & 0xFF;
+        if (hitInvulnTimer != 0) {
+            return;
+        }
+        state.invulnerable = false;                  // bclr #6,status(a0)
+        collisionFlagsByte = savedCollisionFlags;    // move.b $25(a0),collision_flags(a0)
+    }
+
+    /**
+     * {@code sub_78CCA} (sonic3k.asm:160689-160702): the same flash, but it never restores
+     * {@code collision_flags} -- its caller clears the byte instead -- and it starts a flash for
+     * nobody: with {@code $20} already zero it simply returns.
+     */
+    private void sub78CCA() {
+        if (state.hitCount == 0) {
+            loc78C60();
+            return;
+        }
+        if (hitInvulnTimer == 0) {
+            return;
+        }
+        applyHitFlash();
+        hitInvulnTimer = (hitInvulnTimer - 1) & 0xFF;
+        if (hitInvulnTimer == 0) {
+            state.invulnerable = false;
+        }
+    }
+
+    /** {@code sub_78C98} -> {@code CopyWordData_6} over {@code word_78CA6}/{@code word_78CB2}. */
+    private void applyHitFlash() {
+        int window = (hitInvulnTimer & 1) != 0 ? 0 : FLASH_WORD_OFFSET_SHIPPED;
+        lastFlashWindow = window;
+        var objectServices = tryServices();
+        if (objectServices == null || objectServices.currentLevel() == null) {
+            return;
+        }
+        for (int i = 0; i < FLASH_COLOUR_INDICES.length; i++) {
+            PaletteWriteSupport.applyColor(
+                    objectServices.paletteOwnershipRegistryOrNull(),
+                    objectServices.currentLevel(),
+                    objectServices.graphicsManager(),
+                    FLASH_PALETTE_OWNER,
+                    FLASH_PALETTE_PRIORITY,
+                    FLASH_PALETTE_LINE,
+                    FLASH_COLOUR_INDICES[i],
+                    FLASH_SOURCE_WORDS[window + i]);
+        }
+    }
+
+    /**
+     * {@code loc_78C60} (sonic3k.asm:160672-160682). Entered from either flash routine the moment
+     * {@code collision_property} reads zero. The full chain -- {@code Wait_FadeToLevelMusic},
+     * {@code loc_787E0}'s eleven debris and {@code Obj_EndSignControl} -- is not built yet; what
+     * is modelled here is the state every later step reads: both hands flagged dead (so the arms
+     * retire through {@code sub_78B46}), the player released, and the level timer stopped.
+     */
+    private void loc78C60() {
+        if (state.defeated) {
+            return;
+        }
+        state.defeated = true;
+        state.invulnerable = false;
+        collisionFlagsByte = 0;
+        flags38 |= BOTH_HANDS_DEAD;                  // bset #6 and #7 of $38(a0)
+        displacePlayerOffObject();
+        stopLevelTimerOnBossDefeat();
+        onDefeatStarted();
+    }
+
+    /**
+     * The shared touch pass's boss bookkeeping, which in the ROM is {@code Touch_Response}'s work
+     * and not the object's: {@code collision_flags} is zeroed with its old value stowed in
+     * {@code $25}, and {@code collision_property} is decremented. Everything that follows --
+     * the sound, the flash, the invulnerability window and the fatal branch -- belongs to
+     * {@code sub_78C14}, which runs from this object's own update.
+     */
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        if (state.defeated || collisionFlagsByte == 0) {
+            return;
+        }
+        savedCollisionFlags = collisionFlagsByte;
+        collisionFlagsByte = 0;
+        if (state.hitCount > 0) {
+            state.hitCount--;
+        }
+    }
+
+    /**
+     * {@code collision_flags(a0)} verbatim: {@code 0} until {@code loc_786BC} sets {@code $B5}
+     * for the drop, {@code 6} from {@code loc_786EA} through the slam and the first half of the
+     * recovery, and {@code 0} again once a hit lands (until {@code sub_78C14} restores it) or
+     * once {@code loc_78784} clears it. The base class's unconditional {@code $C0 | size} would
+     * make the drill hittable for its whole cycle.
+     */
+    @Override
+    public int getCollisionFlags() {
+        return collisionFlagsByte;
+    }
+
+    /** {@code sub_78C14} owns the invulnerability window, not the shared S2-shaped handler. */
+    @Override
+    protected boolean usesBaseHitHandler() {
+        return false;
+    }
+
+    @Override
+    public SolidObjectParams getSolidParams() {
+        return SolidObjectParams.of(SOLID_HALF_WIDTH, SOLID_AIR_HALF_HEIGHT, SOLID_GROUND_HALF_HEIGHT);
+    }
+
+    /** {@code SolidObjectFull} is called from {@code loc_7871A} only: the slam frame. */
+    @Override
+    public boolean isSolidFor(PlayableEntity player) {
+        return !state.defeated && state.routine == ROUTINE_SLAM;
+    }
+
+    /**
+     * {@code Displace_PlayerOffObject} (sonic3k.asm:180051-180068), called at {@code loc_7873A}
+     * when the slam ends and again at {@code loc_78C60} on defeat: for each player the standing
+     * mask names, clear {@code Status_OnObj} and set {@code Status_InAir}. It does not move
+     * anyone -- it hands them back to gravity where they stand.
      */
     private void displacePlayerOffObject() {
+        var objectServices = tryServices();
+        if (objectServices == null || objectServices.objectManager() == null) {
+            return;
+        }
+        var objectManager = objectServices.objectManager();
+        ObjectPlayerQuery query = objectServices.playerQuery();
+        if (query == null) {
+            return;
+        }
+        for (PlayableEntity candidate : query.playersFor(
+                ObjectPlayerParticipationPolicy.MAIN_PLUS_ENGINE_SIDEKICKS_AS_NATIVE_P2_EXTENDED)) {
+            if (candidate instanceof AbstractPlayableSprite sprite
+                    && objectManager.isRidingObject(candidate, this)) {
+                objectManager.clearRidingObject(candidate);
+                sprite.setOnObject(false);
+                sprite.setAir(true);
+            }
+        }
     }
 }

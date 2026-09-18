@@ -16,10 +16,14 @@ import java.util.List;
  * The Lava Reef miniboss's arm-segment child: subtype {@code 0} of each ring
  * ({@code loc_78838}, sonic3k.asm:160288-160345).
  *
- * <p>It is the anchor the ten orbiters chain off, and it does not hang from the boss: its
- * position comes from {@code sub_78BEE}, which is camera-relative -- {@code Camera_X + $20},
- * or {@code + $120} on the mirrored ring, and {@code Camera_Y + $1B8}. So both arms stay pinned
- * to the screen edges while the drill itself moves.
+ * <p>It is the anchor the ten links chain off, and it does not hang from the boss. Its position
+ * is set <b>once</b>, by {@code sub_78BEE} at {@code loc_7885A} -- routine 0, which runs on the
+ * creation frame and never again: {@code Camera_X + $20}, or {@code + $120} on the mirrored ring,
+ * and {@code Camera_Y + $1B8}. It is a camera-relative <i>placement</i>, not a camera <i>lock</i>:
+ * once placed, the only thing that ever moves the segment again is its own {@code MoveSprite2} at
+ * {@code loc_78890}. The arena camera does not travel during the fight, so in practice the two
+ * arms rise from the bottom corners of the screen, but nothing re-reads the camera to keep them
+ * there.
  *
  * <p>{@code off_78850} is five routines. The segment tracks the parent's {@code $38} bit 3: when
  * the boss extends ({@code loc_78868}) it rises at {@code -$200} for {@code $6F} frames, and when
@@ -61,7 +65,10 @@ final class LrzMinibossArmSegmentChild extends AbstractBossChild implements Rewi
         super(parent, "LRZMinibossArmSegment", PRIORITY_BUCKET, 0x9D);
         this.mirrored = mirrored;
         this.childSubtype = childSubtype;
-        // loc_787FE gives the mirrored ring $2E = $10 before loc_7880A adds subtype * 2.
+        // loc_787FE gives the mirrored ring $2E = $10 before loc_7880A adds subtype * 2. The
+        // arm segment is the one child that never waits on it -- loc_78838's routine table runs
+        // straight away, where the links and the hand go through sub_78BD6's Wait_Draw first --
+        // but the SST value is this, and awaitExtend() overwrites it before anything reads it.
         this.waitTimer = (mirrored ? 0x10 : 0) + childSubtype * 2;
         this.xFixed = currentX << 16;
         this.yFixed = currentY << 16;
@@ -92,7 +99,7 @@ final class LrzMinibossArmSegmentChild extends AbstractBossChild implements Rewi
         updateDynamicSpawn();
     }
 
-    /** {@code sub_78BEE}: the anchor is camera-relative, not parent-relative. */
+    /** {@code sub_78BEE} (sonic3k.asm:160617-160626), run once from routine 0's {@code loc_7885A}. */
     private void anchorToCamera() {
         var services = tryServices();
         if (services == null || services.camera() == null) {
@@ -155,6 +162,8 @@ final class LrzMinibossArmSegmentChild extends AbstractBossChild implements Rewi
 
     @Override public int ringSubtype() { return childSubtype; }
     @Override public boolean ringMirrored() { return mirrored; }
+    @Override public int ringXFixed() { return xFixed; }
+    @Override public int ringYFixed() { return yFixed; }
 
     boolean isMirrored() {
         return mirrored;
