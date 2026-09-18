@@ -3,7 +3,8 @@
 Game / canonical zone / act: S3K `S3K_DEATH_EGG_2`, engine zone `$0B` act index 1,
 ROM `Current_zone_and_act = $B01`, SKL object set. **Not Sonic 2's Death Egg.**
 Owning plan: [S3K DEZ bring-up](../../plans/2026-09-17-s3k-dez-bring-up.md).
-Status: slice 1 (presentation foundation) delivered at `4e7655bf9`. Nothing below certifies the act.
+Status: slice 1 (presentation foundation) delivered at `4e7655bf9`; slice 2 (reverse gravity core)
+delivered and gated twice; slice 3 part-delivered (`$5B` only). Nothing below certifies the act.
 
 LevelSizes (sonic3k.asm:38120): x `0`-`$6000`, y `0`-`$F10`. The engine's direct `$B01`
 load places Sonic at centre `$140,$3AC`, which is also the ROM's post-act-change
@@ -25,9 +26,9 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 
 | Claim | State |
 | --- | --- |
-| Implemented | Presentation foundation only: static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages and the direct-load routine values |
+| Implemented | Presentation foundation (static background, the two shared `AnPal_DEZ2` channels, the eight `AniPLC_DEZ` scripts, both `DEZ2_ScreenEvent` chunk stages, the direct-load routine values), reverse gravity for the player, shields, lost rings, dust-free solid objects, springs and the sidekick (86 of 116 ROM references — the 11 open group A-I rows are listed in [s3k-known-bugs](../../../status/s3k-known-bugs.md)), and the `$5B` gravity swap that makes it reachable |
 | Cold-reachable | Not started |
-| Rewind-verified | Event routine words only (`TestS3kDezPresentationRewind`) |
+| Rewind-verified | Event routine words (`TestS3kDezPresentationRewind`) and the `$5B` write plus its side latch, capture/restore/forward replay (`TestS3kDezGravityObjectsHeadless`) |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` below |
 | Visually matched | Not started for act 2 specifically; the act 1 clips `01a`-`01d` cover the shared background, palette and tile work |
 
@@ -44,7 +45,10 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | EVENT: `DEZ2_ScreenEvent` stage 1 chunk | `movea.w $18(a3),a1; move.b #$BC,$6B(a1)` = FG layout row 6, column `$6B` | 320 | `TestS3kDezScreenEvents` | implemented | pass, `4e7655bf9` | Production trigger is the end boss (slice 8) |
 | EVENT: `DEZ2_BackgroundEvent` bottom-up redraw | stages 0-1 `Draw_PlaneVertBottomUp` (`loc_59532`/`loc_59556`) | — | — | missing | unrun | Slice 7 |
 | PLACEMENT: 494 act 2 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | placeholder baseline recorded | unrun | Slices 3-5 |
-| GRAVITY: `$58`, `$59`, `$5B` writers | All Player 1 only; `$5B` selected by `render_flags` bit 0 | — | `TestS3kDezGravityObjectsHeadless` | missing | unrun | Slice 3 |
+| GRAVITY: `$5B` writer, both crossing directions, band edges, latch, Player 1 only | `sub_49228` / `loc_49270` (sonic3k.asm:95472-95543); write not toggle; band `[y_pos-$20, y_pos+$20)` | — | `TestS3kDezGravityObjectsHeadless` | implemented (`S3kDezGravitySwapObjectInstance`) | pass 10/10, `ff080949c`+ | Player-2 case is a guard against a future sidekick loop, not evidence about one |
+| REWIND spot: flag written by `$5B`, mid-corridor | capture after the write, clear it forward, restore, replay the same crossing | — | `TestS3kDezGravityObjectsHeadless` | implemented | pass | Replay covers the object's `$32` latch as well as the global flag |
+| GRAVITY: `$58`, `$59` writers | `$58` `d6 & $14`, toggle 4 frames later, 20-frame rearm (`loc_48B7E`); `$59` subtype bit 7, `cmpa.w #Player_1` (`loc_48DF2`) | — | `TestS3kDezGravityObjectsHeadless` | missing | unrun | Slice 3; ROM reading written up in the plan's 2026-09-18 entry |
+| GRAVITY: `$5A` tube, `$5C` hub, `$5F` room, `$61` puzzle | `$5A` reads the flag (`loc_48FBA`, `loc_4904A`); the other three contain no flag reference and move the player with `object_control` | — | — | missing | unrun | Slice 3 |
 | BOSS: `$A7` end boss | `word_7F0BE` range, `word_7F0C6` arena `$218,$288,$3400,$34E0`, 8 hits, `sub_7F8A0` gravity | — | `TestS3kDezAct2BossHeadless` | missing | unrun | Slice 8 |
 | REWIND: event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` | implemented | pass, `4e7655bf9` | Mid-flip, act change and boss spots not started |
 | ORACLE: Tails act 2 | `runs/s3k-tails-full-chain-all-emeralds/ssz_2` (5,202 rows) | — | `TestS3kTailsFullChainSsz2SegmentTraceReplay` (expected red) | — | blocked: 229 errors, first error frame 0 `camera_y` expected `0x080E` actual `0x0810` (`035e48a58`) | Whole campaign |

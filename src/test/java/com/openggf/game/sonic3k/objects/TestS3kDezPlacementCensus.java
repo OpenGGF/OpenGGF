@@ -64,19 +64,21 @@ class TestS3kDezPlacementCensus {
     private static final int DEZ3_RECORDS = 1;
 
     /**
-     * The object IDs whose SKL factory is already a real implementation shared with other zones.
-     * Every other placed DEZ ID resolves to {@link PlaceholderObjectInstance} today, either
-     * because its factory is bound to the S3KL pointer set (a different object under the same
-     * number) or because no factory exists at all ({@code $5D}-{@code $61}).
+     * The object IDs whose SKL factory is already a real implementation: those shared with
+     * other zones, plus whatever the DEZ slices have landed. {@code $5B}
+     * ({@code Obj_DEZGravitySwap}, 11 act 2 placements) is slice 3's first. Every other placed
+     * DEZ ID resolves to {@link PlaceholderObjectInstance} today, either because its factory is
+     * bound to the S3KL pointer set (a different object under the same number) or because no
+     * factory exists at all ({@code $5D}-{@code $61}).
      */
     private static final Set<Integer> CONCRETE_DEZ_IDS = Set.of(
-            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x6A, 0x6B, 0x78);
+            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x5B, 0x6A, 0x6B, 0x78);
 
     /** Recorded baseline: placements that still resolve to a placeholder. Slices 3-6 drive these to 0. */
     private static final int PLACEHOLDER_ACT_1 = 225;
-    private static final int PLACEHOLDER_ACT_2 = 337;
+    private static final int PLACEHOLDER_ACT_2 = 326;
     private static final int CONCRETE_ACT_1 = 140;
-    private static final int CONCRETE_ACT_2 = 157;
+    private static final int CONCRETE_ACT_2 = 168;
 
     @Test
     void romPlacementTablesDecodeToTheInventoriedSpawnCounts() throws IOException {
@@ -113,6 +115,38 @@ class TestS3kDezPlacementCensus {
                 "IDs resolving to a real factory under the SKL pointer set");
         assertTrue(placed.containsAll(CONCRETE_DEZ_IDS),
                 "every recorded concrete ID must actually be placed in Death Egg");
+    }
+
+    /**
+     * The wiring that nothing else can catch: {@code Obj_DEZGravitySwap} selects its crossing
+     * direction from {@code btst #0,render_flags(a0)} (sonic3k.asm:95512, :95537), and the
+     * placement record carries that bit in the <em>y word's</em> top nibble, not in a subtype.
+     * {@code CommonPlacementParser} reads it as {@code (yWord >> 13) & 3}, so the eleven act 2
+     * records — six with top nibble {@code 0} and five with top nibble {@code 2} — must come
+     * out as six with {@code renderFlags} bit 0 clear and five with it set.
+     *
+     * <p>Get the shift wrong and every one of the eleven reads as unflipped: the census still
+     * passes, the object still resolves, the focused behaviour tests still pass on synthetic
+     * spawns, and half of Death Egg act 2's gravity triggers silently do the wrong thing.
+     */
+    @Test
+    void theElevenGravitySwapPlacementsSplitSixUnflippedToFiveXFlipped() throws IOException {
+        int unflipped = 0;
+        int xFlipped = 0;
+        for (ObjectSpawn spawn : act(DEZ2_OBJECTS_ADDR, DEZ2_RECORDS)) {
+            if (spawn.objectId() != 0x5B) {
+                continue;
+            }
+            assertEquals(0, spawn.subtype(),
+                    "every $5B placement is subtype $00: the flip bit is the only variation");
+            if ((spawn.renderFlags() & 1) != 0) {
+                xFlipped++;
+            } else {
+                unflipped++;
+            }
+        }
+        assertEquals(6, unflipped, "$5B placements whose left-to-right crossing sets gravity");
+        assertEquals(5, xFlipped, "$5B placements whose right-to-left crossing sets it");
     }
 
     /**

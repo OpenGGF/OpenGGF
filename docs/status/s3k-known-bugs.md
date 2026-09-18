@@ -175,16 +175,43 @@ What remains missing is Knuckles' glide, slide and wall-climb rows, `Obj_Tails_T
 modify upright structure the engine does not model and are recorded in the reference table with
 that reason.
 
-**Suspected cause.** Not a defect — a deliberately sliced port. 28 of the 116
-`Reverse_gravity_flag` references in the disassembly are still unimplemented; the row-by-row
-inventory is
+**Updated 2026-09-18, and the reachability changed.** `loc_123DE` is done, and so is the one
+row the ROM gets wrong (`Tails_Test_For_Flight` :28655 negates `d0` where the adjustment is in
+`d1`, so Tails' flight-start unroll is *not* inverted; modelled as shipped under `FixBugs = 0`).
+More importantly, **slice 3's `$5B` `Obj_DEZGravitySwap` has landed**, so the state is now
+reachable in ordinary Death Egg act 2 play for the first time. The earlier removal condition
+asked for zero missing group A-I rows before any writer shipped; that was not met, and shipping
+the writer anyway is a deliberate choice recorded here rather than a resolution.
+
+**What an inverted player in act 2 therefore still gets wrong**, eleven rows across groups A-I:
+
+- **Knuckles' glide, slide and wall climb** (:30921, :30977, :31004, :31068, :31205). His glide
+  floor probe goes through `ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle` directly, while
+  the ROM's `.continueSliding` calls `sub_11FD6` — the swapping wrapper — so the glide
+  landing, the slide get-up and the slide's floor snap all measure against the wrong surface
+  while the flag is set. The two climb rows are whole alternate bodies, not sign flips.
+- **`Obj_Tails_Tail` and `Obj_DashDust`** (:30063, :34038, :34113): Tails' trailing tails and the
+  spindash/skid dust are not mirrored and keep their upright Y offsets.
+- **`sub_1E410`'s `loc_1E4D6`** (:41999): the sloped/top solid-object landing rebuilds its
+  comparison with a deliberate one-pixel asymmetry rather than mirroring, and needs its own
+  measurement.
+- **`Touch_Monitor` :20802 and `Obj_Spikes` :48958**: both modify upright branches the engine
+  does not model at all; porting either means porting that upright branch first, which would
+  change shipped upright behaviour and belongs to those objects' own work.
+
+Groups A (bar `ChooseChkFloorEdge`, partial), B, C, D and G are complete.
+
+**Suspected cause.** Not a defect — a deliberately sliced port. 22 of the 116
+`Reverse_gravity_flag` references in the disassembly are still unimplemented (11 of them in
+groups A-I, above; the rest are the act 2 boss's three and slice 3's remaining eight DEZ-object
+rows); the row-by-row inventory is
 [s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
 
-**Removal condition.** Steps 2a-3, 2b and 2c of the
-[Death Egg bring-up plan](../architecture/plans/2026-09-17-s3k-dez-bring-up.md) land, with the
-probe swap and angle mirror in place, and the reference table reaches zero missing rows for
-groups A-I. **This entry must be resolved before slice 3 ships the `$58`/`$59`/`$5B` objects**,
-which are the writers that would make the state reachable in normal play.
+**Removal condition.** The eleven group A-I rows listed above land, each with a test that runs
+it with the flag set, and the reference table reaches zero missing rows for groups A-I. The
+`ChooseChkFloorEdge` partial and the three hurt death-plane partials stay recorded rather than
+credited: see the reference table for why each cannot be told apart from a sibling that already
+passes.
 
 ---
 

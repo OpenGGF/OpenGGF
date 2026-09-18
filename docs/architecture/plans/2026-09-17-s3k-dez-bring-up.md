@@ -542,9 +542,16 @@ the `Events_fg_4` write order and the `$1700` start position (both in Verified R
 ## Status
 
 Slices 0 and 1 delivered 2026-09-17 on base `035e48a58` (`0d9a4f3ea`, `4e7655bf9`); see the
-evidence log. **Slice 2 is part-delivered**: step 2a-1 (position integration), the death plane, the flag's
-level-load lifecycle, and the first half of 2a-2 (the `sub_11FD6`/`sub_11FEE` probe selector and
-angle mirror). The rest of 2a-2, and all of 2a-3, 2b and 2c, remain.
+evidence log. **Slice 2 is delivered and gated twice** (runs `20260918T100237Z-e62d5573` and
+`20260918T105742Z-cc4590b5`, both acknowledged), with the reference table at **86 covered, 4
+partial, 22 missing, 4 n/a**. The 22 missing rows are, by owner: the Knuckles glide/slide/climb
+rows behind the glide probe wrapper (5), the dash-dust and Tails'-tail render rows (3), the two
+rows blocked on upright behaviour the engine does not model (`Touch_Monitor`, `Obj_Spikes`),
+`loc_1E44C`'s rebuilt comparison (1), the act 2 boss's three, and slice 3's remaining eight
+DEZ-object rows. **Slice 3 is part-delivered**: `$5B` `Obj_DEZGravitySwap` is concrete, which
+makes `Reverse_gravity_flag` reachable in ordinary play for the first time. `$58`, `$59`, `$5A`,
+`$5C`, `$5F` and `$61` remain; the ROM reading for `$58` and `$59` is written up in the last
+evidence entry so the next session does not repeat it.
 
 The blocker for the rest is not ROM reading — it is that **no fixture exists in which an inverted
 player can be shown landing on real ceiling terrain**. Three candidates were tried and rejected
@@ -1375,3 +1382,113 @@ and no solid object has been measured within reach of it. `INDEX.md` carries tha
 would unblock all four: slice 3's `$58`/`$59`/`$5B` writers, which make the flag reachable in
 ordinary play, or `--rings` and `--shield` seeds beside the existing `--emeralds` and
 `--reverse-gravity`.
+
+
+### 2026-09-18 — Two more reference rows, and slice 3's first writer
+
+**Group A's remaining non-slice-3 rows, two of them closed.** Base `035e48a58`, head
+`ff080949c` after the first commit of this session.
+
+`loc_123DE` :24552 is the dead player's own off-screen test — the one that spends the life and
+restarts the act — and its flag branch **rebuilds** the comparison rather than mirroring it.
+Upright: `addi.w #$100,d0 / cmp.w y_pos(a0),d0 / bge locret`. Set: `subi.w #$10,d0 / cmp.w
+y_pos(a0),d0 / bge loc_12410`. Two different offsets, `$100` against `$10`, and no
+competition-mode `$70` on the reverse side — that `subi.w` sits after the branch, on the upright
+path only. The engine owner is `PlayableSpriteMovement.hasFallenPastDeathRestartRow`, which now
+carries both forms. Without it an inverted corpse, whose `-$700` launch and growing positive
+`y_vel` `MoveSprite_TestGravity` integrates *up* the screen, never triggers the restart at all.
+
+`loc_1515C` :28655 is the one row the ROM gets wrong, and it is now modelled as wrong.
+`Tails_Test_For_Flight` puts `y_radius - default_y_radius` in **d1**, tests the flag, and on the
+set side runs `neg.w d0` — a register holding nothing this site uses — before `add.w d1,y_pos(a0)`.
+Every other Tails unroll site (`loc_14DA2` :28233, `loc_14FC4` :28500, `loc_1527C` :28748) negates
+`d0` because `d0` *is* the adjustment there. `TailsFlightController.activate`'s write was already
+unconditional and therefore already right; it now carries the `FixBugs = 0` branch comment and a
+test that pins it. Measured delta is ±1, not ±5: Tails' radii are `$F`/`$E`.
+
+**Rows deliberately left where they were, with the reason.** `Knuckles_Fall_From_Glide` :30921,
+`Knuckles_Sliding` :30977 and :31004 all sit behind one prerequisite that is not a sign flip:
+`checkGlideFloorDist` (`PlayableSpriteMovement:2534`) probes with
+`ObjectTerrainUtils.checkFloorDistWithFlipAwareAngle` directly, while the ROM's `.continueSliding`
+calls **`sub_11FD6`**, the swapping wrapper. Porting the three `neg` sites without first routing
+the glide probe through the wrapper would negate a distance measured against the wrong surface.
+:31068 and :31205 are whole alternate climb bodies (`.climbingUp_ReverseGravity`) and need a
+vertical-wall fixture that does not exist yet. `loc_1E44C` :41999 keeps the reason recorded at
+`24d14f342`. `Touch_Monitor` :20802 and `Obj_Spikes` :48958 were re-confirmed blocked on upright
+behaviour the engine does not model, not on reverse gravity. The three K rows need the act 2 boss,
+which is slice 8. The dash-dust rows :34038/:34113 are a two-line change in
+`SpindashDustController.draw` (`TAILS_Y_OFFSET` negates, `vFlip` becomes the flag) but that class
+is `@com.openggf.game.ModApi`, so it cannot grow a test seam, and `PlayableSpriteRenderer.drawFrame`
+is the only observable — left for whoever can stub that renderer cheaply.
+
+**Slice 3 opens with `$5B`, and the flag is now reachable in ordinary play.**
+`S3kDezGravitySwapObjectInstance` implements `Obj_DEZGravitySwap` (sonic3k.asm:95472-95543): the
+eleven invisible act 2 triggers, six unflipped and five X-flipped.
+
+| ROM fact | Where it came from |
+| --- | --- |
+| The init falls through into the first crossing check in the same frame — there is no `rts` between `move.l #loc_49214,(a0)` and `loc_49214` | :95483-95484. A trigger seeded at exactly the player's x keeps the "on the left" latch (`bhs`) and then fails the "still on the left" test (`bhi`), so it fires on its own spawn frame |
+| It writes, never toggles | Both bodies run `move.b #0,(Reverse_gravity_flag).w` before the conditional `move.b #1` (:95511/95514, :95536/95539) |
+| The flip bit chooses the direction, not the value | Left-to-right sets when `btst #0,render_flags(a0)` is **clear** (`bne.s locret`); right-to-left sets when it is **set** (`beq.s locret`) |
+| The Y band is `[y_pos - $20, y_pos + $20)` | `$30(a0) = $20`, then `cmp.w d2,d4 / blt` and `cmp.w d3,d4 / bge` (:95495-95507): signed word compares, top edge inclusive, bottom exclusive |
+| The side latch is consumed even when nothing is written | `move.b #1,-1(a2)` sits **before** the band test (:95492-95495) |
+| Player 2 is never watched | `lea (Player_1).w,a1` with no second call (:95217-95219) |
+
+Every one of those is a separate assertion in `TestS3kDezGravityObjectsHeadless`, and the
+assertions were shown able to fail: removing the band test reddens both band cases *and* the
+latch case (the out-of-band precondition starts writing); replacing `!xFlipped()` with `true`
+reddens the X-flipped left-to-right case; replacing `xFlipped()` with `false` reddens the
+X-flipped right-to-left case. The rewind spot captures **after** the object has set the flag,
+runs a clearing crossing forward, restores, and replays that crossing — a restore that returned
+the global flag but not the object's `$32` latch would run `sub_49228` again and set the flag
+instead of clearing it, so the replay is what makes the latch's round trip observable.
+
+**The wiring bug none of that would have caught.** `render_flags` bit 0 does not come from a
+subtype — it comes from the placement record's **y word top nibble**, which
+`CommonPlacementParser` reads as `(yWord >> 13) & 3`. Decoding `DEZ2_Sprites` directly shows the
+eleven `$5B` records as six with top nibble `0` and five with top nibble `2`; nibble `2` is bit
+13, so it arrives as `renderFlags` bit 0, which is the bit the ROM tests. Read the wrong bit and
+all eleven behave as unflipped: the census still passes, the object still resolves, the focused
+behaviour tests still pass because they construct their own spawns, and half of act 2's gravity
+triggers quietly do the wrong thing. `TestS3kDezPlacementCensus` now asserts the 6/5 split from
+the ROM's own records so that decoding is pinned rather than assumed. The `$5B` sites, decoded:
+x `$0700`/`$0B00`(x2)/`$0D80`/`$1280`/`$1A00`/`$1A40`/`$1F40`/`$2640`/`$3090`/`$3100`, all
+subtype `$00`.
+
+One assertion in that class is weaker than the others and is recorded as such: the
+"Player 2 writes nothing" case moves the sidekick across the trigger and then calls `update`
+with the leader, which today can only pass because the update signature takes one player. It
+does not exercise a sidekick loop, because there is none; it is a guard against someone adding
+one, not evidence about existing behaviour.
+
+Census ratchet: act 2 placeholders 337 → 326, concrete 157 → 168, `$5B` added to
+`CONCRETE_DEZ_IDS`. Reference table: **86 covered, 4 partial, 22 missing, 4 n/a**.
+
+`-Pguards` caught three consequences the focused tests could not, and then caught a fourth when
+the first fix was wrong. `TestRewindArchitectureGuard`'s override baseline needed the two new
+entries with their triage note. `Sonic3kObjectProfile` needed `$5B` — but *not* in
+`SKL_ONLY_IDS`, which was the obvious-looking place and failed
+`sharedIdsAreExactlyTheIdsImplementedInEveryZone` on the next run. The registry now resolves
+`$5B` to a real class in **every** zone, because S3KL `$5B` is `Obj_MGZTopPlatform` and was
+already concrete; only the SKL side was a placeholder. So the id belongs in
+`SHARED_IMPLEMENTED_IDS` even though the two objects are unrelated. Neither consequence is
+visible from a `-Dtest=` run, and the second was not visible from the first guard failure
+either — the profile guard has two tests and only one of them fired the first time.
+
+**What slice 3 still owes.** `$58` (5 act 2 placements) is read and understood but not written:
+`SolidObjectFull` with `d1=$1B, d2=8, d3=9`, `d6 & $14` for Player 1's top/bottom contact bits,
+the pad sinking 8 px (negated by its own Y-flip bit), `sub_48B40` releasing both players
+(velocities zeroed, `Status_InAir` set, `Status_OnObj` cleared — unconditionally, with only the
+8 px nudge masked by `$14`/`$28`), `sfx_Transporter`, then `$30 = 3` counting down to the
+`eori.b #1` toggle four frames later and a 20-frame rearm that will not start while anything is
+standing on the pad (`loc_48B7E`, `loc_48B9C`, :94874-94910). `$59` (21 placements) is four
+routines per player with its own animation table `RawAni_48DB2` and a `Perform_Player_DPLC` call;
+its flag write is `loc_48DF2`, `Player_1` only, taking the value from subtype bit 7 via
+`rol.b #1,d0 / andi.b #1,d0`. `$5A` only reads the flag. `$5C`, `$5F` and `$61` contain no flag
+reference at all — they move the player with `object_control`, and any gravity change near them
+comes from a `$58`/`$5B` placed alongside.
+
+**No clips this session.** Slice 3's first writer makes the flag reachable in principle, but the
+staged captures the previous session listed still need a player route that reaches one of the
+eleven `$5B` sites, which is act 2 cold-route work the gate for this change came first. The
+`INDEX.md` table of unstaged clips stands unchanged.

@@ -85,6 +85,14 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/HPZSuperEmeraldReturnEffectObjectInstance.java#restoreRewindState", 1),
+            // DEZ ($B01) gravity swap: the flag it writes is global and already snapshotted,
+            // but its own $32 side latch is not derivable from the placement or the player's
+            // position -- the ROM's init seeds it once and each crossing consumes it before
+            // the Y-band test. Without the sidecar a restore mid-corridor replays the wrong
+            // crossing body and sets gravity where the first run cleared it.
+            // TestS3kDezGravityObjectsHeadless captures after the write, replays forward.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#restoreRewindState", 1),
             // HPZ ($1601) teleporter graph and Knuckles-fight children keep object links in
             // ObjectRefId sidecars: generic capture lost the teleporter's beam link on replay.
             // TestS3kHpzCompatibilityMatrix and TestS3kHpzKnucklesFightHeadless prove restore

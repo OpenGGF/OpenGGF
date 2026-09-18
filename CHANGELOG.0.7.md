@@ -30,7 +30,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   transition sound, as in the ROM, instead of fading to white.
 - **S3K Death Egg:** the Death Egg acts now hold their background still instead of scrolling it
   at a quarter of the camera speed, cycle their console and panel colours, and animate their
-  machinery tiles.
+  machinery tiles. Death Egg Act 2's gravity now reverses: crossing one of the act's invisible
+  gravity triggers flips which way is down, and the player falls to the ceiling, stands and runs
+  on it, rolls, jumps, lands, gets hurt and dies against a death plane that has moved to the top
+  of the level. Shields, spilled rings, dust, springs, solid objects and a carried or respawning
+  sidekick all follow the flip. Which direction of crossing turns gravity on is the level's own
+  choice, so running back the way you came restores it.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

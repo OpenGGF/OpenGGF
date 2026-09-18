@@ -228,10 +228,10 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | 95080 | `loc_48DF2` | `Obj_DEZTeleporter` (`loc_48DF2`): **writer** — flag = subtype bit 7 | new | missing |
 | 95277 | `loc_48FBA` | `Obj_DEZGravityTube` (`$5A`, `loc_48FBA`) exit: mirrors `flip_angle`, Y-flip | new | missing |
 | 95322 | `loc_4904A` | `Obj_DEZGravityTube` (`loc_4904A`): Y-flip while riding | new | missing |
-| 95511 | `sub_49228` | `Obj_DEZGravitySwap` (`$5B`, `sub_49228`): **writer** — clear | new | missing |
-| 95514 | `sub_49228` | `Obj_DEZGravitySwap`: **writer** — set when `render_flags` bit 0 is clear | new | missing |
-| 95536 | `loc_49270` | `Obj_DEZGravitySwap` (`loc_49270`, opposite crossing): **writer** — clear | new | missing |
-| 95539 | `loc_49270` | `Obj_DEZGravitySwap`: **writer** — set when `render_flags` bit 0 is set | new | missing |
+| 95511 | `sub_49228` | `Obj_DEZGravitySwap` (`$5B`, `sub_49228`): **writer** — clear | `S3kDezGravitySwapObjectInstance.applyCrossing` | covered |
+| 95514 | `sub_49228` | `Obj_DEZGravitySwap`: **writer** — set when `render_flags` bit 0 is clear | `S3kDezGravitySwapObjectInstance.applyCrossing` | covered |
+| 95536 | `loc_49270` | `Obj_DEZGravitySwap` (`loc_49270`, opposite crossing): **writer** — clear | `S3kDezGravitySwapObjectInstance.applyCrossing` | covered |
+| 95539 | `loc_49270` | `Obj_DEZGravitySwap`: **writer** — set when `render_flags` bit 0 is set | `S3kDezGravitySwapObjectInstance.applyCrossing` | covered |
 
 ### K. DEZ act 2 boss
 
@@ -260,9 +260,9 @@ is the RAM wipe described above).
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 0 | 1 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
-| J. DEZ objects | 12 | 0 | 0 | 12 | 0 |
+| J. DEZ objects | 12 | 4 | 0 | 8 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **82** | **4** | **26** | **4** |
+| **Total** | **116** | **86** | **4** | **22** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.

@@ -112,6 +112,8 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x3D, // RetractingSpring
             0x51, // FloatingPlatform
             0x54, // Bubbler
+            0x5B, // MGZTopPlatform (S3KL) / DEZGravitySwap (SKL) -- concrete in both object
+                  // tables, so it is shared even though the two are unrelated objects
             0x6A, // InvisibleHurtBlockHorizontal
             0x6B, // InvisibleHurtBlockVertical
             0x6C, // TensionBridge

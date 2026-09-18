@@ -134,7 +134,7 @@ matrices; never collapse skipped or unrun into pass.
 | S3K | `S3K_SKY_SANCTUARY_1` | Audit pending |
 | S3K | `S3K_SKY_SANCTUARY_2` | Audit pending |
 | S3K | `S3K_DEATH_EGG_1` | [Act 1 matrix](../architecture/validation/levels/s3k-dez-act1.md) — v2 bring-up started; baseline only: level load, music, intro run and shared objects. Presentation, objects, miniboss, cold route, rewind and native all open |
-| S3K | `S3K_DEATH_EGG_2` | [Act 2 matrix](../architecture/validation/levels/s3k-dez-act2.md) — v2 bring-up started; baseline only. Reverse gravity, gravity objects, seamless act change and the end boss all open |
+| S3K | `S3K_DEATH_EGG_2` | [Act 2 matrix](../architecture/validation/levels/s3k-dez-act2.md) — v2 bring-up in progress. Reverse gravity is implemented for the player, shields, rings, solid objects, springs and the sidekick (86 of 116 ROM references; the 11 open group A-I rows are in [s3k-known-bugs](s3k-known-bugs.md)), and `$5B` `Obj_DEZGravitySwap` makes it reachable in play. Remaining gravity objects (`$58`, `$59`, `$5A`, `$5C`, `$5F`, `$61`), the cold act 2 route, seamless act change, the end boss and every native and breadth row are open |
 | S3K | `S3K_DOOMSDAY` | [Zone matrix](../architecture/validation/levels/s3k-ddz.md) — in progress; seeded Sonic route matches native to the `$D01` request, breadth and rewind spots covered; death/restart, native pixels and incoming DEZ open |
 | S3K | `S3K_DOOMSDAY_2` | Audit pending |
 | S3K | `S3K_AIZ_INTRO` | Audit pending |

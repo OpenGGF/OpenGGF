@@ -99,7 +99,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | placeholder | 3 |
 | `$59` | `Obj_DEZTeleporter` | 0 | 21 | placeholder | 3 |
 | `$5A` | `Obj_DEZGravityTube` | 24 | 17 | placeholder | 3 |
-| `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | placeholder | 3 |
+| `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** (`S3kDezGravitySwapObjectInstance`) | 3 |
 | `$5C` | `Obj_DEZGravityHub` | 0 | 3 | placeholder | 3 |
 | `$5D` | `Obj_DEZRetractingSpring` | 0 | 13 | unregistered | 4 |
 | `$5E` | `Obj_DEZHoverMachine` | 11 | 0 | unregistered | 4 |
@@ -280,7 +280,7 @@ so subtypes `$80+` arrive inverted.
 | `$5A` | `$98` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
 | `$5A` | `$9C` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
 | `$5A` | `$A4` | `Obj_DEZGravityTube` | 0 | 1 | placeholder |
-| `$5B` | `$00` | `Obj_DEZGravitySwap` | 0 | 11 | placeholder |
+| `$5B` | `$00` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** |
 | `$5C` | `$05` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
 | `$5C` | `$06` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
 | `$5C` | `$0F` | `Obj_DEZGravityHub` | 0 | 1 | placeholder |
