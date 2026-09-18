@@ -2264,6 +2264,15 @@ chain as far as `Obj_EndSignControl`. **Census unchanged at 0 / 188 / 8.**
 5. **`LRZ2_BackgroundEvent` stages 0 and 4** (`loc_5700C`/`loc_57040`, sonic3k.asm:115693-115722),
    unchanged from the seventh handover.
 
+**What a player now sees at the end of the fight, and what they do not.** The drill dies, fades,
+breaks apart and the end-of-act sign and results appear -- and then the act does not change. The
+results owner calls `signalActTransition()`, `setEventsFg5ForActTransition()` has no Lava Reef
+branch, so nothing is set and nothing consumes it: the player is left standing in act 1 after the
+tally. Nothing stalls and nothing regresses (the background event never advances to a stage it
+cannot leave), but the ending is visibly unfinished, and that is the state item 1 above closes.
+**Do not build stage `$C` half-way**: a stage 0 that advances `Events_routine_bg` to `$C` with no
+stage `$C` behind it would freeze the act 1 background from the first frame after results.
+
 **What has not been done and is not owed to a later slice.** The miniboss still has **no clip, no
 route rewind spot and no native comparison**, so **no matrix row may be recorded for it**. The
 cold act 1 route was **not re-measured this round**; the last figure (native rows 0-2322 exact,
