@@ -76,16 +76,17 @@ class TestS3kLrzPlacementCensus {
      * {@code Obj_LRZSwingingSpikeBall} (11 / 14) took the totals to 98 / 240, and 3c's
      * {@code $21} {@code Obj_LRZSmashingSpikePlatform} (15 / 0) took act 1 to 83, and {@code $22}
      * {@code Obj_LRZSpikeBall} (6 / 0) to 77, and 3d's {@code $9C}
-     * {@code Obj_LRZRockCrusher} (2 / 0) to 75.
+     * {@code Obj_LRZRockCrusher} (2 / 0) to 75, and slice 4's {@code $9A}
+     * {@code Obj_Iwamodoki} (32 / 34) took the totals to 43 / 206.
      */
     private static final Map<String, String> PLACEHOLDER_BASELINE = Map.of(
-            "LRZ1", "99:00=20;9A:00=32;9B:00=22;9D:00=1",
+            "LRZ1", "99:00=20;9B:00=22;9D:00=1",
             "LRZ2", "25:80=1,81=1,82=1;"
                     + "29:08=1,10=1,13=15,14=4,15=2,16=6,18=1,93=4,94=4,95=2,96=12;"
                     + "2B:00=8,80=4;"
                     + "2C:00=2,10=2,20=2,30=2,40=2,50=2,60=3,70=3,80=3,90=3,A0=3,B0=3,C0=3,D0=3,E0=3,F0=1;"
                     + "2D:00=8,01=9,02=12,04=3,05=4,06=1,10=10,12=2,13=1,15=2;32:00=7,01=11;"
-                    + "37:50=2,60=5,70=2;99:00=9;9A:00=34;9B:00=9;AE:00=1;B3:2D=1",
+                    + "37:50=2,60=5,70=2;99:00=9;9B:00=9;AE:00=1;B3:2D=1",
             "LRZ3", "9E:00=1;AD:00=1,01=1,02=2,04=3");
 
     private static RomByteReader rom;
@@ -109,12 +110,12 @@ class TestS3kLrzPlacementCensus {
 
     @Test
     void act1PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 75);
+        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 43);
     }
 
     @Test
     void act2PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 240);
+        assertPlaceholderBaseline("LRZ2", Sonic3kZoneIds.ZONE_LRZ, 1, 206);
     }
 
     @Test

@@ -316,6 +316,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x1E, // LRZDashElevator
             0x21, // LRZSmashingSpikePlatform
             0x22, // LRZSpikeBall
+            0x9A, // Iwamodoki
             0x9C // LRZRockCrusher
     );
 

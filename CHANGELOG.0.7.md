@@ -393,6 +393,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The act 1 spike balls are in too: the big ones grind back and forth along the floor throwing
   rock chips, and the one on the swinging arm is only dangerous on half its sweep until a player
   approaches it from the left, when it breaks off the arm and rolls away downhill.
+  Lava Reef's bomb badniks are in, 66 of them across the two acts: each one is a solid block you
+  can stand on until a player comes within a few steps, when its fuse lights, flickers faster and
+  faster, and it blows itself apart into four fragments that arc away and fall.
   Act 1's two rock crushers work end to end: reach one and the camera locks to its own limits, the
   crusher rumbles overhead with the screen shaking for three seconds, then the rock underneath is
   cut away, collapsing slabs drop into the gap, the crusher falls through and explodes, and the
