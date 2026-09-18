@@ -87,12 +87,11 @@ class TestS3kLrzRouteRewindSpots {
     /**
      * {@code Obj_LRZRockCrusher} once {@code Check_CameraInRange} has released its rumble.
      *
-     * <p>Object-level, not composite. Restoring this snapshot drops the four
-     * {@code S3kCameraGradualObjectInstance} children {@code Child7_ChangeLevSize} created, and
-     * the Fireworm's segments go the same way; that is an engine-level restore gap recorded in
-     * [s3k-known-bugs](../../../docs/status/s3k-known-bugs.md), not something this object can fix,
-     * so this spot asserts the crusher's own routine and timers survive the round trip and the
-     * composite claim is left to the entry that owns the gap.
+     * <p>Whole-composite, including the four {@code S3kCameraGradualObjectInstance} children
+     * {@code Child7_ChangeLevSize} creates. Those children used to vanish on restore, which is
+     * why this spot was once object-level; the cause was a missing probe constructor on the
+     * child class rather than an engine defect, and
+     * {@link #dynamicallyCreatedChildrenSurviveACompositeRestore} now states it directly.
      */
     @Test
     void theRockCrusherRumblesOnARouteAndRewinds() {
@@ -102,13 +101,12 @@ class TestS3kLrzRouteRewindSpots {
                 c -> c.routine() >= 4, false, false, false, true, false);
         assertTrue(crusher.routine() >= 4,
                 "the crusher must have left its waiting routine; routine=" + crusher.routine());
-        objectRewindSpot(fixture, "crusher rumbling", LrzRockCrusherObjectInstance.class,
-                c -> c.routine() + ":" + c.timer() + ":" + c.getCentreY());
+        rewindSpot(fixture, "crusher rumbling", false, false, false, false, false);
     }
 
     /**
-     * {@code Obj_Iwamodoki} with its fuse lit, before it detonates. Object-level for the same
-     * recorded restore gap as the crusher spot above.
+     * {@code Obj_Iwamodoki} with its fuse lit, before it detonates. Whole-composite; the
+     * Fireworm segments alive at this position used to be dropped by the restore.
      */
     @Test
     void theIwamodokiFuseLightsOnARouteAndRewinds() {
@@ -118,8 +116,48 @@ class TestS3kLrzRouteRewindSpots {
                 b -> b.routine() >= 4 && !b.detonated(), false, false, false, true, false);
         assertTrue(bomb.routine() >= 4 && !bomb.detonated(),
                 "the fuse must be lit and not yet blown; routine=" + bomb.routine());
-        objectRewindSpot(fixture, "iwamodoki fuse", IwamodokiBadnikInstance.class,
-                b -> b.routine() + ":" + b.animFrame() + ":" + b.animTimer() + ":" + b.mappingFrame());
+        rewindSpot(fixture, "iwamodoki fuse", false, false, false, false, false);
+    }
+
+    /**
+     * The engine-level restore gap recorded in {@code s3k-known-bugs}: dynamically created
+     * children vanish from the object manager after a composite restore. This states it as a
+     * count, so it fails for the reason it names rather than through a whole-composite diff.
+     *
+     * <p>Both parents implement {@code RewindRecreatable}, so the restore path reaches
+     * {@code ObjectRewindDynamicCodecs.genericRecreate}, which must first build a probe
+     * instance from one of its known constructor signatures before it can call
+     * {@code recreateForRewind}.
+     */
+    @Test
+    void dynamicallyCreatedChildrenSurviveACompositeRestore() {
+        HeadlessTestFixture fixture = load(0x0F33, 0x0721);
+        advanceUntil(fixture, 900, LrzRockCrusherObjectInstance.class,
+                c -> c.routine() >= 4, false, false, false, true, false);
+        assertChildrenSurvive(fixture, "crusher children",
+                com.openggf.game.sonic3k.objects.S3kCameraGradualObjectInstance.class);
+    }
+
+    /** The Fireworm's four segments, the other half of the same gap. */
+    @Test
+    void firewormSegmentsSurviveACompositeRestore() {
+        HeadlessTestFixture fixture = load(0x0A65, 0x06D2);
+        advanceUntil(fixture, 900,
+                com.openggf.game.sonic3k.objects.badniks.FirewormSegmentInstance.class,
+                s -> true, false, false, false, true, false);
+        assertChildrenSurvive(fixture, "fireworm segments",
+                com.openggf.game.sonic3k.objects.badniks.FirewormSegmentInstance.class);
+    }
+
+    private static void assertChildrenSurvive(HeadlessTestFixture fixture, String label,
+            Class<?> childType) {
+        int before = live(childType).size();
+        assertTrue(before > 0, label + ": no children to begin with, so this spot proves nothing");
+        var registry = fixture.gameplayMode().getRewindRegistry();
+        CompositeSnapshot snapshot = registry.capture();
+        fixture.stepFrame(false, false, false, false, false);
+        registry.restore(snapshot);
+        assertEquals(before, live(childType).size(), label + " present after restore");
     }
 
     // ===== harness =====
@@ -154,27 +192,6 @@ class TestS3kLrzRouteRewindSpots {
                 .filter(type::isInstance)
                 .map(type::cast)
                 .toList();
-    }
-
-    /**
-     * The same before / active / after shape, but read back through the object's own ROM fields
-     * instead of the whole composite. Used where a recorded engine-level restore gap makes the
-     * composite comparison a statement about that gap rather than about this object.
-     */
-    private static <T extends ObjectInstance> void objectRewindSpot(HeadlessTestFixture fixture,
-            String label, Class<T> type, java.util.function.Function<T, String> state) {
-        var registry = fixture.gameplayMode().getRewindRegistry();
-        String before = state.apply(live(type).getFirst());
-        CompositeSnapshot snapshot = registry.capture();
-        fixture.stepFrame(false, false, false, false, false);
-        String after = state.apply(live(type).getFirst());
-        assertTrue(!before.equals(after),
-                label + ": the diverging frame left the object unchanged, so this spot proves nothing");
-
-        registry.restore(snapshot);
-        assertEquals(before, state.apply(live(type).getFirst()), label + " restore");
-        fixture.stepFrame(false, false, false, false, false);
-        assertEquals(after, state.apply(live(type).getFirst()), label + " forward replay");
     }
 
     /** Capture, diverge one frame, restore, compare; then replay that frame and compare. */

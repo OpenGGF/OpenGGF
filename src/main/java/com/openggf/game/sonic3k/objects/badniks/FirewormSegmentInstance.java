@@ -2,6 +2,9 @@ package com.openggf.game.sonic3k.objects.badniks;
 
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.RewindTransient;
+import com.openggf.game.rewind.identity.ObjectRefId;
+import com.openggf.game.rewind.schema.RewindCaptureContext;
+import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kConstants;
 import com.openggf.game.sonic3k.objects.S3kRawAnimation;
@@ -67,7 +70,9 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
     private final FirewormMotion swim = new FirewormMotion();
     @RewindTransient(reason = "read-only ROM script window, reloaded lazily from the ROM reader")
     private S3kRawAnimation scripts;
+    @RewindTransient(reason = "child link restored from an ObjectRefId sidecar in restoreRewindState")
     private FirewormFlameInstance flame;
+    @RewindTransient(reason = "parent link reattached by FirewormHeadInstance.restoreRewindState")
     private FirewormHeadInstance head;
 
     FirewormSegmentInstance(int x, int y, int subtype, int parentXVel,
@@ -82,6 +87,16 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
         // so loc_8F948's first decrement lands on the NEXT dispatch, as for the CaterKiller Jr
         // body: the init dispatch is its own frame.
         this.waitTimer = WAIT_FRAMES[(this.subtype >> 1) & 3] + 1;
+    }
+
+    /**
+     * Probe constructor for {@code ObjectRewindDynamicCodecs.genericRecreate}, which builds an
+     * instance from one of its known signatures before calling {@link #recreateForRewind}. The
+     * six-argument creation constructor matches none of them, so without this the segments were
+     * dropped on every composite restore.
+     */
+    private FirewormSegmentInstance(ObjectSpawn spawn) {
+        this(spawn.x(), spawn.y(), spawn.subtype(), 0, false, false);
     }
 
     /** Rewind recreate: the generic field capturer reapplies every scalar afterwards. */
@@ -127,6 +142,41 @@ public final class FirewormSegmentInstance extends AbstractObjectInstance
         int fy = (motion.y + (flipY ? -FirewormFlameInstance.CHILD_DY : FirewormFlameInstance.CHILD_DY))
                 & 0xFFFF;
         flame = spawnChild(() -> new FirewormFlameInstance(fx, fy));
+    }
+
+    private record FlameLink(ObjectRefId flameId)
+            implements PerObjectRewindSnapshot.ObjectSubclassRewindExtra {}
+
+    /**
+     * The flame follows its segment through {@link #refreshFlame()} and never moves on its own,
+     * so a lost link leaves it standing still after a restore while the segment swims away. The
+     * reference therefore rides the snapshot as an identity id, the same way the head carries its
+     * segments.
+     */
+    @Override
+    public PerObjectRewindSnapshot captureRewindState(RewindCaptureContext context) {
+        ObjectRefId id = flame == null
+                ? null
+                : context.identityTable().map(table -> table.encodeObject(flame)).orElse(null);
+        return super.captureRewindState(context).withObjectSubclassExtra(new FlameLink(id));
+    }
+
+    @Override
+    public void restoreRewindState(PerObjectRewindSnapshot snapshot, RewindCaptureContext context) {
+        super.restoreRewindState(snapshot, context);
+        if (!(snapshot.objectSubclassExtra() instanceof FlameLink link)) {
+            return;
+        }
+        flame = null;
+        if (link.flameId() == null) {
+            return;
+        }
+        // Not required: loc_8F9EE deletes the flame with its segment's chain, so a missing link
+        // must leave the segment flameless rather than throw.
+        Object resolved = context.requireIdentityTable().resolveObject(link.flameId(), false);
+        if (resolved instanceof FirewormFlameInstance restored) {
+            flame = restored;
+        }
     }
 
     private void refreshFlame() {

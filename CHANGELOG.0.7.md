@@ -235,6 +235,11 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   Rewinding a moving dynamic platform restores its execution slot before
   rebinding the player's riding contact.
 
+- **Rewinding dynamically created children:** restoring a saved moment now keeps the
+  children a live object created while it ran. The camera-limit easing objects a Lava
+  Reef rock crusher spawns, and the Fireworm's body segments, used to disappear on
+  restore, and a restored segment's flame stayed behind while the segment swam on.
+
 - **AIZ1 rewind:** capture the hollow-tree reveal counter and intro Super Sonic
   palette timer/frame, preserving tree reveal children and palette cadence after
   restoring gameplay. Add a native route matrix with independently reported intro,

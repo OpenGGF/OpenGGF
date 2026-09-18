@@ -133,7 +133,13 @@ class TestRewindArchitectureGuard {
             // is re-attached to this head. Without it a restored chain would keep hurting after
             // the head was destroyed.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormHeadInstance.java#captureRewindState", 1),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormHeadInstance.java#restoreRewindState", 1)
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormHeadInstance.java#restoreRewindState", 1),
+            // 2026-09-18 Lava Reef, the Fireworm's segment. The same sidecar disposition one level
+            // down: loc_8F95C's flame runs Refresh_ChildPositionAdjusted and never moves on its
+            // own, so a lost link leaves the restored flame standing still while its segment swims
+            // away (a one-pixel-per-frame drift after a restore, which is how this was found).
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#restoreRewindState", 1)
     );
 
     private static final Map<String, Integer> OBJECT_REWIND_ANNOTATION_BASELINE = Map.ofEntries(
@@ -175,7 +181,10 @@ class TestRewindArchitectureGuard {
             // triaged with the override entries above.
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormFlameInstance.java#@RewindTransient", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormHeadInstance.java#@RewindTransient", 2),
-            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#@RewindTransient", 1),
+            // The segment carries three: the ROM script window, its flame link (ObjectRefId
+            // sidecar, triaged with the override entries above) and its head link, which
+            // FirewormHeadInstance.restoreRewindState re-attaches from its own sidecar list.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/FirewormSegmentInstance.java#@RewindTransient", 3),
             // Checkpoint/starpost orbit children keep ROM parent pointers as
             // structural live links. Rewind recreates them only when a matching
             // live parent exists, then reapplies captured scalar orbit state.

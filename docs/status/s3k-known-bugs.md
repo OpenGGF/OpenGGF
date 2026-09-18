@@ -5859,10 +5859,3 @@ against `sub_32F56` (sonic3k.asm:68950-68992) and Obj_Bumper
 
 ---
 
-## Rewind Restore Drops Dynamically Created Children
-
-- **Location** — `RewindRegistry.restore` / `restoreSameLayout` -> `ObjectManager`'s dynamic-object entries; observed through `TestS3kLrzRouteRewindSpots`
-- **Symptom** — Capturing a composite snapshot while a live parent has dynamically created children, stepping one frame, and restoring that snapshot leaves the children gone. The restored world's `object-manager.usedSlotsBits` is missing exactly the child slots, and the diff reports each child's `DynamicObjectEntry` as present in the captured snapshot and absent afterwards. Two independent parents show it in Lava Reef act 1: the `$9C` rock crusher's four `S3kCameraGradualObjectInstance` children from `Child7_ChangeLevSize` (slots 35, 38, 39, 40 in the reproduction), and the `$99` Fireworm's four `FirewormSegmentInstance` children (slots 14-21 across two worms). Both child classes implement `RewindRecreatable` and both are reached by the generic capture, so this is not a missing per-object adapter.
-- **Reproduction** — `TestS3kLrzRouteRewindSpots`, worktree `.worktrees/ai-lrz-bring-up`. Start LRZ act 1 at `(0xF33,0x721)` for the crusher or `(0xA65,0x6D2)` for the Fireworm case, hold right until the parent leaves its waiting routine, then capture / step one frame / restore and compare the whole composite. Those two spots currently assert the parent's own ROM fields instead, precisely because the composite comparison would be a statement about this gap rather than about the object.
-- **Suspected cause** — `restoreSameLayout` is selected because the level layout key is unchanged, and that path restores the state of objects that exist rather than re-adding dynamic entries the snapshot holds but the live manager no longer does. Not confirmed: the restore was not traced.
-- **Removal condition** — The two spots in `TestS3kLrzRouteRewindSpots` assert the whole composite again (capture, diverge, restore, compare; replay, compare) and pass, with the child slots present after the restore.
