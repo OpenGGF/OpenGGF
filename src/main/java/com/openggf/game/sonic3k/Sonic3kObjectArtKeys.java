@@ -281,6 +281,18 @@ public final class Sonic3kObjectArtKeys {
     /** {@code Obj_LRZDashElevator}: {@code Map_LRZDashElevator} over {@code ArtTile_LRZMisc}. */
     public static final String LRZ_DASH_ELEVATOR = "lrz_dash_elevator";
     public static final String LRZ2_BUTTON = "lrz2_button";
+    /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_DOOR = "lrz_door";
+    /** The same mappings over the act 2 tile base {@code $090} (sonic3k.asm:88027). */
+    public static final String LRZ2_DOOR = "lrz2_door";
+    /** {@code Obj_LRZBigDoor}: {@code Map_LRZBigDoor} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_BIG_DOOR = "lrz_big_door";
+    /** {@code Obj_LRZButtonHorizontal}: {@code Map_LRZButtonHorizontal}, palette 3. */
+    public static final String LRZ_BUTTON_HORIZONTAL = "lrz_button_horizontal";
+    /** Act 2's {@code Map_LRZButtonHorizontal2} over {@code ArtTile_LRZ2Misc}, palette 1. */
+    public static final String LRZ2_BUTTON_HORIZONTAL = "lrz2_button_horizontal";
+    /** {@code Obj_LRZShootingTrigger} and its shot: {@code Map_LRZShootingTrigger}, palette 3. */
+    public static final String LRZ_SHOOTING_TRIGGER = "lrz_shooting_trigger";
 
     // FBZ badniks
     public static final String FBZ_BLASTER = "fbz_blaster";

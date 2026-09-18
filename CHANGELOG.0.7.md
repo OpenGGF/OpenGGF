@@ -367,6 +367,12 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   terrain layer, with a wider viewport simply showing more of them.
   Act 1's dash elevators work: charge a spindash on one and it carries you along
   its shaft, in whichever direction you are facing, and stops at the end.
+  The zone's doors and switches work too. Walking into the side of one of the small
+  horizontal buttons opens the sliding door that shares its number, and the door stays
+  open; the huge door in Act 1 grinds down out of the way, shaking the screen, when
+  you approach it from the right; and the shooting triggers fire their slow diagonal
+  shots until you roll into one, which bounces you back, blows the trigger up and
+  opens its door.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list

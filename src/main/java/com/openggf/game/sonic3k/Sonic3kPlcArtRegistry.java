@@ -2570,6 +2570,60 @@ public final class Sonic3kPlcArtRegistry {
                 null
         ));
 
+        // Doors, the big door, the horizontal buttons and the shooting trigger (SKL objects $19,
+        // $1A, $1C, $1D). Act 2 re-skins the door and the horizontal button; the big door and the
+        // shooting trigger are act 1 only, but registering them in both acts costs nothing and
+        // keeps the act branch below to the cases the ROM actually branches on.
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_BIG_DOOR,
+                Sonic3kConstants.MAP_LRZ_BIG_DOOR_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                2,
+                null
+        ));
+        levelArt.add(new LevelArtEntry(
+                Sonic3kObjectArtKeys.LRZ_SHOOTING_TRIGGER,
+                Sonic3kConstants.MAP_LRZ_SHOOTING_TRIGGER_ADDR,
+                Sonic3kConstants.ARTTILE_LRZ_MISC,
+                3,
+                null
+        ));
+        if (actIndex == 0) {
+            // make_art_tile(ArtTile_LRZMisc,2,0) (sonic3k.asm:88017).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_DOOR,
+                    Sonic3kConstants.MAP_LRZ_DOOR_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    2,
+                    null
+            ));
+            // make_art_tile(ArtTile_LRZMisc,3,0) (sonic3k.asm:88223).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_BUTTON_HORIZONTAL,
+                    Sonic3kConstants.MAP_LRZ_BUTTON_HORIZONTAL_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    3,
+                    null
+            ));
+        } else {
+            // make_art_tile($090,2,0) (sonic3k.asm:88027).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_DOOR,
+                    Sonic3kConstants.MAP_LRZ_DOOR_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_DOOR,
+                    2,
+                    null
+            ));
+            // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:88231).
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_BUTTON_HORIZONTAL,
+                    Sonic3kConstants.MAP_LRZ_BUTTON_HORIZONTAL2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
+        }
+
         // Button: act-specific art tile and palette
         if (actIndex == 0) {
             // LRZ Act 1: ArtTile_LRZMisc, palette 3

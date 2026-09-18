@@ -80,8 +80,14 @@ public final class Sonic3kObjectIds {
     public static final int LBZ_CUP_ELEVATOR = 0x18;
     // S3KL object table: Obj_LBZCupElevatorPole.
     public static final int LBZ_CUP_ELEVATOR_POLE = 0x19;
+    // SKL object table: Obj_LRZBigDoor. Unused by the S3KL set.
+    public static final int LRZ_BIG_DOOR = 0x1A;
     // S3KL object table: Obj_LBZPipePlug. SKL reuses $1B for Obj_LRZFireballLauncher.
     public static final int LBZ_PIPE_PLUG = 0x1B;
+    // SKL object table: Obj_LRZButtonHorizontal. Unused by the S3KL set.
+    public static final int LRZ_BUTTON_HORIZONTAL = 0x1C;
+    // SKL object table: Obj_LRZShootingTrigger. Unused by the S3KL set.
+    public static final int LRZ_SHOOTING_TRIGGER = 0x1D;
     // S3KL object table: Obj_LBZSpinLauncher. SKL reuses $1E for Obj_LRZDashElevator.
     public static final int LBZ_SPIN_LAUNCHER = 0x1E;
     // S3KL object table: Obj_LBZLoweringGrapple. SKL reuses $1F for Obj_LRZLavaFall.

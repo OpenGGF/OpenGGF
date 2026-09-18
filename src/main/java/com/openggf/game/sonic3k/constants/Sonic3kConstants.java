@@ -1699,6 +1699,18 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_BUTTON_ADDR = 0x02C748;
     /** {@code Map_LRZDashElevator} (sonic3k.lst: $43096). */
     public static final int MAP_LRZ_DASH_ELEVATOR_ADDR = 0x043096;
+    /** {@code Map_LRZDoor} (sonic3k.lst: $429DA); both acts share it. */
+    public static final int MAP_LRZ_DOOR_ADDR = 0x0429DA;
+    /** {@code Map_LRZBigDoor} (sonic3k.lst: $42B24). */
+    public static final int MAP_LRZ_BIG_DOOR_ADDR = 0x042B24;
+    /** {@code Map_LRZButtonHorizontal} (sonic3k.lst: $42D7C). */
+    public static final int MAP_LRZ_BUTTON_HORIZONTAL_ADDR = 0x042D7C;
+    /** {@code Map_LRZButtonHorizontal2} (sonic3k.lst: $42D9E), the act 2 skin. */
+    public static final int MAP_LRZ_BUTTON_HORIZONTAL2_ADDR = 0x042D9E;
+    /** {@code Map_LRZShootingTrigger} (sonic3k.lst: $42F06); the shot reuses it at frame 1. */
+    public static final int MAP_LRZ_SHOOTING_TRIGGER_ADDR = 0x042F06;
+    /** {@code make_art_tile($090,2,0)}: the act 2 door's tile base (sonic3k.asm:88027). */
+    public static final int ARTTILE_LRZ2_DOOR = 0x0090;
     public static final int MAP_HCZ_BUTTON_ADDR = 0x22BD1A;
     public static final int MAP_CNZ_BUTTON_ADDR = 0x22BD4A;
     public static final int ARTTILE_MHZ1_CUTSCENE_BUTTON = 0x0341;

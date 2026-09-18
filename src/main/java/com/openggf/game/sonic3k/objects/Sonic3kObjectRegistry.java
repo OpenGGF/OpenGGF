@@ -1461,6 +1461,21 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_SPIN_LAUNCHER,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new LrzDashElevatorObjectInstance(spawn));
+        // Id $19 is Obj_LRZDoor in the SKL set (sonic3k.asm:88015); $1A, $1C and $1D are
+        // Obj_LRZBigDoor, Obj_LRZButtonHorizontal and Obj_LRZShootingTrigger, which the S3KL set
+        // does not spend at all.
+        registerStockRomZoneBound(Sonic3kObjectIds.LBZ_CUP_ELEVATOR_POLE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzDoorObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.LRZ_BIG_DOOR,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzBigDoorObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.LRZ_BUTTON_HORIZONTAL,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzButtonHorizontalObjectInstance(spawn));
+        registerStockRomZoneBound(Sonic3kObjectIds.LRZ_SHOOTING_TRIGGER,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzShootingTriggerObjectInstance(spawn));
         registerStockRomZoneBound(Sonic3kObjectIds.HPZ_MASTER_EMERALD,
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_HPZ,
                 (spawn, registry) -> new HPZMasterEmeraldObjectInstance(spawn));
