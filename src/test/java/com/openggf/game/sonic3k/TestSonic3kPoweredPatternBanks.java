@@ -19,8 +19,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,7 +36,7 @@ class TestSonic3kPoweredPatternBanks {
         GameServices.level().resetLevelGamestate(GameModuleRegistry.getCurrent().createLevelState());
         GameServices.sprites().clearAllSprites();
         for (int i = 0; i < 7; i++) GameServices.gameState().markEmeraldCollected(i);
-        reader = new RomByteReader(Files.readAllBytes(Path.of(System.getProperty("s3k.rom.path"))));
+        reader = RomByteReader.fromRom(TestEnvironment.currentRom());
     }
 
     @Test
