@@ -56,6 +56,118 @@ class TestLrzMinibossInstance {
         boss = new LrzMinibossInstance(new ObjectSpawn(SPAWN_X, SPAWN_Y, 0x9D, 0, 0, false, 0));
         services = new TestObjectServices().withIsolatedObjectManager().withCamera(camera);
         boss.setServices(services);
+        // Every test below this line is about the fight itself, which loc_78528 does not install
+        // until Check_CameraInRange, sub_85D6A and loc_85CA4 have finished. Drive that gate here
+        // so each test's first boss.update() is the routine table's slot 0, loc_78562, exactly as
+        // it was before the gate existed. The gate's own behaviour is asserted separately, on a
+        // boss built by ungatedBossWithCameraAt().
+        camera.setY((short) 0x0710);
+        for (int frame = 0; frame < 600 && !boss.isArenaGateComplete(); frame++) {
+            boss.update(frame, null);
+        }
+        assertTrue(boss.isArenaGateComplete(), "arena gate did not complete in setUp");
+        camera.setY((short) SPAWN_Y);
+    }
+
+    /**
+     * A drill at an arbitrary spawn height whose arena gate has already been driven to
+     * completion, so its first {@code update} is {@code loc_78562}.
+     */
+    private LrzMinibossInstance startedBossAt(int spawnY) {
+        camera.setY((short) 0x0710);
+        LrzMinibossInstance started =
+                new LrzMinibossInstance(new ObjectSpawn(SPAWN_X, spawnY, 0x9D, 0, 0, false, 0));
+        started.setServices(
+                new TestObjectServices().withIsolatedObjectManager().withCamera(camera));
+        for (int frame = 0; frame < 600 && !started.isArenaGateComplete(); frame++) {
+            started.update(frame, null);
+        }
+        assertTrue(started.isArenaGateComplete(), "arena gate did not complete for the fixture");
+        camera.setY((short) SPAWN_Y);
+        return started;
+    }
+
+    /**
+     * A second drill with its own services, used only by the gate tests: {@link #setUp} has
+     * already driven {@link #boss} past its gate.
+     */
+    private LrzMinibossInstance ungatedBossWithCameraAt(int cameraX, int cameraY) {
+        camera.setX((short) cameraX);
+        camera.setY((short) cameraY);
+        LrzMinibossInstance fresh =
+                new LrzMinibossInstance(new ObjectSpawn(SPAWN_X, SPAWN_Y, 0x9D, 0, 0, false, 0));
+        fresh.setServices(new TestObjectServices().withIsolatedObjectManager().withCamera(camera));
+        return fresh;
+    }
+
+    // ---------------------------------------------------------------------
+    // The arena gate: Check_CameraInRange, sub_85D6A and loc_85CA4.
+    // ---------------------------------------------------------------------
+
+    /**
+     * {@code Obj_LRZMiniboss} (sonic3k.asm:160001-160010) does not enter {@code off_7854C} at all
+     * on its first dispatch. It runs {@code Check_CameraInRange} against {@code word_784E0}
+     * ({@code $610,$810,$2B00,$2D00}), installs {@code loc_78522} -- which is nothing but
+     * {@code jmp loc_85CA4} -- and only when that gate has finished does {@code $34(a0)}
+     * ({@code loc_78528}) install {@code loc_78538}, the routine table whose slot 0 is
+     * {@code loc_78562} and its two child rings.
+     *
+     * <p>So a drill whose camera has not reached the arena has <b>no children</b>: the arms are
+     * not there to unroll, and the fight has not started.
+     */
+    @Test
+    void theDrillCreatesNothingUntilTheCameraGateCompletes() {
+        LrzMinibossInstance gated = ungatedBossWithCameraAt(0x2B00, 0x0600);
+        for (int frame = 0; frame < 300; frame++) {
+            gated.update(frame, null);
+        }
+        assertFalse(gated.isArenaGateComplete(),
+                "loc_85CA4 needs Camera_Y >= _unkFAB0 ($710); at $600 it only walks Camera_min_Y");
+        assertTrue(gated.getChildComponents().isEmpty(),
+                "loc_78562 runs from loc_78538, which loc_78528 installs only once the gate ends");
+    }
+
+    /**
+     * {@code sub_85D6A} takes {@code word_784E8} = {@code $710,$710,$2C00,$2C00} into
+     * {@code _unkFAB0/2/4/6}, and {@code loc_85CF2}/{@code loc_85D36} write exactly those into
+     * {@code Camera_min_Y_pos}, {@code Camera_target_max_Y_pos}, {@code Camera_min_X_pos} and
+     * {@code Camera_max_X_pos}. The recorded Sonic + Tails run shows the same numbers: from row
+     * 22990 to the end of the fight its camera is pinned at {@code ($2C00,$710)} and never moves.
+     */
+    @Test
+    void theGateLocksTheArenaToWord784E8() {
+        LrzMinibossInstance gated = ungatedBossWithCameraAt(0x2C00, 0x0710);
+        for (int frame = 0; frame < 300 && !gated.isArenaGateComplete(); frame++) {
+            gated.update(frame, null);
+        }
+        assertTrue(gated.isArenaGateComplete(), "loc_85D48: all three $27 bits set");
+        assertEquals(0x2C00, camera.getMinX() & 0xFFFF, "Camera_min_X_pos = _unkFAB4");
+        assertEquals(0x2C00, camera.getMaxX() & 0xFFFF, "Camera_max_X_pos = _unkFAB6");
+        assertEquals(0x0710, camera.getMinY() & 0xFFFF, "Camera_min_Y_pos = _unkFAB0");
+        assertEquals(0x0710, camera.getMaxYTarget() & 0xFFFF, "Camera_target_max_Y_pos = _unkFAB2");
+    }
+
+    /**
+     * {@code loc_85D70}'s {@code move.w #2*60,$2E(a0)} is counted down by {@code loc_85CA4}
+     * before {@code boss_saved_mus} ({@code mus_Miniboss}) is played, so the fight music does not
+     * start on the frame the player arrives. The camera bits can latch earlier; the gate is not
+     * complete until the music bit is set too ({@code loc_85D48} tests all three).
+     */
+    @Test
+    void theGateWaitsTwoSecondsBeforeTheMinibossMusic() {
+        LrzMinibossInstance gated = ungatedBossWithCameraAt(0x2C00, 0x0710);
+        int completedAt = -1;
+        for (int frame = 0; frame < 300; frame++) {
+            gated.update(frame, null);
+            if (gated.isArenaGateComplete()) {
+                completedAt = frame;
+                break;
+            }
+        }
+        assertTrue(completedAt >= 2 * 60,
+                "loc_85CA4 plays boss_saved_mus only after $2E counts past zero, "
+                        + "and loc_85D48 needs bit 0 for the gate to end; completed at "
+                        + completedAt);
     }
 
     @Test
@@ -317,8 +429,7 @@ class TestLrzMinibossInstance {
     @Test
     void theDrillClimbsToTheTravelTopOneStepAtATime() {
         int spawnY = 0x0900;                 // below $7A8 on screen, numerically greater
-        boss = new LrzMinibossInstance(new ObjectSpawn(SPAWN_X, spawnY, 0x9D, 0, 0, false, 0));
-        boss.setServices(new TestObjectServices().withIsolatedObjectManager().withCamera(camera));
+        boss = startedBossAt(spawnY);
 
         int frame = 0;
         while (boss.getY() == spawnY && frame < 2000) {

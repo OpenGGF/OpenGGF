@@ -4,6 +4,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
+import com.openggf.game.sonic3k.audio.Sonic3kMusic;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow;
 import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
@@ -46,6 +47,27 @@ import java.util.List;
  */
 public final class LrzMinibossInstance extends AbstractBossInstance
         implements SpawnRewindRecreatable, SolidObjectProvider {
+
+    /**
+     * {@code word_784E0} (sonic3k.asm:159994), the {@code Check_CameraInRange} box the object's
+     * first dispatch tests: {@code dc.w $610,$810,$2B00,$2D00} -- camera Y in
+     * {@code [$610,$810]}, camera X in {@code [$2B00,$2D00]}.
+     */
+    private static final int RANGE_MIN_CAMERA_Y = 0x610;
+    private static final int RANGE_MAX_CAMERA_Y = 0x810;
+    private static final int RANGE_MIN_CAMERA_X = 0x2B00;
+    private static final int RANGE_MAX_CAMERA_X = 0x2D00;
+    /**
+     * {@code word_784E8} (sonic3k.asm:159996): {@code dc.w $710,$710,$2C00,$2C00}, loaded by
+     * {@code sub_85D6A} into {@code _unkFAB0/2/4/6} and written into the camera bounds by
+     * {@code loc_85CF2} and {@code loc_85D36}. Both Y words are equal and both X words are
+     * equal, so the arena is a single fixed screen -- which is what the recorded run shows: its
+     * camera is {@code ($2C00,$710)} for the whole fight.
+     */
+    private static final int ARENA_LOCK_Y = 0x710;
+    private static final int ARENA_LOCK_X = 0x2C00;
+    /** {@code move.w #2*60,$2E(a0)} at {@code loc_85D70}, before {@code boss_saved_mus} plays. */
+    private static final int BOSS_GATE_FADE_FRAMES = 2 * 60;
 
     /** {@code move.b #6,collision_property(a0)} at {@code loc_78562} (sonic3k.asm:160049). */
     private static final int HIT_COUNT = 6;
@@ -191,6 +213,16 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     /** {@code byte_78DF8}: the recovery animation. */
     private static final int[] ANIM_RECOVER = {4, 3, 4, 3, 3, 3, 2, 3, 1, 0x7F, 1, 0x7F, 0xFC};
 
+    /**
+     * {@code loc_78522}'s {@code jmp loc_85CA4} gate. Deferred by the rewind schema like every
+     * other boss's, and rebuilt by {@link #initializeBossState()} on a recreation.
+     */
+    private S3kSharedBossCameraGate cameraGate;
+    /** True once {@code Check_CameraInRange} has passed and {@code sub_85D6A} has run. */
+    private boolean arenaGateStarted;
+    /** True once {@code loc_85D48} has jumped through {@code $34(a0)} to {@code loc_78528}. */
+    private boolean arenaGateComplete;
+    private boolean bossMusicStarted;
     private int continuation = CONTINUATION_NONE;
     private int waitTimer;
     private int flags38;
@@ -248,6 +280,14 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         hitInvulnTimer = 0;
         continuation = CONTINUATION_NONE;
         childrenCreated = false;
+        arenaGateStarted = false;
+        arenaGateComplete = false;
+        bossMusicStarted = false;
+        if (cameraGate == null) {
+            cameraGate = new S3kSharedBossCameraGate();
+        } else {
+            cameraGate.reset();
+        }
     }
 
     @Override protected int getInitialHitCount() { return HIT_COUNT; }
@@ -268,6 +308,10 @@ public final class LrzMinibossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
+        if (!arenaGateComplete && defeatPhase == DEFEAT_NONE) {
+            updateArenaGate();
+            return;
+        }
         if (defeatPhase == DEFEAT_WAIT_FADE) {
             waitFadeToLevelMusic();
             return;
@@ -930,6 +974,69 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         return player instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled()
                 ? ATTACKER_MARKER_SIDEKICK
                 : ATTACKER_MARKER_MAIN;
+    }
+
+    /**
+     * The whole of {@code Obj_LRZMiniboss}'s pre-fight life (sonic3k.asm:160001-160030).
+     *
+     * <p>The first dispatch runs {@code Check_CameraInRange} against {@code word_784E0}, then
+     * {@code sub_85D6A} -- {@code Boss_flag}, a music fade-out, the four
+     * {@code Camera_stored_*} saves and {@code word_784E8} into {@code _unkFAB0..6} -- and
+     * returns through {@code PalLoad_Line1}. From then on the object is {@code loc_78522}, which
+     * is a bare {@code jmp loc_85CA4}: the shared boss camera ramp that walks
+     * {@code Camera_min_X_pos} up behind the player, plays {@code boss_saved_mus} two seconds in,
+     * and when all three of its {@code $27} bits are set jumps through {@code $34(a0)} to
+     * {@code loc_78528}, which installs {@code loc_78538} -- the routine table. Nothing in
+     * {@code off_7854C} runs before that, so neither do the two child rings.
+     */
+    private void updateArenaGate() {
+        var objectServices = tryServices();
+        if (objectServices == null || objectServices.camera() == null) {
+            // A bare fixture with no camera cannot run the ramp; the ROM's gate is a camera gate,
+            // so treat its absence as "already in the arena" rather than stalling the fight.
+            arenaGateComplete = true;
+            return;
+        }
+        if (cameraGate == null) {
+            cameraGate = new S3kSharedBossCameraGate();
+        }
+        if (!arenaGateStarted) {
+            if (!isCameraInRange(objectServices)) {
+                return;
+            }
+            arenaGateStarted = true;
+            objectServices.fadeOutMusic();
+            cameraGate.begin(objectServices.camera(),
+                    new S3kSharedBossCameraGate.LockBounds(
+                            ARENA_LOCK_Y, ARENA_LOCK_Y, ARENA_LOCK_X, ARENA_LOCK_X),
+                    BOSS_GATE_FADE_FRAMES);
+            // sub_85D6A is the init dispatch's own tail: loc_85CA4's first moving bound write is
+            // the following frame, exactly as it is for the Ice Cap miniboss.
+            return;
+        }
+        arenaGateComplete = cameraGate.update(objectServices.camera(), () -> {
+            if (!bossMusicStarted) {
+                bossMusicStarted = true;
+                // move.b #mus_Miniboss,boss_saved_mus(a0). sonic3k.constants.asm:1483 puts
+                // mus_Miniboss at $2E, not the $18 that is mus_MinibossK; in the S&K driver
+                // table both ids play the same miniboss track, so this is the ROM's byte rather
+                // than an audible change.
+                objectServices.playMusic(Sonic3kMusic.MINIBOSS_S3.id);
+            }
+        });
+    }
+
+    /** {@code Check_CameraInRange} on {@code word_784E0}. */
+    private boolean isCameraInRange(com.openggf.level.objects.ObjectServices objectServices) {
+        int cameraX = objectServices.camera().getX() & 0xFFFF;
+        int cameraY = objectServices.camera().getY() & 0xFFFF;
+        return cameraX >= RANGE_MIN_CAMERA_X && cameraX <= RANGE_MAX_CAMERA_X
+                && cameraY >= RANGE_MIN_CAMERA_Y && cameraY <= RANGE_MAX_CAMERA_Y;
+    }
+
+    /** True once {@code loc_85D48} has handed control to {@code loc_78528}. */
+    public boolean isArenaGateComplete() {
+        return arenaGateComplete;
     }
 
     /** {@code DEFEAT_NONE} / {@code DEFEAT_WAIT_FADE} / {@code DEFEAT_HANDED_OFF}. */

@@ -489,8 +489,17 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   first, each link bursting as it goes, instead of quietly shortening the drill's hover. Killing
   the drill itself now ends the fight: it fades out, breaks into eleven pieces on their own arcs,
   and hands over to the end-of-act sign and the results screen the way every other Sonic 3 &
-  Knuckles miniboss does. The seamless change into Act 2, and the two camera releases that belong
-  to it, are still to come.
+  Knuckles miniboss does.
+  The fight now also starts the way the ROM starts it: the drill does nothing at all until the
+  player has carried the camera into the arena, and then the music fades, the miniboss theme
+  comes in two seconds later, and the camera locks onto the single arena screen the ROM pins it
+  to for the whole fight. Before this the drill built its arms and began its cycle the moment it
+  loaded, with the camera still free to walk out of the arena. The seamless change into Act 2,
+  and the two camera releases that belong to it, are still to come.
+
+- **Gameplay capture tool:** a capture can now declare the ring count its route carried in
+  (`--rings`). A boss filmed from a positioned start otherwise begins on no rings, where the
+  first touch is fatal and the fight cannot be filmed at all.
 
 - **Plane opacity probe:** a development tool answers, from the decoded ROM layout
   alone, whether the plane behind another can show through at a coordinate. Where a

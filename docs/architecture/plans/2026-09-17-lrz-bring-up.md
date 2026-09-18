@@ -2216,6 +2216,72 @@ The palette-line assertion is a **constant** check, not a rendered-output one; i
 such because the risk it guards (one-based ROM naming) is a transcription risk, not a behavioural
 one.
 
+### 2026-09-18 - The arena was always reachable; what was missing was the gate
+
+**The ninth handover's ten probes were read wrong.** Its own table records three teleports that
+**land safely** -- `($2A80,$600)`, `($2B40,$600)`, `($2C00,$600)`, at `y` `$7B3`, `$66C`, `$7AD` --
+and dismisses them as "ledges above and left of the drill, not in the arena". They are the arena.
+Read the fixture instead of the screen: from native row 22985 to the end of the fight Player 1
+stands at `y` `$7AD`-`$7B1` and the camera is pinned at `($2C00,$710)`, and the probe that landed
+at `($2C00,$600)` came to rest at `y $7AD` -- **the native standing height, to the pixel**. The
+drill is at `($2CA0,$880)`, 210 px *below* that floor, because this miniboss hangs under it and
+sends its arms up through it; that is why a capture framed on the drill's own coordinates shows it
+"off the bottom-right of the screen". Nothing about the arena floor is event-built. **Do not
+re-run the probes.**
+
+**What actually kept the fight from starting: `Obj_LRZMiniboss`'s first dispatch was not
+implemented.** sonic3k.asm:160001-160010 never enters `off_7854C`. It runs
+`Check_CameraInRange` against `word_784E0` (`$610,$810,$2B00,$2D00`), then `sub_85D6A` --
+`Boss_flag`, a music fade, the four `Camera_stored_*` saves and `word_784E8`
+(`$710,$710,$2C00,$2C00`) into `_unkFAB0..6` -- and installs `loc_78522`, which is a bare
+`jmp loc_85CA4`. Only when that ramp's three `$27` bits are all set does it jump through
+`$34(a0)` to `loc_78528`, which installs `loc_78538`, the routine table. So `loc_78562` and its
+two child rings do not run until the camera has locked. The engine went straight to `loc_78562` on
+activation, so the drill built its arms wherever the player happened to be, the camera never
+locked, and a capture could walk out of the arena in either direction.
+
+Implemented on the shared `S3kSharedBossCameraGate` that the Ice Cap, Hydrocity and Lava Bed
+bosses already use, with three tests and two deliberate breaks:
+`ARENA_LOCK_Y` `$710` -> `$700` failed only `theGateLocksTheArenaToWord784E8` with
+`expected: <1808> but was: <1792>`, and `BOSS_GATE_FADE_FRAMES` `2*60` -> `0` failed only
+`theGateWaitsTwoSecondsBeforeTheMinibossMusic` with `completed at 1`. A third break -- disabling
+the gate call itself -- failed all 25, through `setUp`, which is the assertion that the gate is
+load-bearing for the whole fight.
+
+**The measured result, at `--x 0x2C00 --y 0x600 --rings 355`:** the camera locks at
+**`(11264,1808)` = `($2C00,$710)`, the native pair exactly**, and holds there for the rest of the
+capture; the player runs right to **`x 11560` = `$2D28`, the same wall native stops at**
+(native row 23100), and the two arms unroll as vertical link chains either side of the drill. The
+native arm is a vertical chain too -- aux rows 23160-23300 put its twelve links between
+`x $2D08` and `$2D3A` with `y` sweeping `$846` up to `$734`, straight past the player's `$7B0` --
+so the shape the engine draws is the shape the ROM makes.
+
+**`mus_Miniboss` is `$2E`, not `$18`.** `sonic3k.constants.asm:1461,1483` puts `mus_MinibossK`
+at `$18` and `mus_Miniboss` at `$2E`, and `Obj_LRZMiniboss` writes the latter. In the S&K driver
+table both ids play the same track, so this is the ROM's byte rather than an audible change; four
+sibling minibosses in the engine use `$18` and were left alone.
+
+**A measurement hazard that cost two captures.** `maven_queue.py ... exec:java` **does not
+compile**. Two arena captures were run against `target/classes` left behind by an earlier
+`-Dtest=` run -- which at that moment held a deliberately *broken* build -- and their camera
+numbers were read as engine behaviour. Every capture command in this campaign now runs
+`compile exec:java`. The tell was a camera that locked at `$700` instead of `$710`: the broken
+constant, not a defect.
+
+**`--rings` was added to `GameplayCaptureTool`.** A boss filmed from a positioned start begins on
+zero rings, where the first touch is fatal; the recorded run arrives at this arena with 355. With
+the ring count declared the fight runs for over 2000 frames instead of ending on frame 256.
+
+**Open question with a kill condition.** Standing still at `$2D28` -- native's own spot -- the
+engine takes a hit at about frame 270 of the arena capture, and native's ring count does not move
+between rows 22985 and 24200. It is not yet established that this is a defect: native is jumping
+through that window (its Player 1 `y` moves `$7B4` -> `$77B` -> `$788` over rows 23160-23300)
+while the capture stands still, and the two fights are not in phase. **Kill condition:** drive the
+engine through native's rows 23150-23310 input from a position and boss phase matched to native's,
+and compare `rings`. If the engine still loses rings there, the arm link's collision box or its
+`MoveSprite_AtAngleLookup` radius is wrong; if not, the hit is the capture's own phase and nothing
+is owed.
+
 ## Handover, 2026-09-18 (eighth)
 
 **Where the work is.** Branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. This round
