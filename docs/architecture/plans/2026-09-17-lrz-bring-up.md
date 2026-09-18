@@ -367,7 +367,7 @@ Still open:
 | Claim | State |
 | --- | --- |
 | Implemented | **Slices 0-3 complete** and slice 4 started (placeholder baseline 43 / 206 / 8 of 609 / 455 / 35 placements): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, and every slice 3 class: `$15` corkscrew, `$16` wall ride, `$17` sinking rock, `$18` falling spike, `$19` door, `$1A` big door, `$1B` fireball launcher, `$1C` horizontal button, `$1D` shooting trigger, `$1E` dash elevator, `$1F` lava fall, `$20` swinging spike ball, `$21` smashing spike platform, `$22` spike ball, `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits it requests. Slice 4's `$9A Obj_Iwamodoki` (32 + 34) landed. Present at `035e48a58`: `AnPal_LRZ1/2`, falling intro, breakable rock, `$31` collapsing bridge, shared-object LRZ branches. Absent: the `LRZ1_BackgroundEvent` stage machine and the seamless `$901` handover, the dome regions, `$99` and `$9B`, three bosses, cutscenes, `StartNewLevel` |
-| Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). On the fixture's recorded native input the engine matches Player 1 `(x, y)` exactly for frames 0-636 and then reaches **x 4029** open-loop before dying at frame 3649. That reach is LOWER than the 4301 recorded at `21fbec7e6` and the drop is the objects working: the input predates the `$1B` launchers that first hurt the run at frame 1102. The hand-authored `lrz1-cold-route-v7` frontier of x 1909 is untouched. Nothing cold-reached in act 2 or the boss act |
+| Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). On the fixture's recorded native input the engine matches Player 1 `(x, y)` exactly for frames 0-636 and then reaches **x 4029** open-loop before dying at frame 3649. That reach is LOWER than the 4301 recorded at `21fbec7e6`. The input is the FIXTURE'S OWN native input, which native survives, so the drop is the engine's open-loop phase error meeting hazards that are now present: the first hurt is at frame 1102 next to the `$1B` launchers. Closing the frame-637 ordering divergence is what would raise it; the classes are not implicated. The hand-authored `lrz1-cold-route-v7` frontier of x 1909 is untouched. Nothing cold-reached in act 2 or the boss act |
 | Rewind-verified | Before/active/after spots with forward replay for the `$19` door, the `$1C` button latch, the `$15` corkscrew ride, the `$17` sinking rock, the `$16` wall ride, the `$18` falling spike, the `$21` smashing spike platform (fall, hold and rise), and now `$1B`, `$1F`, `$20` and the `$1E` dash elevator's mid-ride (`TestLrzHazardRewindSpots`, `TestLrzDashElevatorRewindSpot`), each broken on purpose once. Plus `LrzZoneRuntimeState` capture/restore round trips and the animator's counter blob. `$9C` and `$9A` are covered by `TestEveryObjectRewindRoundTrip` only; no route spot yet |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
 | Visually matched | Act 1 parallax, the act-1 lava block, the act-1 rock sprites (320 and 400), the act-1 animated background lava, and clips `08`-`25` covering every slice 3a/3b/3c/3d class plus `$9A`, each inspected as moving output at 320. Clips `21`-`25` are after-only: the "before" is a placeholder that draws nothing. Act 2's background is still blocked by the direct-`$901` art gap, which slice 2 proved is not the animated-tile DMA |
@@ -1183,13 +1183,20 @@ frames 200 and 330 differ in exactly the edited layout rows.
 | Structural guards | `-Pguards test -B` | 669 tests, 0 failures |
 | Cold act 1 route on the recorded input | `GameplayCaptureTool --main sonic --sidekick tails --settle 1 --frames 12000` | exact `(x, y)` to frame 636 unchanged; open-loop reach **x 4029**, then **hurt at frame 1102** and **dead at frame 3649** |
 
-**The route got shorter, and that is the objects working.** It reached x 4301 at `21fbec7e6` and
-reaches x 4029 now. The hand-authored input predates the hazards it now runs into: the first hurt
-is at frame 1102, `(1993,1157)`, and the nearest placements are `$1B Obj_LRZFireballLauncher`
-subtype `$1C` at `(1982,1008)` and `(1789,1168)` - launchers that were placeholders when the input
-was recorded. The run then limps to x 4029 with no rings and dies at frame 3649. **The route input
-needs re-authoring against the implemented zone**; the reach number is not comparable across this
-commit.
+**The route got shorter, and the reason is not a stale input.** It reached x 4301 at `21fbec7e6`
+and reaches x 4029 now, on `lrz1-native-input-route.txt` - the FIXTURE'S OWN recorded input, which
+the native game plays through these same hazards without dying. What that number measures is how
+long the engine's open-loop replay survives its accumulated phase error, and the error has been
+there since frame 637. Adding faithfully implemented hazards that native also has can only lower
+an open-loop reach when the engine is already off-phase: the first hurt is at frame 1102,
+`(1993,1157)`, beside `$1B Obj_LRZFireballLauncher` subtype `$1C` at `(1982,1008)` and
+`(1789,1168)`, and the run then limps to x 4029 with no rings and dies at frame 3649 near
+`(3790,959)`.
+
+**So the reach is not a regression and the classes are not implicated** - but it is also no longer
+a useful progress number on its own. It will keep falling as the zone fills in, until the frame-637
+shared solid/riding ordering divergence is closed. Quote the exact-match frame (636) and the first
+divergence, not the open-loop reach, until then.
 
 This is focused validation, not a suite pass: the change-based runner has not been run against
 `035e48a58` for this branch.
@@ -1345,12 +1352,16 @@ nothing pushed or merged.
   belongs in a headless level test rather than the unit harness.
 - A route spot for `$9C` and `$9A`.
 
-**The route input is stale and must be re-authored.** `lrz1-native-input-route.txt` was recorded
-when the hazards were placeholders. At `72920cabc` it is first hurt at frame 1102 near the `$1B`
-launchers at `(1982,1008)` and `(1789,1168)`, reaches only x 4029, and dies at frame 3649. The
-frames 0-636 exact match is unchanged and the frame-637 shared-solid ordering divergence still ends
-the parity comparison; the reach number is simply not comparable across this commit. Re-author
-against the implemented zone before quoting a frontier.
+**Stop quoting the open-loop reach as progress.** `lrz1-native-input-route.txt` is the fixture's
+own recorded input, which the native game plays through these hazards without dying, so the reach
+measures how long the engine's replay survives its accumulated phase error and nothing else. At
+`72920cabc` it is first hurt at frame 1102 beside the `$1B` launchers at `(1982,1008)` and
+`(1789,1168)`, reaches x 4029 and dies at frame 3649 - down from 4301, purely because there are now
+hazards for an off-phase run to hit. The frames 0-636 exact match is unchanged and the frame-637
+shared solid/riding ordering divergence still ends the parity comparison. **Expect the reach to
+keep falling as the zone fills in**, and quote the exact-match frame and the first divergence
+instead. Raising it means closing frame 637, which belongs to the shared solid path and is outside
+this campaign.
 
 **Media.** Clips `09`-`25` in `~/Videos/OGGF/lrz-bring-up/`, every `raw-NN-*` kept, all demo and
 route inputs under `inputs/`. `21`-`25` are after-only clips; the census is the "before".

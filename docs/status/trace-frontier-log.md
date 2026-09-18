@@ -110968,13 +110968,18 @@ Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `7
   --sidekick tails --settle 1 --frames 12000`: Player 1 `(x, y)` still matches **exactly for
   frames 0-636**, and the frame-637 shared solid/riding ordering divergence recorded above is
   still what ends the parity comparison.
-- **The open-loop reach fell from x 4301 to x 4029, and that is the objects working.** The
-  hand-authored input predates the hazards it now runs into. First hurt is frame 1102 at
-  `(1993,1157)`; the nearest placements are `$1B Obj_LRZFireballLauncher` subtype `$1C` at
-  `(1982,1008)` and `(1789,1168)`, launchers that were placeholders when the input was recorded.
-  The run then limps to x 4029 with no rings and dies at frame 3649 near `(3790,959)`. **Re-author
-  `lrz1-native-input-route.txt` against the implemented zone before quoting a reach**; the number
-  is not comparable across this commit.
+- **The open-loop reach fell from x 4301 to x 4029, and the reason is not a stale input.**
+  `lrz1-native-input-route.txt` is the fixture's OWN recorded input, which the native game plays
+  through these same hazards without dying. What the reach measures is how long the engine's
+  open-loop replay survives its accumulated phase error, and that error has been there since frame
+  637. Adding faithfully implemented hazards that native also has can only lower an open-loop reach
+  when the engine is already off-phase. First hurt is frame 1102 at `(1993,1157)`, beside
+  `$1B Obj_LRZFireballLauncher` subtype `$1C` at `(1982,1008)` and `(1789,1168)`; the run then
+  limps to x 4029 with no rings and dies at frame 3649 near `(3790,959)`.
+- **So stop quoting the reach as progress.** It is not a regression and the new classes are not
+  implicated, but it will keep falling as the zone fills in. Quote the exact-match frame (636) and
+  the first divergence instead. Raising it means closing the frame-637 shared solid/riding ordering
+  divergence, which is outside this campaign.
 - Classes landed between the two measurements: `$21` smashing spike platform, `$22` spike ball,
   `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits,
   and `$9A` Iwamodoki. Census 98 / 240 / 8 -> 43 / 206 / 8.
