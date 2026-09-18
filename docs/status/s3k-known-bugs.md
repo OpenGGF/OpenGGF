@@ -66,6 +66,9 @@ Entries should include:
 40. [Sky Sanctuary Background Mode Switch Completes a Frame Early](#sky-sanctuary-background-mode-switch-completes-a-frame-early)
 41. [Sky Sanctuary Plain-Mode Background Below `Camera_Y $800` Renders Flat Sky](#sky-sanctuary-plain-mode-background-below-camera_y-800-renders-flat-sky)
 42. [Sky Sanctuary Mecha Sonic Spawner Pad Allocates No Boss](#sky-sanctuary-mecha-sonic-spawner-pad-allocates-no-boss)
+43. [Sky Sanctuary Boss Defeats Draw No Explosion](#sky-sanctuary-boss-defeats-draw-no-explosion)
+44. [Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship](#sky-sanctuary-metropolis-orbs-still-on-the-ring-are-deleted-with-their-ship)
+45. [S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object](#s3k-special-property-touch-teleports-the-sidekick-for-every-c0-object)
 
 ---
 
@@ -5937,3 +5940,47 @@ That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
   the `Child6_CreateBossExplosion` child are missing.
 - **Removal condition** — Slice 7 lands `Obj_SSZEndBoss`, `loc_45A84` allocates it and writes
   `_unkFAA4`, and `loc_45AB0` explodes the pad once the boss passes its X.
+
+## Sky Sanctuary Boss Defeats Draw No Explosion
+
+- **Location** — `SszGhzBossObjectInstance.onDefeatStarted` and `SszMtzBossObjectInstance.onDefeatStarted`
+  (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
+- **Symptom** — Both act 1 recreations reach zero hits, install `Wait_FadeToLevelMusic`, score and
+  fly off correctly, but nothing explodes on the killing frame.
+- **Suspected cause** — `loc_7A5EC` and `loc_7AD3A` both run `CreateChild1_Normal` over
+  `Child6_CreateBossExplosion` with `subtype 4` immediately before `jmp (BossDefeated).l`. Neither
+  port spawns that child, and both set `usesDefeatSequencer()` false, so the shared base's own
+  explosion path is off as well.
+- **Removal condition** — `Child6_CreateBossExplosion` subtype 4 is ported and both defeats spawn
+  it on the killing frame, with a clip showing it.
+
+## Sky Sanctuary Metropolis Orbs Still on the Ring Are Deleted With Their Ship
+
+- **Location** — `SszMtzBossOrbChild.update` (`src/main/java/com/openggf/game/sonic3k/objects/bosses/`)
+- **Symptom** — When `loc_7ACA4` frees the ship's slot, every orb still orbiting disappears with
+  it. On the cartridge they keep orbiting.
+- **Suspected cause** — `sub_7B0C2`, which is what `_unkFA88` pops an orb through, is only reached
+  from `loc_7AFA4` (launched) and `loc_7B02A` (bouncing). An orb in `loc_7AE22` never tests that
+  flag, so after `Go_Delete_Sprite` it goes on reading `$34(a0)` — a slot the next allocation will
+  overwrite — and orbits whatever it finds there until the act ends. The engine cannot reproduce a
+  read of a freed slot and deleting is the sane substitute, but it is a divergence and the
+  Metropolis fight's last frames look different because of it.
+- **Removal condition** — Either a native capture shows the cartridge's orbs are culled some other
+  way, or the divergence is accepted in writing with a clip of both behaviours.
+
+## S3K Special-Property Touch Teleports the Sidekick For Every `$C0` Object
+
+- **Location** — `ObjectTouchResponseController` (`src/main/java/com/openggf/level/objects/`), the
+  `TouchCategoryDecodeMode.S3K_SPECIAL_PROPERTY` arm
+- **Symptom** — Any S3K object whose collision byte decodes as `SPECIAL` teleports the native
+  Player 2 onto it and forces animation 2 when the leader is Knuckles, and puts Player 2 in the air
+  on every leader. The Metropolis boss's launched orbs (`$C6`) are the newest objects to take that
+  path, so a Knuckles + Tails route through the fight moves Tails onto each orb the leader touches.
+- **Suspected cause** — `Touch_Special`'s `loc_103FA` (sonic3k.asm:21162-21194) does only
+  `addq.b #1,collision_property(a1)`, twice for the sidekick. The teleport belongs to a specific
+  object's routine, not to the shared category, and generalising it puts it on every
+  special-property object. The decode itself also returns `SPECIAL` for any `$C0` byte before
+  `Touch_Special`'s size list is consulted, so bytes the ROM ignores (the orbs' unreachable `$DA`)
+  would dispatch here too.
+- **Removal condition** — The teleport moves to the object that owns it in ROM, the size list gates
+  the `SPECIAL` decode, and a Knuckles + Tails Metropolis clip shows Tails staying where they were.

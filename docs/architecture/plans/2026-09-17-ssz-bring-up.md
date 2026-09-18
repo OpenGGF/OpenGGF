@@ -386,13 +386,13 @@ Still open — the named slice must resolve each **before** building on it:
 
 ## Status
 
-Last updated 2026-09-18 after slice 5, at `0d66b1434` on `feature/ai-ssz-bring-up`.
+Last updated 2026-09-18 after slice 6, on `feature/ai-ssz-bring-up`.
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 0, 1, 1b, 2, **3**, **4** and **5** delivered. All 154 act-1 slice-3 placements resolve to concrete classes (`$74 $75 $76 $79 $7A $7B $7C $7D $7E $7F $A0`); the census ratchets act 1 to zero unimplemented families and act 2 still owes `$B2` (slice 9). On top of that: the placement census, runtime state, screen init, the whole `sub_575EA` bounds machine **including** the Green Hill allocation at `loc_576E8`, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, the act-1 background, the death and checkpoint lifecycle, and `Obj_SSZGHZBoss` with its six-link chain, emitter and Mecha Sonic head. Slices 6-11 are not started |
+| Implemented | Slices 0, 1, 1b, 2, **3**, **4**, **5** and **6** delivered. All 154 act-1 slice-3 placements resolve to concrete classes (`$74 $75 $76 $79 $7A $7B $7C $7D $7E $7F $A0`); the census ratchets act 1 to zero unimplemented families and act 2 still owes `$B2` (slice 9). On top of that: the placement census, runtime state, screen init, the whole `sub_575EA` bounds machine **including** the Green Hill allocation at `loc_576E8`, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, the act-1 background, the death and checkpoint lifecycle, `Obj_SSZGHZBoss` with its six-link chain, emitter and Mecha Sonic head, and **`Obj_SSZMTZBoss`** with its seven-orb ring, laser pair and the `loc_5775C` spawn that allocates it. Slices 7-11 are not started |
 | Cold-reachable | Act 1's arrival and cutscene run from a cold load and open the route: the bridge clears `Events_bg+$05` and the camera limits become `0 … $19A0`. `TestS3kSszColdRoutes` carries the recorded movie input to X `$6EB`, past the bridge and the arrival ledge, short of the `$7B` cluster at `$740`. Everything past that — the traversal families, both arenas, the lifecycle — is exercised from **declared** star-post entries, not from a route. `SSZ1_ScreenInit` is why: with no star post it drags the leader back to the arrival column, so a walked approach to anything past the bridge does not exist yet. Act 2 still loads with no events |
-| Rewind-verified | Spots: the cloud band (slice 2), six slice-3 families, the `$7E` debris **deletion** (the first SSZ spot where an `ObjectRefId` sidecar is load-bearing, because the children really are gone at the restore), the death reload's timeline isolation, and the Green Hill fight mid-swing with all six chain links out. Each was broken on purpose once. Still owed: a spot mid-arrival or mid-cutscene, and any spot at a wide viewport |
+| Rewind-verified | Spots: the cloud band (slice 2), six slice-3 families, the `$7E` debris **deletion** (the first SSZ spot where an `ObjectRefId` sidecar is load-bearing, because the children really are gone at the restore), the death reload's timeline isolation, the Green Hill fight mid-swing with all six chain links out, and the Metropolis fight with one orb off the ring. Each was broken on purpose once. Still owed: a spot mid-arrival or mid-cutscene, and any spot at a wide viewport |
 | Native behaviour matched | Three places. The act-1 background layout is decoded from the ROM and matched column for column against the engine's layer. Fixture `hpz` row 0's arrival values match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference recorded as open. Fixture `hpz_2` is itself a `$34:$03` restart and its row 0's player `($14C0,$EC)` and camera `($1420,$8C)` are matched exactly. **Nothing else is.** In particular no boss, no traversal family and no EggRobo is compared against a native row, and the `hpz` fixture's Green Hill arena window (camera `$160,$7C0`, 1142 rows) is unread. There is still no SSZ native probe |
 | Visually matched | Seventeen clips, `01`-`17`, each cut from a raw capture whose frames were read before cutting; the frames looked at are in `~/Videos/OGGF/ssz-bring-up/INDEX.md`. Every slice-3 family, the death and restart, and the Green Hill fight are filmed. Not filmed: the EggRobo's nibble-0/nibble-2 pairing in one shot (the obstacle is measured in INDEX.md), a wide-viewport row for anything past slice 2, and known bug #41's before/after — which was taken and shows **no pixel difference**, reopening the rendered half of that fix |
 
@@ -2045,3 +2045,126 @@ until their `timeout` wrappers killed them. Submit one Maven job at a time from 
 classes into a single `-Dtest=A,B,C`, give it a timeout longer than the job, and wait for it in
 the foreground. Checking `pgrep -af maven_queue.py` for your own worktree before blaming anyone
 else takes one command.
+
+### 2026-09-18 — slice 6: the Metropolis recreation, written against a dated oracle
+
+Slice 6 landed. Unlike Green Hill it started with its native timeline already in hand (the entry
+two above), and the difference shows: `defeatDeferralAppliesToThisBoss()` was overridden from the
+first line instead of discovered at the end, and the entry's init + 33 was asserted rather than
+derived.
+
+**What was written.** `allocateMtzBoss` beside `allocateGhzBoss` in `Sonic3kSSZEvents`
+(`loc_5775C`), `SszMtzBossObjectInstance` (`Obj_SSZMTZBoss` and all of `off_7A728` /
+`off_7A7F0` / `off_7AA60`), `SszMtzBossOrbChild` (`loc_7AD8A`'s five routines, `sub_7AEB0`,
+`sub_7AF5A`, `sub_7B0C2`), `SszMtzBossLaserChild` (`ChildObjDat_7AB80`), and
+`SszMechaHeadHost` — an interface extracted so `SszMechaSonicHeadChild` rides both ships instead
+of being typed to the Green Hill one. `TestS3kSszMtzArenaHeadless` is fourteen tests.
+
+**Four things the reading settled that the label list does not.**
+
+1. **There is no orb controller.** `loc_7A72C` allocates one slot with `loc_7AD8A`, and that
+   slot's routine 0 opens `movea.l a0,a1` — so the first orb it sets up is *itself*, and it
+   allocates six more. Seven, not eight. The native rows agree: slots 25-32 appear together on
+   frame 6190, which is the Mecha Sonic head plus seven orbs.
+2. **The ship's box shrinks after its first hit.** `loc_7A72C` writes
+   `move.b #$11,collision_flags(a0)`; `sub_7ACF2`'s restore writes `move.b #$F`. The two are
+   different sizes and nothing ever writes `$11` again.
+3. **The fight does not progress unless the player deals with the orbs.** `loc_7A98A` will not
+   leave the hit reaction while `$30(a0)` is non-zero, and nothing in the ROM pops a launched orb
+   on its own — `sub_7B0C2` only runs from `loc_7AFA4` and `loc_7B02A`. The tests have to play the
+   fight, not step through it; `clearTheRing` is that.
+4. **`$3C` is never reloaded at the landing, so the bouncing orb's `$DA` is unreachable.** The
+   delay expires on the 61st airborne frame and the flight is well over ninety, so the orb keeps
+   the launch's `$C6` for the whole bounce. The branch is ported as written and the reason is in
+   its Javadoc.
+
+**The laser interval is 46 frames, not 30, and the test is what says so.** `sub_7AB56` rearms
+`move.w #$1E,(SSZ_MTZ_boss_laser_timer).w`, but `loc_7AA44` tests `$33(a0)` *before* the
+`off_7AA60` dispatch and returns, so the `move.b #$10,$33(a0)` recoil freezes the timer for
+sixteen frames first. The first version of the test asserted `$1E` and failed with `2` shots seen
+where `3` were expected — because a shot also outlives the interval, so counting `0 -> 2`
+transitions misses the later pairs. Both were fixed: the test tracks the children by identity and
+asserts `LASER_INTERVAL + LASER_RECOIL_FRAMES`.
+
+**Review.** An independent reviewer read the port against the disassembly line by line and wrote
+`~/Videos/OGGF/ssz-bring-up/notes/ssz-mtz-boss-review.md`. It confirmed `sub_7AEB0`'s three
+lookups (sine for both position terms, cosine of `$2E` for the depth `sub_7AF5A` sorts on) and the
+`move.w d0,d5` low-word truncation of each `muls.w`; `loc_7ADA2`'s seven; `sub_7AC06`'s `$1F`
+accounting; the `bset #6 / beq` two-turn rule; `loc_7AFA4`'s net `+$18`; `loc_7B02A`'s `neg`
+before `asr`; the `$11 -> $F` change; the `$87 / $C6 / $DA` bytes; and the 184-frame escape. It
+raised two blocking findings and four to fix, all applied:
+
+- The laser interval, already found and fixed independently — the same conclusion from the same
+  instruction.
+- **`theOrbRingSortsItselfFrontAndBackFromTheCosineOfItsAngle` could not disagree.** It computed
+  the expected priority and mapping frame from `depthForTest()` using the production class's own
+  `DEPTH_BAND` and `PRIORITY_*` constants and the same branch structure, so swapping `$80` and
+  `$380` in `sortByDepth()` would have moved the expectation with it. It is now the literal table,
+  written out with inline hex, plus a count that every one of the four rows was exercised, plus
+  two assertions the sort cannot produce: the depth's extremes over a revolution are exactly
+  `+/-$27`, the ship's arm length. **Fourth cannot-disagree assertion found in this campaign, and
+  the second found by a reviewer rather than by a failure.**
+- The orb's `index` was captured for rewind and could not be restored — the field was `final`.
+- The launch animation ran a frame early. `loc_7AE22` sets `anim` and ends at `loc_7AE9C` without
+  calling `Animate_Sprite`; the first call is the frame after, and its `.newanim` arm zeroes the
+  duration and then loads entry 0 with a full `dc.b 3`. The port pre-seeded the frame on the
+  launch frame itself, where `sub_7AF5A` promptly overwrote it, so every entry landed early.
+- `loc_7A874`'s two-turn rule had no test: a port that advanced on the *first* turn passed
+  everything in the file. `theShipLeavesThePatrolOnItsSecondTurnAroundAndNotItsFirst` counts the
+  reversals.
+- The Javadoc claimed the `2(a1)` writes had no consumer. They do — `2(a1)` is `_unkFA84`, which
+  this engine models as `backgroundCameraDelta()`. The drop is still right, because `loc_6607E`
+  rewrites that word from the camera delta every frame; the *reason* was wrong, which under
+  invariant 3 is worse than the omission.
+
+**Three gaps recorded** in `docs/status/s3k-known-bugs.md` rather than papered over: neither act-1
+boss spawns `Child6_CreateBossExplosion` (the Green Hill sibling has the same gap); an orb still
+on the ring is deleted with its ship where the cartridge leaves it orbiting a freed slot; and the
+shared `S3K_SPECIAL_PROPERTY` touch arm teleports the sidekick onto every `$C0` object, which the
+orbs are the newest to reach.
+
+**One flag that was in the tool and not in the skill is now in both.** `--star-post` is in the
+`gameplay-capture` argument table in both skill trees, with the `SSZ1_ScreenInit` reason beside
+it.
+
+### 2026-09-18 — handover after slice 6
+
+Branch `feature/ai-ssz-bring-up`, base develop `035e48a58`. Nothing pushed, nothing merged.
+Slice 6 is complete and reviewed; **slice 7 (Mecha Sonic) was not started.**
+
+**What slice 7 needs, in the order it will want it.**
+
+1. **The spawner already exists and is documented as a gap.** `SSZHPZTeleporterObjectInstance`
+   takes `loc_455BA`'s branch for the `$79:$00` placement at `($1A40,$670)` and installs
+   `loc_45A72`; known bug #42 in `docs/status/s3k-known-bugs.md` records exactly what is missing —
+   `loc_45A84`'s `AllocateObject`, the `$30(a0)` boss handle written to `_unkFAA4`,
+   `loc_45AB0`'s `x_pos` comparison and the `Child6_CreateBossExplosion` child. The boss branch is
+   taken when `y_pos < $680` and the spawn fires when `Camera_Y_pos == Camera_max_Y_pos`, through a
+   **plain** `AllocateObject` — not `AllocateObjectAfterCurrent`, so the new slot may not run that
+   frame. The final arena's own lock (`$19A0`/`$5C0`) is already in `Sonic3kSSZEvents.dynamicResize`.
+2. **`Obj_SSZEndBoss` is a 21-entry table from `loc_7B308`** (`SSZEndBoss_Index`, sonic3k.asm:164170)
+   and it is much larger than either recreation: it runs `sub_7D312`, `sub_7D2D8` and
+   `Perform_DPLC` over `DPLCPtr_MechaSonic` on every dispatch, so its art is a per-frame DPLC and
+   not a static sheet. Budget for that before budgeting for the routines.
+3. **Its RNG is seeded from `V_int_run_count`.** That is a declared clock seed for native matching
+   and it is invariant 3 territory: cite the routine that reads it, do not key on a frame index.
+4. **Three things slice 6 learned that slice 7 will meet again.** A shared `SST` field is written
+   by the subsystem that owns the interaction, not by the boss's own routines — grep
+   `Touch_Enemy` and `Touch_Special` before concluding a bit is never set. `bset`/`bclr` set Z
+   from the *old* bit, and the second visit is the one that branches differently. And an
+   assertion that recomputes the production branch from the production output passes whatever the
+   production code says; write the ROM's table out as literals instead.
+
+**Still owed on both act-1 fights.** Neither spawns `Child6_CreateBossExplosion` (known bug). The
+Green Hill `$79:$AA` pad's post-defeat rise is implemented but still not driven end to end; the
+Metropolis `$79:$F6` one now is, in `theDefeatTakesTheCartridgesFrameCountAndOpensTheGatedPad`.
+**Neither fight's palette flash has a native comparison, because palette is not in the trace
+schema**, and **the Metropolis fight has no clip yet** — the capture script is written
+(`~/Videos/OGGF/ssz-bring-up/inputs/ssz-mtz-fight.script`, 900 neutral frames then a jump every
+24) but was not filmed. It wants `--star-post --x 0x1700 --y 0x420`; a bare teleport cannot reach
+this arena either.
+
+**Queue discipline held this round.** One Maven job at a time from this worktree, classes batched
+into a single `-Dtest=A,B,C`, waited on in the foreground. Four test runs and two guard runs, no
+reaping. The guard runs are the slow ones — the `-Pguards` profile takes several minutes and the
+worktree waits behind the LRZ and DEZ campaigns for the slot.
