@@ -1997,3 +1997,41 @@ the setter, run once) named the real writer in one run, after two sessions of re
 `TestS3kDezGravityTubeHeadless` (11), `TestS3kDezGravityObjectsHeadless` (20),
 `TestS3kDezTeleporterHeadless` (10), `TestS3kReverseGravityDezCorridor` (44),
 `TestS3kDezPresentationRewind` (2).
+
+### 2026-09-18 — `$5C` `Obj_DEZGravityHub`, the junction the tubes feed into
+
+Three act 2 placements, subtypes `$05`, `$06` and `$0F`, each beside a `$5A`. `sub_492D4`
+(:95558-95690) runs twice per frame over a two-byte block — `$30(a0)` for Player 1 and
+`$32(a0)` for Player 2 — where `(a2)` is the state and `1(a2)` the pose counter.
+
+**The state byte is a bit set, not a sequence.** `loc_49360` and `loc_49386` `bset #1` and
+`bset #2` as each axis reaches the centre, on top of the `1` the capture wrote, so the byte
+walks 1 → 3 or 5 → 7, and `cmpi.b #7,d0 / bhs` is reached only when both axes are home. Read
+as a counter it would launch the player on the first axis. State `8` is post-launch and resets
+only once the player has left the same `$40` px square the capture used (`loc_49430`).
+
+**The centring snap needs strictly less than eight.** `cmpi.w #8,d0 / bhs` takes the step
+branch at exactly eight, so a rider `$10` off-centre steps twice and snaps on the third frame,
+not the second. The first draft of the test asserted the snap a frame early and the
+implementation was right — worth recording because the arithmetic looks like it should be two
+frames.
+
+**The exit reads the press half.** `d1` is the whole `Ctrl_N_logical` word and
+`and.b subtype(a0),d1` (:95664) masks its low byte. A direction *held* while the hub catches
+the player is not a press, so it cannot fire them straight back out; the engine publishes
+`getLogicalInputState` as held bits, so the edge is derived inside the hub's own per-player
+block, where rewind captures it. `word_49420` is ordered up, down, left, right and
+`loc_49408` shifts to the first set bit, so two allowed directions at once leave along the
+lower one. The subtype masks: `$05` is up+left, `$06` down+left, `$0F` all four.
+
+`btst #Status_OnObj,status(a1) / bne` (:95571) is what stops the hub stealing the rider off the
+tube that feeds it — a co-located pair again, and the same hazard `$5B`/`$5A` had.
+
+Eight mechanisms, eight breaks, eight reds: window span, the `Status_OnObj` guard, the
+eight-pixel step, the exit table's order, the press edge, the pose shift, the launched-state
+window hold, and the subtype mask. No mechanism was left unpinned this time; the `$5A` session's
+lesson (a break that changes nothing is a badly chosen break) was applied by running every
+break before claiming the suite pinned anything.
+
+Census: act 2 placeholders 283 → 280, concrete 211 → 214. Act 1 unchanged — no `$5C` there.
+Guards 669/669 after the five inventories a new object moves.

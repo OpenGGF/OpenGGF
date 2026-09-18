@@ -543,6 +543,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.MGZ_TOP_LAUNCHER,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $5C is Obj_DEZGravityHub (sonic3k.asm:95545); S3KL $5C is
+                        // Obj_MGZTopLauncher. The two object tables share the number.
+                        return new S3kDezGravityHubObjectInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }

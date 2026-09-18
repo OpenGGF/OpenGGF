@@ -117,6 +117,7 @@ public class Sonic3kObjectProfile implements GameObjectProfile {
             0x5A, // MGZPulley (S3KL) / DEZGravityTube (SKL) -- concrete in both
             0x5B, // MGZTopPlatform (S3KL) / DEZGravitySwap (SKL) -- concrete in both object
                   // tables, so it is shared even though the two are unrelated objects
+            0x5C, // MGZTopLauncher (S3KL) / DEZGravityHub (SKL) -- concrete in both
             0x6A, // InvisibleHurtBlockHorizontal
             0x6B, // InvisibleHurtBlockVertical
             0x6C, // TensionBridge

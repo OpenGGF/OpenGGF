@@ -97,6 +97,8 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezTeleporterObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityHubObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityHubObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityTubeObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravityTubeObjectInstance.java#restoreRewindState", 1),
             // HPZ ($1601) teleporter graph and Knuckles-fight children keep object links in

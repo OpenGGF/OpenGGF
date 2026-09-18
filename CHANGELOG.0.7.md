@@ -44,6 +44,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   The act's gravity tunnels now take hold too: run into one and it carries you along, lifting
   and swinging you as it goes, and leaving one while gravity is reversed turns you the right
   way up, and the ride is continuous rather than dropping and catching you every other frame.
+  The junctions the tunnels feed into now catch you as well: they pull you to the middle, hold
+  you spinning there, and fire you out along whichever way you press of the ones that junction
+  opens onto.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.

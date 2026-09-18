@@ -137,9 +137,9 @@ class TestRemainingRewindTailInventory {
         // booleans round-trip through the subclass extra. $58
         // S3kDezGravitySwitchObjectInstance is the same shape again, and $59
         // S3kDezTeleporterObjectInstance a third time -- its two rider blocks round-trip as one
-        // subclass extra record, and $5A S3kDezGravityTubeObjectInstance a fourth.
-        // No bucket grows.
-        return new TailInventory(1113, 878, 235, 0, buckets);
+        // subclass extra record, $5A S3kDezGravityTubeObjectInstance a fourth and $5C
+        // S3kDezGravityHubObjectInstance a fifth. No bucket grows.
+        return new TailInventory(1114, 879, 235, 0, buckets);
     }
 
     private static void loadBucketRows(String resource, Map<Bucket, TreeSet<String>> buckets) {
