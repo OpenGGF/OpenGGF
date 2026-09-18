@@ -1892,26 +1892,24 @@ inside 3825. The chain drops with every link at `x = $200`. `4476 - 4412 = 64 = 
 `BossDefeated`'s `move.w #$3F,$2E(a0)`. `4596 - 4476 = 120 = $78`, which is `loc_85674`'s
 `(2*60)-1`. The whole defeat is **184 frames**.
 
-**The one-frame deviation is now a one-line fix with its evidence, and it is handed over rather
-than applied.** The engine delivers 183, because it detects the killing hit in the touch pass and
-then runs the object's own update later in the same frame, taking one decrement the cartridge does
-not. These rows make it fixable rather than merely describable: `4476 - 4412 = 64` is `$3F`
+**The one-frame deviation is gone, and these rows are what closed it.** The engine used to deliver
+183, because it detects the killing hit in the touch pass and then ran the object's own update
+later in the same frame, taking one decrement the cartridge does not. `4476 - 4412 = 64` is `$3F`
 decrements *plus* the one that goes negative, so the killing frame decrements nothing. That
 follows from the dispatch shape — `loc_7A29C` reads `routine(a0)` at its head and only reaches
 `sub_7A5A0` after the arm has run, so `loc_7A5EC`'s `move.l #Wait_FadeToLevelMusic,(a0)` lands
-after this slot is done for the frame. The shared base already has the mechanism:
+after this slot is done for the frame. The shared base already had the mechanism:
 `AbstractBossInstance.defeatDeferralAppliesToThisBoss()`, which `HczMinibossInstance` overrides
 for exactly this ROM shape (the 2026-08-26 conflict ledger records it as `BOSS_DEFEATED_WAIT=0x3F`
-plus `pendingDefeatDispatch`).
+plus `pendingDefeatDispatch`). This boss overrides it too now, and the test asserts `$3F` on the
+killing frame and `$40 + $78 = 184` in total — the cartridge's number.
 
-**The change is: override it to `true` on `SszGhzBossObjectInstance`, and move the test's two
-numbers from `$3E` to `$3F` and from `$3F + $78` to `$40 + $78`.** It was written, and then
-reverted unrun: three queued Maven runners were reaped while waiting for a slot against a queue
-with nine contending requests, and an unverified behaviour change is not worth committing when the
-verified state is one `git checkout` away. The tree is exactly the state that ran 14/14. Whoever
-picks this up applies those three edits and runs `TestS3kSszGhzArenaHeadless`; if it is green the
-deviation is gone and the assertion messages (which currently describe the gap) should be
-rewritten to describe the match.
+It was written once, reverted unrun when Maven runners kept being reaped while queued, and then
+applied properly once the queue was cleared. **The queue was jammed by this worktree's own
+submissions** — seven `maven_queue.py` requests stacked up from parallel background launches, and
+the queue serialises one worktree's jobs, so they waited on each other until their `timeout`
+wrappers reaped them. Blaming the other campaigns was wrong. One Maven job at a time from a
+worktree, classes batched into a single `-Dtest=A,B,C`, waited on in the foreground.
 
 **One thing it corrected, and it was written two entries above.** That entry said `loc_849D8`
 "walks down the tree one link a frame, so the chain comes apart from the ship outward". It does
@@ -1962,7 +1960,7 @@ try, and it is not a five-minute job.
 Branch `feature/ai-ssz-bring-up`, head `6d462604b`, base develop `035e48a58`. Nothing pushed,
 nothing merged. Commits this round, oldest first: `ea8b23a9e` (the review applied),
 `96599ba13` (how it was applied, disputed and tested), `6d462604b` (the native comparison and the
-claim it corrected).
+claim it corrected), and the commits below it for the defeat deferral and the clip.
 
 **Where slice 6 stands: not started.** The three tasks this round carried were the review
 application, a re-film and a native comparison. The review application ran long, twice, because
@@ -1995,14 +1993,15 @@ routine 0/2 — which is enough to put the ship on screen and test.
    `Wait_FadeToLevelMusic` also lands after the slot is done for the frame. Apply it from the
    start rather than discovering the one-frame gap later, and confirm it against the native rows.
 
-**Still owed on the Green Hill fight**, in the order they are worth doing: the
-`defeatDeferralAppliesToThisBoss()` override and its two test numbers (written, reverted unrun,
-described above with its evidence); the clip 18 re-film, which needs a capture path that does not
-teleport; and the `$79:$AA` gated pad driven end to end from the defeat flag to the `$2A0` lift.
-The hit flash has no native comparison because palette is not in the trace schema.
+**Still owed on the Green Hill fight:** the `$79:$AA` gated pad driven end to end from the defeat
+flag to the `$2A0` lift. The hit flash has no native comparison because palette is not in the
+trace schema.
 
-**Measurement note for the next agent.** The Maven queue was nine requests deep for the last hour
-of this round and reaped three of this worktree's waiting runners before they were admitted. That
-is why the last behaviour change was reverted rather than committed unrun. If runners keep dying
-while waiting, do not work around it by calling `mvn` directly and do not commit unverified
-changes; revert to the last verified tree, commit that, and hand the change over.
+**Queue discipline, learned the hard way.** Late in this round Maven runners kept being reaped
+while waiting for a slot, and this plan first recorded that as the other campaigns saturating the
+queue. It was not: seven of the queued requests were **this worktree's own**, launched in parallel
+in the background, and the queue serialises one worktree's jobs — so they waited on each other
+until their `timeout` wrappers killed them. Submit one Maven job at a time from a worktree, batch
+classes into a single `-Dtest=A,B,C`, give it a timeout longer than the job, and wait for it in
+the foreground. Checking `pgrep -af maven_queue.py` for your own worktree before blaming anyone
+else takes one command.

@@ -310,6 +310,21 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     /** {@code BossDefeated} is {@code moveq #100,d0} into {@code HUD_AddToScore}. */
     @Override protected int getDefeatScore() { return DEFEAT_SCORE; }
 
+    /**
+     * {@code loc_7A29C} reads {@code routine(a0)} at its head, {@code jsr}s the selected arm and
+     * only then {@code bsr.w sub_7A5A0}, whose zero-hits branch ({@code loc_7A5EC}) installs
+     * {@code Wait_FadeToLevelMusic} into {@code (a0)}. The dispatcher has already run this slot
+     * for the frame, so that wait's first decrement belongs to the next object pass and the
+     * killing frame ends with {@code $2E} still at {@code $3F} — the same shape
+     * {@code HczMinibossInstance} models with this override.
+     *
+     * <p>Measured, comparison only: in the {@code s3k-sonic-tails-complete-emeralds} {@code hpz}
+     * segment the ship takes {@code Wait_FadeToLevelMusic} on frame 4412 and {@code loc_7A3E6} on
+     * 4476. Sixty-four executions is {@code $3F} decrements plus the one that goes negative, so
+     * the killing frame decrements nothing.
+     */
+    @Override protected boolean defeatDeferralAppliesToThisBoss() { return true; }
+
     @Override protected boolean usesDefeatSequencer() { return false; }
 
     @Override protected int getBossHitSfxId() { return Sonic3kSfx.BOSS_HIT.id; }

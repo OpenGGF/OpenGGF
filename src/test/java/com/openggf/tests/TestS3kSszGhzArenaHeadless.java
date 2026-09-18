@@ -592,12 +592,11 @@ class TestS3kSszGhzArenaHeadless {
         defeatThroughTheTouchPass(fixture, boss);
         assertEquals(0, boss.hitsRemainingForTest(), "collision_property reached zero");
         assertEquals(0, boss.getCollisionFlags(), "a defeated ship is no longer hittable");
-        assertEquals(0x3E, boss.waitTimerForTest(),
-                "BossDefeated (sonic3k.asm:180822) is move.w #$3F,$2E(a0), and one "
-                        + "Wait_FadeToLevelMusic decrement has already been taken. The cartridge "
-                        + "takes none on the killing frame — see the plan's review-02 entry and "
-                        + "the defeatDeferralAppliesToThisBoss() override it hands over — so the "
-                        + "value is derived from $3F, one frame ahead of the ROM");
+        assertEquals(0x3F, boss.waitTimerForTest(),
+                "BossDefeated (sonic3k.asm:180822) is move.w #$3F,$2E(a0), and the killing frame "
+                        + "decrements nothing: loc_7A29C has already dispatched this slot before "
+                        + "sub_7A5A0 installs Wait_FadeToLevelMusic, so the first decrement "
+                        + "belongs to the next object pass");
         assertEquals(scoreBefore + 100,
                 GameServices.gameState().getScore(),
                 "moveq #100,d0 / jsr (HUD_AddToScore) in the same routine");
@@ -615,14 +614,13 @@ class TestS3kSszGhzArenaHeadless {
         }
         assertTrue(state.eventsBgByte(EV_GHZ_BOSS) < 0,
                 "loc_7A3F8 st (Events_bg+$00).w after the escape");
-        assertEquals(0x3F + 0x78, framesToBeaten,
-                "the rest of the $3F Wait_FadeToLevelMusic frames, then loc_85674's "
-                        + "(2*60)-1 = $77 escape frames plus the frame loc_7A3E6 goes negative "
-                        + "on: 183. The cartridge takes 184 — the s3k-sonic-tails-complete-"
-                        + "emeralds hpz segment puts the ship on Wait_FadeToLevelMusic at native "
-                        + "frame 4412 and frees its slot at 4596 — and the one-frame gap is the "
-                        + "killing-frame decrement the engine takes and the ROM does not. "
-                        + "Comparison only");
+        assertEquals(0x40 + 0x78, framesToBeaten,
+                "$3F decrements plus the one that goes negative is $40 Wait_FadeToLevelMusic "
+                        + "frames, then loc_85674's (2*60)-1 = $77 escape frames plus the frame "
+                        + "loc_7A3E6 goes negative on: $B8 = 184. The "
+                        + "s3k-sonic-tails-complete-emeralds hpz segment puts the ship on "
+                        + "Wait_FadeToLevelMusic at native frame 4412 and frees its slot at "
+                        + "4596 — the same 184. Comparison only");
         assertEquals(0, countActive(SszMechaSonicHeadChild.class),
                 "st (_unkFA89).w deletes the head with the ship");
         assertEquals(0, countActive(SszGhzBossObjectInstance.class), "Go_Delete_Sprite");
