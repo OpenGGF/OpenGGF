@@ -5,6 +5,8 @@ import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.S3kDezGravitySwapObjectInstance;
+import com.openggf.game.sonic3k.objects.S3kDezGravitySwitchObjectInstance;
+import com.openggf.level.objects.SolidContact;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.sprites.NativePositionOps;
 import com.openggf.sprites.playable.AbstractPlayableSprite;
@@ -233,6 +235,276 @@ class TestS3kDezGravityObjectsHeadless {
         for (var instance : GameServices.level().getObjectManager().getActiveObjects()) {
             if (instance instanceof S3kDezGravitySwapObjectInstance swap) {
                 return swap;
+            }
+        }
+        return original;
+    }
+
+    // ---------------------------------------------------------------- $58 gravity switch
+
+    /**
+     * SKL {@code $58}, {@code Obj_DEZGravitySwitch}: the five act 2 pressure pads.
+     *
+     * <p>The pad <strong>toggles</strong> rather than writes — {@code eori.b #1,
+     * (Reverse_gravity_flag).w} at {@code loc_48B7E} (sonic3k.asm:94879) — and it does so
+     * on the <em>fourth</em> update after the press, not the press frame:
+     * {@code move.w #3,$30(a0)} (:94822) then {@code subq.w #1,$30 / bpl} (:94877-94878),
+     * so the counter runs 3, 2, 1, 0 and toggles on the update that takes it negative.
+     */
+    @Test
+    void theGravitySwitchTogglesOnTheFourthUpdateAfterThePress() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            pressPad(pad, sprite);
+            assertTrue(pad.isPressed(), "the press must move the pad out of its armed routine");
+
+            for (int update = 1; update <= 3; update++) {
+                pad.update(0, sprite);
+                assertFalse(GameServices.gameState().isReverseGravityActive(),
+                        "update " + update + " after the press must not have toggled yet");
+            }
+            pad.update(0, sprite);
+            assertTrue(GameServices.gameState().isReverseGravityActive(),
+                    "loc_48B7E toggles on the fourth update, when $30 goes negative");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /** And it is a toggle: a second press turns gravity back off. */
+    @Test
+    void asecondPressOfTheGravitySwitchTogglesBack() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(true);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            pressPad(pad, sprite);
+            for (int update = 0; update < 4; update++) {
+                pad.update(0, sprite);
+            }
+            assertFalse(GameServices.gameState().isReverseGravityActive(),
+                    "eori.b #1 on a set flag clears it; $5B would have written a fixed value");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /**
+     * The rearm cannot start while the pad is still occupied. {@code loc_48B9C}
+     * (:94892-94896) tests {@code Status_OnObj(a0)} and resets {@code $30} to 0 every frame
+     * it is set, so a player who presses the pad and never leaves keeps it down.
+     */
+    @Test
+    void theGravitySwitchDoesNotRearmWhileItIsStillOccupied() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            pressPad(pad, sprite);
+            for (int update = 0; update < 4; update++) {
+                pad.update(0, sprite);
+            }
+            assertTrue(GameServices.gameState().isReverseGravityActive(), "precondition: toggled");
+
+            // Keep reporting contact for far longer than the 20-frame rearm, and count the
+            // flag's transitions rather than sampling it at the end. Sampling cannot tell
+            // "never rearmed" from "rearmed, was pressed again and toggled twice more": both
+            // leave isPressed() true, and with a 24-frame cycle both can leave the flag true.
+            int transitions = 0;
+            boolean previous = GameServices.gameState().isReverseGravityActive();
+            for (int frame = 0; frame < 120; frame++) {
+                pad.onSolidContact(sprite, STANDING_ON_PAD, frame);
+                pad.update(0, sprite);
+                boolean now = GameServices.gameState().isReverseGravityActive();
+                if (now != previous) {
+                    transitions++;
+                    previous = now;
+                }
+            }
+            assertEquals(0, transitions,
+                    "$30 is reset to 0 every frame the pad is stood on, so it never rearms "
+                            + "and never toggles again while it is held down");
+            assertTrue(pad.isPressed(), "and it stays in its pressed routine throughout");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /** Once clear, the pad rearms twenty frames later ({@code move.w #20-1,$30}, :94880). */
+    @Test
+    void theGravitySwitchRearmsTwentyFramesAfterItIsFree() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            pressPad(pad, sprite);
+            for (int update = 0; update < 4; update++) {
+                pad.update(0, sprite);
+            }
+            for (int frame = 0; frame < 19; frame++) {
+                pad.update(0, sprite);
+                assertTrue(pad.isPressed(), "frame " + frame + " is still inside the 20-frame rearm");
+            }
+            pad.update(0, sprite);
+            assertFalse(pad.isPressed(), "the twentieth free update rearms it");
+            assertEquals(0, pad.mappingFrameForTest(), "and restores mapping_frame 0");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /**
+     * The press releases the rider: {@code sub_48B40} (:94848-94861) zeroes
+     * {@code ground_vel}, {@code x_vel} and {@code y_vel}, sets {@code Status_InAir} and
+     * clears {@code Status_OnObj} — so the player falls off the pad it just pressed, which
+     * is what stops it being pressed again on the next frame.
+     */
+    @Test
+    void theGravitySwitchReleasesTheRiderThatPressedIt() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            sprite.setGSpeed((short) 0x0600);
+            sprite.setXSpeed((short) 0x0600);
+            sprite.setYSpeed((short) 0x0200);
+            sprite.setAir(false);
+            sprite.setOnObject(true);
+
+            pressPad(pad, sprite);
+
+            assertEquals(0, sprite.getGSpeed(), "sub_48B40: move.w d1,ground_vel(a1)");
+            assertEquals(0, sprite.getXSpeed(), "sub_48B40: move.w d1,x_vel(a1)");
+            assertEquals(0, sprite.getYSpeed(), "sub_48B40: move.w d1,y_vel(a1)");
+            assertTrue(sprite.getAir(), "sub_48B40: bset #Status_InAir,status(a1)");
+            assertFalse(sprite.isOnObject(), "sub_48B40: bclr #Status_OnObj,status(a1)");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /**
+     * The pad answers to its underside too. {@code andi.w #$14,d0} (:94817) is Player 1's
+     * top <em>and</em> bottom contact bits, which is the whole reason a gravity switch
+     * works at all: once gravity is inverted the player reaches it from the other face.
+     */
+    @Test
+    void theGravitySwitchIsPressedFromItsUndersideAsWellAsItsTop() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            pad.onSolidContact(sprite, BONKED_FROM_BELOW, 0);
+            pad.update(0, sprite);
+            assertTrue(pad.isPressed(), "$14 covers the bottom bit, not just the top one");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /** A side scrape is not a press: {@code $14} has no side bit. */
+    @Test
+    void brushingTheGravitySwitchSideDoesNotPressIt() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            pad.onSolidContact(sprite, PUSHED_SIDEWAYS, 0);
+            for (int update = 0; update < 6; update++) {
+                pad.update(0, sprite);
+            }
+            assertFalse(pad.isPressed(), "a side contact is outside the $14 mask");
+            assertFalse(GameServices.gameState().isReverseGravityActive(),
+                    "and nothing toggled");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    /**
+     * The rewind spot for the pad: capture mid-count, run past the toggle, restore and
+     * replay. The counter and the routine must both come back, or the replay toggles on a
+     * different frame than the first run did.
+     */
+    @Test
+    void theGravitySwitchCounterSurvivesACaptureAndRestore() {
+        HeadlessTestFixture fixture = fixture();
+        try {
+            AbstractPlayableSprite sprite = fixture.sprite();
+            GameServices.gameState().setReverseGravityActive(false);
+            S3kDezGravitySwitchObjectInstance pad = placeSwitch(0);
+
+            pressPad(pad, sprite);
+            pad.update(0, sprite);   // one of the three pre-toggle updates
+            CompositeSnapshot midCount =
+                    TestEnvironment.activeGameplayMode().getRewindRegistry().capture();
+
+            for (int update = 0; update < 3; update++) {
+                pad.update(0, sprite);
+            }
+            assertTrue(GameServices.gameState().isReverseGravityActive(),
+                    "the forward run must cross the toggle before the restore");
+
+            TestEnvironment.activeGameplayMode().getRewindRegistry().restore(midCount);
+            assertFalse(GameServices.gameState().isReverseGravityActive(),
+                    "restore must return the pre-toggle flag");
+
+            S3kDezGravitySwitchObjectInstance restored = restoredSwitch(pad);
+            for (int update = 0; update < 2; update++) {
+                restored.update(0, sprite);
+                assertFalse(GameServices.gameState().isReverseGravityActive(),
+                        "replay must still need the same number of updates");
+            }
+            restored.update(0, sprite);
+            assertTrue(GameServices.gameState().isReverseGravityActive(),
+                    "and toggles on the same update of the replay as of the first run");
+        } finally {
+            SessionManager.clear();
+        }
+    }
+
+    private static final SolidContact STANDING_ON_PAD =
+            new SolidContact(true, false, false, true, false);
+    private static final SolidContact BONKED_FROM_BELOW =
+            new SolidContact(false, false, true, false, false);
+    private static final SolidContact PUSHED_SIDEWAYS =
+            new SolidContact(false, true, false, false, true);
+
+    /** Reports a standing contact and runs the pad's update, which is the press frame. */
+    private void pressPad(S3kDezGravitySwitchObjectInstance pad, AbstractPlayableSprite sprite) {
+        pad.onSolidContact(sprite, STANDING_ON_PAD, 0);
+        pad.update(0, sprite);
+    }
+
+    private S3kDezGravitySwitchObjectInstance placeSwitch(int renderFlags) {
+        ObjectSpawn spawn = new ObjectSpawn(0x1AAC, 0x0588, 0x58, 0, renderFlags,
+                false, 0x0588, -1);
+        S3kDezGravitySwitchObjectInstance pad = new S3kDezGravitySwitchObjectInstance(spawn);
+        GameServices.level().getObjectManager().addDynamicObject(pad);
+        return pad;
+    }
+
+    private S3kDezGravitySwitchObjectInstance restoredSwitch(
+            S3kDezGravitySwitchObjectInstance original) {
+        for (var instance : GameServices.level().getObjectManager().getActiveObjects()) {
+            if (instance instanceof S3kDezGravitySwitchObjectInstance pad) {
+                return pad;
             }
         }
         return original;

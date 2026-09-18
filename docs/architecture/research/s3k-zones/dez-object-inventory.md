@@ -96,7 +96,7 @@ wins. Verify which class DEZ actually gets before testing it.
 | `$55` | `Obj_DEZEnergyBridge` | 13 | 12 | placeholder | 4 |
 | `$56` | `Obj_DEZEnergyBridgeCurved` | 1 | 0 | placeholder | 4 |
 | `$57` | `Obj_DEZTunnelLauncher` | 3 | 4 | placeholder | 5 |
-| `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | placeholder | 3 |
+| `$58` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** (`S3kDezGravitySwitchObjectInstance`; art not registered) | 3 |
 | `$59` | `Obj_DEZTeleporter` | 0 | 21 | placeholder | 3 |
 | `$5A` | `Obj_DEZGravityTube` | 24 | 17 | placeholder | 3 |
 | `$5B` | `Obj_DEZGravitySwap` | 0 | 11 | **concrete** (`S3kDezGravitySwapObjectInstance`) | 3 |
@@ -253,7 +253,7 @@ so subtypes `$80+` arrive inverted.
 | `$57` | `$05` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
 | `$57` | `$06` | `Obj_DEZTunnelLauncher` | 1 | 0 | placeholder |
 | `$57` | `$07` | `Obj_DEZTunnelLauncher` | 0 | 1 | placeholder |
-| `$58` | `$00` | `Obj_DEZGravitySwitch` | 0 | 5 | placeholder |
+| `$58` | `$00` | `Obj_DEZGravitySwitch` | 0 | 5 | **concrete** |
 | `$59` | `$0D` | `Obj_DEZTeleporter` | 0 | 2 | placeholder |
 | `$59` | `$15` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |
 | `$59` | `$18` | `Obj_DEZTeleporter` | 0 | 1 | placeholder |

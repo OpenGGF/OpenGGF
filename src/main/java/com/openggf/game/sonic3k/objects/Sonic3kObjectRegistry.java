@@ -491,6 +491,11 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
         factories.put(Sonic3kObjectIds.MGZ_SWINGING_SPIKE_BALL,
                 (spawn, registry) -> {
                     S3kZoneSet zoneSet = getCurrentZoneSet();
+                    if (zoneSet == S3kZoneSet.SKL) {
+                        // SKL $58 is Obj_DEZGravitySwitch (sonic3k.asm:94800); S3KL $58 is
+                        // Obj_MGZSwingingSpikeBall. The two object tables share the number.
+                        return new S3kDezGravitySwitchObjectInstance(spawn);
+                    }
                     if (zoneSet != S3kZoneSet.S3KL) {
                         return new PlaceholderObjectInstance(spawn, getPrimaryName(spawn.objectId(), zoneSet));
                     }

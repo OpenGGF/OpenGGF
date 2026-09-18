@@ -91,6 +91,8 @@ class TestRewindArchitectureGuard {
             // the Y-band test. Without the sidecar a restore mid-corridor replays the wrong
             // crossing body and sets gravity where the first run cleared it.
             // TestS3kDezGravityObjectsHeadless captures after the write, replays forward.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwitchObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwitchObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/S3kDezGravitySwapObjectInstance.java#restoreRewindState", 1),
             // HPZ ($1601) teleporter graph and Knuckles-fight children keep object links in

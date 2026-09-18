@@ -501,3 +501,21 @@ and bypasses the sand-exit transition to `$20`, preventing boss wall art and roo
 brightening. Seed a fresh checkpoint and use the production reload; do not save
 source runtime state or bypass native event gates. Verify destination events,
 unchanged lives and rewind timeline isolation, not coordinates alone.
+
+### `TerrainCheckResult.hasCollision()` means overlapping, not "found"
+
+A terrain sweep written around `hasCollision()` reports **no terrain anywhere**, confidently
+and silently. `ObjectTerrainUtils.checkFloorDist(x, centreY, radius)` returns
+`hasCollision() == false` with `distance() == 8` for a floor 8 px below the probe — a real
+surface it found and measured. It returns `true` only once the probe box is *inside* the
+terrain (`distance() <= 0`). Nothing found returns `distance() == 32767`.
+
+So "did this probe find a surface?" is `distance() != 32767` (in practice, a small finite
+distance), and the surface is at `centreY + radius + distance`. Measured 2026-09-18 while
+sweeping Death Egg act 2 for floors under the `$5B` gravity swaps: the first sweep reported
+that all eleven sites had no floor within `$400` px, which is obviously false for a level
+people walk through, and the fault was only located by running the same helper against the
+already-measured corridor at x=`$1ACC`.
+
+**Calibrate a terrain sweep against a known-good point before believing a negative result.**
+A sweep that finds nothing is far more often a wrong predicate than an empty level.

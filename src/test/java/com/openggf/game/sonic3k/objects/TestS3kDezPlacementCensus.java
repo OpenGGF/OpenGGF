@@ -66,19 +66,20 @@ class TestS3kDezPlacementCensus {
     /**
      * The object IDs whose SKL factory is already a real implementation: those shared with
      * other zones, plus whatever the DEZ slices have landed. {@code $5B}
-     * ({@code Obj_DEZGravitySwap}, 11 act 2 placements) is slice 3's first. Every other placed
+     * ({@code Obj_DEZGravitySwap}, 11 act 2 placements) and {@code $58}
+     * ({@code Obj_DEZGravitySwitch}, 5) are slice 3's first two. Every other placed
      * DEZ ID resolves to {@link PlaceholderObjectInstance} today, either because its factory is
      * bound to the S3KL pointer set (a different object under the same number) or because no
      * factory exists at all ({@code $5D}-{@code $61}).
      */
     private static final Set<Integer> CONCRETE_DEZ_IDS = Set.of(
-            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x5B, 0x6A, 0x6B, 0x78);
+            0x01, 0x02, 0x07, 0x08, 0x28, 0x2F, 0x34, 0x3C, 0x58, 0x5B, 0x6A, 0x6B, 0x78);
 
     /** Recorded baseline: placements that still resolve to a placeholder. Slices 3-6 drive these to 0. */
     private static final int PLACEHOLDER_ACT_1 = 225;
-    private static final int PLACEHOLDER_ACT_2 = 326;
+    private static final int PLACEHOLDER_ACT_2 = 321;
     private static final int CONCRETE_ACT_1 = 140;
-    private static final int CONCRETE_ACT_2 = 168;
+    private static final int CONCRETE_ACT_2 = 173;
 
     @Test
     void romPlacementTablesDecodeToTheInventoriedSpawnCounts() throws IOException {

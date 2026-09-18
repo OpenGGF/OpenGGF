@@ -30,7 +30,7 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | Cold-reachable | Not started |
 | Rewind-verified | Event routine words (`TestS3kDezPresentationRewind`) and the `$5B` write plus its side latch, capture/restore/forward replay (`TestS3kDezGravityObjectsHeadless`) |
 | Native behaviour matched | Not started; replay frontiers measured at `035e48a58` below |
-| Visually matched | Not started for act 2 specifically; the act 1 clips `01a`-`01d` cover the shared background, palette and tile work |
+| Visually matched | Clips `030` (320 and 528), `031` and `032` show the flag being written by a real `$5B` and the inverted run, jump, roll, rings and Knuckles that follow; no native pixel comparison. The sidekick, hit/lost-ring, shield and solid-object clips are blocked on slice 3's remaining objects and the act 2 route — see `INDEX.md` for the measurements |
 
 ## Obligations
 
@@ -47,7 +47,9 @@ Widths / donors / characters / teams: as act 1. Knuckles is level-select only
 | PLACEMENT: 494 act 2 objects | [inventory](../../research/s3k-zones/dez-object-inventory.md) | — | `TestS3kDezPlacementCensus` | placeholder baseline recorded | unrun | Slices 3-5 |
 | GRAVITY: `$5B` writer, both crossing directions, band edges, latch, Player 1 only | `sub_49228` / `loc_49270` (sonic3k.asm:95472-95543); write not toggle; band `[y_pos-$20, y_pos+$20)` | — | `TestS3kDezGravityObjectsHeadless` | implemented (`S3kDezGravitySwapObjectInstance`) | pass 10/10, `ff080949c`+ | Player-2 case is a guard against a future sidekick loop, not evidence about one |
 | REWIND spot: flag written by `$5B`, mid-corridor | capture after the write, clear it forward, restore, replay the same crossing | — | `TestS3kDezGravityObjectsHeadless` | implemented | pass | Replay covers the object's `$32` latch as well as the global flag |
-| GRAVITY: `$58`, `$59` writers | `$58` `d6 & $14`, toggle 4 frames later, 20-frame rearm (`loc_48B7E`); `$59` subtype bit 7, `cmpa.w #Player_1` (`loc_48DF2`) | — | `TestS3kDezGravityObjectsHeadless` | missing | unrun | Slice 3; ROM reading written up in the plan's 2026-09-18 entry |
+| GRAVITY: `$58` writer — toggle on the 4th update, both faces, rider release, occupancy-blocked rearm | `loc_48AD6`/`loc_48B7E`/`loc_48B9C` (sonic3k.asm:94800-94910); `eori.b #1`, `d6 & $14`, `move.w #20-1,$30` | — | `TestS3kDezGravityObjectsHeadless` | implemented (`S3kDezGravitySwitchObjectInstance`) | pass 18/18 | **Inherited gaps:** the pad is invisible (`Map_DEZGravitySwitch` / `ArtTile_DEZMisc+$143` not registered for DEZ) and silent (`sfx_Transporter` has no `GameSound` constant). Both are shared-surface work for the DEZ misc-object art slice |
+| REWIND spot: `$58` mid-count | capture between the press and the toggle, run past it, restore, replay | — | `TestS3kDezGravityObjectsHeadless` | implemented | pass | Replay toggles on the same update as the first run |
+| GRAVITY: `$59` writer | subtype bit 7 via `rol.b #1,d0 / andi.b #1,d0`, `cmpa.w #Player_1` (`loc_48DF2`, :95080) | — | `TestS3kDezGravityObjectsHeadless` | missing | unrun | Slice 3; ROM reading written up in the plan's 2026-09-18 handover |
 | GRAVITY: `$5A` tube, `$5C` hub, `$5F` room, `$61` puzzle | `$5A` reads the flag (`loc_48FBA`, `loc_4904A`); the other three contain no flag reference and move the player with `object_control` | — | — | missing | unrun | Slice 3 |
 | BOSS: `$A7` end boss | `word_7F0BE` range, `word_7F0C6` arena `$218,$288,$3400,$34E0`, 8 hits, `sub_7F8A0` gravity | — | `TestS3kDezAct2BossHeadless` | missing | unrun | Slice 8 |
 | REWIND: event routine words | Registry restore equals capture plus forward replay | 320 | `TestS3kDezPresentationRewind` | implemented | pass, `4e7655bf9` | Mid-flip, act change and boss spots not started |

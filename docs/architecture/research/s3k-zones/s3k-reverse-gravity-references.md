@@ -221,7 +221,7 @@ consumer" is what exists today; "new" means the owning object does not exist yet
 | Line | Label | What the branch changes | Engine consumer at `9cba6dbb6` | Status |
 | ---: | --- | --- | --- | --- |
 | 93727 | `loc_47AA6` | `Obj_DEZConveyorPad` (`$53`, `loc_47AA6`): negates the X carry | new | missing |
-| 94874 | `loc_48B7E` | `Obj_DEZGravitySwitch` (`$58`, `loc_48B7E`): **writer** — toggles the flag 4 frames after a top/bottom press, then a 20-frame rearm | new | missing |
+| 94874 | `loc_48B7E` | `Obj_DEZGravitySwitch` (`$58`, `loc_48B7E`): **writer** — toggles the flag 4 frames after a top/bottom press, then a 20-frame rearm | `S3kDezGravitySwitchObjectInstance.toggleFlag` | covered |
 | 94990 | `loc_48CB0` | `Obj_DEZTeleporter` (`$59`): negates the unroll radius Y adjustment | new | missing |
 | 95045 | `loc_48D78` | `Obj_DEZTeleporter`: Y-flip on the captured player frames | new | missing |
 | 95075 | `loc_48DCA` | `Obj_DEZTeleporter` (`loc_48DCA`): compares subtype bit 7 with the flag (Player 1 only) | new | missing |
@@ -260,9 +260,9 @@ is the RAM wipe described above).
 | G. Lost rings | 2 | 2 | 0 | 0 | 0 |
 | H. Solid objects and platforms | 6 | 4 | 0 | 1 | 1 |
 | I. Monitors, springs, spikes | 6 | 4 | 0 | 2 | 0 |
-| J. DEZ objects | 12 | 4 | 0 | 8 | 0 |
+| J. DEZ objects | 12 | 5 | 0 | 7 | 0 |
 | K. DEZ act 2 boss | 3 | 0 | 0 | 3 | 0 |
-| **Total** | **116** | **86** | **4** | **22** | **4** |
+| **Total** | **116** | **87** | **4** | **21** | **4** |
 
 "Covered" means a flag-reading branch exists at the cited engine line. `n/a` rows are the three
 debug-cheat toggles and one unreachable S1 leftover.

@@ -1572,3 +1572,118 @@ was bumped to `1110/875` with that note and verified narrowly rather than by rep
 run, since nothing else in the tree changed. Three ratchets in one slice — the profile registry,
 the rewind override baseline and this one — is worth recording: a new object class touches more
 recorded inventories than a new branch does, and none of the three is visible from a focused run.
+
+### 2026-09-18 — Slice 3 clips, `$58`, and two measurements that changed the plan
+
+**The `$5B` sites are not in open space.** The part-3 entry records them as "all in open
+corridor, no terrain within ±32 px". That is wrong, and it mattered: every one of the
+eleven has flat floor about `$1F` below the trigger centre, flat across at least ±64 px,
+and that floor sits *inside* the trigger's `±$20` Y band. A walking player therefore
+crosses the band as a matter of course, which is what makes a positioned-entry clip
+possible at all. Corrected here and in `INDEX.md`.
+
+Finding it needed the probe to be fixed first, and the fault is worth recording because it
+produces a confident wrong answer: `TerrainCheckResult.hasCollision()` means
+**overlapping**, not "found". A floor 8 px below the probe returns `hasCollision() == false`
+with `distance() == 8`; nothing found returns `distance() == 32767`. A sweep written around
+`hasCollision()` reported *no terrain anywhere in act 2*, which is obviously false and was
+only caught by running the same probe against the known corridor at x=`$1ACC`. Calibrate a
+terrain sweep against a known-good point before believing a negative result.
+
+**Three clips, filmed from real triggers with no `--reverse-gravity` seed.** `030` (320 and
+528) walks Sonic into the unflipped `$5B` at `$1A40,$08C0`: the flip lands on frame 104 at
+x=`$1A44`, one frame past the trigger, with `air` 0→1 and `yvel` growing by `$38` while `y`
+decreases. `031` collects three rings and crosses the **flipped** `$5B` at `$2640` right to
+left — the direction that sets the flag on a flipped placement — and carries the rings
+inverted. `032` is `030` as Knuckles, flipping on the same frame at the same x. The
+per-clip evidence is in `INDEX.md`.
+
+**Two clips are still blocked, and the reason is now measured.** A positioned entry
+teleports the *leader only*: the sidekick Tails take was made, inspected and deleted
+because Tails never leaves the act start. And decoding `DEZ2_Sprites` and `DEZ2_Rings`
+around all eleven sites shows no monitor and no ring within `$180` px of six of them, the
+nearest concrete hurt block 256 px across and 488 px up from the nearest trigger, and every
+site's own neighbour a `$5A` gravity tube that slice 3 has not implemented. The rings/hit,
+shield and solid-object clips are blocked on **slice 3's remaining objects and the act 2
+route**, not on reachability.
+
+**`$58` `Obj_DEZGravitySwitch` landed**, the second and last of the two writers that a
+player can reach on foot. It is a **toggle**, not a write: `eori.b #1,(Reverse_gravity_flag).w`
+(:94879). Its three routines, and the assertions that pin each:
+
+| ROM fact | Test |
+| --- | --- |
+| The toggle lands on the **fourth** update after the press: `move.w #3,$30(a0)` (:94822) then `subq.w #1,$30 / bpl` (:94877) | `theGravitySwitchTogglesOnTheFourthUpdateAfterThePress` asserts nothing toggles on updates 1-3 |
+| It is a toggle, so a second press reverses it | `asecondPressOfTheGravitySwitchTogglesBack` starts with the flag set and asserts it clears |
+| `andi.w #$14,d0` (:94817) is Player 1's top **and bottom** contact bits, which is why the pad works from either face and therefore under either gravity | `theGravitySwitchIsPressedFromItsUndersideAsWellAsItsTop`, and a side contact is rejected |
+| `sub_48B40` (:94848-94861) releases the rider: `ground_vel`, `x_vel`, `y_vel` zeroed, `Status_InAir` set, `Status_OnObj` cleared | `theGravitySwitchReleasesTheRiderThatPressedIt` asserts all five |
+| `loc_48B9C` (:94892-94896) resets `$30` to 0 every frame `Status_OnObj(a0)` is set, so it cannot rearm under a standing player; otherwise 20 frames (`move.w #20-1,$30`) | the occupancy and rearm tests |
+
+**One of those tests was tautological on its first version, and the break caught it.**
+`theGravitySwitchDoesNotRearmWhileItIsStillOccupied` originally held contact for 60 frames
+and asserted `isPressed()` at the end. Removing the occupancy reset left it **green**: the
+pad rearmed, was immediately pressed again by the still-reported contact, and `isPressed()`
+read true either way — and with a ~24-frame press/toggle/rearm cycle, sampling the flag at
+the end cannot discriminate either. It now counts the flag's *transitions* across 120
+frames and asserts zero; with the reset removed that reads 4. Every other new assertion
+failed on its first break: `TOGGLE_DELAY = 0`, ignoring the underside bit, and replacing the
+toggle with a write each reddened their own tests, five failures across the five mechanisms.
+
+Two gaps recorded rather than invented. The pad has real art
+(`Map_DEZGravitySwitch`, `make_art_tile(ArtTile_DEZMisc+$143,1,0)`, two mapping frames) and
+none of it is registered for Death Egg, so the pad is **solid and functional but invisible**;
+and `sfx_Transporter` (:94833) has no `GameSound` constant, so the press is silent. Adding
+either is shared-surface work that belongs with the DEZ misc-object art, not with this
+slice. Both are in the act 2 matrix as inherited gaps, and no `$58` clip was filmed,
+because a clip of an invisible pad would show nothing.
+
+Census: act 2 placeholders 326 → 321, concrete 168 → 173. Reference table **87 covered, 4
+partial, 21 missing, 4 n/a**. Four ratchets moved again (census, profile, rewind override
+baseline, rewind tail inventory) — the same four as `$5B`, which is now a reliable checklist
+for the next object. `-Pguards` added a fifth thing to that checklist:
+`TestObjectServicesMigrationGuard` rejects `services() == null` in object code (use
+`tryServices()` for an optional path), which both `$58` and `$5B` were doing. Fixed in both;
+the guard is the only thing that would have caught it, since a null `services()` never
+happens in a test that adds the object through the `ObjectManager`.
+
+**Handover, revised 2026-09-18 after `$5B` and `$58`.** Both flag writers a player can
+reach on foot are done; what remains of slice 3 is the objects that *move* the player.
+
+1. **`$59` `Obj_DEZTeleporter`** (21 act 2 placements) is the big one: four routines per
+   player through the jump table `off_48C3C` (:94933-94936), run twice with separate state
+   blocks at `$30(a0)` for Player 1 and `$3A(a0)` for Player 2.
+   - Capture (`loc_48C44`, :94944-94990): an X window of `$10` around the object, widened by
+     `$A` when `status` bit 0 is set; a Y window of `$40` centred on it; and four refusals —
+     `object_control(a1)` non-zero, `Status_InAir` set, `_unkFAB8` bit 0, and an
+     already-captured player whose `interact` points at another teleporter. On capture it
+     sets `object_control = $83`, zeroes the velocities, snaps `x_pos(a1)` to the object's,
+     and unrolls with the ordinary reverse-gravity `neg.w d0` (:94990).
+   - Ride (`loc_48D2C`, :95008-95045): `4(a4)` climbs by 8 to `$300`, at which point the
+     subtype's low 7 bits become the frame budget `6(a4)` and half of it `8(a4)`, and
+     `y_vel` is `±$1000` by `status` bit 1. The pose comes from `RawAni_48DB2` and its
+     companion flag table `byte_48DBE` (:95051-95053), and the reverse-gravity row is
+     `ori.b #2,d0` on that flag byte (:95045) before it is OR-ed into `render_flags(a1)`.
+   - **The flag write** (`loc_48DCA`, :95075-95080): only when `6(a4) == 8(a4)` (the
+     midpoint) and only for `Player_1` (`cmpa.w #Player_1,a1`). The value is subtype bit 7
+     via `rol.b #1,d0 / andi.b #1,d0`, and `1(a4)` is set when that value *differs* from the
+     current flag — the exit offsets at `loc_48E2C`-`loc_48E8E` read `1(a4)` to decide how
+     far to nudge the player, with separate constants for Sonic and Tails.
+   - Release (`loc_48E94`, :95160-95168): clears the state block once the player is more
+     than `$10` from the object in X.
+2. **`$5A` `Obj_DEZGravityTube`** (24 act 1, 17 act 2) only *reads* the flag: `loc_48FBA`
+   mirrors `flip_angle` on exit and `loc_4904A` Y-flips the rider. It is the neighbour of
+   every `$5B` site, so it is also what blocks the remaining clips.
+3. **`$5C`, `$5F`, `$61`** contain no `Reverse_gravity_flag` reference at all. Do not go
+   looking for one; they move the player with `object_control` and any gravity change near
+   them comes from a `$58`/`$5B` placed alongside.
+4. **The checklist a new gravity object needs**, learned twice now and stable: the class,
+   its SKL registration branch, a RED test per ROM mechanism (and *break each one* — one of
+   `$58`'s was tautological until the break exposed it), a rewind sidecar plus a
+   capture/restore/replay spot, and **five** recorded inventories — the DEZ census, the
+   S3K object profile (`SHARED_IMPLEMENTED_IDS` when the S3KL side is already concrete, not
+   `SKL_ONLY_IDS`), the rewind override baseline, the rewind tail inventory, and
+   `TestObjectServicesMigrationGuard`'s no-null-check-on-`services()` rule. Only `-Pguards`
+   sees the last three.
+5. **Then the cold act 2 route** on the `ssz`-named DEZ fixture's native input, and the
+   clips that are still blocked: sidekick (needs a team teleport or the route), rings + hit
+   + lost rings, a shield, and a solid-object ride.

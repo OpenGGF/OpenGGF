@@ -1,9 +1,11 @@
 package com.openggf.game.sonic3k.objects;
 
+import com.openggf.game.GameStateManager;
 import com.openggf.game.PlayableEntity;
 import com.openggf.game.rewind.schema.RewindCaptureContext;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.AbstractObjectInstance;
+import com.openggf.level.objects.ObjectServices;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.PerObjectRewindSnapshot;
 import com.openggf.level.objects.SpawnRewindRecreatable;
@@ -122,10 +124,12 @@ public final class S3kDezGravitySwapObjectInstance extends AbstractObjectInstanc
         // tst.w (Debug_placement_mode).w / bne.s locret (:95508, :95533). The engine has no
         // debug placement mode during gameplay, so this reads as zero -- the same treatment
         // the other Debug_placement_mode sites in the S3K objects carry.
-        if (services().gameState() == null) {
+        ObjectServices objectServices = tryServices();
+        GameStateManager gameState = objectServices == null ? null : objectServices.gameState();
+        if (gameState == null) {
             return;
         }
-        services().gameState().setReverseGravityActive(setsFlag);
+        gameState.setReverseGravityActive(setsFlag);
     }
 
     /** {@code btst #0,render_flags(a0)}: the placement's X-flip bit. */

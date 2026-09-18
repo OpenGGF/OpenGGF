@@ -35,7 +35,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   on it, rolls, jumps, lands, gets hurt and dies against a death plane that has moved to the top
   of the level. Shields, spilled rings, dust, springs, solid objects and a carried or respawning
   sidekick all follow the flip. Which direction of crossing turns gravity on is the level's own
-  choice, so running back the way you came restores it.
+  choice, so running back the way you came restores it. Act 2's pressure pads flip it too,
+  from either face, so a pad works whichever way up you reach it.
 - **S3K The Doomsday Zone:** Doomsday is now playable. Sonic falls in, transforms (Hyper with
   all Super Emeralds) and flies through the autoscrolling asteroid field under Robotnik's
   ship, whose body is drawn on the foreground plane over the six-band space background.
