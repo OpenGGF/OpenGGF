@@ -90,6 +90,30 @@ This is focused validation, not a suite pass. Media: `raw-01-arrival-sonic-tails
 `raw-02-knuckles-cutscene-bridge` (first attempt, kept) and
 `raw-03-knuckles-cutscene-bridge-walk`, with clips `01`, `02a` and `02b`.
 
+Slice 3, 2026-09-17/18, commits `6523ddcc8`, `44b69c113`, `cbb66adca`, `2bdca80eb`, `ac93480de`.
+All eleven act-1 placed families implemented. Focused runs on the final tree:
+`-Dtest=TestS3kSszCarriersAndSprings` 11, `-Dtest=TestS3kSszEggRobo` 5,
+`-Dtest=TestS3kSszPlacementCensus` 9, `-Dtest=TestS3kSszTraversalPlatforms` 7,
+`-Dtest=TestS3kSszTeleporterPads` 8 — 0 failures, 0 skips each. Combined with the four mandatory
+S3K classes and the SSZ, HPZ and DDZ suites plus `TestEveryObjectRewindRoundTrip` and
+`TestRewindHarnessCoverageRatchet`: **1476 tests, 0 failures, 0 errors, 0 skips**.
+`-Pguards test -B`: **669, 0 failures, 0 skips**. Four comparisons were broken on purpose and each
+was caught — the cloud's `byte_46698` index, the spring's `Level_frame_counter` gate, the EggRobo
+pairing gate and its animal release. `TestEveryObjectRewindRoundTrip` caught one real defect: the
+swinging-carrier arc forced `barSpawned` true on restore, so a rewind past its allocation
+re-spawned nothing. This is focused validation, not a suite pass.
+
+**Claims still open for slice 3.** Of the five matrix claims, this slice closes *implemented* and
+*ROM-derived expectations* for all eleven families and *rewind round-trip* through the generic
+harness. It does **not** close:
+
+| Claim | State |
+| --- | --- |
+| Cold-reachable | Unchanged. Every slice-3 class sits past the bridge and is exercised from star-post checkpoint entries; the cold route still stops where slice 1b left it |
+| Rewind-verified | No spot exercised for any slice-3 family. The carrier chain (hub -> arc -> rider bar, three object references) and the EggRobo `_unkFA82` pairing are the two that most need one |
+| Visually matched | No capture for any of the six part-3/part-4 families. Clip numbering is at `09`; the next is `10` |
+| Breadth | No `TestS3kSszCompatibilityMatrix` yet. The shape is `TestFbzCompatibilityMatrix`: 320 plus one wide width, S1 donor, Sonic / Tails / Knuckles rosters, live roster and ROM-backed renderers asserted, covering every slice 1b-3 class |
+
 ## Open items carried into later slices
 
 - Engine ring-window floor admits the `(0,0)` record at `Camera_X <= 8` where the ROM does not.
@@ -98,7 +122,7 @@ This is focused validation, not a suite pass. Media: `raw-01-arrival-sonic-tails
 - The engine's arrival begins one frame later than fixture `hpz` row 0 implies, because the screen
   init runs from pre-physics of frame 1 rather than inside the level load. Values match exactly;
   the phase is slice 10's to settle.
-- No rewind **spot** has been exercised on any SSZ object yet. Every new class does pass the
+- No rewind **spot** has been exercised on any SSZ object yet, slice 3's families included. Every new class does pass the
   generic capture/restore round trip in `TestEveryObjectRewindRoundTrip`, and
   `SszZoneRuntimeState` is captured, but nothing has been captured mid-arrival or mid-cutscene,
   restored and replayed forward.
