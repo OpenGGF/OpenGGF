@@ -1299,3 +1299,60 @@ the same object — and each piece's `parent3(a0)` has to resolve through the id
 live column. Broken on purpose by replacing the debris' `resolveObject` with `column = null`:
 `expected: <SszCollapsingColumnObjectInstance@…> but was: <null>`. That is the first SSZ spot where
 the sidecar is load-bearing.
+
+### 2026-09-18 — slice 4: death, checkpoint and what a load takes with it
+
+`TestS3kSszLifecycleProduction`, three cases, driven through a real `GameLoop` reload rather than
+by constructing a state.
+
+**Two ROM clears, in two different routines, and neither is in the SSZ code.** `LevelSetup`
+(sonic3k.asm:102185) runs `clr.l (Events_bg+$00/$04/$08/$0C).w` on every load, so a beaten boss is
+not remembered; the star posts simply sit past each arena. `Level:` runs `clearRAM _unkFA80,$80`
+(sonic3k.asm:7623), which covers `_unkFA82`, `_unkFA8A`, `_unkFAA2`, `_unkFAA4` and
+`_unkFAB0..B8` — the question the plan left open ("`_unkFA82` after respawn: no ROM clear") has an
+answer, and it is that block clear. `_unkFA82` is a shared scratch word used by a dozen unrelated
+routines across the ROM (grep finds writes in ICZ, MGZ and both SSZ bosses), which is exactly why
+no zone clears it individually. The engine's per-load rebuild of `SszZoneRuntimeState` is therefore
+faithful, and the test proves the load really replaces the instance: asserting `assertSame` instead
+of `assertNotSame` fails with two different objects.
+
+The lifecycle case seeds the two things a naive carry-over would keep — `Events_bg+$00` negative (a
+beaten Green Hill boss, `st (Events_bg+$00).w`) and `_unkFA82` bit 6 (a passed EggRobo fly-by) —
+calls `applyPitDeath`, and then requires all sixteen `Events_bg` bytes, the pairing word and
+`_unkFAA4` to be zero, the arrival not to run, and the rewind timeline to reset rather than
+continue the pre-death history.
+
+**`sub_575EA` after the restart, which is the observable consequence.** `$34:$03` is at
+`($14C0,$E8)`, and `$E8 < $440`, so the restart lands in the Metropolis branch. With the Green Hill
+word zeroed by the load the branch publishes `Camera_min_X = $160`; if the boss were remembered it
+would publish 0. The test reads `$160` and `Camera_max_X = $1660`, plus `Levels_1000_High`'s wrap
+still enabled over `$1000`.
+
+**Native corroboration, and a correction to this plan's own fixture table.**
+`s3k-sonic-tails-complete-emeralds/hpz_2` *is* a `$34:$03` restart: its metadata declares
+`start_x 0x14C0 / start_y 0x00E8`, the placement's own coordinates. Its row 0 reads player
+`($14C0,$EC)` and camera `($1420,$8C)`, and the engine's first frame from the same declared restart
+reads exactly those four values (broken on purpose with `nativeCameraY + 1`: `expected <141> but
+was <140>`). The table above describes `hpz_2` as carrying a "second death"; scanning
+`player_routine` across all 4352 rows finds **one** `00` span (rows 4224-4350), not two, and the
+test asserts that count so the correction cannot drift back.
+
+**Declared setup, not a route.** `SSZ1_ScreenInit` reads `Last_star_post_hit` on the load's first
+pass and, with it clear, hands Player 1 to `Obj_57C1E` under `object_control 3` — a leader placed
+near `$34:$03` with no checkpoint is dragged back to the arrival column before he can touch
+anything. The restart is therefore written the way the ROM writes it and the way
+`GameplayCaptureTool --star-post` does. A capture that walks into the post is not available at this
+placement and is not claimed.
+
+**Clip** `16-ssz-death-restarts-at-the-star-post.mp4` (`raw-27`, frames 40-280): death at 77,
+restart at the declared star post around 150, alive again by 220.
+
+**Two things the captures taught on the way.** (1) Falling in act 1 does not kill: the act wraps at
+`$1000`, so `raw-26` walks off the same ledge that "killed" in `raw-15`-era captures and comes back
+round the top. The death in `raw-27` is the converted EggRobo, which is why the clip is filmed
+there. (2) The same input that died at frame 404 in `raw-17` survives after the EggRobo collision
+fix — the pre-fix hitbox was killing players the cartridge would not have.
+
+**Owed by slice 4:** a `$34:$02`/`$34:$04` restart case (only `$34:$03` is driven), a wide-viewport
+row, and a capture of a star post being physically touched, which needs a route rather than a
+declared setup.
