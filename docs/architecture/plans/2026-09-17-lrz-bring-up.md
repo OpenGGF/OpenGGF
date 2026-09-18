@@ -3117,3 +3117,36 @@ way down at about `v 618`, and the third pass at `v 1124`-`1156` landed two hits
 still stands -- is answered only in part: the seamless path has its own, separately caused
 background gap, and closing `LRZ2_BackgroundEvent` stages 0 and 4 is the prerequisite for testing
 either. That is the first item of slice 7, ahead of the traversal objects.
+
+
+### 2026-09-18 - Slice 7 started: the two orbiting spike balls
+
+**`$2B` and `$2C`, 52 of act 2's 188 remaining placements.** `Obj_LRZOrbitingSpikeBallHorizontal`
+(sonic3k.asm:89077-89145) and `Obj_LRZOrbitingSpikeBallVertical` (:89149-89222) are the same
+routine on a different axis, so they are one class with an `Axis`. Every branch is cited in the
+class comment. The parts worth carrying forward:
+
+- `bclr #0,subtype(a0)` both TESTS and CLEARS bit 0. The set bit picks the 32x32 ball; the clear
+  is written back, so the angle arithmetic reads the subtype with bit 0 already zero. None of
+  Lava Reef's own placements is affected -- `$2B` places `$00` and `$80`, `$2C` steps the high
+  nibble `$00`-`$F0` -- but the clear is the ROM's and is reproduced.
+- The byte angle is `(Level_frame_counter+1) * 2`, negated when `status` bit 0 is set (the
+  placement's x-flip), plus the subtype. Every step is a byte, so the orbit is 128 level frames.
+- `collision_flags` and the `art_tile` priority bit are cleared **every frame** and restored only
+  while the resulting byte has bit 7 set. The ball is scenery for half its turn and a hazard
+  (`$9A` small, `$8F` large) for the other half, in front of the scenery.
+- The four displacements are different fractions of `cos`: `cos asr 3` horizontal small,
+  `(cos + cos asr 1) asr 3` horizontal large, `(cos + cos asr 2) asr 3` vertical small,
+  `(cos asr 2) - (cos asr 5)` vertical large. The other coordinate is never written.
+- `loc_1B666`'s unload test reads `$44(a0)`, the ANCHOR's x, for both axes -- `move.w $44(a0),d0`
+  at :89126, :89144, :89198 and :89220 -- not the orbited position.
+
+`TestLrzOrbitingSpikeBall` is five cases computed from the ROM's own `SineTable` through the
+routine's arithmetic, not read back from the class; broken on purpose once (`cos asr 2` for
+`asr 3`) it failed on the two positional assertions and nothing else. The census ratchets
+**188 to 136**.
+
+**Owed on these two**: no clip, no rewind spot on a route, no act 2 route position and no
+wide/donor/roster row. Every one of those needs an act 2 route, which needs the background and
+results-handover gaps above closed first -- which is why those are slice 7's first item and not
+its last.

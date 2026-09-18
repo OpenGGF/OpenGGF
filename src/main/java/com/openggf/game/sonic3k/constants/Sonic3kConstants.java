@@ -1755,6 +1755,8 @@ public class Sonic3kConstants {
     public static final int MAP_LRZ_SWINGING_SPIKE_BALL_ADDR = 0x043666;
     /** {@code Map_LRZSwingingSpikeBall2} (sonic3k.lst: $4367E), the act 2 skin. */
     public static final int MAP_LRZ_SWINGING_SPIKE_BALL2_ADDR = 0x04367E;
+    /** {@code Map_LRZOrbitingSpikeBall} (sonic3k.lst, ROM {@code $43D24}). */
+    public static final int MAP_LRZ_ORBITING_SPIKE_BALL_ADDR = 0x043D24;
     /**
      * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87910).
      * The same base the act 2 door uses; named separately so neither owner reads as the other's.

@@ -1546,6 +1546,18 @@ public class Sonic3kObjectRegistry extends AbstractObjectRegistry {
                 S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
                 (spawn, registry) -> new com.openggf.game.sonic3k.objects.bosses
                         .LrzMinibossInstance(spawn));
+        // Ids $2B and $2C are Obj_LRZOrbitingSpikeBallHorizontal and
+        // Obj_LRZOrbitingSpikeBallVertical in the SKL set (sonic3k.asm:89077, :89149); the S3KL
+        // set spends them on Obj_AIZFlippingBridge and Obj_AIZCollapsingLogBridge, which are the
+        // names the id constants carry. Both place only in Lava Reef act 2.
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_FLIPPING_BRIDGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzOrbitingSpikeBallObjectInstance(
+                        spawn, LrzOrbitingSpikeBallObjectInstance.Axis.HORIZONTAL));
+        registerStockRomZoneBound(Sonic3kObjectIds.AIZ_COLLAPSING_LOG_BRIDGE,
+                S3kZoneSet.SKL, Sonic3kZoneIds.ZONE_LRZ,
+                (spawn, registry) -> new LrzOrbitingSpikeBallObjectInstance(
+                        spawn, LrzOrbitingSpikeBallObjectInstance.Axis.VERTICAL));
         // Id $22 is Obj_LRZSpikeBall in the SKL set (sonic3k.asm:88838); the S3KL set spends it
         // on Obj_LBZAlarm.
         registerStockRomZoneBound(Sonic3kObjectIds.LBZ_ALARM,

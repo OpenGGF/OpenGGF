@@ -2722,6 +2722,15 @@ public final class Sonic3kPlcArtRegistry {
                     0,
                     null
             ));
+            // make_art_tile(ArtTile_LRZ2Misc,1,0) (sonic3k.asm:89078-89079, :89150-89151).
+            // Both orbiting spike ball ids place only in act 2.
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_ORBITING_SPIKE_BALL,
+                    Sonic3kConstants.MAP_LRZ_ORBITING_SPIKE_BALL_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
         }
 
         if (actIndex == 0) {

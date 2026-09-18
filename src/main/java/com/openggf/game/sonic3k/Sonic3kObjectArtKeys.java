@@ -334,6 +334,12 @@ public final class Sonic3kObjectArtKeys {
     public static final String LRZ2_SWINGING_SPIKE_BALL = "lrz2_swinging_spike_ball";
     /** Act 2's chain: the same map on palette line 0. */
     public static final String LRZ2_SWINGING_SPIKE_BALL_CHAIN = "lrz2_swinging_spike_ball_chain";
+    /**
+     * {@code Obj_LRZOrbitingSpikeBall*}: {@code Map_LRZOrbitingSpikeBall} (ROM {@code $43D24})
+     * over {@code ArtTile_LRZ2Misc}, palette 1 (sonic3k.asm:89078-89079, :89150-89151). Both
+     * orbiting ids are act 2 only.
+     */
+    public static final String LRZ2_ORBITING_SPIKE_BALL = "lrz2_orbiting_spike_ball";
     public static final String LRZ2_BUTTON = "lrz2_button";
     /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_DOOR = "lrz_door";

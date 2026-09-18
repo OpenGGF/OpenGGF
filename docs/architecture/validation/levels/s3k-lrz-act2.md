@@ -20,10 +20,12 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, of which **197 still build a
-`PlaceholderObjectInstance`** after slice 4's Iwamodoki and Toxomister (281 at `035e48a58`, 277 after slice 1,
+Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, of which **136 still build a
+`PlaceholderObjectInstance`** (281 at `035e48a58`, 277 after slice 1,
 255 after slice 3b's doors and horizontal buttons, 254 after the `$16` wall ride, 240 after the
-`$20` swinging spike ball); 281 live rings (282 records minus the leading `(0,0)` sentinel).
+`$20` swinging spike ball, 197 after slice 4's Iwamodoki and Toxomister, and 136 after slice 7's
+two orbiting spike balls, `$2B` (12) and `$2C` (40)); 281 live rings (282 records minus the
+leading `(0,0)` sentinel).
 
 Act 2 classes reached so far are all shared with act 1 and were implemented there: `$6E` (4),
 `$19` (11), `$1C` (11), `$16` (1), `$20` (14), `$9A` (34) and `$9B` (9). **None of their act 2 skins or
@@ -35,6 +37,7 @@ placements has been exercised in act 2 itself** - that remains an owed row, reco
 | Obligation + spot | Contract / oracle | Config cases | Test binding | Implementation | Result (revision) | Gap / action |
 | --- | --- | --- | --- | --- | --- | --- |
 | BASELINE: placed object and ring census | `LRZ2_Sprites` `$1F7C9C` (455), `LRZ2_Rings` `$1F8C7E` (282 records, 281 live) | native | `TestS3kLrzPlacementCensus` | implemented | pass, `3418eba6e` | Ratchet target 0 placeholders |
+| OBJECT: orbiting spike balls `$2B` (12), `$2C` (40) | `Obj_LRZOrbitingSpikeBallHorizontal` (sonic3k.asm:89077-89145) and `Obj_LRZOrbitingSpikeBallVertical` (:89149-89222): `bclr #0,subtype` picks the 32x32 ball AND clears the bit, the byte angle is `(Level_frame_counter+1)*2` negated for `status` bit 0 plus the subtype, the ball is harmful (`collision_flags` `$9A` small, `$8F` large) and drawn in front only while that byte has bit 7 set, and the displacement is a fixed fraction of `cos` on one axis -- `cos asr 3`, `(cos + cos asr 1) asr 3`, `(cos + cos asr 2) asr 3` and `(cos asr 2) - (cos asr 5)` | native | `TestLrzOrbitingSpikeBall` (5) | implemented | pass | Five cases against the ROM's own `SineTable` through the routine's arithmetic, broken on purpose once (`cos asr 2` for `asr 3`) and failing on the two positional assertions only. **Owed**: no clip, no rewind spot on a route, no act 2 route position, and no wide/donor/roster row. The despawn uses the anchor x, `loc_1B666`'s own reference |
 | ENTRY: `$901` resources, bounds, object set | Registry/sprite/screen-event tables | native | `TestSonic3kLevelLoading` | implemented (inherited) | pass | Not re-verified for this campaign |
 | PRESENT: parallax, bands and shake | `sub_57082`, `LRZ2_BGDeformArray` `$20,$20,$20,$10x4,$F0,$10x3,$20`, `ApplyDeformation` at `HScroll_table`; `Camera_Y_pos_BG_copy` = `3Y/32` | 320 and 640 | `SwScrlLrzTest`, `TestS3kLrzScrollRegistrationHeadless` | implemented | pass, `bbd156d37` | **Not visually matched**: a direct `$901` load draws HUD font tiles in the upper background rows ([known bug](../../../status/s3k-known-bugs.md)); the clip waits for the seamless entry |
 | PRESENT: animated tiles and `AniPLC_LRZ2` | `AnimateTiles_LRZ2` / `loc_282D0` and `loc_28364`; `Offs_AniFunc` pairs `$901` with `AniPLC_LRZ2` `$28A84`; `Animate_Init` does **not** seed `Anim_Counters+1/+3` for `$901` | native | `TestS3kLrzPatternAnimation` | implemented | pass, `1ef1256ca` | A direct or star-post `$901` load whose first phase is 0 skips its first upload, as the ROM does; act 2's background art gap (known bug) still blocks a visual check |

@@ -396,6 +396,10 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   weight, rising back once you step off. Jumping off one while it is still sinking now leaves
   exactly where the ROM leaves you: the pixel the block sinks on that frame is no longer added
   to the jump.
+  Act 2's orbiting spike balls turn: fifty-two of them, a small one and a large one, each
+  sweeping back and forth past its anchor on its own axis and its own phase. Each is only
+  dangerous, and only drawn in front of the scenery, for the half of its turn that brings it
+  towards you; on the other half it passes behind and cannot hurt you.
   The wall rides work in both acts: run into one with any speed at all and it takes hold,
   sweeps you up over the curve and drops you back on the floor heading the other way.
   The act 1 falling spikes drop: walk directly underneath one and it lets go, hurting anything
