@@ -2168,3 +2168,25 @@ this arena either.
 into a single `-Dtest=A,B,C`, waited on in the foreground. Four test runs and two guard runs, no
 reaping. The guard runs are the slow ones — the `-Pguards` profile takes several minutes and the
 worktree waits behind the LRZ and DEZ campaigns for the slot.
+
+### 2026-09-18 — clip 19, and why the Metropolis fight cannot be filmed past its first contact
+
+`19-ssz-metropolis-orb-ring.mp4` (`raw-31-ssz-mtz-fight`) is the upper arena closing,
+`Obj_SSZMTZBoss` descending from `($1700,$300)` with the Mecha Sonic head on it, and its seven-orb
+ring turning around it — orbs passing in front of the ship and behind it as `sub_7AF5A` re-sorts
+them. Frames 215, 260 and 318 are the ones to look at; 318 is an orbiting orb killing Sonic.
+
+**Two captures were spent learning why that is where it ends.** The first held the leader still:
+the ship reached `$420`, its own box overlapped a player standing on the `$42C` floor, and with
+zero rings that was a death at frame 331 before a single input had played. The second jumped
+continuously so the leader would be rolling — attacking — on contact, and died at 318 anyway,
+rolling and airborne. The reason is in `loc_7ADB2`: every orb is set up with
+`move.b #$87,collision_flags(a1)`, and `$87`'s top bits are `10`, which `Touch_ChkValue` sends to
+`Touch_ChkHurt`. An orbiting orb is plain harm. It is not something a player can attack, and the
+attack state does not protect them from it — which is the fight, and correct.
+
+So a ring-less capture of this arena cannot survive to a hit, and `GameplayCaptureTool` has no
+rings flag. The eight hits, the seven arm-raise cycles, the laser pass and the defeat raising the
+`$79:$F6` pad are driven end to end by `TestS3kSszMtzArenaHeadless` and by nothing on film. That is
+recorded as owed in `INDEX.md` and in the act-1 matrix rather than left to be rediscovered: what it
+wants is a route into the arena with rings, or a capture flag that seeds them.
