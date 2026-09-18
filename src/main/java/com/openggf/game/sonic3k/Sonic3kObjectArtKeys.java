@@ -284,6 +284,8 @@ public final class Sonic3kObjectArtKeys {
     public static final String LRZ_SINKING_ROCK = "lrz_sinking_rock";
     /** The same mappings over the act 2 tile base {@code $090} (sonic3k.asm:87910). */
     public static final String LRZ2_SINKING_ROCK = "lrz2_sinking_rock";
+    /** {@code Obj_LRZFallingSpike}: {@code Map_LRZFallingSpike} over {@code ArtTile_LRZMisc}, palette 2. */
+    public static final String LRZ_FALLING_SPIKE = "lrz_falling_spike";
     public static final String LRZ2_BUTTON = "lrz2_button";
     /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_DOOR = "lrz_door";

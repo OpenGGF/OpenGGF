@@ -69,11 +69,11 @@ class TestS3kLrzPlacementCensus {
      * {@code Obj_LRZShootingTrigger} (2 / 0), taking the totals to 171 / 255 / 8; slice 3a's
      * {@code $15} {@code Obj_LRZCorkscrew} (1 / 0) took act 1 to 170; slice 3c's {@code $17}
      * {@code Obj_LRZSinkingRock} (11 / 0) took act 1 to 159, and 3a's remaining {@code $16}
-     * {@code Obj_LRZWallRide} (1 / 1) took the totals to 158 / 254.
+     * {@code Obj_LRZWallRide} (1 / 1) took the totals to 158 / 254, and 3c's {@code $18}
+     * {@code Obj_LRZFallingSpike} (15 / 0) took act 1 to 143.
      */
     private static final Map<String, String> PLACEHOLDER_BASELINE = Map.of(
-            "LRZ1", "18:01=4,02=5,03=2,04=3,05=1;"
-                    + "1B:10=4,14=1,16=4,18=5,1A=2,1C=3,20=2,24=1,28=3,30=1,38=1;"
+            "LRZ1", "1B:10=4,14=1,16=4,18=5,1A=2,1C=3,20=2,24=1,28=3,30=1,38=1;"
                     + "1F:50=2,60=3,70=2;20:02=2,03=4,04=5;"
                     + "21:09=3,0B=1,0F=1,10=1,11=1,14=2,19=2,1A=2,1C=1,1D=1;22:00=5,C0=1;"
                     + "99:00=20;9A:00=32;9B:00=22;9C:00=1,02=1;9D:00=1",
@@ -107,7 +107,7 @@ class TestS3kLrzPlacementCensus {
 
     @Test
     void act1PlaceholderBaselineIsExact() {
-        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 158);
+        assertPlaceholderBaseline("LRZ1", Sonic3kZoneIds.ZONE_LRZ, 0, 143);
     }
 
     @Test

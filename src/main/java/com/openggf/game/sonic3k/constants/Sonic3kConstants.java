@@ -1713,6 +1713,8 @@ public class Sonic3kConstants {
     public static final int ARTTILE_LRZ2_DOOR = 0x0090;
     /** {@code Map_LRZSinkingRock} (sonic3k.lst: $42834); both acts share it. */
     public static final int MAP_LRZ_SINKING_ROCK_ADDR = 0x042834;
+    /** {@code Map_LRZFallingSpike} (sonic3k.lst: $42920). */
+    public static final int MAP_LRZ_FALLING_SPIKE_ADDR = 0x042920;
     /**
      * {@code make_art_tile($090,2,0)}: the act 2 sinking rock's tile base (sonic3k.asm:87910).
      * The same base the act 2 door uses; named separately so neither owner reads as the other's.
