@@ -1147,3 +1147,52 @@ restore, so a rewind past the allocation re-spawned nothing.
 the EggRobo pairing; no breadth matrix class; the cold act-1 route is unchanged, still stopping
 where slice 1b left it, because every class here sits past the bridge and is exercised from
 star-post entries.
+
+### 2026-09-18 — slice 3, part 5: the owed items
+
+Commits `955489d30` (#41), `c0dd69a4e` (rewind spots + breadth matrix), `3cd068e69` (cold route).
+
+**Known bug #41 — fixed, and its evidence corrected.** `SwScrlSsz.getBgCameraX()` now publishes
+`state.backgroundCameraX()` in plain mode, `backgroundWindowActive()` puts act 1 on the 512-pixel
+wrap model in both modes, and `getBgPeriodWidth()` returns the plane width for act 1. Without that
+`LevelManager.applyBackgroundTilemapWindowSelection` took its base-0 branch and the
+`Camera_X + $28` word wrapped inside layout columns 0-3.
+
+The correction matters more than the fix. Decoding the layout the way `TestS3kSszBackgroundLayout`
+does — 60 columns by 22 rows — background row 13 is the sky chunk `$02` from column 13 through 16.
+The `raw-10` frame-75 camera `($6A0,$550)` selects exactly those columns, so **the cartridge shows
+flat sky there too** and the capture never demonstrated the defect. The earlier entry read "row 13
+carries thirteen distinct chunk ids across columns ~9-52" as "structure should be on screen here";
+the row does carry structure, at columns 9, 12 and 17-22, but none of it is in front of that
+camera. The real defect was that a base-0 window ignores the camera at every camera, which is what
+the new case asserts.
+
+**Rewind spots.** Six, one per family, each mid-action. They caught nothing new, and one thing they
+cannot catch is written into the helper rather than glossed: at every spot the object instances
+survive the restore in place, so an `ObjectRefId` sidecar restore is never exercised. Disabling
+`SszRotatingPlatformObjectInstance`'s carrier restore outright leaves both these spots and
+`TestEveryObjectRewindRoundTrip` green. An `assertSame` on the resolved reference was written,
+found unable to disagree, and deleted rather than shipped.
+
+**Breadth.** `TestS3kSszCompatibilityMatrix`: ten scenarios over 320/800, no donor and the S1
+donor, three rosters and two team shapes, each walking nine checkpoints. It asserts every slice
+1b-3 class loads and that all eight ROM art keys have a ready renderer — the half that would
+otherwise be silent, because a class whose PLC entry is missing loads fine and draws nothing.
+Suppressing the retracting spring's entry fails ten of the twenty cases.
+
+**Cold route.** The fixture that carries SSZ act 1 is `hpz_completerun` (`zone_id 10`); the
+`ssz`-named ones are Death Egg. Bridge open at route frame 1390, furthest X `$6EB`, nobody dead
+across 6000 frames — past the bridge and the ledge, stopping short of the `$7B` cluster at `$740`.
+
+**Media.** Clips `10`-`13`: the bouncy cloud throwing the player with its puffs, the elevator bar
+hanging him at mapping frame `$E5`, the rotating post walking him through `byte_468C4`'s poses, and
+the swinging carrier's jointed arc. Each frame was looked at before the clip was cut.
+
+**Still owed.** The `$74` spring clip: the authored walk-in completes and nobody dies, but no
+spring is drawn at frames 180 or 270 as Sonic passes `($A60,$A30)`, while the matrix asserts its
+renderer is ready — an open question about the draw, not the capture position, and the first thing
+the next agent should chase. The `$A0` EggRobo clip: a fighter only exists once its paired fly-by
+has left the screen, so a still capture near one shows nothing; an authored input that walks the
+camera across the fly-by's placement first is the way. The #41 before/after, at a camera where a
+background column actually carries structure (row 13, columns 17-22). And a rewind spot that forces
+object recreation, which is the only way to exercise the sidecar restores.
