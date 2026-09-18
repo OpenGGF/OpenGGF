@@ -1282,3 +1282,68 @@ frame was opened — the skill's "read the CSV first" rule doing its job. And th
 x=437 because that is where the act-start ceiling meets a wall: terrain, not a physics stall. A
 longer inverted run needs a flat-ceiling stretch nobody has measured; the corridor the tests use
 (x=$1ACC) is flat for only ±16 px.
+
+
+### 2026-09-18 — Slice 2, part 10: the end-of-slice gate, and four more groups
+
+**The gate that part 9 left open is closed, green.** Base `035e48a58`, head `b79e0f129` at the
+time of the gate.
+
+| Check | Result |
+| --- | --- |
+| The seven part-8 failures plus every `TestS3kReverseGravity*` | 122 tests, 0 failures, **0 skipped** — `TestPlayableSpriteAnimation` 48/48 and `TestHeadlessTestFixture` 8/8, the two classes that held all seven |
+| `-Pguards` (standalone) | 669/669 |
+| Four-class trace comparison | identical to the recorded `f60b3f3e2` baseline, failure for failure |
+| `--preflight` | Java 21, Lua 5.4, PowerShell all present |
+| `run_categories.py --base 035e48a58 --run` | run id `20260918T100237Z-e62d5573`. Ordinary **2710 reports, 22044 tests, 0 failures, 0 errors, 27 skipped**, 1028 s. Guards **85 reports, 669 tests, 0/0/0**, 195 s. Acknowledged. |
+
+Every one of the 27 skips is an opt-in profile (`openggf.audio.repeatedPlaybackBenchmark`,
+`rewind.soak`, the SOZ capture properties, `openggf.aiz1.*`) or an unavailable-GL assumption
+(`Surfaceless EGL unavailable`, `OpenGL 4.1 unavailable`). None is a silently missing ROM: no
+`@RequiresRom` class skipped.
+
+The trace comparison's current side was measured in this worktree with `clean test` and
+`-Ptrace-replay`, ROM paths absolute: `TestS1Ghz1TraceReplay` and `TestS1Mz1TraceReplay` green,
+`TestS2Ehz1TraceReplay` red with 16388 errors at frame 6 on
+`dynamic_art.outstanding_transfer_ids` (expected `[2]`, actual `[]`), `TestS3kAizTraceReplay` 3/16
+red with 59 errors, first error frame 5497 `camera_x` expected `0x0010` actual `0x0012`. **The
+`f60b3f3e2` side was not re-detached this session**: it is the baseline recorded identically in the
+part-2 and part-3 entries, and the current numbers match it error for error and field for field.
+That is a comparison against a twice-recorded baseline, not two fresh measurements.
+
+**Four more groups, 67 → 80 covered.**
+
+| Group | Rows | Commit | What the ROM actually said |
+| --- | --- | --- | --- |
+| G lost rings | 35550, 35621 | `c7fe5443b` | The table's recorded doubt was right. `loc_1A7E8` (:35675-35678) integrates `-y_vel` and keeps `addi.w #$18` **positive**; the engine did the sign conjugate (negated gravity, `+y_vel`). Those agree on position only if the launch velocity is negated too — and the spill loop (:35592-35613) has no flag branch, so every inverted spill arc was mirrored, throwing rings into the ceiling they stand on |
+| F shields | 34594, 34666, 34747, 34911 | `5aedf369f` | All four `andi.b #1,status(a0)` **before** `ori.b #2`, so this is a set, not the toggle the ROM's own comment claims: the shield's Y-flip equals the flag. One owner, `ShieldAnimationArtLifecycle.reverseGravityMirror`; nothing added to `ShieldObjectInstance`, which is `@ModApi` |
+| D sidekick | 26495, 27298, 27407 | `42b95dcde` | `loc_13B50` (:26493-26499) nets `+$C0`, but `Tails_CPU_target_Y` is **not** mirrored — the ROM writes it from the leader's raw `y_pos` before the branch. The two carry rows fall out of `renderVFlipForDraw`, which composes the flag at every draw and not only the ones the animator reached; carry sets `object_control`, so the animator never runs for a carried player |
+| H solid objects | 41407, 41569, 41623, 41648 | `24d14f342` | `SolidObject_cont`'s reverse branch is `loc_1DFD6` plus exactly one `neg.w d3`. `loc_1E154` turns `y - d3 + 3` into `y + d3 - 3` — the asymmetric constant is the ROM's, from the upright path's extra `subq.w #1` |
+
+**The measurement that mattered.** Group H's first version wrote the mirrored landing correctly —
+a probe on every `player.setY` in the file showed `RG_LAND newCentreY=956` against an upright
+`900`, both exactly 28 px from the block's centre — and the test still failed, because the very
+next frame put the player back. The continued-ride site that actually runs is **not** the one the
+`MvSonicOnPtfm` comment sits on; the file has two, and only the other one is reached for a full
+solid. Instrumenting every Y write found it in one run. A landing test that did not step a second
+frame would have passed and shipped a rider that snaps back through the platform.
+
+**The fixture group H needed.** The measured reverse-gravity corridor at x=$1ACC is a 64 px gap —
+a 38 px player plus a 16 px block does not fit with clearance on both faces — so
+`TestS3kReverseGravitySolidObject` searches Death Egg act 1 for a clear column and guards it.
+Both cases are expressed as an offset from the block's centre and asserted to be exact negations,
+so the test never restates the block's own `d2`/`d3` and fails for any partial mirror.
+
+**One row deliberately left missing.** `loc_1E44C` :41999 is not a sign flip. `loc_1E4D6`
+(:42053-42071) rebuilds the comparison — feet at `y_pos - y_radius - 4` against `y_pos(a0) + d3` —
+and lands at `objBottom + y_radius` where the upright path lands at `objTop - y_radius - 1`, a
+deliberate one-pixel asymmetry. The engine's sloped/top path carries its own compensations, so
+porting it by analogy with the other four would be a guess.
+
+**Every new assertion was shown able to fail.** The lost-ring and sidekick tests were written RED
+first, each with its upright control already passing. The shield test asserts a method that did
+not exist before, so it could not have been RED: it was checked by stubbing
+`reverseGravityMirror` to return `false` and confirming the insta-shield row goes red.
+
+Reference table after this session: **80 covered, 4 partial, 28 missing, 4 n/a** (from 67 / 6 / 39
+/ 4). Groups D and G are complete; F has 3 rows left and H has 1.

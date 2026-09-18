@@ -162,11 +162,20 @@ upright control measured in the same corridor. All six push-out and snap sites o
 :22330 now wraps `CollisionSystem.resolveGroundAttachment`, and an inverted player stands and runs
 along the corridor ceiling in ground mode CEILING. The player action rows landed with them: roll, unroll, jump (headroom and
 radius), spindash release, bubble-shield bounce and touch-floor, for all three characters. The camera look pans and the sprite render mirror
-landed too. What remains missing is groups D, F, G and H — companions, dust, shields, lost rings and
-solid objects — plus the monitor and spike rows, which modify upright structure the engine does not
-model and are recorded in the reference table with that reason.
+landed too.
 
-**Suspected cause.** Not a defect — steps 2a-1 and 2a-2 of a deliberately sliced port. 39 of the 116
+**Updated 2026-09-18.** Groups D and G are complete and most of F and H are done: the CPU
+sidekick respawns from the other side of the leader, the carried player is mirrored, the lost-ring
+spill arc throws rings away from the ceiling they stand on (the engine had the sign conjugate of
+`loc_1A7E8`, which mirrored every arc), all four shields are drawn upside down, and a solid object
+is caught from its other face — overlap, push-out, landing snap and the continued platform ride.
+What remains missing is Knuckles' glide, slide and wall-climb rows, `Obj_Tails_Tail` and
+`Obj_DashDust`, the dead-player off-screen respawn test `loc_123DE`, and `sub_1E410`'s
+`loc_1E4D6`, which rebuilds its comparison rather than mirroring it. The monitor and spike rows
+modify upright structure the engine does not model and are recorded in the reference table with
+that reason.
+
+**Suspected cause.** Not a defect — a deliberately sliced port. 28 of the 116
 `Reverse_gravity_flag` references in the disassembly are still unimplemented; the row-by-row
 inventory is
 [s3k-reverse-gravity-references.md](../architecture/research/s3k-zones/s3k-reverse-gravity-references.md).
