@@ -1347,3 +1347,31 @@ not exist before, so it could not have been RED: it was checked by stubbing
 
 Reference table after this session: **80 covered, 4 partial, 28 missing, 4 n/a** (from 67 / 6 / 39
 / 4). Groups D and G are complete; F has 3 rows left and H has 1.
+
+**The gate re-run, after the four groups.** `run_categories.py --base 035e48a58 --run` again
+selected everything — 2712/2712 classes, full ordinary suite plus guards, because shared collision
+code moved again. Run id `20260918T105742Z-cc4590b5`: ordinary **2712 reports, 22049 tests, 0
+failures, 0 errors, 27 skipped**, 1040 s; guards **85 reports, 669 tests, 0/0/0**, 202 s;
+exit 0, acknowledged. The 27 skips are the same set as the first gate, reason for reason.
+
+Group H is a shared solid-object change that S1 and S2 run, so the four-class trace comparison was
+repeated on top of it, `clean test` with `-Ptrace-replay` in this worktree, ROM paths absolute:
+
+| Class | Recorded `f60b3f3e2` baseline | After `24d14f342` |
+| --- | --- | --- |
+| `TestS1Ghz1TraceReplay` | 1/1 green | 1/1 green |
+| `TestS1Mz1TraceReplay` | 1/1 green | 1/1 green |
+| `TestS2Ehz1TraceReplay` | red, 16388 errors, frame 6 `dynamic_art.outstanding_transfer_ids` (expected=[2], actual=[]) | red, 16388 errors, frame 6, same field and values |
+| `TestS3kAizTraceReplay` | 3/16 red, 59 errors, frame 5497 `camera_x` expected `0x0010` actual `0x0012` | 3/16 red, 59 errors, frame 5497, same values |
+
+Failure for failure identical; both reds stay **baseline-attributed**. Four classes, not the trace
+profiles, and no evidence about any other class.
+
+**No clips for this part, recorded rather than worked around.** None of the four groups can be
+staged with the seeds `GameplayCaptureTool` has: lost rings need a ring count and a hit, the
+shields need a shield, the sidekick rows need Tails to die or carry, and the solid-object rows need
+an inverted player to reach a solid object — the act-start inverted run stops at x=437 on a wall,
+and no solid object has been measured within reach of it. `INDEX.md` carries that table. Two things
+would unblock all four: slice 3's `$58`/`$59`/`$5B` writers, which make the flag reachable in
+ordinary play, or `--rings` and `--shield` seeds beside the existing `--emeralds` and
+`--reverse-gravity`.
