@@ -6,7 +6,7 @@ Character routes: Sonic + Tails, Sonic, Tails (seamless arrival from Act 1, then
 cutscene and `StartNewLevel $1600`) and Knuckles (`Obj_StartNewLevel` `$B3` at `($3FE0,$E0)` to
 `$1601`). Owning plan: [LRZ bring-up](../../plans/2026-09-17-lrz-bring-up.md); starting inventory:
 [LRZ placement inventory](../../research/s3k-zones/lrz-object-inventory.md).
-Status: slice 0 baseline only.
+Status: act 1 slices 0-3 have brought the shared classes with them; act 2 traversal is slice 7.
 
 Incoming: seamless `$900` handover, level select `$901`, star-post reload.
 Outgoing: `$1600` (Sonic/Tails, with the Act 3 carry) and `$1601` (Knuckles, with `SaveGame`).
@@ -20,9 +20,15 @@ Five claims are tracked separately and never aggregated: **implemented**, **cold
 **rewind-verified**, **native behaviour matched**, **visually matched**. Nothing below certifies
 the act.
 
-Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, of which **255 still build a
-`PlaceholderObjectInstance`** after slice 3b's doors and horizontal buttons (281 at `035e48a58`,
-277 after slice 1); 281 live rings (282 records minus the leading `(0,0)` sentinel).
+Placement baseline (`TestS3kLrzPlacementCensus`): 455 placed objects, of which **206 still build a
+`PlaceholderObjectInstance`** after slice 4's Iwamodoki (281 at `035e48a58`, 277 after slice 1,
+255 after slice 3b's doors and horizontal buttons, 254 after the `$16` wall ride, 240 after the
+`$20` swinging spike ball); 281 live rings (282 records minus the leading `(0,0)` sentinel).
+
+Act 2 classes reached so far are all shared with act 1 and were implemented there: `$6E` (4),
+`$19` (11), `$1C` (11), `$16` (1), `$20` (14) and `$9A` (34). **None of their act 2 skins or
+placements has been exercised in act 2 itself** - that remains an owed row, recorded in the
+[bring-up plan](../../plans/2026-09-17-lrz-bring-up.md) handover.
 
 ## Obligations
 

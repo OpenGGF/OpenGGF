@@ -110951,3 +110951,30 @@ Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `2
   `$20` swinging spike ball. `MoveSprite2`'s `lsl.l #8` was also missing from
   `LrzShootingTriggerProjectileInstance`, whose shots crept at 1/256 of the right speed; its test
   asserted the velocity fields and never the resulting motion.
+
+## 2026-09-18 - LRZ1: after slice 3 completed and slice 4's Iwamodoki
+
+Worktree `.worktrees/ai-lrz-bring-up`, branch `feature/ai-lrz-bring-up`, head `72920cabc`.
+
+- `maven_queue.py -Dmse=off -Ptrace-segments -Dtest=TestS3kSonicTailsLrzSegmentTraceReplay
+  -Ds3k.rom.path=<worktree>/s3k.gen test`: **7708 errors, first error frame 208 `tails_y_speed`
+  expected `0x07BD`, actual `0x0000`** (7174 errors at `21fbec7e6`).
+- **The frontier has not moved.** The first error frame and field are unchanged; what rose is the
+  total, by 534. That is expected and is not a regression: `$21`, `$22`, `$9C` and `$9A` now act on
+  frames that previously ran with placeholders that did nothing, so the replay diverges in more
+  fields after the frontier it already had. A total is not a frontier, and neither number says
+  anything about frame 208.
+- Cold act 1 route on the fixture's own recorded input, `GameplayCaptureTool --main sonic
+  --sidekick tails --settle 1 --frames 12000`: Player 1 `(x, y)` still matches **exactly for
+  frames 0-636**, and the frame-637 shared solid/riding ordering divergence recorded above is
+  still what ends the parity comparison.
+- **The open-loop reach fell from x 4301 to x 4029, and that is the objects working.** The
+  hand-authored input predates the hazards it now runs into. First hurt is frame 1102 at
+  `(1993,1157)`; the nearest placements are `$1B Obj_LRZFireballLauncher` subtype `$1C` at
+  `(1982,1008)` and `(1789,1168)`, launchers that were placeholders when the input was recorded.
+  The run then limps to x 4029 with no rings and dies at frame 3649 near `(3790,959)`. **Re-author
+  `lrz1-native-input-route.txt` against the implemented zone before quoting a reach**; the number
+  is not comparable across this commit.
+- Classes landed between the two measurements: `$21` smashing spike platform, `$22` spike ball,
+  `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits,
+  and `$9A` Iwamodoki. Census 98 / 240 / 8 -> 43 / 206 / 8.
