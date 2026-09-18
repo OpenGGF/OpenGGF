@@ -73,6 +73,18 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszGhzBossShieldChild.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicHeadChild.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicHeadChild.java#restoreRewindState", 1),
+            // Obj_SSZMTZBoss and its two child shapes. The ship carries the 16.16 SSZ_MTZ_boss
+            // position/velocity pair, the three arm bytes and the two-level $26/$32 dispatch, none
+            // of which is a spawn decode; each orb holds the ship through a typed ObjectRefId
+            // sidecar and carries its own three orbit angles; and the laser child keeps the shot's
+            // own 16.16 X, its hold counter and the flip it copied off the ship at setup. Restore
+            // equality is covered by TestS3kSszMtzArenaHeadless and the per-object round trip.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossObjectInstance.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossOrbChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossOrbChild.java#restoreRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossLaserChild.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMtzBossLaserChild.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboJetFlameChildInstance.java#captureRewindState", 1),

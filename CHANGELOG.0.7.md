@@ -42,8 +42,14 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   ball and chain whose ball hurts to touch, sweeps the floor and turns the ship around at each
   end. The ship flashes three of its own colours while it is reeling from a hit, exactly as the
   cartridge does — including the off-by-one that makes the flash duller than it was meant to be.
-  Eight hits send it away and open the way on. The Metropolis arena, its boss and the Death Egg launch are still to
-  come.
+  Eight hits send it away and open the way on. The second one follows it: climb to the upper
+  arena and the camera closes again, the Metropolis ship falls in with a ring of seven orbs
+  turning around it — passing in front of the ship and behind it as it turns — patrols the
+  arena and lifts its arms to swing the ring wide. Hitting it throws one orb off the ring at
+  you, and the ship will not come back down until every thrown orb has been dealt with; it has
+  seven of those in it. After the seventh it stops raising its arms, dives at the floor and
+  fires three pairs of lasers along it instead. The eighth hit sends it away and raises the
+  sunk pad in the arena floor. The Death Egg launch is still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter
   the playable Hidden Palace act (`$1601`) with its own layout, bounds and title card,

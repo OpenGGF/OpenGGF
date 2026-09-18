@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.events;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.SszMtzBossObjectInstance;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.camera.DeadzoneGeometry;
 import com.openggf.game.sonic3k.objects.SszArrivalControllerObjectInstance;
@@ -69,6 +70,8 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
     static final int MTZ_LOCK_PLAYER_Y = 0x420;
     static final int MTZ_LOCK_CAMERA_X = 0x1660;
     static final int MTZ_ARENA_Y = 0x380;
+    /** {@code move.w #$7F00,(Events_bg+$02).w}: fighting, and the lock byte cleared with it. */
+    static final int MTZ_BOSS_FIGHTING_WORD = 0x7F00;
     /** The head of {@code sub_575EA}: the Mecha Sonic arena. */
     static final int FINAL_ARENA_CAMERA_X = 0x19A0;
     static final int FINAL_ARENA_PLAYER_Y = 0x680;
@@ -397,7 +400,32 @@ public class Sonic3kSSZEvents extends Sonic3kZoneEvents {
             camera.setMaxYTarget((short) MTZ_ARENA_Y);
             state.setEventsBgByte(EV_MTZ_LOCK, 0xFF);
         }
-        // loc_5775C: Obj_SSZMTZBoss and Events_bg+$02 = $7F00 are the MTZ boss slice.
+        allocateMtzBoss(state, camera);
+    }
+
+    /**
+     * {@code loc_5775C}. As with Green Hill the allocation is a second gate, not part of the
+     * lock: the lock only publishes {@code Camera_target_max_Y_pos = $380} and the camera then
+     * eases up to it two pixels a frame. {@code move.w #$7F00,(Events_bg+$02).w} sets the
+     * fighting byte and clears {@code +$03} beside it in the same instruction.
+     *
+     * <p>Unlike {@code loc_576E8} this one passes no position: {@code loc_7A72C} writes
+     * {@code ($1700,$300)} as absolute world coordinates, so nothing here needs the camera's
+     * 320-pixel framing.
+     */
+    private void allocateMtzBoss(SszZoneRuntimeState state, Camera camera) {
+        if ((camera.getY() & 0xFFFF) != MTZ_ARENA_Y) {
+            return;
+        }
+        SszMtzBossObjectInstance boss = spawnObject(() -> new SszMtzBossObjectInstance(
+                new ObjectSpawn(SszMtzBossObjectInstance.SPAWN_X,
+                        SszMtzBossObjectInstance.SPAWN_Y, 0, 0, 0, false, 0)));
+        if (boss == null) {
+            // jsr (AllocateObject).l / bne.s loc_7777C: a failed allocation writes no flags.
+            return;
+        }
+        state.setEventsBgByte(EV_EVENT_OWNS_BOUNDS, 0xFF);
+        state.setEventsBgWord(EV_MTZ_BOSS, MTZ_BOSS_FIGHTING_WORD);
     }
 
     /** {@code loc_5777E}. */

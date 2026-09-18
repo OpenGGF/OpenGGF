@@ -58,8 +58,8 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
      * nibble-2 fighters test it in {@code sub_91914}. No ROM code clears it, so it is cleared
      * here by the state itself being rebuilt on every level load.
      *
-     * <p>{@code loc_7A7C4} (the MTZ boss, slice 6) writes six bytes starting at this address for
-     * an unrelated purpose; that overlap is out of scope until the boss lands.
+     * <p>{@code loc_7A7C4} (the MTZ boss) writes six bytes starting at this address for an
+     * unrelated purpose; {@link #setEggRoboFlyByBits(int)} is that overwrite.
      */
     private int unkFA82;
 
@@ -170,6 +170,15 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
 
     /** The whole word, for tests. */
     public int eggRoboFlyByBits() { return unkFA82 & 0xFFFF; }
+
+    /**
+     * {@code loc_7A7C4}: the Metropolis recreation's setup writes {@code $10,0,3,0,1,0} over
+     * {@code _unkFA82.._unkFA87}, so the first of those bytes lands on the pairing word's high
+     * half and the second clears its low half. Every EggRobo group but bit 12 therefore reads as
+     * not yet passed for the rest of the act, and group 12 reads as passed whether or not its
+     * fly-by ever left the screen. The other four bytes have no consumer in this engine.
+     */
+    public void setEggRoboFlyByBits(int value) { unkFA82 = value & 0xFFFF; }
 
     /** {@code _unkFA84}: {@code loc_6607E} writes {@code (Camera_X - previous) >> 1} each frame. */
     public int backgroundCameraDelta() { return unkFA84; }

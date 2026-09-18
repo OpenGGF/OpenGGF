@@ -184,6 +184,11 @@ final class DefaultObjectRewindPolicies {
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossChainLinkChild", "chainParent"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance", "shield"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszGhzBossObjectInstance", "chain"), RewindFieldPolicy.CAPTURED),
+            // Obj_SSZMTZBoss allocates one slot that turns itself into the first of seven orbs
+            // and allocates the other six; the ship keeps the whole list, each orb keeps the ship
+            // through a typed ObjectRefId sidecar. TestS3kSszMtzArenaHeadless drives the orbit,
+            // the launch and the defeat across a restore.
+            Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.bosses.SszMtzBossObjectInstance", "orbs"), RewindFieldPolicy.CAPTURED),
             Map.entry(new FieldKey("com.openggf.game.sonic3k.objects.FbzExitHallInstance", "hallRecord"), RewindFieldPolicy.TRANSIENT),
             // Boss childComponents is an identity-bearing live graph. The compact collection
             // codec retains its exact managed children and their roles for restore/relink.

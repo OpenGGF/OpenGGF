@@ -2720,6 +2720,19 @@ public final class Sonic3kPlcArtRegistry {
                 1,
                 -1
         ));
+        // Obj_SSZMTZBoss (loc_7A6DC) queues ArtKosM_SSZMTZOrbs into ArtTile_SSZMTZOrbs as the
+        // fight starts. loc_7ADB2 gives the orbs make_art_tile(ArtTile_SSZMTZOrbs,0,0) -- palette
+        // line 0 -- and ObjDat3_7ABFA gives the lasers make_art_tile(ArtTile_SSZMTZOrbs,1,1);
+        // the sheet is registered on the orbs' line and the laser draw passes its own.
+        standalone.add(new StandaloneArtEntry(
+                Sonic3kObjectArtKeys.SSZ_MTZ_ORBS,
+                Sonic3kConstants.ART_KOSM_SSZ_MTZ_ORBS_ADDR,
+                CompressionType.KOSINSKI_MODULED,
+                0,
+                Sonic3kConstants.MAP_SSZ_MTZ_ORBS_ADDR,
+                0,
+                -1
+        ));
         // Obj_MechaSonicHead queues ArtKosM_MechaSonicHead into ArtTile_RobotnikShip and draws
         // Map_MechaSonicHead on line 1 (ObjDat_MechaSonicHead).
         standalone.add(new StandaloneArtEntry(

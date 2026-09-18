@@ -28,8 +28,9 @@ import java.util.List;
  *
  * <p>{@code Obj_MechaSonicHeadMain} is two lines: follow the parent through
  * {@code Refresh_ChildPositionAdjusted}, then delete outright once {@code _unkFA89} is set. That
- * flag is written by the Green Hill boss's own escape ({@code loc_7A3F8}), so the head disappears
- * with the ship rather than being cleaned up by the parent.
+ * flag is written by the Green Hill boss's own escape ({@code loc_7A3F8}) and by the Metropolis
+ * boss's ({@code loc_7ACA4}), so the head disappears with the ship rather than being cleaned up by
+ * the parent. Both ships implement {@link SszMechaHeadHost}; this child is shared between them.
  */
 public final class SszMechaSonicHeadChild extends AbstractObjectInstance
         implements RewindRecreatable {
@@ -42,11 +43,11 @@ public final class SszMechaSonicHeadChild extends AbstractObjectInstance
     static final int CHILD_DX = 0;
     static final int CHILD_DY = -0x20;
 
-    private SszGhzBossObjectInstance parent;
+    private SszMechaHeadHost parent;
     private int x;
     private int y;
 
-    public SszMechaSonicHeadChild(ObjectSpawn spawn, SszGhzBossObjectInstance parent) {
+    public SszMechaSonicHeadChild(ObjectSpawn spawn, SszMechaHeadHost parent) {
         super(spawn, "SSZMechaSonicHead");
         this.parent = parent;
         this.x = spawn.x();
@@ -81,7 +82,7 @@ public final class SszMechaSonicHeadChild extends AbstractObjectInstance
             x = extra.x();
             y = extra.y();
             parent = extra.parentId() == null ? null
-                    : (SszGhzBossObjectInstance) context.requireIdentityTable()
+                    : (SszMechaHeadHost) context.requireIdentityTable()
                     .resolveObject(extra.parentId(), true);
         }
     }

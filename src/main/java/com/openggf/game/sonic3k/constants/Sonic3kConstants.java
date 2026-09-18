@@ -2066,6 +2066,12 @@ public class Sonic3kConstants {
     public static final int MAP_SSZ_GHZ_MISC_ADDR = 0x186E7C;
     /** {@code Pal_SSZGHZMisc} ($07D850): loaded over palette line 1 by {@code PalLoad_Line1}. */
     public static final int PAL_SSZ_GHZ_MISC_ADDR = 0x07D850;
+    /** {@code ArtKosM_SSZMTZOrbs} ($17EFA6): the Metropolis recreation's orbs and lasers. */
+    public static final int ART_KOSM_SSZ_MTZ_ORBS_ADDR = 0x17EFA6;
+    /** {@code Map_SSZMTZOrbs} ($186DAC). */
+    public static final int MAP_SSZ_MTZ_ORBS_ADDR = 0x186DAC;
+    /** {@code Pal_SSZMTZOrbs} ($07B268): loaded over palette line 1 by {@code PalLoad_Line1}. */
+    public static final int PAL_SSZ_MTZ_ORBS_ADDR = 0x07B268;
     /** {@code ArtKosM_MechaSonicHead} ($17C6E0), queued into {@code ArtTile_RobotnikShip}. */
     public static final int ART_KOSM_MECHA_SONIC_HEAD_ADDR = 0x17C6E0;
     /** {@code Map_MechaSonicHead} ($0681FC). */

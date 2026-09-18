@@ -405,6 +405,13 @@ public final class Sonic3kObjectArtKeys {
     public static final String SSZ_RETRACTING_SPRING = "ssz_retracting_spring";
     /** {@code ArtKosM_SSZGHZMisc} over {@code Map_SSZGHZMisc}: the GHZ boss ball and chain. */
     public static final String SSZ_GHZ_BOSS_MISC = "ssz_ghz_boss_misc";
+    /**
+     * {@code ArtKosM_SSZMTZOrbs} over {@code Map_SSZMTZOrbs}: the Metropolis recreation's seven
+     * orbs and its two laser children. The orbs take {@code make_art_tile(ArtTile_SSZMTZOrbs,0,0)}
+     * and the lasers {@code make_art_tile(ArtTile_SSZMTZOrbs,1,1)}, so the sheet is registered on
+     * line 0 and the laser draws override the line.
+     */
+    public static final String SSZ_MTZ_ORBS = "ssz_mtz_orbs";
     /** {@code ArtKosM_MechaSonicHead} over {@code Map_MechaSonicHead}. */
     public static final String MECHA_SONIC_HEAD = "mecha_sonic_head";
     /** Obj_SSZFloatingPlatform: Map_SSZFloatingPlatform over make_art_tile(ArtTile_SSZMisc,2,0). */

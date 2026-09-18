@@ -74,7 +74,7 @@ import java.util.List;
  * release. Only then does it restore palette line 2 and reload PLC {@code $32}.
  */
 public final class SszGhzBossObjectInstance extends AbstractBossInstance
-        implements SpawnRewindRecreatable {
+        implements SpawnRewindRecreatable, SszMechaHeadHost {
 
     /** {@code move.b #8,collision_property(a0)}. */
     private static final int HIT_COUNT = 8;
@@ -662,10 +662,12 @@ public final class SszGhzBossObjectInstance extends AbstractBossInstance
     public boolean isChainPhaseActive() { return chainPhaseActive; }
 
     /** {@code st (_unkFA89).w}: what deletes the Mecha Sonic head. */
+    @Override
     public boolean headShouldDelete() { return escaped; }
 
     public boolean hasEscaped() { return escaped; }
 
+    @Override
     public boolean isRenderFlippedForTest() { return renderFlipped; }
 
     public int routineForTest() { return state.routine; }
