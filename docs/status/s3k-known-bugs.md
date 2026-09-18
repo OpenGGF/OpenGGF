@@ -5935,25 +5935,25 @@ That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
   per-frame collision byte and `sub_7D312`'s window. Three things below that are not there.
 - **Suspected cause** — Not a defect; slice 7 of the
   [SSZ bring-up plan](../architecture/plans/2026-09-17-ssz-bring-up.md) is delivered in stages and
-  the first stage stops at the killing hit. What is missing is (a) `loc_7B81A`'s post-defeat graph
-  beyond `sub_7D35A`'s own writes — the `loc_7B87C` fall, `loc_7B888`'s landing with
-  `ChildObjDat_7D48C` and `sub_7C678`, and the `loc_7D056` object that runs `sub_868F8` and hands
-  the act over, so a beaten Mecha Sonic holds its defeat pose instead of finishing the act; (b) the
-  `ChildObjDat_7D474` child at `loc_7C9BA`; and (c) `Obj_MechaSonic_Sparks`, whose gate is a
-  palette read (`cmpi.w #$E88,(Normal_palette_line_2+$12).w`) rather than a state. `loc_7B39C`'s
-  bare tail-jump to `AllocateObject` is absent with them — a second slot the ROM consumes and never
-  writes — and slot order decides sibling execution and RNG draw order, so it belongs in this list
-  rather than being treated as a no-op.
+  the stages stop short of its cosmetics. `loc_7B81A`'s act-1 routines 0, 2 and 4 and
+  `loc_7D056`'s handover are implemented and dated against native. What is missing is (a)
+  `sub_7C678`'s palette rotation over `word_7D842` together with the `ChildObjDat_7D48C`
+  (`Obj_MechaSonic_Sparks`) child it gates — the sparks' own test is a read of the rotating
+  colour, `cmpi.w #$E88,(Normal_palette_line_2+$12).w`, so neither is useful without the other,
+  and `loc_7B984`'s `Run_PalRotationScript` therefore drives nothing; (b) the
+  `ChildObjDat_7D474` child at `loc_7C9BA`; and (c) `loc_7B39C`'s bare tail-jump to
+  `AllocateObject`, a second slot the ROM consumes and never writes — slot order decides sibling
+  execution and RNG draw order, so it belongs here rather than being treated as a no-op.
 - **Untested rather than unimplemented** — the `$20`-frame hit window's *phase* is unverified.
   `sub_7D312` opens the window on the frame after the hit, because `Touch_Enemy` has already
   zeroed `collision_flags`; the duration is `$20` on both sides, but which frame the engine's
   shared boss touch pass counts as the first has not been checked against the routine, and no
   test pins it. The window's duration, and the fact that `sub_7D2D8` leaves the byte alone while
   it runs, are covered.
-- **Removal condition** — `loc_7B81A`'s routines 0 to 4 run for act 1, the act-1 handover through
-  `loc_7D056` reaches the results screen, both remaining children exist with their own tests, and
-  the hit window's phase is pinned against `sub_7D312`. The attack graph itself is now driven to
-  a landing and to each of `byte_7B636`'s three attacks against ROM literals.
+- **Removal condition** — the palette rotation and its spark child exist, `loc_7C9BA` exists,
+  `loc_7B39C`'s allocate is accounted for, and the hit window's phase is pinned against
+  `sub_7D312`. The attack graph is driven to a landing and to each of `byte_7B636`'s three
+  attacks against ROM literals, and the defeat through `loc_7D056` is driven and dated.
 
 ## Sky Sanctuary Boss Defeats Draw No Explosion
 

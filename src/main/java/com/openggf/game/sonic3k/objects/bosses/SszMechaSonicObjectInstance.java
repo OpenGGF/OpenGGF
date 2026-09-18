@@ -187,6 +187,16 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private static final int DEFEAT_SCORE = 100;
     /** {@code move.w #$7F,$2E(a0)} in {@code sub_7D35A}. */
     public static final int DEFEAT_WAIT = 0x7F;
+    /** {@code move.b #$E,mapping_frame(a0)} in {@code loc_7B858}. */
+    public static final int DEFEAT_MAPPING_FRAME = 0x0E;
+    /** {@code move.b #$1F,y_radius(a0)} in {@code loc_7B858}. */
+    private static final int DEFEAT_FALL_Y_RADIUS = 0x1F;
+    /** {@code move.b #$23,y_radius(a0)} in {@code loc_7B888}. */
+    private static final int DEFEAT_LANDED_Y_RADIUS = 0x23;
+    /** {@code move.w #(2*60)-1,$2E(a0)} in {@code loc_7B888}. */
+    public static final int DEFEAT_LANDED_WAIT = (2 * 60) - 1;
+    /** {@code bset #5,$38(a0)} in {@code loc_7B888}. */
+    private static final int FLAG_DEFEAT_LANDED = 5;
 
     // --- $38(a0) bits ------------------------------------------------------------------------
 
@@ -212,6 +222,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         /** {@code loc_7B754}. */ BACKSTEP,
         /** {@code loc_7B790}. */ FINAL_DASH,
         /** {@code loc_7B7EC}. */ FINAL_HOP,
+        /** {@code loc_7B858}, installed by {@code sub_7D35A}. */ DEFEAT_FALL,
+        /** {@code loc_7B888}. */ DEFEAT_LANDED,
     }
 
     // --- state -------------------------------------------------------------------------------
@@ -338,6 +350,20 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     @Override protected boolean usesDefeatSequencer() { return false; }
 
+    /**
+     * {@code sub_7D312} runs at the <em>tail</em> of {@code Obj_SSZEndBoss}'s own dispatch, after
+     * the routine has already run, so the frame that reaches zero hits selects {@code loc_7B81A}
+     * and writes {@code $2E = $7F} and stops — {@code loc_7B852}'s first {@code Obj_Wait} is the
+     * next frame. Without the deferral the engine's touch pass, which runs before this slot,
+     * would spend a decrement on the killing frame itself.
+     *
+     * <p>The native {@code hpz_3} segment settles it, comparison only: the slot takes
+     * {@code loc_7B81A} on frame 1310 and routine 2 on 1438. That is 128 dispatches, which is
+     * {@code $7F} decremented to negative starting at 1311 — the deferred shape. Starting at
+     * 1310 would have reached routine 2 on 1437.
+     */
+    @Override protected boolean defeatDeferralAppliesToThisBoss() { return true; }
+
     @Override protected int getDefeatScore() { return DEFEAT_SCORE; }
 
     @Override protected int getBossHitSfxId() { return Sonic3kSfx.BOSS_HIT.id; }
@@ -388,9 +414,18 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         if (!initExecuted) {
             runInit(vIntRunCount);
             initExecuted = true;
-        } else {
-            dispatch();
+            applyHitAndFlash();
+            applyCollisionByte();
+            return;
         }
+        if (defeated) {
+            // sub_7D35A swapped the object's code pointer to loc_7B81A, whose own tail is the
+            // DPLC and Draw_Sprite -- no sub_7D312 and no sub_7D2D8, so the collision byte stops
+            // being rewritten and status bit 6 stands for the rest of the act.
+            dispatchDefeat();
+            return;
+        }
+        dispatch();
         applyHitAndFlash();
         applyCollisionByte();
     }
@@ -801,15 +836,76 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         defeated = true;
         // move.l #loc_7B81A,(a0) / clr.b routine(a0) / move.l #loc_7B858,$34(a0)
         super.state.routine = 0;
-        callback = Callback.NONE;
         // bset #6,status(a0), and move.w #$7F,$2E(a0)
         super.state.invulnerable = true;
         timer = DEFEAT_WAIT;
+        callback = Callback.DEFEAT_FALL;
         // lea (Child6_CreateBossExplosion).l,a2 / CreateChild1_Normal, subtype 4. The score is
-        // the base's, added before this runs. clr.b (Update_HUD_timer).w and
-        // bclr #7,render_flags(a0) belong to loc_7B81A's graph, which is owed; nothing here
-        // clears x_vel, y_vel or the trail bit, and this no longer pretends to.
+        // the base's, added before this runs. Nothing here clears x_vel, y_vel or the trail bit.
         spawnDefeatExplosion();
+    }
+
+    /**
+     * {@code off_7B838}, act-1 entries only. Routine 0 is {@code loc_7B852}'s {@code Obj_Wait},
+     * routine 2 is {@code loc_7B87C}'s fall, and routine 4 is {@code loc_7B984}, which waits out
+     * its own {@code $2E} while {@code loc_7D056} runs the act's handover beside it.
+     *
+     * <p>Dated against the native {@code hpz_3} segment of
+     * {@code s3k-sonic-tails-complete-emeralds}, comparison only: the slot takes
+     * {@code loc_7B81A} on frame 1310, routine 2 on 1438 — {@code $7F + 1}, an {@code Obj_Wait}
+     * completing on update N+1 — and routine 4 on 1439, one frame later, because at
+     * {@code y $660} with {@code loc_7B858}'s {@code $1F} radius his feet are already below the
+     * {@code $67C} floor and {@code ObjHitFloor_DoRoutine} lands him on its first dispatch.
+     */
+    private void dispatchDefeat() {
+        switch (super.state.routine) {
+            case 0 -> objWait();
+            case 2 -> {
+                moveSpriteWithGravity(LIGHT_GRAVITY);
+                objHitFloorDoRoutine();
+            }
+            // loc_7B984: Run_PalRotationScript, then the animation, then Obj_Wait. The palette
+            // rotation sub_7C678 sets up over word_7D842 is owed with the spark child it feeds.
+            case 4 -> { animate(); objWait(); }
+            default -> { }
+        }
+    }
+
+    /** {@code loc_7B858}. */
+    private void onDefeatFall() {
+        super.state.routine = 2;
+        anim.mappingFrame = DEFEAT_MAPPING_FRAME;
+        yRadius = DEFEAT_FALL_Y_RADIUS;
+        xVel = 0;
+        yVel = 0;
+        callback = Callback.DEFEAT_LANDED;
+    }
+
+    /**
+     * {@code loc_7B888}, act-1 branch. {@code sub_7C678}'s palette rotation over
+     * {@code word_7D842} and {@code ChildObjDat_7D48C}'s {@code Obj_MechaSonic_Sparks} are owed
+     * together — the sparks' own gate is a read of the rotating colour
+     * ({@code cmpi.w #$E88,(Normal_palette_line_2+$12).w}), so neither is useful without the
+     * other. Recorded in {@code docs/status/s3k-known-bugs.md} rather than half-built.
+     */
+    private void onDefeatLanded() {
+        yRadius = DEFEAT_LANDED_Y_RADIUS;
+        setRawAnimation(Sonic3kConstants.SSZ_MECHA_ANIM_DEFEATED_ADDR);
+        services().playSfx(Sonic3kSfx.MECHA_LAND.id);
+        super.state.routine = 4;
+        // st (_unkFAA8).w: Check_TailsEndPose reads it, and loc_7D078 waits for it to clear.
+        SszZoneRuntimeState ssz = sszState();
+        if (ssz != null) {
+            ssz.setMechaSonicBeaten(true);
+        }
+        flags |= 1 << FLAG_DEFEAT_LANDED;
+        flags &= ~(1 << FLAG_LONG_LANDING);
+        timer = DEFEAT_LANDED_WAIT;
+        callback = Callback.NONE;
+        // jsr (AllocateObject).l / move.l #loc_7D056,(a1): the act's own handover, beside the
+        // boss rather than owned by it.
+        spawnFreeChild(() -> new SszMechaSonicActEndObjectInstance(
+                new ObjectSpawn(getX(), getY(), 0, 0, 0, false, 0)));
     }
 
     /** {@code Obj_Wait}: {@code subq.w #1,$2E(a0)} and, when it goes negative, {@code jmp $34}. */
@@ -833,6 +929,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
             case BACKSTEP -> onBackstep();
             case FINAL_DASH -> onFinalDash();
             case FINAL_HOP -> onFinalHop();
+            case DEFEAT_FALL -> onDefeatFall();
+            case DEFEAT_LANDED -> onDefeatLanded();
             case NONE -> { }
         }
     }

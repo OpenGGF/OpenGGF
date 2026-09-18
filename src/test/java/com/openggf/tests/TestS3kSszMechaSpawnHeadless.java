@@ -12,6 +12,7 @@ import com.openggf.game.session.SessionManager;
 import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance;
+import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicActEndObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
@@ -387,6 +388,93 @@ class TestS3kSszMechaSpawnHeadless {
         assertEquals(0x300, dash.get(1).priorityWordForTest(), "dc.w $300");
     }
 
+    /**
+     * {@code sub_7D35A} into {@code off_7B838}'s act-1 entries, and {@code loc_7D056} beside
+     * them. The frame counts are the ROM's own: {@code $7F} into an {@code Obj_Wait} that
+     * completes on update N+1, then a fall that lands on its first dispatch because
+     * {@code loc_7B858}'s {@code $1F} radius already puts his feet below the floor.
+     *
+     * <p>The same three numbers are in the native {@code hpz_3} segment of
+     * {@code s3k-sonic-tails-complete-emeralds} — {@code loc_7B81A} on frame 1310, routine 2 on
+     * 1438, routine 4 and the {@code loc_7D056} slot both on 1439 — read for comparison only.
+     */
+    @Test
+    void theDefeatWaitsTheCartridgesFrameCountAndThenHandsTheActOver() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        SszMechaSonicObjectInstance boss = runToInit(fixture);
+
+        for (int hit = 8; hit > 0; hit--) {
+            landOneHit(fixture, boss);
+            assertEquals(hit - 1, boss.getCollisionProperty(),
+                    "collision_property counts down from 8");
+        }
+        assertTrue(boss.defeatedForTest(), "sub_7D35A ran at collision_property zero");
+        assertEquals(0, boss.routineForTest(), "clr.b routine(a0)");
+        assertEquals(0x7F, boss.timerForTest(), "move.w #$7F,$2E(a0)");
+
+        // loc_7B852 is a bare Obj_Wait: $7F, and the frame the decrement goes negative is the
+        // one that calls $34. 128 dispatches, not 127.
+        for (int frame = 0; frame < 0x7F + 1; frame++) {
+            parkTheLeader(fixture);
+            fixture.stepIdleFrames(1);
+        }
+        assertEquals(2, boss.routineForTest(), "loc_7B858's move.b #2,routine(a0)");
+        assertEquals(0x0E, boss.mappingFrameForTest(), "move.b #$E,mapping_frame(a0)");
+        assertEquals(0, boss.xVelForTest(), "clr.w x_vel(a0)");
+
+        parkTheLeader(fixture);
+        fixture.stepIdleFrames(1);
+        assertEquals(4, boss.routineForTest(),
+                "ObjHitFloor_DoRoutine lands him on the first dispatch of routine 2");
+        assertEquals(0x23, boss.yRadiusForTest(), "move.b #$23,y_radius(a0) in loc_7B888");
+        assertEquals((2 * 60) - 1, boss.timerForTest(), "move.w #(2*60)-1,$2E(a0)");
+        assertTrue(requireState().mechaSonicBeaten(), "st (_unkFAA8).w");
+
+        SszMechaSonicActEndObjectInstance handover =
+                active(SszMechaSonicActEndObjectInstance.class);
+        assertNotNull(handover, "jsr (AllocateObject).l / move.l #loc_7D056,(a1)");
+        assertEquals((2 * 60) - 1, handover.timerForTest(),
+                "loc_7D056's own move.w #(2*60)-1,$2E(a0)");
+    }
+
+    /**
+     * {@code sub_868F8}. The act does not end on the timer alone: the routine pre-decrements
+     * {@code $2E} and then refuses while Player 1 is in the air, so a leader still falling holds
+     * the handover open frame after frame and it fires on the first grounded one.
+     */
+    @Test
+    void theHandoverWaitsForTheLeaderToBeStandingAndNotJustForItsTimer() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        SszMechaSonicObjectInstance boss = runToInit(fixture);
+        for (int hit = 8; hit > 0; hit--) {
+            landOneHit(fixture, boss);
+        }
+        for (int frame = 0; frame < 0x7F + 2; frame++) {
+            parkTheLeader(fixture);
+            fixture.stepIdleFrames(1);
+        }
+        SszMechaSonicActEndObjectInstance handover =
+                active(SszMechaSonicActEndObjectInstance.class);
+        assertNotNull(handover, "the handover object is live");
+
+        // Hold the leader off the floor -- placed above it each frame, so the engine's own
+        // physics reports air rather than the test asserting it -- well past the timer.
+        for (int frame = 0; frame < (2 * 60) + 30; frame++) {
+            parkTheLeaderInTheAir(fixture);
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(fixture.sprite().getAir(), "the leader really is airborne");
+        assertFalse(handover.resultsRequestedForTest(),
+                "btst #Status_InAir,status(a1) / bne: an airborne leader holds it open");
+        assertTrue(handover.timerForTest() < 0, "and $2E went negative long ago");
+
+        parkTheLeader(fixture);
+        fixture.stepIdleFrames(1);
+        assertTrue(handover.resultsRequestedForTest(),
+                "the first grounded dispatch takes it");
+        assertEquals(2, handover.routineForTest(), "move.b d0,routine(a0) with d0 = 2");
+    }
+
     /** Rewind across the entry: before the spawn, with the boss live, and after. */
     @Test
     void theEntrySurvivesACaptureRestoreAndForwardReplay() {
@@ -484,6 +572,39 @@ class TestS3kSszMechaSpawnHeadless {
         assertEquals(routine, boss.routineForTest(),
                 "the boss reached routine $" + Integer.toHexString(routine));
         return boss;
+    }
+
+    /** One attack through the real touch pass, waited for by the boss's own hit counter. */
+    private static void landOneHit(HeadlessTestFixture fixture,
+                                   SszMechaSonicObjectInstance boss) {
+        int before = boss.getCollisionProperty();
+        boolean landed = false;
+        for (int frame = 0; frame < 0x400 && !landed; frame++) {
+            AbstractPlayableSprite player = fixture.sprite();
+            player.setDead(false);
+            player.setHurt(false);
+            player.setInvulnerableFrames(0);
+            player.setInvincibleFrames(2);
+            player.setCentreX((short) boss.getX());
+            player.setCentreYPreserveSubpixel((short) boss.getY());
+            player.setXSpeed((short) 0);
+            player.setYSpeed((short) 0);
+            player.setGSpeed((short) 0);
+            player.setAir(true);
+            player.setAnimationId(Sonic3kAnimationIds.ROLL.id());
+            fixture.stepIdleFrames(1);
+            landed = boss.getCollisionProperty() == before - 1;
+        }
+        assertTrue(landed, "a hit landed through the touch pass");
+    }
+
+    /** The same park, a long way above the arena floor, so the leader stays in the air. */
+    private static void parkTheLeaderInTheAir(HeadlessTestFixture fixture) {
+        parkTheLeader(fixture);
+        AbstractPlayableSprite player = fixture.sprite();
+        player.setCentreYPreserveSubpixel((short) (PAD_Y - 0x80));
+        player.setYSpeed((short) 0);
+        player.setAir(true);
     }
 
     private static void parkTheLeader(HeadlessTestFixture fixture) {

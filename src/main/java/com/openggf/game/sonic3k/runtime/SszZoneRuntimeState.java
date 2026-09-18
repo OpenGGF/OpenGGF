@@ -39,7 +39,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public static final int EVENTS_BG_BYTES = 0x10;
 
     private static final int CAPTURE_BYTES =
-            EVENTS_BG_BYTES + 14 * Short.BYTES + 3 * Integer.BYTES + 2;
+            EVENTS_BG_BYTES + 14 * Short.BYTES + 3 * Integer.BYTES + 3;
 
     private final int actIndex;
     private final PlayerCharacter playerCharacter;
@@ -60,6 +60,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
      * the two X limits its {@code x_vel} is heading for. They are world coordinates, not camera
      * offsets, and nothing rewrites them for act 1 after the init.
      */
+    private boolean mechaSonicBeaten;
     private short unkFAB0;
     private short unkFAB4;
     private short unkFAB6;
@@ -169,6 +170,14 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
     public int carriedObjectSlot() { return unkFAA4 & 0xFFFF; }
     public void setCarriedObjectSlot(int value) { unkFAA4 = (short) value; }
 
+    /**
+     * {@code _unkFAA8}: {@code st} by {@code loc_7B888} when the beaten Mecha Sonic lands.
+     * {@code Check_TailsEndPose} reads it to end Player 2's pose, and {@code loc_7D078} holds the
+     * act's handover open until it clears. Nothing in act 1 clears it; the level reload does.
+     */
+    public boolean mechaSonicBeaten() { return mechaSonicBeaten; }
+    public void setMechaSonicBeaten(boolean value) { mechaSonicBeaten = value; }
+
     /** {@code _unkFAB0}: the ceiling {@code loc_7B308} writes as {@code Camera_Y + $30}. */
     public int bossCeilingY() { return unkFAB0 & 0xFFFF; }
     public void setBossCeilingY(int value) { unkFAB0 = (short) value; }
@@ -275,6 +284,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         buffer.putShort(unkFAB6);
         buffer.putShort(unkFA84);
         buffer.putInt(unkFAB8);
+        buffer.put((byte) (mechaSonicBeaten ? 1 : 0));
         buffer.put((byte) (screenInitApplied ? 1 : 0));
         buffer.putShort(unkEventsBg10);
         buffer.putShort(backgroundCameraX);
@@ -304,6 +314,7 @@ public final class SszZoneRuntimeState implements S3kZoneRuntimeState {
         unkFAB6 = buffer.getShort();
         unkFA84 = buffer.getShort();
         unkFAB8 = buffer.getInt();
+        mechaSonicBeaten = buffer.get() != 0;
         screenInitApplied = buffer.get() != 0;
         unkEventsBg10 = buffer.getShort();
         backgroundCameraX = buffer.getShort();

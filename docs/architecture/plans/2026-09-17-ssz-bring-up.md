@@ -2400,3 +2400,51 @@ slot order decides sibling execution and RNG draw order.
 
 `TestS3kSszMechaSpawnHeadless` is 14 cases; with the SSZ, mandatory S3K and rewind round-trip
 batch, **1277 run, 0 failures, 0 errors, 0 skipped**.
+
+### 2026-09-19 — slice 7 stage 2, and the native segment this campaign had been missing
+
+**The SSZ fight is in `hpz_3`, not `hpz`.** Three segments of the Sonic + Tails run carry
+`zone_id 10`: `hpz` (start `($100,$FAE)`), `hpz_2` (`($14C0,$E8)`, the star-post restart) and
+`hpz_3` (`($1880,$968)`). The Mecha Sonic fight is entirely inside `hpz_3`, and stage 1's matrix
+row said it was "not compared" because only `hpz` had been looked at. That was wrong, and the
+correction came from the lead rather than from this lane.
+
+**What `hpz_3` dates**, all comparison-only. Camera `($19A0,$5C0)` at the allocation, so
+`loc_7B308`'s `Cam_X + $160` and `Cam_Y + $A0` are exactly the native `($1B00,$660)`; the routine
+dump's two resting X values, `$1AC0` and `$19C0`, are `_unkFAB6` and `_unkFAB4` — `loc_7D216`'s
+limits, confirmed from the other end. The pad appears at 358, the boss at 402, routine 4 is first
+recorded at 406, and the pad is removed at 460: the boss crosses `$1A40` at about 426 at eight
+pixels a frame, and `loc_45AB0`'s `$20` follows. The graph runs 4 → 8 → `$0A` → `$0C` → `$0E` →
+`$10` → `$12` → `$14` → `$16` → `$18` → `$0A`, then a landing that goes straight to `$14` →
+`$1A` → `$1C`: the two `loc_7B484` branches, with `byte_7B62E` stepping 0 then 1.
+
+**Routine 6 never appears in the dump.** It is not skipped — `loc_7B3E6` plainly sets it — the
+boss is simply off screen for all 64 frames of it and the recorder does not emit `object_state`
+for off-screen slots. Worth writing down: an absent routine in an aux dump is a fact about the
+recorder first.
+
+**The defeat dating found a real bug.** Native: `loc_7B81A` at 1310, routine 2 at 1438, routine 4
+and the `loc_7D056` slot both at 1439. 1310 → 1438 is 128 dispatches, which is `$7F` decremented
+to negative **starting at 1311**, not at 1310. `sub_7D312` runs at the tail of the boss's own
+dispatch, so the killing frame selects `loc_7B81A` and stops; the engine's touch pass runs before
+the slot, so without `defeatDeferralAppliesToThisBoss()` it spent a decrement on the killing frame
+and reached routine 2 a frame early. The test caught the off-by-one and the native rows said which
+side was right. The single frame from routine 2 to routine 4 is also explained rather than fitted:
+at `y $660` with `loc_7B858`'s `$1F` radius his feet are already below the `$67C` floor, so
+`ObjHitFloor_DoRoutine` lands him on the first dispatch.
+
+**The act-1 handover is the results screen, not a level request.** `loc_7D056` waits
+`(2*60)-1` and then calls `sub_868F8` with `d0 = 2`, which pre-decrements, refuses while Player 1
+is dead, airborne or already in routine 6 or above, and then sets the ending pose and allocates
+`Obj_LevelResults`. `StartNewLevel $B00` is `loc_581D2`, in the Death Egg launch, which runs from
+`End_of_level_flag` afterwards and belongs to slice 8. One approximation is recorded in the class:
+the engine's player exposes no routine byte, so `cmpi.b #6,routine(a1)` is stood in for by
+`getDead()`.
+
+`loc_7D078`'s wait for `_unkFAA8` to clear is implemented as the branch it is — nothing in act 1
+clears that flag, so the object holds rather than restoring control, which is the shipped
+behaviour and not an omission.
+
+Tests: `TestS3kSszMechaSpawnHeadless` is 16 cases; with the SSZ, mandatory S3K and rewind
+round-trip batch, **1280 run, 0 failures, 0 errors, 0 skipped**; `-Pguards` **669 run, 0
+failures**, after triaging the handover object's capture/restore override with its reason.

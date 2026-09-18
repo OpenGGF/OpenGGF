@@ -94,6 +94,12 @@ class TestRewindArchitectureGuard {
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicTrailChild.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicTrailChild.java#restoreRewindState", 1),
+            // Triaged: loc_7D056 is a three-field countdown object -- the $2E the handover gate
+            // pre-decrements, the routine sub_868F8 writes, and whether the results allocation
+            // has happened -- none of which the generic capture reaches. Restore equality is
+            // covered by TestS3kSszMechaSpawnHeadless.
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicActEndObjectInstance.java#captureRewindState", 1),
+            Map.entry("src/main/java/com/openggf/game/sonic3k/objects/bosses/SszMechaSonicActEndObjectInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#captureRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboGunArmChildInstance.java#restoreRewindState", 1),
             Map.entry("src/main/java/com/openggf/game/sonic3k/objects/badniks/EggRoboJetFlameChildInstance.java#captureRewindState", 1),

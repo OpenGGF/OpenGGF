@@ -2116,6 +2116,8 @@ public class Sonic3kConstants {
     public static final int SSZ_MECHA_ANIM_TURN_ADDR = 0x07D5A2;
     /** {@code byte_7D65F}: the after-image child's own four-frame loop. */
     public static final int SSZ_MECHA_TRAIL_ANIM_ADDR = 0x07D65F;
+    /** {@code byte_7D5E4}: the pose {@code loc_7B888} sets when the beaten Mecha Sonic lands. */
+    public static final int SSZ_MECHA_ANIM_DEFEATED_ADDR = 0x07D5E4;
 
     /**
      * CNZ Act 1 miniboss PLC id.
