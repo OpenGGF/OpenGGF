@@ -2595,8 +2595,20 @@ class TestS3kDataSelectPresentation {
         assumeTrue(rom != null && rom.exists(), "S3K ROM required for visual regression capture");
         assumeTrue(glfwAvailable(), "GLFW unavailable for visual regression capture");
 
+        // The capture tool reads the ROM from this property. Restore it afterwards: the
+        // surefire fork is reused, and a leaked value lets later tests that read the
+        // property directly pass or fail depending on class order.
+        String previousRomPath = System.getProperty("s3k.rom.path");
         System.setProperty("s3k.rom.path", rom.getAbsolutePath());
-        S3kDataSelectVisualCapture.main(new String[0]);
+        try {
+            S3kDataSelectVisualCapture.main(new String[0]);
+        } finally {
+            if (previousRomPath == null) {
+                System.clearProperty("s3k.rom.path");
+            } else {
+                System.setProperty("s3k.rom.path", previousRomPath);
+            }
+        }
 
         RgbaImage image = ScreenshotCapture.loadPNG(
                 TestSessionOutputPaths.diagnostics("s3k-dataselect-visual")
