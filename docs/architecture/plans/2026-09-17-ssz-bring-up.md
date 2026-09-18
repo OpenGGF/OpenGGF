@@ -1960,6 +1960,42 @@ the ball on top of a standing Sonic, killing him. That last frame is the review'
 made visible — before the fix the ball had no collision byte at all and an idle player could stand
 in the arena indefinitely. Clip `17` is kept, and labelled as the pre-review fight.
 
+### 2026-09-18 — slice 6's oracle, dated frame by frame before a line of it is written
+
+The same `hpz` segment carries the **Metropolis** fight as well, and reading it took one command.
+Slice 6 therefore starts with its native timeline already in hand, which is the opposite of how
+the Green Hill fight went.
+
+| native frame | slot | address | what it is |
+| --- | --- | --- | --- |
+| 6156 | 4 appears, `x = y = 0` | `$7A6A6` `Obj_SSZMTZBoss` | `loc_5775C`'s `AllocateObject`; the init has not run |
+| 6189 | 4 code changes | `$7A71A` `loc_7A71A` | `loc_7A712` ran; the init was 6157, so the first dispatch is **init + 33** |
+| 6190 | 25-32 appear, last at `($16DF,$2DB)` | `$7AD8A` | `loc_7A72C`'s second `AllocateObject`, then `loc_7ADA2` allocating its seven orbs — all in the frame after the first dispatch |
+| 6458-6652 | 25-32 removed | — | the orbs going, one at a time |
+| 6651 | 4 code changes, `($1700,$385)` | `$85668` `Wait_FadeToLevelMusic` | the killing hit |
+| 6715 | 4 code changes | `$7AC92` | `loc_7AC7A` installed it; `6715 - 6651 = 64` |
+
+**Three things this settles before any code is written.** The entry is `init + 33`, exactly as
+Green Hill's — same `Obj_Wait $1F` plus the `loc_7A712` handover inside the 32nd decrement. The
+`$3F + 1 = 64` fade wait is the same too, so **`defeatDeferralAppliesToThisBoss()` should be
+overridden from the start** rather than discovered later. And the orb controller and all seven
+orbs are allocated on a single frame, one frame after the first dispatch — `loc_7A72C` allocates
+the controller, and the controller's own routine 0 loops seven times in its first execution.
+
+**The arena, measured.** The window is 1004 rows at camera `($1660,$380)`, native frames
+`$180C`-`$1BF7`. The player is grounded (`player_air 0`) at `($1755,$42C)` at the start of it and
+moves between about `$1700` and `$1755` horizontally and `$3EE`-`$431` vertically. So the arena
+floor is `y = $42C` and **a headless test's declared restart wants roughly `($1700,$420)`** — the
+same shape as `TestS3kSszGhzArenaHeadless.bootAtCheckpoint`'s `($200,$7C8)`, and a capture wants
+the same values with `--star-post`. Rings fall 55 → 38 across the window.
+
+**Slice 6's first increment, unchanged from the entry above but now testable against numbers:**
+`allocateMtzBoss` at `loc_5775C` beside `allocateGhzBoss` (the lock in `mtzBand` is already
+written, `nativeFramedCameraX` included), then `Obj_SSZMTZBoss`'s init and `loc_7A72C`, whose
+descent from `($1700,$300)` at `Y_vel $100` reaches `loc_7A800`'s `$420` gate in `$120` frames.
+Assert the spawn position, `init + 33`, and that descent as a frame count, the way the Green Hill
+test does.
+
 ### 2026-09-18 — handover after the review-application round
 
 Branch `feature/ai-ssz-bring-up`, head `6d462604b`, base develop `035e48a58`. Nothing pushed,
@@ -1967,7 +2003,8 @@ nothing merged. Commits this round, oldest first: `ea8b23a9e` (the review applie
 `96599ba13` (how it was applied, disputed and tested), `6d462604b` (the native comparison and the
 claim it corrected), and the commits below it for the defeat deferral and the clip.
 
-**Where slice 6 stands: not started.** The three tasks this round carried were the review
+**Where slice 6 stands: not started, but no longer starting cold** — its native timeline is dated
+in the entry above. The three tasks this round carried were the review
 application, a re-film and a native comparison. The review application ran long, twice, because
 two of its corrections were themselves regressions that had to be caught first — so the Metropolis
 recreation has not been written. What exists for it is the disassembly reading in the slice-6
@@ -1987,16 +2024,14 @@ routine 0/2 — which is enough to put the ship on screen and test.
    For a shared SST field, look in the subsystem that owns the interaction. The MTZ boss's
    `sub_7ACF2` is the same hit machine with different offsets (`$1C(a0)` for the window,
    `move.b #$F,collision_flags(a0)` for the restore), so the same applies to it.
-2. **The `hpz` segment is the native oracle for act 1's fights.** Its
+2. **The `hpz` segment is the native oracle for act 1's fights, and the Metropolis one is already
+   read** — see the entry above for its frame table, arena floor and restart position. Its
    `aux_state.jsonl.gz` `object_appeared` rows carry each slot's code-pointer ROM address, which
-   dates every phase transition without a physics row. The Metropolis fight is in the same
-   segment or the one after it; find it by looking for `Obj_SSZMTZBoss` (`$7A6A6`) and `loc_7A71A`
-   (`$7A71A`) the same way. This is the cheapest verification available for a boss and it should
-   be used *while* implementing, not after.
-3. **`defeatDeferralAppliesToThisBoss()` is probably right for the MTZ boss too.** `loc_7A71A`
-   has the same shape — dispatch first, `sub_7ACF2` after — so its `loc_7AD3A` install of
-   `Wait_FadeToLevelMusic` also lands after the slot is done for the frame. Apply it from the
-   start rather than discovering the one-frame gap later, and confirm it against the native rows.
+   dates every phase transition without a physics row. Use it *while* implementing, not after.
+3. **`defeatDeferralAppliesToThisBoss()` is right for the MTZ boss too, and now measured.**
+   `loc_7A71A` has the same shape — dispatch first, `sub_7ACF2` after — so its `loc_7AD3A` install
+   of `Wait_FadeToLevelMusic` also lands after the slot is done for the frame, and the native rows
+   put 64 frames between that install (6651) and `loc_7AC92` (6715). Override it from the start.
 
 **Still owed on the Green Hill fight:** the `$79:$AA` gated pad driven end to end from the defeat
 flag to the `$2A0` lift. The hit flash has no native comparison because palette is not in the
