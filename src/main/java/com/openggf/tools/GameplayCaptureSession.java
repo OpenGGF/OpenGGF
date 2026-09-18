@@ -23,6 +23,7 @@ import com.openggf.sprites.playable.AbstractPlayableSprite;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -177,14 +178,11 @@ public final class GameplayCaptureSession implements AutoCloseable {
             // which silently turns any "team" clip into a solo one. The ROM's own level start
             // places the sidekick just behind the leader, so the seed does the same. Declared
             // capture setup, like --x/--y itself.
-            for (AbstractPlayableSprite sidekick : GameServices.sprites().getSidekicks()) {
-                if (sidekick == player) {
-                    continue;
-                }
-                NativePositionOps.writeXPosPreserveSubpixel(sidekick,
-                        (player.getCentreX() - SIDEKICK_TRAIL_X) & 0xFFFF);
-                NativePositionOps.writeYPosPreserveSubpixel(sidekick, player.getCentreY());
-            }
+            // The sidekick is not registered yet at boot, so the seed is deferred to the
+            // first steps. See seedSidekickPosition.
+            sidekickSeedX = player.getCentreX();
+            sidekickSeedY = player.getCentreY();
+            sidekickSeedFramesLeft = SIDEKICK_SEED_FRAMES;
             Camera camera = GameServices.camera();
             camera.updatePosition(true);
             level.initCameraForLevel();
@@ -195,10 +193,48 @@ public final class GameplayCaptureSession implements AutoCloseable {
 
     /** How far behind the leader a teleported sidekick is placed, as the ROM's level start does. */
     private static final int SIDEKICK_TRAIL_X = 0x20;
+    /**
+     * How many steps the sidekick seed keeps trying. A positioned entry moves the leader in
+     * {@link #boot}, but the CPU sidekick is not registered with the sprite manager until the
+     * level has stepped, so a seed applied at boot moves nobody — which is how the first
+     * version of this failed, silently turning a team clip into a solo one.
+     */
+    private static final int SIDEKICK_SEED_FRAMES = 4;
+
+    private int sidekickSeedX;
+    private int sidekickSeedY;
+    private int sidekickSeedFramesLeft;
+
+    /**
+     * Places every registered sidekick just behind the teleported leader, the way the ROM's
+     * own level start does. {@code getRegisteredSidekicks()} rather than
+     * {@code getSidekicks()}: the latter returns an empty list while a zone suppresses its
+     * sidekick, which Death Egg does during its entry run.
+     */
+    private void seedSidekickPosition() {
+        if (sidekickSeedFramesLeft <= 0) {
+            return;
+        }
+        sidekickSeedFramesLeft--;
+        List<AbstractPlayableSprite> sidekicks = GameServices.sprites().getRegisteredSidekicks();
+        if (sidekicks.isEmpty()) {
+            return;
+        }
+        for (AbstractPlayableSprite sidekick : sidekicks) {
+            if (sidekick == player) {
+                continue;
+            }
+            NativePositionOps.writeXPosPreserveSubpixel(sidekick,
+                    (sidekickSeedX - SIDEKICK_TRAIL_X) & 0xFFFF);
+            NativePositionOps.writeYPosPreserveSubpixel(sidekick, sidekickSeedY);
+        }
+        sidekickSeedFramesLeft = 0;
+    }
 
     /** Steps one gameplay frame with the given held input ({@code null} = neutral). */
     public void step(Bk2FrameInput input) {
         requireBooted();
+        seedSidekickPosition();
         Bk2FrameInput current = input != null ? input : neutral(previousInput);
         loop.getInputHandler().setLogicalOverride(RecordedInputSnapshots.fromBk2(current, previousInput));
         previousInput = current;
