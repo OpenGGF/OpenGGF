@@ -6,42 +6,57 @@ import com.openggf.game.sonic3k.audio.Sonic3kSfx;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.boss.AbstractBossChild;
+import com.openggf.level.objects.TouchResponseAttackable;
+import com.openggf.level.objects.TouchResponseProvider;
+import com.openggf.level.objects.TouchResponseResult;
 import com.openggf.level.objects.boss.AbstractBossInstance;
-import com.openggf.level.objects.boss.BossChildComponent;
 import com.openggf.level.render.PatternSpriteRenderer;
 
 import java.util.List;
 
 /**
  * The Lava Reef miniboss's firing hand: subtype {@code $16}, the last child of each ring
- * ({@code loc_78922}, sonic3k.asm:160381-160389 and {@code loc_78946}/{@code loc_7897A},
- * sonic3k.asm:160391-160446).
+ * ({@code loc_78922}, sonic3k.asm:160378-160386, and {@code loc_78946}/{@code loc_7897A},
+ * sonic3k.asm:160388-160432).
  *
  * <p>It is the only child with its own {@code collision_property} ({@code 4}, so four hits), and
  * killing both hands is what shortens the parent's hover from {@code $15F} to {@code $1F}
- * ({@code loc_78D2C} -> {@code loc_787D8}).
+ * ({@code loc_78D2C}, sonic3k.asm:160778-160791, via {@code loc_787D8}).
  *
  * <p>Firing runs off the parent's {@code $38} bit 3. When the boss extends, the hand arms with
  * {@code $2E = $7F}, or {@code $DF} on the mirrored ring so the two sides alternate, and
- * {@code loc_789CA} fires: a projectile from {@code ChildObjDat_78D90} with the shot counter
- * {@code $39} as its subtype, the next reload at {@code $13} frames, and after the third shot
- * {@code $FFF} -- which is not a long reload so much as a stop, because the parent's bit 2
- * (set when the arm finishes retracting) returns the hand to its idle routine first.
+ * {@code loc_789CA} (sonic3k.asm:160434-160453) fires: a projectile from
+ * {@code ChildObjDat_78D90} with the shot counter {@code $39} as its subtype, the next reload at
+ * {@code $13} frames, and after the third shot {@code $FFF} -- which is not a long reload so much
+ * as a stop, because the parent's bit 2 (set when the arm finishes retracting) returns the hand to
+ * its idle routine first.
  *
- * <p>Two things about the idle routine are easy to get wrong. {@code loc_78946} does <b>no</b>
- * positional work and ends {@code bra.w sub_78B46}, with no {@code Draw_Sprite} after it: an idle
- * hand neither moves nor draws, and simply sits wherever the last volley left it. Only
- * {@code loc_7897A} positions it, and it does so on {@code parent3} -- the tenth arm link, subtype
- * {@code $14} -- through {@code MoveSprite_AtAngleLookup} over {@code AngleLookup_2}
- * (sonic3k.asm:178504-178522), not on the boss body. Syncing it to the parent instead is what
- * makes shots appear to leave the drill rather than the end of the arm.
+ * <p><b>What draws, and when.</b> {@code loc_78946} does no positional work and ends
+ * {@code bra.w sub_78B46}: there is no {@code Draw_Sprite} after it, so an idle hand neither moves
+ * nor draws. {@code loc_7897A} does draw -- and it draws on the frame it hands back to the idle
+ * routine as well, because the {@code btst #2} test only rewrites {@code (a0)} for the next frame
+ * and this frame still falls through {@code loc_7898C} to {@code loc_789C4}. The two routine-switch
+ * frames therefore break the obvious rule in opposite directions, which is why the draw is a
+ * per-frame decision here rather than a function of the routine.
+ *
+ * <p>The draw is also skipped on the odd frames of the hit window: {@code loc_7897A} ends on
+ * {@code move.b $20(a0),d0 / beq -> Add_SpriteToCollisionResponseList + draw}, else
+ * {@code btst #0,d0 / bne -> rts}. A flashing hand blinks, and only an unflashing hand is on the
+ * collision-response list.
+ *
+ * <p>Position comes from {@code loc_7897A} alone, and it anchors on {@code parent3} -- the tenth
+ * arm link, subtype {@code $14} -- through {@code MoveSprite_AtAngleLookup} over
+ * {@code AngleLookup_2} (sonic3k.asm:178504-178523), not on the boss body. Syncing it to the parent
+ * instead is what makes shots appear to leave the drill rather than the end of the arm.
  */
-final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecreatable, LrzMinibossRingChild {
+final class LrzMinibossHandChild extends LrzMinibossRingChildBase
+        implements RewindRecreatable, TouchResponseProvider, TouchResponseAttackable {
 
     /** {@code word_78D6C}: priority 0, {@code $10 $10} size, mapping frame 6, collision 6. */
     private static final int BASE_MAPPING_FRAME = 6;
     private static final int PRIORITY_BUCKET = 0;
+    /** {@code word_78D6C}'s last byte, which {@code SetUp_ObjAttributes3} puts in {@code collision_flags}. */
+    private static final int ACTIVE_COLLISION_FLAGS = 6;
     /** {@code move.b #4,collision_property(a0)} at {@code loc_78922}. */
     private static final int HIT_COUNT = 4;
     /** {@code loc_78946}: {@code moveq #$7F,d0}, or {@code $DF} on the mirrored ring. */
@@ -56,6 +71,8 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
     private static final int MIRRORED_STAGGER_BASE = 0x10;
     /** {@code sub_78BD6}: {@code move.b #$80,$3C(a0)}. The hand never steps it. */
     private static final int FIXED_ANGLE = 0x80;
+    /** {@code sub_78CF4}: {@code move.b #$20,$20(a0)}. */
+    private static final int HIT_FLASH_FRAMES = 0x20;
 
     /**
      * {@code byte_78E05}: {@code dc.b 1,6,7,$B,$FC}, read by {@code Animate_Raw}
@@ -67,7 +84,7 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
     private static final int[] FIRE_ANIMATION = {1, 6, 7, 0x0B, 0xFC};
 
     /**
-     * {@code AngleLookup_2} (sonic3k.asm:201856-201859), 64 bytes.
+     * {@code AngleLookup_2} (sonic3k.asm:201852-201859), 64 bytes.
      * {@code MoveSprite_AtAngleLookup} loads {@code a3 = a2 + $40} and indexes it with
      * {@code not.w d0}, i.e. {@code -(lo + 1)}, which reads this same table backwards from its
      * end -- {@code AngleLookup_2[$3F - lo]}.
@@ -88,6 +105,16 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
     private int waitTimer;
     private int shotCounter;
     private int hitsRemaining = HIT_COUNT;
+    /** {@code collision_flags(a0)}: {@code 6} until a hit zeroes it, then {@code 6} again. */
+    private int collisionFlagsByte = ACTIVE_COLLISION_FLAGS;
+    /** {@code $25(a0)}: where the touch pass stows {@code collision_flags}. */
+    private int savedCollisionFlags;
+    /** {@code $20(a0)}: the hit window {@code sub_78CF4} counts out. */
+    private int hitWindowTimer;
+    /** {@code $1C(a0)}: which player object address last hit this one. */
+    private int attackerMarker;
+    /** {@code status(a0)} bit 7, which the touch pass sets on the killing blow. */
+    private boolean statusBit7;
     /** {@code anim_frame(a0)}: {@code Animate_Raw} steps it by one and reads {@code 1(a1,d0.w)}. */
     private int animFrame;
     /** {@code anim_frame_timer(a0)}. */
@@ -97,6 +124,8 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
     private boolean setupFrameDone;
     /** False until {@code Obj_Wait} has run {@code sub_78BD6}'s {@code $34(a0)}. */
     private boolean staggerElapsed;
+    /** Whether this frame's routine reached a {@code Draw_Sprite}. See the class comment. */
+    private boolean drawnThisFrame;
 
     LrzMinibossHandChild(AbstractBossInstance parent, int childSubtype, boolean mirrored) {
         super(parent, "LRZMinibossHand", PRIORITY_BUCKET, 0x9D);
@@ -126,6 +155,14 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
         if (!shouldUpdate(vIntRunCount)) {
             return;
         }
+        if (retirementTick()) {
+            // Wait_Draw: Obj_Wait then Draw_Sprite. A parked hand is drawn even though an idle
+            // one is not, because it is no longer running loc_78946.
+            drawnThisFrame = true;
+            updateDynamicSpawn();
+            return;
+        }
+        drawnThisFrame = false;
         if (!setupFrameDone) {
             // loc_78922: SetUp_ObjAttributes3, sub_78BD6, then the $34 body is not yet live.
             setupFrameDone = true;
@@ -134,6 +171,7 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
         if (!staggerElapsed) {
             // Wait_Draw -> Obj_Wait, then $34(a0) = the tail of loc_78922 that installs
             // loc_78946 and collision_property 4. loc_78946 first runs the frame after.
+            drawnThisFrame = true;
             waitTimer--;
             if (waitTimer < 0) {
                 staggerElapsed = true;
@@ -141,17 +179,20 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
             return;
         }
         if (routine == ROUTINE_IDLE) {
-            // loc_78946: arm when the boss extends. No positional work, and no Draw_Sprite.
+            // loc_78946: arm when the boss extends. No positional work, and -- because it ends
+            // bra.w sub_78B46 rather than falling into a draw -- no Draw_Sprite either, not even
+            // on the frame it switches to loc_7897A.
             if (bossFlagSet(1 << 3)) {
                 routine = ROUTINE_FIRING;
                 waitTimer = mirrored ? ARM_DELAY_MIRRORED : ARM_DELAY;
                 shotCounter = 0;                        // clr.b $39(a0)
             }
+            sub78B46();
             updateDynamicSpawn();
             return;
         }
         // loc_7897A. The bit-2 test only reinstalls loc_78946 for the NEXT frame; this frame
-        // still falls through to loc_7898C and animates, moves, waits and fires.
+        // still falls through to loc_7898C and animates, moves, waits, fires and draws.
         if (bossFlagSet(1 << 2)) {
             routine = ROUTINE_IDLE;
         }
@@ -161,26 +202,31 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
         if (waitTimer < 0) {
             fire();
         }
+        sub78B46();
+        sub78CF4();
+        // move.b $20(a0),d0 / beq -> collision list + draw; btst #0,d0 / bne -> rts.
+        drawnThisFrame = hitWindowTimer == 0 || (hitWindowTimer & 1) == 0;
         updateDynamicSpawn();
     }
 
     /**
-     * {@code MoveSprite_AtAngleLookup} (sonic3k.asm:178504-178522) with {@code a2 = AngleLookup_2}
+     * {@code MoveSprite_AtAngleLookup} (sonic3k.asm:178504-178523) with {@code a2 = AngleLookup_2}
      * and {@code $3C = $80}: the hand hangs off {@code parent3}, the tenth arm link.
+     *
+     * <p>{@code move.w x_pos(a1),d2} / {@code move.w y_pos(a1),d3} read the anchor's ROM position
+     * words, which for these children are {@link LrzMinibossRingChild#ringXFixed} and
+     * {@code ringYFixed}'s integer halves, and the sum is written back as words too: no sub-pixel
+     * carry survives this hop. When the link is gone there is no anchor at all -- the ROM's
+     * {@code parent3} would point at a dead slot -- so the hand stays where it is rather than
+     * snapping back to the drill.
      */
     private void moveAtAngleLookup() {
-        int anchorX;
-        int anchorY;
-        BossChildComponent anchor = LrzMinibossRingChild.predecessorOf(parent, this);
-        if (anchor != null && !anchor.isDestroyed()) {
-            anchorX = anchor.getX();
-            anchorY = anchor.getY();
-        } else if (parent != null && !parent.isDestroyed()) {
-            anchorX = parent.getX();
-            anchorY = parent.getY();
-        } else {
+        var anchor = LrzMinibossRingChild.predecessorOf(parent, this);
+        if (!(anchor instanceof LrzMinibossRingChild link) || anchor.isDestroyed()) {
             return;
         }
+        int anchorX = link.ringXFixed() >> 16;
+        int anchorY = link.ringYFixed() >> 16;
         int low = FIXED_ANGLE & 0x3F;
         int quadrant = (FIXED_ANGLE >> 5) & 6;
         int along = ANGLE_LOOKUP_2[low];
@@ -198,7 +244,7 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
         currentY = anchorY + dy;
     }
 
-    /** {@code loc_789CA} (sonic3k.asm:160448-160462). */
+    /** {@code loc_789CA} (sonic3k.asm:160434-160453). */
     private void fire() {
         shotCounter++;
         waitTimer = shotCounter >= SHOTS_PER_VOLLEY ? RELOAD_AFTER_LAST_SHOT : RELOAD_FRAMES;
@@ -240,17 +286,81 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
     }
 
     /**
-     * {@code sub_78CF4} / {@code loc_78D2C} (sonic3k.asm:160694-160730): four hits, then the
-     * parent learns which side died.
+     * {@code sub_78CF4} (sonic3k.asm:160756-160776), the hand's own half of the hit.
+     *
+     * <p>Like the drill's {@code sub_78C14} it is gated on {@code collision_flags(a0)} being
+     * <b>zero</b>: the shared touch pass zeroes the byte (stowing it in {@code $25}) and
+     * decrements {@code collision_property}, so a non-zero byte here means nothing has landed.
+     * Unlike the drill's, it has no palette flash -- there is no {@code sub_78C98} call -- and it
+     * announces the hit by creating {@code ChildObjDat_78D98}'s ring instead. The window is
+     * {@code $20} frames, and the byte is restored only when it counts out.
      */
-    void takeHit() {
-        if (hitsRemaining <= 0) {
+    private void sub78CF4() {
+        if (collisionFlagsByte != 0) {
             return;
         }
-        hitsRemaining--;
-        if (hitsRemaining == 0 && parent instanceof LrzMinibossInstance boss) {
+        if (hitsRemaining == 0) {
+            loc78D2C();
+            return;
+        }
+        if (hitWindowTimer == 0) {
+            hitWindowTimer = HIT_FLASH_FRAMES;
+            var objectServices = tryServices();
+            if (objectServices != null) {
+                objectServices.playSfx(Sonic3kSfx.BOSS_HIT.id);
+            }
+            final boolean ring = mirrored;
+            spawnChild(() -> new LrzMinibossHitSparkChild(parent, ring));
+        }
+        hitWindowTimer = (hitWindowTimer - 1) & 0xFF;
+        if (hitWindowTimer != 0) {
+            return;
+        }
+        collisionFlagsByte = savedCollisionFlags;   // move.b $25(a0),collision_flags(a0)
+    }
+
+    /**
+     * {@code loc_78D2C} (sonic3k.asm:160778-160791): set bit 6 (unmirrored) or bit 7 (mirrored) of
+     * the parent's {@code $38}, and if both are now set drop the parent's {@code $2E} to
+     * {@code $1F}. Setting the bit is also what {@code sub_78B46} reads, so this is the step that
+     * peels the dead hand's arm away.
+     */
+    private void loc78D2C() {
+        if (parent instanceof LrzMinibossInstance boss) {
             boss.onHandDestroyed(mirrored);
         }
+    }
+
+    /**
+     * The shared touch pass's boss bookkeeping (sonic3k.asm:20916-20923): stow
+     * {@code collision_flags} in {@code $25}, record the attacking player's object address in
+     * {@code $1C}, zero {@code collision_flags}, decrement {@code collision_property}, and on the
+     * blow that takes it to zero set {@code status} bit 7.
+     */
+    @Override
+    public void onPlayerAttack(PlayableEntity player, TouchResponseResult result) {
+        if (collisionFlagsByte == 0) {
+            return;
+        }
+        savedCollisionFlags = collisionFlagsByte;
+        attackerMarker = LrzMinibossInstance.attackerMarkerFor(player);
+        collisionFlagsByte = 0;
+        if (hitsRemaining > 0) {
+            hitsRemaining--;
+            if (hitsRemaining == 0) {
+                statusBit7 = true;
+            }
+        }
+    }
+
+    @Override
+    public int getCollisionFlags() {
+        return collisionFlagsByte;
+    }
+
+    @Override
+    public int getCollisionProperty() {
+        return hitsRemaining;
     }
 
     int getHitsRemaining() {
@@ -263,6 +373,26 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
 
     int getMappingFrame() {
         return mappingFrame;
+    }
+
+    /** {@code $20(a0)}. */
+    int getHitWindowTimer() {
+        return hitWindowTimer;
+    }
+
+    /** {@code $1C(a0)}. */
+    int getAttackerMarker() {
+        return attackerMarker;
+    }
+
+    /** {@code status(a0)} bit 7. */
+    boolean isStatusBit7Set() {
+        return statusBit7;
+    }
+
+    /** Whether this frame reached a {@code Draw_Sprite}. */
+    boolean wasDrawnThisFrame() {
+        return drawnThisFrame;
     }
 
     /** {@code $2E(a0)}: frames still to wait before {@code loc_78946} takes over. */
@@ -290,7 +420,7 @@ final class LrzMinibossHandChild extends AbstractBossChild implements RewindRecr
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
-        if (routine != ROUTINE_FIRING) {
+        if (!drawnThisFrame) {
             return;
         }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LRZ_MINIBOSS);

@@ -2,6 +2,7 @@ package com.openggf.game.sonic3k.objects.bosses;
 
 import com.openggf.camera.Camera;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.TestObjectServices;
 import com.openggf.level.objects.boss.BossChildComponent;
@@ -42,6 +43,7 @@ class TestLrzMinibossInstance {
 
     private LrzMinibossInstance boss;
     private Camera camera;
+    private TestObjectServices services;
 
     @BeforeEach
     void setUp() {
@@ -52,7 +54,8 @@ class TestLrzMinibossInstance {
         camera.setX((short) SPAWN_X);
         camera.setY((short) SPAWN_Y);
         boss = new LrzMinibossInstance(new ObjectSpawn(SPAWN_X, SPAWN_Y, 0x9D, 0, 0, false, 0));
-        boss.setServices(new TestObjectServices().withIsolatedObjectManager().withCamera(camera));
+        services = new TestObjectServices().withIsolatedObjectManager().withCamera(camera);
+        boss.setServices(services);
     }
 
     @Test
@@ -115,15 +118,188 @@ class TestLrzMinibossInstance {
                 .toList();
         assertEquals(2, hands.size());
 
+        // The production path only: the touch pass zeroes collision_flags and decrements
+        // collision_property (sonic3k.asm:20916-20923), and sub_78CF4 does the rest from the
+        // hand's own update. Nothing here calls a test-only hit entry point.
+        int frame = hitEveryHandUntilDead(hands, 0x600);
+
         for (LrzMinibossHandChild hand : hands) {
-            for (int hit = 0; hit < 4; hit++) {
-                hand.takeHit();
-            }
             assertEquals(0, hand.getHitsRemaining(),
-                    "collision_property 4 at loc_78922");
+                    "collision_property 4 at loc_78922, after " + frame + " frames");
+            assertTrue(hand.isStatusBit7Set(),
+                    "the blow that empties collision_property sets status bit 7");
         }
         assertEquals(0xC0, boss.getFlags38() & 0xC0,
                 "sub_78CF4's loc_78D2C sets $38 bits 6 and 7, one per facing");
+    }
+
+    /**
+     * The two frames on which the hand's routine changes, which break the obvious rule in opposite
+     * directions.
+     *
+     * <p>{@code loc_78946} (sonic3k.asm:160388-160405) ends {@code bra.w sub_78B46} with no
+     * {@code Draw_Sprite} after it, so the frame the hand <b>arms</b> is not drawn -- and it has
+     * done no positional work either, so drawing it would put the sprite wherever the create loop
+     * left it. {@code loc_7897A} (sonic3k.asm:160407-160432) tests the parent's bit 2 and rewrites
+     * {@code (a0)} for the next frame, but this frame still falls through {@code loc_7898C} to
+     * {@code loc_789C4}, so the frame it <b>stops</b> is drawn.
+     *
+     * <p>Deriving the draw from the routine byte gets both of these backwards at once, and a still
+     * frame cannot tell you so.
+     */
+    @Test
+    void theHandIsNotDrawnOnTheFrameItArmsButIsOnTheFrameItStops() {
+        LrzMinibossHandChild hand = runToFiringHand(false, 0x200);
+        // The arming frame is the last frame of ROUTINE_IDLE, i.e. the frame isFiring() first
+        // reads true -- and on that frame loc_78946 ran, not loc_7897A.
+        assertTrue(hand.isFiring(), "precondition: the hand has just armed");
+        assertFalse(hand.wasDrawnThisFrame(),
+                "loc_78946 ends bra.w sub_78B46: there is no Draw_Sprite on the arming frame");
+
+        boss.update(nextFrame(), null);
+        assertTrue(hand.wasDrawnThisFrame(), "loc_7897A draws once it is live");
+
+        // Bit 2 is the arm segment's "finished retracting" cue; loc_7897A reads it and hands back
+        // to loc_78946 for the NEXT frame, drawing on this one.
+        boss.setHandReloadFlag();
+        boss.update(nextFrame(), null);
+        assertFalse(hand.isFiring(), "the bit-2 test reinstalls loc_78946");
+        assertTrue(hand.wasDrawnThisFrame(),
+                "loc_7897A falls through loc_7898C to loc_789C4 on the frame it hands back");
+
+        boss.update(nextFrame(), null);
+        assertFalse(hand.wasDrawnThisFrame(), "and the idle frame after it is not drawn");
+    }
+
+    /**
+     * {@code sub_78CF4} (sonic3k.asm:160756-160776): the hand's own hit path. It is gated on
+     * {@code collision_flags(a0)} being <b>zero</b> -- the touch pass zeroes it and stows the old
+     * value in {@code $25} -- opens a {@code $20}-frame window in {@code $20(a0)}, plays
+     * {@code sfx_BossHit}, creates {@code ChildObjDat_78D98}'s ring, and restores
+     * {@code collision_flags} from {@code $25} only when the window counts out.
+     *
+     * <p>Watched across the whole window, because the defect an endpoint assertion misses is a
+     * window that restores the byte immediately: the hand would then take all four hits in four
+     * frames.
+     */
+    @Test
+    void aHitOnTheHandOpensATwentyFrameWindowBeforeItCanBeHitAgain() {
+        LrzMinibossHandChild hand = runToFiringHand(false, 0x200);
+        boss.update(nextFrame(), null);
+        assertEquals(6, hand.getCollisionFlags(), "word_78D6C's collision byte is 6");
+
+        hand.onPlayerAttack(null, null);
+        assertEquals(0, hand.getCollisionFlags(), "the touch pass zeroes collision_flags");
+        assertEquals(3, hand.getHitsRemaining());
+
+        List<Integer> windowByFrame = new ArrayList<>();
+        for (int i = 0; i < 0x20; i++) {
+            boss.update(nextFrame(), null);
+            windowByFrame.add(hand.getHitWindowTimer());
+        }
+        // $20 is seeded to $20 on the first frame sub_78CF4 sees the zero, then decremented on
+        // that same frame, so the first observed value is $1F and the last is 0.
+        assertEquals(0x1F, windowByFrame.get(0).intValue(), "observed: " + windowByFrame);
+        assertEquals(0, windowByFrame.get(windowByFrame.size() - 1).intValue(),
+                "observed: " + windowByFrame);
+        assertEquals(0x20, windowByFrame.stream().distinct().count(),
+                "the window must step by one every frame, not jump: " + windowByFrame);
+        assertEquals(6, hand.getCollisionFlags(),
+                "move.b $25(a0),collision_flags(a0) only when the window reaches zero");
+    }
+
+    /**
+     * {@code move.w a0,d0 / move.b d0,$1C(a1)} (sonic3k.asm:20917-20918) records which player
+     * landed the blow: {@code $00} for {@code Player_1} at {@code $FFFFB000}, {@code $4A} for
+     * {@code Player_2} at {@code $FFFFB04A}.
+     */
+    @Test
+    void theTouchPassRecordsWhichPlayerHitTheDrill() {
+        advanceTo(ROUTINE_SLAM, 0x400);
+        assertNotEquals(0, boss.getCollisionFlags(), "the slam frame is the hittable one");
+        boss.onPlayerAttack(null, null);
+        assertEquals(0x00, boss.getAttackerMarker(),
+                "the main character's object address is $FFFFB000");
+        assertFalse(boss.isStatusBit7Set(), "five hits left, so no kill marker yet");
+    }
+
+    /**
+     * {@code MoveSprite_AtAngleLookup} reads {@code parent3}, a stored object-slot pointer. When
+     * the link it points at is gone the ROM has no anchor to read, and substituting the boss body
+     * would teleport the hand from the end of the arm to the drill on one frame.
+     */
+    @Test
+    void theHandStaysPutWhenItsAnchorLinkIsGone() {
+        LrzMinibossHandChild hand = runToFiringHand(false, 0x200);
+        boss.update(nextFrame(), null);
+        boss.update(nextFrame(), null);
+        int[] before = {hand.getX(), hand.getY()};
+        assertNotEquals(boss.getX(), hand.getX(),
+                "precondition: the hand is not already sitting on the drill");
+
+        boss.getChildComponents().removeIf(child -> child instanceof LrzMinibossRingChild ring
+                && !ring.ringMirrored() && ring.ringSubtype() == 0x14);
+
+        for (int i = 0; i < 8; i++) {
+            boss.update(nextFrame(), null);
+            assertEquals(before[0], hand.getX(),
+                    "the hand moved after its anchor was retired (frame " + i + ")");
+            assertEquals(before[1], hand.getY(),
+                    "the hand moved after its anchor was retired (frame " + i + ")");
+        }
+    }
+
+    /**
+     * {@code sub_78B46} (sonic3k.asm:160568-160590) plus {@code loc_78B86}
+     * (sonic3k.asm:160592-160605). Killing a hand sets the parent's bit for that ring, and every
+     * child of that ring then parks on {@code Wait_Draw} for {@code $2C - subtype * 2} frames
+     * before exploding and, {@code $F} frames later, deleting.
+     *
+     * <p>The subtype rises towards the hand, so the wait <b>shortens</b> towards the hand: the arm
+     * peels away from its far end first. Only the other ring is untouched. Watched as an ordering
+     * across frames, because a retirement that fires all at once and a retirement in the wrong
+     * order both end with the same empty ring.
+     */
+    @Test
+    void killingAHandPeelsItsOwnArmAwayFromTheHandEndFirst() {
+        boss.update(frameCursor, null);          // loc_78562 creates the two rings
+        LrzMinibossHandChild doomed = hands().stream().filter(h -> !h.ringMirrored())
+                .findFirst().orElseThrow();
+        hitEveryHandUntilDead(List.of(doomed), 0x600);
+        assertEquals(0x40, boss.getFlags38() & 0xC0,
+                "only the unmirrored ring's bit 6 is set");
+
+        Map<Integer, Integer> deletedOnFrame = new LinkedHashMap<>();
+        int survivorsOfTheOtherRing = -1;
+        for (int i = 0; i < 0x60; i++) {
+            int frame = nextFrame();
+            boss.update(frame, null);
+            for (int subtype = 2; subtype <= 0x14; subtype += 2) {
+                final int s = subtype;
+                boolean present = boss.getChildComponents().stream()
+                        .anyMatch(c -> c instanceof LrzMinibossRingChild ring
+                                && !ring.ringMirrored() && ring.ringSubtype() == s);
+                if (!present) {
+                    deletedOnFrame.putIfAbsent(subtype, frame);
+                }
+            }
+            survivorsOfTheOtherRing = (int) boss.getChildComponents().stream()
+                    .filter(c -> c instanceof LrzMinibossRingChild ring && ring.ringMirrored())
+                    .count();
+        }
+
+        assertEquals(10, deletedOnFrame.size(),
+                "every link of the dead hand's ring retires: " + deletedOnFrame);
+        assertEquals(12, survivorsOfTheOtherRing,
+                "the other ring's bit was never set, so none of its twelve children retire");
+        for (int subtype = 4; subtype <= 0x14; subtype += 2) {
+            assertTrue(deletedOnFrame.get(subtype) <= deletedOnFrame.get(subtype - 2),
+                    "$2E = $2C - subtype*2 shortens towards the hand, so a higher subtype must "
+                            + "not outlive a lower one; observed " + deletedOnFrame);
+        }
+        assertTrue(deletedOnFrame.get(0x14) < deletedOnFrame.get(2),
+                "the link nearest the hand must go before the link nearest the shoulder: "
+                        + deletedOnFrame);
     }
 
     /**
@@ -476,6 +652,14 @@ class TestLrzMinibossInstance {
         assertEquals(0, boss.getHitInvulnTimer(), "$20 counted out");
         assertEquals(6, boss.getCollisionFlags(),
                 "move.b $25(a0),collision_flags(a0) restores the slam hit box");
+        // word_78CA6's six offsets are into Normal_palette_line_2, and the ROM's palette line
+        // names are ONE-based: sonic3k.constants.asm:767-770 has Normal_palette ds.b $80 with
+        // Normal_palette_line_2 = Normal_palette+$20. Reading the digit as a zero-based engine
+        // index puts the whole flash on the wrong line -- and because the shipped window is the
+        // boss's own colours rather than white, the symptom is unrelated sprites tinting for $20
+        // frames, not an invisible flash.
+        assertEquals(1, LrzMinibossInstance.flashPaletteLine(),
+                "Normal_palette_line_2 is Normal_palette+$20, i.e. engine palette index 1");
     }
 
     /**
@@ -532,17 +716,240 @@ class TestLrzMinibossInstance {
         assertEquals(2L, countOf(boss.getChildComponents(), LrzMinibossArmSegmentChild.class));
     }
 
+    /**
+     * The defeat chain, end to end: {@code loc_78C60} -> {@code Wait_FadeToLevelMusic}
+     * (sonic3k.asm:179656-179669) -> {@code loc_787E0} (sonic3k.asm:160247-160255).
+     *
+     * <p>Three readings are load-bearing and none of them can be seen from the end state.
+     * {@code loc_78C60} does <b>not</b> reseed {@code $2E}: the fade wait consumes whatever the
+     * interrupted phase left in it, so the pause before the drill breaks up is not a fixed
+     * length. {@code loc_85674} clears {@code render_flags} bit 7 on the frame the wait ends, so
+     * the drill stops being drawn <i>before</i> the pieces appear rather than with them. And
+     * {@code loc_787E0}'s {@code CreateChild1_Normal} runs once, producing exactly eleven pieces
+     * at the {@code ChildObjDat_78D9E} offsets -- not a scatter, and not a piece per frame.
+     */
+    @Test
+    void theDefeatChainFadesTheDrillOutBeforeItBreaksIntoElevenPieces() {
+        int hits = hitDrillUntilDefeated(0x1200);
+        assertEquals(6, hits, "collision_property 6 at loc_78562");
+        assertTrue(boss.getState().defeated, "loc_78C60");
+        assertEquals(0xC0, boss.getFlags38() & 0xC0, "bset #6 and #7 of $38(a0)");
+        assertEquals(1, boss.getDefeatPhase(), "(a0) = Wait_FadeToLevelMusic");
+        assertFalse(boss.isDrawSuppressed(),
+                "Wait_FadeToLevelMusic draws every frame until $2E goes negative");
+        assertEquals(0, debris().size(), "loc_787E0 has not run yet");
+
+        int fadeFrames = 0;
+        while (!boss.isDrawSuppressed() && fadeFrames < 0x400) {
+            assertEquals(0, debris().size(),
+                    "the pieces must not appear before the fade ends (frame " + fadeFrames + ")");
+            boss.update(nextFrame(), null);
+            fadeFrames++;
+        }
+        assertTrue(fadeFrames > 0 && fadeFrames < 0x400,
+                "the fade wait ended after " + fadeFrames + " frames");
+        assertEquals(2, boss.getDefeatPhase(), "loc_787E0 has run");
+        assertTrue(boss.isDrawSuppressed(),
+                "loc_85674: bclr #7,render_flags(a0), and nothing sets it again");
+
+        List<LrzMinibossDebrisChild> pieces = debris();
+        assertEquals(11, pieces.size(), "ChildObjDat_78D9E is dc.w $B-1, so eleven pieces");
+        assertEquals(1, countActive(S3kBossDefeatSignpostFlow.class),
+                "loc_787E0 ends jmp (Obj_EndSignControl).l");
+
+        // The eleven are distinguishable: CreateChild1_Normal's sequential subtype picks both the
+        // frame (RawAni_78A9C) and the velocity (Obj_VelocityIndex entries 23..33). Collapse the
+        // subtype to a constant and all eleven leave on the same arc with the same frame.
+        List<Integer> frames = pieces.stream().map(LrzMinibossDebrisChild::getMappingFrame).toList();
+        assertEquals(List.of(0x0C, 0x0C, 0x0C, 0x11, 0x11, 0x12, 0x13, 0x0D, 0x0E, 0x0F, 0x10),
+                frames, "RawAni_78A9C read with lsr.w #1");
+
+        // And they move, on their own velocities. The creation offsets are already distinct, so
+        // "distinct X" on the creation frame proves nothing at all; what this asserts is the
+        // per-piece displacement after four frames, which is the velocity and nothing else.
+        // The table below is the production one, so it is an oracle for the mechanism (the 16.16
+        // step and where gravity lands) and not for the values. These three rows are transcribed
+        // here straight from Obj_VelocityIndex entries 23, 24 and 33 (sonic3k.asm:179203-179213)
+        // so at least the ends and the start of the window are checked against the ROM itself.
+        assertEquals(List.of(0, -0x100),
+                List.of(LrzMinibossDebrisChild.DEBRIS_VELOCITIES[0][0],
+                        LrzMinibossDebrisChild.DEBRIS_VELOCITIES[0][1]),
+                "Obj_VelocityIndex entry 23, which d0 = $5C selects for subtype 0");
+        assertEquals(List.of(-0x100, -0x100),
+                List.of(LrzMinibossDebrisChild.DEBRIS_VELOCITIES[1][0],
+                        LrzMinibossDebrisChild.DEBRIS_VELOCITIES[1][1]),
+                "entry 24, one four-byte step on from subtype 2's subtype * 2");
+        assertEquals(List.of(0x300, -0x300),
+                List.of(LrzMinibossDebrisChild.DEBRIS_VELOCITIES[10][0],
+                        LrzMinibossDebrisChild.DEBRIS_VELOCITIES[10][1]),
+                "entry 33, the last of the eleven");
+
+        Map<Integer, int[]> before = new LinkedHashMap<>();
+        for (LrzMinibossDebrisChild piece : pieces) {
+            before.put(piece.getIndex(), new int[] {piece.getX(), piece.getY()});
+        }
+        for (int i = 0; i < 4; i++) {
+            stepFrameWithDebris();
+        }
+        for (LrzMinibossDebrisChild piece : pieces) {
+            int[] origin = before.get(piece.getIndex());
+            // MoveSprite in 16.16: four frames of x_vel/$100 pixels, and four of y_vel with
+            // gravity $38 added before each step after the first.
+            int expectedDx = 0;
+            int expectedDy = 0;
+            int yVelocity = LrzMinibossDebrisChild.DEBRIS_VELOCITIES[piece.getIndex()][1];
+            for (int frame = 0; frame < 4; frame++) {
+                expectedDx += LrzMinibossDebrisChild.DEBRIS_VELOCITIES[piece.getIndex()][0];
+                expectedDy += yVelocity;
+                yVelocity += 0x38;
+            }
+            assertEquals(origin[0] + (expectedDx >> 8), piece.getX(),
+                    "piece " + piece.getIndex() + " X after four MoveSprite frames");
+            assertEquals(origin[1] + (expectedDy >> 8), piece.getY(),
+                    "piece " + piece.getIndex() + " Y: gravity is added to y_vel AFTER the step");
+        }
+    }
+
+    /**
+     * {@code Obj_FlickerMove}'s tail is {@code bchg #6,$38(a0) / beq -> rts}, and {@code bchg}
+     * sets the condition code from the bit's value <b>before</b> the change. Starting from a
+     * cleared byte the first frame therefore does not draw and the second does, alternating from
+     * there. Reading {@code bchg} as setting the flag from the new value inverts the whole
+     * pattern, which is invisible in a still and obvious in motion.
+     */
+    @Test
+    void theDebrisFlickersOnAlternateFramesStartingWithASkippedOne() {
+        hitDrillUntilDefeated(0x1200);
+        for (int i = 0; i < 0x400 && debris().isEmpty(); i++) {
+            boss.update(nextFrame(), null);
+        }
+        assertFalse(debris().isEmpty(), "loc_787E0 never ran within $400 frames of the defeat");
+        LrzMinibossDebrisChild piece = debris().get(0);
+        List<Boolean> drawn = new ArrayList<>();
+        for (int i = 0; i < 8; i++) {
+            stepFrameWithDebris();
+            drawn.add(piece.wasDrawnThisFrame());
+        }
+        assertEquals(List.of(false, true, false, true, false, true, false, true), drawn,
+                "bchg reads the old bit: observed " + drawn);
+    }
+
     // ===== helpers =====
 
     private static final int ROUTINE_DROP = 0x10;
     private static final int ROUTINE_SLAM = 0x12;
 
+    /**
+     * The shared {@code V_int_run_count} cursor. {@code shouldUpdate} drops a child update whose
+     * count matches the parent's last, so every frame in a test must be a new number.
+     */
+    private int frameCursor;
+
+    private int nextFrame() {
+        return ++frameCursor;
+    }
+
+    /**
+     * Runs frames until the named ring's hand is in {@code loc_7897A}. The hand arms on the frame
+     * the boss sets {@code $38} bit 3 and its own {@code $2E} stagger has elapsed, so this returns
+     * with the hand on its <b>arming</b> frame -- the one {@code loc_78946} does not draw.
+     */
+    private LrzMinibossHandChild runToFiringHand(boolean mirrored, int limit) {
+        boss.update(frameCursor, null);
+        LrzMinibossHandChild hand = hands().stream()
+                .filter(h -> h.ringMirrored() == mirrored).findFirst().orElseThrow();
+        for (int i = 0; i < limit && !hand.isFiring(); i++) {
+            boss.update(nextFrame(), null);
+        }
+        assertTrue(hand.isFiring(), "the hand never reached loc_7897A in " + limit + " frames");
+        return hand;
+    }
+
+    /**
+     * Drives the production hit path until every named hand has run out of
+     * {@code collision_property}: attack whenever the touch pass would be allowed to (the hand is
+     * live and its {@code collision_flags} is non-zero), and otherwise just step a frame so
+     * {@code sub_78CF4} can count its {@code $20} window out.
+     */
+    private int hitEveryHandUntilDead(List<LrzMinibossHandChild> targets, int limit) {
+        boss.update(frameCursor, null);
+        for (int i = 0; i < limit; i++) {
+            // loc_78D2C only runs from sub_78CF4, i.e. from a firing frame after the last hit,
+            // so the ring's bit -- not the hit count -- is what says the kill has landed.
+            boolean flagged = targets.stream().allMatch(h ->
+                    h.getHitsRemaining() == 0
+                            && (boss.getFlags38() & (h.ringMirrored() ? 0x80 : 0x40)) != 0);
+            if (flagged) {
+                return frameCursor;
+            }
+            for (LrzMinibossHandChild hand : targets) {
+                if (hand.isFiring() && hand.getCollisionFlags() != 0 && hand.getHitsRemaining() > 0) {
+                    hand.onPlayerAttack(null, null);
+                }
+            }
+            boss.update(nextFrame(), null);
+        }
+        throw new AssertionError("hands not emptied in " + limit + " frames: "
+                + targets.stream().map(h -> Integer.toString(h.getHitsRemaining())).toList());
+    }
+
+    /**
+     * Drives the drill's own hit path to zero through the production touch entry point: attack
+     * whenever {@code collision_flags} is non-zero (the slam and the first half of the recovery),
+     * and otherwise step a frame so {@code sub_78C14} can count its {@code $20} window out.
+     *
+     * @return the number of hits landed
+     */
+    private int hitDrillUntilDefeated(int limit) {
+        boss.update(frameCursor, null);
+        int hits = 0;
+        for (int i = 0; i < limit && !boss.getState().defeated; i++) {
+            // Only collision_flags 6 is the attackable-enemy category. loc_786BC's $B5 is the
+            // drop's hurt box: andi.b #$C0 on it gives $80, so Touch_Response takes the hurt
+            // branch and never calls the boss's attack entry point. Attacking on any non-zero
+            // byte would let the test kill the drill in phases the ROM cannot.
+            if (boss.getCollisionFlags() == 6) {
+                boss.onPlayerAttack(null, null);
+                hits++;
+            }
+            boss.update(nextFrame(), null);
+        }
+        assertTrue(boss.getState().defeated, "the drill never reached loc_78C60 in " + limit
+                + " frames (" + hits + " hits landed)");
+        return hits;
+    }
+
+    /**
+     * One frame for the drill and for the pieces. {@code CreateChild1_Normal} allocates its
+     * children into their own object slots ({@code AllocateObjectAfterCurrent}), so the main
+     * object loop runs them, not the parent's child pass -- and in this fixture nothing else
+     * drives the object manager.
+     */
+    private void stepFrameWithDebris() {
+        int frame = nextFrame();
+        boss.update(frame, null);
+        for (LrzMinibossDebrisChild piece : debris()) {
+            piece.update(frame, null);
+        }
+    }
+
+    private List<LrzMinibossDebrisChild> debris() {
+        return services.objectManager().getActiveObjects().stream()
+                .filter(LrzMinibossDebrisChild.class::isInstance)
+                .map(LrzMinibossDebrisChild.class::cast)
+                .toList();
+    }
+
+    private long countActive(Class<?> type) {
+        return services.objectManager().getActiveObjects().stream().filter(type::isInstance).count();
+    }
+
     /** Runs the boss until {@code routine(a0)} reads {@code target}, and returns the frame. */
     private int advanceTo(int targetRoutine, int limit) {
-        int frame = 0;
+        int frame = frameCursor;
         boss.update(frame, null);
         while (boss.getState().routine != targetRoutine && frame < limit) {
-            boss.update(++frame, null);
+            boss.update(frame = nextFrame(), null);
         }
         assertEquals(targetRoutine, boss.getState().routine,
                 "routine $" + Integer.toHexString(targetRoutine) + " not reached in " + limit

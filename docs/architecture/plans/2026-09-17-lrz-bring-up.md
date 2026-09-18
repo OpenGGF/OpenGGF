@@ -361,12 +361,14 @@ Still open:
 | Does `$1600` art at the `$0F` bridge tile match `Map_HPZCollapsingBridge` frames? | Moving capture of the `($60,$4D0)` bridge vs native | Slice 9 |
 | Why does a direct `$901` load draw HUD font tiles in the upper background rows, when the layout is a clean four-chunk repeat and the plane is refilled from column 0? | Native `$901` reference capture of the same rows, or identifying the art the seamless entry's `loc_56BD2` queue supplies | Slice 6/7; recorded in `s3k-known-bugs.md` |
 | Death Egg sprite draw path (`x = 0` suppression, `$1FF` wrap); autoscroll stage ↔ velocity pairing; which of `$29`'s `$30/$32` is the on and which the off timer | Slice owner traces `loc_5711E`, `loc_59E5E`-`loc_59F3C`, `loc_43DDC` before writing the test | Slices 7, 9, 7 |
+| Do the miniboss's two post-defeat camera releases belong to act 2? `loc_78AE6` sets `Camera_min_X_pos = $940` once `Camera_X_pos` reaches `$940`, and `loc_78B08` sets `$2C0` at `$2C0` (sonic3k.asm:160523-160545). Both thresholds are far *behind* the act 1 arena, whose camera sits past `$2C00`, so in act 1 both would fire on the frame they are created and drag the bound backwards. The reading is that they survive the seamless change, after which the `−$2C00` rebase puts the arena near `$0` and the player walks forward through `$2C0` and then `$940` | A native capture of `Camera_min_X_pos` across the act change, or a `$901` entry probe reading the bound on the first act 2 frames. If the act 1 reading is right instead, the object must be gated on something this pass has not found | Slice 6 done-condition. **Not implemented for this reason**: wiring them before the act change exists would break the act 1 camera |
+| Does `word_78EAA`'s rotation script need the S3K palette-rotation subsystem, or can `loc_78AA8`'s `Palette_rotation_data` copy plus `Palette_cycle_counter1 = $7FFF` be modelled as a plain per-frame palette write? | Decode the `palscriptptr` header/data pair at sonic3k.asm:160887 and check whether `Run_PalRotationScript` has an engine owner; if it does not, this is subsystem work, not boss work | Slice 6 done-condition, after the act change |
 
 ## Status
 
 | Claim | State |
 | --- | --- |
-| Implemented | **Slices 0-5 complete, slice 6 started** (placeholder baseline **0 / 188 / 8** of 609 / 455 / 35): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, every slice 3 class (`$15` corkscrew, `$16` wall ride, `$17` sinking rock, `$18` falling spike, `$19` door, `$1A` big door, `$1B` fireball launcher, `$1C` horizontal button, `$1D` shooting trigger, `$1E` dash elevator, `$1F` lava fall, `$20` swinging spike ball, `$21` smashing spike platform, `$22` spike ball, `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits), and **all three badniks**: `$9A` Iwamodoki, `$9B` Toxomister with its cloud and seven puffs, and `$99` Fireworm as its four ROM objects (spawner, DPLC head, four staggered segments, a flame on each). Slice 5's state half landed: `LrzDomeRegions` (`sub_56DCA` + `word_56F88`), `sub_56DAC`'s locked-background arithmetic, and `Obj_56EA0` the dome lava surface with its `_unkEE9C` phase and the P1/P2 fire-shield asymmetry. **Slice 5 is now complete**: the `Events_routine_bg` 0/4/8 stage machine (`LrzBackgroundStageMachine`), `SwScrlLrz`'s locked and pinned modes, the `Draw_delayed_rowcount $F` bottom-up refresh, and the Knuckles `$F6` background chunk. **Slice 6 part one**: `LrzMinibossInstance` (SKL `$9D`) with the whole `off_7854C` routine table, the `$34` continuation chain, `sub_7867C`'s re-aim, `Swing_Setup1`/`Swing_UpAndDown`, and the three `loc_7880A` child shapes plus the hand's projectile -- registered, art-wired and unit-tested, which takes the act 1 census to **0**. **The seven-item independent review is applied** (`d48420e24`): the arms unroll on `sub_78BD6`'s `$2E` stagger, the hand rides `parent3` through `MoveSprite_AtAngleLookup`, `Animate_RawMultiDelay` starts at index 2, `loc_788F4` stores the stepped angle unconditionally, link offsets use the ROM sine table and `asr.l #4` in 16.16, the projectile culls on `Sprite_CheckDeleteTouchXY` literally, and `SolidObjectFull`/`Displace_PlayerOffObject` are real. With them the **hit path**: `collision_flags` is the ROM byte and `sub_78C14` owns the `$20`-frame flash with the `FixBugs = 0` `word_78CB2` window. A restore after `ROUTINE_INIT` rebuilds any missing child. Nine of the class's fifteen tests watch motion across frames; ten deliberate breaks produced ten failures with the right diagnosis. The fight still cannot end: the defeat chain, the per-child retirement (`sub_78B46`), the debris, the post-defeat palette rotation, results and the seamless act change are owed, and it has had **no clip, no route rewind spot and no native comparison**. Absent: the `LRZ1_BackgroundEvent` seamless `$901` handover (stage `$C`), the two remaining bosses, cutscenes, `StartNewLevel` |
+| Implemented | **Slices 0-5 complete, slice 6 started** (placeholder baseline **0 / 188 / 8** of 609 / 455 / 35): scroll for both playable acts, the shared runtime state and its rewind capture, the events shell, act-keyed scroll registration, `AniPLC_LRZ2`, the `$6E` lava blocks, both `loc_282D0` animated-tile channels with their `Anim_Counters` seed, the `Draw_LRZ_Special_Rock_Sprites` renderer, every slice 3 class (`$15` corkscrew, `$16` wall ride, `$17` sinking rock, `$18` falling spike, `$19` door, `$1A` big door, `$1B` fireball launcher, `$1C` horizontal button, `$1D` shooting trigger, `$1E` dash elevator, `$1F` lava fall, `$20` swinging spike ball, `$21` smashing spike platform, `$22` spike ball, `$9C` rock crusher with its timer child, eight hit pieces and the `LRZ1_ScreenEvent` chunk edits), and **all three badniks**: `$9A` Iwamodoki, `$9B` Toxomister with its cloud and seven puffs, and `$99` Fireworm as its four ROM objects (spawner, DPLC head, four staggered segments, a flame on each). Slice 5's state half landed: `LrzDomeRegions` (`sub_56DCA` + `word_56F88`), `sub_56DAC`'s locked-background arithmetic, and `Obj_56EA0` the dome lava surface with its `_unkEE9C` phase and the P1/P2 fire-shield asymmetry. **Slice 5 is now complete**: the `Events_routine_bg` 0/4/8 stage machine (`LrzBackgroundStageMachine`), `SwScrlLrz`'s locked and pinned modes, the `Draw_delayed_rowcount $F` bottom-up refresh, and the Knuckles `$F6` background chunk. **Slice 6 part one**: `LrzMinibossInstance` (SKL `$9D`) with the whole `off_7854C` routine table, the `$34` continuation chain, `sub_7867C`'s re-aim, `Swing_Setup1`/`Swing_UpAndDown`, and the three `loc_7880A` child shapes plus the hand's projectile -- registered, art-wired and unit-tested, which takes the act 1 census to **0**. **The seven-item independent review is applied** (`d48420e24`): the arms unroll on `sub_78BD6`'s `$2E` stagger, the hand rides `parent3` through `MoveSprite_AtAngleLookup`, `Animate_RawMultiDelay` starts at index 2, `loc_788F4` stores the stepped angle unconditionally, link offsets use the ROM sine table and `asr.l #4` in 16.16, the projectile culls on `Sprite_CheckDeleteTouchXY` literally, and `SolidObjectFull`/`Displace_PlayerOffObject` are real. With them the **hit path**: `collision_flags` is the ROM byte and `sub_78C14` owns the `$20`-frame flash with the `FixBugs = 0` `word_78CB2` window. A restore after `ROUTINE_INIT` rebuilds any missing child. **The review's remaining items are closed too**: the hand's render gating at both routine-switch frames plus its `$20` blink, its own hit path (`sub_78CF4`, the `loc_78A28` hit ring, `loc_78D2C`), the touch pass's `$1C` attacker marker and `status` bit 7, the `parent3` anchor reading (and standing still rather than substituting the drill when the anchor is gone), `sub_78B46`'s per-child retirement -- so killing a hand now peels its arm away from the hand end first -- and nineteen corrected `sonic3k.asm` citations. Re-reading for those found a seventh defect the review did not: `FLASH_PALETTE_LINE` was 2, but the ROM's palette-line names are one-based (`Normal_palette_line_2 = Normal_palette+$20`), so every hit flash was on the wrong line. **The fight can now end**: `loc_78C60` -> `Wait_FadeToLevelMusic` (no `$2E` reseed) -> `loc_787E0`'s eleven `ChildObjDat_78D9E` pieces on their own `Obj_VelocityIndex` arcs and `Obj_FlickerMove` blink -> `S3kBossDefeatSignpostFlow`, the engine's `Obj_EndSignControl`. Twenty-two tests, most watching a value across frames; nine deliberate breaks across three runs produced nine failures with the right diagnosis and no masking. Still owed: the two post-defeat camera releases and `word_78EAA`'s rotation (both open questions -- their thresholds are act-2 coordinates), results consuming `Events_fg_5` for LRZ, and the seamless `$900` -> `$901` change. It has had **no clip, no route rewind spot and no native comparison**. Absent: the `LRZ1_BackgroundEvent` seamless `$901` handover (stage `$C`), the two remaining bosses, cutscenes, `StartNewLevel` |
 | Cold-reachable | Act 1 started from the level start with no teleport: the `$05` push-break rock, the `$1C` button and the `$19` door are cold-reached and the door is opened on the route (clip `13`). On the fixture's own recorded native input the engine matches Player 1 `(x, y)` **exactly for native rows 0-2322** (0-856 at the fourth handover, 0-636 before the frame-637 fix). **The reach is not a progress measure** and will keep falling as the zone fills in: the input is the fixture's own, which native survives, so the reach only measures how long an off-phase replay lives among real hazards. Quote the exact-match row and the first divergence. Re-measured at `13a7c8fe8`, row 857 was **already closed** by the Fireworm landing (the fourth handover's number predates `cad4a2e07`). The real divergence was row 863, a hurt the engine took and native did not: a killed worm left its flames alive. Fixed, and the route now matches **exactly for native rows 0-2322**, with the new first divergence at row 2323, unattributed. Evidence in the [trace frontier log](../../status/trace-frontier-log.md). The hand-authored `lrz1-cold-route-v7` frontier of x 1909 is untouched. Nothing cold-reached in act 2 or the boss act |
 | Rewind-verified | Before/active/after spots with forward replay for the `$19` door, the `$1C` button latch, the `$15` corkscrew ride, the `$17` sinking rock, the `$16` wall ride, the `$18` falling spike, the `$21` smashing spike platform, `$1B`, `$1F`, `$20` and the `$1E` dash elevator's mid-ride (`TestLrzHazardRewindSpots`, `TestLrzDashElevatorRewindSpot`), each broken on purpose once. Plus `LrzZoneRuntimeState` capture/restore round trips and the animator's counter blob. New in `TestS3kLrzRouteRewindSpots`, on real terrain at fixture route positions: `$18` mid-fall AND landed (whole composite), `$1A` opening (whole composite), `$9C` rumbling and `$9A` fuse-lit (both now whole-composite again, with the dropped-children restore gap closed), and a child-count spot for the crusher's four `S3kCameraGradualObjectInstance` children and the Fireworm's eight segments. `TestS3kLrzDomeBackgroundHeadless` adds a whole-composite spot inside a locked dome region. Still owed: `$1D`/`sub_42EC0` on a route, and cold-route (rather than route-position) spots |
 | Native behaviour matched | Not started (Sonic + Tails `lrz` frontier frame 208, inherited, re-measured `3418eba6e`) |
@@ -2140,3 +2142,148 @@ catch a misreading the same author would make twice, which is the specific failu
 breaks exist for and the reason the work order asks for a reviewer at all. The routine-table and
 continuation-chain constants remain unreviewed by anyone but their author, as the sixth handover
 already recorded.
+
+### 2026-09-18 - The review's remaining items closed, and the fight can now end
+
+**Six review items, and one the review did not find.** The two incomplete items from the
+`9020c502f` review note and the A-D verifier's follow-ups are closed, and re-reading the
+disassembly for them turned up a seventh defect nobody had flagged.
+
+| Item | ROM | What was wrong, and what it looks like |
+| --- | --- | --- |
+| Hand render gating | `loc_78946` (sonic3k.asm:160388-160405) ends `bra.w sub_78B46` with no `Draw_Sprite`; `loc_7897A` (160407-160432) rewrites `(a0)` for the *next* frame and still falls through `loc_7898C` to `loc_789C4` | The draw was derived from the routine byte, which gets **both** switch frames wrong in opposite directions: the arming frame drew the hand at the stale create-loop position, and the final volley frame -- the one the ROM does draw -- was suppressed. The draw is now a per-frame decision, and it also honours `loc_7897A`'s `$20` blink (`move.b $20(a0),d0 / beq -> collision list + draw; btst #0,d0 / bne -> rts`) |
+| The hand's own hit path | `sub_78CF4` (160756-160776) and `loc_78D2C` (160778-160791) | Unmodelled. The hand now implements `TouchResponseProvider`/`TouchResponseAttackable` with `word_78D6C`'s collision byte `6` and `collision_property` 4, opens the `$20` window, plays `sfx_BossHit`, and creates `ChildObjDat_78D98` -> `loc_78A28`, the hit ring that rides the hand and deletes itself when the hand's `status` bit 7 is set. `takeHit()`, which had no production caller, is gone |
+| Touch bookkeeping | sonic3k.asm:20916-20923 | `onPlayerAttack` stowed `$25` and decremented `collision_property` but dropped `move.b d0,$1C(a1)` (the attacker's object address, `$00`/`$4A`) and `bset #7,status(a1)` on the killing blow. Both are modelled on the drill and on the hand; the hand's bit 7 is the one the hit ring reads |
+| Hand anchor | `MoveSprite_AtAngleLookup` (178504-178523) reads `move.w x_pos(a1)` / `move.w y_pos(a1)` off `parent3` | It read `getX()/getY()`. For an `AbstractBossChild` those *are* the ROM position words -- `currentX` is what `drawFrameIndex` receives -- so the value was right, but the reading was not: it now goes through `ringXFixed() >> 16`, which names the field. The fallback is the real fix: when the anchor link is gone the hand now **stands still**, where it used to substitute the boss body and teleport across the arena |
+| `sub_78B46` retirement | 160568-160590 and `loc_78B86` 160592-160605 | The `$38` bits were set and nothing read them, so killing a hand only shortened the hover. Every ring child now parks on `Wait_Draw` for `$2C - subtype * 2`, explodes, and deletes `$F` frames later. The subtype rises towards the hand, so the arm peels away from the hand end first |
+| Javadoc citations | -- | Nineteen `sonic3k.asm:` ranges were 14-45 lines out. Re-read against the label lines and corrected in all six classes. `sub_78BEE` was the worst, cited 24 lines early |
+| **Flash palette line** (not in the review) | `word_78CA6`'s offsets are into `Normal_palette_line_2`, and `sonic3k.constants.asm:767-770` defines `Normal_palette ds.b $80` with `Normal_palette_line_2 = Normal_palette+$20` | The ROM's palette-line names are **one-based**. `FLASH_PALETTE_LINE` was `2`, so every hit flash was writing engine palette line 2 instead of line 1 -- and because the shipped window is the boss's own colours rather than white, the symptom is unrelated sprites tinting for `$20` frames, not a missing flash. The rest of the codebase already knew this (`AizEndBossInstance`:129, `LbzEndBossInstance`:85, `TunnelbotBadnikInstance`:136 all say so in comments); this class did not |
+
+**The shared retirement is shared code, not three copies.** `LrzMinibossRingChildBase` holds
+`sub_78B46` and the two-step park/explode/delete, because in the ROM it is literally one routine
+that `loc_78838`, `loc_788F4`, `loc_78946` and `loc_7897A` all branch to. The seventh handover
+suggested two `int` scalars per child instead, on the grounds that an object-typed field on a
+boss child is a `TestRewindHarnessCoverageRatchet` risk -- the two scalars are what landed, they
+just live on a shared abstract base rather than being written out three times.
+
+**The defeat chain.** `loc_78C60` now installs `Wait_FadeToLevelMusic` (179656-179669) without
+reseeding `$2E`, so the pause before the drill breaks up is whatever the interrupted phase had
+left -- the ROM's behaviour, and the reason the pause is not a fixed length. When it expires,
+`loc_85674` clears `render_flags` bit 7 (the drill stops drawing *before* the pieces appear),
+spawns the song fade, and runs `loc_787E0` (160247-160255): eleven `ChildObjDat_78D9E` pieces at
+their signed byte offsets, each with its own `RawAni_78A9C` frame and its own `Obj_VelocityIndex`
+entry (`Set_IndexedVelocity` with `d0 = $5C` is a **byte** offset, so the pieces take entries 23
+to 33), flickering on alternate frames through `Obj_FlickerMove`'s `bchg #6,$38(a0) / beq` -- which
+reads the bit *before* the change, so the first frame after creation is a skipped one. Then the
+drill becomes `Obj_EndSignControl`, which in this engine is `S3kBossDefeatSignpostFlow`, the same
+object every other S3K miniboss hands over to.
+
+**What `loc_787E0` still does not do, and why.** It allocates the `loc_78AA8` palette waiter. That
+object and the one it allocates in turn release the camera at `Camera_min_X_pos = $940` and
+`$2C0` -- both far *behind* the act 1 arena. Building them now would fire both on the frame the
+drill dies. They are recorded as an open question with a native kill condition, and are owed
+together with the act change that makes their thresholds mean anything.
+
+**Verification.** Nine deliberate breaks across three runs, each producing exactly the failure
+its own test exists to produce, none masked by another. Six together for the review items: the
+draw derived from the routine byte, the `$20` window restoring `collision_flags` immediately, the
+`$1C` marker hard-coded wrong, `status` bit 7 never set, the boss body substituted for a retired
+anchor, and `$2C - subtype * 2` flattened to `$2C`. Two together for the defeat chain: the pieces
+created at `loc_78C60` instead of after the fade (caught as "loc_787E0 has not run yet: expected 0
+but was 11"), and `bchg` read as setting the flag from the *new* bit (caught as the flicker
+pattern inverted, `[true, false, ...]` for `[false, true, ...]`). And one alone, because the test
+that holds it also holds the first two: `MoveSprite`'s gravity applied *before* the position step
+rather than after.
+
+**Two of the first defeat-chain tests passed against broken code, for two different reasons, and
+both are worth recording.** The debris are allocated into their own object slots
+(`AllocateObjectAfterCurrent`), so the main object loop runs them and the parent's child pass does
+not -- and this fixture drives only the boss, so the pieces never updated at all and the flicker
+list read `[false × 8]` against code that was correct. The second is worse: the first draft
+asserted "at least seven distinct X positions after four frames", which the *creation offsets*
+already satisfy. It would have passed with the velocities deleted. It now asserts each piece's
+displacement against its own `Obj_VelocityIndex` entry, which is the only thing that can tell a
+velocity from a starting position.
+
+**A third passed against broken code for a third reason.** `AbstractBossInstance.update` skips
+`updateBossLogic` entirely once `state.defeated` is set, unless the boss overrides
+`usesDefeatSequencer()` to false. Without that override the whole chain was unreachable: the fade
+never counted out and the eleven pieces never appeared. The test caught it by hanging, not by
+failing, because its wait for the pieces was an unbounded loop -- which is its own lesson about
+bounding every wait in a test.
+
+The palette-line assertion is a **constant** check, not a rendered-output one; it is stated as
+such because the risk it guards (one-based ROM naming) is a transcription risk, not a behavioural
+one.
+
+## Handover, 2026-09-18 (eighth)
+
+**Where the work is.** Branch `feature/ai-lrz-bring-up`, base develop `035e48a58`. This round
+closed every outstanding item from the `9020c502f` review and its A-D follow-ups, found and fixed
+a seventh defect the review did not (the one-based palette-line naming), and built the defeat
+chain as far as `Obj_EndSignControl`. **Census unchanged at 0 / 188 / 8.**
+
+**What slice 6 still owes, in the order it has to be built.**
+
+1. **Results consuming `Events_fg_5` for Lava Reef.** The engine already has the whole chain:
+   the shared results path calls `S3kTransitionEventBridge.signalActTransition()`, which
+   `Sonic3kLevelEventManager.setEventsFg5ForActTransition()` (around line 1809) fans out to the
+   zones that have implemented it -- CNZ, HCZ, FBZ, MGZ, MHZ, LBZ. LRZ is simply not in that list
+   yet, and `LrzZoneRuntimeState` has no `eventsFg5` word. The ROM gate is `Obj_Results`
+   (sonic3k.asm:62615-62622): `Apparent_act == 0` and the zone is neither Angel Island nor Ice
+   Cap, which the shared path already enforces for the others.
+2. **`LRZ1_BackgroundEvent` stage 0's consumer** (`loc_56BD2`, sonic3k.asm:115274-115293): clear
+   `Events_fg_5`, queue `LRZ2_128x128_Secondary_Kos` into `Chunk_table+$180`,
+   `LRZ2_16x16_Secondary_Kos` into `Block_table+$128`, `ArtKosM_LRZ2_Secondary` at tile `$090`,
+   PLC `$30`, and set `Events_routine_bg = $C`. `LrzBackgroundStageMachine` already owns stages
+   0/4/8 and deliberately leaves `$C` alone; this is where stage `$C` joins it.
+3. **Stage `$C`, the act change itself** (`loc_56CAA`, sonic3k.asm:115347-115374). Waits on
+   `Kos_modules_left`, then on **one** frame: `Current_zone_and_act = $901`; clear
+   `Dynamic_resize_routine`, `Object_load_routine`, `Rings_manager_routine`, `Boss_flag`,
+   `Respawn_table_keep`; `Clear_Switches` (sonic3k.asm:104284-104291) clears **`$20` bytes** from
+   `Level_trigger_array`, and `sonic3k.constants.asm:699-700` puts `Anim_Counters ds.b $10`
+   directly after `Level_trigger_array ds.b $10`, so the animated-tile phase counters go with it;
+   `clr.b LRZ_rocks_routine`; `Load_Level`; `LoadSolids`; then `−$2C00` off both players'
+   `x_pos`, `Offset_ObjectsDuringTransition`, `Camera_X_pos`, `Camera_X_pos_copy`,
+   `Camera_min_X_pos` and `Camera_max_X_pos`; `Reset_TileOffsetPositionActual`; and
+   `Events_routine_bg = 0`.
+   **The engine shape for this is settled, not open.** `SozAct1Events.requestAct2Reload()` is the
+   closest precedent and should be copied almost literally: a `SeamlessLevelTransitionRequest`
+   of type `RELOAD_TARGET_LEVEL` with `targetZoneAct(9, 1)`, `deactivateLevelNow(false)`,
+   `preserveMusic(true)`, `preserveLevelGamestate(true)`, `showInLevelTitleCard(false)`,
+   `objectSurvivalPolicy(ALL_LIVE_SST)`, `preserveOffsetCameraPosition(true)`, a
+   `cameraOffset(-0x2C00, 0)` and the four `postTransition*` bounds offset by the same, applied
+   through `levelManager().applySynchronousScreenEventTransition(...)` -- *synchronous*, because
+   `loc_56CAA` does the reload inside this background-event dispatch and deferring it leaves one
+   unreloaded frame. `Sonic3kCNZEvents.handleSeamlessReloadStage()` (around line 820) is the
+   second precedent and uses `PERSISTENT_EXACT_SST` instead; read both before choosing.
+   A `LrzActTransitionHandoff` beside `SozActTransitionHandoff` carries the act-2 side.
+4. **The two camera releases and `word_78EAA`**, both now open questions with kill conditions.
+   They belong after the act change, and the reason is in the question: their thresholds are act-2
+   coordinates.
+5. **`LRZ2_BackgroundEvent` stages 0 and 4** (`loc_5700C`/`loc_57040`, sonic3k.asm:115693-115722),
+   unchanged from the seventh handover.
+
+**What has not been done and is not owed to a later slice.** The miniboss still has **no clip, no
+route rewind spot and no native comparison**, so **no matrix row may be recorded for it**. The
+cold act 1 route was **not re-measured this round**; the last figure (native rows 0-2322 exact,
+first divergence row 2323) is stamped to `17ccb4e72` and predates three commits, so re-measure
+before quoting it. `TestS3kSonicTailsLrzSegmentTraceReplay` was last measured at `51474c172`
+(frame 208 `tails_y_speed`, 6835 errors) and was not re-run.
+
+**Carried forward unchanged from the seventh handover**: the `$1D`/`sub_42EC0` route exercise,
+cold-route rewind spots and a route spot for `$99`, act 2 placements on an act 2 route, native row
+2323, `loc_849D8`'s `Set_IndexedVelocity` `d0` for a retired Fireworm segment, the direct-`$901`
+act 2 background art gap, and slice 5's clip.
+
+**Media.** Clips `09`-`28` unchanged; no new clip this round either. The next round's first
+numbered clip is `29`.
+
+**On reviews.** No reviewer subagent was spawned this round. The three previous attempts across
+two rounds all returned nothing (recorded above), and the work order's own instruction -- write
+the report to a file *and* send it, then wait -- is the mitigation, not a guarantee. What was done
+instead is the six-break run: each new comparison was broken on purpose, once, in a single
+combined run, and each failure was checked against the message that test exists to produce. That
+catches a test that cannot fail. It does not catch a misreading its author would make twice,
+which is what a second pair of eyes is for, and the routine-table and continuation-chain constants
+remain unreviewed by anyone but their author.

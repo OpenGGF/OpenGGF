@@ -14,10 +14,10 @@ import com.openggf.level.render.PatternSpriteRenderer;
 import java.util.List;
 
 /**
- * A shot from the Lava Reef miniboss's hand ({@code loc_78A02}, sonic3k.asm:160502-160510,
+ * A shot from the Lava Reef miniboss's hand ({@code loc_78A02}, sonic3k.asm:160455-160465,
  * created through {@code ChildObjDat_78D90} by {@code CreateChild10_NormalAdjusted}).
  *
- * <p>{@code sub_78BAA} (sonic3k.asm:160583-160596) picks the velocity from {@code word_78BCA} by
+ * <p>{@code sub_78BAA} (sonic3k.asm:160606-160619) picks the velocity from {@code word_78BCA} by
  * the subtype the hand stamped on it -- its shot counter -- reading
  * {@code word_78BCA-4(pc,d0.w)} with {@code d0 = subtype << 2}, so shot 1 takes the first pair,
  * shot 2 the second and shot 3 the third. The X component is negated when the <b>firing hand's</b>

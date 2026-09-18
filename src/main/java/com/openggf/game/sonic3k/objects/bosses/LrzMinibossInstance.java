@@ -5,6 +5,9 @@ import com.openggf.game.PlayableEntity;
 import com.openggf.game.palette.PaletteWriteSupport;
 import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.audio.Sonic3kSfx;
+import com.openggf.game.sonic3k.objects.S3kBossDefeatSignpostFlow;
+import com.openggf.game.sonic3k.objects.S3kBossExplosionChild;
+import com.openggf.game.sonic3k.objects.SongFadeTransitionInstance;
 import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectPlayerParticipationPolicy;
@@ -120,6 +123,21 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     private static final int TRACKING_DEADBAND = 8;         // sub_7867C: cmpi.w #8,d2 / bls
     /** {@code move.b #$20,$20(a0)} at {@code sub_78C14}: the post-hit flash window. */
     private static final int HIT_FLASH_FRAMES = 0x20;
+
+    /** {@code Player_1} is {@code $FFFFB000}; {@code move.b d0,$1C(a1)} keeps the low byte. */
+    private static final int ATTACKER_MARKER_MAIN = 0x00;
+    /** {@code Player_2} is {@code $FFFFB04A}. */
+    private static final int ATTACKER_MARKER_SIDEKICK = 0x4A;
+
+    /** {@code loc_85674}: {@code move.w #(2*60)-1,$2E(a0)} before {@code loc_787E0}. */
+    private static final int SONG_FADE_FRAMES = (2 * 60) - 1;
+
+    /** Not defeated: the routine table runs. */
+    private static final int DEFEAT_NONE = 0;
+    /** {@code (a0) = Wait_FadeToLevelMusic}, counting {@code $2E} out towards {@code loc_787E0}. */
+    private static final int DEFEAT_WAIT_FADE = 1;
+    /** {@code loc_787E0} has run: the drill is now {@code Obj_EndSignControl}'s problem. */
+    private static final int DEFEAT_HANDED_OFF = 2;
     /** {@code loc_78768}: {@code cmpi.b #6,anim_frame(a0) / bhs} drops the hit box. */
     private static final int RECOVERY_INVULNERABLE_ANIM_FRAME = 6;
     /** {@code loc_7871A}: {@code moveq #$33,d1 / moveq #4,d2 / moveq #0,d3}. */
@@ -130,8 +148,17 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     /**
      * {@code word_78CA6}: six {@code Normal_palette_line_2} byte offsets, i.e. colour indices
      * {@code $06/2}, {@code $08/2}, {@code $10/2}, {@code $18/2}, {@code $1A/2}, {@code $1C/2}.
+     *
+     * <p>The line itself is engine index <b>1</b>, not 2. The ROM's names are one-based:
+     * {@code sonic3k.constants.asm:767-770} defines {@code Normal_palette ds.b $80} with
+     * {@code Normal_palette_line_2 = Normal_palette+$20}, so {@code line_2} is the second of the
+     * four lines and {@code line_1} is the base label that is never written out. Reading the
+     * digit as a zero-based index puts every one of these writes on the wrong line, and since
+     * the shipped flash window is the boss's own colours rather than white
+     * (see {@link #FLASH_WORD_OFFSET_SHIPPED}), the mistake shows as the wrong sprites tinting
+     * for {@code $20} frames rather than as nothing happening.
      */
-    private static final int FLASH_PALETTE_LINE = 2;
+    private static final int FLASH_PALETTE_LINE = 1;
     private static final int[] FLASH_COLOUR_INDICES = {3, 4, 8, 12, 13, 14};
     /** {@code word_78CB2}, twelve words; {@code CopyWordData_6} takes a six-word window of it. */
     private static final int[] FLASH_SOURCE_WORDS = {
@@ -141,7 +168,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     /**
      * {@code FixBugs = 0}. {@code sub_78C14} and {@code sub_78CCA} both take
      * {@code addi.w #2*2,d0} where the {@code FixBugs} branch takes {@code addi.w #2*6,d0}
-     * (sonic3k.asm:160659-160664, 160707-160712), so the flash half of the alternation reads
+     * (sonic3k.asm:160676-160681, 160735-160740), so the flash half of the alternation reads
      * {@code word_78CB2} from word <b>2</b> -- {@code 2, $644, $422, 0, $888, $AAA}, a window
      * straddling the boss's normal colours and the white flash -- rather than the six white
      * words at word 6. The shipped ROM therefore does not flash white at all, and this is what
@@ -171,6 +198,17 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     private int collisionFlagsByte;
     /** {@code $25(a0)}: the {@code collision_flags} the touch code stowed when the hit landed. */
     private int savedCollisionFlags;
+    /** {@code $1C(a0)}: the low byte of the attacking player's object address. */
+    private int attackerMarker;
+    /** {@code status(a0)} bit 7, set by the touch pass on the blow that empties the hit count. */
+    private boolean statusBit7;
+    /** {@code DEFEAT_NONE} / {@code DEFEAT_WAIT_FADE} / {@code DEFEAT_HANDED_OFF}. */
+    private int defeatPhase = DEFEAT_NONE;
+    /**
+     * {@code render_flags} bit 7, cleared by {@code loc_85674} and never set again: the drill's
+     * slot stops calling {@code Draw_Sprite} from there, so nothing re-sets it.
+     */
+    private boolean drawSuppressed;
     /** {@code $20(a0)}: the post-hit flash/invulnerability counter. */
     private int hitInvulnTimer;
     /**
@@ -230,6 +268,15 @@ public final class LrzMinibossInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
+        if (defeatPhase == DEFEAT_WAIT_FADE) {
+            waitFadeToLevelMusic();
+            return;
+        }
+        if (defeatPhase == DEFEAT_HANDED_OFF) {
+            // The drill's own slot has become Obj_EndSignControl, which does no drill work at
+            // all; the eleven pieces and the signpost flow are separate objects from here.
+            return;
+        }
         switch (state.routine) {
             case ROUTINE_INIT -> initialiseAndCreateChildren();
             case ROUTINE_QUEUE_ART -> queueArt();
@@ -322,7 +369,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         waitTimer = ART_DELAY_TIMER;
     }
 
-    /** {@code loc_785C2} (sonic3k.asm:160072-160080). */
+    /** {@code loc_785C2} (sonic3k.asm:160071-160081). */
     private void countDownArtDelay() {
         waitTimer--;
         if (waitTimer >= 0) {
@@ -334,7 +381,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         continuation = CONTINUATION_785EA;
     }
 
-    /** {@code Obj_Wait} (sonic3k.asm:180716-180719): count past zero, then run {@code $34(a0)}. */
+    /** {@code Obj_Wait} (sonic3k.asm:177949-177958): count past zero, then run {@code $34(a0)}. */
     private void objWait() {
         waitTimer--;
         if (waitTimer < 0) {
@@ -409,7 +456,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     }
 
     /**
-     * {@code loc_78628} (sonic3k.asm:160104-160116). The drill climbs at {@code -$400} until it
+     * {@code loc_78628} (sonic3k.asm:160105-160118). The drill climbs at {@code -$400} until it
      * reaches {@code _unkFAB0}. The ROM's {@code cmp.w y_pos(a0),d0 / blo.w} computes
      * {@code d0 - y_pos} and returns when {@code d0} is the lower, so the leg continues while the
      * top bound is still above the drill in screen terms -- numerically while
@@ -431,7 +478,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         swingSetup1();
     }
 
-    /** {@code loc_78666} (sonic3k.asm:160161-160165). */
+    /** {@code loc_78666} (sonic3k.asm:160120-160127). */
     private void swing(int vIntRunCount, PlayableEntity player) {
         swingUpAndDown();
         trackPlayer(vIntRunCount, player);
@@ -439,7 +486,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         objWait();
     }
 
-    /** {@code loc_786DA} (sonic3k.asm:160212-160215): the drop is a fixed 4px a frame. */
+    /** {@code loc_786DA} (sonic3k.asm:160164-160168): the drop is a fixed 4px a frame. */
     private void drop() {
         state.y = (state.y + DROP_Y_STEP) & 0xFFFF;
         state.yFixed = state.y << 16;
@@ -447,7 +494,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     }
 
     /**
-     * {@code loc_78768} (sonic3k.asm:160218-160225). After the slam the drill falls back at
+     * {@code loc_78768} (sonic3k.asm:160204-160211). After the slam the drill falls back at
      * {@code $400} to the spawn height it started from. {@code bhi.s} returns while
      * {@code _unkFAB2} is still greater than {@code y_pos}.
      */
@@ -476,7 +523,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     }
 
     /**
-     * {@code sub_7867C} (sonic3k.asm:160167-160181): re-aim once every sixteen frames on
+     * {@code sub_7867C} (sonic3k.asm:160129-160154): re-aim once every sixteen frames on
      * {@code V_int_run_count+3}'s low nibble, and hold still inside an 8px deadband.
      */
     private void trackPlayer(int vIntRunCount, PlayableEntity player) {
@@ -598,7 +645,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     }
 
     /**
-     * {@code loc_78D2C} (sonic3k.asm:160779-160791): a hand's kill sets bit 6 or 7 of the
+     * {@code loc_78D2C} (sonic3k.asm:160778-160791): a hand's kill sets bit 6 or 7 of the
      * parent's {@code $38} by facing, and with both set the parent's wait drops to {@code $1F}.
      */
     public void onHandDestroyed(boolean mirrored) {
@@ -616,6 +663,11 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         return collisionFlagsByte;
     }
 
+    /** {@code word_78CA6}'s target line as an engine palette index. */
+    static int flashPaletteLine() {
+        return FLASH_PALETTE_LINE;
+    }
+
     /** See {@link #lastFlashWindow}. */
     int getLastFlashWindow() {
         return lastFlashWindow;
@@ -628,6 +680,9 @@ public final class LrzMinibossInstance extends AbstractBossInstance
 
     @Override
     public void appendRenderCommands(List<GLCommand> commands) {
+        if (drawSuppressed) {
+            return;
+        }
         PatternSpriteRenderer renderer = getRenderer(Sonic3kObjectArtKeys.LRZ_MINIBOSS);
         if (renderer == null || !renderer.isReady()) {
             return;
@@ -637,6 +692,10 @@ public final class LrzMinibossInstance extends AbstractBossInstance
 
     @Override
     public void refreshPostCameraRenderState() {
+        if (drawSuppressed) {
+            state.renderFlags &= ~0x80;
+            return;
+        }
         if (isWithinRenderSpriteBounds(RENDER_WIDTH_PIXELS, RENDER_HEIGHT_PIXELS)) {
             state.renderFlags |= 0x80;
         } else {
@@ -670,7 +729,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     }
 
     /**
-     * {@code loc_7871A} (sonic3k.asm:160189-160196): the slam frame is solid
+     * {@code loc_7871A} (sonic3k.asm:160182-160191): the slam frame is solid
      * ({@code SolidObjectFull d1=$33 d2=4 d3=0}), takes hits through {@code sub_78C14}, and only
      * then runs {@code Obj_Wait}. The solid pass itself is the engine's, driven by
      * {@link #getSolidParams()} and gated by {@link #isSolidFor}.
@@ -684,7 +743,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     }
 
     /**
-     * {@code sub_78C14} (sonic3k.asm:160641-160670). The gate is {@code collision_flags(a0)}:
+     * {@code sub_78C14} (sonic3k.asm:160660-160692). The gate is {@code collision_flags(a0)}:
      * the shared touch code zeroes it (stowing the old value in {@code $25}) when a hit lands, so
      * a non-zero value here means nothing has been hit and there is nothing to do.
      */
@@ -711,7 +770,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     }
 
     /**
-     * {@code sub_78CCA} (sonic3k.asm:160689-160702): the same flash, but it never restores
+     * {@code sub_78CCA} (sonic3k.asm:160727-160754): the same flash, but it never restores
      * {@code collision_flags} -- its caller clears the byte instead -- and it starts a flash for
      * nobody: with {@code $20} already zero it simply returns.
      */
@@ -752,7 +811,7 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     }
 
     /**
-     * {@code loc_78C60} (sonic3k.asm:160672-160682). Entered from either flash routine the moment
+     * {@code loc_78C60} (sonic3k.asm:160694-160704). Entered from either flash routine the moment
      * {@code collision_property} reads zero. The full chain -- {@code Wait_FadeToLevelMusic},
      * {@code loc_787E0}'s eleven debris and {@code Obj_EndSignControl} -- is not built yet; what
      * is modelled here is the state every later step reads: both hands flagged dead (so the arms
@@ -766,9 +825,72 @@ public final class LrzMinibossInstance extends AbstractBossInstance
         state.invulnerable = false;
         collisionFlagsByte = 0;
         flags38 |= BOTH_HANDS_DEAD;                  // bset #6 and #7 of $38(a0)
+        // move.l #Wait_FadeToLevelMusic,(a0) / move.l #loc_787E0,$34(a0). $2E is NOT reseeded:
+        // the fade wait consumes whatever the interrupted phase had left in it, which is why the
+        // pause before the drill breaks up is not a fixed length.
+        defeatPhase = DEFEAT_WAIT_FADE;
+        // lea (Child6_CreateBossExplosion).l,a2 / jsr (CreateChild1_Normal).l -- one explosion,
+        // on the frame of the fatal hit, before anything else. The ROM's loc_78C60 plays no sound
+        // of its own: the sound belongs to the explosion object (Obj_CreateBossExplosion ->
+        // Obj_Explosion, sonic3k.asm:176659-176672), which is what the native-init-sfx variant
+        // models. Playing it from the boss instead would put it on the wrong object and the wrong
+        // frame.
+        final int explosionX = state.x;
+        final int explosionY = state.y;
+        spawnChild(() -> S3kBossExplosionChild.createWithNativeInitSfx(explosionX, explosionY));
         displacePlayerOffObject();
         stopLevelTimerOnBossDefeat();
         onDefeatStarted();
+    }
+
+    /**
+     * {@code Wait_FadeToLevelMusic} (sonic3k.asm:179656-179669) and {@code loc_85674}: count
+     * {@code $2E} out drawing every frame, then clear {@code render_flags} bit 7 so the drill
+     * stops being drawn at all, reload {@code $2E} with {@code 2*60-1}, allocate
+     * {@code Obj_Song_Fade_ToLevelMusic} and jump to {@code $34(a0)} = {@code loc_787E0}.
+     */
+    private void waitFadeToLevelMusic() {
+        waitTimer--;
+        if (waitTimer >= 0) {
+            return;
+        }
+        drawSuppressed = true;
+        state.renderFlags &= ~0x80;                  // bclr #7,render_flags(a0)
+        waitTimer = SONG_FADE_FRAMES;
+        int levelMusicId = services().getCurrentLevelMusicId();
+        if (levelMusicId > 0) {
+            spawnChild(() -> new SongFadeTransitionInstance(SONG_FADE_FRAMES, levelMusicId));
+        }
+        loc787E0();
+    }
+
+    /**
+     * {@code loc_787E0} (sonic3k.asm:160247-160255): allocate the {@code loc_78AA8} palette
+     * waiter, create {@code ChildObjDat_78D9E}'s eleven pieces, and become
+     * {@code Obj_EndSignControl}.
+     *
+     * <p>The palette waiter is <b>not</b> built yet, and deliberately so: both of the objects it
+     * leads to release the camera at act-2 coordinates ({@code Camera_min_X_pos = $940} at
+     * {@code loc_78AE6} and {@code $2C0} at {@code loc_78B08}), which only make sense once the
+     * seamless change has rebased the world by {@code -$2C00}. Wiring them before that change
+     * exists would fire both on the frame the drill dies and drag the act 1 camera bound
+     * backwards. See the plan's open questions.
+     */
+    private void loc787E0() {
+        defeatPhase = DEFEAT_HANDED_OFF;
+        for (int index = 0; index < LrzMinibossDebrisChild.DEBRIS_COUNT; index++) {
+            final int piece = index;
+            spawnChild(() -> new LrzMinibossDebrisChild(this, piece));
+        }
+        // jmp (Obj_EndSignControl).l. The engine's shared implementation of that routine and the
+        // results/act-transition chain behind it is S3kBossDefeatSignpostFlow; every other S3K
+        // miniboss reaches the results screen through it.
+        final int signpostX = state.x;
+        // Obj_Results reads Apparent_act, not the loaded act, and the two differ across a
+        // seamless change (sonic3k.asm:62615-62622).
+        final int apparentAct = services().apparentAct();
+        spawnChild(() -> new S3kBossDefeatSignpostFlow(
+                signpostX, apparentAct, S3kBossDefeatSignpostFlow.CleanupAction.NONE));
     }
 
     /**
@@ -784,10 +906,50 @@ public final class LrzMinibossInstance extends AbstractBossInstance
             return;
         }
         savedCollisionFlags = collisionFlagsByte;
+        attackerMarker = attackerMarkerFor(player);  // move.w a0,d0 / move.b d0,$1C(a1)
         collisionFlagsByte = 0;
         if (state.hitCount > 0) {
             state.hitCount--;
+            if (state.hitCount == 0) {
+                // subq.b #1,boss_hitcount2(a1) / bne / bset #7,status(a1). Nothing in this object
+                // reads the bit -- loc_78C60 runs off collision_property being zero, not off it --
+                // but the hand's hit ring does read its own, so the byte is modelled on both.
+                statusBit7 = true;
+            }
         }
+    }
+
+    /**
+     * {@code move.w a0,d0 / move.b d0,$1C(a1)} (sonic3k.asm:20917-20918): the low byte of the
+     * attacking player's object address, which is {@code $00} for {@code Player_1}
+     * ({@code $FFFFB000}) and {@code $4A} for {@code Player_2} ({@code $FFFFB04A}). The ROM keeps
+     * it so a boss can tell which player landed the blow; nothing in this fight reads it back yet,
+     * but the byte a rewind capture carries should be the byte the ROM would have.
+     */
+    static int attackerMarkerFor(PlayableEntity player) {
+        return player instanceof AbstractPlayableSprite sprite && sprite.isCpuControlled()
+                ? ATTACKER_MARKER_SIDEKICK
+                : ATTACKER_MARKER_MAIN;
+    }
+
+    /** {@code DEFEAT_NONE} / {@code DEFEAT_WAIT_FADE} / {@code DEFEAT_HANDED_OFF}. */
+    int getDefeatPhase() {
+        return defeatPhase;
+    }
+
+    /** True once {@code loc_85674} has cleared {@code render_flags} bit 7. */
+    boolean isDrawSuppressed() {
+        return drawSuppressed;
+    }
+
+    /** {@code $1C(a0)}. */
+    int getAttackerMarker() {
+        return attackerMarker;
+    }
+
+    /** {@code status(a0)} bit 7. */
+    boolean isStatusBit7Set() {
+        return statusBit7;
     }
 
     /**
@@ -805,6 +967,18 @@ public final class LrzMinibossInstance extends AbstractBossInstance
     /** {@code sub_78C14} owns the invulnerability window, not the shared S2-shaped handler. */
     @Override
     protected boolean usesBaseHitHandler() {
+        return false;
+    }
+
+    /**
+     * {@code loc_78C60} installs its own chain -- {@code Wait_FadeToLevelMusic} then
+     * {@code loc_787E0} -- rather than the generic explode-and-flee sequencer, and that chain runs
+     * from this object's own routine dispatch. Leaving the sequencer on would stop
+     * {@link #updateBossLogic} being called the moment the drill dies, so the fade would never
+     * count out and the eleven pieces would never be created.
+     */
+    @Override
+    protected boolean usesDefeatSequencer() {
         return false;
     }
 

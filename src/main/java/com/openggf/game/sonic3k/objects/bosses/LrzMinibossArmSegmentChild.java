@@ -6,7 +6,6 @@ import com.openggf.graphics.GLCommand;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreatable;
 import com.openggf.level.objects.RewindRecreateContext;
-import com.openggf.level.objects.boss.AbstractBossChild;
 import com.openggf.level.objects.boss.AbstractBossInstance;
 import com.openggf.level.render.PatternSpriteRenderer;
 
@@ -14,7 +13,7 @@ import java.util.List;
 
 /**
  * The Lava Reef miniboss's arm-segment child: subtype {@code 0} of each ring
- * ({@code loc_78838}, sonic3k.asm:160288-160345).
+ * ({@code loc_78838}, sonic3k.asm:160287-160349).
  *
  * <p>It is the anchor the ten links chain off, and it does not hang from the boss. Its position
  * is set <b>once</b>, by {@code sub_78BEE} at {@code loc_7885A} -- routine 0, which runs on the
@@ -30,12 +29,12 @@ import java.util.List;
  * the boss retracts ({@code loc_788A4}) it falls back at {@code $200} and then sets the parent's
  * bit 2 ({@code loc_788CC}), which is the hand's cue to stop firing.
  */
-final class LrzMinibossArmSegmentChild extends AbstractBossChild implements RewindRecreatable, LrzMinibossRingChild {
+final class LrzMinibossArmSegmentChild extends LrzMinibossRingChildBase implements RewindRecreatable {
 
     /** {@code word_78D66}: priority 0, {@code $08 $08} size, mapping frame 8, collision 0. */
     private static final int MAPPING_FRAME = 8;
     private static final int PRIORITY_BUCKET = 0;
-    /** {@code sub_78BEE} (sonic3k.asm:160617-160626). */
+    /** {@code sub_78BEE} (sonic3k.asm:160641-160655). */
     private static final int CAMERA_X_OFFSET = 0x20;
     private static final int CAMERA_X_OFFSET_MIRRORED = 0x120;
     private static final int CAMERA_Y_OFFSET = 0x1B8;
@@ -85,6 +84,10 @@ final class LrzMinibossArmSegmentChild extends AbstractBossChild implements Rewi
         if (!shouldUpdate(vIntRunCount)) {
             return;
         }
+        if (retirementTick()) {
+            updateDynamicSpawn();
+            return;
+        }
         switch (routine) {
             case ROUTINE_INIT -> {
                 anchorToCamera();
@@ -96,10 +99,13 @@ final class LrzMinibossArmSegmentChild extends AbstractBossChild implements Rewi
             case ROUTINE_AWAIT_RETRACT -> awaitRetract();
             default -> { }
         }
+        // loc_78838 ends bsr.w sub_78B46 / jmp Draw_Sprite: the retirement test is the last
+        // thing the live routine does, every frame.
+        sub78B46();
         updateDynamicSpawn();
     }
 
-    /** {@code sub_78BEE} (sonic3k.asm:160617-160626), run once from routine 0's {@code loc_7885A}. */
+    /** {@code sub_78BEE} (sonic3k.asm:160641-160655), run once from routine 0's {@code loc_7885A}. */
     private void anchorToCamera() {
         var services = tryServices();
         if (services == null || services.camera() == null) {

@@ -481,8 +481,16 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   whole, each hand rides the end of its own arm so its shots leave the arm and not the drill, and
   the drill's slam is solid to stand on, carries the only hit box in the cycle, and takes damage:
   six hits, each followed by the palette flicker the shipped ROM actually produces, which is not
-  the white flash its own data was written for. The fight still does not end: the defeat
-  sequence, the results and the seamless change into Act 2 are to come.
+  the white flash its own data was written for -- and that flicker now lands on the palette line
+  the ROM names rather than the one after it, so it tints the boss instead of whatever else shares
+  the screen.
+  The hands take damage too, four hits each, with their own hit ring, their own invulnerability
+  window and their own blink; killing one peels its whole arm away link by link from the hand end
+  first, each link bursting as it goes, instead of quietly shortening the drill's hover. Killing
+  the drill itself now ends the fight: it fades out, breaks into eleven pieces on their own arcs,
+  and hands over to the end-of-act sign and the results screen the way every other Sonic 3 &
+  Knuckles miniboss does. The seamless change into Act 2, and the two camera releases that belong
+  to it, are still to come.
 
 - **Plane opacity probe:** a development tool answers, from the decoded ROM layout
   alone, whether the plane behind another can show through at a coordinate. Where a
