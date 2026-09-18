@@ -388,7 +388,7 @@ Still open — the named slice must resolve each **before** building on it:
 
 | Claim | State |
 | --- | --- |
-| Implemented | Slices 0, 1, 1b and 2 delivered, and 43 of slice 3's 154 placements (the ten `$79` pads, the eight `$7F` floating platforms and the twenty-five `$7E` collapsing columns with their debris): placement census, runtime state, screen init, the whole `sub_575EA` bounds machine short of boss allocation, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, and the act-1 background — both modes, the four-routine machine, the cloud oscillator, the five roaming clouds, the ten solid cloud platforms and the six AniPLC scripts |
+| Implemented | Slices 0, 1, 1b, 2 and **3** delivered: all 154 act-1 slice-3 placements now resolve to concrete classes ($74 $75 $76 $79 $7A $7B $7C $7D $7E $7F $A0), alongside the placement census, runtime state, screen init, the whole `sub_575EA` bounds machine short of boss allocation, the arrival controller and beam, the Tails helper, the Knuckles/Death Egg/button/bridge cutscene with its pseudo-starpost, and the act-1 background. `TestS3kSszPlacementCensus` ratchets act 1 to zero unimplemented families; act 2 still owes `$B2` (slice 9). Slices 4-11 are not started |
 | Cold-reachable | Unchanged by slice 3 so far: the new objects all sit past the bridge and no route reaches them yet, so they are exercised from star-post checkpoint entries. Act 1's arrival and cutscene run from a cold load and open the route: the bridge clears `Events_bg+$05` and the camera limits become `0 … $19A0`. Everything from the GHZ arena on is not started. Act 2 still loads with no events |
 | Rewind-verified | One spot exercised, in the sky (slice 2): capture mid-swing inside the cloud band, step, restore, compare, replay forward, compare again. It caught two real defects. The arrival and cutscene spots are still owed |
 | Native behaviour matched | The act-1 background layout is decoded from the ROM and matched against the engine's layer. That settles plain mode (rows 0-2 are one repeated chunk; the arrival camera selects row 1) and exposes a cloud-mode defect: the ROM pins that plane to layout columns 56-59 and the engine reads camera-derived ones (s3k-known-bugs #41). Placement/ring decode pinned to the ROM; the arrival's forced camera, player offset and rise arithmetic match `SSZ1_ScreenInit`/`loc_57D50` exactly, with a one-frame phase difference against fixture `hpz` row 0 recorded as open. No SSZ native probe yet |
@@ -1053,3 +1053,97 @@ question, and the cloud-window change is not implicated because this capture nev
 
 **Tests.** `TestS3kSszTraversalPlatforms` 7 cases, `TestS3kSszTeleporterPads` 8,
 `TestS3kSszBackgroundLayout` 6 — 21, 0 failures, 0 skips. `-Pguards` 669, 0 failures, 0 skips.
+
+### 2026-09-18 — slice 3, part 4: the five remaining traversal families, the EggRobo, and #41's cause
+
+Commits `2bdca80eb` (traversal) and `ac93480de` (EggRobo + census ratchet), on
+`feature/ai-ssz-bring-up` over `cbb66adca`.
+
+**`$7D` `Obj_SSZBouncyCloud`** (27 placements, all subtype 0). Three things a summary loses:
+
+- `routine(a0)` is not a routine. It is a shared bounce counter: the first player to land sets it
+  to 7, it decrements once a frame in the draw path, and a second player who lands while it runs
+  takes the current value, so two riders leave together rather than on their own clocks.
+- The Y term at `loc_450EC` is a two-branch pick. If either player's sag byte is non-zero it takes
+  the **unsigned** larger of the two and only then sign-extends it — so `$F8` beats `$12` and then
+  applies as `-8`. Otherwise it takes the recoil byte belonging to whichever player has the larger
+  *countdown index*, not the larger recoil.
+- The post-launch angle spin-down at `loc_4527A` adds or subtracts 6 while the angle byte reads on
+  one side of the sign boundary and 2 after it crosses, in both directions, and both paths take
+  exactly 80 frames to reach zero. `byte_466A0` only covers 38 of them, sticking at index 0.
+
+The four `word_466C8` puffs are allocated at the player's X, and `loc_452DA` is a cull, not an
+init: a puff outside `cloud X ± $18` deletes itself on the pass it was allocated for, so a bounce
+off the end of a cloud sheds fewer than four.
+
+**`$7A` `Obj_SSZElevatorBar`** (5, subtype 0). The throw's Y velocity is the bar's own
+`Gradual_SwingOffset` speed longword shifted down eight plus `-$400`, so a bar caught on the way up
+throws harder than one caught at the bottom; holding down drops the `-$400` and the player simply
+falls with the bar. Left leaves the bar's priority at `$80`, in front of the player; right and the
+neutral release put it back to `$180`. The hang offset is `$14` except for `Player_mode == 2`
+(Tails alone) and Player 2, which get `$11`.
+
+**`$76` `Obj_SSZRotatingPlatform`** (7: three `$00`, four `$01`). Bit 0 is the only subtype bit any
+part of it reads, and it only widens the invisible `loc_45F10` carrier from `$60` to `$A0`.
+`sub_45E6E` is a two-step latch: the frame a player first stands, it writes `$0100` and does
+nothing else, so the spin starts a frame late. The carrier's priority for a rider is a four-way
+pick on the pose angle's sign *and* on whether the other player is riding at a smaller radius.
+
+**`$75` `Obj_SSZSwingingCarrier`** (8: five `$00`, one `$80`, two `$82`). Two subtype fields, both
+read: bit 7 picks pendulum (`Gradual_SwingOffset($20000,$821)` biased `$41`) or rotator (one step a
+frame, reversed by the placement's X-flip bit); bits 0-1 give the arc `(subtype & 3) + 6` segments.
+The arc's step is `GetSineCosine` swapped, low-word-cleared and `asr.l #4` — cosine into X, sine
+into Y — so a full-scale `$100` entry is a sixteen-pixel step. Only the rider bar is solid, and it
+is a `SolidObjectFull`: a side or bottom touch runs `sub_24280`, which rewinds the player's Y by one
+frame of `y_vel` before `HurtCharacter` so the knockback starts where they were.
+
+**`$74` `Obj_SSZRetractingSpring`** (5, subtype 0). The proximity test is gated on
+`btst #0,(Level_frame_counter+1).w` — the counter's low byte — so the extension steps every other
+frame. `loc_464C6` hands the solid routine `$7FFF` while the spring is below mapping frame 2 and
+restores the real `x_pos` immediately. **Exposing that parked X through `getX()` despawned the
+object**: the placement window saw it at `$7FFF` and never loaded it. The class now reports the real
+X always and simply does not call the solid below frame 2; `solidXForTest()` keeps the ROM's value
+visible to the test.
+
+**`$A0` `Obj_EggRobo`** (26). `sub_9185E` masks with `$F` and indexes `off_9186E`, which has three
+entries; the ROM places only 0, 2 and 4, and that is asserted rather than assumed. Every high
+nibble 0-`$A` carries both a fly-by and a fighter, which is what makes `_unkFA82` a pairing gate:
+`loc_91570` sets bit `subtype >> 4` as the fly-by leaves the screen and `sub_91914` drops any
+fighter whose bit is clear before its init runs. `word_919CA` gives the shot **no collision at all**
+for its first `$1F` frames, which is why a player in the line of fire can still walk out of it, and
+the arm holds the parent for `$5F` frames after each shot, so the cadence is one per 96 frames
+rather than one per alignment.
+
+**Census.** `TestS3kSszPlacementCensus` now ratchets against `Sonic3kObjectProfile`'s zone-10 list,
+which `TestSonic3kObjectProfileRegistryGuard` pins to the registry in a fresh JVM. Act 1: **zero**
+placements without an implemented owner. Act 2: one, `$B2:$00`, the crane slice 9 owns.
+
+**Known-bug #41 — cause established, fix not taken.** Reading
+`LevelManager.applyBackgroundTilemapWindowSelection` settles it. Its middle branch, the one that
+moves the BG cache window to follow the background camera, needs both `bgCameraX != MIN_VALUE` and
+`bgWrapsHorizontally()`. In plain mode `SwScrlSsz.getBgCameraX()` returns `MIN_VALUE` and
+`isSszCloudBackgroundWindowActive` is false, so control reaches the third branch, which pins
+`bgTilemapBaseX` to 0, and `getBgPeriodWidth()` outside cloud mode is the scroll fan's width. The
+plane is therefore built from background layout X 0 for that many pixels and the `Camera_X + $28`
+word wraps inside it. Neither of the two things previously suspected is wrong on its own; the defect
+is that "camera-derived" is expressed as base 0, which only equals the cartridge when the cached
+window spans the whole background. The candidate fix and its risk are in the known-bugs entry; it
+was not taken here because it changes the plane source for every plain-mode frame in the act and
+needs its own RED layout test and before/after capture.
+
+**Tests.** `TestS3kSszCarriersAndSprings` 11, `TestS3kSszEggRobo` 5, `TestS3kSszPlacementCensus` 9 —
+all 0 failures, 0 skips. Four comparisons were broken on purpose and each was caught: the cloud's
+`byte_46698` index (`+1` -> "6(a2) is byte_46698 at the countdown index"), the spring's
+`Level_frame_counter` gate (ungated -> "the extension stepped on an even Level_frame_counter"), the
+EggRobo pairing gate (always-pass -> "a fighter survived with its _unkFA82 bit clear") and its
+animal release (suppressed -> "CreateChild6_Simple let animals go on the way"). The four mandatory
+S3K classes plus the SSZ, HPZ and DDZ suites and `TestEveryObjectRewindRoundTrip` /
+`TestRewindHarnessCoverageRatchet`: 1476, 0 failures, 0 skips. `-Pguards`: 669, 0 failures, 0 skips.
+`TestEveryObjectRewindRoundTrip` caught one real defect — the arc child forced `barSpawned` true on
+restore, so a rewind past the allocation re-spawned nothing.
+
+**Not delivered, and owed by whoever continues slice 3:** no capture for any of the six families
+(the clip numbering is still at `09`, so the next is `10`); no rewind spot for the carrier chain or
+the EggRobo pairing; no breadth matrix class; the cold act-1 route is unchanged, still stopping
+where slice 1b left it, because every class here sits past the bridge and is exercised from
+star-post entries.

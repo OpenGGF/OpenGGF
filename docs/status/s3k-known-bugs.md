@@ -5884,14 +5884,31 @@ renders; see `05-ssz-cloud-band-before-after.mp4`.
   (`BG Y = $550 + $160 = $6B0`) carries thirteen distinct chunk ids across columns ~9-52, the
   distant sanctuary structures (`$BC`-`$EA`, `$C3`, `$38`, `$62`, `$01`, `$0F`, `$3A`-`$3D`). None of
   them reaches the screen.
-- **Suspected cause** — Not yet established, and deliberately not guessed. Plain mode is
-  camera-derived on the cartridge (`Reset_TileOffsetPositionEff` loads `Camera_X_pos_BG_copy`) and
-  `SwScrlSsz.plainParameters` does produce `Camera_X + $28`, which at this camera is layout column
-  13 — inside the cluster. `getBgCameraX()` returns `MIN_VALUE` in plain mode by design, so the
-  tilemap window stays at base 0 and the column is meant to come from the scroll word instead, the
-  way every non-wrapping zone works. Which of those two is not lining up is the open question. Note
-  the frame predates nothing: the cloud-window change is not implicated, because this capture never
-  enters cloud mode.
+- **Cause — established 2026-09-18, by reading the window-selection path rather than by guessing.**
+  `LevelRenderer.renderBackground` passes `parallaxManager.getBgCameraX()` to
+  `LevelManager.applyBackgroundTilemapWindowSelection`. That method has three branches. The middle
+  one — the one that moves the cache window to follow the background camera — requires
+  `bgCameraX != Integer.MIN_VALUE` **and** `zoneFeatureProvider.bgWrapsHorizontally()`. In plain
+  mode `SwScrlSsz.getBgCameraX()` returns `MIN_VALUE` and
+  `Sonic3kZoneFeatureProvider.isSszCloudBackgroundWindowActive` is false, so control falls to the
+  third branch, which pins `bgTilemapBaseX` to 0. The period width is
+  `SwScrlSsz.getBgPeriodWidth()`, which outside cloud mode is
+  `SwScrlHpz.requiredBgPeriodWidth(horizScrollBuf, viewportWidth())` — the fan's width, not the
+  background's. So the plane is built from background layout X 0 upward for that many pixels and
+  the `Camera_X + $28` scroll word wraps inside it. At camera `($6A0,$550)` the word is `$6C8`,
+  layout column 13, which is inside the structure cluster; the window it indexes is not.
+  Neither of the two things previously suspected is wrong on its own: `plainParameters` produces
+  the right word and `getBgCameraX()` is right that plain mode is camera-derived on the cartridge.
+  The defect is that "camera-derived" is expressed as base 0, which is only equivalent to the
+  cartridge when the cached window spans the whole background.
+- **Candidate fix, not yet taken** — have `getBgCameraX()` return `state.backgroundCameraX()` in
+  plain mode as well and widen `isSszCloudBackgroundWindowActive` to the whole of act 1, so the
+  middle branch runs in both modes and the window base follows the background camera. That is what
+  the VDP does: Plane B is a 512-pixel nametable that `Reset_TileOffsetPositionEff` refills as
+  `Camera_X_pos_BG_copy` moves. The risk is that it changes the plane source for every plain-mode
+  frame in the act, so it needs the RED layout test written first (the shape `7eae9918d` used for
+  the cloud window), the existing `TestS3kSszBackgroundLayout` and `TestS3kSszScrollBands` cases
+  re-run, and a before/after capture at 320 and wide.
 - **Removal condition** — The structures the layout holds at rows 4-17, columns ~9-52 appear on a
   capture with the camera below wrapped `Camera_Y $800`, at 320 and at a wide viewport, with the
   act-1 matrix's plain-mode background row carrying the frame numbers.
