@@ -1931,5 +1931,15 @@ seamless `$901` change, then `LRZ2_BackgroundEvent` stages 0/4.
 - No matrix rows for the miniboss: it has no motion verification, no clip and no route rewind spot,
   so nothing may be recorded as covered for it yet.
 
+**The independent review did not deliver a report.** A reviewer subagent was spawned for the
+coupled boundary and resumed three times; it never returned findings. Its five areas were covered
+by hand instead, and two of them produced real fixes (`17ccb4e72`, `8121b3dee`). Verified directly
+against the disassembly and found correct: `Animate_RawMultiDelay`'s command dispatch -- `$FC`
+reaches `loc_845F2`, which emits the script's base frame and reloads the timer in the same call, so
+the engine's same-call restart is right, and `$7F` has bit 7 clear so it is a delay and not a
+command (sonic3k.asm:177563-177613). Still unreviewed by a second pair of eyes: the routine-table
+and continuation-chain constants, and oracle independence beyond the three deliberate breaks done
+here. A later slice should re-spawn the review before the transition lands.
+
 **Media.** Clips `09`-`28` unchanged; no new clip. `raw-38`/`raw-39` dome captures retained as
 evidence for the foreground-opacity finding.

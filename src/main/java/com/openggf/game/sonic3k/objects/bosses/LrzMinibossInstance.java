@@ -429,7 +429,17 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
         animationDelay = 0;
     }
 
-    /** {@code Animate_RawMultiDelay}: frame/delay pairs, {@code $FC} repeats from the base. */
+    /**
+     * {@code Animate_RawMultiDelay} (sonic3k.asm:177563-177590) over frame/delay pairs.
+     *
+     * <p>Command bytes are the ones with bit 7 set, dispatched through {@code off_845D8-4(pc,d1.w)}
+     * with {@code d1 = -value}: {@code $FC} -> {@code loc_845F2}, which emits the script's base
+     * frame and reloads the timer <b>in the same call</b> before {@code loc_845CC} clears
+     * {@code anim_frame}; {@code $F4} -> {@code loc_84600}, which clears the frame timer and calls
+     * {@code $34(a0)}. {@code $7F} has bit 7 clear, so in pairs like {@code 1, $7F} it is a delay,
+     * not a command. {@code $F8} ({@code loc_845E4}, re-point the script base) is not used by this
+     * object's three scripts.
+     */
     private void advanceRawAnimation() {
         if (animationDelay > 0) {
             animationDelay--;
@@ -444,7 +454,10 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
             frame = animation[0];
         }
         if (frame == 0xF4) {
-            // loc_786BC's callback command: the drop animation's own end runs the continuation.
+            // loc_84600: clear the frame timer, then call $34(a0). loc_845CC clears anim_frame
+            // after the callback returns, so the script restarts from its base if it runs again.
+            animationDelay = 0;
+            animationIndex = 0;
             runContinuation();
             return;
         }
@@ -528,8 +541,12 @@ public final class LrzMinibossInstance extends AbstractBossInstance implements S
         }
     }
 
+    /**
+     * {@code Displace_PlayerOffObject} at {@code loc_7873A}. Deliberately empty for now: it is
+     * one half of a pair, and its partner -- {@code SolidObjectFull d1=$33 d2=4 d3=0} at
+     * {@code loc_7871A} -- is not implemented either, so no player can be standing on the boss to
+     * displace. Both land together with the hit path; the plan's slice 6 table owns them.
+     */
     private void displacePlayerOffObject() {
-        // Displace_PlayerOffObject: the shared boss path releases a standing player when the
-        // solid surface stops being solid, which the routine change below already does.
     }
 }
