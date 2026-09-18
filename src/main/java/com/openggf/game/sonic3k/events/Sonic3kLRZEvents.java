@@ -15,6 +15,8 @@ import com.openggf.game.sonic3k.runtime.LrzZoneRuntimeState;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.level.Level;
 import com.openggf.level.LevelManager;
+import com.openggf.level.SeamlessLevelTransitionRequest;
+import com.openggf.game.mutation.MutationEffects;
 
 /**
  * Lava Reef screen and background events for {@code $900}, {@code $901} and the boss act
@@ -101,6 +103,17 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
     private static final int KNUCKLES_BG_CHUNK_COLUMN = 4;
     private static final int KNUCKLES_BG_CHUNK_ID = 0xF6;
 
+    /** {@code move.w #$C,(Events_routine_bg)} at {@code loc_56BD2} (sonic3k.asm:115292). */
+    public static final int BG_STAGE_ACT_CHANGE = 0x0C;
+    /** {@code ArtKosM_LRZ2_Secondary} (sonic3k.lst: ROM {@code $1B97D6}). */
+    private static final int ACT2_SECONDARY_ART_SOURCE = 0x1B97D6;
+    /** {@code move.w #tiles_to_bytes($090),d2} at {@code loc_56BD2} (sonic3k.asm:115286). */
+    private static final int ACT2_SECONDARY_ART_TILE = 0x090;
+    /** {@code moveq #$30,d0 / jsr (Load_PLC)} at {@code loc_56BD2} (sonic3k.asm:115288-115289). */
+    private static final int ACT2_PLC = 0x30;
+    /** {@code move.w #$2C00,d0} at {@code loc_56CAA} (sonic3k.asm:115361). */
+    private static final int ACT2_REBASE_X = 0x2C00;
+
     private boolean act1BackgroundInitialised;
 
     @Override
@@ -110,8 +123,129 @@ public class Sonic3kLRZEvents extends Sonic3kZoneEvents {
         // streaming already does. The stage machines arrive with their slices.
         applyBackgroundInit(act);
         applyPendingChunkEdit(act);
+        if (advanceSeamlessActChange(act)) {
+            // loc_56BD2 and loc_56CAA both leave through loc_56D16, so the frame still draws;
+            // what they do not do is run sub_56DCA, the dome-region test.
+            advanceRockSpriteWindow();
+            return;
+        }
         advanceDomeRegions(act);
         advanceRockSpriteWindow();
+    }
+
+    /**
+     * {@code LRZ1_BackgroundEvent} stage 0's {@code Events_fg_5} branch ({@code loc_56BD2},
+     * sonic3k.asm:115274-115293) and stage {@code $C}, the act change itself ({@code loc_56CAA},
+     * sonic3k.asm:115347-115374).
+     *
+     * <p>The two halves exist together on purpose: stage 0 advancing {@code Events_routine_bg} to
+     * {@code $C} with no stage {@code $C} behind it would leave the background event pointing at a
+     * stage that never draws again.
+     *
+     * @return true when this frame belonged to the change, so the dome-region test does not run
+     */
+    private boolean advanceSeamlessActChange(int act) {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz == null || lrz.zoneIndex() != Sonic3kZoneIds.ZONE_LRZ || act != 0) {
+            return false;
+        }
+        if (lrz.backgroundRoutine() == BG_STAGE_ACT_CHANGE) {
+            applyActChangeWhenArtIsReady(lrz);
+            return true;
+        }
+        // tst.w (Events_fg_5) / beq loc_56C28: with the word clear this is the ordinary stage 0.
+        if (lrz.eventsFg5() == 0) {
+            return false;
+        }
+        armActChange(lrz);
+        return true;
+    }
+
+    /**
+     * {@code loc_56BD2}: clear {@code Events_fg_5}, queue the act-2 secondary resources and PLC
+     * {@code $30}, and step the background routine to {@code $C}. The ROM queues three Kos jobs;
+     * the two table jobs ({@code LRZ2_128x128_Secondary_Kos} into {@code Chunk_table+$180},
+     * {@code LRZ2_16x16_Secondary_Kos} into {@code Block_table+$128}) are the act-2 chunk and
+     * block data, which the engine's own target {@code Load_Level} brings with the reload. What
+     * it does not bring is the art module, so that one is queued here, exactly as the ROM does,
+     * and it is also what stage {@code $C} waits on.
+     */
+    private void armActChange(LrzZoneRuntimeState lrz) {
+        lrz.setEventsFg5(0);
+        try {
+            lrz.setAct2ArtJobOrdinal(moduleKosQueue()
+                    .queue(rom(), ACT2_SECONDARY_ART_SOURCE, ACT2_SECONDARY_ART_TILE).ordinal());
+        } catch (java.io.IOException failure) {
+            throw new IllegalStateException("Cannot queue the Lava Reef act 2 secondary art", failure);
+        }
+        applyPlc(ACT2_PLC);
+        lrz.setBackgroundRoutine(BG_STAGE_ACT_CHANGE);
+    }
+
+    /**
+     * {@code loc_56CAA}: {@code tst.b (Kos_modules_left) / bne} holds the change until the queued
+     * art has landed, and then the whole swap happens on one frame.
+     */
+    private void applyActChangeWhenArtIsReady(LrzZoneRuntimeState lrz) {
+        if (lrz.act2ArtJobOrdinal() < 0) {
+            requestAct2Reload(null);
+            return;
+        }
+        var handle = hardwareTiming().pendingHandle(
+                com.openggf.game.timing.HardwareWorkKind.KOS_MODULE_QUEUE,
+                lrz.act2ArtJobOrdinal()).orElseThrow();
+        if (!moduleKosQueue().isReady(handle)) {
+            return;
+        }
+        byte[] art = moduleKosQueue().claim(handle);
+        lrz.setAct2ArtJobOrdinal(-1);
+        requestAct2Reload(art);
+    }
+
+    /**
+     * The reload half of {@code loc_56CAA}. It is applied <b>synchronously</b> because the ROM
+     * runs {@code Load_Level}, {@code LoadSolids} and the {@code -$2C00} rebase inside this
+     * background-event dispatch; deferring it to the next loop iteration would leave one frame
+     * drawn from the old act. {@code SozAct1Events.requestAct2Reload} is the precedent.
+     */
+    private void requestAct2Reload(byte[] act2SecondaryArt) {
+        var handoff = seamlessTransitionResourceHandoffs().register(
+                new LrzActTransitionHandoff(-ACT2_REBASE_X, act2SecondaryArt,
+                        ACT2_SECONDARY_ART_TILE, this));
+        Camera camera = camera();
+        int minX = (camera.getMinX() - ACT2_REBASE_X) & 0xFFFF;
+        int maxX = (camera.getMaxX() - ACT2_REBASE_X) & 0xFFFF;
+        levelManager().applySynchronousScreenEventTransition(
+                SeamlessLevelTransitionRequest.builder(
+                        SeamlessLevelTransitionRequest.TransitionType.RELOAD_TARGET_LEVEL)
+                        .targetZoneAct(Sonic3kZoneIds.ZONE_LRZ, 1)
+                        .deactivateLevelNow(false)
+                        .preserveMusic(true)
+                        .preserveLevelGamestate(true)
+                        .showInLevelTitleCard(false)
+                        .objectSurvivalPolicy(
+                                SeamlessLevelTransitionRequest.ObjectSurvivalPolicy.ALL_LIVE_SST)
+                        .preserveOffsetCameraPosition(true)
+                        // sub.w d0,(Camera_X_pos) / (Camera_X_pos_copy) and the two bounds.
+                        .cameraOffset(-ACT2_REBASE_X, 0)
+                        .postTransitionMinX(minX)
+                        .postTransitionMaxX(maxX)
+                        .postTransitionMinXTarget(minX)
+                        .postTransitionMaxXTarget(maxX)
+                        .resourceHandoff(handoff)
+                        .build());
+        // The synchronous reload has finished: this is the first legal post-change rewind state.
+        if (hasRuntime()) {
+            levelManager().markSynchronousSeamlessTransitionBoundary();
+        }
+    }
+
+    /** {@code Obj_Results}' {@code st (Events_fg_5)} for Lava Reef (sonic3k.asm:62615-62622). */
+    public void setEventsFg5(boolean flag) {
+        LrzZoneRuntimeState lrz = state();
+        if (lrz != null) {
+            lrz.setEventsFg5(flag ? 0xFFFF : 0);
+        }
     }
 
     /**

@@ -492,12 +492,18 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the drill itself now ends the fight: it fades out, breaks into eleven pieces on their own arcs,
   and hands over to the end-of-act sign and the results screen the way every other Sonic 3 &
   Knuckles miniboss does.
+  Beating the drill now changes the act. Once the tally is over, Lava Reef loads Act 2's art
+  behind the results screen and then, on a single frame, swaps the act underneath the player:
+  the level, its solids and its object list are Act 2's, and the player, the camera and the
+  camera's limits all shift with them, so play carries straight on into the second act instead of
+  leaving you standing in the first. The switches and animated-tile counters the first act left
+  behind are cleared with it.
   The fight now also starts the way the ROM starts it: the drill does nothing at all until the
   player has carried the camera into the arena, and then the music fades, the miniboss theme
   comes in two seconds later, and the camera locks onto the single arena screen the ROM pins it
   to for the whole fight. Before this the drill built its arms and began its cycle the moment it
-  loaded, with the camera still free to walk out of the arena. The seamless change into Act 2,
-  and the two camera releases that belong to it, are still to come.
+  loaded, with the camera still free to walk out of the arena. The two camera releases that follow
+  the act change are still to come.
 
 - **Gameplay capture tool:** a capture can now declare the ring count its route carried in
   (`--rings`). A boss filmed from a positioned start otherwise begins on no rings, where the

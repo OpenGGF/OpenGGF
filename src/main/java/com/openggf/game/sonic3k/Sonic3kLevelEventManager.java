@@ -1825,6 +1825,9 @@ public class Sonic3kLevelEventManager extends AbstractLevelEventManager
         if (lbzEvents != null) {
             lbzEvents.setEventsFg5(true);
         }
+        if (lrzEvents != null) {
+            lrzEvents.setEventsFg5(true);
+        }
         // Other zones' event handlers will be added here as implemented.
     }
 

@@ -42,7 +42,7 @@ import java.util.Objects;
  */
 public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCameraStoredBounds {
     private static final int CAPTURE_BYTES =
-            S3kScreenShake.captureBytes() + Integer.BYTES + 19 * Short.BYTES;
+            S3kScreenShake.captureBytes() + 2 * Integer.BYTES + 20 * Short.BYTES;
 
     /** No placement can sit at X 0, so it is free as "no big door has opened". */
     private static final int NO_BIG_DOOR = 0;
@@ -70,6 +70,10 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     private short delayedRowcount;
     /** ROM {@code _unkEE9C}: the dome lava platform's published phase, and the locked BG's Y term. */
     private short domePlatformPhase;
+    /** ROM {@code Events_fg_5}: {@code Obj_Results} sets it, {@code loc_56BD2} consumes it. */
+    private short eventsFg5;
+    /** The {@code Queue_Kos_Module} job {@code loc_56BD2} starts; {@code -1} when none is live. */
+    private int act2ArtJobOrdinal = -1;
     private short cameraStoredMinX;
     private short cameraStoredMaxX;
     private short cameraStoredMinY;
@@ -257,6 +261,24 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
     @Override public int cameraStoredMinY() { return cameraStoredMinY; }
     @Override public int cameraStoredMaxY() { return cameraStoredMaxY; }
 
+    /** {@code Events_fg_5} (sonic3k.asm:115274). */
+    public int eventsFg5() {
+        return eventsFg5;
+    }
+
+    public void setEventsFg5(int value) {
+        eventsFg5 = (short) value;
+    }
+
+    /** {@code Kos_modules_left}'s engine stand-in: the pending act-2 art job, or {@code -1}. */
+    public long act2ArtJobOrdinal() {
+        return act2ArtJobOrdinal;
+    }
+
+    public void setAct2ArtJobOrdinal(long ordinal) {
+        act2ArtJobOrdinal = (int) ordinal;
+    }
+
     public void storeCameraBounds(int minX, int maxX, int minY, int maxY) {
         cameraStoredMinX = (short) minX;
         cameraStoredMaxX = (short) maxX;
@@ -284,6 +306,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         buffer.putShort(savedBackgroundCameraY);
         buffer.putShort(delayedRowcount);
         buffer.putShort(domePlatformPhase);
+        buffer.putShort(eventsFg5);
+        buffer.putInt(act2ArtJobOrdinal);
         buffer.putShort(cameraStoredMinX);
         buffer.putShort(cameraStoredMaxX);
         buffer.putShort(cameraStoredMinY);
@@ -314,6 +338,8 @@ public final class LrzZoneRuntimeState implements S3kZoneRuntimeState, S3kCamera
         savedBackgroundCameraY = buffer.getShort();
         delayedRowcount = buffer.getShort();
         domePlatformPhase = buffer.getShort();
+        eventsFg5 = buffer.getShort();
+        act2ArtJobOrdinal = buffer.getInt();
         cameraStoredMinX = buffer.getShort();
         cameraStoredMaxX = buffer.getShort();
         cameraStoredMinY = buffer.getShort();

@@ -14,8 +14,6 @@ import com.openggf.level.objects.ObjectConstructionContext;
 import com.openggf.level.objects.ObjectSpawn;
 import com.openggf.level.objects.RewindRecreateContext;
 import com.openggf.level.objects.RewindRecreatable;
-import com.openggf.level.objects.DestructionEffects;
-import com.openggf.level.objects.ObjectLifetimeOps;
 import com.openggf.level.objects.PoweredScreenAttackable;
 import com.openggf.level.objects.RomObjectCodePointerProvider;
 import com.openggf.level.objects.TouchResponseAttackable;
@@ -156,21 +154,8 @@ public final class ToxomisterBadnikInstance extends AbstractObjectInstance
     }
 
     private void destroyAsBadnik(PlayableEntity player, boolean powered) {
-        if (isDestroyed()) {
-            return;
-        }
-        // The ROM rewrites this SST slot in place, so the explosion inherits the slot.
-        int mySlot = ObjectLifetimeOps.detachSlotForTransfer(this);
-        setDestroyed(true);
-        if (powered) {
-            DestructionEffects.destroyBadnikPowered(getCentreX(), getCentreY(), getSpawn(),
-                    mySlot, player, services(),
-                    AbstractS3kBadnikInstance.S3K_DESTRUCTION_CONFIG);
-        } else {
-            DestructionEffects.destroyBadnik(getCentreX(), getCentreY(), getSpawn(),
-                    mySlot, player, services(),
-                    AbstractS3kBadnikInstance.S3K_DESTRUCTION_CONFIG);
-        }
+        AbstractS3kBadnikInstance.destroyAsS3kBadnik(this, getCentreX(), getCentreY(), getSpawn(),
+                player, services(), powered);
     }
 
     /** {@code sub_8FF72} (sonic3k.asm, {@code $8FF72}). */
