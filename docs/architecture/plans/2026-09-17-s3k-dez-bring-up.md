@@ -1257,3 +1257,28 @@ sites and leaves the stored flip alone. Package-private, so only `Sonic`, `Tails
 see it and it stays off the `@ModApi` surface this class pins; the ghost and hyper-trail samplers
 keep sampling the stored value deliberately. The corridor test now asserts both halves — the drawn
 flip follows the flag, and the stored flip does not.
+
+
+### 2026-09-18 — Slice 2 demo clips (seeded)
+
+Five clips in `~/Videos/OGGF/s3k-dez-bring-up/`, all at `8f5da1c8a`, S3K zone 11 act 2, Sonic solo,
+cold load at the act's own start, 40 neutral frames of lead-in and lead-out. Every one **seeds
+`Reverse_gravity_flag` itself** through the new `GameplayCaptureTool --reverse-gravity`; the ROM's
+writers (`$58`, `$59`, `$5B`) arrive in the object slice, so none of this is reachable in normal
+play yet. `INDEX.md` states that on every row.
+
+| Clip | Shows | The `state.csv` line that proves it |
+| --- | --- | --- |
+| `020-inverted-run-320` | falls *up* out of the act start, lands on the ceiling, runs along it upside down | `yvel` positive while `y` falls 940 to 777; `air` clears at frame 58 on y=723 |
+| `021-inverted-jump-320` | two ceiling jumps *down* the screen, away from the surface, falling back up onto it | frame 100 `yvel` = −1664 with `y` rising 718 to 748 |
+| `022-inverted-roll-320` | rolling along the ceiling | `rolling` 1 for frames 90-106 at `gspeed` 684, and `y` = **718** rolling against 723 standing — `Player_DoRoll`'s reverse-gravity −5 centre move, visible in a capture |
+| `023-camera-look-pans-320` | the look pans reversed | Up held: `cam_y` 627 to 695 (camera moves **down**). Down held: 627 to 527 (**up**) |
+| `020-inverted-run-528` | the same run at 528 px | lands frame 47, same ceiling y=723 |
+
+**Two things the captures corrected.** The first roll take never rolled: Down was pressed after the
+player had already hit a wall and lost `ground_vel`, and `SonicKnux_Roll` (sonic3k.asm:23240-23258)
+also refuses a roll while left or right is held. `state.csv` showed `rolling` flat at 0 before any
+frame was opened — the skill's "read the CSV first" rule doing its job. And the run clips stop at
+x=437 because that is where the act-start ceiling meets a wall: terrain, not a physics stall. A
+longer inverted run needs a flat-ceiling stretch nobody has measured; the corridor the tests use
+(x=$1ACC) is flat for only ±16 px.
