@@ -1832,3 +1832,38 @@ campaign, and all of it this one object; act 2 placeholders 300 → 283, concret
 Reference table **93 covered, 4 partial, 15 missing, 4 n/a**; the 15 remaining have no Death
 Egg gravity-object owner left in them.
 
+### 2026-09-18 — The team-teleport seed, the `$5A` capture, and two open blockers
+
+**A capture found a class of bug the focused tests structurally cannot reach.** Every
+assertion in the four gravity-object suites drives `update()` directly, so none of them ever
+sees the engine's own per-frame bookkeeping between object updates. Filming `$5A` at the
+co-located `$5B`/`$5A` pair at `$1A40,$08C0` — the placement table has the swap at record 263
+and the tube at record 264, identical x and y, which the earlier "the `$5B` sites' own
+neighbour is a `$5A`" note understated — showed nineteen frames of the rider's `air`
+alternating 1/0 with `y` pinned. Worth keeping as a method note: **a green focused suite says
+nothing about frame-to-frame engine state around the object.**
+
+The fix written for it did not fix it. Renewing the engine's object support every riding frame,
+to match the ROM's persistent standing bit, is right on ROM grounds and is kept (`e9b54292b`),
+but re-filming on top of it gives a byte-identical `state.csv` over frames 99-159. Recorded as
+a **rejected explanation with its kill evidence** rather than a closed bug. The remaining ROM
+reading: `sub_48F12`'s mount has no `Status_InAir` test (:95216-95252), so a player the inverted
+gravity lifts off is re-mounted the next frame by `RideObject_SetRide`'s `Player_TouchFloor`,
+and the ROM may alternate here too. Kill condition: a native capture of a player crossing
+`$1A40,$08C0` under reverse gravity.
+
+**`GameplayCaptureTool` now teleports the whole team on a positioned entry** (`193d73f85`,
+`257059dd3`), which the previous session recorded as the reason the sidekick clip could not be
+filmed. The first version of the seed ran inside `boot()` and moved nobody, because the CPU
+sidekick is not registered with the sprite manager until the level has stepped — instrumenting
+`getRegisteredSidekicks()` at the seed point reads 0 at boot and 1 on the first step. It also
+had to move off `getSidekicks()`, which returns an empty list while a zone suppresses its
+sidekick. With both fixed and the seed confirmed applied, **Tails is still absent from every
+frame of a 291-frame act 2 capture** (checked at 5, 160 and 280); that take was inspected and
+deleted rather than shipped, as the previous one was. The blocker has moved from the tool to
+something downstream of the seed, and is recorded with its kill condition in `INDEX.md`: log
+the registered sidekick's position over the first 60 frames and see whether the seed is being
+undone or the sprite is hidden.
+
+Clip `035-gravity-tube-320` ships with the alternation described rather than smoothed over.
+
