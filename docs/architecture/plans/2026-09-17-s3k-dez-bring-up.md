@@ -1687,3 +1687,30 @@ reach on foot are done; what remains of slice 3 is the objects that *move* the p
 5. **Then the cold act 2 route** on the `ssz`-named DEZ fixture's native input, and the
    clips that are still blocked: sidekick (needs a team teleport or the route), rings + hit
    + lost rings, a shield, and a solid-object ride.
+
+**The gate after `$58`.** Preflight passed. `run_categories.py --base 035e48a58 --run`
+selected **BROAD** again (2713/2713 classes, full ordinary suite plus guards), stated before
+launching with the runner's 40-minute per-invocation timeout as the stopping rule.
+
+| Lane | Result |
+| --- | --- |
+| Ordinary | 2713 reports, **22075 tests, 0 failures, 0 errors, 27 skipped**, 1026.2 s |
+| Guards | 85 reports, **669 tests, 0/0/0**, 185.1 s |
+
+Run id `20260918T132045Z-02b73773`, exit 0, acknowledged. The 27 skips are the same set as
+the two previous gates, reason for reason — opt-in profiles and unavailable-host
+assumptions. (A grep for "rom" in the skip reasons is not the check: it matches the word
+"from" in "excluded from normal runs". The check is that no `@RequiresRom` class appears in
+the skip list, which is how the previous gates' enumeration was read.)
+
+Nine more tests than the previous gate (22066 → 22075) and no new failures: the eight new
+`$58` cases plus the reworked occupancy assertion.
+
+The four-class trace comparison was repeated on top of `22cda0a59`, `clean test` with
+`-Ptrace-replay`, all three ROM paths absolute: `TestS1Ghz1TraceReplay` and
+`TestS1Mz1TraceReplay` 1/1 green; `TestS2Ehz1TraceReplay` red with **16388 errors at frame 6
+on `dynamic_art.outstanding_transfer_ids` (expected=[2], actual=[])**; `TestS3kAizTraceReplay`
+3/16 red with **59 errors, first at frame 5497 on `camera_x`, expected `0x0010` actual
+`0x0012`**. Identical to the four-times-recorded `f60b3f3e2` baseline, failure for failure and
+field for field; both reds stay **baseline-attributed**. Four classes only, and no evidence
+about any other class.
