@@ -682,6 +682,28 @@ edit, reverted and recompiled immediately. Input preserved as
 `target/capture/lrz-drop-on-button.txt` (260 neutral frames: the drop and the door are the whole
 demo).
 
+**Clip 11** `11-lrz1-big-door-before-after.mp4` (`raw-13-lrz1-big-door-{before,after}`, frames
+0-160 of 260, before on the left): Sonic is dropped at `($AF4,$28A)`, inside the big door's
+proximity box at `($A8C,$208)` from the first frame (`dx` 104 >= `$50`, `dy` 130 inside
+`[$40,$C0)`), and the 96x128 slab grinds down out of the ceiling while `Screen_shake_flag` holds
+the camera shaking - which is why the whole frame differs, not just the door's own box. 122 of the
+161 frames differ; the last difference is frame 123, so the cut carries 37 frames of quiet
+lead-out. On the left the door is not there at all.
+
+**Clip 12** `12-lrz1-shooting-trigger-door-before-after.mp4`
+(`raw-14-lrz1-shooting-trigger-{before,after}`, 260 frames): Sonic is dropped at `($8FC,$496)` and
+runs right. On the right the `$19` door subtype `$00` at `($920,$4DE)` stops him dead at x 2309 -
+exactly its left solid edge, `$2336 - $1B` - while the `$1D` trigger above at `($94B,$4A7)` keeps
+firing its diagonal shots. On the left, with the four registrations disabled, there is no door and
+he runs straight past to x 2493. 259 of the 260 frames differ. This is the clearest proof that the
+doors are load-bearing terrain rather than decoration, and the shots are the first end-to-end sight
+of the `$1D` gun half running on the production path (frames 150-174 cropped around
+`($94B,$4A7)` show one shot travelling down and to the right, two pixels per frame on each axis).
+**It does not exercise `sub_42EC0`**: this door stops Sonic at its left edge, 70 pixels short of
+the trigger, so nothing rolls into it and the `Touch_Special` -> `collision_property` ->
+explosion path is still only covered by the unit test. A capture that reaches the trigger has to
+come from the other side of the door, or from the `$C2` trigger at `($19C8,$6D9)`.
+
 Two earlier attempts at this clip are kept as the record of what does not work:
 `raw-10-lrz1-button-door-after` walks Sonic right along the floor past the `$1C`/`$19` pair at
 `($445,$4D4)`/`($490,$500)`, but the floor there is 57 px below the horizontal button, so he walks
