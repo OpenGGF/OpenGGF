@@ -296,6 +296,14 @@ public final class Sonic3kObjectArtKeys {
     public static final String LRZ_FIREBALL = "lrz_fireball";
     /** The drops {@code Obj_LRZLavaFall} allocates: {@code Map_LRZLavaFall} on palette line 2. */
     public static final String LRZ_LAVA_FALL = "lrz_lava_fall";
+    /** {@code Obj_LRZSwingingSpikeBall}: {@code Map_LRZSwingingSpikeBall}, palette 1. */
+    public static final String LRZ_SWINGING_SPIKE_BALL = "lrz_swinging_spike_ball";
+    /** The same map on palette line 0, which {@code andi.w #$9FFF} leaves the chain child. */
+    public static final String LRZ_SWINGING_SPIKE_BALL_CHAIN = "lrz_swinging_spike_ball_chain";
+    /** Act 2's {@code Map_LRZSwingingSpikeBall2} over {@code ArtTile_LRZ2Misc}, palette 1. */
+    public static final String LRZ2_SWINGING_SPIKE_BALL = "lrz2_swinging_spike_ball";
+    /** Act 2's chain: the same map on palette line 0. */
+    public static final String LRZ2_SWINGING_SPIKE_BALL_CHAIN = "lrz2_swinging_spike_ball_chain";
     public static final String LRZ2_BUTTON = "lrz2_button";
     /** {@code Obj_LRZDoor}: {@code Map_LRZDoor} over {@code ArtTile_LRZMisc}, palette 2. */
     public static final String LRZ_DOOR = "lrz_door";

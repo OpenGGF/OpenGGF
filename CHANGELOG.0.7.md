@@ -385,6 +385,8 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   shooting triggers' shots now travel at the speed the ROM gives them instead of creeping.
   The act 1 lava falls pour: each one runs for part of every four-second cycle, dropping a
   blob every sixth frame, and every second blob carries the falling-lava sound.
+  The swinging spike balls sweep their circles in both acts, chain and all, with act 2 using
+  its own artwork.
   The Lava Reef and Death Egg boss acts no longer borrow Hidden Palace's background
   scroll; Hidden Palace and the Super Emerald sanctuary keep theirs.
   Rings no longer appear at the top-left corner of every S3K act: each ROM ring list

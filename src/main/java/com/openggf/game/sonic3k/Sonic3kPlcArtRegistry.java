@@ -2630,6 +2630,40 @@ public final class Sonic3kPlcArtRegistry {
                 0,
                 null
         ));
+        // Swinging spike ball (SKL object $20) and its chain: the same map on palette lines 1 and
+        // 0, the latter being what andi.w #$9FFF leaves the child (sonic3k.asm:88654, :88669).
+        if (actIndex == 0) {
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_SWINGING_SPIKE_BALL,
+                    Sonic3kConstants.MAP_LRZ_SWINGING_SPIKE_BALL_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    1,
+                    null
+            ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ_SWINGING_SPIKE_BALL_CHAIN,
+                    Sonic3kConstants.MAP_LRZ_SWINGING_SPIKE_BALL_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ_MISC,
+                    0,
+                    null
+            ));
+        } else {
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SWINGING_SPIKE_BALL,
+                    Sonic3kConstants.MAP_LRZ_SWINGING_SPIKE_BALL2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    1,
+                    null
+            ));
+            levelArt.add(new LevelArtEntry(
+                    Sonic3kObjectArtKeys.LRZ2_SWINGING_SPIKE_BALL_CHAIN,
+                    Sonic3kConstants.MAP_LRZ_SWINGING_SPIKE_BALL2_ADDR,
+                    Sonic3kConstants.ARTTILE_LRZ2_MISC,
+                    0,
+                    null
+            ));
+        }
+
         if (actIndex == 0) {
             // make_art_tile($0D3,2,0) (sonic3k.asm:87900). Act 1 holds all eleven placements.
             levelArt.add(new LevelArtEntry(
