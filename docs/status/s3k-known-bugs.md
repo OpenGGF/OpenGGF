@@ -5940,9 +5940,18 @@ That is what the new case in `TestS3kSszBackgroundLayout` asserts, and reverting
   `ChildObjDat_7D48C` and `sub_7C678`, and the `loc_7D056` object that runs `sub_868F8` and hands
   the act over, so a beaten Mecha Sonic holds its defeat pose instead of finishing the act; (b) the
   `ChildObjDat_7D474` child at `loc_7C9BA`; and (c) `Obj_MechaSonic_Sparks`, whose gate is a
-  palette read (`cmpi.w #$E88,(Normal_palette_line_2+$12).w`) rather than a state.
+  palette read (`cmpi.w #$E88,(Normal_palette_line_2+$12).w`) rather than a state. `loc_7B39C`'s
+  bare tail-jump to `AllocateObject` is absent with them — a second slot the ROM consumes and never
+  writes — and slot order decides sibling execution and RNG draw order, so it belongs in this list
+  rather than being treated as a no-op.
+- **Also untested rather than unimplemented** — nothing drives routines `$0A` to `$28`, so
+  `loc_7B484`'s RNG branch, both landings, both dashes, the ground pound, the slam-and-backstep
+  chain and the final hop are implemented against the ROM but unexercised, as are rows 2 to 4 of
+  `byte_7D24C` and the `loc_7C8FE`/`loc_7B70E` subtype paths that reach them.
 - **Removal condition** — `loc_7B81A`'s routines 0 to 4 run for act 1, the act-1 handover through
-  `loc_7D056` reaches the results screen, and both remaining children exist with their own tests.
+  `loc_7D056` reaches the results screen, both remaining children exist with their own tests, and
+  the attack graph is driven to at least one landing and one of each of `byte_7B636`'s three
+  attacks against ROM literals.
 
 ## Sky Sanctuary Boss Defeats Draw No Explosion
 

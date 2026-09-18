@@ -416,6 +416,11 @@ public final class SSZHPZTeleporterObjectInstance extends AbstractObjectInstance
             // jsr (AllocateObject).l -- the plain one. The boss takes the lowest free slot,
             // which may be below this pad's, so it may not run in the same frame. A failed
             // allocation writes nothing and the gate is simply retried next frame.
+            // The ROM's AllocateObject hands back a cleared slot, so the boss's x_pos is zero
+            // until loc_7B308 runs; this spawn gives it the pad's own position instead. Both
+            // read the same to loc_45AB0 below -- its cmp/bhi wants the boss strictly to the
+            // right of the pad, and neither 0 nor $1A40 is -- and in both the boss has run its
+            // init before the pad's first loc_45AB0 frame. That agreement is load-bearing.
             SszMechaSonicObjectInstance boss = spawnFreeChild(() ->
                     new SszMechaSonicObjectInstance(
                             new ObjectSpawn(x, y, 0, 0, 0, false, 0)));

@@ -96,9 +96,16 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     public static final int HIT_COUNT = 8;
     /** {@code ObjSlot_MechaSonic}: {@code dc.w $280}. */
     private static final int PRIORITY_BUCKET = RenderPriority.fromS3kWord(0x280);
-    /** {@code dc.b $20,$20,0,$23}: y_radius, x_radius, frame, collision_flags. */
-    public static final int INITIAL_Y_RADIUS = 0x20;
+    /**
+     * {@code dc.b $20,$20,0,$23}. {@code SetUp_ObjAttributesSlotted} consumes these as
+     * {@code width_pixels}, {@code height_pixels}, {@code mapping_frame} and
+     * {@code collision_flags} — <b>not</b> as radii. {@code y_radius} is a different SST field
+     * that this routine never touches; only {@code loc_7B484} ({@code $1F}) and
+     * {@code loc_7B5E8} ({@code $F}) write it, and until the first of those it is whatever the
+     * cleared slot left, which is zero.
+     */
     public static final int HALF_WIDTH = 0x20;
+    public static final int HALF_HEIGHT = 0x20;
 
     // --- loc_7B308 ---------------------------------------------------------------------------
 
@@ -222,7 +229,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     private int attackChoice;
     /** {@code $3B(a0)}: the cycle counter {@code loc_7B5E8} steps. */
     private int attackCounter;
-    private int yRadius = INITIAL_Y_RADIUS;
+    /** {@code y_radius(a0)}: used by the floor checks only, and zero until loc_7B484. */
+    private int yRadius;
     /** {@code render_flags} bit 0. */
     private boolean renderFlipped;
     /** {@code $38(a0)}. */
@@ -340,7 +348,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     @Override public int getOnScreenHalfWidth() { return HALF_WIDTH; }
 
-    @Override public int getOnScreenHalfHeight() { return yRadius; }
+    /** {@code height_pixels}, a constant {@code $20}; the cull box is not {@code y_radius}. */
+    @Override public int getOnScreenHalfHeight() { return HALF_HEIGHT; }
 
     /** Nothing in this chain is an {@code Obj_WaitOffscreen}: routine 4 runs off screen on purpose. */
     @Override public boolean isPersistent() { return true; }
@@ -372,13 +381,16 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     @Override
     protected void updateBossLogic(int vIntRunCount, PlayableEntity player) {
+        // Obj_SSZEndBoss's tail is unconditional: the routine, then sub_7D312, then sub_7D2D8,
+        // then Perform_DPLC. The init is routine 0's body, not something that happens instead of
+        // a dispatch, so the collision byte is written on that frame too -- loc_7B308 has just
+        // set mapping_frame 2, and byte_7D2FC[2] is $09 where the slot table left $23.
         if (!initExecuted) {
             runInit(vIntRunCount);
             initExecuted = true;
-            return;
+        } else {
+            dispatch();
         }
-        dispatch();
-        // Obj_SSZEndBoss's own tail: the hit handler, then the collision byte, then the DPLC.
         applyHitAndFlash();
         applyCollisionByte();
     }
@@ -394,7 +406,6 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         }
         super.state.hitCount = HIT_COUNT;
         collisionFlags = COLLISION_BY_FRAME[0];
-        yRadius = INITIAL_Y_RADIUS;
 
         SszZoneRuntimeState ssz = sszState();
         var camera = services().camera();
@@ -409,6 +420,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         if (ssz != null) {
             ssz.setBossLeftX((cameraX + BOX_LEFT_CAMERA_OFFSET) & 0xFFFF);
             ssz.setBossRightX((cameraX + BOX_RIGHT_CAMERA_OFFSET) & 0xFFFF);
+            // _unkFAB0 is written here and read by nothing in act 1's graph; loc_7D216 only
+            // ever consults the two X limits. It is kept because act 2 and the launch read it.
             ssz.setBossCeilingY((cameraY + CEILING_CAMERA_Y_OFFSET) & 0xFFFF);
         }
         setPosition((cameraX + SPAWN_CAMERA_X_OFFSET) & 0xFFFF,
@@ -495,7 +508,7 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
         anim.animFrame = 0;
         anim.animFrameTimer = 0;
         callback = Callback.LANDED;
-        int random = services().rng().nextWord();
+        int random = services().rng() == null ? 0 : services().rng().nextWord();
         SszZoneRuntimeState ssz = sszState();
         boolean longLanding = (random & 0x8000) != 0;
         if (!longLanding && ssz != null) {
@@ -560,7 +573,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
 
     /** {@code loc_7B5AC}. */
     private void groundDash() {
-        xVel += xAccel;
+        // add.w d0,x_vel(a0): a word add, as MoveSprite's own y_vel gain is.
+        xVel = (short) (xVel + xAccel);
         moveSprite2();
         Integer limit = boundaryReached();
         if (limit == null) {
@@ -619,7 +633,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     /** {@code loc_7B67C}. */
     private void airDash() {
         animate();
-        xVel += xAccel;
+        // add.w d0,x_vel(a0): a word add, as MoveSprite's own y_vel gain is.
+        xVel = (short) (xVel + xAccel);
         moveSprite2();
         Integer limit = boundaryReached();
         if (limit == null) {
@@ -706,7 +721,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     /** {@code loc_7B7BA}. */
     private void finalDash() {
         animate();
-        xVel += xAccel;
+        // add.w d0,x_vel(a0): a word add, as MoveSprite's own y_vel gain is.
+        xVel = (short) (xVel + xAccel);
         moveSprite2();
         if (boundaryReached() == null) {
             return;
@@ -783,13 +799,16 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     @Override
     protected void onDefeatStarted() {
         defeated = true;
+        // move.l #loc_7B81A,(a0) / clr.b routine(a0) / move.l #loc_7B858,$34(a0)
         super.state.routine = 0;
-        anim.mappingFrame = 0x0E;
+        callback = Callback.NONE;
+        // bset #6,status(a0), and move.w #$7F,$2E(a0)
         super.state.invulnerable = true;
         timer = DEFEAT_WAIT;
-        xVel = 0;
-        yVel = 0;
-        flags &= ~(1 << FLAG_TRAIL);
+        // lea (Child6_CreateBossExplosion).l,a2 / CreateChild1_Normal, subtype 4. The score is
+        // the base's, added before this runs. clr.b (Update_HUD_timer).w and
+        // bclr #7,render_flags(a0) belong to loc_7B81A's graph, which is owed; nothing here
+        // clears x_vel, y_vel or the trail bit, and this no longer pretends to.
         spawnDefeatExplosion();
     }
 
@@ -1005,6 +1024,8 @@ public final class SszMechaSonicObjectInstance extends AbstractBossInstance
     public int timerForTest() { return timer; }
     public int xVelForTest() { return xVel; }
     public int yVelForTest() { return yVel; }
+    /** {@code $16(a0)}, the low word of the 16.16 {@code y_pos}. */
+    public int ySubForTest() { return posY & 0xFFFF; }
     public int mappingFrameForTest() { return anim.mappingFrame; }
     /** {@code $20(a0)}: the base keeps the same counter. */
     public int flashTimerForTest() { return super.state.invulnerabilityTimer; }

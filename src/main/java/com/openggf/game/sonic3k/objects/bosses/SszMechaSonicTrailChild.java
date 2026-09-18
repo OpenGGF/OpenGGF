@@ -145,15 +145,17 @@ public final class SszMechaSonicTrailChild extends AbstractObjectInstance
             services().playSfx(Sonic3kSfx.ROLL.id);
         }
         animate();
+        // loc_7C91C's order: animate, then Refresh_ChildPositionAdjusted, and only then the two
+        // parent tests. The refresh runs on the delete frame too.
+        if (parent != null && !parent.isDestroyed()) {
+            boolean flipped = parent.renderFlippedForTest();
+            x = (parent.getX() + (flipped ? -childDx : childDx)) & 0xFFFF;
+            y = (parent.getY() + childDy) & 0xFFFF;
+        }
         if (parent == null || parent.isDestroyed() || !parent.trailVisible()) {
             // loc_7C942: Go_Delete_Sprite the moment the parent stops dashing.
             ObjectLifetimeOps.expireDynamic(this);
-            return;
         }
-        // Refresh_ChildPositionAdjusted: the offset is applied against the parent's facing.
-        boolean flipped = parent.renderFlippedForTest();
-        x = (parent.getX() + (flipped ? -childDx : childDx)) & 0xFFFF;
-        y = (parent.getY() + childDy) & 0xFFFF;
     }
 
     private void animate() {

@@ -9,12 +9,14 @@ import com.openggf.game.GameServices;
 import com.openggf.game.rewind.CompositeSnapshot;
 import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.constants.Sonic3kAnimationIds;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.SSZHPZTeleporterObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicObjectInstance;
 import com.openggf.game.sonic3k.objects.bosses.SszMechaSonicTrailChild;
 import com.openggf.game.sonic3k.runtime.S3kRuntimeStates;
 import com.openggf.game.sonic3k.runtime.SszZoneRuntimeState;
+import com.openggf.sprites.playable.AbstractPlayableSprite;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 
@@ -243,6 +245,149 @@ class TestS3kSszMechaSpawnHeadless {
         }
     }
 
+    /**
+     * {@code loc_7B484} and {@code loc_7B4DA}. The landing choice is the one place in this graph
+     * that reads the RNG; what is asserted here is the state it leaves and the gravity it falls
+     * under, because {@code loc_7B4DA} is {@code MoveSprite_LightGravity} — {@code moveq #$20,d1}
+     * — where every other fall in the graph is {@code MoveSprite}'s {@code $38}.
+     */
+    @Test
+    void theLandingDropsAtLightGravityAndTakesTheFallingRadius() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        SszMechaSonicObjectInstance boss = runToRoutine(fixture, 0x0C, 0x300);
+
+        assertEquals(0x1F, boss.yRadiusForTest(), "move.b #$1F,y_radius(a0)");
+        assertEquals(0, boss.xVelForTest(), "clr.w x_vel(a0)");
+
+        int before = boss.yVelForTest();
+        fixture.stepIdleFrames(1);
+        assertEquals(before + 0x20, boss.yVelForTest(),
+                "MoveSprite_LightGravity's moveq #$20,d1, not MoveSprite's $38");
+
+        SszMechaSonicObjectInstance landed = runToRoutine(fixture, 0x0E, 0x300);
+        // loc_7B4EC is clr.w $16(a0) -- the low word of the 16.16 y_pos, not y_vel, which keeps
+        // whatever the fall had reached. Asserting y_vel here instead is how this was first
+        // written, and it is a different instruction.
+        assertEquals(0, landed.ySubForTest(), "clr.w $16(a0)");
+        assertTrue(landed.yVelForTest() > 0, "and y_vel is not what that instruction clears");
+    }
+
+    /**
+     * {@code loc_7B5E8}, {@code byte_7B62E} and {@code byte_7B636}. Three jumps in a row must
+     * come out as routine {@code $16}, {@code $1A} and {@code $1E} — the air dash, the ground
+     * pound and the slam — because the cycle is {@code 0,1,2,…} on {@code $3B(a0)} and not a
+     * draw. Asserted as the ROM's own routine numbers, not as the production table.
+     */
+    @Test
+    void theThreeAttacksComeOutInTheCartridgesCycleOrder() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        SszMechaSonicObjectInstance boss = runToRoutine(fixture, 0x0C, 0x300);
+
+        int[] expected = {0x16, 0x1A, 0x1E};
+        for (int index = 0; index < expected.length; index++) {
+            int counterBefore = boss.attackCounterForTest();
+            runToRoutine(fixture, expected[index], 0x400);
+            assertEquals(index, boss.attackChoiceForTest(),
+                    "byte_7B62E entry " + index + " of 0,1,2,0,1,2,0,1");
+            assertEquals(counterBefore + 1, boss.attackCounterForTest(),
+                    "addq.b #1,$3B(a0) once per jump");
+            assertEquals(0x0F, boss.yRadiusForTest(),
+                    "move.b #$F,y_radius(a0) in loc_7B5E8");
+        }
+    }
+
+    /**
+     * {@code loc_7B544}/{@code loc_7B5AC} and {@code loc_7D216}. The ground dash leaves at
+     * {@code $820} with {@code $40(a0) = -$20} decelerating it, and it does not stop where it
+     * runs out — it stops at whichever of {@code _unkFAB4}/{@code _unkFAB6} it was heading for,
+     * and the caller is handed that limit as its new {@code x_pos}.
+     */
+    @Test
+    void theGroundDashDeceleratesAndStopsOnTheBoxLimitItWasHeadingFor() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        SszMechaSonicObjectInstance boss = runToRoutine(fixture, 0x10, 0x600);
+        SszZoneRuntimeState state = requireState();
+
+        assertEquals(0x820, Math.abs(boss.xVelForTest()), "move.w #$820,d0");
+        boolean headingRight = boss.xVelForTest() > 0;
+
+        int before = boss.xVelForTest();
+        fixture.stepIdleFrames(1);
+        assertEquals(before + (headingRight ? -0x20 : 0x20), boss.xVelForTest(),
+                "add.w $40(a0),x_vel(a0) with $40 = -$20, negated with the direction");
+
+        runToRoutine(fixture, 0x12, 0x400);
+        assertEquals(headingRight ? state.bossRightX() : state.bossLeftX(), boss.getX(),
+                "loc_7B5C2's move.w d0,x_pos(a0): d0 is the limit loc_7D216 matched");
+    }
+
+    /**
+     * {@code loc_7B6C0} and {@code loc_7B70E}: the two floor arrivals that are not the landing.
+     * The ground pound bounces at {@code -$900}; the slam instead arms {@code $2E = $F} and
+     * creates {@code ChildObjDat_7D480}'s single child with {@code move.b #8,subtype(a1)}, which
+     * is {@code byte_7D24C}'s fifth row — the only path that reaches it.
+     */
+    @Test
+    void theGroundPoundBouncesAndTheSlamMakesTheRowFourAfterImage() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        SszMechaSonicObjectInstance boss = runToRoutine(fixture, 0x1C, 0x800);
+        assertEquals(-0x900, boss.yVelForTest(), "move.w #-$900,y_vel(a0) in loc_7B6C0");
+
+        runToRoutine(fixture, 0x20, 0x800);
+        assertEquals(0x0F, boss.timerForTest(), "move.w #$F,$2E(a0) in loc_7B70E");
+        SszMechaSonicTrailChild row4 = boss.trailForTest().stream()
+                .filter(child -> !child.isDestroyed())
+                .filter(child -> child.subtypeForTest() == 8)
+                .findFirst().orElse(null);
+        assertNotNull(row4, "ChildObjDat_7D480's child with move.b #8,subtype(a1)");
+        assertEquals(0x0C, row4.childDxForTest(), "dc.b $C of byte_7D24C's fifth row");
+        assertEquals(0x0C, row4.childDyForTest(), "dc.b $C");
+        assertEquals(0x200, row4.priorityWordForTest(), "dc.w $200");
+    }
+
+    /**
+     * {@code loc_7B790} and {@code loc_7B7EC}, the tail of the slam chain, and the return to
+     * {@code loc_7B462} that closes the loop. {@code ChildObjDat_7D486}'s pair goes through
+     * {@code loc_7C8FE}, so those two after-images are subtypes 4 and 6 — rows 2 and 3.
+     */
+    @Test
+    void theSlamChainEndsInAFinalDashAndHopAndComesBackToThePause() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        SszMechaSonicObjectInstance boss = runToRoutine(fixture, 0x24, 0x800);
+        assertEquals(0x640, Math.abs(boss.xVelForTest()), "move.w #$640,d0 in loc_7B790");
+
+        runToRoutine(fixture, 0x28, 0x400);
+        assertEquals(-0x640, boss.yVelForTest(), "move.w #-$640,y_vel(a0) in loc_7B7EC");
+        assertEquals(0, boss.xVelForTest(), "clr.w x_vel(a0)");
+
+        runToRoutine(fixture, 0x0A, 0x400);
+        assertEquals(0x1F, boss.timerForTest(),
+                "loc_7B804 falls back into loc_7B462's move.w #$1F,$2E(a0)");
+    }
+
+    /**
+     * {@code loc_7C8FE}'s {@code addq.b #4,subtype(a0)}: the dash's pair are rows 2 and 3 of
+     * {@code byte_7D24C}, where the init's pair are rows 0 and 1.
+     */
+    @Test
+    void theDashAfterImagesTakeTheRowsFourAndSixSubtypes() {
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, PAD_X, PAD_Y);
+        SszMechaSonicObjectInstance boss = runToRoutine(fixture, 0x10, 0x600);
+
+        List<SszMechaSonicTrailChild> dash = boss.trailForTest().stream()
+                .filter(child -> !child.isDestroyed())
+                .filter(child -> child.subtypeForTest() >= 4)
+                .sorted(java.util.Comparator.comparingInt(SszMechaSonicTrailChild::subtypeForTest))
+                .toList();
+        assertEquals(2, dash.size(), "ChildObjDat_7D486's dc.w 2-1 is two children");
+        assertEquals(4, dash.get(0).subtypeForTest(), "0 + loc_7C8FE's addq.b #4");
+        assertEquals(6, dash.get(1).subtypeForTest(), "2 + 4");
+        assertEquals(-8, dash.get(0).childDxForTest(), "dc.b -8 of the third row");
+        assertEquals(0x200, dash.get(0).priorityWordForTest(), "dc.w $200");
+        assertEquals(4, dash.get(1).childDxForTest(), "dc.b 4 of the fourth row");
+        assertEquals(0x300, dash.get(1).priorityWordForTest(), "dc.w $300");
+    }
+
     /** Rewind across the entry: before the spawn, with the boss live, and after. */
     @Test
     void theEntrySurvivesACaptureRestoreAndForwardReplay() {
@@ -321,6 +466,39 @@ class TestS3kSszMechaSpawnHeadless {
         }
         assertNotNull(boss, "loc_45A84 allocated Obj_SSZEndBoss");
         return boss;
+    }
+
+    /**
+     * Steps until the boss reaches a routine, with the leader parked out of the way and not
+     * attacking, so the graph advances on its own timers rather than on a hit.
+     */
+    private static SszMechaSonicObjectInstance runToRoutine(HeadlessTestFixture fixture,
+                                                            int routine, int budget) {
+        SszMechaSonicObjectInstance boss = active(SszMechaSonicObjectInstance.class);
+        if (boss == null) {
+            boss = runToInit(fixture);
+        }
+        for (int frame = 0; frame < budget && boss.routineForTest() != routine; frame++) {
+            parkTheLeader(fixture);
+            fixture.stepIdleFrames(1);
+        }
+        assertEquals(routine, boss.routineForTest(),
+                "the boss reached routine $" + Integer.toHexString(routine));
+        return boss;
+    }
+
+    private static void parkTheLeader(HeadlessTestFixture fixture) {
+        AbstractPlayableSprite player = fixture.sprite();
+        player.setDead(false);
+        player.setHurt(false);
+        player.setInvulnerableFrames(0);
+        player.setInvincibleFrames(0);
+        player.setCentreX((short) PAD_X);
+        player.setCentreYPreserveSubpixel((short) PAD_Y);
+        player.setXSpeed((short) 0);
+        player.setYSpeed((short) 0);
+        player.setGSpeed((short) 0);
+        player.setAnimationId(Sonic3kAnimationIds.WALK.id());
     }
 
     private static SszMechaSonicObjectInstance runToInit(HeadlessTestFixture fixture) {

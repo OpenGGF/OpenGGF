@@ -2348,3 +2348,50 @@ and takes the sheet's own registered line, and the after-image child passes `0` 
 a rendered pixel — the palette owner and the draw call are presentation. That is the argument for
 the campaign's one-clip-per-feature rule, and it is worth saying plainly: the tests were green
 across both wrong versions.
+
+### 2026-09-18 — slice 7's review, applied
+
+The reviewer's file is `~/Videos/OGGF/ssz-bring-up/notes/ssz-mecha-review.md`. Its blocking
+finding, B1, was the missing `PalLoad_Line1 Pal_SSZGHZMisc`, which this round had already found
+independently by filming the fight and fixed in `be3b09bff` — two routes to the same defect, and
+worth noting that the clip found it first.
+
+**S1, applied.** `Obj_SSZEndBoss`'s tail is unconditional. The init frame was returning before
+`sub_7D312` and `sub_7D2D8`, so the frame on which `loc_7B308` sets `mapping_frame 2` kept the
+slot table's `$23` instead of `byte_7D2FC[2]`'s `$09`. One frame of the wrong collision size.
+
+**S2, applied, and it was a misreading of the slot table.** `ObjSlot_MechaSonic`'s
+`dc.b $20,$20,0,$23` are `width_pixels`, `height_pixels`, `mapping_frame` and `collision_flags` —
+`SetUp_ObjAttributesSlotted` says so in its own comments — not radii. `y_radius` is a different
+SST field that routine never writes; it is zero until `loc_7B484` sets `$1F`. The cull box is
+therefore the constant `height_pixels`, where this class had it following `y_radius` down to
+`$F` for the whole jump graph.
+
+**S3, applied.** `onDefeatStarted` was writing `mapping_frame $E`, zeroed velocities and a
+cleared trail bit, none of which `sub_7D35A` writes; the `$E` was invented outright. It now
+writes what the routine writes and says which of the routine's own writes belong to the owed
+graph.
+
+**S4 and S5, applied — this was the real one.** Nothing drove routines `$0A` to `$28`: the
+attack-cycle test asserted two production constants against ROM literals and never booted a
+level, so deleting the entire attack graph would have left it green, and rows 2 to 4 of
+`byte_7D24C` were asserted nowhere. Six new cases now drive the graph with the leader parked and
+not attacking: the light-gravity fall and its `$1F` radius, the three attacks coming out in
+`byte_7B62E`'s order with `$3B` stepping once per jump, the ground dash's `$820`/`-$20` and the
+`loc_7D216` limit it stops on, the ground pound's `-$900`, the slam's `$F` timer and its row-4
+after-image, the final dash and hop, and the dash pair's `loc_7C8FE` subtypes 4 and 6.
+
+One of those six failed first, on an assertion of mine rather than on the production code:
+`loc_7B4EC` is `clr.w $16(a0)`, the low word of the 16.16 `y_pos`, and the test had read it as
+clearing `y_vel`. It now asserts the subpixel and, separately, that `y_vel` is *not* what that
+instruction clears.
+
+**Observations taken:** the after-image now refreshes its position before the delete test as
+`loc_7C91C` does; the dash accumulator is a word add like the gravity gain; the RNG is guarded
+the same way in both places; the spawner says why giving the boss the pad's position agrees with
+the ROM's cleared slot; and `_unkFAB0` says why it has no reader in act 1. `loc_7B39C`'s bare
+tail-jump to `AllocateObject` is recorded in known bug #42 with the two missing children, since
+slot order decides sibling execution and RNG draw order.
+
+`TestS3kSszMechaSpawnHeadless` is 14 cases; with the SSZ, mandatory S3K and rewind round-trip
+batch, **1277 run, 0 failures, 0 errors, 0 skipped**.
