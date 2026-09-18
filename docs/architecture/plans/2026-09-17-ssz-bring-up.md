@@ -1196,3 +1196,75 @@ has left the screen, so a still capture near one shows nothing; an authored inpu
 camera across the fly-by's placement first is the way. The #41 before/after, at a camera where a
 background column actually carries structure (row 13, columns 17-22). And a rewind spot that forces
 object recreation, which is the only way to exercise the sidecar restores.
+
+### 2026-09-18 — slice 3's tail: the spring's draw, the EggRobo's box, and what the clips settled
+
+**The `$74` spring is not a draw defect.** `Map_SSZRetractingSpring` (`$046D20`) is a six-frame
+table whose **frame 0 has a zero piece count** — the ROM's own way of saying "not out yet" — and
+`loc_46452` only leaves frame 0 while a player is inside the `$60`-wide approach box. Re-reading
+`raw-15-ssz-retracting-spring/state.csv` against the placement settles it arithmetically: the
+spring is at `($A60,$A30)`, so its box is X `[$A00,$A60]`, and Sonic is inside it only between
+capture frames ~70 and ~105. The two frames the previous entry inspected, 180 and 270, have him at
+X `$BB8` and `$B21` — well past the box, with the spring correctly retracted and correctly
+invisible. Frames 78, 85 and 95 show it extended, yellow and grey, exactly where it belongs.
+
+`TestS3kSszCarriersAndSprings#theRetractedSpringHasNoSpritePiecesAndTheExtendedOneDoes` pins both
+halves: the ROM's six piece counts (0, 1, 5, 4, 3, 4) and the engine's decoded sheet, whose frame-0
+`FrameBounds` are all-zero while frame 3's are not. Broken on purpose by pointing the empty-frame
+assertion at frame 1: `expected FrameBounds[0,0,0,0] but was FrameBounds[-8,8,23,15]`.
+
+**A real defect the EggRobo capture found: every mode wore the fighter's hitbox.**
+`EggRoboBadnikInstance` passed `FIGHTER_COLLISION_SIZE` to its superclass unconditionally, so
+`getCollisionFlags()` returned the size-6 enemy box in all three modes. The ROM disagrees, and the
+disagreement is one byte per `ObjDat3` row (`dc.b width, height, frame, collision`), verified
+against the cartridge at `$9199A`/`$919A6`/`$919B2`:
+
+| Row | Bytes | Collision |
+| --- | --- | --- |
+| `ObjDat3_9199A` (fly-by) | `20 20 00 00` | none |
+| `ObjDat3_919A6` (fighter) | `14 18 01 06` | size 6 |
+| `ObjDat3_919B2` (animal releaser) | `04 04 00 00` | none |
+
+The releaser is a 4x4 **invisible marker** and takes `ObjDat3_919A6` only at `loc_915F6`, on the
+frame its fourth animal goes. `getCollisionFlags()` now returns 0 unless the loaded attribute row
+is the fighter's, which is true for `FIGHTER` mode from its init and for a releaser once it has
+converted. RED first: `onlyTheFighterRowCarriesACollisionBox` failed with
+`expected: <0> but was: <6>` on the releaser.
+
+**The fix exposed a test that had been resting on the bug.** `theAnimalReleaserLetsFourAnimalsGoBeforeItFliesAway`
+and the EggRobo rewind spot both booted at the `$1330,$620` releaser and went red the moment the
+hitbox went away. The reason is worth recording: **that releaser hangs over a chasm**. A capture at
+`($1330,$5E0)` has the player fall straight past it and off the level; what had been keeping him near
+enough for the object to stay on screen was the invented hitbox knocking him upward. Both tests and
+the new one now use `$A0:$04` at `($1720,$E20)`, the one releaser of the three with ground under it —
+confirmed by capture, the player standing at `($172A,$E2C)` with the object on screen throughout.
+
+**Clips.**
+
+| Clip | Raw | What the frames show |
+| --- | --- | --- |
+| `14-ssz-retracting-spring-extends.mp4` | `raw-15-ssz-retracting-spring` 40-150 | The spring folded flat, then extending through frames 78-95 as Sonic enters its box, then folding away again as he leaves |
+| `15-ssz-eggrobo-releases-and-converts.mp4` | `raw-23-ssz-eggrobo-releaser` 0-137 | `$A0:$04` letting its animals go while a player stands in it unharmed, then taking `ObjDat3_919A6` at ~frame 70 and, now that it is a robot, hurting him |
+
+**The nibble-0/nibble-2 pairing is still unfilmed, and here is the measurement that says why.**
+The pairing itself is proven in tests — `theFlyByArcsOffTheScreenAndOnlyThenDoesItsFighterSurvive`
+drives group 6's fly-by to `loc_91570`, watches bit 6 of `_unkFA82` go up, and
+`aFighterWithNoReleasedFlyByNeverRuns` holds the other side. What cannot be filmed at any camera
+tried is the two of them in one shot, for a reason that is arithmetic rather than bad luck:
+
+- The fly-by's arc is tiny. `y_vel` starts `$180` and `$3C(a0)` subtracts one more each frame, so
+  it turns negative after 27 frames having descended about `$1A` pixels, and the perspective term
+  `$100 / (scale + 4)` pulls the drawn position up and left by as much as 32 px as the scale falls.
+  It therefore never gets more than a few pixels below its placement row before leaving upward.
+- Every nibble-2 partner hovers at its own placement Y, and at the camera the player can actually
+  occupy, that Y is off the top of the screen. Group 6 measured: fly-by `($1520,$C80)`, fighter
+  `($1660,$C80)`, player's standing Y on that walkway `$CEC`, camera Y `$C8C` — both objects sit 12
+  px *above* the visible area. Walking right to load the fighter (`raw-20`) runs the player off the
+  walkway at `$15C0` into the shaft below, where the camera is `$14C` too low to see it.
+- Group 1 (`raw-18`) reaches the fly-by at `($C20,$9E0)` but the return leg strands the player on a
+  carrier oscillating between X `$B1A` and `$C65`, never back inside the fighter's load window.
+
+Owed, with the next thing to try named: a capture that stands the player on the `$7B` walkway at
+`($15D0,$CEC)` **without** stepping off it — a one-frame right tap rather than a burst — so the
+fighter's load window opens while the camera is still on the walkway; or a group whose fighter Y is
+at least `$60` below its own ledge.

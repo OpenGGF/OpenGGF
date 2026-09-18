@@ -150,6 +150,27 @@ public final class EggRoboBadnikInstance extends AbstractS3kBadnikInstance
         };
     }
 
+    /**
+     * {@code SetUp_ObjAttributes} is the only thing that writes {@code collision_flags}, and of the
+     * three {@code ObjDat3} rows this object loads only {@code ObjDat3_919A6} carries one
+     * ({@code dc.b $14,$18,1,6}). {@code ObjDat3_9199A}, the scaled fly-by, and
+     * {@code ObjDat3_919B2}, the 4x4 invisible animal releaser, both end in a zero byte, so
+     * neither can hurt the player or be stomped — the releaser only becomes a hazard on the frame
+     * {@code loc_915F6} swaps it onto the fighter row.
+     */
+    @Override
+    public int getCollisionFlags() {
+        return hasFighterAttributes() ? super.getCollisionFlags() : 0;
+    }
+
+    /** True once {@code ObjDat3_919A6} is the loaded attribute row. */
+    private boolean hasFighterAttributes() {
+        return switch (state) {
+            case HOVER, HOVER_SHOOTING, RISING, FALLING -> true;
+            default -> false;
+        };
+    }
+
     @Override
     protected void updateMovement(int vIntRunCount, PlayableEntity player) {
         if (tryServices() == null || state == State.GONE) {

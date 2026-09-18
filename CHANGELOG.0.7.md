@@ -34,7 +34,9 @@ campaigns; feature/API publication remains subject to the 0.8 roadmap.
   the act now, in all three shapes the cartridge gives them: the distant one that crosses the
   sky and, by crossing, lets its partner appear; the hovering one that tracks the player,
   levels its arm and fires a laser once it has them lined up; and the one that lets four
-  animals go before it takes off and joins the others. The recreated Green Hill and
+  animals go before it takes off and joins the others — and which, until it takes off, is the
+  harmless invisible marker the cartridge makes it rather than something that hurts a player
+  falling past, as the distant sky-crossing one is too. The recreated Green Hill and
   Metropolis arenas, their bosses and the Death Egg launch are still to come.
 
 - **S3K Hidden Palace:** the Hidden Palace data-select slot and level load now enter

@@ -30,6 +30,7 @@ import java.util.TreeSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -159,8 +160,8 @@ class TestS3kSszEggRobo {
      */
     @Test
     void theAnimalReleaserLetsFourAnimalsGoBeforeItFliesAway() {
-        // $A0:$04 at ($1330,$620).
-        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1330, 0x0600);
+        // $A0:$04 at ($1720,$E20).
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1720, 0x0DF0);
         EggRoboBadnikInstance releaser = null;
         for (int frame = 0; frame < 240 && releaser == null; frame++) {
             fixture.stepIdleFrames(1);
@@ -170,7 +171,7 @@ class TestS3kSszEggRobo {
                 }
             }
         }
-        assertNotNull(releaser, "$A0:$04 at ($1330,$620)");
+        assertNotNull(releaser, "$A0:$04 at ($1720,$E20)");
         assertEquals(EggRoboBadnikInstance.ANIMAL_RELEASES, releaser.animalsLeftForTest(),
                 "move.b #4,$39(a0): the count starts at four and only falls on a release tick");
         int animalsBefore = countActive(AnimalObjectInstance.class);
@@ -190,10 +191,109 @@ class TestS3kSszEggRobo {
                 "bclr #7,art_tile(a0) drops the robot behind the level art as it leaves");
     }
 
+    /**
+     * The pairing the whole family turns on, driven rather than asserted on a fresh state:
+     * {@code loc_91874}'s fly-by really has to reach {@code loc_91570}, set its {@code _unkFA82}
+     * bit and delete itself, and only then does {@code sub_91914} let the partner fighter live.
+     *
+     * <p>Group 6 is the pair that makes this observable in one camera: the fly-by {@code $A0:$60}
+     * at {@code ($1520,$C80)} and the fighter {@code $A0:$62} at {@code ($1660,$C80)} sit on the
+     * same row, {@code $140} apart.
+     */
+    @Test
+    void theFlyByArcsOffTheScreenAndOnlyThenDoesItsFighterSurvive() {
+        // $A0:$60 at ($1520,$C80).
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1500, 0x0C80);
+        SszZoneRuntimeState state = S3kRuntimeStates
+                .currentSsz(GameServices.zoneRuntimeRegistry()).orElse(null);
+        assertNotNull(state, "SSZ act 1 has a runtime state");
+        assertFalse(state.eggRoboFlyByPassed(6), "group 6 starts unreleased");
+
+        EggRoboBadnikInstance flyBy = null;
+        for (int frame = 0; frame < 120 && flyBy == null; frame++) {
+            fixture.stepIdleFrames(1);
+            for (EggRoboBadnikInstance robo : allActive(EggRoboBadnikInstance.class)) {
+                if (robo.group() == 6 && robo.mode() == EggRoboBadnikInstance.Mode.FLY_BY) {
+                    flyBy = robo;
+                }
+            }
+        }
+        assertNotNull(flyBy, "$A0:$60 at ($1520,$C80) loads as a fly-by");
+        // move.b #$7F,$40(a0), stepped down three at a time by loc_91526.
+        int scaleAtStart = flyBy.scaleIndexForTest();
+        int yAtStart = flyBy.getY() & 0xFFFF;
+
+        for (int frame = 0; frame < 600 && !state.eggRoboFlyByPassed(6); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertTrue(state.eggRoboFlyByPassed(6),
+                "loc_91570 sets bit 6 of _unkFA82 when the fly-by leaves the screen");
+        assertTrue(flyBy.scaleIndexForTest() < scaleAtStart,
+                "the scale index fell from $" + Integer.toHexString(scaleAtStart)
+                        + " on the way past");
+        assertNotEquals(yAtStart, flyBy.getY() & 0xFFFF, "and the arc moved it");
+    }
+
+    /**
+     * The three {@code ObjDat3} rows {@code SetUp_ObjAttributes} loads, and the one field of them
+     * that decides whether the player gets hurt: {@code ObjDat3_9199A} (the fly-by) and
+     * {@code ObjDat3_919B2} (the animal releaser) both end {@code dc.b …,0} — no collision at all —
+     * while only {@code ObjDat3_919A6} (the fighter) carries the size-6 enemy box. A releaser that
+     * hurt a falling player would be an invented hazard: it is a 4x4 invisible marker until
+     * {@code loc_915F6} converts it, and only then does it take {@code ObjDat3_919A6}.
+     */
+    @Test
+    void onlyTheFighterRowCarriesACollisionBox() throws IOException {
+        RomByteReader rom = RomByteReader.fromRom(RomManager.getInstance().getRom());
+        // dc.l mappings, dc.w art_tile, dc.w priority, dc.b width, height, frame, collision.
+        assertEquals(0, rom.readU8(0x09199A + 11), "ObjDat3_9199A (fly-by) has no collision");
+        assertEquals(6, rom.readU8(0x0919A6 + 11), "ObjDat3_919A6 (fighter) is the size-6 box");
+        assertEquals(0, rom.readU8(0x0919B2 + 11), "ObjDat3_919B2 (releaser) has no collision");
+
+        // $A0:$04 at ($1720,$E20): the releaser, invisible and harmless until it converts.
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1720, 0x0DF0);
+        EggRoboBadnikInstance releaser = null;
+        for (int frame = 0; frame < 240 && releaser == null; frame++) {
+            fixture.stepIdleFrames(1);
+            for (EggRoboBadnikInstance robo : allActive(EggRoboBadnikInstance.class)) {
+                if (robo.mode() == EggRoboBadnikInstance.Mode.ANIMAL_RELEASER) {
+                    releaser = robo;
+                }
+            }
+        }
+        assertNotNull(releaser, "$A0:$04 at ($1720,$E20)");
+        assertEquals("RELEASING", releaser.stateForTest(), "still on loc_915F6");
+        assertEquals(0, releaser.getCollisionFlags(),
+                "ObjDat3_919B2's zero collision byte: the marker cannot hurt anyone");
+
+        for (int frame = 0; frame < 300 && "RELEASING".equals(releaser.stateForTest()); frame++) {
+            fixture.stepIdleFrames(1);
+        }
+        assertFalse("RELEASING".equals(releaser.stateForTest()), "the fourth release converts it");
+        assertEquals(6, releaser.getCollisionFlags() & 0x3F,
+                "loc_915F6's SetUp_ObjAttributes ObjDat3_919A6 gives the real robot its box");
+
+        // $A0:$60 at ($1520,$C80): the fly-by, which Draw_Sprite never touch-tests.
+        reset();
+        HeadlessTestFixture flyFixture = bootAtCheckpoint(320, 0x1500, 0x0C80);
+        EggRoboBadnikInstance flyBy = null;
+        for (int frame = 0; frame < 120 && flyBy == null; frame++) {
+            flyFixture.stepIdleFrames(1);
+            for (EggRoboBadnikInstance robo : allActive(EggRoboBadnikInstance.class)) {
+                if (robo.mode() == EggRoboBadnikInstance.Mode.FLY_BY) {
+                    flyBy = robo;
+                }
+            }
+        }
+        assertNotNull(flyBy, "$A0:$60 at ($1520,$C80)");
+        assertEquals(0, flyBy.getCollisionFlags(),
+                "ObjDat3_9199A's zero collision byte: the scaled pass is scenery");
+    }
+
     /** Rewind spot: the releaser part-way through its four animals, children and all. */
     @Test
     void theEggRoboSurvivesACaptureRestoreAndForwardReplay() {
-        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1330, 0x0600);
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x1720, 0x0DF0);
         boolean reached = false;
         for (int frame = 0; frame < 600 && !reached; frame++) {
             fixture.stepIdleFrames(1);

@@ -11,6 +11,7 @@ import com.openggf.game.rewind.RewindSnapshotDiff;
 import com.openggf.game.CrossGameFeatureProvider;
 import com.openggf.game.GameServices;
 import com.openggf.game.session.SessionManager;
+import com.openggf.game.sonic3k.Sonic3kObjectArtKeys;
 import com.openggf.game.sonic3k.constants.Sonic3kZoneIds;
 import com.openggf.game.sonic3k.objects.SszBouncyCloudObjectInstance;
 import com.openggf.game.sonic3k.objects.SszBouncyCloudPuffObjectInstance;
@@ -23,6 +24,7 @@ import com.openggf.game.sonic3k.objects.SszSwingingCarrierArcObjectInstance;
 import com.openggf.game.sonic3k.objects.SszSwingingCarrierBarObjectInstance;
 import com.openggf.game.sonic3k.objects.SszSwingingCarrierObjectInstance;
 import com.openggf.level.objects.ObjectInstance;
+import com.openggf.level.render.PatternSpriteRenderer;
 import com.openggf.tests.rules.RequiresRom;
 import com.openggf.tests.rules.SonicGame;
 import org.junit.jupiter.api.AfterEach;
@@ -34,6 +36,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -457,6 +460,53 @@ class TestS3kSszCarriersAndSprings {
         // of the three are observable here; the parity assertion above is what pins the gate.
         assertTrue(steps >= 2, "the extension steps once per odd counter, saw " + steps);
         assertEquals(0x0A60, spring.getX() & 0xFFFF, "an extended spring reports its real X");
+    }
+
+    /**
+     * Why a retracted spring draws nothing, which the slice-3 capture read as a missing renderer.
+     *
+     * <p>{@code Map_SSZRetractingSpring} ({@code $046D20}) is a six-frame table and frame 0 is a
+     * <em>zero-piece</em> frame: the ROM's own answer to "the spring is not out yet" is to emit no
+     * sprite at all. {@code loc_46452} only leaves frame 0 while a player is inside the {@code $60}
+     * approach box, so a camera parked anywhere else legitimately shows empty sky. The engine's
+     * decoded sheet has to agree, otherwise a retracted spring would draw a stray tile.
+     */
+    @Test
+    void theRetractedSpringHasNoSpritePiecesAndTheExtendedOneDoes() throws IOException {
+        // Map_SSZRetractingSpring: six frame offsets, then each frame's piece-count word.
+        RomByteReader rom = RomByteReader.fromRom(RomManager.getInstance().getRom());
+        int base = 0x046D20;
+        int[] pieces = new int[6];
+        for (int frame = 0; frame < 6; frame++) {
+            pieces[frame] = rom.readU16BE(base + rom.readU16BE(base + frame * 2));
+        }
+        assertEquals(0, pieces[0],
+                "Map_SSZRetractingSpring frame 0 is the zero-piece frame the retracted spring uses");
+        for (int frame = 1; frame < 6; frame++) {
+            assertTrue(pieces[frame] > 0,
+                    "frame " + frame + " of Map_SSZRetractingSpring draws pieces");
+        }
+
+        HeadlessTestFixture fixture = bootAtCheckpoint(320, 0x0A60, 0x0A30);
+        SszRetractingSpringObjectInstance spring = null;
+        for (int frame = 0; frame < 240 && spring == null; frame++) {
+            fixture.stepIdleFrames(1);
+            spring = active(SszRetractingSpringObjectInstance.class);
+        }
+        assertNotNull(spring, "$74:$00 at ($A60,$A30)");
+        var renderManager = GameServices.level().getObjectRenderManager();
+        assertNotNull(renderManager, "the object render manager exists");
+        var renderer = renderManager.getRenderer(Sonic3kObjectArtKeys.SSZ_RETRACTING_SPRING);
+        assertNotNull(renderer, "ssz_retracting_spring has a renderer");
+        assertTrue(renderer.isReady(), "ssz_retracting_spring art is decoded from the ROM");
+        // A frame with any piece in it spans at least one 8x8 pattern, so its bounds cannot be
+        // all-zero; an empty frame is the only thing that leaves computeFrameBounds untouched.
+        assertEquals(new PatternSpriteRenderer.FrameBounds(0, 0, 0, 0),
+                renderer.getFrameBoundsForIndex(0),
+                "the decoded sheet's frame 0 is empty, so a retracted spring draws nothing");
+        assertNotEquals(new PatternSpriteRenderer.FrameBounds(0, 0, 0, 0),
+                renderer.getFrameBoundsForIndex(3),
+                "and the extended frame 3 covers pixels");
     }
 
     // ---------------------------------------------------------------------------------------
